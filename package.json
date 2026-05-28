@@ -4,10 +4,20 @@
   "private": true,
   "description": "Label a GitHub issue. Our bot investigates, fixes, and opens a PR. Backed by OpenCode.",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
+    "dev:api": "RUN_MODE=api tsx watch src/index.ts",
+    "dev:worker": "RUN_MODE=worker tsx watch src/index.ts",
     "build": "tsc",
+    "start": "node dist/index.js",
+    "start:api": "RUN_MODE=api node dist/index.js",
+    "start:worker": "RUN_MODE=worker node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "smee": "tsx scripts/smee.ts",
     "docker:build": "docker build -t stas-bot .",
     "docker:run": "docker run -p 3000:3000 stas-bot",
     "plugin:dev": "cd plugin && npm run dev",
@@ -18,14 +28,23 @@
     "stas:status": "bash plugin/tools/stas-status.sh"
   },
   "dependencies": {
-    "@octokit/webhooks": "^13.3.0",
-    "fastify": "^5.2.0",
-    "@fastify/formbody": "^8.0.0",
+    "express": "^4.21.0",
+    "@octokit/auth-app": "^7.1.0",
+    "@octokit/rest": "^21.0.0",
+    "@octokit/webhooks": "^13.4.0",
+    "bullmq": "^5.34.0",
+    "ioredis": "^5.4.0",
+    "e2b": "^2.19.0",
+    "openai": "^4.77.0",
+    "pino": "^9.6.0",
     "dotenv": "^16.4.0"
   },
   "devDependencies": {
+    "@types/express": "^4.17.0",
+    "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.0",
-    "@types/node": "^22.0.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.0",
+    "smee-client": "^5.0.0"
   }
 }

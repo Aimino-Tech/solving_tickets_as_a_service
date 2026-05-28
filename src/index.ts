@@ -1,83 +1,83 @@
 /**
  * STAS — Solving Tickets As A Service
  *
- * A GitHub bot that turns labeled issues into PRs via OpenCode.
+ * Entry point — starts the API server, the worker, or both based on RUN_MODE.
  *
  * Usage:
- *   1. Run `opencode serve` on :4096
- *   2. Set up env vars (see .env.example)
- *   3. `bun run src/index.ts`
- *   4. Install the GitHub App on a repo
- *   5. Label an issue with `stas:fix`
- *   6. Get a PR
+ *   RUN_MODE=api    npm run dev    # API server only
+ *   RUN_MODE=worker npm run dev    # Worker only
+ *   RUN_MODE=both   npm run dev    # Both (default)
  */
 
-import Fastify from "fastify";
-import { config, requireConfig } from "./config.js";
-import { handleIssueLabeled, type IssueLabeledPayload } from "./webhook.js";
+import "dotenv/config";
+import { config } from "./config.js";
+import { rootLogger } from "./utils/logger.js";
 
-requireConfig();
+const log = rootLogger.child({ module: "entry" });
 
-const app = Fastify({ logger: true });
+async function main(): Promise<void> {
+  log.info(
+    { runMode: config.runMode, nodeEnv: config.nodeEnv },
+    "Starting STAS",
+  );
 
-// Health check
-app.get("/health", async () => ({ status: "ok", label: config.label }));
+  const mode = config.runMode;
 
-// GitHub webhook receiver
-app.post("/webhook/github", async (req, reply) => {
-  const event = req.headers["x-github-event"] as string | undefined;
-  const delivery = req.headers["x-github-delivery"] as string | undefined;
-  const signature = req.headers["x-hub-signature-256"] as string | undefined;
-  const body = req.body as Record<string, unknown>;
-
-  // Verify webhook signature
-  if (signature) {
-    const sigAlgo = { name: "HMAC", hash: "SHA-256" };
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(config.github.webhookSecret),
-      sigAlgo,
-      false,
-      ["verify"],
-    );
-    const expected = "sha256=" + Array.from(
-      new Uint8Array(
-        await crypto.subtle.sign(
-          "HMAC",
-          key,
-          encoder.encode(JSON.stringify(body)),
-        ),
-      ),
-      (b) => b.toString(16).padStart(2, "0"),
-    ).join("");
-
-    if (signature !== expected) {
-      reply.status(401).send({ error: "Invalid signature" });
-      return;
+  // Start API server
+  if (mode === "api" || mode === "both") {
+    log.info("Starting API server...");
+    try {
+      const { startServer } = await import("./server.js");
+      startServer();
+      log.info("API server started");
+    } catch (err) {
+      log.error({ err: String(err) }, "Failed to start API server");
+      if (mode === "api") {
+        process.exit(1);
+      }
     }
   }
 
-  console.log(`[webhook] event=${event} delivery=${delivery}`);
+  // Start worker
+  if (mode === "worker" || mode === "both") {
+    log.info("Starting worker...");
+    try {
+      const { createIssueWorker } = await import("./queue/issueQueue.js");
+      const worker = createIssueWorker();
+      log.info("Worker started");
 
-  // We only handle labeled issues for now
-  if (event === "issues" && (body.action as string) === "labeled") {
-    // Fire and forget — respond 200 immediately
-    handleIssueLabeled(body as unknown as IssueLabeledPayload).catch((err) =>
-      console.error("Handler error:", err),
-    );
+      // Graceful shutdown
+      const shutdown = async () => {
+        log.info("Shutting down worker...");
+        await worker.close();
+        log.info("Worker shut down");
+        process.exit(0);
+      };
+
+      process.on("SIGTERM", shutdown);
+      process.on("SIGINT", shutdown);
+    } catch (err) {
+      log.error({ err: String(err) }, "Failed to start worker");
+      if (mode === "worker") {
+        process.exit(1);
+      }
+    }
   }
 
-  reply.status(200).send({ ok: true });
-});
-
-// Start
-app.listen({ port: config.port, host: "0.0.0.0" }, (err, address) => {
-  if (err) {
-    console.error(err);
-    process.exit(1);
+  // If only API mode, set up graceful shutdown for the server
+  if (mode === "api") {
+    process.on("SIGTERM", () => {
+      log.info("Received SIGTERM, shutting down");
+      process.exit(0);
+    });
+    process.on("SIGINT", () => {
+      log.info("Received SIGINT, shutting down");
+      process.exit(0);
+    });
   }
-  console.log(`STAS bot listening on ${address}`);
-  console.log(`Trigger label: ${config.label}`);
-  console.log(`OpenCode endpoint: ${config.opencode.url}`);
+}
+
+main().catch((err) => {
+  log.error({ err: String(err) }, "Fatal error during startup");
+  process.exit(1);
 });
