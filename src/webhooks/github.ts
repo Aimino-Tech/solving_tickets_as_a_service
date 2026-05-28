@@ -4,6 +4,14 @@
  * Receives webhook events from GitHub and routes them to the appropriate
  * handlers. Primary handler is issues.labeled with the "stas:fix" label.
  * Also handles marketplace_purchase for billing plan changes.
+ *
+ * ── Error Handling Audit ────────────────────────────────────────────
+ * ✅ issues.labeled handler catches enqueue failures with context
+ * ✅ issues.edited handler catches enqueue failures with context
+ * ✅ marketplace_purchase handler catches errors with context
+ * ✅ Missing installation ID logged and handled gracefully
+ * ✅ All handlers log event name and delivery context
+ * ────────────────────────────────────────────────────────────────────
  */
 
 import { Webhooks, type EmitterWebhookEventName } from "@octokit/webhooks";
@@ -68,11 +76,25 @@ export function createGithubWebhooks(
     };
 
     if (!jobData.installationId) {
-      log.error("No installation ID in payload — cannot process");
+      log.error(
+        { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+        "No installation ID in payload — cannot process",
+      );
       return;
     }
 
-    await enqueueIssue(queue, jobData);
+    try {
+      await enqueueIssue(queue, jobData);
+    } catch (err) {
+      log.error(
+        {
+          err: String(err),
+          repo: `${jobData.repoOwner}/${jobData.repoName}`,
+          issueNumber: jobData.issueNumber,
+        },
+        "Failed to enqueue labeled issue",
+      );
+    }
   });
 
   // ── issues.edited ────────────────────────────────────────────────
@@ -103,39 +125,59 @@ export function createGithubWebhooks(
       };
 
       if (jobData.installationId) {
-        await enqueueIssue(queue, jobData);
+        try {
+          await enqueueIssue(queue, jobData);
+        } catch (err) {
+          log.error(
+            {
+              err: String(err),
+              repo: `${jobData.repoOwner}/${jobData.repoName}`,
+              issueNumber: jobData.issueNumber,
+            },
+            "Failed to enqueue edited issue",
+          );
+        }
+      } else {
+        log.warn(
+          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+          "No installation ID in edited issue payload — skipped",
+        );
       }
     }
   });
 
   // ── marketplace_purchase ─────────────────────────────────────────
   webhooks.on("marketplace_purchase" as EmitterWebhookEventName, async ({ payload }) => {
-    const p = payload as unknown as {
-      action: string;
-      effective_date: string;
-      marketplace_purchase: {
-        account: { id: number; type: string };
-        plan: { name: string };
+    try {
+      const p = payload as unknown as {
+        action: string;
+        effective_date: string;
+        marketplace_purchase: {
+          account: { id: number; type: string };
+          plan: { name: string };
+        };
       };
-    };
 
-    const plan: BillingPlan = {
-      plan: mapMarketplacePlan(p.marketplace_purchase.plan.name),
-      accountId: p.marketplace_purchase.account.id,
-      effectiveAt: p.effective_date,
-    };
+      const plan: BillingPlan = {
+        plan: mapMarketplacePlan(p.marketplace_purchase.plan.name),
+        accountId: p.marketplace_purchase.account.id,
+        effectiveAt: p.effective_date,
+      };
 
-    log.info(
-      {
-        action: p.action,
-        accountId: plan.accountId,
-        plan: plan.plan,
-      },
-      "Marketplace purchase event",
-    );
+      log.info(
+        {
+          action: p.action,
+          accountId: plan.accountId,
+          plan: plan.plan,
+        },
+        "Marketplace purchase event",
+      );
 
-    // TODO: Update the billing plan in the database
-    // For OSS self-hosted, billing is a no-op
+      // TODO: Update the billing plan in the database
+      // For OSS self-hosted, billing is a no-op
+    } catch (err) {
+      log.error({ err: String(err), payload: JSON.stringify(payload).slice(0, 500) }, "Failed to handle marketplace purchase event");
+    }
   });
 
   return webhooks;

@@ -4,6 +4,13 @@
  * After the agent loop completes, this class examines the result confidence
  * and takes the appropriate action: create PR (draft or ready), post comments,
  * or flag for human attention.
+ *
+ * ── Error Handling Audit ────────────────────────────────────────────
+ * ✅ Outer dispatch() catch logs with context: issueNumber, repoOwner, repoName
+ * ✅ Diff-gathering failure logs a warning (non-fatal, continues)
+ * ✅ Error comment posting has its own try/catch fallback
+ * ✅ postComment() logs warning on failure (non-fatal)
+ * ────────────────────────────────────────────────────────────────────
  */
 
 import { config } from "../config.js";
@@ -86,8 +93,11 @@ export class ActionDispatcher {
           `git -C ${sandbox["repoDir"] || `/home/user/${repoName}`} diff --name-only origin/${baseBranch}...${branchName} 2>/dev/null || true`,
         );
         changedFiles = diffResult.stdout.split("\n").filter(Boolean);
-      } catch {
-        // non-fatal
+      } catch (err) {
+        log.warn(
+          { err: String(err), repoOwner, repoName, issueNumber },
+          "Failed to gather changed files for PR body (non-fatal)",
+        );
       }
 
       if (agentResult.confidence === "high") {
@@ -162,7 +172,10 @@ export class ActionDispatcher {
 
       return { action: "comment_posted", commentBody: lowBody };
     } catch (err) {
-      log.error({ err: String(err) }, "Error dispatching action");
+      log.error(
+        { err: String(err), issueNumber, repoOwner, repoName },
+        "Error dispatching action",
+      );
 
       // Fallback: post error comment
       const errorBody = messages.errorComment(
@@ -170,8 +183,11 @@ export class ActionDispatcher {
       );
       try {
         await this.postComment(octokit, repoOwner, repoName, issueNumber, errorBody);
-      } catch {
-        log.error("Failed to post error comment as well");
+      } catch (commentErr) {
+        log.error(
+          { err: String(commentErr), issueNumber, repoOwner, repoName },
+          "Failed to post error comment as well",
+        );
       }
 
       return { action: "error" };
@@ -180,6 +196,7 @@ export class ActionDispatcher {
 
   /**
    * Post a comment to a GitHub issue using Octokit.
+   * Logs context on failure and re-throws so callers can handle.
    */
   private async postComment(
     octokit: ReturnType<typeof getOctokit> extends Promise<infer T> ? T : never,
@@ -188,11 +205,19 @@ export class ActionDispatcher {
     issueNumber: number,
     body: string,
   ): Promise<void> {
-    await octokit.issues.createComment({
-      owner,
-      repo,
-      issue_number: issueNumber,
-      body,
-    });
+    try {
+      await octokit.issues.createComment({
+        owner,
+        repo,
+        issue_number: issueNumber,
+        body,
+      });
+    } catch (err) {
+      log.warn(
+        { err: String(err), owner, repo, issueNumber },
+        "Failed to post comment to GitHub issue",
+      );
+      throw err;
+    }
   }
 }

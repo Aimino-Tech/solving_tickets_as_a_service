@@ -1,0 +1,44 @@
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: stas-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - stas-net
+
+  bot:
+    build: .
+    container_name: stas-bot
+    ports:
+      - "3000:3000"
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_URL=redis://stas-redis:6379
+      - OPENCODE_URL=http://opencode:4096
+      - NODE_ENV=development
+    volumes:
+      - ./src:/app/src
+    networks:
+      - stas-net
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+
+networks:
+  stas-net:
+    driver: bridge

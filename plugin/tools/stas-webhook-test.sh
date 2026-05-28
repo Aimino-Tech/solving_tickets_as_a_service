@@ -2,18 +2,43 @@
 set -eu
 
 # stas-webhook-test — Simulate a GitHub webhook event locally
-# Usage: stas-webhook-test <event> <payload-file>
 #
-# Events:
-#   issues.labeled   Simulate labeling an issue (default)
-#   issues.opened    Simulate opening an issue
+# SYNOPSIS
+#   stas-webhook-test [event] [payload-file]
 #
-# If no payload file given, generates a default test payload.
+# DESCRIPTION
+#   Sends a test webhook event to a running STAS bot. Can be used as a
+#   standalone CLI tool or invoked by the STAS OpenCode plugin
+#   (stas_webhook_test tool).
+#
+# ARGUMENTS
+#   event          GitHub webhook event type (default: issues.labeled)
+#                  Common values: issues.labeled, issues.opened
+#   payload-file   Path to JSON payload file
+#                  (default: auto-generates a test payload)
+#
+# ENVIRONMENT
+#   STAS_URL   STAS bot URL (default: http://localhost:3000)
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 STAS_URL="${STAS_URL:-http://localhost:3000}"
 EVENT="${1:-issues.labeled}"
 PAYLOAD_FILE="${2:-}"
+
+if [ "$EVENT" = "--help" ] || [ "$EVENT" = "-h" ]; then
+  echo "Usage: stas-webhook-test [event] [payload-file]"
+  echo ""
+  echo "Send a test webhook event to a running STAS bot."
+  echo ""
+  echo "Arguments:"
+  echo "  event          Webhook event type (default: issues.labeled)"
+  echo "  payload-file   Path to JSON payload file"
+  echo ""
+  echo "Examples:"
+  echo "  stas-webhook-test issues.labeled"
+  echo "  stas-webhook-test issues.opened ./test-payload.json"
+  exit 0
+fi
 
 if [ -z "$PAYLOAD_FILE" ]; then
   # Generate a default test payload
@@ -43,7 +68,7 @@ else
 fi
 
 echo "Sending $EVENT to $STAS_URL/webhook/github..."
-echo "Payload: $(cat "$PAYLOAD_FILE" | head -5)"
+echo "Payload: $(head -5 "$PAYLOAD_FILE")"
 echo "---"
 
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -58,7 +83,8 @@ echo "HTTP Status: $RESPONSE"
 if [ "$RESPONSE" = "200" ]; then
   echo "✅ Webhook accepted. Check STAS logs for agent dispatch."
 else
-  echo "❌ Webhook failed."
+  echo "❌ Webhook failed (HTTP $RESPONSE)."
+  echo "   Is STAS running at $STAS_URL? Run: stas-status"
 fi
 
 [ "$CLEANUP_PAYLOAD" = "1" ] && rm "$PAYLOAD_FILE"

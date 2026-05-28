@@ -12,6 +12,16 @@
  * - Git push
  *
  * Uses the E2B SDK v2 API (sandbox.commands.run, sandbox.files.read/write).
+ *
+ * ── Error Handling Audit ────────────────────────────────────────────
+ * ✅ boot() wraps Sandbox.create() and token fetch with context
+ * ✅ boot() clone failure throws with stderr context
+ * ✅ path traversal detection in validatePath() for read/write/remove
+ * ✅ readFile/writeFile/removeFile catch with descriptive messages
+ * ✅ destroy() catches kill failures (non-fatal, logs warning)
+ * ✅ pushBranch() wraps all git operations with context
+ * installDeps() failure is non-fatal (logs warning, continues)
+ * ────────────────────────────────────────────────────────────────────
  */
 
 import { Sandbox } from "e2b";
@@ -63,16 +73,28 @@ export class SandboxExecutor {
     log.info("Booting E2B sandbox");
 
     // Create the sandbox
-    this.sandbox = await Sandbox.create({
-      apiKey: config.e2b.apiKey,
-      template: config.e2b.templateId,
-      timeoutMs: config.e2b.sandboxTimeoutMs,
-    });
+    try {
+      this.sandbox = await Sandbox.create({
+        apiKey: config.e2b.apiKey,
+        template: config.e2b.templateId,
+        timeoutMs: config.e2b.sandboxTimeoutMs,
+      });
+    } catch (err) {
+      throw new Error(
+        `Failed to create E2B sandbox (template: ${config.e2b.templateId}): ${String(err)}`,
+      );
+    }
 
     log.info({ sandboxId: this.sandbox.sandboxId }, "Sandbox created");
 
     // Get installation token for auth
-    this.installationToken = await this.getToken(this.installationId);
+    try {
+      this.installationToken = await this.getToken(this.installationId);
+    } catch (err) {
+      throw new Error(
+        `Failed to get installation token for sandbox ${this.sandbox.sandboxId}: ${String(err)}`,
+      );
+    }
 
     // Clone the repo with auth
     const authUrl = this.repoUrl.replace(
@@ -182,50 +204,59 @@ export class SandboxExecutor {
 
     log.info({ branchName }, "Pushing branch");
 
-    // Configure git
-    await this.exec(`git -C "${this.repoDir}" config user.email "stas-bot@users.noreply.github.com"`);
-    await this.exec(`git -C "${this.repoDir}" config user.name "STAS Bot"`);
+    try {
+      // Configure git
+      await this.exec(`git -C "${this.repoDir}" config user.email "stas-bot@users.noreply.github.com"`);
+      await this.exec(`git -C "${this.repoDir}" config user.name "STAS Bot"`);
 
-    // Add all changes
-    await this.exec(`git -C "${this.repoDir}" add -A`);
+      // Add all changes
+      await this.exec(`git -C "${this.repoDir}" add -A`);
 
-    // Check if there's anything to commit
-    const statusResult = await this.exec(
-      `git -C "${this.repoDir}" status --porcelain`,
-    );
-    if (!statusResult.stdout.trim()) {
-      log.warn("No changes to commit");
-      return;
+      // Check if there's anything to commit
+      const statusResult = await this.exec(
+        `git -C "${this.repoDir}" status --porcelain`,
+      );
+      if (!statusResult.stdout.trim()) {
+        log.warn("No changes to commit");
+        return;
+      }
+
+      // Commit
+      const commitResult = await this.exec(
+        `git -C "${this.repoDir}" commit -m "fix: automated fix by STAS"`,
+      );
+      if (commitResult.exitCode !== 0 && !commitResult.stderr.includes("nothing to commit")) {
+        throw new Error(`Failed to commit: ${commitResult.stderr}`);
+      }
+
+      // Push
+      const authUrl = this.repoUrl.replace(
+        "https://",
+        `https://x-access-token:${this.installationToken}@`,
+      );
+      await this.exec(
+        `git -C "${this.repoDir}" remote set-url origin "${authUrl}"`,
+      );
+      await this.exec(
+        `git -C "${this.repoDir}" checkout -b "${branchName}"`,
+      );
+      const pushResult = await this.exec(
+        `git -C "${this.repoDir}" push origin "${branchName}"`,
+        120_000,
+      );
+      if (pushResult.exitCode !== 0) {
+        throw new Error(`Failed to push branch '${branchName}': ${pushResult.stderr}`);
+      }
+
+      log.info({ branchName }, "Branch pushed successfully");
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith("Failed to")) {
+        throw err; // Already has context
+      }
+      throw new Error(
+        `Git push operation failed for branch '${branchName}': ${String(err)}`,
+      );
     }
-
-    // Commit
-    const commitResult = await this.exec(
-      `git -C "${this.repoDir}" commit -m "fix: automated fix by STAS"`,
-    );
-    if (commitResult.exitCode !== 0 && !commitResult.stderr.includes("nothing to commit")) {
-      throw new Error(`Failed to commit: ${commitResult.stderr}`);
-    }
-
-    // Push
-    const authUrl = this.repoUrl.replace(
-      "https://",
-      `https://x-access-token:${this.installationToken}@`,
-    );
-    await this.exec(
-      `git -C "${this.repoDir}" remote set-url origin "${authUrl}"`,
-    );
-    await this.exec(
-      `git -C "${this.repoDir}" checkout -b "${branchName}"`,
-    );
-    const pushResult = await this.exec(
-      `git -C "${this.repoDir}" push origin "${branchName}"`,
-      120_000,
-    );
-    if (pushResult.exitCode !== 0) {
-      throw new Error(`Failed to push branch: ${pushResult.stderr}`);
-    }
-
-    log.info({ branchName }, "Branch pushed successfully");
   }
 
   /**

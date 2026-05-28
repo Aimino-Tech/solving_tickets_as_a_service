@@ -14,6 +14,18 @@
  *   6. Agent loop — call opencode serve with full context
  *   7. PR creation — via ActionDispatcher
  *   8. Cleanup — destroy sandbox
+ *
+ * ── Error Handling Audit ────────────────────────────────────────────
+ * ✅ Outer try/catch wraps all 8 phases with phase tracking
+ * ✅ Phase-specific error context in catch log
+ * ✅ Sandbox cleanup in finally block with non-fatal error logging
+ * ✅ classifyIssue() catches API failures, returns safe defaults
+ * ✅ fetchIssueComments() catches API failures, returns empty array
+ * ✅ buildCodeIntelligence() catches partial failures, continues
+ * ✅ dispatchToOpenCode() has timeout (10 min) and catch with distinction
+ * ✅ attemptBasicFix() has full try/catch returning structured error
+ * ✅ postComment() catches failures, logs warning (non-fatal)
+ * ────────────────────────────────────────────────────────────────────
  */
 
 import OpenAI from "openai";
@@ -58,9 +70,11 @@ export async function runIssueAgent(
     : `https://github.com/${repoOwner}/${repoName}`;
 
   let sandbox: SandboxExecutor | null = null;
+  let currentPhase = "";
 
   try {
     // ── Phase 1: Triage ──────────────────────────────────────────────
+    currentPhase = "1-triage";
     logger.info("Phase 1: Classifying issue");
     const triage = await classifyIssue(issueTitle, issueBody ?? "");
 
@@ -96,6 +110,7 @@ export async function runIssueAgent(
     );
 
     // ── Phase 2: Fetch comments ──────────────────────────────────────
+    currentPhase = "2-fetch-comments";
     logger.info("Phase 2: Fetching issue comments");
     const comments = await fetchIssueComments(
       installationId,
@@ -105,6 +120,7 @@ export async function runIssueAgent(
     );
 
     // ── Phase 3: Boot sandbox ─────────────────────────────────────────
+    currentPhase = "3-boot-sandbox";
     logger.info("Phase 3: Booting sandbox");
     sandbox = new SandboxExecutor(
       repoUrl,
@@ -116,14 +132,17 @@ export async function runIssueAgent(
     await sandbox.boot();
 
     // ── Phase 4: Static analysis ──────────────────────────────────────
+    currentPhase = "4-static-analysis";
     logger.info("Phase 4: Running static analysis");
     const analysisResult = await sandbox.analyzeCode();
 
     // ── Phase 5: Build code intelligence ──────────────────────────────
+    currentPhase = "5-code-intelligence";
     logger.info("Phase 5: Building code intelligence");
     const codeIntel = await buildCodeIntelligence(sandbox);
 
     // ── Phase 6: Agent loop via OpenCode ──────────────────────────────
+    currentPhase = "6-opencode-agent";
     logger.info("Phase 6: Dispatching to OpenCode");
 
     const openCodeResult = await dispatchToOpenCode({
@@ -159,6 +178,7 @@ export async function runIssueAgent(
     }
 
     // ── Phase 7: Dispatch action ──────────────────────────────────────
+    currentPhase = "7-dispatch-action";
     logger.info("Phase 7: Dispatching action");
     const dispatcher = new ActionDispatcher();
     const dispatchResult = await dispatcher.dispatch({
@@ -196,7 +216,7 @@ export async function runIssueAgent(
     };
   } catch (err) {
     const errorMsg = String(err);
-    logger.error({ err: errorMsg }, "Agent pipeline failed");
+    logger.error({ err: errorMsg, phase: currentPhase }, "Agent pipeline failed during phase");
 
     // Post error comment
     try {
@@ -205,10 +225,10 @@ export async function runIssueAgent(
         repoOwner,
         repoName,
         issueNumber,
-        messages.errorComment(errorMsg),
+        messages.errorComment(`[Phase: ${currentPhase}] ${errorMsg}`),
       );
-    } catch {
-      logger.error("Failed to post error comment");
+    } catch (commentErr) {
+      logger.error({ err: String(commentErr), phase: currentPhase }, "Failed to post error comment");
     }
 
     return {

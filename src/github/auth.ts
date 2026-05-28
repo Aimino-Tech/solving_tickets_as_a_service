@@ -4,6 +4,14 @@
  * Handles PKCS#1 → PKCS#8 conversion for Node 20 / OpenSSL 3 compatibility.
  * Supports reading the private key from a file path (GITHUB_APP_PRIVATE_KEY_PATH)
  * or directly from an env var (GITHUB_APP_PRIVATE_KEY).
+ *
+ * ── Error Handling Audit ────────────────────────────────────────────
+ * ✅ loadPrivateKey() throws clear error if both key sources are missing
+ * ✅ readFileSync errors propagate with file path context
+ * ✅ getOctokit() and getInstallationToken() catch auth failures with
+ *    installationId in log context
+ * ✅ PKCS#1→PKCS#8 conversion errors are caught with descriptive message
+ * ────────────────────────────────────────────────────────────────────
  */
 
 import { readFileSync } from "node:fs";
@@ -22,7 +30,13 @@ function loadPrivateKey(): string {
   let pem: string;
 
   if (config.github.privateKeyPath) {
-    pem = readFileSync(config.github.privateKeyPath, "utf-8");
+    try {
+      pem = readFileSync(config.github.privateKeyPath, "utf-8");
+    } catch (err) {
+      throw new Error(
+        `Failed to read private key from ${config.github.privateKeyPath}: ${String(err)}`,
+      );
+    }
   } else if (config.github.privateKeyEnv) {
     pem = config.github.privateKeyEnv.replace(/\\n/g, "\n");
   } else {
@@ -53,12 +67,18 @@ function loadPrivateKey(): string {
  * Uses Node's crypto module for the conversion.
  */
 function convertPkcs1ToPkcs8(pkcs1Pem: string): string {
-  const crypto = require("node:crypto");
-  const keyObject = crypto.createPrivateKey(pkcs1Pem);
-  return keyObject
-    .export({ type: "pkcs8", format: "pem" })
-    .toString("utf-8")
-    .trim();
+  try {
+    const crypto = require("node:crypto");
+    const keyObject = crypto.createPrivateKey(pkcs1Pem);
+    return keyObject
+      .export({ type: "pkcs8", format: "pem" })
+      .toString("utf-8")
+      .trim();
+  } catch (err) {
+    throw new Error(
+      `Failed to convert PKCS#1 private key to PKCS#8: ${String(err)}`,
+    );
+  }
 }
 
 let _auth: ReturnType<typeof createAppAuth> | undefined;
@@ -93,9 +113,15 @@ function getAppOctokit(): Octokit {
  * Get an authenticated Octokit instance for a specific installation.
  */
 export async function getOctokit(installationId: number): Promise<Octokit> {
-  const auth = getAuth();
-  const { token } = await auth({ type: "installation", installationId });
-  return new Octokit({ auth: token });
+  try {
+    const auth = getAuth();
+    const { token } = await auth({ type: "installation", installationId });
+    return new Octokit({ auth: token });
+  } catch (err) {
+    throw new Error(
+      `Failed to get Octokit for installation ${installationId}: ${String(err)}`,
+    );
+  }
 }
 
 /**
@@ -104,9 +130,15 @@ export async function getOctokit(installationId: number): Promise<Octokit> {
 export async function getInstallationToken(
   installationId: number,
 ): Promise<string> {
-  const auth = getAuth();
-  const { token } = await auth({ type: "installation", installationId });
-  return token;
+  try {
+    const auth = getAuth();
+    const { token } = await auth({ type: "installation", installationId });
+    return token;
+  } catch (err) {
+    throw new Error(
+      `Failed to get installation token for installation ${installationId}: ${String(err)}`,
+    );
+  }
 }
 
 /**

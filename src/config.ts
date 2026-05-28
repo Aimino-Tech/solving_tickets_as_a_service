@@ -1,84 +1,169 @@
 /**
- * Environment configuration with validation.
+ * Environment configuration with Zod validation.
  *
  * All env vars are read once at startup and exported as a typed config object.
- * Missing required values cause a friendly error message and process exit.
+ * Missing/invalid required values produce grouped error messages.
  */
 
 import "dotenv/config";
+import { z } from "zod";
 import { rootLogger } from "./utils/logger.js";
 
-function envInt(key: string, fallback: number): number {
-  const raw = process.env[key];
-  if (raw === undefined || raw === "") return fallback;
-  const parsed = parseInt(raw, 10);
-  if (isNaN(parsed)) {
-    rootLogger.warn({ key, raw }, `Invalid integer for env var ${key}, using fallback ${fallback}`);
-    return fallback;
+// ---------------------------------------------------------------------------
+// Schema
+// ---------------------------------------------------------------------------
+
+const envSchema = z.object({
+  // Server
+  PORT: z.coerce.number().int().positive().max(65535).default(3000),
+  RUN_MODE: z.enum(["api", "worker", "both"]).default("both"),
+
+  // GitHub App
+  GITHUB_APP_ID: z.string().min(1, "GITHUB_APP_ID is required"),
+  GITHUB_APP_PRIVATE_KEY: z
+    .string()
+    .min(1, "GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_PATH is required")
+    .optional(),
+  GITHUB_APP_PRIVATE_KEY_PATH: z.string().optional(),
+  GITHUB_WEBHOOK_SECRET: z.string().min(1, "GITHUB_WEBHOOK_SECRET is required"),
+  GITHUB_WEBHOOK_PATH: z.string().default("/webhook"),
+
+  // Queue
+  REDIS_URL: z.string().default("redis://localhost:6379"),
+  WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
+  QUEUE_DEDUP_TTL_SECONDS: z.coerce.number().int().positive().default(120),
+  QUEUE_KEEP_COMPLETED: z.coerce.number().int().positive().default(200),
+  QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
+
+  // OpenCode
+  OPENCODE_URL: z.string().default("http://localhost:4096"),
+  OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
+
+  // OpenAI / triage
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_CHEAP_MODEL: z.string().default("gpt-4o-mini"),
+
+  // Sandbox
+  E2B_API_KEY: z.string().optional(),
+  E2B_TEMPLATE_ID: z.string().default("stas-default"),
+  E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+
+  // STAS
+  STAS_LABEL: z.string().default("stas:fix"),
+  BOT_NAME: z.string().default("STAS"),
+  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),
+  MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
+  MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
+  STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+
+  // Logging
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "fatal"]).default("info"),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+});
+
+type ParsedEnv = z.infer<typeof envSchema>;
+
+// ---------------------------------------------------------------------------
+// Build config tree
+// ---------------------------------------------------------------------------
+
+function buildConfig(env: ParsedEnv) {
+  return {
+    port: env.PORT,
+    runMode: env.RUN_MODE,
+    logLevel: env.LOG_LEVEL,
+    nodeEnv: env.NODE_ENV,
+
+    github: {
+      appId: env.GITHUB_APP_ID,
+      privateKeyPath: env.GITHUB_APP_PRIVATE_KEY_PATH,
+      privateKeyEnv: env.GITHUB_APP_PRIVATE_KEY,
+      webhookSecret: env.GITHUB_WEBHOOK_SECRET,
+      webhookPath: env.GITHUB_WEBHOOK_PATH,
+    },
+
+    queue: {
+      redisUrl: env.REDIS_URL,
+      workerConcurrency: env.WORKER_CONCURRENCY,
+      dedupTtl: env.QUEUE_DEDUP_TTL_SECONDS,
+      keepCompleted: env.QUEUE_KEEP_COMPLETED,
+      keepFailed: env.QUEUE_KEEP_FAILED,
+    },
+
+    opencode: {
+      url: env.OPENCODE_URL,
+      model: env.OPENCODE_MODEL,
+    },
+
+    openai: {
+      apiKey: env.OPENAI_API_KEY,
+      cheapModel: env.OPENAI_CHEAP_MODEL,
+    },
+
+    e2b: {
+      apiKey: env.E2B_API_KEY,
+      templateId: env.E2B_TEMPLATE_ID,
+      sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
+    },
+
+    stas: {
+      label: env.STAS_LABEL,
+      botName: env.BOT_NAME,
+      devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
+      maxAgentIterations: env.MAX_AGENT_ITERATIONS,
+      maxIssueComments: env.MAX_ISSUE_COMMENTS,
+      rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
+      rateLimitMax: env.STAS_RATE_LIMIT_MAX,
+    },
+  } as const;
+}
+
+// ---------------------------------------------------------------------------
+// Parse eagerly at module load
+// ---------------------------------------------------------------------------
+
+const parsed = envSchema.safeParse(process.env);
+
+if (!parsed.success) {
+  const { fieldErrors, formErrors } = parsed.error.flatten();
+
+  rootLogger.error("Invalid environment configuration:");
+
+  if (formErrors.length > 0) {
+    rootLogger.error({ errors: formErrors }, "Form-level errors");
   }
-  return parsed;
-}
 
-function envStr(key: string, fallback?: string): string | undefined {
-  const raw = process.env[key];
-  if (raw === undefined || raw === "") return fallback;
-  return raw;
-}
-
-function envRequired(key: string): string {
-  const raw = process.env[key];
-  if (!raw) {
-    rootLogger.error(`Missing required env var: ${key}`);
-    process.exit(1);
+  for (const [key, msgs] of Object.entries(fieldErrors)) {
+    if (msgs && msgs.length > 0) {
+      for (const msg of msgs) {
+        rootLogger.error({ key }, `${key}: ${msg}`);
+      }
+    }
   }
-  return raw;
+
+  process.exit(1);
 }
 
-export const config = {
-  port: envInt("PORT", 3000),
-  runMode: (process.env.RUN_MODE || "both") as "api" | "worker" | "both",
-  logLevel: envStr("LOG_LEVEL", "info"),
-  nodeEnv: envStr("NODE_ENV", "development"),
+export const config = buildConfig(parsed.data);
 
-  github: {
-    appId: envRequired("GITHUB_APP_ID"),
-    privateKeyPath: envStr("GITHUB_APP_PRIVATE_KEY_PATH"),
-    privateKeyEnv: envStr("GITHUB_APP_PRIVATE_KEY"),
-    webhookSecret: envRequired("GITHUB_WEBHOOK_SECRET"),
-    webhookPath: envStr("GITHUB_WEBHOOK_PATH", "/webhook"),
-  },
+// ---------------------------------------------------------------------------
+// Explicit re-parse helper (for tests / re-imports)
+// ---------------------------------------------------------------------------
 
-  queue: {
-    redisUrl: envStr("REDIS_URL", "redis://localhost:6379"),
-    workerConcurrency: envInt("WORKER_CONCURRENCY", 2),
-    dedupTtl: envInt("QUEUE_DEDUP_TTL_SECONDS", 120),
-    keepCompleted: envInt("QUEUE_KEEP_COMPLETED", 200),
-    keepFailed: envInt("QUEUE_KEEP_FAILED", 100),
-  },
-
-  opencode: {
-    url: envStr("OPENCODE_URL", "http://localhost:4096"),
-    model: envStr("OPENCODE_MODEL", "anthropic/claude-sonnet-4-20250514"),
-  },
-
-  openai: {
-    apiKey: envStr("OPENAI_API_KEY"),
-    cheapModel: envStr("OPENAI_CHEAP_MODEL", "gpt-4o-mini"),
-  },
-
-  e2b: {
-    apiKey: envRequired("E2B_API_KEY"),
-    templateId: envStr("E2B_TEMPLATE_ID", "stas-default"),
-    sandboxTimeoutMs: envInt("E2B_SANDBOX_TIMEOUT_MS", 300_000),
-  },
-
-  stas: {
-    label: envStr("STAS_LABEL", "stas:fix"),
-    botName: envStr("BOT_NAME", "STAS"),
-    devSkipWebhookVerify: process.env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY === "true",
-    maxAgentIterations: envInt("MAX_AGENT_ITERATIONS", 40),
-    maxIssueComments: envInt("MAX_ISSUE_COMMENTS", 15),
-  },
-} as const;
+export function requireConfig(): typeof config {
+  const result = envSchema.safeParse(process.env);
+  if (!result.success) {
+    const { fieldErrors } = result.error.flatten();
+    const lines: string[] = ["Invalid environment configuration:"];
+    for (const [key, msgs] of Object.entries(fieldErrors)) {
+      if (msgs && msgs.length > 0) {
+        lines.push(`  - ${key}: ${msgs.join("; ")}`);
+      }
+    }
+    throw new Error(lines.join("\n"));
+  }
+  return buildConfig(result.data);
+}
 
 export type Config = typeof config;

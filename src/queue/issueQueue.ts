@@ -3,6 +3,14 @@
  *
  * Manages the lifecycle of fix jobs — queueing, processing, retries, and cleanup.
  * Jobs are deduplicated by issue identity with a configurable TTL.
+ *
+ * ── Error Handling Audit ────────────────────────────────────────────
+ * ✅ Redis retry strategy with exponential backoff and logging
+ * ✅ Worker 'failed' event logs context (jobId, repo, issueNumber, error)
+ * ✅ Worker 'error' event logged for connection issues
+ * ✅ Queue 'completed'/'failed' events logged
+ * ✅ enqueueIssue() catches queue.add failures and returns undefined
+ * ────────────────────────────────────────────────────────────────────
  */
 
 import { Queue, Worker, QueueEvents } from "bullmq";
@@ -152,29 +160,41 @@ export async function enqueueIssue(
   queue: Queue<IssueJobData>,
   data: IssueJobData,
 ): Promise<string | undefined> {
-  // Dedup key ensures the same issue isn't enqueued twice within TTL
   const dedupKey = `issue:${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}`;
 
-  const job = await queue.add(
-    "process-issue",
-    data,
-    {
-      deduplication: {
-        id: dedupKey,
-        ttl: config.queue.dedupTtl * 1000,
+  try {
+    const job = await queue.add(
+      "process-issue",
+      data,
+      {
+        deduplication: {
+          id: dedupKey,
+          ttl: config.queue.dedupTtl * 1000,
+        },
       },
-    },
-  );
+    );
 
-  log.info(
-    {
-      jobId: job.id,
-      repo: `${data.repoOwner}/${data.repoName}`,
-      issueNumber: data.issueNumber,
-      dedupKey,
-    },
-    "Issue enqueued",
-  );
+    log.info(
+      {
+        jobId: job.id,
+        repo: `${data.repoOwner}/${data.repoName}`,
+        issueNumber: data.issueNumber,
+        dedupKey,
+      },
+      "Issue enqueued",
+    );
 
-  return job.id;
+    return job.id;
+  } catch (err) {
+    log.error(
+      {
+        err: String(err),
+        repo: `${data.repoOwner}/${data.repoName}`,
+        issueNumber: data.issueNumber,
+        dedupKey,
+      },
+      "Failed to enqueue issue — Redis may be unreachable",
+    );
+    return undefined;
+  }
 }

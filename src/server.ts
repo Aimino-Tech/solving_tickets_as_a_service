@@ -7,6 +7,14 @@
  * - Structured access logging with pino
  * - GET /health endpoint
  * - POST /webhook — GitHub webhook receiver via @octokit/webhooks
+ *
+ * ── Error Handling Audit ────────────────────────────────────────────
+ * ✅ Global Express error middleware (4-arg handler) at bottom of chain
+ * ✅ Process-level uncaughtException and unhandledRejection handlers
+ * ✅ app.listen() error event handled (EADDRINUSE, EACCES, etc.)
+ * ✅ Server instance returned for graceful shutdown by caller
+ * ✅ Request ID middleware for log correlation
+ * ────────────────────────────────────────────────────────────────────
  */
 
 import crypto from "node:crypto";
@@ -17,6 +25,8 @@ import { rootLogger } from "./utils/logger.js";
 import { createGithubWebhooks } from "./webhooks/github.js";
 import { createIssueQueue } from "./queue/issueQueue.js";
 import type { IssueJobData } from "./utils/types.js";
+import { validateWebhookPayload } from "./validation.js";
+import rateLimit from "express-rate-limit";
 
 const log = rootLogger.child({ module: "server" });
 
@@ -66,6 +76,16 @@ export function createApp(): express.Application {
   // ── JSON parsing for all other routes ────────────────────────────
   app.use(express.json());
 
+  // ── Rate limiter for webhook routes ───────────────────────────────
+  const limiter = rateLimit({
+    windowMs: config.stas.rateLimitWindowMs,
+    limit: config.stas.rateLimitMax,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests", retryAfter: "see Retry-After header" },
+  });
+  app.use("/webhook", limiter);
+
   // ── Health check ─────────────────────────────────────────────────
   app.get("/health", (_req: Request, res: Response) => {
     res.json({
@@ -90,9 +110,35 @@ export function createApp(): express.Application {
       "Received webhook",
     );
 
-    // Verify signature (skip in dev mode if configured)
+    // ── Parse and validate payload before processing ──────────────
+    const rawBody = (req as { rawBody?: Buffer }).rawBody;
+    let parsedPayload: unknown;
+    try {
+      parsedPayload = rawBody
+        ? JSON.parse(rawBody.toString())
+        : req.body;
+    } catch (err) {
+      log.error({ err: String(err) }, "Failed to parse webhook payload");
+      res.status(400).json({ error: "Invalid JSON payload" });
+      return;
+    }
+
+    const validation = validateWebhookPayload(event, parsedPayload);
+    if (!validation.success) {
+      log.warn(
+        {
+          event,
+          errors: validation.errors,
+          requestId: req.requestId,
+        },
+        "Webhook payload validation failed",
+      );
+      res.status(400).json({ error: "Invalid payload", details: validation.errors });
+      return;
+    }
+
+    // ── Verify signature (skip in dev mode if configured) ─────────
     if (!config.stas.devSkipWebhookVerify && signature) {
-      const rawBody = (req as { rawBody?: Buffer }).rawBody;
       if (!rawBody) {
         log.error("Missing raw body for signature verification");
         res.status(400).json({ error: "Missing raw body" });
@@ -113,7 +159,6 @@ export function createApp(): express.Application {
       }
     } else {
       // Dev mode: process without verification
-      const rawBody = (req as { rawBody?: Buffer }).rawBody;
       const payload = rawBody ? rawBody.toString() : JSON.stringify(req.body);
 
       try {
@@ -149,17 +194,46 @@ export function createApp(): express.Application {
 
 /**
  * Start the Express server on the configured port.
+ * Returns the server instance so callers can close it during graceful shutdown.
  */
-export function startServer(): void {
+export function startServer(): import("http").Server {
   const app = createApp();
 
-  app.listen(config.port, "0.0.0.0", () => {
+  const server = app.listen(config.port, "0.0.0.0", () => {
     log.info(
       { port: config.port, label: config.stas.label, env: config.nodeEnv },
       `STAS server listening on :${config.port}`,
     );
   });
+
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      log.error({ port: config.port }, `Port ${config.port} is already in use`);
+    } else if (err.code === "EACCES") {
+      log.error({ port: config.port }, `Permission denied for port ${config.port}`);
+    } else {
+      log.error({ err: String(err) }, "Server failed to start");
+    }
+    process.exit(1);
+  });
+
+  return server;
 }
+
+// ── Process-level error handlers ────────────────────────────────────
+
+process.on("uncaughtException", (err) => {
+  log.error({ err: String(err), stack: (err as Error).stack }, "Uncaught exception — shutting down");
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  log.error(
+    { err: String(reason), stack: (reason as Error)?.stack },
+    "Unhandled promise rejection — shutting down",
+  );
+  process.exit(1);
+});
 
 // ── Helper: Capture raw body for webhook signature verification ────
 

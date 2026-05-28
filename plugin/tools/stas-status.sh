@@ -2,7 +2,18 @@
 set -eu
 
 # stas-status — Check STAS bot and OpenCode serve health
-# Usage: stas-status
+#
+# SYNOPSIS
+#   stas-status
+#
+# DESCRIPTION
+#   Checks whether the STAS bot and OpenCode serve are running and healthy.
+#   Can be used as a standalone CLI tool or invoked by the STAS OpenCode
+#   plugin (stas_status tool).
+#
+# ENVIRONMENT
+#   STAS_URL       STAS bot URL (default: http://localhost:3000)
+#   OPENCODE_URL   OpenCode serve URL (default: http://localhost:4096)
 
 STAS_URL="${STAS_URL:-http://localhost:3000}"
 OPENCODE_URL="${OPENCODE_URL:-http://localhost:4096}"
@@ -30,7 +41,7 @@ fi
 
 echo ""
 
-# Process check
+# Process check (best-effort)
 if command -v pgrep &>/dev/null; then
   STAS_PID=$(pgrep -f "tsx.*src/index.ts" 2>/dev/null || pgrep -f "node.*dist/index.js" 2>/dev/null || echo "")
   OC_PID=$(pgrep -f "opencode serve" 2>/dev/null || echo "")
