@@ -111,11 +111,10 @@ describe("createIssueQueue", () => {
     vi.clearAllMocks();
   });
 
-  it("returns a Queue instance with stas:issues name and Redis connection", () => {
+it("returns a Queue instance with stas-issues name and Redis connection", () => {
     const queue = createIssueQueue();
-
     expect(Queue).toHaveBeenCalledWith(
-      "stas:issues",
+      "stas-issues",
       expect.objectContaining({
         connection: expect.objectContaining({
           url: "redis://localhost:6379",
@@ -145,7 +144,7 @@ describe("createIssueWorker", () => {
     const worker = createIssueWorker();
 
     expect(Worker).toHaveBeenCalledWith(
-      "stas:issues",
+      "stas-issues",
       expect.any(Function),
       expect.objectContaining({
         connection: expect.objectContaining({ url: "redis://localhost:6379" }),
@@ -223,7 +222,7 @@ describe("createQueueEvents", () => {
     const events = createQueueEvents();
 
     expect(QueueEvents).toHaveBeenCalledWith(
-      "stas:issues",
+      "stas-issues",
       expect.objectContaining({
         connection: expect.objectContaining({ url: "redis://localhost:6379" }),
       }),

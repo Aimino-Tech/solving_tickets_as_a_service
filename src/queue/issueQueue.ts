@@ -21,7 +21,7 @@ import { rootLogger } from "../utils/logger.js";
 
 const log = rootLogger.child({ module: "issue-queue" });
 
-const QUEUE_NAME = "stas:issues";
+const QUEUE_NAME = "stas-issues";
 
 /**
  * Shared Redis connection options used by BullMQ.

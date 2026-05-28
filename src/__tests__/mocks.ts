@@ -89,7 +89,7 @@ export interface MockWorkerInstance {
  */
 export function mockBullMQQueue(queueName?: string): MockQueueInstance {
   return {
-    add: vi.fn().mockResolvedValue({ id: "mock-job-id", name: queueName ?? "stas:issues" }),
+    add: vi.fn().mockResolvedValue({ id: "mock-job-id", name: queueName ?? "stas-issues" }),
     close: vi.fn().mockResolvedValue(undefined),
     on: vi.fn().mockReturnThis(),
     getJob: vi.fn().mockResolvedValue(null),
