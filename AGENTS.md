@@ -18,7 +18,7 @@ Every competitor (Plip, TaskBounty, KintsugiBot, Open SWE, OpenRonin) wraps Clau
 GitHub Issue (labeled "stas:fix")
        │
        ▼
-  Webhook Server (Fastify, ~300 LOC)
+  Webhook Server (Express, ~260 LOC)
        │
        ├── Verify webhook signature
        ├── Post "working on it" comment

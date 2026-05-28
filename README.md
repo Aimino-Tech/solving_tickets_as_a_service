@@ -165,7 +165,7 @@ See `k8s/` for example manifests.
 - [x] Two-phase triage (cheap model classifies → expensive model fixes)
 - [x] Sandbox isolation (E2B — 10+ language runtimes)
 - [x] Regression test verification gate
-- [ ] Real-time status streaming to issue comments
+- [x] Real-time status streaming to issue comments
 - [ ] Dashboard for run history
 - [ ] Cloud hosted version
 

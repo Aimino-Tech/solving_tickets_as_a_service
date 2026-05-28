@@ -97,7 +97,7 @@ STAS is an open-source GitHub bot that turns labeled issues into pull requests. 
 GitHub Issue (labeled "stas:fix")
        │
        ▼
-  Webhook Server (Fastify, TypeScript, ESM)
+  Webhook Server (Express, TypeScript, ESM)
        │
        ├── Verify webhook signature
        ├── Post "working on it" comment
@@ -122,18 +122,19 @@ GitHub Issue (labeled "stas:fix")
 ### Tech stack
 
 - **Runtime**: Node.js 22+, TypeScript, ESM
-- **Web server**: Fastify 5.x
+- **Web server**: Express 5.x
 - **GitHub integration**: `@octokit/webhooks`, GitHub REST API
 - **Agent backend**: `opencode serve` (:4096 HTTP API)
 - **Config**: environment variables (`.env`)
 - **Build**: `npm run build` (`tsc` → `dist/`)
-- **Lint**: not yet configured (add Biome when ready)
-- **Test**: not yet configured (add Vitest when ready)
+- **Lint**: Biome (configured via biome.json/biome check)
+- **Test**: Vitest — 11 test files, 394 tests passing
+- **Build**: tsc — TypeScript compiles with zero errors
 - **Package manager**: npm
 
 ### Key files
 
-- `src/index.ts` — Fastify server entry point, routes, startup
+- `src/index.ts` — Express server entry point, routes, startup
 - `src/webhook.ts` — GitHub webhook handler (`issues.labeled` events)
 - `src/github.ts` — GitHub API client (JWT auth, comments, PRs)
 - `src/opencode.ts` — OpenCode serve client (agent dispatch)
