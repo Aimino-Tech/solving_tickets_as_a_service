@@ -4,16 +4,14 @@
 
 The basic pipeline: GitHub webhook → OpenCode agent → PR.
 
-- [x] Webhook receiver (Fastify, `issues.labeled` events)
+- [x] Webhook receiver (Express, `issues.labeled` events)
 - [x] Webhook signature verification (HMAC-SHA256)
-- [x] OpenCode serve client (`POST /api/run` on `:4096`)
-- [x] GitHub API client (JWT auth, comments, draft PR creation)
-- [x] Config validation (env-based, `.env.example`)
+- [x] OpenCode serve dispatch (`POST /api/run` on `:4096`)
+- [x] GitHub API client (Octokit JWT auth, comments, draft PR creation)
+- [x] Config validation (Zod schema with safeParse)
 - [x] Dockerfile for containerized deployment
 - [x] WORKFLOW.md (AI orchestrator state machine)
 - [x] AGENTS.md (AI-readable project context)
-- [ ] OpenCode plugin published to npm
-- [ ] Basic integration test
 
 ## Phase 2 — Production Hardening (🔜 Current)
 

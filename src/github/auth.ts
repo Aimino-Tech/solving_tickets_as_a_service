@@ -15,6 +15,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { createPrivateKey } from "node:crypto";
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
 import { config } from "../config.js";
@@ -68,8 +69,7 @@ function loadPrivateKey(): string {
  */
 function convertPkcs1ToPkcs8(pkcs1Pem: string): string {
   try {
-    const crypto = require("node:crypto");
-    const keyObject = crypto.createPrivateKey(pkcs1Pem);
+    const keyObject = createPrivateKey(pkcs1Pem);
     return keyObject
       .export({ type: "pkcs8", format: "pem" })
       .toString("utf-8")

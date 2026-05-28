@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stas-bot
+  labels:
+    app: stas-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stas-bot
+  template:
+    metadata:
+      labels:
+        app: stas-bot
+    spec:
+      containers:
+        - name: stas-bot
+          image: ghcr.io/tamnguyen08/solving_tickets_as_a_service:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: stas-env
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stas-bot
+spec:
+  selector:
+    app: stas-bot
+  ports:
+    - port: 3000
+      targetPort: 3000
