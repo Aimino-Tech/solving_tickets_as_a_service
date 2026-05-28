@@ -118,6 +118,8 @@ export async function runIssueAgent(
       repoName,
       issueNumber,
     );
+    await postStatus(installationId, repoOwner, repoName, issueNumber,
+      `📖 **Analyzing issue** — reviewed ${comments.length} comments for context.`);
 
     // ── Phase 3: Boot sandbox ─────────────────────────────────────────
     currentPhase = "3-boot-sandbox";
@@ -130,11 +132,15 @@ export async function runIssueAgent(
       getInstallationToken,
     );
     await sandbox.boot();
+    await postStatus(installationId, repoOwner, repoName, issueNumber,
+      `⚙️ **Sandbox ready** — cloned repository, detected runtime, installed dependencies.`);
 
     // ── Phase 4: Static analysis ──────────────────────────────────────
     currentPhase = "4-static-analysis";
     logger.info("Phase 4: Running static analysis");
     const analysisResult = await sandbox.analyzeCode();
+    await postStatus(installationId, repoOwner, repoName, issueNumber,
+      `🔬 **Analysis complete** — codebase scanned, issues identified.`);
 
     // ── Phase 5: Build code intelligence ──────────────────────────────
     currentPhase = "5-code-intelligence";
@@ -144,6 +150,8 @@ export async function runIssueAgent(
     // ── Phase 6: Agent loop via OpenCode ──────────────────────────────
     currentPhase = "6-opencode-agent";
     logger.info("Phase 6: Dispatching to OpenCode");
+    await postStatus(installationId, repoOwner, repoName, issueNumber,
+      `🤖 **Running fix agent** — investigating root cause and writing fix (may take a few minutes).`);
 
     const openCodeResult = await dispatchToOpenCode({
       repoUrl,
@@ -743,6 +751,19 @@ async function attemptBasicFix(
 }
 
 // Helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Post a status update to the issue (updates the existing "working on it" thread).
+ */
+async function postStatus(
+  installationId: number,
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  message: string,
+): Promise<void> {
+  await postComment(installationId, owner, repo, issueNumber, `> 🤖 **STAS:** ${message}`);
+}
 
 /**
  * Post a comment to an issue via raw fetch (used early in the pipeline
