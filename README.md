@@ -97,7 +97,7 @@ For OpenCode users: add `@tarquinen/stas-plugin` to your opencode.json `plugin` 
 GitHub Issue (labeled)
        │
        ▼
-  Webhook Server (Fastify)
+   Webhook Server (Express)
        │
        ├── Verify signature
        ├── Post "working on it" comment
@@ -162,9 +162,9 @@ See `k8s/` for example manifests.
 - [x] Webhook receiver & GitHub App integration
 - [x] OpenCode agent dispatch
 - [x] PR creation with fix
-- [ ] Two-phase triage (Haiku cheap analysis → Sonnet/Opus fix)
-- [ ] Sandbox isolation (Docker/E2B)
-- [ ] Regression test verification gate
+- [x] Two-phase triage (cheap model classifies → expensive model fixes)
+- [x] Sandbox isolation (E2B — 10+ language runtimes)
+- [x] Regression test verification gate
 - [ ] Real-time status streaming to issue comments
 - [ ] Dashboard for run history
 - [ ] Cloud hosted version
