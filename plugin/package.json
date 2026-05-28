@@ -1,0 +1,29 @@
+{
+  "name": "@tarquinen/stas-plugin",
+  "version": "0.1.0",
+  "description": "OpenCode plugin for STAS — local dev, test webhooks, deploy",
+  "type": "module",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamnguyen08/solving_tickets_as_a_service"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@opencode-ai/sdk": ">=1.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "files": [
+    "dist",
+    "tools"
+  ]
+}

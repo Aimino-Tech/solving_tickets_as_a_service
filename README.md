@@ -40,6 +40,45 @@ cp .env.example .env
 npm run dev
 ```
 
+## OpenCode Plugin
+
+For development, STAS ships with an OpenCode plugin. Install it to get dev tools:
+
+```json
+{
+  "plugin": ["@tarquinen/stas-plugin"]
+}
+```
+
+### Plugin tools
+
+| Tool | Description |
+|---|---|
+| `stas-dev` | Start local dev environment (opencode serve + bot) |
+| `stas-webhook-test` | Simulate a GitHub webhook locally |
+| `stas-config` | Validate or init `.env` configuration |
+| `stas-status` | Check bot and OpenCode health |
+
+```bash
+# Start full dev environment
+bash plugin/tools/stas-dev.sh
+
+# Send a test webhook
+bash plugin/tools/stas-webhook-test.sh issues.labeled
+
+# Validate config
+bash plugin/tools/stas-config.sh check
+
+# Check status
+bash plugin/tools/stas-status.sh
+```
+
+### OpenCode integration
+
+STAS is built on top of OpenCode. The `WORKFLOW.md` at the project root defines how the OpenCode agent (Sisyphus) autonomously works on tickets — from `Backlog` → `Todo` → `In Progress` → `Human Review` → `Done`, with mandatory anti-mockup scans at every gate.
+
+For OpenCode users: add `@tarquinen/stas-plugin` to your opencode.json `plugin` array, and the agent can invoke dev tools via slash commands during development.
+
 ## Self-Hosted vs Cloud
 
 | Feature | Self-Hosted (OSS) | Cloud (Coming Soon) |

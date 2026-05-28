@@ -9,7 +9,13 @@
     "start": "node dist/index.js",
     "build": "tsc",
     "docker:build": "docker build -t stas-bot .",
-    "docker:run": "docker run -p 3000:3000 stas-bot"
+    "docker:run": "docker run -p 3000:3000 stas-bot",
+    "plugin:dev": "cd plugin && npm run dev",
+    "plugin:build": "cd plugin && npm run build",
+    "stas:dev": "bash plugin/tools/stas-dev.sh",
+    "stas:webhook": "bash plugin/tools/stas-webhook-test.sh",
+    "stas:config": "bash plugin/tools/stas-config.sh",
+    "stas:status": "bash plugin/tools/stas-status.sh"
   },
   "dependencies": {
     "@octokit/webhooks": "^13.3.0",
