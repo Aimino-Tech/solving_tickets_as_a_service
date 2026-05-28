@@ -1,0 +1,25 @@
+{
+  "name": "solving-tickets-as-a-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Label a GitHub issue. Our bot investigates, fixes, and opens a PR. Backed by OpenCode.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "docker:build": "docker build -t stas-bot .",
+    "docker:run": "docker run -p 3000:3000 stas-bot"
+  },
+  "dependencies": {
+    "@octokit/webhooks": "^13.3.0",
+    "fastify": "^5.2.0",
+    "@fastify/formbody": "^8.0.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  }
+}
