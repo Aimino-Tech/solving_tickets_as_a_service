@@ -35,6 +35,22 @@ export class BillingRepository {
     return result.rows[0];
   }
 
+  async getOrCreate(accountId: number): Promise<Billing> {
+    const result = await queryWithRetry<Billing>(
+      'SELECT * FROM billing WHERE account_id = $1',
+      [accountId],
+    );
+    if (result.rows[0]) return result.rows[0];
+
+    const created = await queryWithRetry<Billing>(
+      `INSERT INTO billing (account_id, plan, status, usage_count)
+       VALUES ($1, 'free', 'active', 0)
+       RETURNING *`,
+      [accountId],
+    );
+    return created.rows[0];
+  }
+
   async create(data: NewBilling): Promise<Billing> {
     const result = await queryWithRetry<Billing>(
       `INSERT INTO billing (account_id, stripe_customer_id, stripe_subscription_id, plan, status, current_period_start, current_period_end, usage_count)
@@ -54,10 +70,10 @@ export class BillingRepository {
     return result.rows[0];
   }
 
-  async update(
-    accountId: number,
-    data: Partial<Pick<Billing, 'stripeCustomerId' | 'stripeSubscriptionId' | 'plan' | 'status' | 'currentPeriodStart' | 'currentPeriodEnd' | 'usageCount'>>,
-  ): Promise<Billing | undefined> {
+  async update(accountId: number, data: Partial<Pick<Billing,
+    'stripeCustomerId' | 'stripeSubscriptionId' | 'plan' | 'status'
+    | 'currentPeriodStart' | 'currentPeriodEnd' | 'usageCount'
+  >>): Promise<Billing | undefined> {
     const sets: string[] = [];
     const values: unknown[] = [];
     let idx = 1;
@@ -91,12 +107,9 @@ export class BillingRepository {
       values.push(data.usageCount);
     }
 
-    if (sets.length === 0) {
-      return this.findByAccountId(accountId);
-    }
+    if (sets.length === 0) return this.getOrCreate(accountId);
 
     values.push(accountId);
-
     const result = await queryWithRetry<Billing>(
       `UPDATE billing SET ${sets.join(', ')} WHERE account_id = $${idx} RETURNING *`,
       values,
@@ -104,12 +117,35 @@ export class BillingRepository {
     return result.rows[0];
   }
 
-  async incrementUsage(accountId: number, amount = 1): Promise<Billing | undefined> {
+  async incrementUsage(accountId: number, amount = 1): Promise<Billing> {
     const result = await queryWithRetry<Billing>(
       `UPDATE billing SET usage_count = usage_count + $1 WHERE account_id = $2 RETURNING *`,
       [amount, accountId],
     );
+    if (result.rows[0]) return result.rows[0];
+    return this.getOrCreate(accountId);
+  }
+
+  async resetUsage(accountId: number): Promise<Billing | undefined> {
+    const result = await queryWithRetry<Billing>(
+      `UPDATE billing SET usage_count = 0 WHERE account_id = $1 RETURNING *`,
+      [accountId],
+    );
     return result.rows[0];
+  }
+
+  async checkUsageLimit(accountId: number, planLimits: Record<string, number>): Promise<{
+    allowed: boolean;
+    current: number;
+    limit: number;
+  }> {
+    const billing = await this.getOrCreate(accountId);
+    const limit = planLimits[billing.plan] ?? planLimits['free'] ?? 100;
+    return {
+      allowed: billing.usageCount < limit,
+      current: billing.usageCount,
+      limit,
+    };
   }
 
   async deleteByAccountId(accountId: number): Promise<boolean> {

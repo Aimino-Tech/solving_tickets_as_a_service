@@ -72,6 +72,7 @@ import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { dashboardRouter } from './routes/dashboard.js';
+import { adminDashboardRouter } from './routes/adminDashboard.js';
 import { addBreadcrumb, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
 
 const log = rootLogger.child({ module: 'server' });
@@ -761,8 +762,11 @@ export function createApp(): express.Application {
   // ── Admin API ────────────────────────────────────────
   app.use('/admin', adminRouter);
 
-  // ── Dashboard API ──────────────────────────────────────
+  // ── Dashboard API (user-facing) ────────────────────────
   app.use('/api/v1/me', dashboardRouter);
+
+  // ── Admin Dashboard API ────────────────────────────────
+  app.use('/api/v1/dashboard', adminDashboardRouter);
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);

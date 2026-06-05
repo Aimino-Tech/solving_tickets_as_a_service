@@ -1,8 +1,8 @@
 /**
- * Repos schema — repository tracking per account.
+ * Repos schema — repositories tracked per account.
  *
- * Each row represents a GitHub repository that has been enabled
- * for STAS processing by a given account.
+ * Links GitHub repositories to an account/installation, enabling
+ * per-repo run history and configuration.
  */
 
 import { integer, pgTable, serial, timestamp, varchar } from 'drizzle-orm/pg-core';
