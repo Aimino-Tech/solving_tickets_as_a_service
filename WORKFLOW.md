@@ -1,16 +1,13 @@
 ---
 hooks:
-  timeout_ms: 2592000000
   after_create: |
     if command -v mise >/dev/null 2>&1; then
       if [ -f mise.toml ]; then
         mise trust
-        mise exec -- npm install
-      elif [ -f package.json ]; then
-        npm install
+        mise exec -- mix deps.get
+      elif [ -f elixir/mise.toml ]; then
+        cd elixir && mise trust && mise exec -- mix deps.get
       fi
-    elif [ -f package.json ]; then
-      npm install
     fi
   after_run: |
     set -eu
@@ -18,8 +15,9 @@ hooks:
     has_violations=0
     scan_file() {
       local f="$1"
+      local violations=""
       while IFS= read -r line; do
-        v=$(printf '%s' | grep -inE '(TODO: implement|FIXME: (add|implement)|@ts-(ignore|expect-error)|as any|throw new Error\("Not implemented|Not implemented yet|// placeholder|// stub|// TODO|\.then\(\(\) => \{\}\)|catch\s*\([^)]*\)\s*\{\s*\}|function\s+\w+\s*\([^)]*\)\s*\{\s*\}[\s\S]*?$)' <<< "$line")
+        v=$(printf '%s' "$line" | grep -inE '(TODO: implement|FIXME: (add|implement)|@ts-(ignore|expect-error)|as any|throw new Error\("Not implemented|Not implemented yet|// placeholder|// stub|// TODO|\.then\(\(\) => \{\}\)|catch\s*\([^)]*\)\s*\{\s*\}|function\s+\w+\s*\([^)]*\)\s*\{\s*\}[\s\S]*?$)')
         if [ -n "$v" ]; then
           violations="$violations$v"$'\n'
         fi
@@ -32,8 +30,8 @@ hooks:
       return 0
     }
     export -f scan_file
-    find "$(pwd -P)" -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.jsx' -o -name '*.mjs' \) \
-      -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/build/*' \
+    find "$(pwd -P)" -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.jsx' -o -name '*.py' -o -name '*.go' -o -name '*.rs' -o -name '*.ex' -o -name '*.exs' \) \
+      -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/_build/*' -not -path '*/deps/*' -not -path '*/dist/*' \
       -exec bash -c 'scan_file "$0"' {} \; || has_violations=1
     if [ "$has_violations" -eq 1 ]; then
       echo "!!! WARNING: Mockups/stubs detected in workspace. Review required before Human Review !!!"
@@ -42,13 +40,15 @@ hooks:
     fi
     echo "--- End Anti-Mockup Scan ---"
   before_remove: |
-    if grep -q '"clean"' package.json 2>/dev/null; then
-      npm run clean
+    if [ -f elixir/mix.exs ]; then
+      cd elixir && mise exec -- mix workspace.before_remove
     fi
 agent:
   default_effort: medium
   max_turns: 20
 ---
+
+
 
 You are working on a Linear ticket `{{ issue.identifier }}`
 
@@ -59,7 +59,7 @@ Continuation context:
 - Resume from the current workspace state instead of restarting from scratch.
 - Do not repeat already-completed investigation or validation unless needed for new code changes.
 - Do not end the turn while the issue remains in an active state unless you are blocked by missing required permissions/secrets.
-{% endif %}
+  {% endif %}
 
 Issue context:
 Identifier: {{ issue.identifier }}
@@ -87,103 +87,47 @@ Work only in the provided repository copy. Do not touch any other path.
 
 The agent should be able to talk to Linear, either via a configured Linear MCP server or injected `linear_graphql` tool. If none are present, stop and ask the user to configure Linear.
 
-## Project overview: STAS — Solving Tickets As A Service
-
-STAS is an open-source GitHub bot that turns labeled issues into pull requests. Backed by OpenCode.
-
-### Core architecture
-
-```
-GitHub Issue (labeled "stas:fix")
-       │
-       ▼
-  Webhook Server (Express, TypeScript, ESM)
-       │
-       ├── Verify webhook signature
-       ├── Post "working on it" comment
-       ├── Build prompt from issue context
-       │
-       ▼
-  OpenCode Serve (:4096)
-       │
-       ├── Clone repo (shallow)
-       ├── Investigate root cause
-       ├── Write fix + regression test
-       ├── Run existing test suite
-       ├── Commit & push branch
-       │
-       ▼
-  GitHub API
-       │
-       ├── Open draft PR
-       └── Post result comment
-```
-
-### Tech stack
-
-- **Runtime**: Node.js 22+, TypeScript, ESM
-- **Web server**: Express 5.x
-- **GitHub integration**: `@octokit/webhooks`, GitHub REST API
-- **Agent backend**: `opencode serve` (:4096 HTTP API)
-- **Config**: environment variables (`.env`)
-- **Build**: `npm run build` (`tsc` → `dist/`)
-- **Lint**: Biome (configured via biome.json/biome check)
-- **Test**: Vitest — 11 test files, 394 tests passing
-- **Build**: tsc — TypeScript compiles with zero errors
-- **Package manager**: npm
-
-### Key files
-
-- `src/index.ts` — Express server entry point, routes, startup
-- `src/webhook.ts` — GitHub webhook handler (`issues.labeled` events)
-- `src/github.ts` — GitHub API client (JWT auth, comments, PRs)
-- `src/opencode.ts` — OpenCode serve client (agent dispatch)
-- `src/config.ts` — env-based configuration with validation
-- `WORKFLOW.md` — this file — orchestrator workflow definition
-- `README.md` — project docs, architecture, deployment guide
-- `.env.example` — environment variable template
-
-### Business model
-
-**Open-core**: The entire bot is MIT open-source. What we monetize is the hosted service with our AGI (50% better than GPT-5.5), dashboard, zero-ops, and enterprise features.
-
-Funnel: self-host (free) → hit limits → upgrade to hosted with our AGI ($49/mo)
-
-### Competitive positioning
-
-| Dimension | Plip.io | TaskBounty | KintsugiBot | Open SWE | **STAS** |
-|---|---|---|---|---|---|
-| Agent quality | Claude | Multiple | Any LLM | Claude/GPT | **Our AGI** |
-| Cost/fix | $2-5+ | $2-52 | BYO API | BYO API | **Minimal** |
-| Self-hosted | ❌ | ❌ | ✅ | ✅ | **✅** |
-| OSS | ❌ | ❌ | ✅ | ✅ | **✅ MIT** |
-| OpenCode backend | ❌ | ❌ | ❌ | ❌ | **✅ Native** |
-
 ## Zero tolerance for mockups, stubs, and fake data
 
 This is a **hard rule**, not a guideline. Violations block the move to `Human Review`.
 
-- Never produce mock objects, stub functions, placeholder implementations, fake data arrays, or hardcoded test values in place of real implementation.
-- Never use `TODO: implement`, `FIXME: add real`, `// placeholder`, or any deferral comment as a substitute for completing the work now.
-- Never use type-unsafe escapes (`as any`, `@ts-ignore`, `@ts-expect-error`) to silence real type errors caused by incomplete implementation.
-- Never generate lorem ipsum, sample text, or demo content unless the ticket explicitly asks for placeholder content.
-- Never leave empty catch blocks, empty promise handlers (`.then(() => {})`), or no-op function bodies.
-- Every function you write must have a real body that handles inputs, produces correct outputs, and propagates errors appropriately.
-- Every data structure you create must use real field names, real types, and real relationships matching the problem domain — no `MockUser`, `TestData`, or generic `Item` types.
-- Before considering any code complete, scan every changed file for these patterns and replace any found with real implementation.
+- Never produce mock objects, stub functions, placeholder implementations, fake data arrays, or
+  hardcoded test values in place of real implementation.
+- Never use `TODO: implement`, `FIXME: add real`, `// placeholder`, or any deferral comment
+  as a substitute for completing the work now.
+- Never use type-unsafe escapes (`as any`, `@ts-ignore`, `@ts-expect-error`) to silence real
+  type errors caused by incomplete implementation.
+- Never generate lorem ipsum, sample text, or demo content unless the ticket explicitly asks
+  for placeholder content.
+- Never leave empty catch blocks, empty promise handlers (`.then(() => {})`), or no-op
+  function bodies.
+- Every function you write must have a real body that handles inputs, produces correct outputs,
+  and propagates errors appropriately.
+- Every data structure you create must use real field names, real types, and real relationships
+  matching the problem domain — no `MockUser`, `TestData`, or generic `Item` types.
+- Before considering any code complete, scan every changed file for these patterns and
+  replace any found with real implementation.
 
-If you catch yourself reaching for a stub, a mock, a `TODO`, or a placeholder — **stop**. Implement the real thing. The ticket is not done until every line is real.
+If you catch yourself reaching for a stub, a mock, a `TODO`, or a placeholder — **stop**.
+Implement the real thing. The ticket is not done until every line is real.
+
 
 ## Default posture
 
 - Start by determining the ticket's current status, then follow the matching flow for that status.
 - Start every task by opening the tracking workpad comment and bringing it up to date before doing new implementation work.
 - Spend extra effort up front on planning and verification design before implementation.
+- Reproduce first: always confirm the current behavior/issue signal before changing code so the fix target is explicit.
 - Keep ticket metadata current (state, checklist, acceptance criteria, links).
 - Treat a single persistent Linear comment as the source of truth for progress.
 - Use that single workpad comment for all progress and handoff notes; do not post separate "done"/summary comments.
 - Treat any ticket-authored `Validation`, `Test Plan`, or `Testing` section as non-negotiable acceptance input: mirror it in the workpad and execute it before considering the work complete.
-- When meaningful out-of-scope improvements are discovered during execution, file a separate Linear issue instead of expanding scope. The follow-up issue must include a clear title, description, and acceptance criteria, be placed in `Backlog`, be assigned to the same project as the current issue, link the current issue as `related`, and use `blockedBy` when the follow-up depends on the current issue.
+- When meaningful out-of-scope improvements are discovered during execution,
+  file a separate Linear issue instead of expanding scope. The follow-up issue
+  must include a clear title, description, and acceptance criteria, be placed in
+  `Backlog`, be assigned to the same project as the current issue, link the
+  current issue as `related`, and use `blockedBy` when the follow-up depends on
+  the current issue.
 - Move status only when the matching quality bar is met.
 - Operate autonomously end-to-end unless blocked by missing requirements, secrets, or permissions.
 - Use the blocked-access escape hatch only for true external blockers (missing required tools/auth) after exhausting documented fallbacks.
@@ -194,16 +138,20 @@ If you catch yourself reaching for a stub, a mock, a `TODO`, or a placeholder �
 - `commit`: produce clean, logical commits during implementation.
 - `push`: keep remote branch current and publish updates.
 - `pull`: keep branch updated with latest `origin/main` before handoff.
+- `land`: when ticket reaches `Merging`, explicitly open and follow `.codex/skills/land/SKILL.md`, which includes the `land` loop.
 
 ## Oh My OpenAgent (oh-my-opencode)
 
 The oh-my-opencode plugin is pre-installed and provides the following built-in slash commands to accelerate common workflows:
 
-- `/ralph-loop` — self-referential development loop; use for complex multi-step tasks.
-- `/refactor` — intelligent refactoring with LSP and AST-grep validation.
-- `/review-work` — launches 5 parallel review agents (Oracle, code quality, security, QA, context mining).
+- `/ralph-loop` — self-referential development loop; use for complex multi-step tasks that require the agent to work until completion without stopping mid-way. Alternative to Symphony's turn-based loop.
+- `/refactor` — intelligent refactoring with LSP and AST-grep validation; use for any code restructuring.
+- `/review-work` — launches 5 parallel review agents (Oracle, code quality, security, QA, context mining) to validate implementation completeness. Use before state transitions for thorough quality assurance.
+- `/init-deep` — generate hierarchical AGENTS.md knowledge base for projects that lack one.
 - `/start-work` — start systematic development from a Prometheus plan.
-- `/ulw-loop` — ultrawork version of ralph-loop.
+- `/ulw-loop` — ultrawork version of ralph-loop with higher intensity.
+- `/cancel-ralph` — cancel an active Ralph Loop.
+- `/stop-continuation` — stop continuation mechanisms.
 - `/handoff` — create detailed context summary for session continuation.
 
 Use these commands at the appropriate lifecycle points during execution.
@@ -215,7 +163,7 @@ Use these commands at the appropriate lifecycle points during execution.
   - Special case: if a PR is already attached, treat as feedback/rework loop (run full PR feedback sweep, address or explicitly push back, revalidate, return to `Human Review`).
 - `In Progress` -> implementation actively underway.
 - `Human Review` -> PR is attached and validated; waiting on human approval.
-- `Merging` -> approved by human; merge the PR.
+- `Merging` -> approved by human; execute the `land` skill flow (do not call `gh pr merge` directly).
 - `Rework` -> reviewer requested changes; planning + implementation required.
 - `Done` -> terminal state; no further action required.
 
@@ -227,9 +175,9 @@ Use these commands at the appropriate lifecycle points during execution.
    - `Backlog` -> do not modify issue content/state; stop and wait for human to move it to `Todo`.
    - `Todo` -> immediately move to `In Progress`, then ensure bootstrap workpad comment exists (create if missing), then start execution flow.
      - If PR is already attached, start by reviewing all open PR comments and deciding required changes vs explicit pushback responses.
-   - `In Progress` -> continue execution flow from current workpad comment.
+   - `In Progress` -> continue execution flow from current scratchpad comment.
    - `Human Review` -> wait and poll for decision/review updates.
-   - `Merging` -> merge the PR and move to `Done`.
+   - `Merging` -> on entry, open and follow `.codex/skills/land/SKILL.md`; do not call `gh pr merge` directly.
    - `Rework` -> run rework flow.
    - `Done` -> do nothing and shut down.
 4. Check whether a PR already exists for the current branch and whether it is closed.
@@ -257,17 +205,20 @@ Use these commands at the appropriate lifecycle points during execution.
 4.  Start work by writing/updating a hierarchical plan in the workpad comment.
 5.  Ensure the workpad includes a compact environment stamp at the top as a code fence line:
     - Format: `<host>:<abs-workdir>@<short-sha>`
-    - Example: `devbox-01:/home/dev-user/repos/stas@7bdde33`
+    - Example: `devbox-01:/home/dev-user/code/symphony-workspaces/MT-32@7bdde33bc`
     - Do not include metadata already inferable from Linear issue fields (`issue ID`, `status`, `branch`, `PR link`).
 6.  Add explicit acceptance criteria and TODOs in checklist form in the same comment.
+    - If changes are user-facing, include a UI walkthrough acceptance criterion that describes the end-to-end user path to validate.
+    - If changes touch app files or app behavior, add explicit app-specific flow checks to `Acceptance Criteria` in the workpad (for example: launch path, changed interaction path, and expected result path).
     - If the ticket description/comment context includes `Validation`, `Test Plan`, or `Testing` sections, copy those requirements into the workpad `Acceptance Criteria` and `Validation` sections as required checkboxes (no optional downgrade).
-7.  Run a principal-style self-review of the plan and refine it in the comment. Use `/refactor` for any planned code restructuring to ensure safety via LSP and AST-grep validation.
-8.  Run the `pull` skill to sync with latest `origin/main` before any code edits, then record the pull/sync result in the workpad `Notes`.
+8.  Run a principal-style self-review of the plan and refine it in the comment. Use `/refactor` for any planned code restructuring to ensure safety via LSP and AST-grep validation.
+9.  Before implementing, capture a concrete reproduction signal and record it in the workpad `Notes` section (command/output, screenshot, or deterministic UI behavior).
+10.  Run the `pull` skill to sync with latest `origin/main` before any code edits, then record the pull/sync result in the workpad `Notes`.
     - Include a `pull skill evidence` note with:
       - merge source(s),
       - result (`clean` or `conflicts resolved`),
       - resulting `HEAD` short SHA.
-9.  Compact context and proceed to execution.
+10. Compact context and proceed to execution.
 
 ## PR feedback sweep protocol (required)
 
@@ -307,37 +258,46 @@ Use this only when completion is blocked by missing required tools or missing au
     - Check off completed items.
     - Add newly discovered items in the appropriate section.
     - Keep parent/child structure intact as scope evolves.
-    - Update the workpad immediately after each meaningful milestone.
+    - Update the workpad immediately after each meaningful milestone (for example: reproduction complete, code change landed, validation run, review feedback addressed).
     - Never leave completed work unchecked in the plan.
     - For tickets that started as `Todo` with an attached PR, run the full PR feedback sweep protocol immediately after kickoff and before new feature work.
-5.  Run validation/tests required for the scope:
-    - STAS-specific validation commands:
-      - `npm run build` — TypeScript compilation must succeed (no errors)
-    - When tests are added: `npm test` — Vitest must pass
-    - When lint is configured: `npm run lint` — Biome must pass
-    - Mandatory gate: execute all ticket-provided `Validation`/`Test Plan`/`Testing` requirements when present; treat unmet items as incomplete work.
+5.  Run validation/tests required for the scope.
+    - Mandatory gate: execute all ticket-provided `Validation`/`Test Plan`/ `Testing` requirements when present; treat unmet items as incomplete work.
+    - Prefer a targeted proof that directly demonstrates the behavior you changed.
+    - You may make temporary local proof edits to validate assumptions (for example: tweak a local build input for `make`, or hardcode a UI account / response path) when this increases confidence.
+    - Revert every temporary proof edit before commit/push.
+    - Document these temporary proof steps and outcomes in the workpad `Validation`/`Notes` sections so reviewers can follow the evidence.
+    - If app-touching, run `launch-app` validation and capture/upload media via `github-pr-media` before handoff.
 6.  **Mandatory mockup/stub scan** — Before re-checking criteria:
-    - Scan every file you changed or created for mockup/stub patterns.
-    - For **every** match found: **replace with real implementation before proceeding.**
-    - Document the scan in the workpad `Anti-Mockup Verification` section with file-by-file results.
-    - Do not skip this step. Do not defer replacements.
+     - Scan every file you changed or created for the following patterns:
+       - `TODO: implement`, `FIXME: add real`, `// placeholder`, or any deferral comment.
+       - Empty function bodies, empty catch blocks, no-op promise handlers (`.then(() => {})`).
+       - `as any`, `@ts-ignore`, `@ts-expect-error` type escapes.
+       - Mock objects, fake data arrays, hardcoded test values in production code.
+       - Lorem ipsum, `MyComponent`, `TestData`, `MockUser`, `App` — generic names that should be domain-specific.
+       - `throw new Error("Not implemented")` or equivalent stub exceptions.
+       - `return null;` or `return {};` as function body placeholder.
+     - For **every** match found: **replace with real implementation before proceeding.**
+     - Document the scan in the workpad `Anti-Mockup Verification` section with file-by-file results.
+     - Do not skip this step. Do not defer replacements. Real implementation now or the ticket is not done.
 7.  Re-check all acceptance criteria and close any gaps.
-8.  Before every `git push` attempt, run the required validation for your scope and confirm it passes.
+8.  Before every `git push` attempt, run the required validation for your scope and confirm it passes; if it fails, address issues and rerun until green, then commit and push changes.
 9.  Attach PR URL to the issue (prefer attachment; use the workpad comment only if attachment is unavailable).
+    - Ensure the GitHub PR has label `symphony` (add it if missing).
 10. Merge latest `origin/main` into branch, resolve conflicts, and rerun checks.
 11. Update the workpad comment with final checklist status and validation notes.
-    - Mark completed items as checked.
+    - Mark completed plan/acceptance/validation checklist items as checked.
     - Add final handoff notes (commit + validation summary) in the same workpad comment.
     - Do not include PR URL in the workpad comment; keep PR linkage on the issue via attachment/link fields.
     - Add a short `### Confusions` section at the bottom when any part of task execution was unclear/confusing, with concise bullets.
     - Do not post any additional completion summary comment.
-12. Run `/review-work` to launch parallel review sub-agents. Address any issues they report and re-run until all sub-agents pass.
+12. Run `/review-work` to launch parallel review sub-agents that validate against goals, code quality, security, and contextual requirements. Address any issues they report and re-run until all sub-agents pass.
 13. Confirm PR checks are green, the branch is pushed, and PR is linked on the issue.
 14. Re-open and refresh the workpad so `Plan`, `Acceptance Criteria`, and `Validation` exactly match completed work.
 15. Only then move issue to `Human Review`.
     - Exception: if blocked by missing required non-GitHub tools/auth per the blocked-access escape hatch, move to `Human Review` with the blocker brief and explicit unblock actions.
 16. For `Todo` tickets that already had a PR attached at kickoff:
-    - Ensure all existing PR feedback was reviewed and resolved.
+    - Ensure all existing PR feedback was reviewed and resolved, including inline review comments (code changes or explicit, justified pushback response).
     - Ensure branch was pushed with any required updates.
     - Then move to `Human Review`.
 
@@ -347,7 +307,7 @@ Use this only when completion is blocked by missing required tools or missing au
 2. Poll for updates as needed, including GitHub PR review comments from humans and bots.
 3. If review feedback requires changes, move the issue to `Rework` and follow the rework flow.
 4. If approved, human moves the issue to `Merging`.
-5. When the issue is in `Merging`, merge the PR (squash merge preferred), delete the branch.
+5. When the issue is in `Merging`, open and follow `.codex/skills/land/SKILL.md`, then run the `land` skill in a loop until the PR is merged. Do not call `gh pr merge` directly.
 6. After merge is complete, move the issue to `Done`.
 
 ## Step 4: Rework handling
@@ -355,44 +315,51 @@ Use this only when completion is blocked by missing required tools or missing au
 1. Treat `Rework` as a full approach reset, not incremental patching.
 2. Re-read the full issue body and all human comments; explicitly identify what will be done differently this attempt.
 3. Close the existing PR tied to the issue.
-4. Remove the existing `## Symphony Workpad` comment from the issue.
+4. Remove the existing `## Codex Workpad` comment from the issue.
 5. Create a fresh branch from `origin/main`.
-6. Start over from the normal kickoff flow.
+6. Start over from the normal kickoff flow:
+   - If current issue state is `Todo`, move it to `In Progress`; otherwise keep the current state.
+   - Create a new bootstrap `## Codex Workpad` comment.
+   - Build a fresh plan/checklist and execute end-to-end.
 
 ## Completion bar before Human Review
 
 - Step 1/2 checklist is fully complete and accurately reflected in the single workpad comment.
 - Acceptance criteria and required ticket-provided validation items are complete.
-- Validation/tests are green for the latest commit:
-  - `npm run build` — tsc compiles clean.
-  - `npm test` — Vitest passes (when configured).
-  - `npm run lint` — Biome passes (when configured).
+- Validation/tests are green for the latest commit.
 - **Anti-Mockup Verification: zero mockups, stubs, placeholder code, or fake data remain in changed files (scan results documented in workpad).**
 - `/review-work` sub-agents pass (goal, quality, security, QA, context).
 - PR checks are green, branch is pushed, and PR is linked on the issue.
+- Required PR metadata is present (`symphony` label).
+- If app-touching, runtime validation/media requirements from `App runtime validation (required)` are complete.
 
 ## Guardrails
 
 - **Zero tolerance for mockups/stubs is a hard requirement.** Every mockup scan violation must be fixed with real implementation before proceeding. No exceptions.
 - If the branch PR is already closed/merged, do not reuse that branch or prior implementation state for continuation.
-- For closed/merged branch PRs, create a new branch from `origin/main` and restart from scratch.
+- For closed/merged branch PRs, create a new branch from `origin/main` and restart from reproduction/planning as if starting fresh.
 - If issue state is `Backlog`, do not modify it; wait for human to move to `Todo`.
 - Do not edit the issue body/description for planning or progress tracking.
-- Use exactly one persistent workpad comment (`## Symphony Workpad`) per issue.
+- Use exactly one persistent workpad comment (`## Codex Workpad`) per issue.
 - If comment editing is unavailable in-session, use the update script. Only report blocked if both MCP editing and script-based editing are unavailable.
-- If out-of-scope improvements are found, create a separate Backlog issue rather than expanding current scope.
+- Temporary proof edits are allowed only for local verification and must be reverted before commit.
+- If out-of-scope improvements are found, create a separate Backlog issue rather
+  than expanding current scope, and include a clear
+  title/description/acceptance criteria, same-project assignment, a `related`
+  link to the current issue, and `blockedBy` when the follow-up depends on the
+  current issue.
 - Do not move to `Human Review` unless the `Completion bar before Human Review` is satisfied.
 - In `Human Review`, do not make changes; wait and poll.
 - If state is terminal (`Done`), do nothing and shut down.
 - Keep issue text concise, specific, and reviewer-oriented.
-- STAS-specific: config changes (`.env` shape) must keep `.env.example` in sync. Do not commit real tokens. Do not modify `opencode serve` externally — STAS only talks to it via HTTP API on `:4096`.
+- If blocked and no workpad exists yet, add one blocker comment describing blocker, impact, and next unblock action.
 
 ## Workpad template
 
 Use this exact structure for the persistent workpad comment and keep it updated in place throughout execution:
 
 ````md
-## Symphony Workpad
+## Codex Workpad
 
 ```text
 <hostname>:<abs-path>@<short-sha>
@@ -412,9 +379,7 @@ Use this exact structure for the persistent workpad comment and keep it updated 
 
 ### Validation
 
-- [ ] type-check: `npm run build`
-- [ ] targeted tests: `npm test` (when configured)
-- [ ] lint: `npm run lint` (when configured)
+- [ ] targeted tests: `<command>`
 
 ### Anti-Mockup Verification
 
