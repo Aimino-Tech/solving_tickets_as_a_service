@@ -1,0 +1,73 @@
+version: '3.8'
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Docker Compose profile for E2E tests.
+#
+# Usage:
+#   docker compose -f docker-compose.e2e.yml up --abort-on-container-exit
+#   docker compose -f docker-compose.e2e.yml down
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Redis (required by BullMQ) ──────────────────────────────────────────────
+  redis-e2e:
+    image: redis:7-alpine
+    container_name: stas-redis-e2e
+    ports:
+      - "16379:6379"  # Different port to avoid conflict with dev Redis
+    command: redis-server --appendonly no --save ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+    mem_limit: 256m
+    cpus: 0.5
+
+  # ── E2E Test Runner ─────────────────────────────────────────────────────────
+  e2e-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stas-e2e-tests
+    command: >
+      sh -c "
+        echo '=== STAS E2E Tests ===' &&
+        echo 'Waiting for Redis...' &&
+        while ! nc -z redis-e2e 6379; do sleep 1; done &&
+        echo 'Redis ready. Running E2E tests...' &&
+        npm run test:e2e
+      "
+    depends_on:
+      redis-e2e:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=test
+      - TEST=true
+      - LOG_LEVEL=silent
+      - REDIS_URL=redis://redis-e2e:6379
+      - GITHUB_APP_ID=999999
+      - GITHUB_WEBHOOK_SECRET=test-secret
+      - DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY=true
+      - STAS_LABEL=stas:fix
+      - OPENCODE_URL=http://localhost:4096
+      - ADMIN_API_KEY=test-admin-key
+      - IP_ALLOWLIST_ENABLED=false
+      - SLACK_WEBHOOK_URL=
+      - E2B_API_KEY=
+      - LINEAR_API_KEY=
+      - JIRA_URL=
+      - STRIPE_SECRET_KEY=
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./vitest.config.e2e.ts:/app/vitest.config.e2e.ts
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+
+# ── Notes ─────────────────────────────────────────────────────────────────────
+# To run E2E tests locally without Docker:
+#   1. Start Redis: docker compose up -d redis
+#   2. Run: npm run test:e2e
+# ──────────────────────────────────────────────────────────────────────────────
