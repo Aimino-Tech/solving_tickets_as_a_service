@@ -17,6 +17,9 @@ export default defineConfig({
     // Setup file runs before each test file
     setupFiles: ["src/__tests__/setup.ts"],
 
+    // Exclude E2E tests from normal runs
+    exclude: ["**/node_modules/**", "**/dist/**", "**/tests/e2e/**"],
+
     // Coverage configuration
     coverage: {
       provider: "v8",

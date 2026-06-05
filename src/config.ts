@@ -65,14 +65,22 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_CHEAP_MODEL: z.string().default('gpt-4o-mini'),
 
-  // Sandbox
+  // Sandbox — E2B
   E2B_API_KEY: z.string().optional(),
   E2B_TEMPLATE_ID: z.string().default('stas-default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
-  // STAS
+  // Sandbox — Docker
+  DOCKER_IMAGE: z.string().default('ubuntu:24.04'),
+  DOCKER_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+  DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(true),
+  DOCKER_ALLOWED_HOSTS: z
+    .string()
+    .default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io,rubygems.org,repo1.maven.org,packagist.org,getcomposer.org'),
+  DOCKER_CONTAINER_MEMORY: z.string().default('4g'),
+  DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(2),
 
-  // Pricing
+  // STAS
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
   STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
   STAS_LABEL: z.string().default('stas:fix'),
@@ -123,6 +131,13 @@ const envSchema = z.object({
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
+  // Usage metering
+  USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
+  USAGE_CREDITS_TRIAGE: z.coerce.number().int().positive().default(10),
+  USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
+
+  // Feature flags
+  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
@@ -130,6 +145,11 @@ const envSchema = z.object({
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
   DATABASE_SSL: z.coerce.boolean().default(false),
   DATABASE_ENABLE_AUDIT_PERSISTENCE: z.coerce.boolean().default(false),
+
+  // Rate limiting (credit-based)
+  STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
+  STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
+  STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
 
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
@@ -154,6 +174,18 @@ const envSchema = z.object({
   SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
+  // Feature Flags
+  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
+  // Metering / Usage Tracking
+  METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
+  METERING_COST_OPENCODE_PRIMARY: z.coerce.number().int().positive().default(10),
+  METERING_COST_OPENCODE_FALLBACK: z.coerce.number().int().positive().default(5),
+  METERING_COST_PR_CREATION: z.coerce.number().int().positive().default(2),
+  METERING_COST_RETRY_PENALTY: z.coerce.number().int().positive().default(3),
+  METERING_BASELINE_SANDBOX_MS: z.coerce.number().int().positive().default(300000),
+  METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
+  METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
+  METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -162,7 +194,30 @@ type ParsedEnv = z.infer<typeof envSchema>;
 // Build config tree
 // ---------------------------------------------------------------------------
 
+
+function parseConcurrencyOverrides(raw: string): Record<string, number> {
+  if (!raw) return {};
+  const result: Record<string, number> = {};
+  for (const part of raw.split(',')) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = Number(trimmed.slice(eqIdx + 1).trim());
+    if (!Number.isNaN(val) && Number.isInteger(val) && val > 0) {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
 function buildConfig(env: ParsedEnv) {
+  // Parse allowed hosts from comma-separated string
+  const allowedHosts = env.DOCKER_ALLOWED_HOSTS.split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   return {
     port: env.PORT,
     runMode: env.RUN_MODE,
@@ -231,6 +286,15 @@ function buildConfig(env: ParsedEnv) {
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
     },
 
+    docker: {
+      image: env.DOCKER_IMAGE,
+      sandboxTimeoutMs: env.DOCKER_SANDBOX_TIMEOUT_MS,
+      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
+      allowedHosts,
+      containerMemory: env.DOCKER_CONTAINER_MEMORY,
+      containerCpu: env.DOCKER_CONTAINER_CPU,
+    },
+
     slack: {
       webhookUrl: env.SLACK_WEBHOOK_URL,
       channel: env.SLACK_CHANNEL,
@@ -249,6 +313,22 @@ function buildConfig(env: ParsedEnv) {
       rateLimitMax: env.STAS_RATE_LIMIT_MAX,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    },
+
+    rateLimit: {
+      defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
+      ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
+      adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
+    },
+
+    usage: {
+      creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
+      creditsTriage: env.USAGE_CREDITS_TRIAGE,
+      creditsSandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    featureFlags: {
+      defaultTtlSeconds: env.FEATURE_FLAGS_DEFAULT_TTL_SECONDS,
     },
 
     stripe: {
@@ -274,6 +354,11 @@ function buildConfig(env: ParsedEnv) {
       sandboxBoot: env.PHASE_TIMEOUT_SANDBOX_MS,
       openCodeAgent: env.FIX_TIMEOUT_MS,
       prCreation: env.PHASE_TIMEOUT_PRCREATION_MS,
+    },
+
+    featureFlags: {
+      defaultTtlSeconds: env.FEATURE_FLAGS_DEFAULT_TTL_SECONDS,
+      autoDisableThreshold: env.FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD,
     },
 
     trackers: {
@@ -318,6 +403,21 @@ function buildConfig(env: ParsedEnv) {
         diskLimit: env.SANDBOX_DISK_LIMIT,
         networkEnabled: env.SANDBOX_NETWORK_ENABLED,
       },
+    metering: {
+      costTriage: env.METERING_COST_TRIAGE,
+      costOpencodePrimary: env.METERING_COST_OPENCODE_PRIMARY,
+      costOpencodeFallback: env.METERING_COST_OPENCODE_FALLBACK,
+      costPrCreation: env.METERING_COST_PR_CREATION,
+      costRetryPenalty: env.METERING_COST_RETRY_PENALTY,
+      baselineSandboxMs: env.METERING_BASELINE_SANDBOX_MS,
+      freeMonthlyCredits: env.METERING_FREE_MONTHLY_CREDITS,
+      sandboxMultiplierMin: env.METERING_SANDBOX_MULTIPLIER_MIN,
+      sandboxMultiplierMax: env.METERING_SANDBOX_MULTIPLIER_MAX,
+    },
+    usageCredits: {
+      fixRun: env.USAGE_CREDITS_FIX_RUN,
+      triage: env.USAGE_CREDITS_TRIAGE,
+      sandbox: env.USAGE_CREDITS_SANDBOX,
     },
   } as const;
 }

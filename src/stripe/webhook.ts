@@ -23,7 +23,9 @@ import type { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { creditsRepository } from '../db/repositories/CreditsRepository.js';
 import { CREDIT_PACKS } from './credit-packs.js';
+import { creditsRepository } from '../db/repositories/CreditsRepository.js';
 
 const log = rootLogger.child({ module: 'stripe-webhook' });
 
@@ -169,15 +171,23 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
     'Crediting account after successful checkout',
   );
 
-  // TODO: Persist credit balance to database once the billing/credits table exists.
-  // For now, log the fulfilment - the account service integration will be added
-  // in a follow-up ticket.
-  //
-  // Example future implementation:
-  //   await creditAccount(Number(accountId), totalCredits, {
-  //     source: 'stripe_checkout',
-  //     stripeSessionId: session.id,
-  //   });
+  try {
+    await creditsRepository.credit(Number(accountId), totalCredits, {
+      type: 'purchase',
+      description: `Purchased ${pack.label} — ${pack.credits} credits + ${pack.bonus} bonus`,
+      stripePaymentIntentId: session.payment_intent?.toString(),
+    });
+    const balance = await creditsRepository.getBalance(Number(accountId));
+    log.info(
+      { accountId: Number(accountId), creditsAdded: totalCredits, newBalance: balance.balance },
+      'Account credited after successful checkout',
+    );
+  } catch (err) {
+    log.error(
+      { err: String(err), accountId: Number(accountId), sessionId: session.id },
+      'Failed to credit account after checkout',
+    );
+  }
 }
 
 /**
