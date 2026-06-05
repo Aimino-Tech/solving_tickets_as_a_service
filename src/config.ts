@@ -293,9 +293,6 @@ function buildConfig(env: ParsedEnv) {
       creditsSandbox: env.USAGE_CREDITS_SANDBOX,
     },
 
-    featureFlags: {
-      defaultTtlSeconds: env.FEATURE_FLAGS_DEFAULT_TTL_SECONDS,
-    },
 
     stripe: {
       secretKey: env.STRIPE_SECRET_KEY,

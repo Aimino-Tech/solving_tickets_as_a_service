@@ -36,6 +36,7 @@ import { rootLogger } from "../utils/logger.js";
 import { recordQueueDepth } from "../bridge/metrics.js";
 import * as messages from "../github/messages.js";
 import { getOctokit } from "../github/auth.js";
+import { logFixJobEvent } from "../audit/service.js";
 
 const log = rootLogger.child({ module: 'issue-queue' });
 
@@ -124,6 +125,16 @@ export function createIssueWorker(): Worker<IssueJobData> {
         'Processing issue job',
       );
 
+      // Audit log: fix job started
+      logFixJobEvent({
+        jobId: job.id ?? 'unknown',
+        event: retryCount > 0 ? 'retried' : 'started',
+        accountId: String(data.installationId),
+        repo: `${data.repoOwner}/${data.repoName}`,
+        issueNumber: data.issueNumber,
+        correlationId: job.id ?? undefined,
+      }).catch(() => {});
+
       // Post retry status comment if this is a retry
       if (retryCount > 0 && data.lastError) {
         try {
@@ -203,6 +214,16 @@ export function createIssueWorker(): Worker<IssueJobData> {
       { jobId: job.id, repo: `${job.data.repoOwner}/${job.data.repoName}`, issueNumber: job.data.issueNumber },
       'Job completed',
     );
+
+    // Audit log: fix job completed
+    logFixJobEvent({
+      jobId: job.id ?? 'unknown',
+      event: 'completed',
+      accountId: String(job.data.installationId),
+      repo: `${job.data.repoOwner}/${job.data.repoName}`,
+      issueNumber: job.data.issueNumber,
+      correlationId: job.id ?? undefined,
+    }).catch(() => {});
   });
 
   worker.on("failed", async (job, err) => {
@@ -238,6 +259,18 @@ export function createIssueWorker(): Worker<IssueJobData> {
       },
       'Job failed',
     );
+
+    // Audit log: fix job failed
+    const jobId4 = job?.id ?? 'unknown';
+    logFixJobEvent({
+      jobId: jobId4,
+      event: 'failed',
+      accountId: data ? String(data.installationId) : undefined,
+      repo: data ? `${data.repoOwner}/${data.repoName}` : undefined,
+      issueNumber: data?.issueNumber,
+      error: errorMsg,
+      correlationId: jobId4,
+    }).catch(() => {});
 
     // Schedule retry if slots remain
     if (retryCount < config.queue.maxRetries) {

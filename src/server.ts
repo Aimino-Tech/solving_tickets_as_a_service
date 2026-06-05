@@ -42,6 +42,7 @@ import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
 import { bridgeMetrics } from './bridge/metrics.js';
 import { adminRouter } from './routes/admin.js';
+import { logWebhookReceived } from './audit/service.js';
 import { dashboardRouter } from './routes/dashboard.js';
 
 const log = rootLogger.child({ module: 'server' });
@@ -209,6 +210,15 @@ export function createApp(): express.Application {
       }
     }
 
+    // Fire-and-forget audit log
+    logWebhookReceived({
+      source: 'github',
+      eventType: event,
+      deliveryId,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    }).catch(() => {});
     res.status(202).json({ accepted: true });
   }
 
@@ -254,6 +264,14 @@ export function createApp(): express.Application {
       log.error({ err: String(err) }, 'GitLab webhook processing error');
     }
 
+    // Fire-and-forget audit log
+    logWebhookReceived({
+      source: 'gitlab',
+      eventType: event,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    }).catch(() => {});
     res.status(202).json({ accepted: true });
   });
 
@@ -276,6 +294,13 @@ export function createApp(): express.Application {
       log.error({ err: String(err) }, 'Bitbucket webhook processing error');
     }
 
+    // Fire-and-forget audit log
+    logWebhookReceived({
+      source: 'bitbucket',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    }).catch(() => {});
     res.status(202).json({ accepted: true });
   });
 
@@ -343,6 +368,13 @@ export function createApp(): express.Application {
       }
     }
 
+    // Fire-and-forget audit log
+    logWebhookReceived({
+      source: 'linear',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    }).catch(() => {});
     res.status(202).json({ accepted: true });
   });
 
@@ -410,6 +442,13 @@ export function createApp(): express.Application {
       }
     }
 
+    // Fire-and-forget audit log
+    logWebhookReceived({
+      source: 'jira',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    }).catch(() => {});
     res.status(202).json({ accepted: true });
   });
 

@@ -34,7 +34,7 @@ async function safeLog(entry: AuditLogEntry): Promise<void> {
  */
 export async function logWebhookReceived(params: {
   source: string;
-  eventType: string;
+  eventType?: string;
   deliveryId?: string;
   ipAddress?: string;
   userAgent?: string;
