@@ -123,18 +123,13 @@ const envSchema = z.object({
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
-  USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
-  USAGE_CREDITS_TRIAGE: z.coerce.number().int().positive().default(10),
-  USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
-
-  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
+  // Feature flags
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
   DATABASE_SSL: z.coerce.boolean().default(false),
-
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -248,6 +243,12 @@ function buildConfig(env: ParsedEnv) {
       rateLimitMax: env.STAS_RATE_LIMIT_MAX,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    },
+
+    usage: {
+      creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
+      creditsTriage: env.USAGE_CREDITS_TRIAGE,
+      creditsSandbox: env.USAGE_CREDITS_SANDBOX,
     },
 
     stripe: {
