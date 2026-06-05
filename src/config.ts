@@ -36,7 +36,7 @@ const envSchema = z.object({
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
-  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('bullmq'),
+  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('both'),
 
   // RabbitMQ
   RABBITMQ_URL: z.string().default('amqp://localhost:5672/stas'),

@@ -79,6 +79,7 @@ vi.mock("../../config.js", () => ({
       keepFailed: 100,
       maxRetries: 4,
       retryDelays: [30000, 120000, 300000, 900000],
+      backend: 'bullmq',
     },
   },
 }));
