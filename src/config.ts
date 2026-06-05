@@ -312,6 +312,12 @@ function buildConfig(env: ParsedEnv) {
       sandboxMultiplierMin: env.METERING_SANDBOX_MULTIPLIER_MIN,
       sandboxMultiplierMax: env.METERING_SANDBOX_MULTIPLIER_MAX,
     },
+
+    usageCredits: {
+      fixRun: env.USAGE_CREDITS_FIX_RUN,
+      triage: env.USAGE_CREDITS_TRIAGE,
+      sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
   } as const;
 }
 
