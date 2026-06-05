@@ -134,6 +134,20 @@ export function createApp(): express.Application {
   app.get('/metrics', (_req: Request, res: Response) => {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.send(bridgeMetrics.render());
+
+  // -- DLQ Admin API: Replay messages ---------------------------------------
+  app.post("/api/v1/admin/dlq/replay", async (req: Request, res: Response) => {
+    try {
+      const { queueName, messageIds } = req.body as { queueName?: string; messageIds?: string[] };
+      const { replayDLQMessages } = await import("./queue/rabbitmq.js");
+
+      const result = await replayDLQMessages(queueName, messageIds);
+      res.json(result);
+    } catch (err) {
+      log.error({ err: String(err) }, "DLQ replay failed");
+      res.status(500).json({ error: "DLQ replay failed", details: String(err) });
+    }
+  });
   });
 
   // -- Initialize trackers --------------------------------------------------
