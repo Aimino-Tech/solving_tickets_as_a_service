@@ -1,0 +1,56 @@
+# E2E Test Infrastructure for STAS
+#
+# Provides the minimal services needed to run E2E tests:
+#   - Redis 7 (BullMQ queue backend)
+#   - RabbitMQ 4 (optional, for cross-service bridge tests)
+#
+# Usage:
+#   docker compose -f docker-compose.e2e.yml up -d
+#   npm run test:e2e
+#   docker compose -f docker-compose.e2e.yml down
+
+services:
+
+  redis-e2e:
+    image: redis:7-alpine
+    container_name: stas-e2e-redis
+    ports:
+      - "16379:6379"
+    command: redis-server --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+    mem_limit: 128m
+    cpus: 0.25
+    restart: "no"
+    networks:
+      - stas-e2e-net
+
+  rabbitmq-e2e:
+    image: rabbitmq:4-management-alpine
+    container_name: stas-e2e-rabbitmq
+    ports:
+      - "15673:15672"
+      - "5673:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: stas-e2e
+      RABBITMQ_DEFAULT_PASS: stas-e2e-password
+      RABBITMQ_DEFAULT_VHOST: /stas-e2e
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    mem_limit: 256m
+    cpus: 0.5
+    restart: "no"
+    profiles:
+      - full
+    networks:
+      - stas-e2e-net
+
+networks:
+  stas-e2e-net:
+    driver: bridge
