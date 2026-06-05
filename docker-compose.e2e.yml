@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: stas-e2e-redis
+    ports:
+      - "16379:6379"
+    command: redis-server --appendonly no --save ""
+    tmpfs: /data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+    networks:
+      - stas-e2e-net
+    mem_limit: 128m
+    cpus: 0.3
+
+  # Note: The E2E test suite creates its own mock servers for GitHub API
+  # and OpenCode. No additional services are needed beyond Redis.
+  #
+  # Run tests with:
+  #   docker compose -f docker-compose.e2e.yml up -d redis
+  #   npm run test:e2e
+
+networks:
+  stas-e2e-net:
+    driver: bridge

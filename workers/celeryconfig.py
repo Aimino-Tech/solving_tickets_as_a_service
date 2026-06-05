@@ -1,6 +1,44 @@
 from kombu import Exchange, Queue
 
-broker_url = "pyamqp://guest:guest@localhost:5672//"
+
+import os
+
+# ── Retry Configuration ─────────────────────────────────────────
+TASK_DEFAULT_RETRY_DELAY = int(os.getenv("CELERY_RETRY_DELAY_SECONDS", "60"))
+TASK_TRIAGE_RETRY_DELAY = int(os.getenv("CELERY_TRIAGE_RETRY_DELAY_SECONDS", "30"))
+TASK_AGENT_RETRY_DELAY = int(os.getenv("CELERY_AGENT_RETRY_DELAY_SECONDS", "60"))
+TASK_SANDBOX_RETRY_DELAY = int(os.getenv("CELERY_SANDBOX_RETRY_DELAY_SECONDS", "30"))
+TASK_PR_RETRY_DELAY = int(os.getenv("CELERY_PR_RETRY_DELAY_SECONDS", "30"))
+TASK_NOTIFICATION_RETRY_DELAY = int(os.getenv("CELERY_NOTIFICATION_RETRY_DELAY_SECONDS", "10"))
+TASK_VERIFICATION_RETRY_DELAY = int(os.getenv("CELERY_VERIFICATION_RETRY_DELAY_SECONDS", "30"))
+
+# ── Beat Schedule (Periodic Tasks) ───────────────────────────────
+from celery.schedules import crontab
+
+beat_schedule = {
+    "queue-health-check": {
+        "task": "workers.tasks.periodic.queue_health_check",
+        "schedule": crontab(minute="*/5"),
+        "args": (),
+    },
+    "dlq-cleanup": {
+        "task": "workers.tasks.periodic.dlq_cleanup",
+        "schedule": crontab(hour=2, minute=0),
+        "args": (),
+    },
+    "metrics-push": {
+        "task": "workers.tasks.periodic.push_metrics",
+        "schedule": crontab(minute="*"),
+        "args": (),
+    },
+    "worker-liveness-report": {
+        "task": "workers.tasks.periodic.report_liveness",
+        "schedule": crontab(minute="*/1"),
+        "args": (),
+    },
+}
+
+broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")
 result_backend = "redis://localhost:6379/0"
 
 task_serializer = "json"

@@ -57,7 +57,16 @@ vi.mock('../../utils/logger.js', () => ({
 vi.mock('../../config.js', () => ({
   config: {
     github: { webhookSecret: 'test-secret' },
-    stas: { label: 'stas:fix' },
+    stas: {
+      label: 'stas:fix',
+      rateLimit: {
+        windowMs: 60_000,
+        max: 30,
+        repoLimit: 5,
+        accountLimit: 10,
+        repoConcurrencyMax: 3,
+      },
+    },
   },
 }));
 

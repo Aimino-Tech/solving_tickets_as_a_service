@@ -36,7 +36,7 @@ const envSchema = z.object({
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
-  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('both'),
+  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('bullmq'),
 
   // RabbitMQ
   RABBITMQ_URL: z.string().default('amqp://localhost:5672/stas'),
@@ -44,12 +44,12 @@ const envSchema = z.object({
   RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5000),
   RABBITMQ_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
 
-  // Bridge
-  BRIDGE_RPC_TIMEOUT: z.coerce.number().int().positive().default(30000),
-  BRIDGE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(3),
-  BRIDGE_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(5),
-  QUEUE_FALLBACK_BACKEND: z.enum(['redis', 'local', 'none']).default('redis'),
-
+  // RabbitMQ TLS (for amqps:// connections)
+  RABBITMQ_TLS_CERT_PATH: z.string().optional(),
+  RABBITMQ_TLS_KEY_PATH: z.string().optional(),
+  RABBITMQ_TLS_CA_PATH: z.string().optional(),
+  RABBITMQ_TLS_SERVER_NAME: z.string().optional(),
+  RABBITMQ_TLS_REJECT_UNAUTHORIZED: z.coerce.boolean().default(true),
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
@@ -65,23 +65,41 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_CHEAP_MODEL: z.string().default('gpt-4o-mini'),
 
-  // Sandbox
+  // Sandbox — E2B
   E2B_API_KEY: z.string().optional(),
   E2B_TEMPLATE_ID: z.string().default('stas-default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
+  // Sandbox — Docker
+  DOCKER_IMAGE: z.string().default('ubuntu:24.04'),
+  DOCKER_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+  DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(true),
+  DOCKER_ALLOWED_HOSTS: z
+    .string()
+    .default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io,rubygems.org,repo1.maven.org,packagist.org,getcomposer.org'),
+  DOCKER_CONTAINER_MEMORY: z.string().default('4g'),
+  DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(2),
+
   // STAS
- 
+
   // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
   STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
-  STAS_LABEL: z.string().default('stas:fix'),
-  BOT_NAME: z.string().default('STAS'),
+  STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
+  STAS_LABEL: z.string().default("stas:fix"),
+  BOT_NAME: z.string().default("STAS"),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  // Admin API
+  ADMIN_API_KEY: z.string().optional(),
+
+  // Webhook Retry Worker
+  WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
+  WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
+
 
   // GitLab
   GITLAB_URL: z.string().default('https://gitlab.com'),
@@ -123,26 +141,93 @@ const envSchema = z.object({
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
+  // Usage metering
   USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
   USAGE_CREDITS_TRIAGE: z.coerce.number().int().positive().default(10),
   USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
 
+  // Feature flags
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
+  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
   DATABASE_SSL: z.coerce.boolean().default(false),
+  DATABASE_ENABLE_AUDIT_PERSISTENCE: z.coerce.boolean().default(false),
 
+  // ── Security ──────────────────────────────────────────────────────────────
+  ADMIN_API_KEY: z.string().optional(),
+  CORS_ORIGIN: z.string().default('*'),
+  REQUEST_BODY_LIMIT: z.string().default('1mb'),
+  WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
+
+  // ── IP Allowlist ──
+  IP_ALLOWLIST_ENABLED: z.coerce.boolean().default(false),
+  IP_ALLOWLIST: z.string().default(''),
+
+  // ── Sandbox Security ──
+  SANDBOX_PRIVILEGED: z.coerce.boolean().default(false),
+  SANDBOX_READONLY_ROOT: z.coerce.boolean().default(true),
+  SANDBOX_MEMORY_LIMIT: z.string().default('512m'),
+  SANDBOX_CPU_LIMIT: z.string().default('0.5'),
+  SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
+  SANDBOX_DISK_LIMIT: z.string().default('2gb'),
+  SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
+
+  // Rate limiting (credit-based)
+  STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
+  STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
+  STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
+
+  // Admin API
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+
+  // ── Security ──────────────────────────────────────────────────────────────
+  ADMIN_API_KEY: z.string().optional(),
+  ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  CORS_ORIGIN: z.string().default('*'),
+  REQUEST_BODY_LIMIT: z.string().default('1mb'),
+  WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
+
+  // ── IP Allowlist ──
+  IP_ALLOWLIST_ENABLED: z.coerce.boolean().default(false),
+  IP_ALLOWLIST: z.string().default(''),
+  // Comma-separated list of IPs or CIDR ranges allowed to access webhooks
+
+  // ── Sandbox Security ──
+  SANDBOX_PRIVILEGED: z.coerce.boolean().default(false),
+  SANDBOX_READONLY_ROOT: z.coerce.boolean().default(true),
+  SANDBOX_MEMORY_LIMIT: z.string().default('512m'),
+  SANDBOX_CPU_LIMIT: z.string().default('0.5'),
+  SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
+  SANDBOX_DISK_LIMIT: z.string().default('2gb'),
+  SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
 
   // Feature Flags
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
   FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
+  // Sentry
+  SENTRY_DSN: z.string().optional(),
+  SENTRY_ENVIRONMENT: z.string().default('development'),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
+
+  // Health & Monitoring
+  HEALTH_QUEUE_DEPTH_WARN_THRESHOLD: z.coerce.number().int().positive().default(50),
+  HEALTH_QUEUE_DEPTH_CRIT_THRESHOLD: z.coerce.number().int().positive().default(200),
+  HEALTH_QUEUE_DEPTH_ALERT_MINUTES: z.coerce.number().int().positive().default(5),
+  DLQ_RETENTION_DAYS: z.coerce.number().int().positive().default(7),
+
+  // Alerting
+  ALERT_SLACK_CHANNEL: z.string().default('#stas-alerts'),
+  ALERT_WARN_QUEUE_DEPTH: z.coerce.number().int().positive().default(50),
+  ALERT_CRIT_QUEUE_DEPTH: z.coerce.number().int().positive().default(200),
+  ALERT_WARN_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(10),
+  ALERT_CRIT_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(30),
   // Metering / Usage Tracking
   METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
   METERING_COST_OPENCODE_PRIMARY: z.coerce.number().int().positive().default(10),
@@ -161,7 +246,30 @@ type ParsedEnv = z.infer<typeof envSchema>;
 // Build config tree
 // ---------------------------------------------------------------------------
 
+
+function parseConcurrencyOverrides(raw: string): Record<string, number> {
+  if (!raw) return {};
+  const result: Record<string, number> = {};
+  for (const part of raw.split(',')) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = Number(trimmed.slice(eqIdx + 1).trim());
+    if (!Number.isNaN(val) && Number.isInteger(val) && val > 0) {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
 function buildConfig(env: ParsedEnv) {
+  // Parse allowed hosts from comma-separated string
+  const allowedHosts = env.DOCKER_ALLOWED_HOSTS.split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   return {
     port: env.PORT,
     runMode: env.RUN_MODE,
@@ -192,13 +300,13 @@ function buildConfig(env: ParsedEnv) {
       prefetchCount: env.RABBITMQ_PREFETCH_COUNT,
       reconnectDelayMs: env.RABBITMQ_RECONNECT_DELAY_MS,
       maxReconnectAttempts: env.RABBITMQ_MAX_RECONNECT_ATTEMPTS,
-    },
-
-    bridge: {
-      rpcTimeoutMs: env.BRIDGE_RPC_TIMEOUT,
-      maxRetries: env.BRIDGE_MAX_RETRIES,
-      circuitBreakerThreshold: env.BRIDGE_CIRCUIT_BREAKER_THRESHOLD,
-      fallbackBackend: env.QUEUE_FALLBACK_BACKEND,
+      tls: {
+        certPath: env.RABBITMQ_TLS_CERT_PATH,
+        keyPath: env.RABBITMQ_TLS_KEY_PATH,
+        caPath: env.RABBITMQ_TLS_CA_PATH,
+        servername: env.RABBITMQ_TLS_SERVER_NAME,
+        rejectUnauthorized: env.RABBITMQ_TLS_REJECT_UNAUTHORIZED,
+      },
     },
 
     opencode: {
@@ -230,6 +338,15 @@ function buildConfig(env: ParsedEnv) {
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
     },
 
+    docker: {
+      image: env.DOCKER_IMAGE,
+      sandboxTimeoutMs: env.DOCKER_SANDBOX_TIMEOUT_MS,
+      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
+      allowedHosts,
+      containerMemory: env.DOCKER_CONTAINER_MEMORY,
+      containerCpu: env.DOCKER_CONTAINER_CPU,
+    },
+
     slack: {
       webhookUrl: env.SLACK_WEBHOOK_URL,
       channel: env.SLACK_CHANNEL,
@@ -238,6 +355,31 @@ function buildConfig(env: ParsedEnv) {
       interactionsPath: env.SLACK_INTERACTIONS_PATH,
     },
 
+    admin: {
+      apiKey: env.ADMIN_API_KEY ?? '',
+      rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
+    },
+
+    sentry: {
+      dsn: env.SENTRY_DSN,
+      environment: env.SENTRY_ENVIRONMENT,
+      tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE,
+    },
+
+    monitoring: {
+      queueDepthWarnThreshold: env.HEALTH_QUEUE_DEPTH_WARN_THRESHOLD,
+      queueDepthCritThreshold: env.HEALTH_QUEUE_DEPTH_CRIT_THRESHOLD,
+      queueDepthAlertMinutes: env.HEALTH_QUEUE_DEPTH_ALERT_MINUTES,
+      dlqRetentionDays: env.DLQ_RETENTION_DAYS,
+    },
+
+    alerting: {
+      slackChannel: env.ALERT_SLACK_CHANNEL,
+      warnQueueDepth: env.ALERT_WARN_QUEUE_DEPTH,
+      critQueueDepth: env.ALERT_CRIT_QUEUE_DEPTH,
+      warnErrorRatePercent: env.ALERT_WARN_ERROR_RATE_PERCENT,
+      critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
+    },
     stas: {
       label: env.STAS_LABEL,
       botName: env.BOT_NAME,
@@ -249,6 +391,30 @@ function buildConfig(env: ParsedEnv) {
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
     },
+
+    webhookRetry: {
+      pollIntervalMs: env.WEBHOOK_RETRY_POLL_INTERVAL_MS,
+      batchSize: env.WEBHOOK_RETRY_BATCH_SIZE,
+    },
+
+    usage: {
+      creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
+      creditsTriage: env.USAGE_CREDITS_TRIAGE,
+      creditsSandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    rateLimit: {
+      defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
+      ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
+      adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
+    },
+
+    usage: {
+      creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
+      creditsTriage: env.USAGE_CREDITS_TRIAGE,
+      creditsSandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
 
     stripe: {
       secretKey: env.STRIPE_SECRET_KEY,
@@ -263,6 +429,7 @@ function buildConfig(env: ParsedEnv) {
       poolMin: env.DATABASE_POOL_MIN,
       poolMax: env.DATABASE_POOL_MAX,
       ssl: env.DATABASE_SSL,
+      enableAuditPersistence: env.DATABASE_ENABLE_AUDIT_PERSISTENCE,
     },
 
     fixTimeoutMs: env.FIX_TIMEOUT_MS,
@@ -301,6 +468,28 @@ function buildConfig(env: ParsedEnv) {
       installationId: env.TRACKER_INSTALLATION_ID || 0,
     },
 
+    // ── Security ────────────────────────────────────────────────────────────
+    security: {
+      adminApiKey: env.ADMIN_API_KEY,
+      corsOrigin: env.CORS_ORIGIN,
+      requestBodyLimit: env.REQUEST_BODY_LIMIT,
+      webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
+
+      ipAllowlist: {
+        enabled: env.IP_ALLOWLIST_ENABLED,
+        ips: env.IP_ALLOWLIST.split(',').map((s) => s.trim()).filter(Boolean),
+      },
+      sandbox: {
+        privileged: env.SANDBOX_PRIVILEGED,
+        readOnlyRoot: env.SANDBOX_READONLY_ROOT,
+        memoryLimit: env.SANDBOX_MEMORY_LIMIT,
+        cpuLimit: env.SANDBOX_CPU_LIMIT,
+        pidsLimit: env.SANDBOX_PIDS_LIMIT,
+        diskLimit: env.SANDBOX_DISK_LIMIT,
+        networkEnabled: env.SANDBOX_NETWORK_ENABLED,
+      },
+    },
+
     metering: {
       costTriage: env.METERING_COST_TRIAGE,
       costOpencodePrimary: env.METERING_COST_OPENCODE_PRIMARY,
@@ -317,6 +506,27 @@ function buildConfig(env: ParsedEnv) {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    // ── Security ────────────────────────────────────────────────────────────
+    security: {
+      adminApiKey: env.ADMIN_API_KEY,
+      corsOrigin: env.CORS_ORIGIN,
+      requestBodyLimit: env.REQUEST_BODY_LIMIT,
+      webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
+      ipAllowlist: {
+        enabled: env.IP_ALLOWLIST_ENABLED,
+        ips: env.IP_ALLOWLIST.split(',').map((s) => s.trim()).filter(Boolean),
+      },
+      sandbox: {
+        privileged: env.SANDBOX_PRIVILEGED,
+        readOnlyRoot: env.SANDBOX_READONLY_ROOT,
+        memoryLimit: env.SANDBOX_MEMORY_LIMIT,
+        cpuLimit: env.SANDBOX_CPU_LIMIT,
+        pidsLimit: env.SANDBOX_PIDS_LIMIT,
+        diskLimit: env.SANDBOX_DISK_LIMIT,
+        networkEnabled: env.SANDBOX_NETWORK_ENABLED,
+      },
     },
   } as const;
 }

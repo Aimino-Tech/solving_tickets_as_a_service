@@ -4,13 +4,6 @@
 ![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-
-[![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml)
-[![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml)
-
-[![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml)
-[![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml)
-
 **Label a GitHub issue. Get a pull request.**
 
 STAS is an open-source GitHub bot that takes a labeled issue, investigates your codebase, writes a fix, runs your tests, and opens a PR. Backed by [OpenCode](https://opencode.ai) — the 162K ★ open-source coding agent.
@@ -182,11 +175,32 @@ docker run -p 3000:3000 --env-file .env stas-bot
 
 ### Docker Compose
 
+#### Development
 ```bash
+# Start Redis + bot with hot-reload
 docker compose up
 ```
 
-Starts Redis + bot with hot-reload. See `DEVELOPMENT.md` for details.
+#### Production Stack
+```bash
+# Start full production stack (Redis, RabbitMQ, PostgreSQL, webhook, workers, Nginx)
+docker compose -f docker-compose.prod.yml up -d
+
+# Scale workers horizontally (e.g., 4 worker replicas)
+docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
+```
+
+The production stack includes:
+- **PostgreSQL 16** — primary database
+- **Redis 7** — Celery result backend + caching
+- **RabbitMQ 4** — message broker for Celery
+- **stas-webhook** — Express.js API server (horizontally scalable)
+- **stas-worker** — Celery worker pool (horizontally scalable via `--scale`)
+- **celery-beat** — periodic task scheduler
+- **Flower** — Celery monitoring dashboard (port 5555)
+- **Nginx** — reverse proxy with TLS termination and load balancing
+
+See `DEVELOPMENT.md` for details on all deployment options.
 
 ### Kubernetes
 

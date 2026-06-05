@@ -1,20 +1,49 @@
+# =============================================================================
+# STAS CD — Build & Push Docker Image to GHCR
+#
+# Triggered on:
+#   - Push to main
+#   - Manual workflow_dispatch
+#
+# Features:
+#   - Multi-platform Docker build with BuildKit cache
+#   - Tagging: semver, branch, git SHA, latest
+#   - GitHub Container Registry push
+#   - Slack notification (success/failure)
+# =============================================================================
+
 name: CD
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Force a specific tag (e.g. v0.1.0)"
+        required: false
+        default: ""
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  deploy:
+  ##############################################################################
+  # BUILD & PUSH DOCKER IMAGE
+  ##############################################################################
+  build-and-push:
     name: Build & Push to GHCR
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       packages: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -34,6 +63,11 @@ jobs:
             type=semver,pattern={{version}}
             type=ref,event=branch
             type=sha,format=short
+            type=raw,value=${{ inputs.tag || '' }},enable=${{ inputs.tag != '' }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -42,3 +76,47 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate image summary
+        id: summary
+        run: |
+          {
+            echo '### 🚀 Docker image published'
+            echo ''
+            echo '| Tag | Digest |'
+            echo '|-----|--------|'
+            for tag in ${{ join(steps.meta.outputs.tags, '\n') }}; do
+              echo "| \`$tag\` | ${{ steps.meta.outputs.digest }} |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  ##############################################################################
+  # NOTIFY SLACK (optional — requires SLACK_WEBHOOK_URL secret)
+  ##############################################################################
+  notify:
+    name: Notify Slack
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+    timeout-minutes: 2
+    steps:
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "🚀 STAS deployment complete",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*🚀 STAS deployed*\nRepository: `${{ github.repository }}`\nCommit: <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|`${{ github.sha }}`>\nImage: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}`"
+                  }
+                }
+              ]
+            }

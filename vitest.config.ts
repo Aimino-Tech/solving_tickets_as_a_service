@@ -14,8 +14,14 @@ export default defineConfig({
     // Auto-restore mocks between tests
     restoreMocks: true,
 
+    // Exclude E2E tests from unit test runs
+    exclude: ["**/node_modules/**", "**/tests/e2e/**"],
+
     // Setup file runs before each test file
     setupFiles: ["src/__tests__/setup.ts"],
+
+    // Exclude E2E tests from normal runs
+    exclude: ["**/node_modules/**", "**/dist/**", "**/tests/e2e/**"],
 
     // Coverage configuration
     coverage: {

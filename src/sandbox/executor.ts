@@ -20,39 +20,20 @@
  * ✅ readFile/writeFile/removeFile catch with descriptive messages
  * ✅ destroy() catches kill failures (non-fatal, logs warning)
  * ✅ pushBranch() wraps all git operations with context
- * installDeps() failure is non-fatal (logs warning, continues)
+ * ✅ installDeps() failure is non-fatal (logs warning, continues)
  * ────────────────────────────────────────────────────────────────────
  */
 
 import { Sandbox } from 'e2b';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import type { SandboxExecutor, ExecResult, TestRunResult, RuntimeInfo } from './types.js';
 
 const log = rootLogger.child({ module: 'sandbox' });
 
-export interface ExecResult {
-  stdout: string;
-  stderr: string;
-  exitCode: number;
-}
+export type { ExecResult, TestRunResult, RuntimeInfo };
 
-export interface TestRunResult {
-  passed: boolean;
-  output: string;
-  command: string;
-  durationMs: number;
-}
-
-export interface RuntimeInfo {
-  language: string;
-  version: string;
-  testCommand: string;
-  installCommand: string;
-  formatCommand: string;
-  lintCommand: string;
-}
-
-export class SandboxExecutor {
+export class E2BSandboxExecutor implements SandboxExecutor {
   private sandbox: Sandbox | null = null;
   private repoDir: string = '';
   private runtimeInfo: RuntimeInfo | null = null;
@@ -60,7 +41,7 @@ export class SandboxExecutor {
 
   constructor(
     private repoUrl: string,
-    _repoOwner: string,
+    private repoOwner: string,
     private repoName: string,
     private installationId: number,
     private getToken: (installationId: number) => Promise<string>,
@@ -589,3 +570,13 @@ export class SandboxExecutor {
     }
   }
 }
+
+// ── Backward compatibility alias ────────────────────────────────────
+// Old code used `SandboxExecutor` (the class name). We keep the name
+// as a type alias so existing imports continue to work.
+/**
+ * @deprecated Use `E2BSandboxExecutor` instead. The `SandboxExecutor` name
+ * is now the shared interface from `./types.js`. This alias is maintained
+ * for backward compatibility only.
+ */
+export const SandboxExecutor = E2BSandboxExecutor;

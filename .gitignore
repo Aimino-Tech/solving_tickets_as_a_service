@@ -1,10 +1,33 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
+
+# Environment files (contain secrets - NEVER commit)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+
+# Private keys and secrets
+*.pem
+*.key
+*.cert
+stas-private-key.pem
 .stas-private-key.pem
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-workers/.env
-.venv/
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug logs
+npm-debug.log*

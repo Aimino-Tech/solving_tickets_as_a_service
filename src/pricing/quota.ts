@@ -18,6 +18,7 @@
  */
 
 import { Redis } from 'ioredis';
+import crypto from "node:crypto";
 import { config } from '../config.js';
 import type { Tier } from '../ratelimit/tiers.js';
 import { getMonthlyQuota } from './tiers.js';

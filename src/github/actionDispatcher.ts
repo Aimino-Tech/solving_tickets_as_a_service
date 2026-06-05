@@ -10,14 +10,16 @@
  * ✅ Diff-gathering failure logs a warning (non-fatal, continues)
  * ✅ Error comment posting has its own try/catch fallback
  * ✅ postComment() logs warning on failure (non-fatal)
+ * ✅ Sentry breadcrumbs for PR creation actions
  * ────────────────────────────────────────────────────────────────────
  */
 
 import type { AgentResult } from '../agent/types.js';
-import type { SandboxExecutor } from '../sandbox/executor.js';
+import type { SandboxExecutor } from '../sandbox/types.js';
 import { rootLogger } from '../utils/logger.js';
 import { getOctokit } from './auth.js';
 import * as messages from './messages.js';
+import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
 
@@ -47,6 +49,9 @@ export class ActionDispatcher {
   async dispatch(params: DispatchParams): Promise<DispatchResult> {
     const { issueNumber, issueTitle, agentResult, sandbox, repoOwner, repoName, installationId, repoDefaultBranch } =
       params;
+
+    // Set Sentry user context for error correlation
+    setUserContext(installationId, `${repoOwner}/${repoName}`);
 
     const octokit = await getOctokit(installationId);
     const baseBranch = repoDefaultBranch || 'main';
@@ -122,6 +127,15 @@ export class ActionDispatcher {
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
         log.info({ prNumber: pr.data.number }, 'High-confidence PR created');
+
+        addBreadcrumb('pr', 'High-confidence PR created', {
+          prNumber: String(pr.data.number),
+          prUrl: pr.data.html_url,
+          repo: `${repoOwner}/${repoName}`,
+          issueNumber: String(issueNumber),
+          confidence: 'high',
+        });
+
         return {
           action: 'pr_created',
           prUrl: pr.data.html_url,
@@ -153,6 +167,15 @@ export class ActionDispatcher {
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
         log.info({ prNumber: pr.data.number }, 'Draft PR created');
+
+        addBreadcrumb('pr', 'Draft PR created', {
+          prNumber: String(pr.data.number),
+          prUrl: pr.data.html_url,
+          repo: `${repoOwner}/${repoName}`,
+          issueNumber: String(issueNumber),
+          confidence: 'medium',
+        });
+
         return {
           action: 'draft_pr_created',
           prUrl: pr.data.html_url,
@@ -168,6 +191,12 @@ export class ActionDispatcher {
       return { action: 'comment_posted', commentBody: lowBody };
     } catch (err) {
       log.error({ err: String(err), issueNumber, repoOwner, repoName }, 'Error dispatching action');
+
+      addBreadcrumb('pr', 'PR creation failed', {
+        repo: `${repoOwner}/${repoName}`,
+        issueNumber: String(issueNumber),
+        error: String(err),
+      });
 
       // Fallback: post error comment
       const errorBody = messages.errorComment(`Action dispatch failed: ${String(err)}`);
