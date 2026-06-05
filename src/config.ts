@@ -36,6 +36,13 @@ const envSchema = z.object({
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
+  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('bullmq'),
+
+  // RabbitMQ
+  RABBITMQ_URL: z.string().default('amqp://localhost:5672/stas'),
+  RABBITMQ_PREFETCH_COUNT: z.coerce.number().int().positive().default(10),
+  RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5000),
+  RABBITMQ_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
 
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
@@ -133,6 +140,14 @@ function buildConfig(env: ParsedEnv) {
       keepFailed: env.QUEUE_KEEP_FAILED,
       maxRetries: env.QUEUE_MAX_RETRIES,
       retryDelays: env.QUEUE_RETRY_DELAYS.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n)),
+      backend: env.QUEUE_BACKEND,
+    },
+
+    rabbitmq: {
+      url: env.RABBITMQ_URL,
+      prefetchCount: env.RABBITMQ_PREFETCH_COUNT,
+      reconnectDelayMs: env.RABBITMQ_RECONNECT_DELAY_MS,
+      maxReconnectAttempts: env.RABBITMQ_MAX_RECONNECT_ATTEMPTS,
     },
 
     opencode: {
