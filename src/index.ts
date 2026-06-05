@@ -2,6 +2,7 @@
  * STAS — Solving Tickets As A Service
  *
  * Entry point — starts the API server, the worker, or both based on RUN_MODE.
+ * Also starts the CI monitor if CI_MONITOR_ENABLED is true.
  *
  * ══════════════════════════════════════════════════════════════════════
  * IMPORTANT: Sentry must be initialized BEFORE any other imports to
@@ -20,6 +21,8 @@
  * ✅ Server failure in 'both' mode logs and allows worker to continue
  * ✅ Worker failure in 'both' mode logs and allows server to continue
  * ✅ Sentry initialized before all other code (top of import chain)
+ * ✅ CI monitor failure logs warning (non-fatal)
+ * ✅ CI monitor stopped on graceful shutdown
  * ────────────────────────────────────────────────────────────────────
  */
 
@@ -124,7 +127,7 @@ async function main(): Promise<void> {
 
   const mode = config.runMode;
 
-  // Graceful shutdown — closes server, worker, and exits
+  // Graceful shutdown — closes server, worker, CI monitor, and exits
   const shutdown = async (signal: string) => {
     if (shutdownInProgress) return;
     shutdownInProgress = true;
@@ -149,6 +152,16 @@ async function main(): Promise<void> {
       } catch (err) {
         log.warn({ err: String(err) }, 'Error closing worker');
       }
+    }
+
+    // Stop CI monitor if running
+    try {
+      const { stopCiMonitor } = await import('./ci/monitor.js');
+      stopCiMonitor();
+      const { stopPrCiMonitor } = await import('./ci/prMonitor.js');
+      stopPrCiMonitor();
+    } catch (err) {
+      log.warn({ err: String(err) }, 'Error stopping CI monitor (non-fatal)');
     }
 
     // Stop scheduled maintenance tasks
@@ -187,6 +200,19 @@ async function main(): Promise<void> {
       if (mode === 'worker') {
         process.exit(1);
       }
+    }
+  }
+
+  // Start CI monitor if enabled
+  if (config.ci.monitorEnabled) {
+    log.info('CI_MONITOR_ENABLED is true — starting CI monitor');
+    try {
+      const { startCiMonitor } = await import('./ci/monitor.js');
+      startCiMonitor();
+      const { startPrCiMonitor } = await import('./ci/prMonitor.js');
+      startPrCiMonitor();
+    } catch (err) {
+      log.warn({ err: String(err) }, 'Failed to start CI monitor (non-fatal)');
     }
   }
 
