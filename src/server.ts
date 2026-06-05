@@ -41,7 +41,6 @@ import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
 import { adminRouter } from './routes/admin.js';
 import { dashboardRouter } from './routes/dashboard.js';
-import { auditMiddleware } from './audit/middleware.js';
 
 const log = rootLogger.child({ module: 'server' });
 

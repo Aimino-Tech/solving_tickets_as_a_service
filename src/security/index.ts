@@ -1,8 +1,9 @@
 /**
  * Security module barrel export.
  *
- * Exports admin authentication middleware and audit logging service.
+ * Exports admin authentication middleware.
+ * (Audit logging is in src/audit/ -- this barrel previously re-exported an
+ *  AuditService that duplicated src/audit/service.ts.)
  */
 
-export { AuditService } from './audit.js';
 export { adminAuthMiddleware } from './adminAuth.js';
