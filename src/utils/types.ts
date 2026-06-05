@@ -12,24 +12,24 @@ export interface IssueJobData {
   issueBody: string | null;
 
   /** Source platform that originated this job. Defaults to "github". */
-  source?: "github" | "linear" | "jira";
+  source?: 'github' | 'linear' | 'jira';
 
   /** Tracker ticket ID (Linear issue ID or Jira issue key) for cross-platform sync. */
   trackerTicketId?: string;
 
   /** Tracker platform type for posting results back to the source. */
-  trackerType?: "linear" | "jira";
+  trackerType?: 'linear' | 'jira';
 }
 
 export interface BillingPlan {
-  plan: "free" | "pro" | "enterprise";
+  plan: 'free' | 'pro' | 'enterprise';
   accountId: number;
   effectiveAt: string;
 }
 
 export interface AgentResult {
   summary: string;
-  confidence: "high" | "medium" | "low";
+  confidence: 'high' | 'medium' | 'low';
   fixReady: boolean;
   prUrl?: string;
   branchName?: string;

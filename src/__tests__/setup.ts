@@ -5,11 +5,11 @@
  * - Clears all mocks before each test (via beforeEach)
  */
 
-import { beforeEach, vi } from "vitest";
+import { beforeEach, vi } from 'vitest';
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 // Ensure we're in test mode
-process.env.TEST = "true";
+process.env.TEST = 'true';

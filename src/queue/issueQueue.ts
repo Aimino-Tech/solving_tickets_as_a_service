@@ -13,15 +13,15 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
-import { Queue, Worker, QueueEvents } from "bullmq";
-import { config } from "../config.js";
-import { runIssueAgent } from "../agent/issueAgent.js";
-import type { IssueJobData } from "../utils/types.js";
-import { rootLogger } from "../utils/logger.js";
+import { Queue, QueueEvents, Worker } from 'bullmq';
+import { runIssueAgent } from '../agent/issueAgent.js';
+import { config } from '../config.js';
+import { rootLogger } from '../utils/logger.js';
+import type { IssueJobData } from '../utils/types.js';
 
-const log = rootLogger.child({ module: "issue-queue" });
+const log = rootLogger.child({ module: 'issue-queue' });
 
-const QUEUE_NAME = "stas-issues";
+const QUEUE_NAME = 'stas-issues';
 
 /**
  * Shared Redis connection options used by BullMQ.
@@ -30,7 +30,7 @@ const QUEUE_NAME = "stas-issues";
  */
 function redisConnectionOptions() {
   return {
-    url: config.queue.redisUrl || "redis://localhost:6379",
+    url: config.queue.redisUrl || 'redis://localhost:6379',
     maxRetriesPerRequest: null,
     enableReadyCheck: true,
     retryStrategy: (times: number) => {
@@ -44,13 +44,13 @@ function redisConnectionOptions() {
 /**
  * Create the BullMQ issue queue.
  */
-export function createIssueQueue(): Queue<IssueJobData, any, string, IssueJobData> {
-  const queue = new Queue<IssueJobData, any, string, IssueJobData>(QUEUE_NAME, {
+export function createIssueQueue(): Queue<IssueJobData, unknown, string, IssueJobData> {
+  const queue = new Queue<IssueJobData, unknown, string, IssueJobData>(QUEUE_NAME, {
     connection: redisConnectionOptions(),
     defaultJobOptions: {
       attempts: 2,
       backoff: {
-        type: "exponential",
+        type: 'exponential',
         delay: 5000,
       },
       removeOnComplete: {
@@ -62,7 +62,7 @@ export function createIssueQueue(): Queue<IssueJobData, any, string, IssueJobDat
     },
   });
 
-  log.info("Issue queue created");
+  log.info('Issue queue created');
   return queue;
 }
 
@@ -80,22 +80,16 @@ export function createIssueWorker(): Worker<IssueJobData> {
           repo: `${data.repoOwner}/${data.repoName}`,
           issueNumber: data.issueNumber,
         },
-        "Processing issue job",
+        'Processing issue job',
       );
 
       // Run the agent — this is the core of STAS
       const result = await runIssueAgent(data, job.id ?? undefined);
 
       if (!result.fixReady) {
-        log.warn(
-          { jobId: job.id, reason: result.noFixReason },
-          "Fix not ready",
-        );
+        log.warn({ jobId: job.id, reason: result.noFixReason }, 'Fix not ready');
       } else {
-        log.info(
-          { jobId: job.id, confidence: result.confidence, prUrl: result.prUrl },
-          "Fix completed",
-        );
+        log.info({ jobId: job.id, confidence: result.confidence, prUrl: result.prUrl }, 'Fix completed');
       }
 
       // Return the result so it's stored in BullMQ job metadata
@@ -107,30 +101,30 @@ export function createIssueWorker(): Worker<IssueJobData> {
     },
   );
 
-  worker.on("completed", (job) => {
+  worker.on('completed', (job) => {
     log.info(
       { jobId: job.id, repo: `${job.data.repoOwner}/${job.data.repoName}`, issueNumber: job.data.issueNumber },
-      "Job completed",
+      'Job completed',
     );
   });
 
-  worker.on("failed", (job, err) => {
+  worker.on('failed', (job, err) => {
     log.error(
       {
         jobId: job?.id,
-        repo: job ? `${job.data.repoOwner}/${job.data.repoName}` : "unknown",
+        repo: job ? `${job.data.repoOwner}/${job.data.repoName}` : 'unknown',
         issueNumber: job?.data.issueNumber,
         err: String(err),
       },
-      "Job failed",
+      'Job failed',
     );
   });
 
-  worker.on("error", (err) => {
-    log.error({ err: String(err) }, "Worker error");
+  worker.on('error', (err) => {
+    log.error({ err: String(err) }, 'Worker error');
   });
 
-  log.info({ concurrency: config.queue.workerConcurrency }, "Issue worker created");
+  log.info({ concurrency: config.queue.workerConcurrency }, 'Issue worker created');
   return worker;
 }
 
@@ -142,12 +136,12 @@ export function createQueueEvents(): QueueEvents {
     connection: redisConnectionOptions(),
   });
 
-  events.on("completed", ({ jobId }) => {
-    log.debug({ jobId }, "Queue event: completed");
+  events.on('completed', ({ jobId }) => {
+    log.debug({ jobId }, 'Queue event: completed');
   });
 
-  events.on("failed", ({ jobId, failedReason }) => {
-    log.warn({ jobId, failedReason }, "Queue event: failed");
+  events.on('failed', ({ jobId, failedReason }) => {
+    log.warn({ jobId, failedReason }, 'Queue event: failed');
   });
 
   return events;
@@ -156,23 +150,16 @@ export function createQueueEvents(): QueueEvents {
 /**
  * Enqueue an issue for processing with deduplication.
  */
-export async function enqueueIssue(
-  queue: Queue<IssueJobData>,
-  data: IssueJobData,
-): Promise<string | undefined> {
+export async function enqueueIssue(queue: Queue<IssueJobData>, data: IssueJobData): Promise<string | undefined> {
   const dedupKey = `issue:${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}`;
 
   try {
-    const job = await queue.add(
-      "process-issue",
-      data,
-      {
-        deduplication: {
-          id: dedupKey,
-          ttl: config.queue.dedupTtl * 1000,
-        },
+    const job = await queue.add('process-issue', data, {
+      deduplication: {
+        id: dedupKey,
+        ttl: config.queue.dedupTtl * 1000,
       },
-    );
+    });
 
     log.info(
       {
@@ -181,7 +168,7 @@ export async function enqueueIssue(
         issueNumber: data.issueNumber,
         dedupKey,
       },
-      "Issue enqueued",
+      'Issue enqueued',
     );
 
     return job.id;
@@ -193,7 +180,7 @@ export async function enqueueIssue(
         issueNumber: data.issueNumber,
         dedupKey,
       },
-      "Failed to enqueue issue — Redis may be unreachable",
+      'Failed to enqueue issue — Redis may be unreachable',
     );
     return undefined;
   }

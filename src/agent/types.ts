@@ -17,8 +17,8 @@ export interface AgentTool {
 }
 
 export interface TriageResult {
-  type: "bug" | "feature" | "question" | "unknown";
-  difficulty: "easy" | "medium" | "hard" | "unknown";
+  type: 'bug' | 'feature' | 'question' | 'unknown';
+  difficulty: 'easy' | 'medium' | 'hard' | 'unknown';
   relevantFiles?: string[];
   summary: string;
 }
@@ -27,12 +27,12 @@ export interface FileChange {
   path: string;
   originalContent: string;
   newContent: string;
-  action: "create" | "modify" | "delete";
+  action: 'create' | 'modify' | 'delete';
 }
 
 export interface AgentResult {
   summary: string;
-  confidence: "high" | "medium" | "low";
+  confidence: 'high' | 'medium' | 'low';
   fixReady: boolean;
   prUrl?: string;
   branchName?: string;
