@@ -40,7 +40,7 @@ export interface FailureAnalysis {
  * @param logs - The raw log output from the CI run
  * @returns A structured FailureAnalysis
  */
-export async function analyzeFailure(checkName: string, logs: string): Promise<string> {
+export function analyzeFailure(checkName: string, logs: string): string {
   try {
     const analysis = parseLogs(checkName, logs);
 

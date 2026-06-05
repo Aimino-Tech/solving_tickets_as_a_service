@@ -213,11 +213,6 @@ const envSchema = z.object({
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
 
-  // Feature Flags
-  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
-  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
-
-<<<<<<< HEAD
   // Sentry
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENVIRONMENT: z.string().default('development'),
@@ -235,14 +230,12 @@ const envSchema = z.object({
   ALERT_CRIT_QUEUE_DEPTH: z.coerce.number().int().positive().default(200),
   ALERT_WARN_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(10),
   ALERT_CRIT_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(30),
-=======
+
   // CI Monitor
   CI_MONITOR_ENABLED: z.coerce.boolean().default(false),
   CI_MONITOR_REPOS: z.string().default(""),
   CI_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(2),
   CI_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(300000),
-
->>>>>>> d904601 (feat: add CI self-healing system with monitor, analyzer, and PR monitor (AIM-1218))
   // Metering / Usage Tracking
   METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
   METERING_COST_OPENCODE_PRIMARY: z.coerce.number().int().positive().default(10),

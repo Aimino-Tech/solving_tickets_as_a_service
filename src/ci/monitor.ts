@@ -292,7 +292,7 @@ async function createIssueForFailure(
   let analysis = '';
   try {
     const logs = await fetchCheckRunLogs(octokit, owner, repo, run.id);
-    analysis = await analyzeFailure(checkName, logs);
+    analysis = analyzeFailure(checkName, logs);
   } catch (err) {
     log.warn({ err: String(err) }, 'Failed to fetch/analyze CI logs (non-fatal)');
     analysis = 'Log analysis could not be completed. See the failed run for details.';
