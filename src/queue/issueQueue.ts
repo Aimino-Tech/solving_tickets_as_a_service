@@ -28,18 +28,129 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
+import crypto from "node:crypto";
 import { Queue, Worker, QueueEvents } from "bullmq";
+import { Redis } from 'ioredis';
 import { config } from "../config.js";
 import { runIssueAgent } from "../agent/issueAgent.js";
 import type { IssueJobData } from "../utils/types.js";
 import { rootLogger } from "../utils/logger.js";
+import { recordQueueDepth } from "../bridge/metrics.js";
 import * as messages from "../github/messages.js";
 import { getOctokit } from "../github/auth.js";
+import { rateLimiter } from "../ratelimit/limiter.js";
+import { getTierForAccount } from "../ratelimit/tiers.js";
 
 const log = rootLogger.child({ module: 'issue-queue' });
 
 const QUEUE_NAME = "stas-issues";
 const DLQ_NAME = "stas-issues-dlq";
+
+// ── Per-repo concurrency lock ──────────────────────────────────────
+const REPO_LOCK_KEY_PREFIX = 'concurrency:repo:';
+const REPO_LOCK_TTL_S = 600; // 10 minutes — matches FIX_TIMEOUT_MS
+
+/**
+ * Redis client for repo concurrency locks (lazy, shared).
+ */
+let repoLockClient: Redis | null = null;
+
+function getRepoLockClient(): Redis {
+  if (!repoLockClient) {
+    repoLockClient = new Redis(config.queue.redisUrl, {
+      maxRetriesPerRequest: null,
+      enableReadyCheck: true,
+      retryStrategy: (times: number) => {
+        const delay = Math.min(times * 100, 3000);
+        log.warn({ attempt: times }, `Repo lock Redis retry in ${delay}ms`);
+        return delay;
+      },
+      lazyConnect: true,
+    });
+
+    repoLockClient.on('error', (err) => {
+      log.error({ err: String(err) }, 'Repo lock Redis connection error');
+    });
+  }
+  return repoLockClient;
+}
+
+/**
+ * Priority mapping by billing plan.
+ * Lower number = higher priority in BullMQ.
+ */
+function getPriorityForPlan(billingPlan?: string): number {
+  switch (billingPlan) {
+    case 'enterprise': return 10;
+    case 'pro':         return 20;
+    case 'free':
+    default:            return 30;
+  }
+}
+
+/**
+ * Try to acquire a concurrency slot for the given repo.
+ * Uses a Redis SET to track active job IDs per repo.
+ * Returns true if the slot was acquired, false if the repo is at capacity.
+ */
+async function tryAcquireRepoSlot(
+  repoOwner: string,
+  repoName: string,
+  jobId: string,
+): Promise<boolean> {
+  try {
+    const client = getRepoLockClient();
+    const lockKey = `${REPO_LOCK_KEY_PREFIX}${repoOwner}/${repoName}`;
+    const maxConcurrency = config.stas.rateLimit?.repoConcurrencyMax ?? 3;
+
+    await client.sadd(lockKey, jobId);
+    const activeCount = await client.scard(lockKey);
+    await client.expire(lockKey, REPO_LOCK_TTL_S);
+
+    if (activeCount <= maxConcurrency) {
+      log.info({ repo: `${repoOwner}/${repoName}`, jobId, activeCount, limit: maxConcurrency },
+        'Repo concurrency slot acquired',
+      );
+      return true;
+    }
+
+    // Over limit — remove our entry and block
+    await client.srem(lockKey, jobId);
+    log.warn({ repo: `${repoOwner}/${repoName}`, jobId, activeCount, limit: maxConcurrency },
+      'Repo concurrency limit reached — slot denied',
+    );
+    return false;
+  } catch (err) {
+    log.error({ err: String(err), repo: `${repoOwner}/${repoName}`, jobId },
+      'Repo concurrency acquire failed — allowing (fail-open)',
+    );
+    return true;
+  }
+}
+
+/**
+ * Release a concurrency slot for the given repo.
+ */
+async function releaseRepoSlot(
+  repoOwner: string,
+  repoName: string,
+  jobId: string,
+): Promise<void> {
+  try {
+    const client = getRepoLockClient();
+    const lockKey = `${REPO_LOCK_KEY_PREFIX}${repoOwner}/${repoName}`;
+    await client.srem(lockKey, jobId);
+    const remaining = await client.scard(lockKey);
+    if (remaining === 0) {
+      await client.del(lockKey);
+    }
+    log.info({ repo: `${repoOwner}/${repoName}`, jobId, remaining }, 'Repo concurrency slot released');
+  } catch (err) {
+    log.warn({ err: String(err), repo: `${repoOwner}/${repoName}`, jobId },
+      'Failed to release repo concurrency slot',
+    );
+  }
+}
 
 /**
  * Extended job data with retry tracking.
@@ -98,6 +209,9 @@ export function createIssueQueue(): Queue<IssueJobData, unknown, string, IssueJo
     },
   });
 
+  // Expose queue for pause/resume admin endpoints
+  (queue as any).__queueName = QUEUE_NAME;
+
   log.info({ maxRetries: config.queue.maxRetries, retryDelays: config.queue.retryDelays }, "Issue queue created");
   return queue;
 }
@@ -136,6 +250,17 @@ export function createIssueWorker(): Worker<IssueJobData> {
         }
       }
 
+      // Acquire per-repo concurrency slot before running
+      const jobIdStr = job.id ?? crypto.randomUUID();
+      const repoSlotAcquired = await tryAcquireRepoSlot(data.repoOwner, data.repoName, jobIdStr);
+      if (!repoSlotAcquired) {
+        log.warn(
+          { jobId: job.id, repo: `${data.repoOwner}/${data.repoName}` },
+          'Repo concurrency limit reached — retrying later',
+        );
+        throw new Error(`Repo concurrency limit reached for ${data.repoOwner}/${data.repoName}`);
+      }
+
       // Run the agent — this is the core of STAS
       let result: import("../agent/types.js").AgentResult;
       try {
@@ -143,6 +268,8 @@ export function createIssueWorker(): Worker<IssueJobData> {
       } catch (err) {
         // Unexpected worker-level error — schedule a retry if slots remain
         const errorMsg = String(err);
+        // Release repo slot on error
+        await releaseRepoSlot(data.repoOwner, data.repoName, jobIdStr);
         if (retryCount < config.queue.maxRetries) {
           const delay = config.queue.retryDelays[retryCount] ?? 900000;
           try {
@@ -188,6 +315,9 @@ export function createIssueWorker(): Worker<IssueJobData> {
       } else {
         log.info({ jobId: job.id, confidence: result.confidence, prUrl: result.prUrl }, 'Fix completed');
       }
+
+      // Release per-repo concurrency slot
+      await releaseRepoSlot(data.repoOwner, data.repoName, jobIdStr);
 
       return result;
     },
@@ -344,6 +474,51 @@ async function postIssueComment(
 /**
  * Create queue events listener for monitoring.
  */
+/**
+ * Pause the issue queue — stops processing new jobs.
+ */
+export async function pauseIssueQueue(queue: Queue<IssueJobData, unknown, string, IssueJobData>): Promise<void> {
+  await queue.pause();
+  log.info('Issue queue paused');
+}
+
+/**
+ * Resume the issue queue — restarts processing.
+ */
+export async function resumeIssueQueue(queue: Queue<IssueJobData, unknown, string, IssueJobData>): Promise<void> {
+  await queue.resume();
+  log.info('Issue queue resumed');
+}
+
+/**
+ * Check if the issue queue is paused.
+ */
+export async function isQueuePaused(queue: Queue<IssueJobData, unknown, string, IssueJobData>): Promise<boolean> {
+  return queue.isPaused();
+}
+
+/**
+ * Get queue metrics (waiting, active, completed, failed counts).
+ */
+export async function getQueueMetrics(queue: Queue<IssueJobData, unknown, string, IssueJobData>): Promise<{
+  waiting: number;
+  active: number;
+  completed: number;
+  failed: number;
+  delayed: number;
+  paused: boolean;
+}> {
+  const [waiting, active, completed, failed, delayed, paused] = await Promise.all([
+    queue.getWaitingCount(),
+    queue.getActiveCount(),
+    queue.getCompletedCount(),
+    queue.getFailedCount(),
+    queue.getDelayedCount(),
+    queue.isPaused(),
+  ]);
+  return { waiting, active, completed, failed, delayed, paused };
+}
+
 export function createQueueEvents(): QueueEvents {
   const events = new QueueEvents(QUEUE_NAME, {
     connection: redisConnectionOptions(),
@@ -358,6 +533,23 @@ export function createQueueEvents(): QueueEvents {
   });
 
   return events;
+}
+
+/**
+ * Update the queue depth gauge for an account by counting waiting and
+ * delayed jobs in the BullMQ queue that belong to that installation.
+ */
+async function updateQueueDepthMetric(
+  queue: Queue<IssueJobData>,
+  data: IssueJobData,
+): Promise<void> {
+  try {
+    const jobs = await queue.getJobs(['waiting', 'delayed'], 0, 1000);
+    const depth = jobs.filter((j) => j.data.installationId === data.installationId).length;
+    recordQueueDepth(String(data.installationId), depth);
+  } catch {
+    // non-fatal
+  }
 }
 
 /**
@@ -418,7 +610,9 @@ export async function enqueueIssue(
     }
 
     try {
+      const priority = data.priority ?? getPriorityForPlan(data.billingPlan);
       const job = await queue.add('process-issue', data, {
+        priority,
         deduplication: {
           id: dedupKey,
           ttl: config.queue.dedupTtl * 1000,
@@ -436,6 +630,11 @@ export async function enqueueIssue(
         },
         'Issue enqueued via BullMQ',
       );
+
+      // Track queue depth per account
+      updateQueueDepthMetric(queue, data).catch((err) => {
+        log.warn({ err: String(err) }, 'Failed to update queue depth metric');
+      });
     } catch (err) {
       log.error(
         {

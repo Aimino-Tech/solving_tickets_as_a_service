@@ -19,6 +19,12 @@ export interface IssueJobData {
 
   /** Tracker platform type for posting results back to the source. */
   trackerType?: 'linear' | 'jira';
+
+  /** Billing tier for this account — determines priority and rate limits. */
+  billingPlan?: 'free' | 'pro' | 'enterprise';
+
+  /** Job priority (lower = higher priority). Free=30, Pro=20, Enterprise=10. */
+  priority?: number;
 }
 
 /**
@@ -41,6 +47,12 @@ export interface TriageData {
 
   /** Tracker platform type for posting results back to the source. */
   trackerType?: 'linear' | 'jira';
+
+  /** Billing tier for this account — determines priority and rate limits. */
+  billingPlan?: 'free' | 'pro' | 'enterprise';
+
+  /** Job priority (lower = higher priority). Free=30, Pro=20, Enterprise=10. */
+  priority?: number;
 }
 
 /**

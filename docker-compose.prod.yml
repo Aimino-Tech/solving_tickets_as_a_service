@@ -1,0 +1,282 @@
+# =============================================================================
+# STAS — Production Docker Compose Stack
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
+#
+# Requires a .env file with all required environment variables.
+# See .env.example for the full list.
+# =============================================================================
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-restart: &default-restart
+  restart: unless-stopped
+
+x-resources-webhook: &resources-webhook
+  resources:
+    limits:
+      memory: 512M
+      cpus: "0.5"
+
+x-resources-worker: &resources-worker
+  resources:
+    limits:
+      memory: 1G
+      cpus: "1"
+
+x-resources-light: &resources-light
+  resources:
+    limits:
+      memory: 256M
+      cpus: "0.2"
+
+x-healthcheck-redis: &healthcheck-redis
+  healthcheck:
+    test: ["CMD", "redis-cli", "ping"]
+    interval: 5s
+    timeout: 3s
+    retries: 5
+    start_period: 10s
+
+x-healthcheck-rabbitmq: &healthcheck-rabbitmq
+  healthcheck:
+    test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 15s
+
+x-healthcheck-postgres: &healthcheck-postgres
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stas} -d ${POSTGRES_DB:-stas}"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 15s
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — primary database for the hosted service
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: stas-postgres
+    <<: *default-restart
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-stas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stas-password}
+      POSTGRES_DB: ${POSTGRES_DB:-stas}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    <<: *healthcheck-postgres
+    <<: *resources-light
+    logging: *default-logging
+    networks:
+      - stas-net
+
+  # ---------------------------------------------------------------------------
+  # Redis — Celery backend + caching + BullMQ job queue
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: stas-redis
+    <<: *default-restart
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --appendfsync everysec --auto-aof-rewrite-percentage 100 --auto-aof-rewrite-min-size 64mb
+    volumes:
+      - redis-data:/data
+    <<: *healthcheck-redis
+    <<: *resources-light
+    logging: *default-logging
+    networks:
+      - stas-net
+
+  # ---------------------------------------------------------------------------
+  # RabbitMQ — message broker for Celery workers and cross-service bridge
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: stas-rabbitmq
+    <<: *default-restart
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-stas-app}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-stas-app-password}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/stas}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    <<: *healthcheck-rabbitmq
+    <<: *resources-light
+    logging: *default-logging
+    networks:
+      - stas-net
+
+  # ---------------------------------------------------------------------------
+  # STAS Webhook — Express.js API server (scalable horizontally)
+  # ---------------------------------------------------------------------------
+  stas-webhook:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: stas-webhook:latest
+    container_name: stas-webhook
+    <<: *default-restart
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+      - RUN_MODE=api
+      - REDIS_URL=redis://stas-redis:6379
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-stas}:${POSTGRES_PASSWORD:-stas-password}@stas-postgres:5432/${POSTGRES_DB:-stas}
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health/ready').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    # Graceful shutdown — allow in-flight webhook processing to complete
+    stop_grace_period: 30s
+    <<: *resources-webhook
+    logging: *default-logging
+    networks:
+      - stas-net
+
+  # ---------------------------------------------------------------------------
+  # STAS Worker — Celery worker that processes issue queues (scalable)
+  # ---------------------------------------------------------------------------
+  stas-worker:
+    build:
+      context: ./workers
+      dockerfile: Dockerfile
+    image: stas-worker:latest
+    container_name: stas-worker
+    <<: *default-restart
+    command: celery -A workers.celery_app worker -l info -Q stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications --concurrency=4
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://stas-redis:6379
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-stas}:${POSTGRES_PASSWORD:-stas-password}@stas-postgres:5432/${POSTGRES_DB:-stas}
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
+      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "/app/workers/health.py", "--check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Graceful shutdown — allow running tasks to finish before SIGKILL
+    stop_grace_period: 60s
+    <<: *resources-worker
+    logging: *default-logging
+    networks:
+      - stas-net
+
+  # ---------------------------------------------------------------------------
+  # Celery Beat — periodic task scheduler
+  # ---------------------------------------------------------------------------
+  celery-beat:
+    image: stas-worker:latest
+    container_name: stas-celery-beat
+    <<: *default-restart
+    command: celery -A workers.celery_app beat -l info
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://stas-redis:6379
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
+      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    # Graceful shutdown — allow beat to save schedule state
+    stop_grace_period: 15s
+    <<: *resources-light
+    logging: *default-logging
+    networks:
+      - stas-net
+
+  # ---------------------------------------------------------------------------
+  # Flower — Celery monitoring dashboard
+  # ---------------------------------------------------------------------------
+  flower:
+    image: mher/flower:latest
+    container_name: stas-flower
+    <<: *default-restart
+    ports:
+      - "5555:5555"
+    command: flower --port=5555 --broker=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
+    environment:
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
+      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+      - FLOWER_PORT=5555
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    <<: *resources-light
+    logging: *default-logging
+    networks:
+      - stas-net
+
+  # ---------------------------------------------------------------------------
+  # Nginx — reverse proxy with TLS termination and load balancing
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: stas-nginx
+    <<: *default-restart
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - stas-webhook
+    <<: *resources-light
+    logging: *default-logging
+    networks:
+      - stas-net
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+
+networks:
+  stas-net:
+    driver: bridge
+    name: stas-prod-net

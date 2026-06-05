@@ -19,6 +19,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { rateLimiter } from './limiter.js';
 import { getRateLimitForAccount } from './tiers.js';
 import { rootLogger } from '../utils/logger.js';
+import { recordRejectedRun } from '../bridge/metrics.js';
 
 const log = rootLogger.child({ module: 'rate-middleware' });
 
@@ -113,7 +114,7 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
       // ── Account-level rate limit ────────────────────────────────────
       if (installationId !== undefined && installationId > 0) {
         const accountLimits = getRateLimitForAccount(installationId);
-        const accountResult = await rateLimiter.increment('account', String(installationId));
+        const accountResult = await rateLimiter.increment('account', String(installationId), accountLimits.max);
 
         applyHeaders(res, {
           limit: accountResult.limit,
@@ -128,6 +129,7 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
             { installationId, current: accountResult.current, limit: accountResult.limit },
             'Account rate limit exceeded',
           );
+          recordRejectedRun(String(installationId), 'account_rate_limit');
           sendRateLimited(res, retryAfterSeconds, `account:${installationId}`);
           return;
         }
@@ -135,7 +137,8 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
 
       // ── Repo-level rate limit ───────────────────────────────────────
       if (repo) {
-        const repoResult = await rateLimiter.increment('repo', repo);
+        const repoMax = config.stas.rateLimit?.repoLimit ?? 5;
+        const repoResult = await rateLimiter.increment('repo', repo, repoMax);
 
         // Repo-level headers are additive — they don't replace account headers
         res.setHeader('X-RateLimit-Repo-Limit', String(repoResult.limit));
@@ -148,6 +151,9 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
             { repo, current: repoResult.current, limit: repoResult.limit },
             'Repo rate limit exceeded',
           );
+          if (installationId !== undefined && installationId > 0) {
+            recordRejectedRun(String(installationId), 'repo_rate_limit');
+          }
           sendRateLimited(res, retryAfterSeconds, `repo:${repo}`);
           return;
         }

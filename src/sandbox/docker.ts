@@ -1,41 +1,106 @@
 /**
- * E2B sandbox executor — isolates fix execution in a disposable cloud sandbox.
+ * Docker sandbox — isolates fix execution in a local Docker container.
+ *
+ * Serves as a fallback when E2B is unavailable. Uses Dockerode to manage
+ * container lifecycle and host volume mounts for file operations.
  *
  * Handles:
- * - Sandbox lifecycle (create, destroy)
+ * - Container lifecycle (create, exec, destroy)
  * - Repo cloning with auth token
  * - Runtime detection (10+ languages)
  * - Dependency installation
- * - File operations with path traversal protection
+ * - File operations through host volume mount
  * - Static analysis (tsc, ruff, etc.)
  * - Test execution
+ * - Network restriction via iptables
+ * - Resource limits (memory, CPU)
  * - Git push
  *
- * Uses the E2B SDK v2 API (sandbox.commands.run, sandbox.files.read/write).
- *
  * ── Error Handling Audit ────────────────────────────────────────────
- * ✅ boot() wraps Sandbox.create() and token fetch with context
+ * ✅ boot() wraps container create and token fetch with context
  * ✅ boot() clone failure throws with stderr context
  * ✅ path traversal detection in validatePath() for read/write/remove
  * ✅ readFile/writeFile/removeFile catch with descriptive messages
- * ✅ destroy() catches kill failures (non-fatal, logs warning)
+ * ✅ destroy() catches container kill/remove failures (non-fatal, logs warning)
  * ✅ pushBranch() wraps all git operations with context
  * ✅ installDeps() failure is non-fatal (logs warning, continues)
  * ────────────────────────────────────────────────────────────────────
  */
 
-import { Sandbox } from 'e2b';
+import { execSync, spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync, unlinkSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, sep } from 'node:path';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import type { SandboxExecutor, ExecResult, TestRunResult, RuntimeInfo } from './types.js';
 
-const log = rootLogger.child({ module: 'sandbox' });
+const log = rootLogger.child({ module: 'docker-sandbox' });
 
-export type { ExecResult, TestRunResult, RuntimeInfo };
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
-export class E2BSandboxExecutor implements SandboxExecutor {
-  private sandbox: Sandbox | null = null;
+interface ContainerInfo {
+  id: string;
+  name: string;
+}
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const DOCKER_TIMEOUT_MS = 120_000;
+const CONTAINER_WORKDIR = '/home/user';
+
+// ---------------------------------------------------------------------------
+// Helper: run a docker command and return parsed result
+// ---------------------------------------------------------------------------
+
+function dockerCmd(args: string[], timeoutMs = DOCKER_TIMEOUT_MS): ExecResult {
+  try {
+    const result = spawnSync('docker', args, {
+      timeout: timeoutMs,
+      encoding: 'utf-8',
+      maxBuffer: 10 * 1024 * 1024, // 10MB
+    });
+    return {
+      stdout: result.stdout?.trim() ?? '',
+      stderr: result.stderr?.trim() ?? '',
+      exitCode: result.status ?? -1,
+    };
+  } catch (err) {
+    return {
+      stdout: '',
+      stderr: `docker command failed: ${String(err)}`,
+      exitCode: -1,
+    };
+  }
+}
+
+function dockerExecCmd(
+  containerId: string,
+  command: string,
+  timeoutMs = DOCKER_TIMEOUT_MS,
+  workdir?: string,
+): ExecResult {
+  const args = ['exec'];
+  if (workdir) {
+    args.push('-w', workdir);
+  }
+  args.push(containerId, '/bin/sh', '-c', command);
+  return dockerCmd(args, timeoutMs);
+}
+
+// ---------------------------------------------------------------------------
+// DockerSandbox
+// ---------------------------------------------------------------------------
+
+export class DockerSandbox implements SandboxExecutor {
+  private container: ContainerInfo | null = null;
+  private tempDir: string = '';
   private repoDir: string = '';
+  private repoHostPath: string = '';
   private runtimeInfo: RuntimeInfo | null = null;
   private installationToken: string = '';
 
@@ -47,35 +112,77 @@ export class E2BSandboxExecutor implements SandboxExecutor {
     private getToken: (installationId: number) => Promise<string>,
   ) {}
 
+  // ── Public API ────────────────────────────────────────────────────
+
   /**
-   * Boot the sandbox: create instance, clone repo, detect runtime, install deps.
+   * Boot the sandbox: pull image, create container, clone repo, detect runtime, install deps.
    */
   async boot(): Promise<void> {
-    log.info('Booting E2B sandbox');
+    log.info('Booting Docker sandbox');
 
-    // Create the sandbox
+    // 1. Verify Docker is available
+    const versionResult = dockerCmd(['--version']);
+    if (versionResult.exitCode !== 0) {
+      throw new Error(`Docker is not available: ${versionResult.stderr || 'command not found'}`);
+    }
+    log.info({ version: versionResult.stdout }, 'Docker available');
+
+    // 2. Pull the configured image
+    const image = config.docker.image;
+    log.info({ image }, 'Pulling Docker image');
+    const pullResult = dockerCmd(['pull', image], 300_000);
+    if (pullResult.exitCode !== 0) {
+      throw new Error(`Failed to pull Docker image '${image}': ${pullResult.stderr}`);
+    }
+    log.info({ image }, 'Image pulled');
+
+    // 3. Create temp directory for volume mount
     try {
-      this.sandbox = await Sandbox.create({
-        apiKey: config.e2b.apiKey,
-        template: config.e2b.templateId,
-        timeoutMs: config.e2b.sandboxTimeoutMs,
-      });
+      this.tempDir = mkdtempSync(join(tmpdir(), 'stas-sandbox-'));
     } catch (err) {
-      throw new Error(`Failed to create E2B sandbox (template: ${config.e2b.templateId}): ${String(err)}`);
+      throw new Error(`Failed to create temp directory: ${String(err)}`);
     }
 
-    log.info({ sandboxId: this.sandbox.sandboxId }, 'Sandbox created');
-
-    // Get installation token for auth
+    // 4. Get installation token for auth
     try {
       this.installationToken = await this.getToken(this.installationId);
     } catch (err) {
-      throw new Error(`Failed to get installation token for sandbox ${this.sandbox.sandboxId}: ${String(err)}`);
+      throw new Error(`Failed to get installation token: ${String(err)}`);
     }
 
-    // Clone the repo with auth
+    // 5. Create container with resource limits and network restrictions
+    const containerName = `stas-sandbox-${this.repoName}-${Date.now().toString(36)}`;
+    const createArgs = this.buildCreateArgs(image, containerName);
+
+    log.info({ containerName }, 'Creating container');
+    const createResult = dockerCmd(createArgs);
+    if (createResult.exitCode !== 0) {
+      throw new Error(`Failed to create container: ${createResult.stderr}`);
+    }
+
+    // Extract container ID from output
+    this.container = {
+      id: createResult.stdout,
+      name: containerName,
+    };
+    log.info({ containerId: this.container.id }, 'Container created');
+
+    // 6. Start the container
+    const startResult = dockerCmd(['start', this.container.id]);
+    if (startResult.exitCode !== 0) {
+      throw new Error(`Failed to start container: ${startResult.stderr}`);
+    }
+    log.info('Container started');
+
+    // 7. Apply network restrictions if enabled
+    if (config.docker.networkRestrict) {
+      await this.applyNetworkRestrictions();
+    }
+
+    // 8. Clone the repo
     const authUrl = this.repoUrl.replace('https://', `https://x-access-token:${this.installationToken}@`);
-    this.repoDir = `/home/user/${this.repoName}`;
+    this.repoHostPath = join(this.tempDir, this.repoName);
+    this.repoDir = `${CONTAINER_WORKDIR}/${this.repoName}`;
 
     const cloneResult = await this.exec(`git clone --depth 1 ${authUrl} ${this.repoDir}`, 120_000);
     if (cloneResult.exitCode !== 0) {
@@ -83,30 +190,20 @@ export class E2BSandboxExecutor implements SandboxExecutor {
     }
     log.info('Repo cloned successfully');
 
-    // Detect runtime
+    // 9. Detect runtime
     this.runtimeInfo = await this.detectRuntime();
     log.info({ runtime: this.runtimeInfo }, 'Runtime detected');
 
-    // Install dependencies
+    // 10. Install dependencies
     await this.installDeps();
   }
 
   /**
-   * Execute a command in the sandbox using E2B commands.run().
+   * Execute a command in the container using docker exec.
    */
   async exec(command: string, timeoutMs: number = 60_000): Promise<ExecResult> {
-    if (!this.sandbox) throw new Error('Sandbox not booted');
-
-    const result = await this.sandbox.commands.run(command, {
-      cwd: this.repoDir || undefined,
-      timeoutMs,
-    });
-
-    return {
-      stdout: result.stdout || '',
-      stderr: result.stderr || '',
-      exitCode: result.exitCode ?? -1,
-    };
+    this.ensureBooted();
+    return dockerExecCmd(this.container!.id, command, timeoutMs, this.repoDir);
   }
 
   /**
@@ -117,49 +214,54 @@ export class E2BSandboxExecutor implements SandboxExecutor {
   }
 
   /**
-   * Read a file from the sandbox with path traversal protection.
+   * Read a file from the host volume mount with path traversal protection.
    */
   async readFile(filePath: string): Promise<string> {
-    if (!this.sandbox) throw new Error('Sandbox not booted');
+    this.ensureBooted();
     this.validatePath(filePath);
 
-    const fullPath = filePath.startsWith('/') ? filePath : `${this.repoDir}/${filePath}`;
+    const hostPath = this.resolveHostPath(filePath);
     try {
-      return await this.sandbox.files.read(fullPath);
+      return readFileSync(hostPath, 'utf-8');
     } catch (err) {
       throw new Error(`Failed to read file ${filePath}: ${String(err)}`);
     }
   }
 
   /**
-   * Write a file in the sandbox with path traversal protection.
+   * Write a file to the host volume mount with path traversal protection.
    */
   async writeFile(filePath: string, content: string): Promise<void> {
-    if (!this.sandbox) throw new Error('Sandbox not booted');
+    this.ensureBooted();
     this.validatePath(filePath);
 
-    const fullPath = filePath.startsWith('/') ? filePath : `${this.repoDir}/${filePath}`;
+    const hostPath = this.resolveHostPath(filePath);
     try {
       // Ensure parent directory exists
-      const parentDir = fullPath.includes('/') ? fullPath.substring(0, fullPath.lastIndexOf('/')) : '.';
-      await this.sandbox.files.makeDir(parentDir);
-
-      await this.sandbox.files.write(fullPath, content);
+      const parentDir = hostPath.includes(sep) ? hostPath.substring(0, hostPath.lastIndexOf(sep)) : '.';
+      if (parentDir !== '.') {
+        // mkdir -p via docker exec since the dir is in the container
+        const containerParent = filePath.startsWith('/')
+          ? filePath.substring(0, filePath.lastIndexOf('/'))
+          : `${this.repoDir}/${filePath.substring(0, filePath.lastIndexOf('/'))}`;
+        await this.exec(`mkdir -p "${containerParent}"`);
+      }
+      writeFileSync(hostPath, content, 'utf-8');
     } catch (err) {
       throw new Error(`Failed to write file ${filePath}: ${String(err)}`);
     }
   }
 
   /**
-   * Remove a file from the sandbox with path traversal protection.
+   * Remove a file from the host volume mount with path traversal protection.
    */
   async removeFile(filePath: string): Promise<void> {
-    if (!this.sandbox) throw new Error('Sandbox not booted');
+    this.ensureBooted();
     this.validatePath(filePath);
 
-    const fullPath = filePath.startsWith('/') ? filePath : `${this.repoDir}/${filePath}`;
+    const hostPath = this.resolveHostPath(filePath);
     try {
-      await this.sandbox.files.remove(fullPath);
+      unlinkSync(hostPath);
     } catch (err) {
       throw new Error(`Failed to remove file ${filePath}: ${String(err)}`);
     }
@@ -169,36 +271,36 @@ export class E2BSandboxExecutor implements SandboxExecutor {
    * Push changes to a new branch on GitHub.
    */
   async pushBranch(branchName: string): Promise<void> {
-    if (!this.sandbox) throw new Error('Sandbox not booted');
+    this.ensureBooted();
 
     log.info({ branchName }, 'Pushing branch');
 
     try {
       // Configure git
-      await this.exec(`git -C "${this.repoDir}" config user.email "stas-bot@users.noreply.github.com"`);
-      await this.exec(`git -C "${this.repoDir}" config user.name "STAS Bot"`);
+      await this.exec(`git config user.email "stas-bot@users.noreply.github.com"`);
+      await this.exec(`git config user.name "STAS Bot"`);
 
       // Add all changes
-      await this.exec(`git -C "${this.repoDir}" add -A`);
+      await this.exec(`git add -A`);
 
       // Check if there's anything to commit
-      const statusResult = await this.exec(`git -C "${this.repoDir}" status --porcelain`);
+      const statusResult = await this.exec(`git status --porcelain`);
       if (!statusResult.stdout.trim()) {
         log.warn('No changes to commit');
         return;
       }
 
       // Commit
-      const commitResult = await this.exec(`git -C "${this.repoDir}" commit -m "fix: automated fix by STAS"`);
+      const commitResult = await this.exec(`git commit -m "fix: automated fix by STAS"`);
       if (commitResult.exitCode !== 0 && !commitResult.stderr.includes('nothing to commit')) {
         throw new Error(`Failed to commit: ${commitResult.stderr}`);
       }
 
       // Push
       const authUrl = this.repoUrl.replace('https://', `https://x-access-token:${this.installationToken}@`);
-      await this.exec(`git -C "${this.repoDir}" remote set-url origin "${authUrl}"`);
-      await this.exec(`git -C "${this.repoDir}" checkout -b "${branchName}"`);
-      const pushResult = await this.exec(`git -C "${this.repoDir}" push origin "${branchName}"`, 120_000);
+      await this.exec(`git remote set-url origin "${authUrl}"`);
+      await this.exec(`git checkout -b "${branchName}"`);
+      const pushResult = await this.exec(`git push origin "${branchName}"`, 120_000);
       if (pushResult.exitCode !== 0) {
         throw new Error(`Failed to push branch '${branchName}': ${pushResult.stderr}`);
       }
@@ -206,7 +308,7 @@ export class E2BSandboxExecutor implements SandboxExecutor {
       log.info({ branchName }, 'Branch pushed successfully');
     } catch (err) {
       if (err instanceof Error && err.message.startsWith('Failed to')) {
-        throw err; // Already has context
+        throw err;
       }
       throw new Error(`Git push operation failed for branch '${branchName}': ${String(err)}`);
     }
@@ -223,22 +325,22 @@ export class E2BSandboxExecutor implements SandboxExecutor {
    * Run a specific test file or test pattern.
    */
   async runSpecificTest(testPath: string): Promise<TestRunResult> {
-    if (!this.sandbox) throw new Error("Sandbox not booted");
-    if (!this.runtimeInfo) throw new Error("Runtime not detected");
+    this.ensureBooted();
+    if (!this.runtimeInfo) throw new Error('Runtime not detected');
 
     const start = Date.now();
 
     const commands: string[] = [];
-    if (this.runtimeInfo.language === "node") {
+    if (this.runtimeInfo.language === 'node') {
       commands.push(`npx vitest run ${testPath} 2>&1`);
       commands.push(`npx jest ${testPath} 2>&1`);
       commands.push(`npm test -- ${testPath} 2>&1`);
-    } else if (this.runtimeInfo.language === "python") {
+    } else if (this.runtimeInfo.language === 'python') {
       commands.push(`python -m pytest ${testPath} -v 2>&1`);
       commands.push(`python -m unittest ${testPath} -v 2>&1`);
-    } else if (this.runtimeInfo.language === "go") {
+    } else if (this.runtimeInfo.language === 'go') {
       commands.push(`go test ${testPath} 2>&1`);
-    } else if (this.runtimeInfo.language === "rust") {
+    } else if (this.runtimeInfo.language === 'rust') {
       commands.push(`cargo test 2>&1`);
     } else {
       commands.push(this.runtimeInfo.testCommand);
@@ -247,7 +349,7 @@ export class E2BSandboxExecutor implements SandboxExecutor {
     for (const command of commands) {
       try {
         const result = await this.exec(command, 300_000);
-        if (!result.stderr.includes("command not found") && !result.stderr.includes("Unknown command")) {
+        if (!result.stderr.includes('command not found') && !result.stderr.includes('Unknown command')) {
           return {
             passed: result.exitCode === 0,
             output: `${result.stdout}\n${result.stderr}`.trim(),
@@ -263,7 +365,7 @@ export class E2BSandboxExecutor implements SandboxExecutor {
     return {
       passed: false,
       output: `Could not find a test runner for specific test: ${testPath}`,
-      command: commands[0] || "",
+      command: commands[0] || '',
       durationMs: Date.now() - start,
     };
   }
@@ -272,7 +374,7 @@ export class E2BSandboxExecutor implements SandboxExecutor {
    * Auto-detect and run the test suite.
    */
   async runTests(): Promise<TestRunResult> {
-    if (!this.sandbox) throw new Error('Sandbox not booted');
+    this.ensureBooted();
     if (!this.runtimeInfo) throw new Error('Runtime not detected');
 
     const command = this.runtimeInfo.testCommand;
@@ -296,7 +398,7 @@ export class E2BSandboxExecutor implements SandboxExecutor {
    * Auto-format modified files.
    */
   async formatCode(): Promise<void> {
-    if (!this.sandbox) throw new Error('Sandbox not booted');
+    this.ensureBooted();
     if (!this.runtimeInfo) throw new Error('Runtime not detected');
 
     const command = this.runtimeInfo.formatCommand;
@@ -310,7 +412,7 @@ export class E2BSandboxExecutor implements SandboxExecutor {
    * Run static analysis on the codebase.
    */
   async analyzeCode(): Promise<string> {
-    if (!this.sandbox) throw new Error('Sandbox not booted');
+    this.ensureBooted();
     if (!this.runtimeInfo) throw new Error('Runtime not detected');
 
     const command = this.runtimeInfo.lintCommand;
@@ -324,7 +426,7 @@ export class E2BSandboxExecutor implements SandboxExecutor {
    * Auto-detect the project runtime environment.
    */
   async detectRuntime(): Promise<RuntimeInfo> {
-    if (!this.sandbox) throw new Error('Sandbox not booted');
+    this.ensureBooted();
 
     const defaults: RuntimeInfo = {
       language: 'unknown',
@@ -335,7 +437,6 @@ export class E2BSandboxExecutor implements SandboxExecutor {
       lintCommand: '',
     };
 
-    // Check for common language markers
     const files = await this.exec('ls -la', 10_000);
 
     // Node / JavaScript
@@ -349,7 +450,6 @@ export class E2BSandboxExecutor implements SandboxExecutor {
         /* ignore */
       }
 
-      // Check for specific test frameworks
       let testCmd = 'npm test 2>&1';
       if (pkgJson.stdout.includes('"turbo"')) {
         testCmd = 'npx turbo run test 2>&1';
@@ -546,18 +646,158 @@ export class E2BSandboxExecutor implements SandboxExecutor {
   }
 
   /**
-   * Destroy the sandbox and clean up resources.
+   * Destroy the sandbox: stop/remove container, clean up temp dirs.
    */
   async destroy(): Promise<void> {
-    if (this.sandbox) {
-      log.info({ sandboxId: this.sandbox.sandboxId }, 'Destroying sandbox');
-      try {
-        await this.sandbox.kill();
-      } catch (err) {
-        log.warn({ err: String(err) }, 'Error destroying sandbox (non-fatal)');
+    if (this.container) {
+      log.info({ containerId: this.container.id }, 'Destroying Docker sandbox');
+
+      // Stop container (best-effort)
+      const stopResult = dockerCmd(['stop', '--time', '5', this.container.id]);
+      if (stopResult.exitCode !== 0) {
+        log.warn({ err: stopResult.stderr }, 'Error stopping container (non-fatal)');
       }
-      this.sandbox = null;
+
+      // Remove container
+      const rmResult = dockerCmd(['rm', '--force', '--volumes', this.container.id]);
+      if (rmResult.exitCode !== 0) {
+        log.warn({ err: rmResult.stderr }, 'Error removing container (non-fatal)');
+      }
+
+      this.container = null;
     }
+
+    // Clean up temp directory
+    if (this.tempDir && existsSync(this.tempDir)) {
+      try {
+        rmSync(this.tempDir, { recursive: true, force: true });
+        log.debug({ tempDir: this.tempDir }, 'Temp directory cleaned up');
+      } catch (err) {
+        log.warn({ err: String(err) }, 'Error cleaning up temp directory (non-fatal)');
+      }
+      this.tempDir = '';
+    }
+  }
+
+  // ── Private ───────────────────────────────────────────────────────
+
+  /**
+   * Build docker create arguments with resource limits and volume mounts.
+   */
+  private buildCreateArgs(image: string, containerName: string): string[] {
+    const args: string[] = ['create', '--init', '--rm'];
+
+    // Container name
+    args.push('--name', containerName);
+
+    // Volume mount for repo
+    args.push('-v', `${this.tempDir}:${CONTAINER_WORKDIR}`);
+
+    // Working directory
+    args.push('-w', CONTAINER_WORKDIR);
+
+    // Resource limits
+    const memory = config.docker.containerMemory;
+    if (memory) {
+      args.push('--memory', memory);
+    }
+
+    const cpu = config.docker.containerCpu;
+    if (cpu) {
+      args.push('--cpus', String(cpu));
+    }
+
+    // Security options
+    args.push('--security-opt', 'no-new-privileges:true');
+    args.push('--cap-drop', 'ALL');
+    args.push('--cap-add', 'NET_ADMIN'); // needed for iptables
+    args.push('--cap-add', 'NET_RAW');   // needed for iptables
+    args.push('--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=1g');
+    args.push('--tmpfs', `${CONTAINER_WORKDIR}:rw,noexec,nosuid,size=2g`);
+
+    // Network
+    args.push('--network', 'bridge');
+    if (config.docker.networkRestrict) {
+      args.push('--dns', '1.1.1.1');
+      args.push('--dns', '8.8.8.8');
+    }
+
+    // Env vars
+    args.push('-e', `HOME=${CONTAINER_WORKDIR}`);
+    args.push('-e', 'USER=user');
+
+    // Image
+    args.push(image);
+
+    // Keep container running
+    args.push('tail', '-f', '/dev/null');
+
+    return args;
+  }
+
+  /**
+   * Apply iptables-based network restrictions inside the container.
+   * Whitelists: GitHub API, configured LLM providers, package registries.
+   */
+  private async applyNetworkRestrictions(): Promise<void> {
+    if (!this.container) return;
+
+    const allowedHosts = config.docker.allowedHosts;
+    if (!allowedHosts || allowedHosts.length === 0) return;
+
+    log.info({ allowedHosts }, 'Applying network restrictions via iptables');
+
+    try {
+      // Set default policy to DROP
+      await this.exec('iptables -P INPUT DROP');
+      await this.exec('iptables -P FORWARD DROP');
+      await this.exec('iptables -P OUTPUT DROP');
+
+      // Allow loopback
+      await this.exec('iptables -A INPUT -i lo -j ACCEPT');
+      await this.exec('iptables -A OUTPUT -o lo -j ACCEPT');
+
+      // Allow established connections
+      await this.exec('iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT');
+      await this.exec('iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT');
+
+      // Allow DNS
+      await this.exec('iptables -A OUTPUT -p udp --dport 53 -j ACCEPT');
+      await this.exec('iptables -A OUTPUT -p tcp --dport 53 -j ACCEPT');
+
+      // Allow each configured host
+      for (const host of allowedHosts) {
+        // Resolve hostname to IPs
+        const resolveResult = await this.exec(`getent hosts ${host} | awk '{ print $1 }'`);
+        if (resolveResult.exitCode === 0 && resolveResult.stdout.trim()) {
+          const ips = resolveResult.stdout.trim().split('\n');
+          for (const ip of ips) {
+            if (ip) {
+              await this.exec(`iptables -A OUTPUT -d ${ip} -j ACCEPT`);
+            }
+          }
+        }
+      }
+
+      log.info('Network restrictions applied');
+    } catch (err) {
+      log.warn({ err: String(err) }, 'Failed to apply network restrictions (non-fatal)');
+    }
+  }
+
+  /**
+   * Resolve a sandbox file path to a host filesystem path.
+   */
+  private resolveHostPath(filePath: string): string {
+    if (filePath.startsWith('/')) {
+      // Absolute path: map CONTAINER_WORKDIR prefix to tempDir
+      if (filePath.startsWith(CONTAINER_WORKDIR)) {
+        return join(this.tempDir, filePath.slice(CONTAINER_WORKDIR.length));
+      }
+      return filePath; // outside repo dir, use as-is
+    }
+    // Relative path: join with repoDir on host
+    return join(this.repoHostPath, filePath);
   }
 
   /**
@@ -569,14 +809,13 @@ export class E2BSandboxExecutor implements SandboxExecutor {
       throw new Error(`Path traversal detected: ${filePath}`);
     }
   }
-}
 
-// ── Backward compatibility alias ────────────────────────────────────
-// Old code used `SandboxExecutor` (the class name). We keep the name
-// as a type alias so existing imports continue to work.
-/**
- * @deprecated Use `E2BSandboxExecutor` instead. The `SandboxExecutor` name
- * is now the shared interface from `./types.js`. This alias is maintained
- * for backward compatibility only.
- */
-export const SandboxExecutor = E2BSandboxExecutor;
+  /**
+   * Throw if container is not running.
+   */
+  private ensureBooted(): void {
+    if (!this.container) {
+      throw new Error('Sandbox not booted');
+    }
+  }
+}

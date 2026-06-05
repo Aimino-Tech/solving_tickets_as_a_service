@@ -1,0 +1,20 @@
+# ---------------------------------------------------------------------------
+# STAS Webhook Service — exposes the webhook API internally
+# Nginx or Ingress handles external TLS termination and load balancing.
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: stas-webhook
+  labels:
+    app: stas-webhook
+    tier: webhook
+spec:
+  selector:
+    app: stas-webhook
+  ports:
+    - port: 80
+      targetPort: 3000
+      name: http
+      protocol: TCP
+  type: ClusterIP
