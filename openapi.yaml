@@ -1,0 +1,1952 @@
+openapi: 3.1.0
+info:
+  title: STAS API — Solving Tickets As A Service
+  description: |
+    STAS is an open-source GitHub bot that turns labeled issues into pull requests.
+    This API powers the webhook receiver, credit management, usage metering, and admin dashboard.
+
+    ## Authentication
+
+    ### Webhook Signatures
+    Each webhook source uses its own verification method:
+    - **GitHub**: `X-Hub-Signature-256` (HMAC-SHA256)
+    - **GitLab**: `X-GitLab-Token`
+    - **Bitbucket**: `X-Hub-Signature` (HMAC-SHA1)
+    - **Linear**: `Linear-Signature` (HMAC-SHA256)
+    - **Jira**: `X-Hub-Signature-256` (HMAC-SHA256)
+    - **Stripe**: `Stripe-Signature` (Stripe's `constructEvent`)
+
+    ### Admin API
+    Admin endpoints require a Bearer token in the `Authorization` header:
+    ```
+    Authorization: Bearer <admin-api-token>
+    ```
+
+    ### User API
+    User endpoints require authentication via the account's API key:
+    ```
+    Authorization: Bearer <user-api-key>
+    ```
+
+    ## Rate Limiting
+    Webhook routes are rate-limited to 30 requests per 60-second sliding window.
+    The response includes standard rate limit headers (`RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`).
+    When exceeded, the API returns `429 Too Many Requests` with a `Retry-After` header.
+  version: "0.1.0"
+  contact:
+    name: STAS Team
+    url: https://github.com/tamnguyen08/solving_tickets_as_a_service
+  license:
+    name: MIT
+    identifier: MIT
+
+servers:
+  - url: https://api.stas.ai
+    description: Production server
+  - url: http://localhost:3000
+    description: Local development
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Webhooks
+    description: Webhook receivers for various platforms
+  - name: Credits
+    description: Credit balance and transaction management
+  - name: Usage
+    description: Usage metering and statistics
+  - name: User
+    description: User account endpoints
+  - name: Admin
+    description: Admin-only endpoints for system management
+  - name: Feature Flags
+    description: Feature flag management
+
+paths:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Health
+  # ──────────────────────────────────────────────────────────────────────────
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns the current health status of the STAS API server.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: "ok"
+                label: "stas:fix"
+                uptime: 12345.67
+                timestamp: "2026-06-05T20:00:00.000Z"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Webhooks — GitHub
+  # ──────────────────────────────────────────────────────────────────────────
+  /webhook/github:
+    post:
+      tags:
+        - Webhooks
+      summary: GitHub webhook receiver
+      description: |
+        Receives webhook events from GitHub. Supports all GitHub webhook event types
+        (issues, pull requests, push, etc.). The payload is verified using the
+        `X-Hub-Signature-256` header (HMAC-SHA256).
+
+        Also available at the legacy `/webhook` path for backward compatibility.
+      operationId: postWebhookGithub
+      parameters:
+        - name: X-GitHub-Event
+          in: header
+          required: true
+          schema:
+            type: string
+          description: GitHub event type (e.g., `issues.labeled`, `push`, `pull_request`)
+        - name: X-GitHub-Delivery
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unique delivery identifier
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC-SHA256 signature of the raw request body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GitHubWebhookPayload"
+            examples:
+              issueLabeled:
+                summary: Issue labeled event
+                value:
+                  action: labeled
+                  issue:
+                    number: 42
+                    title: "Fix login bug"
+                    body: "The login endpoint returns 500 when the email contains special characters."
+                    labels:
+                      - name: "stas:fix"
+                  repository:
+                    full_name: "owner/repo"
+                    owner:
+                      login: "owner"
+                    name: "repo"
+                  installation:
+                    id: 12345
+      responses:
+        "202":
+          description: Webhook accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookAcceptedResponse"
+              example:
+                accepted: true
+        "400":
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid signature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # Legacy /webhook endpoint (same handler as /webhook/github)
+  /webhook:
+    post:
+      tags:
+        - Webhooks
+      summary: Legacy GitHub webhook receiver
+      description: |
+        Legacy webhook endpoint — identical behavior to `POST /webhook/github`.
+        Included for backward compatibility.
+      operationId: postWebhookLegacy
+      parameters:
+        - name: X-GitHub-Event
+          in: header
+          required: true
+          schema:
+            type: string
+          description: GitHub event type
+        - name: X-GitHub-Delivery
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GitHubWebhookPayload"
+      responses:
+        "202":
+          $ref: "#/components/responses/WebhookAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Webhooks — GitLab
+  # ──────────────────────────────────────────────────────────────────────────
+  /webhook/gitlab:
+    post:
+      tags:
+        - Webhooks
+      summary: GitLab webhook receiver
+      description: |
+        Receives webhook events from GitLab. The payload is verified using the
+        `X-GitLab-Token` header against the configured webhook secret.
+      operationId: postWebhookGitlab
+      parameters:
+        - name: X-GitLab-Event
+          in: header
+          required: true
+          schema:
+            type: string
+          description: GitLab event type (e.g., `Push Hook`, `Issue Hook`, `Merge Request Hook`)
+        - name: X-GitLab-Token
+          in: header
+          required: false
+          schema:
+            type: string
+          description: GitLab webhook token for verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GitLabWebhookPayload"
+            examples:
+              pushEvent:
+                summary: Push event
+                value:
+                  event_name: push
+                  ref: refs/heads/main
+                  project:
+                    id: 123
+                    path_with_namespace: owner/repo
+                  commits:
+                    - id: abc123
+                      message: "Fix bug"
+      responses:
+        "202":
+          $ref: "#/components/responses/WebhookAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Webhooks — Bitbucket
+  # ──────────────────────────────────────────────────────────────────────────
+  /webhook/bitbucket:
+    post:
+      tags:
+        - Webhooks
+      summary: Bitbucket webhook receiver
+      description: |
+        Receives webhook events from Bitbucket. The payload is verified using the
+        `X-Hub-Signature` header (HMAC-SHA1).
+      operationId: postWebhookBitbucket
+      parameters:
+        - name: X-Hub-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC-SHA1 signature of the raw request body
+        - name: X-Event-Key
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bitbucket event key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BitbucketWebhookPayload"
+            examples:
+              repoPush:
+                summary: Repository push
+                value:
+                  push:
+                    changes:
+                      - new:
+                          name: main
+                          type: branch
+                  repository:
+                    full_name: owner/repo
+      responses:
+        "202":
+          $ref: "#/components/responses/WebhookAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Webhooks — Linear
+  # ──────────────────────────────────────────────────────────────────────────
+  /webhook/linear:
+    post:
+      tags:
+        - Webhooks
+      summary: Linear webhook receiver
+      description: |
+        Receives webhook events from Linear. The payload is verified using the
+        `Linear-Signature` header (HMAC-SHA256).
+      operationId: postWebhookLinear
+      parameters:
+        - name: Linear-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC-SHA256 signature of the raw request body
+        - name: Linear-Event
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Linear event type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LinearWebhookPayload"
+            examples:
+              issueCreated:
+                summary: Issue created
+                value:
+                  action: create
+                  data:
+                    id: abc-123
+                    title: "Fix login bug"
+                    description: "The login endpoint is broken"
+                    state: triage
+                  type: Issue
+      responses:
+        "202":
+          $ref: "#/components/responses/WebhookAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Webhooks — Jira
+  # ──────────────────────────────────────────────────────────────────────────
+  /webhook/jira:
+    post:
+      tags:
+        - Webhooks
+      summary: Jira webhook receiver
+      description: |
+        Receives webhook events from Jira. The payload is verified using the
+        `X-Hub-Signature-256` header (HMAC-SHA256).
+      operationId: postWebhookJira
+      parameters:
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC-SHA256 signature of the raw request body
+        - name: X-Event-Key
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Jira event key (e.g., `jira:issue_created`)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JiraWebhookPayload"
+            examples:
+              issueCreated:
+                summary: Issue created
+                value:
+                  timestamp: 1717622400000
+                  webhookEvent: jira:issue_created
+                  issue:
+                    id: "10001"
+                    key: "PROJ-123"
+                    fields:
+                      summary: "Fix login bug"
+                      description:
+                        type: doc
+                        version: 1
+                        content:
+                          - type: paragraph
+                            content:
+                              - text: "The login endpoint is broken"
+                                type: text
+      responses:
+        "202":
+          $ref: "#/components/responses/WebhookAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Webhooks — Stripe
+  # ──────────────────────────────────────────────────────────────────────────
+  /webhook/stripe:
+    post:
+      tags:
+        - Webhooks
+      summary: Stripe webhook receiver
+      description: |
+        Receives webhook events from Stripe for credit purchase processing.
+        Verifies the event using Stripe's signature verification (`Stripe-Signature` header).
+        Handles events such as `checkout.session.completed`, `invoice.paid`,
+        `invoice.payment_failed`, `customer.subscription.updated`, and
+        `customer.subscription.deleted`.
+      operationId: postWebhookStripe
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Stripe webhook signature
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: Stripe event type
+                  example: checkout.session.completed
+                data:
+                  type: object
+                  properties:
+                    object:
+                      type: object
+              description: Raw Stripe event object
+      responses:
+        "200":
+          description: Webhook received and processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Slack Events
+  # ──────────────────────────────────────────────────────────────────────────
+  /slack/events:
+    post:
+      tags:
+        - Webhooks
+      summary: Slack events receiver
+      description: |
+        Receives Slack Events API payloads (interactive messages, slash commands,
+        and event subscriptions) via the Slack Bolt framework.
+      operationId: postSlackEvents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SlackEventBody"
+      responses:
+        "200":
+          description: Event acknowledged (Slack expects 200 for URL verification and event ack)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  challenge:
+                    type: string
+                    description: URL verification challenge token
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Credits — Balance
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/v1/credits/balance:
+    get:
+      tags:
+        - Credits
+      summary: Get credit balance
+      description: Returns the current credit balance for the authenticated account.
+      operationId: getCreditBalance
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: Current credit balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditBalance"
+              example:
+                account_id: 1
+                balance: 2500
+                lifetime_credits: 5000
+                created_at: "2026-01-01T00:00:00.000Z"
+                updated_at: "2026-06-05T20:00:00.000Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Credits — Transactions
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/v1/credits/transactions:
+    get:
+      tags:
+        - Credits
+      summary: List credit transactions
+      description: |
+        Returns the transaction history for the authenticated account.
+        Results are paginated with the newest transactions first.
+      operationId: getCreditTransactions
+      security:
+        - BearerToken: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+          description: Maximum number of transactions to return
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Number of transactions to skip
+      responses:
+        "200":
+          description: List of credit transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CreditTransaction"
+              example:
+                - id: 1
+                  account_id: 1
+                  amount: 100
+                  type: purchase
+                  description: "Purchased 100 Credits"
+                  stripe_payment_intent_id: pi_abc123
+                  created_at: "2026-06-05T19:00:00.000Z"
+                - id: 2
+                  account_id: 1
+                  amount: -50
+                  type: usage
+                  description: "Fix run for issue #42"
+                  stripe_payment_intent_id: null
+                  created_at: "2026-06-04T12:00:00.000Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Credits — Top-Up
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/v1/credits/top-up:
+    post:
+      tags:
+        - Credits
+      summary: Top up credits
+      description: |
+        Creates a Stripe Checkout session for purchasing additional credits.
+        Redirects the user to the Stripe Checkout page for payment completion.
+      operationId: postCreditTopUp
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreditTopUpRequest"
+            examples:
+              smallPack:
+                summary: Purchase 100 credits
+                value:
+                  price_id: price_100credits
+                  success_url: "https://app.stas.ai/credits/success"
+                  cancel_url: "https://app.stas.ai/credits"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditTopUpResponse"
+              example:
+                url: "https://checkout.stripe.com/c/pay/cs_test_abc123"
+                session_id: "cs_test_abc123"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Credits — Usage Stats
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/v1/credits/usage/stats:
+    get:
+      tags:
+        - Usage
+      summary: Aggregate usage statistics
+      description: Returns aggregate usage statistics across all accounts.
+      operationId: getUsageStats
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: Aggregate usage statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageStats"
+              example:
+                totalRuns: 150
+                totalCredits: 7500
+                averageCreditsPerRun: 50
+                totalDurationMs: 1800000
+                runsBySource:
+                  github: 120
+                  linear: 20
+                  jira: 10
+                runsByModel:
+                  "anthropic/claude-sonnet-4-20250514": 100
+                  "gpt-4o": 50
+                prCreationRate: 85.5
+                fallbackRate: 5.2
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # Also include current-month and forecast sub-routes
+  /api/v1/credits/usage/current-month:
+    get:
+      tags:
+        - Usage
+      summary: Current month usage
+      description: Returns usage and free tier information for the current month.
+      operationId: getUsageCurrentMonth
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: Current month usage data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageCurrentMonth"
+              example:
+                month: "2026-06"
+                totalCreditsUsed: 450
+                totalRuns: 9
+                freeTierLimit: 100
+                freeTierRemaining: 55
+                withinFreeTier: false
+                costConfig:
+                  triage: 1
+                  opencodePrimary: 10
+                  opencodeFallback: 5
+                  prCreation: 2
+                  retryPenalty: 3
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/credits/usage/forecast:
+    get:
+      tags:
+        - Usage
+      summary: Usage forecast
+      description: Forecasts end-of-month usage based on current consumption patterns.
+      operationId: getUsageForecast
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: Usage forecast data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageForecast"
+              example:
+                forecastDate: "2026-06-05T20:00:00.000Z"
+                month: "2026-06"
+                daysElapsed: 5
+                daysRemaining: 25
+                daysInMonth: 30
+                currentUsage:
+                  credits: 450
+                  runs: 9
+                dailyAverage:
+                  credits: 90
+                  runs: 1.8
+                forecast:
+                  endOfMonthCredits: 2700
+                  endOfMonthRuns: 54
+                  projectedRemainingCredits: 2250
+                freeTier:
+                  limit: 100
+                  wouldExceed: true
+                  estimatedOverage: 2600
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # User — Me
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/v1/me:
+    get:
+      tags:
+        - User
+      summary: Current user profile
+      description: Returns the profile information for the authenticated user.
+      operationId: getMe
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+              example:
+                id: 1
+                email: "user@example.com"
+                name: "Jane Doe"
+                tier: "pro"
+                github_installation_id: 12345
+                created_at: "2026-01-01T00:00:00.000Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/me/usage:
+    get:
+      tags:
+        - User
+      summary: Current user usage
+      description: Returns usage statistics for the authenticated user.
+      operationId: getMeUsage
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: User usage data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserUsage"
+              example:
+                totalRuns: 42
+                totalCreditsUsed: 2100
+                monthlyCreditsUsed: 450
+                monthlyRuns: 9
+                freeTierRemaining: 55
+                tier: "pro"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/me/transactions:
+    get:
+      tags:
+        - User
+      summary: Current user transactions
+      description: Returns the transaction history for the authenticated user.
+      operationId: getMeTransactions
+      security:
+        - BearerToken: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: User transaction history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CreditTransaction"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Admin
+  # ──────────────────────────────────────────────────────────────────────────
+  /admin/health:
+    get:
+      tags:
+        - Admin
+      summary: Admin health check
+      description: Returns detailed health information about the system (admin only).
+      operationId: getAdminHealth
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: Detailed system health
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminHealth"
+              example:
+                status: "ok"
+                uptime: 12345.67
+                version: "0.1.0"
+                node_env: "production"
+                database: "connected"
+                redis: "connected"
+                queue_backend: "bullmq"
+                timestamp: "2026-06-05T20:00:00.000Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/stats:
+    get:
+      tags:
+        - Admin
+      summary: System statistics
+      description: Returns aggregate system statistics (admin only).
+      operationId: getAdminStats
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: System statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+              example:
+                totalAccounts: 42
+                totalFixRuns: 1500
+                totalCreditsIssued: 75000
+                totalCreditsUsed: 45000
+                activeAccountsThisMonth: 28
+                averageCreditsPerRun: 50
+                prSuccessRate: 84.3
+                topSources:
+                  github: 1200
+                  linear: 200
+                  jira: 100
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/accounts:
+    get:
+      tags:
+        - Admin
+      summary: List accounts
+      description: Lists all accounts with pagination (admin only).
+      operationId: getAdminAccounts
+      security:
+        - BearerToken: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: List of accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminAccount"
+              example:
+                - id: 1
+                  github_installation_id: 12345
+                  email: "user@example.com"
+                  name: "Jane Doe"
+                  tier: "pro"
+                  created_at: "2026-01-01T00:00:00.000Z"
+                  updated_at: "2026-06-05T20:00:00.000Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/audit-logs:
+    get:
+      tags:
+        - Admin
+      summary: List audit logs
+      description: |
+        Returns the system audit log (admin only). Contains security-relevant
+        events such as configuration changes, API key creation, and admin actions.
+      operationId: getAdminAuditLogs
+      security:
+        - BearerToken: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: account_id
+          in: query
+          schema:
+            type: integer
+          description: Filter by account ID
+        - name: action
+          in: query
+          schema:
+            type: string
+          description: Filter by action type
+      responses:
+        "200":
+          description: List of audit log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLogEntry"
+              example:
+                - id: 1
+                  account_id: 1
+                  action: "tier_change"
+                  details: "Tier changed from free to pro"
+                  ip_address: "192.168.1.1"
+                  created_at: "2026-06-05T20:00:00.000Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/webhooks:
+    get:
+      tags:
+        - Admin
+      summary: List webhook events
+      description: |
+        Returns the list of all received webhook events for debugging and
+        monitoring purposes (admin only).
+      operationId: getAdminWebhooks
+      security:
+        - BearerToken: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [github, gitlab, bitbucket, stripe, slack, linear, jira]
+          description: Filter by webhook source
+        - name: processed
+          in: query
+          schema:
+            type: boolean
+          description: Filter by processed status
+      responses:
+        "200":
+          description: List of webhook events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WebhookEvent"
+              example:
+                - id: 1
+                  source: github
+                  event_type: "issues.labeled"
+                  payload: { "action": "labeled" }
+                  processed: true
+                  created_at: "2026-06-05T20:00:00.000Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/webhooks/{id}/replay:
+    post:
+      tags:
+        - Admin
+      summary: Replay a webhook event
+      description: |
+        Re-processes a previously received webhook event by its ID (admin only).
+        Useful for debugging and recovery.
+      operationId: postAdminWebhookReplay
+      security:
+        - BearerToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Webhook event ID to replay
+      responses:
+        "200":
+          description: Webhook event replayed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  replayed:
+                    type: boolean
+                    example: true
+                  event_id:
+                    type: integer
+                    example: 42
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Feature Flags (Admin)
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/v1/admin/feature-flags:
+    get:
+      tags:
+        - Feature Flags
+      summary: List feature flags
+      description: Lists all feature flags, optionally filtered by account.
+      operationId: listFeatureFlags
+      security:
+        - BearerToken: []
+      parameters:
+        - name: account_id
+          in: query
+          schema:
+            type: integer
+          description: Filter flags for a specific account
+      responses:
+        "200":
+          description: List of feature flags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  flags:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FeatureFlag"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      tags:
+        - Feature Flags
+      summary: Set a feature flag
+      description: Creates or updates a feature flag by name.
+      operationId: setFeatureFlag
+      security:
+        - BearerToken: []
+      parameters:
+        - name: name
+          in: query
+          schema:
+            type: string
+          description: Feature flag name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlagPutBody"
+      responses:
+        "200":
+          description: Feature flag updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  flag:
+                    type: string
+                  enabled:
+                    type: boolean
+                  account_id:
+                    type: integer
+                    nullable: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/admin/feature-flags/{name}:
+    get:
+      tags:
+        - Feature Flags
+      summary: Get a feature flag
+      description: Returns the status of a specific feature flag.
+      operationId: getFeatureFlag
+      security:
+        - BearerToken: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Feature flag name
+        - name: account_id
+          in: query
+          schema:
+            type: integer
+          description: Account ID for account-specific flags
+      responses:
+        "200":
+          description: Feature flag status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  flag:
+                    type: string
+                  enabled:
+                    type: boolean
+                  account_id:
+                    type: integer
+                    nullable: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags:
+        - Feature Flags
+      summary: Delete a feature flag
+      description: Removes a feature flag override.
+      operationId: deleteFeatureFlag
+      security:
+        - BearerToken: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Feature flag name to delete
+        - name: account_id
+          in: query
+          schema:
+            type: integer
+          description: Account ID for account-specific flags
+      responses:
+        "200":
+          description: Feature flag deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                    example: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    BearerToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        API key or admin token provided in the Authorization header.
+        For admin endpoints, use your admin API token.
+        For user endpoints, use your account API key.
+
+  schemas:
+    # ── Health ──────────────────────────────────────────────────────────────
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+        label:
+          type: string
+          description: The configured issue label that triggers STAS
+          example: "stas:fix"
+        uptime:
+          type: number
+          description: Server uptime in seconds
+          example: 12345.67
+        timestamp:
+          type: string
+          format: date-time
+          description: Current server timestamp
+      required:
+        - status
+        - label
+        - uptime
+        - timestamp
+
+    # ── Error Responses ────────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+        details:
+          type: array
+          items:
+            type: string
+          description: Detailed error information (optional)
+      required:
+        - error
+
+    # ── Webhook ────────────────────────────────────────────────────────────
+    WebhookAcceptedResponse:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+          example: true
+      required:
+        - accepted
+
+    GitHubWebhookPayload:
+      type: object
+      description: GitHub webhook payload. Structure varies by event type.
+      properties:
+        action:
+          type: string
+          example: "labeled"
+        issue:
+          type: object
+          properties:
+            number:
+              type: integer
+            title:
+              type: string
+            body:
+              type: string
+            labels:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+        repository:
+          type: object
+          properties:
+            full_name:
+              type: string
+            owner:
+              type: object
+              properties:
+                login:
+                  type: string
+            name:
+              type: string
+        installation:
+          type: object
+          properties:
+            id:
+              type: integer
+
+    GitLabWebhookPayload:
+      type: object
+      description: GitLab webhook payload. Structure varies by event type.
+      properties:
+        event_name:
+          type: string
+          example: "push"
+        ref:
+          type: string
+          example: "refs/heads/main"
+        project:
+          type: object
+          properties:
+            id:
+              type: integer
+            path_with_namespace:
+              type: string
+
+    BitbucketWebhookPayload:
+      type: object
+      description: Bitbucket webhook payload. Structure varies by event type.
+      properties:
+        push:
+          type: object
+          properties:
+            changes:
+              type: array
+              items:
+                type: object
+        repository:
+          type: object
+          properties:
+            full_name:
+              type: string
+
+    LinearWebhookPayload:
+      type: object
+      description: Linear webhook payload. Structure varies by event type.
+      properties:
+        action:
+          type: string
+          example: "create"
+        type:
+          type: string
+          example: "Issue"
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              example: "abc-123"
+            title:
+              type: string
+            description:
+              type: string
+            state:
+              type: string
+
+    JiraWebhookPayload:
+      type: object
+      description: Jira webhook payload. Structure varies by event type.
+      properties:
+        timestamp:
+          type: integer
+          description: Event timestamp in milliseconds
+        webhookEvent:
+          type: string
+          example: "jira:issue_created"
+        issue:
+          type: object
+          properties:
+            id:
+              type: string
+            key:
+              type: string
+              example: "PROJ-123"
+            fields:
+              type: object
+              properties:
+                summary:
+                  type: string
+                description:
+                  type: object
+
+    SlackEventBody:
+      type: object
+      description: |
+        Slack Events API payload. Used for URL verification challenge, event callbacks,
+        and interactive message actions.
+      properties:
+        type:
+          type: string
+          example: "url_verification"
+        challenge:
+          type: string
+          description: URL verification challenge string
+        event:
+          type: object
+          description: Slack event object (present in event_callback type)
+        token:
+          type: string
+
+    # ── Credits ─────────────────────────────────────────────────────────────
+    CreditBalance:
+      type: object
+      properties:
+        id:
+          type: integer
+        account_id:
+          type: integer
+        balance:
+          type: integer
+          description: Current credit balance
+        lifetime_credits:
+          type: integer
+          description: Total credits ever earned
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - account_id
+        - balance
+        - lifetime_credits
+
+    CreditTransaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        account_id:
+          type: integer
+        amount:
+          type: integer
+          description: Positive for credits added, negative for deductions
+        type:
+          type: string
+          enum: [purchase, usage, refund, adjustment]
+        description:
+          type: string
+          nullable: true
+        stripe_payment_intent_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - account_id
+        - amount
+        - type
+        - created_at
+
+    CreditTopUpRequest:
+      type: object
+      required:
+        - price_id
+        - success_url
+        - cancel_url
+      properties:
+        price_id:
+          type: string
+          description: Stripe Price ID for the desired credit pack
+          example: "price_100credits"
+        success_url:
+          type: string
+          format: uri
+          description: Redirect URL on successful payment
+          example: "https://app.stas.ai/credits/success"
+        cancel_url:
+          type: string
+          format: uri
+          description: Redirect URL if the user cancels
+          example: "https://app.stas.ai/credits"
+
+    CreditTopUpResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Stripe Checkout session URL for redirect
+        session_id:
+          type: string
+          description: Stripe Checkout session ID
+      required:
+        - url
+        - session_id
+
+    # ── Usage ───────────────────────────────────────────────────────────────
+    UsageStats:
+      type: object
+      properties:
+        totalRuns:
+          type: integer
+        totalCredits:
+          type: integer
+        averageCreditsPerRun:
+          type: number
+        totalDurationMs:
+          type: integer
+        runsBySource:
+          type: object
+          additionalProperties:
+            type: integer
+        runsByModel:
+          type: object
+          additionalProperties:
+            type: integer
+        prCreationRate:
+          type: number
+          description: Percentage of runs that resulted in PR creation
+        fallbackRate:
+          type: number
+          description: Percentage of runs that used fallback model
+      required:
+        - totalRuns
+        - totalCredits
+        - averageCreditsPerRun
+        - totalDurationMs
+        - runsBySource
+        - runsByModel
+        - prCreationRate
+        - fallbackRate
+
+    UsageCurrentMonth:
+      type: object
+      properties:
+        month:
+          type: string
+          example: "2026-06"
+        totalCreditsUsed:
+          type: integer
+        totalRuns:
+          type: integer
+        freeTierLimit:
+          type: integer
+        freeTierRemaining:
+          type: integer
+          nullable: true
+        withinFreeTier:
+          type: boolean
+        costConfig:
+          type: object
+          properties:
+            triage:
+              type: integer
+            opencodePrimary:
+              type: integer
+            opencodeFallback:
+              type: integer
+            prCreation:
+              type: integer
+            retryPenalty:
+              type: integer
+      required:
+        - month
+        - totalCreditsUsed
+        - totalRuns
+
+    UsageForecast:
+      type: object
+      properties:
+        forecastDate:
+          type: string
+          format: date-time
+        month:
+          type: string
+        daysElapsed:
+          type: integer
+        daysRemaining:
+          type: integer
+        daysInMonth:
+          type: integer
+        currentUsage:
+          type: object
+          properties:
+            credits:
+              type: integer
+            runs:
+              type: integer
+        dailyAverage:
+          type: object
+          properties:
+            credits:
+              type: number
+            runs:
+              type: number
+        forecast:
+          type: object
+          properties:
+            endOfMonthCredits:
+              type: integer
+            endOfMonthRuns:
+              type: integer
+            projectedRemainingCredits:
+              type: integer
+        freeTier:
+          type: object
+          properties:
+            limit:
+              type: integer
+            wouldExceed:
+              type: boolean
+            estimatedOverage:
+              type: integer
+      required:
+        - forecastDate
+        - month
+
+    # ── User ────────────────────────────────────────────────────────────────
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        tier:
+          type: string
+          enum: [free, pro, enterprise]
+        github_installation_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - tier
+        - github_installation_id
+
+    UserUsage:
+      type: object
+      properties:
+        totalRuns:
+          type: integer
+        totalCreditsUsed:
+          type: integer
+        monthlyCreditsUsed:
+          type: integer
+        monthlyRuns:
+          type: integer
+        freeTierRemaining:
+          type: integer
+          nullable: true
+        tier:
+          type: string
+      required:
+        - totalRuns
+        - totalCreditsUsed
+        - tier
+
+    # ── Admin ───────────────────────────────────────────────────────────────
+    AdminHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+        uptime:
+          type: number
+        version:
+          type: string
+        node_env:
+          type: string
+        database:
+          type: string
+          example: "connected"
+        redis:
+          type: string
+          example: "connected"
+        queue_backend:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - status
+        - uptime
+
+    AdminStats:
+      type: object
+      properties:
+        totalAccounts:
+          type: integer
+        totalFixRuns:
+          type: integer
+        totalCreditsIssued:
+          type: integer
+        totalCreditsUsed:
+          type: integer
+        activeAccountsThisMonth:
+          type: integer
+        averageCreditsPerRun:
+          type: number
+        prSuccessRate:
+          type: number
+        topSources:
+          type: object
+          additionalProperties:
+            type: integer
+
+    AdminAccount:
+      type: object
+      properties:
+        id:
+          type: integer
+        github_installation_id:
+          type: integer
+        email:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        tier:
+          type: string
+          enum: [free, pro, enterprise]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - github_installation_id
+        - tier
+
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        account_id:
+          type: integer
+        action:
+          type: string
+        details:
+          type: string
+          nullable: true
+        ip_address:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - account_id
+        - action
+
+    WebhookEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        source:
+          type: string
+          enum: [github, gitlab, bitbucket, stripe, slack, linear, jira]
+        event_type:
+          type: string
+        payload:
+          type: object
+        processed:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - source
+        - event_type
+        - processed
+
+    # ── Feature Flags ───────────────────────────────────────────────────────
+    FeatureFlag:
+      type: object
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+        account_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        ttl_seconds:
+          type: integer
+      required:
+        - name
+        - enabled
+
+    FeatureFlagPutBody:
+      type: object
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+          description: Whether the feature flag should be enabled
+        account_id:
+          type: integer
+          description: Optional account ID for account-specific overrides
+
+  responses:
+    WebhookAccepted:
+      description: Webhook accepted for processing
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/WebhookAcceptedResponse"
+    BadRequest:
+      description: Invalid request payload
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateLimited:
+      description: Too many requests — rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        RateLimit-Limit:
+          schema:
+            type: integer
+          description: Maximum requests per window
+        RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Requests remaining in current window
+        RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix timestamp when the window resets
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Too many requests"
+              retryAfter:
+                type: string
+                description: See Retry-After header

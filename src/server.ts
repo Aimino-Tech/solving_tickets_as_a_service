@@ -13,6 +13,7 @@
  * - GET /metrics endpoint (Prometheus-style webhook metrics)
  * - POST /webhook -- GitHub webhook receiver via @octokit/webhooks
  * - POST /webhook/stripe -- Stripe webhook for credit purchase events
+ * - GET /docs -- Swagger UI / OpenAPI documentation
  * - Admin webhook management API at /admin/webhooks
  * - Webhook event logging to webhook_events table for all sources
  * - Idempotency via x-github-delivery / delivery_id deduplication
@@ -30,6 +31,11 @@
  */
 
 import crypto from 'node:crypto';
+import fs from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import yaml from "js-yaml";
+import swaggerUi from "swagger-ui-express";
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
@@ -769,7 +775,12 @@ export function createApp(): express.Application {
   // GET /admin/webhooks/stats
   app.use('/admin/webhooks', adminWebhooksRouter);
 
-  // -- 404 handler ----------------------------------------------------------
+  // ── Swagger UI / OpenAPI documentation ──────────────────────────────
+  const thisFilename = fileURLToPath(import.meta.url);
+  const thisDirname = dirname(thisFilename);
+  const specPath = resolve(thisDirname, '../openapi.yaml');
+  const openApiSpec = yaml.load(fs.readFileSync(specPath, 'utf8')) as Record<string, unknown>;
+  app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
   // -- 404 handler ----------------------------------------------------------
   app.use((_req: Request, res: Response) => {
