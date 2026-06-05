@@ -206,6 +206,23 @@ See `DEVELOPMENT.md` for details on all deployment options.
 
 See `k8s/` for example manifests.
 
+
+## Documentation
+
+STAS ships with comprehensive documentation:
+
+| Document | Description |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Deep-dive into the pipeline: webhooks, queue, agent, sandbox, security |
+| [SECURITY.md](docs/SECURITY.md) | Security model: webhook verification, sandbox isolation, prompt injection protection |
+| [SELF_HOSTING.md](docs/SELF_HOSTING.md) | Step-by-step self-hosting guide: Docker, Kubernetes, Railway, Fly.io |
+| [CUSTOMIZATION.md](docs/CUSTOMIZATION.md) | Customizing labels, models, tools, PR templates, and environment |
+| [FAQ.md](docs/FAQ.md) | Frequently asked questions about STAS, alternatives, and troubleshooting |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, testing, PR process, code style |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community guidelines |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | Local development and deployment guide |
+
+
 ## Roadmap
 
 - [x] Webhook receiver & GitHub App integration
