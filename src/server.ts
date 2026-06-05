@@ -30,7 +30,9 @@ import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/li
 import { rootLogger } from './utils/logger.js';
 import type { IssueJobData } from './utils/types.js';
 import { validateWebhookPayload } from './validation.js';
+import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
+import { createGitlabWebhooks } from './webhooks/gitlab.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -71,7 +73,7 @@ export function createApp(): express.Application {
 
   // ── Raw body capture for webhook verification ────────────────────
   app.use(
-    ['/webhook', '/webhook/linear', '/webhook/jira'],
+    ['/webhook', '/webhook/github', '/webhook/gitlab', '/webhook/bitbucket', '/webhook/linear', '/webhook/jira'],
     express.raw({ type: 'application/json', verify: addRawBody }),
   );
 
@@ -103,16 +105,18 @@ export function createApp(): express.Application {
 
   // ── Webhook receiver ─────────────────────────────────────────────
   const queue = createIssueQueue();
-  const webhooks = createGithubWebhooks(queue);
+  const githubWebhooks = createGithubWebhooks(queue);
+  const gitlabHandler = createGitlabWebhooks(queue);
+  const bitbucketHandler = createBitbucketWebhooks(queue);
 
-  app.post('/webhook', async (req: Request, res: Response) => {
+  // ── GitHub webhook handler (shared between /webhook and /webhook/github) ─
+  async function handleGithubWebhook(req: Request, res: Response): Promise<void> {
     const event = req.headers['x-github-event'] as string;
     const deliveryId = req.headers['x-github-delivery'] as string;
     const signature = req.headers['x-hub-signature-256'] as string;
 
-    log.info({ event, deliveryId, requestId: req.requestId }, 'Received webhook');
+    log.info({ event, deliveryId, requestId: req.requestId }, 'Received GitHub webhook');
 
-    // ── Parse and validate payload before processing ──────────────
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
     let parsedPayload: unknown;
     try {
@@ -137,7 +141,6 @@ export function createApp(): express.Application {
       return;
     }
 
-    // ── Verify signature (skip in dev mode if configured) ─────────
     if (!config.stas.devSkipWebhookVerify && signature) {
       if (!rawBody) {
         log.error('Missing raw body for signature verification');
@@ -146,35 +149,99 @@ export function createApp(): express.Application {
       }
 
       try {
-        await webhooks.verifyAndReceive({
+        await githubWebhooks.verifyAndReceive({
           id: deliveryId,
-          name: event as EmitterWebhookEventName,
+          name: event as any,
           payload: rawBody.toString(),
           signature,
         });
       } catch (err) {
-        log.warn({ err: String(err) }, 'Webhook verification failed');
+        log.warn({ err: String(err) }, 'GitHub webhook verification failed');
         res.status(401).json({ error: 'Invalid signature' });
         return;
       }
     } else {
-      // Dev mode: process without verification
       const payload = rawBody ? rawBody.toString() : JSON.stringify(req.body);
 
       try {
-        await webhooks.verifyAndReceive({
+        await githubWebhooks.verifyAndReceive({
           id: deliveryId || crypto.randomUUID(),
-          name: event as EmitterWebhookEventName,
+          name: event as any,
           payload,
           signature: signature || '',
         });
       } catch (err) {
         log.error({ err: String(err) }, 'Webhook processing error');
-        // Don't return 401 in dev mode — just log the error
       }
     }
 
-    // Always return 202 Accepted for webhooks
+    res.status(202).json({ accepted: true });
+  }
+
+  // Legacy /webhook (backward compat) + explicit /webhook/github
+  app.post('/webhook', handleGithubWebhook);
+  app.post('/webhook/github', handleGithubWebhook);
+
+  // ── GitLab webhook ───────────────────────────────────────────────
+  app.post('/webhook/gitlab', async (req: Request, res: Response) => {
+    const event = req.headers['x-gitlab-event'] as string;
+    const token = req.headers['x-gitlab-token'] as string;
+    const rawBody = (req as { rawBody?: Buffer }).rawBody;
+
+    log.info({ event, requestId: req.requestId }, 'Received GitLab webhook');
+
+    if (!rawBody) {
+      log.error('Missing raw body for GitLab webhook');
+      res.status(400).json({ error: 'Missing raw body' });
+      return;
+    }
+
+    if (config.gitlab.webhookSecret) {
+      const { gitlabWebhook: gw } = await import('./webhooks/gitlab.js');
+      if (!gw.verify(rawBody.toString(), token, config.gitlab.webhookSecret)) {
+        log.warn('GitLab webhook token verification failed');
+        res.status(401).json({ error: 'Invalid token' });
+        return;
+      }
+    }
+
+    let parsedPayload: unknown;
+    try {
+      parsedPayload = JSON.parse(rawBody.toString());
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to parse GitLab webhook payload');
+      res.status(400).json({ error: 'Invalid JSON payload' });
+      return;
+    }
+
+    try {
+      await gitlabHandler.handle(event, parsedPayload);
+    } catch (err) {
+      log.error({ err: String(err) }, 'GitLab webhook processing error');
+    }
+
+    res.status(202).json({ accepted: true });
+  });
+
+  // ── Bitbucket webhook ────────────────────────────────────────────
+  app.post('/webhook/bitbucket', async (req: Request, res: Response) => {
+    const signature = req.headers['x-hub-signature'] as string;
+    const rawBody = (req as { rawBody?: Buffer }).rawBody;
+
+    log.info({ requestId: req.requestId }, 'Received Bitbucket webhook');
+
+    if (!rawBody) {
+      log.error('Missing raw body for Bitbucket webhook');
+      res.status(400).json({ error: 'Missing raw body' });
+      return;
+    }
+
+    try {
+      await bitbucketHandler.handle(rawBody.toString(), signature);
+    } catch (err) {
+      log.error({ err: String(err) }, 'Bitbucket webhook processing error');
+    }
+
     res.status(202).json({ accepted: true });
   });
 

@@ -12,7 +12,7 @@ export interface IssueJobData {
   issueBody: string | null;
 
   /** Source platform that originated this job. Defaults to "github". */
-  source?: 'github' | 'linear' | 'jira';
+  source?: 'github' | 'gitlab' | 'bitbucket' | 'linear' | 'jira';
 
   /** Tracker ticket ID (Linear issue ID or Jira issue key) for cross-platform sync. */
   trackerTicketId?: string;
@@ -40,4 +40,6 @@ export interface AgentResult {
   noFixReason?: string;
   alreadyFixed?: boolean;
   investigationOnly?: boolean;
+  /** Agent produced a fix but it failed verification (tests didn't pass). */
+  verificationFailed?: boolean;
 }
