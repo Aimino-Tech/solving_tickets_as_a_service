@@ -23,6 +23,7 @@ import type { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { creditsRepository } from '../db/repositories/CreditsRepository.js';
 import { CREDIT_PACKS } from './credit-packs.js';
 import { creditsRepository } from '../db/repositories/CreditsRepository.js';
 
@@ -184,7 +185,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
   } catch (err) {
     log.error(
       { err: String(err), accountId: Number(accountId), sessionId: session.id },
-      'Failed to credit account after checkout — manual reconciliation required',
+      'Failed to credit account after checkout',
     );
   }
 }
