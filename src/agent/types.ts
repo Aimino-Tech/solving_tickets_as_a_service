@@ -43,4 +43,6 @@ export interface AgentResult {
   noFixReason?: string;
   alreadyFixed?: boolean;
   investigationOnly?: boolean;
+  /** Agent produced a fix but it failed verification (tests didn't pass). */
+  verificationFailed?: boolean;
 }

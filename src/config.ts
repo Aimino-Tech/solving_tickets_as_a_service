@@ -66,6 +66,13 @@ const envSchema = z.object({
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
 
+  // Slack notifications
+  SLACK_WEBHOOK_URL: z.string().optional(),
+  SLACK_CHANNEL: z.string().optional(),
+  SLACK_BOT_TOKEN: z.string().optional(),
+  SLACK_SIGNING_SECRET: z.string().optional(),
+  SLACK_INTERACTIONS_PATH: z.string().default('/slack/events'),
+
   // Trackers — Linear
   LINEAR_API_KEY: z.string().optional(),
   LINEAR_WEBHOOK_SECRET: z.string().optional(),
@@ -133,6 +140,14 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
+    },
+
+    slack: {
+      webhookUrl: env.SLACK_WEBHOOK_URL,
+      channel: env.SLACK_CHANNEL,
+      botToken: env.SLACK_BOT_TOKEN,
+      signingSecret: env.SLACK_SIGNING_SECRET,
+      interactionsPath: env.SLACK_INTERACTIONS_PATH,
     },
 
     stas: {
