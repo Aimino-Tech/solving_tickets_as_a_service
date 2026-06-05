@@ -172,7 +172,7 @@ services:
     image: stas-worker:latest
     container_name: stas-worker
     <<: *default-restart
-    command: celery -A celery_app worker -l info -Q stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications --concurrency=4
+    command: celery -A workers.celery_app worker -l info -Q stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications --concurrency=4
     env_file: .env
     environment:
       - REDIS_URL=redis://stas-redis:6379
@@ -186,7 +186,7 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python3", "/app/health.py", "--check"]
+      test: ["CMD", "python3", "/app/workers/health.py", "--check"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -205,7 +205,7 @@ services:
     image: stas-worker:latest
     container_name: stas-celery-beat
     <<: *default-restart
-    command: celery -A celery_app beat -l info
+    command: celery -A workers.celery_app beat -l info
     env_file: .env
     environment:
       - REDIS_URL=redis://stas-redis:6379
@@ -233,7 +233,7 @@ services:
     <<: *default-restart
     ports:
       - "5555:5555"
-    command: celery flower --port=5555 --broker=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
+    command: flower --port=5555 --broker=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
     environment:
       - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
       - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
@@ -261,7 +261,6 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
       - stas-webhook
     <<: *resources-light

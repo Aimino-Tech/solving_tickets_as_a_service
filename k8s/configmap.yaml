@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------
-# STAS ConfigMap — shared environment variables for all deployments
-# Sensitive values (keys, tokens, passwords) belong in a Secret.
+# STAS ConfigMap — shared (non-sensitive) environment variables.
+# Sensitive values (keys, tokens, passwords) MUST be in a Secret, not here.
 # ---------------------------------------------------------------------------
 apiVersion: v1
 kind: ConfigMap
@@ -14,10 +14,10 @@ data:
   LOG_LEVEL: "info"
   RUN_MODE: "both"
 
-  # Service URLs — adjust namespaces/services as needed
-  REDIS_URL: "redis://stas-redis:6379"
-  RABBITMQ_URL: "amqp://stas-app:stas-app-password@stas-rabbitmq:5672/stas"
-  DATABASE_URL: "postgres://stas:stas-password@stas-postgres:5432/stas"
+  # Service hostnames (credentials come from Secret)
+  REDIS_HOST: "stas-redis"
+  RABBITMQ_HOST: "stas-rabbitmq"
+  POSTGRES_HOST: "stas-postgres"
   OPENCODE_URL: "http://stas-opencode:4096"
 
   # STAS behavior

@@ -1,11 +1,16 @@
-"""
-STAS Celery Task Modules.
+from .triage import triage_issue
+from .agent import dispatch_opencode
+from .sandbox import boot_sandbox
+from .verification import run_verification
+from .pr_creation import create_pull_request
+from .notifications import send_notification, process_webhook
 
-Each submodule corresponds to a Celery queue used in the agent pipeline:
-  - triage: Issue classification
-  - agent: OpenCode agent dispatch
-  - sandbox: E2B sandbox management
-  - verification: Test suite verification
-  - pr_creation: GitHub PR creation
-  - notifications: Slack/webhook notifications
-"""
+__all__ = [
+    "triage_issue",
+    "dispatch_opencode",
+    "boot_sandbox",
+    "run_verification",
+    "create_pull_request",
+    "send_notification",
+    "process_webhook",
+]
