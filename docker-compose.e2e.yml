@@ -1,55 +1,29 @@
-# E2E Test Infrastructure for STAS
-#
-# Provides the minimal services needed to run E2E tests:
-#   - Redis 7 (BullMQ queue backend)
-#   - RabbitMQ 4 (optional, for cross-service bridge tests)
-#
-# Usage:
-#   docker compose -f docker-compose.e2e.yml up -d
-#   npm run test:e2e
-#   docker compose -f docker-compose.e2e.yml down
+version: '3.8'
 
 services:
-
-  redis-e2e:
+  redis:
     image: redis:7-alpine
     container_name: stas-e2e-redis
     ports:
       - "16379:6379"
-    command: redis-server --appendonly no
+    command: redis-server --appendonly no --save ""
+    tmpfs: /data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 3s
+      interval: 2s
       timeout: 2s
       retries: 10
+    networks:
+      - stas-e2e-net
     mem_limit: 128m
-    cpus: 0.25
-    restart: "no"
-    networks:
-      - stas-e2e-net
+    cpus: 0.3
 
-  rabbitmq-e2e:
-    image: rabbitmq:4-management-alpine
-    container_name: stas-e2e-rabbitmq
-    ports:
-      - "15673:15672"
-      - "5673:5672"
-    environment:
-      RABBITMQ_DEFAULT_USER: stas-e2e
-      RABBITMQ_DEFAULT_PASS: stas-e2e-password
-      RABBITMQ_DEFAULT_VHOST: /stas-e2e
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    mem_limit: 256m
-    cpus: 0.5
-    restart: "no"
-    profiles:
-      - full
-    networks:
-      - stas-e2e-net
+  # Note: The E2E test suite creates its own mock servers for GitHub API
+  # and OpenCode. No additional services are needed beyond Redis.
+  #
+  # Run tests with:
+  #   docker compose -f docker-compose.e2e.yml up -d redis
+  #   npm run test:e2e
 
 networks:
   stas-e2e-net:
