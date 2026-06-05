@@ -44,6 +44,7 @@
     "@octokit/auth-app": "^7.1.0",
     "@octokit/rest": "^21.0.0",
     "@octokit/webhooks": "^13.4.0",
+    "@sentry/node": "^10.56.0",
     "@slack/bolt": "^4.7.3",
     "amqplib": "^0.10.5",
     "bullmq": "^5.34.0",

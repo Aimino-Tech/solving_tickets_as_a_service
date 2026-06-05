@@ -39,6 +39,7 @@ import { buildTools, type SandboxTools } from "./tools.js";
 import type { AgentResult, TriageResult, VerificationResult, TestBaseline } from "./types.js";
 import type { IssueJobData } from "../utils/types.js";
 import { rootLogger, jobLogger } from "../utils/logger.js";
+import * as Sentry from '@sentry/node';
 import * as messages from "../github/messages.js";
 
 const log = rootLogger.child({ module: 'issue-agent' });
@@ -665,6 +666,21 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
         ? (result.errors as string[])
         : undefined;
 
+      Sentry.addBreadcrumb({
+        category: 'agent',
+        message: `OpenCode agent dispatched: ${repoOwner}/${repoName}#${issueNumber}`,
+        level: 'info',
+        data: {
+          model,
+          repoOwner,
+          repoName,
+          issueNumber,
+          confidence,
+          hasBranch: !!branchName,
+        },
+      });
+      Sentry.setTag('agent.model', model);
+      Sentry.setTag('agent.confidence', confidence);
       return {
         success: true,
         summary,

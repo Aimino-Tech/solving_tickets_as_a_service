@@ -17,6 +17,13 @@
  */
 
 import 'dotenv/config';
+
+/**
+ * Sentry must be imported and initialized before any other application code
+ * to ensure error instrumentation captures all span information.
+ */
+import * as Sentry from '@sentry/node';
+import { expressIntegration } from '@sentry/node';
 import type { Server } from 'node:http';
 import { config } from './config.js';
 import { rootLogger } from './utils/logger.js';
@@ -27,6 +34,20 @@ let server: Server | undefined;
 let shutdownInProgress = false;
 
 async function main(): Promise<void> {
+  // Initialize Sentry as early as possible
+  if (config.sentry.dsn) {
+    Sentry.init({
+      dsn: config.sentry.dsn,
+      environment: config.sentry.environment,
+      release: `stas@${process.env.npm_package_version || '0.1.0'}`,
+      tracesSampleRate: config.sentry.tracesSampleRate,
+      integrations: [expressIntegration()],
+    });
+    log.info({ environment: config.sentry.environment }, 'Sentry initialized');
+  } else {
+    log.info('Sentry not configured (SENTRY_DSN not set)');
+  }
+
   log.info({ runMode: config.runMode, nodeEnv: config.nodeEnv }, 'Starting STAS');
 
   const mode = config.runMode;
@@ -56,6 +77,13 @@ async function main(): Promise<void> {
       } catch (err) {
         log.warn({ err: String(err) }, 'Error closing worker');
       }
+    }
+
+    // Flush Sentry events before exit
+    try {
+      await Sentry.flush(2000);
+    } catch {
+      // non-fatal
     }
 
     process.exit(0);
@@ -99,5 +127,10 @@ async function main(): Promise<void> {
 
 main().catch((err) => {
   log.error({ err: String(err) }, 'Fatal error during startup');
+  try {
+    Sentry.captureException(err);
+  } catch {
+    // non-fatal
+  }
   process.exit(1);
 });

@@ -16,6 +16,7 @@
 import type { AgentResult } from '../agent/types.js';
 import type { SandboxExecutor } from '../sandbox/executor.js';
 import { rootLogger } from '../utils/logger.js';
+import * as Sentry from '@sentry/node';
 import { getOctokit } from './auth.js';
 import * as messages from './messages.js';
 
@@ -122,6 +123,21 @@ export class ActionDispatcher {
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
         log.info({ prNumber: pr.data.number }, 'High-confidence PR created');
+        Sentry.addBreadcrumb({
+          category: 'pr',
+          message: `PR created (high confidence): #${pr.data.number}`,
+          level: 'info',
+          data: {
+            prNumber: pr.data.number,
+            prUrl: pr.data.html_url,
+            confidence: 'high',
+            repoOwner,
+            repoName,
+            issueNumber,
+          },
+        });
+        Sentry.setTag('pr.number', pr.data.number);
+        Sentry.setTag('pr.confidence', 'high');
         return {
           action: 'pr_created',
           prUrl: pr.data.html_url,
@@ -153,6 +169,21 @@ export class ActionDispatcher {
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
         log.info({ prNumber: pr.data.number }, 'Draft PR created');
+        Sentry.addBreadcrumb({
+          category: 'pr',
+          message: `Draft PR created (medium confidence): #${pr.data.number}`,
+          level: 'info',
+          data: {
+            prNumber: pr.data.number,
+            prUrl: pr.data.html_url,
+            confidence: 'medium',
+            repoOwner,
+            repoName,
+            issueNumber,
+          },
+        });
+        Sentry.setTag('pr.number', pr.data.number);
+        Sentry.setTag('pr.confidence', 'medium');
         return {
           action: 'draft_pr_created',
           prUrl: pr.data.html_url,

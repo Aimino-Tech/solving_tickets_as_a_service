@@ -18,6 +18,54 @@
  * ---------------------------------------------------------------------------
  */
 
+/**
+ * ── Sentry Alerting Rules ─────────────────────────────────────────────
+ * Configure these in the Sentry dashboard (Settings > Alerts) after deployment:
+ *
+ * 1. Error Rate Spike Alert
+ *    - Metric: errors() FILTER WHERE level >= error
+ *    - Threshold: > 10 errors in 5 minutes
+ *    - Action: Notify #stas-alerts (Slack/PagerDuty/Email)
+ *    - Why: Catches unexpected spikes like webhook signature bursts or agent crashes
+ *
+ * 2. Webhook Processing Failure Alert
+ *    - Metric: errors() FILTER WHERE transaction = "/webhook"
+ *    - Threshold: > 5 failures in 15 minutes
+ *    - Action: Notify #stas-alerts
+ *    - Why: Downstream webhook verification or GitHub API issues
+ *
+ * 3. Queue Health Degradation Alert
+ *    - Tag: queue.status = "degraded"
+ *    - Threshold: Any occurrence
+ *    - Action: Notify #stas-alerts
+ *    - Why: Redis or RabbitMQ connection issues impact all job processing
+ *
+ * 4. Agent Pipeline Failure Alert
+ *    - Tag: agent.phase = failing
+ *    - Threshold: > 3 failures in 30 minutes
+ *    - Action: Notify #stas-alerts
+ *    - Why: OpenCode agent dispatch failures indicate upstream model issues
+ *
+ * 5. Unhandled Error Alert (process-level)
+ *    - Filter: unhandled = true
+ *    - Threshold: Any occurrence
+ *    - Action: Immediate PagerDuty + #stas-alerts
+ *    - Why: Process-level crashes (uncaughtException / unhandledRejection)
+ *
+ * 6. Health Check Degradation
+ *    - Monitor: /health/ready returns 503
+ *    - Threshold: > 3 consecutive failures
+ *    - Action: Notify #stas-alerts
+ *    - Why: Readiness probe failures mean the service is not accepting traffic
+ *
+ * 7. Performance Degradation (if tracing enabled)
+ *    - Metric: transaction.duration for /webhook
+ *    - Threshold: p95 > 5s in 15 minutes
+ *    - Action: Notify #stas-alerts
+ *    - Why: Slow webhook processing indicates downstream API or queue backpressure
+ * ──────────────────────────────────────────────────────────────────────
+ */
+
 import crypto from 'node:crypto';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
@@ -31,6 +79,7 @@ import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.j
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
 import { rootLogger } from './utils/logger.js';
+import * as Sentry from '@sentry/node';
 import type { IssueJobData } from './utils/types.js';
 import { validateWebhookPayload } from './validation.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
@@ -38,6 +87,18 @@ import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
 
 const log = rootLogger.child({ module: 'server' });
+
+// ── Health status tracker ─────────────────────────────────────────────
+// Tracks per-service status, last error timestamps, and queue depths for
+// the enhanced /health endpoint.
+const healthState = {
+  startedAt: Date.now(),
+  webhook: { status: 'healthy' as 'healthy' | 'degraded' | 'unknown', lastError: null as string | null, lastErrorAt: null as string | null },
+  worker: { status: 'unknown' as 'healthy' | 'degraded' | 'unknown', lastError: null as string | null, lastErrorAt: null as string | null },
+  queue: { status: 'unknown' as 'healthy' | 'degraded' | 'unknown', lastError: null as string | null, lastErrorAt: null as string | null },
+  db: { status: 'unknown' as 'healthy' | 'degraded' | 'unknown', lastError: null as string | null, lastErrorAt: null as string | null },
+  opencode: { status: 'unknown' as 'healthy' | 'degraded' | 'unknown', lastError: null as string | null, lastErrorAt: null as string | null },
+};
 
 /**
  * Create and configure the Express application.
@@ -53,6 +114,18 @@ export function createApp(): express.Application {
     next();
   });
 
+  // -- Sentry user context (set from webhook headers if available) ----------
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    const installationId = req.headers['x-github-hook-installation-target-id'] as string | undefined;
+    const repo = req.headers['x-github-repo'] as string | undefined;
+    if (installationId || repo) {
+      Sentry.setUser({
+        id: installationId || 'unknown',
+        data: repo ? { repo } : undefined,
+      });
+    }
+    next();
+  });
   // -- Structured access log middleware -------------------------------------
   app.use((req: Request, res: Response, next: NextFunction) => {
     const start = Date.now();
@@ -105,11 +178,83 @@ export function createApp(): express.Application {
   const bolt = getSlackBoltApp();
   bolt.mountOn(app);
 
-  // -- Health check ---------------------------------------------------------
-  app.get('/health', (_req: Request, res: Response) => {
+  // -- Health check endpoints ------------------------------------------------
+  /**
+   * Enhanced /health — returns detailed service status including per-service
+   * health, last error timestamps, queue depths, and uptime.
+   */
+  app.get('/health', async (_req: Request, res: Response) => {
+    // Attempt to check queue health
+    let queueDepth: number | undefined;
+    let queueWaiting: number | undefined;
+    try {
+      const { default: IORedis } = await import('ioredis');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const redis = new (IORedis as any)(config.queue.redisUrl || 'redis://localhost:6379', {
+        maxRetriesPerRequest: 1,
+        retryStrategy: () => null,
+        lazyConnect: true,
+      });
+      try {
+        await redis.connect();
+        // Use KEYS/LLEN as a lightweight health check — counts pending jobs
+        queueWaiting = await redis.llen('bull:stas-issues:wait') || 0;
+        queueDepth = await redis.llen('bull:stas-issues:active') || 0;
+        healthState.queue.status = 'healthy';
+      } catch {
+        healthState.queue.status = 'degraded';
+        healthState.queue.lastError = 'Redis unreachable';
+        healthState.queue.lastErrorAt = new Date().toISOString();
+      } finally {
+        redis.disconnect();
+      }
+    } catch {
+      healthState.queue.status = 'degraded';
+    }
+
     res.json({
       status: 'ok',
+      service: 'stas',
+      version: process.env.npm_package_version || '0.1.0',
       label: config.stas.label,
+      uptime: process.uptime(),
+      startedAt: new Date(healthState.startedAt).toISOString(),
+      timestamp: new Date().toISOString(),
+      services: {
+        webhook: healthState.webhook,
+        worker: healthState.worker,
+        queue: healthState.queue,
+        db: healthState.db,
+        opencode: healthState.opencode,
+      },
+      queue: {
+        waiting: queueWaiting ?? null,
+        active: queueDepth ?? null,
+      },
+    });
+  });
+
+  /**
+   * /health/ready — readiness probe.
+   * Returns 200 when all critical dependencies (queue) are connected, 503 otherwise.
+   */
+  app.get('/health/ready', async (_req: Request, res: Response) => {
+    const ready = healthState.queue.status === 'healthy';
+    res.status(ready ? 200 : 503).json({
+      status: ready ? 'ready' : 'not ready',
+      services: {
+        queue: healthState.queue.status,
+      },
+    });
+  });
+
+  /**
+   * /health/live — liveness probe.
+   * Always returns 200 as long as the process is alive.
+   */
+  app.get('/health/live', (_req: Request, res: Response) => {
+    res.json({
+      status: 'alive',
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     });
@@ -131,6 +276,14 @@ export function createApp(): express.Application {
     const signature = req.headers['x-hub-signature-256'] as string;
 
     log.info({ event, deliveryId, requestId: req.requestId }, 'Received GitHub webhook');
+    Sentry.addBreadcrumb({
+      category: 'webhook',
+      message: `GitHub webhook received: ${event}`,
+      level: 'info',
+      data: { event, deliveryId, requestId: req.requestId },
+    });
+    Sentry.setTag('webhook.event', event);
+    Sentry.setTag('webhook.delivery_id', deliveryId);
 
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
     let parsedPayload: unknown;
@@ -204,6 +357,12 @@ export function createApp(): express.Application {
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
 
     log.info({ event, requestId: req.requestId }, 'Received GitLab webhook');
+    Sentry.addBreadcrumb({
+      category: 'webhook',
+      message: `GitLab webhook received: ${event}`,
+      level: 'info',
+      data: { event, platform: 'gitlab', requestId: req.requestId },
+    });
 
     if (!rawBody) {
       log.error('Missing raw body for GitLab webhook');
@@ -244,6 +403,12 @@ export function createApp(): express.Application {
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
 
     log.info({ requestId: req.requestId }, 'Received Bitbucket webhook');
+    Sentry.addBreadcrumb({
+      category: 'webhook',
+      message: 'Bitbucket webhook received',
+      level: 'info',
+      data: { platform: 'bitbucket', requestId: req.requestId },
+    });
 
     if (!rawBody) {
       log.error('Missing raw body for Bitbucket webhook');
@@ -403,10 +568,20 @@ export function createApp(): express.Application {
     res.status(404).json({ error: 'Not found' });
   });
 
+  // -- Sentry error handler (must be before generic 500 handler) -------------
+  // Captures Express request errors and sends them to Sentry.
+  if (typeof Sentry.setupExpressErrorHandler === 'function') {
+    Sentry.setupExpressErrorHandler(app);
+  } else if (typeof Sentry.expressErrorHandler === 'function') {
+    app.use(Sentry.expressErrorHandler() as any);
+  }
+
   // -- Global error handler -------------------------------------------------
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     log.error({ err: String(err) }, 'Unhandled error');
-    res.status(500).json({ error: 'Internal server error' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   });
 
   return app;
@@ -444,11 +619,15 @@ export function startServer(): import('http').Server {
 
 process.on('uncaughtException', (err) => {
   log.error({ err: String(err), stack: (err as Error).stack }, 'Uncaught exception -- shutting down');
+  Sentry.captureException(err);
+  Sentry.flush(2000).catch(() => {});
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
   log.error({ err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection -- shutting down');
+  Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
+  Sentry.flush(2000).catch(() => {});
   process.exit(1);
 });
 

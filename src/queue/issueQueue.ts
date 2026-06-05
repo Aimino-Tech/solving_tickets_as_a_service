@@ -33,6 +33,7 @@ import { config } from "../config.js";
 import { runIssueAgent } from "../agent/issueAgent.js";
 import type { IssueJobData } from "../utils/types.js";
 import { rootLogger } from "../utils/logger.js";
+import * as Sentry from '@sentry/node';
 import * as messages from "../github/messages.js";
 import { getOctokit } from "../github/auth.js";
 
@@ -405,6 +406,12 @@ export async function enqueueIssue(
     } else if (backend === 'rabbitmq') {
       if (rabbitmqResult) {
         log.info({ repo, issueNumber: data.issueNumber, dedupKey }, 'Issue published to RabbitMQ');
+        Sentry.addBreadcrumb({
+          category: 'queue',
+          message: `Issue published to RabbitMQ: ${repo}#${data.issueNumber}`,
+          level: 'info',
+          data: { repo, issueNumber: data.issueNumber, backend: 'rabbitmq', dedupKey },
+        });
       }
       return rabbitmqResult ? 'rabbitmq' : undefined;
     }
@@ -436,6 +443,21 @@ export async function enqueueIssue(
         },
         'Issue enqueued via BullMQ',
       );
+      Sentry.addBreadcrumb({
+        category: 'queue',
+        message: `Issue enqueued: ${repo}#${data.issueNumber}`,
+        level: 'info',
+        data: {
+          jobId: job.id,
+          repo,
+          issueNumber: data.issueNumber,
+          backend: 'bullmq',
+          dedupKey,
+        },
+      });
+      Sentry.setTag('queue.job_id', job.id);
+      Sentry.setTag('queue.repo', repo);
+      Sentry.setTag('queue.issue', String(data.issueNumber));
     } catch (err) {
       log.error(
         {
