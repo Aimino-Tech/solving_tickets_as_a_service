@@ -48,8 +48,13 @@ vi.mock('../../config.js', () => ({
   config: {
     queue: { redisUrl: 'redis://localhost:6379' },
     stas: {
-      rateLimitWindowMs: 60_000,
-      rateLimitMax: 30,
+      rateLimit: {
+        windowMs: 60_000,
+        max: 30,
+        repoLimit: 5,
+        accountLimit: 10,
+        repoConcurrencyMax: 3,
+      },
     },
   },
 }));

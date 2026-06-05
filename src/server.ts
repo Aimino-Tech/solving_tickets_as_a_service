@@ -17,7 +17,6 @@
  * - Webhook event logging to webhook_events table for all sources
  * - Idempotency via x-github-delivery / delivery_id deduplication
  * - Exponential backoff retry worker (1min, 5min, 30min, max 3)
- * - Sentry error handler (captures Express errors)
  *
  * --- Error Handling Audit ---------------------------------------------------
  * - Sentry error handler via setupExpressErrorHandler (v8 API)
@@ -41,25 +40,27 @@ import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
 import { getQueueHealth } from './health/queueHealth.js';
 import { bridgeMetrics } from './bridge/metrics.js';
-import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
+import { createIssueQueue, enqueueIssue, pauseIssueQueue, resumeIssueQueue, isQueuePaused, getQueueMetrics } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
+import { creditRouter } from './credits/index.js';
 import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
 import { validateWebhookPayload } from './validation.js';
+import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
-import { recordWebhookDuration } from './webhooks/metrics.js';
-import { renderMetrics } from './webhooks/metrics.js';
+import { recordWebhookDuration, renderMetrics } from './webhooks/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
+import { startHealthMonitor } from './webhooks/healthMonitor.js';
 import { adminRouter } from './routes/admin.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { addBreadcrumb, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
@@ -170,10 +171,26 @@ export function createApp(): express.Application {
   // -- URL-encoded body parsing (with size limit) ---------------------------
   app.use(express.urlencoded({ extended: true, limit: config.security.requestBodyLimit }));
 
-  // -- Rate limiter for webhook routes ---------------------------------------
+  // -- Custom per-repo and per-account rate limit middleware ---------------
+  app.use('/webhook', rateLimitMiddleware({
+    getAccountId: (req, _res) => {
+      const p = (req as any).parsedPayload;
+      return p?.installation?.id ?? undefined;
+    },
+    getRepo: (req, _res) => {
+      const p = (req as any).parsedPayload;
+      if (p?.repository?.full_name) return p.repository.full_name;
+      if (p?.repository?.owner?.login && p?.repository?.name) {
+        return `${p.repository.owner.login}/${p.repository.name}`;
+      }
+      return undefined;
+    },
+  }));
+
+  // -- Global rate limiter for webhook routes (IP-based) ---------------------
   const limiter = rateLimit({
-    windowMs: config.stas.rateLimitWindowMs,
-    limit: config.stas.rateLimitMax,
+    windowMs: config.stas.rateLimit.windowMs,
+    limit: config.stas.rateLimit.max,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
@@ -187,8 +204,8 @@ export function createApp(): express.Application {
   const bolt = getSlackBoltApp();
   bolt.mountOn(app);
 
-  // -- Health check ---------------------------------------------------------
-  app.get('/health', (_req: Request, res: Response) => {
+  // -- Health check (liveness, readiness, and simple health) -----------------
+  app.get(['/health', '/health/live', '/health/ready'], (_req: Request, res: Response) => {
     res.json({
       status: 'ok',
       label: config.stas.label,
@@ -285,11 +302,12 @@ export function createApp(): express.Application {
     }
   });
 
-  // -- Prometheus metrics endpoint ------------------------------------------
+  // -- Prometheus metrics endpoint -----------------------------------------
   app.get('/metrics', (_req: Request, res: Response) => {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.send(renderMetrics());
-
+    const webhookMetrics = renderMetrics();
+    const bridgeMetricsOutput = bridgeMetrics.render();
+    res.send([webhookMetrics, bridgeMetricsOutput].filter(Boolean).join('\n\n'));
   });
 
   // -- Initialize trackers --------------------------------------------------
@@ -302,6 +320,11 @@ export function createApp(): express.Application {
   // Only start if we're running as API or both
   if (config.runMode === 'api' || config.runMode === 'both') {
     startWebhookRetryWorker();
+  }
+
+  // ── Start webhook health monitor ──────────────────────────────────
+  if (config.runMode === 'api' || config.runMode === 'both') {
+    startHealthMonitor();
   }
 
   // ── Webhook receiver ─────────────────────────────────────────────
@@ -330,6 +353,8 @@ export function createApp(): express.Application {
     let parsedPayload: unknown;
     try {
       parsedPayload = rawBody ? JSON.parse(rawBody.toString()) : req.body;
+      // Store payload for downstream middleware (rate limit)
+      (req as any).parsedPayload = parsedPayload;
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to parse webhook payload');
       res.status(400).json({ error: 'Invalid JSON payload' });
@@ -445,7 +470,6 @@ export function createApp(): express.Application {
     const eventId = await logWebhookReceived({
       source,
       eventType: event || 'unknown',
-      deliveryId: undefined,
       payload: parsedPayload,
     });
 
@@ -500,7 +524,6 @@ export function createApp(): express.Application {
     const eventId = await logWebhookReceived({
       source,
       eventType: 'push',
-      deliveryId: undefined,
       payload: parsedPayload,
     });
 
@@ -540,7 +563,6 @@ export function createApp(): express.Application {
     const eventId = await logWebhookReceived({
       source,
       eventType: (payload as any)?.type || 'unknown',
-      deliveryId: undefined,
       payload,
     });
 
@@ -622,7 +644,6 @@ export function createApp(): express.Application {
     const eventId = await logWebhookReceived({
       source,
       eventType: (payload as any)?.webhookEvent || 'unknown',
-      deliveryId: undefined,
       payload,
     });
 
@@ -693,7 +714,6 @@ export function createApp(): express.Application {
       eventId = await logWebhookReceived({
         source,
         eventType: stripeEventType,
-        deliveryId: undefined,
         payload: { note: 'Stripe webhook payload parsed by handler' },
       });
     } catch {
@@ -705,7 +725,7 @@ export function createApp(): express.Application {
     // Wrap the handler to capture success/failure for event logging
     const wrappedHandler = async (req2: Request, res2: Response, next2: NextFunction) => {
       try {
-        await stripeWebhookHandler(req2, res2);
+        await stripeWebhookHandler(req2, res2, next2);
         if (eventId) await logWebhookProcessed(eventId);
       } catch (err) {
         if (eventId) await logWebhookFailed(eventId, String(err));
@@ -736,6 +756,49 @@ export function createApp(): express.Application {
   // GET /admin/webhooks/sources
   // GET /admin/webhooks/stats
   app.use('/admin/webhooks', adminWebhooksRouter);
+
+  // -- Credit REST API routes ------------------------------------------------
+  app.use('/api/v1', creditRouter);
+
+  // ── Queue management endpoints (pause/resume) ──────────────────
+  async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const adminKey = req.headers['x-admin-key'] as string;
+    if (!adminKey || adminKey !== config.stas.adminApiKey) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    next();
+  }
+
+  app.post('/admin/queue/pause', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      await pauseIssueQueue(queue);
+      res.json({ status: 'paused', queue: 'stas-issues' });
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to pause queue');
+      res.status(500).json({ error: 'Failed to pause queue' });
+    }
+  });
+
+  app.post('/admin/queue/resume', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      await resumeIssueQueue(queue);
+      res.json({ status: 'resumed', queue: 'stas-issues' });
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to resume queue');
+      res.status(500).json({ error: 'Failed to resume queue' });
+    }
+  });
+
+  app.get('/admin/queue/status', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const metrics = await getQueueMetrics(queue);
+      res.json(metrics);
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to get queue metrics');
+      res.status(500).json({ error: 'Failed to get queue metrics' });
+    }
+  });
 
   // -- 404 handler ----------------------------------------------------------
 
@@ -805,6 +868,74 @@ process.on('unhandledRejection', (reason) => {
  */
 function addRawBody(req: Request, _res: Response, buf: Buffer): void {
   (req as { rawBody?: Buffer }).rawBody = buf;
+}
+
+/**
+ * Extract webhook context for event logging from request and parsed payload.
+ * Captures installation_id, repo name, raw_body_snippet (first 1KB), and headers.
+ */
+function captureWebhookContext(
+  req: Request,
+  parsedPayload: Record<string, unknown> | undefined,
+): {
+  installationId?: string;
+  repo?: string;
+  rawBodySnippet?: string;
+  headers?: Record<string, string>;
+} {
+  const rawBody = (req as { rawBody?: Buffer }).rawBody;
+  const rawStr = rawBody?.toString() || '';
+
+  // Extract relevant headers (omit auth tokens, cookies)
+  const headers: Record<string, string> = {};
+  const relevantHeaders = [
+    'x-github-event', 'x-github-delivery', 'x-hub-signature-256',
+    'x-gitlab-event', 'x-gitlab-token',
+    'x-hub-signature',
+    'linear-signature',
+    'stripe-signature',
+    'content-type', 'user-agent', 'x-request-id',
+  ];
+  for (const h of relevantHeaders) {
+    const val = req.headers[h.toLowerCase()];
+    if (val) headers[h] = Array.isArray(val) ? val.join(', ') : val;
+  }
+
+  // First 1KB of raw body as snippet
+  const rawBodySnippet = rawStr.length > 1024 ? rawStr.slice(0, 1024) : rawStr || undefined;
+
+  // Extract installation_id and repo from payload if available
+  let installationId: string | undefined;
+  let repo: string | undefined;
+
+  if (parsedPayload) {
+    // GitHub-like payload: installation?.id, repository?.full_name
+    const payload = parsedPayload as Record<string, unknown>;
+    const installation = payload.installation as Record<string, unknown> | undefined;
+    if (installation?.id) {
+      installationId = String(installation.id);
+    }
+    const repository = payload.repository as Record<string, unknown> | undefined;
+    if (repository?.full_name) {
+      repo = String(repository.full_name);
+    } else if (repository?.name) {
+      // Some providers may have just a name and we need the owner
+      const owner = (repository.owner as Record<string, unknown> | undefined)?.login || (repository.owner as Record<string, unknown> | undefined)?.name;
+      if (owner) {
+        repo = `${owner}/${repository.name}`;
+      }
+    }
+
+    // GitLab: project?.path_with_namespace
+    if (!repo) {
+      const project = payload.project as Record<string, unknown> | undefined;
+      if (project?.path_with_namespace) {
+        repo = String(project.path_with_namespace);
+      }
+    }
+  }
+
+  return { installationId, repo, rawBodySnippet, headers: Object.keys(headers).length > 0 ? headers : undefined };
 }
 
 // Extend Express Request to include requestId

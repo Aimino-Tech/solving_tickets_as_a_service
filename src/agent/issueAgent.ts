@@ -8,7 +8,7 @@
  * Phases:
  *   1. Triage — classify issue type + difficulty (cheap model)
  *   2. Fetch comments — gather up to 15 issue comments for context
- *   3. Boot sandbox — E2B sandbox with cloned repo
+ *   3. Boot sandbox — sandbox with cloned repo (E2B or Docker)
  *   3.5 Baseline tests — run test suite before any changes
  *   4. Static analysis — tsc --noEmit etc.
  *   5. Code intelligence — symbol index, import tracing
@@ -34,7 +34,8 @@ import OpenAI from "openai";
 import { config } from "../config.js";
 import { getOctokit, getInstallationToken } from "../github/auth.js";
 import { ActionDispatcher } from "../github/actionDispatcher.js";
-import { SandboxExecutor } from "../sandbox/executor.js";
+import { createSandbox } from "../sandbox/index.js";
+import type { SandboxExecutor } from "../sandbox/types.js";
 import { buildTools, type SandboxTools } from "./tools.js";
 import type { AgentResult, TriageResult, VerificationResult, TestBaseline } from "./types.js";
 import type { IssueJobData } from "../utils/types.js";
@@ -177,7 +178,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     // ── Phase 3: Boot sandbox ─────────────────────────────────────────
     currentPhase = '3-boot-sandbox';
     logger.info('Phase 3: Booting sandbox');
-    sandbox = new SandboxExecutor(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
+    sandbox = createSandbox(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
     await sandbox.boot();
     await postStatus(
       installationId,

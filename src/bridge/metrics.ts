@@ -338,17 +338,32 @@ export function recordProcessingDuration(queue: string, durationSeconds: number)
 }
 
 /**
- * Record the current depth of a queue (number of pending messages).
- */
-export function recordQueueDepth(queue: string, depth: number): void {
-  bridgeMetrics.setGauge('queue_depth', { queue }, depth);
-}
-
-/**
  * Record a publish error with the specific error type.
  */
 export function recordPublishError(queue: string, errorType: string): void {
   bridgeMetrics.incrementCounter('publish_errors_total', { queue, error: errorType });
-  // Also record under the general failed metric for consistency
   recordMessageFailed(queue, errorType);
+}
+
+// ── Rate Limiting & Concurrency Metrics ─────────────────────────────────
+
+/**
+ * Record a rejected request due to rate limiting.
+ */
+export function recordRejectedRun(accountId: string, reason: string): void {
+  bridgeMetrics.incrementCounter('rejected_runs_total', { account_id: accountId, reason });
+}
+
+/**
+ * Set the current active run count for an account.
+ */
+export function recordActiveRuns(accountId: string, count: number): void {
+  bridgeMetrics.setGauge('active_runs', { account_id: accountId }, count);
+}
+
+/**
+ * Record the current depth of a queue (number of pending messages).
+ */
+export function recordQueueDepth(accountId: string, depth: number): void {
+  bridgeMetrics.setGauge('queue_depth', { account_id: accountId }, depth);
 }

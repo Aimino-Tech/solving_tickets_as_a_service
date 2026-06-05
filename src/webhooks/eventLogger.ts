@@ -28,6 +28,10 @@ export interface WebhookLogEntry {
   source: string;
   eventType: string;
   deliveryId?: string;
+  installationId?: string;
+  repo?: string;
+  rawBodySnippet?: string;
+  headers?: Record<string, string>;
   payload: unknown;
 }
 
@@ -38,13 +42,17 @@ export interface WebhookLogEntry {
  * (idempotent — duplicate delivery IDs are silently skipped).
  */
 export async function logWebhookReceived(entry: WebhookLogEntry): Promise<number | undefined> {
-  const { source, eventType, deliveryId } = entry;
+  const { source, eventType, deliveryId, installationId, repo, rawBodySnippet, headers } = entry;
 
   try {
     const id = await webhookEventsRepository.insert({
       source,
       eventType,
       deliveryId,
+      installationId,
+      repo,
+      rawBodySnippet,
+      headers,
       payload: entry.payload,
     });
 
