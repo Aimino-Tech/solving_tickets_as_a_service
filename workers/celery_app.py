@@ -24,4 +24,4 @@ app.autodiscover_tasks(["workers.tasks"])
 
 @app.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
-    logger.info("Celery app configured -- broker=%s backend=%s concurrency=%d", broker_url, result_backend, concurrency)
+    logger.info("Celery app configured — broker=%s backend=%s concurrency=%d", broker_url, result_backend, concurrency)
