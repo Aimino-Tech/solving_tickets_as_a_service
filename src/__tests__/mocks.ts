@@ -10,7 +10,7 @@
  *   octokit.issues.createComment.mockResolvedValue({ data: { id: 1 } });
  */
 
-import { vi } from "vitest";
+import { vi } from 'vitest';
 
 // ── Octokit ────────────────────────────────────────────────────────────────
 
@@ -46,20 +46,20 @@ export function mockOctokit(): MockOctokitInstance {
         data: {
           id: 1,
           number: 42,
-          html_url: "https://github.com/owner/repo/pull/42",
+          html_url: 'https://github.com/owner/repo/pull/42',
         },
       }),
       update: vi.fn().mockResolvedValue({ data: {} }),
     },
     git: {
-      createRef: vi.fn().mockResolvedValue({ data: { ref: "refs/heads/test" } }),
+      createRef: vi.fn().mockResolvedValue({ data: { ref: 'refs/heads/test' } }),
       getRef: vi.fn().mockResolvedValue({
-        data: { object: { sha: "abc123" } },
+        data: { object: { sha: 'abc123' } },
       }),
     },
     repos: {
       getContent: vi.fn().mockResolvedValue({
-        data: { content: Buffer.from("test content").toString("base64") },
+        data: { content: Buffer.from('test content').toString('base64') },
       }),
     },
   };
@@ -89,7 +89,7 @@ export interface MockWorkerInstance {
  */
 export function mockBullMQQueue(queueName?: string): MockQueueInstance {
   return {
-    add: vi.fn().mockResolvedValue({ id: "mock-job-id", name: queueName ?? "stas-issues" }),
+    add: vi.fn().mockResolvedValue({ id: 'mock-job-id', name: queueName ?? 'stas-issues' }),
     close: vi.fn().mockResolvedValue(undefined),
     on: vi.fn().mockReturnThis(),
     getJob: vi.fn().mockResolvedValue(null),
@@ -148,16 +148,16 @@ export interface MockE2BSandboxInstance {
  */
 export function mockE2BSandbox(): MockE2BSandboxInstance {
   return {
-    sandboxId: "mock-sandbox-id",
+    sandboxId: 'mock-sandbox-id',
     commands: {
       run: vi.fn().mockResolvedValue({
-        stdout: "",
-        stderr: "",
+        stdout: '',
+        stderr: '',
         exitCode: 0,
       }),
     },
     files: {
-      read: vi.fn().mockResolvedValue(""),
+      read: vi.fn().mockResolvedValue(''),
       write: vi.fn().mockResolvedValue(undefined),
       remove: vi.fn().mockResolvedValue(undefined),
       makeDir: vi.fn().mockResolvedValue(undefined),
@@ -185,18 +185,18 @@ export function mockOpenAI(): MockOpenAIInstance {
     chat: {
       completions: {
         create: vi.fn().mockResolvedValue({
-          id: "chatcmpl-mock",
-          object: "chat.completion",
+          id: 'chatcmpl-mock',
+          object: 'chat.completion',
           created: Date.now(),
-          model: "gpt-4o-mini",
+          model: 'gpt-4o-mini',
           choices: [
             {
               index: 0,
               message: {
-                role: "assistant",
-                content: "Mock response from OpenAI",
+                role: 'assistant',
+                content: 'Mock response from OpenAI',
               },
-              finish_reason: "stop",
+              finish_reason: 'stop',
             },
           ],
           usage: {
@@ -230,7 +230,7 @@ export interface MockPinoLoggerInstance {
 export function mockPinoLogger(): MockPinoLoggerInstance {
   const child = vi.fn().mockReturnThis();
   return {
-    level: "silent",
+    level: 'silent',
     child,
     info: vi.fn(),
     warn: vi.fn(),

@@ -17,27 +17,22 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
-import crypto from "node:crypto";
-import express from "express";
-import type { Request, Response, NextFunction } from "express";
-import { config } from "./config.js";
-import { rootLogger } from "./utils/logger.js";
-import { createGithubWebhooks } from "./webhooks/github.js";
-import { createIssueQueue, enqueueIssue } from "./queue/issueQueue.js";
-import type { IssueJobData } from "./utils/types.js";
-import { validateWebhookPayload } from "./validation.js";
-import rateLimit from "express-rate-limit";
-import { initTrackers, getTracker } from "./trackers/index.js";
-import {
-  handleLinearWebhook,
-  verifyLinearWebhookSignature,
-} from "./trackers/linear.js";
-import {
-  handleJiraWebhook,
-  verifyJiraWebhookSignature,
-} from "./trackers/jira.js";
+import crypto from 'node:crypto';
+import type { EmitterWebhookEventName } from '@octokit/webhooks';
+import type { NextFunction, Request, Response } from 'express';
+import express from 'express';
+import rateLimit from 'express-rate-limit';
+import { config } from './config.js';
+import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
+import { getTracker, initTrackers } from './trackers/index.js';
+import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
+import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
+import { rootLogger } from './utils/logger.js';
+import type { IssueJobData } from './utils/types.js';
+import { validateWebhookPayload } from './validation.js';
+import { createGithubWebhooks } from './webhooks/github.js';
 
-const log = rootLogger.child({ module: "server" });
+const log = rootLogger.child({ module: 'server' });
 
 /**
  * Create and configure the Express application.
@@ -47,18 +42,16 @@ export function createApp(): express.Application {
 
   // ── Request ID middleware ────────────────────────────────────────
   app.use((req: Request, res: Response, next: NextFunction) => {
-    const requestId =
-      (req.headers["x-request-id"] as string) ||
-      crypto.randomUUID();
+    const requestId = (req.headers['x-request-id'] as string) || crypto.randomUUID();
     req.requestId = requestId;
-    res.setHeader("x-request-id", requestId);
+    res.setHeader('x-request-id', requestId);
     next();
   });
 
   // ── Structured access log middleware ─────────────────────────────
   app.use((req: Request, res: Response, next: NextFunction) => {
     const start = Date.now();
-    res.on("finish", () => {
+    res.on('finish', () => {
       const latency = Date.now() - start;
       log.info(
         {
@@ -67,8 +60,8 @@ export function createApp(): express.Application {
           statusCode: res.statusCode,
           latency,
           requestId: req.requestId,
-          contentLength: req.headers["content-length"],
-          userAgent: req.headers["user-agent"],
+          contentLength: req.headers['content-length'],
+          userAgent: req.headers['user-agent'],
         },
         `${req.method} ${req.path} ${res.statusCode} ${latency}ms`,
       );
@@ -78,8 +71,8 @@ export function createApp(): express.Application {
 
   // ── Raw body capture for webhook verification ────────────────────
   app.use(
-    ["/webhook", "/webhook/linear", "/webhook/jira"],
-    express.raw({ type: "application/json", verify: addRawBody }),
+    ['/webhook', '/webhook/linear', '/webhook/jira'],
+    express.raw({ type: 'application/json', verify: addRawBody }),
   );
 
   // ── JSON parsing for all other routes ────────────────────────────
@@ -91,14 +84,14 @@ export function createApp(): express.Application {
     limit: config.stas.rateLimitMax,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: "Too many requests", retryAfter: "see Retry-After header" },
+    message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
   });
-  app.use("/webhook", limiter);
+  app.use('/webhook', limiter);
 
   // ── Health check ─────────────────────────────────────────────────
-  app.get("/health", (_req: Request, res: Response) => {
+  app.get('/health', (_req: Request, res: Response) => {
     res.json({
-      status: "ok",
+      status: 'ok',
       label: config.stas.label,
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
@@ -112,26 +105,21 @@ export function createApp(): express.Application {
   const queue = createIssueQueue();
   const webhooks = createGithubWebhooks(queue);
 
-  app.post("/webhook", async (req: Request, res: Response) => {
-    const event = req.headers["x-github-event"] as string;
-    const deliveryId = req.headers["x-github-delivery"] as string;
-    const signature = req.headers["x-hub-signature-256"] as string;
+  app.post('/webhook', async (req: Request, res: Response) => {
+    const event = req.headers['x-github-event'] as string;
+    const deliveryId = req.headers['x-github-delivery'] as string;
+    const signature = req.headers['x-hub-signature-256'] as string;
 
-    log.info(
-      { event, deliveryId, requestId: req.requestId },
-      "Received webhook",
-    );
+    log.info({ event, deliveryId, requestId: req.requestId }, 'Received webhook');
 
     // ── Parse and validate payload before processing ──────────────
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
     let parsedPayload: unknown;
     try {
-      parsedPayload = rawBody
-        ? JSON.parse(rawBody.toString())
-        : req.body;
+      parsedPayload = rawBody ? JSON.parse(rawBody.toString()) : req.body;
     } catch (err) {
-      log.error({ err: String(err) }, "Failed to parse webhook payload");
-      res.status(400).json({ error: "Invalid JSON payload" });
+      log.error({ err: String(err) }, 'Failed to parse webhook payload');
+      res.status(400).json({ error: 'Invalid JSON payload' });
       return;
     }
 
@@ -143,30 +131,30 @@ export function createApp(): express.Application {
           errors: validation.errors,
           requestId: req.requestId,
         },
-        "Webhook payload validation failed",
+        'Webhook payload validation failed',
       );
-      res.status(400).json({ error: "Invalid payload", details: validation.errors });
+      res.status(400).json({ error: 'Invalid payload', details: validation.errors });
       return;
     }
 
     // ── Verify signature (skip in dev mode if configured) ─────────
     if (!config.stas.devSkipWebhookVerify && signature) {
       if (!rawBody) {
-        log.error("Missing raw body for signature verification");
-        res.status(400).json({ error: "Missing raw body" });
+        log.error('Missing raw body for signature verification');
+        res.status(400).json({ error: 'Missing raw body' });
         return;
       }
 
       try {
         await webhooks.verifyAndReceive({
           id: deliveryId,
-          name: event as any,
+          name: event as EmitterWebhookEventName,
           payload: rawBody.toString(),
           signature,
         });
       } catch (err) {
-        log.warn({ err: String(err) }, "Webhook verification failed");
-        res.status(401).json({ error: "Invalid signature" });
+        log.warn({ err: String(err) }, 'Webhook verification failed');
+        res.status(401).json({ error: 'Invalid signature' });
         return;
       }
     } else {
@@ -176,12 +164,12 @@ export function createApp(): express.Application {
       try {
         await webhooks.verifyAndReceive({
           id: deliveryId || crypto.randomUUID(),
-          name: event as any,
+          name: event as EmitterWebhookEventName,
           payload,
-          signature: signature || "",
+          signature: signature || '',
         });
       } catch (err) {
-        log.error({ err: String(err) }, "Webhook processing error");
+        log.error({ err: String(err) }, 'Webhook processing error');
         // Don't return 401 in dev mode — just log the error
       }
     }
@@ -191,17 +179,17 @@ export function createApp(): express.Application {
   });
 
   // ── Linear webhook ────────────────────────────────────────────────
-  app.post("/webhook/linear", async (req: Request, res: Response) => {
-    const signature = req.headers["linear-signature"] as string;
+  app.post('/webhook/linear', async (req: Request, res: Response) => {
+    const signature = req.headers['linear-signature'] as string;
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
 
     if (!rawBody) {
-      res.status(400).json({ error: "Missing raw body" });
+      res.status(400).json({ error: 'Missing raw body' });
       return;
     }
 
     if (!verifyLinearWebhookSignature(rawBody, signature)) {
-      res.status(401).json({ error: "Invalid signature" });
+      res.status(401).json({ error: 'Invalid signature' });
       return;
     }
 
@@ -209,24 +197,21 @@ export function createApp(): express.Application {
     try {
       payload = JSON.parse(rawBody.toString());
     } catch {
-      res.status(400).json({ error: "Invalid JSON payload" });
+      res.status(400).json({ error: 'Invalid JSON payload' });
       return;
     }
 
     const result = await handleLinearWebhook(payload);
     if (!result) {
-      res.status(400).json({ error: "Invalid webhook payload" });
+      res.status(400).json({ error: 'Invalid webhook payload' });
       return;
     }
 
-    const tracker = getTracker("linear");
+    const tracker = getTracker('linear');
     if (tracker) {
       try {
         const ticket = await tracker.getTicket(result.ticketId);
-        log.info(
-          { ticketId: result.ticketId, title: ticket.title },
-          "Fetched Linear ticket details",
-        );
+        log.info({ ticketId: result.ticketId, title: ticket.title }, 'Fetched Linear ticket details');
 
         const repoOwner = config.trackers.defaultRepoOwner;
         const repoName = config.trackers.defaultRepoName;
@@ -241,22 +226,19 @@ export function createApp(): express.Application {
             issueNumber: 0,
             issueTitle: ticket.title,
             issueBody: ticket.description,
-            source: "linear",
-            trackerType: "linear",
+            source: 'linear',
+            trackerType: 'linear',
             trackerTicketId: ticket.id,
           };
 
           await enqueueIssue(queue, jobData);
         } else {
           log.warn(
-            "TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured — Linear ticket not enqueued",
+            'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured — Linear ticket not enqueued',
           );
         }
       } catch (err) {
-        log.error(
-          { err: String(err), ticketId: result.ticketId },
-          "Failed to process Linear webhook",
-        );
+        log.error({ err: String(err), ticketId: result.ticketId }, 'Failed to process Linear webhook');
       }
     }
 
@@ -264,17 +246,17 @@ export function createApp(): express.Application {
   });
 
   // ── Jira webhook ─────────────────────────────────────────────────
-  app.post("/webhook/jira", async (req: Request, res: Response) => {
-    const signature = req.headers["x-hub-signature-256"] as string;
+  app.post('/webhook/jira', async (req: Request, res: Response) => {
+    const signature = req.headers['x-hub-signature-256'] as string;
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
 
     if (!rawBody) {
-      res.status(400).json({ error: "Missing raw body" });
+      res.status(400).json({ error: 'Missing raw body' });
       return;
     }
 
     if (!verifyJiraWebhookSignature(rawBody, signature)) {
-      res.status(401).json({ error: "Invalid signature" });
+      res.status(401).json({ error: 'Invalid signature' });
       return;
     }
 
@@ -282,24 +264,21 @@ export function createApp(): express.Application {
     try {
       payload = JSON.parse(rawBody.toString());
     } catch {
-      res.status(400).json({ error: "Invalid JSON payload" });
+      res.status(400).json({ error: 'Invalid JSON payload' });
       return;
     }
 
     const result = await handleJiraWebhook(payload);
     if (!result) {
-      res.status(400).json({ error: "Invalid webhook payload" });
+      res.status(400).json({ error: 'Invalid webhook payload' });
       return;
     }
 
-    const tracker = getTracker("jira");
+    const tracker = getTracker('jira');
     if (tracker) {
       try {
         const ticket = await tracker.getTicket(result.ticketId);
-        log.info(
-          { ticketId: result.ticketId, title: ticket.title },
-          "Fetched Jira ticket details",
-        );
+        log.info({ ticketId: result.ticketId, title: ticket.title }, 'Fetched Jira ticket details');
 
         const repoOwner = config.trackers.defaultRepoOwner;
         const repoName = config.trackers.defaultRepoName;
@@ -314,22 +293,19 @@ export function createApp(): express.Application {
             issueNumber: 0,
             issueTitle: ticket.title,
             issueBody: ticket.description,
-            source: "jira",
-            trackerType: "jira",
+            source: 'jira',
+            trackerType: 'jira',
             trackerTicketId: ticket.id,
           };
 
           await enqueueIssue(queue, jobData);
         } else {
           log.warn(
-            "TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured — Jira ticket not enqueued",
+            'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured — Jira ticket not enqueued',
           );
         }
       } catch (err) {
-        log.error(
-          { err: String(err), ticketId: result.ticketId },
-          "Failed to process Jira webhook",
-        );
+        log.error({ err: String(err), ticketId: result.ticketId }, 'Failed to process Jira webhook');
       }
     }
 
@@ -338,13 +314,13 @@ export function createApp(): express.Application {
 
   // ── 404 handler ──────────────────────────────────────────────────
   app.use((_req: Request, res: Response) => {
-    res.status(404).json({ error: "Not found" });
+    res.status(404).json({ error: 'Not found' });
   });
 
   // ── Global error handler ─────────────────────────────────────────
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    log.error({ err: String(err) }, "Unhandled error");
-    res.status(500).json({ error: "Internal server error" });
+    log.error({ err: String(err) }, 'Unhandled error');
+    res.status(500).json({ error: 'Internal server error' });
   });
 
   return app;
@@ -354,23 +330,23 @@ export function createApp(): express.Application {
  * Start the Express server on the configured port.
  * Returns the server instance so callers can close it during graceful shutdown.
  */
-export function startServer(): import("http").Server {
+export function startServer(): import('http').Server {
   const app = createApp();
 
-  const server = app.listen(config.port, "0.0.0.0", () => {
+  const server = app.listen(config.port, '0.0.0.0', () => {
     log.info(
       { port: config.port, label: config.stas.label, env: config.nodeEnv },
       `STAS server listening on :${config.port}`,
     );
   });
 
-  server.on("error", (err: NodeJS.ErrnoException) => {
-    if (err.code === "EADDRINUSE") {
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
       log.error({ port: config.port }, `Port ${config.port} is already in use`);
-    } else if (err.code === "EACCES") {
+    } else if (err.code === 'EACCES') {
       log.error({ port: config.port }, `Permission denied for port ${config.port}`);
     } else {
-      log.error({ err: String(err) }, "Server failed to start");
+      log.error({ err: String(err) }, 'Server failed to start');
     }
     process.exit(1);
   });
@@ -380,16 +356,13 @@ export function startServer(): import("http").Server {
 
 // ── Process-level error handlers ────────────────────────────────────
 
-process.on("uncaughtException", (err) => {
-  log.error({ err: String(err), stack: (err as Error).stack }, "Uncaught exception — shutting down");
+process.on('uncaughtException', (err) => {
+  log.error({ err: String(err), stack: (err as Error).stack }, 'Uncaught exception — shutting down');
   process.exit(1);
 });
 
-process.on("unhandledRejection", (reason) => {
-  log.error(
-    { err: String(reason), stack: (reason as Error)?.stack },
-    "Unhandled promise rejection — shutting down",
-  );
+process.on('unhandledRejection', (reason) => {
+  log.error({ err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection — shutting down');
   process.exit(1);
 });
 
@@ -399,11 +372,7 @@ process.on("unhandledRejection", (reason) => {
  * Express verify callback that stores the raw body buffer on the request
  * object so it can be used for webhook signature verification.
  */
-function addRawBody(
-  req: Request,
-  _res: Response,
-  buf: Buffer,
-): void {
+function addRawBody(req: Request, _res: Response, buf: Buffer): void {
   (req as { rawBody?: Buffer }).rawBody = buf;
 }
 

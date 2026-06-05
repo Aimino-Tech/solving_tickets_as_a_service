@@ -5,9 +5,9 @@
  * Missing/invalid required values produce grouped error messages.
  */
 
-import "dotenv/config";
-import { z } from "zod";
-import { rootLogger } from "./utils/logger.js";
+import 'dotenv/config';
+import { z } from 'zod';
+import { rootLogger } from './utils/logger.js';
 
 // ---------------------------------------------------------------------------
 // Schema
@@ -16,41 +16,41 @@ import { rootLogger } from "./utils/logger.js";
 const envSchema = z.object({
   // Server
   PORT: z.coerce.number().int().positive().max(65535).default(3000),
-  RUN_MODE: z.enum(["api", "worker", "both"]).default("both"),
+  RUN_MODE: z.enum(['api', 'worker', 'both']).default('both'),
 
   // GitHub App
-  GITHUB_APP_ID: z.string().min(1, "GITHUB_APP_ID is required"),
+  GITHUB_APP_ID: z.string().min(1, 'GITHUB_APP_ID is required'),
   GITHUB_APP_PRIVATE_KEY: z
     .string()
-    .min(1, "GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_PATH is required")
+    .min(1, 'GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_PATH is required')
     .optional(),
   GITHUB_APP_PRIVATE_KEY_PATH: z.string().optional(),
-  GITHUB_WEBHOOK_SECRET: z.string().min(1, "GITHUB_WEBHOOK_SECRET is required"),
-  GITHUB_WEBHOOK_PATH: z.string().default("/webhook"),
+  GITHUB_WEBHOOK_SECRET: z.string().min(1, 'GITHUB_WEBHOOK_SECRET is required'),
+  GITHUB_WEBHOOK_PATH: z.string().default('/webhook'),
 
   // Queue
-  REDIS_URL: z.string().default("redis://localhost:6379"),
+  REDIS_URL: z.string().default('redis://localhost:6379'),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
   QUEUE_DEDUP_TTL_SECONDS: z.coerce.number().int().positive().default(120),
   QUEUE_KEEP_COMPLETED: z.coerce.number().int().positive().default(200),
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
 
   // OpenCode
-  OPENCODE_URL: z.string().default("http://localhost:4096"),
-  OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
+  OPENCODE_URL: z.string().default('http://localhost:4096'),
+  OPENCODE_MODEL: z.string().default('anthropic/claude-sonnet-4-20250514'),
 
   // OpenAI / triage
   OPENAI_API_KEY: z.string().optional(),
-  OPENAI_CHEAP_MODEL: z.string().default("gpt-4o-mini"),
+  OPENAI_CHEAP_MODEL: z.string().default('gpt-4o-mini'),
 
   // Sandbox
   E2B_API_KEY: z.string().optional(),
-  E2B_TEMPLATE_ID: z.string().default("stas-default"),
+  E2B_TEMPLATE_ID: z.string().default('stas-default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // STAS
-  STAS_LABEL: z.string().default("stas:fix"),
-  BOT_NAME: z.string().default("STAS"),
+  STAS_LABEL: z.string().default('stas:fix'),
+  BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
@@ -74,8 +74,8 @@ const envSchema = z.object({
   TRACKER_INSTALLATION_ID: z.coerce.number().int().positive().optional(),
 
   // Logging
-  LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "fatal"]).default("info"),
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -140,15 +140,16 @@ function buildConfig(env: ParsedEnv) {
             webhookSecret: env.LINEAR_WEBHOOK_SECRET,
           }
         : undefined,
-      jira: env.JIRA_URL && env.JIRA_EMAIL && env.JIRA_API_TOKEN
-        ? {
-            url: env.JIRA_URL,
-            email: env.JIRA_EMAIL,
-            apiToken: env.JIRA_API_TOKEN,
-            webhookSecret: env.JIRA_WEBHOOK_SECRET,
-            projectKey: env.JIRA_PROJECT_KEY,
-          }
-        : undefined,
+      jira:
+        env.JIRA_URL && env.JIRA_EMAIL && env.JIRA_API_TOKEN
+          ? {
+              url: env.JIRA_URL,
+              email: env.JIRA_EMAIL,
+              apiToken: env.JIRA_API_TOKEN,
+              webhookSecret: env.JIRA_WEBHOOK_SECRET,
+              projectKey: env.JIRA_PROJECT_KEY,
+            }
+          : undefined,
       defaultRepoOwner: env.TRACKER_DEFAULT_REPO_OWNER,
       defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME,
       installationId: env.TRACKER_INSTALLATION_ID || 0,
@@ -165,10 +166,10 @@ const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {
   const { fieldErrors, formErrors } = parsed.error.flatten();
 
-  rootLogger.error("Invalid environment configuration:");
+  rootLogger.error('Invalid environment configuration:');
 
   if (formErrors.length > 0) {
-    rootLogger.error({ errors: formErrors }, "Form-level errors");
+    rootLogger.error({ errors: formErrors }, 'Form-level errors');
   }
 
   for (const [key, msgs] of Object.entries(fieldErrors)) {
@@ -192,13 +193,13 @@ export function requireConfig(): typeof config {
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
     const { fieldErrors } = result.error.flatten();
-    const lines: string[] = ["Invalid environment configuration:"];
+    const lines: string[] = ['Invalid environment configuration:'];
     for (const [key, msgs] of Object.entries(fieldErrors)) {
       if (msgs && msgs.length > 0) {
-        lines.push(`  - ${key}: ${msgs.join("; ")}`);
+        lines.push(`  - ${key}: ${msgs.join('; ')}`);
       }
     }
-    throw new Error(lines.join("\n"));
+    throw new Error(lines.join('\n'));
   }
   return buildConfig(result.data);
 }

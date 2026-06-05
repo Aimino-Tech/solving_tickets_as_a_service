@@ -16,21 +16,18 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
-import "dotenv/config";
-import type { Server } from "node:http";
-import { config } from "./config.js";
-import { rootLogger } from "./utils/logger.js";
+import 'dotenv/config';
+import type { Server } from 'node:http';
+import { config } from './config.js';
+import { rootLogger } from './utils/logger.js';
 
-const log = rootLogger.child({ module: "entry" });
+const log = rootLogger.child({ module: 'entry' });
 
 let server: Server | undefined;
 let shutdownInProgress = false;
 
 async function main(): Promise<void> {
-  log.info(
-    { runMode: config.runMode, nodeEnv: config.nodeEnv },
-    "Starting STAS",
-  );
+  log.info({ runMode: config.runMode, nodeEnv: config.nodeEnv }, 'Starting STAS');
 
   const mode = config.runMode;
 
@@ -39,13 +36,13 @@ async function main(): Promise<void> {
     if (shutdownInProgress) return;
     shutdownInProgress = true;
 
-    log.info({ signal }, "Shutting down gracefully");
+    log.info({ signal }, 'Shutting down gracefully');
 
     // Close server if running
     if (server) {
       await new Promise<void>((resolve) => {
         server!.close(() => {
-          log.info("Server closed");
+          log.info('Server closed');
           resolve();
         });
       });
@@ -55,9 +52,9 @@ async function main(): Promise<void> {
     if (worker) {
       try {
         await worker.close();
-        log.info("Worker closed");
+        log.info('Worker closed');
       } catch (err) {
-        log.warn({ err: String(err) }, "Error closing worker");
+        log.warn({ err: String(err) }, 'Error closing worker');
       }
     }
 
@@ -65,15 +62,15 @@ async function main(): Promise<void> {
   };
 
   // Start API server
-  if (mode === "api" || mode === "both") {
-    log.info("Starting API server...");
+  if (mode === 'api' || mode === 'both') {
+    log.info('Starting API server...');
     try {
-      const { startServer } = await import("./server.js");
+      const { startServer } = await import('./server.js');
       server = startServer() as Server;
-      log.info("API server started");
+      log.info('API server started');
     } catch (err) {
-      log.error({ err: String(err) }, "Failed to start API server");
-      if (mode === "api") {
+      log.error({ err: String(err) }, 'Failed to start API server');
+      if (mode === 'api') {
         process.exit(1);
       }
     }
@@ -81,26 +78,26 @@ async function main(): Promise<void> {
 
   // Start worker
   let worker: { close: () => Promise<void> } | undefined;
-  if (mode === "worker" || mode === "both") {
-    log.info("Starting worker...");
+  if (mode === 'worker' || mode === 'both') {
+    log.info('Starting worker...');
     try {
-      const { createIssueWorker } = await import("./queue/issueQueue.js");
+      const { createIssueWorker } = await import('./queue/issueQueue.js');
       worker = createIssueWorker();
-      log.info("Worker started");
+      log.info('Worker started');
     } catch (err) {
-      log.error({ err: String(err) }, "Failed to start worker");
-      if (mode === "worker") {
+      log.error({ err: String(err) }, 'Failed to start worker');
+      if (mode === 'worker') {
         process.exit(1);
       }
     }
   }
 
   // Register signal handlers for graceful shutdown
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 main().catch((err) => {
-  log.error({ err: String(err) }, "Fatal error during startup");
+  log.error({ err: String(err) }, 'Fatal error during startup');
   process.exit(1);
 });

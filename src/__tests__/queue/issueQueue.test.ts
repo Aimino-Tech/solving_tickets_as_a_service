@@ -5,9 +5,9 @@
  * All external dependencies (bullmq, runIssueAgent, config) are mocked.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { IssueJobData } from "../../utils/types.js";
-import type { AgentResult } from "../../agent/types.js";
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AgentResult } from '../../agent/types.js';
+import type { IssueJobData } from '../../utils/types.js';
 
 // ---------------------------------------------------------------------------
 // Mocks — hoisted before imports by vitest
@@ -42,14 +42,14 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../agent/issueAgent.js", () => ({
+vi.mock('../../agent/issueAgent.js', () => ({
   runIssueAgent: mocks.mockRunIssueAgent,
 }));
 
-vi.mock("../../config.js", () => ({
+vi.mock('../../config.js', () => ({
   config: {
     queue: {
-      redisUrl: "redis://localhost:6379",
+      redisUrl: 'redis://localhost:6379',
       workerConcurrency: 2,
       dedupTtl: 120,
       keepCompleted: 200,
@@ -58,7 +58,7 @@ vi.mock("../../config.js", () => ({
   },
 }));
 
-vi.mock("../../utils/logger.js", () => ({
+vi.mock('../../utils/logger.js', () => ({
   rootLogger: {
     child: vi.fn(() => ({
       info: vi.fn(),
@@ -75,17 +75,12 @@ vi.mock("../../utils/logger.js", () => ({
   },
 }));
 
-vi.mock("bullmq", () => ({
+vi.mock('bullmq', () => ({
   Queue: vi.fn(() => mocks.mockQueueInstance),
-  Worker: vi.fn(
-    (
-      _queueName: string,
-      processor: (job: { id: string; data: IssueJobData }) => Promise<unknown>,
-    ) => {
-      mocks.workerProcessorRef.current = processor;
-      return mocks.mockWorkerInstance;
-    },
-  ),
+  Worker: vi.fn((_queueName: string, processor: (job: { id: string; data: IssueJobData }) => Promise<unknown>) => {
+    mocks.workerProcessorRef.current = processor;
+    return mocks.mockWorkerInstance;
+  }),
   QueueEvents: vi.fn(() => mocks.mockQueueEventsInstance),
 }));
 
@@ -93,37 +88,32 @@ vi.mock("bullmq", () => ({
 // Imports under test (mocks are already installed)
 // ---------------------------------------------------------------------------
 
-import { Queue, Worker, QueueEvents } from "bullmq";
-import {
-  createIssueQueue,
-  createIssueWorker,
-  createQueueEvents,
-  enqueueIssue,
-} from "../../queue/issueQueue.js";
-import { sampleJobData, sampleAgentResult, sampleNoFixAgentResult } from "../fixtures.js";
+import { Queue, QueueEvents, Worker } from 'bullmq';
+import { createIssueQueue, createIssueWorker, createQueueEvents, enqueueIssue } from '../../queue/issueQueue.js';
+import { sampleAgentResult, sampleJobData, sampleNoFixAgentResult } from '../fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("createIssueQueue", () => {
+describe('createIssueQueue', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-it("returns a Queue instance with stas-issues name and Redis connection", () => {
+  it('returns a Queue instance with stas-issues name and Redis connection', () => {
     const queue = createIssueQueue();
     expect(Queue).toHaveBeenCalledWith(
-      "stas-issues",
+      'stas-issues',
       expect.objectContaining({
         connection: expect.objectContaining({
-          url: "redis://localhost:6379",
+          url: 'redis://localhost:6379',
           maxRetriesPerRequest: null,
           enableReadyCheck: true,
         }),
         defaultJobOptions: expect.objectContaining({
           attempts: 2,
-          backoff: { type: "exponential", delay: 5000 },
+          backoff: { type: 'exponential', delay: 5000 },
           removeOnComplete: { count: 200 },
           removeOnFail: { count: 100 },
         }),
@@ -134,20 +124,20 @@ it("returns a Queue instance with stas-issues name and Redis connection", () => 
   });
 });
 
-describe("createIssueWorker", () => {
+describe('createIssueWorker', () => {
   beforeEach(() => {
     mocks.workerProcessorRef.current = null;
     vi.clearAllMocks();
   });
 
-  it("returns a Worker instance with correct concurrency from config", () => {
+  it('returns a Worker instance with correct concurrency from config', () => {
     const worker = createIssueWorker();
 
     expect(Worker).toHaveBeenCalledWith(
-      "stas-issues",
+      'stas-issues',
       expect.any(Function),
       expect.objectContaining({
-        connection: expect.objectContaining({ url: "redis://localhost:6379" }),
+        connection: expect.objectContaining({ url: 'redis://localhost:6379' }),
         concurrency: 2,
       }),
     );
@@ -155,43 +145,41 @@ describe("createIssueWorker", () => {
     expect(worker).toBe(mocks.mockWorkerInstance);
   });
 
-  it("registers completed, failed, and error event handlers", () => {
+  it('registers completed, failed, and error event handlers', () => {
     createIssueWorker();
 
-    expect(mocks.mockWorkerOn).toHaveBeenCalledWith("completed", expect.any(Function));
-    expect(mocks.mockWorkerOn).toHaveBeenCalledWith("failed", expect.any(Function));
-    expect(mocks.mockWorkerOn).toHaveBeenCalledWith("error", expect.any(Function));
+    expect(mocks.mockWorkerOn).toHaveBeenCalledWith('completed', expect.any(Function));
+    expect(mocks.mockWorkerOn).toHaveBeenCalledWith('failed', expect.any(Function));
+    expect(mocks.mockWorkerOn).toHaveBeenCalledWith('error', expect.any(Function));
   });
 
-  it("processes a job by calling runIssueAgent with job data and id", async () => {
+  it('processes a job by calling runIssueAgent with job data and id', async () => {
     const data = sampleJobData();
     const agentResult = sampleAgentResult();
     mocks.mockRunIssueAgent.mockResolvedValue(agentResult);
 
     createIssueWorker();
-    const output = await mocks.workerProcessorRef.current!({ id: "j-001", data });
+    const output = await mocks.workerProcessorRef.current!({ id: 'j-001', data });
 
     expect(mocks.mockRunIssueAgent).toHaveBeenCalledTimes(1);
-    expect(mocks.mockRunIssueAgent).toHaveBeenCalledWith(data, "j-001");
+    expect(mocks.mockRunIssueAgent).toHaveBeenCalledWith(data, 'j-001');
     expect(output).toBe(agentResult);
   });
 
-  it("returns the agent result even when fix is not ready", async () => {
+  it('returns the agent result even when fix is not ready', async () => {
     const data = sampleJobData({ issueNumber: 99 });
     const noFixResult = sampleNoFixAgentResult();
     mocks.mockRunIssueAgent.mockResolvedValue(noFixResult);
 
     createIssueWorker();
-    const output = await mocks.workerProcessorRef.current!({ id: "j-002", data });
+    const output = await mocks.workerProcessorRef.current!({ id: 'j-002', data });
 
     expect(output).toBe(noFixResult);
     expect((output as AgentResult).fixReady).toBe(false);
-    expect((output as AgentResult).noFixReason).toBe(
-      "Issue could not be reproduced on latest main branch.",
-    );
+    expect((output as AgentResult).noFixReason).toBe('Issue could not be reproduced on latest main branch.');
   });
 
-  it("passes undefined job id when job.id is null", async () => {
+  it('passes undefined job id when job.id is null', async () => {
     const data = sampleJobData();
     mocks.mockRunIssueAgent.mockResolvedValue(sampleAgentResult());
 
@@ -202,7 +190,7 @@ describe("createIssueWorker", () => {
     expect(mocks.mockRunIssueAgent).toHaveBeenCalledWith(data, undefined);
   });
 
-  it("propagates worker concurrency value from config to Worker constructor", () => {
+  it('propagates worker concurrency value from config to Worker constructor', () => {
     createIssueWorker();
 
     expect(Worker).toHaveBeenCalledWith(
@@ -213,66 +201,66 @@ describe("createIssueWorker", () => {
   });
 });
 
-describe("createQueueEvents", () => {
+describe('createQueueEvents', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("creates a QueueEvents instance with the queue name", () => {
+  it('creates a QueueEvents instance with the queue name', () => {
     const events = createQueueEvents();
 
     expect(QueueEvents).toHaveBeenCalledWith(
-      "stas-issues",
+      'stas-issues',
       expect.objectContaining({
-        connection: expect.objectContaining({ url: "redis://localhost:6379" }),
+        connection: expect.objectContaining({ url: 'redis://localhost:6379' }),
       }),
     );
 
     expect(events).toBe(mocks.mockQueueEventsInstance);
   });
 
-  it("registers completed and failed event handlers", () => {
+  it('registers completed and failed event handlers', () => {
     createQueueEvents();
 
-    expect(mocks.mockQueueEventsOn).toHaveBeenCalledWith("completed", expect.any(Function));
-    expect(mocks.mockQueueEventsOn).toHaveBeenCalledWith("failed", expect.any(Function));
+    expect(mocks.mockQueueEventsOn).toHaveBeenCalledWith('completed', expect.any(Function));
+    expect(mocks.mockQueueEventsOn).toHaveBeenCalledWith('failed', expect.any(Function));
   });
 });
 
-describe("enqueueIssue", () => {
+describe('enqueueIssue', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("adds a job and returns the job id", async () => {
-    mocks.mockQueueAdd.mockResolvedValue({ id: "job-foo-42" });
+  it('adds a job and returns the job id', async () => {
+    mocks.mockQueueAdd.mockResolvedValue({ id: 'job-foo-42' });
     const data = sampleJobData();
 
     const jobId = await enqueueIssue(mocks.mockQueueInstance as never, data);
 
-    expect(jobId).toBe("job-foo-42");
+    expect(jobId).toBe('job-foo-42');
   });
 
-  it("calls queue.add with process-issue name, job data, and dedup options", async () => {
-    mocks.mockQueueAdd.mockResolvedValue({ id: "j-1" });
+  it('calls queue.add with process-issue name, job data, and dedup options', async () => {
+    mocks.mockQueueAdd.mockResolvedValue({ id: 'j-1' });
     const data = sampleJobData();
 
     await enqueueIssue(mocks.mockQueueInstance as never, data);
 
     expect(mocks.mockQueueAdd).toHaveBeenCalledWith(
-      "process-issue",
+      'process-issue',
       data,
       expect.objectContaining({
         deduplication: expect.objectContaining({
-          id: "issue:555:owner/test-repo#42",
+          id: 'issue:555:owner/test-repo#42',
           ttl: 120_000,
         }),
       }),
     );
   });
 
-  it("returns undefined when queue.add throws (e.g. Redis unreachable)", async () => {
-    mocks.mockQueueAdd.mockRejectedValue(new Error("Redis connection refused"));
+  it('returns undefined when queue.add throws (e.g. Redis unreachable)', async () => {
+    mocks.mockQueueAdd.mockRejectedValue(new Error('Redis connection refused'));
     const data = sampleJobData();
 
     const jobId = await enqueueIssue(mocks.mockQueueInstance as never, data);
@@ -280,8 +268,8 @@ describe("enqueueIssue", () => {
     expect(jobId).toBeUndefined();
   });
 
-  it("generates the same dedup key for identical issue data", async () => {
-    mocks.mockQueueAdd.mockResolvedValue({ id: "j-1" });
+  it('generates the same dedup key for identical issue data', async () => {
+    mocks.mockQueueAdd.mockResolvedValue({ id: 'j-1' });
     const data = sampleJobData();
 
     await enqueueIssue(mocks.mockQueueInstance as never, data);
@@ -290,26 +278,26 @@ describe("enqueueIssue", () => {
     expect(mocks.mockQueueAdd).toHaveBeenCalledTimes(2);
     expect(mocks.mockQueueAdd).toHaveBeenNthCalledWith(
       1,
-      "process-issue",
+      'process-issue',
       data,
       expect.objectContaining({
-        deduplication: expect.objectContaining({ id: "issue:555:owner/test-repo#42" }),
+        deduplication: expect.objectContaining({ id: 'issue:555:owner/test-repo#42' }),
       }),
     );
     expect(mocks.mockQueueAdd).toHaveBeenNthCalledWith(
       2,
-      "process-issue",
+      'process-issue',
       data,
       expect.objectContaining({
-        deduplication: expect.objectContaining({ id: "issue:555:owner/test-repo#42" }),
+        deduplication: expect.objectContaining({ id: 'issue:555:owner/test-repo#42' }),
       }),
     );
   });
 
-  it("generates different dedup keys for different repos", async () => {
-    mocks.mockQueueAdd.mockResolvedValue({ id: "j-1" });
-    const data1 = sampleJobData({ repoName: "repo-a" });
-    const data2 = sampleJobData({ repoName: "repo-b" });
+  it('generates different dedup keys for different repos', async () => {
+    mocks.mockQueueAdd.mockResolvedValue({ id: 'j-1' });
+    const data1 = sampleJobData({ repoName: 'repo-a' });
+    const data2 = sampleJobData({ repoName: 'repo-b' });
 
     await enqueueIssue(mocks.mockQueueInstance as never, data1);
     await enqueueIssue(mocks.mockQueueInstance as never, data2);

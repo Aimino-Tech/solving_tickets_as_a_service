@@ -1,14 +1,14 @@
-import crypto from "node:crypto";
-import { config } from "../config.js";
-import { rootLogger } from "../utils/logger.js";
-import type { Tracker, Ticket } from "./base.js";
+import crypto from 'node:crypto';
+import { config } from '../config.js';
+import { rootLogger } from '../utils/logger.js';
+import type { Ticket, Tracker } from './base.js';
 
-const log = rootLogger.child({ module: "tracker-linear" });
+const log = rootLogger.child({ module: 'tracker-linear' });
 
-const LINEAR_API_URL = "https://api.linear.app/graphql";
+const LINEAR_API_URL = 'https://api.linear.app/graphql';
 
 interface LinearWebhookPayload {
-  action: "create" | "update" | "delete";
+  action: 'create' | 'update' | 'delete';
   data: {
     id: string;
     title?: string;
@@ -30,21 +30,18 @@ interface LinearWebhookPayload {
 }
 
 export class LinearTracker implements Tracker {
-  readonly source = "linear" as const;
+  readonly source = 'linear' as const;
 
-  private async graphql<T>(
-    query: string,
-    variables?: Record<string, unknown>,
-  ): Promise<T> {
+  private async graphql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
     const apiKey = config.trackers?.linear?.apiKey;
     if (!apiKey) {
-      throw new Error("LINEAR_API_KEY is not configured");
+      throw new Error('LINEAR_API_KEY is not configured');
     }
 
     const response = await fetch(LINEAR_API_URL, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({ query, variables }),
@@ -58,7 +55,7 @@ export class LinearTracker implements Tracker {
     const body = (await response.json()) as { data?: T; errors?: Array<{ message: string }> };
 
     if (body.errors?.length) {
-      throw new Error(`Linear GraphQL error: ${body.errors.map((e) => e.message).join("; ")}`);
+      throw new Error(`Linear GraphQL error: ${body.errors.map((e) => e.message).join('; ')}`);
     }
 
     return body.data as T;
@@ -108,7 +105,7 @@ export class LinearTracker implements Tracker {
       status: result.issue.state.name,
       priority: result.issue.priority,
       url: result.issue.url,
-      source: "linear",
+      source: 'linear',
       labels: result.issue.labels.nodes.map((l) => l.name),
       createdAt: result.issue.createdAt,
       updatedAt: result.issue.updatedAt,
@@ -138,10 +135,7 @@ export class LinearTracker implements Tracker {
       throw new Error(`Failed to post comment on Linear issue ${ticketId}`);
     }
 
-    log.info(
-      { ticketId, commentId: result.commentCreate.comment.id },
-      "Comment posted to Linear",
-    );
+    log.info({ ticketId, commentId: result.commentCreate.comment.id }, 'Comment posted to Linear');
   }
 
   async updateStatus(ticketId: string, statusName: string): Promise<void> {
@@ -186,14 +180,12 @@ export class LinearTracker implements Tracker {
       throw new Error(`Linear team not found for issue ${ticketId}`);
     }
 
-    const targetState = statesResult.team.states.nodes.find(
-      (s) => s.name.toLowerCase() === statusName.toLowerCase(),
-    );
+    const targetState = statesResult.team.states.nodes.find((s) => s.name.toLowerCase() === statusName.toLowerCase());
 
     if (!targetState) {
       throw new Error(
         `Linear state "${statusName}" not found for ticket ${ticketId}. ` +
-          `Available states: ${statesResult.team.states.nodes.map((s) => s.name).join(", ")}`,
+          `Available states: ${statesResult.team.states.nodes.map((s) => s.name).join(', ')}`,
       );
     }
 
@@ -216,10 +208,7 @@ export class LinearTracker implements Tracker {
       throw new Error(`Failed to update status of Linear issue ${ticketId}`);
     }
 
-    log.info(
-      { ticketId, oldStatus: undefined, newStatus: statusName },
-      "Linear issue status updated",
-    );
+    log.info({ ticketId, oldStatus: undefined, newStatus: statusName }, 'Linear issue status updated');
   }
 
   async createLink(ticketId: string, url: string, title: string): Promise<void> {
@@ -240,66 +229,49 @@ export class LinearTracker implements Tracker {
         },
       });
 
-      log.info({ ticketId, url, title }, "Link created on Linear issue");
+      log.info({ ticketId, url, title }, 'Link created on Linear issue');
     } catch (err) {
-      log.warn(
-        { err: String(err), ticketId, url },
-        "Failed to create attachment link on Linear issue",
-      );
+      log.warn({ err: String(err), ticketId, url }, 'Failed to create attachment link on Linear issue');
     }
   }
 }
 
-export function verifyLinearWebhookSignature(
-  rawBody: Buffer,
-  signatureHeader: string,
-): boolean {
+export function verifyLinearWebhookSignature(rawBody: Buffer, signatureHeader: string): boolean {
   const secret = config.trackers?.linear?.webhookSecret;
   if (!secret) {
-    log.warn("LINEAR_WEBHOOK_SECRET not configured — skipping webhook verification");
+    log.warn('LINEAR_WEBHOOK_SECRET not configured — skipping webhook verification');
     return true;
   }
 
-  const prefix = "sha256=";
+  const prefix = 'sha256=';
   if (!signatureHeader.startsWith(prefix)) {
     return false;
   }
 
   const expectedSignature = signatureHeader.slice(prefix.length);
-  const computedSignature = crypto
-    .createHmac("sha256", secret)
-    .update(rawBody)
-    .digest("hex");
+  const computedSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
 
-  const valid = crypto.timingSafeEqual(
-    Buffer.from(computedSignature),
-    Buffer.from(expectedSignature),
-  );
+  const valid = crypto.timingSafeEqual(Buffer.from(computedSignature), Buffer.from(expectedSignature));
 
   if (!valid) {
-    log.warn("Linear webhook signature verification failed");
+    log.warn('Linear webhook signature verification failed');
   }
 
   return valid;
 }
 
-export async function handleLinearWebhook(
-  payload: unknown,
-): Promise<{ ticketId: string; action: string } | null> {
+export async function handleLinearWebhook(payload: unknown): Promise<{ ticketId: string; action: string } | null> {
   const body = payload as LinearWebhookPayload;
 
   if (!body.data?.id) {
-    log.warn({ payload }, "Invalid Linear webhook payload — missing data.id");
+    log.warn({ payload }, 'Invalid Linear webhook payload — missing data.id');
     return null;
   }
 
   const ticketId = body.data.id;
-  const action = body.action || "update";
+  const action = body.action || 'update';
 
-  log.info(
-    { ticketId, action, title: body.data.title },
-    "Linear webhook event received",
-  );
+  log.info({ ticketId, action, title: body.data.title }, 'Linear webhook event received');
 
   return { ticketId, action };
 }
@@ -312,7 +284,7 @@ export function linearTicketToIssueData(
   issueNumber: number,
 ) {
   return {
-    source: "linear" as const,
+    source: 'linear' as const,
     externalId: ticket.id,
     installationId,
     repoOwner,
@@ -321,7 +293,7 @@ export function linearTicketToIssueData(
     issueNumber,
     issueTitle: ticket.title,
     issueBody: ticket.description,
-    trackerType: "linear" as const,
+    trackerType: 'linear' as const,
     trackerTicketId: ticket.id,
   };
 }
