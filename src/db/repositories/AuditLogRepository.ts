@@ -119,6 +119,20 @@ export class AuditLogRepository {
   }
 
   /**
+   * Query audit logs by action and account ID.
+   */
+  async listByActionAndAccount(action: string, accountId: string, limit = 50, offset = 0): Promise<AuditLog[]> {
+    const result = await queryWithRetry<AuditLog>(
+      `SELECT * FROM audit_logs
+       WHERE action = $1 AND actor_id = $2 AND actor_type = 'user'
+       ORDER BY timestamp DESC
+       LIMIT $3 OFFSET $4`,
+      [action, accountId, limit, offset],
+    );
+    return result.rows;
+  }
+
+  /**
    * Query audit logs by action type.
    */
   async listByAction(action: string, limit = 50, offset = 0): Promise<AuditLog[]> {

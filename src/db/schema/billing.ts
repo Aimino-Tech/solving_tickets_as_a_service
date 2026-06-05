@@ -1,15 +1,19 @@
 /**
  * Billing schema — subscription and usage tracking per account.
  *
- * Integrates with Stripe for subscription management.
- * Tracks current plan, status, billing periods, and usage count.
+ * One row per account with Stripe integration fields, current plan,
+ * billing period, and usage counters for limit enforcement.
  */
 
 import { integer, pgTable, serial, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { accounts } from './accounts.js';
 
 export const billing = pgTable('billing', {
   id: serial('id').primaryKey(),
-  accountId: integer('account_id').notNull(),
+  accountId: integer('account_id')
+    .notNull()
+    .references(() => accounts.id, { onDelete: 'cascade' })
+    .unique(),
   stripeCustomerId: varchar('stripe_customer_id', { length: 255 }),
   stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }),
   plan: varchar('plan', { length: 50 }).notNull().default('free'),
