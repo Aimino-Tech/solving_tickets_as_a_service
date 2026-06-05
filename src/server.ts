@@ -23,6 +23,10 @@ import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+
+import cors from 'cors';
+import helmet from 'helmet';
+import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
 import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
@@ -44,11 +48,41 @@ import { bridgeMetrics } from './bridge/metrics.js';
 
 const log = rootLogger.child({ module: 'server' });
 
+const REQUEST_SIZE_LIMIT = parseSize(config.security.requestBodyLimit);
+const WEBHOOK_SIZE_LIMIT = parseSize(config.security.webhookBodyLimit);
+
+function parseSize(size: string): number {
+  const match = size.match(/^(\d+)\s*(b|kb|mb|gb)$/i);
+  if (!match) return 0;
+  const num = parseInt(match[1], 10);
+  const unit = match[2].toLowerCase();
+  const multipliers: Record<string, number> = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 * 1024 * 1024 };
+  return num * (multipliers[unit] || 1);
+}
+
 /**
  * Create and configure the Express application.
  */
 export function createApp(): express.Application {
   const app = express();
+
+  // -- Security headers (Helmet) -------------------------------------------
+  app.use(helmet());
+
+  // -- CORS -----------------------------------------------------------------
+  app.use(cors({
+    origin: config.security.corsOrigin === '*'
+      ? '*'
+      : config.security.corsOrigin.split(',').map(s => s.trim()),
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-request-id'],
+    exposedHeaders: ['x-request-id'],
+    credentials: true,
+    maxAge: 86400,
+  }));
+
+  // -- IP Allowlist for webhook endpoints -----------------------------------
+  app.use('/webhook', ipAllowlistMiddleware);
 
   // -- Request ID middleware ------------------------------------------------
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -90,11 +124,14 @@ export function createApp(): express.Application {
       '/webhook/jira',
       '/webhook/stripe',
     ],
-    express.raw({ type: 'application/json', verify: addRawBody }),
+    express.raw({ type: 'application/json', limit: WEBHOOK_SIZE_LIMIT, verify: addRawBody }),
   );
 
-  // -- JSON parsing for all other routes ------------------------------------
-  app.use(express.json());
+  // -- JSON parsing for all other routes (with size limit) --------------------
+  app.use(express.json({ limit: REQUEST_SIZE_LIMIT }));
+
+  // -- URL-encoded body parsing (with size limit) ---------------------------
+  app.use(express.urlencoded({ extended: true, limit: REQUEST_SIZE_LIMIT }));
 
   // -- Rate limiter for webhook routes ---------------------------------------
   const limiter = rateLimit({
