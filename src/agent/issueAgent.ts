@@ -38,6 +38,7 @@ import type { AgentResult, TriageResult } from "./types.js";
 import type { IssueJobData } from "../utils/types.js";
 import { rootLogger, jobLogger } from "../utils/logger.js";
 import * as messages from "../github/messages.js";
+import { getTracker } from "../trackers/index.js";
 
 const log = rootLogger.child({ module: "issue-agent" });
 
@@ -108,6 +109,22 @@ export async function runIssueAgent(
       issueNumber,
       `### 🔍 STAS Investigating\n\nIssue classified as **${triage.type}** (difficulty: ${triage.difficulty}).\n\nI'll investigate and work on a fix.\n\n`,
     );
+
+    // Post "working on it" to tracker if applicable
+    if (data.trackerType && data.trackerTicketId) {
+      const tracker = getTracker(data.trackerType);
+      if (tracker) {
+        tracker.postComment(
+          data.trackerTicketId,
+          `### 🔍 STAS Investigating\n\n**Issue**: ${data.issueTitle}\n\nIssue classified as **${triage.type}** (difficulty: ${triage.difficulty}).\n\nI'll investigate and work on a fix.\n\n`,
+        ).catch((err) => {
+          log.warn(
+            { err: String(err), trackerType: data.trackerType, ticketId: data.trackerTicketId },
+            "Failed to post initial tracker comment",
+          );
+        });
+      }
+    }
 
     // ── Phase 2: Fetch comments ──────────────────────────────────────
     currentPhase = "2-fetch-comments";
@@ -207,6 +224,35 @@ export async function runIssueAgent(
       installationId,
     });
 
+    // ── Post result back to tracker (Linear/Jira) ───────────────────
+    if (data.trackerType && data.trackerTicketId && dispatchResult.prUrl) {
+      const tracker = getTracker(data.trackerType);
+      if (tracker) {
+        try {
+          await tracker.postComment(
+            data.trackerTicketId,
+            `### ✅ Fix Completed by STAS\n\nA fix has been implemented and a pull request has been opened.\n\n**PR**: ${dispatchResult.prUrl}\n**Summary**: ${openCodeResult.summary}\n**Confidence**: ${openCodeResult.confidence}`,
+          );
+
+          await tracker.createLink(
+            data.trackerTicketId,
+            dispatchResult.prUrl,
+            `STAS Fix: ${data.issueTitle}`,
+          );
+
+          log.info(
+            { trackerType: data.trackerType, ticketId: data.trackerTicketId, prUrl: dispatchResult.prUrl },
+            "Posted fix result back to tracker",
+          );
+        } catch (err) {
+          log.warn(
+            { err: String(err), trackerType: data.trackerType, ticketId: data.trackerTicketId },
+            "Failed to post result back to tracker",
+          );
+        }
+      }
+    }
+
     // ── Phase 8: Cleanup ──────────────────────────────────────────────
     if (sandbox) {
       await sandbox.destroy();
@@ -226,7 +272,7 @@ export async function runIssueAgent(
     const errorMsg = String(err);
     logger.error({ err: errorMsg, phase: currentPhase }, "Agent pipeline failed during phase");
 
-    // Post error comment
+    // Post error comment to GitHub
     try {
       await postComment(
         installationId,
@@ -237,6 +283,19 @@ export async function runIssueAgent(
       );
     } catch (commentErr) {
       logger.error({ err: String(commentErr), phase: currentPhase }, "Failed to post error comment");
+    }
+
+    // Post error to tracker if applicable
+    if (data.trackerType && data.trackerTicketId) {
+      const tracker = getTracker(data.trackerType);
+      if (tracker) {
+        tracker.postComment(
+          data.trackerTicketId,
+          `### ❌ STAS Error\n\nAn error occurred during fix analysis:\n\n\`\`\`\n${errorMsg.slice(0, 2000)}\n\`\`\`\n\n**Phase**: ${currentPhase}`,
+        ).catch((e) => {
+          logger.warn({ err: String(e) }, "Failed to post error to tracker");
+        });
+      }
     }
 
     return {

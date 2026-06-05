@@ -57,6 +57,22 @@ const envSchema = z.object({
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
 
+  // Trackers — Linear
+  LINEAR_API_KEY: z.string().optional(),
+  LINEAR_WEBHOOK_SECRET: z.string().optional(),
+
+  // Trackers — Jira
+  JIRA_URL: z.string().optional(),
+  JIRA_EMAIL: z.string().optional(),
+  JIRA_API_TOKEN: z.string().optional(),
+  JIRA_WEBHOOK_SECRET: z.string().optional(),
+  JIRA_PROJECT_KEY: z.string().optional(),
+
+  // Tracker-to-GitHub repo mapping (comma-separated: "linear=<owner/repo>,jira=<owner/repo>")
+  TRACKER_DEFAULT_REPO_OWNER: z.string().optional(),
+  TRACKER_DEFAULT_REPO_NAME: z.string().optional(),
+  TRACKER_INSTALLATION_ID: z.coerce.number().int().positive().optional(),
+
   // Logging
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "fatal"]).default("info"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -115,6 +131,27 @@ function buildConfig(env: ParsedEnv) {
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
       rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
       rateLimitMax: env.STAS_RATE_LIMIT_MAX,
+    },
+
+    trackers: {
+      linear: env.LINEAR_API_KEY
+        ? {
+            apiKey: env.LINEAR_API_KEY,
+            webhookSecret: env.LINEAR_WEBHOOK_SECRET,
+          }
+        : undefined,
+      jira: env.JIRA_URL && env.JIRA_EMAIL && env.JIRA_API_TOKEN
+        ? {
+            url: env.JIRA_URL,
+            email: env.JIRA_EMAIL,
+            apiToken: env.JIRA_API_TOKEN,
+            webhookSecret: env.JIRA_WEBHOOK_SECRET,
+            projectKey: env.JIRA_PROJECT_KEY,
+          }
+        : undefined,
+      defaultRepoOwner: env.TRACKER_DEFAULT_REPO_OWNER,
+      defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME,
+      installationId: env.TRACKER_INSTALLATION_ID || 0,
     },
   } as const;
 }
