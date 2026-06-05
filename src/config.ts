@@ -97,6 +97,10 @@ const envSchema = z.object({
   // Admin API
   ADMIN_API_KEY: z.string().optional(),
 
+  // Webhook Retry Worker
+  WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
+  WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
+
   // GitLab
   GITLAB_URL: z.string().default('https://gitlab.com'),
   GITLAB_TOKEN: z.string().optional(),
@@ -307,6 +311,11 @@ function buildConfig(env: ParsedEnv) {
       adminApiKey: env.ADMIN_API_KEY,
     },
 
+    webhookRetry: {
+      pollIntervalMs: env.WEBHOOK_RETRY_POLL_INTERVAL_MS,
+      batchSize: env.WEBHOOK_RETRY_BATCH_SIZE,
+    },
+
     rateLimit: {
       defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
       ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
@@ -318,7 +327,6 @@ function buildConfig(env: ParsedEnv) {
       creditsTriage: env.USAGE_CREDITS_TRIAGE,
       creditsSandbox: env.USAGE_CREDITS_SANDBOX,
     },
-
 
     stripe: {
       secretKey: env.STRIPE_SECRET_KEY,
