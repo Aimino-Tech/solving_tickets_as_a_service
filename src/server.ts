@@ -1,20 +1,21 @@
 /**
- * Express API server — webhook receiver and health endpoint.
+ * Express API server -- webhook receiver and health endpoint.
  *
  * Features:
  * - Raw body middleware for webhook signature verification
  * - Request ID middleware for log correlation
  * - Structured access logging with pino
  * - GET /health endpoint
- * - POST /webhook — GitHub webhook receiver via @octokit/webhooks
+ * - POST /webhook -- GitHub webhook receiver via @octokit/webhooks
+ * - POST /webhook/stripe -- Stripe webhook for credit purchase events
  *
- * ── Error Handling Audit ────────────────────────────────────────────
- * ✅ Global Express error middleware (4-arg handler) at bottom of chain
- * ✅ Process-level uncaughtException and unhandledRejection handlers
- * ✅ app.listen() error event handled (EADDRINUSE, EACCES, etc.)
- * ✅ Server instance returned for graceful shutdown by caller
- * ✅ Request ID middleware for log correlation
- * ────────────────────────────────────────────────────────────────────
+ * --- Error Handling Audit ---------------------------------------------------
+ * - Global Express error middleware (4-arg handler) at bottom of chain
+ * - Process-level uncaughtException and unhandledRejection handlers
+ * - app.listen() error event handled (EADDRINUSE, EACCES, etc.)
+ * - Server instance returned for graceful shutdown by caller
+ * - Request ID middleware for log correlation
+ * ---------------------------------------------------------------------------
  */
 
 import crypto from 'node:crypto';
@@ -28,6 +29,7 @@ import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
+import { createStripeWebhookHandler } from './stripe/index.js';
 import { rootLogger } from './utils/logger.js';
 import type { IssueJobData } from './utils/types.js';
 import { validateWebhookPayload } from './validation.js';
@@ -43,7 +45,7 @@ const log = rootLogger.child({ module: 'server' });
 export function createApp(): express.Application {
   const app = express();
 
-  // ── Request ID middleware ────────────────────────────────────────
+  // -- Request ID middleware ------------------------------------------------
   app.use((req: Request, res: Response, next: NextFunction) => {
     const requestId = (req.headers['x-request-id'] as string) || crypto.randomUUID();
     req.requestId = requestId;
@@ -51,7 +53,7 @@ export function createApp(): express.Application {
     next();
   });
 
-  // ── Structured access log middleware ─────────────────────────────
+  // -- Structured access log middleware -------------------------------------
   app.use((req: Request, res: Response, next: NextFunction) => {
     const start = Date.now();
     res.on('finish', () => {
@@ -72,16 +74,24 @@ export function createApp(): express.Application {
     next();
   });
 
-  // ── Raw body capture for webhook verification ────────────────────
+  // -- Raw body capture for webhook verification ----------------------------
   app.use(
-    ['/webhook', '/webhook/github', '/webhook/gitlab', '/webhook/bitbucket', '/webhook/linear', '/webhook/jira'],
+    [
+      '/webhook',
+      '/webhook/github',
+      '/webhook/gitlab',
+      '/webhook/bitbucket',
+      '/webhook/linear',
+      '/webhook/jira',
+      '/webhook/stripe',
+    ],
     express.raw({ type: 'application/json', verify: addRawBody }),
   );
 
-  // ── JSON parsing for all other routes ────────────────────────────
+  // -- JSON parsing for all other routes ------------------------------------
   app.use(express.json());
 
-  // ── Rate limiter for webhook routes ───────────────────────────────
+  // -- Rate limiter for webhook routes ---------------------------------------
   const limiter = rateLimit({
     windowMs: config.stas.rateLimitWindowMs,
     limit: config.stas.rateLimitMax,
@@ -91,11 +101,11 @@ export function createApp(): express.Application {
   });
   app.use('/webhook', limiter);
 
-  // ── Slack Bolt receiver (interactive messages) ───────────────────
+  // -- Slack Bolt receiver (interactive messages) ---------------------------
   const bolt = getSlackBoltApp();
   bolt.mountOn(app);
 
-  // ── Health check ─────────────────────────────────────────────────
+  // -- Health check ---------------------------------------------------------
   app.get('/health', (_req: Request, res: Response) => {
     res.json({
       status: 'ok',
@@ -105,16 +115,16 @@ export function createApp(): express.Application {
     });
   });
 
-  // ── Initialize trackers ──────────────────────────────────────────
+  // -- Initialize trackers --------------------------------------------------
   initTrackers();
 
-  // ── Webhook receiver ─────────────────────────────────────────────
+  // -- Webhook receiver -----------------------------------------------------
   const queue = createIssueQueue();
   const githubWebhooks = createGithubWebhooks(queue);
   const gitlabHandler = createGitlabWebhooks(queue);
   const bitbucketHandler = createBitbucketWebhooks(queue);
 
-  // ── GitHub webhook handler (shared between /webhook and /webhook/github) ─
+  // -- GitHub webhook handler (shared between /webhook and /webhook/github) --
   async function handleGithubWebhook(req: Request, res: Response): Promise<void> {
     const event = req.headers['x-github-event'] as string;
     const deliveryId = req.headers['x-github-delivery'] as string;
@@ -187,7 +197,7 @@ export function createApp(): express.Application {
   app.post('/webhook', handleGithubWebhook);
   app.post('/webhook/github', handleGithubWebhook);
 
-  // ── GitLab webhook ───────────────────────────────────────────────
+  // -- GitLab webhook -------------------------------------------------------
   app.post('/webhook/gitlab', async (req: Request, res: Response) => {
     const event = req.headers['x-gitlab-event'] as string;
     const token = req.headers['x-gitlab-token'] as string;
@@ -228,7 +238,7 @@ export function createApp(): express.Application {
     res.status(202).json({ accepted: true });
   });
 
-  // ── Bitbucket webhook ────────────────────────────────────────────
+  // -- Bitbucket webhook ----------------------------------------------------
   app.post('/webhook/bitbucket', async (req: Request, res: Response) => {
     const signature = req.headers['x-hub-signature'] as string;
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
@@ -250,7 +260,7 @@ export function createApp(): express.Application {
     res.status(202).json({ accepted: true });
   });
 
-  // ── Linear webhook ────────────────────────────────────────────────
+  // -- Linear webhook --------------------------------------------------------
   app.post('/webhook/linear', async (req: Request, res: Response) => {
     const signature = req.headers['linear-signature'] as string;
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
@@ -306,7 +316,7 @@ export function createApp(): express.Application {
           await enqueueIssue(queue, jobData);
         } else {
           log.warn(
-            'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured — Linear ticket not enqueued',
+            'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Linear ticket not enqueued',
           );
         }
       } catch (err) {
@@ -317,7 +327,7 @@ export function createApp(): express.Application {
     res.status(202).json({ accepted: true });
   });
 
-  // ── Jira webhook ─────────────────────────────────────────────────
+  // -- Jira webhook ---------------------------------------------------------
   app.post('/webhook/jira', async (req: Request, res: Response) => {
     const signature = req.headers['x-hub-signature-256'] as string;
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
@@ -373,7 +383,7 @@ export function createApp(): express.Application {
           await enqueueIssue(queue, jobData);
         } else {
           log.warn(
-            'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured — Jira ticket not enqueued',
+            'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Jira ticket not enqueued',
           );
         }
       } catch (err) {
@@ -384,12 +394,16 @@ export function createApp(): express.Application {
     res.status(202).json({ accepted: true });
   });
 
-  // ── 404 handler ──────────────────────────────────────────────────
+  // -- Stripe webhook -------------------------------------------------------
+  const stripeWebhookHandler = createStripeWebhookHandler();
+  app.post('/webhook/stripe', stripeWebhookHandler);
+
+  // -- 404 handler ----------------------------------------------------------
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: 'Not found' });
   });
 
-  // ── Global error handler ─────────────────────────────────────────
+  // -- Global error handler -------------------------------------------------
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     log.error({ err: String(err) }, 'Unhandled error');
     res.status(500).json({ error: 'Internal server error' });
@@ -426,19 +440,19 @@ export function startServer(): import('http').Server {
   return server;
 }
 
-// ── Process-level error handlers ────────────────────────────────────
+// -- Process-level error handlers --------------------------------------------
 
 process.on('uncaughtException', (err) => {
-  log.error({ err: String(err), stack: (err as Error).stack }, 'Uncaught exception — shutting down');
+  log.error({ err: String(err), stack: (err as Error).stack }, 'Uncaught exception -- shutting down');
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
-  log.error({ err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection — shutting down');
+  log.error({ err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection -- shutting down');
   process.exit(1);
 });
 
-// ── Helper: Capture raw body for webhook signature verification ────
+// -- Helper: Capture raw body for webhook signature verification -------------
 
 /**
  * Express verify callback that stores the raw body buffer on the request

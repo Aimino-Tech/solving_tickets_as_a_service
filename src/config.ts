@@ -36,6 +36,13 @@ const envSchema = z.object({
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
+  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('bullmq'),
+
+  // RabbitMQ
+  RABBITMQ_URL: z.string().default('amqp://localhost:5672/stas'),
+  RABBITMQ_PREFETCH_COUNT: z.coerce.number().int().positive().default(10),
+  RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5000),
+  RABBITMQ_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
 
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
@@ -58,8 +65,18 @@ const envSchema = z.object({
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // STAS
+<<<<<<< HEAD
+ 
+  // Pricing
+  STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
+  STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
   STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
+=======
+  STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
+  STAS_LABEL: z.string().default("stas:fix"),
+  BOT_NAME: z.string().default("STAS"),
+>>>>>>> ralph/aim-1230-celery-complete
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
@@ -83,11 +100,11 @@ const envSchema = z.object({
   SLACK_SIGNING_SECRET: z.string().optional(),
   SLACK_INTERACTIONS_PATH: z.string().default('/slack/events'),
 
-  // Trackers — Linear
+  // Trackers -- Linear
   LINEAR_API_KEY: z.string().optional(),
   LINEAR_WEBHOOK_SECRET: z.string().optional(),
 
-  // Trackers — Jira
+  // Trackers -- Jira
   JIRA_URL: z.string().optional(),
   JIRA_EMAIL: z.string().optional(),
   JIRA_API_TOKEN: z.string().optional(),
@@ -98,6 +115,13 @@ const envSchema = z.object({
   TRACKER_DEFAULT_REPO_OWNER: z.string().optional(),
   TRACKER_DEFAULT_REPO_NAME: z.string().optional(),
   TRACKER_INSTALLATION_ID: z.coerce.number().int().positive().optional(),
+
+  // Stripe
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PRICE_100_CREDITS: z.string().default('price_100credits'),
+  STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
+  STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
@@ -133,6 +157,14 @@ function buildConfig(env: ParsedEnv) {
       keepFailed: env.QUEUE_KEEP_FAILED,
       maxRetries: env.QUEUE_MAX_RETRIES,
       retryDelays: env.QUEUE_RETRY_DELAYS.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n)),
+      backend: env.QUEUE_BACKEND,
+    },
+
+    rabbitmq: {
+      url: env.RABBITMQ_URL,
+      prefetchCount: env.RABBITMQ_PREFETCH_COUNT,
+      reconnectDelayMs: env.RABBITMQ_RECONNECT_DELAY_MS,
+      maxReconnectAttempts: env.RABBITMQ_MAX_RECONNECT_ATTEMPTS,
     },
 
     opencode: {
@@ -180,6 +212,16 @@ function buildConfig(env: ParsedEnv) {
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
       rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
       rateLimitMax: env.STAS_RATE_LIMIT_MAX,
+      defaultTier: env.STAS_DEFAULT_TIER,
+      monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    },
+
+    stripe: {
+      secretKey: env.STRIPE_SECRET_KEY,
+      webhookSecret: env.STRIPE_WEBHOOK_SECRET,
+      price100Credits: env.STRIPE_PRICE_100_CREDITS,
+      price500Credits: env.STRIPE_PRICE_500_CREDITS,
+      price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
     },
 
     fixTimeoutMs: env.FIX_TIMEOUT_MS,
