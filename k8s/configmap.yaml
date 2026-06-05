@@ -1,0 +1,46 @@
+# ---------------------------------------------------------------------------
+# STAS ConfigMap — shared environment variables for all deployments
+# Sensitive values (keys, tokens, passwords) belong in a Secret.
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stas-config
+  labels:
+    app: stas
+data:
+  # Runtime
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  RUN_MODE: "both"
+
+  # Service URLs — adjust namespaces/services as needed
+  REDIS_URL: "redis://stas-redis:6379"
+  RABBITMQ_URL: "amqp://stas-app:stas-app-password@stas-rabbitmq:5672/stas"
+  DATABASE_URL: "postgres://stas:stas-password@stas-postgres:5432/stas"
+  OPENCODE_URL: "http://stas-opencode:4096"
+
+  # STAS behavior
+  STAS_LABEL: "stas:fix"
+  STAS_PORT: "3000"
+  STAS_RATE_LIMIT_WINDOW_MS: "60000"
+  STAS_RATE_LIMIT_MAX: "30"
+
+  # Queue configuration
+  WORKER_CONCURRENCY: "4"
+  QUEUE_BACKEND: "both"
+  QUEUE_DEDUP_TTL_SECONDS: "120"
+  QUEUE_MAX_RETRIES: "4"
+
+  # RabbitMQ tuning
+  RABBITMQ_PREFETCH_COUNT: "10"
+  RABBITMQ_RECONNECT_DELAY_MS: "5000"
+  RABBITMQ_MAX_RECONNECT_ATTEMPTS: "10"
+
+  # Database connection pool
+  DATABASE_POOL_MIN: "2"
+  DATABASE_POOL_MAX: "10"
+  DATABASE_SSL: "true"
+
+  # OpenCode model
+  OPENCODE_MODEL: "anthropic/claude-sonnet-4-20250514"
