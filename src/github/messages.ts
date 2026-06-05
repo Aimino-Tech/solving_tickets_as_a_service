@@ -303,6 +303,85 @@ export function ciFailureComment(prNumber: number, failedChecks: string[]): stri
 }
 
 /**
+ * Pre-existing test regression — blocks PR creation.
+ */
+export function regressionBlockComment(result: AgentResult): string {
+  const ver = result.verification;
+  return [
+    `### ❌ Regression Detected — PR Blocked`,
+    "",
+    result.summary,
+    "",
+    "Pre-existing tests that were passing **before** the fix are now **failing**.",
+    "",
+    ver?.details.length
+      ? ver.details.map((d) => `- ${d}`).join("\n")
+      : "",
+    "",
+    "The fix introduces regressions in previously passing tests. Please review the changes",
+    "and ensure existing functionality is preserved.",
+    "",
+    "A branch with the attempted changes has been pushed for inspection.",
+    BOT_SIGNATURE,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/**
+ * Verification warning — regression test validation had issues.
+ */
+export function verificationWarningComment(result: AgentResult): string {
+  const ver = result.verification;
+  if (!ver) return "";
+
+  const lines: string[] = [
+    `### ⚠️ Verification Warnings`,
+    "",
+  ];
+
+  if (ver.regressionTestPassedOnOriginal === false) {
+    lines.push(
+      "- The regression test does **not fail** when run against the original code.",
+      "  It may not properly validate the bug fix.",
+    );
+  }
+  if (ver.regressionTestPassedOnFix === false) {
+    lines.push(
+      "- The regression test does **not pass** on the fixed code.",
+      "  The test may need adjustment.",
+    );
+  }
+  if (ver.regressionTestCreated === false) {
+    lines.push(
+      "- No new regression test file was detected.",
+      "  Manual verification is recommended.",
+    );
+  }
+
+  if (ver.unverified) {
+    lines.push(
+      "- No test suite was detected. Verification was skipped.",
+      "  Manual testing is recommended before merging.",
+    );
+  }
+
+  if (ver.details.length > 0) {
+    lines.push(
+      "",
+      "<details><summary>Verification Details</summary>",
+      "",
+      ...ver.details.map((d) => `- ${d}`),
+      "",
+      "</details>",
+    );
+  }
+
+  lines.push("", BOT_SIGNATURE);
+  return lines.join("\n");
+}
+
+/**
  * Build a structured PR body.
  */
 export function buildPRBody(params: {
@@ -313,6 +392,37 @@ export function buildPRBody(params: {
   branchName: string;
 }): string {
   const { issueNumber, result, fileLinks, branchName } = params;
+
+  const ver = result.verification;
+  const verSection: string[] = [];
+
+  if (ver) {
+    if (ver.unverified) {
+      verSection.push("⚠️ **Unverified**: No test suite detected. Manual testing recommended.");
+    } else {
+      const checks: string[] = [];
+      checks.push(ver.preExistingTestsRegressed ? "❌" : "✅");
+      checks.push("No pre-existing test regressions");
+
+      if (ver.regressionTestCreated) {
+        checks.push(ver.regressionTestPassedOnOriginal ? "✅" : "❌");
+        checks.push("Regression test fails on original code");
+
+        checks.push(ver.regressionTestPassedOnFix ? "✅" : "❌");
+        checks.push("Regression test passes on fix");
+      } else {
+        checks.push("⚠️ No regression test detected");
+      }
+
+      verSection.push(
+        "| Check | Status |",
+        "|---|---|",
+      );
+      for (let i = 0; i < checks.length; i += 2) {
+        verSection.push(`| ${checks[i]} ${checks[i + 1]} |`);
+      }
+    }
+  }
 
   return [
     `## Summary`,
@@ -326,7 +436,8 @@ export function buildPRBody(params: {
     fileLinks.length > 0 ? fileLinks.map((f) => `- \`${f}\``).join('\n') : '_(file list not available)_',
     '',
     `## Verification`,
-    '',
+    "",
+    verSection.length > 0 ? verSection.join("\n") + "\n" : "",
     result.testOutput
       ? `<details><summary>Test Output</summary>\n\n\`\`\`\n${result.testOutput.slice(0, 5000)}\n\`\`\`\n</details>`
       : 'Tests were run as part of the fix process.',

@@ -6,8 +6,16 @@
  * investigation, error) are all properly representable.
  */
 
-import { describe, expect, it } from 'vitest';
-import type { AgentResult, AgentTool, FileChange, TestResult, TriageResult } from '../../agent/types.js';
+import { describe, it, expect } from "vitest";
+import type {
+  AgentTool,
+  TestResult,
+  TestBaseline,
+  VerificationResult,
+  TriageResult,
+  FileChange,
+  AgentResult,
+} from "../../agent/types.js";
 
 // ── AgentTool ───────────────────────────────────────────────────────────────
 
@@ -130,6 +138,190 @@ describe('TestResult interface', () => {
       durationMs: 100,
     };
     expect(result.command).toBe('');
+  });
+});
+
+// ── TestBaseline ─────────────────────────────────────────────────────────────
+
+describe("TestBaseline interface", () => {
+  it("can be constructed with all fields for a passing run", () => {
+    const baseline: TestBaseline = {
+      passed: true,
+      output: "✓ all tests passed (42 tests in 1.5s)",
+      command: "vitest run",
+      durationMs: 1500,
+      totalTests: 42,
+      passedTests: 42,
+      failedTests: 0,
+    };
+
+    expect(baseline.passed).toBe(true);
+    expect(baseline.totalTests).toBe(42);
+    expect(baseline.passedTests).toBe(42);
+    expect(baseline.failedTests).toBe(0);
+  });
+
+  it("optional test counts can be omitted", () => {
+    const baseline: TestBaseline = {
+      passed: false,
+      output: "Error: no tests found",
+      command: "npm test",
+      durationMs: 100,
+    };
+
+    expect(baseline.totalTests).toBeUndefined();
+    expect(baseline.passedTests).toBeUndefined();
+    expect(baseline.failedTests).toBeUndefined();
+  });
+
+  it("supports failing baseline", () => {
+    const baseline: TestBaseline = {
+      passed: false,
+      output: "FAIL tests/unit/foo.test.ts",
+      command: "npm test",
+      durationMs: 3000,
+      totalTests: 50,
+      passedTests: 48,
+      failedTests: 2,
+    };
+
+    expect(baseline.passed).toBe(false);
+    expect(baseline.failedTests).toBe(2);
+  });
+});
+
+// ── VerificationResult ───────────────────────────────────────────────────────
+
+describe("VerificationResult interface", () => {
+  it("can represent a fully verified fix", () => {
+    const result: VerificationResult = {
+      baseline: {
+        passed: true,
+        output: "PASS",
+        command: "npm test",
+        durationMs: 5000,
+      },
+      postFix: {
+        passed: true,
+        output: "PASS",
+        command: "npm test",
+        durationMs: 5200,
+      },
+      regressionTestCreated: true,
+      regressionTestPassedOnOriginal: true,
+      regressionTestPassedOnFix: true,
+      preExistingTestsRegressed: false,
+      unverified: false,
+      details: ["All checks passed"],
+    };
+
+    expect(result.baseline?.passed).toBe(true);
+    expect(result.postFix?.passed).toBe(true);
+    expect(result.regressionTestCreated).toBe(true);
+    expect(result.regressionTestPassedOnOriginal).toBe(true);
+    expect(result.regressionTestPassedOnFix).toBe(true);
+    expect(result.preExistingTestsRegressed).toBe(false);
+    expect(result.unverified).toBe(false);
+  });
+
+  it("can represent an unverified run", () => {
+    const result: VerificationResult = {
+      baseline: null,
+      postFix: null,
+      regressionTestCreated: false,
+      regressionTestPassedOnOriginal: null,
+      regressionTestPassedOnFix: null,
+      preExistingTestsRegressed: false,
+      unverified: true,
+      details: ["No test suite configured"],
+    };
+
+    expect(result.unverified).toBe(true);
+    expect(result.baseline).toBeNull();
+    expect(result.postFix).toBeNull();
+    expect(result.regressionTestPassedOnOriginal).toBeNull();
+  });
+
+  it("can represent regression detection failure", () => {
+    const result: VerificationResult = {
+      baseline: {
+        passed: true,
+        output: "PASS",
+        command: "npm test",
+        durationMs: 5000,
+      },
+      postFix: {
+        passed: false,
+        output: "FAIL",
+        command: "npm test",
+        durationMs: 6000,
+      },
+      regressionTestCreated: false,
+      regressionTestPassedOnOriginal: null,
+      regressionTestPassedOnFix: null,
+      preExistingTestsRegressed: true,
+      unverified: false,
+      details: ["REGRESSION: Pre-existing tests that were passing now fail"],
+    };
+
+    expect(result.preExistingTestsRegressed).toBe(true);
+    expect(result.regressionTestCreated).toBe(false);
+    expect(result.baseline?.passed).toBe(true);
+    expect(result.postFix?.passed).toBe(false);
+  });
+
+  it("can represent regression test validation failure", () => {
+    const result: VerificationResult = {
+      baseline: {
+        passed: true,
+        output: "PASS",
+        command: "npm test",
+        durationMs: 5000,
+      },
+      postFix: {
+        passed: true,
+        output: "PASS",
+        command: "npm test",
+        durationMs: 5200,
+      },
+      regressionTestCreated: true,
+      regressionTestPassedOnOriginal: false,
+      regressionTestPassedOnFix: true,
+      preExistingTestsRegressed: false,
+      unverified: false,
+      details: ["Regression test does not fail on original code"],
+    };
+
+    expect(result.regressionTestPassedOnOriginal).toBe(false);
+    expect(result.regressionTestPassedOnFix).toBe(true);
+  });
+
+  it("supports nested null baseline for no test suite", () => {
+    const result: VerificationResult = {
+      baseline: null,
+      postFix: null,
+      regressionTestCreated: false,
+      regressionTestPassedOnOriginal: null,
+      regressionTestPassedOnFix: null,
+      preExistingTestsRegressed: false,
+      unverified: true,
+      details: ["No test suite configured"],
+    };
+    expect(result.baseline).toBeNull();
+  });
+
+  it("details array can be empty", () => {
+    const result: VerificationResult = {
+      baseline: null,
+      postFix: null,
+      regressionTestCreated: false,
+      regressionTestPassedOnOriginal: null,
+      regressionTestPassedOnFix: null,
+      preExistingTestsRegressed: false,
+      unverified: true,
+      details: [],
+    };
+    expect(result.details).toEqual([]);
   });
 });
 
@@ -411,6 +603,7 @@ describe('AgentResult optional fields', () => {
     expect(result.noFixReason).toBeUndefined();
     expect(result.alreadyFixed).toBeUndefined();
     expect(result.investigationOnly).toBeUndefined();
+    expect(result.verification).toBeUndefined();
   });
 
   it('relevantPRs can be populated', () => {

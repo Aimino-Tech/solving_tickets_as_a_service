@@ -4,8 +4,8 @@
  * Every fixture returns a fresh copy so tests can safely mutate as needed.
  */
 
-import type { AgentResult } from '../agent/types.js';
-import type { IssueJobData } from '../utils/types.js';
+import type { IssueJobData } from "../utils/types.js";
+import type { AgentResult, VerificationResult } from "../agent/types.js";
 
 // ── Webhook Payloads ───────────────────────────────────────────────────────
 
@@ -192,6 +192,40 @@ export function sampleJobData(overrides?: Partial<IssueJobData>): IssueJobData {
 // ── Agent Results ──────────────────────────────────────────────────────────
 
 /**
+ * Sample successful verification result.
+ */
+export function sampleVerificationResult(
+  overrides?: Partial<VerificationResult>,
+): VerificationResult {
+  return {
+    baseline: {
+      passed: true,
+      output: "PASS: 42 tests passed",
+      command: "npm test",
+      durationMs: 5000,
+    },
+    postFix: {
+      passed: true,
+      output: "PASS: 43 tests passed",
+      command: "npm test",
+      durationMs: 5200,
+    },
+    regressionTestCreated: true,
+    regressionTestPassedOnOriginal: true,
+    regressionTestPassedOnFix: true,
+    preExistingTestsRegressed: false,
+    unverified: false,
+    details: [
+      "Post-fix tests: passed (5200ms)",
+      "No pre-existing test regressions detected",
+      "New test file(s) detected: tests/login.regression.test.ts",
+      "Regression test tests/login.regression.test.ts: fails on original, passes on fix",
+    ],
+    ...overrides,
+  };
+}
+
+/**
  * Sample AgentResult with a high-confidence fix_ready result.
  */
 export function sampleAgentResult(_overrides?: Partial<AgentResult>): AgentResult {
@@ -205,6 +239,7 @@ export function sampleAgentResult(_overrides?: Partial<AgentResult>): AgentResul
     testOutput:
       'PASS tests/login.test.ts (42ms)\n  ✓ handles special characters in password\n  ✓ rejects empty password\n\nTests: 2 passed, 2 total',
     errors: [],
+    verification: sampleVerificationResult(),
   };
 }
 

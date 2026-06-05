@@ -232,6 +232,62 @@ export class SandboxExecutor {
   }
 
   /**
+   * Check if the project has a test suite configured.
+   */
+  hasTestSuite(): boolean {
+    return !!(this.runtimeInfo?.testCommand);
+  }
+
+  /**
+   * Run a specific test file or test pattern.
+   */
+  async runSpecificTest(testPath: string): Promise<TestRunResult> {
+    if (!this.sandbox) throw new Error("Sandbox not booted");
+    if (!this.runtimeInfo) throw new Error("Runtime not detected");
+
+    const start = Date.now();
+
+    const commands: string[] = [];
+    if (this.runtimeInfo.language === "node") {
+      commands.push(`npx vitest run ${testPath} 2>&1`);
+      commands.push(`npx jest ${testPath} 2>&1`);
+      commands.push(`npm test -- ${testPath} 2>&1`);
+    } else if (this.runtimeInfo.language === "python") {
+      commands.push(`python -m pytest ${testPath} -v 2>&1`);
+      commands.push(`python -m unittest ${testPath} -v 2>&1`);
+    } else if (this.runtimeInfo.language === "go") {
+      commands.push(`go test ${testPath} 2>&1`);
+    } else if (this.runtimeInfo.language === "rust") {
+      commands.push(`cargo test 2>&1`);
+    } else {
+      commands.push(this.runtimeInfo.testCommand);
+    }
+
+    for (const command of commands) {
+      try {
+        const result = await this.exec(command, 300_000);
+        if (!result.stderr.includes("command not found") && !result.stderr.includes("Unknown command")) {
+          return {
+            passed: result.exitCode === 0,
+            output: `${result.stdout}\n${result.stderr}`.trim(),
+            command,
+            durationMs: Date.now() - start,
+          };
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return {
+      passed: false,
+      output: `Could not find a test runner for specific test: ${testPath}`,
+      command: commands[0] || "",
+      durationMs: Date.now() - start,
+    };
+  }
+
+  /**
    * Auto-detect and run the test suite.
    */
   async runTests(): Promise<TestRunResult> {
