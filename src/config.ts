@@ -36,19 +36,13 @@ const envSchema = z.object({
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
-  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('both'),
+  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('bullmq'),
 
   // RabbitMQ
   RABBITMQ_URL: z.string().default('amqp://localhost:5672/stas'),
   RABBITMQ_PREFETCH_COUNT: z.coerce.number().int().positive().default(10),
   RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5000),
   RABBITMQ_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
-
-  // Bridge
-  BRIDGE_RPC_TIMEOUT: z.coerce.number().int().positive().default(30000),
-  BRIDGE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(3),
-  BRIDGE_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(5),
-  QUEUE_FALLBACK_BACKEND: z.enum(['redis', 'local', 'none']).default('redis'),
 
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
@@ -81,10 +75,12 @@ const envSchema = z.object({
   DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(2),
 
   // STAS
+  // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
   STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
-  STAS_LABEL: z.string().default('stas:fix'),
-  BOT_NAME: z.string().default('STAS'),
+  STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
+  STAS_LABEL: z.string().default("stas:fix"),
+  BOT_NAME: z.string().default("STAS"),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
@@ -141,28 +137,11 @@ const envSchema = z.object({
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
-  // Usage metering
-  USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
-  USAGE_CREDITS_TRIAGE: z.coerce.number().int().positive().default(10),
-  USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
+ 
+  // Admin API
+  ADMIN_API_KEY: z.string().optional(),
 
-  // Feature flags
-  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
-  // Database
-  DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
-  DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
-  DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
-  DATABASE_SSL: z.coerce.boolean().default(false),
-
-  // Storage — run history persistence
-  STORAGE_TYPE: z.enum(['sqlite', 'postgres']).default('sqlite'),
-  STORAGE_SQLITE_PATH: z.string().default('./stas.db'),
-
-  // Rate limiting (credit-based)
-  STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
-  STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
-  STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
-
+  // Admin API
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -244,13 +223,6 @@ function buildConfig(env: ParsedEnv) {
       maxReconnectAttempts: env.RABBITMQ_MAX_RECONNECT_ATTEMPTS,
     },
 
-    bridge: {
-      rpcTimeoutMs: env.BRIDGE_RPC_TIMEOUT,
-      maxRetries: env.BRIDGE_MAX_RETRIES,
-      circuitBreakerThreshold: env.BRIDGE_CIRCUIT_BREAKER_THRESHOLD,
-      fallbackBackend: env.QUEUE_FALLBACK_BACKEND,
-    },
-
     opencode: {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
@@ -303,33 +275,11 @@ function buildConfig(env: ParsedEnv) {
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
       maxAgentIterations: env.MAX_AGENT_ITERATIONS,
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
-      rateLimit: {
-        windowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
-        max: env.STAS_RATE_LIMIT_MAX,
-        repoLimit: env.STAS_REPO_RATE_LIMIT,
-        accountLimit: env.STAS_ACCOUNT_RATE_LIMIT,
-        repoConcurrencyMax: env.STAS_REPO_CONCURRENCY_MAX,
-      },
+      rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
+      rateLimitMax: env.STAS_RATE_LIMIT_MAX,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
-      adminApiKey: env.ADMIN_API_KEY,
-    },
-
-    webhookRetry: {
-      pollIntervalMs: env.WEBHOOK_RETRY_POLL_INTERVAL_MS,
-      batchSize: env.WEBHOOK_RETRY_BATCH_SIZE,
-    },
-
-    rateLimit: {
-      defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
-      ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
-      adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
-    },
-
-    usage: {
-      creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
-      creditsTriage: env.USAGE_CREDITS_TRIAGE,
-      creditsSandbox: env.USAGE_CREDITS_SANDBOX,
+      adminApiKey: env.ADMIN_API_KEY ?? '',
     },
 
     stripe: {
@@ -338,21 +288,6 @@ function buildConfig(env: ParsedEnv) {
       price100Credits: env.STRIPE_PRICE_100_CREDITS,
       price500Credits: env.STRIPE_PRICE_500_CREDITS,
       price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
-    },
-
-    database: {
-      url: env.DATABASE_URL,
-      poolMin: env.DATABASE_POOL_MIN,
-      poolMax: env.DATABASE_POOL_MAX,
-      ssl: env.DATABASE_SSL,
-    },
-
-    /** Storage backend for persistent run history (AIM-1203). */
-    storage: {
-      /** Active backend: 'sqlite' (OSS/local) or 'postgres' (hosted). */
-      type: env.STORAGE_TYPE,
-      /** File path for SQLite database (used when type='sqlite'). */
-      sqlitePath: env.STORAGE_SQLITE_PATH,
     },
 
     fixTimeoutMs: env.FIX_TIMEOUT_MS,

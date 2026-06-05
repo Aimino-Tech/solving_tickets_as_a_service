@@ -6,13 +6,8 @@
  * - Request ID middleware for log correlation
  * - Structured access logging with pino
  * - GET /health endpoint
- * - GET /metrics endpoint (Prometheus-style webhook metrics)
  * - POST /webhook -- GitHub webhook receiver via @octokit/webhooks
  * - POST /webhook/stripe -- Stripe webhook for credit purchase events
- * - Admin webhook management API at /admin/webhooks
- * - Webhook event logging to webhook_events table for all sources
- * - Idempotency via x-github-delivery / delivery_id deduplication
- * - Exponential backoff retry worker (1min, 5min, 30min, max 3)
  *
  * --- Error Handling Audit ---------------------------------------------------
  * - Global Express error middleware (4-arg handler) at bottom of chain
@@ -35,10 +30,12 @@ import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
-import { creditRouter } from './credits/index.js';
 import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
+import { adminRouter } from "./pricing/admin.js";
+import { adminAuthMiddleware } from "./security/adminAuth.js";
+import { initTierOverrides } from "./ratelimit/tiers.js";
 import { validateWebhookPayload } from './validation.js';
 import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
@@ -106,23 +103,7 @@ export function createApp(): express.Application {
   // -- JSON parsing for all other routes ------------------------------------
   app.use(express.json());
 
-  // -- Custom per-repo and per-account rate limit middleware ---------------
-  app.use('/webhook', rateLimitMiddleware({
-    getAccountId: (req, _res) => {
-      const p = (req as any).parsedPayload;
-      return p?.installation?.id ?? undefined;
-    },
-    getRepo: (req, _res) => {
-      const p = (req as any).parsedPayload;
-      if (p?.repository?.full_name) return p.repository.full_name;
-      if (p?.repository?.owner?.login && p?.repository?.name) {
-        return `${p.repository.owner.login}/${p.repository.name}`;
-      }
-      return undefined;
-    },
-  }));
-
-  // -- Global rate limiter for webhook routes (IP-based) ---------------------
+  // -- Rate limiter for webhook routes ---------------------------------------
   const limiter = rateLimit({
     windowMs: config.stas.rateLimit.windowMs,
     limit: config.stas.rateLimit.max,
@@ -132,15 +113,12 @@ export function createApp(): express.Application {
   });
   app.use('/webhook', limiter);
 
-  // -- Credit-based rate limiter (per-account, per-repo, per-IP) ----------
-  app.use('/webhook', rateLimitMiddleware());
-
   // -- Slack Bolt receiver (interactive messages) ---------------------------
   const bolt = getSlackBoltApp();
   bolt.mountOn(app);
 
-  // -- Health check (liveness, readiness, and simple health) -----------------
-  app.get(['/health', '/health/live', '/health/ready'], (_req: Request, res: Response) => {
+  // -- Health check ---------------------------------------------------------
+  app.get('/health', (_req: Request, res: Response) => {
     res.json({
       status: 'ok',
       label: config.stas.label,
@@ -149,34 +127,11 @@ export function createApp(): express.Application {
     });
   });
 
-  // -- Prometheus metrics endpoint -----------------------------------------
-  app.get('/metrics', (_req: Request, res: Response) => {
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    // Combine webhook and bridge metrics
-    const webhookMetrics = renderMetrics();
-    const bridgeMetricsOutput = bridgeMetrics.render();
-    res.send([webhookMetrics, bridgeMetricsOutput].filter(Boolean).join('\n\n'));
-  });
-
   // -- Initialize trackers --------------------------------------------------
   initTrackers();
+  initTierOverrides();
 
-  // ── Initialize metering ───────────────────────────────────────────
-  initMetering();
-
-  // ── Start webhook retry worker ────────────────────────────────────
-  // Only start if we're running as API or both
-  if (config.runMode === 'api' || config.runMode === 'both') {
-    startWebhookRetryWorker();
-  }
-
-  // ── Start webhook health monitor ──────────────────────────────────
-  // Periodically checks failure rate and alerts if > 5%
-  if (config.runMode === 'api' || config.runMode === 'both') {
-    startHealthMonitor();
-  }
-
-  // ── Webhook receiver ─────────────────────────────────────────────
+  // -- Webhook receiver -----------------------------------------------------
   const queue = createIssueQueue();
   const githubWebhooks = createGithubWebhooks(queue);
   const gitlabHandler = createGitlabWebhooks(queue);
@@ -348,9 +303,21 @@ export function createApp(): express.Application {
 
     let parsedPayload: unknown;
     try {
-      parsedPayload = JSON.parse(rawBody.toString());
-    } catch {
-      res.status(400).json({ error: 'Invalid JSON payload' });
+      await bitbucketHandler.handle(rawBody.toString(), signature);
+    } catch (err) {
+      log.error({ err: String(err) }, 'Bitbucket webhook processing error');
+    }
+
+    res.status(202).json({ accepted: true });
+  });
+
+  // -- Linear webhook --------------------------------------------------------
+  app.post('/webhook/linear', async (req: Request, res: Response) => {
+    const signature = req.headers['linear-signature'] as string;
+    const rawBody = (req as { rawBody?: Buffer }).rawBody;
+
+    if (!rawBody) {
+      res.status(400).json({ error: 'Missing raw body' });
       return;
     }
 
@@ -539,115 +506,14 @@ export function createApp(): express.Application {
   });
 
   // -- Stripe webhook -------------------------------------------------------
-  app.post('/webhook/stripe', async (req: Request, res: Response) => {
-    const startTime = Date.now();
-    const rawBody = (req as { rawBody?: Buffer }).rawBody;
-    const source = 'stripe';
+  const stripeWebhookHandler = createStripeWebhookHandler();
+  app.post('/webhook/stripe', stripeWebhookHandler);
 
-    // Log the event before processing (best-effort, raw body may not be parseable yet)
-    let eventId: number | undefined;
-    try {
-      const stripeEventType = req.headers['stripe-signature'] ? 'stripe-event' : 'unknown';
-      eventId = await logWebhookReceived({
-        source,
-        eventType: stripeEventType,
-        ...captureWebhookContext(req, undefined),
-        payload: { note: 'Stripe webhook payload parsed by handler' },
-      });
-    } catch {
-      // Non-fatal — Stripe handler will manage its own errors
-    }
-
-    const stripeWebhookHandler = createStripeWebhookHandler();
-
-    // Wrap the handler to capture success/failure for event logging
-    const wrappedHandler = async (req2: Request, res2: Response, next2: NextFunction) => {
-      try {
-        await stripeWebhookHandler(req2, res2, next2);
-        if (eventId) await logWebhookProcessed(eventId);
-      } catch (err) {
-        if (eventId) await logWebhookFailed(eventId, String(err));
-        throw err;
-      }
-      recordWebhookDuration(source, Date.now() - startTime);
-    };
-
-    await wrappedHandler(req, res, () => {});
-  });
-
-  // -- Feature flags admin API ------------------------------------------------
-  app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
-
-  // ── Usage metering API ──────────────────────────────────────────
-  app.use('/api/v1/credits/usage', usageRouter);
-
-  // ── Admin webhooks API ──────────────────────────────────────────
-  // GET /admin/webhooks (paginated, filterable)
-  // POST /admin/webhooks/:id/replay
-  // POST /admin/webhooks/replay-range
-  // GET /admin/webhooks/sources
-  // GET /admin/webhooks/stats
-  // GET /admin/webhooks/health
-  app.use('/admin/webhooks', adminWebhooksRouter);
-
-  // -- Credit REST API routes ------------------------------------------------
-  app.use('/api/v1', creditRouter);
-
-
-  // ── Queue management endpoints (pause/resume) ──────────────────
-  async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const adminKey = req.headers['x-admin-key'] as string;
-    if (!adminKey || adminKey !== config.stas.adminApiKey) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-    next();
-  }
-
-  /**
-   * POST /admin/queue/pause — Pause the issue queue.
-   * Requires x-admin-key header.
-   */
-  app.post('/admin/queue/pause', requireAdmin, async (_req: Request, res: Response) => {
-    try {
-      await pauseIssueQueue(queue);
-      res.json({ status: 'paused', queue: 'stas-issues' });
-    } catch (err) {
-      log.error({ err: String(err) }, 'Failed to pause queue');
-      res.status(500).json({ error: 'Failed to pause queue' });
-    }
-  });
-
-  /**
-   * POST /admin/queue/resume — Resume the issue queue.
-   * Requires x-admin-key header.
-   */
-  app.post('/admin/queue/resume', requireAdmin, async (_req: Request, res: Response) => {
-    try {
-      await resumeIssueQueue(queue);
-      res.json({ status: 'resumed', queue: 'stas-issues' });
-    } catch (err) {
-      log.error({ err: String(err) }, 'Failed to resume queue');
-      res.status(500).json({ error: 'Failed to resume queue' });
-    }
-  });
-
-  /**
-   * GET /admin/queue/status — Get queue metrics (waiting, active, completed, failed).
-   * Requires x-admin-key header.
-   */
-  app.get('/admin/queue/status', requireAdmin, async (_req: Request, res: Response) => {
-    try {
-      const metrics = await getQueueMetrics(queue);
-      res.json(metrics);
-    } catch (err) {
-      log.error({ err: String(err) }, 'Failed to get queue metrics');
-      res.status(500).json({ error: 'Failed to get queue metrics' });
-    }
-  });
+  // -- Admin API (pricing tiers, quota management) ---------------------
+  // Admin routes are protected by adminAuthMiddleware
+  app.use("/admin", adminAuthMiddleware, adminRouter);
 
   // -- 404 handler ----------------------------------------------------------
-
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: 'Not found' });
   });
