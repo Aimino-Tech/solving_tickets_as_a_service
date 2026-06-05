@@ -2,7 +2,12 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
+# Make root filesystem read-only for security
+# Writable directories (tmp, data) use tmpfs volumes at runtime
+
 # Install dependencies (layer caching — only invalidated when lockfile changes)
+# IMPORTANT: Do NOT COPY .env or any secrets into the image
+# Secrets are injected at runtime via environment variables or Docker secrets
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 
@@ -32,6 +37,11 @@ RUN chown -R stas:stas /app
 USER stas
 
 EXPOSE 3000
+
+# Run with read-only root filesystem in production:
+# docker run --read-only --tmpfs /tmp --tmpfs /app/data ...
+# This prevents the container from writing to the filesystem,
+# limiting the impact of a compromised process.
 
 STOPSIGNAL SIGTERM
 

@@ -23,6 +23,10 @@ import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+
+import cors from 'cors';
+import helmet from 'helmet';
+import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { config } from './config.js';
 import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
@@ -39,9 +43,28 @@ import { createGitlabWebhooks } from './webhooks/gitlab.js';
 
 const log = rootLogger.child({ module: 'server' });
 
+// Request body size limit from config
+const REQUEST_SIZE_LIMIT = parseSize(config.security.requestBodyLimit);
+const WEBHOOK_SIZE_LIMIT = parseSize(config.security.webhookBodyLimit);
+
 /**
  * Create and configure the Express application.
  */
+
+/**
+ * Parse a size string (e.g. '1mb', '5mb', '100kb') to bytes.
+ * Returns 0 if the string cannot be parsed.
+ */
+function parseSize(size: string): number {
+  const match = size.match(/^(d+)s*(b|kb|mb|gb)$/i);
+  if (!match) return 0;
+  const num = parseInt(match[1], 10);
+  const unit = match[2].toLowerCase();
+  const multipliers: Record<string, number> = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 * 1024 * 1024 };
+  return num * (multipliers[unit] || 1);
+}
+
+
 export function createApp(): express.Application {
   const app = express();
 
@@ -52,6 +75,26 @@ export function createApp(): express.Application {
     res.setHeader('x-request-id', requestId);
     next();
   });
+
+  // -- Security headers (Helmet) -------------------------------------------
+  // Sets various HTTP headers for security: CSP, X-Frame-Options,
+  // X-Content-Type-Options, Strict-Transport-Security, etc.
+  app.use(helmet());
+
+  // -- CORS -----------------------------------------------------------------
+  app.use(cors({
+    origin: config.security.corsOrigin === '*'
+      ? '*'
+      : config.security.corsOrigin.split(',').map(s => s.trim()),
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-request-id'],
+    exposedHeaders: ['x-request-id'],
+    credentials: true,
+    maxAge: 86400, // 24 hours
+  }));
+
+  // -- IP Allowlist for webhook endpoints -----------------------------------
+  app.use('/webhook', ipAllowlistMiddleware);
 
   // -- Structured access log middleware -------------------------------------
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -85,11 +128,14 @@ export function createApp(): express.Application {
       '/webhook/jira',
       '/webhook/stripe',
     ],
-    express.raw({ type: 'application/json', verify: addRawBody }),
+    express.raw({ type: 'application/json', limit: config.security.webhookBodyLimit, verify: addRawBody }),
   );
 
-  // -- JSON parsing for all other routes ------------------------------------
-  app.use(express.json());
+  // -- JSON parsing for all other routes (with size limit) --------------------
+  app.use(express.json({ limit: config.security.requestBodyLimit }));
+
+  // -- URL-encoded body parsing (with size limit) ---------------------------
+  app.use(express.urlencoded({ extended: true, limit: config.security.requestBodyLimit }));
 
   // -- Rate limiter for webhook routes ---------------------------------------
   const limiter = rateLimit({

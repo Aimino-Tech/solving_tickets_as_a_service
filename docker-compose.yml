@@ -14,8 +14,26 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+
+    # ── Security Constraints ──────────────────────────────────────────
+    # Run with least privilege: read-only root FS, no new privileges,
+    # dropped capabilities, resource limits
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 512m
+    mem_reservation: 256m
+    cpus: 0.5
+    pids_limit: 256
+    # ──────────────────────────────────────────────────────────────────
     networks:
       - stas-net
+    # Note: Sandbox containers should run on an isolated network
+    # without access to the stas-net internal network
 
   rabbitmq:
     image: rabbitmq:4-management-alpine

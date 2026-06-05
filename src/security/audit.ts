@@ -46,8 +46,8 @@ export async function writeAuditLog(entry: AuditEntry): Promise<void> {
 
   log.info(payload, `[AUDIT] ${entry.action} — ${entry.outcome}`);
 
-  // Persist to database if configured
-  if (config.database.url && config.database.url !== 'postgres://localhost:5432/stas') {
+  // Persist to database if explicitly enabled via config flag
+  if (config.database.enableAuditPersistence) {
     try {
       const { db } = await import('../db/index.js');
       await db.insertInto('audit_logs').values({

@@ -129,6 +129,7 @@ const envSchema = z.object({
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
   DATABASE_SSL: z.coerce.boolean().default(false),
+  DATABASE_ENABLE_AUDIT_PERSISTENCE: z.coerce.boolean().default(false),
 
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
@@ -139,6 +140,20 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('*'),
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
+
+  // ── IP Allowlist ──
+  IP_ALLOWLIST_ENABLED: z.coerce.boolean().default(false),
+  IP_ALLOWLIST: z.string().default(''),
+  // Comma-separated list of IPs or CIDR ranges allowed to access webhooks
+
+  // ── Sandbox Security ──
+  SANDBOX_PRIVILEGED: z.coerce.boolean().default(false),
+  SANDBOX_READONLY_ROOT: z.coerce.boolean().default(true),
+  SANDBOX_MEMORY_LIMIT: z.string().default('512m'),
+  SANDBOX_CPU_LIMIT: z.string().default('0.5'),
+  SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
+  SANDBOX_DISK_LIMIT: z.string().default('2gb'),
+  SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -249,6 +264,7 @@ function buildConfig(env: ParsedEnv) {
       poolMin: env.DATABASE_POOL_MIN,
       poolMax: env.DATABASE_POOL_MAX,
       ssl: env.DATABASE_SSL,
+      enableAuditPersistence: env.DATABASE_ENABLE_AUDIT_PERSISTENCE,
     },
 
     fixTimeoutMs: env.FIX_TIMEOUT_MS,
@@ -288,6 +304,20 @@ function buildConfig(env: ParsedEnv) {
       corsOrigin: env.CORS_ORIGIN,
       requestBodyLimit: env.REQUEST_BODY_LIMIT,
       webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
+
+      ipAllowlist: {
+        enabled: env.IP_ALLOWLIST_ENABLED,
+        ips: env.IP_ALLOWLIST.split(',').map((s) => s.trim()).filter(Boolean),
+      },
+      sandbox: {
+        privileged: env.SANDBOX_PRIVILEGED,
+        readOnlyRoot: env.SANDBOX_READONLY_ROOT,
+        memoryLimit: env.SANDBOX_MEMORY_LIMIT,
+        cpuLimit: env.SANDBOX_CPU_LIMIT,
+        pidsLimit: env.SANDBOX_PIDS_LIMIT,
+        diskLimit: env.SANDBOX_DISK_LIMIT,
+        networkEnabled: env.SANDBOX_NETWORK_ENABLED,
+      },
     },
   } as const;
 }
