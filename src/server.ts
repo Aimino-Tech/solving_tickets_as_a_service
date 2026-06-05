@@ -22,6 +22,7 @@ import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import { rateLimitMiddleware } from './rate-limit/middleware.js';
 import { config } from './config.js';
 import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
@@ -90,6 +91,12 @@ export function createApp(): express.Application {
     message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
   });
   app.use('/webhook', limiter);
+
+  // ── Credit-based rate limiter (per-account, per-repo, per-IP) ──────
+  // Adds RateLimit-* headers and enforces tier-based limits for
+  // authenticated (installation ID) and unauthenticated (IP) requests.
+  // Fail-open: Redis errors allow the request through (logged).
+  app.use('/webhook', rateLimitMiddleware);
 
   // ── Slack Bolt receiver (interactive messages) ───────────────────
   const bolt = getSlackBoltApp();
