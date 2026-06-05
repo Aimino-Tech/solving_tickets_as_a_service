@@ -1,57 +1,301 @@
-# Self-Hosting STAS
+# Self-Hosting Guide
+
+> **Everything you need to run STAS on your own infrastructure.**
+
+---
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Quick Start (5 Minutes)](#quick-start-5-minutes)
+- [GitHub App Creation Walkthrough](#github-app-creation-walkthrough)
+- [Configuration Walkthrough](#configuration-walkthrough)
+- [Running with Docker Compose](#running-with-docker-compose)
+- [Running with Docker (Standalone)](#running-with-docker-standalone)
+- [Running with Kubernetes](#running-with-kubernetes)
+- [Running with Railway](#running-with-railway)
+- [Running with Fly.io](#running-with-flyio)
+- [Production Checklist](#production-checklist)
+- [Monitoring & Maintenance](#monitoring--maintenance)
+- [Troubleshooting](#troubleshooting)
+
+---
 
 ## Prerequisites
 
-- **Node.js** >= 20
-- **Redis** >= 7 (for BullMQ queue)
-- **OpenCode** CLI (`npm install -g @opencode/cli`)
-- **Docker** (optional, for Docker sandbox)
-- **E2B API key** (optional, for cloud sandbox)
-- **GitHub App** (see below)
+### Required
 
-## GitHub App Creation
+| Requirement | Version | Why |
+|---|---|---|
+| **Node.js** | >= 20 | Runtime for the bot |
+| **Redis** | >= 7 | Job queue (BullMQ), concurrency locks, rate limiting |
+| **OpenCode CLI** | Latest | Fix agent backend |
+| **Docker** | Latest | Local sandbox (or use E2B cloud) |
+| **GitHub App** | — | Webhook receiver + API access |
 
-1. Go to GitHub Settings → Developer settings → GitHub Apps → New GitHub App
-2. Fill in:
-   - **GitHub App name**: `stas-bot` (or your choice)
-   - **Homepage URL**: `https://github.com/your-org/stas-bot`
-   - **Webhook URL**: `https://your-server.com/webhook`
-   - **Webhook secret**: Generate a secure random string
-3. Permissions:
-   - **Contents**: Read & write
-   - **Issues**: Read & write
-   - **Pull requests**: Read & write
-   - **Metadata**: Read-only
-4. Subscribe to events:
-   - Issues
-   - Issue comment
-   - Pull request
-5. Generate a private key and download the PEM file
-6. Note your **App ID** from the General tab
+### Optional
 
-## Quick Start (Local)
+| Tool | Use Case |
+|---|---|
+| **Docker Compose** | Local development stack |
+| **Kubernetes** | Production orchestration |
+| **Railway CLI** | One-click deployment |
+| **Fly CLI** | Edge deployment |
+| **E2B API Key** | Cloud sandbox (no Docker needed) |
+| **RabbitMQ** | Alternative queue backend |
+
+---
+
+## Quick Start (5 Minutes)
 
 ```bash
-# 1. Clone and install
+# 1. Clone the repository
 git clone https://github.com/tamnguyen08/solving_tickets_as_a_service
 cd solving_tickets_as_a_service
+
+# 2. Install dependencies
 npm install
 
-# 2. Start Redis (if not already running)
-redis-server
+# 3. Copy and edit configuration
+cp .env.example .env
 
-# 3. Start OpenCode (in another terminal)
+# 4. Create a GitHub App (see walkthrough below)
+#    Fill in GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, GITHUB_WEBHOOK_SECRET
+
+# 5. Start Redis + the bot
+docker compose up -d
+
+# 6. Start OpenCode (in another terminal)
 opencode serve --port 4096
 
-# 4. Configure environment
-cp .env.example .env
-# Edit .env with your GitHub App credentials
-
-# 5. Run
-npm run dev
+# 7. Verify it's running
+curl http://localhost:3000/health
+# → {"status":"ok","label":"stas:fix","uptime":42,"timestamp":"..."}
 ```
 
-## Docker Deployment
+---
+
+## GitHub App Creation Walkthrough
+
+### Step 1: Create the App
+
+1. Go to **GitHub Settings → Developer settings → GitHub Apps → New GitHub App**
+   - Or directly: `https://github.com/settings/apps/new`
+
+2. Fill in the basic info:
+   - **GitHub App name**: `stas-bot` (or your preferred name)
+   - **Homepage URL**: `https://github.com/tamnguyen08/solving_tickets_as_a_service`
+   - **Webhook URL**: `https://your-domain.com/webhook` (use `https://smee.io/your-channel` for local dev)
+   - **Webhook secret**: Generate a strong random secret:
+     ```bash
+     openssl rand -hex 32
+     ```
+
+### Step 2: Configure Permissions
+
+| Permission | Access | Why |
+|---|---|---|
+| **Issues** | Read & write | Read issue content, post comments, manage labels |
+| **Pull requests** | Read & write | Create PRs with fixes |
+| **Contents** | Read & write | Clone repos, push fix branches |
+| **Metadata** | Read (automatic) | Repository metadata |
+
+### Step 3: Subscribe to Events
+
+Subscribe to these webhook events:
+- **Issues** — Receive `issues.labeled` and `issues.edited` events
+- **Issue comments** — Receive comment events (future use)
+- **Pull requests** — Receive PR events (future use)
+
+### Step 4: Generate a Private Key
+
+1. Scroll to **Private keys** section
+2. Click **Generate a private key**
+3. Download the `.pem` file
+4. Store it securely:
+   ```bash
+   mv ~/Downloads/stas-bot.*.pem /etc/stas/github-private-key.pem
+   chmod 600 /etc/stas/github-private-key.pem
+   ```
+
+### Step 5: Install the App
+
+1. Go to your app settings page (e.g., `https://github.com/settings/apps/stas-bot`)
+2. Click **Install App** in the sidebar
+3. Choose the repositories (or all repositories)
+4. Note the **Installation ID** — you can find it in the URL after installation:
+   - `https://github.com/settings/installations/12345678`
+   - The number at the end is your installation ID
+
+### Step 6: Find Your App ID
+
+Your **App ID** is displayed at the top of your GitHub App settings page. It's a numeric value like `123456`.
+
+---
+
+## Configuration Walkthrough
+
+### Minimal Configuration
+
+Create a `.env` file with these required values:
+
+```bash
+# === GitHub App (Required) ===
+GITHUB_APP_ID=123456                         # Your GitHub App ID
+GITHUB_APP_PRIVATE_KEY_PATH=/etc/stas/github-private-key.pem  # Path to PEM file
+# OR inline the key (replace \n with actual newlines):
+# GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nMIIEpA...\n-----END RSA PRIVATE KEY-----"
+
+GITHUB_WEBHOOK_SECRET=your-webhook-secret-here  # Must match GitHub App settings
+
+# === Queue (Default: local Redis) ===
+REDIS_URL=redis://localhost:6379
+
+# === OpenCode (Default: local) ===
+OPENCODE_URL=http://localhost:4096
+```
+
+### Production Configuration
+
+```bash
+# === Run Mode ===
+RUN_MODE=both                                  # Run API + worker in same process
+PORT=3000                                      # Webhook server port
+NODE_ENV=production                            # Enable production optimizations
+
+# === GitHub App ===
+GITHUB_APP_ID=123456
+GITHUB_APP_PRIVATE_KEY_PATH=/etc/stas/github-private-key.pem
+GITHUB_WEBHOOK_SECRET=your-webhook-secret-here
+
+# === Queue (Production Redis) ===
+REDIS_URL=rediss://username:password@your-redis-host:6380
+WORKER_CONCURRENCY=4                           # Increase for more parallelism
+QUEUE_DEDUP_TTL_SECONDS=120
+QUEUE_MAX_RETRIES=4
+QUEUE_RETRY_DELAYS=30000,120000,300000,900000
+
+# === OpenCode ===
+OPENCODE_URL=http://opencode:4096              # Docker network URL
+OPENCODE_MODEL=anthropic/claude-sonnet-4-20250514
+FALLBACK_MODELS=gpt-4o,claude-haiku
+
+# === Sandbox (Choose one) ===
+# E2B (recommended for production):
+E2B_API_KEY=e2b_api_key_here
+E2B_TEMPLATE_ID=stas-default
+
+# Docker (alternative):
+# DOCKER_IMAGE=ubuntu:24.04
+
+# === Security ===
+ADMIN_API_KEY=your-admin-api-key               # Generate with: openssl rand -hex 32
+IP_ALLOWLIST_ENABLED=true
+IP_ALLOWLIST=192.30.252.0/22,185.199.108.0/22,140.82.112.0/20
+CORS_ORIGIN=https://your-dashboard.com
+
+# === Monitoring ===
+LOG_LEVEL=info
+SENTRY_DSN=https://your-dsn@o0.ingest.sentry.io/0
+
+# === Database (for audit persistence) ===
+DATABASE_URL=postgres://user:password@postgres:5432/stas
+DATABASE_SSL=true
+
+# === Slack Notifications ===
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T0000/B0000/xxxxx
+SLACK_CHANNEL=#stas-alerts
+
+# === STAS Settings ===
+STAS_LABEL=stas:fix
+BOT_NAME=STAS
+MAX_AGENT_ITERATIONS=40
+FIX_TIMEOUT_MS=600000                          # 10 minutes
+```
+
+### Validating Configuration
+
+STAS validates all environment variables at startup using Zod schemas. If any required values are missing or invalid, you'll see grouped error messages like:
+
+```
+Invalid environment configuration:
+  GITHUB_APP_ID: GITHUB_APP_ID is required
+  GITHUB_WEBHOOK_SECRET: GITHUB_WEBHOOK_SECRET is required
+```
+
+Use the config validation tool:
+```bash
+npm run stas:config
+# or
+bash plugin/tools/stas-config.sh check
+```
+
+---
+
+## Running with Docker Compose
+
+### Development Stack
+
+```bash
+# Start Redis + bot with hot-reload
+docker compose up
+```
+
+The `docker-compose.yml` starts:
+- `stas-redis` — Redis 7 (persistent, health-checked)
+- `stas-bot` — STAS bot with hot-reload via `tsx watch`
+
+### Production Stack
+
+```yaml
+# docker-compose.prod.yml
+services:
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  opencode:
+    image: opencodeai/opencode:latest
+    ports: ["4096:4096"]
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    command: serve --port 4096
+
+  stas-webhook:
+    build: .
+    ports: ["3000:3000"]
+    environment:
+      - RUN_MODE=api
+      # ... all other env vars
+    depends_on: [redis]
+
+  stas-worker:
+    build: .
+    environment:
+      - RUN_MODE=worker
+      # ... all other env vars
+    depends_on: [redis]
+    scale: 4  # Scale workers horizontally
+
+  nginx:
+    image: nginx:alpine
+    ports: ["443:443"]
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on: [stas-webhook]
+```
+
+Start the full stack:
+```bash
+docker compose -f docker-compose.prod.yml up -d
+
+# Scale workers
+docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
+```
+
+---
+
+## Running with Docker (Standalone)
 
 ```bash
 # Build the image
@@ -60,87 +304,357 @@ docker build -t stas-bot .
 # Run with environment file
 docker run -p 3000:3000 --env-file .env stas-bot
 
-# Or with Docker Compose (includes Redis)
-docker compose up
+# Run with individual env vars
+docker run -p 3000:3000 \
+  -e GITHUB_APP_ID=123456 \
+  -e GITHUB_WEBHOOK_SECRET=your-secret \
+  -e REDIS_URL=redis://host.docker.internal:6379 \
+  -e OPENCODE_URL=http://host.docker.internal:4096 \
+  stas-bot
 ```
 
-## Docker Compose (Production Stack)
+### Dockerfile Highlights
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY dist/ ./dist/
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+
+CMD ["node", "dist/index.js"]
+```
+
+---
+
+## Running with Kubernetes
+
+### Prerequisites
+
+- A Kubernetes cluster (v1.24+)
+- `kubectl` configured
+- (Optional) Ingress controller for external access
+
+### Basic Deployment
+
+```yaml
+# k8s/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stas-bot
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: stas-bot
+  template:
+    metadata:
+      labels:
+        app: stas-bot
+    spec:
+      containers:
+      - name: stas-bot
+        image: stas-bot:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GITHUB_APP_ID
+          valueFrom:
+            secretKeyRef:
+              name: stas-secrets
+              key: github-app-id
+        - name: GITHUB_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: stas-secrets
+              key: github-webhook-secret
+        - name: REDIS_URL
+          value: redis://stas-redis:6379
+        - name: OPENCODE_URL
+          value: http://stas-opencode:4096
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stas-bot
+spec:
+  selector:
+    app: stas-bot
+  ports:
+  - port: 3000
+    targetPort: 3000
+```
+
+### Secrets
+
+```yaml
+# k8s/secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: stas-secrets
+type: Opaque
+stringData:
+  github-app-id: "123456"
+  github-webhook-secret: "your-webhook-secret"
+  github-private-key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIEpA...
+    -----END RSA PRIVATE KEY-----
+```
+
+### Redis (using Bitnami Helm chart)
 
 ```bash
-# Full production stack: Redis, RabbitMQ, PostgreSQL, webhook, workers, Nginx
-docker compose -f docker-compose.prod.yml up -d
-
-# Scale workers
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install stas-redis bitnami/redis \
+  --set auth.enabled=true \
+  --set auth.password=stas-redis-password \
+  --set replica.replicaCount=1
 ```
 
-## Kubernetes Deployment
+### Full Stack with Helm
 
-See `k8s/` directory for example manifests:
+See `k8s/` directory for complete manifests including:
+- `deployment.yaml` — Bot deployment
+- `secrets.yaml` — Secret management
+- `configmap.yaml` — Non-sensitive configuration
+- `hpa.yaml` — Horizontal pod autoscaling
+- `ingress.yaml` — Ingress configuration
 
-```bash
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/deployment-webhook.yaml
-kubectl apply -f k8s/service-webhook.yaml
-kubectl apply -f k8s/deployment-worker.yaml
-```
+---
 
-## Railway Deployment
+## Running with Railway
+
+### One-Click Deploy
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/railway.json)
 
+### Manual Deploy
+
 ```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login and init
 railway login
 railway init
+
+# Deploy
 railway up
-railway secrets set GITHUB_APP_ID=... GITHUB_WEBHOOK_SECRET=...
+
+# Set secrets
+railway secrets set GITHUB_APP_ID=123456
+railway secrets set GITHUB_APP_PRIVATE_KEY="$(cat /path/to/private-key.pem)"
+railway secrets set GITHUB_WEBHOOK_SECRET=your-secret
+railway secrets set OPENCODE_URL=https://your-opencode-instance.com:4096
 ```
 
 Railway auto-provisions Redis via the `railway.json` template.
 
-## Fly.io Deployment
+---
+
+## Running with Fly.io
 
 ```bash
+# Install Fly CLI
+curl -L https://fly.io/install.sh | sh
+fly auth login
+
+# Launch
 fly launch --copy-config
-fly secrets set GITHUB_APP_ID=... GITHUB_WEBHOOK_SECRET=...
-fly redis create && fly redis attach <name>
+
+# Set secrets
+fly secrets set GITHUB_APP_ID=123456
+fly secrets set GITHUB_APP_PRIVATE_KEY="$(cat /path/to/private-key.pem)"
+fly secrets set GITHUB_WEBHOOK_SECRET=your-secret
+fly secrets set OPENCODE_URL=https://your-opencode-instance.com:4096
+
+# Create Redis
+fly redis create
+fly redis attach <redis-name>
+
+# Deploy
 fly deploy
+
+# Scale
+fly scale count 2
 ```
 
-## Configuration
+---
 
-All configuration via environment variables. See `.env.example` for all options.
+## Production Checklist
 
-### Required Variables
+### Before Going Live
 
-| Variable | Description |
-|---|---|
-| `GITHUB_APP_ID` | GitHub App ID |
-| `GITHUB_WEBHOOK_SECRET` | Webhook secret |
-| `GITHUB_APP_PRIVATE_KEY` | App private key (PEM) |
-| `REDIS_URL` | Redis connection string |
+- [ ] **GitHub App**: Webhook URL is set to your production domain with HTTPS
+- [ ] **Webhook secret**: Strong, unique value (use `openssl rand -hex 32`)
+- [ ] **Private key**: Stored securely, file permissions `600`
+- [ ] **Redis**: Authentication enabled, TLS enabled for external connections
+- [ ] **HTTPS**: TLS termination configured at reverse proxy (Nginx, Cloudflare, etc.)
+- [ ] **Secrets**: All API keys and tokens are set as environment variables (never in code)
+- [ ] **E2B API key**: Configured for production sandbox (or Docker properly secured)
+- [ ] **OpenCode**: Running with production model, configured API keys
+- [ ] **Health checks**: `/health` endpoint is monitored
+- [ ] **Logging**: Structured JSON logging configured
+- [ ] **Error monitoring**: Sentry DSN configured
+- [ ] **Database**: PostgreSQL configured if using audit persistence
+- [ ] **Rate limiting**: Appropriate limits set for your traffic
+- [ ] **IP allowlist**: Enabled for webhook endpoints
+- [ ] **Backups**: Redis data persistence configured (AOF/RDB)
+- [ ] **Monitoring**: Queue depth, error rate, and uptime alerts configured
+- [ ] **DNS**: Domain configured with appropriate records
 
-### Optional Variables
+### Regular Maintenance
 
-| Variable | Default | Description |
+| Task | Frequency | How |
 |---|---|---|
-| `OPENCODE_URL` | `http://localhost:4096` | OpenCode endpoint |
-| `OPENCODE_MODEL` | `anthropic/claude-sonnet-4-20250514` | Agent model |
-| `STAS_LABEL` | `stas:fix` | Trigger label |
-| `SENTRY_DSN` | — | Sentry error tracking |
-| `E2B_API_KEY` | — | E2B cloud sandbox |
-| `STAS_PORT` | `3000` | Server port |
+| Update dependencies | Weekly | `npm audit && npm update` |
+| Check queue health | Daily | `curl /health` or monitoring dashboard |
+| Review DLQ | Weekly | Check dead-letter queue for stuck jobs |
+| Rotate secrets | Quarterly | Regenerate webhook secret and API keys |
+| Update OpenCode | Monthly | `opencode update` or pull latest Docker image |
+| Review logs | Weekly | Check for errors or anomalies |
+| Backup config | Monthly | Export env vars and Kubernetes manifests |
 
-## Monitoring
+---
 
-- Health check: `GET /health`
-- Database health: `GET /health/db`
-- Queue metrics: Exposed via health endpoint
-- Prometheus metrics: `GET /metrics` (if enabled)
+## Monitoring & Maintenance
 
-## Maintenance
+### Health Endpoints
 
-- Run history stored in configurable storage (SQLite for OSS, Postgres for hosted)
-- Queue cleanup happens automatically based on retention settings
-- Dead-letter queues capture failed jobs for manual inspection
-- Logs are structured (pino) for integration with log aggregators
+```bash
+# Basic health
+curl http://localhost:3000/health
+# → {"status":"ok","label":"stas:fix","uptime":3600,"timestamp":"..."}
+
+# Database health
+curl http://localhost:3000/health/db
+# → {"status":"ok","latencyMs":5,"poolConfig":{"min":2,"max":10,"ssl":false}}
+```
+
+### Queue Metrics
+
+```bash
+# Via BullMQ API (if exposed)
+curl http://localhost:3000/api/v1/admin/queue/metrics
+# → {"waiting":3,"active":1,"completed":142,"failed":5,"delayed":0,"paused":false}
+```
+
+### Logs
+
+STAS uses **pino** for structured JSON logging:
+
+```bash
+# Human-readable output (development)
+npm run dev | npx pino-pretty
+
+# Production JSON (ingest by Logstash/Datadog)
+docker compose logs -f stas-bot
+# → {"level":30,"time":1712345678000,"pid":1,"host":"stas-bot","module":"server","msg":"STAS server listening on :3000"}
+```
+
+Key log modules:
+- `server` — HTTP request/response logging
+- `webhooks-github` — Webhook event handling
+- `issue-queue` — Queue enqueue/dequeue/retry
+- `issue-agent` — Agent pipeline phases
+- `sandbox-factory` — Sandbox selection
+- `sandbox` — E2B sandbox operations
+- `docker-sandbox` — Docker sandbox operations
+- `action-dispatcher` — PR creation decisions
+- `github-auth` — Authentication operations
+
+### Slack Alerts
+
+Configure Slack webhook for alerts:
+```bash
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T0000/B0000/xxxxx
+SLACK_CHANNEL=#stas-alerts
+```
+
+Alert thresholds (configurable):
+- Queue depth warning: 50 messages
+- Queue depth critical: 200 messages
+- Error rate warning: 10%
+- Error rate critical: 30%
+
+### Scaling
+
+| Component | Scale Strategy |
+|---|---|
+| **Webhook API** | Horizontal (multiple pods behind load balancer) |
+| **Worker** | Horizontal (set `--scale stas-worker=N`) |
+| **Redis** | Vertical (more memory) or Redis Cluster |
+| **OpenCode** | Dedicated instance per STAS instance |
+| **Sandbox** | E2B auto-scales; Docker needs host capacity |
+
+---
+
+## Troubleshooting
+
+### Bot not responding to labels
+
+```bash
+# 1. Check the webhook arrived
+docker compose logs stas-bot | grep "Received GitHub webhook"
+# 2. Check label matching
+docker compose logs stas-bot | grep "Ignoring non-target label"
+# 3. Check enqueue
+docker compose logs stas-bot | grep "Issue enqueued"
+# 4. Check worker processing
+docker compose logs stas-bot | grep "Processing issue job"
+```
+
+### Redis connection refused
+
+```bash
+# Test connection
+redis-cli -u redis://localhost:6379 ping
+
+# Check if Redis is running
+docker compose ps stas-redis
+
+# Check logs
+docker compose logs stas-redis
+```
+
+### OpenCode connection refused
+
+```bash
+# Test connection
+curl http://localhost:4096/health
+
+# Check if OpenCode is running
+opencode serve --port 4096
+```
+
+### Sandbox creation failed
+
+```bash
+# E2B: Check API key
+curl -H "Authorization: Bearer $E2B_API_KEY" https://api.e2b.dev/v1/health
+
+# Docker: Check availability
+docker --version
+docker info
+```
