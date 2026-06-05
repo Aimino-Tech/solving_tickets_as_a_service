@@ -1,135 +1,104 @@
 /**
- * Storage abstraction types for persistent run history.
+ * Storage interface — abstract data access contract.
  *
- * Defines the interface that both SQLite and Postgres backends implement,
- * along with shared data types for fix-run records.
+ * All storage backends (Postgres, SQLite, etc.) implement this interface,
+ * allowing the application to be storage-agnostic.
  */
 
-// ---------------------------------------------------------------------------
-// RunRecord — a single fix-run attempt
-// ---------------------------------------------------------------------------
-
-export interface RunRecord {
-  /** Auto-generated primary key (set by backend after insert). */
-  id?: number;
-
-  /** GitHub App installation ID that triggered this run. */
-  installationId: number;
-
-  /** Repository owner (user or org). */
-  repoOwner: string;
-
-  /** Repository name. */
-  repoName: string;
-
-  /** GitHub issue number. */
-  issueNumber: number;
-
-  /** Current status of the fix run. */
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
-
-  /** Agent's confidence level: high / medium / low. */
-  confidence?: string;
-
-  /** Human-readable summary of what the fix does. */
-  summary?: string;
-
-  /** URL of the pull request created by the fix. */
-  prUrl?: string;
-
-  /** Git branch name created by the agent. */
-  branchName?: string;
-
-  /** Error message if the run failed. */
-  error?: string;
-
-  /** Timestamp when the record was created. */
-  createdAt?: Date;
-
-  /** Timestamp of the last update. */
-  updatedAt?: Date;
-
-  /** Total duration of the fix run in milliseconds. */
-  durationMs?: number;
-
-  /** Model identifier used for this run. */
-  modelUsed?: string;
-}
-
-// ---------------------------------------------------------------------------
-// RunFilter — query parameters for listing runs
-// ---------------------------------------------------------------------------
-
-export interface RunFilter {
-  /** Filter by repo in "owner/name" format. */
-  repo?: string;
-
-  /** Filter by issue number. */
-  issueNumber?: number;
-
-  /** Filter by status value. */
-  status?: string;
-
-  /** Only runs created on or after this date. */
-  startDate?: Date;
-
-  /** Only runs created on or before this date. */
-  endDate?: Date;
-
-  /** Maximum number of results to return. */
-  limit?: number;
-
-  /** Number of results to skip (for pagination). */
-  offset?: number;
-}
-
-// ---------------------------------------------------------------------------
-// RunStats — aggregate statistics for a set of runs
-// ---------------------------------------------------------------------------
-
-export interface RunStats {
-  /** Total number of runs matching the filter. */
-  total: number;
-
-  /** Fraction of completed runs that succeeded (0..1). */
-  passRate: number;
-
-  /** Average duration of completed runs in milliseconds. */
-  avgDurationMs: number;
-}
-
-// ---------------------------------------------------------------------------
-// StorageBackend — abstract storage interface
-// ---------------------------------------------------------------------------
+import type {
+  Account,
+  NewAccount,
+  AuditLog,
+  NewAuditLog,
+  NewRunHistory,
+  NewUsageRecord,
+  RunHistory,
+  Team,
+  NewTeam,
+  TeamMember,
+  NewTeamMember,
+  UsageRecord,
+} from '../db/schema/index.js';
 
 export interface StorageBackend {
-  /**
-   * Persist a new run record. On success the returned record includes the
-   * auto-generated `id` and server-set timestamps.
-   */
-  saveRun(run: RunRecord): Promise<RunRecord>;
+  // -------------------------------------------------------------------------
+  // Lifecycle
+  // -------------------------------------------------------------------------
 
-  /**
-   * Retrieve a single run record by its numeric ID.
-   * Returns `undefined` when no record matches.
-   */
-  getRun(runId: string | number): Promise<RunRecord | undefined>;
+  /** Initialize the storage backend (e.g., run migrations, create pool). */
+  initialize(): Promise<void>;
 
-  /**
-   * List run records matching the supplied filter, newest-first.
-   * Returns an empty array when no records match.
-   */
-  listRuns(filter: RunFilter): Promise<RunRecord[]>;
+  /** Gracefully shut down (close connections, release resources). */
+  destroy(): Promise<void>;
 
-  /**
-   * Return aggregate statistics (count, pass rate, avg duration) for
-   * the runs matching the supplied filter.
-   */
-  getRunStats(filter: RunFilter): Promise<RunStats>;
+  /** Check the health of the storage backend. */
+  health(): Promise<{ ok: boolean; latencyMs: number }>;
 
-  /**
-   * Optional. Release any underlying resources (database connections,
-   * file handles, etc.). Called during graceful shutdown.
-   */
-  close?(): void | Promise<void>;
+  // -------------------------------------------------------------------------
+  // Accounts
+  // -------------------------------------------------------------------------
+
+  createAccount(data: NewAccount): Promise<Account>;
+  getAccount(id: number): Promise<Account | undefined>;
+  getAccountByInstallationId(githubInstallationId: number): Promise<Account | undefined>;
+  updateAccount(id: number, data: Partial<Pick<Account, 'email' | 'name' | 'tier'>>): Promise<Account | undefined>;
+  deleteAccount(id: number): Promise<boolean>;
+  listAccounts(limit?: number, offset?: number): Promise<Account[]>;
+
+  // -------------------------------------------------------------------------
+  // Teams
+  // -------------------------------------------------------------------------
+
+  createTeam(data: NewTeam): Promise<Team>;
+  getTeam(id: number): Promise<Team | undefined>;
+  getTeamBySlug(slug: string): Promise<Team | undefined>;
+  updateTeam(id: number, data: Partial<Pick<Team, 'name' | 'slug'>>): Promise<Team | undefined>;
+  deleteTeam(id: number): Promise<boolean>;
+  listTeams(accountId?: number, limit?: number, offset?: number): Promise<Team[]>;
+
+  addTeamMember(data: NewTeamMember): Promise<TeamMember>;
+  removeTeamMember(teamId: number, accountId: number): Promise<boolean>;
+  getTeamMembers(teamId: number): Promise<TeamMember[]>;
+  updateTeamMemberRole(teamId: number, accountId: number, role: string): Promise<TeamMember | undefined>;
+
+  // -------------------------------------------------------------------------
+  // Run History
+  // -------------------------------------------------------------------------
+
+  createRun(data: NewRunHistory): Promise<RunHistory>;
+  getRun(id: number): Promise<RunHistory | undefined>;
+  markRunStarted(id: number): Promise<RunHistory | undefined>;
+  markRunCompleted(id: number, result?: string): Promise<RunHistory | undefined>;
+  markRunFailed(id: number, errorDetails?: string): Promise<RunHistory | undefined>;
+  markRunCancelled(id: number): Promise<RunHistory | undefined>;
+  listRuns(accountId: number, limit?: number, offset?: number, filters?: RunFilters): Promise<RunHistory[]>;
+  latestRunForIssue(accountId: number, issueId: number): Promise<RunHistory | undefined>;
+
+  // -------------------------------------------------------------------------
+  // Usage Tracking
+  // -------------------------------------------------------------------------
+
+  recordUsage(data: NewUsageRecord): Promise<UsageRecord>;
+  totalCreditsUsed(accountId: number): Promise<number>;
+  creditsUsedInRange(accountId: number, startDate: Date, endDate: Date): Promise<number>;
+  monthlyUsageStats(accountId: number, months?: number): Promise<unknown[]>;
+  listUsageRecords(accountId: number, limit?: number, offset?: number): Promise<UsageRecord[]>;
+
+  // -------------------------------------------------------------------------
+  // Audit Log
+  // -------------------------------------------------------------------------
+
+  appendAuditLog(data: NewAuditLog): Promise<AuditLog>;
+  listAuditLogs(accountId: number, limit?: number, offset?: number): Promise<AuditLog[]>;
+  listAuditLogsByAction(action: string, limit?: number, offset?: number): Promise<AuditLog[]>;
+  listAuditLogsByDateRange(startDate: Date, endDate: Date, limit?: number, offset?: number): Promise<AuditLog[]>;
 }
+
+export interface RunFilters {
+  status?: string;
+  repo?: string;
+  startedAfter?: Date;
+  startedBefore?: Date;
+}
+
+export type StorageBackendConstructor = new (...args: unknown[]) => StorageBackend;

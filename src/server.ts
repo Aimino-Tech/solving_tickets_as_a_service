@@ -46,6 +46,7 @@ import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
+import { queryWithRetry } from './db/connection.js';
 import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
@@ -207,9 +208,18 @@ export function createApp(): express.Application {
   bolt.mountOn(app);
 
   // -- Health check ---------------------------------------------------------
-  app.get('/health', (_req: Request, res: Response) => {
+  app.get('/health', async (_req: Request, res: Response) => {
+    let dbStatus = 'unknown';
+    try {
+      const result = await queryWithRetry<{ ok: number }>('SELECT 1 AS ok');
+      dbStatus = result.rows[0]?.ok === 1 ? 'ok' : 'degraded';
+    } catch (err) {
+      dbStatus = 'error';
+      log.error({ err: String(err) }, 'Health check: database unreachable');
+    }
+
     res.json({
-      status: 'ok',
+      status: dbStatus === 'ok' ? 'ok' : 'degraded',
       label: config.stas.label,
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
@@ -218,7 +228,7 @@ export function createApp(): express.Application {
         webhook: { status: 'ok' },
         worker: { status: 'ok' },
         queue: { status: 'unknown' },
-        database: { status: 'unknown' },
+        database: { status: dbStatus },
         opencode: { status: 'unknown' },
         sentry: { status: config.sentry.dsn ? 'connected' : 'disabled' },
       },
