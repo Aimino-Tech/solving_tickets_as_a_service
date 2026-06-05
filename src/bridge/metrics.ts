@@ -336,3 +336,26 @@ export function recordConsumerLag(queue: string, lag: number): void {
 export function recordProcessingDuration(queue: string, durationSeconds: number): void {
   bridgeMetrics.observeHistogram('processing_duration_seconds', { queue }, durationSeconds);
 }
+
+// ── Rate Limiting & Concurrency Metrics ─────────────────────────────────
+
+/**
+ * Record a rejected request due to rate limiting.
+ */
+export function recordRejectedRun(accountId: string, reason: string): void {
+  bridgeMetrics.incrementCounter('rejected_runs_total', { account_id: accountId, reason });
+}
+
+/**
+ * Set the current active run count for an account.
+ */
+export function recordActiveRuns(accountId: string, count: number): void {
+  bridgeMetrics.setGauge('active_runs', { account_id: accountId }, count);
+}
+
+/**
+ * Set the queue depth for an account.
+ */
+export function recordQueueDepth(accountId: string, depth: number): void {
+  bridgeMetrics.setGauge('queue_depth', { account_id: accountId }, depth);
+}
