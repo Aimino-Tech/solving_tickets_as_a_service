@@ -46,6 +46,19 @@ vi.mock("../../agent/issueAgent.js", () => ({
   runIssueAgent: mocks.mockRunIssueAgent,
 }));
 
+vi.mock("../../github/auth.js", () => ({
+  getOctokit: vi.fn(() => ({
+    issues: {
+      createComment: vi.fn(),
+    },
+  })),
+}));
+
+vi.mock("../../github/messages.js", () => ({
+  queueRetryComment: vi.fn(() => "Retry comment"),
+  deadLetterComment: vi.fn(() => "Dead letter comment"),
+}));
+
 vi.mock("../../config.js", () => ({
   config: {
     queue: {
@@ -54,6 +67,8 @@ vi.mock("../../config.js", () => ({
       dedupTtl: 120,
       keepCompleted: 200,
       keepFailed: 100,
+      maxRetries: 4,
+      retryDelays: [30000, 120000, 300000, 900000],
     },
   },
 }));
@@ -122,8 +137,7 @@ it("returns a Queue instance with stas-issues name and Redis connection", () => 
           enableReadyCheck: true,
         }),
         defaultJobOptions: expect.objectContaining({
-          attempts: 2,
-          backoff: { type: "exponential", delay: 5000 },
+          attempts: 1,
           removeOnComplete: { count: 200 },
           removeOnFail: { count: 100 },
         }),
