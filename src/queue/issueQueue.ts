@@ -38,6 +38,14 @@ import { rootLogger } from "../utils/logger.js";
 import { recordQueueDepth } from "../bridge/metrics.js";
 import * as messages from "../github/messages.js";
 import { getOctokit } from "../github/auth.js";
+import {
+  bridgeMetrics,
+  recordMessagePublished,
+  recordMessageFailed,
+  recordProcessingDuration,
+} from "../bridge/metrics.js";
+import { createStorage } from "../storage/index.js";
+import type { RunRecord } from "../storage/types.js";
 import { rateLimiter } from "../ratelimit/limiter.js";
 import { getTierForAccount } from "../ratelimit/tiers.js";
 
@@ -237,6 +245,21 @@ export function createIssueWorker(): Worker<IssueJobData> {
         'Processing issue job',
       );
 
+      // Save initial 'running' record to persistent storage (AIM-1203)
+      const startTime = Date.now();
+      try {
+        const storage = await createStorage();
+        await storage.saveRun({
+          installationId: data.installationId,
+          repoOwner: data.repoOwner,
+          repoName: data.repoName,
+          issueNumber: data.issueNumber,
+          status: 'running',
+        });
+      } catch (storageErr) {
+        log.warn({ err: String(storageErr) }, 'Failed to save run start to storage');
+      }
+
       // Post retry status comment if this is a retry
       if (retryCount > 0 && data.lastError) {
         try {
@@ -268,6 +291,22 @@ export function createIssueWorker(): Worker<IssueJobData> {
       } catch (err) {
         // Unexpected worker-level error — schedule a retry if slots remain
         const errorMsg = String(err);
+        // Save failure to persistent storage (AIM-1203)
+        try {
+          const storage = await createStorage();
+          await storage.saveRun({
+            installationId: data.installationId,
+            repoOwner: data.repoOwner,
+            repoName: data.repoName,
+            issueNumber: data.issueNumber,
+            status: 'failed',
+            error: errorMsg,
+            durationMs: Date.now() - startTime,
+          });
+        } catch (storageErr) {
+          log.warn({ err: String(storageErr) }, 'Failed to save run failure to storage');
+        }
+
         // Release repo slot on error
         await releaseRepoSlot(data.repoOwner, data.repoName, jobIdStr);
         if (retryCount < config.queue.maxRetries) {
@@ -314,6 +353,25 @@ export function createIssueWorker(): Worker<IssueJobData> {
         }
       } else {
         log.info({ jobId: job.id, confidence: result.confidence, prUrl: result.prUrl }, 'Fix completed');
+
+        // Save completion to persistent storage (AIM-1203)
+        try {
+          const storage = await createStorage();
+          await storage.saveRun({
+            installationId: data.installationId,
+            repoOwner: data.repoOwner,
+            repoName: data.repoName,
+            issueNumber: data.issueNumber,
+            status: 'completed',
+            confidence: result.confidence,
+            summary: result.summary,
+            prUrl: result.prUrl,
+            branchName: result.branchName,
+            durationMs: Date.now() - startTime,
+          });
+        } catch (storageErr) {
+          log.warn({ err: String(storageErr) }, 'Failed to save run completion to storage');
+        }
       }
 
       // Release per-repo concurrency slot
