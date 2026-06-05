@@ -17,6 +17,7 @@
 import { Redis } from 'ioredis';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { bridgeMetrics } from '../bridge/metrics.js';
 
 const log = rootLogger.child({ module: 'rate-limiter' });
 
@@ -155,6 +156,9 @@ export class RateLimiter {
   /**
    * Increment the counter and return the new state.
    * Call this when a request is actually processed.
+   *
+   * When the rate limit is exceeded, automatically records a `rejected_runs`
+   * Prometheus counter with reason="rate_limit" and the scope label.
    */
   async increment(scope: RateLimitScope, key: string): Promise<RateLimitResult> {
     try {
@@ -175,7 +179,18 @@ export class RateLimiter {
       const count = this.extractCount(results, 2);
       const oldestTimestamp = now;
 
-      return this.buildResult(scope, count, oldestTimestamp, now);
+      const result = this.buildResult(scope, count, oldestTimestamp, now);
+
+      // Record rejected_runs metric when rate limit is exceeded
+      if (!result.allowed) {
+        bridgeMetrics.incrementCounter('rejected_runs', {
+          reason: 'rate_limit',
+          scope,
+          key,
+        });
+      }
+
+      return result;
     } catch (err) {
       log.error({ err: String(err), scope, key }, 'Rate limit increment failed — allowing request');
       return this.failOpenResult(scope);

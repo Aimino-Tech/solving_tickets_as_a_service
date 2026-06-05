@@ -4,6 +4,10 @@
  * Tracks active fix runs per GitHub installation (account) in Redis and
  * prevents exceeding the tier-defined concurrency cap.
  *
+ * Instrumented with Prometheus metrics:
+ *   - active_runs (gauge) — current active fix runs per account, tier
+ *   - rejected_runs (counter) — concurrency-blocked requests, tagged by reason / scope
+ *
  * ── Design ──────────────────────────────────────────────────────────────────
  * Each active run is stored as a member of a Redis SET keyed by
  * `concurrency:account:{installationId}`. The member value is a unique run
@@ -21,8 +25,9 @@
  */
 
 import { Redis } from 'ioredis';
-import { getConcurrencyLimitForAccount } from './tiers.js';
+import { getConcurrencyLimitForAccount, getTierForAccount } from './tiers.js';
 import { rootLogger } from '../utils/logger.js';
+import { bridgeMetrics } from '../bridge/metrics.js';
 
 const log = rootLogger.child({ module: 'concurrency' });
 
@@ -92,6 +97,9 @@ export class ConcurrencyManager {
   /**
    * Attempt to acquire a concurrency slot for the given account.
    *
+   * Updates the `active_runs` gauge and records `rejected_runs` counter
+   * when the concurrency limit blocks the request.
+   *
    * @param installationId - GitHub installation (account) ID
    * @param runId - Unique identifier for this run (e.g. job ID)
    * @returns ConcurrencyResult indicating if the slot was acquired
@@ -116,6 +124,14 @@ export class ConcurrencyManager {
           { installationId, runId, activeCount, limit: concurrencyLimit },
           'Concurrency slot acquired',
         );
+
+        // Update active_runs gauge
+        const tier = getTierForAccount(installationId);
+        bridgeMetrics.setGauge('active_runs', {
+          account: String(installationId),
+          tier,
+        }, activeCount);
+
         return {
           acquired: true,
           activeCount,
@@ -126,13 +142,29 @@ export class ConcurrencyManager {
 
       // Over limit — remove our entry and block
       await client.srem(accountKey, runId);
+      const actualActive = activeCount - 1;
       log.warn(
-        { installationId, runId, activeCount, limit: concurrencyLimit },
+        { installationId, runId, activeCount: actualActive, limit: concurrencyLimit },
         'Concurrency limit reached — slot denied',
       );
+
+      // Update active_runs gauge (shows the actual count without our rejected entry)
+      const tier = getTierForAccount(installationId);
+      bridgeMetrics.setGauge('active_runs', {
+        account: String(installationId),
+        tier,
+      }, actualActive);
+
+      // Record rejected_runs metric for concurrency blocks
+      bridgeMetrics.incrementCounter('rejected_runs', {
+        reason: 'concurrency',
+        scope: 'account',
+        key: String(installationId),
+      });
+
       return {
         acquired: false,
-        activeCount: activeCount - 1,
+        activeCount: actualActive,
         limit: concurrencyLimit,
         position: concurrencyLimit + 1,
       };
@@ -153,6 +185,8 @@ export class ConcurrencyManager {
   /**
    * Release a concurrency slot for the given account.
    * Called when a fix completes (success or failure).
+   *
+   * Updates the `active_runs` gauge after releasing the slot.
    */
   async release(installationId: number, runId: string): Promise<void> {
     try {
@@ -167,6 +201,13 @@ export class ConcurrencyManager {
       }
 
       log.info({ installationId, runId, remaining }, 'Concurrency slot released');
+
+      // Update active_runs gauge after release
+      const tier = getTierForAccount(installationId);
+      bridgeMetrics.setGauge('active_runs', {
+        account: String(installationId),
+        tier,
+      }, remaining);
     } catch (err) {
       log.warn(
         { err: String(err), installationId, runId },

@@ -16,6 +16,11 @@
  * When RabbitMQ is unavailable in "rabbitmq" mode, falls back to BullMQ.
  * ────────────────────────────────────────────────────────────────────
  *
+ * ── Prometheus Metrics ──────────────────────────────────────────────
+ *   queue_depth (gauge) — current number of jobs waiting in the queue
+ *   Exposed via getQueueDepth() which reads BullMQ's getJobCounts().
+ * ────────────────────────────────────────────────────────────────────
+ *
  * ── Error Handling Audit ────────────────────────────────────────────
  * ✅ Redis retry strategy with exponential backoff and logging
  * ✅ Worker 'failed' event logs context (jobId, repo, issueNumber, error)
@@ -35,6 +40,7 @@ import type { IssueJobData } from "../utils/types.js";
 import { rootLogger } from "../utils/logger.js";
 import * as messages from "../github/messages.js";
 import { getOctokit } from "../github/auth.js";
+import { bridgeMetrics } from "../bridge/metrics.js";
 
 const log = rootLogger.child({ module: 'issue-queue' });
 
@@ -464,4 +470,29 @@ export async function enqueueIssue(
   }
 
   return bullmqResult ?? undefined;
+}
+
+/**
+ * Get the current queue depth (waiting jobs) and update the `queue_depth` gauge.
+ *
+ * Reads BullMQ's getJobCounts() which returns counts by job state.
+ * Queue depth is typically the jobs waiting to be processed.
+ *
+ * @param queue - The BullMQ issue queue instance
+ * @returns The current number of waiting jobs, or 0 on error
+ */
+export async function getQueueDepth(
+  queue: Queue<IssueJobData, unknown, string, IssueJobData>,
+): Promise<number> {
+  try {
+    const counts = await queue.getJobCounts('wait', 'active', 'delayed');
+    const depth = (counts.wait ?? 0) + (counts.active ?? 0) + (counts.delayed ?? 0);
+
+    bridgeMetrics.setGauge('queue_depth', {}, depth);
+
+    return depth;
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to get queue depth');
+    return 0;
+  }
 }

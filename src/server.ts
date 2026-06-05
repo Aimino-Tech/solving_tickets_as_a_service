@@ -6,6 +6,7 @@
  * - Request ID middleware for log correlation
  * - Structured access logging with pino
  * - GET /health endpoint
+ * - GET /metrics endpoint (Prometheus exposition format)
  * - POST /webhook -- GitHub webhook receiver via @octokit/webhooks
  * - POST /webhook/stripe -- Stripe webhook for credit purchase events
  *
@@ -24,7 +25,7 @@ import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
-import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
+import { createIssueQueue, enqueueIssue, getQueueDepth } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
@@ -38,6 +39,7 @@ import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
+import { bridgeMetrics } from './bridge/metrics.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -115,6 +117,23 @@ export function createApp(): express.Application {
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     });
+  });
+
+  // -- Metrics endpoint (Prometheus exposition format) ----------------------
+  const queueForMetrics = createIssueQueue();
+
+  app.get('/metrics', async (_req: Request, res: Response) => {
+    try {
+      // Update dynamic gauges before rendering
+      await getQueueDepth(queueForMetrics);
+
+      const metrics = bridgeMetrics.render();
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.status(200).send(metrics);
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to render metrics');
+      res.status(500).send('# Error rendering metrics\n');
+    }
   });
 
   // -- Initialize trackers --------------------------------------------------
