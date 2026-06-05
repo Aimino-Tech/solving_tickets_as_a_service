@@ -41,8 +41,75 @@ const log = rootLogger.child({ module: 'entry' });
 let server: Server | undefined;
 let shutdownInProgress = false;
 
+/**
+ * Validate connectivity on startup — checks Redis, OpenCode, and E2B if configured.
+ * Fails fast with clear error message if any required service is unreachable.
+ */
+async function validateStartupHealth(): Promise<void> {
+  const checks: { name: string; ok: boolean; error?: string }[] = [];
+
+  // Check Redis
+  try {
+    const { Redis } = await import('ioredis');
+    const redis = new Redis(config.queue.redisUrl, {
+      maxRetriesPerRequest: null,
+      enableReadyCheck: true,
+      retryStrategy: () => null, // no retry — fail fast
+      lazyConnect: true,
+    });
+    await redis.connect();
+    await redis.ping();
+    checks.push({ name: 'redis', ok: true });
+    await redis.quit().catch(() => {});
+  } catch (err) {
+    checks.push({ name: 'redis', ok: false, error: String(err) });
+  }
+
+  // Check OpenCode endpoint
+  try {
+    const response = await fetch(config.opencode.url + '/health', {
+      signal: AbortSignal.timeout(5000),
+    });
+    checks.push({ name: 'opencode', ok: response.ok, error: response.ok ? undefined : `HTTP ${response.status}` });
+  } catch (err) {
+    checks.push({ name: 'opencode', ok: false, error: String(err) });
+  }
+
+  // Check E2B if configured
+  if (config.e2b.apiKey) {
+    try {
+      const { Sandbox } = await import('e2b');
+      const sandbox = await Sandbox.create({
+        apiKey: config.e2b.apiKey,
+        timeoutMs: 5000,
+      });
+      await sandbox.kill();
+      checks.push({ name: 'e2b', ok: true });
+    } catch (err) {
+      checks.push({ name: 'e2b', ok: false, error: String(err) });
+    }
+  }
+
+  // Log results
+  const failures = checks.filter((c) => !c.ok);
+  if (failures.length > 0) {
+    for (const f of failures) {
+      log.error({ service: f.name, error: f.error }, `Startup health check FAILED: ${f.name}`);
+    }
+    log.error({ checks }, 'Startup health validation completed with failures');
+  } else {
+    log.info({ checks: checks.map((c) => c.name) }, 'All startup health checks passed');
+  }
+}
+
 async function main(): Promise<void> {
   log.info({ runMode: config.runMode, nodeEnv: config.nodeEnv }, 'Starting STAS');
+
+  // Run startup health validation (non-fatal — log warnings, don't block)
+  validateStartupHealth().catch((err) => {
+    log.warn({ err: String(err) }, 'Startup health validation error (non-fatal)');
+  });
+
   // Initialize storage backend on startup (warm-up the connection)
   try {
     const { createStorage } = await import('./storage/index.js');
