@@ -101,7 +101,30 @@ describe('config', () => {
       expect(configModule.config.opencode.url).toBe('http://localhost:4096');
     });
 
-    it('defaults DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY to false', () => {
+    it("defaults FALLBACK_MODELS to gpt-4o,claude-haiku", () => {
+      expect(configModule.config.opencode.fallbackModels).toEqual(["gpt-4o", "claude-haiku"]);
+    });
+
+    it("defaults FIX_TIMEOUT_MS to 600000", () => {
+      expect(configModule.config.fixTimeoutMs).toBe(600_000);
+    });
+
+    it("defaults phase timeouts correctly", () => {
+      expect(configModule.config.phaseTimeouts.triage).toBe(30_000);
+      expect(configModule.config.phaseTimeouts.sandboxBoot).toBe(300_000);
+      expect(configModule.config.phaseTimeouts.openCodeAgent).toBe(600_000);
+      expect(configModule.config.phaseTimeouts.prCreation).toBe(30_000);
+    });
+
+    it("defaults QUEUE_MAX_RETRIES to 4", () => {
+      expect(configModule.config.queue.maxRetries).toBe(4);
+    });
+
+    it("defaults QUEUE_RETRY_DELAYS to [30000, 120000, 300000, 900000]", () => {
+      expect(configModule.config.queue.retryDelays).toEqual([30000, 120000, 300000, 900000]);
+    });
+
+    it("defaults DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY to false", () => {
       expect(configModule.config.stas.devSkipWebhookVerify).toBe(false);
     });
 
@@ -283,26 +306,35 @@ describe('config', () => {
     it('exports a Config type that matches the config shape', () => {
       const cfg = configModule.config;
       // Structural verification — the type contract should match the runtime shape.
-      expect(cfg).toHaveProperty('port');
-      expect(cfg).toHaveProperty('runMode');
-      expect(cfg).toHaveProperty('logLevel');
-      expect(cfg).toHaveProperty('nodeEnv');
-      expect(cfg).toHaveProperty('github');
-      expect(cfg).toHaveProperty('queue');
-      expect(cfg).toHaveProperty('opencode');
-      expect(cfg).toHaveProperty('openai');
-      expect(cfg).toHaveProperty('e2b');
-      expect(cfg).toHaveProperty('stas');
+      expect(cfg).toHaveProperty("port");
+      expect(cfg).toHaveProperty("runMode");
+      expect(cfg).toHaveProperty("logLevel");
+      expect(cfg).toHaveProperty("nodeEnv");
+      expect(cfg).toHaveProperty("github");
+      expect(cfg).toHaveProperty("queue");
+      expect(cfg).toHaveProperty("opencode");
+      expect(cfg).toHaveProperty("openai");
+      expect(cfg).toHaveProperty("e2b");
+      expect(cfg).toHaveProperty("stas");
+      expect(cfg).toHaveProperty("fixTimeoutMs");
+      expect(cfg).toHaveProperty("phaseTimeouts");
 
       // Nested sections
-      expect(cfg.github).toHaveProperty('appId');
-      expect(cfg.github).toHaveProperty('webhookSecret');
-      expect(cfg.queue).toHaveProperty('redisUrl');
-      expect(cfg.queue).toHaveProperty('workerConcurrency');
-      expect(cfg.opencode).toHaveProperty('url');
-      expect(cfg.opencode).toHaveProperty('model');
-      expect(cfg.e2b).toHaveProperty('sandboxTimeoutMs');
-      expect(cfg.stas).toHaveProperty('rateLimitMax');
+      expect(cfg.github).toHaveProperty("appId");
+      expect(cfg.github).toHaveProperty("webhookSecret");
+      expect(cfg.queue).toHaveProperty("redisUrl");
+      expect(cfg.queue).toHaveProperty("workerConcurrency");
+      expect(cfg.queue).toHaveProperty("maxRetries");
+      expect(cfg.queue).toHaveProperty("retryDelays");
+      expect(cfg.opencode).toHaveProperty("url");
+      expect(cfg.opencode).toHaveProperty("model");
+      expect(cfg.opencode).toHaveProperty("fallbackModels");
+      expect(cfg.e2b).toHaveProperty("sandboxTimeoutMs");
+      expect(cfg.stas).toHaveProperty("rateLimitMax");
+      expect(cfg.phaseTimeouts).toHaveProperty("triage");
+      expect(cfg.phaseTimeouts).toHaveProperty("sandboxBoot");
+      expect(cfg.phaseTimeouts).toHaveProperty("openCodeAgent");
+      expect(cfg.phaseTimeouts).toHaveProperty("prCreation");
     });
   });
 });
