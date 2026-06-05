@@ -135,6 +135,11 @@ const envSchema = z.object({
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
   DATABASE_SSL: z.coerce.boolean().default(false),
 
+  // Rate limiting (credit-based)
+  STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
+  STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
+  STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
+
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -160,6 +165,24 @@ type ParsedEnv = z.infer<typeof envSchema>;
 // ---------------------------------------------------------------------------
 // Build config tree
 // ---------------------------------------------------------------------------
+
+
+function parseConcurrencyOverrides(raw: string): Record<string, number> {
+  if (!raw) return {};
+  const result: Record<string, number> = {};
+  for (const part of raw.split(',')) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = Number(trimmed.slice(eqIdx + 1).trim());
+    if (!Number.isNaN(val) && Number.isInteger(val) && val > 0) {
+      result[key] = val;
+    }
+  }
+  return result;
+}
 
 function buildConfig(env: ParsedEnv) {
   return {
@@ -248,6 +271,12 @@ function buildConfig(env: ParsedEnv) {
       rateLimitMax: env.STAS_RATE_LIMIT_MAX,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    },
+
+    rateLimit: {
+      defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
+      ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
+      adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
     },
 
     stripe: {
