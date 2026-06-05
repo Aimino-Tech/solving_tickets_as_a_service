@@ -73,6 +73,7 @@ import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { adminDashboardRouter } from './routes/adminDashboard.js';
+import { billingRouter, initBilling } from './billing/index.js';
 import { addBreadcrumb, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
 
 const log = rootLogger.child({ module: 'server' });
@@ -187,6 +188,7 @@ export function createApp(): express.Application {
       '/webhook/linear',
       '/webhook/jira',
       '/webhook/stripe',
+      '/api/v1/billing/webhook',
     ],
     express.raw({ type: 'application/json', limit: WEBHOOK_SIZE_LIMIT, verify: addRawBody }),
   );
@@ -334,6 +336,9 @@ export function createApp(): express.Application {
 
   // ── Initialize metering ───────────────────────────────────────────
   initMetering();
+
+  // ── Initialize billing ────────────────────────────────────────────
+  initBilling();
 
   // ── Start webhook retry worker ────────────────────────────────────
   // Only start if we're running as API or both
@@ -770,6 +775,9 @@ export function createApp(): express.Application {
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
+
+  // ── Billing API ───────────────────────────────────────────────────
+  app.use('/api/v1/billing', billingRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────
   // GET /admin/webhooks (paginated, filterable)

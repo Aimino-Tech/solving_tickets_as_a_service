@@ -140,6 +140,8 @@ const envSchema = z.object({
   STRIPE_PRICE_100_CREDITS: z.string().default('price_100credits'),
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
+  STRIPE_SOLO_PRICE_ID: z.string().default(''),
+  STRIPE_TEAM_PRICE_ID: z.string().default(''),
 
   // Usage metering
   USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
@@ -422,6 +424,8 @@ function buildConfig(env: ParsedEnv) {
       price100Credits: env.STRIPE_PRICE_100_CREDITS,
       price500Credits: env.STRIPE_PRICE_500_CREDITS,
       price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
+      soloPriceId: env.STRIPE_SOLO_PRICE_ID,
+      teamPriceId: env.STRIPE_TEAM_PRICE_ID,
     },
 
     database: {
