@@ -871,13 +871,36 @@ async function attemptBasicFix(
     }
 
     const summary = message?.content || 'Agent completed basic fix attempt.';
+    const hadChanges = results.length > 0;
+
+    // Re-run tests after fix attempt to verify
+    let postFixTestOutput = testResult.output;
+    if (hadChanges) {
+      const postFixTest = await sandbox.runTests();
+      postFixTestOutput = postFixTest.output;
+
+      if (!postFixTest.passed) {
+        return {
+          summary: `[Fallback] ${summary}`,
+          confidence: 'low',
+          fixReady: false,
+          verificationFailed: true,
+          branchName: undefined,
+          testOutput: postFixTestOutput,
+          errors: ['Fix failed verification — tests did not pass after changes'],
+          noFixReason: 'Fix failed verification: tests did not pass after changes',
+        };
+      }
+    }
+
     return {
       summary: `[Fallback] ${summary}`,
-      confidence: 'low',
-      fixReady: results.length > 0,
+      confidence: hadChanges ? 'medium' : 'low',
+      fixReady: hadChanges,
       branchName: undefined,
-      testOutput: testResult.output,
-      errors: results.length === 0 ? ['No tool calls were made'] : undefined,
+      testOutput: postFixTestOutput,
+      errors: hadChanges ? undefined : ['No tool calls were made'],
+      noFixReason: hadChanges ? undefined : 'No changes were made by the fallback agent',
     };
   } catch (err) {
     return {
