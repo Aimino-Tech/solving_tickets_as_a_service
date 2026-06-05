@@ -35,6 +35,12 @@ import type { IssueJobData } from "../utils/types.js";
 import { rootLogger } from "../utils/logger.js";
 import * as messages from "../github/messages.js";
 import { getOctokit } from "../github/auth.js";
+import {
+  bridgeMetrics,
+  recordMessagePublished,
+  recordMessageFailed,
+  recordProcessingDuration,
+} from "../bridge/metrics.js";
 
 const log = rootLogger.child({ module: 'issue-queue' });
 
@@ -202,6 +208,7 @@ export function createIssueWorker(): Worker<IssueJobData> {
       { jobId: job.id, repo: `${job.data.repoOwner}/${job.data.repoName}`, issueNumber: job.data.issueNumber },
       'Job completed',
     );
+    recordMessagePublished('bullmq:' + QUEUE_NAME);
   });
 
   worker.on("failed", async (job, err) => {
@@ -237,6 +244,7 @@ export function createIssueWorker(): Worker<IssueJobData> {
       },
       'Job failed',
     );
+    recordMessageFailed('bullmq:' + QUEUE_NAME, 'WORKER_FAILED');
 
     // Schedule retry if slots remain
     if (retryCount < config.queue.maxRetries) {
@@ -258,6 +266,10 @@ export function createIssueWorker(): Worker<IssueJobData> {
           { jobId: job.id, repo: `${data.repoOwner}/${data.repoName}`, issueNumber: data.issueNumber },
           "Job moved to dead-letter queue",
         );
+        bridgeMetrics.incrementCounter('dlq_messages_total', {
+          queue: QUEUE_NAME,
+          repo: data.repoOwner + '/' + data.repoName,
+        });
       } catch (dlqErr) {
         log.error({ err: String(dlqErr), jobId: job.id }, "Failed to move job to dead-letter queue");
       }
@@ -316,6 +328,10 @@ async function moveToDeadLetter(
 
     // Post dead letter comment on the issue
     await postIssueComment(data, messages.deadLetterComment(error));
+    log.warn(
+      { repo: data.repoOwner + '/' + data.repoName, issueNumber: data.issueNumber, error },
+      'DLQ alert — job moved to dead-letter queue',
+    );
   } finally {
     await dlq.close();
   }

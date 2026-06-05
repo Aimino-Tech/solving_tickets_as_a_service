@@ -336,3 +336,19 @@ export function recordConsumerLag(queue: string, lag: number): void {
 export function recordProcessingDuration(queue: string, durationSeconds: number): void {
   bridgeMetrics.observeHistogram('processing_duration_seconds', { queue }, durationSeconds);
 }
+
+/**
+ * Record the current depth of a queue (number of pending messages).
+ */
+export function recordQueueDepth(queue: string, depth: number): void {
+  bridgeMetrics.setGauge('queue_depth', { queue }, depth);
+}
+
+/**
+ * Record a publish error with the specific error type.
+ */
+export function recordPublishError(queue: string, errorType: string): void {
+  bridgeMetrics.incrementCounter('publish_errors_total', { queue, error: errorType });
+  // Also record under the general failed metric for consistency
+  recordMessageFailed(queue, errorType);
+}
