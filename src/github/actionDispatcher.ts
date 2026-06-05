@@ -14,7 +14,7 @@
  */
 
 import type { AgentResult } from '../agent/types.js';
-import type { SandboxExecutor } from '../sandbox/executor.js';
+import type { SandboxExecutor } from '../sandbox/types.js';
 import { rootLogger } from '../utils/logger.js';
 import { getOctokit } from './auth.js';
 import * as messages from './messages.js';
