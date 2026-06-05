@@ -147,14 +147,30 @@ All config via environment variables:
 
 ## Deployment
 
-### Railway / Fly.io
+See [`DEVELOPMENT.md`](DEVELOPMENT.md) for a comprehensive deployment guide covering local dev, Railway, Fly.io, and Kubernetes.
+
+### One-Click Deploy
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/railway.json)
+
+### Railway
 
 ```bash
-# Deploy the webhook server
+railway login
+railway init
 railway up
+railway secrets set GITHUB_APP_ID=... GITHUB_WEBHOOK_SECRET=...
+```
 
-# Deploy OpenCode alongside it
-# (separate container)
+Railway auto-provisions Redis via the `railway.json` template. Health check at `/health`.
+
+### Fly.io
+
+```bash
+fly launch --copy-config
+fly secrets set GITHUB_APP_ID=... GITHUB_WEBHOOK_SECRET=...
+fly redis create && fly redis attach <name>
+fly deploy
 ```
 
 ### Docker
@@ -163,6 +179,14 @@ railway up
 docker build -t stas-bot .
 docker run -p 3000:3000 --env-file .env stas-bot
 ```
+
+### Docker Compose
+
+```bash
+docker compose up
+```
+
+Starts Redis + bot with hot-reload. See `DEVELOPMENT.md` for details.
 
 ### Kubernetes
 
