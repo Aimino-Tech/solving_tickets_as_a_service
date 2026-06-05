@@ -19,6 +19,7 @@
 import 'dotenv/config';
 import type { Server } from 'node:http';
 import { config } from './config.js';
+import { startScheduledTasks, stopScheduledTasks } from './health/scheduled.js';
 import { rootLogger } from './utils/logger.js';
 
 const log = rootLogger.child({ module: 'entry' });
@@ -58,6 +59,9 @@ async function main(): Promise<void> {
       }
     }
 
+    // Stop scheduled maintenance tasks
+    stopScheduledTasks();
+
     process.exit(0);
   };
 
@@ -91,6 +95,9 @@ async function main(): Promise<void> {
       }
     }
   }
+
+  // Start scheduled maintenance tasks (queue depth check, DLQ cleanup, metrics refresh)
+  startScheduledTasks();
 
   // Register signal handlers for graceful shutdown
   process.on('SIGTERM', () => shutdown('SIGTERM'));
