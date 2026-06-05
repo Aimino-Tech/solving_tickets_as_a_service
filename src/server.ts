@@ -39,6 +39,9 @@ import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
+import { adminRouter } from './routes/admin.js';
+import { dashboardRouter } from './routes/dashboard.js';
+import { auditMiddleware } from './audit/middleware.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -409,6 +412,12 @@ export function createApp(): express.Application {
 
   // -- Feature flags admin API ------------------------------------------------
   app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
+
+  // ── Admin API ────────────────────────────────────────
+  app.use('/admin', adminRouter);
+
+  // ── Dashboard API ──────────────────────────────────────
+  app.use('/api/v1/me', dashboardRouter);
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
