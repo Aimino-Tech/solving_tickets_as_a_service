@@ -123,10 +123,12 @@ const envSchema = z.object({
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
+  // Usage metering
   USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
   USAGE_CREDITS_TRIAGE: z.coerce.number().int().positive().default(10),
   USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
 
+  // Feature flags
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
 
   // Database
@@ -134,6 +136,11 @@ const envSchema = z.object({
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
   DATABASE_SSL: z.coerce.boolean().default(false),
+
+  // Rate limiting (credit-based)
+  STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
+  STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
+  STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
 
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
@@ -159,6 +166,24 @@ type ParsedEnv = z.infer<typeof envSchema>;
 // ---------------------------------------------------------------------------
 // Build config tree
 // ---------------------------------------------------------------------------
+
+
+function parseConcurrencyOverrides(raw: string): Record<string, number> {
+  if (!raw) return {};
+  const result: Record<string, number> = {};
+  for (const part of raw.split(',')) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = Number(trimmed.slice(eqIdx + 1).trim());
+    if (!Number.isNaN(val) && Number.isInteger(val) && val > 0) {
+      result[key] = val;
+    }
+  }
+  return result;
+}
 
 function buildConfig(env: ParsedEnv) {
   return {
@@ -247,6 +272,22 @@ function buildConfig(env: ParsedEnv) {
       rateLimitMax: env.STAS_RATE_LIMIT_MAX,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    },
+
+    rateLimit: {
+      defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
+      ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
+      adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
+    },
+
+    usage: {
+      creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
+      creditsTriage: env.USAGE_CREDITS_TRIAGE,
+      creditsSandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    featureFlags: {
+      defaultTtlSeconds: env.FEATURE_FLAGS_DEFAULT_TTL_SECONDS,
     },
 
     stripe: {

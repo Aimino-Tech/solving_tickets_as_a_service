@@ -23,6 +23,7 @@ import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
 import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
@@ -30,6 +31,7 @@ import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
+import { creditRouter } from './credits/index.js';
 import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
@@ -38,6 +40,7 @@ import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
+import { bridgeMetrics } from './bridge/metrics.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -103,6 +106,9 @@ export function createApp(): express.Application {
   });
   app.use('/webhook', limiter);
 
+  // -- Credit-based rate limiter (per-account, per-repo, per-IP) ----------
+  app.use('/webhook', rateLimitMiddleware());
+
   // -- Slack Bolt receiver (interactive messages) ---------------------------
   const bolt = getSlackBoltApp();
   bolt.mountOn(app);
@@ -115,6 +121,12 @@ export function createApp(): express.Application {
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     });
+  });
+
+  // -- Prometheus metrics endpoint -----------------------------------------
+  app.get('/metrics', (_req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'text/plain; version=0.0.4');
+    res.send(bridgeMetrics.render());
   });
 
   // -- Initialize trackers --------------------------------------------------
@@ -408,6 +420,9 @@ export function createApp(): express.Application {
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
+
+  // -- Credit REST API routes ------------------------------------------------
+  app.use('/api/v1', creditRouter);
 
   // -- 404 handler ----------------------------------------------------------
 
