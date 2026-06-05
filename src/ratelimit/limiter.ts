@@ -116,8 +116,8 @@ export class RateLimiter {
   private readonly max: number;
 
   constructor(options?: Partial<RateLimiterOptions>) {
-    this.windowMs = options?.windowMs ?? config.stas.rateLimitWindowMs;
-    this.max = options?.max ?? config.stas.rateLimitMax;
+    this.windowMs = options?.windowMs ?? config.stas.rateLimit.windowMs;
+    this.max = options?.max ?? config.stas.rateLimit.max;
   }
 
   // ── Public API ──────────────────────────────────────────────────────────
@@ -129,12 +129,13 @@ export class RateLimiter {
    * This is useful for read-only checks (e.g. middleware wanting to inspect
    * limits without recording).
    */
-  async checkLimit(scope: RateLimitScope, key: string): Promise<RateLimitResult> {
+  async checkLimit(scope: RateLimitScope, key: string, maxOverride?: number): Promise<RateLimitResult> {
     try {
       const redisKey = this.buildKey(scope, key);
       const client = getRedisClient();
       const now = Date.now();
       const windowStart = now - this.windowMs;
+      const effectiveMax = maxOverride ?? this.max;
 
       // Clean old entries and count current ones in a single pipeline
       const pipeline = client.pipeline();
@@ -145,10 +146,10 @@ export class RateLimiter {
       const count = this.extractCount(results);
       const oldestTimestamp = await this.getOldestTimestamp(redisKey, client);
 
-      return this.buildResult(scope, count, oldestTimestamp, now);
+      return this.buildResult(scope, count, oldestTimestamp, now, effectiveMax);
     } catch (err) {
       log.error({ err: String(err), scope, key }, 'Rate limit check failed — allowing request');
-      return this.failOpenResult(scope);
+      return this.failOpenResult(scope, maxOverride ?? this.max);
     }
   }
 
@@ -156,13 +157,14 @@ export class RateLimiter {
    * Increment the counter and return the new state.
    * Call this when a request is actually processed.
    */
-  async increment(scope: RateLimitScope, key: string): Promise<RateLimitResult> {
+  async increment(scope: RateLimitScope, key: string, maxOverride?: number): Promise<RateLimitResult> {
     try {
       const redisKey = this.buildKey(scope, key);
       const client = getRedisClient();
       const now = Date.now();
       const windowStart = now - this.windowMs;
       const member = `${now}:${crypto.randomUUID()}`;
+      const effectiveMax = maxOverride ?? this.max;
 
       // Add entry, clean old entries, count current — all in one pipeline
       const pipeline = client.pipeline();
@@ -175,10 +177,10 @@ export class RateLimiter {
       const count = this.extractCount(results, 2);
       const oldestTimestamp = now;
 
-      return this.buildResult(scope, count, oldestTimestamp, now);
+      return this.buildResult(scope, count, oldestTimestamp, now, effectiveMax);
     } catch (err) {
       log.error({ err: String(err), scope, key }, 'Rate limit increment failed — allowing request');
-      return this.failOpenResult(scope);
+      return this.failOpenResult(scope, maxOverride ?? this.max);
     }
   }
 
@@ -249,14 +251,15 @@ export class RateLimiter {
     }
   }
 
-  private buildResult(scope: RateLimitScope, count: number, oldestTimestamp: number, now: number): RateLimitResult {
-    const remaining = Math.max(0, this.max - count);
+  private buildResult(scope: RateLimitScope, count: number, oldestTimestamp: number, now: number, maxOverride?: number): RateLimitResult {
+    const effectiveMax = maxOverride ?? this.max;
+    const remaining = Math.max(0, effectiveMax - count);
     const reset = oldestTimestamp + this.windowMs;
 
     return {
-      allowed: count < this.max,
+      allowed: count < effectiveMax,
       current: count,
-      limit: this.max,
+      limit: effectiveMax,
       remaining,
       reset,
       windowMs: this.windowMs,
@@ -264,11 +267,12 @@ export class RateLimiter {
     };
   }
 
-  private failOpenResult(scope: RateLimitScope): RateLimitResult {
+  private failOpenResult(scope: RateLimitScope, maxOverride?: number): RateLimitResult {
+    const effectiveMax = maxOverride ?? this.max;
     return {
       allowed: true,
       current: 0,
-      limit: this.max,
+      limit: effectiveMax,
       remaining: 1,
       reset: Date.now() + this.windowMs,
       windowMs: this.windowMs,

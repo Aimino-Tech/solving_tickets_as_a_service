@@ -90,6 +90,12 @@ const envSchema = z.object({
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  STAS_REPO_RATE_LIMIT: z.coerce.number().int().positive().default(5),
+  STAS_ACCOUNT_RATE_LIMIT: z.coerce.number().int().positive().default(10),
+  STAS_REPO_CONCURRENCY_MAX: z.coerce.number().int().positive().default(3),
+
+  // Admin API
+  ADMIN_API_KEY: z.string().optional(),
 
   // GitLab
   GITLAB_URL: z.string().default('https://gitlab.com'),
@@ -138,7 +144,6 @@ const envSchema = z.object({
 
   // Feature flags
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
-
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
@@ -290,10 +295,16 @@ function buildConfig(env: ParsedEnv) {
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
       maxAgentIterations: env.MAX_AGENT_ITERATIONS,
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
-      rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
-      rateLimitMax: env.STAS_RATE_LIMIT_MAX,
+      rateLimit: {
+        windowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
+        max: env.STAS_RATE_LIMIT_MAX,
+        repoLimit: env.STAS_REPO_RATE_LIMIT,
+        accountLimit: env.STAS_ACCOUNT_RATE_LIMIT,
+        repoConcurrencyMax: env.STAS_REPO_CONCURRENCY_MAX,
+      },
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+      adminApiKey: env.ADMIN_API_KEY,
     },
 
     rateLimit: {
