@@ -146,6 +146,12 @@ const envSchema = z.object({
   USAGE_CREDITS_TRIAGE: z.coerce.number().int().positive().default(10),
   USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
 
+  // CI Monitor
+  CI_MONITOR_ENABLED: z.coerce.boolean().default(false),
+  CI_MONITOR_REPOS: z.string().default(""),
+  CI_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(2),
+  CI_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(300000),
+
   // Feature flags
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
   FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
@@ -390,6 +396,13 @@ function buildConfig(env: ParsedEnv) {
       rateLimitMax: env.STAS_RATE_LIMIT_MAX,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    },
+
+    ci: {
+      monitorEnabled: env.CI_MONITOR_ENABLED,
+      repos: env.CI_MONITOR_REPOS.split(",").map((s) => s.trim()).filter(Boolean),
+      failureThreshold: env.CI_FAILURE_THRESHOLD,
+      pollIntervalMs: env.CI_POLL_INTERVAL_MS,
     },
 
     webhookRetry: {
