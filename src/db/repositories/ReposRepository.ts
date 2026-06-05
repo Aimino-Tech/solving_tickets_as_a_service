@@ -11,7 +11,14 @@ export class ReposRepository {
     return result.rows[0];
   }
 
-  async findByOwnerAndName(owner: string, name: string): Promise<Repo | undefined> {
+  async findByOwnerAndName(owner: string, name: string, accountId?: number): Promise<Repo | undefined> {
+    if (accountId !== undefined) {
+      const result = await queryWithRetry<Repo>(
+        'SELECT * FROM repos WHERE owner = $1 AND name = $2 AND account_id = $3',
+        [owner, name, accountId],
+      );
+      return result.rows[0];
+    }
     const result = await queryWithRetry<Repo>(
       'SELECT * FROM repos WHERE owner = $1 AND name = $2',
       [owner, name],
@@ -45,6 +52,22 @@ export class ReposRepository {
       [installationId, owner, name],
     );
     return result.rows[0];
+  }
+
+  async listByAccount(accountId: number, limit = 50, offset = 0): Promise<Repo[]> {
+    const result = await queryWithRetry<Repo>(
+      'SELECT * FROM repos WHERE account_id = $1 ORDER BY enabled_at DESC LIMIT $2 OFFSET $3',
+      [accountId, limit, offset],
+    );
+    return result.rows;
+  }
+
+  async listByInstallation(installationId: number): Promise<Repo[]> {
+    const result = await queryWithRetry<Repo>(
+      'SELECT * FROM repos WHERE installation_id = $1 ORDER BY enabled_at DESC',
+      [installationId],
+    );
+    return result.rows;
   }
 
   async create(data: NewRepo): Promise<Repo> {

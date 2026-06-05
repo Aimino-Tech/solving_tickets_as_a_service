@@ -30,7 +30,7 @@ export const teamMembers = pgTable(
     accountId: integer('account_id')
       .notNull()
       .references(() => accounts.id, { onDelete: 'cascade' }),
-    role: varchar('role', { length: 50 }).notNull().default('member'), // admin | member
+    role: varchar('role', { length: 50 }).notNull().default('member'),
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
