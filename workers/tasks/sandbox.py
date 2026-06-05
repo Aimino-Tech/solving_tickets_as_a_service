@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
     max_retries=2,
     default_retry_delay=30,
     name="workers.tasks.sandbox.boot_sandbox",
+    autoretry_for=(Exception,),
 )
 def boot_sandbox(self, repo_url: str, branch: str) -> dict:
     logger.info("Booting sandbox — repo=%s branch=%s", repo_url, branch)

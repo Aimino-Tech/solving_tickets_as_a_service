@@ -337,25 +337,55 @@ export function recordProcessingDuration(queue: string, durationSeconds: number)
   bridgeMetrics.observeHistogram('processing_duration_seconds', { queue }, durationSeconds);
 }
 
-// ── Rate Limiting & Concurrency Metrics ─────────────────────────────────
-
 /**
- * Record a rejected request due to rate limiting.
+ * Record the current depth of a queue (number of pending messages).
  */
-export function recordRejectedRun(accountId: string, reason: string): void {
-  bridgeMetrics.incrementCounter('rejected_runs_total', { account_id: accountId, reason });
+export function recordQueueDepth(queue: string, depth: number): void {
+  bridgeMetrics.setGauge('queue_depth', { queue }, depth);
 }
 
 /**
- * Set the current active run count for an account.
+ * Record a publish error with the specific error type.
  */
-export function recordActiveRuns(accountId: string, count: number): void {
-  bridgeMetrics.setGauge('active_runs', { account_id: accountId }, count);
+export function recordPublishError(queue: string, errorType: string): void {
+  bridgeMetrics.incrementCounter('publish_errors_total', { queue, error: errorType });
+  // Also record under the general failed metric for consistency
+  recordMessageFailed(queue, errorType);
+}
+
+// ── Queue & Worker Monitoring Metrics ──────────────────────────────────────
+
+/**
+ * Record the current depth of a queue (number of pending messages).
+ */
+export function recordQueueDepthByQueue(queue: string, depth: number): void {
+  bridgeMetrics.setGauge('queue_depth', { queue }, depth);
 }
 
 /**
- * Set the queue depth for an account.
+ * Set the number of currently running tasks for a worker/queue.
  */
-export function recordQueueDepth(accountId: string, depth: number): void {
-  bridgeMetrics.setGauge('queue_depth', { account_id: accountId }, depth);
+export function recordTasksRunning(worker: string, queue: string, count: number): void {
+  bridgeMetrics.setGauge('tasks_running', { worker, queue }, count);
+}
+
+/**
+ * Record a successful task completion.
+ */
+export function recordTaskSucceeded(worker: string, queue: string): void {
+  bridgeMetrics.incrementCounter('tasks_succeeded_total', { worker, queue });
+}
+
+/**
+ * Record a failed task.
+ */
+export function recordTaskFailed(worker: string, queue: string, error: string): void {
+  bridgeMetrics.incrementCounter('tasks_failed_total', { worker, queue, error });
+}
+
+/**
+ * Set worker liveness indicator (1 = alive, 0 = dead).
+ */
+export function recordWorkerLiveness(worker: string, hostname: string, alive: boolean): void {
+  bridgeMetrics.setGauge('worker_liveness', { worker, hostname }, alive ? 1 : 0);
 }

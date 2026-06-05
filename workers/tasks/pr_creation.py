@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
     max_retries=2,
     default_retry_delay=30,
     name="workers.tasks.pr_creation.create_pull_request",
+    autoretry_for=(Exception,),
 )
 def create_pull_request(self, fix_result: dict, repo_info: dict) -> dict:
     logger.info(

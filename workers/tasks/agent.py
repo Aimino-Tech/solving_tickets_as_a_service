@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
     max_retries=2,
     default_retry_delay=60,
     name="workers.tasks.agent.dispatch_opencode",
+    autoretry_for=(Exception,),
 )
 def dispatch_opencode(self, issue_context: dict) -> dict:
     logger.info("Dispatching OpenCode — issue=%s", issue_context.get("issue_number", "unknown"))

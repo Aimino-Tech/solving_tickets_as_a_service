@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
     max_retries=3,
     default_retry_delay=10,
     name="workers.tasks.notifications.send_notification",
+    autoretry_for=(Exception,),
 )
 def send_notification(self, channel: str, message: str) -> dict:
     logger.info("Sending notification — channel=%s message_len=%d", channel, len(message))
@@ -27,6 +28,7 @@ def send_notification(self, channel: str, message: str) -> dict:
     max_retries=3,
     default_retry_delay=10,
     name="workers.tasks.notifications.process_webhook",
+    autoretry_for=(Exception,),
 )
 def process_webhook(self, event_type: str, payload: dict) -> dict:
     logger.info("Processing webhook — event=%s", event_type)
