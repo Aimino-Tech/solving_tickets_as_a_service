@@ -130,11 +130,7 @@ const envSchema = z.object({
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
-  USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
-  USAGE_CREDITS_TRIAGE: z.coerce.number().int().positive().default(10),
-  USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
-
-  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
+  // Feature flags
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
@@ -171,6 +167,23 @@ const envSchema = z.object({
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
   FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
+  // Sentry
+  SENTRY_DSN: z.string().optional(),
+  SENTRY_ENVIRONMENT: z.string().default('development'),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
+
+  // Health & Monitoring
+  HEALTH_QUEUE_DEPTH_WARN_THRESHOLD: z.coerce.number().int().positive().default(50),
+  HEALTH_QUEUE_DEPTH_CRIT_THRESHOLD: z.coerce.number().int().positive().default(200),
+  HEALTH_QUEUE_DEPTH_ALERT_MINUTES: z.coerce.number().int().positive().default(5),
+  DLQ_RETENTION_DAYS: z.coerce.number().int().positive().default(7),
+
+  // Alerting
+  ALERT_SLACK_CHANNEL: z.string().default('#stas-alerts'),
+  ALERT_WARN_QUEUE_DEPTH: z.coerce.number().int().positive().default(50),
+  ALERT_CRIT_QUEUE_DEPTH: z.coerce.number().int().positive().default(200),
+  ALERT_WARN_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(10),
+  ALERT_CRIT_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(30),
   // Metering / Usage Tracking
   METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
   METERING_COST_OPENCODE_PRIMARY: z.coerce.number().int().positive().default(10),
@@ -266,6 +279,28 @@ function buildConfig(env: ParsedEnv) {
       interactionsPath: env.SLACK_INTERACTIONS_PATH,
     },
 
+    sentry: {
+      dsn: env.SENTRY_DSN,
+      environment: env.SENTRY_ENVIRONMENT,
+      tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE,
+    },
+
+    monitoring: {
+      queueDepthWarnThreshold: env.HEALTH_QUEUE_DEPTH_WARN_THRESHOLD,
+      queueDepthCritThreshold: env.HEALTH_QUEUE_DEPTH_CRIT_THRESHOLD,
+      queueDepthAlertMinutes: env.HEALTH_QUEUE_DEPTH_ALERT_MINUTES,
+      dlqRetentionDays: env.DLQ_RETENTION_DAYS,
+    },
+
+    alerting: {
+      slackChannel: env.ALERT_SLACK_CHANNEL,
+      warnQueueDepth: env.ALERT_WARN_QUEUE_DEPTH,
+      critQueueDepth: env.ALERT_CRIT_QUEUE_DEPTH,
+      warnErrorRatePercent: env.ALERT_WARN_ERROR_RATE_PERCENT,
+      critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
+    },
+
+
     stas: {
       label: env.STAS_LABEL,
       botName: env.BOT_NAME,
@@ -283,6 +318,11 @@ function buildConfig(env: ParsedEnv) {
       batchSize: env.WEBHOOK_RETRY_BATCH_SIZE,
     },
 
+    usage: {
+      creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
+      creditsTriage: env.USAGE_CREDITS_TRIAGE,
+      creditsSandbox: env.USAGE_CREDITS_SANDBOX,
+    },
 
     stripe: {
       secretKey: env.STRIPE_SECRET_KEY,

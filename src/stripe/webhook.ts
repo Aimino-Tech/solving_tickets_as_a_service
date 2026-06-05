@@ -184,7 +184,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
   } catch (err) {
     log.error(
       { err: String(err), accountId: Number(accountId), sessionId: session.id },
-      'Failed to credit account after checkout',
+'Failed to credit account after checkout — manual reconciliation required',
     );
   }
 }

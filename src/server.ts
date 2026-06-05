@@ -33,6 +33,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { config } from './config.js';
+import { getQueueHealth } from './health/queueHealth.js';
+import { bridgeMetrics } from './bridge/metrics.js';
 import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { getTracker, initTrackers } from './trackers/index.js';
@@ -173,10 +175,22 @@ export function createApp(): express.Application {
     });
   });
 
-  // -- Prometheus metrics endpoint -----------------------------------------
+  // -- Queue health endpoint ------------------------------------------------
+  app.get('/health/queue', async (_req: Request, res: Response) => {
+    try {
+      const report = await getQueueHealth();
+      const httpStatus = report.status === 'critical' ? 503 : report.status === 'degraded' ? 200 : 200;
+      res.status(httpStatus).json(report);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to get queue health', details: String(err) });
+    }
+  });
+
+  // -- Prometheus metrics endpoint ------------------------------------------
   app.get('/metrics', (_req: Request, res: Response) => {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.send(renderMetrics());
+
   });
 
   // -- Initialize trackers --------------------------------------------------

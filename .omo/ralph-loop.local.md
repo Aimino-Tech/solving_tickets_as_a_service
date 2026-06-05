@@ -1,13 +1,12 @@
 ---
 active: true
 iteration: 1
-max_iterations: 500
+max_iterations: 100
 completion_promise: "DONE"
 initial_completion_promise: "DONE"
-started_at: "2026-05-28T10:04:54.932Z"
-session_id: "ses_1922705a2ffeH9jH8eTLTsrGPo"
-ultrawork: true
+started_at: "2026-06-05T20:00:55.016Z"
+session_id: "ses_166a0658fffeaWqleBkoi64Ow4"
 strategy: "continue"
-message_count_at_start: 103
+message_count_at_start: 4
 ---
-implement them all, make the repo really strong. send subagents to do it!
+Complete the task as instructed
