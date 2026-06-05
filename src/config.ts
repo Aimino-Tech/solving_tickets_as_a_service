@@ -44,6 +44,13 @@ const envSchema = z.object({
   RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5000),
   RABBITMQ_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
 
+  // RabbitMQ TLS (for amqps:// connections)
+  RABBITMQ_TLS_CERT_PATH: z.string().optional(),
+  RABBITMQ_TLS_KEY_PATH: z.string().optional(),
+  RABBITMQ_TLS_CA_PATH: z.string().optional(),
+  RABBITMQ_TLS_SERVER_NAME: z.string().optional(),
+  RABBITMQ_TLS_REJECT_UNAUTHORIZED: z.coerce.boolean().default(true),
+
   // Bridge
   BRIDGE_RPC_TIMEOUT: z.coerce.number().int().positive().default(30000),
   BRIDGE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(3),
@@ -71,7 +78,7 @@ const envSchema = z.object({
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // STAS
- 
+  
   // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
   STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
@@ -127,7 +134,6 @@ const envSchema = z.object({
   USAGE_CREDITS_TRIAGE: z.coerce.number().int().positive().default(10),
   USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
 
-  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
@@ -192,6 +198,13 @@ function buildConfig(env: ParsedEnv) {
       prefetchCount: env.RABBITMQ_PREFETCH_COUNT,
       reconnectDelayMs: env.RABBITMQ_RECONNECT_DELAY_MS,
       maxReconnectAttempts: env.RABBITMQ_MAX_RECONNECT_ATTEMPTS,
+      tls: {
+        certPath: env.RABBITMQ_TLS_CERT_PATH,
+        keyPath: env.RABBITMQ_TLS_KEY_PATH,
+        caPath: env.RABBITMQ_TLS_CA_PATH,
+        servername: env.RABBITMQ_TLS_SERVER_NAME,
+        rejectUnauthorized: env.RABBITMQ_TLS_REJECT_UNAUTHORIZED,
+      },
     },
 
     bridge: {
