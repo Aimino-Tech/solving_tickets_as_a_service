@@ -82,11 +82,10 @@ export class ActionDispatcher {
         return { action: "comment_posted", commentBody: body };
       }
 
-      // 4. Fix is ready — push branch and create PR
+      // 5. Push branch and gather changed files
       const branchName = `stas/fix-${issueNumber}-${Date.now().toString(36)}`;
       await sandbox.pushBranch(branchName);
 
-      // Gather changed files for the PR body
       let changedFiles: string[] = [];
       try {
         const diffResult = await sandbox.exec(
@@ -100,6 +99,14 @@ export class ActionDispatcher {
         );
       }
 
+      // 6a. Pre-existing tests regressed — block PR creation, branch already pushed
+      if (agentResult.verification?.preExistingTestsRegressed) {
+        const body = messages.regressionBlockComment(agentResult);
+        await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
+        return { action: "comment_posted", commentBody: body };
+      }
+
+      // 6b. Create PR based on confidence
       if (agentResult.confidence === "high") {
         // Create a non-draft PR
         const prBody = messages.buildPRBody({

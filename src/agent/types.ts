@@ -30,6 +30,27 @@ export interface FileChange {
   action: "create" | "modify" | "delete";
 }
 
+export interface TestBaseline {
+  passed: boolean;
+  output: string;
+  command: string;
+  durationMs: number;
+  totalTests?: number;
+  passedTests?: number;
+  failedTests?: number;
+}
+
+export interface VerificationResult {
+  baseline: TestBaseline | null;
+  postFix: TestBaseline | null;
+  regressionTestCreated: boolean;
+  regressionTestPassedOnOriginal: boolean | null;
+  regressionTestPassedOnFix: boolean | null;
+  preExistingTestsRegressed: boolean;
+  unverified: boolean;
+  details: string[];
+}
+
 export interface AgentResult {
   summary: string;
   confidence: "high" | "medium" | "low";
@@ -43,4 +64,5 @@ export interface AgentResult {
   noFixReason?: string;
   alreadyFixed?: boolean;
   investigationOnly?: boolean;
+  verification?: VerificationResult;
 }

@@ -38,6 +38,8 @@ import {
   featureSkipComment,
   questionSkipComment,
   ciFailureComment,
+  regressionBlockComment,
+  verificationWarningComment,
   buildPRBody,
 } from "../../github/messages.js";
 
@@ -434,7 +436,142 @@ describe("github/messages", () => {
     });
   });
 
-  // ── 12. buildPRBody ───────────────────────────────────────────────────
+  // ── 12. regressionBlockComment ─────────────────────────────────────────
+
+  describe("regressionBlockComment", () => {
+    const regressionResult = {
+      ...sampleAgentResult(),
+      verification: {
+        baseline: { passed: true, output: "PASS", command: "npm test", durationMs: 5000 },
+        postFix: { passed: false, output: "FAIL", command: "npm test", durationMs: 6000 },
+        regressionTestCreated: false,
+        regressionTestPassedOnOriginal: null,
+        regressionTestPassedOnFix: null,
+        preExistingTestsRegressed: true,
+        unverified: false,
+        details: ["REGRESSION: Pre-existing tests that were passing now fail"],
+      },
+    };
+
+    it('includes "Regression Detected" heading', () => {
+      const msg = regressionBlockComment(regressionResult);
+      expect(msg).toContain("Regression Detected");
+      expect(msg).toContain("PR Blocked");
+    });
+
+    it("includes verification details", () => {
+      const msg = regressionBlockComment(regressionResult);
+      expect(msg).toContain("Pre-existing tests");
+    });
+
+    it("includes bot signature", () => {
+      const msg = regressionBlockComment(regressionResult);
+      expect(msg).toContain("STAS");
+    });
+  });
+
+  // ── 13. verificationWarningComment ─────────────────────────────────────
+
+  describe("verificationWarningComment", () => {
+    it("returns empty string when no verification result exists", () => {
+      const msg = verificationWarningComment({ ...sampleAgentResult(), verification: undefined });
+      expect(msg).toBe("");
+    });
+
+    it("warns when regression test does not fail on original", () => {
+      const result = {
+        ...sampleAgentResult(),
+        verification: {
+          baseline: { passed: true, output: "PASS", command: "npm test", durationMs: 5000 },
+          postFix: { passed: true, output: "PASS", command: "npm test", durationMs: 5200 },
+          regressionTestCreated: true,
+          regressionTestPassedOnOriginal: false,
+          regressionTestPassedOnFix: true,
+          preExistingTestsRegressed: false,
+          unverified: false,
+          details: [],
+        },
+      };
+      const msg = verificationWarningComment(result);
+      expect(msg).toContain("Verification Warnings");
+      expect(msg).toContain("does **not fail**");
+    });
+
+    it("warns when regression test does not pass on fix", () => {
+      const result = {
+        ...sampleAgentResult(),
+        verification: {
+          baseline: { passed: true, output: "PASS", command: "npm test", durationMs: 5000 },
+          postFix: { passed: true, output: "PASS", command: "npm test", durationMs: 5200 },
+          regressionTestCreated: true,
+          regressionTestPassedOnOriginal: true,
+          regressionTestPassedOnFix: false,
+          preExistingTestsRegressed: false,
+          unverified: false,
+          details: [],
+        },
+      };
+      const msg = verificationWarningComment(result);
+      expect(msg).toContain("does **not pass**");
+    });
+
+    it("warns when no new regression test detected", () => {
+      const result = {
+        ...sampleAgentResult(),
+        verification: {
+          baseline: { passed: true, output: "PASS", command: "npm test", durationMs: 5000 },
+          postFix: { passed: true, output: "PASS", command: "npm test", durationMs: 5200 },
+          regressionTestCreated: false,
+          regressionTestPassedOnOriginal: null,
+          regressionTestPassedOnFix: null,
+          preExistingTestsRegressed: false,
+          unverified: false,
+          details: [],
+        },
+      };
+      const msg = verificationWarningComment(result);
+      expect(msg).toContain("No new regression test file was detected");
+    });
+
+    it("warns when unverified", () => {
+      const result = {
+        ...sampleAgentResult(),
+        verification: {
+          baseline: null,
+          postFix: null,
+          regressionTestCreated: false,
+          regressionTestPassedOnOriginal: null,
+          regressionTestPassedOnFix: null,
+          preExistingTestsRegressed: false,
+          unverified: true,
+          details: ["No test suite configured"],
+        },
+      };
+      const msg = verificationWarningComment(result);
+      expect(msg).toContain("No test suite");
+    });
+
+    it("includes details block when present", () => {
+      const result = {
+        ...sampleAgentResult(),
+        verification: {
+          baseline: null,
+          postFix: null,
+          regressionTestCreated: false,
+          regressionTestPassedOnOriginal: null,
+          regressionTestPassedOnFix: null,
+          preExistingTestsRegressed: false,
+          unverified: true,
+          details: ["No test suite configured", "Skipping verification"],
+        },
+      };
+      const msg = verificationWarningComment(result);
+      expect(msg).toContain("Skipping verification");
+      expect(msg).toContain("Verification Details");
+    });
+  });
+
+  // ── 14. buildPRBody ───────────────────────────────────────────────────
 
   describe("buildPRBody", () => {
     const prBodyParams = {
@@ -471,6 +608,34 @@ describe("github/messages", () => {
       const body = buildPRBody(prBodyParams);
       expect(body).toContain("Branch");
       expect(body).toContain("stas/fix-42");
+    });
+
+    it("includes verification status table when verification exists", () => {
+      const body = buildPRBody(prBodyParams);
+      expect(body).toContain("Check");
+      expect(body).toContain("Status");
+      expect(body).toContain("No pre-existing test regressions");
+      expect(body).toContain("Regression test fails on original code");
+      expect(body).toContain("Regression test passes on fix");
+    });
+
+    it("shows unverified message when no test suite detected", () => {
+      const unverifiedResult = {
+        ...sampleAgentResult(),
+        verification: {
+          baseline: null,
+          postFix: null,
+          regressionTestCreated: false,
+          regressionTestPassedOnOriginal: null,
+          regressionTestPassedOnFix: null,
+          preExistingTestsRegressed: false,
+          unverified: true,
+          details: ["No test suite configured"],
+        },
+      };
+      const body = buildPRBody({ ...prBodyParams, result: unverifiedResult });
+      expect(body).toContain("Unverified");
+      expect(body).toContain("No test suite detected");
     });
 
     it("handles empty fileLinks array", () => {
