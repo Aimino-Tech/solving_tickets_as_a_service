@@ -34,10 +34,19 @@ const envSchema = z.object({
   QUEUE_DEDUP_TTL_SECONDS: z.coerce.number().int().positive().default(120),
   QUEUE_KEEP_COMPLETED: z.coerce.number().int().positive().default(200),
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
+  QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
+  QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
 
   // OpenCode
-  OPENCODE_URL: z.string().default('http://localhost:4096'),
-  OPENCODE_MODEL: z.string().default('anthropic/claude-sonnet-4-20250514'),
+  OPENCODE_URL: z.string().default("http://localhost:4096"),
+  OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
+  FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
+
+  // Timeouts
+  FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
+  PHASE_TIMEOUT_TRIAGE_MS: z.coerce.number().int().positive().default(30_000),
+  PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(300_000),
+  PHASE_TIMEOUT_PRCREATION_MS: z.coerce.number().int().positive().default(30_000),
 
   // OpenAI / triage
   OPENAI_API_KEY: z.string().optional(),
@@ -105,11 +114,14 @@ function buildConfig(env: ParsedEnv) {
       dedupTtl: env.QUEUE_DEDUP_TTL_SECONDS,
       keepCompleted: env.QUEUE_KEEP_COMPLETED,
       keepFailed: env.QUEUE_KEEP_FAILED,
+      maxRetries: env.QUEUE_MAX_RETRIES,
+      retryDelays: env.QUEUE_RETRY_DELAYS.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n)),
     },
 
     opencode: {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
+      fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
     },
 
     openai: {
@@ -131,6 +143,15 @@ function buildConfig(env: ParsedEnv) {
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
       rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
       rateLimitMax: env.STAS_RATE_LIMIT_MAX,
+    },
+
+    fixTimeoutMs: env.FIX_TIMEOUT_MS,
+
+    phaseTimeouts: {
+      triage: env.PHASE_TIMEOUT_TRIAGE_MS,
+      sandboxBoot: env.PHASE_TIMEOUT_SANDBOX_MS,
+      openCodeAgent: env.FIX_TIMEOUT_MS,
+      prCreation: env.PHASE_TIMEOUT_PRCREATION_MS,
     },
 
     trackers: {

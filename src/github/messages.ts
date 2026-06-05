@@ -196,6 +196,97 @@ export function questionSkipComment(): string {
 }
 
 /**
+ * Phase timeout — a pipeline phase exceeded its time limit.
+ */
+export function timeoutComment(phase: string, timeoutMs: number): string {
+  const seconds = Math.round(timeoutMs / 1000);
+  return [
+    `### ⏱️ Phase Timed Out — ${phase}`,
+    "",
+    `The **${phase}** phase exceeded its time limit of ${seconds}s.`,
+    "",
+    "This could indicate a performance issue or an unexpected state.",
+    "The pipeline will move to the next phase or abort if this is a critical phase.",
+    BOT_SIGNATURE,
+  ].join("\n");
+}
+
+/**
+ * Model retry — switching to a fallback model after a failure.
+ */
+export function retryComment(
+  attempt: number,
+  model: string,
+  error: string,
+): string {
+  return [
+    `### 🔄 Retrying — Attempt ${attempt}`,
+    "",
+    `The previous attempt failed with model \`${model}\`.`,
+    "",
+    `**Error**: \`${error.slice(0, 1000)}\``,
+    "",
+    "Retrying with next fallback model.",
+    BOT_SIGNATURE,
+  ].join("\n");
+}
+
+/**
+ * Model fallback — a fallback model was selected.
+ */
+export function modelFallbackComment(
+  model: string,
+  previousError: string,
+): string {
+  return [
+    `### 🔄 Fallback Model — ${model}`,
+    "",
+    `Switching to fallback model \`${model}\` after primary model failure.`,
+    "",
+    `**Previous error**: \`${previousError.slice(0, 1000)}\``,
+    "",
+    BOT_SIGNATURE,
+  ].join("\n");
+}
+
+/**
+ * Queue retry — a job is being retried after a failure.
+ */
+export function queueRetryComment(
+  attempt: number,
+  maxRetries: number,
+  error: string,
+): string {
+  return [
+    `### 🔄 Queue Retry — Attempt ${attempt}/${maxRetries}`,
+    "",
+    `The issue processing job failed and will be retried.`,
+    "",
+    `**Error**: \`${error.slice(0, 1000)}\``,
+    "",
+    BOT_SIGNATURE,
+  ].join("\n");
+}
+
+/**
+ * Dead letter — job has exhausted all retries.
+ */
+export function deadLetterComment(
+  error: string,
+): string {
+  return [
+    `### ❌ Max Retries Exceeded`,
+    "",
+    "The issue processing job has exhausted all retry attempts and has been moved to the dead-letter queue.",
+    "",
+    `**Final error**: \`${error.slice(0, 1000)}\``,
+    "",
+    "A human operator will need to investigate this issue manually.",
+    BOT_SIGNATURE,
+  ].join("\n");
+}
+
+/**
  * CI failure follow-up — a PR's CI checks failed.
  */
 export function ciFailureComment(prNumber: number, failedChecks: string[]): string {

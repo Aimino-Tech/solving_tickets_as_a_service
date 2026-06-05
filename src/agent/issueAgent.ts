@@ -42,6 +42,45 @@ import type { AgentResult, TriageResult } from './types.js';
 
 const log = rootLogger.child({ module: 'issue-agent' });
 
+// ---------------------------------------------------------------------------
+// Timeout helper
+// ---------------------------------------------------------------------------
+
+class PhaseTimeoutError extends Error {
+  phase: string;
+  timeoutMs: number;
+
+  constructor(phase: string, timeoutMs: number) {
+    super(`Phase "${phase}" timed out after ${timeoutMs}ms`);
+    this.name = "PhaseTimeoutError";
+    this.phase = phase;
+    this.timeoutMs = timeoutMs;
+  }
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  phase: string,
+): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const result = await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        controller.signal.addEventListener("abort", () => {
+          reject(new PhaseTimeoutError(phase, timeoutMs));
+        });
+      }),
+    ]);
+    return result;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Run the full agent pipeline for an issue.
  */
@@ -64,9 +103,13 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 
   try {
     // ── Phase 1: Triage ──────────────────────────────────────────────
-    currentPhase = '1-triage';
-    logger.info('Phase 1: Classifying issue');
-    const triage = await classifyIssue(issueTitle, issueBody ?? '');
+    currentPhase = "1-triage";
+    logger.info("Phase 1: Classifying issue");
+    const triage = await withTimeout(
+      classifyIssue(issueTitle, issueBody ?? ""),
+      config.phaseTimeouts.triage,
+      "1-triage",
+    );
 
     if (triage.type === 'feature') {
       logger.info('Issue is a feature request — skipping');
@@ -141,6 +184,13 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       issueNumber,
       `⚙️ **Sandbox ready** — cloned repository, detected runtime, installed dependencies.`,
     );
+    await withTimeout(
+      sandbox.boot(),
+      config.phaseTimeouts.sandboxBoot,
+      "3-boot-sandbox",
+    );
+    await postStatus(installationId, repoOwner, repoName, issueNumber,
+      `⚙️ **Sandbox ready** — cloned repository, detected runtime, installed dependencies.`);
 
     // ── Phase 4: Static analysis ──────────────────────────────────────
     currentPhase = '4-static-analysis';
@@ -170,21 +220,27 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       `🤖 **Running fix agent** — investigating root cause and writing fix (may take a few minutes).`,
     );
 
-    const openCodeResult = await dispatchToOpenCode({
-      repoOwner,
-      repoName,
-      issueNumber,
-      issueTitle,
-      issueBody: issueBody ?? '',
-      comments,
-      triage,
-      analysisResult,
-      codeIntel,
-      installationToken: await getInstallationToken(installationId),
-    });
+    const openCodeResult = await withTimeout(
+      dispatchToOpenCode({
+        repoUrl,
+        repoOwner,
+        repoName,
+        issueNumber,
+        issueTitle,
+        issueBody: issueBody ?? "",
+        comments,
+        triage,
+        analysisResult,
+        codeIntel,
+        installationToken: await getInstallationToken(installationId),
+        installationId,
+      }),
+      config.phaseTimeouts.openCodeAgent,
+      "6-opencode-agent",
+    );
 
     if (!openCodeResult.success) {
-      logger.error({ error: openCodeResult.errors?.[0] }, 'OpenCode agent failed');
+      logger.error({ error: openCodeResult.errors?.[0] }, "OpenCode agent failed");
 
       // Try basic fix approach as fallback
       logger.info('Attempting basic fix fallback');
@@ -200,23 +256,27 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     currentPhase = '7-dispatch-action';
     logger.info('Phase 7: Dispatching action');
     const dispatcher = new ActionDispatcher();
-    const dispatchResult = await dispatcher.dispatch({
-      issueNumber,
-      issueTitle,
-      agentResult: {
-        summary: openCodeResult.summary,
-        confidence: openCodeResult.confidence,
-        fixReady: true,
-        branchName: openCodeResult.branchName,
-        diff: openCodeResult.diff,
-        testOutput: openCodeResult.testOutput,
-        errors: openCodeResult.errors,
-      },
-      sandbox,
-      repoOwner,
-      repoName,
-      installationId,
-    });
+    const dispatchResult = await withTimeout(
+      dispatcher.dispatch({
+        issueNumber,
+        issueTitle,
+        agentResult: {
+          summary: openCodeResult.summary,
+          confidence: openCodeResult.confidence,
+          fixReady: true,
+          branchName: openCodeResult.branchName,
+          diff: openCodeResult.diff,
+          testOutput: openCodeResult.testOutput,
+          errors: openCodeResult.errors,
+        },
+        sandbox,
+        repoOwner,
+        repoName,
+        installationId,
+      }),
+      config.phaseTimeouts.prCreation,
+      "7-dispatch-action",
+    );
 
     // ── Post result back to tracker (Linear/Jira) ───────────────────
     if (data.trackerType && data.trackerTicketId && dispatchResult.prUrl) {
@@ -262,15 +322,25 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     const errorMsg = String(err);
     logger.error({ err: errorMsg, phase: currentPhase }, 'Agent pipeline failed during phase');
 
-    // Post error comment to GitHub
+    // Post appropriate comment based on error type
     try {
-      await postComment(
-        installationId,
-        repoOwner,
-        repoName,
-        issueNumber,
-        messages.errorComment(`[Phase: ${currentPhase}] ${errorMsg}`),
-      );
+      if (err instanceof PhaseTimeoutError) {
+        await postComment(
+          installationId,
+          repoOwner,
+          repoName,
+          issueNumber,
+          messages.timeoutComment(err.phase, err.timeoutMs),
+        );
+      } else {
+        await postComment(
+          installationId,
+          repoOwner,
+          repoName,
+          issueNumber,
+          messages.errorComment(`[Phase: ${currentPhase}] ${errorMsg}`),
+        );
+      }
     } catch (commentErr) {
       logger.error({ err: String(commentErr), phase: currentPhase }, 'Failed to post error comment');
     }
@@ -431,6 +501,7 @@ interface OpenCodeDispatchParams {
   analysisResult: string;
   codeIntel: CodeIntel;
   installationToken: string;
+  installationId: number;
 }
 
 interface OpenCodeDispatchResult {
@@ -461,6 +532,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
     analysisResult,
     codeIntel,
     installationToken,
+    installationId,
   } = params;
 
   const prompt = buildOpenCodePrompt({
@@ -477,67 +549,124 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
 
   const sanitizedPrompt = sanitizeUserContent(prompt);
 
-  try {
-    const response = await fetch(`${config.opencode.url}/api/run`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${installationToken}`,
-      },
-      body: JSON.stringify({
-        prompt: sanitizedPrompt,
-        model: config.opencode.model,
-      }),
-      signal: AbortSignal.timeout(600_000), // 10 min timeout
-    });
+  // Build model chain: primary + fallbacks
+  const models = [
+    config.opencode.model,
+    ...config.opencode.fallbackModels,
+  ];
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'unknown error');
-      return {
-        success: false,
-        summary: `OpenCode returned HTTP ${response.status}`,
-        confidence: 'low',
-        errors: [errorText],
-      };
+  let lastError: string | undefined;
+
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
+
+    // Post status for fallback attempts
+    if (i > 0 && lastError) {
+      try {
+        await postComment(
+          installationId,
+          repoOwner,
+          repoName,
+          issueNumber,
+          messages.retryComment(i + 1, model, lastError),
+        );
+      } catch {
+        // non-fatal
+      }
     }
 
-    const result = (await response.json()) as Record<string, unknown>;
+    try {
+      const response = await fetch(`${config.opencode.url}/api/run`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${installationToken}`,
+        },
+        body: JSON.stringify({
+          prompt: sanitizedPrompt,
+          model,
+        }),
+      });
 
-    // Parse the result
-    const summary = String(result.summary || 'Agent completed.');
-    const diff = result.diff ? String(result.diff) : undefined;
-    const branchName = result.branch ? String(result.branch) : undefined;
-    const testOutput = result.testOutput ? String(result.testOutput) : undefined;
-    const confidence = parseConfidence(result);
-    const errorList = result.errors ? (result.errors as string[]) : undefined;
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "unknown error");
+        lastError = errorText;
 
-    return {
-      success: true,
-      summary,
-      confidence,
-      branchName,
-      diff,
-      testOutput,
-      errors: errorList,
-      metadata: result.metadata as Record<string, unknown> | undefined,
-    };
-  } catch (err) {
-    const errorMsg = String(err);
-    if (errorMsg.includes('abort') || errorMsg.includes('timeout')) {
+        // Post status about the failure
+        try {
+          await postComment(
+            installationId,
+            repoOwner,
+            repoName,
+            issueNumber,
+            messages.modelFallbackComment(models[i + 1] ?? "none", errorText),
+          );
+        } catch {
+          // non-fatal
+        }
+
+        continue;
+      }
+
+      const result = (await response.json()) as Record<string, unknown>;
+
+      // Parse the result
+      const summary = String(result.summary || "Agent completed.");
+      const diff = result.diff ? String(result.diff) : undefined;
+      const branchName = result.branch ? String(result.branch) : undefined;
+      const testOutput = result.testOutput
+        ? String(result.testOutput)
+        : undefined;
+      const confidence = parseConfidence(result);
+      const errorList = result.errors
+        ? (result.errors as string[])
+        : undefined;
+
       return {
-        success: false,
-        summary: 'OpenCode agent timed out after 10 minutes',
-        confidence: 'low',
-        errors: [errorMsg],
+        success: true,
+        summary,
+        confidence,
+        branchName,
+        diff,
+        testOutput,
+        errors: errorList,
+        metadata: result.metadata as Record<string, unknown> | undefined,
       };
+    } catch (err) {
+      const errorMsg = String(err);
+      lastError = errorMsg;
+
+      // Check if this was a timeout error
+      const isTimeout = errorMsg.includes("abort") || errorMsg.includes("timeout");
+
+      if (isTimeout && i < models.length - 1) {
+        try {
+          await postComment(
+            installationId,
+            repoOwner,
+            repoName,
+            issueNumber,
+            messages.timeoutComment(`6-opencode-agent (model: ${model})`, config.phaseTimeouts.openCodeAgent),
+          );
+        } catch {
+          // non-fatal
+        }
+      }
+
+      // Continue to next fallback model
+      continue;
     }
-    return {
-      success: false,
-      summary: 'Failed to reach OpenCode serve',
-      confidence: 'low',
-      errors: [errorMsg],
-    };
   }
+
+  // All models failed
+  return {
+    success: false,
+    summary: lastError?.includes("abort") || lastError?.includes("timeout")
+      ? "OpenCode agent timed out on all models"
+      : "OpenCode agent failed on all models",
+    confidence: "low",
+    errors: lastError ? [lastError] : ["All models failed"],
+  };
 }
 
 /**
