@@ -71,7 +71,7 @@ const envSchema = z.object({
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // STAS
- 
+
   // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
   STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
@@ -133,6 +133,12 @@ const envSchema = z.object({
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+
+  // ── Security ──────────────────────────────────────────────────────────────
+  ADMIN_API_KEY: z.string().optional(),
+  CORS_ORIGIN: z.string().default('*'),
+  REQUEST_BODY_LIMIT: z.string().default('1mb'),
+  WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -274,6 +280,14 @@ function buildConfig(env: ParsedEnv) {
       defaultRepoOwner: env.TRACKER_DEFAULT_REPO_OWNER,
       defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME,
       installationId: env.TRACKER_INSTALLATION_ID || 0,
+    },
+
+    // ── Security ────────────────────────────────────────────────────────────
+    security: {
+      adminApiKey: env.ADMIN_API_KEY,
+      corsOrigin: env.CORS_ORIGIN,
+      requestBodyLimit: env.REQUEST_BODY_LIMIT,
+      webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
     },
   } as const;
 }
