@@ -1,0 +1,11 @@
+celery[redis]==5.5.1
+flower==2.0.1
+openai==1.55.0
+httpx==0.28.1
+pydantic==2.10.3
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+# For E2B sandbox integration (optional, falls back to placeholder)
+e2b>=2.0.0
+# For Slack notifications
+slack-sdk>=3.33.0

@@ -60,8 +60,61 @@ services:
       - stas-net
     restart: unless-stopped
 
+  workers-celery:
+    build: ./workers
+    container_name: stas-workers-celery
+    env_file: .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - CELERY_BROKER_URL=pyamqp://stas-app:stas-app-password@stas-rabbitmq:5672/stas
+      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+      - REDIS_URL=redis://stas-redis:6379/0
+      - OPENCODE_URL=http://opencode:4096
+    networks:
+      - stas-net
+    restart: unless-stopped
+
+  celery-beat:
+    build: ./workers
+    container_name: stas-celery-beat
+    env_file: .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - CELERY_BROKER_URL=pyamqp://stas-app:stas-app-password@stas-rabbitmq:5672/stas
+      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+      - REDIS_URL=redis://stas-redis:6379/0
+    command: ["celery", "-A", "workers.celery_app", "beat", "--loglevel=info"]
+    networks:
+      - stas-net
+    restart: unless-stopped
+
+  flower:
+    image: mher/flower:2.0
+    container_name: stas-flower
+    ports:
+      - "5555:5555"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - CELERY_BROKER_URL=pyamqp://stas-app:stas-app-password@stas-rabbitmq:5672/stas
+      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+    command: ["celery", "--broker=pyamqp://stas-app:stas-app-password@stas-rabbitmq:5672/stas", "flower", "--port=5555"]
+    networks:
+      - stas-net
+    restart: unless-stopped
+
 volumes:
   redis-data:
+  rabbitmq-data:
 
 networks:
   stas-net:
