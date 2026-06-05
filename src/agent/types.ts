@@ -17,8 +17,8 @@ export interface AgentTool {
 }
 
 export interface TriageResult {
-  type: "bug" | "feature" | "question" | "unknown";
-  difficulty: "easy" | "medium" | "hard" | "unknown";
+  type: 'bug' | 'feature' | 'question' | 'unknown';
+  difficulty: 'easy' | 'medium' | 'hard' | 'unknown';
   relevantFiles?: string[];
   summary: string;
 }
@@ -27,12 +27,33 @@ export interface FileChange {
   path: string;
   originalContent: string;
   newContent: string;
-  action: "create" | "modify" | "delete";
+  action: 'create' | 'modify' | 'delete';
+}
+
+export interface TestBaseline {
+  passed: boolean;
+  output: string;
+  command: string;
+  durationMs: number;
+  totalTests?: number;
+  passedTests?: number;
+  failedTests?: number;
+}
+
+export interface VerificationResult {
+  baseline: TestBaseline | null;
+  postFix: TestBaseline | null;
+  regressionTestCreated: boolean;
+  regressionTestPassedOnOriginal: boolean | null;
+  regressionTestPassedOnFix: boolean | null;
+  preExistingTestsRegressed: boolean;
+  unverified: boolean;
+  details: string[];
 }
 
 export interface AgentResult {
   summary: string;
-  confidence: "high" | "medium" | "low";
+  confidence: 'high' | 'medium' | 'low';
   fixReady: boolean;
   prUrl?: string;
   branchName?: string;
@@ -43,4 +64,5 @@ export interface AgentResult {
   noFixReason?: string;
   alreadyFixed?: boolean;
   investigationOnly?: boolean;
+  verification?: VerificationResult;
 }

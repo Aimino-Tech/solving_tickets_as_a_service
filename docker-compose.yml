@@ -14,6 +14,45 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+
+    # ── Security Constraints ──────────────────────────────────────────
+    # Run with least privilege: read-only root FS, no new privileges,
+    # dropped capabilities, resource limits
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 512m
+    mem_reservation: 256m
+    cpus: 0.5
+    pids_limit: 256
+    # ──────────────────────────────────────────────────────────────────
+    networks:
+      - stas-net
+    # Note: Sandbox containers should run on an isolated network
+    # without access to the stas-net internal network
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: stas-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: stas-app
+      RABBITMQ_DEFAULT_PASS: stas-app-password
+      RABBITMQ_DEFAULT_VHOST: /stas
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
     networks:
       - stas-net
 
@@ -26,8 +65,11 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       - REDIS_URL=redis://stas-redis:6379
+      - RABBITMQ_URL=amqp://stas-app:stas-app-password@stas-rabbitmq:5672/stas
       - OPENCODE_URL=http://opencode:4096
       - NODE_ENV=development
     volumes:

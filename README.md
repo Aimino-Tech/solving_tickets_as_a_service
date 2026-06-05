@@ -1,5 +1,16 @@
 # STAS — Solving Tickets As A Service
 
+![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)
+![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+
+[![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml)
+[![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml)
+
+[![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml)
+[![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml)
+
 **Label a GitHub issue. Get a pull request.**
 
 STAS is an open-source GitHub bot that takes a labeled issue, investigates your codebase, writes a fix, runs your tests, and opens a PR. Backed by [OpenCode](https://opencode.ai) — the 162K ★ open-source coding agent.
@@ -136,14 +147,30 @@ All config via environment variables:
 
 ## Deployment
 
-### Railway / Fly.io
+See [`DEVELOPMENT.md`](DEVELOPMENT.md) for a comprehensive deployment guide covering local dev, Railway, Fly.io, and Kubernetes.
+
+### One-Click Deploy
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/railway.json)
+
+### Railway
 
 ```bash
-# Deploy the webhook server
+railway login
+railway init
 railway up
+railway secrets set GITHUB_APP_ID=... GITHUB_WEBHOOK_SECRET=...
+```
 
-# Deploy OpenCode alongside it
-# (separate container)
+Railway auto-provisions Redis via the `railway.json` template. Health check at `/health`.
+
+### Fly.io
+
+```bash
+fly launch --copy-config
+fly secrets set GITHUB_APP_ID=... GITHUB_WEBHOOK_SECRET=...
+fly redis create && fly redis attach <name>
+fly deploy
 ```
 
 ### Docker
@@ -152,6 +179,14 @@ railway up
 docker build -t stas-bot .
 docker run -p 3000:3000 --env-file .env stas-bot
 ```
+
+### Docker Compose
+
+```bash
+docker compose up
+```
+
+Starts Redis + bot with hot-reload. See `DEVELOPMENT.md` for details.
 
 ### Kubernetes
 

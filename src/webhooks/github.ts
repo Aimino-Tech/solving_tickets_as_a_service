@@ -14,45 +14,40 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
-import { Webhooks, type EmitterWebhookEventName } from "@octokit/webhooks";
-import type { Queue } from "bullmq";
-import { config } from "../config.js";
-import { enqueueIssue } from "../queue/issueQueue.js";
-import type { IssueJobData, BillingPlan } from "../utils/types.js";
-import { rootLogger } from "../utils/logger.js";
+import { type EmitterWebhookEventName, Webhooks } from '@octokit/webhooks';
+import type { Queue } from 'bullmq';
+import { config } from '../config.js';
+import { enqueueIssue } from '../queue/issueQueue.js';
+import { rootLogger } from '../utils/logger.js';
+import type { BillingPlan, IssueJobData } from '../utils/types.js';
 
-const log = rootLogger.child({ module: "webhooks-github" });
+const log = rootLogger.child({ module: 'webhooks-github' });
 
 /**
  * Create the GitHub webhooks handler with all event listeners registered.
  */
-export function createGithubWebhooks(
-  queue: Queue<IssueJobData>,
-): Webhooks {
+export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
   const webhooks = new Webhooks({
     secret: config.github.webhookSecret,
   });
 
   // ── issues.opened ───────────────────────────────────────────────
-  webhooks.on("issues.opened", async ({ payload }) => {
+  webhooks.on('issues.opened', async ({ payload }) => {
     log.info(
       {
         repo: `${payload.repository.owner.login}/${payload.repository.name}`,
         issueNumber: payload.issue.number,
       },
-      "Received issues.opened event",
+      'Received issues.opened event',
     );
     // We wait for the label event instead of acting on open
   });
 
   // ── issues.labeled ──────────────────────────────────────────────
-  webhooks.on("issues.labeled", async ({ payload }) => {
+  webhooks.on('issues.labeled', async ({ payload }) => {
     const label = payload.label?.name;
     if (label !== config.stas.label) {
-      log.debug(
-        { label, expected: config.stas.label },
-        "Ignoring non-target label",
-      );
+      log.debug({ label, expected: config.stas.label }, 'Ignoring non-target label');
       return;
     }
 
@@ -62,7 +57,7 @@ export function createGithubWebhooks(
         issueNumber: payload.issue.number,
         label,
       },
-      "Received issues.labeled with target label",
+      'Received issues.labeled with target label',
     );
 
     const jobData: IssueJobData = {
@@ -78,7 +73,7 @@ export function createGithubWebhooks(
     if (!jobData.installationId) {
       log.error(
         { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-        "No installation ID in payload — cannot process",
+        'No installation ID in payload — cannot process',
       );
       return;
     }
@@ -92,17 +87,17 @@ export function createGithubWebhooks(
           repo: `${jobData.repoOwner}/${jobData.repoName}`,
           issueNumber: jobData.issueNumber,
         },
-        "Failed to enqueue labeled issue",
+        'Failed to enqueue labeled issue',
       );
     }
   });
 
   // ── issues.edited ────────────────────────────────────────────────
-  webhooks.on("issues.edited", async ({ payload }) => {
+  webhooks.on('issues.edited', async ({ payload }) => {
     // If the issue already has the label and was edited, we could re-process
     const labels = payload.issue.labels ?? [];
     const hasStasLabel = labels.some(
-      (l: { name?: string } | string) => (typeof l === "string" ? l : l.name) === config.stas.label,
+      (l: { name?: string } | string) => (typeof l === 'string' ? l : l.name) === config.stas.label,
     );
 
     if (hasStasLabel) {
@@ -111,7 +106,7 @@ export function createGithubWebhooks(
           repo: `${payload.repository.owner.login}/${payload.repository.name}`,
           issueNumber: payload.issue.number,
         },
-        "Target issue edited — re-enqueuing",
+        'Target issue edited — re-enqueuing',
       );
 
       const jobData: IssueJobData = {
@@ -134,20 +129,20 @@ export function createGithubWebhooks(
               repo: `${jobData.repoOwner}/${jobData.repoName}`,
               issueNumber: jobData.issueNumber,
             },
-            "Failed to enqueue edited issue",
+            'Failed to enqueue edited issue',
           );
         }
       } else {
         log.warn(
           { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-          "No installation ID in edited issue payload — skipped",
+          'No installation ID in edited issue payload — skipped',
         );
       }
     }
   });
 
   // ── marketplace_purchase ─────────────────────────────────────────
-  webhooks.on("marketplace_purchase" as EmitterWebhookEventName, async ({ payload }) => {
+  webhooks.on('marketplace_purchase' as EmitterWebhookEventName, async ({ payload }) => {
     try {
       const p = payload as unknown as {
         action: string;
@@ -170,13 +165,16 @@ export function createGithubWebhooks(
           accountId: plan.accountId,
           plan: plan.plan,
         },
-        "Marketplace purchase event",
+        'Marketplace purchase event',
       );
 
       // TODO: Update the billing plan in the database
       // For OSS self-hosted, billing is a no-op
     } catch (err) {
-      log.error({ err: String(err), payload: JSON.stringify(payload).slice(0, 500) }, "Failed to handle marketplace purchase event");
+      log.error(
+        { err: String(err), payload: JSON.stringify(payload).slice(0, 500) },
+        'Failed to handle marketplace purchase event',
+      );
     }
   });
 
@@ -186,67 +184,71 @@ export function createGithubWebhooks(
 /**
  * Map GitHub Marketplace plan names to internal plan types.
  */
-function mapMarketplacePlan(planName: string): BillingPlan["plan"] {
+function mapMarketplacePlan(planName: string): BillingPlan['plan'] {
   const lower = planName.toLowerCase();
-  if (lower.includes("enterprise")) return "enterprise";
-  if (lower.includes("pro") || lower.includes("premium")) return "pro";
-  return "free";
+  if (lower.includes('enterprise')) return 'enterprise';
+  if (lower.includes('pro') || lower.includes('premium')) return 'pro';
+  return 'free';
 }
 
 /**
  * Suggest labels based on issue content using keyword matching.
  * Useful for recommending labels before the full triage runs.
  */
-export function suggestLabels(
-  title: string,
-  body: string,
-): string[] {
+export function suggestLabels(title: string, body: string): string[] {
   const text = `${title}\n${body}`.toLowerCase();
   const labels: string[] = [];
 
   // Bug indicators
   const bugPatterns = [
-    "bug", "fix", "error", "crash", "broken", "fails", "failure",
-    "incorrect", "wrong", "issue", "problem", "bug report",
+    'bug',
+    'fix',
+    'error',
+    'crash',
+    'broken',
+    'fails',
+    'failure',
+    'incorrect',
+    'wrong',
+    'issue',
+    'problem',
+    'bug report',
   ];
   if (bugPatterns.some((p) => text.includes(p))) {
-    labels.push("bug");
+    labels.push('bug');
   }
 
   // Feature indicators
   const featurePatterns = [
-    "feature", "request", "would like", "please add", "suggestion",
-    "idea", "enhancement", "new feature",
+    'feature',
+    'request',
+    'would like',
+    'please add',
+    'suggestion',
+    'idea',
+    'enhancement',
+    'new feature',
   ];
   if (featurePatterns.some((p) => text.includes(p))) {
-    labels.push("enhancement");
+    labels.push('enhancement');
   }
 
   // Question indicators
-  const questionPatterns = [
-    "how to", "how do i", "question", "help", "not sure",
-    "what is", "how can", "guide",
-  ];
+  const questionPatterns = ['how to', 'how do i', 'question', 'help', 'not sure', 'what is', 'how can', 'guide'];
   if (questionPatterns.some((p) => text.includes(p))) {
-    labels.push("question");
+    labels.push('question');
   }
 
   // Documentation indicators
-  const docsPatterns = [
-    "docs", "documentation", "readme", "typo",
-    "spelling", "readability",
-  ];
+  const docsPatterns = ['docs', 'documentation', 'readme', 'typo', 'spelling', 'readability'];
   if (docsPatterns.some((p) => text.includes(p))) {
-    labels.push("documentation");
+    labels.push('documentation');
   }
 
   // Performance
-  const perfPatterns = [
-    "slow", "performance", "latency", "memory", "leak",
-    "optimize", "bottleneck",
-  ];
+  const perfPatterns = ['slow', 'performance', 'latency', 'memory', 'leak', 'optimize', 'bottleneck'];
   if (perfPatterns.some((p) => text.includes(p))) {
-    labels.push("performance");
+    labels.push('performance');
   }
 
   return labels;
