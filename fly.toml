@@ -1,0 +1,35 @@
+app = "stas-bot"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 25
+    soft_limit = 10
+
+  [[http_service.checks]]
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  RUN_MODE = "both"
+  OPENCODE_MODEL = "anthropic/claude-sonnet-4-20250514"
+  LOG_LEVEL = "info"
+
+[experimental]
+  allowed_public_ports = []
+  auto_rollback = true
