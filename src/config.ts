@@ -133,6 +133,10 @@ const envSchema = z.object({
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+
+  // Feature Flags
+  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
+  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -252,6 +256,11 @@ function buildConfig(env: ParsedEnv) {
       sandboxBoot: env.PHASE_TIMEOUT_SANDBOX_MS,
       openCodeAgent: env.FIX_TIMEOUT_MS,
       prCreation: env.PHASE_TIMEOUT_PRCREATION_MS,
+    },
+
+    featureFlags: {
+      defaultTtlSeconds: env.FEATURE_FLAGS_DEFAULT_TTL_SECONDS,
+      autoDisableThreshold: env.FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD,
     },
 
     trackers: {

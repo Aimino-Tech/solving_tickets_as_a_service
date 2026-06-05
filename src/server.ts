@@ -36,6 +36,7 @@ import { validateWebhookPayload } from './validation.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
+import { featureFlagsRouter } from './routes/featureFlags.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -397,6 +398,9 @@ export function createApp(): express.Application {
   // -- Stripe webhook -------------------------------------------------------
   const stripeWebhookHandler = createStripeWebhookHandler();
   app.post('/webhook/stripe', stripeWebhookHandler);
+
+  // -- Feature flags admin API ------------------------------------------------
+  app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
 
   // -- 404 handler ----------------------------------------------------------
   app.use((_req: Request, res: Response) => {
