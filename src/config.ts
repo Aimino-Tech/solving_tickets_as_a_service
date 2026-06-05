@@ -140,6 +140,8 @@ const envSchema = z.object({
   STRIPE_PRICE_100_CREDITS: z.string().default('price_100credits'),
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
+  STRIPE_SOLO_PRICE_ID: z.string().default(''),
+  STRIPE_TEAM_PRICE_ID: z.string().default(''),
 
   // Usage metering
   USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
@@ -183,39 +185,14 @@ const envSchema = z.object({
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
 
   // Rate limiting (credit-based)
+  ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
   STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
   STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
 
-  // Admin API
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-
-  // ── Security ──────────────────────────────────────────────────────────────
-  ADMIN_API_KEY: z.string().optional(),
-  ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
-  CORS_ORIGIN: z.string().default('*'),
-  REQUEST_BODY_LIMIT: z.string().default('1mb'),
-  WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
-
-  // ── IP Allowlist ──
-  IP_ALLOWLIST_ENABLED: z.coerce.boolean().default(false),
-  IP_ALLOWLIST: z.string().default(''),
-  // Comma-separated list of IPs or CIDR ranges allowed to access webhooks
-
-  // ── Sandbox Security ──
-  SANDBOX_PRIVILEGED: z.coerce.boolean().default(false),
-  SANDBOX_READONLY_ROOT: z.coerce.boolean().default(true),
-  SANDBOX_MEMORY_LIMIT: z.string().default('512m'),
-  SANDBOX_CPU_LIMIT: z.string().default('0.5'),
-  SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
-  SANDBOX_DISK_LIMIT: z.string().default('2gb'),
-  SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
-
-  // Feature Flags
-  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
-  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
   // Sentry
   SENTRY_DSN: z.string().optional(),
@@ -422,19 +399,14 @@ function buildConfig(env: ParsedEnv) {
       adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
     },
 
-    usage: {
-      creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
-      creditsTriage: env.USAGE_CREDITS_TRIAGE,
-      creditsSandbox: env.USAGE_CREDITS_SANDBOX,
-    },
-
-
     stripe: {
       secretKey: env.STRIPE_SECRET_KEY,
       webhookSecret: env.STRIPE_WEBHOOK_SECRET,
       price100Credits: env.STRIPE_PRICE_100_CREDITS,
       price500Credits: env.STRIPE_PRICE_500_CREDITS,
       price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
+      soloPriceId: env.STRIPE_SOLO_PRICE_ID,
+      teamPriceId: env.STRIPE_TEAM_PRICE_ID,
     },
 
     database: {
@@ -519,27 +491,6 @@ function buildConfig(env: ParsedEnv) {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
-    },
-
-    // ── Security ────────────────────────────────────────────────────────────
-    security: {
-      adminApiKey: env.ADMIN_API_KEY,
-      corsOrigin: env.CORS_ORIGIN,
-      requestBodyLimit: env.REQUEST_BODY_LIMIT,
-      webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
-      ipAllowlist: {
-        enabled: env.IP_ALLOWLIST_ENABLED,
-        ips: env.IP_ALLOWLIST.split(',').map((s) => s.trim()).filter(Boolean),
-      },
-      sandbox: {
-        privileged: env.SANDBOX_PRIVILEGED,
-        readOnlyRoot: env.SANDBOX_READONLY_ROOT,
-        memoryLimit: env.SANDBOX_MEMORY_LIMIT,
-        cpuLimit: env.SANDBOX_CPU_LIMIT,
-        pidsLimit: env.SANDBOX_PIDS_LIMIT,
-        diskLimit: env.SANDBOX_DISK_LIMIT,
-        networkEnabled: env.SANDBOX_NETWORK_ENABLED,
-      },
     },
   } as const;
 }
