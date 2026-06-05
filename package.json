@@ -34,7 +34,13 @@
     "stas:dev": "bash plugin/tools/stas-dev.sh",
     "stas:webhook": "bash plugin/tools/stas-webhook-test.sh",
     "stas:config": "bash plugin/tools/stas-config.sh",
-    "stas:status": "bash plugin/tools/stas-status.sh"
+    "stas:status": "bash plugin/tools/stas-status.sh",
+    "workers:up": "docker compose up -d celery-worker celery-beat flower",
+    "workers:down": "docker compose down celery-worker celery-beat flower",
+    "workers:logs": "docker compose logs -f celery-worker celery-beat flower",
+    "workers:dev": "celery -A workers.celery_app worker --loglevel=info --concurrency=2",
+    "workers:beat": "celery -A workers.celery_app beat --loglevel=info",
+    "workers:flower": "celery -A workers.celery_app flower --port=5555 --loglevel=info"
   },
   "dependencies": {
     "@octokit/auth-app": "^7.1.0",
