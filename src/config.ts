@@ -82,6 +82,13 @@ const envSchema = z.object({
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  // Admin API
+  ADMIN_API_KEY: z.string().optional(),
+
+  // Webhook Retry Worker
+  WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
+  WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
+
 
   // GitLab
   GITLAB_URL: z.string().default('https://gitlab.com'),
@@ -249,6 +256,12 @@ function buildConfig(env: ParsedEnv) {
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
     },
+
+    webhookRetry: {
+      pollIntervalMs: env.WEBHOOK_RETRY_POLL_INTERVAL_MS,
+      batchSize: env.WEBHOOK_RETRY_BATCH_SIZE,
+    },
+
 
     stripe: {
       secretKey: env.STRIPE_SECRET_KEY,
