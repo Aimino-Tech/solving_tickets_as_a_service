@@ -37,6 +37,7 @@ import { validateWebhookPayload } from './validation.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
+import { featureFlagsRouter } from './routes/featureFlags.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -402,10 +403,14 @@ export function createApp(): express.Application {
   const stripeWebhookHandler = createStripeWebhookHandler();
   app.post('/webhook/stripe', stripeWebhookHandler);
 
+  // -- Feature flags admin API ------------------------------------------------
+  app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
+
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
 
-  // ── 404 handler ──────────────────────────────────────────────────
+  // -- 404 handler ----------------------------------------------------------
+
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: 'Not found' });
   });
