@@ -363,14 +363,6 @@ export function recordQueueDepthByQueue(queue: string, depth: number): void {
 }
 
 /**
- * Record a publish error with the specific error type.
- */
-export function recordPublishError(queue: string, errorType: string): void {
-  bridgeMetrics.incrementCounter('publish_errors_total', { queue, error: errorType });
-  recordMessageFailed(queue, errorType);
-}
-
-/**
  * Set the number of currently running tasks for a worker/queue.
  */
 export function recordTasksRunning(worker: string, queue: string, count: number): void {

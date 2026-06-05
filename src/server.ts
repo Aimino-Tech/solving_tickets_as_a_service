@@ -134,6 +134,7 @@ export function createApp(): express.Application {
   app.get('/metrics', (_req: Request, res: Response) => {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.send(bridgeMetrics.render());
+  });
 
   // -- DLQ Admin API: Replay messages ---------------------------------------
   app.post("/api/v1/admin/dlq/replay", async (req: Request, res: Response) => {
@@ -147,7 +148,6 @@ export function createApp(): express.Application {
       log.error({ err: String(err) }, "DLQ replay failed");
       res.status(500).json({ error: "DLQ replay failed", details: String(err) });
     }
-  });
   });
 
   // -- Initialize trackers --------------------------------------------------

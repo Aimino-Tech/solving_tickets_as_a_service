@@ -15,6 +15,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
     max_retries=3,
     default_retry_delay=30,
     name="workers.tasks.triage.triage_issue",
+    autoretry_for=(Exception,),
 )
 def triage_issue(self, issue_data: dict) -> dict:
     logger.info("Triaging issue — title=%s", issue_data.get("title", "untitled"))
