@@ -4,7 +4,7 @@
  * Each row represents a single agent execution or action.
  */
 
-import { pgTable, serial, integer, varchar, timestamp } from 'drizzle-orm/pg-core';
+import { integer, pgTable, serial, timestamp, varchar } from 'drizzle-orm/pg-core';
 import { accounts } from './accounts.js';
 
 export const usageRecords = pgTable('usage_records', {

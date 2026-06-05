@@ -151,11 +151,20 @@ export function getConsumeChannel(): Channel {
   return state.consumeChannel;
 }
 
+/**
+ * Extended publish options that include headers for retry tracking.
+ */
+export interface PublishOptions {
+  persistent?: boolean;
+  expiration?: string;
+  headers?: Record<string, string>;
+}
+
 export async function publish(
   exchange: string,
   routingKey: string,
   content: object,
-  options?: { persistent?: boolean; expiration?: string },
+  options?: PublishOptions,
 ): Promise<boolean> {
   const channel = getPublishChannel();
   const buffer = Buffer.from(JSON.stringify(content));
@@ -163,6 +172,7 @@ export async function publish(
   const published = channel.publish(exchange, routingKey, buffer, {
     persistent: options?.persistent ?? true,
     expiration: options?.expiration,
+    headers: options?.headers,
     contentType: 'application/json',
     timestamp: Math.floor(Date.now() / 1000),
   });

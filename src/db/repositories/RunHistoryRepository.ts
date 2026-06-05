@@ -16,12 +16,7 @@ export class RunHistoryRepository {
       `INSERT INTO run_history (account_id, issue_id, repo, status)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [
-        data.accountId,
-        data.issueId ?? null,
-        data.repo ?? null,
-        data.status ?? 'pending',
-      ],
+      [data.accountId, data.issueId ?? null, data.repo ?? null, data.status ?? 'pending'],
     );
     return result.rows[0];
   }
@@ -86,10 +81,7 @@ export class RunHistoryRepository {
    * Find a run by its ID.
    */
   async findById(id: number): Promise<RunHistory | undefined> {
-    const result = await queryWithRetry<RunHistory>(
-      'SELECT * FROM run_history WHERE id = $1',
-      [id],
-    );
+    const result = await queryWithRetry<RunHistory>('SELECT * FROM run_history WHERE id = $1', [id]);
     return result.rows[0];
   }
 

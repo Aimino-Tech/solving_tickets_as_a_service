@@ -5,8 +5,7 @@
  */
 
 import { getPool, queryWithRetry } from '../connection.js';
-import type { CreditBalance, NewCreditBalance } from '../schema/index.js';
-import type { NewCreditTransaction } from '../schema/index.js';
+import type { CreditBalance } from '../schema/index.js';
 
 export class CreditsRepository {
   // -----------------------------------------------------------------------
@@ -18,10 +17,9 @@ export class CreditsRepository {
    * Returns a zero balance if no row exists yet.
    */
   async getBalance(accountId: number): Promise<CreditBalance> {
-    const result = await queryWithRetry<CreditBalance>(
-      'SELECT * FROM credit_balances WHERE account_id = $1',
-      [accountId],
-    );
+    const result = await queryWithRetry<CreditBalance>('SELECT * FROM credit_balances WHERE account_id = $1', [
+      accountId,
+    ]);
     if (result.rows[0]) return result.rows[0];
 
     // Create an initial zero-balance row
@@ -35,27 +33,6 @@ export class CreditsRepository {
   }
 
   // -----------------------------------------------------------------------
-  // Transactions
-  // -----------------------------------------------------------------------
-
-  /**
-   * Record a credit transaction in the append-only ledger.
-   */
-  private async recordTransaction(tx: NewCreditTransaction): Promise<void> {
-    await queryWithRetry(
-      `INSERT INTO credit_transactions (account_id, amount, type, description, stripe_payment_intent_id)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [
-        tx.accountId,
-        tx.amount,
-        tx.type,
-        tx.description ?? null,
-        tx.stripePaymentIntentId ?? null,
-      ],
-    );
-  }
-
-  // -----------------------------------------------------------------------
   // Mutations
   // -----------------------------------------------------------------------
 
@@ -64,11 +41,15 @@ export class CreditsRepository {
    *
    * @returns The new balance.
    */
-  async credit(accountId: number, amount: number, options?: {
-    type?: string;
-    description?: string;
-    stripePaymentIntentId?: string;
-  }): Promise<CreditBalance> {
+  async credit(
+    accountId: number,
+    amount: number,
+    options?: {
+      type?: string;
+      description?: string;
+      stripePaymentIntentId?: string;
+    },
+  ): Promise<CreditBalance> {
     if (amount <= 0) throw new Error('Credit amount must be positive');
 
     const client = await getPool().connect();
@@ -117,9 +98,13 @@ export class CreditsRepository {
    * @throws If the account has insufficient credits.
    * @returns The new balance.
    */
-  async deduct(accountId: number, amount: number, options?: {
-    description?: string;
-  }): Promise<CreditBalance> {
+  async deduct(
+    accountId: number,
+    amount: number,
+    options?: {
+      description?: string;
+    },
+  ): Promise<CreditBalance> {
     if (amount <= 0) throw new Error('Deduction amount must be positive');
 
     const client = await getPool().connect();
@@ -134,9 +119,7 @@ export class CreditsRepository {
 
       const currentBalance = balanceCheck.rows[0]?.balance ?? 0;
       if (currentBalance < amount) {
-        throw new Error(
-          `Insufficient credits: ${currentBalance} available, ${amount} required`,
-        );
+        throw new Error(`Insufficient credits: ${currentBalance} available, ${amount} required`);
       }
 
       // Deduct

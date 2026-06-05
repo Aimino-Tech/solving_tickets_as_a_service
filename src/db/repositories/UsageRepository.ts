@@ -16,13 +16,7 @@ export class UsageRepository {
       `INSERT INTO usage_records (account_id, issue_id, repo, action, credits_used)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [
-        data.accountId,
-        data.issueId ?? null,
-        data.repo ?? null,
-        data.action,
-        data.creditsUsed ?? 0,
-      ],
+      [data.accountId, data.issueId ?? null, data.repo ?? null, data.action, data.creditsUsed ?? 0],
     );
     return result.rows[0];
   }
@@ -41,11 +35,7 @@ export class UsageRepository {
   /**
    * Get credits used in a date range.
    */
-  async creditsUsedInRange(
-    accountId: number,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<number> {
+  async creditsUsedInRange(accountId: number, startDate: Date, endDate: Date): Promise<number> {
     const result = await queryWithRetry<{ total: number }>(
       `SELECT COALESCE(SUM(credits_used), 0) AS total
        FROM usage_records

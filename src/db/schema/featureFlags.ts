@@ -4,7 +4,7 @@
  * Allows gradual rollout of features to specific accounts.
  */
 
-import { pgTable, serial, integer, varchar, boolean, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, integer, pgTable, serial, timestamp, varchar } from 'drizzle-orm/pg-core';
 import { accounts } from './accounts.js';
 
 export const featureFlags = pgTable('feature_flags', {

@@ -36,13 +36,19 @@ const envSchema = z.object({
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
-  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('bullmq'),
+  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('both'),
 
   // RabbitMQ
   RABBITMQ_URL: z.string().default('amqp://localhost:5672/stas'),
   RABBITMQ_PREFETCH_COUNT: z.coerce.number().int().positive().default(10),
   RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5000),
   RABBITMQ_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
+
+  // Bridge
+  BRIDGE_RPC_TIMEOUT: z.coerce.number().int().positive().default(30000),
+  BRIDGE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(3),
+  BRIDGE_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(5),
+  QUEUE_FALLBACK_BACKEND: z.enum(['redis', 'local', 'none']).default('redis'),
 
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
@@ -166,6 +172,13 @@ function buildConfig(env: ParsedEnv) {
       prefetchCount: env.RABBITMQ_PREFETCH_COUNT,
       reconnectDelayMs: env.RABBITMQ_RECONNECT_DELAY_MS,
       maxReconnectAttempts: env.RABBITMQ_MAX_RECONNECT_ATTEMPTS,
+    },
+
+    bridge: {
+      rpcTimeoutMs: env.BRIDGE_RPC_TIMEOUT,
+      maxRetries: env.BRIDGE_MAX_RETRIES,
+      circuitBreakerThreshold: env.BRIDGE_CIRCUIT_BREAKER_THRESHOLD,
+      fallbackBackend: env.QUEUE_FALLBACK_BACKEND,
     },
 
     opencode: {

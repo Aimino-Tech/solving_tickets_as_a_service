@@ -5,7 +5,7 @@
  * Never delete or update rows in this table.
  */
 
-import { pgTable, serial, integer, varchar, text, inet, timestamp } from 'drizzle-orm/pg-core';
+import { inet, integer, pgTable, serial, text, timestamp, varchar } from 'drizzle-orm/pg-core';
 import { accounts } from './accounts.js';
 
 export const auditLogs = pgTable('audit_logs', {

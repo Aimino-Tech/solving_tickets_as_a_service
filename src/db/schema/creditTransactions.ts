@@ -5,7 +5,7 @@
  * This table is append-only; never delete or update rows.
  */
 
-import { pgTable, serial, integer, varchar, text, timestamp } from 'drizzle-orm/pg-core';
+import { integer, pgTable, serial, text, timestamp, varchar } from 'drizzle-orm/pg-core';
 import { accounts } from './accounts.js';
 
 export const creditTransactions = pgTable('credit_transactions', {

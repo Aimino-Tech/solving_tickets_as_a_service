@@ -1,20 +1,14 @@
-/**
- * AccountsRepository — CRUD operations for the accounts table.
- */
-
-import { eq } from 'drizzle-orm';
-import { getPool, queryWithRetry } from '../connection.js';
-import { accounts, type Account, type NewAccount } from '../schema/index.js';
+import { queryWithRetry } from '../connection.js';
+import type { Account, NewAccount } from '../schema/index.js';
 
 export class AccountsRepository {
   /**
    * Find an account by its GitHub installation ID.
    */
   async findByInstallationId(githubInstallationId: number): Promise<Account | undefined> {
-    const result = await queryWithRetry<Account>(
-      'SELECT * FROM accounts WHERE github_installation_id = $1',
-      [githubInstallationId],
-    );
+    const result = await queryWithRetry<Account>('SELECT * FROM accounts WHERE github_installation_id = $1', [
+      githubInstallationId,
+    ]);
     return result.rows[0];
   }
 
@@ -22,10 +16,7 @@ export class AccountsRepository {
    * Find an account by its primary key.
    */
   async findById(id: number): Promise<Account | undefined> {
-    const result = await queryWithRetry<Account>(
-      'SELECT * FROM accounts WHERE id = $1',
-      [id],
-    );
+    const result = await queryWithRetry<Account>('SELECT * FROM accounts WHERE id = $1', [id]);
     return result.rows[0];
   }
 
@@ -81,10 +72,7 @@ export class AccountsRepository {
    * Delete an account by ID.
    */
   async delete(id: number): Promise<boolean> {
-    const result = await queryWithRetry(
-      'DELETE FROM accounts WHERE id = $1',
-      [id],
-    );
+    const result = await queryWithRetry('DELETE FROM accounts WHERE id = $1', [id]);
     return (result.rowCount ?? 0) > 0;
   }
 
@@ -92,10 +80,10 @@ export class AccountsRepository {
    * List all accounts (with optional pagination).
    */
   async list(limit = 50, offset = 0): Promise<Account[]> {
-    const result = await queryWithRetry<Account>(
-      'SELECT * FROM accounts ORDER BY id DESC LIMIT $1 OFFSET $2',
-      [limit, offset],
-    );
+    const result = await queryWithRetry<Account>('SELECT * FROM accounts ORDER BY id DESC LIMIT $1 OFFSET $2', [
+      limit,
+      offset,
+    ]);
     return result.rows;
   }
 }

@@ -38,9 +38,7 @@ let pool: pg.Pool | null = null;
 export function getPool(): pg.Pool {
   if (pool) return pool;
 
-  const sslConfig = config.database.ssl
-    ? { ssl: { rejectUnauthorized: true } }
-    : {};
+  const sslConfig = config.database.ssl ? { ssl: { rejectUnauthorized: true } } : {};
 
   pool = new Pool({
     connectionString: config.database.url,
@@ -96,10 +94,7 @@ export async function queryWithRetry<T extends pg.QueryResultRow>(
       }
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
-      log.warn(
-        { attempt, maxRetries, err: lastError.message },
-        'Database query failed, retrying...',
-      );
+      log.warn({ attempt, maxRetries, err: lastError.message }, 'Database query failed, retrying...');
 
       if (attempt < maxRetries) {
         await sleep(delayMs);

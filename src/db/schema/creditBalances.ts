@@ -4,7 +4,7 @@
  * One row per account, updated atomically on each transaction.
  */
 
-import { pgTable, serial, integer, timestamp } from 'drizzle-orm/pg-core';
+import { integer, pgTable, serial, timestamp } from 'drizzle-orm/pg-core';
 import { accounts } from './accounts.js';
 
 export const creditBalances = pgTable('credit_balances', {

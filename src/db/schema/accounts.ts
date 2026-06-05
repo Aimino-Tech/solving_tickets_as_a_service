@@ -5,7 +5,7 @@
  * Tier determines credit pricing and rate limits.
  */
 
-import { pgTable, serial, integer, varchar, timestamp } from 'drizzle-orm/pg-core';
+import { integer, pgTable, serial, timestamp, varchar } from 'drizzle-orm/pg-core';
 
 export const accounts = pgTable('accounts', {
   id: serial('id').primaryKey(),

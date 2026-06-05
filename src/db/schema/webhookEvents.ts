@@ -5,7 +5,7 @@
  * The `processed` flag tracks whether the event has been handled.
  */
 
-import { pgTable, serial, varchar, jsonb, boolean, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, jsonb, pgTable, serial, timestamp, varchar } from 'drizzle-orm/pg-core';
 
 export const webhookEvents = pgTable('webhook_events', {
   id: serial('id').primaryKey(),

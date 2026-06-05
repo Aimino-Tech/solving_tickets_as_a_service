@@ -16,12 +16,7 @@ export class AuditLogRepository {
       `INSERT INTO audit_logs (account_id, action, details, ip_address)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [
-        data.accountId,
-        data.action,
-        data.details ?? null,
-        data.ipAddress ?? null,
-      ],
+      [data.accountId, data.action, data.details ?? null, data.ipAddress ?? null],
     );
     return result.rows[0];
   }
@@ -57,12 +52,7 @@ export class AuditLogRepository {
   /**
    * Get all audit logs within a date range.
    */
-  async listByDateRange(
-    startDate: Date,
-    endDate: Date,
-    limit = 100,
-    offset = 0,
-  ): Promise<AuditLog[]> {
+  async listByDateRange(startDate: Date, endDate: Date, limit = 100, offset = 0): Promise<AuditLog[]> {
     const result = await queryWithRetry<AuditLog>(
       `SELECT * FROM audit_logs
        WHERE created_at >= $1 AND created_at < $2

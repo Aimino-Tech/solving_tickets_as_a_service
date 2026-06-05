@@ -9,12 +9,11 @@
  *   npx tsx src/db/migrate.ts --rollback  # Roll back the last batch
  */
 
-import { execSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getPool, queryWithRetry, closePool } from './connection.js';
 import { rootLogger } from '../utils/logger.js';
+import { closePool, getPool, queryWithRetry } from './connection.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -52,10 +51,7 @@ async function applyMigration(name: string, sql: string, checksum: string): Prom
     await client.query(sql);
 
     // Record the migration
-    await client.query(
-      `INSERT INTO "${MIGRATION_TABLE}" (name, checksum) VALUES ($1, $2)`,
-      [name, checksum],
-    );
+    await client.query(`INSERT INTO "${MIGRATION_TABLE}" (name, checksum) VALUES ($1, $2)`, [name, checksum]);
 
     await client.query('COMMIT');
     log.info({ migration: name }, 'Migration applied successfully');
@@ -73,9 +69,7 @@ async function applyMigration(name: string, sql: string, checksum: string): Prom
 // ---------------------------------------------------------------------------
 
 async function getAppliedMigrations(): Promise<Set<string>> {
-  const result = await queryWithRetry<{ name: string }>(
-    `SELECT name FROM "${MIGRATION_TABLE}" ORDER BY id`,
-  );
+  const result = await queryWithRetry<{ name: string }>(`SELECT name FROM "${MIGRATION_TABLE}" ORDER BY id`);
   return new Set(result.rows.map((r) => r.name));
 }
 
@@ -88,7 +82,7 @@ function computeChecksum(content: string): string {
   let hash = 0;
   for (let i = 0; i < content.length; i++) {
     const char = content.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash |= 0; // Convert to 32bit integer
   }
   return Math.abs(hash).toString(16).padStart(8, '0');
@@ -173,17 +167,11 @@ export async function rollbackLastBatch(): Promise<void> {
         await client.query(sql);
         log.info({ migration: row.name }, 'Rollback SQL applied');
       } else {
-        log.warn(
-          { migration: row.name },
-          `No rollback file found for ${row.name}, skipping SQL rollback`,
-        );
+        log.warn({ migration: row.name }, `No rollback file found for ${row.name}, skipping SQL rollback`);
       }
 
       // Remove the migration record
-      await client.query(
-        `DELETE FROM "${MIGRATION_TABLE}" WHERE name = $1`,
-        [row.name],
-      );
+      await client.query(`DELETE FROM "${MIGRATION_TABLE}" WHERE name = $1`, [row.name]);
 
       await client.query('COMMIT');
       log.info({ migration: row.name }, 'Migration rolled back successfully');

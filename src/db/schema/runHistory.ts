@@ -4,7 +4,7 @@
  * Status values: pending, running, completed, failed, cancelled
  */
 
-import { pgTable, serial, integer, varchar, text, timestamp } from 'drizzle-orm/pg-core';
+import { integer, pgTable, serial, text, timestamp, varchar } from 'drizzle-orm/pg-core';
 import { accounts } from './accounts.js';
 
 export const runHistory = pgTable('run_history', {
