@@ -20,8 +20,8 @@ import { Redis } from 'ioredis';
 import crypto from 'node:crypto';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import type { PlanId, Plan } from './plans.js';
-import { PLANS, getMonthlyFixLimit } from './plans.js';
+import type { PlanId } from './plans.js';
+import { getMonthlyFixLimit } from './plans.js';
 
 const log = rootLogger.child({ module: 'billing-usage' });
 

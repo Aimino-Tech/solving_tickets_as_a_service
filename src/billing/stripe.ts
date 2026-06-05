@@ -28,8 +28,8 @@
 import Stripe from 'stripe';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import { PLANS, getPlanByPriceId } from './plans.js';
-import type { PlanId, Plan } from './plans.js';
+import { PLANS } from './plans.js';
+import type { PlanId } from './plans.js';
 
 const log = rootLogger.child({ module: 'billing-stripe' });
 

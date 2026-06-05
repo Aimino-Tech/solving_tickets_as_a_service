@@ -22,7 +22,6 @@ import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { queryWithRetry } from '../db/connection.js';
 import { PLANS } from './plans.js';
-import type { PlanId } from './plans.js';
 
 const log = rootLogger.child({ module: 'billing-trial' });
 
