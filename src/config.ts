@@ -286,7 +286,7 @@ function buildConfig(env: ParsedEnv) {
       defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME,
       installationId: env.TRACKER_INSTALLATION_ID || 0,
     },
-  },
+
     metering: {
       costTriage: env.METERING_COST_TRIAGE,
       costOpencodePrimary: env.METERING_COST_OPENCODE_PRIMARY,
