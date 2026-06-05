@@ -97,7 +97,20 @@ export function createApp(): express.Application {
   // -- JSON parsing for all other routes ------------------------------------
   app.use(express.json());
 
-  // -- Custom per-repo and per-account rate limit middleware ---------------
+  // -- Parse webhook body early so rate limit middleware can read it -------
+  app.use('/webhook', (req: Request, _res: Response, next: NextFunction) => {
+    const rawBody = (req as { rawBody?: Buffer }).rawBody;
+    if (rawBody && !(req as any).parsedPayload) {
+      try {
+        (req as any).parsedPayload = JSON.parse(rawBody.toString());
+      } catch {
+        // Not parseable — rate limit middleware will gracefully skip
+      }
+    }
+    next();
+  });
+
+  // -- Per-repo and per-account rate limit middleware ----------------------
   app.use('/webhook', rateLimitMiddleware({
     getAccountId: (req, _res) => {
       const p = (req as any).parsedPayload;
@@ -122,9 +135,6 @@ export function createApp(): express.Application {
     message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
   });
   app.use('/webhook', limiter);
-
-  // -- Credit-based rate limiter (per-account, per-repo, per-IP) ----------
-  app.use('/webhook', rateLimitMiddleware());
 
   // -- Slack Bolt receiver (interactive messages) ---------------------------
   const bolt = getSlackBoltApp();
