@@ -44,6 +44,12 @@ const envSchema = z.object({
   RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5000),
   RABBITMQ_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
 
+  // Bridge
+  BRIDGE_RPC_TIMEOUT: z.coerce.number().int().positive().default(30000),
+  BRIDGE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(3),
+  BRIDGE_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(5),
+  QUEUE_FALLBACK_BACKEND: z.enum(['redis', 'local', 'none']).default('redis'),
+
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
@@ -159,6 +165,13 @@ function buildConfig(env: ParsedEnv) {
       prefetchCount: env.RABBITMQ_PREFETCH_COUNT,
       reconnectDelayMs: env.RABBITMQ_RECONNECT_DELAY_MS,
       maxReconnectAttempts: env.RABBITMQ_MAX_RECONNECT_ATTEMPTS,
+    },
+
+    bridge: {
+      rpcTimeoutMs: env.BRIDGE_RPC_TIMEOUT,
+      maxRetries: env.BRIDGE_MAX_RETRIES,
+      circuitBreakerThreshold: env.BRIDGE_CIRCUIT_BREAKER_THRESHOLD,
+      fallbackBackend: env.QUEUE_FALLBACK_BACKEND,
     },
 
     opencode: {
