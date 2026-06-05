@@ -23,10 +23,19 @@ import type { Request, Response, NextFunction } from "express";
 import { config } from "./config.js";
 import { rootLogger } from "./utils/logger.js";
 import { createGithubWebhooks } from "./webhooks/github.js";
-import { createIssueQueue } from "./queue/issueQueue.js";
+import { createIssueQueue, enqueueIssue } from "./queue/issueQueue.js";
 import type { IssueJobData } from "./utils/types.js";
 import { validateWebhookPayload } from "./validation.js";
 import rateLimit from "express-rate-limit";
+import { initTrackers, getTracker } from "./trackers/index.js";
+import {
+  handleLinearWebhook,
+  verifyLinearWebhookSignature,
+} from "./trackers/linear.js";
+import {
+  handleJiraWebhook,
+  verifyJiraWebhookSignature,
+} from "./trackers/jira.js";
 
 const log = rootLogger.child({ module: "server" });
 
@@ -69,7 +78,7 @@ export function createApp(): express.Application {
 
   // ── Raw body capture for webhook verification ────────────────────
   app.use(
-    "/webhook",
+    ["/webhook", "/webhook/linear", "/webhook/jira"],
     express.raw({ type: "application/json", verify: addRawBody }),
   );
 
@@ -95,6 +104,9 @@ export function createApp(): express.Application {
       timestamp: new Date().toISOString(),
     });
   });
+
+  // ── Initialize trackers ──────────────────────────────────────────
+  initTrackers();
 
   // ── Webhook receiver ─────────────────────────────────────────────
   const queue = createIssueQueue();
@@ -175,6 +187,152 @@ export function createApp(): express.Application {
     }
 
     // Always return 202 Accepted for webhooks
+    res.status(202).json({ accepted: true });
+  });
+
+  // ── Linear webhook ────────────────────────────────────────────────
+  app.post("/webhook/linear", async (req: Request, res: Response) => {
+    const signature = req.headers["linear-signature"] as string;
+    const rawBody = (req as { rawBody?: Buffer }).rawBody;
+
+    if (!rawBody) {
+      res.status(400).json({ error: "Missing raw body" });
+      return;
+    }
+
+    if (!verifyLinearWebhookSignature(rawBody, signature)) {
+      res.status(401).json({ error: "Invalid signature" });
+      return;
+    }
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(rawBody.toString());
+    } catch {
+      res.status(400).json({ error: "Invalid JSON payload" });
+      return;
+    }
+
+    const result = await handleLinearWebhook(payload);
+    if (!result) {
+      res.status(400).json({ error: "Invalid webhook payload" });
+      return;
+    }
+
+    const tracker = getTracker("linear");
+    if (tracker) {
+      try {
+        const ticket = await tracker.getTicket(result.ticketId);
+        log.info(
+          { ticketId: result.ticketId, title: ticket.title },
+          "Fetched Linear ticket details",
+        );
+
+        const repoOwner = config.trackers.defaultRepoOwner;
+        const repoName = config.trackers.defaultRepoName;
+        const installationId = config.trackers.installationId;
+
+        if (repoOwner && repoName && installationId) {
+          const jobData: IssueJobData = {
+            installationId,
+            repoOwner,
+            repoName,
+            repoPrivate: false,
+            issueNumber: 0,
+            issueTitle: ticket.title,
+            issueBody: ticket.description,
+            source: "linear",
+            trackerType: "linear",
+            trackerTicketId: ticket.id,
+          };
+
+          await enqueueIssue(queue, jobData);
+        } else {
+          log.warn(
+            "TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured — Linear ticket not enqueued",
+          );
+        }
+      } catch (err) {
+        log.error(
+          { err: String(err), ticketId: result.ticketId },
+          "Failed to process Linear webhook",
+        );
+      }
+    }
+
+    res.status(202).json({ accepted: true });
+  });
+
+  // ── Jira webhook ─────────────────────────────────────────────────
+  app.post("/webhook/jira", async (req: Request, res: Response) => {
+    const signature = req.headers["x-hub-signature-256"] as string;
+    const rawBody = (req as { rawBody?: Buffer }).rawBody;
+
+    if (!rawBody) {
+      res.status(400).json({ error: "Missing raw body" });
+      return;
+    }
+
+    if (!verifyJiraWebhookSignature(rawBody, signature)) {
+      res.status(401).json({ error: "Invalid signature" });
+      return;
+    }
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(rawBody.toString());
+    } catch {
+      res.status(400).json({ error: "Invalid JSON payload" });
+      return;
+    }
+
+    const result = await handleJiraWebhook(payload);
+    if (!result) {
+      res.status(400).json({ error: "Invalid webhook payload" });
+      return;
+    }
+
+    const tracker = getTracker("jira");
+    if (tracker) {
+      try {
+        const ticket = await tracker.getTicket(result.ticketId);
+        log.info(
+          { ticketId: result.ticketId, title: ticket.title },
+          "Fetched Jira ticket details",
+        );
+
+        const repoOwner = config.trackers.defaultRepoOwner;
+        const repoName = config.trackers.defaultRepoName;
+        const installationId = config.trackers.installationId;
+
+        if (repoOwner && repoName && installationId) {
+          const jobData: IssueJobData = {
+            installationId,
+            repoOwner,
+            repoName,
+            repoPrivate: false,
+            issueNumber: 0,
+            issueTitle: ticket.title,
+            issueBody: ticket.description,
+            source: "jira",
+            trackerType: "jira",
+            trackerTicketId: ticket.id,
+          };
+
+          await enqueueIssue(queue, jobData);
+        } else {
+          log.warn(
+            "TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured — Jira ticket not enqueued",
+          );
+        }
+      } catch (err) {
+        log.error(
+          { err: String(err), ticketId: result.ticketId },
+          "Failed to process Jira webhook",
+        );
+      }
+    }
+
     res.status(202).json({ accepted: true });
   });
 

@@ -10,6 +10,15 @@ export interface IssueJobData {
   issueNumber: number;
   issueTitle: string;
   issueBody: string | null;
+
+  /** Source platform that originated this job. Defaults to "github". */
+  source?: "github" | "linear" | "jira";
+
+  /** Tracker ticket ID (Linear issue ID or Jira issue key) for cross-platform sync. */
+  trackerTicketId?: string;
+
+  /** Tracker platform type for posting results back to the source. */
+  trackerType?: "linear" | "jira";
 }
 
 export interface BillingPlan {
