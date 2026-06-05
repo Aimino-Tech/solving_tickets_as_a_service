@@ -28,10 +28,10 @@ import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-
 import cors from 'cors';
 import helmet from 'helmet';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
+import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
 import { getQueueHealth } from './health/queueHealth.js';
 import { bridgeMetrics } from './bridge/metrics.js';
@@ -54,6 +54,8 @@ import { recordWebhookDuration } from './webhooks/metrics.js';
 import { renderMetrics } from './webhooks/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
+import { adminRouter } from './routes/admin.js';
+import { dashboardRouter } from './routes/dashboard.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -160,6 +162,9 @@ export function createApp(): express.Application {
     message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
   });
   app.use('/webhook', limiter);
+
+  // -- Credit-based rate limiter (per-account, per-repo, per-IP) ----------
+  app.use('/webhook', rateLimitMiddleware());
 
   // -- Slack Bolt receiver (interactive messages) ---------------------------
   const bolt = getSlackBoltApp();
@@ -603,6 +608,12 @@ export function createApp(): express.Application {
 
   // -- Feature flags admin API ------------------------------------------------
   app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
+
+  // ── Admin API ────────────────────────────────────────
+  app.use('/admin', adminRouter);
+
+  // ── Dashboard API ──────────────────────────────────────
+  app.use('/api/v1/me', dashboardRouter);
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);

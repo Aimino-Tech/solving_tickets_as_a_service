@@ -130,7 +130,13 @@ const envSchema = z.object({
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
+  USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
+  USAGE_CREDITS_TRIAGE: z.coerce.number().int().positive().default(10),
+  USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
+
   // Feature flags
+  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
+  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
@@ -139,12 +145,18 @@ const envSchema = z.object({
   DATABASE_SSL: z.coerce.boolean().default(false),
   DATABASE_ENABLE_AUDIT_PERSISTENCE: z.coerce.boolean().default(false),
 
+  // Rate limiting (credit-based)
+  STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
+  STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
+  STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
+
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
   // ── Security ──────────────────────────────────────────────────────────────
   ADMIN_API_KEY: z.string().optional(),
+  ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   CORS_ORIGIN: z.string().default('*'),
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
@@ -201,6 +213,24 @@ type ParsedEnv = z.infer<typeof envSchema>;
 // ---------------------------------------------------------------------------
 // Build config tree
 // ---------------------------------------------------------------------------
+
+
+function parseConcurrencyOverrides(raw: string): Record<string, number> {
+  if (!raw) return {};
+  const result: Record<string, number> = {};
+  for (const part of raw.split(',')) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = Number(trimmed.slice(eqIdx + 1).trim());
+    if (!Number.isNaN(val) && Number.isInteger(val) && val > 0) {
+      result[key] = val;
+    }
+  }
+  return result;
+}
 
 function buildConfig(env: ParsedEnv) {
   return {
@@ -279,6 +309,11 @@ function buildConfig(env: ParsedEnv) {
       interactionsPath: env.SLACK_INTERACTIONS_PATH,
     },
 
+    admin: {
+      apiKey: env.ADMIN_API_KEY ?? '',
+      rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
+    },
+
     sentry: {
       dsn: env.SENTRY_DSN,
       environment: env.SENTRY_ENVIRONMENT,
@@ -299,8 +334,6 @@ function buildConfig(env: ParsedEnv) {
       warnErrorRatePercent: env.ALERT_WARN_ERROR_RATE_PERCENT,
       critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
     },
-
-
     stas: {
       label: env.STAS_LABEL,
       botName: env.BOT_NAME,
@@ -322,6 +355,12 @@ function buildConfig(env: ParsedEnv) {
       creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
       creditsTriage: env.USAGE_CREDITS_TRIAGE,
       creditsSandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    rateLimit: {
+      defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
+      ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
+      adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
     },
 
     stripe: {
