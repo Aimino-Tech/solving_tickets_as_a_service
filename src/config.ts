@@ -49,6 +49,7 @@ const envSchema = z.object({
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // STAS
+  STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_LABEL: z.string().default("stas:fix"),
   BOT_NAME: z.string().default("STAS"),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),

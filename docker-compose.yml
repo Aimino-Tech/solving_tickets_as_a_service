@@ -17,6 +17,21 @@ services:
     networks:
       - stas-net
 
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    container_name: stas-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - stas-net
+
   bot:
     build: .
     container_name: stas-bot
@@ -32,6 +47,58 @@ services:
       - NODE_ENV=development
     volumes:
       - ./src:/app/src
+    networks:
+      - stas-net
+    restart: unless-stopped
+
+  workers-celery:
+    build: ./workers
+    container_name: stas-workers-celery
+    env_file: .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - CELERY_BROKER_URL=pyamqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
+      - OPENCODE_URL=http://opencode:4096
+    networks:
+      - stas-net
+    restart: unless-stopped
+
+  celery-beat:
+    build: ./workers
+    container_name: stas-celery-beat
+    env_file: .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - CELERY_BROKER_URL=pyamqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
+    command: ["celery", "-A", "celery_app", "beat", "--loglevel=info"]
+    networks:
+      - stas-net
+    restart: unless-stopped
+
+  flower:
+    image: mher/flower:2.0
+    container_name: stas-flower
+    ports:
+      - "5555:5555"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - CELERY_BROKER_URL=pyamqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    command: ["celery", "--broker=pyamqp://guest:guest@rabbitmq:5672//", "flower", "--port=5555"]
     networks:
       - stas-net
     restart: unless-stopped
