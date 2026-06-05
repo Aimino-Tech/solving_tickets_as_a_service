@@ -51,9 +51,13 @@ export class WebhookEventsRepository {
     source: string;
     eventType: string;
     deliveryId?: string;
+    installationId?: string;
+    repo?: string;
+    rawBodySnippet?: string;
+    headers?: Record<string, string>;
     payload: unknown;
   }): Promise<number> {
-    const { source, eventType, deliveryId, payload } = event;
+    const { source, eventType, deliveryId, installationId, repo, rawBodySnippet, headers, payload } = event;
 
     // Check for existing delivery_id for idempotency
     if (deliveryId) {
@@ -67,11 +71,12 @@ export class WebhookEventsRepository {
     }
 
     const payloadJson = payload !== undefined ? JSON.stringify(payload) : null;
+    const headersJson = headers !== undefined ? JSON.stringify(headers) : null;
     const result = await queryWithRetry<{ id: number }>(
-      `INSERT INTO webhook_events (source, event_type, delivery_id, payload, status, created_at)
-       VALUES ($1, $2, $3, $4::jsonb, 'received', NOW())
+      `INSERT INTO webhook_events (source, event_type, delivery_id, installation_id, repo, raw_body_snippet, headers, payload, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, 'received', NOW())
        RETURNING id`,
-      [source, eventType, deliveryId || null, payloadJson],
+      [source, eventType, deliveryId || null, installationId || null, repo || null, rawBodySnippet || null, headersJson, payloadJson],
     );
 
     return result.rows[0].id;

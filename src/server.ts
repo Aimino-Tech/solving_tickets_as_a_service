@@ -48,6 +48,7 @@ import { recordWebhookDuration } from './webhooks/metrics.js';
 import { renderMetrics } from './webhooks/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
+import { startHealthMonitor } from './webhooks/healthMonitor.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -145,6 +146,12 @@ export function createApp(): express.Application {
     startWebhookRetryWorker();
   }
 
+  // ── Start webhook health monitor ──────────────────────────────────
+  // Periodically checks failure rate and alerts if > 5%
+  if (config.runMode === 'api' || config.runMode === 'both') {
+    startHealthMonitor();
+  }
+
   // ── Webhook receiver ─────────────────────────────────────────────
   const queue = createIssueQueue();
   const githubWebhooks = createGithubWebhooks(queue);
@@ -176,6 +183,7 @@ export function createApp(): express.Application {
       source,
       eventType: event,
       deliveryId,
+      ...captureWebhookContext(req, parsedPayload as Record<string, unknown> | undefined),
       payload: parsedPayload,
     });
 
@@ -271,7 +279,7 @@ export function createApp(): express.Application {
     const eventId = await logWebhookReceived({
       source,
       eventType: event || 'unknown',
-      deliveryId: undefined,
+      ...captureWebhookContext(req, parsedPayload as Record<string, unknown> | undefined),
       payload: parsedPayload,
     });
 
@@ -324,7 +332,7 @@ export function createApp(): express.Application {
     const eventId = await logWebhookReceived({
       source,
       eventType: 'push',
-      deliveryId: undefined,
+      ...captureWebhookContext(req, parsedPayload as Record<string, unknown> | undefined),
       payload: parsedPayload,
     });
 
@@ -364,7 +372,7 @@ export function createApp(): express.Application {
     const eventId = await logWebhookReceived({
       source,
       eventType: (payload as any)?.type || 'unknown',
-      deliveryId: undefined,
+      ...captureWebhookContext(req, payload as Record<string, unknown> | undefined),
       payload,
     });
 
@@ -446,7 +454,7 @@ export function createApp(): express.Application {
     const eventId = await logWebhookReceived({
       source,
       eventType: (payload as any)?.webhookEvent || 'unknown',
-      deliveryId: undefined,
+      ...captureWebhookContext(req, payload as Record<string, unknown> | undefined),
       payload,
     });
 
@@ -517,7 +525,7 @@ export function createApp(): express.Application {
       eventId = await logWebhookReceived({
         source,
         eventType: stripeEventType,
-        deliveryId: undefined,
+        ...captureWebhookContext(req, undefined),
         payload: { note: 'Stripe webhook payload parsed by handler' },
       });
     } catch {
@@ -618,6 +626,74 @@ process.on('unhandledRejection', (reason) => {
  */
 function addRawBody(req: Request, _res: Response, buf: Buffer): void {
   (req as { rawBody?: Buffer }).rawBody = buf;
+}
+
+/**
+ * Extract webhook context for event logging from request and parsed payload.
+ * Captures installation_id, repo name, raw_body_snippet (first 1KB), and headers.
+ */
+function captureWebhookContext(
+  req: Request,
+  parsedPayload: Record<string, unknown> | undefined,
+): {
+  installationId?: string;
+  repo?: string;
+  rawBodySnippet?: string;
+  headers?: Record<string, string>;
+} {
+  const rawBody = (req as { rawBody?: Buffer }).rawBody;
+  const rawStr = rawBody?.toString() || '';
+
+  // Extract relevant headers (omit auth tokens, cookies)
+  const headers: Record<string, string> = {};
+  const relevantHeaders = [
+    'x-github-event', 'x-github-delivery', 'x-hub-signature-256',
+    'x-gitlab-event', 'x-gitlab-token',
+    'x-hub-signature',
+    'linear-signature',
+    'stripe-signature',
+    'content-type', 'user-agent', 'x-request-id',
+  ];
+  for (const h of relevantHeaders) {
+    const val = req.headers[h.toLowerCase()];
+    if (val) headers[h] = Array.isArray(val) ? val.join(', ') : val;
+  }
+
+  // First 1KB of raw body as snippet
+  const rawBodySnippet = rawStr.length > 1024 ? rawStr.slice(0, 1024) : rawStr || undefined;
+
+  // Extract installation_id and repo from payload if available
+  let installationId: string | undefined;
+  let repo: string | undefined;
+
+  if (parsedPayload) {
+    // GitHub-like payload: installation?.id, repository?.full_name
+    const payload = parsedPayload as Record<string, unknown>;
+    const installation = payload.installation as Record<string, unknown> | undefined;
+    if (installation?.id) {
+      installationId = String(installation.id);
+    }
+    const repository = payload.repository as Record<string, unknown> | undefined;
+    if (repository?.full_name) {
+      repo = String(repository.full_name);
+    } else if (repository?.name) {
+      // Some providers may have just a name and we need the owner
+      const owner = (repository.owner as Record<string, unknown> | undefined)?.login || (repository.owner as Record<string, unknown> | undefined)?.name;
+      if (owner) {
+        repo = `${owner}/${repository.name}`;
+      }
+    }
+
+    // GitLab: project?.path_with_namespace
+    if (!repo) {
+      const project = payload.project as Record<string, unknown> | undefined;
+      if (project?.path_with_namespace) {
+        repo = String(project.path_with_namespace);
+      }
+    }
+  }
+
+  return { installationId, repo, rawBodySnippet, headers: Object.keys(headers).length > 0 ? headers : undefined };
 }
 
 // Extend Express Request to include requestId
