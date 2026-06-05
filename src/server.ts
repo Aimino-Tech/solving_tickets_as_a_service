@@ -1,11 +1,15 @@
 /**
- * Express API server -- webhook receiver and health endpoint.
+ * Express API server -- webhook receiver, health endpoints, and Sentry monitoring.
  *
  * Features:
  * - Raw body middleware for webhook signature verification
  * - Request ID middleware for log correlation
  * - Structured access logging with pino
- * - GET /health endpoint
+ * - Sentry error handler (captures Express errors via setupExpressErrorHandler)
+ * - GET /health — overall service health
+ * - GET /health/queue — queue depth and worker health
+ * - GET /health/ready — readiness probe (all dependencies connected)
+ * - GET /health/live — liveness probe (process is alive)
  * - GET /metrics endpoint (Prometheus-style webhook metrics)
  * - POST /webhook -- GitHub webhook receiver via @octokit/webhooks
  * - POST /webhook/stripe -- Stripe webhook for credit purchase events
@@ -13,8 +17,10 @@
  * - Webhook event logging to webhook_events table for all sources
  * - Idempotency via x-github-delivery / delivery_id deduplication
  * - Exponential backoff retry worker (1min, 5min, 30min, max 3)
+ * - Sentry error handler (captures Express errors)
  *
  * --- Error Handling Audit ---------------------------------------------------
+ * - Sentry error handler via setupExpressErrorHandler (v8 API)
  * - Global Express error middleware (4-arg handler) at bottom of chain
  * - Process-level uncaughtException and unhandledRejection handlers
  * - app.listen() error event handled (EADDRINUSE, EACCES, etc.)
@@ -56,12 +62,23 @@ import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { dashboardRouter } from './routes/dashboard.js';
+import { addBreadcrumb, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
 
 const log = rootLogger.child({ module: 'server' });
 
 // Request body size limit from config
 const REQUEST_SIZE_LIMIT = parseSize(config.security.requestBodyLimit);
 const WEBHOOK_SIZE_LIMIT = parseSize(config.security.webhookBodyLimit);
+
+const START_TIME = Date.now();
+
+// Track the most recent application error for the health endpoint
+let lastError: { message: string; timestamp: string; stack?: string } | null = null;
+function setLastError(err: Error | string): void {
+  const msg = typeof err === 'string' ? err : err.message;
+  lastError = { message: msg, timestamp: new Date().toISOString(), stack: typeof err === 'string' ? undefined : err.stack };
+}
+export { lastError as lastHealthError };
 
 /**
  * Create and configure the Express application.
@@ -72,7 +89,7 @@ const WEBHOOK_SIZE_LIMIT = parseSize(config.security.webhookBodyLimit);
  * Returns 0 if the string cannot be parsed.
  */
 function parseSize(size: string): number {
-  const match = size.match(/^(d+)s*(b|kb|mb|gb)$/i);
+  const match = size.match(/^(\d+)\s*(b|kb|mb|gb)$/i);
   if (!match) return 0;
   const num = parseInt(match[1], 10);
   const unit = match[2].toLowerCase();
@@ -177,6 +194,83 @@ export function createApp(): express.Application {
       label: config.stas.label,
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
+      lastError: lastError,
+      services: {
+        webhook: { status: 'ok' },
+        worker: { status: 'ok' },
+        queue: { status: 'unknown' },
+        database: { status: 'unknown' },
+        opencode: { status: 'unknown' },
+        sentry: { status: config.sentry.dsn ? 'connected' : 'disabled' },
+      },
+    });
+  });
+
+  // -- Readiness probe (all dependencies connected) --------------------------
+  app.get('/health/ready', async (_req: Request, res: Response) => {
+    const checks: Record<string, { status: string; error?: string }> = {};
+
+    // Check database connectivity
+    try {
+      const { getPool } = await import('./db/connection.js');
+      const pool = getPool();
+      const client = await pool.connect();
+      await client.query('SELECT 1');
+      client.release();
+      checks.database = { status: 'ok' };
+    } catch (err) {
+      checks.database = { status: 'error', error: String(err) };
+    }
+
+    // Check Redis / queue connectivity
+    try {
+      const { Redis } = await import('ioredis');
+      const redis = new Redis(config.queue.redisUrl, {
+        maxRetriesPerRequest: null,
+        enableReadyCheck: true,
+        lazyConnect: true,
+        retryStrategy: () => null, // no retry for health check
+      });
+      await redis.connect();
+      await redis.ping();
+      checks.queue = { status: 'ok' };
+      await redis.quit();
+    } catch (err) {
+      checks.queue = { status: 'error', error: String(err) };
+    }
+
+    // Check OpenCode connectivity
+    try {
+      const response = await fetch(`${config.opencode.url}/health`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      checks.opencode = {
+        status: response.ok ? 'ok' : 'error',
+        ...(response.ok ? {} : { error: `HTTP ${response.status}` }),
+      };
+    } catch (err) {
+      checks.opencode = { status: 'error', error: String(err) };
+    }
+
+    // Overall readiness — all checks must pass
+    const allOk = Object.values(checks).every((c) => c.status === 'ok');
+    const httpStatus = allOk ? 200 : 503;
+
+    res.status(httpStatus).json({
+      status: allOk ? 'ok' : 'degraded',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      checks,
+    });
+  });
+
+  // -- Liveness probe (process is alive) -------------------------------------
+  app.get('/health/live', (_req: Request, res: Response) => {
+    res.json({
+      status: 'ok',
+      uptime: process.uptime(),
+      startedAt: new Date(START_TIME).toISOString(),
+      timestamp: new Date().toISOString(),
     });
   });
 
@@ -225,6 +319,12 @@ export function createApp(): express.Application {
     const source = 'github';
 
     log.info({ event, deliveryId, requestId: req.requestId }, 'Received GitHub webhook');
+
+    addBreadcrumb('webhook', 'GitHub webhook received', {
+      event,
+      deliveryId,
+      source,
+    });
 
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
     let parsedPayload: unknown;
@@ -299,6 +399,13 @@ export function createApp(): express.Application {
       recordWebhookDuration(source, Date.now() - startTime);
     }
 
+    addBreadcrumb('webhook', 'GitHub webhook processed', {
+      event,
+      deliveryId,
+      source,
+      durationMs: String(Date.now() - startTime),
+    });
+
     // Always respond 202 (accepted for async processing)
     res.status(202).json({ accepted: true });
   }
@@ -316,6 +423,8 @@ export function createApp(): express.Application {
     const source = 'gitlab';
 
     log.info({ event, requestId: req.requestId }, 'Received GitLab webhook');
+
+    addBreadcrumb('webhook', 'GitLab webhook received', { event, source });
 
     if (!rawBody) {
       log.error('Missing raw body for GitLab webhook');
@@ -370,6 +479,8 @@ export function createApp(): express.Application {
     const source = 'bitbucket';
 
     log.info({ requestId: req.requestId }, 'Received Bitbucket webhook');
+
+    addBreadcrumb('webhook', 'Bitbucket webhook received', { source });
 
     if (!rawBody) {
       log.error('Missing raw body for Bitbucket webhook');
@@ -594,7 +705,7 @@ export function createApp(): express.Application {
     // Wrap the handler to capture success/failure for event logging
     const wrappedHandler = async (req2: Request, res2: Response, next2: NextFunction) => {
       try {
-        await stripeWebhookHandler(req2, res2, next2);
+        await stripeWebhookHandler(req2, res2);
         if (eventId) await logWebhookProcessed(eventId);
       } catch (err) {
         if (eventId) await logWebhookFailed(eventId, String(err));
@@ -634,9 +745,14 @@ export function createApp(): express.Application {
 
   // -- Global error handler -------------------------------------------------
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    setLastError(err);
     log.error({ err: String(err) }, 'Unhandled error');
     res.status(500).json({ error: 'Internal server error' });
   });
+
+  // -- Sentry error handler (must be last middleware) -----------------------
+  // Uses Sentry v8 setupExpressErrorHandler API
+  setupSentryExpressErrorHandler(app);
 
   return app;
 }

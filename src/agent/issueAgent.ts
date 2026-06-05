@@ -39,6 +39,7 @@ import { buildTools, type SandboxTools } from "./tools.js";
 import type { AgentResult, TriageResult, VerificationResult, TestBaseline } from "./types.js";
 import type { IssueJobData } from "../utils/types.js";
 import { rootLogger, jobLogger } from "../utils/logger.js";
+import { addBreadcrumb, setUserContext } from "../monitoring/sentry.js";
 import * as messages from "../github/messages.js";
 
 const log = rootLogger.child({ module: 'issue-agent' });

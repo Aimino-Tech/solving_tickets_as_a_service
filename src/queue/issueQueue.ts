@@ -25,6 +25,7 @@
  * ✅ Retry count and lastError persisted in job data
  * ✅ Dead-letter queue captures jobs after max retries
  * ✅ RabbitMQ publish failures logged with fallback to BullMQ
+ * ✅ Sentry breadcrumbs for enqueue, retry, DLQ events
  * ────────────────────────────────────────────────────────────────────
  */
 
@@ -41,6 +42,7 @@ import {
   recordMessageFailed,
   recordProcessingDuration,
 } from "../bridge/metrics.js";
+import { addBreadcrumb, setUserContext } from "../monitoring/sentry.js";
 
 const log = rootLogger.child({ module: 'issue-queue' });
 
@@ -118,6 +120,9 @@ export function createIssueWorker(): Worker<IssueJobData> {
       const data = job.data as IssueJobDataWithRetry;
       const retryCount = data.retryCount ?? 0;
 
+      // Set Sentry user context for error correlation
+      setUserContext(data.installationId, `${data.repoOwner}/${data.repoName}`);
+
       log.info(
         {
           jobId: job.id,
@@ -128,6 +133,13 @@ export function createIssueWorker(): Worker<IssueJobData> {
         },
         'Processing issue job',
       );
+
+      addBreadcrumb('queue', 'Processing issue job', {
+        jobId: job.id,
+        repo: `${data.repoOwner}/${data.repoName}`,
+        issueNumber: String(data.issueNumber),
+        attempt: String(retryCount + 1),
+      });
 
       // Post retry status comment if this is a retry
       if (retryCount > 0 && data.lastError) {
@@ -193,6 +205,12 @@ export function createIssueWorker(): Worker<IssueJobData> {
         }
       } else {
         log.info({ jobId: job.id, confidence: result.confidence, prUrl: result.prUrl }, 'Fix completed');
+        addBreadcrumb('queue', 'Job completed successfully', {
+          jobId: job.id,
+          repo: `${data.repoOwner}/${data.repoName}`,
+          issueNumber: String(data.issueNumber),
+          prUrl: result.prUrl ?? 'none',
+        });
       }
 
       return result;
@@ -221,6 +239,14 @@ export function createIssueWorker(): Worker<IssueJobData> {
     }
 
     const retryCount = data.retryCount ?? 0;
+
+    addBreadcrumb('queue', 'Job failed', {
+      jobId: job.id,
+      repo: `${data.repoOwner}/${data.repoName}`,
+      issueNumber: String(data.issueNumber),
+      attempt: String(retryCount + 1),
+      error: errorMsg,
+    });
 
     // Update job data with retry info
     try {
@@ -332,6 +358,12 @@ async function moveToDeadLetter(
       { repo: data.repoOwner + '/' + data.repoName, issueNumber: data.issueNumber, error },
       'DLQ alert — job moved to dead-letter queue',
     );
+
+    addBreadcrumb('queue', 'Job moved to dead-letter queue', {
+      repo: `${data.repoOwner}/${data.repoName}`,
+      issueNumber: String(data.issueNumber),
+      error,
+    });
   } finally {
     await dlq.close();
   }
@@ -397,6 +429,13 @@ export async function enqueueIssue(
   const dedupKey = `issue:${data.installationId}:${repo}#${data.issueNumber}`;
   const backend = config.queue.backend;
 
+  addBreadcrumb('queue', 'Enqueueing issue', {
+    repo,
+    issueNumber: String(data.issueNumber),
+    installationId: String(data.installationId),
+    backend,
+  });
+
   let rabbitmqResult: boolean | undefined;
   let bullmqResult: string | undefined;
 
@@ -452,6 +491,13 @@ export async function enqueueIssue(
         },
         'Issue enqueued via BullMQ',
       );
+
+      addBreadcrumb('queue', 'Issue enqueued via BullMQ', {
+        jobId: job.id,
+        repo,
+        issueNumber: String(data.issueNumber),
+        dedupKey,
+      });
     } catch (err) {
       log.error(
         {

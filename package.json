@@ -52,6 +52,8 @@
     "@octokit/auth-app": "^7.1.0",
     "@octokit/rest": "^21.0.0",
     "@octokit/webhooks": "^13.4.0",
+    "@sentry/node": "^8.55.2",
+    "@sentry/types": "^8.55.2",
     "@slack/bolt": "^4.7.3",
     "amqplib": "^0.10.5",
     "bullmq": "^5.78.0",
@@ -66,8 +68,7 @@
     "openai": "^4.77.0",
     "pg": "^8.21.0",
     "pino": "^9.6.0",
-    "zod": "^3.25.76",
-    "@sentry/node": "^8.0.0"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.16",
