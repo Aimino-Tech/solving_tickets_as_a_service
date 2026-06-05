@@ -40,6 +40,7 @@ import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
+import { bridgeMetrics } from './bridge/metrics.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -120,6 +121,12 @@ export function createApp(): express.Application {
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     });
+  });
+
+  // -- Prometheus metrics endpoint -----------------------------------------
+  app.get('/metrics', (_req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'text/plain; version=0.0.4');
+    res.send(bridgeMetrics.render());
   });
 
   // -- Initialize trackers --------------------------------------------------
