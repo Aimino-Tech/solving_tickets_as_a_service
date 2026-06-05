@@ -33,6 +33,7 @@ import { config } from "../config.js";
 import { runIssueAgent } from "../agent/issueAgent.js";
 import type { IssueJobData } from "../utils/types.js";
 import { rootLogger } from "../utils/logger.js";
+import { recordQueueDepth } from "../bridge/metrics.js";
 import * as messages from "../github/messages.js";
 import { getOctokit } from "../github/auth.js";
 
@@ -361,6 +362,23 @@ export function createQueueEvents(): QueueEvents {
 }
 
 /**
+ * Update the queue depth gauge for an account by counting waiting and
+ * delayed jobs in the BullMQ queue that belong to that installation.
+ */
+async function updateQueueDepthMetric(
+  queue: Queue<IssueJobData>,
+  data: IssueJobData,
+): Promise<void> {
+  try {
+    const jobs = await queue.getJobs(['waiting', 'delayed'], 0, 1000);
+    const depth = jobs.filter((j) => j.data.installationId === data.installationId).length;
+    recordQueueDepth(String(data.installationId), depth);
+  } catch {
+    // non-fatal
+  }
+}
+
+/**
  * Enqueue an issue for processing with support for dual-write mode.
  *
  * Behavior depends on QUEUE_BACKEND config:
@@ -436,6 +454,11 @@ export async function enqueueIssue(
         },
         'Issue enqueued via BullMQ',
       );
+
+      // Track queue depth per account
+      updateQueueDepthMetric(queue, data).catch((err) => {
+        log.warn({ err: String(err) }, 'Failed to update queue depth metric');
+      });
     } catch (err) {
       log.error(
         {
