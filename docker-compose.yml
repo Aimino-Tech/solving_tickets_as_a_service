@@ -36,15 +36,23 @@ services:
     # without access to the stas-net internal network
 
   rabbitmq:
-    image: rabbitmq:4-management-alpine
+    build:
+      context: .
+      dockerfile: docker/rabbitmq/Dockerfile
     container_name: stas-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
+      - "5671:5671"
     environment:
       RABBITMQ_DEFAULT_USER: stas-app
       RABBITMQ_DEFAULT_PASS: stas-app-password
       RABBITMQ_DEFAULT_VHOST: /stas
+      STAS_MONITOR_PASSWORD: stas-monitor-password
+      STAS_DEV_VHOST: /stas-dev
+      STAS_APP_USER: stas-app
+      STAS_MONITOR_USER: stas-monitor
+      STAS_VHOST: /stas
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:

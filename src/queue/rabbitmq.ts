@@ -1,4 +1,5 @@
-import { connect, type Channel, type Connection, type ChannelModel } from 'amqplib';
+import { connect as amqpConnect, type Channel, type Connection, type ChannelModel } from 'amqplib';
+import fs from 'node:fs';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -41,6 +42,57 @@ function getUrl(): string {
   return config.rabbitmq.url;
 }
 
+/**
+ * Build TLS socket options for amqps:// connections.
+ *
+ * Reads certificate files from paths specified in config. Returns undefined
+ * when no TLS paths are configured (plain amqp:// connections).
+ */
+function buildTlsOptions(): Record<string, unknown> | undefined {
+  const { tls } = config.rabbitmq;
+
+  if (!tls.certPath && !tls.keyPath && !tls.caPath) {
+    return undefined;
+  }
+
+  const opts: Record<string, unknown> = {};
+
+  if (tls.certPath) {
+    try {
+      opts.cert = fs.readFileSync(tls.certPath);
+    } catch (err) {
+      log.error({ err: String(err), path: tls.certPath }, 'Failed to read RabbitMQ TLS certificate');
+      throw err;
+    }
+  }
+
+  if (tls.keyPath) {
+    try {
+      opts.key = fs.readFileSync(tls.keyPath);
+    } catch (err) {
+      log.error({ err: String(err), path: tls.keyPath }, 'Failed to read RabbitMQ TLS key');
+      throw err;
+    }
+  }
+
+  if (tls.caPath) {
+    try {
+      opts.ca = [fs.readFileSync(tls.caPath)];
+    } catch (err) {
+      log.error({ err: String(err), path: tls.caPath }, 'Failed to read RabbitMQ TLS CA certificate');
+      throw err;
+    }
+  }
+
+  if (tls.servername) {
+    opts.servername = tls.servername;
+  }
+
+  opts.rejectUnauthorized = tls.rejectUnauthorized;
+
+  return opts;
+}
+
 async function declareTopology(channel: Channel): Promise<void> {
   for (const ex of Object.values(EXCHANGES)) {
     await channel.assertExchange(ex.name, ex.type, { durable: true });
@@ -71,8 +123,13 @@ export async function connect(options?: {
 
   const url = options?.url ?? getUrl();
 
+  const tlsOptions = buildTlsOptions();
+  const useTls = url.startsWith('amqps://') && tlsOptions !== undefined;
+
   try {
-    const connection = await connect(url);
+    const connection = useTls
+      ? await amqpConnect(url, tlsOptions)
+      : await amqpConnect(url);
     state.connection = connection;
 
     connection.on('error', (err) => {
@@ -101,7 +158,8 @@ export async function connect(options?: {
     await declareTopology(publishChannel);
 
     state.reconnectAttempts = 0;
-    log.info('RabbitMQ connected — url=%s', url.replace(/\/\/.*@/, '//***@'));
+    const redactedUrl = url.replace(/\/\/.*@/, '//***@');
+    log.info('RabbitMQ connected — url=%s tls=%s', redactedUrl, useTls);
   } catch (err) {
     log.error({ err: String(err) }, 'RabbitMQ connection failed');
     scheduleReconnect();

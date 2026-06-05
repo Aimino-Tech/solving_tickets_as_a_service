@@ -44,6 +44,12 @@ const envSchema = z.object({
   RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5000),
   RABBITMQ_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
 
+  // RabbitMQ TLS (for amqps:// connections)
+  RABBITMQ_TLS_CERT_PATH: z.string().optional(),
+  RABBITMQ_TLS_KEY_PATH: z.string().optional(),
+  RABBITMQ_TLS_CA_PATH: z.string().optional(),
+  RABBITMQ_TLS_SERVER_NAME: z.string().optional(),
+  RABBITMQ_TLS_REJECT_UNAUTHORIZED: z.coerce.boolean().default(true),
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
@@ -294,6 +300,13 @@ function buildConfig(env: ParsedEnv) {
       prefetchCount: env.RABBITMQ_PREFETCH_COUNT,
       reconnectDelayMs: env.RABBITMQ_RECONNECT_DELAY_MS,
       maxReconnectAttempts: env.RABBITMQ_MAX_RECONNECT_ATTEMPTS,
+      tls: {
+        certPath: env.RABBITMQ_TLS_CERT_PATH,
+        keyPath: env.RABBITMQ_TLS_KEY_PATH,
+        caPath: env.RABBITMQ_TLS_CA_PATH,
+        servername: env.RABBITMQ_TLS_SERVER_NAME,
+        rejectUnauthorized: env.RABBITMQ_TLS_REJECT_UNAUTHORIZED,
+      },
     },
 
     opencode: {
