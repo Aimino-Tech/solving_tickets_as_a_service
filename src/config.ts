@@ -130,6 +130,7 @@ const envSchema = z.object({
 
   // Feature flags
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
+  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
@@ -146,9 +147,9 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
-  // Feature Flags
-  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
-  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
+  // Admin API
+  ADMIN_API_KEY: z.string().optional(),
+  ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
 
   // Metering / Usage Tracking
   METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
@@ -261,6 +262,11 @@ function buildConfig(env: ParsedEnv) {
       botToken: env.SLACK_BOT_TOKEN,
       signingSecret: env.SLACK_SIGNING_SECRET,
       interactionsPath: env.SLACK_INTERACTIONS_PATH,
+    },
+
+    admin: {
+      apiKey: env.ADMIN_API_KEY ?? '',
+      rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
     },
 
     stas: {
