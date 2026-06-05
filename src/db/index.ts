@@ -1,0 +1,11 @@
+/**
+ * Database barrel export.
+ *
+ * Provides access to connection, migrations, schema, and repositories.
+ */
+
+export { getPool, queryWithRetry, startHealthChecks, stopHealthChecks, closePool } from './connection.js';
+export { runMigrations, rollbackLastBatch } from './migrate.js';
+
+export * from './schema/index.js';
+export * from './repositories/index.js';

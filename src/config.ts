@@ -123,6 +123,13 @@ const envSchema = z.object({
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
+
+  // Database
+  DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
+  DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
+  DATABASE_SSL: z.coerce.boolean().default(false),
+
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -229,6 +236,13 @@ function buildConfig(env: ParsedEnv) {
       price100Credits: env.STRIPE_PRICE_100_CREDITS,
       price500Credits: env.STRIPE_PRICE_500_CREDITS,
       price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
+    },
+
+    database: {
+      url: env.DATABASE_URL,
+      poolMin: env.DATABASE_POOL_MIN,
+      poolMax: env.DATABASE_POOL_MAX,
+      ssl: env.DATABASE_SSL,
     },
 
     fixTimeoutMs: env.FIX_TIMEOUT_MS,
