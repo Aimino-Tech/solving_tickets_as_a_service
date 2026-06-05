@@ -66,6 +66,16 @@ const envSchema = z.object({
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
 
+  // GitLab
+  GITLAB_URL: z.string().default('https://gitlab.com'),
+  GITLAB_TOKEN: z.string().optional(),
+  GITLAB_WEBHOOK_SECRET: z.string().optional(),
+
+  // Bitbucket
+  BITBUCKET_USERNAME: z.string().optional(),
+  BITBUCKET_APP_PASSWORD: z.string().optional(),
+  BITBUCKET_WEBHOOK_SECRET: z.string().optional(),
+
   // Slack notifications
   SLACK_WEBHOOK_URL: z.string().optional(),
   SLACK_CHANNEL: z.string().optional(),
@@ -129,6 +139,18 @@ function buildConfig(env: ParsedEnv) {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
+    },
+
+    gitlab: {
+      url: env.GITLAB_URL,
+      token: env.GITLAB_TOKEN ?? '',
+      webhookSecret: env.GITLAB_WEBHOOK_SECRET ?? '',
+    },
+
+    bitbucket: {
+      username: env.BITBUCKET_USERNAME ?? '',
+      appPassword: env.BITBUCKET_APP_PASSWORD ?? '',
+      webhookSecret: env.BITBUCKET_WEBHOOK_SECRET ?? '',
     },
 
     openai: {
