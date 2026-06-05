@@ -1,7 +1,7 @@
 /**
  * Credit cost configuration per model.
  *
- * Costs are configurable via environment variables with sensible defaults.
+ * Costs are read from the Zod-validated config object.
  * The base cost for each model/layer is multiplied by a sandbox time factor
  * when the actual sandbox duration deviates from the baseline.
  *
@@ -51,25 +51,17 @@ export interface CostConfig {
   sandboxMultiplierMax: number;
 }
 
-// ---------------------------------------------------------------------------
-// Defaults
-// ---------------------------------------------------------------------------
-
 const DEFAULTS: CostConfig = {
   triage: 1,
   opencodePrimary: 10,
   opencodeFallback: 5,
   prCreation: 2,
   retryPenalty: 3,
-  baselineSandboxDurationMs: 300_000, // 5 min
+  baselineSandboxDurationMs: 300_000,
   freeMonthlyCredits: 100,
   sandboxMultiplierMin: 0.5,
   sandboxMultiplierMax: 2.0,
 };
-
-// ---------------------------------------------------------------------------
-// Load from environment
-// ---------------------------------------------------------------------------
 
 function envInt(key: string, fallback: number): number {
   const raw = process.env[key];
@@ -85,19 +77,30 @@ function envFloat(key: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-// ---------------------------------------------------------------------------
-// Singleton
-// ---------------------------------------------------------------------------
-
 let _costConfig: CostConfig | null = null;
 
-/**
- * Get the current cost configuration, loading from env vars on first call.
- */
-export function getCostConfig(): CostConfig {
-  if (_costConfig) return _costConfig;
+function loadFromConfig(): CostConfig | null {
+  try {
+    const mod = require('../config.js');
+    const cfg = mod.config;
+    return {
+      triage: cfg.metering.costTriage,
+      opencodePrimary: cfg.metering.costOpencodePrimary,
+      opencodeFallback: cfg.metering.costOpencodeFallback,
+      prCreation: cfg.metering.costPrCreation,
+      retryPenalty: cfg.metering.costRetryPenalty,
+      baselineSandboxDurationMs: cfg.metering.baselineSandboxMs,
+      freeMonthlyCredits: cfg.metering.freeMonthlyCredits,
+      sandboxMultiplierMin: cfg.metering.sandboxMultiplierMin,
+      sandboxMultiplierMax: cfg.metering.sandboxMultiplierMax,
+    };
+  } catch {
+    return null;
+  }
+}
 
-  _costConfig = {
+function loadFromEnv(): CostConfig {
+  return {
     triage: envInt('METERING_COST_TRIAGE', DEFAULTS.triage),
     opencodePrimary: envInt('METERING_COST_OPENCODE_PRIMARY', DEFAULTS.opencodePrimary),
     opencodeFallback: envInt('METERING_COST_OPENCODE_FALLBACK', DEFAULTS.opencodeFallback),
@@ -108,7 +111,11 @@ export function getCostConfig(): CostConfig {
     sandboxMultiplierMin: envFloat('METERING_SANDBOX_MULTIPLIER_MIN', DEFAULTS.sandboxMultiplierMin),
     sandboxMultiplierMax: envFloat('METERING_SANDBOX_MULTIPLIER_MAX', DEFAULTS.sandboxMultiplierMax),
   };
+}
 
+export function getCostConfig(): CostConfig {
+  if (_costConfig) return _costConfig;
+  _costConfig = loadFromConfig() ?? loadFromEnv();
   return _costConfig;
 }
 

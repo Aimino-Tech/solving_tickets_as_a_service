@@ -22,6 +22,9 @@ import { config } from '../config.js';
 import { enqueueIssue } from '../queue/issueQueue.js';
 import { rootLogger } from '../utils/logger.js';
 import type { BillingPlan, IssueJobData } from '../utils/types.js';
+import { rateLimiter } from '../ratelimit/limiter.js';
+import { getRateLimitForAccount } from '../ratelimit/tiers.js';
+import { getTierForAccount } from '../ratelimit/tiers.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
 
@@ -62,6 +65,8 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
       'Received issues.labeled with target label',
     );
 
+    const tier = getTierForAccount(payload.installation?.id ?? 0);
+    const priorityMap: Record<string, number> = { enterprise: 10, pro: 20, free: 30 };
     const jobData: IssueJobData = {
       installationId: payload.installation?.id ?? 0,
       repoOwner: payload.repository.owner.login,
@@ -70,6 +75,8 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
       issueNumber: payload.issue.number,
       issueTitle: payload.issue.title,
       issueBody: payload.issue.body,
+      billingPlan: tier,
+      priority: priorityMap[tier] ?? 30,
     };
 
     if (!jobData.installationId) {
@@ -96,6 +103,31 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
       log.warn({ err: String(storageErr) }, 'Failed to save pending RunRecord');
     }
 
+    // ── Rate limit check ─────────────────────────────────────────
+    const repo = `${jobData.repoOwner}/${jobData.repoName}`;
+    const accountLimits = getRateLimitForAccount(jobData.installationId);
+    const accountLimitResult = await rateLimiter.checkLimit('account', String(jobData.installationId), accountLimits.max);
+    const repoLimitResult = await rateLimiter.checkLimit('repo', repo, config.stas.rateLimit.repoLimit);
+
+    if (!accountLimitResult.allowed) {
+      log.warn(
+        { installationId: jobData.installationId, current: accountLimitResult.current, limit: accountLimitResult.limit },
+        'Account rate limit exceeded — not enqueuing',
+      );
+      return;
+    }
+
+    if (!repoLimitResult.allowed) {
+      log.warn(
+        { repo, current: repoLimitResult.current, limit: repoLimitResult.limit },
+        'Repo rate limit exceeded — not enqueuing',
+      );
+      return;
+    }
+
+    // Record the rate limit hit
+    await rateLimiter.increment('account', String(jobData.installationId), accountLimits.max);
+    await rateLimiter.increment('repo', repo, config.stas.rateLimit.repoLimit);
     try {
       await enqueueIssue(queue, jobData);
     } catch (err) {
@@ -127,6 +159,8 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
         'Target issue edited — re-enqueuing',
       );
 
+      const tier = getTierForAccount(payload.installation?.id ?? 0);
+      const priorityMap: Record<string, number> = { enterprise: 10, pro: 20, free: 30 };
       const jobData: IssueJobData = {
         installationId: payload.installation?.id ?? 0,
         repoOwner: payload.repository.owner.login,
@@ -135,9 +169,37 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
         issueNumber: payload.issue.number,
         issueTitle: payload.issue.title,
         issueBody: payload.issue.body,
+        billingPlan: tier,
+        priority: priorityMap[tier] ?? 30,
       };
 
       if (jobData.installationId) {
+        // ── Rate limit check ─────────────────────────────────────
+        const repo = `${jobData.repoOwner}/${jobData.repoName}`;
+        const accountLimits = getRateLimitForAccount(jobData.installationId);
+        const accountLimitResult = await rateLimiter.checkLimit('account', String(jobData.installationId), accountLimits.max);
+        const repoLimitResult = await rateLimiter.checkLimit('repo', repo, config.stas.rateLimit.repoLimit);
+
+        if (!accountLimitResult.allowed) {
+          log.warn(
+            { installationId: jobData.installationId, current: accountLimitResult.current, limit: accountLimitResult.limit },
+            'Account rate limit exceeded — not enqueuing edited issue',
+          );
+          return;
+        }
+
+        if (!repoLimitResult.allowed) {
+          log.warn(
+            { repo, current: repoLimitResult.current, limit: repoLimitResult.limit },
+            'Repo rate limit exceeded — not enqueuing edited issue',
+          );
+          return;
+        }
+
+        // Record the rate limit hit
+        await rateLimiter.increment('account', String(jobData.installationId), accountLimits.max);
+        await rateLimiter.increment('repo', repo, config.stas.rateLimit.repoLimit);
+
         try {
           await enqueueIssue(queue, jobData);
         } catch (err) {

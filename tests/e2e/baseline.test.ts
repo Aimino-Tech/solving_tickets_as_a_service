@@ -11,7 +11,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from './harness/index.js';
-import { sampleIssueLabeledPayload } from './fixtures/webhooks/github.js';
+import { githubIssuesLabeledStasFix, githubIssuesOpened } from './fixtures/webhooks/github.js';
 import type { TestHarness } from './harness/index.js';
 
 let harness: TestHarness;
@@ -48,7 +48,7 @@ describe('Health endpoint', () => {
 
 describe('GitHub webhook — issues.labeled with stas:fix', () => {
   it('should respond 202 Accepted when target label is present', async () => {
-    const payload = sampleIssueLabeledPayload();
+    const payload = githubIssuesLabeledStasFix();
     const res = await harness.sendWebhook('/webhook', payload);
 
     expect(res.status).toBe(202);
@@ -57,7 +57,21 @@ describe('GitHub webhook — issues.labeled with stas:fix', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test 3: 404 handling
+// Test 3: Webhook without stas:fix label is still accepted
+// ---------------------------------------------------------------------------
+
+describe('GitHub webhook — issues.opened (no target label)', () => {
+  it('should respond 202 Accepted even without target label', async () => {
+    const payload = githubIssuesOpened();
+    const res = await harness.sendWebhook('/webhook', payload);
+
+    expect(res.status).toBe(202);
+    expect(res.body).toEqual({ accepted: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 4: Unknown route returns 404
 // ---------------------------------------------------------------------------
 
 describe('404 handling', () => {
@@ -71,7 +85,7 @@ describe('404 handling', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test 4: Mock GitHub API server is reachable
+// Test 5: Mock GitHub API server is reachable
 // ---------------------------------------------------------------------------
 
 describe('Mock servers', () => {
@@ -87,7 +101,7 @@ describe('Mock servers', () => {
 
   it('should track requests received by mock GitHub API', async () => {
     // Send a webhook and verify the mock GitHub API receives requests
-    const payload = sampleIssueLabeledPayload();
+    const payload = githubIssuesLabeledStasFix();
 
     // Reset request tracking
     harness.githubApi.receivedRequests.length = 0;
@@ -107,12 +121,12 @@ describe('Mock servers', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test 5: Webhook with x-github-event header routed correctly
+// Test 6: Webhook with x-github-event header routed correctly
 // ---------------------------------------------------------------------------
 
 describe('GitHub webhook routing', () => {
   it('should handle /webhook/github endpoint', async () => {
-    const payload = sampleIssueLabeledPayload();
+    const payload = githubIssuesLabeledStasFix();
     const bodyStr = JSON.stringify(payload);
 
     const res = await fetch(`${harness.baseUrl}/webhook/github`, {
