@@ -93,9 +93,6 @@ const envSchema = z.object({
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
-  // Admin API
-  ADMIN_API_KEY: z.string().optional(),
-
   // Webhook Retry Worker
   WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
   WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
@@ -150,37 +147,12 @@ const envSchema = z.object({
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
   FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
-  // CI Monitor
-  CI_MONITOR_ENABLED: z.coerce.boolean().default(false),
-  CI_MONITOR_REPOS: z.string().default(""),
-  CI_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(2),
-  CI_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(300000),
-
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
   DATABASE_SSL: z.coerce.boolean().default(false),
   DATABASE_ENABLE_AUDIT_PERSISTENCE: z.coerce.boolean().default(false),
-
-  // ── Security ──────────────────────────────────────────────────────────────
-  ADMIN_API_KEY: z.string().optional(),
-  CORS_ORIGIN: z.string().default('*'),
-  REQUEST_BODY_LIMIT: z.string().default('1mb'),
-  WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
-
-  // ── IP Allowlist ──
-  IP_ALLOWLIST_ENABLED: z.coerce.boolean().default(false),
-  IP_ALLOWLIST: z.string().default(''),
-
-  // ── Sandbox Security ──
-  SANDBOX_PRIVILEGED: z.coerce.boolean().default(false),
-  SANDBOX_READONLY_ROOT: z.coerce.boolean().default(true),
-  SANDBOX_MEMORY_LIMIT: z.string().default('512m'),
-  SANDBOX_CPU_LIMIT: z.string().default('0.5'),
-  SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
-  SANDBOX_DISK_LIMIT: z.string().default('2gb'),
-  SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
 
   // Rate limiting (credit-based)
   STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
@@ -405,12 +377,6 @@ function buildConfig(env: ParsedEnv) {
       batchSize: env.WEBHOOK_RETRY_BATCH_SIZE,
     },
 
-    usage: {
-      creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
-      creditsTriage: env.USAGE_CREDITS_TRIAGE,
-      creditsSandbox: env.USAGE_CREDITS_SANDBOX,
-    },
-
     rateLimit: {
       defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
       ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
@@ -480,28 +446,6 @@ function buildConfig(env: ParsedEnv) {
       defaultRepoOwner: env.TRACKER_DEFAULT_REPO_OWNER,
       defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME,
       installationId: env.TRACKER_INSTALLATION_ID || 0,
-    },
-
-    // ── Security ────────────────────────────────────────────────────────────
-    security: {
-      adminApiKey: env.ADMIN_API_KEY,
-      corsOrigin: env.CORS_ORIGIN,
-      requestBodyLimit: env.REQUEST_BODY_LIMIT,
-      webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
-
-      ipAllowlist: {
-        enabled: env.IP_ALLOWLIST_ENABLED,
-        ips: env.IP_ALLOWLIST.split(',').map((s) => s.trim()).filter(Boolean),
-      },
-      sandbox: {
-        privileged: env.SANDBOX_PRIVILEGED,
-        readOnlyRoot: env.SANDBOX_READONLY_ROOT,
-        memoryLimit: env.SANDBOX_MEMORY_LIMIT,
-        cpuLimit: env.SANDBOX_CPU_LIMIT,
-        pidsLimit: env.SANDBOX_PIDS_LIMIT,
-        diskLimit: env.SANDBOX_DISK_LIMIT,
-        networkEnabled: env.SANDBOX_NETWORK_ENABLED,
-      },
     },
 
     metering: {
