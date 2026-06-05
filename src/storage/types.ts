@@ -126,4 +126,10 @@ export interface StorageBackend {
    * the runs matching the supplied filter.
    */
   getRunStats(filter: RunFilter): Promise<RunStats>;
+
+  /**
+   * Optional. Release any underlying resources (database connections,
+   * file handles, etc.). Called during graceful shutdown.
+   */
+  close?(): void | Promise<void>;
 }

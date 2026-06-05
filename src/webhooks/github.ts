@@ -80,9 +80,22 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
       return;
     }
 
-    // TODO(AIM-1203): When storage backend is initialized, save a 'pending' RunRecord
-    // here before enqueueing, so every labeled issue is recorded. The worker
-    // will then update the record to 'running' / 'completed' / 'failed'.
+    // Save a 'pending' RunRecord before enqueueing, so every labeled issue
+    // is recorded. The worker will update the record to 'running' / 'completed' / 'failed'.
+    try {
+      const { createStorage } = await import('../storage/index.js');
+      const storage = await createStorage();
+      await storage.saveRun({
+        installationId: jobData.installationId,
+        repoOwner: jobData.repoOwner,
+        repoName: jobData.repoName,
+        issueNumber: jobData.issueNumber,
+        status: 'pending',
+      });
+    } catch (storageErr) {
+      log.warn({ err: String(storageErr) }, 'Failed to save pending RunRecord');
+    }
+
     try {
       await enqueueIssue(queue, jobData);
     } catch (err) {

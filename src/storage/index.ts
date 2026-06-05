@@ -68,8 +68,8 @@ export async function createStorage(): Promise<StorageBackend> {
  * Close / tear down the active storage backend (e.g. on graceful shutdown).
  */
 export async function closeStorage(): Promise<void> {
-  if (storageInstance instanceof SQLiteStorage) {
-    storageInstance.close();
+  if (storageInstance && typeof storageInstance.close === 'function') {
+    await storageInstance.close();
   }
   storageInstance = null;
   log.info('Storage backend closed');

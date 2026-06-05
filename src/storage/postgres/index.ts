@@ -253,4 +253,11 @@ export class PostgresStorage implements StorageBackend {
       avgDurationMs: Math.round(Number(row.avg_duration_ms)),
     };
   }
+
+  /** Release the database connection pool. */
+  async close(): Promise<void> {
+    const { closePool } = await import('../../db/connection.js');
+    await closePool();
+    log.info('Postgres storage closed');
+  }
 }
