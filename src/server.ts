@@ -24,6 +24,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
 import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
+import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
@@ -89,6 +90,10 @@ export function createApp(): express.Application {
     message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
   });
   app.use('/webhook', limiter);
+
+  // ── Slack Bolt receiver (interactive messages) ───────────────────
+  const bolt = getSlackBoltApp();
+  bolt.mountOn(app);
 
   // ── Health check ─────────────────────────────────────────────────
   app.get('/health', (_req: Request, res: Response) => {

@@ -1,7 +1,7 @@
 /**
  * Unit tests for src/github/messages.ts
  *
- * Covers all 12 message templates plus edge cases:
+ * Covers all 17 message templates plus edge cases:
  * 1. highConfidenceIssueComment
  * 2. draftIssueComment
  * 3. lowConfidenceComment
@@ -14,6 +14,11 @@
  * 10. questionSkipComment
  * 11. ciFailureComment
  * 12. buildPRBody
+ * 13. timeoutComment
+ * 14. retryComment
+ * 15. modelFallbackComment
+ * 16. queueRetryComment
+ * 17. deadLetterComment
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -39,7 +44,14 @@ import {
   noFixComment,
   noResultComment,
   questionSkipComment,
-} from '../../github/messages.js';
+  ciFailureComment,
+  buildPRBody,
+  timeoutComment,
+  retryComment,
+  modelFallbackComment,
+  queueRetryComment,
+  deadLetterComment,
+} from "../../github/messages.js";
 
 describe('github/messages', () => {
   // ── Shared test data ──────────────────────────────────────────────────
@@ -495,6 +507,116 @@ describe('github/messages', () => {
     it('includes the agent summary in the body', () => {
       const body = buildPRBody(prBodyParams);
       expect(body).toContain(highResult.summary);
+    });
+  });
+
+  // ── 13. timeoutComment ─────────────────────────────────────────────────
+
+  describe("timeoutComment", () => {
+    it("mentions the phase name", () => {
+      const msg = timeoutComment("6-opencode-agent", 600_000);
+      expect(msg).toContain("6-opencode-agent");
+    });
+
+    it("includes the timeout duration in seconds", () => {
+      const msg = timeoutComment("1-triage", 30_000);
+      expect(msg).toContain("30s");
+    });
+
+    it("includes bot signature", () => {
+      const msg = timeoutComment("3-boot-sandbox", 300_000);
+      expect(msg).toContain("STAS");
+    });
+  });
+
+  // ── 14. retryComment ───────────────────────────────────────────────────
+
+  describe("retryComment", () => {
+    it("includes attempt number and model name", () => {
+      const msg = retryComment(2, "claude-haiku", "Request timed out");
+      expect(msg).toContain("Attempt 2");
+      expect(msg).toContain("claude-haiku");
+    });
+
+    it("includes the error message", () => {
+      const msg = retryComment(1, "gpt-4o", "HTTP 500 Internal Server Error");
+      expect(msg).toContain("HTTP 500");
+    });
+
+    it("truncates long error messages", () => {
+      const longError = "x".repeat(2000);
+      const msg = retryComment(1, "model", longError);
+      expect(msg).toContain("x".repeat(1000));
+      expect(msg).not.toContain("x".repeat(2000));
+    });
+
+    it("includes bot signature", () => {
+      const msg = retryComment(1, "model", "error");
+      expect(msg).toContain("STAS");
+    });
+  });
+
+  // ── 15. modelFallbackComment ───────────────────────────────────────────
+
+  describe("modelFallbackComment", () => {
+    it("mentions the fallback model", () => {
+      const msg = modelFallbackComment("gpt-4o", "Primary model failed");
+      expect(msg).toContain("gpt-4o");
+    });
+
+    it("includes the previous error", () => {
+      const msg = modelFallbackComment("claude-haiku", "Rate limit exceeded");
+      expect(msg).toContain("Rate limit exceeded");
+    });
+
+    it("includes bot signature", () => {
+      const msg = modelFallbackComment("model", "error");
+      expect(msg).toContain("STAS");
+    });
+  });
+
+  // ── 16. queueRetryComment ──────────────────────────────────────────────
+
+  describe("queueRetryComment", () => {
+    it("shows attempt and max retries", () => {
+      const msg = queueRetryComment(2, 4, "Redis connection lost");
+      expect(msg).toContain("2/4");
+    });
+
+    it("includes the error message", () => {
+      const msg = queueRetryComment(1, 3, "BullMQ job timeout");
+      expect(msg).toContain("BullMQ job timeout");
+    });
+
+    it("includes bot signature", () => {
+      const msg = queueRetryComment(1, 4, "error");
+      expect(msg).toContain("STAS");
+    });
+  });
+
+  // ── 17. deadLetterComment ──────────────────────────────────────────────
+
+  describe("deadLetterComment", () => {
+    it("mentions max retries exceeded", () => {
+      const msg = deadLetterComment("All retries exhausted");
+      expect(msg).toContain("Max Retries Exceeded");
+    });
+
+    it("includes the final error", () => {
+      const msg = deadLetterComment("Unhandled exception: TypeError");
+      expect(msg).toContain("TypeError");
+    });
+
+    it("truncates long error messages", () => {
+      const longError = "y".repeat(2000);
+      const msg = deadLetterComment(longError);
+      expect(msg).toContain("y".repeat(1000));
+      expect(msg).not.toContain("y".repeat(2000));
+    });
+
+    it("includes bot signature", () => {
+      const msg = deadLetterComment("error");
+      expect(msg).toContain("STAS");
     });
   });
 });
