@@ -6,13 +6,9 @@
  * and edge-case handling.
  */
 
-import { describe, it, expect, vi } from "vitest";
-import {
-  buildTools,
-  dispatchNamedTool,
-  toOpenAiTools,
-} from "../../agent/tools.js";
+import { describe, expect, it, vi } from "vitest";
 import type { SandboxTools } from "../../agent/tools.js";
+import { buildTools, dispatchNamedTool, toOpenAiTools } from "../../agent/tools.js";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -25,9 +21,7 @@ function createMockSandbox() {
     readFile: vi.fn().mockResolvedValue(""),
     writeFile: vi.fn().mockResolvedValue(undefined),
     exec: vi.fn().mockResolvedValue({ stdout: "", stderr: "", exitCode: 0 }),
-    runTests: vi
-      .fn()
-      .mockResolvedValue({ passed: true, output: "", command: "", durationMs: 0 }),
+    runTests: vi.fn().mockResolvedValue({ passed: true, output: "", command: "", durationMs: 0 }),
     formatCode: vi.fn().mockResolvedValue(undefined),
     pushBranch: vi.fn().mockResolvedValue(undefined),
   };
@@ -181,9 +175,7 @@ describe("toOpenAiTools", () => {
     for (let i = 0; i < tools.length; i++) {
       expect(openaiTools[i].function.name).toBe(tools[i].name);
       expect(openaiTools[i].function.description).toBe(tools[i].description);
-      expect(openaiTools[i].function.parameters).toBe(
-        tools[i].inputSchema,
-      );
+      expect(openaiTools[i].function.parameters).toBe(tools[i].inputSchema);
     }
   });
 
@@ -262,10 +254,7 @@ describe("write_file tool", () => {
       content: "export const x = 1;",
     });
 
-    expect(sandbox.writeFile).toHaveBeenCalledWith(
-      "/src/out.ts",
-      "export const x = 1;",
-    );
+    expect(sandbox.writeFile).toHaveBeenCalledWith("/src/out.ts", "export const x = 1;");
     expect(result).toContain("Successfully wrote");
     expect(result).toContain("/src/out.ts");
   });
@@ -341,13 +330,7 @@ describe("patch_file tool", () => {
     sandbox.readFile.mockResolvedValue("line1\nline2\nline3");
     sandbox.writeFile.mockResolvedValue(undefined);
     const tools = buildTools(sandbox);
-    const diff = [
-      "@@ -1,3 +1,3 @@",
-      " line1",
-      "-line2",
-      "+modified2",
-      " line3",
-    ].join("\n");
+    const diff = ["@@ -1,3 +1,3 @@", " line1", "-line2", "+modified2", " line3"].join("\n");
 
     const result = await dispatchNamedTool(tools, "patch_file", {
       file_path: "test.ts",
@@ -355,10 +338,7 @@ describe("patch_file tool", () => {
     });
 
     expect(sandbox.readFile).toHaveBeenCalledWith("test.ts");
-    expect(sandbox.writeFile).toHaveBeenCalledWith(
-      "test.ts",
-      "line1\nmodified2\nline3",
-    );
+    expect(sandbox.writeFile).toHaveBeenCalledWith("test.ts", "line1\nmodified2\nline3");
     expect(result).toContain("Successfully patched");
   });
 
@@ -386,9 +366,7 @@ describe("patch_file tool", () => {
       diff: "  context line\n+new line (no-op in simple mode)",
     });
 
-    expect(result).toContain(
-      "Warning: diff applied but file content did not change",
-    );
+    expect(result).toContain("Warning: diff applied but file content did not change");
   });
 
   it("handles sandbox.readFile or writeFile errors", async () => {
@@ -422,10 +400,7 @@ describe("replace_lines tool", () => {
     });
 
     expect(sandbox.readFile).toHaveBeenCalledWith("/test.ts");
-    expect(sandbox.writeFile).toHaveBeenCalledWith(
-      "/test.ts",
-      "line1\nreplacement\nline4",
-    );
+    expect(sandbox.writeFile).toHaveBeenCalledWith("/test.ts", "line1\nreplacement\nline4");
     expect(result).toBe("Replaced lines 2-3 in /test.ts");
   });
 
@@ -465,9 +440,7 @@ describe("replace_lines tool", () => {
     const sandbox = createMockSandbox();
     const tools = buildTools(sandbox);
 
-    expect(
-      await dispatchNamedTool(tools, "replace_lines", {}),
-    ).toContain("Error");
+    expect(await dispatchNamedTool(tools, "replace_lines", {})).toContain("Error");
     expect(
       await dispatchNamedTool(tools, "replace_lines", {
         file_path: "",
@@ -507,12 +480,8 @@ describe("search_codebase tool", () => {
       pattern: "foo",
     });
 
-    expect(sandbox.exec).toHaveBeenCalledWith(
-      expect.stringContaining("rg"),
-    );
-    expect(sandbox.exec).toHaveBeenCalledWith(
-      expect.stringContaining("foo"),
-    );
+    expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining("rg"));
+    expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining("foo"));
     expect(result).toContain("function foo()");
   });
 
@@ -939,12 +908,8 @@ describe("list_directory tool", () => {
       path: "src",
     });
 
-    expect(sandbox.exec).toHaveBeenCalledWith(
-      expect.stringContaining("find src"),
-    );
-    expect(sandbox.exec).toHaveBeenCalledWith(
-      expect.stringContaining("-maxdepth 1"),
-    );
+    expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining("find src"));
+    expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining("-maxdepth 1"));
     expect(result).toContain("src/test.ts");
   });
 
@@ -962,9 +927,7 @@ describe("list_directory tool", () => {
       depth: 3,
     });
 
-    expect(sandbox.exec).toHaveBeenCalledWith(
-      expect.stringContaining("-maxdepth 3"),
-    );
+    expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining("-maxdepth 3"));
   });
 
   it("returns error for empty path", async () => {
@@ -1008,12 +971,8 @@ describe("get_line_numbers tool", () => {
       pattern: "function",
     });
 
-    expect(sandbox.exec).toHaveBeenCalledWith(
-      expect.stringContaining("grep"),
-    );
-    expect(sandbox.exec).toHaveBeenCalledWith(
-      expect.stringContaining("src/test.ts"),
-    );
+    expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining("grep"));
+    expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining("src/test.ts"));
     expect(result).toContain("function foo()");
   });
 
@@ -1040,9 +999,7 @@ describe("get_line_numbers tool", () => {
     const sandbox = createMockSandbox();
     const tools = buildTools(sandbox);
 
-    expect(
-      await dispatchNamedTool(tools, "get_line_numbers", {}),
-    ).toBe("Error: file_path and pattern are required");
+    expect(await dispatchNamedTool(tools, "get_line_numbers", {})).toBe("Error: file_path and pattern are required");
     expect(
       await dispatchNamedTool(tools, "get_line_numbers", {
         file_path: "",
@@ -1081,12 +1038,8 @@ describe("find_symbol tool", () => {
       symbol: "foo",
     });
 
-    expect(sandbox.exec).toHaveBeenCalledWith(
-      expect.stringContaining("rg"),
-    );
-    expect(sandbox.exec).toHaveBeenCalledWith(
-      expect.stringContaining("foo"),
-    );
+    expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining("rg"));
+    expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining("foo"));
     expect(result).toContain("ripgrep results");
     expect(result).toContain("export function foo()");
   });

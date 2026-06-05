@@ -5,8 +5,8 @@
  * predictable across all interactions.
  */
 
-import { config } from "../config.js";
 import type { AgentResult } from "../agent/types.js";
+import { config } from "../config.js";
 
 const BOT_NAME = config.stas.botName;
 const BOT_SIGNATURE = `> — ${BOT_NAME} 🤖`;
@@ -14,10 +14,7 @@ const BOT_SIGNATURE = `> — ${BOT_NAME} 🤖`;
 /**
  * High-confidence fix — PR is ready for review (non-draft).
  */
-export function highConfidenceIssueComment(
-  prNumber: number,
-  result: AgentResult,
-): string {
+export function highConfidenceIssueComment(prNumber: number, result: AgentResult): string {
   return [
     `### ✅ Fix Ready — PR ##${prNumber}`,
     "",
@@ -43,10 +40,7 @@ export function highConfidenceIssueComment(
 /**
  * Medium-confidence fix — draft PR created, needs human review.
  */
-export function draftIssueComment(
-  prNumber: number,
-  result: AgentResult,
-): string {
+export function draftIssueComment(prNumber: number, result: AgentResult): string {
   return [
     `### ✏️ Draft PR Ready — PR ##${prNumber}`,
     "",
@@ -58,9 +52,7 @@ export function draftIssueComment(
     `|---|---|`,
     `| PR | [#${prNumber}](https://github.com/pulls/${prNumber}) |`,
     `| Branch | \`${result.branchName ?? "auto-fix"}\` |`,
-    result.errors?.length
-      ? `\n**Notes**:\n${result.errors.map((e) => `- ${e}`).join("\n")}`
-      : "",
+    result.errors?.length ? `\n**Notes**:\n${result.errors.map((e) => `- ${e}`).join("\n")}` : "",
     "",
     "Please review the draft, make any needed changes, and mark it ready for review.",
     BOT_SIGNATURE,
@@ -72,10 +64,7 @@ export function draftIssueComment(
 /**
  * Low-confidence fix — tests are failing, but changes are pushed to a branch.
  */
-export function lowConfidenceComment(
-  result: AgentResult,
-  testOutput: string,
-): string {
+export function lowConfidenceComment(result: AgentResult, testOutput: string): string {
   return [
     `### ⚠️ Attempted Fix — Tests Need Attention`,
     "",
@@ -86,9 +75,7 @@ export function lowConfidenceComment(
     testOutput
       ? `<details><summary>📋 Test Output</summary>\n\n\`\`\`\n${testOutput.slice(0, 10000)}\n\`\`\`\n</details>`
       : "",
-    result.errors?.length
-      ? `\n**Errors encountered**:\n${result.errors.map((e) => `- ${e}`).join("\n")}`
-      : "",
+    result.errors?.length ? `\n**Errors encountered**:\n${result.errors.map((e) => `- ${e}`).join("\n")}` : "",
     "",
     "A branch with the attempted changes has been pushed. You can inspect it and continue from there.",
     BOT_SIGNATURE,
@@ -104,29 +91,18 @@ export function noFixComment(
   result: AgentResult,
   relevantPRs?: Array<{ url: string; title: string; state: string }>,
 ): string {
-  const lines: string[] = [
-    `### ❌ Could Not Fix`,
-    "",
-    result.noFixReason || result.summary,
-    "",
-  ];
+  const lines: string[] = [`### ❌ Could Not Fix`, "", result.noFixReason || result.summary, ""];
 
   if (relevantPRs && relevantPRs.length > 0) {
     lines.push(
       "**Related pull requests**:",
       "",
-      ...relevantPRs.map(
-        (pr) => `- [${pr.title}](${pr.url}) — ${pr.state}`,
-      ),
+      ...relevantPRs.map((pr) => `- [${pr.title}](${pr.url}) — ${pr.state}`),
       "",
     );
   }
 
-  lines.push(
-    "This issue may need manual investigation. Contributions are welcome!",
-    "",
-    BOT_SIGNATURE,
-  );
+  lines.push("This issue may need manual investigation. Contributions are welcome!", "", BOT_SIGNATURE);
 
   return lines.join("\n");
 }
@@ -222,10 +198,7 @@ export function questionSkipComment(): string {
 /**
  * CI failure follow-up — a PR's CI checks failed.
  */
-export function ciFailureComment(
-  prNumber: number,
-  failedChecks: string[],
-): string {
+export function ciFailureComment(prNumber: number, failedChecks: string[]): string {
   return [
     `### ⚠️ CI Checks Failed — PR ##${prNumber}`,
     "",
@@ -250,8 +223,7 @@ export function buildPRBody(params: {
   repoName: string;
   branchName: string;
 }): string {
-  const { issueNumber, result, fileLinks, repoOwner, repoName, branchName } =
-    params;
+  const { issueNumber, result, fileLinks, repoOwner, repoName, branchName } = params;
 
   return [
     `## Summary`,
@@ -262,9 +234,7 @@ export function buildPRBody(params: {
     "",
     `## Changes`,
     "",
-    fileLinks.length > 0
-      ? fileLinks.map((f) => `- \`${f}\``).join("\n")
-      : "_(file list not available)_",
+    fileLinks.length > 0 ? fileLinks.map((f) => `- \`${f}\``).join("\n") : "_(file list not available)_",
     "",
     `## Verification`,
     "",

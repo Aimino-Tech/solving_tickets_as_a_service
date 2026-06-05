@@ -6,66 +6,36 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  NODE_VERSION: "22"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint (Biome)
+  quality:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [22]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
-      - run: npm ci
-      - run: npm run lint
 
-  type-check:
-    name: Type Check (tsc)
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [22]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
-      - run: npm ci
-      - run: npm run typecheck
 
-  test:
-    name: Test (Vitest)
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [22]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
-      - run: npm ci
-      - run: npm test
+      - name: Install dependencies
+        run: npm ci
 
-  build:
-    name: Build (tsc)
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [22]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
-      - run: npm ci
-      - run: npm run build
+      - name: Lint
+        run: npm run lint:ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

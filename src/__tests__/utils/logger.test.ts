@@ -8,7 +8,7 @@
  * (pino-pretty) is instantiated during tests.
  */
 
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Hoisted mock references ─────────────────────────────────────────────────
 // These must be defined via vi.hoisted so they exist when the vi.mock factory runs.
@@ -89,9 +89,7 @@ describe("logger", () => {
 
       const options = mockPino.mock.calls[0][0];
       expect(options).toHaveProperty("redact");
-      expect(options.redact.paths).toContain(
-        'req.headers["x-hub-signature-256"]',
-      );
+      expect(options.redact.paths).toContain('req.headers["x-hub-signature-256"]');
     });
 
     it("includes serializers for req, res, and err", async () => {

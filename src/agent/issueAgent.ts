@@ -30,24 +30,21 @@
 
 import OpenAI from "openai";
 import { config } from "../config.js";
-import { getOctokit, getInstallationToken } from "../github/auth.js";
 import { ActionDispatcher } from "../github/actionDispatcher.js";
+import { getInstallationToken, getOctokit } from "../github/auth.js";
+import * as messages from "../github/messages.js";
 import { SandboxExecutor } from "../sandbox/executor.js";
+import { jobLogger, rootLogger } from "../utils/logger.js";
+import type { IssueJobData } from "../utils/types.js";
 import { buildTools, type SandboxTools } from "./tools.js";
 import type { AgentResult, TriageResult } from "./types.js";
-import type { IssueJobData } from "../utils/types.js";
-import { rootLogger, jobLogger } from "../utils/logger.js";
-import * as messages from "../github/messages.js";
 
 const log = rootLogger.child({ module: "issue-agent" });
 
 /**
  * Run the full agent pipeline for an issue.
  */
-export async function runIssueAgent(
-  data: IssueJobData,
-  jobId?: string,
-): Promise<AgentResult> {
+export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise<AgentResult> {
   const logger = jobLogger({
     jobId,
     installationId: data.installationId,
@@ -55,15 +52,7 @@ export async function runIssueAgent(
     issueNumber: data.issueNumber,
   });
 
-  const {
-    installationId,
-    repoOwner,
-    repoName,
-    repoPrivate,
-    issueNumber,
-    issueTitle,
-    issueBody,
-  } = data;
+  const { installationId, repoOwner, repoName, repoPrivate, issueNumber, issueTitle, issueBody } = data;
 
   const repoUrl = repoPrivate
     ? `https://github.com/${repoOwner}/${repoName}`
@@ -112,35 +101,39 @@ export async function runIssueAgent(
     // ── Phase 2: Fetch comments ──────────────────────────────────────
     currentPhase = "2-fetch-comments";
     logger.info("Phase 2: Fetching issue comments");
-    const comments = await fetchIssueComments(
+    const comments = await fetchIssueComments(installationId, repoOwner, repoName, issueNumber);
+    await postStatus(
       installationId,
       repoOwner,
       repoName,
       issueNumber,
+      `📖 **Analyzing issue** — reviewed ${comments.length} comments for context.`,
     );
-    await postStatus(installationId, repoOwner, repoName, issueNumber,
-      `📖 **Analyzing issue** — reviewed ${comments.length} comments for context.`);
 
     // ── Phase 3: Boot sandbox ─────────────────────────────────────────
     currentPhase = "3-boot-sandbox";
     logger.info("Phase 3: Booting sandbox");
-    sandbox = new SandboxExecutor(
-      repoUrl,
+    sandbox = new SandboxExecutor(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
+    await sandbox.boot();
+    await postStatus(
+      installationId,
       repoOwner,
       repoName,
-      installationId,
-      getInstallationToken,
+      issueNumber,
+      `⚙️ **Sandbox ready** — cloned repository, detected runtime, installed dependencies.`,
     );
-    await sandbox.boot();
-    await postStatus(installationId, repoOwner, repoName, issueNumber,
-      `⚙️ **Sandbox ready** — cloned repository, detected runtime, installed dependencies.`);
 
     // ── Phase 4: Static analysis ──────────────────────────────────────
     currentPhase = "4-static-analysis";
     logger.info("Phase 4: Running static analysis");
     const analysisResult = await sandbox.analyzeCode();
-    await postStatus(installationId, repoOwner, repoName, issueNumber,
-      `🔬 **Analysis complete** — codebase scanned, issues identified.`);
+    await postStatus(
+      installationId,
+      repoOwner,
+      repoName,
+      issueNumber,
+      `🔬 **Analysis complete** — codebase scanned, issues identified.`,
+    );
 
     // ── Phase 5: Build code intelligence ──────────────────────────────
     currentPhase = "5-code-intelligence";
@@ -150,8 +143,13 @@ export async function runIssueAgent(
     // ── Phase 6: Agent loop via OpenCode ──────────────────────────────
     currentPhase = "6-opencode-agent";
     logger.info("Phase 6: Dispatching to OpenCode");
-    await postStatus(installationId, repoOwner, repoName, issueNumber,
-      `🤖 **Running fix agent** — investigating root cause and writing fix (may take a few minutes).`);
+    await postStatus(
+      installationId,
+      repoOwner,
+      repoName,
+      issueNumber,
+      `🤖 **Running fix agent** — investigating root cause and writing fix (may take a few minutes).`,
+    );
 
     const openCodeResult = await dispatchToOpenCode({
       repoUrl,
@@ -167,17 +165,12 @@ export async function runIssueAgent(
       installationToken: await getInstallationToken(installationId),
     });
 
-      if (!openCodeResult.success) {
+    if (!openCodeResult.success) {
       logger.error({ error: openCodeResult.errors?.[0] }, "OpenCode agent failed");
 
       // Try basic fix approach as fallback
       logger.info("Attempting basic fix fallback");
-      const fallbackResult = await attemptBasicFix(
-        sandbox,
-        data,
-        triage,
-        comments,
-      );
+      const fallbackResult = await attemptBasicFix(sandbox, data, triage, comments);
 
       await sandbox.destroy();
       sandbox = null;
@@ -262,10 +255,7 @@ export async function runIssueAgent(
 /**
  * Classify the issue using a cheap OpenAI model.
  */
-async function classifyIssue(
-  title: string,
-  body: string,
-): Promise<TriageResult> {
+async function classifyIssue(title: string, body: string): Promise<TriageResult> {
   const openai = new OpenAI({ apiKey: config.openai.apiKey });
 
   const prompt = `You are a triage agent. Given a GitHub issue, classify it.
@@ -353,7 +343,9 @@ async function buildCodeIntelligence(sandbox: SandboxExecutor): Promise<CodeInte
 
   try {
     // Get file structure
-    const structure = await sandbox.exec("find . -type f -not -path './node_modules/*' -not -path './.git/*' -not -path './dist/*' 2>/dev/null | head -200");
+    const structure = await sandbox.exec(
+      "find . -type f -not -path './node_modules/*' -not -path './.git/*' -not -path './dist/*' 2>/dev/null | head -200",
+    );
     intel.fileStructure = structure.stdout;
 
     // For TypeScript projects, use tsc to get symbol info
@@ -400,9 +392,7 @@ interface OpenCodeDispatchResult {
  * This is the key differentiator from KintsugiBot — instead of calling
  * the OpenAI SDK for the main agent loop, we call opencode serve.
  */
-async function dispatchToOpenCode(
-  params: OpenCodeDispatchParams,
-): Promise<OpenCodeDispatchResult> {
+async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenCodeDispatchResult> {
   const {
     repoUrl,
     repoOwner,
@@ -462,13 +452,9 @@ async function dispatchToOpenCode(
     const summary = String(result.summary || "Agent completed.");
     const diff = result.diff ? String(result.diff) : undefined;
     const branchName = result.branch ? String(result.branch) : undefined;
-    const testOutput = result.testOutput
-      ? String(result.testOutput)
-      : undefined;
+    const testOutput = result.testOutput ? String(result.testOutput) : undefined;
     const confidence = parseConfidence(result);
-    const errorList = result.errors
-      ? (result.errors as string[])
-      : undefined;
+    const errorList = result.errors ? (result.errors as string[]) : undefined;
 
     return {
       success: true,
@@ -514,7 +500,18 @@ function buildOpenCodePrompt(params: {
   analysisResult: string;
   codeIntel: CodeIntel;
 }): string {
-  const { repoUrl, repoOwner, repoName, issueNumber, issueTitle, issueBody, comments, triage, analysisResult, codeIntel } = params;
+  const {
+    repoUrl,
+    repoOwner,
+    repoName,
+    issueNumber,
+    issueTitle,
+    issueBody,
+    comments,
+    triage,
+    analysisResult,
+    codeIntel,
+  } = params;
 
   return [
     "# STAS Fix Agent",
@@ -529,44 +526,19 @@ function buildOpenCodePrompt(params: {
     "",
     issueBody || "(no description)",
     "",
-    comments.length > 0
-      ? [
-          "## Issue Comments",
-          "",
-          ...comments.map((c) => `> ${c}`),
-          "",
-        ].join("\n")
-      : "",
+    comments.length > 0 ? ["## Issue Comments", "", ...comments.map((c) => `> ${c}`), ""].join("\n") : "",
     "",
     "## Triage Analysis",
     "",
     `**Type**: ${triage.type}`,
     `**Difficulty**: ${triage.difficulty}`,
     `**Summary**: ${triage.summary}`,
-    triage.relevantFiles?.length
-      ? `**Relevant Files**:\n${triage.relevantFiles.map((f) => `- ${f}`).join("\n")}`
-      : "",
+    triage.relevantFiles?.length ? `**Relevant Files**:\n${triage.relevantFiles.map((f) => `- ${f}`).join("\n")}` : "",
     "",
-    analysisResult
-      ? [
-          "## Static Analysis Output",
-          "",
-          "```",
-          analysisResult.slice(0, 2000),
-          "```",
-          "",
-        ].join("\n")
-      : "",
+    analysisResult ? ["## Static Analysis Output", "", "```", analysisResult.slice(0, 2000), "```", ""].join("\n") : "",
     "",
     codeIntel.fileStructure
-      ? [
-          "## Codebase Structure",
-          "",
-          "```",
-          codeIntel.fileStructure.slice(0, 3000),
-          "```",
-          "",
-        ].join("\n")
+      ? ["## Codebase Structure", "", "```", codeIntel.fileStructure.slice(0, 3000), "```", ""].join("\n")
       : "",
     "",
     "## Instructions",
@@ -669,17 +641,12 @@ async function attemptBasicFix(
 
     // Try to use the cheap OpenAI model for a simpler fix attempt
     const openai = new OpenAI({ apiKey: config.openai.apiKey });
-    const issueContext = [
-      `Issue #${data.issueNumber}: ${data.issueTitle}`,
-      data.issueBody || "",
-      ...comments,
-    ].join("\n\n");
+    const issueContext = [`Issue #${data.issueNumber}: ${data.issueTitle}`, data.issueBody || "", ...comments].join(
+      "\n\n",
+    );
 
     const toolDescriptions = tools
-      .map(
-        (t) =>
-          `- ${t.name}: ${t.description} (args: ${JSON.stringify(t.inputSchema)})`,
-      )
+      .map((t) => `- ${t.name}: ${t.description} (args: ${JSON.stringify(t.inputSchema)})`)
       .join("\n");
 
     const systemPrompt = [

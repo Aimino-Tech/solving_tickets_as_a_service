@@ -34,9 +34,7 @@ const issueSchema = z.object({
   title: z.string(),
   body: z.string().nullable(),
   html_url: z.string().optional(),
-  labels: z
-    .array(z.object({ name: z.string() }))
-    .optional(),
+  labels: z.array(z.object({ name: z.string() })).optional(),
 });
 
 const senderSchema = z
@@ -92,7 +90,7 @@ export const marketplacePurchaseSchema = z.object({
 export const webhookSchemas = {
   "issues.labeled": issueLabeledSchema,
   "issues.opened": issueOpenedSchema,
-  "marketplace_purchase": marketplacePurchaseSchema,
+  marketplace_purchase: marketplacePurchaseSchema,
 } as const;
 
 export type WebhookEventName = keyof typeof webhookSchemas;
@@ -123,12 +121,8 @@ export type ValidationResult = ValidationSuccess | ValidationFailure;
  * Errors are human-readable strings like "Missing required field: issue.number"
  * or "Invalid field: issue.title — Expected string, received number".
  */
-export function validateWebhookPayload(
-  event: string,
-  payload: unknown,
-): ValidationResult {
-  const schema =
-    webhookSchemas[event as WebhookEventName] ?? null;
+export function validateWebhookPayload(event: string, payload: unknown): ValidationResult {
+  const schema = webhookSchemas[event as WebhookEventName] ?? null;
 
   if (!schema) {
     // Unknown event — no schema to validate against. We consider this

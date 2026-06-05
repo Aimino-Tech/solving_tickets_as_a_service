@@ -5,9 +5,9 @@
  * All external dependencies (bullmq, runIssueAgent, config) are mocked.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { IssueJobData } from "../../utils/types.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentResult } from "../../agent/types.js";
+import type { IssueJobData } from "../../utils/types.js";
 
 // ---------------------------------------------------------------------------
 // Mocks — hoisted before imports by vitest
@@ -77,15 +77,10 @@ vi.mock("../../utils/logger.js", () => ({
 
 vi.mock("bullmq", () => ({
   Queue: vi.fn(() => mocks.mockQueueInstance),
-  Worker: vi.fn(
-    (
-      _queueName: string,
-      processor: (job: { id: string; data: IssueJobData }) => Promise<unknown>,
-    ) => {
-      mocks.workerProcessorRef.current = processor;
-      return mocks.mockWorkerInstance;
-    },
-  ),
+  Worker: vi.fn((_queueName: string, processor: (job: { id: string; data: IssueJobData }) => Promise<unknown>) => {
+    mocks.workerProcessorRef.current = processor;
+    return mocks.mockWorkerInstance;
+  }),
   QueueEvents: vi.fn(() => mocks.mockQueueEventsInstance),
 }));
 
@@ -93,14 +88,9 @@ vi.mock("bullmq", () => ({
 // Imports under test (mocks are already installed)
 // ---------------------------------------------------------------------------
 
-import { Queue, Worker, QueueEvents } from "bullmq";
-import {
-  createIssueQueue,
-  createIssueWorker,
-  createQueueEvents,
-  enqueueIssue,
-} from "../../queue/issueQueue.js";
-import { sampleJobData, sampleAgentResult, sampleNoFixAgentResult } from "../fixtures.js";
+import { Queue, QueueEvents, Worker } from "bullmq";
+import { createIssueQueue, createIssueWorker, createQueueEvents, enqueueIssue } from "../../queue/issueQueue.js";
+import { sampleAgentResult, sampleJobData, sampleNoFixAgentResult } from "../fixtures.js";
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -111,7 +101,7 @@ describe("createIssueQueue", () => {
     vi.clearAllMocks();
   });
 
-it("returns a Queue instance with stas-issues name and Redis connection", () => {
+  it("returns a Queue instance with stas-issues name and Redis connection", () => {
     const queue = createIssueQueue();
     expect(Queue).toHaveBeenCalledWith(
       "stas-issues",
@@ -186,9 +176,7 @@ describe("createIssueWorker", () => {
 
     expect(output).toBe(noFixResult);
     expect((output as AgentResult).fixReady).toBe(false);
-    expect((output as AgentResult).noFixReason).toBe(
-      "Issue could not be reproduced on latest main branch.",
-    );
+    expect((output as AgentResult).noFixReason).toBe("Issue could not be reproduced on latest main branch.");
   });
 
   it("passes undefined job id when job.id is null", async () => {

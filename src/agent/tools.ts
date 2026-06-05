@@ -14,9 +14,7 @@ type ToolHandler = (args: Record<string, unknown>) => Promise<string>;
 
 // ── Individual tool definitions ────────────────────────────────────
 
-function readFileTool(sandbox: {
-  readFile: (path: string) => Promise<string>;
-}): AgentTool {
+function readFileTool(sandbox: { readFile: (path: string) => Promise<string> }): AgentTool {
   return {
     name: "read_file",
     description: "Read the contents of a file from the codebase.",
@@ -46,13 +44,11 @@ function readFileTool(sandbox: {
       } catch (err) {
         return `Error reading file: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
-function writeFileTool(sandbox: {
-  writeFile: (path: string, content: string) => Promise<void>;
-}): AgentTool {
+function writeFileTool(sandbox: { writeFile: (path: string, content: string) => Promise<void> }): AgentTool {
   return {
     name: "write_file",
     description: "Write content to a file (creates or overwrites).",
@@ -80,7 +76,7 @@ function writeFileTool(sandbox: {
       } catch (err) {
         return `Error writing file: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
@@ -90,8 +86,7 @@ function patchFileTool(sandbox: {
 }): AgentTool {
   return {
     name: "patch_file",
-    description:
-      "Apply a unified diff patch to a file. Uses standard patch format.",
+    description: "Apply a unified diff patch to a file. Uses standard patch format.",
     inputSchema: {
       type: "object",
       properties: {
@@ -121,7 +116,7 @@ function patchFileTool(sandbox: {
       } catch (err) {
         return `Error patching file: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
@@ -131,8 +126,7 @@ function replaceLinesTool(sandbox: {
 }): AgentTool {
   return {
     name: "replace_lines",
-    description:
-      "Replace a range of lines in a file with new content. Lines are 1-indexed.",
+    description: "Replace a range of lines in a file with new content. Lines are 1-indexed.",
     inputSchema: {
       type: "object",
       properties: {
@@ -166,11 +160,7 @@ function replaceLinesTool(sandbox: {
       try {
         const content = await sandbox.readFile(filePath);
         const lines = content.split("\n");
-        if (
-          startLine < 1 ||
-          endLine > lines.length ||
-          startLine > endLine
-        ) {
+        if (startLine < 1 || endLine > lines.length || startLine > endLine) {
           return `Error: invalid line range. File has ${lines.length} lines, requested ${startLine}-${endLine}.`;
         }
         const before = lines.slice(0, startLine - 1);
@@ -181,7 +171,7 @@ function replaceLinesTool(sandbox: {
       } catch (err) {
         return `Error replacing lines: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
@@ -190,8 +180,7 @@ function searchCodebaseTool(sandbox: {
 }): AgentTool {
   return {
     name: "search_codebase",
-    description:
-      "Search the codebase using ripgrep or grep. Patterns are regex by default.",
+    description: "Search the codebase using ripgrep or grep. Patterns are regex by default.",
     inputSchema: {
       type: "object",
       properties: {
@@ -201,8 +190,7 @@ function searchCodebaseTool(sandbox: {
         },
         path: {
           type: "string",
-          description:
-            "Optional subdirectory to restrict the search to",
+          description: "Optional subdirectory to restrict the search to",
         },
         file_pattern: {
           type: "string",
@@ -241,7 +229,7 @@ function searchCodebaseTool(sandbox: {
       } catch (err) {
         return `Error searching codebase: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
@@ -250,8 +238,7 @@ function findFilesTool(sandbox: {
 }): AgentTool {
   return {
     name: "find_files",
-    description:
-      "Find files in the repository matching a glob pattern.",
+    description: "Find files in the repository matching a glob pattern.",
     inputSchema: {
       type: "object",
       properties: {
@@ -280,7 +267,7 @@ function findFilesTool(sandbox: {
       } catch (err) {
         return `Error finding files: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
@@ -289,8 +276,7 @@ function runCommandTool(sandbox: {
 }): AgentTool {
   return {
     name: "run_command",
-    description:
-      "Run an arbitrary shell command in the sandbox. Use for building, linting, or any CLI operation.",
+    description: "Run an arbitrary shell command in the sandbox. Use for building, linting, or any CLI operation.",
     inputSchema: {
       type: "object",
       properties: {
@@ -324,7 +310,7 @@ function runCommandTool(sandbox: {
       } catch (err) {
         return `Error running command: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
@@ -338,8 +324,7 @@ function runTestsTool(sandbox: {
 }): AgentTool {
   return {
     name: "run_tests",
-    description:
-      "Run the project's test suite and return results.",
+    description: "Run the project's test suite and return results.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -358,7 +343,7 @@ function runTestsTool(sandbox: {
       } catch (err) {
         return `Error running tests: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
@@ -367,8 +352,7 @@ function getDiffTool(sandbox: {
 }): AgentTool {
   return {
     name: "get_diff",
-    description:
-      "Get the current working tree diff (uncommitted changes).",
+    description: "Get the current working tree diff (uncommitted changes).",
     inputSchema: {
       type: "object",
       properties: {
@@ -386,17 +370,14 @@ function getDiffTool(sandbox: {
       } catch (err) {
         return `Error getting diff: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
-function formatCodeTool(sandbox: {
-  formatCode: () => Promise<void>;
-}): AgentTool {
+function formatCodeTool(sandbox: { formatCode: () => Promise<void> }): AgentTool {
   return {
     name: "format_code",
-    description:
-      "Auto-format all modified files in the repository.",
+    description: "Auto-format all modified files in the repository.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -408,7 +389,7 @@ function formatCodeTool(sandbox: {
       } catch (err) {
         return `Error formatting code: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
@@ -417,8 +398,7 @@ function listDirectoryTool(sandbox: {
 }): AgentTool {
   return {
     name: "list_directory",
-    description:
-      "List files and directories at a given path.",
+    description: "List files and directories at a given path.",
     inputSchema: {
       type: "object",
       properties: {
@@ -438,14 +418,12 @@ function listDirectoryTool(sandbox: {
       const depth = Number(args.depth ?? 1);
       if (!dirPath) return "Error: path is required";
       try {
-        const result = await sandbox.exec(
-          `find ${dirPath} -maxdepth ${depth} 2>/dev/null | head -200`,
-        );
+        const result = await sandbox.exec(`find ${dirPath} -maxdepth ${depth} 2>/dev/null | head -200`);
         return result.stdout.slice(0, 5000) || "Directory is empty or does not exist.";
       } catch (err) {
         return `Error listing directory: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
@@ -454,8 +432,7 @@ function getLineNumbersTool(sandbox: {
 }): AgentTool {
   return {
     name: "get_line_numbers",
-    description:
-      "Get line numbers matching a pattern in a file.",
+    description: "Get line numbers matching a pattern in a file.",
     inputSchema: {
       type: "object",
       properties: {
@@ -488,7 +465,7 @@ function getLineNumbersTool(sandbox: {
       } catch (err) {
         return `Error searching file: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
@@ -497,8 +474,7 @@ function findSymbolTool(sandbox: {
 }): AgentTool {
   return {
     name: "find_symbol",
-    description:
-      "Find definitions and usages of a symbol across the codebase.",
+    description: "Find definitions and usages of a symbol across the codebase.",
     inputSchema: {
       type: "object",
       properties: {
@@ -508,8 +484,7 @@ function findSymbolTool(sandbox: {
         },
         symbol_type: {
           type: "string",
-          description:
-            "Optional: 'function', 'class', 'variable', 'interface', 'type'",
+          description: "Optional: 'function', 'class', 'variable', 'interface', 'type'",
         },
       },
       required: ["symbol"],
@@ -522,14 +497,10 @@ function findSymbolTool(sandbox: {
         const rgResult = await sandbox.exec(
           `rg -n "\\b${symbol}\\b" --type ts --type js --type py --type rs --type go 2>/dev/null | head -50`,
         );
-        const ctagsResult = await sandbox.exec(
-          `grep -rn "\\b${symbol}\\b" src/ 2>/dev/null | head -50`,
-        );
+        const ctagsResult = await sandbox.exec(`grep -rn "\\b${symbol}\\b" src/ 2>/dev/null | head -50`);
         const output = [
           rgResult.stdout ? `## ripgrep results:\n${rgResult.stdout.slice(0, 5000)}` : "",
-          ctagsResult.stdout && !rgResult.stdout
-            ? `## grep results:\n${ctagsResult.stdout.slice(0, 5000)}`
-            : "",
+          ctagsResult.stdout && !rgResult.stdout ? `## grep results:\n${ctagsResult.stdout.slice(0, 5000)}` : "",
         ]
           .filter(Boolean)
           .join("\n\n");
@@ -537,7 +508,7 @@ function findSymbolTool(sandbox: {
       } catch (err) {
         return `Error finding symbol: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
@@ -546,8 +517,7 @@ function traceImportsTool(sandbox: {
 }): AgentTool {
   return {
     name: "trace_imports",
-    description:
-      "Trace the import chain of a module to understand dependencies.",
+    description: "Trace the import chain of a module to understand dependencies.",
     inputSchema: {
       type: "object",
       properties: {
@@ -571,9 +541,7 @@ function traceImportsTool(sandbox: {
         let current = filePath;
         const trace: string[] = [`${filePath}`];
         for (let i = 0; i < depth; i++) {
-          const imports = await sandbox.exec(
-            `grep -E "^(import|const .* require)" ${current} 2>/dev/null | head -20`,
-          );
+          const imports = await sandbox.exec(`grep -E "^(import|const .* require)" ${current} 2>/dev/null | head -20`);
           if (!imports.stdout.trim()) break;
           const lines = imports.stdout.split("\n").filter(Boolean);
           for (const line of lines.slice(0, 5)) {
@@ -591,17 +559,14 @@ function traceImportsTool(sandbox: {
       } catch (err) {
         return `Error tracing imports: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
-function submitFixTool(sandbox: {
-  pushBranch: (branchName: string) => Promise<void>;
-}): AgentTool {
+function submitFixTool(sandbox: { pushBranch: (branchName: string) => Promise<void> }): AgentTool {
   return {
     name: "submit_fix",
-    description:
-      "Commit all changes and push to a new branch. Call this when the fix is complete.",
+    description: "Commit all changes and push to a new branch. Call this when the fix is complete.",
     inputSchema: {
       type: "object",
       properties: {
@@ -626,7 +591,7 @@ function submitFixTool(sandbox: {
       } catch (err) {
         return `Error submitting fix: ${String(err)}`;
       }
-    }
+    },
   };
 }
 
@@ -635,9 +600,7 @@ function submitFixTool(sandbox: {
 export type SandboxTools = {
   readFile: (path: string) => Promise<string>;
   writeFile: (path: string, content: string) => Promise<void>;
-  exec: (
-    cmd: string,
-  ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
+  exec: (cmd: string) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
   runTests: () => Promise<{
     passed: boolean;
     output: string;
@@ -750,10 +713,7 @@ function applyUnifiedDiff(original: string, diff: string): string {
   return [...before, ...patchedLines, ...remaining].join("\n");
 }
 
-function applySimplePatch(
-  lines: string[],
-  diffLines: string[],
-): string {
+function applySimplePatch(lines: string[], diffLines: string[]): string {
   // Very simple "replace what matches" approach
   let result = lines.join("\n");
 

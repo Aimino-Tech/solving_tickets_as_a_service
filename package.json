@@ -22,6 +22,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check --write src/",
     "lint:ci": "biome ci src/",
+    "lint": "biome check --write src/",
+    "lint:ci": "biome ci src/",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

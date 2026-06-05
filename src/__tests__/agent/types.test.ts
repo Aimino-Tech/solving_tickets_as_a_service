@@ -6,14 +6,8 @@
  * investigation, error) are all properly representable.
  */
 
-import { describe, it, expect } from "vitest";
-import type {
-  AgentTool,
-  TestResult,
-  TriageResult,
-  FileChange,
-  AgentResult,
-} from "../../agent/types.js";
+import { describe, expect, it } from "vitest";
+import type { AgentResult, AgentTool, FileChange, TestResult, TriageResult } from "../../agent/types.js";
 
 // ── AgentTool ───────────────────────────────────────────────────────────────
 
@@ -359,10 +353,7 @@ describe("AgentResult interface (error variant)", () => {
       summary: "Failed to process issue #42",
       confidence: "low",
       fixReady: false,
-      errors: [
-        "Connection timeout after 30s",
-        "Invalid response from GitHub API",
-      ],
+      errors: ["Connection timeout after 30s", "Invalid response from GitHub API"],
     };
 
     expect(result.fixReady).toBe(false);

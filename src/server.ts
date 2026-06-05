@@ -18,15 +18,15 @@
  */
 
 import crypto from "node:crypto";
+import type { NextFunction, Request, Response } from "express";
 import express from "express";
-import type { Request, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
 import { config } from "./config.js";
-import { rootLogger } from "./utils/logger.js";
-import { createGithubWebhooks } from "./webhooks/github.js";
 import { createIssueQueue } from "./queue/issueQueue.js";
+import { rootLogger } from "./utils/logger.js";
 import type { IssueJobData } from "./utils/types.js";
 import { validateWebhookPayload } from "./validation.js";
-import rateLimit from "express-rate-limit";
+import { createGithubWebhooks } from "./webhooks/github.js";
 
 const log = rootLogger.child({ module: "server" });
 
@@ -38,9 +38,7 @@ export function createApp(): express.Application {
 
   // ── Request ID middleware ────────────────────────────────────────
   app.use((req: Request, res: Response, next: NextFunction) => {
-    const requestId =
-      (req.headers["x-request-id"] as string) ||
-      crypto.randomUUID();
+    const requestId = (req.headers["x-request-id"] as string) || crypto.randomUUID();
     req.requestId = requestId;
     res.setHeader("x-request-id", requestId);
     next();
@@ -68,10 +66,7 @@ export function createApp(): express.Application {
   });
 
   // ── Raw body capture for webhook verification ────────────────────
-  app.use(
-    "/webhook",
-    express.raw({ type: "application/json", verify: addRawBody }),
-  );
+  app.use("/webhook", express.raw({ type: "application/json", verify: addRawBody }));
 
   // ── JSON parsing for all other routes ────────────────────────────
   app.use(express.json());
@@ -105,18 +100,13 @@ export function createApp(): express.Application {
     const deliveryId = req.headers["x-github-delivery"] as string;
     const signature = req.headers["x-hub-signature-256"] as string;
 
-    log.info(
-      { event, deliveryId, requestId: req.requestId },
-      "Received webhook",
-    );
+    log.info({ event, deliveryId, requestId: req.requestId }, "Received webhook");
 
     // ── Parse and validate payload before processing ──────────────
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
     let parsedPayload: unknown;
     try {
-      parsedPayload = rawBody
-        ? JSON.parse(rawBody.toString())
-        : req.body;
+      parsedPayload = rawBody ? JSON.parse(rawBody.toString()) : req.body;
     } catch (err) {
       log.error({ err: String(err) }, "Failed to parse webhook payload");
       res.status(400).json({ error: "Invalid JSON payload" });
@@ -228,10 +218,7 @@ process.on("uncaughtException", (err) => {
 });
 
 process.on("unhandledRejection", (reason) => {
-  log.error(
-    { err: String(reason), stack: (reason as Error)?.stack },
-    "Unhandled promise rejection — shutting down",
-  );
+  log.error({ err: String(reason), stack: (reason as Error)?.stack }, "Unhandled promise rejection — shutting down");
   process.exit(1);
 });
 
@@ -241,11 +228,7 @@ process.on("unhandledRejection", (reason) => {
  * Express verify callback that stores the raw body buffer on the request
  * object so it can be used for webhook signature verification.
  */
-function addRawBody(
-  req: Request,
-  _res: Response,
-  buf: Buffer,
-): void {
+function addRawBody(req: Request, _res: Response, buf: Buffer): void {
   (req as { rawBody?: Buffer }).rawBody = buf;
 }
 

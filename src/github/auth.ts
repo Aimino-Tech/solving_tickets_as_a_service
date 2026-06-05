@@ -14,8 +14,8 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
-import { readFileSync } from "node:fs";
 import { createPrivateKey } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
 import { config } from "../config.js";
@@ -34,16 +34,12 @@ function loadPrivateKey(): string {
     try {
       pem = readFileSync(config.github.privateKeyPath, "utf-8");
     } catch (err) {
-      throw new Error(
-        `Failed to read private key from ${config.github.privateKeyPath}: ${String(err)}`,
-      );
+      throw new Error(`Failed to read private key from ${config.github.privateKeyPath}: ${String(err)}`);
     }
   } else if (config.github.privateKeyEnv) {
     pem = config.github.privateKeyEnv.replace(/\\n/g, "\n");
   } else {
-    throw new Error(
-      "Either GITHUB_APP_PRIVATE_KEY_PATH or GITHUB_APP_PRIVATE_KEY must be set",
-    );
+    throw new Error("Either GITHUB_APP_PRIVATE_KEY_PATH or GITHUB_APP_PRIVATE_KEY must be set");
   }
 
   // Normalise line endings
@@ -70,14 +66,9 @@ function loadPrivateKey(): string {
 function convertPkcs1ToPkcs8(pkcs1Pem: string): string {
   try {
     const keyObject = createPrivateKey(pkcs1Pem);
-    return keyObject
-      .export({ type: "pkcs8", format: "pem" })
-      .toString("utf-8")
-      .trim();
+    return keyObject.export({ type: "pkcs8", format: "pem" }).toString("utf-8").trim();
   } catch (err) {
-    throw new Error(
-      `Failed to convert PKCS#1 private key to PKCS#8: ${String(err)}`,
-    );
+    throw new Error(`Failed to convert PKCS#1 private key to PKCS#8: ${String(err)}`);
   }
 }
 
@@ -118,26 +109,20 @@ export async function getOctokit(installationId: number): Promise<Octokit> {
     const { token } = await auth({ type: "installation", installationId });
     return new Octokit({ auth: token });
   } catch (err) {
-    throw new Error(
-      `Failed to get Octokit for installation ${installationId}: ${String(err)}`,
-    );
+    throw new Error(`Failed to get Octokit for installation ${installationId}: ${String(err)}`);
   }
 }
 
 /**
  * Get a raw installation token string.
  */
-export async function getInstallationToken(
-  installationId: number,
-): Promise<string> {
+export async function getInstallationToken(installationId: number): Promise<string> {
   try {
     const auth = getAuth();
     const { token } = await auth({ type: "installation", installationId });
     return token;
   } catch (err) {
-    throw new Error(
-      `Failed to get installation token for installation ${installationId}: ${String(err)}`,
-    );
+    throw new Error(`Failed to get installation token for installation ${installationId}: ${String(err)}`);
   }
 }
 

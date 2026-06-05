@@ -27,10 +27,7 @@ let server: Server | undefined;
 let shutdownInProgress = false;
 
 async function main(): Promise<void> {
-  log.info(
-    { runMode: config.runMode, nodeEnv: config.nodeEnv },
-    "Starting STAS",
-  );
+  log.info({ runMode: config.runMode, nodeEnv: config.nodeEnv }, "Starting STAS");
 
   const mode = config.runMode;
 

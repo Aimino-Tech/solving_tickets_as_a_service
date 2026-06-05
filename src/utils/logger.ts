@@ -8,10 +8,7 @@ const level = process.env.LOG_LEVEL || "info";
 
 export const rootLogger = pino({
   level,
-  transport:
-    process.env.NODE_ENV !== "production"
-      ? { target: "pino-pretty", options: { colorize: true } }
-      : undefined,
+  transport: process.env.NODE_ENV !== "production" ? { target: "pino-pretty", options: { colorize: true } } : undefined,
   redact: {
     paths: ["req.headers.authorization", 'req.headers["x-hub-signature-256"]'],
     censor: "[REDACTED]",

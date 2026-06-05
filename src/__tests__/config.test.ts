@@ -12,7 +12,7 @@
  *   dynamic import block after resetModules.
  */
 
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Module-level mocks ──────────────────────────────────────────────────────
 // Prevent .env loading and keep the logger quiet during tests.
@@ -266,16 +266,12 @@ describe("config", () => {
       // Clear all env stubs so the required vars are absent
       vi.unstubAllEnvs();
 
-      const localExitMock = vi
-        .spyOn(process, "exit")
-        .mockImplementation((() => {
-          // Throw to prevent execution from continuing to buildConfig(undefined)
-          throw new Error("process.exit was called");
-        }) as any);
+      const localExitMock = vi.spyOn(process, "exit").mockImplementation((() => {
+        // Throw to prevent execution from continuing to buildConfig(undefined)
+        throw new Error("process.exit was called");
+      }) as any);
 
-      await expect(import("../config.js")).rejects.toThrow(
-        "process.exit was called",
-      );
+      await expect(import("../config.js")).rejects.toThrow("process.exit was called");
       expect(localExitMock).toHaveBeenCalledWith(1);
       localExitMock.mockRestore();
     });

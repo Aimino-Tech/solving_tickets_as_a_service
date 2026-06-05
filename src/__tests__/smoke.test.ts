@@ -2,7 +2,7 @@
  * Smoke test — verifies vitest is configured correctly.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 describe("vitest smoke test", () => {
   it("should run a basic test", () => {

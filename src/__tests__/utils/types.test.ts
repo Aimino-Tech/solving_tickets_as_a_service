@@ -9,13 +9,9 @@
  *   - src/agent/types.ts  → TestResult (referenced in the task requirements)
  */
 
-import { describe, it, expect } from "vitest";
-import type {
-  IssueJobData,
-  BillingPlan,
-  AgentResult as UtilsAgentResult,
-} from "../../utils/types.js";
-import type { TestResult, AgentResult as AgentAgentResult } from "../../agent/types.js";
+import { describe, expect, it } from "vitest";
+import type { AgentResult as AgentAgentResult, TestResult } from "../../agent/types.js";
+import type { BillingPlan, IssueJobData, AgentResult as UtilsAgentResult } from "../../utils/types.js";
 
 // ── IssueJobData ────────────────────────────────────────────────────────────
 
@@ -186,9 +182,7 @@ describe("AgentResult (utils/types.ts)", () => {
       diff: "diff --git a/src/login.ts b/src/login.ts",
       testOutput: "PASS 2 tests",
       errors: ["ESLint warning: unused variable"],
-      relevantPRs: [
-        { url: "https://github.com/owner/repo/pull/41", title: "Fix", state: "open" },
-      ],
+      relevantPRs: [{ url: "https://github.com/owner/repo/pull/41", title: "Fix", state: "open" }],
       noFixReason: "Cannot reproduce the issue.",
       alreadyFixed: true,
       investigationOnly: false,
@@ -199,9 +193,7 @@ describe("AgentResult (utils/types.ts)", () => {
     expect(result.diff).toContain("diff --git");
     expect(result.errors).toHaveLength(1);
     expect(result.relevantPRs).toHaveLength(1);
-    expect(result.relevantPRs![0].url).toBe(
-      "https://github.com/owner/repo/pull/41",
-    );
+    expect(result.relevantPRs![0].url).toBe("https://github.com/owner/repo/pull/41");
     expect(result.noFixReason).toBe("Cannot reproduce the issue.");
     expect(result.alreadyFixed).toBe(true);
     expect(result.investigationOnly).toBe(false);

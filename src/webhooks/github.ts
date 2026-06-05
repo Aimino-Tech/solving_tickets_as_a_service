@@ -14,21 +14,19 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
-import { Webhooks, type EmitterWebhookEventName } from "@octokit/webhooks";
+import { type EmitterWebhookEventName, Webhooks } from "@octokit/webhooks";
 import type { Queue } from "bullmq";
 import { config } from "../config.js";
 import { enqueueIssue } from "../queue/issueQueue.js";
-import type { IssueJobData, BillingPlan } from "../utils/types.js";
 import { rootLogger } from "../utils/logger.js";
+import type { BillingPlan, IssueJobData } from "../utils/types.js";
 
 const log = rootLogger.child({ module: "webhooks-github" });
 
 /**
  * Create the GitHub webhooks handler with all event listeners registered.
  */
-export function createGithubWebhooks(
-  queue: Queue<IssueJobData>,
-): Webhooks {
+export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
   const webhooks = new Webhooks({
     secret: config.github.webhookSecret,
   });
@@ -49,10 +47,7 @@ export function createGithubWebhooks(
   webhooks.on("issues.labeled", async ({ payload }) => {
     const label = payload.label?.name;
     if (label !== config.stas.label) {
-      log.debug(
-        { label, expected: config.stas.label },
-        "Ignoring non-target label",
-      );
+      log.debug({ label, expected: config.stas.label }, "Ignoring non-target label");
       return;
     }
 
@@ -176,7 +171,10 @@ export function createGithubWebhooks(
       // TODO: Update the billing plan in the database
       // For OSS self-hosted, billing is a no-op
     } catch (err) {
-      log.error({ err: String(err), payload: JSON.stringify(payload).slice(0, 500) }, "Failed to handle marketplace purchase event");
+      log.error(
+        { err: String(err), payload: JSON.stringify(payload).slice(0, 500) },
+        "Failed to handle marketplace purchase event",
+      );
     }
   });
 
@@ -197,17 +195,24 @@ function mapMarketplacePlan(planName: string): BillingPlan["plan"] {
  * Suggest labels based on issue content using keyword matching.
  * Useful for recommending labels before the full triage runs.
  */
-export function suggestLabels(
-  title: string,
-  body: string,
-): string[] {
+export function suggestLabels(title: string, body: string): string[] {
   const text = `${title}\n${body}`.toLowerCase();
   const labels: string[] = [];
 
   // Bug indicators
   const bugPatterns = [
-    "bug", "fix", "error", "crash", "broken", "fails", "failure",
-    "incorrect", "wrong", "issue", "problem", "bug report",
+    "bug",
+    "fix",
+    "error",
+    "crash",
+    "broken",
+    "fails",
+    "failure",
+    "incorrect",
+    "wrong",
+    "issue",
+    "problem",
+    "bug report",
   ];
   if (bugPatterns.some((p) => text.includes(p))) {
     labels.push("bug");
@@ -215,36 +220,33 @@ export function suggestLabels(
 
   // Feature indicators
   const featurePatterns = [
-    "feature", "request", "would like", "please add", "suggestion",
-    "idea", "enhancement", "new feature",
+    "feature",
+    "request",
+    "would like",
+    "please add",
+    "suggestion",
+    "idea",
+    "enhancement",
+    "new feature",
   ];
   if (featurePatterns.some((p) => text.includes(p))) {
     labels.push("enhancement");
   }
 
   // Question indicators
-  const questionPatterns = [
-    "how to", "how do i", "question", "help", "not sure",
-    "what is", "how can", "guide",
-  ];
+  const questionPatterns = ["how to", "how do i", "question", "help", "not sure", "what is", "how can", "guide"];
   if (questionPatterns.some((p) => text.includes(p))) {
     labels.push("question");
   }
 
   // Documentation indicators
-  const docsPatterns = [
-    "docs", "documentation", "readme", "typo",
-    "spelling", "readability",
-  ];
+  const docsPatterns = ["docs", "documentation", "readme", "typo", "spelling", "readability"];
   if (docsPatterns.some((p) => text.includes(p))) {
     labels.push("documentation");
   }
 
   // Performance
-  const perfPatterns = [
-    "slow", "performance", "latency", "memory", "leak",
-    "optimize", "bottleneck",
-  ];
+  const perfPatterns = ["slow", "performance", "latency", "memory", "leak", "optimize", "bottleneck"];
   if (perfPatterns.some((p) => text.includes(p))) {
     labels.push("performance");
   }

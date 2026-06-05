@@ -11,8 +11,8 @@
  *   a command-routing mock that simulates clone, ls, cat, and install.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { ExecResult, TestRunResult, RuntimeInfo } from "../../sandbox/executor.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ExecResult, RuntimeInfo, TestRunResult } from "../../sandbox/executor.js";
 
 // ---------------------------------------------------------------------------
 // Hoisted helpers — available inside vi.mock factories (hoisted above imports)
@@ -88,13 +88,7 @@ const DEFAULT_OK: ExecResult = { stdout: "", stderr: "", exitCode: 0 };
  */
 function createExecutor(): SandboxExecutor {
   const getToken = vi.fn<(installationId: number) => Promise<string>>().mockResolvedValue("mock-installation-token");
-  const executor = new SandboxExecutor(
-    "https://github.com/owner/repo.git",
-    "owner",
-    "repo",
-    123,
-    getToken,
-  );
+  const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, getToken);
   // Bypass boot() — set private fields directly
   (executor as any).sandbox = mockSandboxInstance;
   (executor as any).repoDir = "/home/user/repo";
@@ -142,37 +136,19 @@ describe("SandboxExecutor", () => {
   describe("constructor", () => {
     it("stores repoOwner", () => {
       const getToken = vi.fn();
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "my-owner",
-        "my-repo",
-        123,
-        getToken,
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "my-owner", "my-repo", 123, getToken);
       expect((executor as any).repoOwner).toBe("my-owner");
     });
 
     it("stores repoName", () => {
       const getToken = vi.fn();
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "my-repo",
-        123,
-        getToken,
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "my-repo", 123, getToken);
       expect((executor as any).repoName).toBe("my-repo");
     });
 
     it("stores github token getter (getToken)", () => {
       const getToken = vi.fn().mockResolvedValue("my-token");
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        getToken,
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, getToken);
       expect((executor as any).getToken).toBe(getToken);
     });
   });
@@ -219,13 +195,7 @@ describe("SandboxExecutor", () => {
       const { Sandbox: MockSandbox } = await import("e2b");
 
       const getToken = vi.fn().mockResolvedValue("token");
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        getToken,
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, getToken);
 
       (executor as any).sandbox = null; // ensure boot() creates fresh
       await executor.boot();
@@ -241,13 +211,7 @@ describe("SandboxExecutor", () => {
       setupBootMock();
       const getToken = vi.fn().mockResolvedValue("fresh-token");
 
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        42,
-        getToken,
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 42, getToken);
       (executor as any).sandbox = null;
       await executor.boot();
 
@@ -268,8 +232,8 @@ describe("SandboxExecutor", () => {
       (executor as any).sandbox = null;
       await executor.boot();
 
-      const cloneCall = mockSandboxInstance.commands.run.mock.calls.find(
-        ([cmd]: string[]) => cmd.startsWith("git clone"),
+      const cloneCall = mockSandboxInstance.commands.run.mock.calls.find(([cmd]: string[]) =>
+        cmd.startsWith("git clone"),
       );
       expect(cloneCall).toBeDefined();
       const cloneCmd: string = cloneCall![0];
@@ -297,9 +261,7 @@ describe("SandboxExecutor", () => {
 
     it("throws with descriptive error when Sandbox.create fails", async () => {
       const { Sandbox: MockSandbox } = await import("e2b");
-      (MockSandbox.create as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error("API quota exceeded"),
-      );
+      (MockSandbox.create as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("API quota exceeded"));
 
       const executor = new SandboxExecutor(
         "https://github.com/owner/repo.git",
@@ -310,26 +272,16 @@ describe("SandboxExecutor", () => {
       );
       (executor as any).sandbox = null;
 
-      await expect(executor.boot()).rejects.toThrow(
-        "Failed to create E2B sandbox",
-      );
+      await expect(executor.boot()).rejects.toThrow("Failed to create E2B sandbox");
     });
 
     it("throws with descriptive error when getToken fails", async () => {
       setupBootMock();
       const getToken = vi.fn().mockRejectedValue(new Error("Auth failed"));
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        getToken,
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, getToken);
       (executor as any).sandbox = null;
 
-      await expect(executor.boot()).rejects.toThrow(
-        "Failed to get installation token",
-      );
+      await expect(executor.boot()).rejects.toThrow("Failed to get installation token");
     });
 
     it("throws when git clone fails", async () => {
@@ -349,19 +301,14 @@ describe("SandboxExecutor", () => {
       );
       (executor as any).sandbox = null;
 
-      await expect(executor.boot()).rejects.toThrow(
-        "Failed to clone repo: Repository not found",
-      );
+      await expect(executor.boot()).rejects.toThrow("Failed to clone repo: Repository not found");
     });
   });
 
   // ── Runtime detection ─────────────────────────────────────────────────
 
   describe("detectRuntime()", () => {
-    async function detectFor(
-      lsOutput: string,
-      extraMocks?: Record<string, ExecResult>,
-    ): Promise<RuntimeInfo> {
+    async function detectFor(lsOutput: string, extraMocks?: Record<string, ExecResult>): Promise<RuntimeInfo> {
       const executor = createExecutor();
       mockSandboxInstance.commands.run.mockImplementation((command: string) => {
         // Check extra mocks first (for version commands, cat, etc.)
@@ -378,160 +325,164 @@ describe("SandboxExecutor", () => {
       return executor.detectRuntime();
     }
 
-    it('detects node from package.json', async () => {
+    it("detects node from package.json", async () => {
       const info = await detectFor("package.json\ntsconfig.json\n", {
-        'cat': { stdout: JSON.stringify({ scripts: { test: "vitest run" }, engines: { node: ">=18" } }), stderr: "", exitCode: 0 },
+        cat: {
+          stdout: JSON.stringify({ scripts: { test: "vitest run" }, engines: { node: ">=18" } }),
+          stderr: "",
+          exitCode: 0,
+        },
       });
       expect(info.language).toBe("node");
       expect(info.version).toBe(">=18");
       expect(info.testCommand).toContain("npm test");
     });
 
-    it('detects node with turbo monorepo', async () => {
+    it("detects node with turbo monorepo", async () => {
       const info = await detectFor("package.json\ntsconfig.json\n", {
-        'cat': { stdout: JSON.stringify({ scripts: { test: "vitest run" }, turbo: {} }), stderr: "", exitCode: 0 },
+        cat: { stdout: JSON.stringify({ scripts: { test: "vitest run" }, turbo: {} }), stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("node");
       expect(info.testCommand).toContain("turbo");
     });
 
-    it('detects node with nx monorepo', async () => {
+    it("detects node with nx monorepo", async () => {
       const info = await detectFor("package.json\ntsconfig.json\n", {
-        'cat': { stdout: JSON.stringify({ scripts: { test: "vitest run" }, nx: {} }), stderr: "", exitCode: 0 },
+        cat: { stdout: JSON.stringify({ scripts: { test: "vitest run" }, nx: {} }), stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("node");
       expect(info.testCommand).toContain("nx");
     });
 
-    it('detects node with yarn.lock', async () => {
+    it("detects node with yarn.lock", async () => {
       const info = await detectFor("package.json\nyarn.lock\n", {
-        'cat': { stdout: JSON.stringify({}), stderr: "", exitCode: 0 },
+        cat: { stdout: JSON.stringify({}), stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("node");
       expect(info.installCommand).toBe("yarn install");
     });
 
-    it('detects node with pnpm-lock.yaml', async () => {
+    it("detects node with pnpm-lock.yaml", async () => {
       const info = await detectFor("package.json\npnpm-lock.yaml\n", {
-        'cat': { stdout: JSON.stringify({}), stderr: "", exitCode: 0 },
+        cat: { stdout: JSON.stringify({}), stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("node");
       expect(info.installCommand).toBe("pnpm install");
     });
 
-    it('detects node with biome.json for formatting', async () => {
+    it("detects node with biome.json for formatting", async () => {
       const info = await detectFor("package.json\nbiome.json\n", {
-        'cat': { stdout: JSON.stringify({}), stderr: "", exitCode: 0 },
+        cat: { stdout: JSON.stringify({}), stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("node");
       expect(info.formatCommand).toContain("biome");
     });
 
-    it('detects python from requirements.txt', async () => {
+    it("detects python from requirements.txt", async () => {
       const info = await detectFor("requirements.txt\nsrc\n", {
-        'python3 --version': { stdout: "Python 3.12", stderr: "", exitCode: 0 },
+        "python3 --version": { stdout: "Python 3.12", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("python");
       expect(info.installCommand).toContain("pip install -r");
     });
 
-    it('detects python from pyproject.toml', async () => {
+    it("detects python from pyproject.toml", async () => {
       const info = await detectFor("pyproject.toml\nsrc\n", {
-        'python3 --version': { stdout: "Python 3.12", stderr: "", exitCode: 0 },
+        "python3 --version": { stdout: "Python 3.12", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("python");
     });
 
-    it('detects python from Pipfile', async () => {
+    it("detects python from Pipfile", async () => {
       const info = await detectFor("Pipfile\nsrc\n", {
-        'python3 --version': { stdout: "Python 3.12", stderr: "", exitCode: 0 },
+        "python3 --version": { stdout: "Python 3.12", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("python");
       expect(info.installCommand).toContain("pipenv");
     });
 
-    it('detects go from go.mod', async () => {
+    it("detects go from go.mod", async () => {
       const info = await detectFor("go.mod\nmain.go\n", {
-        'go version': { stdout: "go version go1.22", stderr: "", exitCode: 0 },
+        "go version": { stdout: "go version go1.22", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("go");
       expect(info.testCommand).toBe("go test ./... 2>&1");
       expect(info.formatCommand).toBe("go fmt ./... 2>&1");
     });
 
-    it('detects rust from Cargo.toml', async () => {
+    it("detects rust from Cargo.toml", async () => {
       const info = await detectFor("Cargo.toml\nsrc\n", {
-        'rustc --version': { stdout: "rustc 1.78.0", stderr: "", exitCode: 0 },
+        "rustc --version": { stdout: "rustc 1.78.0", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("rust");
       expect(info.testCommand).toBe("cargo test 2>&1");
     });
 
-    it('detects ruby from Gemfile', async () => {
+    it("detects ruby from Gemfile", async () => {
       const info = await detectFor("Gemfile\n", {
-        'ruby --version': { stdout: "ruby 3.3.0", stderr: "", exitCode: 0 },
+        "ruby --version": { stdout: "ruby 3.3.0", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("ruby");
       expect(info.testCommand).toContain("rspec");
     });
 
-    it('detects java from pom.xml', async () => {
+    it("detects java from pom.xml", async () => {
       const info = await detectFor("pom.xml\n", {
-        'java -version': { stdout: "openjdk 21", stderr: "", exitCode: 0 },
+        "java -version": { stdout: "openjdk 21", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("java");
       expect(info.testCommand).toBe("mvn test 2>&1");
     });
 
-    it('detects java from build.gradle', async () => {
+    it("detects java from build.gradle", async () => {
       const info = await detectFor("build.gradle\n", {
-        'java -version': { stdout: "openjdk 21", stderr: "", exitCode: 0 },
+        "java -version": { stdout: "openjdk 21", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("java");
       expect(info.testCommand).toBe("./gradlew test 2>&1");
     });
 
-    it('detects php from composer.json', async () => {
+    it("detects php from composer.json", async () => {
       const info = await detectFor("composer.json\n", {
-        'php --version': { stdout: "PHP 8.3", stderr: "", exitCode: 0 },
+        "php --version": { stdout: "PHP 8.3", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("php");
       expect(info.installCommand).toContain("composer install");
     });
 
-    it('detects swift from Package.swift', async () => {
+    it("detects swift from Package.swift", async () => {
       const info = await detectFor("Package.swift\n", {
-        'swift --version': { stdout: "swift 5.10", stderr: "", exitCode: 0 },
+        "swift --version": { stdout: "swift 5.10", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("swift");
       expect(info.testCommand).toBe("swift test 2>&1");
     });
 
-    it('detects dart/flutter from pubspec.yaml', async () => {
+    it("detects dart/flutter from pubspec.yaml", async () => {
       const info = await detectFor("pubspec.yaml\n", {
-        'dart --version': { stdout: "Dart 3.4", stderr: "", exitCode: 0 },
+        "dart --version": { stdout: "Dart 3.4", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("dart");
       expect(info.installCommand).toContain("flutter pub get");
     });
 
-    it('detects elixir from mix.exs', async () => {
+    it("detects elixir from mix.exs", async () => {
       const info = await detectFor("mix.exs\n", {
-        'elixir --version': { stdout: "Elixir 1.17", stderr: "", exitCode: 0 },
+        "elixir --version": { stdout: "Elixir 1.17", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("elixir");
       expect(info.testCommand).toBe("mix test 2>&1");
     });
 
-    it('detects cpp from CMakeLists.txt', async () => {
+    it("detects cpp from CMakeLists.txt", async () => {
       const info = await detectFor("CMakeLists.txt\n", {
-        'g++ --version || clang++ --version': { stdout: "g++ 14", stderr: "", exitCode: 0 },
+        "g++ --version || clang++ --version": { stdout: "g++ 14", stderr: "", exitCode: 0 },
       });
       expect(info.language).toBe("cpp");
       expect(info.testCommand).toContain("ctest");
     });
 
-    it('defaults to unknown when no markers match', async () => {
+    it("defaults to unknown when no markers match", async () => {
       const info = await detectFor("README.md\nLICENSE\n");
       expect(info.language).toBe("unknown");
       expect(info.testCommand).toBe("");
@@ -578,16 +529,8 @@ describe("SandboxExecutor", () => {
     });
 
     it("throws if sandbox is not booted", async () => {
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        vi.fn(),
-      );
-      await expect(executor.exec("npm test")).rejects.toThrow(
-        "Sandbox not booted",
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, vi.fn());
+      await expect(executor.exec("npm test")).rejects.toThrow("Sandbox not booted");
     });
   });
 
@@ -607,16 +550,8 @@ describe("SandboxExecutor", () => {
     });
 
     it("throws if sandbox not booted (error on failure)", async () => {
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        vi.fn(),
-      );
-      await expect(executor.execForTools("npm test")).rejects.toThrow(
-        "Sandbox not booted",
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, vi.fn());
+      await expect(executor.execForTools("npm test")).rejects.toThrow("Sandbox not booted");
     });
   });
 
@@ -627,42 +562,26 @@ describe("SandboxExecutor", () => {
       const executor = createExecutor();
       await executor.writeFile("src/test.ts", "const x = 1;");
 
-      expect(mockSandboxInstance.files.write).toHaveBeenCalledWith(
-        "/home/user/repo/src/test.ts",
-        "const x = 1;",
-      );
+      expect(mockSandboxInstance.files.write).toHaveBeenCalledWith("/home/user/repo/src/test.ts", "const x = 1;");
     });
 
     it("creates parent directory before writing", async () => {
       const executor = createExecutor();
       await executor.writeFile("src/deep/file.ts", "content");
 
-      expect(mockSandboxInstance.files.makeDir).toHaveBeenCalledWith(
-        "/home/user/repo/src/deep",
-      );
+      expect(mockSandboxInstance.files.makeDir).toHaveBeenCalledWith("/home/user/repo/src/deep");
     });
 
     it("uses absolute paths as-is", async () => {
       const executor = createExecutor();
       await executor.writeFile("/etc/config.json", '{"key": "val"}');
 
-      expect(mockSandboxInstance.files.write).toHaveBeenCalledWith(
-        "/etc/config.json",
-        '{"key": "val"}',
-      );
+      expect(mockSandboxInstance.files.write).toHaveBeenCalledWith("/etc/config.json", '{"key": "val"}');
     });
 
     it("throws if sandbox not booted", async () => {
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        vi.fn(),
-      );
-      await expect(executor.writeFile("f.ts", "c")).rejects.toThrow(
-        "Sandbox not booted",
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, vi.fn());
+      await expect(executor.writeFile("f.ts", "c")).rejects.toThrow("Sandbox not booted");
     });
   });
 
@@ -680,31 +599,19 @@ describe("SandboxExecutor", () => {
       const executor = createExecutor();
       await executor.readFile("package.json");
 
-      expect(mockSandboxInstance.files.read).toHaveBeenCalledWith(
-        "/home/user/repo/package.json",
-      );
+      expect(mockSandboxInstance.files.read).toHaveBeenCalledWith("/home/user/repo/package.json");
     });
 
     it("uses absolute paths as-is", async () => {
       const executor = createExecutor();
       await executor.readFile("/tmp/output.log");
 
-      expect(mockSandboxInstance.files.read).toHaveBeenCalledWith(
-        "/tmp/output.log",
-      );
+      expect(mockSandboxInstance.files.read).toHaveBeenCalledWith("/tmp/output.log");
     });
 
     it("throws if sandbox not booted", async () => {
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        vi.fn(),
-      );
-      await expect(executor.readFile("f.ts")).rejects.toThrow(
-        "Sandbox not booted",
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, vi.fn());
+      await expect(executor.readFile("f.ts")).rejects.toThrow("Sandbox not booted");
     });
   });
 
@@ -715,43 +622,28 @@ describe("SandboxExecutor", () => {
       const executor = createExecutor();
       await executor.removeFile("src/old.ts");
 
-      expect(mockSandboxInstance.files.remove).toHaveBeenCalledWith(
-        "/home/user/repo/src/old.ts",
-      );
+      expect(mockSandboxInstance.files.remove).toHaveBeenCalledWith("/home/user/repo/src/old.ts");
     });
 
     it("throws if sandbox not booted", async () => {
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        vi.fn(),
-      );
-      await expect(executor.removeFile("f.ts")).rejects.toThrow(
-        "Sandbox not booted",
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, vi.fn());
+      await expect(executor.removeFile("f.ts")).rejects.toThrow("Sandbox not booted");
     });
   });
 
   // ── Path traversal protection ────────────────────────────────────────
 
   describe("path traversal protection (validatePath)", () => {
-    it.each(["../../etc/passwd", "../other-repo/secret", "a/../../../b"])(
-      "throws for traversal path: %s",
-      async (badPath) => {
-        const executor = createExecutor();
-        await expect(executor.readFile(badPath)).rejects.toThrow(
-          "Path traversal detected",
-        );
-        await expect(executor.writeFile(badPath, "x")).rejects.toThrow(
-          "Path traversal detected",
-        );
-        await expect(executor.removeFile(badPath)).rejects.toThrow(
-          "Path traversal detected",
-        );
-      },
-    );
+    it.each([
+      "../../etc/passwd",
+      "../other-repo/secret",
+      "a/../../../b",
+    ])("throws for traversal path: %s", async (badPath) => {
+      const executor = createExecutor();
+      await expect(executor.readFile(badPath)).rejects.toThrow("Path traversal detected");
+      await expect(executor.writeFile(badPath, "x")).rejects.toThrow("Path traversal detected");
+      await expect(executor.removeFile(badPath)).rejects.toThrow("Path traversal detected");
+    });
 
     it("allows absolute paths under repo", async () => {
       const executor = createExecutor();
@@ -795,11 +687,11 @@ describe("SandboxExecutor", () => {
       await executor.pushBranch("stas/fix-42");
 
       // Verify the push sequence
-      expect(runLog.some((c) => c.includes('config user.email'))).toBe(true);
-      expect(runLog.some((c) => c.includes('config user.name'))).toBe(true);
-      expect(runLog.some((c) => c.includes('add -A'))).toBe(true);
-      expect(runLog.some((c) => c.includes('commit -m'))).toBe(true);
-      expect(runLog.some((c) => c.includes('remote set-url origin'))).toBe(true);
+      expect(runLog.some((c) => c.includes("config user.email"))).toBe(true);
+      expect(runLog.some((c) => c.includes("config user.name"))).toBe(true);
+      expect(runLog.some((c) => c.includes("add -A"))).toBe(true);
+      expect(runLog.some((c) => c.includes("commit -m"))).toBe(true);
+      expect(runLog.some((c) => c.includes("remote set-url origin"))).toBe(true);
       expect(runLog.some((c) => c.includes('checkout -b "stas/fix-42"'))).toBe(true);
       expect(runLog.some((c) => c.includes('push origin "stas/fix-42"'))).toBe(true);
     });
@@ -836,9 +728,7 @@ describe("SandboxExecutor", () => {
       await executor.pushBranch("stas/fix-42");
 
       // Should not attempt commit or push
-      const calls = mockSandboxInstance.commands.run.mock.calls.map(
-        (c: any[]) => c[0],
-      );
+      const calls = mockSandboxInstance.commands.run.mock.calls.map((c: any[]) => c[0]);
       expect(calls.filter((c: string) => c.includes("commit"))).toHaveLength(0);
       expect(calls.filter((c: string) => c.includes("push"))).toHaveLength(0);
     });
@@ -855,22 +745,12 @@ describe("SandboxExecutor", () => {
         return { stdout: "", stderr: "", exitCode: 0 };
       });
 
-      await expect(
-        executor.pushBranch("stas/fix-42"),
-      ).rejects.toThrow("Failed to push branch 'stas/fix-42'");
+      await expect(executor.pushBranch("stas/fix-42")).rejects.toThrow("Failed to push branch 'stas/fix-42'");
     });
 
     it("throws if sandbox not booted", async () => {
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        vi.fn(),
-      );
-      await expect(executor.pushBranch("stas/fix")).rejects.toThrow(
-        "Sandbox not booted",
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, vi.fn());
+      await expect(executor.pushBranch("stas/fix")).rejects.toThrow("Sandbox not booted");
     });
   });
 
@@ -920,22 +800,14 @@ describe("SandboxExecutor", () => {
     });
 
     it("throws if sandbox not booted", async () => {
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        vi.fn(),
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, vi.fn());
       await expect(executor.runTests()).rejects.toThrow("Sandbox not booted");
     });
 
     it("throws if runtime not detected", async () => {
       const executor = createExecutor();
       (executor as any).runtimeInfo = null;
-      await expect(executor.runTests()).rejects.toThrow(
-        "Runtime not detected",
-      );
+      await expect(executor.runTests()).rejects.toThrow("Runtime not detected");
     });
   });
 
@@ -968,22 +840,14 @@ describe("SandboxExecutor", () => {
     });
 
     it("throws if sandbox not booted", async () => {
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        vi.fn(),
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, vi.fn());
       await expect(executor.formatCode()).rejects.toThrow("Sandbox not booted");
     });
 
     it("throws if runtime not detected", async () => {
       const executor = createExecutor();
       (executor as any).runtimeInfo = null;
-      await expect(executor.formatCode()).rejects.toThrow(
-        "Runtime not detected",
-      );
+      await expect(executor.formatCode()).rejects.toThrow("Runtime not detected");
     });
   });
 
@@ -1033,24 +897,14 @@ describe("SandboxExecutor", () => {
     });
 
     it("throws if sandbox not booted", async () => {
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        vi.fn(),
-      );
-      await expect(executor.analyzeCode()).rejects.toThrow(
-        "Sandbox not booted",
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, vi.fn());
+      await expect(executor.analyzeCode()).rejects.toThrow("Sandbox not booted");
     });
 
     it("throws if runtime not detected", async () => {
       const executor = createExecutor();
       (executor as any).runtimeInfo = null;
-      await expect(executor.analyzeCode()).rejects.toThrow(
-        "Runtime not detected",
-      );
+      await expect(executor.analyzeCode()).rejects.toThrow("Runtime not detected");
     });
   });
 
@@ -1082,9 +936,7 @@ describe("SandboxExecutor", () => {
     });
 
     it("handles kill errors gracefully without throwing", async () => {
-      mockSandboxInstance.kill.mockRejectedValue(
-        new Error("Connection reset"),
-      );
+      mockSandboxInstance.kill.mockRejectedValue(new Error("Connection reset"));
       const executor = createExecutor();
 
       // Should not throw
@@ -1096,13 +948,7 @@ describe("SandboxExecutor", () => {
     });
 
     it("does nothing if sandbox was never booted", async () => {
-      const executor = new SandboxExecutor(
-        "https://github.com/owner/repo.git",
-        "owner",
-        "repo",
-        123,
-        vi.fn(),
-      );
+      const executor = new SandboxExecutor("https://github.com/owner/repo.git", "owner", "repo", 123, vi.fn());
       await expect(executor.destroy()).resolves.toBeUndefined();
       expect(mockSandboxInstance.kill).not.toHaveBeenCalled();
     });

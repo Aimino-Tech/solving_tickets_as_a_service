@@ -13,11 +13,11 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
-import { Queue, Worker, QueueEvents } from "bullmq";
-import { config } from "../config.js";
+import { Queue, QueueEvents, Worker } from "bullmq";
 import { runIssueAgent } from "../agent/issueAgent.js";
-import type { IssueJobData } from "../utils/types.js";
+import { config } from "../config.js";
 import { rootLogger } from "../utils/logger.js";
+import type { IssueJobData } from "../utils/types.js";
 
 const log = rootLogger.child({ module: "issue-queue" });
 
@@ -87,15 +87,9 @@ export function createIssueWorker(): Worker<IssueJobData> {
       const result = await runIssueAgent(data, job.id ?? undefined);
 
       if (!result.fixReady) {
-        log.warn(
-          { jobId: job.id, reason: result.noFixReason },
-          "Fix not ready",
-        );
+        log.warn({ jobId: job.id, reason: result.noFixReason }, "Fix not ready");
       } else {
-        log.info(
-          { jobId: job.id, confidence: result.confidence, prUrl: result.prUrl },
-          "Fix completed",
-        );
+        log.info({ jobId: job.id, confidence: result.confidence, prUrl: result.prUrl }, "Fix completed");
       }
 
       // Return the result so it's stored in BullMQ job metadata
@@ -156,23 +150,16 @@ export function createQueueEvents(): QueueEvents {
 /**
  * Enqueue an issue for processing with deduplication.
  */
-export async function enqueueIssue(
-  queue: Queue<IssueJobData>,
-  data: IssueJobData,
-): Promise<string | undefined> {
+export async function enqueueIssue(queue: Queue<IssueJobData>, data: IssueJobData): Promise<string | undefined> {
   const dedupKey = `issue:${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}`;
 
   try {
-    const job = await queue.add(
-      "process-issue",
-      data,
-      {
-        deduplication: {
-          id: dedupKey,
-          ttl: config.queue.dedupTtl * 1000,
-        },
+    const job = await queue.add("process-issue", data, {
+      deduplication: {
+        id: dedupKey,
+        ttl: config.queue.dedupTtl * 1000,
       },
-    );
+    });
 
     log.info(
       {

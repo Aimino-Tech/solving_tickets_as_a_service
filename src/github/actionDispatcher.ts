@@ -13,12 +13,12 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
-import { config } from "../config.js";
-import { getOctokit } from "./auth.js";
-import * as messages from "./messages.js";
 import type { AgentResult } from "../agent/types.js";
+import { config } from "../config.js";
 import type { SandboxExecutor } from "../sandbox/executor.js";
 import { rootLogger } from "../utils/logger.js";
+import { getOctokit } from "./auth.js";
+import * as messages from "./messages.js";
 
 const log = rootLogger.child({ module: "action-dispatcher" });
 
@@ -46,16 +46,8 @@ export class ActionDispatcher {
    * Dispatch the appropriate action based on agent result confidence.
    */
   async dispatch(params: DispatchParams): Promise<DispatchResult> {
-    const {
-      issueNumber,
-      issueTitle,
-      agentResult,
-      sandbox,
-      repoOwner,
-      repoName,
-      installationId,
-      repoDefaultBranch,
-    } = params;
+    const { issueNumber, issueTitle, agentResult, sandbox, repoOwner, repoName, installationId, repoDefaultBranch } =
+      params;
 
     const octokit = await getOctokit(installationId);
     const baseBranch = repoDefaultBranch || "main";
@@ -172,15 +164,10 @@ export class ActionDispatcher {
 
       return { action: "comment_posted", commentBody: lowBody };
     } catch (err) {
-      log.error(
-        { err: String(err), issueNumber, repoOwner, repoName },
-        "Error dispatching action",
-      );
+      log.error({ err: String(err), issueNumber, repoOwner, repoName }, "Error dispatching action");
 
       // Fallback: post error comment
-      const errorBody = messages.errorComment(
-        `Action dispatch failed: ${String(err)}`,
-      );
+      const errorBody = messages.errorComment(`Action dispatch failed: ${String(err)}`);
       try {
         await this.postComment(octokit, repoOwner, repoName, issueNumber, errorBody);
       } catch (commentErr) {
@@ -213,10 +200,7 @@ export class ActionDispatcher {
         body,
       });
     } catch (err) {
-      log.warn(
-        { err: String(err), owner, repo, issueNumber },
-        "Failed to post comment to GitHub issue",
-      );
+      log.warn({ err: String(err), owner, repo, issueNumber }, "Failed to post comment to GitHub issue");
       throw err;
     }
   }

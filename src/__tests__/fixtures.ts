@@ -4,8 +4,8 @@
  * Every fixture returns a fresh copy so tests can safely mutate as needed.
  */
 
-import type { IssueJobData } from "../utils/types.js";
 import type { AgentResult } from "../agent/types.js";
+import type { IssueJobData } from "../utils/types.js";
 
 // ── Webhook Payloads ───────────────────────────────────────────────────────
 
@@ -35,7 +35,18 @@ export function sampleIssueLabeledPayload() {
       author_association: "CONTRIBUTOR",
       active_lock_reason: null,
       performed_via_github_app: null,
-      reactions: { url: "", total_count: 0, "+1": 0, "-1": 0, laugh: 0, hooray: 0, confused: 0, heart: 0, rocket: 0, eyes: 0 },
+      reactions: {
+        url: "",
+        total_count: 0,
+        "+1": 0,
+        "-1": 0,
+        laugh: 0,
+        hooray: 0,
+        confused: 0,
+        heart: 0,
+        rocket: 0,
+        eyes: 0,
+      },
       state_reason: null,
     },
     label: { name: "stas:fix", color: "fc2929", default: false, description: "Trigger STAS fix" },
@@ -94,7 +105,18 @@ export function sampleIssueOpenedPayload() {
       author_association: "NONE",
       active_lock_reason: null,
       performed_via_github_app: null,
-      reactions: { url: "", total_count: 0, "+1": 0, "-1": 0, laugh: 0, hooray: 0, confused: 0, heart: 0, rocket: 0, eyes: 0 },
+      reactions: {
+        url: "",
+        total_count: 0,
+        "+1": 0,
+        "-1": 0,
+        laugh: 0,
+        hooray: 0,
+        confused: 0,
+        heart: 0,
+        rocket: 0,
+        eyes: 0,
+      },
       state_reason: null,
     },
     repository: {
@@ -180,7 +202,8 @@ export function sampleAgentResult(overrides?: Partial<AgentResult>): AgentResult
     prUrl: "https://github.com/owner/test-repo/pull/42",
     branchName: "stas/fix-42-mock",
     diff: "diff --git a/src/login.ts b/src/login.ts\nindex abc..def 100644\n--- a/src/login.ts\n+++ b/src/login.ts\n@@ -10,3 +10,5 @@\n+  // Sanitize input\n+  const sanitized = escapeSpecialChars(input);",
-    testOutput: "PASS tests/login.test.ts (42ms)\n  ✓ handles special characters in password\n  ✓ rejects empty password\n\nTests: 2 passed, 2 total",
+    testOutput:
+      "PASS tests/login.test.ts (42ms)\n  ✓ handles special characters in password\n  ✓ rejects empty password\n\nTests: 2 passed, 2 total",
     errors: [],
   };
 }

@@ -80,9 +80,7 @@ export class SandboxExecutor {
         timeoutMs: config.e2b.sandboxTimeoutMs,
       });
     } catch (err) {
-      throw new Error(
-        `Failed to create E2B sandbox (template: ${config.e2b.templateId}): ${String(err)}`,
-      );
+      throw new Error(`Failed to create E2B sandbox (template: ${config.e2b.templateId}): ${String(err)}`);
     }
 
     log.info({ sandboxId: this.sandbox.sandboxId }, "Sandbox created");
@@ -91,22 +89,14 @@ export class SandboxExecutor {
     try {
       this.installationToken = await this.getToken(this.installationId);
     } catch (err) {
-      throw new Error(
-        `Failed to get installation token for sandbox ${this.sandbox.sandboxId}: ${String(err)}`,
-      );
+      throw new Error(`Failed to get installation token for sandbox ${this.sandbox.sandboxId}: ${String(err)}`);
     }
 
     // Clone the repo with auth
-    const authUrl = this.repoUrl.replace(
-      "https://",
-      `https://x-access-token:${this.installationToken}@`,
-    );
+    const authUrl = this.repoUrl.replace("https://", `https://x-access-token:${this.installationToken}@`);
     this.repoDir = `/home/user/${this.repoName}`;
 
-    const cloneResult = await this.exec(
-      `git clone --depth 1 ${authUrl} ${this.repoDir}`,
-      120_000,
-    );
+    const cloneResult = await this.exec(`git clone --depth 1 ${authUrl} ${this.repoDir}`, 120_000);
     if (cloneResult.exitCode !== 0) {
       throw new Error(`Failed to clone repo: ${cloneResult.stderr}`);
     }
@@ -170,9 +160,7 @@ export class SandboxExecutor {
     const fullPath = filePath.startsWith("/") ? filePath : `${this.repoDir}/${filePath}`;
     try {
       // Ensure parent directory exists
-      const parentDir = fullPath.includes("/")
-        ? fullPath.substring(0, fullPath.lastIndexOf("/"))
-        : ".";
+      const parentDir = fullPath.includes("/") ? fullPath.substring(0, fullPath.lastIndexOf("/")) : ".";
       await this.sandbox.files.makeDir(parentDir);
 
       await this.sandbox.files.write(fullPath, content);
@@ -213,37 +201,23 @@ export class SandboxExecutor {
       await this.exec(`git -C "${this.repoDir}" add -A`);
 
       // Check if there's anything to commit
-      const statusResult = await this.exec(
-        `git -C "${this.repoDir}" status --porcelain`,
-      );
+      const statusResult = await this.exec(`git -C "${this.repoDir}" status --porcelain`);
       if (!statusResult.stdout.trim()) {
         log.warn("No changes to commit");
         return;
       }
 
       // Commit
-      const commitResult = await this.exec(
-        `git -C "${this.repoDir}" commit -m "fix: automated fix by STAS"`,
-      );
+      const commitResult = await this.exec(`git -C "${this.repoDir}" commit -m "fix: automated fix by STAS"`);
       if (commitResult.exitCode !== 0 && !commitResult.stderr.includes("nothing to commit")) {
         throw new Error(`Failed to commit: ${commitResult.stderr}`);
       }
 
       // Push
-      const authUrl = this.repoUrl.replace(
-        "https://",
-        `https://x-access-token:${this.installationToken}@`,
-      );
-      await this.exec(
-        `git -C "${this.repoDir}" remote set-url origin "${authUrl}"`,
-      );
-      await this.exec(
-        `git -C "${this.repoDir}" checkout -b "${branchName}"`,
-      );
-      const pushResult = await this.exec(
-        `git -C "${this.repoDir}" push origin "${branchName}"`,
-        120_000,
-      );
+      const authUrl = this.repoUrl.replace("https://", `https://x-access-token:${this.installationToken}@`);
+      await this.exec(`git -C "${this.repoDir}" remote set-url origin "${authUrl}"`);
+      await this.exec(`git -C "${this.repoDir}" checkout -b "${branchName}"`);
+      const pushResult = await this.exec(`git -C "${this.repoDir}" push origin "${branchName}"`, 120_000);
       if (pushResult.exitCode !== 0) {
         throw new Error(`Failed to push branch '${branchName}': ${pushResult.stderr}`);
       }
@@ -253,9 +227,7 @@ export class SandboxExecutor {
       if (err instanceof Error && err.message.startsWith("Failed to")) {
         throw err; // Already has context
       }
-      throw new Error(
-        `Git push operation failed for branch '${branchName}': ${String(err)}`,
-      );
+      throw new Error(`Git push operation failed for branch '${branchName}': ${String(err)}`);
     }
   }
 
@@ -331,14 +303,14 @@ export class SandboxExecutor {
 
     // Node / JavaScript
     if (files.stdout.includes("package.json")) {
-      const pkgJson = await this.exec(
-        `cat "${this.repoDir}/package.json"`,
-      );
+      const pkgJson = await this.exec(`cat "${this.repoDir}/package.json"`);
       let nodeVersion = "";
       try {
         const pkg = JSON.parse(pkgJson.stdout);
         nodeVersion = pkg.engines?.node || "";
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
 
       // Check for specific test frameworks
       let testCmd = "npm test 2>&1";
@@ -390,9 +362,7 @@ export class SandboxExecutor {
             ? "pip install -e '.[dev]' 2>&1 || pip install -r requirements.txt 2>&1"
             : "pip install -r requirements.txt 2>&1",
         formatCommand: hasRuff ? "python3 -m ruff format . 2>&1 || true" : "",
-        lintCommand: hasRuff
-          ? "python3 -m ruff check . 2>&1"
-          : "python3 -m flake8 . 2>&1 || true",
+        lintCommand: hasRuff ? "python3 -m ruff check . 2>&1" : "python3 -m flake8 . 2>&1 || true",
       };
     }
 

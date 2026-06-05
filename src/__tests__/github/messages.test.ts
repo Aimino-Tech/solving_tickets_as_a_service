@@ -16,7 +16,7 @@
  * 12. buildPRBody
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { sampleAgentResult } from "../fixtures.js";
 
 // Mock config so messages can read BOT_NAME
@@ -27,18 +27,18 @@ vi.mock("../../config.js", () => ({
 }));
 
 import {
-  highConfidenceIssueComment,
+  alreadyFixedComment,
+  buildPRBody,
+  ciFailureComment,
   draftIssueComment,
+  errorComment,
+  featureSkipComment,
+  highConfidenceIssueComment,
+  investigationComment,
   lowConfidenceComment,
   noFixComment,
   noResultComment,
-  investigationComment,
-  alreadyFixedComment,
-  errorComment,
-  featureSkipComment,
   questionSkipComment,
-  ciFailureComment,
-  buildPRBody,
 } from "../../github/messages.js";
 
 describe("github/messages", () => {
@@ -51,15 +51,11 @@ describe("github/messages", () => {
    * Build a result with errors inline (avoids Partial<> spread issues
    * with describe-scoped sampleAgentResult calls).
    */
-  function resultWithErrors(
-    errors: string[],
-  ): ReturnType<typeof sampleAgentResult> {
+  function resultWithErrors(errors: string[]): ReturnType<typeof sampleAgentResult> {
     return { ...sampleAgentResult(), errors };
   }
 
-  function resultWithNoFix(
-    noFixReason: string,
-  ): ReturnType<typeof sampleAgentResult> {
+  function resultWithNoFix(noFixReason: string): ReturnType<typeof sampleAgentResult> {
     return { ...sampleAgentResult(), fixReady: false, noFixReason, alreadyFixed: true };
   }
 
@@ -148,9 +144,7 @@ describe("github/messages", () => {
   // ── 3. lowConfidenceComment ───────────────────────────────────────────
 
   describe("lowConfidenceComment", () => {
-    const errorResult = resultWithErrors([
-      "Test failed: login.test.ts timeout after 5000ms",
-    ]);
+    const errorResult = resultWithErrors(["Test failed: login.test.ts timeout after 5000ms"]);
 
     it("includes test output when provided", () => {
       const msg = lowConfidenceComment(errorResult, "PASS: 3/3 tests");
@@ -189,9 +183,7 @@ describe("github/messages", () => {
   // ── 4. noFixComment ──────────────────────────────────────────────────
 
   describe("noFixComment", () => {
-    const nfResult = resultWithNoFix(
-      "Cannot reproduce the issue on latest main",
-    );
+    const nfResult = resultWithNoFix("Cannot reproduce the issue on latest main");
 
     it('includes "Could Not Fix" heading', () => {
       const msg = noFixComment(nfResult);

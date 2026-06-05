@@ -20,7 +20,7 @@
  * ─────────────────────────────────────────────────────────────────────
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Mocks — hoisted before imports by vitest
@@ -28,7 +28,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockEnqueueIssue } = vi.hoisted(() => {
   return {
-    mockEnqueueIssue: vi.fn<(queue: unknown, data: unknown) => Promise<string | undefined>>()
+    mockEnqueueIssue: vi
+      .fn<(queue: unknown, data: unknown) => Promise<string | undefined>>()
       .mockResolvedValue("job-mock-id"),
   };
 });
@@ -69,11 +70,7 @@ vi.mock("../../queue/issueQueue.js", () => ({
 // ---------------------------------------------------------------------------
 
 import { createGithubWebhooks, suggestLabels } from "../../webhooks/github.js";
-import {
-  sampleIssueLabeledPayload,
-  sampleIssueOpenedPayload,
-  sampleMarketplacePayload,
-} from "../fixtures.js";
+import { sampleIssueLabeledPayload, sampleIssueOpenedPayload, sampleMarketplacePayload } from "../fixtures.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -207,7 +204,18 @@ describe("createGithubWebhooks", () => {
           author_association: "CONTRIBUTOR",
           active_lock_reason: null,
           performed_via_github_app: null,
-          reactions: { url: "", total_count: 0, "+1": 0, "-1": 0, laugh: 0, hooray: 0, confused: 0, heart: 0, rocket: 0, eyes: 0 },
+          reactions: {
+            url: "",
+            total_count: 0,
+            "+1": 0,
+            "-1": 0,
+            laugh: 0,
+            hooray: 0,
+            confused: 0,
+            heart: 0,
+            rocket: 0,
+            eyes: 0,
+          },
           state_reason: null,
         },
         changes: { body: { from: "Original body" } },
@@ -296,7 +304,18 @@ describe("createGithubWebhooks", () => {
           author_association: "CONTRIBUTOR",
           active_lock_reason: null,
           performed_via_github_app: null,
-          reactions: { url: "", total_count: 0, "+1": 0, "-1": 0, laugh: 0, hooray: 0, confused: 0, heart: 0, rocket: 0, eyes: 0 },
+          reactions: {
+            url: "",
+            total_count: 0,
+            "+1": 0,
+            "-1": 0,
+            laugh: 0,
+            hooray: 0,
+            confused: 0,
+            heart: 0,
+            rocket: 0,
+            eyes: 0,
+          },
           state_reason: null,
         },
         changes: {},
