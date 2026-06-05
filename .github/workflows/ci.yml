@@ -182,7 +182,7 @@ jobs:
           echo "RabbitMQ is healthy"
 
       - name: Run E2E tests
-        run: npx vitest run --testNamePattern="e2e|E2E|integration" --reporter=verbose
+        run: npm run test:e2e:ci
         continue-on-error: true
         env:
           REDIS_URL: redis://localhost:6379
