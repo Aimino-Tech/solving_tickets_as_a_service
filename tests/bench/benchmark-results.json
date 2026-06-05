@@ -1,0 +1,297 @@
+{
+  "recordedAt": "2026-06-05T00:00:00.000Z",
+  "suites": {
+    "webhook": {
+      "parse raw body (JSON.parse)": {
+        "iterations": 1000,
+        "mean": 0.002,
+        "stddev": 0.001,
+        "p50": 0.002,
+        "p90": 0.003,
+        "p99": 0.005,
+        "min": 0.001,
+        "max": 0.010
+      },
+      "verify HMAC-SHA256 signature": {
+        "iterations": 1000,
+        "mean": 0.015,
+        "stddev": 0.005,
+        "p50": 0.014,
+        "p90": 0.020,
+        "p99": 0.030,
+        "min": 0.010,
+        "max": 0.050
+      },
+      "validate payload schema": {
+        "iterations": 1000,
+        "mean": 0.001,
+        "stddev": 0.0005,
+        "p50": 0.001,
+        "p90": 0.002,
+        "p99": 0.003,
+        "min": 0.001,
+        "max": 0.005
+      },
+      "enqueue job (mocked)": {
+        "iterations": 1000,
+        "mean": 0.050,
+        "stddev": 0.010,
+        "p50": 0.048,
+        "p90": 0.060,
+        "p99": 0.080,
+        "min": 0.040,
+        "max": 0.100
+      },
+      "full webhook pipeline (parse → verify → validate → enqueue)": {
+        "iterations": 1000,
+        "mean": 0.080,
+        "stddev": 0.020,
+        "p50": 0.075,
+        "p90": 0.100,
+        "p99": 0.150,
+        "min": 0.060,
+        "max": 0.200
+      }
+    },
+    "triage": {
+      "build classification prompt": {
+        "iterations": 1000,
+        "mean": 0.003,
+        "stddev": 0.001,
+        "p50": 0.003,
+        "p90": 0.004,
+        "p99": 0.006,
+        "min": 0.002,
+        "max": 0.010
+      },
+      "parse JSON classification response": {
+        "iterations": 1000,
+        "mean": 0.001,
+        "stddev": 0.0005,
+        "p50": 0.001,
+        "p90": 0.002,
+        "p99": 0.003,
+        "min": 0.001,
+        "max": 0.005
+      },
+      "keyword-based classifier (fast path)": {
+        "iterations": 1000,
+        "mean": 0.005,
+        "stddev": 0.002,
+        "p50": 0.004,
+        "p90": 0.007,
+        "p99": 0.010,
+        "min": 0.003,
+        "max": 0.015
+      },
+      "full triage pipeline (mocked AI)": {
+        "iterations": 1000,
+        "mean": 0.010,
+        "stddev": 0.003,
+        "p50": 0.009,
+        "p90": 0.013,
+        "p99": 0.020,
+        "min": 0.007,
+        "max": 0.030
+      }
+    },
+    "sandbox": {
+      "simulate ls (list files)": {
+        "iterations": 1000,
+        "mean": 0.001,
+        "stddev": 0.0005,
+        "p50": 0.001,
+        "p90": 0.002,
+        "p99": 0.003,
+        "min": 0.001,
+        "max": 0.005
+      },
+      "detect runtime from file listing": {
+        "iterations": 1000,
+        "mean": 0.003,
+        "stddev": 0.001,
+        "p50": 0.003,
+        "p90": 0.004,
+        "p99": 0.006,
+        "min": 0.002,
+        "max": 0.010
+      },
+      "construct git clone URL with auth token": {
+        "iterations": 1000,
+        "mean": 0.001,
+        "stddev": 0.0005,
+        "p50": 0.001,
+        "p90": 0.002,
+        "p99": 0.003,
+        "min": 0.001,
+        "max": 0.005
+      },
+      "full sandbox boot orchestration (mocked)": {
+        "iterations": 1000,
+        "mean": 0.008,
+        "stddev": 0.003,
+        "p50": 0.007,
+        "p90": 0.011,
+        "p99": 0.018,
+        "min": 0.005,
+        "max": 0.025
+      }
+    },
+    "codeintel": {
+      "simulate find command string construction": {
+        "iterations": 1000,
+        "mean": 0.001,
+        "stddev": 0.0005,
+        "p50": 0.001,
+        "p90": 0.002,
+        "p99": 0.003,
+        "min": 0.001,
+        "max": 0.005
+      },
+      "scan file structure (split + filter)": {
+        "iterations": 1000,
+        "mean": 0.002,
+        "stddev": 0.001,
+        "p50": 0.002,
+        "p90": 0.003,
+        "p99": 0.005,
+        "min": 0.001,
+        "max": 0.008
+      },
+      "extract symbols from file paths": {
+        "iterations": 1000,
+        "mean": 0.003,
+        "stddev": 0.001,
+        "p50": 0.003,
+        "p90": 0.004,
+        "p99": 0.006,
+        "min": 0.002,
+        "max": 0.010
+      },
+      "extract imports from file listing": {
+        "iterations": 1000,
+        "mean": 0.002,
+        "stddev": 0.001,
+        "p50": 0.002,
+        "p90": 0.003,
+        "p99": 0.005,
+        "min": 0.001,
+        "max": 0.008
+      },
+      "full code intelligence build pipeline": {
+        "iterations": 1000,
+        "mean": 0.008,
+        "stddev": 0.003,
+        "p50": 0.007,
+        "p90": 0.012,
+        "p99": 0.020,
+        "min": 0.005,
+        "max": 0.030
+      }
+    },
+    "queue": {
+      "compute dedup key": {
+        "iterations": 1000,
+        "mean": 0.001,
+        "stddev": 0.0005,
+        "p50": 0.001,
+        "p90": 0.002,
+        "p99": 0.003,
+        "min": 0.001,
+        "max": 0.005
+      },
+      "enqueue job (mocked BullMQ)": {
+        "iterations": 1000,
+        "mean": 0.040,
+        "stddev": 0.010,
+        "p50": 0.038,
+        "p90": 0.050,
+        "p99": 0.070,
+        "min": 0.030,
+        "max": 0.100
+      },
+      "process job handler (mocked)": {
+        "iterations": 1000,
+        "mean": 0.005,
+        "stddev": 0.002,
+        "p50": 0.005,
+        "p90": 0.007,
+        "p99": 0.010,
+        "min": 0.003,
+        "max": 0.015
+      },
+      "compute retry delay from retry count": {
+        "iterations": 1000,
+        "mean": 0.001,
+        "stddev": 0.0005,
+        "p50": 0.001,
+        "p90": 0.002,
+        "p99": 0.003,
+        "min": 0.001,
+        "max": 0.005
+      },
+      "check retry eligibility": {
+        "iterations": 1000,
+        "mean": 0.001,
+        "stddev": 0.0005,
+        "p50": 0.001,
+        "p90": 0.002,
+        "p99": 0.003,
+        "min": 0.001,
+        "max": 0.005
+      },
+      "full enqueue → process lifecycle (mocked)": {
+        "iterations": 1000,
+        "mean": 0.050,
+        "stddev": 0.015,
+        "p50": 0.045,
+        "p90": 0.065,
+        "p99": 0.090,
+        "min": 0.035,
+        "max": 0.120
+      }
+    },
+    "pipeline": {
+      "phase 1: webhook ingestion + parse": {
+        "iterations": 1000,
+        "mean": 0.004,
+        "stddev": 0.002,
+        "p50": 0.004,
+        "p90": 0.006,
+        "p99": 0.010,
+        "min": 0.003,
+        "max": 0.015
+      },
+      "phase 2: enqueue to BullMQ (mocked)": {
+        "iterations": 1000,
+        "mean": 0.040,
+        "stddev": 0.010,
+        "p50": 0.038,
+        "p90": 0.050,
+        "p99": 0.070,
+        "min": 0.030,
+        "max": 0.100
+      },
+      "phase 3: worker process + triage (mocked)": {
+        "iterations": 1000,
+        "mean": 0.008,
+        "stddev": 0.003,
+        "p50": 0.007,
+        "p90": 0.011,
+        "p99": 0.018,
+        "min": 0.005,
+        "max": 0.025
+      },
+      "full pipeline: webhook → job → worker (mocked)": {
+        "iterations": 1000,
+        "mean": 0.060,
+        "stddev": 0.020,
+        "p50": 0.055,
+        "p90": 0.080,
+        "p99": 0.120,
+        "min": 0.040,
+        "max": 0.160
+      }
+    }
+  }
+}

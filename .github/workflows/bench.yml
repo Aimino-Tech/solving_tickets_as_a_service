@@ -1,0 +1,122 @@
+name: Benchmarks (Daily)
+
+on:
+  schedule:
+    # Run daily at 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    # Allow manual trigger
+    inputs:
+      update-baseline:
+        description: 'Update baseline with current results'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for baseline comparison
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run benchmarks
+        id: bench
+        run: |
+          npm run bench:ci 2>&1 | tee bench-output.txt
+        continue-on-error: true
+
+      - name: Check for regressions
+        id: check
+        run: |
+          if grep -q 'REGRESSIONS DETECTED' bench-output.txt; then
+            echo "has_regressions=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_regressions=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: tests/bench/benchmark-results.json
+          retention-days: 90
+
+      - name: Upload benchmark output
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-output
+          path: bench-output.txt
+          retention-days: 30
+
+      - name: Notify on regression (Slack)
+        if: steps.check.outputs.has_regressions == 'true'
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SLACK_BENCH_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "🚨 *Benchmark Regression Detected*\nRepository: ${{ github.repository }}\nWorkflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nCheck the artifacts for details."
+            }
+        continue-on-error: true
+
+  regression-comment:
+    name: Comment on PR (if regressions)
+    runs-on: ubuntu-latest
+    needs: benchmark
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-results
+          path: tests/bench/
+
+      - name: Run baseline comparison
+        id: compare
+        run: |
+          npx tsx scripts/bench.ts --compare-only 2>&1 | tee compare-output.txt
+
+      - name: Find PR comment
+        id: find-comment
+        if: always()
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: 'Benchmark Report'
+
+      - name: Create or update PR comment
+        if: always()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: compare-output.txt
+          edit-mode: replace
