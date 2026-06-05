@@ -65,14 +65,22 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_CHEAP_MODEL: z.string().default('gpt-4o-mini'),
 
-  // Sandbox
+  // Sandbox — E2B
   E2B_API_KEY: z.string().optional(),
   E2B_TEMPLATE_ID: z.string().default('stas-default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
+  // Sandbox — Docker
+  DOCKER_IMAGE: z.string().default('ubuntu:24.04'),
+  DOCKER_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+  DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(true),
+  DOCKER_ALLOWED_HOSTS: z
+    .string()
+    .default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io,rubygems.org,repo1.maven.org,packagist.org,getcomposer.org'),
+  DOCKER_CONTAINER_MEMORY: z.string().default('4g'),
+  DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(2),
+
   // STAS
- 
-  // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
   STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
   STAS_LABEL: z.string().default('stas:fix'),
@@ -162,6 +170,11 @@ type ParsedEnv = z.infer<typeof envSchema>;
 // ---------------------------------------------------------------------------
 
 function buildConfig(env: ParsedEnv) {
+  // Parse allowed hosts from comma-separated string
+  const allowedHosts = env.DOCKER_ALLOWED_HOSTS.split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   return {
     port: env.PORT,
     runMode: env.RUN_MODE,
@@ -228,6 +241,15 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
+    },
+
+    docker: {
+      image: env.DOCKER_IMAGE,
+      sandboxTimeoutMs: env.DOCKER_SANDBOX_TIMEOUT_MS,
+      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
+      allowedHosts,
+      containerMemory: env.DOCKER_CONTAINER_MEMORY,
+      containerCpu: env.DOCKER_CONTAINER_CPU,
     },
 
     slack: {
