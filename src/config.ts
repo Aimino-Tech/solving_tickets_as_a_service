@@ -82,6 +82,13 @@ const envSchema = z.object({
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  // Admin API
+  ADMIN_API_KEY: z.string().optional(),
+
+  // Webhook Retry Worker
+  WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
+  WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
+
 
   // GitLab
   GITLAB_URL: z.string().default('https://gitlab.com'),
@@ -123,6 +130,11 @@ const envSchema = z.object({
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
+  USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
+  USAGE_CREDITS_TRIAGE: z.coerce.number().int().positive().default(10),
+  USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
+
+  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
@@ -154,6 +166,21 @@ const envSchema = z.object({
   SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
+
+  // Feature Flags
+  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
+  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
+
+  // Metering / Usage Tracking
+  METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
+  METERING_COST_OPENCODE_PRIMARY: z.coerce.number().int().positive().default(10),
+  METERING_COST_OPENCODE_FALLBACK: z.coerce.number().int().positive().default(5),
+  METERING_COST_PR_CREATION: z.coerce.number().int().positive().default(2),
+  METERING_COST_RETRY_PENALTY: z.coerce.number().int().positive().default(3),
+  METERING_BASELINE_SANDBOX_MS: z.coerce.number().int().positive().default(300000),
+  METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
+  METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
+  METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -251,6 +278,12 @@ function buildConfig(env: ParsedEnv) {
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
     },
 
+    webhookRetry: {
+      pollIntervalMs: env.WEBHOOK_RETRY_POLL_INTERVAL_MS,
+      batchSize: env.WEBHOOK_RETRY_BATCH_SIZE,
+    },
+
+
     stripe: {
       secretKey: env.STRIPE_SECRET_KEY,
       webhookSecret: env.STRIPE_WEBHOOK_SECRET,
@@ -274,6 +307,11 @@ function buildConfig(env: ParsedEnv) {
       sandboxBoot: env.PHASE_TIMEOUT_SANDBOX_MS,
       openCodeAgent: env.FIX_TIMEOUT_MS,
       prCreation: env.PHASE_TIMEOUT_PRCREATION_MS,
+    },
+
+    featureFlags: {
+      defaultTtlSeconds: env.FEATURE_FLAGS_DEFAULT_TTL_SECONDS,
+      autoDisableThreshold: env.FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD,
     },
 
     trackers: {
@@ -318,6 +356,24 @@ function buildConfig(env: ParsedEnv) {
         diskLimit: env.SANDBOX_DISK_LIMIT,
         networkEnabled: env.SANDBOX_NETWORK_ENABLED,
       },
+    },
+
+    metering: {
+      costTriage: env.METERING_COST_TRIAGE,
+      costOpencodePrimary: env.METERING_COST_OPENCODE_PRIMARY,
+      costOpencodeFallback: env.METERING_COST_OPENCODE_FALLBACK,
+      costPrCreation: env.METERING_COST_PR_CREATION,
+      costRetryPenalty: env.METERING_COST_RETRY_PENALTY,
+      baselineSandboxMs: env.METERING_BASELINE_SANDBOX_MS,
+      freeMonthlyCredits: env.METERING_FREE_MONTHLY_CREDITS,
+      sandboxMultiplierMin: env.METERING_SANDBOX_MULTIPLIER_MIN,
+      sandboxMultiplierMax: env.METERING_SANDBOX_MULTIPLIER_MAX,
+    },
+
+    usageCredits: {
+      fixRun: env.USAGE_CREDITS_FIX_RUN,
+      triage: env.USAGE_CREDITS_TRIAGE,
+      sandbox: env.USAGE_CREDITS_SANDBOX,
     },
   } as const;
 }

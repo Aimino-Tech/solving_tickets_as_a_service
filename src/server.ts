@@ -6,8 +6,13 @@
  * - Request ID middleware for log correlation
  * - Structured access logging with pino
  * - GET /health endpoint
+ * - GET /metrics endpoint (Prometheus-style webhook metrics)
  * - POST /webhook -- GitHub webhook receiver via @octokit/webhooks
  * - POST /webhook/stripe -- Stripe webhook for credit purchase events
+ * - Admin webhook management API at /admin/webhooks
+ * - Webhook event logging to webhook_events table for all sources
+ * - Idempotency via x-github-delivery / delivery_id deduplication
+ * - Exponential backoff retry worker (1min, 5min, 30min, max 3)
  *
  * --- Error Handling Audit ---------------------------------------------------
  * - Global Express error middleware (4-arg handler) at bottom of chain
@@ -35,11 +40,18 @@ import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.j
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
 import { rootLogger } from './utils/logger.js';
+import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
 import { validateWebhookPayload } from './validation.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
+import { featureFlagsRouter } from './routes/featureFlags.js';
+import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
+import { recordWebhookDuration } from './webhooks/metrics.js';
+import { renderMetrics } from './webhooks/metrics.js';
+import { adminWebhooksRouter } from './routes/adminWebhooks.js';
+import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -161,10 +173,25 @@ export function createApp(): express.Application {
     });
   });
 
+  // -- Prometheus metrics endpoint -----------------------------------------
+  app.get('/metrics', (_req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.send(renderMetrics());
+  });
+
   // -- Initialize trackers --------------------------------------------------
   initTrackers();
 
-  // -- Webhook receiver -----------------------------------------------------
+  // ── Initialize metering ───────────────────────────────────────────
+  initMetering();
+
+  // ── Start webhook retry worker ────────────────────────────────────
+  // Only start if we're running as API or both
+  if (config.runMode === 'api' || config.runMode === 'both') {
+    startWebhookRetryWorker();
+  }
+
+  // ── Webhook receiver ─────────────────────────────────────────────
   const queue = createIssueQueue();
   const githubWebhooks = createGithubWebhooks(queue);
   const gitlabHandler = createGitlabWebhooks(queue);
@@ -172,9 +199,11 @@ export function createApp(): express.Application {
 
   // -- GitHub webhook handler (shared between /webhook and /webhook/github) --
   async function handleGithubWebhook(req: Request, res: Response): Promise<void> {
+    const startTime = Date.now();
     const event = req.headers['x-github-event'] as string;
     const deliveryId = req.headers['x-github-delivery'] as string;
     const signature = req.headers['x-hub-signature-256'] as string;
+    const source = 'github';
 
     log.info({ event, deliveryId, requestId: req.requestId }, 'Received GitHub webhook');
 
@@ -188,16 +217,21 @@ export function createApp(): express.Application {
       return;
     }
 
+    // Log the webhook event BEFORE processing (for audit trail)
+    const eventId = await logWebhookReceived({
+      source,
+      eventType: event,
+      deliveryId,
+      payload: parsedPayload,
+    });
+
     const validation = validateWebhookPayload(event, parsedPayload);
     if (!validation.success) {
       log.warn(
-        {
-          event,
-          errors: validation.errors,
-          requestId: req.requestId,
-        },
+        { event, errors: validation.errors, requestId: req.requestId },
         'Webhook payload validation failed',
       );
+      if (eventId) await logWebhookFailed(eventId, `Validation failed: ${validation.errors?.join(', ')}`);
       res.status(400).json({ error: 'Invalid payload', details: validation.errors });
       return;
     }
@@ -205,6 +239,7 @@ export function createApp(): express.Application {
     if (!config.stas.devSkipWebhookVerify && signature) {
       if (!rawBody) {
         log.error('Missing raw body for signature verification');
+        if (eventId) await logWebhookFailed(eventId, 'Missing raw body for signature verification');
         res.status(400).json({ error: 'Missing raw body' });
         return;
       }
@@ -218,6 +253,7 @@ export function createApp(): express.Application {
         });
       } catch (err) {
         log.warn({ err: String(err) }, 'GitHub webhook verification failed');
+        if (eventId) await logWebhookFailed(eventId, `Signature verification failed: ${String(err)}`);
         res.status(401).json({ error: 'Invalid signature' });
         return;
       }
@@ -233,9 +269,18 @@ export function createApp(): express.Application {
         });
       } catch (err) {
         log.error({ err: String(err) }, 'Webhook processing error');
+        if (eventId) await logWebhookFailed(eventId, `Processing error: ${String(err)}`);
+        // Still respond 202 — we've logged the event for replay
       }
     }
 
+    // Mark as processed on success
+    if (eventId) {
+      await logWebhookProcessed(eventId);
+      recordWebhookDuration(source, Date.now() - startTime);
+    }
+
+    // Always respond 202 (accepted for async processing)
     res.status(202).json({ accepted: true });
   }
 
@@ -245,9 +290,11 @@ export function createApp(): express.Application {
 
   // -- GitLab webhook -------------------------------------------------------
   app.post('/webhook/gitlab', async (req: Request, res: Response) => {
+    const startTime = Date.now();
     const event = req.headers['x-gitlab-event'] as string;
     const token = req.headers['x-gitlab-token'] as string;
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
+    const source = 'gitlab';
 
     log.info({ event, requestId: req.requestId }, 'Received GitLab webhook');
 
@@ -255,15 +302,6 @@ export function createApp(): express.Application {
       log.error('Missing raw body for GitLab webhook');
       res.status(400).json({ error: 'Missing raw body' });
       return;
-    }
-
-    if (config.gitlab.webhookSecret) {
-      const { gitlabWebhook: gw } = await import('./webhooks/gitlab.js');
-      if (!gw.verify(rawBody.toString(), token, config.gitlab.webhookSecret)) {
-        log.warn('GitLab webhook token verification failed');
-        res.status(401).json({ error: 'Invalid token' });
-        return;
-      }
     }
 
     let parsedPayload: unknown;
@@ -275,19 +313,42 @@ export function createApp(): express.Application {
       return;
     }
 
-    try {
-      await gitlabHandler.handle(event, parsedPayload);
-    } catch (err) {
-      log.error({ err: String(err) }, 'GitLab webhook processing error');
+    // Log the webhook event
+    const eventId = await logWebhookReceived({
+      source,
+      eventType: event || 'unknown',
+      deliveryId: undefined,
+      payload: parsedPayload,
+    });
+
+    if (config.gitlab.webhookSecret) {
+      const { gitlabWebhook: gw } = await import('./webhooks/gitlab.js');
+      if (!gw.verify(rawBody.toString(), token, config.gitlab.webhookSecret)) {
+        log.warn('GitLab webhook token verification failed');
+        if (eventId) await logWebhookFailed(eventId, 'Token verification failed');
+        res.status(401).json({ error: 'Invalid token' });
+        return;
+      }
     }
 
+    try {
+      await gitlabHandler.handle(event, parsedPayload);
+      if (eventId) await logWebhookProcessed(eventId);
+    } catch (err) {
+      log.error({ err: String(err) }, 'GitLab webhook processing error');
+      if (eventId) await logWebhookFailed(eventId, String(err));
+    }
+
+    recordWebhookDuration(source, Date.now() - startTime);
     res.status(202).json({ accepted: true });
   });
 
   // -- Bitbucket webhook ----------------------------------------------------
   app.post('/webhook/bitbucket', async (req: Request, res: Response) => {
+    const startTime = Date.now();
     const signature = req.headers['x-hub-signature'] as string;
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
+    const source = 'bitbucket';
 
     log.info({ requestId: req.requestId }, 'Received Bitbucket webhook');
 
@@ -297,27 +358,43 @@ export function createApp(): express.Application {
       return;
     }
 
+    let parsedPayload: unknown;
     try {
-      await bitbucketHandler.handle(rawBody.toString(), signature);
-    } catch (err) {
-      log.error({ err: String(err) }, 'Bitbucket webhook processing error');
+      parsedPayload = JSON.parse(rawBody.toString());
+    } catch {
+      res.status(400).json({ error: 'Invalid JSON payload' });
+      return;
     }
 
+    // Log the webhook event
+    const eventId = await logWebhookReceived({
+      source,
+      eventType: 'push',
+      deliveryId: undefined,
+      payload: parsedPayload,
+    });
+
+    try {
+      await bitbucketHandler.handle(rawBody.toString(), signature);
+      if (eventId) await logWebhookProcessed(eventId);
+    } catch (err) {
+      log.error({ err: String(err) }, 'Bitbucket webhook processing error');
+      if (eventId) await logWebhookFailed(eventId, String(err));
+    }
+
+    recordWebhookDuration(source, Date.now() - startTime);
     res.status(202).json({ accepted: true });
   });
 
   // -- Linear webhook --------------------------------------------------------
   app.post('/webhook/linear', async (req: Request, res: Response) => {
+    const startTime = Date.now();
     const signature = req.headers['linear-signature'] as string;
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
+    const source = 'linear';
 
     if (!rawBody) {
       res.status(400).json({ error: 'Missing raw body' });
-      return;
-    }
-
-    if (!verifyLinearWebhookSignature(rawBody, signature)) {
-      res.status(401).json({ error: 'Invalid signature' });
       return;
     }
 
@@ -329,8 +406,23 @@ export function createApp(): express.Application {
       return;
     }
 
+    // Log the webhook event
+    const eventId = await logWebhookReceived({
+      source,
+      eventType: (payload as any)?.type || 'unknown',
+      deliveryId: undefined,
+      payload,
+    });
+
+    if (!verifyLinearWebhookSignature(rawBody, signature)) {
+      if (eventId) await logWebhookFailed(eventId, 'Signature verification failed');
+      res.status(401).json({ error: 'Invalid signature' });
+      return;
+    }
+
     const result = await handleLinearWebhook(payload);
     if (!result) {
+      if (eventId) await logWebhookFailed(eventId, 'Invalid webhook payload');
       res.status(400).json({ error: 'Invalid webhook payload' });
       return;
     }
@@ -367,24 +459,24 @@ export function createApp(): express.Application {
         }
       } catch (err) {
         log.error({ err: String(err), ticketId: result.ticketId }, 'Failed to process Linear webhook');
+        if (eventId) await logWebhookFailed(eventId, String(err));
       }
     }
 
+    if (eventId) await logWebhookProcessed(eventId);
+    recordWebhookDuration(source, Date.now() - startTime);
     res.status(202).json({ accepted: true });
   });
 
   // -- Jira webhook ---------------------------------------------------------
   app.post('/webhook/jira', async (req: Request, res: Response) => {
+    const startTime = Date.now();
     const signature = req.headers['x-hub-signature-256'] as string;
     const rawBody = (req as { rawBody?: Buffer }).rawBody;
+    const source = 'jira';
 
     if (!rawBody) {
       res.status(400).json({ error: 'Missing raw body' });
-      return;
-    }
-
-    if (!verifyJiraWebhookSignature(rawBody, signature)) {
-      res.status(401).json({ error: 'Invalid signature' });
       return;
     }
 
@@ -396,8 +488,23 @@ export function createApp(): express.Application {
       return;
     }
 
+    // Log the webhook event
+    const eventId = await logWebhookReceived({
+      source,
+      eventType: (payload as any)?.webhookEvent || 'unknown',
+      deliveryId: undefined,
+      payload,
+    });
+
+    if (!verifyJiraWebhookSignature(rawBody, signature)) {
+      if (eventId) await logWebhookFailed(eventId, 'Signature verification failed');
+      res.status(401).json({ error: 'Invalid signature' });
+      return;
+    }
+
     const result = await handleJiraWebhook(payload);
     if (!result) {
+      if (eventId) await logWebhookFailed(eventId, 'Invalid webhook payload');
       res.status(400).json({ error: 'Invalid webhook payload' });
       return;
     }
@@ -434,17 +541,68 @@ export function createApp(): express.Application {
         }
       } catch (err) {
         log.error({ err: String(err), ticketId: result.ticketId }, 'Failed to process Jira webhook');
+        if (eventId) await logWebhookFailed(eventId, String(err));
       }
     }
 
+    if (eventId) await logWebhookProcessed(eventId);
+    recordWebhookDuration(source, Date.now() - startTime);
     res.status(202).json({ accepted: true });
   });
 
   // -- Stripe webhook -------------------------------------------------------
-  const stripeWebhookHandler = createStripeWebhookHandler();
-  app.post('/webhook/stripe', stripeWebhookHandler);
+  app.post('/webhook/stripe', async (req: Request, res: Response) => {
+    const startTime = Date.now();
+    const rawBody = (req as { rawBody?: Buffer }).rawBody;
+    const source = 'stripe';
+
+    // Log the event before processing (best-effort, raw body may not be parseable yet)
+    let eventId: number | undefined;
+    try {
+      const stripeEventType = req.headers['stripe-signature'] ? 'stripe-event' : 'unknown';
+      eventId = await logWebhookReceived({
+        source,
+        eventType: stripeEventType,
+        deliveryId: undefined,
+        payload: { note: 'Stripe webhook payload parsed by handler' },
+      });
+    } catch {
+      // Non-fatal — Stripe handler will manage its own errors
+    }
+
+    const stripeWebhookHandler = createStripeWebhookHandler();
+
+    // Wrap the handler to capture success/failure for event logging
+    const wrappedHandler = async (req2: Request, res2: Response, next2: NextFunction) => {
+      try {
+        await stripeWebhookHandler(req2, res2, next2);
+        if (eventId) await logWebhookProcessed(eventId);
+      } catch (err) {
+        if (eventId) await logWebhookFailed(eventId, String(err));
+        throw err;
+      }
+      recordWebhookDuration(source, Date.now() - startTime);
+    };
+
+    await wrappedHandler(req, res, () => {});
+  });
+
+  // -- Feature flags admin API ------------------------------------------------
+  app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
+
+  // ── Usage metering API ──────────────────────────────────────────
+  app.use('/api/v1/credits/usage', usageRouter);
+
+  // ── Admin webhooks API ──────────────────────────────────────────
+  // GET /admin/webhooks (paginated, filterable)
+  // POST /admin/webhooks/:id/replay
+  // POST /admin/webhooks/replay-range
+  // GET /admin/webhooks/sources
+  // GET /admin/webhooks/stats
+  app.use('/admin/webhooks', adminWebhooksRouter);
 
   // -- 404 handler ----------------------------------------------------------
+
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: 'Not found' });
   });

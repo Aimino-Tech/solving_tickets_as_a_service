@@ -40,7 +40,13 @@
     "db:seed": "tsx src/db/seed.ts",
     "db:generate": "drizzle-kit generate",
     "audit": "npm audit --audit-level=high",
-    "audit:fix": "npm audit fix"
+    "audit:fix": "npm audit fix",
+    "workers:up": "docker compose up -d celery-worker celery-beat flower",
+    "workers:down": "docker compose down celery-worker celery-beat flower",
+    "workers:logs": "docker compose logs -f celery-worker celery-beat flower",
+    "workers:dev": "celery -A workers.celery_app worker --loglevel=info --concurrency=2",
+    "workers:beat": "celery -A workers.celery_app beat --loglevel=info",
+    "workers:flower": "celery -A workers.celery_app flower --port=5555 --loglevel=info"
   },
   "dependencies": {
     "@octokit/auth-app": "^7.1.0",
