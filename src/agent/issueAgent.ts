@@ -38,6 +38,7 @@ import { SandboxExecutor } from "../sandbox/executor.js";
 import { buildTools, type SandboxTools } from "./tools.js";
 import type { AgentResult, TriageResult, VerificationResult, TestBaseline } from "./types.js";
 import type { IssueJobData } from "../utils/types.js";
+import { getTracker } from '../trackers/index.js';
 import { rootLogger, jobLogger } from "../utils/logger.js";
 import * as Sentry from '@sentry/node';
 import * as messages from "../github/messages.js";
@@ -534,6 +535,7 @@ async function buildCodeIntelligence(sandbox: SandboxExecutor): Promise<CodeInte
 // ── Phase 6: OpenCode dispatch ──────────────────────────────────────
 
 interface OpenCodeDispatchParams {
+  repoUrl: string;
   repoOwner: string;
   repoName: string;
   issueNumber: number;
@@ -544,6 +546,7 @@ interface OpenCodeDispatchParams {
   analysisResult: string;
   codeIntel: CodeIntel;
   installationToken: string;
+  installationId: number;
   baselineTestResult?: TestBaseline | null;
 }
 
@@ -565,6 +568,7 @@ interface OpenCodeDispatchResult {
  */
 async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenCodeDispatchResult> {
   const {
+    repoUrl,
     repoOwner,
     repoName,
     issueNumber,
@@ -575,6 +579,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
     analysisResult,
     codeIntel,
     installationToken,
+    installationId,
     baselineTestResult,
   } = params;
 
@@ -589,6 +594,8 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
     analysisResult,
     codeIntel,
     baselineTestResult,
+    repoUrl,
+    installationId,
   });
 
   const sanitizedPrompt = sanitizeUserContent(prompt);
@@ -732,6 +739,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
  * Build the system prompt for the OpenCode agent.
  */
 function buildOpenCodePrompt(params: {
+  repoUrl: string;
   repoOwner: string;
   repoName: string;
   issueNumber: number;
@@ -741,9 +749,10 @@ function buildOpenCodePrompt(params: {
   triage: TriageResult;
   analysisResult: string;
   codeIntel: CodeIntel;
+  installationId: number;
   baselineTestResult?: TestBaseline | null;
 }): string {
-  const { repoUrl, repoOwner, repoName, issueNumber, issueTitle, issueBody, comments, triage, analysisResult, codeIntel, baselineTestResult } = params;
+  const { repoUrl, repoOwner, repoName, issueNumber, issueTitle, issueBody, comments, triage, analysisResult, codeIntel, installationId, baselineTestResult } = params;
 
   return [
     '# STAS Fix Agent',
@@ -1095,7 +1104,7 @@ async function attemptBasicFix(
           summary: `[Fallback] ${summary}`,
           confidence: 'low',
           fixReady: false,
-          verificationFailed: true,
+          verification: undefined,
           branchName: undefined,
           testOutput: postFixTestOutput,
           errors: ['Fix failed verification — tests did not pass after changes'],

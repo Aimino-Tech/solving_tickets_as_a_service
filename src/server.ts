@@ -81,11 +81,8 @@ import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/li
 import { createStripeWebhookHandler } from './stripe/index.js';
 import { creditRouter } from './credits/index.js';
 import { rootLogger } from './utils/logger.js';
+import * as Sentry from '@sentry/node';
 import { initMetering, usageRouter } from './metering/index.js';
-import type { IssueJobData } from './utils/types.js';
-import { validateWebhookPayload } from './validation.js';
-import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
-import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
 import { bridgeMetrics } from './bridge/metrics.js';

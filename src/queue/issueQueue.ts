@@ -33,9 +33,10 @@ import { config } from "../config.js";
 import { runIssueAgent } from "../agent/issueAgent.js";
 import type { IssueJobData } from "../utils/types.js";
 import { rootLogger } from "../utils/logger.js";
-import { recordQueueDepth } from "../bridge/metrics.js";
-import * as messages from "../github/messages.js";
-import { getOctokit } from "../github/auth.js";
+import * as Sentry from '@sentry/node';
+import { recordQueueDepth } from '../bridge/metrics.js';
+import * as messages from '../github/messages.js';
+import { getOctokit } from '../github/auth.js';
 
 const log = rootLogger.child({ module: 'issue-queue' });
 

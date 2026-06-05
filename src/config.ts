@@ -129,7 +129,6 @@ const envSchema = z.object({
   USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
 
   // Feature flags
-  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
@@ -145,6 +144,11 @@ const envSchema = z.object({
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+
+  // Sentry
+  SENTRY_DSN: z.string().optional(),
+  SENTRY_ENVIRONMENT: z.string().optional(),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
 
   // Feature Flags
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
@@ -287,10 +291,6 @@ function buildConfig(env: ParsedEnv) {
       creditsSandbox: env.USAGE_CREDITS_SANDBOX,
     },
 
-    featureFlags: {
-      defaultTtlSeconds: env.FEATURE_FLAGS_DEFAULT_TTL_SECONDS,
-    },
-
     stripe: {
       secretKey: env.STRIPE_SECRET_KEY,
       webhookSecret: env.STRIPE_WEBHOOK_SECRET,
@@ -313,6 +313,12 @@ function buildConfig(env: ParsedEnv) {
       sandboxBoot: env.PHASE_TIMEOUT_SANDBOX_MS,
       openCodeAgent: env.FIX_TIMEOUT_MS,
       prCreation: env.PHASE_TIMEOUT_PRCREATION_MS,
+    },
+
+    sentry: {
+      dsn: env.SENTRY_DSN,
+      environment: env.SENTRY_ENVIRONMENT ?? env.NODE_ENV,
+      tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE,
     },
 
     featureFlags: {
