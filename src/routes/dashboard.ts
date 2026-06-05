@@ -14,6 +14,7 @@
  */
 
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import type { Request, Response } from 'express';
 import {
   accountsRepository,
@@ -29,7 +30,17 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'routes:dashboard' });
 
+const dashboardLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests — rate limit exceeded (60 req/min)' },
+});
+
 export const dashboardRouter = Router();
+
+dashboardRouter.use(dashboardLimiter);
 
 // ---------------------------------------------------------------------------
 // Auth helpers
@@ -314,7 +325,7 @@ dashboardRouter.get('/accounts/:accountId/audit-log', async (req: Request, res: 
 
     let results;
     if (action) {
-      results = await auditLogRepository.listByAction(action, limit, offset);
+      results = await auditLogRepository.listByActionAndAccount(action, accountId, limit, offset);
     } else {
       results = await auditLogRepository.listByAccount(accountId, limit, offset);
     }

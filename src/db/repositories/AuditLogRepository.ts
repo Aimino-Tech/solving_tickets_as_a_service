@@ -49,6 +49,17 @@ export class AuditLogRepository {
     return result.rows;
   }
 
+  async listByActionAndAccount(action: string, accountId: number, limit = 50, offset = 0): Promise<AuditLog[]> {
+    const result = await queryWithRetry<AuditLog>(
+      `SELECT * FROM audit_logs
+       WHERE action = $1 AND account_id = $2
+       ORDER BY created_at DESC
+       LIMIT $3 OFFSET $4`,
+      [action, accountId, limit, offset],
+    );
+    return result.rows;
+  }
+
   /**
    * Get all audit logs within a date range.
    */

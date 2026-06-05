@@ -1,6 +1,8 @@
 -- Multi-tenant schema: teams, repos, runs, billing, and extended accounts/audit_logs
 -- Migration: 005_multi_tenant
 
+BEGIN;
+
 -- ============================================================================
 -- 1. Extend accounts with multi-tenant fields
 -- ============================================================================
@@ -98,3 +100,17 @@ CREATE INDEX IF NOT EXISTS idx_accounts_plan ON accounts(plan);
 CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts(github_user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_target ON audit_logs(target);
+
+-- Add foreign key constraint on repos.account_id
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'repos_account_id_fkey'
+    ) THEN
+        ALTER TABLE repos ADD CONSTRAINT repos_account_id_fkey
+            FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+COMMIT;

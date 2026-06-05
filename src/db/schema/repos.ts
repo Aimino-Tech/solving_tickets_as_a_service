@@ -6,6 +6,7 @@
  */
 
 import { integer, pgTable, serial, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { accounts } from './accounts.js';
 
 export const repos = pgTable('repos', {
   id: serial('id').primaryKey(),
@@ -16,7 +17,7 @@ export const repos = pgTable('repos', {
   /** GitHub App installation ID that has access to this repo. */
   installationId: integer('installation_id').notNull(),
   /** Account that owns this repo record. */
-  accountId: integer('account_id').notNull(),
+  accountId: integer('account_id').notNull().references(() => accounts.id, { onDelete: 'cascade' }),
   /** When this repo was first enabled/added. */
   enabledAt: timestamp('enabled_at', { withTimezone: true }).notNull().defaultNow(),
 });

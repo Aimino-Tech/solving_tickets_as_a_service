@@ -45,6 +45,7 @@ import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
+import { dashboardRouter } from './routes/dashboard.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
 import { recordWebhookDuration, renderMetrics } from './webhooks/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
@@ -577,6 +578,9 @@ export function createApp(): express.Application {
 
   // -- Feature flags admin API ------------------------------------------------
   app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
+
+  // ── Dashboard API (multi-tenant data access) ────────────────────
+  app.use('/api/v1/dashboard', dashboardRouter);
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
