@@ -46,7 +46,9 @@
     "workers:logs": "docker compose logs -f celery-worker celery-beat flower",
     "workers:dev": "celery -A workers.celery_app worker --loglevel=info --concurrency=2",
     "workers:beat": "celery -A workers.celery_app beat --loglevel=info",
-    "workers:flower": "celery -A workers.celery_app flower --port=5555 --loglevel=info"
+    "workers:flower": "celery -A workers.celery_app flower --port=5555 --loglevel=info",
+    "test:e2e": "vitest run --config tests/e2e/vitest.config.e2e.ts",
+    "test:e2e:watch": "vitest --config tests/e2e/vitest.config.e2e.ts"
   },
   "dependencies": {
     "@octokit/auth-app": "^7.1.0",
