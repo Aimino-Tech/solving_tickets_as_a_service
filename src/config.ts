@@ -133,6 +133,17 @@ const envSchema = z.object({
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+
+  // Metering / Usage Tracking
+  METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
+  METERING_COST_OPENCODE_PRIMARY: z.coerce.number().int().positive().default(10),
+  METERING_COST_OPENCODE_FALLBACK: z.coerce.number().int().positive().default(5),
+  METERING_COST_PR_CREATION: z.coerce.number().int().positive().default(2),
+  METERING_COST_RETRY_PENALTY: z.coerce.number().int().positive().default(3),
+  METERING_BASELINE_SANDBOX_MS: z.coerce.number().int().positive().default(300000),
+  METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
+  METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
+  METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -274,6 +285,18 @@ function buildConfig(env: ParsedEnv) {
       defaultRepoOwner: env.TRACKER_DEFAULT_REPO_OWNER,
       defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME,
       installationId: env.TRACKER_INSTALLATION_ID || 0,
+    },
+  },
+    metering: {
+      costTriage: env.METERING_COST_TRIAGE,
+      costOpencodePrimary: env.METERING_COST_OPENCODE_PRIMARY,
+      costOpencodeFallback: env.METERING_COST_OPENCODE_FALLBACK,
+      costPrCreation: env.METERING_COST_PR_CREATION,
+      costRetryPenalty: env.METERING_COST_RETRY_PENALTY,
+      baselineSandboxMs: env.METERING_BASELINE_SANDBOX_MS,
+      freeMonthlyCredits: env.METERING_FREE_MONTHLY_CREDITS,
+      sandboxMultiplierMin: env.METERING_SANDBOX_MULTIPLIER_MIN,
+      sandboxMultiplierMax: env.METERING_SANDBOX_MULTIPLIER_MAX,
     },
   } as const;
 }

@@ -31,6 +31,7 @@ import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.j
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
 import { rootLogger } from './utils/logger.js';
+import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
 import { validateWebhookPayload } from './validation.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
@@ -118,7 +119,10 @@ export function createApp(): express.Application {
   // -- Initialize trackers --------------------------------------------------
   initTrackers();
 
-  // -- Webhook receiver -----------------------------------------------------
+  // ── Initialize metering ───────────────────────────────────────────
+  initMetering();
+
+  // ── Webhook receiver ─────────────────────────────────────────────
   const queue = createIssueQueue();
   const githubWebhooks = createGithubWebhooks(queue);
   const gitlabHandler = createGitlabWebhooks(queue);
@@ -398,7 +402,10 @@ export function createApp(): express.Application {
   const stripeWebhookHandler = createStripeWebhookHandler();
   app.post('/webhook/stripe', stripeWebhookHandler);
 
-  // -- 404 handler ----------------------------------------------------------
+  // ── Usage metering API ──────────────────────────────────────────
+  app.use('/api/v1/credits/usage', usageRouter);
+
+  // ── 404 handler ──────────────────────────────────────────────────
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: 'Not found' });
   });
