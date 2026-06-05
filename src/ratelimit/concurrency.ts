@@ -21,7 +21,9 @@
  */
 
 import { Redis } from 'ioredis';
+import { config } from '../config.js';
 import { getConcurrencyLimitForAccount } from './tiers.js';
+import { recordActiveRuns } from '../bridge/metrics.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'concurrency' });
@@ -70,7 +72,6 @@ export class ConcurrencyManager {
 
   private getClient(): Redis {
     if (!this.redisClient) {
-      const { config } = require('../config.js');
       this.redisClient = new Redis(config.queue.redisUrl, {
         maxRetriesPerRequest: null,
         enableReadyCheck: true,
@@ -116,6 +117,7 @@ export class ConcurrencyManager {
           { installationId, runId, activeCount, limit: concurrencyLimit },
           'Concurrency slot acquired',
         );
+        recordActiveRuns(String(installationId), activeCount);
         return {
           acquired: true,
           activeCount,
@@ -130,6 +132,7 @@ export class ConcurrencyManager {
         { installationId, runId, activeCount, limit: concurrencyLimit },
         'Concurrency limit reached — slot denied',
       );
+      recordActiveRuns(String(installationId), activeCount - 1);
       return {
         acquired: false,
         activeCount: activeCount - 1,
@@ -165,6 +168,7 @@ export class ConcurrencyManager {
       if (remaining === 0) {
         await client.del(accountKey);
       }
+      recordActiveRuns(String(installationId), remaining);
 
       log.info({ installationId, runId, remaining }, 'Concurrency slot released');
     } catch (err) {

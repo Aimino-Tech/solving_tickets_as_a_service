@@ -137,9 +137,29 @@ const envSchema = z.object({
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
   DATABASE_SSL: z.coerce.boolean().default(false),
 
+  // Rate limiting (credit-based)
+  STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
+  STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
+  STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
+
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+
+  // Feature Flags
+  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
+  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
+
+  // Metering / Usage Tracking
+  METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
+  METERING_COST_OPENCODE_PRIMARY: z.coerce.number().int().positive().default(10),
+  METERING_COST_OPENCODE_FALLBACK: z.coerce.number().int().positive().default(5),
+  METERING_COST_PR_CREATION: z.coerce.number().int().positive().default(2),
+  METERING_COST_RETRY_PENALTY: z.coerce.number().int().positive().default(3),
+  METERING_BASELINE_SANDBOX_MS: z.coerce.number().int().positive().default(300000),
+  METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
+  METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
+  METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -147,6 +167,24 @@ type ParsedEnv = z.infer<typeof envSchema>;
 // ---------------------------------------------------------------------------
 // Build config tree
 // ---------------------------------------------------------------------------
+
+
+function parseConcurrencyOverrides(raw: string): Record<string, number> {
+  if (!raw) return {};
+  const result: Record<string, number> = {};
+  for (const part of raw.split(',')) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = Number(trimmed.slice(eqIdx + 1).trim());
+    if (!Number.isNaN(val) && Number.isInteger(val) && val > 0) {
+      result[key] = val;
+    }
+  }
+  return result;
+}
 
 function buildConfig(env: ParsedEnv) {
   return {
@@ -237,6 +275,12 @@ function buildConfig(env: ParsedEnv) {
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
     },
 
+    rateLimit: {
+      defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
+      ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
+      adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
+    },
+
     usage: {
       creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
       creditsTriage: env.USAGE_CREDITS_TRIAGE,
@@ -271,6 +315,11 @@ function buildConfig(env: ParsedEnv) {
       prCreation: env.PHASE_TIMEOUT_PRCREATION_MS,
     },
 
+    featureFlags: {
+      defaultTtlSeconds: env.FEATURE_FLAGS_DEFAULT_TTL_SECONDS,
+      autoDisableThreshold: env.FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD,
+    },
+
     trackers: {
       linear: env.LINEAR_API_KEY
         ? {
@@ -291,6 +340,24 @@ function buildConfig(env: ParsedEnv) {
       defaultRepoOwner: env.TRACKER_DEFAULT_REPO_OWNER,
       defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME,
       installationId: env.TRACKER_INSTALLATION_ID || 0,
+    },
+
+    metering: {
+      costTriage: env.METERING_COST_TRIAGE,
+      costOpencodePrimary: env.METERING_COST_OPENCODE_PRIMARY,
+      costOpencodeFallback: env.METERING_COST_OPENCODE_FALLBACK,
+      costPrCreation: env.METERING_COST_PR_CREATION,
+      costRetryPenalty: env.METERING_COST_RETRY_PENALTY,
+      baselineSandboxMs: env.METERING_BASELINE_SANDBOX_MS,
+      freeMonthlyCredits: env.METERING_FREE_MONTHLY_CREDITS,
+      sandboxMultiplierMin: env.METERING_SANDBOX_MULTIPLIER_MIN,
+      sandboxMultiplierMax: env.METERING_SANDBOX_MULTIPLIER_MAX,
+    },
+
+    usageCredits: {
+      fixRun: env.USAGE_CREDITS_FIX_RUN,
+      triage: env.USAGE_CREDITS_TRIAGE,
+      sandbox: env.USAGE_CREDITS_SANDBOX,
     },
   } as const;
 }
