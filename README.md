@@ -1,5 +1,16 @@
 # STAS — Solving Tickets As A Service
 
+![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)
+![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+
+[![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml)
+[![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml)
+
+[![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml)
+[![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml)
+
 **Label a GitHub issue. Get a pull request.**
 
 STAS is an open-source GitHub bot that takes a labeled issue, investigates your codebase, writes a fix, runs your tests, and opens a PR. Backed by [OpenCode](https://opencode.ai) — the 162K ★ open-source coding agent.
