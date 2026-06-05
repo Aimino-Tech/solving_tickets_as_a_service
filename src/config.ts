@@ -123,6 +123,11 @@ const envSchema = z.object({
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
+  USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
+  USAGE_CREDITS_TRIAGE: z.coerce.number().int().positive().default(10),
+  USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
+
+  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
