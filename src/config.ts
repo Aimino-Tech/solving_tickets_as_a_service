@@ -145,6 +145,10 @@ const envSchema = z.object({
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
   DATABASE_SSL: z.coerce.boolean().default(false),
 
+  // Storage — run history persistence
+  STORAGE_TYPE: z.enum(['sqlite', 'postgres']).default('sqlite'),
+  STORAGE_SQLITE_PATH: z.string().default('./stas.db'),
+
   // Rate limiting (credit-based)
   STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
   STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
@@ -325,6 +329,14 @@ function buildConfig(env: ParsedEnv) {
       poolMin: env.DATABASE_POOL_MIN,
       poolMax: env.DATABASE_POOL_MAX,
       ssl: env.DATABASE_SSL,
+    },
+
+    /** Storage backend for persistent run history (AIM-1203). */
+    storage: {
+      /** Active backend: 'sqlite' (OSS/local) or 'postgres' (hosted). */
+      type: env.STORAGE_TYPE,
+      /** File path for SQLite database (used when type='sqlite'). */
+      sqlitePath: env.STORAGE_SQLITE_PATH,
     },
 
     fixTimeoutMs: env.FIX_TIMEOUT_MS,

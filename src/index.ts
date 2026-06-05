@@ -28,6 +28,15 @@ let shutdownInProgress = false;
 
 async function main(): Promise<void> {
   log.info({ runMode: config.runMode, nodeEnv: config.nodeEnv }, 'Starting STAS');
+  // Initialize storage backend on startup (warm-up the connection)
+  try {
+    const { createStorage } = await import('./storage/index.js');
+    await createStorage();
+    log.info({ storageType: config.storage.type }, 'Storage backend initialized');
+  } catch (storageErr) {
+    log.warn({ err: String(storageErr) }, 'Failed to initialize storage backend (non-fatal)');
+  }
+
 
   const mode = config.runMode;
 
@@ -58,6 +67,16 @@ async function main(): Promise<void> {
       }
     }
 
+    // Stop scheduled maintenance tasks
+    stopScheduledTasks();
+
+    // Close storage backend (SQLite connection, etc.)
+    try {
+      const { closeStorage } = await import('./storage/index.js');
+      await closeStorage();
+    } catch (err) {
+      log.warn({ err: String(err) }, 'Error closing storage backend');
+    }
     process.exit(0);
   };
 

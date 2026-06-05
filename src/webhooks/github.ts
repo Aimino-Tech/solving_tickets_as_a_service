@@ -1,7 +1,9 @@
 /**
  * GitHub webhook event handlers.
  *
- * Receives webhook events from GitHub and routes them to the appropriate
+ * Receives webhook event
+import { accountsRepository } from "../db/repositories/index.js";
+s from GitHub and routes them to the appropriate
  * handlers. Primary handler is issues.labeled with the "stas:fix" label.
  * Also handles marketplace_purchase for billing plan changes.
  *
@@ -78,6 +80,9 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
       return;
     }
 
+    // TODO(AIM-1203): When storage backend is initialized, save a 'pending' RunRecord
+    // here before enqueueing, so every labeled issue is recorded. The worker
+    // will then update the record to 'running' / 'completed' / 'failed'.
     try {
       await enqueueIssue(queue, jobData);
     } catch (err) {
@@ -168,8 +173,21 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
         'Marketplace purchase event',
       );
 
-      // TODO: Update the billing plan in the database
-      // For OSS self-hosted, billing is a no-op
+      // Update the billing plan in the database
+      if (p.action === 'purchased' || p.action === 'changed') {
+        try {
+          // Look up the account by GitHub installation ID
+          const account = await accountsRepository.findByInstallationId(plan.accountId);
+          if (account) {
+            await accountsRepository.update(account.id, { tier: plan.plan });
+            log.info({ accountId: account.id, tier: plan.plan }, 'Billing plan updated');
+          } else {
+            log.warn({ installationId: plan.accountId }, 'No account found for marketplace purchase');
+          }
+        } catch (dbErr) {
+          log.error({ err: String(dbErr), installationId: plan.accountId }, 'Failed to update billing plan');
+        }
+      }
     } catch (err) {
       log.error(
         { err: String(err), payload: JSON.stringify(payload).slice(0, 500) },
