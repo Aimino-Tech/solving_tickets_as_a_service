@@ -50,6 +50,9 @@ import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { startHealthMonitor } from './webhooks/healthMonitor.js';
 import { bridgeMetrics } from './bridge/metrics.js';
+import { adminRouter } from './routes/admin.js';
+import { logWebhookReceived } from './audit/service.js';
+import { dashboardRouter } from './routes/dashboard.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -250,13 +253,15 @@ export function createApp(): express.Application {
       }
     }
 
-    // Mark as processed on success
-    if (eventId) {
-      await logWebhookProcessed(eventId);
-      recordWebhookDuration(source, Date.now() - startTime);
-    }
-
-    // Always respond 202 (accepted for async processing)
+    // Fire-and-forget audit log
+    logWebhookReceived({
+      source: 'github',
+      eventType: event,
+      deliveryId,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    }).catch(() => {});
     res.status(202).json({ accepted: true });
   }
 
@@ -307,15 +312,14 @@ export function createApp(): express.Application {
       }
     }
 
-    try {
-      await gitlabHandler.handle(event, parsedPayload);
-      if (eventId) await logWebhookProcessed(eventId);
-    } catch (err) {
-      log.error({ err: String(err) }, 'GitLab webhook processing error');
-      if (eventId) await logWebhookFailed(eventId, String(err));
-    }
-
-    recordWebhookDuration(source, Date.now() - startTime);
+    // Fire-and-forget audit log
+    logWebhookReceived({
+      source: 'gitlab',
+      eventType: event,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    }).catch(() => {});
     res.status(202).json({ accepted: true });
   });
 
@@ -341,6 +345,13 @@ export function createApp(): express.Application {
       log.error({ err: String(err) }, 'Bitbucket webhook processing error');
     }
 
+    // Fire-and-forget audit log
+    logWebhookReceived({
+      source: 'bitbucket',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    }).catch(() => {});
     res.status(202).json({ accepted: true });
   });
 
@@ -451,8 +462,13 @@ export function createApp(): express.Application {
       }
     }
 
-    if (eventId) await logWebhookProcessed(eventId);
-    recordWebhookDuration(source, Date.now() - startTime);
+    // Fire-and-forget audit log
+    logWebhookReceived({
+      source: 'linear',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    }).catch(() => {});
     res.status(202).json({ accepted: true });
   });
 
@@ -533,8 +549,13 @@ export function createApp(): express.Application {
       }
     }
 
-    if (eventId) await logWebhookProcessed(eventId);
-    recordWebhookDuration(source, Date.now() - startTime);
+    // Fire-and-forget audit log
+    logWebhookReceived({
+      source: 'jira',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    }).catch(() => {});
     res.status(202).json({ accepted: true });
   });
 
@@ -542,9 +563,20 @@ export function createApp(): express.Application {
   const stripeWebhookHandler = createStripeWebhookHandler();
   app.post('/webhook/stripe', stripeWebhookHandler);
 
-  // -- Admin API (pricing tiers, quota management) ---------------------
-  // Admin routes are protected by adminAuthMiddleware
-  app.use("/admin", adminAuthMiddleware, adminRouter);
+  // -- Feature flags admin API ------------------------------------------------
+  app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
+
+  // ── Admin API ────────────────────────────────────────
+  app.use('/admin', adminRouter);
+
+  // ── Dashboard API ──────────────────────────────────────
+  app.use('/api/v1/me', dashboardRouter);
+
+  // ── Usage metering API ──────────────────────────────────────────
+  app.use('/api/v1/credits/usage', usageRouter);
+
+  // -- Credit REST API routes ------------------------------------------------
+  app.use('/api/v1', creditRouter);
 
   // -- 404 handler ----------------------------------------------------------
   app.use((_req: Request, res: Response) => {

@@ -18,6 +18,7 @@ import type { SandboxExecutor } from '../sandbox/types.js';
 import { rootLogger } from '../utils/logger.js';
 import { getOctokit } from './auth.js';
 import * as messages from './messages.js';
+import { logPrCreated } from '../audit/service.js';
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
 
@@ -122,6 +123,17 @@ export class ActionDispatcher {
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
         log.info({ prNumber: pr.data.number }, 'High-confidence PR created');
+
+        // Audit log: PR created
+        logPrCreated({
+          prUrl: pr.data.html_url,
+          prNumber: pr.data.number,
+          repo: `${repoOwner}/${repoName}`,
+          accountId: String(installationId),
+          issueNumber,
+          correlationId: `pr-${pr.data.number}`,
+        }).catch(() => {});
+
         return {
           action: 'pr_created',
           prUrl: pr.data.html_url,
@@ -153,6 +165,17 @@ export class ActionDispatcher {
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
         log.info({ prNumber: pr.data.number }, 'Draft PR created');
+
+        // Audit log: draft PR created
+        logPrCreated({
+          prUrl: pr.data.html_url,
+          prNumber: pr.data.number,
+          repo: `${repoOwner}/${repoName}`,
+          accountId: String(installationId),
+          issueNumber,
+          correlationId: `pr-${pr.data.number}`,
+        }).catch(() => {});
+
         return {
           action: 'draft_pr_created',
           prUrl: pr.data.html_url,

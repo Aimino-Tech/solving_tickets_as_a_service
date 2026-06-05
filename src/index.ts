@@ -105,8 +105,28 @@ async function main(): Promise<void> {
     }
   }
 
-  // Start scheduled maintenance tasks (queue depth check, DLQ cleanup, metrics refresh)
-  startScheduledTasks();
+  // ── Audit log retention cleanup ────────────────────────────────
+  // Runs every 24 hours to purge audit logs older than 90 days (configurable)
+  const AUDIT_RETENTION_DAYS = Number(process.env.AUDIT_RETENTION_DAYS) || 90;
+  const AUDIT_CLEANUP_INTERVAL_MS = Number(process.env.AUDIT_CLEANUP_INTERVAL_MS) || 86_400_000; // 24h
+
+  const auditCleanupTimer = setInterval(async () => {
+    try {
+      const { auditRepository } = await import('./audit/repository.js');
+      const deleted = await auditRepository.deleteOlderThan(AUDIT_RETENTION_DAYS);
+      if (deleted > 0) {
+        log.info({ deleted, retentionDays: AUDIT_RETENTION_DAYS }, 'Audit log retention cleanup completed');
+      }
+    } catch (err) {
+      log.error({ err: String(err) }, 'Audit log retention cleanup failed');
+    }
+  }, AUDIT_CLEANUP_INTERVAL_MS);
+
+  if (auditCleanupTimer && typeof auditCleanupTimer === 'object' && 'unref' in auditCleanupTimer) {
+    auditCleanupTimer.unref();
+  }
+
+  log.info({ retentionDays: AUDIT_RETENTION_DAYS, intervalMs: AUDIT_CLEANUP_INTERVAL_MS }, 'Audit log retention cleanup scheduled');
 
   // Register signal handlers for graceful shutdown
   process.on('SIGTERM', () => shutdown('SIGTERM'));

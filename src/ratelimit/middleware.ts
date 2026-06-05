@@ -19,6 +19,8 @@ import type { NextFunction, Request, Response } from 'express';
 import { rateLimiter } from './limiter.js';
 import { getRateLimitForAccount } from './tiers.js';
 import { rootLogger } from '../utils/logger.js';
+import { recordRejectedRun } from '../bridge/metrics.js';
+import { logRateLimitHit } from '../audit/service.js';
 
 const log = rootLogger.child({ module: 'rate-middleware' });
 
@@ -128,6 +130,19 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
             { installationId, current: accountResult.current, limit: accountResult.limit },
             'Account rate limit exceeded',
           );
+          recordRejectedRun(String(installationId), 'account_rate_limit');
+
+          // Audit log: rate limit hit
+          logRateLimitHit({
+            accountId: String(installationId),
+            ipAddress: req.ip,
+            route: req.path,
+            limit: accountResult.limit,
+            windowMs: 60_000,
+            details: { type: 'account', current: accountResult.current },
+            correlationId: req.requestId,
+          }).catch(() => {});
+
           sendRateLimited(res, retryAfterSeconds, `account:${installationId}`);
           return;
         }
@@ -148,6 +163,21 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
             { repo, current: repoResult.current, limit: repoResult.limit },
             'Repo rate limit exceeded',
           );
+          if (installationId !== undefined && installationId > 0) {
+            recordRejectedRun(String(installationId), 'repo_rate_limit');
+          }
+
+          // Audit log: rate limit hit
+          logRateLimitHit({
+            accountId: installationId !== undefined ? String(installationId) : undefined,
+            ipAddress: req.ip,
+            route: req.path,
+            limit: repoResult.limit,
+            windowMs: 60_000,
+            details: { type: 'repo', repo, current: repoResult.current },
+            correlationId: req.requestId,
+          }).catch(() => {});
+
           sendRateLimited(res, retryAfterSeconds, `repo:${repo}`);
           return;
         }
