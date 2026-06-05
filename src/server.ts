@@ -30,6 +30,7 @@ import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
+import { creditRouter } from './credits/index.js';
 import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
@@ -408,6 +409,9 @@ export function createApp(): express.Application {
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
+
+  // -- Credit REST API routes ------------------------------------------------
+  app.use('/api/v1', creditRouter);
 
   // -- 404 handler ----------------------------------------------------------
 
