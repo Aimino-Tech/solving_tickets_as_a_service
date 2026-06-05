@@ -138,6 +138,60 @@ All config via environment variables:
 | `STAS_MAX_CONCURRENT` | `3` | Max concurrent fix runs |
 | `STAS_PORT` | `3000` | Webhook server port |
 
+
+## Security
+
+STAS implements defense-in-depth security across multiple layers:
+
+### Webhook Security
+- **Signature verification** — All incoming webhooks (GitHub HMAC-SHA256, GitLab token, Bitbucket HMAC-SHA1, Linear HMAC-SHA256, Jira HMAC-SHA256, Stripe) are verified before processing.
+- **Rate limiting** — Webhook endpoints are rate-limited (configurable via `STAS_RATE_LIMIT_WINDOW_MS` and `STAS_RATE_LIMIT_MAX`).
+- **IP allowlisting** — Optional IP/CIDR allowlist for webhook endpoints (`IP_ALLOWLIST_ENABLED`, `IP_ALLOWLIST`).
+- **Request size limits** — Payload size limits prevent DoS attacks: `REQUEST_BODY_LIMIT` (1mb), `WEBHOOK_BODY_LIMIT` (5mb).
+- **Raw body capture** — Webhook payloads are captured as raw buffers before JSON parsing to preserve exact byte sequences for signature verification.
+
+### API Security
+- **Helmet.js** — HTTP security headers (CSP, X-Frame-Options, X-Content-Type-Options, Strict-Transport-Security, etc.) on all responses.
+- **CORS** — Configurable Cross-Origin Resource Sharing policy via `CORS_ORIGIN`.
+- **Admin authentication** — Admin endpoints protected behind `ADMIN_API_KEY` via `Authorization: Bearer` or `x-admin-key` header.
+- **Input validation** — All webhook payloads validated with Zod schemas before processing.
+
+### Sandbox Security
+- **No privileged mode** — Sandboxes never run with `--privileged` (enforced by `validateSandboxConfig()`)
+- **Read-only root filesystem** — Prevents persistent modifications to the sandbox environment.
+- **Capability dropping** — All Linux capabilities dropped; only explicitly allowed capabilities added.
+- **Resource limits** — CPU (0.5 cores), memory (512MB), disk (2GB), processes (256 PIDs).
+- **Network isolation** — Sandbox network access restricted (disabled by default).
+- **Internal network denial** — Private IP ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16) denied.
+
+### Audit Trail
+All admin actions logged to structured audit trail (`src/security/audit.ts`) with action, actor, target, outcome, and timestamp. When `DATABASE_ENABLE_AUDIT_PERSISTENCE=true`, entries persisted to `audit_logs` table.
+
+### CI/CD Security
+- **npm audit** — CI runs `npm audit --audit-level=high`, fails on high/critical vulnerabilities.
+- **Docker non-root user** — Production image runs as non-root `stas` user with read-only root filesystem.
+- **Secret management** — Secrets never baked into images; injected at runtime via environment variables.
+
+### Security Configuration Reference
+
+| Variable | Default | Description |
+|---|---|---|
+| `ADMIN_API_KEY` | — | Shared API key for admin endpoints |
+| `CORS_ORIGIN` | `*` | Allowed CORS origin(s) |
+| `REQUEST_BODY_LIMIT` | `1mb` | Max API request body size |
+| `WEBHOOK_BODY_LIMIT` | `5mb` | Max webhook payload size |
+| `IP_ALLOWLIST_ENABLED` | `false` | Enable IP allowlist for webhooks |
+| `IP_ALLOWLIST` | — | Comma-separated IPs/CIDR ranges |
+| `SANDBOX_PRIVILEGED` | `false` | Never enable — security violation |
+| `SANDBOX_READONLY_ROOT` | `true` | Read-only sandbox filesystem |
+| `SANDBOX_MEMORY_LIMIT` | `512m` | Max memory per sandbox |
+| `SANDBOX_CPU_LIMIT` | `0.5` | CPU cores per sandbox |
+| `SANDBOX_PIDS_LIMIT` | `256` | Max processes per sandbox |
+| `SANDBOX_DISK_LIMIT` | `2gb` | Max disk per sandbox |
+| `SANDBOX_NETWORK_ENABLED` | `false` | Allow sandbox network access |
+| `STAS_RATE_LIMIT_WINDOW_MS` | `60000` | Rate limit window (ms) |
+| `STAS_RATE_LIMIT_MAX` | `30` | Max requests per window |
+
 ## Deployment
 
 See [`DEVELOPMENT.md`](DEVELOPMENT.md) for a comprehensive deployment guide covering local dev, Railway, Fly.io, and Kubernetes.
