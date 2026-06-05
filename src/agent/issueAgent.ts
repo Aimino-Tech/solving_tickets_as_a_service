@@ -232,20 +232,8 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     currentPhase = '4-static-analysis';
     logger.info('Phase 4: Running static analysis');
     const analysisResult = await sandbox.analyzeCode();
-    await postStatus(
-      installationId,
-      repoOwner,
-      repoName,
-      issueNumber,
-      issueTitle,
-      issueBody: issueBody ?? "",
-      comments,
-      triage,
-      analysisResult,
-      codeIntel,
-      installationToken: await getInstallationToken(installationId),
-      baselineTestResult,
-    });
+    await postStatus(installationId, repoOwner, repoName, issueNumber,
+      `📊 **Static analysis** — completed analysis of codebase.`);
 
     // ── Phase 5: Build code intelligence ──────────────────────────────
     currentPhase = '5-code-intelligence';

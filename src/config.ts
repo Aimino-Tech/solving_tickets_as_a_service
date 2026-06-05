@@ -65,6 +65,10 @@ const envSchema = z.object({
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // STAS
+ 
+  // Pricing
+  STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
+  STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
   STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),
@@ -90,11 +94,11 @@ const envSchema = z.object({
   SLACK_SIGNING_SECRET: z.string().optional(),
   SLACK_INTERACTIONS_PATH: z.string().default('/slack/events'),
 
-  // Trackers — Linear
+  // Trackers -- Linear
   LINEAR_API_KEY: z.string().optional(),
   LINEAR_WEBHOOK_SECRET: z.string().optional(),
 
-  // Trackers — Jira
+  // Trackers -- Jira
   JIRA_URL: z.string().optional(),
   JIRA_EMAIL: z.string().optional(),
   JIRA_API_TOKEN: z.string().optional(),
@@ -105,6 +109,13 @@ const envSchema = z.object({
   TRACKER_DEFAULT_REPO_OWNER: z.string().optional(),
   TRACKER_DEFAULT_REPO_NAME: z.string().optional(),
   TRACKER_INSTALLATION_ID: z.coerce.number().int().positive().optional(),
+
+  // Stripe
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PRICE_100_CREDITS: z.string().default('price_100credits'),
+  STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
+  STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
@@ -195,6 +206,16 @@ function buildConfig(env: ParsedEnv) {
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
       rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
       rateLimitMax: env.STAS_RATE_LIMIT_MAX,
+      defaultTier: env.STAS_DEFAULT_TIER,
+      monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    },
+
+    stripe: {
+      secretKey: env.STRIPE_SECRET_KEY,
+      webhookSecret: env.STRIPE_WEBHOOK_SECRET,
+      price100Credits: env.STRIPE_PRICE_100_CREDITS,
+      price500Credits: env.STRIPE_PRICE_500_CREDITS,
+      price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
     },
 
     fixTimeoutMs: env.FIX_TIMEOUT_MS,
