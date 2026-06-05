@@ -48,6 +48,16 @@ vi.mock('../../agent/issueAgent.js', () => ({
 
 vi.mock('../../config.js', () => ({
   config: {
+    stas: {
+      botName: 'STAS',
+    },
+    slack: {
+      webhookUrl: undefined,
+      channel: undefined,
+      botToken: undefined,
+      signingSecret: undefined,
+      interactionsPath: '/slack/events',
+    },
     queue: {
       redisUrl: 'redis://localhost:6379',
       workerConcurrency: 2,
