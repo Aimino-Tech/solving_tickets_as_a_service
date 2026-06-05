@@ -23,9 +23,8 @@ import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
-import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
+import { createIssueQueue, enqueueIssue, pauseIssueQueue, resumeIssueQueue, isQueuePaused, getQueueMetrics } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
@@ -36,11 +35,13 @@ import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
 import { validateWebhookPayload } from './validation.js';
+import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
 import { bridgeMetrics } from './bridge/metrics.js';
+
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -96,10 +97,26 @@ export function createApp(): express.Application {
   // -- JSON parsing for all other routes ------------------------------------
   app.use(express.json());
 
-  // -- Rate limiter for webhook routes ---------------------------------------
+  // -- Custom per-repo and per-account rate limit middleware ---------------
+  app.use('/webhook', rateLimitMiddleware({
+    getAccountId: (req, _res) => {
+      const p = (req as any).parsedPayload;
+      return p?.installation?.id ?? undefined;
+    },
+    getRepo: (req, _res) => {
+      const p = (req as any).parsedPayload;
+      if (p?.repository?.full_name) return p.repository.full_name;
+      if (p?.repository?.owner?.login && p?.repository?.name) {
+        return `${p.repository.owner.login}/${p.repository.name}`;
+      }
+      return undefined;
+    },
+  }));
+
+  // -- Global rate limiter for webhook routes (IP-based) ---------------------
   const limiter = rateLimit({
-    windowMs: config.stas.rateLimitWindowMs,
-    limit: config.stas.rateLimitMax,
+    windowMs: config.stas.rateLimit.windowMs,
+    limit: config.stas.rateLimit.max,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
@@ -153,6 +170,8 @@ export function createApp(): express.Application {
     let parsedPayload: unknown;
     try {
       parsedPayload = rawBody ? JSON.parse(rawBody.toString()) : req.body;
+      // Store payload for downstream middleware (rate limit)
+      (req as any).parsedPayload = parsedPayload;
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to parse webhook payload');
       res.status(400).json({ error: 'Invalid JSON payload' });
@@ -423,6 +442,59 @@ export function createApp(): express.Application {
 
   // -- Credit REST API routes ------------------------------------------------
   app.use('/api/v1', creditRouter);
+
+
+  // ── Queue management endpoints (pause/resume) ──────────────────
+  async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const adminKey = req.headers['x-admin-key'] as string;
+    if (!adminKey || adminKey !== config.stas.adminApiKey) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    next();
+  }
+
+  /**
+   * POST /admin/queue/pause — Pause the issue queue.
+   * Requires x-admin-key header.
+   */
+  app.post('/admin/queue/pause', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      await pauseIssueQueue(queue);
+      res.json({ status: 'paused', queue: 'stas-issues' });
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to pause queue');
+      res.status(500).json({ error: 'Failed to pause queue' });
+    }
+  });
+
+  /**
+   * POST /admin/queue/resume — Resume the issue queue.
+   * Requires x-admin-key header.
+   */
+  app.post('/admin/queue/resume', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      await resumeIssueQueue(queue);
+      res.json({ status: 'resumed', queue: 'stas-issues' });
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to resume queue');
+      res.status(500).json({ error: 'Failed to resume queue' });
+    }
+  });
+
+  /**
+   * GET /admin/queue/status — Get queue metrics (waiting, active, completed, failed).
+   * Requires x-admin-key header.
+   */
+  app.get('/admin/queue/status', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const metrics = await getQueueMetrics(queue);
+      res.json(metrics);
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to get queue metrics');
+      res.status(500).json({ error: 'Failed to get queue metrics' });
+    }
+  });
 
   // -- 404 handler ----------------------------------------------------------
 

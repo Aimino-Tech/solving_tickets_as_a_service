@@ -114,7 +114,7 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
       // ── Account-level rate limit ────────────────────────────────────
       if (installationId !== undefined && installationId > 0) {
         const accountLimits = getRateLimitForAccount(installationId);
-        const accountResult = await rateLimiter.increment('account', String(installationId));
+        const accountResult = await rateLimiter.increment('account', String(installationId), accountLimits.max);
 
         applyHeaders(res, {
           limit: accountResult.limit,
@@ -137,7 +137,8 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
 
       // ── Repo-level rate limit ───────────────────────────────────────
       if (repo) {
-        const repoResult = await rateLimiter.increment('repo', repo);
+        const repoMax = config.stas.rateLimit?.repoLimit ?? 5;
+        const repoResult = await rateLimiter.increment('repo', repo, repoMax);
 
         // Repo-level headers are additive — they don't replace account headers
         res.setHeader('X-RateLimit-Repo-Limit', String(repoResult.limit));
