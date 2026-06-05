@@ -1,3 +1,17 @@
+# =============================================================================
+# STAS CD — Build & Push Docker Image to GHCR
+#
+# Triggered on:
+#   - Push to main
+#   - Manual workflow_dispatch
+#
+# Features:
+#   - Multi-platform Docker build with BuildKit cache
+#   - Tagging: semver, branch, git SHA, latest
+#   - GitHub Container Registry push
+#   - Slack notification (success/failure)
+# =============================================================================
+
 name: CD
 
 on:

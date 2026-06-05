@@ -175,11 +175,32 @@ docker run -p 3000:3000 --env-file .env stas-bot
 
 ### Docker Compose
 
+#### Development
 ```bash
+# Start Redis + bot with hot-reload
 docker compose up
 ```
 
-Starts Redis + bot with hot-reload. See `DEVELOPMENT.md` for details.
+#### Production Stack
+```bash
+# Start full production stack (Redis, RabbitMQ, PostgreSQL, webhook, workers, Nginx)
+docker compose -f docker-compose.prod.yml up -d
+
+# Scale workers horizontally (e.g., 4 worker replicas)
+docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
+```
+
+The production stack includes:
+- **PostgreSQL 16** — primary database
+- **Redis 7** — Celery result backend + caching
+- **RabbitMQ 4** — message broker for Celery
+- **stas-webhook** — Express.js API server (horizontally scalable)
+- **stas-worker** — Celery worker pool (horizontally scalable via `--scale`)
+- **celery-beat** — periodic task scheduler
+- **Flower** — Celery monitoring dashboard (port 5555)
+- **Nginx** — reverse proxy with TLS termination and load balancing
+
+See `DEVELOPMENT.md` for details on all deployment options.
 
 ### Kubernetes
 

@@ -1,0 +1,46 @@
+# ---------------------------------------------------------------------------
+# STAS ConfigMap — shared (non-sensitive) environment variables.
+# Sensitive values (keys, tokens, passwords) MUST be in a Secret, not here.
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stas-config
+  labels:
+    app: stas
+data:
+  # Runtime
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  RUN_MODE: "both"
+
+  # Service hostnames (credentials come from Secret)
+  REDIS_HOST: "stas-redis"
+  RABBITMQ_HOST: "stas-rabbitmq"
+  POSTGRES_HOST: "stas-postgres"
+  OPENCODE_URL: "http://stas-opencode:4096"
+
+  # STAS behavior
+  STAS_LABEL: "stas:fix"
+  STAS_PORT: "3000"
+  STAS_RATE_LIMIT_WINDOW_MS: "60000"
+  STAS_RATE_LIMIT_MAX: "30"
+
+  # Queue configuration
+  WORKER_CONCURRENCY: "4"
+  QUEUE_BACKEND: "both"
+  QUEUE_DEDUP_TTL_SECONDS: "120"
+  QUEUE_MAX_RETRIES: "4"
+
+  # RabbitMQ tuning
+  RABBITMQ_PREFETCH_COUNT: "10"
+  RABBITMQ_RECONNECT_DELAY_MS: "5000"
+  RABBITMQ_MAX_RECONNECT_ATTEMPTS: "10"
+
+  # Database connection pool
+  DATABASE_POOL_MIN: "2"
+  DATABASE_POOL_MAX: "10"
+  DATABASE_SSL: "true"
+
+  # OpenCode model
+  OPENCODE_MODEL: "anthropic/claude-sonnet-4-20250514"

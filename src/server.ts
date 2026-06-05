@@ -113,8 +113,8 @@ export function createApp(): express.Application {
   const bolt = getSlackBoltApp();
   bolt.mountOn(app);
 
-  // -- Health check ---------------------------------------------------------
-  app.get('/health', (_req: Request, res: Response) => {
+  // -- Health check (liveness, readiness, and simple health) -----------------
+  app.get(['/health', '/health/live', '/health/ready'], (_req: Request, res: Response) => {
     res.json({
       status: 'ok',
       label: config.stas.label,

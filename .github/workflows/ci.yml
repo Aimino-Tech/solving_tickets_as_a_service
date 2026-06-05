@@ -1,3 +1,15 @@
+# =============================================================================
+# STAS CI — Lint, TypeCheck, Test (with coverage), Build, and E2E
+#
+# Optimizations:
+#   - Dependency caching via actions/setup-node (npm ci ~5s)
+#   - Parallel independent jobs (lint, typecheck, test, build, e2e)
+#   - Workflow concurrency: cancels in-progress runs on same branch
+#   - E2E job with Docker Compose services (Redis)
+#   - Coverage threshold (minimum 70%)
+#   - workflow_dispatch trigger for manual runs
+# =============================================================================
+
 name: CI
 
 on:
