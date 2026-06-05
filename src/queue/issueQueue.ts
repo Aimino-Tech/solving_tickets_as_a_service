@@ -25,6 +25,7 @@
  * ✅ Retry count and lastError persisted in job data
  * ✅ Dead-letter queue captures jobs after max retries
  * ✅ RabbitMQ publish failures logged with fallback to BullMQ
+ * ✅ Sentry breadcrumbs for enqueue, retry, DLQ events
  * ────────────────────────────────────────────────────────────────────
  */
 
@@ -38,7 +39,13 @@ import { rootLogger } from "../utils/logger.js";
 import { recordQueueDepth } from "../bridge/metrics.js";
 import * as messages from "../github/messages.js";
 import { getOctokit } from "../github/auth.js";
-import { logFixJobEvent } from "../audit/service.js";
+import {
+  bridgeMetrics,
+  recordMessagePublished,
+  recordMessageFailed,
+  recordProcessingDuration,
+} from "../bridge/metrics.js";
+import { addBreadcrumb, setUserContext } from "../monitoring/sentry.js";
 
 const log = rootLogger.child({ module: 'issue-queue' });
 
@@ -225,6 +232,9 @@ export function createIssueWorker(): Worker<IssueJobData> {
       const data = job.data as IssueJobDataWithRetry;
       const retryCount = data.retryCount ?? 0;
 
+      // Set Sentry user context for error correlation
+      setUserContext(data.installationId, `${data.repoOwner}/${data.repoName}`);
+
       log.info(
         {
           jobId: job.id,
@@ -236,15 +246,12 @@ export function createIssueWorker(): Worker<IssueJobData> {
         'Processing issue job',
       );
 
-      // Audit log: fix job started
-      logFixJobEvent({
-        jobId: job.id ?? 'unknown',
-        event: retryCount > 0 ? 'retried' : 'started',
-        accountId: String(data.installationId),
+      addBreadcrumb('queue', 'Processing issue job', {
+        jobId: job.id,
         repo: `${data.repoOwner}/${data.repoName}`,
-        issueNumber: data.issueNumber,
-        correlationId: job.id ?? undefined,
-      }).catch(() => {});
+        issueNumber: String(data.issueNumber),
+        attempt: String(retryCount + 1),
+      });
 
       // Post retry status comment if this is a retry
       if (retryCount > 0 && data.lastError) {
@@ -339,25 +346,12 @@ export function createIssueWorker(): Worker<IssueJobData> {
         }
       } else {
         log.info({ jobId: job.id, confidence: result.confidence, prUrl: result.prUrl }, 'Fix completed');
-
-        // Save completion to persistent storage (AIM-1203)
-        try {
-          const storage = await createStorage();
-          await storage.saveRun({
-            installationId: data.installationId,
-            repoOwner: data.repoOwner,
-            repoName: data.repoName,
-            issueNumber: data.issueNumber,
-            status: 'completed',
-            confidence: result.confidence,
-            summary: result.summary,
-            prUrl: result.prUrl,
-            branchName: result.branchName,
-            durationMs: Date.now() - startTime,
-          });
-        } catch (storageErr) {
-          log.warn({ err: String(storageErr) }, 'Failed to save run completion to storage');
-        }
+        addBreadcrumb('queue', 'Job completed successfully', {
+          jobId: job.id,
+          repo: `${data.repoOwner}/${data.repoName}`,
+          issueNumber: String(data.issueNumber),
+          prUrl: result.prUrl ?? 'none',
+        });
       }
 
       // Release per-repo concurrency slot
@@ -376,16 +370,7 @@ export function createIssueWorker(): Worker<IssueJobData> {
       { jobId: job.id, repo: `${job.data.repoOwner}/${job.data.repoName}`, issueNumber: job.data.issueNumber },
       'Job completed',
     );
-
-    // Audit log: fix job completed
-    logFixJobEvent({
-      jobId: job.id ?? 'unknown',
-      event: 'completed',
-      accountId: String(job.data.installationId),
-      repo: `${job.data.repoOwner}/${job.data.repoName}`,
-      issueNumber: job.data.issueNumber,
-      correlationId: job.id ?? undefined,
-    }).catch(() => {});
+    recordMessagePublished('bullmq:' + QUEUE_NAME);
   });
 
   worker.on("failed", async (job, err) => {
@@ -398,6 +383,14 @@ export function createIssueWorker(): Worker<IssueJobData> {
     }
 
     const retryCount = data.retryCount ?? 0;
+
+    addBreadcrumb('queue', 'Job failed', {
+      jobId: job.id,
+      repo: `${data.repoOwner}/${data.repoName}`,
+      issueNumber: String(data.issueNumber),
+      attempt: String(retryCount + 1),
+      error: errorMsg,
+    });
 
     // Update job data with retry info
     try {
@@ -422,18 +415,6 @@ export function createIssueWorker(): Worker<IssueJobData> {
       'Job failed',
     );
     recordMessageFailed('bullmq:' + QUEUE_NAME, 'WORKER_FAILED');
-
-    // Audit log: fix job failed
-    const jobId4 = job?.id ?? 'unknown';
-    logFixJobEvent({
-      jobId: jobId4,
-      event: 'failed',
-      accountId: data ? String(data.installationId) : undefined,
-      repo: data ? `${data.repoOwner}/${data.repoName}` : undefined,
-      issueNumber: data?.issueNumber,
-      error: errorMsg,
-      correlationId: jobId4,
-    }).catch(() => {});
 
     // Schedule retry if slots remain
     if (retryCount < config.queue.maxRetries) {
@@ -521,6 +502,12 @@ async function moveToDeadLetter(
       { repo: data.repoOwner + '/' + data.repoName, issueNumber: data.issueNumber, error },
       'DLQ alert — job moved to dead-letter queue',
     );
+
+    addBreadcrumb('queue', 'Job moved to dead-letter queue', {
+      repo: `${data.repoOwner}/${data.repoName}`,
+      issueNumber: String(data.issueNumber),
+      error,
+    });
   } finally {
     await dlq.close();
   }
@@ -648,6 +635,13 @@ export async function enqueueIssue(
   const dedupKey = `issue:${data.installationId}:${repo}#${data.issueNumber}`;
   const backend = config.queue.backend;
 
+  addBreadcrumb('queue', 'Enqueueing issue', {
+    repo,
+    issueNumber: String(data.issueNumber),
+    installationId: String(data.installationId),
+    backend,
+  });
+
   let rabbitmqResult: boolean | undefined;
   let bullmqResult: string | undefined;
 
@@ -706,9 +700,11 @@ export async function enqueueIssue(
         'Issue enqueued via BullMQ',
       );
 
-      // Track queue depth per account
-      updateQueueDepthMetric(queue, data).catch((err) => {
-        log.warn({ err: String(err) }, 'Failed to update queue depth metric');
+      addBreadcrumb('queue', 'Issue enqueued via BullMQ', {
+        jobId: job.id,
+        repo,
+        issueNumber: String(data.issueNumber),
+        dedupKey,
       });
     } catch (err) {
       log.error(

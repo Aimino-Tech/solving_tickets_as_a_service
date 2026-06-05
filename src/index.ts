@@ -3,6 +3,12 @@
  *
  * Entry point — starts the API server, the worker, or both based on RUN_MODE.
  *
+ * ══════════════════════════════════════════════════════════════════════
+ * IMPORTANT: Sentry must be initialized BEFORE any other imports to
+ * ensure it can capture startup errors and instrument modules correctly.
+ * The `@sentry/node` import is hoisted to the very top of the file.
+ * ══════════════════════════════════════════════════════════════════════
+ *
  * Usage:
  *   RUN_MODE=api    npm run dev    # API server only
  *   RUN_MODE=worker npm run dev    # Worker only
@@ -13,14 +19,22 @@
  * ✅ Graceful shutdown on SIGTERM/SIGINT (closes server, worker, Redis)
  * ✅ Server failure in 'both' mode logs and allows worker to continue
  * ✅ Worker failure in 'both' mode logs and allows server to continue
+ * ✅ Sentry initialized before all other code (top of import chain)
  * ────────────────────────────────────────────────────────────────────
  */
+
+// ═══════════════════════════════════════════════════════════════════
+// Sentry MUST be initialized before all other imports so it can
+// capture errors that occur during module loading and startup.
+// ═══════════════════════════════════════════════════════════════════
+import './monitoring/sentry-init.js';
 
 import 'dotenv/config';
 import type { Server } from 'node:http';
 import { config } from './config.js';
 import { startScheduledTasks, stopScheduledTasks } from './health/scheduled.js';
 import { rootLogger } from './utils/logger.js';
+import { addBreadcrumb } from './monitoring/sentry.js';
 
 const log = rootLogger.child({ module: 'entry' });
 
@@ -38,6 +52,8 @@ async function main(): Promise<void> {
     log.warn({ err: String(storageErr) }, 'Failed to initialize storage backend (non-fatal)');
   }
 
+
+  addBreadcrumb('system', 'STAS starting', { runMode: config.runMode, nodeEnv: config.nodeEnv });
 
   const mode = config.runMode;
 
@@ -81,6 +97,7 @@ async function main(): Promise<void> {
       const { startServer } = await import('./server.js');
       server = startServer() as Server;
       log.info('API server started');
+      addBreadcrumb('system', 'API server started');
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to start API server');
       if (mode === 'api') {
@@ -97,6 +114,7 @@ async function main(): Promise<void> {
       const { createIssueWorker } = await import('./queue/issueQueue.js');
       worker = createIssueWorker();
       log.info('Worker started');
+      addBreadcrumb('system', 'Worker started');
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to start worker');
       if (mode === 'worker') {
@@ -105,32 +123,14 @@ async function main(): Promise<void> {
     }
   }
 
-  // ── Audit log retention cleanup ────────────────────────────────
-  // Runs every 24 hours to purge audit logs older than 90 days (configurable)
-  const AUDIT_RETENTION_DAYS = Number(process.env.AUDIT_RETENTION_DAYS) || 90;
-  const AUDIT_CLEANUP_INTERVAL_MS = Number(process.env.AUDIT_CLEANUP_INTERVAL_MS) || 86_400_000; // 24h
-
-  const auditCleanupTimer = setInterval(async () => {
-    try {
-      const { auditRepository } = await import('./audit/repository.js');
-      const deleted = await auditRepository.deleteOlderThan(AUDIT_RETENTION_DAYS);
-      if (deleted > 0) {
-        log.info({ deleted, retentionDays: AUDIT_RETENTION_DAYS }, 'Audit log retention cleanup completed');
-      }
-    } catch (err) {
-      log.error({ err: String(err) }, 'Audit log retention cleanup failed');
-    }
-  }, AUDIT_CLEANUP_INTERVAL_MS);
-
-  if (auditCleanupTimer && typeof auditCleanupTimer === 'object' && 'unref' in auditCleanupTimer) {
-    auditCleanupTimer.unref();
-  }
-
-  log.info({ retentionDays: AUDIT_RETENTION_DAYS, intervalMs: AUDIT_CLEANUP_INTERVAL_MS }, 'Audit log retention cleanup scheduled');
+  // Start scheduled maintenance tasks (queue depth check, DLQ cleanup, metrics refresh)
+  startScheduledTasks();
 
   // Register signal handlers for graceful shutdown
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+
+  addBreadcrumb('system', 'STAS started successfully');
 }
 
 main().catch((err) => {

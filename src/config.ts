@@ -75,6 +75,7 @@ const envSchema = z.object({
   DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(2),
 
   // STAS
+
   // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
   STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
@@ -86,16 +87,13 @@ const envSchema = z.object({
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
-  STAS_REPO_RATE_LIMIT: z.coerce.number().int().positive().default(5),
-  STAS_ACCOUNT_RATE_LIMIT: z.coerce.number().int().positive().default(10),
-  STAS_REPO_CONCURRENCY_MAX: z.coerce.number().int().positive().default(3),
-
   // Admin API
   ADMIN_API_KEY: z.string().optional(),
 
   // Webhook Retry Worker
   WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
   WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
+
 
   // GitLab
   GITLAB_URL: z.string().default('https://gitlab.com'),
@@ -151,6 +149,7 @@ const envSchema = z.object({
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
   DATABASE_SSL: z.coerce.boolean().default(false),
+  DATABASE_ENABLE_AUDIT_PERSISTENCE: z.coerce.boolean().default(false),
 
   // Rate limiting (credit-based)
   STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
@@ -162,9 +161,30 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
-  // Admin API
+  // ── Security ──────────────────────────────────────────────────────────────
   ADMIN_API_KEY: z.string().optional(),
   ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  CORS_ORIGIN: z.string().default('*'),
+  REQUEST_BODY_LIMIT: z.string().default('1mb'),
+  WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
+
+  // ── IP Allowlist ──
+  IP_ALLOWLIST_ENABLED: z.coerce.boolean().default(false),
+  IP_ALLOWLIST: z.string().default(''),
+  // Comma-separated list of IPs or CIDR ranges allowed to access webhooks
+
+  // ── Sandbox Security ──
+  SANDBOX_PRIVILEGED: z.coerce.boolean().default(false),
+  SANDBOX_READONLY_ROOT: z.coerce.boolean().default(true),
+  SANDBOX_MEMORY_LIMIT: z.string().default('512m'),
+  SANDBOX_CPU_LIMIT: z.string().default('0.5'),
+  SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
+  SANDBOX_DISK_LIMIT: z.string().default('2gb'),
+  SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
+
+  // Feature Flags
+  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
+  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
   // Sentry
   SENTRY_DSN: z.string().optional(),
@@ -308,6 +328,26 @@ function buildConfig(env: ParsedEnv) {
       rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
     },
 
+    sentry: {
+      dsn: env.SENTRY_DSN,
+      environment: env.SENTRY_ENVIRONMENT,
+      tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE,
+    },
+
+    monitoring: {
+      queueDepthWarnThreshold: env.HEALTH_QUEUE_DEPTH_WARN_THRESHOLD,
+      queueDepthCritThreshold: env.HEALTH_QUEUE_DEPTH_CRIT_THRESHOLD,
+      queueDepthAlertMinutes: env.HEALTH_QUEUE_DEPTH_ALERT_MINUTES,
+      dlqRetentionDays: env.DLQ_RETENTION_DAYS,
+    },
+
+    alerting: {
+      slackChannel: env.ALERT_SLACK_CHANNEL,
+      warnQueueDepth: env.ALERT_WARN_QUEUE_DEPTH,
+      critQueueDepth: env.ALERT_CRIT_QUEUE_DEPTH,
+      warnErrorRatePercent: env.ALERT_WARN_ERROR_RATE_PERCENT,
+      critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
+    },
     stas: {
       label: env.STAS_LABEL,
       botName: env.BOT_NAME,
@@ -318,6 +358,17 @@ function buildConfig(env: ParsedEnv) {
       rateLimitMax: env.STAS_RATE_LIMIT_MAX,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    },
+
+    webhookRetry: {
+      pollIntervalMs: env.WEBHOOK_RETRY_POLL_INTERVAL_MS,
+      batchSize: env.WEBHOOK_RETRY_BATCH_SIZE,
+    },
+
+    usage: {
+      creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
+      creditsTriage: env.USAGE_CREDITS_TRIAGE,
+      creditsSandbox: env.USAGE_CREDITS_SANDBOX,
     },
 
     rateLimit: {
@@ -339,6 +390,14 @@ function buildConfig(env: ParsedEnv) {
       price100Credits: env.STRIPE_PRICE_100_CREDITS,
       price500Credits: env.STRIPE_PRICE_500_CREDITS,
       price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
+    },
+
+    database: {
+      url: env.DATABASE_URL,
+      poolMin: env.DATABASE_POOL_MIN,
+      poolMax: env.DATABASE_POOL_MAX,
+      ssl: env.DATABASE_SSL,
+      enableAuditPersistence: env.DATABASE_ENABLE_AUDIT_PERSISTENCE,
     },
 
     fixTimeoutMs: env.FIX_TIMEOUT_MS,
@@ -375,6 +434,28 @@ function buildConfig(env: ParsedEnv) {
       defaultRepoOwner: env.TRACKER_DEFAULT_REPO_OWNER,
       defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME,
       installationId: env.TRACKER_INSTALLATION_ID || 0,
+    },
+
+    // ── Security ────────────────────────────────────────────────────────────
+    security: {
+      adminApiKey: env.ADMIN_API_KEY,
+      corsOrigin: env.CORS_ORIGIN,
+      requestBodyLimit: env.REQUEST_BODY_LIMIT,
+      webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
+
+      ipAllowlist: {
+        enabled: env.IP_ALLOWLIST_ENABLED,
+        ips: env.IP_ALLOWLIST.split(',').map((s) => s.trim()).filter(Boolean),
+      },
+      sandbox: {
+        privileged: env.SANDBOX_PRIVILEGED,
+        readOnlyRoot: env.SANDBOX_READONLY_ROOT,
+        memoryLimit: env.SANDBOX_MEMORY_LIMIT,
+        cpuLimit: env.SANDBOX_CPU_LIMIT,
+        pidsLimit: env.SANDBOX_PIDS_LIMIT,
+        diskLimit: env.SANDBOX_DISK_LIMIT,
+        networkEnabled: env.SANDBOX_NETWORK_ENABLED,
+      },
     },
 
     metering: {
