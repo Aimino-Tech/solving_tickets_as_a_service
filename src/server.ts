@@ -32,6 +32,9 @@ import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/li
 import { createStripeWebhookHandler } from './stripe/index.js';
 import { rootLogger } from './utils/logger.js';
 import type { IssueJobData } from './utils/types.js';
+import { adminRouter } from "./pricing/admin.js";
+import { adminAuthMiddleware } from "./security/adminAuth.js";
+import { initTierOverrides } from "./ratelimit/tiers.js";
 import { validateWebhookPayload } from './validation.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
@@ -117,6 +120,7 @@ export function createApp(): express.Application {
 
   // -- Initialize trackers --------------------------------------------------
   initTrackers();
+  initTierOverrides();
 
   // -- Webhook receiver -----------------------------------------------------
   const queue = createIssueQueue();
@@ -397,6 +401,10 @@ export function createApp(): express.Application {
   // -- Stripe webhook -------------------------------------------------------
   const stripeWebhookHandler = createStripeWebhookHandler();
   app.post('/webhook/stripe', stripeWebhookHandler);
+
+  // -- Admin API (pricing tiers, quota management) ---------------------
+  // Admin routes are protected by adminAuthMiddleware
+  app.use("/admin", adminAuthMiddleware, adminRouter);
 
   // -- 404 handler ----------------------------------------------------------
   app.use((_req: Request, res: Response) => {

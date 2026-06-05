@@ -42,3 +42,22 @@ export {
 export type { QuotaCheckOptions } from './middleware.js';
 
 export { adminRouter } from './admin.js';
+
+export {
+  recordAuditEntry,
+  getAuditLog,
+  auditTierOverrideSet,
+  auditTierOverrideCleared,
+  auditQuotaReset,
+  auditQuotaResetAll,
+  closeAuditRedisClient,
+} from './audit.js';
+
+export type { AuditEntry, AuditAction } from './audit.js';
+
+export {
+  startMonthlyResetCron,
+  stopMonthlyResetCron,
+  triggerMonthlyReset,
+  isCronRunning,
+} from './cron.js';
