@@ -36,7 +36,8 @@ export default defineConfig({
     // Report slow tests
     slowTestThreshold: 10_000,
 
-    // Exclude fixtures from test discovery
-    exclude: ['**/node_modules/**', '**/fixtures/**'],
+    // Exclude fixtures from test discovery and worker-pipeline
+    // (worker-pipeline has its own dedicated config and requires RabbitMQ)
+    exclude: ['**/node_modules/**', '**/fixtures/**', '**/worker-pipeline.test.ts'],
   },
 });

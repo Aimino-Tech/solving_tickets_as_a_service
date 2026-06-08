@@ -18,11 +18,32 @@ services:
     mem_limit: 128m
     cpus: 0.3
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: stas-e2e-rabbitmq
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: /
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - stas-e2e-net
+    mem_limit: 256m
+    cpus: 0.5
+
   # Note: The E2E test suite creates its own mock servers for GitHub API
-  # and OpenCode. No additional services are needed beyond Redis.
+  # and OpenCode. The Celery worker is started programmatically by the test
+  # via a Python virtualenv (see worker-pipeline.test.ts).
   #
   # Run tests with:
-  #   docker compose -f docker-compose.e2e.yml up -d redis
+  #   docker compose -f docker-compose.e2e.yml up -d redis rabbitmq
   #   npm run test:e2e
 
 networks:
