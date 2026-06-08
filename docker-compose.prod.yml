@@ -261,9 +261,112 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
+      - htpasswd-data:/etc/nginx/.htpasswd:ro
     depends_on:
       - stas-webhook
     <<: *resources-light
+    logging: *default-logging
+    networks:
+      - stas-net
+
+  # ---------------------------------------------------------------------------
+  # STAS Dashboard — React/Vite frontend for the hosted service
+  # ---------------------------------------------------------------------------
+  stas-dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    image: stas-dashboard:latest
+    container_name: stas-dashboard
+    <<: *default-restart
+    ports:
+      - "5173:80"
+    env_file: .env
+    environment:
+      - VITE_API_URL=http://stas-webhook:3000
+      - NODE_ENV=production
+    depends_on:
+      - stas-webhook
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    <<: *resources-light
+    logging: *default-logging
+    networks:
+      - stas-net
+
+  # ---------------------------------------------------------------------------
+  # Certbot — automatic TLS certificate provisioning with Let's Encrypt
+  # ---------------------------------------------------------------------------
+  certbot:
+    image: certbot/certbot:latest
+    container_name: stas-certbot
+    <<: *default-restart
+    entrypoint: ""
+    command: >
+      sh -c "
+        trap 'exit 0' TERM;
+        while :; do
+          certbot renew --webroot -w /var/www/html --quiet --non-interactive;
+          sleep 86400;
+        done
+      "
+    volumes:
+      - certbot-www:/var/www/html
+      - certbot-etc:/etc/letsencrypt
+    depends_on:
+      - nginx
+    logging: *default-logging
+    networks:
+      - stas-net
+
+  # ---------------------------------------------------------------------------
+  # Backup Cron — scheduled database and queue backups
+  # ---------------------------------------------------------------------------
+  stas-backup:
+    image: stas-webhook:latest
+    container_name: stas-backup
+    <<: *default-restart
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "0 */6 * * * /app/scripts/backup-postgres.sh" > /etc/crontabs/root
+        echo "0 */12 * * * /app/scripts/backup-redis.sh" >> /etc/crontabs/root
+        echo "0 */12 * * * /app/scripts/backup-rabbitmq.sh" >> /etc/crontabs/root
+        crond -f -l 2
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-stas}:${POSTGRES_PASSWORD:-stas-password}@stas-postgres:5432/${POSTGRES_DB:-stas}
+      - REDIS_URL=redis://stas-redis:6379
+      - BACKUP_DIR=/backups
+    volumes:
+      - backup-data:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    <<: *resources-light
+    logging: *default-logging
+    networks:
+      - stas-net
+
+  # ---------------------------------------------------------------------------
+  # Nginx Setup — generates htpasswd file for Flower auth
+  # ---------------------------------------------------------------------------
+  nginx-setup:
+    image: nginx:alpine
+    container_name: stas-nginx-setup
+    <<: *default-restart
+    entrypoint: >
+      sh -c "
+        apk add --no-cache apache2-utils &&
+        echo '${FLOWER_USER:-admin}:$$(echo '${FLOWER_PASSWORD:-stas-flower-admin}' | openssl passwd -apr1 -stdin)' > /etc/nginx/.htpasswd &&
+        echo 'htpasswd generated'
+      "
+    volumes:
+      - htpasswd-data:/etc/nginx
     logging: *default-logging
     networks:
       - stas-net
@@ -274,6 +377,14 @@ volumes:
   redis-data:
     driver: local
   rabbitmq-data:
+    driver: local
+  certbot-www:
+    driver: local
+  certbot-etc:
+    driver: local
+  backup-data:
+    driver: local
+  htpasswd-data:
     driver: local
 
 networks:
