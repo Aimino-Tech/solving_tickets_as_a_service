@@ -46,7 +46,13 @@
     "workers:dev": "celery -A workers.celery_app worker --loglevel=info --concurrency=2",
     "workers:beat": "celery -A workers.celery_app beat --loglevel=info",
     "workers:flower": "celery -A workers.celery_app flower --port=5555 --loglevel=info",
-    "test:e2e:ci": "vitest run --config vitest.e2e.config.ts"
+    "test:e2e:ci": "vitest run --config vitest.e2e.config.ts",
+    "test:load:webhook": "k6 run tests/load/webhook-load-test.js",
+    "test:load:db": "k6 run tests/load/db-connection-pool-test.js",
+    "test:load:queue": "k6 run tests/load/queue-throughput-test.js",
+    "test:load:mixed": "k6 run tests/load/mixed-workload-test.js",
+    "test:load:all": "bash tests/load/load-test-runner.sh",
+    "bench:ci": "npx tsx scripts/bench.ts --ci"
   },
   "dependencies": {
     "@octokit/auth-app": "^7.1.0",
