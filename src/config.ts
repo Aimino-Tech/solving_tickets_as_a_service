@@ -183,6 +183,9 @@ const envSchema = z.object({
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
 
+  // ── CSP / Security Headers ──
+  CSP_REPORT_URI: z.string().default('/api/v1/csp-violation-report'),
+
   // ── IP Allowlist ──
   IP_ALLOWLIST_ENABLED: coerceBoolean(false),
   IP_ALLOWLIST: z.string().default(''),
@@ -477,6 +480,7 @@ function buildConfig(env: ParsedEnv) {
       corsOrigin: env.CORS_ORIGIN,
       requestBodyLimit: env.REQUEST_BODY_LIMIT,
       webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
+      cspReportUri: env.CSP_REPORT_URI,
 
       ipAllowlist: {
         enabled: env.IP_ALLOWLIST_ENABLED,
