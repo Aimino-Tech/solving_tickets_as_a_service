@@ -16,8 +16,12 @@ function isBoltConfigured(): boolean {
 
 function buildBlocks(event: NotificationEvent, data: NotificationData): any[] {
   const bot = data.botName ?? config.stas.botName;
-  const issueUrl = ISSUE_URL(data.repoOwner, data.repoName, data.issueNumber);
-  const repoUrl = `https://github.com/${data.repoOwner}/${data.repoName}`;
+  const issueUrl = data.issueNumber > 0
+    ? ISSUE_URL(data.repoOwner, data.repoName, data.issueNumber)
+    : '';
+  const repoUrl = data.repoOwner && data.repoName
+    ? `https://github.com/${data.repoOwner}/${data.repoName}`
+    : '';
 
   const headerText = (() => {
     switch (event) {
@@ -31,6 +35,10 @@ function buildBlocks(event: NotificationEvent, data: NotificationData): any[] {
         return `${bot} fix for #${data.issueNumber} failed verification`;
       case 'error':
         return `${bot} encountered an error on #${data.issueNumber}`;
+      case 'payment_failed':
+        return `Payment Failed — ${data.issueTitle}`;
+      case 'payment_recovered':
+        return `Payment Recovered — ${data.issueTitle}`;
     }
   })();
 
@@ -46,6 +54,10 @@ function buildBlocks(event: NotificationEvent, data: NotificationData): any[] {
         return 'warning';
       case 'error':
         return 'fire';
+      case 'payment_failed':
+        return 'credit_card';
+      case 'payment_recovered':
+        return 'white_check_mark';
     }
   })();
 
@@ -58,14 +70,38 @@ function buildBlocks(event: NotificationEvent, data: NotificationData): any[] {
         emoji: true,
       },
     },
-    {
+  ];
+
+  if (event === 'payment_failed' || event === 'payment_recovered') {
+    const meta = data.metadata ?? {};
+    const fields = [];
+    if (data.reason) {
+      fields.push({ type: 'mrkdwn', text: `*Reason:*\n${data.reason.slice(0, 300)}` });
+    }
+    if (meta.amountCents) {
+      const amount = `${(Number(meta.amountCents) / 100).toFixed(2)} ${String(meta.currency ?? 'USD').toUpperCase()}`;
+      fields.push({ type: 'mrkdwn', text: `*Amount:*\n${amount}` });
+    }
+    if (data.email) {
+      fields.push({ type: 'mrkdwn', text: `*Account:*\n${data.email}` });
+    }
+    if (fields.length > 0) {
+      blocks.push({
+        type: 'section',
+        fields,
+      });
+    }
+    // Add a divider
+    blocks.push({ type: 'divider' });
+  } else if (issueUrl || repoUrl) {
+    blocks.push({
       type: 'section',
       text: {
         type: 'mrkdwn',
         text: `*<${issueUrl}|#${data.issueNumber}: ${data.issueTitle}>*\n<${repoUrl}|${data.repoOwner}/${data.repoName}>`,
       },
-    },
-  ];
+    });
+  }
 
   if (event === 'fix_failed' && data.reason) {
     blocks.push({
@@ -97,28 +133,34 @@ function buildBlocks(event: NotificationEvent, data: NotificationData): any[] {
     });
   }
 
-  const actionElements: any[] = [
-    {
-      type: 'button',
-      text: { type: 'plain_text', text: 'View Issue', emoji: true },
-      url: issueUrl,
-      action_id: 'view_issue',
-    },
-  ];
+  // Action buttons — only add for GitHub-related events
+  if (event !== 'payment_failed' && event !== 'payment_recovered') {
+    const actionElements: any[] = [];
+    if (issueUrl) {
+      actionElements.push({
+        type: 'button',
+        text: { type: 'plain_text', text: 'View Issue', emoji: true },
+        url: issueUrl,
+        action_id: 'view_issue',
+      });
+    }
 
-  if (event === 'pr_created' && data.prUrl) {
-    actionElements.push({
-      type: 'button',
-      text: { type: 'plain_text', text: 'View PR', emoji: true },
-      url: data.prUrl,
-      action_id: 'view_pr',
-    });
+    if (event === 'pr_created' && data.prUrl) {
+      actionElements.push({
+        type: 'button',
+        text: { type: 'plain_text', text: 'View PR', emoji: true },
+        url: data.prUrl,
+        action_id: 'view_pr',
+      });
+    }
+
+    if (actionElements.length > 0) {
+      blocks.push({
+        type: 'actions',
+        elements: actionElements,
+      });
+    }
   }
-
-  blocks.push({
-    type: 'actions',
-    elements: actionElements,
-  });
 
   return blocks;
 }
