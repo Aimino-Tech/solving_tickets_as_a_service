@@ -16,6 +16,11 @@ COPY tsconfig.json ./
 COPY src/ ./src/
 RUN npm run build
 
+# Build dashboard (if it exists)
+COPY dashboard/package.json dashboard/package-lock.json ./dashboard/
+COPY dashboard/ ./dashboard/
+RUN cd dashboard && npm ci --ignore-scripts && npm run build
+
 # Prune dev dependencies (keep only what's needed at runtime)
 RUN npm prune --production
 
@@ -30,6 +35,7 @@ RUN addgroup -S stas && adduser -S stas -G stas
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
+COPY --from=build /app/dashboard/dist ./dashboard/dist
 
 # Own everything by the non-root user
 RUN chown -R stas:stas /app

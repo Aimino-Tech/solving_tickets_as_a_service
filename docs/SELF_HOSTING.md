@@ -600,6 +600,20 @@ Alert thresholds (configurable):
 
 ### Scaling
 
+### Dashboard
+
+The STAS dashboard (analytics, run history) is served by the same Express server in production:
+
+```bash
+# Build the dashboard alongside the API
+npm run build:all
+
+# Or build just the dashboard
+npm run build:dashboard
+```
+
+The dashboard is served automatically when `dashboard/dist/` exists at startup. It handles client-side routing via an SPA fallback: all non-API routes return `index.html`. The Nginx config includes aggressive caching for `/assets/` — deploy new versions with cache-busting hashed filenames (Vite does this automatically).
+
 | Component | Scale Strategy |
 |---|---|
 | **Webhook API** | Horizontal (multiple pods behind load balancer) |
@@ -607,6 +621,7 @@ Alert thresholds (configurable):
 | **Redis** | Vertical (more memory) or Redis Cluster |
 | **OpenCode** | Dedicated instance per STAS instance |
 | **Sandbox** | E2B auto-scales; Docker needs host capacity |
+| **Dashboard** | Served by webhook API; scales with it |
 
 ---
 
