@@ -12,12 +12,14 @@ vi.mock('@slack/bolt', () => ({
   LogLevel: { INFO: 'info' },
 }));
 
-vi.mock('../../config.js', () => ({
+const mockConfig: any = {
   config: {
     stas: { botName: 'STAS' },
     slack: { botToken: '', signingSecret: '', channel: '#stas-test', interactionsPath: '/slack/events' },
   },
-}));
+};
+
+vi.mock('../../config.js', () => mockConfig);
 
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
@@ -39,13 +41,8 @@ describe('notifications/slack-bolt', () => {
 
     it('creates a configured Bolt app when tokens are present', async () => {
       vi.resetModules();
-      vi.mock('../../config.js', () => ({
-        config: {
-          stas: { botName: 'STAS' },
-          slack: { botToken: 'xoxb-test', signingSecret: 'secret', channel: '#stas-test', interactionsPath: '/slack/events' },
-        },
-      }));
-      vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) } }));
+      mockConfig.config.slack.botToken = 'xoxb-test';
+      mockConfig.config.slack.signingSecret = 'secret';
       const mod = await import('../../notifications/slack-bolt.js');
       const app = new mod.SlackBoltApp();
       expect(app.app).not.toBeNull();
