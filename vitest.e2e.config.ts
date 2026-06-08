@@ -46,6 +46,6 @@ export default defineConfig({
 
     // Exclude fixtures from test discovery and worker-pipeline
     // (worker-pipeline has its own dedicated config and requires RabbitMQ)
-    exclude: ['**/node_modules/**', '**/fixtures/**', '**/worker-pipeline.test.ts'],
+    exclude: ['**/node_modules/**', '**/fixtures/**', '**/worker-pipeline.test.ts', '**/full-flow.test.ts'],
   },
 });

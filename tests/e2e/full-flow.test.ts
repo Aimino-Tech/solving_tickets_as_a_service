@@ -25,6 +25,13 @@ import http from "node:http";
 import { type AddressInfo } from "node:net";
 import crypto from "node:crypto";
 
+/**
+ * Sign a webhook payload body with HMAC-SHA256 using the given secret.
+ */
+function signPayload(body: string, secret: string): string {
+  return "sha256=" + crypto.createHmac("sha256", secret).update(body, "utf8").digest("hex");
+}
+
 // ---------------------------------------------------------------------------
 // Mocks — hoisted before ALL imports by vitest
 // ---------------------------------------------------------------------------

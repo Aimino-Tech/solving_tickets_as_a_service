@@ -183,12 +183,26 @@ vi.mock('../../../src/monitoring/sentry.js', () => ({
 
 // Mock webhook handlers
 vi.mock('../../../src/webhooks/bitbucket.js', () => ({
+  bitbucketWebhook: {
+    eventNames: ['repo:push', 'pullrequest:created', 'pullrequest:updated'],
+    verify: vi.fn(() => true),
+    handle: vi.fn().mockResolvedValue(undefined),
+  },
   createBitbucketWebhooks: vi.fn(() => ({})),
 }));
 vi.mock('../../../src/webhooks/github.js', () => ({
   createGithubWebhooks: vi.fn(() => ({})),
 }));
 vi.mock('../../../src/webhooks/gitlab.js', () => ({
+  gitlabWebhook: {
+    eventNames: ['Issue Hook', 'Note Hook', 'Push Hook', 'Merge Request Hook'],
+    verify: vi.fn(() => true),
+    handle: vi.fn().mockResolvedValue(undefined),
+  },
+  gitlabClient: {
+    getFile: vi.fn(),
+    createComment: vi.fn(),
+  },
   createGitlabWebhooks: vi.fn(() => ({})),
 }));
 

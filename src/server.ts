@@ -853,15 +853,19 @@ export function startServer(): import('http').Server {
 
 // -- Process-level error handlers --------------------------------------------
 
-process.on('uncaughtException', (err) => {
-  log.error({ err: String(err), stack: (err as Error).stack }, 'Uncaught exception -- shutting down');
-  process.exit(1);
-});
+if (process.env.NODE_ENV !== 'test') {
+  process.on('uncaughtException', (err) => {
+    log.error({ err: String(err), stack: (err as Error).stack }, 'Uncaught exception -- shutting down');
+    process.exit(1);
+  });
+}
 
-process.on('unhandledRejection', (reason) => {
-  log.error({ err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection -- shutting down');
-  process.exit(1);
-});
+if (process.env.NODE_ENV !== 'test') {
+  process.on('unhandledRejection', (reason) => {
+    log.error({ err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection -- shutting down');
+    process.exit(1);
+  });
+}
 
 // -- Helper: Capture raw body for webhook signature verification -------------
 
