@@ -10,19 +10,7 @@ e2b==2.19.0
 # Sentry SDK for error monitoring and performance tracing
 sentry-sdk==2.18.0
 
-# Benchmark / ML dependencies
-scikit-learn>=1.3.0
-pandas>=2.0.0
-numpy>=1.24.0
-requests>=2.31.0
-scipy>=1.10.0
-kagglehub>=0.3.0
-openml>=0.14.0
-xgboost>=1.7.0
-lightgbm>=3.3.0
-catboost>=1.1.0
-
-# Benchmark / ML dependencies
+# Benchmark / ML dependencies (AIM-1192)
 scikit-learn>=1.3.0
 pandas>=2.0.0
 numpy>=1.24.0

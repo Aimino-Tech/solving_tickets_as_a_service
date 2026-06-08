@@ -16,17 +16,16 @@ import csv
 import json
 import logging
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-from .datasets import DatasetConfig, DATASET_REGISTRY, get_dataset, get_dataset_names, load_dataset
+from .datasets import DatasetConfig, get_dataset, get_dataset_names, load_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +40,11 @@ def _register_model(
     priority: int = 100,
 ) -> Callable:
     """Decorator to register a model builder in the model registry."""
+
     def wrapper(builder: Callable[[], Any]) -> Callable[[], Any]:
         _MODEL_REGISTRY[name] = {"builder": builder, "priority": priority}
         return builder
+
     return wrapper
 
 
@@ -54,12 +55,14 @@ def _register_model(
 @_register_model("LogisticRegression", priority=10)
 def _build_lr():
     from sklearn.linear_model import LogisticRegression
+
     return LogisticRegression(max_iter=1000, random_state=42)
 
 
 @_register_model("RandomForest", priority=20)
 def _build_rf():
     from sklearn.ensemble import RandomForestClassifier
+
     return RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
 
 
@@ -67,6 +70,7 @@ def _build_rf():
 def _build_xgb():
     try:
         from xgboost import XGBClassifier
+
         return XGBClassifier(n_estimators=100, random_state=42, n_jobs=-1, verbosity=0)
     except ImportError:
         raise ImportError("xgboost is required. Install with: pip install xgboost")
@@ -76,7 +80,10 @@ def _build_xgb():
 def _build_lgbm():
     try:
         import lightgbm as lgbm
-        return lgbm.LGBMClassifier(n_estimators=100, random_state=42, n_jobs=-1, verbose=-1)
+
+        return lgbm.LGBMClassifier(
+            n_estimators=100, random_state=42, n_jobs=-1, verbose=-1
+        )
     except ImportError:
         raise ImportError("lightgbm is required. Install with: pip install lightgbm")
 
@@ -85,6 +92,7 @@ def _build_lgbm():
 def _build_cat():
     try:
         from catboost import CatBoostClassifier
+
         return CatBoostClassifier(
             iterations=100,
             random_seed=42,
@@ -101,6 +109,7 @@ def _build_cat():
 @dataclass
 class ModelBenchmarkResult:
     """Results for a single (dataset, model) pair."""
+
     dataset_name: str
     model_name: str
     n_samples: int
@@ -175,7 +184,10 @@ def run_model_on_dataset(
     try:
         stratify = y if n_classes > 1 and len(y) >= 2 else None
         X_train, X_test, y_train, y_test = train_test_split(
-            X_df, y, test_size=test_size, random_state=random_state,
+            X_df,
+            y,
+            test_size=test_size,
+            random_state=random_state,
             stratify=stratify,
         )
     except Exception as e:
@@ -253,7 +265,13 @@ def run_model_on_dataset(
     total_time_ms = (time.perf_counter() - t_start) * 1000
 
     # Calculate metrics
-    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+    from sklearn.metrics import (
+        accuracy_score,
+        precision_score,
+        recall_score,
+        f1_score,
+        roc_auc_score,
+    )
 
     result = ModelBenchmarkResult(
         dataset_name=config.name,
@@ -272,11 +290,15 @@ def run_model_on_dataset(
     except Exception:
         pass
     try:
-        result.precision = float(precision_score(y_test, y_pred, average="weighted", zero_division=0))
+        result.precision = float(
+            precision_score(y_test, y_pred, average="weighted", zero_division=0)
+        )
     except Exception:
         pass
     try:
-        result.recall = float(recall_score(y_test, y_pred, average="weighted", zero_division=0))
+        result.recall = float(
+            recall_score(y_test, y_pred, average="weighted", zero_division=0)
+        )
     except Exception:
         pass
     try:
@@ -311,10 +333,14 @@ def run_model_comparison(
 
     # Determine which models to run
     if model_names is None:
-        model_names = sorted(_MODEL_REGISTRY.keys(), key=lambda n: _MODEL_REGISTRY[n]["priority"])
+        model_names = sorted(
+            _MODEL_REGISTRY.keys(), key=lambda n: _MODEL_REGISTRY[n]["priority"]
+        )
 
     # Filter to only actually registered models
-    available_models = {n: _MODEL_REGISTRY[n] for n in model_names if n in _MODEL_REGISTRY}
+    available_models = {
+        n: _MODEL_REGISTRY[n] for n in model_names if n in _MODEL_REGISTRY
+    }
     missing = [n for n in model_names if n not in _MODEL_REGISTRY]
     if missing:
         logger.warning("Unknown models (skipping): %s", missing)
@@ -346,33 +372,37 @@ def run_model_comparison(
                 scale_features=needs_scaling,
             )
             status = "OK" if result.error is None else f"ERROR: {result.error}"
-            logger.info("    accuracy=%.4f | F1=%.4f | train=%.1fms | infer=%.1fms | %s",
-                        result.accuracy or 0.0,
-                        result.f1_score or 0.0,
-                        result.train_time_ms,
-                        result.infer_time_ms,
-                        status)
+            logger.info(
+                "    accuracy=%.4f | F1=%.4f | train=%.1fms | infer=%.1fms | %s",
+                result.accuracy or 0.0,
+                result.f1_score or 0.0,
+                result.train_time_ms,
+                result.infer_time_ms,
+                status,
+            )
             all_results.append(result)
 
     # Build summary DataFrame
     records = []
     for r in all_results:
-        records.append({
-            "dataset": r.dataset_name,
-            "model": r.model_name,
-            "n_samples": r.n_samples,
-            "n_features": r.n_features,
-            "n_classes": r.n_classes,
-            "accuracy": r.accuracy,
-            "f1_score": r.f1_score,
-            "precision": r.precision,
-            "recall": r.recall,
-            "roc_auc": r.roc_auc,
-            "train_time_ms": r.train_time_ms,
-            "infer_time_ms": r.infer_time_ms,
-            "total_time_ms": r.total_time_ms,
-            "error": r.error or "",
-        })
+        records.append(
+            {
+                "dataset": r.dataset_name,
+                "model": r.model_name,
+                "n_samples": r.n_samples,
+                "n_features": r.n_features,
+                "n_classes": r.n_classes,
+                "accuracy": r.accuracy,
+                "f1_score": r.f1_score,
+                "precision": r.precision,
+                "recall": r.recall,
+                "roc_auc": r.roc_auc,
+                "train_time_ms": r.train_time_ms,
+                "infer_time_ms": r.infer_time_ms,
+                "total_time_ms": r.total_time_ms,
+                "error": r.error or "",
+            }
+        )
 
     summary_df = pd.DataFrame(records)
 
@@ -393,30 +423,43 @@ def _export_comparison_csv(results: list[ModelBenchmarkResult], path: str) -> No
         return
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
-        "dataset", "model", "n_samples", "n_features", "n_classes",
-        "accuracy", "f1_score", "precision", "recall", "roc_auc",
-        "train_time_ms", "infer_time_ms", "total_time_ms", "error",
+        "dataset",
+        "model",
+        "n_samples",
+        "n_features",
+        "n_classes",
+        "accuracy",
+        "f1_score",
+        "precision",
+        "recall",
+        "roc_auc",
+        "train_time_ms",
+        "infer_time_ms",
+        "total_time_ms",
+        "error",
     ]
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for r in results:
-            writer.writerow({
-                "dataset": r.dataset_name,
-                "model": r.model_name,
-                "n_samples": r.n_samples,
-                "n_features": r.n_features,
-                "n_classes": r.n_classes,
-                "accuracy": r.accuracy,
-                "f1_score": r.f1_score,
-                "precision": r.precision,
-                "recall": r.recall,
-                "roc_auc": r.roc_auc,
-                "train_time_ms": r.train_time_ms,
-                "infer_time_ms": r.infer_time_ms,
-                "total_time_ms": r.total_time_ms,
-                "error": r.error or "",
-            })
+            writer.writerow(
+                {
+                    "dataset": r.dataset_name,
+                    "model": r.model_name,
+                    "n_samples": r.n_samples,
+                    "n_features": r.n_features,
+                    "n_classes": r.n_classes,
+                    "accuracy": r.accuracy,
+                    "f1_score": r.f1_score,
+                    "precision": r.precision,
+                    "recall": r.recall,
+                    "roc_auc": r.roc_auc,
+                    "train_time_ms": r.train_time_ms,
+                    "infer_time_ms": r.infer_time_ms,
+                    "total_time_ms": r.total_time_ms,
+                    "error": r.error or "",
+                }
+            )
 
 
 def _export_comparison_json(results: list[ModelBenchmarkResult], path: str) -> None:
@@ -470,16 +513,28 @@ def print_summary_table(summary_df: pd.DataFrame) -> None:
     # Pivot table: datasets x models, values = accuracy
     try:
         pivot_acc = summary_df.pivot_table(
-            index="dataset", columns="model", values="accuracy", aggfunc="first",
+            index="dataset",
+            columns="model",
+            values="accuracy",
+            aggfunc="first",
         )
         pivot_f1 = summary_df.pivot_table(
-            index="dataset", columns="model", values="f1_score", aggfunc="first",
+            index="dataset",
+            columns="model",
+            values="f1_score",
+            aggfunc="first",
         )
         pivot_train = summary_df.pivot_table(
-            index="dataset", columns="model", values="train_time_ms", aggfunc="first",
+            index="dataset",
+            columns="model",
+            values="train_time_ms",
+            aggfunc="first",
         )
         pivot_infer = summary_df.pivot_table(
-            index="dataset", columns="model", values="infer_time_ms", aggfunc="first",
+            index="dataset",
+            columns="model",
+            values="infer_time_ms",
+            aggfunc="first",
         )
     except Exception:
         print(summary_df.to_string(index=False))
@@ -488,41 +543,64 @@ def print_summary_table(summary_df: pd.DataFrame) -> None:
     print("\n" + "=" * 80)
     print("MODEL COMPARISON — ACCURACY")
     print("=" * 80)
-    print(pivot_acc.to_string(float_format=lambda x: f"{x:.4f}" if pd.notna(x) else "N/A"))
+    print(
+        pivot_acc.to_string(float_format=lambda x: f"{x:.4f}" if pd.notna(x) else "N/A")
+    )
     print()
 
     if not pivot_f1.dropna(how="all").empty:
         print("=" * 80)
         print("MODEL COMPARISON — F1 SCORE (weighted)")
         print("=" * 80)
-        print(pivot_f1.to_string(float_format=lambda x: f"{x:.4f}" if pd.notna(x) else "N/A"))
+        print(
+            pivot_f1.to_string(
+                float_format=lambda x: f"{x:.4f}" if pd.notna(x) else "N/A"
+            )
+        )
         print()
 
     print("=" * 80)
     print("MODEL COMPARISON — TRAINING TIME (ms)")
     print("=" * 80)
-    print(pivot_train.to_string(float_format=lambda x: f"{x:.1f}" if pd.notna(x) else "N/A"))
+    print(
+        pivot_train.to_string(
+            float_format=lambda x: f"{x:.1f}" if pd.notna(x) else "N/A"
+        )
+    )
     print()
 
     print("=" * 80)
     print("MODEL COMPARISON — INFERENCE TIME (ms)")
     print("=" * 80)
-    print(pivot_infer.to_string(float_format=lambda x: f"{x:.1f}" if pd.notna(x) else "N/A"))
+    print(
+        pivot_infer.to_string(
+            float_format=lambda x: f"{x:.1f}" if pd.notna(x) else "N/A"
+        )
+    )
     print()
 
     # Per-model averages
     print("=" * 80)
     print("PER-MODEL AVERAGES")
     print("=" * 80)
-    avg_df = summary_df.groupby("model").agg(
-        avg_accuracy=("accuracy", "mean"),
-        avg_f1=("f1_score", "mean"),
-        avg_train_time_ms=("train_time_ms", "mean"),
-        avg_infer_time_ms=("infer_time_ms", "mean"),
-        total_datasets=("dataset", "count"),
-        errors=("error", lambda x: sum(1 for e in x if e)),
-    ).reset_index()
-    print(avg_df.to_string(index=False, float_format=lambda x: f"{x:.4f}" if isinstance(x, float) else str(x)))
+    avg_df = (
+        summary_df.groupby("model")
+        .agg(
+            avg_accuracy=("accuracy", "mean"),
+            avg_f1=("f1_score", "mean"),
+            avg_train_time_ms=("train_time_ms", "mean"),
+            avg_infer_time_ms=("infer_time_ms", "mean"),
+            total_datasets=("dataset", "count"),
+            errors=("error", lambda x: sum(1 for e in x if e)),
+        )
+        .reset_index()
+    )
+    print(
+        avg_df.to_string(
+            index=False,
+            float_format=lambda x: f"{x:.4f}" if isinstance(x, float) else str(x),
+        )
+    )
 
 
 # ── Main entry point ─────────────────────────────────────────────────────────
