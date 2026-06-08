@@ -1,23 +1,42 @@
 /**
- * Scheduled Maintenance — periodic tasks for queue health and DLQ cleanup.
+ * Scheduled Maintenance — periodic tasks for queue health, DLQ cleanup,
+ * alerting rules, worker heartbeat checks, and SLO compliance.
  *
  * Tasks (runs on configurable intervals):
- *   1. Queue depth check — logs warnings/alerts when queues exceed thresholds
- *   2. DLQ cleanup — purges expired DLQ messages based on DLQ_RETENTION_DAYS
- *   3. Prometheus metrics update — refreshes queue depth gauges
+ *   1. Queue depth check — fires alerting rules when queues exceed thresholds
+ *   2. Worker heartbeat check — alerts on workers with no heartbeat >2min
+ *   3. SLO compliance check — evaluates SLIs against SLO targets, records metrics
+ *   4. DLQ cleanup — purges expired DLQ messages based on DLQ_RETENTION_DAYS
+ *   5. Prometheus metrics update — refreshes queue depth gauges
  *
  * All tasks are started/stopped via `startScheduledTasks()` / `stopScheduledTasks()`.
+ *
+ * ── AIM-1272 Integration ────────────────────────────────────────────
+ * The scheduled loop now wires concrete alerting rules from
+ * src/monitoring/alerting.ts into the periodic health checks:
+ *   - Queue depth exceeding thresholds → checkQueueDepth()
+ *   - Worker heartbeat missing >2min   → checkWorkerHeartbeats()
+ *   - SLO breach detection             → checkSLOCompliance()
+ *   - Error rate spikes                → (handled per-message in bridge)
+ * ────────────────────────────────────────────────────────────────────
  */
 
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { getQueueHealth, hasCriticalQueues, getDLQSummary } from './queueHealth.js';
+import {
+  checkQueueDepth,
+  checkWorkerHeartbeats,
+  checkSLOCompliance,
+} from '../monitoring/alerting.js';
 
 const log = rootLogger.child({ module: 'scheduled' });
 
 // ── Intervals (milliseconds) ────────────────────────────────────────
 
 const QUEUE_DEPTH_CHECK_INTERVAL_MS = config.monitoring.queueDepthAlertMinutes * 60 * 1000;
+const WORKER_HEARTBEAT_CHECK_INTERVAL_MS = 60_000; // every 60s
+const SLO_COMPLIANCE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // every 5min
 const DLQ_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
 const METRICS_REFRESH_INTERVAL_MS = 60_000; // every 60s
 
@@ -29,6 +48,16 @@ const timers: NodeJS.Timeout[] = [];
 
 async function checkQueueDepths(): Promise<void> {
   try {
+    const health = await getQueueHealth();
+
+    // Fire alerting rules based on actual queue depths
+    for (const queue of health.queues) {
+      if (queue.type === 'main') {
+        checkQueueDepth(queue.depth, config.monitoring.queueDepthAlertMinutes);
+      }
+    }
+
+    // Legacy logging (kept for backward compatibility)
     const { critical, warning } = await hasCriticalQueues();
 
     if (critical.length > 0) {
@@ -46,6 +75,27 @@ async function checkQueueDepths(): Promise<void> {
     }
   } catch (err) {
     log.error({ err: String(err) }, 'Queue depth check failed');
+  }
+}
+
+// ── Worker Heartbeat Check (AIM-1272) ──────────────────────────────
+
+async function checkWorkerHealth(): Promise<void> {
+  try {
+    checkWorkerHeartbeats(120); // 2 minutes max silence
+    log.debug('Worker heartbeat check complete');
+  } catch (err) {
+    log.error({ err: String(err) }, 'Worker heartbeat check failed');
+  }
+}
+
+// ── SLO Compliance Check (AIM-1272) ────────────────────────────────
+
+async function runSloCheck(): Promise<void> {
+  try {
+    checkSLOCompliance();
+  } catch (err) {
+    log.error({ err: String(err) }, 'SLO compliance check failed');
   }
 }
 
@@ -90,14 +140,22 @@ export function startScheduledTasks(): void {
   log.info(
     {
       queueDepthCheckMs: QUEUE_DEPTH_CHECK_INTERVAL_MS,
+      workerHeartbeatCheckMs: WORKER_HEARTBEAT_CHECK_INTERVAL_MS,
+      sloComplianceCheckMs: SLO_COMPLIANCE_CHECK_INTERVAL_MS,
       dlqCleanupMs: DLQ_CLEANUP_INTERVAL_MS,
       metricsRefreshMs: METRICS_REFRESH_INTERVAL_MS,
     },
     'Starting scheduled maintenance tasks',
   );
 
-  // Queue depth check (on interval)
+  // Queue depth check (on interval matching queueDepthAlertMinutes)
   timers.push(setInterval(checkQueueDepths, QUEUE_DEPTH_CHECK_INTERVAL_MS));
+
+  // Worker heartbeat check (every 60s)
+  timers.push(setInterval(checkWorkerHealth, WORKER_HEARTBEAT_CHECK_INTERVAL_MS));
+
+  // SLO compliance check (every 5min)
+  timers.push(setInterval(runSloCheck, SLO_COMPLIANCE_CHECK_INTERVAL_MS));
 
   // DLQ cleanup (once per day)
   timers.push(setInterval(cleanupDLQ, DLQ_CLEANUP_INTERVAL_MS));
@@ -107,6 +165,8 @@ export function startScheduledTasks(): void {
 
   // Run initial checks immediately
   checkQueueDepths().catch(() => {});
+  checkWorkerHealth().catch(() => {});
+  runSloCheck().catch(() => {});
   cleanupDLQ().catch(() => {});
   refreshMetrics().catch(() => {});
 
