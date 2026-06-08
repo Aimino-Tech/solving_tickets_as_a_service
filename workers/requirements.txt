@@ -18,3 +18,20 @@ requests>=2.31.0
 scipy>=1.10.0
 kagglehub>=0.3.0
 openml>=0.14.0
+xgboost>=1.7.0
+lightgbm>=3.3.0
+catboost>=1.1.0
+
+# Benchmark / ML dependencies
+scikit-learn>=1.3.0
+pandas>=2.0.0
+numpy>=1.24.0
+requests>=2.31.0
+scipy>=1.10.0
+kagglehub>=0.3.0
+openml>=0.14.0
+
+# Model comparison dependencies (AIM-1189)
+xgboost>=2.0.0
+lightgbm>=4.0.0
+catboost>=1.2.0

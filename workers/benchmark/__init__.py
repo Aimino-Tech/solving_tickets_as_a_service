@@ -1,1 +1,1 @@
-# Benchmark Runner — OpenML/Kaggle dataset benchmarks
+# Benchmark Suite — OpenML/Kaggle datasets with model comparisons
