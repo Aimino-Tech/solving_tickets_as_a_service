@@ -33,7 +33,7 @@ let storageInstance: StorageBackend | null = null;
  *
  * The instance is cached so subsequent calls return the same object.
  */
-export async function createStorage(): Promise<StorageBackend> {
+export async function createStorage(): Promise<StorageBackend | undefined> {
   if (storageInstance) return storageInstance;
 
   const storageType = config.storage.type;

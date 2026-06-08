@@ -190,6 +190,10 @@ const envSchema = z.object({
   STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
   STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
 
+  // Storage
+  STORAGE_TYPE: z.enum(['sqlite', 'postgres']).default('sqlite'),
+  SQLITE_PATH: z.string().default('/tmp/stas.db'),
+
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -369,8 +373,10 @@ function buildConfig(env: ParsedEnv) {
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
       maxAgentIterations: env.MAX_AGENT_ITERATIONS,
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
-      rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
-      rateLimitMax: env.STAS_RATE_LIMIT_MAX,
+      rateLimit: {
+        windowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
+        max: env.STAS_RATE_LIMIT_MAX,
+      },
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
     },
@@ -491,6 +497,11 @@ function buildConfig(env: ParsedEnv) {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    storage: {
+      type: env.STORAGE_TYPE,
+      sqlitePath: env.SQLITE_PATH,
     },
   } as const;
 }

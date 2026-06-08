@@ -1,0 +1,64 @@
+{
+  "conversations": [
+    {
+      "id": "c493bce5-f982-44e0-b852-89b852bc1353",
+      "sessionId": "global",
+      "role": "system",
+      "content": "Tool navigate on http://localhost:3000/health: {\"result\":{\"title\":\"\",\"url\":\"http://localhost:3000/health\",\"analysis\":\"## Visual State\\nPage \\\"\\\" at http://localhost:3000/health\\nViewport: 1280x720\\nScroll: (0, 0)\\nConsole errors: 0\\nNetwork errors: 0\\n\\n### Accessibility Tree\\n\",\"consoleLogs\":[],\"failedRequests\":[]}}",
+      "timestamp": "2026-06-08T09:14:28.741Z",
+      "metadata": {
+        "tool": "navigate",
+        "url": "http://localhost:3000/health",
+        "args": {
+          "url": "http://localhost:3000/health"
+        }
+      }
+    },
+    {
+      "id": "b2830c1f-e65a-45c3-ad21-7969ff01b87f",
+      "sessionId": "global",
+      "role": "system",
+      "content": "Tool navigate on http://localhost:3000/docs: {\"result\":{\"title\":\"Swagger UI\",\"url\":\"http://localhost:3000/docs/\",\"analysis\":\"## Visual State\\nPage \\\"Swagger UI\\\" at http://localhost:3000/docs/\\nViewport: 1280x720\\nScroll: (0, 0)\\nConsole errors: 0\\nNetwork errors: 0\\n\\n### Accessibility Tree\\n      [button]\",\"consoleLogs\":[],\"failedRequests\":[]}}",
+      "timestamp": "2026-06-08T09:14:33.661Z",
+      "metadata": {
+        "tool": "navigate",
+        "url": "http://localhost:3000/docs",
+        "args": {
+          "url": "http://localhost:3000/docs"
+        }
+      }
+    },
+    {
+      "id": "d1592f69-5d46-423a-90d9-fffa7cb0d418",
+      "sessionId": "global",
+      "role": "system",
+      "content": "Tool navigate on http://localhost:3000/health: {\"result\":{\"title\":\"\",\"url\":\"http://localhost:3000/health\",\"analysis\":\"## Visual State\\nPage \\\"\\\" at http://localhost:3000/health\\nViewport: 1280x720\\nScroll: (0, 0)\\nConsole errors: 0\\nNetwork errors: 0\\n\\n### Accessibility Tree\\n\",\"consoleLogs\":[],\"failedRequests\":[]}}",
+      "timestamp": "2026-06-08T09:14:54.925Z",
+      "metadata": {
+        "tool": "navigate",
+        "url": "http://localhost:3000/health",
+        "args": {
+          "url": "http://localhost:3000/health"
+        }
+      }
+    }
+  ],
+  "facts": [
+    {
+      "id": "db6ba86f-9565-43da-99ac-5cae39c2e7b0",
+      "key": "domain_localhost",
+      "content": "Domain pattern: navigate on http://localhost:3000/health completed successfully",
+      "domain": "localhost",
+      "tags": [
+        "auto-learned",
+        "domain:localhost",
+        "action:navigate"
+      ],
+      "source": "auto",
+      "confidence": 0.5,
+      "createdAt": "2026-06-08T09:14:28.741Z",
+      "lastAccessedAt": "2026-06-08T09:14:54.925Z",
+      "accessCount": 3
+    }
+  ]
+}

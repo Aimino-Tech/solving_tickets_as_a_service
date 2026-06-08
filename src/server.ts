@@ -78,6 +78,7 @@ import { addBreadcrumb, setupSentryExpressErrorHandler } from './monitoring/sent
 
 const log = rootLogger.child({ module: 'server' });
 
+const START_TIME = Date.now();
 const REQUEST_SIZE_LIMIT = parseSize(config.security.requestBodyLimit);
 const WEBHOOK_SIZE_LIMIT = parseSize(config.security.webhookBodyLimit);
 
@@ -93,20 +94,6 @@ function parseSize(size: string): number {
 /**
  * Create and configure the Express application.
  */
-
-/**
- * Parse a size string (e.g. '1mb', '5mb', '100kb') to bytes.
- * Returns 0 if the string cannot be parsed.
- */
-function parseSize(size: string): number {
-  const match = size.match(/^(\d+)\s*(b|kb|mb|gb)$/i);
-  if (!match) return 0;
-  const num = parseInt(match[1], 10);
-  const unit = match[2].toLowerCase();
-  const multipliers: Record<string, number> = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 * 1024 * 1024 };
-  return num * (multipliers[unit] || 1);
-}
-
 
 export function createApp(): express.Application {
   const app = express();
@@ -794,10 +781,15 @@ export function createApp(): express.Application {
   const openApiSpec = yaml.load(fs.readFileSync(specPath, 'utf8')) as Record<string, unknown>;
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
-  // -- 404 handler ----------------------------------------------------------
+    // -- 404 handler ----------------------------------------------------------
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: 'Not found' });
   });
+
+  let lastError: string | null = null;
+  function setLastError(err: Error): void {
+    lastError = err.message;
+  }
 
   // -- Global error handler -------------------------------------------------
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
