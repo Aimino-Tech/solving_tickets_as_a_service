@@ -16,8 +16,9 @@
 
 import { Octokit } from '@octokit/rest';
 import { config } from '../config.js';
-import { getOctokit } from '../github/auth.js';
+import { getOctokit, getInstallationToken } from '../github/auth.js';
 import { rootLogger } from '../utils/logger.js';
+import { createSandbox } from '../sandbox/index.js';
 import * as messages from '../github/messages.js';
 
 const log = rootLogger.child({ module: 'pr-ci-monitor' });

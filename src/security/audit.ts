@@ -19,6 +19,7 @@
 
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { auditLogRepository } from '../db/repositories/AuditLogRepository.js';
 
 const log = rootLogger.child({ module: 'audit' });
 
@@ -49,9 +50,18 @@ export async function writeAuditLog(entry: AuditEntry): Promise<void> {
   // Persist to database if explicitly enabled via config flag
   if (config.database.enableAuditPersistence) {
     try {
-      // DB persistence temporarily disabled - import pattern needs alignment
-      // TODO: Re-enable with proper queryWithRetry pattern
-      log.warn({ action: entry.action }, 'Audit log DB persistence skipped - WIP');
+      await auditLogRepository.log({
+        actorType: 'system',
+        actorId: entry.actor,
+        action: entry.action,
+        resourceType: 'account',
+        resourceId: entry.target,
+        details: {
+          ...entry.details,
+          outcome: entry.outcome,
+          error: entry.error,
+        },
+      });
     } catch (err) {
       // Non-fatal: log the failure but don't throw
       log.error({ err: String(err), action: entry.action }, 'Failed to persist audit log to database');

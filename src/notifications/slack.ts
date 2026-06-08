@@ -8,13 +8,21 @@ const log = rootLogger.child({ module: 'slack-notifier' });
 const ISSUE_URL = (owner: string, repo: string, number: number) =>
   `https://github.com/${owner}/${repo}/issues/${number}`;
 
+function formatCurrency(amountCents: number, currency: string): string {
+  return `${(amountCents / 100).toFixed(2)} ${currency.toUpperCase()}`;
+}
+
 function buildTextMessage(
   event: NotificationEvent,
   data: NotificationData,
 ): string {
   const bot = data.botName ?? config.stas.botName;
-  const issueLink = `<${ISSUE_URL(data.repoOwner, data.repoName, data.issueNumber)}|#${data.issueNumber}>`;
-  const repoLink = `<https://github.com/${data.repoOwner}/${data.repoName}|${data.repoOwner}/${data.repoName}>`;
+  const issueLink = data.issueNumber > 0
+    ? `<${ISSUE_URL(data.repoOwner, data.repoName, data.issueNumber)}|#${data.issueNumber}>`
+    : '';
+  const repoLink = data.repoOwner && data.repoName
+    ? `<https://github.com/${data.repoOwner}/${data.repoName}|${data.repoOwner}/${data.repoName}>`
+    : '';
 
   switch (event) {
     case 'fix_started':
@@ -64,6 +72,38 @@ function buildTextMessage(
       ]
         .filter(Boolean)
         .join('\n');
+
+    case 'payment_failed': {
+      const meta = data.metadata ?? {};
+      const amount = meta.amountCents ? formatCurrency(Number(meta.amountCents), String(meta.currency ?? 'usd')) : 'Unknown';
+      const attempts = meta.attemptCount ?? 'unknown';
+      const nextAttempt = meta.nextAttempt
+        ? `Next attempt: ${new Date(String(meta.nextAttempt)).toISOString()}`
+        : 'No further attempts scheduled';
+      return [
+        `:credit_card: *Payment Failed* — ${data.issueTitle}`,
+        data.reason ? `> ${data.reason}` : '',
+        `> Amount: ${amount}`,
+        `> Attempts: ${attempts}`,
+        `> ${nextAttempt}`,
+        data.email ? `> Account: ${data.email}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+    }
+
+    case 'payment_recovered': {
+      const meta = data.metadata ?? {};
+      const amount = meta.amountCents ? formatCurrency(Number(meta.amountCents), String(meta.currency ?? 'usd')) : 'Unknown';
+      return [
+        `:white_check_mark: *Payment Recovered* — ${data.issueTitle}`,
+        data.reason ? `> ${data.reason}` : '',
+        `> Amount: ${amount}`,
+        data.email ? `> Account: ${data.email}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+    }
   }
 }
 
