@@ -56,7 +56,16 @@
     "supply-chain:audit-pip": "bash scripts/supply-chain.sh audit-pip",
     "supply-chain:verify-lock": "bash scripts/supply-chain.sh verify-lock",
     "supply-chain:scan-docker": "bash scripts/supply-chain.sh scan-docker",
-    "supply-chain:all": "bash scripts/supply-chain.sh all"
+    "supply-chain:all": "bash scripts/supply-chain.sh all",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:migrate:dry-run": "tsx src/db/migrate.ts --dry-run",
+    "db:migrate:rollback": "tsx src/db/migrate.ts --rollback",
+    "db:migrate:benchmark": "tsx src/db/migrate.ts --benchmark",
+    "db:migrate:test": "tsx scripts/test-migrations.ts",
+    "db:migrate:test:check": "tsx scripts/test-migrations.ts --check",
+    "db:migrate:bench": "tsx scripts/bench-migrations.ts",
+    "db:migrate:bench:ci": "tsx scripts/bench-migrations.ts --ci --json",
+    "test:db-migrations": "vitest run src/__tests__/db/"
   },
   "dependencies": {
     "@octokit/auth-app": "^7.1.0",

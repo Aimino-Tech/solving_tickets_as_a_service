@@ -292,6 +292,45 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+
+  ##############################################################################
+  # MIGRATION INTEGRITY CHECK — validates migration file structure, pairing,
+  # naming conventions, order, and content integrity (no DB needed)
+  ##############################################################################
+  migration-integrity:
+    name: Migration Integrity Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run migration integrity check
+        run: npm run db:migrate:test:check
+
+  ##############################################################################
+  # MIGRATION BENCHMARK — validates migration file processing timing
+  ##############################################################################
+  migration-benchmark:
+    name: Migration Benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run migration benchmarks
+        run: npm run db:migrate:bench:ci
+
+
   ##############################################################################
   # SECURITY AUDIT (npm audit)
   ##############################################################################
