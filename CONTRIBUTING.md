@@ -37,15 +37,21 @@ This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participatin
 - **Redis** (for queue)
 - **OpenCode CLI** (`npm install -g @opencode/cli`)
 
-### Step 1: Clone and Install
+### Step 1: Clone and One-Command Setup
+
+The fastest way to get started:
 
 ```bash
 git clone https://github.com/tamnguyen08/solving_tickets_as_a_service
 cd solving_tickets_as_a_service
-npm install
+npm run setup
 ```
 
-### Step 2: Configure Environment
+This single command checks prerequisites, installs dependencies, creates a `.env` file with development defaults, and optionally starts Docker services.
+
+### Step 2: Manual Configuration (if needed)
+
+If you need to customize the environment after running `setup`:
 
 ```bash
 cp .env.example .env

@@ -12,6 +12,8 @@
   },
   "scripts": {
     "init": "tsx scripts/init.ts",
+    "setup": "bash scripts/setup.sh",
+    "doctor": "bash scripts/doctor.sh",
     "dev": "tsx watch src/index.ts",
     "dev:api": "RUN_MODE=api tsx watch src/index.ts",
     "dev:worker": "RUN_MODE=worker tsx watch src/index.ts",
