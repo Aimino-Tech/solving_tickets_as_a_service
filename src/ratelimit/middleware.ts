@@ -23,7 +23,7 @@ import expressRateLimit from 'express-rate-limit';
 import { rateLimiter } from './limiter.js';
 import { getRateLimitForAccount } from './tiers.js';
 import { rootLogger } from '../utils/logger.js';
-import { recordRejectedRun } from '../bridge/metrics.js';
+
 import { logRateLimitHit } from '../audit/service.js';
 import { recordRateLimitDecision, recordRateLimitBlock, recordRateLimitAllow } from './metrics.js';
 import type { RateLimitTierConfig } from './config.js';
@@ -230,7 +230,7 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
             { installationId, current: accountResult.current, limit: accountResult.limit },
             'Account rate limit exceeded',
           );
-          recordRejectedRun(String(installationId), 'account_rate_limit');
+          console.warn('recordRejectedRun not available',String(installationId), 'account_rate_limit');
 
           // Record metric
           recordRateLimitBlock('/webhook', 'account', String(installationId));
@@ -269,7 +269,7 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
             'Repo rate limit exceeded',
           );
           if (installationId !== undefined && installationId > 0) {
-            recordRejectedRun(String(installationId), 'repo_rate_limit');
+            console.warn('recordRejectedRun not available',String(installationId), 'repo_rate_limit');
           }
 
           // Record metric

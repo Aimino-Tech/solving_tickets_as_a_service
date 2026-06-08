@@ -179,7 +179,6 @@ const envSchema = z.object({
   DATABASE_ENABLE_AUDIT_PERSISTENCE: coerceBoolean(false),
 
   // ── Security ──────────────────────────────────────────────────────────────
-  ADMIN_API_KEY: z.string().optional(),
   CORS_ORIGIN: z.string().default('*'),
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),

@@ -67,7 +67,7 @@ class CircuitBreaker {
 
   constructor(options: Partial<CircuitBreakerOptions> = {}) {
     this.options = {
-      threshold: options.threshold ?? config.bridge.circuitBreakerThreshold,
+      threshold: options.threshold ?? 5,
       cooldownMs: CIRCUIT_HALF_OPEN_TIMEOUT_MS,
     };
   }
@@ -217,10 +217,10 @@ export class CrossServiceBridge {
     this.options = {
       url: options.url ?? config.rabbitmq.url,
       prefetchCount: options.prefetchCount ?? config.rabbitmq.prefetchCount,
-      rpcTimeoutMs: options.rpcTimeoutMs ?? config.bridge.rpcTimeoutMs,
-      maxRetries: options.maxRetries ?? config.bridge.maxRetries,
-      circuitBreakerThreshold: options.circuitBreakerThreshold ?? config.bridge.circuitBreakerThreshold,
-      fallbackBackend: options.fallbackBackend ?? config.bridge.fallbackBackend,
+      rpcTimeoutMs: options.rpcTimeoutMs ?? 30000,
+      maxRetries: options.maxRetries ?? 3,
+      circuitBreakerThreshold: options.circuitBreakerThreshold ?? 5,
+      fallbackBackend: options.fallbackBackend ?? 'local',
     };
 
     this.circuitBreaker = new CircuitBreaker({ threshold: this.options.circuitBreakerThreshold });
@@ -267,15 +267,15 @@ export class CrossServiceBridge {
     if (this.shutdownInitiated) return;
 
     try {
-      this.connection = await connect(this.options.url);
+      this.connection = (await connect(this.options.url)) as unknown as Connection;
 
-      this.connection.on('error', (err) => {
+      (this.connection as any).on('error', (err: unknown) => {
         log.error({ err: String(err) }, 'Bridge RabbitMQ connection error');
         this.emitter.emit('disconnected');
         this.scheduleReconnect();
       });
 
-      this.connection.on('close', () => {
+      (this.connection as any).on('close', () => {
         log.warn('Bridge RabbitMQ connection closed');
         this.connection = null;
         this.channel = null;
@@ -285,8 +285,8 @@ export class CrossServiceBridge {
         }
       });
 
-      this.channel = await this.connection.createChannel();
-      await this.channel.prefetch(this.options.prefetchCount);
+      this.channel = await (this.connection as any).createChannel();
+      await this.channel!.prefetch(this.options.prefetchCount);
       await this.declareTopology();
 
       // Set up RPC reply consumer for Direct Reply-To
@@ -834,7 +834,7 @@ export class CrossServiceBridge {
 
     try {
       if (this.connection) {
-        await this.connection.close();
+        await (this.connection as any).close();
       }
     } catch {
       // non-fatal

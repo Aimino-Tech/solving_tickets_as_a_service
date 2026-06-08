@@ -72,7 +72,7 @@ function get(app: Express, path: string): Promise<{ status: number; body: any }>
       end() {},
     } as any;
     // Express route dispatch
-    app.handle(req, res, () => {});
+    (app as any).handle(req, res, () => {});
     resolve({ status: res.statusCode, body: res.body });
   });
 }

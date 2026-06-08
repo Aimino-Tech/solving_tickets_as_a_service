@@ -11,7 +11,7 @@
  * auto-create here is a convenience for development/testing.
  */
 
-import type { RunRecord, RunFilter, RunStats, StorageBackend } from '../types.js';
+import type { RunRecord, RunFilter, RunStats } from '../types.js';
 import { queryWithRetry } from '../../db/connection.js';
 import { rootLogger } from '../../utils/logger.js';
 
@@ -70,7 +70,7 @@ function rowToRecord(row: DbRow): RunRecord {
     repoOwner: row.repo_owner,
     repoName: row.repo_name,
     issueNumber: row.issue_number,
-    status: row.status as RunRecord['status'],
+    status: row.status,
     confidence: row.confidence ?? undefined,
     summary: row.summary ?? undefined,
     prUrl: row.pr_url ?? undefined,
@@ -87,7 +87,7 @@ function rowToRecord(row: DbRow): RunRecord {
 // PostgresStorage
 // ---------------------------------------------------------------------------
 
-export class PostgresStorage implements StorageBackend {
+export class PostgresStorage {
   private initialized = false;
 
   /** Ensure the run_history table exists. Idempotent. */
