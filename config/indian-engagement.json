@@ -1,0 +1,76 @@
+{
+  "$schema": "./indian-engagement-schema.json",
+  "version": "1.0.0",
+  "platforms": {
+    "devto": {
+      "enabled": false,
+      "api_key_env": "DEVTO_API_KEY",
+      "rate_limit_posts_per_30s": 10,
+      "target_tags": ["mcp", "opensource", "python", "tools", "productivity"],
+      "default_language_tag": "en_IN"
+    },
+    "telegram": {
+      "enabled": false,
+      "bot_token_env": "TELEGRAM_BOT_TOKEN",
+      "privacy_mode": false,
+      "indian_groups": {
+        "foss_united": "@fossunited",
+        "python_devs_india": "@pythondevelopersindia",
+        "kerala_devs": "@keraladevs",
+        "fp_india": "@fpindia",
+        "bangalore_devs": "@bangaloredevelopers",
+        "mumbai_devs": "@mumbaitech",
+        "chennai_devs": "@chennaidevs",
+        "hyderabad_devs": "@hyderabadtech",
+        "pune_devs": "@punedevelopers",
+        "delhi_ncr_devs": "@delhincrdevs"
+      },
+      "keyword_filters": ["mcp", "opensource", "openclaw", "modelcontextprotocol", "fossunited"],
+      "default_language_tag": "en_IN"
+    },
+    "reddit_india": {
+      "enabled": false,
+      "client_id_env": "REDDIT_CLIENT_ID",
+      "client_secret_env": "REDDIT_CLIENT_SECRET",
+      "subreddit": "developersIndia",
+      "keyword_filters": ["mcp", "opensource", "openclaw", "modelcontextprotocol"],
+      "check_interval_minutes": 60,
+      "default_language_tag": "en_IN"
+    },
+    "foss_united": {
+      "enabled": false,
+      "api_key_env": "FOSS_UNITED_API_KEY",
+      "base_url": "https://platform.fossunited.org",
+      "check_interval_hours": 24,
+      "default_language_tag": "en_IN"
+    },
+    "hasgeek": {
+      "enabled": false,
+      "conferences": [
+        {"name": "Rootconf", "url": "https://hasgeek.com/rootconf/", "focus": "Infra/DevOps"},
+        {"name": "The Fifth Elephant", "url": "https://hasgeek.com/the-fifthelephant/", "focus": "Data/ML"},
+        {"name": "JSFoo", "url": "https://hasgeek.com/jsfoo/", "focus": "JS/Web"}
+      ],
+      "check_interval_days": 7,
+      "default_language_tag": "en_IN"
+    },
+    "hackerearth": {
+      "enabled": false,
+      "api_key_env": "HACKEREARTH_API_KEY",
+      "note": "Code evaluation API only. Not used for community engagement.",
+      "default_language_tag": "en_IN"
+    }
+  },
+  "logging": {
+    "duckdb_path": "./workspace/indian-engagement/engagements.duckdb",
+    "default_language_tag": "en_IN",
+    "export_enabled": true
+  },
+  "heartbeat_tasks": {
+    "reddit_monitor": {"cron": "0 * * * *", "enabled": false},
+    "telegram_poll": {"cron": "*/30 * * * *", "enabled": false},
+    "foss_united_check": {"cron": "0 6 * * *", "enabled": false},
+    "hasgeek_cfp_check": {"cron": "0 8 * * 1", "enabled": false},
+    "engagement_digest": {"cron": "0 9 * * 1", "enabled": false}
+  }
+}

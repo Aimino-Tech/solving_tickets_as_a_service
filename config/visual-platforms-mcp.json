@@ -1,0 +1,81 @@
+{
+  "$schema": "https://docs.openclaw.ai/mcp-config-schema.json",
+  "description": "MCP server alternatives for visual content platforms",
+  "servers": {
+    "tiktok-mcp": {
+      "name": "TikTok MCP",
+      "source": "smithery",
+      "package": "follox42/tiktok-mcp",
+      "enabled": false,
+      "description": "TikTok Content Posting API via Smithery MCP server. Alternative to direct API integration.",
+      "env": {
+        "TIKTOK_CLIENT_KEY": "${TIKTOK_CLIENT_KEY}",
+        "TIKTOK_CLIENT_SECRET": "${TIKTOK_CLIENT_SECRET}",
+        "TIKTOK_ACCESS_TOKEN": "${TIKTOK_ACCESS_TOKEN}"
+      },
+      "fallback_to": "playwright-automation"
+    },
+    "instagram-mcp": {
+      "name": "Instagram MCP",
+      "source": "smithery",
+      "package": "mcpware/instagram-mcp",
+      "enabled": false,
+      "description": "Instagram Graph API via Smithery MCP server (6.9K★). Alternative to direct API integration.",
+      "env": {
+        "INSTAGRAM_USER_ID": "${INSTAGRAM_USER_ID}",
+        "INSTAGRAM_ACCESS_TOKEN": "${INSTAGRAM_ACCESS_TOKEN}"
+      },
+      "fallback_to": null
+    },
+    "youtube-mcp": {
+      "name": "YouTube MCP",
+      "source": "github",
+      "package": "pauling-ai/mcp-youtube",
+      "enabled": false,
+      "description": "YouTube Data API v3 via MCP server (40+ tools: upload, search, comments, analytics).",
+      "env": {
+        "YOUTUBE_API_KEY": "${YOUTUBE_API_KEY}",
+        "YOUTUBE_ACCESS_TOKEN": "${YOUTUBE_ACCESS_TOKEN}"
+      },
+      "fallback_to": null
+    },
+    "posteverywhere-mcp": {
+      "name": "PostEverywhere MCP",
+      "source": "community",
+      "package": "PostEverywhere",
+      "enabled": false,
+      "description": "Cross-platform posting MCP server. Supports Facebook Pages, Instagram, and more.",
+      "env": {
+        "POSTEVERYWHERE_API_KEY": "${POSTEVERYWHERE_API_KEY}"
+      },
+      "fallback_to": null
+    }
+  },
+  "clawhub_skills": {
+    "socialclaw": {
+      "enabled": true,
+      "description": "Social media management ClawHub skill. Configured by AIM-763 Foundation.",
+      "env": {
+        "SOCIALCLAW_API_KEY": "${SOCIALCLAW_API_KEY}",
+        "INSTAGRAM_ACCESS_TOKEN": "${INSTAGRAM_ACCESS_TOKEN}",
+        "YOUTUBE_API_KEY": "${YOUTUBE_API_KEY}",
+        "FACEBOOK_PAGE_ACCESS_TOKEN": "${FACEBOOK_PAGE_ACCESS_TOKEN}"
+      }
+    },
+    "blogburst": {
+      "enabled": true,
+      "description": "AI content generation and blog posting. Configured by AIM-763 Foundation.",
+      "env": {
+        "BLOGBURST_API_KEY": "${BLOGBURST_API_KEY}"
+      }
+    },
+    "postiz": {
+      "enabled": true,
+      "description": "Cross-platform social media scheduler. Configured by AIM-763 Foundation.",
+      "env": {
+        "POSTIZ_API_KEY": "${POSTIZ_API_KEY}",
+        "POSTIZ_ACCOUNT_ID": "${POSTIZ_ACCOUNT_ID}"
+      }
+    }
+  }
+}

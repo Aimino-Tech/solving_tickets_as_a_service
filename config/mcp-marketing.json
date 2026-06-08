@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "product": {
+    "name": "fast-html-mcp",
+    "npm_package": "@surfsense/fast-html-mcp",
+    "repository": "https://github.com/Aimino-Tech/fast-html-mcp",
+    "description": "High-performance HTML-to-MCP server for fetching, processing, and converting web content into structured MCP resources"
+  },
+  "directories": [
+    {"name": "smithery", "url": "https://smithery.ai/server/@surfsense/fast-html-mcp", "method": "api"},
+    {"name": "mcp.so", "url": "https://mcp.so/server/@surfsense/fast-html-mcp", "method": "api"},
+    {"name": "glama", "url": "https://glama.ai/mcp/servers/@surfsense/fast-html-mcp", "method": "api"},
+    {"name": "awesome-mcp-servers", "url": "https://github.com/punkpeye/awesome-mcp-servers", "method": "pr", "repo": "punkpeye/awesome-mcp-servers"},
+    {"name": "mcp-get", "url": "https://mcp-get.com/", "method": "manual"},
+    {"name": "mcp-marketplace", "url": "https://mcp-marketplace.dev", "method": "api"},
+    {"name": "mcp-hub", "url": "https://mcp-hub.com", "method": "api"},
+    {"name": "mcp-registry", "url": "https://mcp-registry.com", "method": "api"},
+    {"name": "npm", "url": "https://www.npmjs.com/package/@surfsense/fast-html-mcp", "method": "npm"},
+    {"name": "mcp-cheatsheet", "url": "https://mcp-cheatsheet.com/", "method": "manual"}
+  ],
+  "campaign": {
+    "days": 5,
+    "check_interval_hours": 2,
+    "platforms": ["devto", "x", "linkedin", "reddit", "producthunt", "hackernews"],
+    "success_criteria": {
+      "min_directory_submissions": 8,
+      "min_awesome_mcp_pr": true,
+      "min_platform_posts": 5,
+      "tracking_window_hours": 24
+    }
+  }
+}

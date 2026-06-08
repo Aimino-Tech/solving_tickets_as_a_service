@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0",
+  "platforms": {
+    "v2ex": {
+      "enabled": false,
+      "token_env": "V2EX_TOKEN",
+      "target_nodes": ["python", "programmer", "share", "opensource"],
+      "rate_limit_seconds": 5,
+      "language_tag": "zh_CN",
+      "note": "V2EX API v2 with token auth"
+    },
+    "juejin": {
+      "enabled": false,
+      "cookie_env": "JUEJIN_COOKIE",
+      "target_tags": ["MCP", "\u5f00\u6e90", "\u5927\u6a21\u578b", "\u5f00\u53d1\u8005\u5de5\u5177"],
+      "language_tag": "zh_CN",
+      "note": "Juejin API with cookie auth"
+    },
+    "csdn": {
+      "enabled": false,
+      "cookie_env": "CSDN_COOKIE",
+      "language_tag": "zh_CN",
+      "note": "No public API - HTTP scraping"
+    },
+    "zhihu": {
+      "enabled": false,
+      "cookie_env": "ZHIHU_COOKIE",
+      "language_tag": "zh_CN",
+      "note": "No public API - HTTP scraping"
+    },
+    "wecom": {
+      "enabled": false,
+      "corp_id_env": "WECOM_CORP_ID",
+      "agent_id_env": "WECOM_AGENT_ID",
+      "corp_secret_env": "WECOM_CORP_SECRET",
+      "language_tag": "zh_CN",
+      "note": "WeCom Bot API with OAuth2 token"
+    }
+  },
+  "logging": {
+    "duckdb_path": "./workspace/engagement/engagement.duckdb",
+    "language_tag": "zh_CN"
+  }
+}

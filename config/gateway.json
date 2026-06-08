@@ -1,0 +1,203 @@
+{
+  "$schema": "https://docs.openclaw.ai/config-schema.json",
+  "gateway": {
+    "port": 18789,
+    "host": "127.0.0.1",
+    "remote": {
+      "enabled": true,
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    }
+  },
+  "ai": {
+    "default_provider": "opencode-go",
+    "providers": {
+      "opencode-go": {
+        "api_key": "${OPENCODE_API_KEY}",
+        "base_url": "https://api.opencode.ai/v1",
+        "default_model": "opencode-go/minimax-m2.7",
+        "models": {
+          "routine": "opencode-go/minimax-m2.5",
+          "default": "opencode-go/minimax-m2.7",
+          "reasoning": "opencode-go/kimi-k2.5",
+          "vision": "opencode-go/mimo-v2-omni",
+          "code": "opencode-go/mimo-v2-pro",
+          "chinese_data": "opencode-go/glm-5.1"
+        }
+      }
+    },
+    "model_routing": {
+      "data_collection": "opencode-go/kimi-k2.5",
+      "data_quality": "opencode-go/minimax-m2.7",
+      "migration_planning": "opencode-go/kimi-k2.5",
+      "code_generation": "opencode-go/mimo-v2-pro",
+      "report_writing": "opencode-go/minimax-m2.7",
+      "bookkeeping": "opencode-go/minimax-m2.5",
+      "research": "opencode-go/kimi-k2.5",
+      "quick_reply": "opencode-go/minimax-m2.5"
+    }
+  },
+  "workspace": {
+    "path": "./workspace",
+    "soul": "./workspace/SOUL.md",
+    "agents": "./workspace/AGENTS.md",
+    "memory": "./workspace/MEMORY.md",
+    "logs": "./workspace/logs"
+  },
+  "heartbeat": {
+    "enabled": true,
+    "interval_minutes": 15,
+    "tasks": [
+      {
+        "name": "health-check",
+        "cron": "0 8 * * *",
+        "prompt": "Check all active pipeline health. Report failures to operator."
+      },
+      {
+        "name": "morning-brief",
+        "cron": "0 9 * * *",
+        "prompt": "Summarize overnight logs. Report via Telegram."
+      },
+      {
+        "name": "marketing-scan",
+        "cron": "*/15 * * * *",
+        "prompt": "Run engagement research cycle: scan Reddit, HN, and Twitter for MCP-related mentions. Use python3 scripts/engagement/cli.py research. Log all findings to DuckDB. Report new opportunities via Telegram."
+      },
+      {
+        "name": "marketing-engage",
+        "cron": "0 * * * *",
+        "prompt": "Process pending engagements: draft replies using LLM and post to approved platforms. Use python3 scripts/engagement/cli.py engage --approval auto. Log results to DuckDB."
+      },
+      {
+        "name": "daily-marketing-brief",
+        "cron": "0 8 * * *",
+        "prompt": "Summarize yesterday's engagement across all platforms. Report new leads and conversion metrics. Post to Telegram."
+      },
+      {
+        "name": "marketing-followup",
+        "cron": "0 */4 * * *",
+        "prompt": "Check conversation threads needing follow-up. Scan DuckDB for engagements with replies that need responses. Draft follow-up replies."
+      },
+      {
+        "name": "token-refresh",
+        "cron": "0 */3 * * *",
+        "prompt": "Check all platform OAuth tokens and refresh any expiring within 24h."
+      },
+      {
+        "name": "weekly-digest",
+        "cron": "0 10 * * 1",
+        "prompt": "Generate weekly engagement report by platform. Include total mentions, replies posted, new leads, and conversion rate."
+      },
+      {
+        "name": "bookkeeping-prep",
+        "cron": "0 16 * * 5",
+        "prompt": "Review this week's expenses. Categorize transactions. Flag missing receipts."
+      },
+      {
+        "name": "reddit-india-monitor",
+        "cron": "0 * * * *",
+        "prompt": "Check r/developersIndia for MCP/opensource mentions. Reply if relevant opportunity found. Log to engagement DuckDB."
+      },
+      {
+        "name": "telegram-india-poll",
+        "cron": "*/30 * * * *",
+        "prompt": "Poll Indian developer Telegram groups for keyword mentions (mcp, opensource). Engage with relevant discussions."
+      },
+      {
+        "name": "foss-united-check",
+        "cron": "0 6 * * *",
+        "prompt": "Check FOSS United for upcoming events and open proposals. Report any CFP deadlines."
+      },
+      {
+        "name": "hasgeek-cfp-check",
+        "cron": "0 8 * * 1",
+        "prompt": "Check HasGeek conference homepages for CFP openings. Report any active CFPs."
+      },
+      {
+        "name": "engagement-digest",
+        "cron": "0 9 * * 1",
+        "prompt": "Generate weekly engagement digest from DuckDB. Report total engagements by platform and any notable interactions."
+      },
+      {
+        "name": "daily-report",
+        "cron": "0 8 * * *",
+        "prompt": "Generate daily engagement report. Summarize yesterday's activity across all platforms. Use: python scripts/engagement_loop.py daily"
+      },
+      {
+        "name": "engagement-weekly-digest",
+        "cron": "0 10 * * 1",
+        "prompt": "Weekly engagement digest by platform. Generate summary of past week's activity, top leads, engagement stats. Use: python scripts/engagement_loop.py weekly"
+      },
+      {
+        "name": "v2ex-trending-check",
+        "cron": "0 */4 * * *",
+        "prompt": "Check V2EX trending topics in python/programmer/share nodes. Identify opportunities to engage with MCP/AI/opensource discussions. Log findings to engagement DuckDB with zh_CN tag."
+      },
+      {
+        "name": "juejin-trending-check",
+        "cron": "0 */6 * * *",
+        "prompt": "Check Juejin trending articles about MCP/opensource/AI topics. Identify opportunities to engage. Log to engagement DuckDB with zh_CN tag."
+      },
+      {
+        "name": "zhihu-hot-trending",
+        "cron": "0 */8 * * *",
+        "prompt": "Check Zhihu hot topics list for MCP/AI/opensource related trending discussions. Report any relevant hot topics. Log to engagement DuckDB with zh_CN tag."
+      },
+      {
+        "name": "wecom-announcement",
+        "cron": "0 10 * * 1",
+        "prompt": "Send weekly WeCom announcement to target groups with latest MCP/opensource content published this week. Draft message in Chinese. Log to engagement DuckDB with zh_CN tag."
+      },
+      {
+        "name": "chinese-engagement-digest",
+        "cron": "0 10 * * 1",
+        "prompt": "Generate weekly Chinese engagement digest from DuckDB. Report total engagements by Chinese platform (V2EX, Juejin, CSDN, Zhihu, WeCom) and any notable interactions. Log digest to engagement DuckDB with zh_CN tag."
+      },
+      {
+        "name": "campaign-metrics",
+        "cron": "*/30 * * * *",
+        "prompt": "Collect Fast HTML MCP campaign metrics. Poll GitHub stars and npm downloads, log to campaign_metrics table. Use: python scripts/campaign_manager.py metrics"
+      },
+      {
+        "name": "campaign-status",
+        "cron": "0 7 * * *",
+        "prompt": "Report Fast HTML MCP campaign daily status. Show current day, pending tasks, and latest metrics. Use: python scripts/campaign_manager.py status"
+      },
+      {
+        "name": "campaign-morning-brief",
+        "cron": "0 8 * * *",
+        "prompt": "Generate campaign morning brief. Check what day of the launch week we're on, list pending tasks, fetch latest metrics. Highlight any blocking issues."
+      },
+      {
+        "name": "visual-content-cross-post",
+        "cron": "0 */6 * * *",
+        "prompt": "Process pending visual content queue. Use python3 scripts/visual_platforms/cli.py cross-post process-queue. Publish approved content to TikTok, Instagram Reels, YouTube Shorts, and Facebook. Log results to DuckDB."
+      },
+      {
+        "name": "visual-content-daily-metrics",
+        "cron": "0 7 * * *",
+        "prompt": "Collect yesterday's engagement metrics from TikTok, Instagram, YouTube, and Facebook Pages. Use python3 scripts/visual_platforms/cli.py facebook insights and related commands. Store in DuckDB visual_engagements table."
+      },
+      {
+        "name": "visual-content-token-check",
+        "cron": "0 */6 * * *",
+        "prompt": "Check all visual platform OAuth tokens. Verify TIKTOK_ACCESS_TOKEN, INSTAGRAM_ACCESS_TOKEN, YOUTUBE_ACCESS_TOKEN, FACEBOOK_PAGE_ACCESS_TOKEN are valid. Refresh any expired tokens. Report failures via Telegram."
+      }
+    ]
+  },
+  "channels": {
+    "telegram": {
+      "enabled": false,
+      "bot_token": "${TELEGRAM_BOT_TOKEN}"
+    }
+  },
+  "sandbox": {
+    "mode": "strict",
+    "allowed_commands": [
+      "duckdb", "dbt", "great_expectations", "scrapy",
+      "python", "node", "git", "curl", "jq"
+    ],
+    "blocked_paths": [
+      "/etc", "/root", "/var/log"
+    ]
+  }
+}

@@ -1952,6 +1952,27 @@ def _run_browser_command(
     else:
         # Local mode — launch a headless Chromium instance
         backend_args = ["--session", session_info["session_name"]]
+        # If user_data_dir is configured, use a persistent Chrome profile
+        # so cookies from the user's existing Chrome session are inherited
+        # (e.g., Reddit login cookies for guerrilla marketing automation).
+        # Profile path = user_data_dir / profile_name.
+        # Profile name priority: AGENT_BROWSER_PROFILE env > config > "Default".
+        _profile_patch_cfg = None
+        try:
+            from hermes_cli.config import read_raw_config
+            _profile_patch_cfg = read_raw_config()
+        except Exception:
+            pass
+        if _profile_patch_cfg:
+            _profile_patch_ud_dir = cfg_get(_profile_patch_cfg, "browser", "user_data_dir", default="")
+            if _profile_patch_ud_dir and os.path.isdir(_profile_patch_ud_dir):
+                _profile_patch_name = (
+                    os.environ.get("AGENT_BROWSER_PROFILE")
+                    or cfg_get(_profile_patch_cfg, "browser", "profile_name", default="Default")
+                )
+                _profile_patch_path = os.path.join(_profile_patch_ud_dir, _profile_patch_name)
+                if os.path.isdir(_profile_patch_path):
+                    backend_args += ["--profile", _profile_patch_path]
 
     # Lightpanda engine injection (local mode only, agent-browser v0.25.3+).
     # Use the resolved session backend rather than global cloud-provider state:

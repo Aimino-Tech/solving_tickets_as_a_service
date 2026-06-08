@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaign Dashboard — fast-html-mcp</title>
+<style>
+  /* ═══════════════════════════════════════════════
+     fast-html-mcp Design System — Campaign Dashboard
+     ═══════════════════════════════════════════════ */
+
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-primary: #f5f5f0;
+    --bg-secondary: #efefe8;
+    --bg-card: #ffffff;
+    --bg-card-hover: #fafaf5;
+    --bg-elevated: #e8e8e0;
+    --border: #e0e0d8;
+    --border-active: #c0c0b8;
+    --text-primary: #1a1a1a;
+    --text-secondary: #6a6a6a;
+    --text-tertiary: #9a9a9a;
+    --accent: #f59e0b;
+    --accent-glow: rgba(245, 158, 11, 0.1);
+    --accent-bright: #fbbf24;
+    --green: #34d399;
+    --green-bg: rgba(52, 211, 153, 0.12);
+    --red: #f87171;
+    --red-bg: rgba(248, 113, 113, 0.12);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245, 158, 11, 0.12);
+    --blue: #60a5fa;
+    --blue-bg: rgba(96, 165, 250, 0.12);
+    --purple: #a78bfa;
+    --purple-bg: rgba(167, 139, 250, 0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 20px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.08);
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ─── Background ─── */
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .bg-glow {
+    position: fixed;
+    top: -20%;
+    left: 50%;
+    translate: -50% 0;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── App Layout ─── */
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 24px 32px 48px;
+  }
+
+  /* ─── Header ─── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-bright) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header .badge {
+    background: var(--accent-bg);
+    color: var(--accent-bright);
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .btn-icon {
+    padding: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-icon:hover { background: var(--bg-card-hover); color: var(--text-primary); border-color: var(--border-active); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: var(--accent-bright); box-shadow: 0 0 20px var(--accent-glow); }
+
+  .btn-ghost {
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--bg-card-hover); color: var(--text-primary); border-color: var(--border-active); }
+
+  .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
+
+  .btn-success { background: var(--green); color: #000; font-weight: 600; }
+  .btn-success:hover { box-shadow: 0 0 16px rgba(52, 211, 153, 0.3); }
+  .btn-danger { background: var(--red); color: #fff; font-weight: 600; }
+  .btn-danger:hover { box-shadow: 0 0 16px rgba(248, 113, 113, 0.3); }
+  .btn-secondary { background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+
+  /* ─── Stats ─── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    transition: var(--transition);
+  }
+  .stat-card:hover { border-color: var(--border-active); background: var(--bg-card-hover); }
+
+  .stat-card .num {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .stat-card .label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    font-weight: 500;
+  }
+
+  .stat-card.pending .num { color: var(--amber); }
+  .stat-card.approved .num { color: var(--blue); }
+  .stat-card.done .num { color: var(--green); }
+  .stat-card.alert .num { color: var(--red); }
+  .stat-card.draft .num { color: var(--purple); }
+  .stat-card.denied .num { color: var(--red); }
+
+  /* ─── Boards ─── */
+  .boards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .board {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+  }
+
+  .board-header {
+    padding: 14px 18px;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid;
+    background: var(--bg-card);
+  }
+  .board-header .count {
+    font-weight: 700;
+    font-size: 13px;
+    padding: 1px 10px;
+    border-radius: 12px;
+    background: var(--bg-elevated);
+  }
+  .board-header.pending { border-color: var(--amber); color: var(--amber); }
+  .board-header.approved { border-color: var(--blue); color: var(--blue); }
+  .board-header.done { border-color: var(--green); color: var(--green); }
+  .board-header.denied { border-color: var(--red); color: var(--red); }
+
+  .board-body {
+    padding: 10px;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  /* ─── Item Card ─── */
+  .item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+  }
+  .item:hover {
+    border-color: var(--border-active);
+    background: var(--bg-card-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+  }
+  .item:last-child { margin-bottom: 0; }
+
+  .item .meta {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .item .platform {
+    font-weight: 700;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--bg-elevated);
+  }
+  .platform.reddit { color: #ff4500; }
+  .platform.twitter { color: #1d9bf0; }
+  .platform.facebook { color: #1877f2; }
+  .platform.instagram { color: #e4405f; }
+  .platform.threads { color: var(--text-primary); }
+  .platform.linkedin { color: #0a66c2; }
+  .platform.hackernews { color: #ff6600; }
+
+  .item .community {
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 1px 8px;
+    border-radius: 4px;
+  }
+
+  .item .action-tag {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--bg-elevated);
+    color: var(--text-tertiary);
+  }
+
+  .item .timestamp {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    margin-left: auto;
+  }
+
+  .item .content {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .item .badge-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  .item .badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .badge-approval {
+    background: var(--red-bg);
+    color: var(--red);
+    border: 1px solid rgba(248, 113, 113, 0.2);
+  }
+  .badge-approved-slack {
+    background: var(--blue-bg);
+    color: var(--blue);
+    border: 1px solid rgba(96, 165, 250, 0.2);
+  }
+  .badge-edited {
+    background: var(--purple-bg);
+    color: var(--purple);
+    border: 1px solid rgba(167, 139, 250, 0.2);
+  }
+
+  .item .actions {
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    transition: var(--transition);
+  }
+  .item:hover .actions { opacity: 1; }
+  .item .actions .btn { padding: 4px 10px; font-size: 11px; }
+
+  /* ─── Detail Modal ─── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+  }
+  .modal-overlay.active { display: flex; }
+
+  .modal {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 600px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.1);
+    animation: modalIn 0.2s ease-out;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 0;
+  }
+  .modal-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    transition: var(--transition);
+  }
+  .modal-close:hover { color: var(--text-primary); }
+
+  .modal-body {
+    padding: 16px 24px 24px;
+  }
+
+  .modal-body .field {
+    margin-bottom: 14px;
+  }
+  .modal-body .field-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary);
+    margin-bottom: 4px;
+  }
+  .modal-body .field-value {
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.5;
+  }
+  .modal-body .field-value.url {
+    color: var(--blue);
+    word-break: break-all;
+  }
+  .modal-body .field-value.url:hover { text-decoration: underline; }
+
+  .modal-body .field-value textarea,
+  .modal-body .field-value input[type="text"] {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    resize: vertical;
+    transition: var(--transition);
+  }
+  .modal-body .field-value textarea:focus,
+  .modal-body .field-value input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .modal-body .field-value textarea { min-height: 80px; }
+
+  .modal-footer {
+    display: flex;
+    gap: 8px;
+    padding: 0 24px 20px;
+    justify-content: flex-end;
+  }
+
+  .modal-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px 0;
+  }
+  .modal-status-bar .label { font-size: 12px; color: var(--text-secondary); }
+  .modal-status-bar .value { font-size: 13px; font-weight: 600; }
+
+  /* ─── Messenger Bar ─── */
+  .messenger-bar { margin-top: 8px; }
+  .messenger-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 4px 4px 4px 16px;
+    transition: var(--transition);
+  }
+  .messenger-input-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .messenger-input-wrap input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text-primary);
+    outline: none;
+    padding: 8px 0;
+  }
+  .messenger-input-wrap input::placeholder {
+    color: var(--text-tertiary);
+  }
+  .messenger-send {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    flex-shrink: 0;
+  }
+  .messenger-send:hover {
+    background: var(--accent-bright);
+    transform: scale(1.05);
+  }
+
+  /* ─── Empty state ─── */
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 20px;
+    color: var(--text-tertiary);
+    text-align: center;
+  }
+  .empty .icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+  .empty .text { font-size: 13px; }
+
+  /* ─── Toast ─── */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toast {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 18px;
+    font-size: 13px;
+    color: var(--text-primary);
+    box-shadow: var(--shadow);
+    animation: toastIn 0.3s ease-out;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .toast.success { border-color: var(--green); }
+  .toast.error { border-color: var(--red); }
+  .toast.info { border-color: var(--blue); }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ─── Loader ─── */
+  .loader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 48px;
+    color: var(--text-tertiary);
+    font-size: 14px;
+    gap: 10px;
+  }
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Scrollbar ─── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-active); }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 1024px) {
+    .boards { grid-template-columns: 1fr; }
+    .app { padding: 16px; }
+  }
+  @media (max-width: 640px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .header-actions { width: 100%; }
+    .modal { max-height: 90vh; margin: 12px; }
+  }
+
+  /* ─── Edit mode indicator ─── */
+  .item.edited { border-left: 3px solid var(--purple); }
+  .item.requires-approval { border-left: 3px solid var(--red); }
+.item.approved-item { border-left: 3px solid var(--blue); }
+.item.done-item { border-left: 3px solid var(--green); }
+.item.denied-item { border-left: 3px solid var(--red); opacity: 0.8; }
+
+/* ─── Sidebar Layout ─── */
+.layout {
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border);
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  padding: 0 18px 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.sidebar-brand h2 {
+  font-size: 15px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-bright) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sidebar-brand .sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 8px;
+  flex: 1;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  text-decoration: none;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+}
+
+.nav-item:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.nav-item.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-item .nav-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  color: var(--text-tertiary);
+}
+
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-tertiary);
+  padding: 12px 12px 4px;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+}
+
+.view {
+  display: none;
+}
+.view.active { display: block; }
+
+/* ─── Tracking Views ─── */
+.tracking-view {
+  padding: 24px 32px 48px;
+}
+
+.tracking-view h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.tracking-view .subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.tracking-table-wrap {
+  overflow-x: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.tracking-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.tracking-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.tracking-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tracking-table tr:hover td {
+  background: var(--bg-card-hover);
+}
+
+.tracking-table tr:last-child td {
+  border-bottom: none;
+}
+
+.tracking-table .cell-timestamp {
+  white-space: nowrap;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.tracking-table .cell-preview {
+  max-width: 350px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.tracking-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 20px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.tracking-empty .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+.tracking-empty .text { font-size: 14px; }
+.tracking-empty .hint { font-size: 12px; margin-top: 4px; opacity: 0.7; }
+
+/* ─── Tracking Status Badges ─── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.status-success { background: var(--green-bg); color: #059669; }
+.status-error   { background: var(--red-bg);   color: #dc2626; }
+.status-pending { background: var(--amber-bg); color: #d97706; }
+.status-active  { background: var(--blue-bg);  color: #2563eb; }
+.status-done    { background: var(--green-bg); color: #059669; }
+
+.tracking-table td.clickable { cursor: pointer; }
+.tracking-table td.clickable:hover { text-decoration: underline; color: var(--accent); }
+
+/* ─── Tracking Detail Modal ─── */
+.tracking-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.tracking-detail-grid .field-full { grid-column: 1 / -1; }
+.tracking-detail-grid .field-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin-bottom: 2px;
+}
+.tracking-detail-grid .field-value {
+  font-size: 13px;
+  color: var(--text-primary);
+  word-break: break-all;
+  line-height: 1.5;
+}
+.tracking-detail-grid .field-value.code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  background: var(--bg-secondary);
+  padding: 8px 10px;
+  border-radius: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+/* ─── Responsive sidebar ─── */
+@media (max-width: 900px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    padding: 12px 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-brand { display: none; }
+  .sidebar-nav { flex-direction: row; flex-wrap: wrap; padding: 0 12px; gap: 4px; }
+  .nav-item { width: auto; padding: 6px 10px; font-size: 12px; }
+  .tracking-view { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<div class="layout">
+
+  <!-- ─── Sidebar ─── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <h2>⚡ Openclaw</h2>
+      <div class="sub">Campaign Control Center</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <button class="nav-item active" data-view="kanban">
+        <span class="nav-icon">📊</span> Dashboard
+      </button>
+
+      <div class="nav-section-label">Tracking</div>
+      <button class="nav-item" data-view="engagements">
+        <span class="nav-icon">💬</span> Engagements
+        <span class="nav-badge" id="badge-engagements">0</span>
+      </button>
+      <button class="nav-item" data-view="leads">
+        <span class="nav-icon">🎯</span> Leads
+        <span class="nav-badge" id="badge-leads">0</span>
+      </button>
+      <button class="nav-item" data-view="campaign_tasks">
+        <span class="nav-icon">✅</span> Tasks
+        <span class="nav-badge" id="badge-campaign_tasks">0</span>
+      </button>
+      <button class="nav-item" data-view="metrics">
+        <span class="nav-icon">📈</span> Metrics
+        <span class="nav-badge" id="badge-metrics">0</span>
+      </button>
+      <button class="nav-item" data-view="directory_submissions">
+        <span class="nav-icon">🌐</span> Submissions
+        <span class="nav-badge" id="badge-directory_submissions">0</span>
+      </button>
+      <button class="nav-item" data-view="orchestration_cycles">
+        <span class="nav-icon">🔄</span> Cycles
+        <span class="nav-badge" id="badge-orchestration_cycles">0</span>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- ─── Main Content ─── -->
+  <main class="main-content">
+
+    <!-- ─── Kanban View ─── -->
+    <div class="view view-kanban active" id="view-kanban">
+
+      <div class="app">
+        <!-- ─── Header ─── -->
+        <header class="header">
+    <div class="header-left">
+      <h1>⚡ Campaign Dashboard</h1>
+      <span class="badge">Hacker News 📢</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" onclick="exportData()" title="Export data as JSON">📥 Export</button>
+      <button class="btn btn-ghost btn-sm" onclick="loadData()" title="Reload from campaign-items.json">🔄 Reload</button>
+      <span id="save-status" style="font-size:12px;color:var(--text-tertiary);"></span>
+    </div>
+  </header>
+
+  <!-- ─── Stats ─── -->
+  <div class="stats" id="stats">
+    <div class="stat-card pending"><div class="num" id="count-pending">—</div><div class="label">⏳ Pending</div></div>
+    <div class="stat-card alert"><div class="num" id="count-approval">—</div><div class="label">⚠️ Approval Required</div></div>
+    <div class="stat-card approved"><div class="num" id="count-approved">—</div><div class="label">✅ Approved</div></div>
+    <div class="stat-card done"><div class="num" id="count-done">—</div><div class="label">✔️ Executed</div></div>
+    <div class="stat-card denied"><div class="num" id="count-denied">—</div><div class="label">❌ Denied</div></div>
+    <div class="stat-card draft"><div class="num" id="count-draft">—</div><div class="label">📝 Draft</div></div>
+  </div>
+
+  <!-- ─── Boards ─── -->
+  <div class="boards">
+    <div class="board">
+      <div class="board-header pending">⏳ Pending <span class="count" id="pend-count">0</span></div>
+      <div class="board-body" id="board-pending">
+        <div class="loader"><div class="spinner"></div> Loading...</div>
+      </div>
+    </div>
+    <div class="board">
+      <div class="board-header approved">✅ Approved <span class="count" id="appr-count">0</span></div>
+      <div class="board-body" id="board-approved">
+        <div class="empty"><div class="icon">📋</div><div class="text">No approved items</div></div>
+      </div>
+    </div>
+    <div class="board">
+      <div class="board-header done">✔️ Executed <span class="count" id="done-count">0</span></div>
+      <div class="board-body" id="board-done">
+        <div class="empty"><div class="icon">✅</div><div class="text">No executed items</div></div>
+      </div>
+    </div>
+    <div class="board">
+      <div class="board-header denied">❌ Denied <span class="count" id="denied-count">0</span></div>
+      <div class="board-body" id="board-denied">
+        <div class="empty"><div class="icon">❌</div><div class="text">No denied items</div></div>
+      </div>
+    </div>
+  </div><!-- /view-kanban -->
+
+  <!-- ─── Tracking Views ─── -->
+  <div class="view view-tracking" id="view-tracking">
+    <!-- Engagements -->
+    <div class="tracking-view" id="tracking-engagements" data-view="engagements">
+      <h2>💬 Engagements</h2>
+      <div class="subtitle">All recorded social media engagement actions</div>
+      <div class="tracking-table-wrap"><div class="loader"><div class="spinner"></div> Loading...</div></div>
+    </div>
+    <!-- Leads -->
+    <div class="tracking-view" id="tracking-leads" data-view="leads" style="display:none;">
+      <h2>🎯 Leads</h2>
+      <div class="subtitle">Identified potential leads from conversations</div>
+      <div class="tracking-table-wrap"><div class="loader"><div class="spinner"></div> Loading...</div></div>
+    </div>
+    <!-- Campaign Tasks -->
+    <div class="tracking-view" id="tracking-campaign_tasks" data-view="campaign_tasks" style="display:none;">
+      <h2>✅ Campaign Tasks</h2>
+      <div class="subtitle">Completed campaign task log</div>
+      <div class="tracking-table-wrap"><div class="loader"><div class="spinner"></div> Loading...</div></div>
+    </div>
+    <!-- Metrics -->
+    <div class="tracking-view" id="tracking-metrics" data-view="metrics" style="display:none;">
+      <h2>📈 Metrics Snapshots</h2>
+      <div class="subtitle">Campaign performance metrics over time</div>
+      <div class="tracking-table-wrap"><div class="loader"><div class="spinner"></div> Loading...</div></div>
+    </div>
+    <!-- Directory Submissions -->
+    <div class="tracking-view" id="tracking-directory_submissions" data-view="directory_submissions" style="display:none;">
+      <h2>🌐 Directory Submissions</h2>
+      <div class="subtitle">Directory listing submission attempts</div>
+      <div class="tracking-table-wrap"><div class="loader"><div class="spinner"></div> Loading...</div></div>
+    </div>
+    <!-- Orchestration Cycles -->
+    <div class="tracking-view" id="tracking-orchestration_cycles" data-view="orchestration_cycles" style="display:none;">
+      <h2>🔄 Orchestration Cycles</h2>
+      <div class="subtitle">Full automation cycle logs</div>
+      <div class="tracking-table-wrap"><div class="loader"><div class="spinner"></div> Loading...</div></div>
+    </div>
+  </div><!-- /view-tracking -->
+
+</main><!-- /main-content -->
+</div><!-- /layout -->
+
+<!-- ─── Detail/Edit Modal ─── -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Item Detail</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-status-bar" id="modal-status-bar"></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- ─── Toast Container ─── -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ─── Tracking Detail Modal ─── -->
+<div class="modal-overlay" id="tracking-modal">
+  <div class="modal" style="max-width: 700px;">
+    <div class="modal-header">
+      <h2 id="tracking-modal-title">Record Detail</h2>
+      <button class="modal-close" onclick="closeTrackingModal()">✕</button>
+    </div>
+    <div class="modal-body" id="tracking-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeTrackingModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// Campaign Dashboard — fast-html-mcp
+// ════════════════════════════════════════════════════════════
+
+const DATA_URL = './campaign-items.json';
+const STORAGE_KEY = 'fast-html-mcp-dashboard';
+
+let items = [];
+let editingItem = null;
+let dirty = false;
+
+// ─── Load Data ───
+async function loadData() {
+  const pend = document.getElementById('board-pending');
+  pend.innerHTML = '<div class="loader"><div class="spinner"></div> Loading...</div>';
+
+  try {
+    const r = await fetch(DATA_URL + '?t=' + Date.now());
+    const data = await r.json();
+    items = (data.items || []).map(normalizeItem);
+    // Merge with localStorage edits if any
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const savedItems = JSON.parse(saved);
+        // Merge: saved edits override the original
+        for (const sItem of savedItems) {
+          const idx = items.findIndex(i => i.id === sItem.id);
+          if (idx >= 0) {
+            // Keep the saved (potentially edited) version but retain original fields not in saved
+            items[idx] = { ...items[idx], ...sItem, _edited: true };
+          } else {
+            // New item from saved data
+            items.push({ ...sItem, _edited: true });
+          }
+        }
+        showToast('Loaded with saved edits', 'info');
+      } catch(e) { /* ignore corrupt localStorage */ }
+    }
+    dirty = false;
+  } catch(e) {
+    // Try localStorage fallback
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        items = JSON.parse(saved).map(normalizeItem);
+        showToast('Offline mode — loaded from local storage', 'info');
+      } catch(e2) {
+        items = getSampleItems();
+        showToast('Using sample data (campaign-items.json not found)', 'info');
+      }
+    } else {
+      items = getSampleItems();
+      showToast('Using sample data (campaign-items.json not found)', 'info');
+    }
+  }
+  render();
+}
+
+function normalizeItem(item) {
+  return {
+    id: item.id || 'id-' + Date.now(),
+    platform: item.platform || 'reddit',
+    community: item.community || '',
+    action: item.action || 'post',
+    status: item.status || 'pending',
+    proposed: item.proposed || new Date().toISOString(),
+    content: item.content || '',
+    url: item.url || '',
+    notes: item.notes || '',
+    approval_required: item.approval_required || false,
+    approval_status: item.approval_status || 'pending',
+    _edited: item._edited || false,
+    _draft: item._draft || false,
+  };
+}
+
+function getSampleItems() {
+  return [
+    { id:'fb-001', platform:'facebook', community:'MCP Dev Groups', action:'post', status:'pending', proposed:'2026-05-20T10:00:00Z', content:'Post in MCP/Claude dev groups about fast-html-mcp architecture and benefits.', url:'', notes:'Need fresh FB cookies', approval_required:true, approval_status:'pending' },
+    { id:'ig-001', platform:'instagram', community:'@fasthtmlmcp', action:'post', status:'pending', proposed:'2026-05-20T11:00:00Z', content:'Cross-post the X thread content to Instagram with visuals.', url:'', notes:'Need fresh IG cookies', approval_required:true, approval_status:'pending' },
+    { id:'rdt-007', platform:'reddit', community:'r/SaaS', action:'comment', status:'pending', proposed:'2026-05-20T14:00:00Z', content:'Share fast-html-mcp on the AI SaaS founders thread — spec-first approach saves dev time.', url:'', notes:'Write warm intro', approval_required:false },
+    { id:'x-003', platform:'twitter', community:'@Hello374565', action:'tweet', status:'pending', proposed:'2026-05-20T16:00:00Z', content:'New blog post: Why AI agents should output HTML, not Markdown.', url:'', notes:'Coordinate with blog publish', approval_required:false },
+    { id:'rdt-001', platform:'reddit', community:'r/mcp', action:'comment', status:'done', proposed:'2026-05-19T11:00:00Z', content:'Seeded on WebMCP thread about agents and HTML generation.', url:'https://old.reddit.com/r/mcp/comments/1tgqbpw/', notes:'First seed — got engagement' },
+    { id:'x-001', platform:'twitter', community:'@Hello374565', action:'thread', status:'done', proposed:'2026-05-19T12:00:00Z', content:'7-tweet launch thread about fast-html-mcp architecture.', url:'https://x.com/Hello374565', notes:'Complete thread, good engagement' },
+  ];
+}
+
+// ─── Render ───
+function render() {
+  const pending = items.filter(i => i.status === 'pending' && !i._draft)
+    .sort((a, b) => new Date(b.proposed) - new Date(a.proposed));
+  const approved = items.filter(i => i.status === 'approved' || i.status === 'approved-campaign');
+  const done = items.filter(i => i.status === 'done' || i.status === 'executed');
+  const denied = items.filter(i => i.status === 'denied');
+  const needsApproval = pending.filter(i => i.approval_required);
+  const drafts = items.filter(i => i._draft);
+
+  document.getElementById('count-pending').textContent = pending.length;
+  document.getElementById('count-approval').textContent = needsApproval.length;
+  document.getElementById('count-approved').textContent = approved.length;
+  document.getElementById('count-done').textContent = done.length;
+  document.getElementById('count-denied').textContent = denied.length;
+  document.getElementById('count-draft').textContent = drafts.length;
+
+  document.getElementById('pend-count').textContent = pending.length;
+  document.getElementById('appr-count').textContent = approved.length;
+  document.getElementById('done-count').textContent = done.length;
+  document.getElementById('denied-count').textContent = denied.length;
+
+  renderBoard('board-pending', pending, 'pending');
+  renderBoard('board-approved', approved, 'approved');
+  renderBoard('board-done', done, 'done');
+  renderBoard('board-denied', denied, 'denied');
+  updateSaveStatus();
+}
+
+function renderBoard(elId, boardItems, column) {
+  const el = document.getElementById(elId);
+  if (!boardItems.length) {
+    const msgs = { pending:'Nothing pending', approved:'No approved items', done:'No executed items', denied:'No denied items' };
+    el.innerHTML = `<div class="empty"><div class="icon">📋</div><div class="text">${msgs[column]}</div></div>`;
+    return;
+  }
+  el.innerHTML = boardItems.map(item => renderItem(item, column)).join('');
+}
+
+function renderItem(item, column) {
+  const platClass = (item.platform || '').toLowerCase();
+  const actionLabels = { comment:'💬 Comment', post:'📝 Post', thread:'🧵 Thread', tweet:'🐦 Tweet', reply:'↩️ Reply', engage:'🎯 Engage' };
+  const al = actionLabels[item.action] || item.action;
+  const time = item.proposed ? new Date(item.proposed).toLocaleString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
+
+  // Badges
+  let badges = '';
+  if (item.approval_required && column === 'pending') {
+    badges += `<span class="badge badge-approval">⚠️ Approval Required</span>`;
+  }
+  if (item.approval_status === 'approved-slack') {
+    badges += `<span class="badge badge-approved-slack">✅ Slack Approved</span>`;
+  }
+  if (item._edited) {
+    badges += `<span class="badge badge-edited">✏️ Edited</span>`;
+  }
+
+  // Action buttons based on column
+  let actions = '';
+  if (column === 'pending') {
+    if (item.approval_required) {
+      actions = `
+        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();viewDetail('${item.id}')">👁️ Detail</button>
+        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();editItem('${item.id}')">✏️ Edit</button>
+      `;
+    } else {
+      actions = `
+        <button class="btn btn-success btn-sm" onclick="event.stopPropagation();approveItem('${item.id}')">✅ Approve</button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();denyItem('${item.id}')">❌ Deny</button>
+        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();editItem('${item.id}')">✏️ Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();viewDetail('${item.id}')">👁️</button>
+      `;
+    }
+  } else if (column === 'approved') {
+    actions = `
+      <button class="btn btn-success btn-sm" onclick="event.stopPropagation();executeItem('${item.id}')">▶️ Execute</button>
+      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();viewDetail('${item.id}')">👁️ Detail</button>
+      <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();editItem('${item.id}')">✏️ Edit</button>
+    `;
+  } else if (column === 'done') {
+    actions = `
+      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();viewDetail('${item.id}')">👁️ View</button>
+      <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();editItem('${item.id}')">✏️ Edit</button>
+    `;
+  } else if (column === 'denied') {
+    actions = `
+      <button class="btn btn-success btn-sm" onclick="event.stopPropagation();revertItem('${item.id}')">↩️ Revert to Pending</button>
+      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();viewDetail('${item.id}')">👁️ Detail</button>
+      <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();editItem('${item.id}')">✏️ Edit</button>
+    `;
+  }
+
+  const urlHtml = item.url ? `<a class="url" href="${item.url}" target="_blank" onclick="event.stopPropagation()">🔗 ${item.url.substring(0,50)}${item.url.length>50?'…':''}</a>` : '';
+
+  const borderClass = item.approval_required && column === 'pending' ? 'requires-approval' :
+    column === 'approved' ? 'approved-item' :
+    column === 'done' ? 'done-item' :
+    column === 'denied' ? 'denied-item' : '';
+
+  return `<div class="item ${borderClass} ${item._edited?'edited':''}" onclick="viewDetail('${item.id}')">
+    <div class="meta">
+      <span class="platform ${platClass}">${(item.platform||'').toUpperCase()}</span>
+      <span class="community">${item.community||''}</span>
+      <span class="action-tag">${al}</span>
+      <span class="timestamp">${time}</span>
+    </div>
+    <div class="content">${escapeHtml(item.content||'')}</div>
+    ${badges ? `<div class="badge-row">${badges}</div>` : ''}
+    ${urlHtml}
+    ${actions ? `<div class="actions">${actions}</div>` : ''}
+  </div>`;
+}
+
+// ─── Actions ───
+function approveItem(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+
+  showToast(`⏳ "${item.id}" executing…`, 'info');
+
+  fetch('/api/execute-item', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: item.id,
+      platform: item.platform,
+      action: item.action,
+      content: item.content,
+      url: item.url,
+      community: item.community,
+    }),
+  })
+  .then(r => r.json())
+  .then(result => {
+    if (result.ok) {
+      item.status = 'done';
+      item._edited = true;
+      saveAndRender();
+      showToast(`✅ "${item.id}" — ${result.message || 'done'}`, 'success');
+    } else {
+      showToast(`❌ "${item.id}" — ${result.error}`, 'error');
+    }
+  })
+  .catch(() => showToast(`❌ "${item.id}" — server unreachable`, 'error'));
+}
+
+function denyItem(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.status = 'denied';
+  item._edited = true;
+  saveAndRender();
+  showToast(`❌ "${item.id}" denied`, 'error');
+}
+
+function revertItem(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.status = 'pending';
+  item._edited = true;
+  saveAndRender();
+  showToast(`↩️ "${item.id}" reverted to pending`, 'info');
+}
+
+function executeItem(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+
+  showToast(`⏳ "${item.id}" executing…`, 'info');
+
+  fetch('/api/execute-item', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: item.id,
+      platform: item.platform,
+      action: item.action,
+      content: item.content,
+      url: item.url,
+      community: item.community,
+    }),
+  })
+  .then(r => r.json())
+  .then(result => {
+    if (result.ok) {
+      item.status = 'done';
+      item._edited = true;
+      saveAndRender();
+      showToast(`✅ "${item.id}" — ${result.message || 'done'}`, 'success');
+    } else {
+      showToast(`❌ "${item.id}" — ${result.error}`, 'error');
+    }
+  })
+  .catch(() => showToast(`❌ "${item.id}" — server unreachable`, 'error'));
+}
+
+// ─── Detail Modal ───
+function viewDetail(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  editingItem = item;
+
+  const actionLabels = { comment:'💬 Comment', post:'📝 Post', thread:'🧵 Thread', tweet:'🐦 Tweet', reply:'↩️ Reply', engage:'🎯 Engage' };
+  const time = item.proposed ? new Date(item.proposed).toLocaleString('en-US', { weekday:'short', month:'long', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+
+  let statusBadge = '';
+  if (item.approval_required && item.status === 'pending') {
+    statusBadge = '<span class="badge badge-approval" style="font-size:12px;padding:3px 10px;">⚠️ Awaiting Slack Approval</span>';
+  } else if (item.approval_status === 'approved-slack') {
+    statusBadge = '<span class="badge badge-approved-slack" style="font-size:12px;padding:3px 10px;">✅ Slack Approved</span>';
+  }
+
+  document.getElementById('modal-title').textContent = `📋 ${item.id}`;
+  document.getElementById('modal-status-bar').innerHTML = `
+    <span class="label">Status:</span>
+    <span class="value">${item.status}</span>
+    ${statusBadge}
+  `;
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="field">
+      <div class="field-label">Platform</div>
+      <div class="field-value">${item.platform} — ${item.community||'—'}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Action</div>
+      <div class="field-value">${actionLabels[item.action] || item.action}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Content</div>
+      <div class="field-value"><textarea id="detail-content" rows="3">${escapeHtml(item.content||'')}</textarea></div>
+    </div>
+    <div class="field">
+      <div class="field-label">Notes</div>
+      <div class="field-value"><textarea id="detail-notes" rows="2">${escapeHtml(item.notes||'')}</textarea></div>
+    </div>
+    <div class="field">
+      <div class="field-label">URL</div>
+      <div class="field-value"><input type="text" id="detail-url" value="${escapeHtml(item.url||'')}" placeholder="https://..."></div>
+    </div>
+    <div class="field messenger-bar">
+      <div class="messenger-input-wrap">
+        <input type="text" id="detail-input-plan" placeholder="Message OpenClaw..." autocomplete="off">
+        <button class="messenger-send" onclick="submitToOpenClaw()" title="Send to OpenClaw">➤</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Proposed Date</div>
+      <div class="field-value">${time}</div>
+    </div>
+    <div class="field" style="display:flex;align-items:center;gap:8px;">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" id="detail-approval-required" ${item.approval_required?'checked':''}>
+        <span style="font-size:13px;color:var(--text-secondary);">Requires Slack Approval</span>
+      </label>
+    </div>
+  `;
+
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="saveDetail()">💾 Save Locally</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+  `;
+
+  document.getElementById('modal').classList.add('active');
+  setTimeout(() => document.getElementById('detail-input-plan')?.focus(), 100);
+}
+
+function saveDetail() {
+  if (!editingItem) return;
+  editingItem.content = document.getElementById('detail-content').value;
+  editingItem.notes = document.getElementById('detail-notes').value;
+  editingItem.url = document.getElementById('detail-url').value;
+  editingItem.approval_required = document.getElementById('detail-approval-required').checked;
+  editingItem._edited = true;
+  saveAndRender();
+  closeModal();
+  showToast(`💾 "${editingItem.id}" saved`, 'success');
+}
+
+function submitToOpenClaw() {
+  if (!editingItem) return;
+  const plan = document.getElementById('detail-input-plan').value.trim();
+  if (!plan) {
+    showToast('Please write an Input Plan first', 'error');
+    document.getElementById('detail-input-plan').focus();
+    return;
+  }
+  const payload = {
+    id: editingItem.id,
+    platform: editingItem.platform,
+    community: editingItem.community,
+    action: editingItem.action,
+    content: document.getElementById('detail-content').value,
+    notes: document.getElementById('detail-notes').value,
+    url: document.getElementById('detail-url').value,
+    approval_required: document.getElementById('detail-approval-required').checked,
+    plan: plan
+  };
+  fetch('/api/submit-task', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(result => {
+    if (result.ok) {
+      editingItem.content = payload.content;
+      editingItem.notes = payload.notes;
+      editingItem.url = payload.url;
+      editingItem.approval_required = payload.approval_required;
+      editingItem._edited = true;
+      saveToLocalStorage();
+      closeModal();
+      showToast(`🚀 "${payload.id}" sent to OpenClaw`, 'success');
+    } else {
+      showToast('Error: ' + (result.error || 'unknown'), 'error');
+    }
+  })
+  .catch(() => {
+    showToast('Cannot reach server — is the server running?', 'error');
+  });
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('active');
+  editingItem = null;
+}
+
+// ─── Edit (quick inline via modal) ───
+function editItem(id) {
+  viewDetail(id);
+}
+
+// ─── Persistence ───
+function saveToLocalStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    dirty = false;
+    updateSaveStatus();
+  } catch(e) {
+    showToast('Failed to save to local storage', 'error');
+  }
+}
+
+function saveAndRender() {
+  saveToLocalStorage();
+  render();
+}
+
+function updateSaveStatus() {
+  const el = document.getElementById('save-status');
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const count = JSON.parse(saved).length;
+      el.textContent = `💾 ${count} items saved locally`;
+    } catch(e) {
+      el.textContent = '';
+    }
+  } else {
+    el.textContent = '';
+  }
+}
+
+function exportData() {
+  // Merge current state into a clean export
+  const exportObj = { items: items.map(i => ({
+    id: i.id,
+    platform: i.platform,
+    community: i.community,
+    action: i.action,
+    status: i.status,
+    proposed: i.proposed,
+    content: i.content,
+    url: i.url,
+    notes: i.notes,
+    approval_required: i.approval_required,
+    approval_status: i.approval_status,
+  })) };
+
+  const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'campaign-items-export.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('📥 Data exported', 'success');
+}
+
+// ─── Toast ───
+function showToast(message, type) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type || 'info'}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// ─── Helpers ───
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Keyboard ───
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && document.getElementById('modal')?.classList.contains('active')) {
+    const input = document.getElementById('detail-input-plan');
+    if (input && document.activeElement === input) {
+      e.preventDefault();
+      submitToOpenClaw();
+    }
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+// Tracking Views
+// ════════════════════════════════════════════════════════════
+
+let trackingData = null;
+
+// ─── View Switching ───
+function switchView(viewName) {
+  // Update nav
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const navBtn = document.querySelector(`.nav-item[data-view="${viewName}"]`);
+  if (navBtn) navBtn.classList.add('active');
+
+  // Update views
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  if (viewName === 'kanban') {
+    document.getElementById('view-kanban').classList.add('active');
+  } else {
+    document.getElementById('view-tracking').classList.add('active');
+    // Show/hide individual tracking panes
+    document.querySelectorAll('.tracking-view').forEach(el => el.style.display = 'none');
+    const pane = document.querySelector(`.tracking-view[data-view="${viewName}"]`);
+    if (pane) pane.style.display = 'block';
+    // Load data if needed
+    if (!trackingData) {
+      loadTrackingData();
+    } else {
+      renderTrackingView(viewName);
+    }
+  }
+}
+
+// ─── Load Tracking Data ───
+async function loadTrackingData() {
+  try {
+    const r = await fetch('/api/tracking?t=' + Date.now());
+    const result = await r.json();
+    if (result.ok) {
+      trackingData = result.data;
+      updateTrackingBadges();
+      // Render the currently active tracking view
+      const activePane = document.querySelector('.tracking-view[style*="display: block"]');
+      if (activePane) {
+        renderTrackingView(activePane.dataset.view);
+      }
+    } else {
+      showToast('Failed to load tracking data', 'error');
+    }
+  } catch(e) {
+    showToast('Cannot reach server for tracking data', 'error');
+    // Show error in all panes
+    document.querySelectorAll('.tracking-view .tracking-table-wrap').forEach(el => {
+      el.innerHTML = '<div class="tracking-empty"><div class="icon">⚠️</div><div class="text">Server unreachable</div><div class="hint">Make sure campaign-server.py is running</div></div>';
+    });
+  }
+}
+
+function updateTrackingBadges() {
+  if (!trackingData) return;
+  const stats = trackingData.stats || {};
+  const map = {
+    engagements: 'engagement_count',
+    leads: 'lead_count',
+    campaign_tasks: 'campaign_task_count',
+    metrics: 'metrics_count',
+    directory_submissions: 'directory_submission_count',
+    orchestration_cycles: 'orchestration_cycle_count',
+  };
+  for (const [badgeId, statKey] of Object.entries(map)) {
+    const el = document.getElementById(`badge-${badgeId}`);
+    if (el) el.textContent = stats[statKey] || 0;
+  }
+}
+
+// ─── Render Tracking Views ───
+function renderTrackingView(viewName) {
+  if (!trackingData) return;
+  const records = trackingData[viewName] || [];
+  const container = document.querySelector(`.tracking-view[data-view="${viewName}"] .tracking-table-wrap`);
+  if (!container) return;
+
+  if (records.length === 0) {
+    container.innerHTML = '<div class="tracking-empty"><div class="icon">📭</div><div class="text">No records yet</div><div class="hint">Records appear here once Openclaw takes action</div></div>';
+    return;
+  }
+
+  const renderers = {
+    engagements: renderEngagementsTable,
+    leads: renderLeadsTable,
+    campaign_tasks: renderCampaignTasksTable,
+    metrics: renderMetricsTable,
+    directory_submissions: renderDirectorySubmissionsTable,
+    orchestration_cycles: renderOrchestrationCyclesTable,
+  };
+
+  const renderFn = renderers[viewName];
+  if (renderFn) {
+    container.innerHTML = renderFn(records);
+  }
+}
+
+// ─── Badge Helper ───
+function trackingStatusBadge(val) {
+  if (val === true || val === 'success' || val === 'completed' || val === 'approved') return '<span class="status-badge status-success">✓ Ok</span>';
+  if (val === false || val === 'failed' || val === 'error' || val === 'rejected' || val === 'denied') return '<span class="status-badge status-error">✗ Failed</span>';
+  if (val === 'pending' || val === 'submitted') return '<span class="status-badge status-pending">⏳ Pending</span>';
+  if (val === 'in_progress' || val === 'running') return '<span class="status-badge status-active">⟳ Active</span>';
+  return `<span class="status-badge status-pending">${escapeHtml(String(val))}</span>`;
+}
+
+function fmtTime(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleString('en-US', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+function safe(str) { return escapeHtml(String(str ?? '—')); }
+
+// ─── Detail Modal ───
+function showTrackingDetail(record) {
+  const rows = Object.entries(record).map(([k, v]) => {
+    const val = v === null || v === undefined ? '—' : (typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v));
+    const isObj = typeof v === 'object' && v !== null;
+    return `<div class="field ${isObj ? 'field-full' : ''}">
+      <div class="field-label">${k}</div>
+      <div class="field-value${isObj ? ' code' : ''}">${isObj ? safe(val) : safe(val)}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('tracking-modal-title').textContent = `📄 ${record.type || 'Record'} Detail`;
+  document.getElementById('tracking-modal-body').innerHTML = `<div class="tracking-detail-grid">${rows}</div>`;
+  document.getElementById('tracking-modal').classList.add('active');
+}
+
+function closeTrackingModal() {
+  document.getElementById('tracking-modal').classList.remove('active');
+}
+
+// Close on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeTrackingModal();
+});
+
+// ─── Render Functions ───
+function renderEngagementsTable(records) {
+  return `<table class="tracking-table">
+    <thead><tr>
+      <th>Time</th><th>Platform</th><th>Action</th><th>Status</th><th>Story</th><th>Preview</th>
+    </tr></thead>
+    <tbody>${records.slice().reverse().map(r => `<tr onclick="showTrackingDetail(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+      <td class="cell-timestamp">${fmtTime(r.timestamp)}</td>
+      <td><strong>${safe(r.platform)}</strong></td>
+      <td>${safe(r.action)}</td>
+      <td>${trackingStatusBadge(r.success)}</td>
+      <td class="cell-preview clickable">${safe((r.story_title||'').substring(0,50))}</td>
+      <td class="cell-preview">${safe((r.content_preview||'').substring(0,70))}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderLeadsTable(records) {
+  return `<table class="tracking-table">
+    <thead><tr>
+      <th>Time</th><th>Source</th><th>Author</th><th>Signal</th><th>Story / URL</th>
+    </tr></thead>
+    <tbody>${records.slice().reverse().map(r => `<tr onclick="showTrackingDetail(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+      <td class="cell-timestamp">${fmtTime(r.timestamp)}</td>
+      <td><strong>${safe(r.source)}</strong></td>
+      <td>${safe(r.author)}</td>
+      <td class="cell-preview clickable">${safe(r.interest_signal)}</td>
+      <td class="cell-preview">${safe((r.story_title||r.url||'').substring(0,50))}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderCampaignTasksTable(records) {
+  return `<table class="tracking-table">
+    <thead><tr>
+      <th>Time</th><th>Task ID</th><th>Phase</th><th>Status</th><th>Description</th>
+    </tr></thead>
+    <tbody>${records.slice().reverse().map(r => `<tr onclick="showTrackingDetail(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+      <td class="cell-timestamp">${fmtTime(r.timestamp)}</td>
+      <td><code>${safe(r.task_id||'').substring(0,20)}</code></td>
+      <td>${safe(r.phase)}</td>
+      <td>${trackingStatusBadge(r.status)}</td>
+      <td class="cell-preview">${safe((r.description||'').substring(0,60))}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderMetricsTable(records) {
+  return `<table class="tracking-table">
+    <thead><tr>
+      <th>Time</th><th>Metric</th><th>Value</th><th>Unit</th><th>Period</th>
+    </tr></thead>
+    <tbody>${records.slice().reverse().map(r => `<tr onclick="showTrackingDetail(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+      <td class="cell-timestamp">${fmtTime(r.timestamp)}</td>
+      <td><strong>${safe(r.metric_name)}</strong></td>
+      <td style="font-weight:700;font-size:14px;">${r.value != null ? r.value : '—'}</td>
+      <td>${safe(r.unit)}</td>
+      <td class="cell-preview">${fmtTime(r.period_start)} — ${fmtTime(r.period_end)}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderDirectorySubmissionsTable(records) {
+  return `<table class="tracking-table">
+    <thead><tr>
+      <th>Time</th><th>Directory</th><th>Product</th><th>Status</th><th>URL</th>
+    </tr></thead>
+    <tbody>${records.slice().reverse().map(r => `<tr onclick="showTrackingDetail(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+      <td class="cell-timestamp">${fmtTime(r.timestamp)}</td>
+      <td><strong>${safe(r.directory)}</strong></td>
+      <td>${safe(r.product_name)}</td>
+      <td>${trackingStatusBadge(r.status)}</td>
+      <td class="cell-preview clickable">${r.submission_url ? safe(r.submission_url.substring(0,40))+'…' : '—'}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderOrchestrationCyclesTable(records) {
+  return `<table class="tracking-table">
+    <thead><tr>
+      <th>Time</th><th>Cycle ID</th><th>Phase</th><th>Tasks</th><th>Next Scheduled</th>
+    </tr></thead>
+    <tbody>${records.slice().reverse().map(r => `<tr onclick="showTrackingDetail(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+      <td class="cell-timestamp">${fmtTime(r.timestamp)}</td>
+      <td><code>${safe(r.cycle_id||'').substring(0,20)}</code></td>
+      <td>${safe(r.current_phase)} <span style="color:var(--text-tertiary);font-size:11px;">(${r.phases_completed||0}/${r.total_phases||'?'})</span></td>
+      <td style="font-weight:600;">${r.tasks_generated != null ? r.tasks_generated : '—'}</td>
+      <td class="cell-timestamp">${fmtTime(r.next_scheduled)}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// ─── Sidebar Navigation ───
+document.addEventListener('click', (e) => {
+  const navItem = e.target.closest('.nav-item[data-view]');
+  if (navItem) {
+    e.preventDefault();
+    switchView(navItem.dataset.view);
+  }
+});
+
+// ─── Init ───
+loadData();
+loadTrackingData();
+</script>
+</body>
+</html>

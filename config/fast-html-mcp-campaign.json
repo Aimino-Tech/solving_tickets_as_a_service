@@ -1,0 +1,100 @@
+{
+  "$schema": "https://docs.openclaw.ai/campaign-schema.json",
+  "campaign": "fast-html-mcp-launch",
+  "version": "1.0.0",
+  "start_date": "2026-05-25",
+  "end_date": "2026-05-29",
+  "description": "5-day launch week campaign for the Fast HTML MCP open-source project",
+  "schedule": {
+    "monitor": "*/15 * * * *",
+    "engage": "*/30 * * * *",
+    "daily_digest": "0 8 * * *"
+  },
+  "platforms": {
+    "devto": {
+      "enabled": true,
+      "article_limit": 2,
+      "publish_window": "06:00-12:00"
+    },
+    "x": {
+      "enabled": true,
+      "thread_limit": 2,
+      "reply_limit": 5,
+      "publish_window": "08:00-20:00"
+    },
+    "linkedin": {
+      "enabled": true,
+      "article_limit": 1,
+      "publish_window": "07:00-10:00"
+    },
+    "reddit": {
+      "enabled": true,
+      "post_limit": 3,
+      "subreddits": ["MCP", "selfhosted", "programming"],
+      "publish_window": "09:00-18:00"
+    },
+    "hacker_news": {
+      "enabled": true,
+      "type": "show_hn",
+      "requires_human": true,
+      "notes": "Show HN requires manual submission via browser"
+    },
+    "product_hunt": {
+      "enabled": true,
+      "type": "listing",
+      "requires_human": true,
+      "notes": "Product Hunt listing must be scheduled manually"
+    },
+    "directories": {
+      "mcp_so": {"enabled": true, "requires_browser": true},
+      "pulse_mcp": {"enabled": true, "requires_browser": true},
+      "glama": {"enabled": true, "requires_browser": true},
+      "smithery": {"enabled": true, "method": "cli"},
+      "awesome_mcp_servers": {"enabled": true, "method": "pr"}
+    },
+    "discord": {
+      "enabled": true,
+      "channels": ["mcp", "anthropic", "cursor"],
+      "reply_limit": 10
+    },
+    "youtube": {
+      "enabled": true,
+      "comment_limit": 5
+    }
+  },
+  "content": {
+    "kit_path": "marketing/content/fast-html-mcp/",
+    "pieces": [
+      {"day": 1, "file": "day-1-devto-article.md", "platform": "devto", "title": "How AI Agents Can Generate HTML 1000× Faster with This Open-Source MCP"},
+      {"day": 1, "file": "day-1-x-thread.md", "platform": "x", "title": "X Launch Thread (10 tweets)"},
+      {"day": 2, "file": "day-2-linkedin-article.md", "platform": "linkedin", "title": "Why I Built an Open-Source MCP Server for HTML Document Generation"},
+      {"day": 2, "file": "day-2-reddit-mcp.md", "platform": "reddit", "title": "Technical Deep-Dive: Self-Hosting an HTML MCP Server"},
+      {"day": 3, "file": "day-3-x-update.md", "platform": "x", "title": "Early Metrics Update"},
+      {"day": 4, "file": "day-4-comparison-post.md", "platform": "devto", "title": "Fast HTML MCP vs Other HTML Generation Tools"},
+      {"day": 4, "file": "day-4-show-hn.md", "platform": "hacker_news", "title": "Show HN: Fast HTML MCP - Open-Source HTML Generation for AI Agents"},
+      {"day": 5, "file": "day-5-devto-wrapup.md", "platform": "devto", "title": "What I Learned from Launching an Open-Source MCP Server"},
+      {"day": 5, "file": "day-5-x-thread.md", "platform": "x", "title": "Launch Week Retrospective Thread"}
+    ]
+  },
+  "monitoring": {
+    "github_repo": "Aimino-Tech/fast-html-mcp",
+    "npm_package": "fast-html-mcp",
+    "metrics": {
+      "github_stars": {"check_interval": "*/30 * * * *", "target_30d": 200},
+      "npm_downloads": {"check_interval": "0 */6 * * *"},
+      "directory_rankings": {"check_interval": "0 8 * * *"}
+    }
+  },
+  "engagement_rules": {
+    "approval_gate": "auto",
+    "max_daily_posts": {
+      "devto": 1,
+      "x": 5,
+      "linkedin": 1,
+      "reddit": 3,
+      "hacker_news": 1
+    },
+    "auto_reply_threshold": 60,
+    "reply_within_hours": 24
+  }
+}
