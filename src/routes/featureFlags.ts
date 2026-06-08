@@ -1,10 +1,25 @@
 import { Router, type Request, type Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { isFeatureEnabled, setFeatureFlag, deleteFeatureFlag, listFeatureFlags } from '../services/featureFlags.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'feature-flags-admin' });
 
+// ---------------------------------------------------------------------------
+// Rate Limiting: 30 requests per minute on feature flag admin endpoints
+// ---------------------------------------------------------------------------
+
+const featureFlagsLimiter = rateLimit({
+  windowMs: 60_000, // 1 minute
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
+});
+
 const router = Router();
+
+router.use(featureFlagsLimiter);
 
 router.get('/', async (req: Request, res: Response) => {
   try {

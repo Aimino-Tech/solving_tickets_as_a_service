@@ -9,6 +9,7 @@
 #   - Multi-platform Docker build with BuildKit cache
 #   - Tagging: semver, branch, git SHA, latest
 #   - GitHub Container Registry push
+#   - Trivy vulnerability scan on built image
 #   - Slack notification (success/failure)
 # =============================================================================
 
@@ -70,6 +71,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -78,6 +80,15 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scan on built image
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: ${{ steps.meta.outputs.tags }}
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          hide-progress: true
 
       - name: Generate image summary
         id: summary

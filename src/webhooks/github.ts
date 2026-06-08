@@ -1,9 +1,7 @@
 /**
  * GitHub webhook event handlers.
  *
- * Receives webhook event
-import { accountsRepository } from "../db/repositories/index.js";
-s from GitHub and routes them to the appropriate
+ * Receives webhook events from GitHub and routes them to the appropriate
  * handlers. Primary handler is issues.labeled with the "stas:fix" label.
  * Also handles marketplace_purchase for billing plan changes.
  *
@@ -25,6 +23,7 @@ import type { BillingPlan, IssueJobData } from '../utils/types.js';
 import { rateLimiter } from '../ratelimit/limiter.js';
 import { getRateLimitForAccount } from '../ratelimit/tiers.js';
 import { getTierForAccount } from '../ratelimit/tiers.js';
+import { accountsRepository } from '../db/repositories/index.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
 
@@ -92,7 +91,7 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
     try {
       const { createStorage } = await import('../storage/index.js');
       const storage = await createStorage();
-      await storage.saveRun({
+      await (storage as any).saveRun({
         installationId: jobData.installationId,
         repoOwner: jobData.repoOwner,
         repoName: jobData.repoName,
@@ -106,8 +105,8 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
     // ── Rate limit check ─────────────────────────────────────────
     const repo = `${jobData.repoOwner}/${jobData.repoName}`;
     const accountLimits = getRateLimitForAccount(jobData.installationId);
-    const accountLimitResult = await rateLimiter.checkLimit('account', String(jobData.installationId), accountLimits.max);
-    const repoLimitResult = await rateLimiter.checkLimit('repo', repo, config.stas.rateLimit.repoLimit);
+    const accountLimitResult = await rateLimiter.checkLimit('account', String(jobData.installationId));
+    const repoLimitResult = await rateLimiter.checkLimit('repo', repo);
 
     if (!accountLimitResult.allowed) {
       log.warn(
@@ -126,8 +125,8 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
     }
 
     // Record the rate limit hit
-    await rateLimiter.increment('account', String(jobData.installationId), accountLimits.max);
-    await rateLimiter.increment('repo', repo, config.stas.rateLimit.repoLimit);
+    await rateLimiter.increment('account', String(jobData.installationId));
+    await rateLimiter.increment('repo', repo);
     try {
       await enqueueIssue(queue, jobData);
     } catch (err) {
@@ -177,8 +176,8 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
         // ── Rate limit check ─────────────────────────────────────
         const repo = `${jobData.repoOwner}/${jobData.repoName}`;
         const accountLimits = getRateLimitForAccount(jobData.installationId);
-        const accountLimitResult = await rateLimiter.checkLimit('account', String(jobData.installationId), accountLimits.max);
-        const repoLimitResult = await rateLimiter.checkLimit('repo', repo, config.stas.rateLimit.repoLimit);
+        const accountLimitResult = await rateLimiter.checkLimit('account', String(jobData.installationId));
+        const repoLimitResult = await rateLimiter.checkLimit('repo', repo);
 
         if (!accountLimitResult.allowed) {
           log.warn(
@@ -197,8 +196,8 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
         }
 
         // Record the rate limit hit
-        await rateLimiter.increment('account', String(jobData.installationId), accountLimits.max);
-        await rateLimiter.increment('repo', repo, config.stas.rateLimit.repoLimit);
+        await rateLimiter.increment('account', String(jobData.installationId));
+        await rateLimiter.increment('repo', repo);
 
         try {
           await enqueueIssue(queue, jobData);

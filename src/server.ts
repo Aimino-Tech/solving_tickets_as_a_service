@@ -56,7 +56,6 @@ import { queryWithRetry } from './db/connection.js';
 import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
-import { adminRouter } from "./pricing/admin.js";
 import { adminAuthMiddleware } from "./security/adminAuth.js";
 import { initTierOverrides } from "./ratelimit/tiers.js";
 import { validateWebhookPayload } from './validation.js';

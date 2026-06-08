@@ -66,7 +66,7 @@ const { ConcurrencyManager } = await import('../../ratelimit/concurrency.js');
 // ── Suite ──────────────────────────────────────────────────────────────────
 
 describe('ConcurrencyManager', () => {
-  let manager: ConcurrencyManager;
+  let manager: InstanceType<typeof ConcurrencyManager>;
 
   beforeEach(() => {
     vi.clearAllMocks();

@@ -1,15 +1,15 @@
 # Stage 1: Build
 FROM node:22-alpine AS build
-WORKDIR /app
 
-# Make root filesystem read-only for security
-# Writable directories (tmp, data) use tmpfs volumes at runtime
+# Use BuildKit cache mounts for faster rebuilds
+WORKDIR /app
 
 # Install dependencies (layer caching — only invalidated when lockfile changes)
 # IMPORTANT: Do NOT COPY .env or any secrets into the image
 # Secrets are injected at runtime via environment variables or Docker secrets
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts
 
 # Build TypeScript
 COPY tsconfig.json ./
@@ -26,32 +26,40 @@ RUN npm prune --production
 
 # Stage 2: Runtime
 FROM node:22-alpine
-WORKDIR /app
+
+# Security: upgrade all system packages to fix known CVEs
+RUN apk upgrade --no-cache
+
+# SHELL hardening: ensure pipefail is set for all RUN commands
+SHELL ["/bin/sh", "-o", "pipefail", "-c"]
 
 # Create non-root user for security
 RUN addgroup -S stas && adduser -S stas -G stas
 
-# Copy only what's needed at runtime
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./
-COPY --from=build /app/dashboard/dist ./dashboard/dist
+WORKDIR /app
 
-# Own everything by the non-root user
-RUN chown -R stas:stas /app
+# Copy only what's needed at runtime — with correct ownership
+COPY --from=build --chown=stas:stas /app/dist ./dist
+COPY --from=build --chown=stas:stas /app/node_modules ./node_modules
+COPY --from=build --chown=stas:stas /app/package.json ./
+COPY --from=build --chown=stas:stas /app/dashboard/dist ./dashboard/dist
 
 USER stas
 
 EXPOSE 3000
 
 # Run with read-only root filesystem in production:
-# docker run --read-only --tmpfs /tmp --tmpfs /app/data ...
+#   docker run --read-only --tmpfs /tmp --tmpfs /app/data ...
 # This prevents the container from writing to the filesystem,
 # limiting the impact of a compromised process.
 
 STOPSIGNAL SIGTERM
 
 # Healthcheck — uses Node 22's built-in fetch to hit the /health endpoint
+# Interval: how often to check (30s)
+# Timeout: max time for a single check (3s)
+# Start-period: grace period before first check (5s)
+# Retries: consecutive failures before marking unhealthy (3)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD ["node", "-e", "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
 

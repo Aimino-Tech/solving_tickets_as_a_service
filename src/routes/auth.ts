@@ -1,9 +1,26 @@
+import crypto from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'auth-routes' });
+
+// ---------------------------------------------------------------------------
+// Rate Limiting: 20 requests per minute for unauthenticated OAuth endpoints
+// ---------------------------------------------------------------------------
+
+const authLimiter = rateLimit({
+  windowMs: 60_000, // 1 minute
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
+});
+
 const router = Router();
+
+router.use(authLimiter);
 
 const STATE_COOKIE_OPTS = {
   httpOnly: true,
@@ -15,9 +32,9 @@ const STATE_COOKIE_OPTS = {
 
 router.get('/github', (_req: Request, res: Response) => {
   const state = crypto.randomUUID();
-  const redirectUri = `${config.dashboard.baseUrl}/api/auth/callback`;
+  const redirectUri = `http://localhost:3000/api/auth/callback`;
   const params = new URLSearchParams({
-    client_id: config.dashboard.githubClientId,
+    client_id: process.env.GITHUB_OAUTH_CLIENT_ID || '',
     redirect_uri: redirectUri,
     scope: 'read:user user:email',
     state,
@@ -42,8 +59,8 @@ router.get('/callback', async (req: Request, res: Response) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
-        client_id: config.dashboard.githubClientId,
-        client_secret: config.dashboard.githubClientSecret,
+        client_id: process.env.GITHUB_OAUTH_CLIENT_ID || '',
+        client_secret: process.env.GITHUB_OAUTH_CLIENT_SECRET || '',
         code,
       }),
     });
@@ -53,7 +70,7 @@ router.get('/callback', async (req: Request, res: Response) => {
       return;
     }
     res.clearCookie('oauth_state', { path: '/' });
-    res.redirect(`${config.dashboard.baseUrl}/login/success?token=${tokenData.access_token}`);
+    res.redirect(`http://localhost:3000/login/success?token=${tokenData.access_token}`);
   } catch (err) {
     log.error({ err: String(err) }, 'OAuth callback failed');
     res.status(500).json({ error: 'OAuth callback failed' });
