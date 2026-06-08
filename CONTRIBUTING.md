@@ -422,3 +422,101 @@ Contributors will be recognized in:
 - GitHub's automatic contributor graph
 
 Thank you for contributing!
+
+---
+
+## Worker E2E Tests (Celery Pipeline)
+
+The Celery worker pipeline E2E test validates the full worker task flow:
+`triage → agent → sandbox → verification → PR creation → notifications`
+
+### Prerequisites
+
+- **Docker** and **docker-compose** (for Redis and RabbitMQ)
+- **Python 3.10+** with `python3` and `pip3` on PATH
+- The test auto-creates a Python virtualenv and installs dependencies from `workers/requirements.txt`
+
+### Running Worker E2E Tests
+
+```bash
+# Full pipeline: starts Docker, runs test, cleans up
+npm run test:worker
+
+# Watch mode (re-run on changes — assumes Docker already running)
+npm run test:worker:watch
+```
+
+### What the Test Does
+
+1. **Infrastructure setup**:
+   - Starts Redis (Celery result backend) and RabbitMQ (Celery broker) via `docker-compose.e2e.yml`
+   - Starts mock HTTP servers for OpenCode serve and GitHub API
+   - Creates a Python virtualenv with Celery and task dependencies
+   - Spawns a `celery worker` subprocess consuming from all pipeline queues
+
+2. **Pipeline execution**:
+   - A Python helper script dispatches a test issue through each stage sequentially:
+     - `triage_issue` — classifies the issue (gracefully degrades when no API key)
+     - `dispatch_opencode` — calls the mock OpenCode server (avoids real API costs)
+     - `boot_sandbox` — creates a sandbox (returns placeholder when no E2B key)
+     - `run_verification` — runs tests (returns placeholder success)
+     - `create_pull_request` — creates a PR (returns placeholder data)
+     - `send_notification` — sends notification (returns placeholder)
+   - Each stage emits a JSON result line with stage name, task ID, and status
+
+3. **Assertions**:
+   - All 6 stages complete with `SUCCESS` status
+   - Each stage's result contains expected fields
+   - Data flows correctly between stages (e.g., issue number preserved)
+   - Pipeline executes stages in the correct order
+
+### Mock External Dependencies
+
+The test uses mock HTTP servers instead of real services:
+
+| Service | Mock Port | Purpose |
+|---|---|---|
+| **OpenCode serve** | 9409 | Responds to `POST /run` with mock agent results |
+| **GitHub API** | 9410 | Handles PR creation, comments, refs |
+| **OpenAI API** | — | Gracefully skipped (empty `OPENAI_API_KEY`) |
+| **E2B Sandbox** | — | Returns placeholder (empty `E2B_API_KEY`) |
+
+### CI Integration
+
+Worker E2E tests run as a separate job (`worker-e2e`) in the CI workflow:
+- Runs in parallel with other E2E tests
+- Uses `actions/setup-python@v5` to provision Python 3.12
+- Starts Redis + RabbitMQ via Docker Compose
+- Has a 15-minute timeout (pipeline can take 3+ minutes)
+- Docker services are torn down in an `if: always()` step
+
+### Debugging
+
+If the worker pipeline test fails:
+
+1. **Check Docker logs**:
+   ```bash
+   docker logs stas-e2e-redis
+   docker logs stas-e2e-rabbitmq
+   ```
+
+2. **Check Python virtualenv**: The test creates `.venv-worker-pipeline` in `tests/e2e/`.
+   You can activate it manually:
+   ```bash
+   source tests/e2e/.venv-worker-pipeline/bin/activate
+   celery -A workers.celery_app worker --loglevel=DEBUG --concurrency=1
+   ```
+
+3. **Run the helper script directly** (with Docker and venv active):
+   ```bash
+   python3 tests/e2e/worker_pipeline_helper.py \
+     --broker amqp://guest:guest@localhost:5672// \
+     --backend redis://localhost:16379/0
+   ```
+
+4. **Common failure modes**:
+   - Docker not running or containers unhealthy
+   - Port conflicts (Redis on 16379, RabbitMQ on 5672/15672)
+   - Python version mismatch (3.10+ required)
+   - pip install failures (network, version conflicts)
+   - Worker crashes on startup (check Celery log in test output)

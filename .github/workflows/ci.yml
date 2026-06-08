@@ -6,6 +6,7 @@
 #   - Parallel independent jobs (lint, typecheck, test, build, e2e)
 #   - Workflow concurrency: cancels in-progress runs on same branch
 #   - E2E job with Docker Compose services (Redis)
+#   - Worker E2E job with Docker Compose services (Redis + RabbitMQ)
 #   - Coverage thresholds enforced by vitest config
 #   - workflow_dispatch trigger for manual runs
 #   - Dockerfile linting via hadolint
@@ -32,6 +33,10 @@ on:
         default: "false"
       skip_e2e:
         description: "Skip E2E tests (true/false)"
+        required: false
+        default: "false"
+      skip_worker_e2e:
+        description: "Skip Worker E2E tests (true/false)"
         required: false
         default: "false"
 
@@ -287,6 +292,45 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+
+  ##############################################################################
+  # MIGRATION INTEGRITY CHECK — validates migration file structure, pairing,
+  # naming conventions, order, and content integrity (no DB needed)
+  ##############################################################################
+  migration-integrity:
+    name: Migration Integrity Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run migration integrity check
+        run: npm run db:migrate:test:check
+
+  ##############################################################################
+  # MIGRATION BENCHMARK — validates migration file processing timing
+  ##############################################################################
+  migration-benchmark:
+    name: Migration Benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run migration benchmarks
+        run: npm run db:migrate:bench:ci
+
+
   ##############################################################################
   # SECURITY AUDIT (npm audit)
   ##############################################################################
@@ -368,10 +412,10 @@ jobs:
           category: grype-docker
 
   ##############################################################################
-  # E2E TESTS
+  # E2E TESTS (Redis) — baseline and full-flow webhook tests
   ##############################################################################
   e2e:
-    name: E2E Tests
+    name: E2E Tests (Redis)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [lint, build]
@@ -390,5 +434,67 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Start services and run E2E tests
+      - name: Start Docker services (Redis)
+        run: docker compose -f docker-compose.e2e.yml up -d redis
+
+      - name: Wait for Redis
+        run: |
+          for i in $(seq 1 30); do
+            docker exec stas-e2e-redis redis-cli ping && break
+            sleep 1
+          done
+
+      - name: Run E2E tests
         run: npm run test:e2e:ci
+
+      - name: Stop Docker services
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml down --remove-orphans
+
+  ##############################################################################
+  # WORKER E2E TESTS (Redis + RabbitMQ) — full Celery worker pipeline
+  ##############################################################################
+  worker-e2e:
+    name: Worker E2E Tests (Redis + RabbitMQ)
+    runs-on: ubuntu-latest
+    needs: [lint]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Start Docker services (Redis + RabbitMQ)
+        run: docker compose -f docker-compose.e2e.yml up -d redis rabbitmq
+
+      - name: Wait for Redis
+        run: |
+          for i in $(seq 1 30); do
+            docker exec stas-e2e-redis redis-cli ping && break
+            sleep 1
+          done
+
+      - name: Wait for RabbitMQ
+        run: |
+          for i in $(seq 1 30); do
+            docker inspect stas-e2e-rabbitmq --format '{{.State.Health.Status}}' | grep healthy && break
+            sleep 2
+          done
+
+      - name: Run Worker E2E tests
+        run: npm run test:worker
+
+      - name: Stop Docker services
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml down --remove-orphans -t 5
