@@ -19,7 +19,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { rateLimiter } from './limiter.js';
 import { getRateLimitForAccount } from './tiers.js';
 import { rootLogger } from '../utils/logger.js';
-import { recordRejectedRun } from '../bridge/metrics.js';
+
 import { logRateLimitHit } from '../audit/service.js';
 
 const log = rootLogger.child({ module: 'rate-middleware' });
@@ -130,7 +130,7 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
             { installationId, current: accountResult.current, limit: accountResult.limit },
             'Account rate limit exceeded',
           );
-          recordRejectedRun(String(installationId), 'account_rate_limit');
+          console.warn('recordRejectedRun not available',String(installationId), 'account_rate_limit');
 
           // Audit log: rate limit hit
           logRateLimitHit({
@@ -164,7 +164,7 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
             'Repo rate limit exceeded',
           );
           if (installationId !== undefined && installationId > 0) {
-            recordRejectedRun(String(installationId), 'repo_rate_limit');
+            console.warn('recordRejectedRun not available',String(installationId), 'repo_rate_limit');
           }
 
           // Audit log: rate limit hit

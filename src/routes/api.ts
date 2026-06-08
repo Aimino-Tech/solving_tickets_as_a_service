@@ -16,6 +16,7 @@ router.get('/runs', async (req: Request, res: Response) => {
     const offset = Math.abs(Number(req.query.offset) || 0);
     const status = req.query.status as string | undefined;
     const repo = req.query.repo as string | undefined;
+    if (!storage) { res.status(500).json({ error: 'Storage not available' }); return; }
     const runs = await storage.listRuns(limit, offset, { status, repo });
     const total = await storage.countRuns({ status, repo });
     res.json({ runs, total, limit, offset });
@@ -29,6 +30,7 @@ router.get('/runs/:id', async (req: Request, res: Response) => {
   try {
     const { createStorage } = await import('../storage/index.js');
     const storage = await createStorage();
+    if (!storage) { res.status(500).json({ error: 'Storage not available' }); return; }
     const run = await storage.getRun(req.params.id);
     if (!run) {
       res.status(404).json({ error: 'Run not found' });
@@ -65,6 +67,7 @@ router.get('/stats', async (_req: Request, res: Response) => {
   try {
     const { createStorage } = await import('../storage/index.js');
     const storage = await createStorage();
+    if (!storage) { res.status(500).json({ error: 'Storage not available' }); return; }
     const totalRuns = await storage.countRuns({});
     const successfulRuns = await storage.countRuns({ status: 'success' });
     const failedRuns = await storage.countRuns({ status: 'failed' });

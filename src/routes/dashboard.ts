@@ -57,7 +57,7 @@ function parseId(param: string): number | null {
 async function checkAdmin(req: Request, res: Response): Promise<boolean> {
   const { config } = await import('../config.js');
   const adminKey = req.headers['x-admin-key'] as string;
-  if (!adminKey || adminKey !== config.stas.adminApiKey) {
+  if (!adminKey || adminKey !== config.security.adminApiKey) {
     res.status(401).json({ error: 'Unauthorized — valid x-admin-key header required' });
     return false;
   }
@@ -362,7 +362,7 @@ router.get('/dashboard/accounts/:accountId/audit-log', async (req: Request, res:
     if (action) {
       results = await auditLogRepository.listByAction(action, limit, offset);
     } else {
-      results = await auditLogRepository.listByAccount(accountId, limit, offset);
+      results = await auditLogRepository.listByAccount(String(accountId), limit, offset);
     }
     res.json({ auditLogs: results, limit, offset });
   } catch (err) {

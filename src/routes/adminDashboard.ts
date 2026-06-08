@@ -29,7 +29,7 @@ adminDashboardRouter.use(dashboardLimiter);
 
 function requireAdmin(req: Request, res: Response): boolean {
   const adminKey = req.headers['x-admin-key'] as string;
-  if (!adminKey || adminKey !== config.stas.adminApiKey) {
+  if (!adminKey || adminKey !== config.security.adminApiKey) {
     res.status(401).json({ error: 'Unauthorized — valid x-admin-key header required' });
     return false;
   }
@@ -118,7 +118,7 @@ adminDashboardRouter.get('/accounts/:accountId/teams', async (req: Request, res:
   try {
     const accountId = parseId(req.params.accountId);
     if (!accountId) { res.status(400).json({ error: 'Invalid account ID' }); return; }
-    const results = await teamsRepository.listByAccount(accountId);
+    const results = await teamsRepository.getTeamsForAccount(accountId);
     res.json({ teams: results });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to list teams for account');
@@ -253,7 +253,7 @@ adminDashboardRouter.get('/accounts/:accountId/audit-log', async (req: Request, 
 
     let results;
     if (action) {
-      results = await auditLogRepository.listByActionAndAccount(action, accountId, limit, offset);
+      const { rows } = await auditLogRepository.listFiltered({ action, actorId: String(accountId), limit, offset }); results = rows;
     } else {
       results = await auditLogRepository.listByAccount(String(accountId), limit, offset);
     }

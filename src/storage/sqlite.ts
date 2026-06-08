@@ -9,7 +9,7 @@
  */
 
 import Database from 'better-sqlite3';
-import type { RunRecord, RunFilter, RunStats, StorageBackend } from './types.js';
+import type { RunRecord, RunFilter, RunStats } from './types.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'storage:sqlite' });
@@ -43,7 +43,7 @@ function rowToRecord(row: DbRow): RunRecord {
     repoOwner: row.repo_owner,
     repoName: row.repo_name,
     issueNumber: row.issue_number,
-    status: row.status as RunRecord['status'],
+    status: row.status,
     confidence: row.confidence ?? undefined,
     summary: row.summary ?? undefined,
     prUrl: row.pr_url ?? undefined,
@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS run_history (
 // SQLiteStorage
 // ---------------------------------------------------------------------------
 
-export class SQLiteStorage implements StorageBackend {
+export class SQLiteStorage {
   private db: Database.Database;
 
   constructor(dbPath: string) {

@@ -42,7 +42,7 @@ import type { IssueJobData } from "../utils/types.js";
 import { rootLogger, jobLogger } from "../utils/logger.js";
 import { addBreadcrumb, setUserContext } from "../monitoring/sentry.js";
 import * as messages from "../github/messages.js";
-
+import { getTracker } from "../trackers/index.js";
 const log = rootLogger.child({ module: 'issue-agent' });
 
 // ---------------------------------------------------------------------------
@@ -154,7 +154,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
             data.trackerTicketId,
             `### 🔍 STAS Investigating\n\n**Issue**: ${data.issueTitle}\n\nIssue classified as **${triage.type}** (difficulty: ${triage.difficulty}).\n\nI'll investigate and work on a fix.\n\n`,
           )
-          .catch((err) => {
+          .catch((err: unknown) => {
             log.warn(
               { err: String(err), trackerType: data.trackerType, ticketId: data.trackerTicketId },
               'Failed to post initial tracker comment',
@@ -398,7 +398,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
             data.trackerTicketId,
             `### ❌ STAS Error\n\nAn error occurred during fix analysis:\n\n\`\`\`\n${errorMsg.slice(0, 2000)}\n\`\`\`\n\n**Phase**: ${currentPhase}`,
           )
-          .catch((e) => {
+          .catch((e: unknown) => {
             logger.warn({ err: String(e) }, 'Failed to post error to tracker');
           });
       }
@@ -535,6 +535,7 @@ async function buildCodeIntelligence(sandbox: SandboxExecutor): Promise<CodeInte
 // ── Phase 6: OpenCode dispatch ──────────────────────────────────────
 
 interface OpenCodeDispatchParams {
+  repoUrl: string;
   repoOwner: string;
   repoName: string;
   issueNumber: number;
@@ -545,6 +546,7 @@ interface OpenCodeDispatchParams {
   analysisResult: string;
   codeIntel: CodeIntel;
   installationToken: string;
+  installationId: number;
   baselineTestResult?: TestBaseline | null;
 }
 
@@ -566,6 +568,7 @@ interface OpenCodeDispatchResult {
  */
 async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenCodeDispatchResult> {
   const {
+    repoUrl,
     repoOwner,
     repoName,
     issueNumber,
@@ -576,10 +579,12 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
     analysisResult,
     codeIntel,
     installationToken,
+    installationId,
     baselineTestResult,
   } = params;
 
   const prompt = buildOpenCodePrompt({
+    repoUrl,
     repoOwner,
     repoName,
     issueNumber,
@@ -718,6 +723,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
  * Build the system prompt for the OpenCode agent.
  */
 function buildOpenCodePrompt(params: {
+  repoUrl: string;
   repoOwner: string;
   repoName: string;
   issueNumber: number;
@@ -1081,7 +1087,16 @@ async function attemptBasicFix(
           summary: `[Fallback] ${summary}`,
           confidence: 'low',
           fixReady: false,
-          verificationFailed: true,
+          verification: {
+            baseline: null,
+            postFix: { passed: false, output: postFixTestOutput, command: 'npm test', durationMs: 0 },
+            regressionTestCreated: false,
+            regressionTestPassedOnOriginal: null,
+            regressionTestPassedOnFix: null,
+            preExistingTestsRegressed: true,
+            unverified: false,
+            details: ['Fix failed verification — tests did not pass after changes'],
+          },
           branchName: undefined,
           testOutput: postFixTestOutput,
           errors: ['Fix failed verification — tests did not pass after changes'],

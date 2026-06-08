@@ -130,7 +130,7 @@ export async function connect(options?: {
     const connection = useTls
       ? await amqpConnect(url, tlsOptions)
       : await amqpConnect(url);
-    state.connection = connection;
+    state.connection = connection as unknown as Connection;
 
     connection.on('error', (err) => {
       log.error({ err: String(err) }, 'RabbitMQ connection error');
@@ -263,7 +263,7 @@ export async function gracefulShutdown(): Promise<void> {
 
   try {
     if (state.connection) {
-      await state.connection.close();
+      await (state.connection as any).close();
     }
   } catch (err) {
     log.warn({ err: String(err) }, 'Error closing connection');
