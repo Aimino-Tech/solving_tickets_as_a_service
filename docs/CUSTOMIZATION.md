@@ -280,9 +280,7 @@ SANDBOX_NETWORK_ENABLED=false          # Network isolation
 Choose the queue backend:
 
 ```bash
-QUEUE_BACKEND=bullmq        # BullMQ (Redis) — default, rich features
-QUEUE_BACKEND=rabbitmq      # RabbitMQ — persistent delivery
-QUEUE_BACKEND=both          # Dual-write — migrate between backends
+QUEUE_BACKEND=rabbitmq      # RabbitMQ — persistent delivery (default, only option)
 ```
 
 ### Retry Strategy
@@ -429,7 +427,7 @@ ALERT_CRIT_ERROR_RATE_PERCENT=30
 | `PHASE_TIMEOUT_SANDBOX_MS` | `300000` | Sandbox boot timeout (5 min) |
 | `MAX_AGENT_ITERATIONS` | `40` | Max agent tool calls |
 | `MAX_ISSUE_COMMENTS` | `15` | Max issue comments per run |
-| `QUEUE_BACKEND` | `bullmq` | Queue backend |
+| `QUEUE_BACKEND` | `rabbitmq` | Queue backend (RabbitMQ only, BullMQ removed) |
 | `QUEUE_MAX_RETRIES` | `4` | Max retry attempts |
 | `QUEUE_DEDUP_TTL_SECONDS` | `120` | Dedup window |
 | `STAS_MAX_CONCURRENT` | `3` | Per-repo concurrency |

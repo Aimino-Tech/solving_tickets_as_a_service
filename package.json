@@ -71,7 +71,8 @@
     "db:migrate:test:check": "tsx scripts/test-migrations.ts --check",
     "db:migrate:bench": "tsx scripts/bench-migrations.ts",
     "db:migrate:bench:ci": "tsx scripts/bench-migrations.ts --ci --json",
-    "test:db-migrations": "vitest run src/__tests__/db/"
+    "test:db-migrations": "vitest run src/__tests__/db/",
+    "release:dry-run": "bash scripts/release-dry-run.sh"
   },
   "dependencies": {
     "@octokit/auth-app": "^7.1.0",
@@ -81,7 +82,6 @@
     "@slack/bolt": "^4.7.3",
     "amqplib": "^0.10.5",
     "better-sqlite3": "^11.10.0",
-    "bullmq": "^5.78.0",
     "cors": "^2.8.6",
     "dotenv": "^16.4.0",
     "drizzle-orm": "^0.38.4",

@@ -93,7 +93,7 @@ const { mockConfig } = vi.hoisted(() => {
         keepFailed: 100,
         maxRetries: 4,
         retryDelays: [30000, 120000, 300000, 900000] as number[],
-        backend: "bullmq" as const,
+        backend: "rabbitmq" as const,
       },
       rabbitmq: {
         url: "amqp://localhost:5672/stas",
@@ -250,10 +250,6 @@ vi.mock("../../src/utils/logger.js", () => ({
 
 vi.mock("../../src/queue/issueQueue.js", () => ({
   enqueueIssue: mockEnqueueIssue,
-  createIssueQueue: mockCreateIssueQueue,
-  createIssueWorker: vi.fn(),
-  createDeadLetterQueue: vi.fn(),
-  createQueueEvents: vi.fn(() => ({ on: vi.fn(), close: vi.fn() })),
 }));
 
 vi.mock("../../src/github/auth.js", () => ({
@@ -720,7 +716,7 @@ describe("Full E2E Flow: Webhook → Queue → Agent → PR Creation", () => {
   describe("Retry flow: agent fails → retry scheduled → max retries → DLQ", () => {
     it("enqueues a job that would be retried on failure (config has retry delays)", async () => {
       // This tests that the enqueue path works correctly.
-      // Retry logic lives in the worker (issueQueue.ts createIssueWorker).
+      // Retry logic is now handled by Celery workers (Python via RabbitMQ).
       // Here we verify the queue configuration supports retries.
       const payload = sampleIssueLabeledPayload();
       await sendGithubWebhook(serverUrl, "issues.labeled", payload);

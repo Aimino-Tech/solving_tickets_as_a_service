@@ -874,7 +874,7 @@ paths:
                 node_env: "production"
                 database: "connected"
                 redis: "connected"
-                queue_backend: "bullmq"
+                queue_backend: "rabbitmq"
                 timestamp: "2026-06-05T20:00:00.000Z"
         "401":
           $ref: "#/components/responses/Unauthorized"

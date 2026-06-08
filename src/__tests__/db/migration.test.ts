@@ -15,6 +15,13 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Hoisted mock functions for node:fs - used across multiple describe blocks
+const fsMockFns = vi.hoisted(() => ({
+  existsSync: vi.fn(),
+  readdirSync: vi.fn(),
+  readFileSync: vi.fn(),
+}));
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -167,19 +174,24 @@ describe('runMigrations', () => {
   let mockExistsSync: ReturnType<typeof vi.fn>;
   let mockReaddirSync: ReturnType<typeof vi.fn>;
   let mockReadFileSync: ReturnType<typeof vi.fn>;
+  const fsMocks = vi.hoisted(() => ({
+    existsSync: vi.fn(),
+    readdirSync: vi.fn(),
+    readFileSync: vi.fn(),
+  }));
 
   beforeEach(async () => {
     vi.resetModules();
 
     mockQueryWithRetry = vi.fn();
-    mockExistsSync = vi.fn();
-    mockReaddirSync = vi.fn();
-    mockReadFileSync = vi.fn();
+    mockExistsSync = fsMockFns.existsSync;
+    mockReaddirSync = fsMockFns.readdirSync;
+    mockReadFileSync = fsMockFns.readFileSync;
 
     vi.mock('node:fs', () => ({
-      existsSync: (...args: any[]) => mockExistsSync(...args),
-      readdirSync: (...args: any[]) => mockReaddirSync(...args),
-      readFileSync: (...args: any[]) => mockReadFileSync(...args),
+      existsSync: (...args: any[]) => fsMockFns.existsSync(...args),
+      readdirSync: (...args: any[]) => fsMockFns.readdirSync(...args),
+      readFileSync: (...args: any[]) => fsMockFns.readFileSync(...args),
       mkdirSync: vi.fn(),
     }));
 
@@ -308,14 +320,19 @@ describe('rollbackLastBatch', () => {
   let mockExistsSync: ReturnType<typeof vi.fn>;
   let mockReaddirSync: ReturnType<typeof vi.fn>;
   let mockReadFileSync: ReturnType<typeof vi.fn>;
+  const fsMocks = vi.hoisted(() => ({
+    existsSync: vi.fn(),
+    readdirSync: vi.fn(),
+    readFileSync: vi.fn(),
+  }));
 
   beforeEach(async () => {
     vi.resetModules();
 
     mockQueryWithRetry = vi.fn();
-    mockExistsSync = vi.fn();
-    mockReaddirSync = vi.fn();
-    mockReadFileSync = vi.fn();
+    mockExistsSync = fsMockFns.existsSync;
+    mockReaddirSync = fsMockFns.readdirSync;
+    mockReadFileSync = fsMockFns.readFileSync;
 
     vi.mock('node:fs', () => ({
       existsSync: (...args: any[]) => mockExistsSync(...args),
@@ -508,19 +525,24 @@ describe('dry-run mode', () => {
   let mockExistsSync: ReturnType<typeof vi.fn>;
   let mockReaddirSync: ReturnType<typeof vi.fn>;
   let mockReadFileSync: ReturnType<typeof vi.fn>;
+  const fsMocks = vi.hoisted(() => ({
+    existsSync: vi.fn(),
+    readdirSync: vi.fn(),
+    readFileSync: vi.fn(),
+  }));
 
   beforeEach(async () => {
     vi.resetModules();
 
     mockQueryWithRetry = vi.fn();
-    mockExistsSync = vi.fn();
-    mockReaddirSync = vi.fn();
-    mockReadFileSync = vi.fn();
+    mockExistsSync = fsMockFns.existsSync;
+    mockReaddirSync = fsMockFns.readdirSync;
+    mockReadFileSync = fsMockFns.readFileSync;
 
     vi.mock('node:fs', () => ({
-      existsSync: (...args: any[]) => mockExistsSync(...args),
-      readdirSync: (...args: any[]) => mockReaddirSync(...args),
-      readFileSync: (...args: any[]) => mockReadFileSync(...args),
+      existsSync: (...args: any[]) => fsMockFns.existsSync(...args),
+      readdirSync: (...args: any[]) => fsMockFns.readdirSync(...args),
+      readFileSync: (...args: any[]) => fsMockFns.readFileSync(...args),
       mkdirSync: vi.fn(),
     }));
 

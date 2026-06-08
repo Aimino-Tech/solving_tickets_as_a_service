@@ -1,7 +1,7 @@
 /**
  * STAS — Solving Tickets As A Service
  *
- * Entry point — starts the API server, the worker, or both based on RUN_MODE.
+ * Entry point — starts the API server, or both API and worker based on RUN_MODE.
  * Also starts the CI monitor if CI_MONITOR_ENABLED is true.
  *
  * ══════════════════════════════════════════════════════════════════════
@@ -12,14 +12,12 @@
  *
  * Usage:
  *   RUN_MODE=api    npm run dev    # API server only
- *   RUN_MODE=worker npm run dev    # Worker only
  *   RUN_MODE=both   npm run dev    # Both (default)
  *
  * ── Error Handling Audit ────────────────────────────────────────────
  * ✅ main() catch block logs error and exits with code 1
- * ✅ Graceful shutdown on SIGTERM/SIGINT (closes server, worker, Redis)
- * ✅ Server failure in 'both' mode logs and allows worker to continue
- * ✅ Worker failure in 'both' mode logs and allows server to continue
+ * ✅ Graceful shutdown on SIGTERM/SIGINT (closes server, Redis)
+ * ✅ Server failure in 'both' mode logs and allows to continue
  * ✅ Sentry initialized before all other code (top of import chain)
  * ✅ CI monitor failure logs warning (non-fatal)
  * ✅ CI monitor stopped on graceful shutdown
@@ -148,7 +146,7 @@ async function main(): Promise<void> {
 
   const mode = config.runMode;
 
-  // Graceful shutdown — closes server, worker, CI monitor, and exits
+  // Graceful shutdown — closes server, CI monitor, and exits
   const shutdown = async (signal: string) => {
     if (shutdownInProgress) return;
     shutdownInProgress = true;
@@ -163,16 +161,6 @@ async function main(): Promise<void> {
           resolve();
         });
       });
-    }
-
-    // Close worker if running
-    if (worker) {
-      try {
-        await worker.close();
-        log.info('Worker closed');
-      } catch (err) {
-        log.warn({ err: String(err) }, 'Error closing worker');
-      }
     }
 
     // Stop CI monitor if running
@@ -205,23 +193,6 @@ async function main(): Promise<void> {
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to start API server');
       if (mode === 'api') {
-        process.exit(1);
-      }
-    }
-  }
-
-  // Start worker
-  let worker: { close: () => Promise<void> } | undefined;
-  if (mode === 'worker' || mode === 'both') {
-    log.info('Starting worker...');
-    try {
-      const { createIssueWorker } = await import('./queue/issueQueue.js');
-      worker = createIssueWorker();
-      log.info('Worker started');
-      addBreadcrumb('system', 'Worker started');
-    } catch (err) {
-      log.error({ err: String(err) }, 'Failed to start worker');
-      if (mode === 'worker') {
         process.exit(1);
       }
     }

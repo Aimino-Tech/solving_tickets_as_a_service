@@ -297,26 +297,21 @@ The queue decouples webhook reception from agent execution, providing reliabilit
 
 ```mermaid
 flowchart TB
-    subgraph "Queue Backends (QUEUE_BACKEND)"
-        BULLMQ[BullMQ<br/>Redis-backed<br/>High-level features]
+    subgraph "Queue Backend (QUEUE_BACKEND=rabbitmq)"
         RABBITMQ[RabbitMQ<br/>AMQP-based<br/>Persistent delivery]
-        BOTH[Dual-Write Mode<br/>Both backends<br/>Comparison metrics]
     end
 
     subgraph "Features"
         DEDUP[Deduplication<br/>By issue ID + TTL]
-        PRIORITY[Priority Queueing<br/>Enterprise > Pro > Free]
         RETRY[Retry Strategy<br/>30s, 2m, 5m, 15m]
         DLQ[Dead-Letter Queue<br/>After max retries]
-        CONCUR[Per-Repo Concurrency<br/>Redis SET locks]
+        PROM[Prometheus Metrics<br/>Queue depth, lag, consumers]
     end
 
-    BULLMQ --> DEDUP
-    BULLMQ --> PRIORITY
-    BULLMQ --> RETRY
-    BULLMQ --> DLQ
-    BULLMQ --> CONCUR
+    RABBITMQ --> DEDUP
     RABBITMQ --> RETRY
+    RABBITMQ --> DLQ
+    RABBITMQ --> PROM
     RABBITMQ --> DLQ
 ```
 
@@ -662,7 +657,7 @@ Additional service directories:
 
 ### 4. Dual Queue Backends (BullMQ + RabbitMQ)
 
-**Decision**: Support BullMQ (Redis) and RabbitMQ as queue backends, with a dual-write migration mode.
+**Decision**: Use RabbitMQ as the sole queue backend. BullMQ was used initially but has been fully migrated to RabbitMQ + Celery.
 
 **Rationale**: BullMQ provides a rich feature set (deduplication, priority, delayed jobs) but ties you to Redis. RabbitMQ provides persistent delivery and cross-service bridging (e.g., to Python Celery workers). The `both` mode allows zero-downtime migration between backends.
 

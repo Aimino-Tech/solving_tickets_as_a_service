@@ -19,6 +19,7 @@ export const QUEUES = {
   sandbox: { name: 'stas.agents.sandbox', exchange: 'stas.agents', routingKey: 'sandbox' },
   verification: { name: 'stas.agents.verification', exchange: 'stas.agents', routingKey: 'verification' },
   notifications: { name: 'stas.events.notifications', exchange: 'stas.events', routingKey: 'notifications' },
+  prCreation: { name: 'stas.agents.pr_creation', exchange: 'stas.agents', routingKey: 'pr_creation' },
   audit: { name: 'stas.events.audit', exchange: 'stas.events', routingKey: 'audit' },
 } as const;
 

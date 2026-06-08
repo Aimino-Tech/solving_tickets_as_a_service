@@ -44,7 +44,6 @@ const { mockLoggerChild } = vi.hoisted(() => {
 });
 
 const mockEnqueueIssue = vi.hoisted(() => vi.fn().mockResolvedValue('job-mock-id'));
-const mockCreateIssueQueue = vi.hoisted(() => vi.fn().mockReturnValue({ add: vi.fn(), close: vi.fn() }));
 const mockVerifyAndReceive = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockCreateGithubWebhooks = vi.hoisted(() =>
   vi.fn().mockReturnValue({
@@ -93,14 +92,27 @@ vi.mock('../config.js', () => ({
       label: 'stas:fix',
       botName: 'STAS',
       devSkipWebhookVerify: false,
-      rateLimitWindowMs: 60000,
-      rateLimitMax: 30,
+      rateLimit: { windowMs: 60000, max: 30 },
+
       maxIssueComments: 15,
+    },
+    rabbitmq: {
+      url: 'amqp://localhost:5672/stas',
+      prefetchCount: 10,
+      reconnectDelayMs: 5000,
+      maxReconnectAttempts: 10,
+      tls: {
+        certPath: undefined,
+        keyPath: undefined,
+        caPath: undefined,
+        servername: undefined,
+        rejectUnauthorized: true,
+      },
     },
     queue: {
       redisUrl: 'redis://localhost:6379',
       workerConcurrency: 2,
-      backend: 'bullmq',
+      backend: 'rabbitmq',
       dedupTtl: 120,
       keepCompleted: 200,
       keepFailed: 100,
@@ -118,7 +130,22 @@ vi.mock('../config.js', () => ({
       model: 'test-model',
       fallbackModels: ['gpt-4o'],
     },
+    opencodeHealth: {
+      pollIntervalMs: 15000,
+      cacheTtlMs: 30000,
+      circuitBreakerThreshold: 3,
+      requestTimeoutMs: 5000,
+      startupTimeoutMs: 30000,
+    },
     e2b: { apiKey: 'test', templateId: 'test', sandboxTimeoutMs: 300000 },
+    docker: {
+      image: 'ubuntu:24.04',
+      sandboxTimeoutMs: 300000,
+      networkRestrict: true,
+      allowedHosts: ['api.github.com'],
+      containerMemory: '4g',
+      containerCpu: 2,
+    },
     openai: { apiKey: undefined, cheapModel: 'gpt-4o-mini' },
     slack: {
       webhookUrl: undefined,
@@ -134,10 +161,28 @@ vi.mock('../config.js', () => ({
       defaultRepoName: undefined,
       installationId: 0,
     },
+    security: {
+      corsOrigin: '*',
+      requestBodyLimit: '1mb',
+      webhookBodyLimit: '5mb',
+      cspReportUri: '/api/v1/csp-violation-report',
+      ipAllowlist: { enabled: false, ips: [] },
+      sandbox: {
+        privileged: false,
+        readOnlyRoot: true,
+        memoryLimit: '512m',
+        cpuLimit: '0.5',
+        pidsLimit: 256,
+        diskLimit: '2gb',
+        networkEnabled: false,
+      },
+    },
+    sentry: { dsn: undefined, environment: 'test', tracesSampleRate: 0.1 },
     stripe: { secretKey: undefined, webhookSecret: undefined },
     database: { url: 'postgres://localhost:5432/stas', poolMin: 2, poolMax: 10, ssl: false },
     fixTimeoutMs: 600000,
     featureFlags: { defaultTtlSeconds: 30, autoDisableThreshold: 0.05 },
+    webhookRetry: { pollIntervalMs: 15000, batchSize: 10 },
     metering: { freeMonthlyCredits: 100 },
     usageCredits: { fixRun: 50, triage: 10, sandbox: 5 },
   },
@@ -148,7 +193,6 @@ vi.mock('../utils/logger.js', () => ({
 }));
 
 vi.mock('../queue/issueQueue.js', () => ({
-  createIssueQueue: mockCreateIssueQueue,
   enqueueIssue: mockEnqueueIssue,
 }));
 
@@ -173,7 +217,10 @@ vi.mock('../stripe/index.js', () => ({
 }));
 
 vi.mock('../notifications/slack-bolt.js', () => ({
-  getSlackBoltApp: mockGetSlackBoltApp,
+  getSlackBoltApp: vi.fn().mockReturnValue({
+    mountOn: vi.fn(),
+    client: { conversations: { open: vi.fn(), invite: vi.fn() } },
+  }),
 }));
 
 vi.mock('../trackers/index.js', () => ({

@@ -65,67 +65,6 @@ export function mockOctokit(): MockOctokitInstance {
   };
 }
 
-// ── BullMQ ─────────────────────────────────────────────────────────────────
-
-export interface MockQueueInstance {
-  add: ReturnType<typeof vi.fn>;
-  close: ReturnType<typeof vi.fn>;
-  on: ReturnType<typeof vi.fn>;
-  getJob: ReturnType<typeof vi.fn>;
-  getJobs: ReturnType<typeof vi.fn>;
-  obliterate: ReturnType<typeof vi.fn>;
-}
-
-export interface MockWorkerInstance {
-  run: ReturnType<typeof vi.fn>;
-  close: ReturnType<typeof vi.fn>;
-  on: ReturnType<typeof vi.fn>;
-  pause: ReturnType<typeof vi.fn>;
-  resume: ReturnType<typeof vi.fn>;
-}
-
-/**
- * Create a mocked BullMQ Queue class.
- */
-export function mockBullMQQueue(queueName?: string): MockQueueInstance {
-  return {
-    add: vi.fn().mockResolvedValue({ id: 'mock-job-id', name: queueName ?? 'stas-issues' }),
-    close: vi.fn().mockResolvedValue(undefined),
-    on: vi.fn().mockReturnThis(),
-    getJob: vi.fn().mockResolvedValue(null),
-    getJobs: vi.fn().mockResolvedValue([]),
-    obliterate: vi.fn().mockResolvedValue(undefined),
-  };
-}
-
-/**
- * Create a mocked BullMQ Worker class.
- */
-export function mockBullMQWorker(): MockWorkerInstance {
-  return {
-    run: vi.fn(),
-    close: vi.fn().mockResolvedValue(undefined),
-    on: vi.fn().mockReturnThis(),
-    pause: vi.fn().mockResolvedValue(undefined),
-    resume: vi.fn().mockResolvedValue(undefined),
-  };
-}
-
-export interface MockQueueEventsInstance {
-  on: ReturnType<typeof vi.fn>;
-  close: ReturnType<typeof vi.fn>;
-}
-
-/**
- * Create a mocked BullMQ QueueEvents instance.
- */
-export function mockBullMQQueueEvents(): MockQueueEventsInstance {
-  return {
-    on: vi.fn().mockReturnThis(),
-    close: vi.fn().mockResolvedValue(undefined),
-  };
-}
-
 // ── E2B Sandbox ────────────────────────────────────────────────────────────
 
 export interface MockE2BSandboxInstance {
