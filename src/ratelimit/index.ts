@@ -6,6 +6,8 @@
  *   - Tier-aware limits (Free / Pro / Enterprise)
  *   - Per-account concurrency manager
  *   - Express middleware for enforcing limits and adding headers
+ *   - Centralized, config-driven rate limit tiers for all route groups
+ *   - Prometheus metrics for rate limit hits/blocks
  *
  * Usage:
  *   ```ts
@@ -49,5 +51,17 @@ export type { ConcurrencyResult, ConcurrencyManagerOptions } from './concurrency
 export {
   rateLimitMiddleware,
   addRateLimitHeaders,
+  createRateLimiter,
 } from './middleware.js';
 export type { RateLimitMiddlewareOptions } from './middleware.js';
+
+export { DEFAULT_RATE_LIMIT_TIERS, TIER_DEFAULTS } from './config.js';
+export type { RateLimitTierConfig, RateLimitTierName } from './config.js';
+
+export {
+  recordRateLimitDecision,
+  recordRateLimitBlock,
+  recordRateLimitAllow,
+  renderRateLimitMetrics,
+  resetRateLimitMetrics,
+} from './metrics.js';
