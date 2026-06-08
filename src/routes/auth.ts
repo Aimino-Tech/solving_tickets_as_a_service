@@ -44,7 +44,7 @@ router.get('/callback', async (req: Request, res: Response) => {
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
         client_id: process.env.GITHUB_OAUTH_CLIENT_ID || '',
-        client_secret: '',
+        client_secret: process.env.GITHUB_OAUTH_CLIENT_SECRET || '',
         code,
       }),
     });
