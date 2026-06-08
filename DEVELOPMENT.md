@@ -1,5 +1,39 @@
 # Development & Deployment Guide
 
+## Quick Setup
+
+Get your development environment running with a single command:
+
+```bash
+# One-command setup — checks prerequisites, installs dependencies, creates .env
+npm run setup
+
+# Validate your environment at any time
+npm run doctor
+```
+
+The `setup` script will:
+1. Check for required tools (Node.js 20+, npm 10+, Python 3.12+, Docker, git)
+2. Install Node.js dependencies (`npm install`)
+3. Generate a `.env` file with development defaults
+4. Optionally start Docker services (Redis, RabbitMQ)
+5. Create a Python virtual environment and install worker dependencies
+6. Validate GitHub App credentials (if configured)
+
+The `doctor` script validates your full environment:
+1. Checks all required tools and their versions
+2. Tests service connectivity (Redis, PostgreSQL, RabbitMQ, OpenCode)
+3. Validates `.env` configuration
+4. Checks for port conflicts
+5. Reports system resources (disk, memory)
+
+> **Tip**: Run `npm run doctor` before filing a bug report — it helps diagnose common issues.
+
+---
+
+## Overview
+
+
 ## Overview
 
 STAS can be deployed in several ways depending on your needs:
