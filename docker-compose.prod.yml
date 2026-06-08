@@ -68,7 +68,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: stas-postgres
-    <<: *default-restart
+    restart: "no"
     ports:
       - "5432:5432"
     environment:
@@ -89,7 +89,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: stas-redis
-    <<: *default-restart
+    restart: "no"
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes --appendfsync everysec --auto-aof-rewrite-percentage 100 --auto-aof-rewrite-min-size 64mb
@@ -107,7 +107,7 @@ services:
   rabbitmq:
     image: rabbitmq:4-management-alpine
     container_name: stas-rabbitmq
-    <<: *default-restart
+    restart: "no"
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -132,7 +132,7 @@ services:
       dockerfile: Dockerfile
     image: stas-webhook:latest
     container_name: stas-webhook
-    <<: *default-restart
+    restart: "no"
     ports:
       - "3000:3000"
     env_file: .env
@@ -171,7 +171,7 @@ services:
       dockerfile: Dockerfile
     image: stas-worker:latest
     container_name: stas-worker
-    <<: *default-restart
+    restart: "no"
     command: celery -A workers.celery_app worker -l info -Q stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications --concurrency=4
     env_file: .env
     environment:
@@ -204,7 +204,7 @@ services:
   celery-beat:
     image: stas-worker:latest
     container_name: stas-celery-beat
-    <<: *default-restart
+    restart: "no"
     command: celery -A workers.celery_app beat -l info
     env_file: .env
     environment:
@@ -230,7 +230,7 @@ services:
   flower:
     image: mher/flower:latest
     container_name: stas-flower
-    <<: *default-restart
+    restart: "no"
     ports:
       - "5555:5555"
     command: flower --port=5555 --broker=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
@@ -254,7 +254,7 @@ services:
   nginx:
     image: nginx:alpine
     container_name: stas-nginx
-    <<: *default-restart
+    restart: "no"
     ports:
       - "80:80"
       - "443:443"
@@ -278,7 +278,7 @@ services:
       dockerfile: Dockerfile
     image: stas-dashboard:latest
     container_name: stas-dashboard
-    <<: *default-restart
+    restart: "no"
     ports:
       - "5173:80"
     env_file: .env
@@ -304,7 +304,7 @@ services:
   certbot:
     image: certbot/certbot:latest
     container_name: stas-certbot
-    <<: *default-restart
+    restart: "no"
     entrypoint: ""
     command: >
       sh -c "
@@ -329,7 +329,7 @@ services:
   stas-backup:
     image: stas-webhook:latest
     container_name: stas-backup
-    <<: *default-restart
+    restart: "no"
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -358,11 +358,11 @@ services:
   nginx-setup:
     image: nginx:alpine
     container_name: stas-nginx-setup
-    <<: *default-restart
+    restart: "no"
     entrypoint: >
       sh -c "
         apk add --no-cache apache2-utils &&
-        echo '${FLOWER_USER:-admin}:$$(echo '${FLOWER_PASSWORD:-stas-flower-admin}' | openssl passwd -apr1 -stdin)' > /etc/nginx/.htpasswd &&
+        htpasswd -b -c /etc/nginx/.htpasswd '${FLOWER_USER:-admin}' '${FLOWER_PASSWORD:-stas-flower-admin}' &&
         echo 'htpasswd generated'
       "
     volumes:
