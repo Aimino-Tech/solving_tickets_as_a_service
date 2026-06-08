@@ -86,7 +86,7 @@ export class ActionDispatcher {
       try {
         const diffResult = await sandbox.exec(
           // biome-ignore lint/suspicious/noExplicitAny: private field access needed
-          `git -C ${(sandbox as any).repoDir || `/home/user/${repoName}`} diff --name-only origin/${baseBranch}...${branchName} 2>/dev/null || true`,
+          `git -C ${(sandbox as { repoDir?: string }).repoDir || `/home/user/${repoName}`} diff --name-only origin/${baseBranch}...${branchName} 2>/dev/null || true`,
         );
         changedFiles = diffResult.stdout.split('\n').filter(Boolean);
       } catch (err) {

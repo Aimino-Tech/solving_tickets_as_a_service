@@ -23,6 +23,11 @@ import { queryWithRetry } from '../db/connection.js';
 import { getPlanByPriceId } from './plans.js';
 import type { PlanId } from './plans.js';
 
+
+interface StripeSubscriptionWithPeriod extends Stripe.Subscription {
+  current_period_start: number;
+  current_period_end: number;
+}
 const log = rootLogger.child({ module: 'billing-webhook' });
 
 // ---------------------------------------------------------------------------
@@ -167,8 +172,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
     return;
   }
 
-  const currentPeriodStart = new Date((subscription as any).current_period_start * 1000);
-  const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+  const subWithPeriod = subscription as StripeSubscriptionWithPeriod;
+  const currentPeriodStart = new Date(subWithPeriod.current_period_start * 1000);
+  const currentPeriodEnd = new Date(subWithPeriod.current_period_end * 1000);
   const customerId = subscription.customer?.toString() ?? session.customer?.toString() ?? '';
 
   log.info(
@@ -211,7 +217,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
  * Handle `invoice.paid` — update billing period dates.
  */
 async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
-  const subscriptionId = (invoice as any).subscription?.toString();
+  const subscriptionId = (invoice as { subscription?: unknown }).subscription?.toString();
   if (!subscriptionId) {
     log.warn({ invoiceId: invoice.id }, 'Invoice paid but no subscription ID');
     return;
@@ -227,8 +233,9 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
     return;
   }
 
-  const currentPeriodStart = new Date((subscription as any).current_period_start * 1000);
-  const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+  const subWithPeriod = subscription as StripeSubscriptionWithPeriod;
+  const currentPeriodStart = new Date(subWithPeriod.current_period_start * 1000);
+  const currentPeriodEnd = new Date(subWithPeriod.current_period_end * 1000);
 
   log.info(
     {
@@ -263,8 +270,9 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
   const plan = getPlanByPriceId(priceId);
   const planId = plan?.id ?? 'free';
   const status = subscription.status === 'active' ? 'active' : subscription.status === 'past_due' ? 'past_due' : 'canceled';
-  const currentPeriodStart = new Date((subscription as any).current_period_start * 1000);
-  const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+  const subWithPeriod = subscription as StripeSubscriptionWithPeriod;
+  const currentPeriodStart = new Date(subWithPeriod.current_period_start * 1000);
+  const currentPeriodEnd = new Date(subWithPeriod.current_period_end * 1000);
 
   log.info(
     {

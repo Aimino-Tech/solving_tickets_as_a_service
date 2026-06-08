@@ -130,7 +130,7 @@ export function jwtAuth(req: Request, res: Response, next: NextFunction): void {
     return;
   }
 
-  (req as any).user = {
+  (req as Record<string, unknown>).user = {
     githubId: payload.sub,
     username: payload.username,
     avatarUrl: payload.avatar_url,
@@ -146,7 +146,7 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
     const token = authHeader.slice(7);
     const payload = verifyJwt(token);
     if (payload) {
-      (req as any).user = {
+      (req as Record<string, unknown>).user = {
         githubId: payload.sub,
         username: payload.username,
         avatarUrl: payload.avatar_url,
