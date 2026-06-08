@@ -36,6 +36,7 @@ import 'dotenv/config';
 import type { Server } from 'node:http';
 import { config } from './config.js';
 import { startScheduledTasks, stopScheduledTasks } from './health/scheduled.js';
+import { opencodeHealth } from './health/opencodeHealth.js';
 import { rootLogger } from './utils/logger.js';
 import { addBreadcrumb } from './monitoring/sentry.js';
 
@@ -68,14 +69,31 @@ async function validateStartupHealth(): Promise<void> {
     checks.push({ name: 'redis', ok: false, error: String(err) });
   }
 
-  // Check OpenCode endpoint
-  try {
-    const response = await fetch(config.opencode.url + '/health', {
-      signal: AbortSignal.timeout(5000),
-    });
-    checks.push({ name: 'opencode', ok: response.ok, error: response.ok ? undefined : `HTTP ${response.status}` });
-  } catch (err) {
-    checks.push({ name: 'opencode', ok: false, error: String(err) });
+  // Check OpenCode endpoint (with configurable startup timeout)
+  // The opencodeHealth client must already be started (start() called in main())
+  const startupTimeoutMs = config.opencodeHealth.startupTimeoutMs;
+  const pollInterval = 2000; // poll every 2s
+  const deadline = Date.now() + startupTimeoutMs;
+  let opencodeOk = false;
+  let opencodeError: string | undefined;
+  while (Date.now() < deadline) {
+    const status = opencodeHealth.getStatus();
+    if (status.status === 'healthy') {
+      opencodeOk = true;
+      break;
+    }
+    opencodeError = `status=${status.status}, circuit=${status.circuit}, failures=${status.consecutiveFailures}`;
+    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    await opencodeHealth.checkNow().catch(() => {});
+  }
+  if (opencodeOk) {
+    checks.push({ name: 'opencode', ok: true });
+  } else {
+    log.warn(
+      { timeoutMs: startupTimeoutMs, error: opencodeError },
+      'OpenCode did not become healthy within startup timeout -- continuing without',
+    );
+    checks.push({ name: 'opencode', ok: false, error: opencodeError ?? 'timeout' });
   }
 
   // Check E2B if configured
@@ -107,6 +125,9 @@ async function validateStartupHealth(): Promise<void> {
 
 async function main(): Promise<void> {
   log.info({ runMode: config.runMode, nodeEnv: config.nodeEnv }, 'Starting STAS');
+
+  // Start the OpenCode health client (begins polling OpenCode serve immediately)
+  opencodeHealth.start();
 
   // Run startup health validation (non-fatal — log warnings, don't block)
   validateStartupHealth().catch((err) => {
@@ -166,6 +187,9 @@ async function main(): Promise<void> {
 
     // Stop scheduled maintenance tasks
     stopScheduledTasks();
+
+    // Stop OpenCode health client polling
+    opencodeHealth.stop();
 
     process.exit(0);
   };
