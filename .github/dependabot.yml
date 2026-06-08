@@ -1,0 +1,168 @@
+# =============================================================================
+# STAS Dependabot Configuration
+#
+# Automates dependency updates for npm (Node.js/TypeScript) and pip (Python)
+# ecosystems. Separate PRs for dev vs runtime dependencies.
+#
+# Schedule: Weekly updates on Monday morning UTC
+# =============================================================================
+
+version: 2
+updates:
+  # ---------------------------------------------------------------------------
+  # npm — Runtime dependencies (production deps)
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    versioning-strategy: "increase"
+    allow:
+      - dependency-type: "production"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "npm"
+      - "runtime"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "tamnguyen08"
+    groups:
+      express-ecosystem:
+        patterns:
+          - "express*"
+          - "@types/express*"
+          - "cors"
+          - "@types/cors"
+          - "helmet"
+        update-types:
+          - "patch"
+          - "minor"
+      octokit-ecosystem:
+        patterns:
+          - "@octokit/*"
+        update-types:
+          - "patch"
+          - "minor"
+      database:
+        patterns:
+          - "drizzle-orm"
+          - "drizzle-kit"
+          - "pg"
+          - "@types/pg"
+          - "better-sqlite3"
+          - "@types/better-sqlite3"
+          - "ioredis"
+        update-types:
+          - "patch"
+          - "minor"
+
+  # ---------------------------------------------------------------------------
+  # npm — Dev dependencies
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    versioning-strategy: "increase-if-necessary"
+    allow:
+      - dependency-type: "development"
+    commit-message:
+      prefix: "chore(deps-dev)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "npm"
+      - "dev"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "tamnguyen08"
+    groups:
+      typescript-ecosystem:
+        patterns:
+          - "typescript"
+          - "tsx"
+          - "@types/*"
+        update-types:
+          - "patch"
+          - "minor"
+      testing:
+        patterns:
+          - "vitest*"
+          - "@vitest/*"
+        update-types:
+          - "patch"
+          - "minor"
+      tooling:
+        patterns:
+          - "@biomejs/*"
+          - "smee-client"
+          - "drizzle-kit"
+          - "pino-pretty"
+        update-types:
+          - "patch"
+          - "minor"
+
+  # ---------------------------------------------------------------------------
+  # pip — Python workers dependencies
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "pip"
+    directory: "/workers"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    commit-message:
+      prefix: "chore(deps-python)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "tamnguyen08"
+    groups:
+      python-framework:
+        patterns:
+          - "celery*"
+          - "flower"
+          - "pydantic*"
+        update-types:
+          - "patch"
+          - "minor"
+      python-http:
+        patterns:
+          - "httpx"
+          - "requests"
+          - "openai"
+        update-types:
+          - "patch"
+          - "minor"
+
+  # ---------------------------------------------------------------------------
+  # GitHub Actions — Keep CI/CD workflows up to date
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    commit-message:
+      prefix: "chore(actions)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    open-pull-requests-limit: 5
