@@ -67,6 +67,13 @@ const envSchema = z.object({
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
+ 
+  // OpenCode Health Check
+  OPENCODE_HEALTH_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
+  OPENCODE_HEALTH_CACHE_TTL_MS: z.coerce.number().int().positive().default(30000),
+  OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(3),
+  OPENCODE_HEALTH_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+  OPENCODE_HEALTH_STARTUP_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
 
   // Timeouts
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
@@ -315,6 +322,14 @@ function buildConfig(env: ParsedEnv) {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
+    },
+
+    opencodeHealth: {
+      pollIntervalMs: env.OPENCODE_HEALTH_POLL_INTERVAL_MS,
+      cacheTtlMs: env.OPENCODE_HEALTH_CACHE_TTL_MS,
+      circuitBreakerThreshold: env.OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD,
+      requestTimeoutMs: env.OPENCODE_HEALTH_REQUEST_TIMEOUT_MS,
+      startupTimeoutMs: env.OPENCODE_HEALTH_STARTUP_TIMEOUT_MS,
     },
 
     gitlab: {
