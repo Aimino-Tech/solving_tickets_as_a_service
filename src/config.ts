@@ -225,8 +225,8 @@ const envSchema = z.object({
   ALERT_SLACK_CHANNEL: z.string().default('#stas-alerts'),
   ALERT_WARN_QUEUE_DEPTH: z.coerce.number().int().positive().default(50),
   ALERT_CRIT_QUEUE_DEPTH: z.coerce.number().int().positive().default(200),
-  ALERT_WARN_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(10),
-  ALERT_CRIT_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(30),
+  ALERT_WARN_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(5),
+  ALERT_CRIT_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(20),
   // Metering / Usage Tracking
   METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
   METERING_COST_OPENCODE_PRIMARY: z.coerce.number().int().positive().default(10),
