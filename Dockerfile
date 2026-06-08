@@ -16,6 +16,11 @@ COPY tsconfig.json ./
 COPY src/ ./src/
 RUN npm run build
 
+# Build dashboard (if it exists)
+COPY dashboard/package.json dashboard/package-lock.json ./dashboard/
+COPY dashboard/ ./dashboard/
+RUN cd dashboard && npm ci --ignore-scripts && npm run build
+
 # Prune dev dependencies (keep only what's needed at runtime)
 RUN npm prune --production
 
@@ -37,6 +42,7 @@ WORKDIR /app
 COPY --from=build --chown=stas:stas /app/dist ./dist
 COPY --from=build --chown=stas:stas /app/node_modules ./node_modules
 COPY --from=build --chown=stas:stas /app/package.json ./
+COPY --from=build --chown=stas:stas /app/dashboard/dist ./dashboard/dist
 
 USER stas
 
