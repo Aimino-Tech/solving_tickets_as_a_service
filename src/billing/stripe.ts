@@ -68,8 +68,8 @@ export function getStripeClient(): Stripe {
         503,
       );
     }
-    _stripe = new Stripe(secretKey, {
-      apiVersion: '2025-02-24.acacia' as any,
+    _stripe = new (Stripe as unknown as { new(key: string, config?: Record<string, unknown>): Stripe })(secretKey, {
+      apiVersion: '2025-02-24.acacia',
       typescript: true,
     });
   }

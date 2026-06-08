@@ -31,6 +31,11 @@ import { accountsRepository } from '../db/repositories/AccountsRepository.js';
 import { createSlackNotifier } from '../notifications/index.js';
 import { CREDIT_PACKS } from './credit-packs.js';
 
+interface StripeSubscriptionWithPeriod extends Stripe.Subscription {
+  current_period_start: number;
+  current_period_end: number;
+}
+
 const log = rootLogger.child({ module: 'stripe-webhook' });
 
 /**
@@ -44,8 +49,8 @@ function getStripe(): Stripe {
     if (!secretKey) {
       throw new Error('STRIPE_SECRET_KEY is not configured.');
     }
-    _stripe = new Stripe(secretKey, {
-      apiVersion: '2025-02-24.acacia' as any,
+    _stripe = new (Stripe as unknown as { new(key: string, config?: Record<string, unknown>): Stripe })(secretKey, {
+      apiVersion: '2025-02-24.acacia',
       typescript: true,
     });
   }
@@ -340,6 +345,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
   const customerId = subscription.customer;
   const priceId = subscription.items.data[0]?.price?.id ?? '';
   const planNickname = subscription.items.data[0]?.price?.nickname ?? 'unknown';
+  const sub = subscription as StripeSubscriptionWithPeriod;
 
   log.info(
     {
@@ -348,8 +354,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
       status: subscription.status,
       plan: planNickname,
       priceId,
-      currentPeriodStart: new Date((subscription as any).current_period_start * 1000).toISOString(),
-      currentPeriodEnd: new Date((subscription as any).current_period_end * 1000).toISOString(),
+      currentPeriodStart: new Date(sub.current_period_start * 1000).toISOString(),
+      currentPeriodEnd: new Date(sub.current_period_end * 1000).toISOString(),
     },
     'Subscription updated - syncing billing plan',
   );
@@ -389,11 +395,11 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
         ? 'past_due'
         : 'canceled';
 
-    const currentPeriodStart = new Date((subscription as any).current_period_start * 1000);
-    const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+    const currentPeriodStart = new Date(sub.current_period_start * 1000);
+    const currentPeriodEnd = new Date(sub.current_period_end * 1000);
 
     await billingRepository.update(billing.accountId, {
-      plan: planId as any,
+      plan: planId,
       status,
       currentPeriodStart,
       currentPeriodEnd,

@@ -19,7 +19,7 @@
  * ───────────────────────────────────────────────────────────────────
  */
 
-import { connect, type Channel, type Connection, type ConsumeMessage } from 'amqplib';
+import { connect, type Channel, type ChannelModel, type ConsumeMessage } from 'amqplib';
 import { EventEmitter } from 'node:events';
 import { randomUUID, createHash } from 'node:crypto';
 import { Redis } from 'ioredis';
@@ -200,7 +200,7 @@ export interface BridgeOptions {
  *   - Redis/local fallback when RabbitMQ is down
  */
 export class CrossServiceBridge {
-  private connection: Connection | null = null;
+  private connection: ChannelModel | null = null;
   private channel: Channel | null = null;
   private readonly options: Required<BridgeOptions>;
   private shutdownInitiated = false;
@@ -267,15 +267,15 @@ export class CrossServiceBridge {
     if (this.shutdownInitiated) return;
 
     try {
-      this.connection = (await connect(this.options.url)) as unknown as Connection;
+      this.connection = await connect(this.options.url);
 
-      (this.connection as any).on('error', (err: unknown) => {
+      this.connection.on('error', (err: unknown) => {
         log.error({ err: String(err) }, 'Bridge RabbitMQ connection error');
         this.emitter.emit('disconnected');
         this.scheduleReconnect();
       });
 
-      (this.connection as any).on('close', () => {
+      this.connection.on('close', () => {
         log.warn('Bridge RabbitMQ connection closed');
         this.connection = null;
         this.channel = null;
@@ -285,7 +285,7 @@ export class CrossServiceBridge {
         }
       });
 
-      this.channel = await (this.connection as any).createChannel();
+      this.channel = await this.connection.createChannel();
       await this.channel!.prefetch(this.options.prefetchCount);
       await this.declareTopology();
 
@@ -834,7 +834,7 @@ export class CrossServiceBridge {
 
     try {
       if (this.connection) {
-        await (this.connection as any).close();
+        await this.connection.close();
       }
     } catch {
       // non-fatal
