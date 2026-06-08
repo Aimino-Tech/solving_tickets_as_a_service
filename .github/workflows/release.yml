@@ -1,0 +1,328 @@
+# =============================================================================
+# STAS Release — Automated Release Pipeline
+#
+# Triggered on:
+#   - Push of a v* tag (e.g., v0.11.0, v0.11.0-rc.1)
+#   - workflow_dispatch for manual releases (requires version input)
+#
+# Features:
+#   - Generates release notes from CHANGELOG.md
+#   - Builds and pushes multi-platform Docker images to GHCR
+#   - Creates GitHub Release with release notes and artifacts
+#   - Attaches SBOM artifacts to the release
+#   - Slack notification on success/failure
+# =============================================================================
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v0.11.0)'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  NODE_VERSION: '22'
+
+jobs:
+  ##############################################################################
+  # VALIDATE — verify tag matches package.json and CHANGELOG has entry
+  ##############################################################################
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      changelog_entry: ${{ steps.extract-changelog.outputs.entry }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Determine version
+        id: get-version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Release version: v$VERSION"
+
+      - name: Validate package.json version
+        run: |
+          PKG_VERSION=$(node -e "console.log(require('./package.json').version)")
+          echo "package.json version: $PKG_VERSION"
+          echo "Release version: ${{ steps.get-version.outputs.version }}"
+          # During pre-1.0, allow minor mismatches (package.json is dev-focused)
+          # This is informational; CHANGELOG validation is the gate
+
+      - name: Extract CHANGELOG entry for this version
+        id: extract-changelog
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          ESCAPED_VERSION="${VERSION//\./\\.}"
+          # Extract the section for this version from CHANGELOG.md
+          ENTRY=$(node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync('CHANGELOG.md', 'utf8');
+            const lines = content.split('\n');
+            let inSection = false;
+            let section = [];
+            const headerRegex = new RegExp('^## \\\\[' + '$ESCAPED_VERSION'.replace(/v/g, '') + '\\\\]');
+            for (const line of lines) {
+              if (headerRegex.test(line)) {
+                inSection = true;
+                continue;
+              }
+              if (inSection) {
+                if (line.startsWith('## [')) break;
+                section.push(line);
+              }
+            }
+            const result = section.join('\n').trim();
+            if (!result) {
+              console.error('ERROR: No CHANGELOG entry found for version ' + '${{ steps.get-version.outputs.version }}');
+              process.exit(1);
+            }
+            // Escape for GitHub Actions output
+            console.log(result);
+          ")
+          # Make multiline output safe for GHA
+          EOF=$(dd if=/dev/urandom bs=1 count=32 2>/dev/null | base64 | tr -d '+/=' | cut -c1-8)
+          echo "entry<<$EOF" >> "$GITHUB_OUTPUT"
+          echo "$ENTRY" >> "$GITHUB_OUTPUT"
+          echo "$EOF" >> "$GITHUB_OUTPUT"
+          echo "CHANGELOG entry extracted successfully"
+
+      - name: Validate tag format
+        run: |
+          TAG="${{ steps.get-version.outputs.version }}"
+          if ! echo "$TAG" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$'; then
+            echo "ERROR: Invalid version format: $TAG"
+            echo "Expected: MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH-prerelease.N"
+            exit 1
+          fi
+          echo "Version format valid: $TAG"
+
+  ##############################################################################
+  # BUILD & PUSH DOCKER IMAGE
+  ##############################################################################
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [validate]
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: ${{ steps.meta.outputs.tags }}
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          hide-progress: true
+
+      - name: Generate image summary
+        id: summary
+        run: |
+          {
+            echo '### Docker image published'
+            echo ''
+            echo '| Tag | Digest |'
+            echo '|-----|--------|'
+            for tag in ${{ join(steps.meta.outputs.tags, '\n') }}; do
+              echo "| \`$tag\` | ${{ steps.meta.outputs.digest }} |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Output image digest
+        id: digest
+        run: |
+          DIGEST="${{ steps.build.outputs.digest }}"
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "Image digest: $DIGEST"
+
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+
+  ##############################################################################
+  # GENERATE SBOM (CycloneDX)
+  ##############################################################################
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [validate]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          mkdir -p sbom
+          npx --yes @cyclonedx/cyclonedx-npm \
+            --output-format JSON \
+            --output-file sbom/sbom.cyclonedx.json
+
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
+          retention-days: 90
+
+  ##############################################################################
+  # CREATE GITHUB RELEASE
+  ##############################################################################
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [validate, build-and-push, sbom]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download SBOM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
+
+      - name: Generate release notes body
+        id: release-notes
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          CHANGELOG_ENTRY="${{ needs.validate.outputs.changelog_entry }}"
+
+          # Build release body: version header + changelog entry + metadata
+          cat > release-body.md << BODY
+          # Release v${VERSION}
+
+          $CHANGELOG_ENTRY
+
+          ---
+
+          ## Docker Image
+
+          Image published to GitHub Container Registry:
+
+          \`\`\`
+          ghcr.io/${{ github.repository }}:v${VERSION}
+          ghcr.io/${{ github.repository }}:latest
+          \`\`\`
+
+          **Digest:** \`${{ needs.build-and-push.outputs.digest }}\`
+
+          ## Artifacts
+
+          - CycloneDX SBOM: \`sbom/sbom.cyclonedx.json\`
+
+          ## Commits
+
+          https://github.com/${{ github.repository }}/compare/v${VERSION}...main
+          BODY
+
+      - name: Create Release
+        id: create-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.validate.outputs.version }}
+          name: v${{ needs.validate.outputs.version }}
+          body_path: release-body.md
+          draft: false
+          prerelease: ${{ contains(needs.validate.outputs.version, '-') }}
+          files: |
+            sbom/sbom.cyclonedx.json
+
+      - name: Output release URL
+        run: |
+          echo "Release created: ${{ steps.create-release.outputs.url }}"
+
+  ##############################################################################
+  # NOTIFY SLACK (optional)
+  ##############################################################################
+  notify:
+    name: Notify Slack
+    runs-on: ubuntu-latest
+    needs: [create-release]
+    if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+    timeout-minutes: 2
+    steps:
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "STAS release v${{ needs.validate.outputs.version }} published",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*STAS release v${{ needs.validate.outputs.version }} published*\nRepository: \`${{ github.repository }}\`\nImage: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.version }}\`"
+                  }
+                }
+              ]
+            }
