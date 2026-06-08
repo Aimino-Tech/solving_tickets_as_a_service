@@ -44,7 +44,6 @@ const { mockLoggerChild } = vi.hoisted(() => {
 });
 
 const mockEnqueueIssue = vi.hoisted(() => vi.fn().mockResolvedValue('job-mock-id'));
-const mockCreateIssueQueue = vi.hoisted(() => vi.fn().mockReturnValue({ add: vi.fn(), close: vi.fn() }));
 const mockVerifyAndReceive = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockCreateGithubWebhooks = vi.hoisted(() =>
   vi.fn().mockReturnValue({
@@ -113,7 +112,7 @@ vi.mock('../config.js', () => ({
     queue: {
       redisUrl: 'redis://localhost:6379',
       workerConcurrency: 2,
-      backend: 'bullmq',
+      backend: 'rabbitmq',
       dedupTtl: 120,
       keepCompleted: 200,
       keepFailed: 100,
@@ -194,7 +193,6 @@ vi.mock('../utils/logger.js', () => ({
 }));
 
 vi.mock('../queue/issueQueue.js', () => ({
-  createIssueQueue: mockCreateIssueQueue,
   enqueueIssue: mockEnqueueIssue,
 }));
 

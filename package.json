@@ -82,7 +82,6 @@
     "@slack/bolt": "^4.7.3",
     "amqplib": "^0.10.5",
     "better-sqlite3": "^11.10.0",
-    "bullmq": "^5.78.0",
     "cors": "^2.8.6",
     "dotenv": "^16.4.0",
     "drizzle-orm": "^0.38.4",

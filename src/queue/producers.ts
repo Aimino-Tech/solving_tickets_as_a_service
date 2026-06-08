@@ -247,3 +247,121 @@ export async function closeProducers(): Promise<void> {
     redis = null;
   }
 }
+
+/**
+ * Publish a verification job to the stas.agents.verification queue.
+ *
+ * @param data - The verification data (sandbox_id, test_command).
+ * @param options - Optional correlationId, replyTo, and retryCount.
+ * @returns true if the message was published, false if deduplicated or failed.
+ */
+export async function publishVerificationJob(
+  data: import('../utils/types.js').VerificationData,
+  options?: { correlationId?: string; replyTo?: string; retryCount?: number },
+): Promise<boolean> {
+  const dedupKey = `verification:${data.sandboxId}`;
+
+  // Dedup check
+  if (await isDuplicate(dedupKey)) {
+    log.info({ sandboxId: data.sandboxId, dedupKey }, 'Verification job is a duplicate — skipping');
+    return false;
+  }
+
+  // Ensure RabbitMQ connection
+  if (!(await ensureConnected())) {
+    log.warn({ sandboxId: data.sandboxId }, 'RabbitMQ unavailable — verification job not published');
+    return false;
+  }
+
+  const envelope = createEnvelope('verification', data, options?.correlationId, options?.replyTo);
+  const publishOptions = buildPublishOptions(options);
+
+  const published = await publish('stas.agents', 'verification', envelope, publishOptions);
+
+  if (published) {
+    log.info({ sandboxId: data.sandboxId, messageId: envelope.messageId }, 'Verification job published to RabbitMQ');
+  } else {
+    log.warn({ sandboxId: data.sandboxId, messageId: envelope.messageId }, 'Verification job publish returned false');
+  }
+
+  return published;
+}
+
+/**
+ * Publish a PR creation job to the stas.agents.pr_creation queue.
+ *
+ * @param data - The PR creation data (repo info, branch, fix summary).
+ * @param options - Optional correlationId, replyTo, and retryCount.
+ * @returns true if the message was published, false if deduplicated or failed.
+ */
+export async function publishPRCreationJob(
+  data: import('../utils/types.js').PRCreationData,
+  options?: { correlationId?: string; replyTo?: string; retryCount?: number },
+): Promise<boolean> {
+  const repo = `${data.repoOwner}/${data.repoName}`;
+  const dedupKey = `pr:${data.installationId}:${repo}#${data.issueNumber}`;
+
+  // Dedup check
+  if (await isDuplicate(dedupKey)) {
+    log.info({ repo, issueNumber: data.issueNumber, dedupKey }, 'PR creation job is a duplicate — skipping');
+    return false;
+  }
+
+  // Ensure RabbitMQ connection
+  if (!(await ensureConnected())) {
+    log.warn({ repo, issueNumber: data.issueNumber }, 'RabbitMQ unavailable — PR creation job not published');
+    return false;
+  }
+
+  const envelope = createEnvelope('pr_creation', data, options?.correlationId, options?.replyTo);
+  const publishOptions = buildPublishOptions(options);
+
+  const published = await publish('stas.agents', 'pr_creation', envelope, publishOptions);
+
+  if (published) {
+    log.info({ repo, issueNumber: data.issueNumber, messageId: envelope.messageId }, 'PR creation job published to RabbitMQ');
+  } else {
+    log.warn({ repo, issueNumber: data.issueNumber, messageId: envelope.messageId }, 'PR creation job publish returned false');
+  }
+
+  return published;
+}
+
+/**
+ * Publish a notification job to the stas.events.notifications queue.
+ *
+ * @param data - The notification data (channel, message, severity).
+ * @param options - Optional correlationId, replyTo, and retryCount.
+ * @returns true if the message was published, false if deduplicated or failed.
+ */
+export async function publishNotificationJob(
+  data: import('../utils/types.js').NotificationData,
+  options?: { correlationId?: string; replyTo?: string; retryCount?: number },
+): Promise<boolean> {
+  const dedupKey = `notification:${data.channel}:${crypto.createHash('md5').update(data.message).digest('hex')}`;
+
+  // Dedup check
+  if (await isDuplicate(dedupKey)) {
+    log.info({ channel: data.channel, dedupKey }, 'Notification job is a duplicate — skipping');
+    return false;
+  }
+
+  // Ensure RabbitMQ connection
+  if (!(await ensureConnected())) {
+    log.warn({ channel: data.channel }, 'RabbitMQ unavailable — notification job not published');
+    return false;
+  }
+
+  const envelope = createEnvelope('notification', data, options?.correlationId, options?.replyTo);
+  const publishOptions = buildPublishOptions(options);
+
+  const published = await publish('stas.events', 'notifications', envelope, publishOptions);
+
+  if (published) {
+    log.info({ channel: data.channel, messageId: envelope.messageId }, 'Notification job published to RabbitMQ');
+  } else {
+    log.warn({ channel: data.channel, messageId: envelope.messageId }, 'Notification job publish returned false');
+  }
+
+  return published;
+}
