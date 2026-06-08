@@ -125,7 +125,7 @@ export function addBreadcrumb(
   message: string,
   data?: Record<string, unknown>,
 ): void {
-  if (!config.sentry.dsn) return;
+  if (!config.sentry?.dsn) return;
   Sentry.addBreadcrumb({
     category,
     message,
@@ -141,7 +141,7 @@ export function addBreadcrumb(
  * @param context - Optional context data (repo, installation ID, etc.)
  */
 export function captureError(error: Error, context?: Record<string, unknown>): void {
-  if (!config.sentry.dsn) return;
+  if (!config.sentry?.dsn) return;
   Sentry.withScope((scope: Sentry.Scope) => {
     if (context) {
       scope.setContext('action', context as Record<string, string>);
@@ -158,7 +158,7 @@ export function captureError(error: Error, context?: Record<string, unknown>): v
  * @param repo - Repository identifier (owner/name)
  */
 export function setUserContext(installationId: number | string, repo?: string): void {
-  if (!config.sentry.dsn) return;
+  if (!config.sentry?.dsn) return;
   Sentry.setUser({
     id: String(installationId),
     ...(repo ? { username: repo } : {}),
@@ -169,7 +169,7 @@ export function setUserContext(installationId: number | string, repo?: string): 
  * Set a Sentry tag for filtering errors in the dashboard.
  */
 export function setTag(key: string, value: string): void {
-  if (!config.sentry.dsn) return;
+  if (!config.sentry?.dsn) return;
   Sentry.setTag(key, value);
 }
 

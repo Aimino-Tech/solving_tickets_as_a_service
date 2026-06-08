@@ -17,10 +17,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // ---------------------------------------------------------------------------
 
 const { mockCreateComment, mockPullsCreate, mockOctokitInstance, mockLoggerChild } = vi.hoisted(() => {
-  const createComment = vi.fn().mockResolvedValue({ data: { id: 1 } });
-  const pullsCreate = vi.fn().mockResolvedValue({
-    data: { id: 100, number: 42, html_url: 'https://github.com/owner/repo/pull/42' },
-  });
+  const createComment = vi.fn();
+  const pullsCreate = vi.fn();
+  const resetMocks = () => {
+    createComment.mockResolvedValue({ data: { id: 1 } });
+    pullsCreate.mockResolvedValue({
+      data: { id: 100, number: 42, html_url: 'https://github.com/owner/repo/pull/42' },
+    });
+  };
+  resetMocks();
 
   const logger = {
     child: vi.fn(),
@@ -56,10 +61,6 @@ vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => mockLoggerChild) },
 }));
 
-vi.mock('../auth.js', () => ({
-  getOctokit: vi.fn().mockResolvedValue(mockOctokitInstance),
-}));
-
 vi.mock('../../config.js', () => ({
   config: {
     stas: { botName: 'STAS', label: 'stas:fix' },
@@ -75,6 +76,10 @@ vi.mock('../../config.js', () => ({
 
 vi.mock('../../sandbox/executor.js', () => ({
   SandboxExecutor: vi.fn(),
+}));
+
+vi.mock('../../github/auth.ts', () => ({
+  getOctokit: () => Promise.resolve(mockOctokitInstance),
 }));
 
 // ---------------------------------------------------------------------------
@@ -147,7 +152,10 @@ describe('ActionDispatcher', () => {
   let dispatcher: ActionDispatcher;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockCreateComment.mockResolvedValue({ data: { id: 1 } });
+    mockPullsCreate.mockResolvedValue({
+      data: { id: 100, number: 42, html_url: 'https://github.com/owner/repo/pull/42' },
+    });
     dispatcher = new ActionDispatcher();
   });
 
