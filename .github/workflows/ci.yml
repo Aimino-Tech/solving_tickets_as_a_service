@@ -8,6 +8,9 @@
 #   - E2E job with Docker Compose services (Redis)
 #   - Coverage thresholds enforced by vitest config
 #   - workflow_dispatch trigger for manual runs
+#   - Dockerfile linting via hadolint
+#   - Docker image vulnerability scanning via Trivy
+#   - Docker Bench Security audit
 # =============================================================================
 
 name: CI
@@ -67,6 +70,72 @@ jobs:
       - name: Run Biome lint
         if: steps.check-skip.outputs.skipped != 'true'
         run: npm run lint:ci
+
+  ##############################################################################
+  # DOCKERFILE LINT (hadolint)
+  ##############################################################################
+  docker-lint:
+    name: Dockerfile Lint (hadolint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Dockerfile with hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+
+      - name: Lint workers/Dockerfile with hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: workers/Dockerfile
+          failure-threshold: warning
+
+  ##############################################################################
+  # DOCKER BENCH SECURITY
+  ##############################################################################
+  docker-bench:
+    name: Docker Bench Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Docker Bench Security
+        run: |
+          docker run --rm \
+            --pid=host \
+            --userns=host \
+            --cap-add=audit_control \
+            -v /etc:/etc:ro \
+            -v /usr/bin/containerd:/usr/bin/containerd:ro \
+            -v /usr/bin/runc:/usr/bin/runc:ro \
+            -v /usr/lib/systemd:/usr/lib/systemd:ro \
+            -v /var/lib:/var/lib:ro \
+            -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            docker/docker-bench-security:latest
+        continue-on-error: true
+
+  ##############################################################################
+  # TRIVY CONFIG SCAN (Dockerfile vulnerabilities)
+  ##############################################################################
+  docker-scan:
+    name: Dockerfile Scan (Trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan Dockerfile with Trivy (config/misconfig)
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: 1
 
   ##############################################################################
   # TYPE CHECK
@@ -130,9 +199,13 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  ##############################################################################
+  # SECURITY AUDIT
+  ##############################################################################
   audit:
     name: Security Audit (npm audit)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
