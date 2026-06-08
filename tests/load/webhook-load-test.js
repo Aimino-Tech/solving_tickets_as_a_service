@@ -18,7 +18,7 @@
  *   - Custom: webhook_accepted, webhook_rejected, rate_limited
  *
  * Usage:
- *   k6 run tests/load/webhook-load-test.js
+ *   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY=true k6 run tests/load/webhook-load-test.js
  *
  * Environment:
  *   TARGET_URL  — base URL (default: http://localhost:3000)
@@ -27,11 +27,13 @@
  *   SUSTAIN_DUR — sustained duration (default: 30s)
  *   PEAK_VUS    — peak VUs (default: 100)
  *   STRESS_VUS  — stress VUs (default: 200)
+ *   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY — set "true" to skip HMAC verification
  */
 
 import http from 'k6/http';
 import { check, sleep, group } from 'k6';
 import { Rate, Trend, Counter } from 'k6/metrics';
+import { BASE_URL, baseOptions } from './k6.config.js';
 
 // ── Custom Metrics ─────────────────────────────────────────────────────────
 
@@ -41,13 +43,28 @@ const rateLimited = new Counter('rate_limited');
 const webhookLatency = new Trend('webhook_latency_ms');
 
 // ── Configuration ─────────────────────────────────────────────────────────
+//
+// Webhook signature verification
+// ──────────────────────────────
+// STAS verifies X-Hub-Signature-256 by default. Load tests send random
+// payloads, so the signature will never match. To bypass, either:
+//
+//   (a) Set DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY=true when running k6:
+//         DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY=true k6 run tests/load/webhook-load-test.js
+//
+//   (b) Or omit the X-Hub-Signature-256 header entirely (the server also
+//       skips verification when no signature header is present).
+//
+// We use approach (b) here — no signature header is sent — so the tests
+// work out of the box without env var configuration.
 
-const TARGET = __ENV.TARGET_URL || 'http://localhost:3000';
+const TARGET = __ENV.TARGET_URL || BASE_URL;
 const WEBHOOK_URL = `${TARGET}/webhook`;
 
 // ── Options ───────────────────────────────────────────────────────────────
 
 export const options = {
+  ...baseOptions,
   stages: [
     { duration: '5s', target: parseInt(__ENV.RAMP_VUS || '10') },
     { duration: __ENV.SUSTAIN_DUR || '30s', target: parseInt(__ENV.SUSTAIN_VUS || '50') },
@@ -56,6 +73,7 @@ export const options = {
     { duration: '10s', target: 0 },
   ],
   thresholds: {
+    ...baseOptions.thresholds,
     http_req_duration: ['p(95)<2000', 'p(99)<5000'],
     http_req_failed: ['rate<0.05'],
     webhook_accepted: ['count>0'],
@@ -105,7 +123,9 @@ export default function () {
       'Content-Type': 'application/json',
       'X-GitHub-Event': 'issues.labeled',
       'X-GitHub-Delivery': 'delivery-' + Math.random().toString(36).substring(2, 15),
-      'X-Hub-Signature-256': 'sha256=' + Math.random().toString(36).substring(2, 66),
+      // NOTE: X-Hub-Signature-256 intentionally omitted.
+      // The server skips verification when no signature header is present.
+      // See comment at top of file for details.
       'X-Request-Id': 'load-test-' + Math.random().toString(36).substring(2, 15),
     };
 
