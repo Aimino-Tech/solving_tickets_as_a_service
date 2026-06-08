@@ -15,7 +15,8 @@ describe('security/audit', () => {
   let audit: typeof import('../../security/audit.js');
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    const loggerMod = await import('../../utils/logger.js');
+    loggerMod.rootLogger.child = vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) as any;
     audit = await import('../../security/audit.js');
   });
 

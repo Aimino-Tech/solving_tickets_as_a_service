@@ -3,8 +3,10 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
+const mockAdminConfig = { security: { adminApiKey: 'test-admin-key' } };
+
 vi.mock('../../config.js', () => ({
-  config: { security: { adminApiKey: 'test-admin-key' } },
+  config: mockAdminConfig,
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -15,15 +17,14 @@ describe('security/adminAuth', () => {
   let adminAuth: typeof import('../../security/adminAuth.js');
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    mockAdminConfig.security.adminApiKey = 'test-admin-key';
     adminAuth = await import('../../security/adminAuth.js');
   });
 
   describe('adminAuthMiddleware', () => {
     it('returns 500 when ADMIN_API_KEY is not configured', async () => {
+      mockAdminConfig.security.adminApiKey = '';
       vi.resetModules();
-      vi.mock('../../config.js', () => ({ config: { security: { adminApiKey: '' } } }));
-      vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) } }));
       const mod = await import('../../security/adminAuth.js');
 
       const req = { headers: {}, ip: '127.0.0.1', path: '/admin' } as any;
