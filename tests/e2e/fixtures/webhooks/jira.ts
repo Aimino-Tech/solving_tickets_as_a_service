@@ -51,6 +51,11 @@ export function jiraIssueCreated() {
 }
 
 /**
+ * Alias for jiraIssueCreated — used by full-flow.test.ts.
+ */
+export const sampleJiraWebhookPayload = jiraIssueCreated;
+
+/**
  * Jira Issue Updated — an existing issue is updated.
  */
 export function jiraIssueUpdated() {

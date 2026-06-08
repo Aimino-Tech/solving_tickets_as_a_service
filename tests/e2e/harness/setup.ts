@@ -8,7 +8,7 @@
  * This runs once before all E2E test files via vitest globalSetup.
  */
 
-import { setupTestEnvironment } from './index.js';
+import { setupTestEnvironment } from './env.js';
 
 /**
  * Global setup: configure environment before any test runs.
