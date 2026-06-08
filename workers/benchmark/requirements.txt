@@ -1,0 +1,26 @@
+# Benchmark dependencies for TabPFN comparison
+# Installed by: bash scripts/setup-tabpfn.sh
+# Or manually: pip install -r workers/benchmark/requirements.txt
+
+# Core ML
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+scipy>=1.10.0
+
+# TabPFN (requires PyTorch - installed separately as CPU version)
+tabpfn>=1.0.0
+
+# Comparison models
+xgboost>=2.0.0
+lightgbm>=4.0.0
+catboost>=1.2.0
+
+# OpenML dataset download
+openml>=0.14.0
+
+# Hardware monitoring
+psutil>=5.9.0
+
+# PyTorch (CPU) - TabPFN requirement
+# Install via: pip install torch --index-url https://download.pytorch.org/whl/cpu
