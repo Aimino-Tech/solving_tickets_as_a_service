@@ -124,26 +124,6 @@ export function createApp(): express.Application {
     next();
   });
 
-  // -- Security headers (Helmet) -------------------------------------------
-  // Sets various HTTP headers for security: CSP, X-Frame-Options,
-  // X-Content-Type-Options, Strict-Transport-Security, etc.
-  app.use(helmet());
-
-  // -- CORS -----------------------------------------------------------------
-  app.use(cors({
-    origin: config.security.corsOrigin === '*'
-      ? '*'
-      : config.security.corsOrigin.split(',').map(s => s.trim()),
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-request-id'],
-    exposedHeaders: ['x-request-id'],
-    credentials: true,
-    maxAge: 86400, // 24 hours
-  }));
-
-  // -- IP Allowlist for webhook endpoints -----------------------------------
-  app.use('/webhook', ipAllowlistMiddleware);
-
   // -- Structured access log middleware -------------------------------------
   app.use((req: Request, res: Response, next: NextFunction) => {
     const start = Date.now();
@@ -185,9 +165,6 @@ export function createApp(): express.Application {
 
   // -- URL-encoded body parsing (with size limit) ---------------------------
   app.use(express.urlencoded({ extended: true, limit: REQUEST_SIZE_LIMIT }));
-
-  // -- URL-encoded body parsing (with size limit) ---------------------------
-  app.use(express.urlencoded({ extended: true, limit: config.security.requestBodyLimit }));
 
   // -- Rate limiter for webhook routes ---------------------------------------
   const limiter = rateLimit({
