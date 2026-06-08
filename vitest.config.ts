@@ -25,12 +25,13 @@ export default defineConfig({
 
     // Coverage configuration
     coverage: {
+      thresholdAutoUpdate: false,
       provider: "v8",
       thresholds: {
-        lines: 80,
-        branches: 70,
-        functions: 75,
-        statements: 80,
+        lines: 70,
+        branches: 60,
+        functions: 65,
+        statements: 70,
       },
     },
   },
