@@ -69,7 +69,7 @@ export function getStripeClient(): Stripe {
       );
     }
     _stripe = new Stripe(secretKey, {
-      apiVersion: '2026-05-27.dahlia' as any,
+      apiVersion: '2025-02-24.acacia',
       typescript: true,
     });
   }

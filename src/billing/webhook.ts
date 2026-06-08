@@ -38,7 +38,7 @@ function getStripe(): Stripe {
       throw new Error('STRIPE_SECRET_KEY is not configured.');
     }
     _stripe = new Stripe(secretKey, {
-      apiVersion: '2026-05-27.dahlia' as any,
+      apiVersion: '2025-02-24.acacia',
       typescript: true,
     });
   }
