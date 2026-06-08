@@ -56,6 +56,11 @@ export function linearIssueCreateOtherLabel() {
 }
 
 /**
+ * Alias for linearIssueCreate — used by full-flow.test.ts.
+ */
+export const sampleLinearWebhookPayload = linearIssueCreate;
+
+/**
  * Linear Comment Create — a comment on an issue.
  */
 export function linearCommentCreate() {
