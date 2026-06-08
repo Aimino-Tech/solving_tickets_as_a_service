@@ -37,6 +37,11 @@ function createMockStripeClient() {
   };
 }
 
+let sharedMockClient: ReturnType<typeof createMockStripeClient>;
+vi.mock('stripe', () => ({
+  default: vi.fn(() => sharedMockClient),
+}));
+
 vi.mock('../../config.js', () => mockConfig);
 vi.mock('../../utils/logger.js', () => mockLogger);
 
@@ -47,6 +52,10 @@ describe('billing/stripe', () => {
   beforeEach(async () => {
     // Create a fresh mock client for each test
     mockStripeClient = createMockStripeClient();
+    sharedMockClient = mockStripeClient;
+
+    // Reset modules so the stripe mock picks up our new client
+    vi.resetModules();
 
     // Import the module under test
     const mod = await import('../../billing/stripe.js');
@@ -54,9 +63,6 @@ describe('billing/stripe', () => {
 
     // Reset the cached Stripe client so getStripeClient() will re-create
     stripe.resetStripeClient();
-
-    // Spy on getStripeClient to return our controlled mock client
-    vi.spyOn(stripe, 'getStripeClient').mockReturnValue(mockStripeClient as any);
   });
 
   afterEach(() => {
@@ -107,6 +113,7 @@ describe('billing/stripe', () => {
     it('clears the cached client', () => {
       const client1 = stripe.getStripeClient();
       stripe.resetStripeClient();
+      sharedMockClient = createMockStripeClient();
       const client2 = stripe.getStripeClient();
       expect(client1).not.toBe(client2);
     });
