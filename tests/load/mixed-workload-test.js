@@ -29,6 +29,7 @@ import http from 'k6/http';
 import { check, sleep, group } from 'k6';
 import { Rate, Trend, Counter } from 'k6/metrics';
 
+import { BASE_URL, baseOptions } from './k6.config.js';
 // ── Custom Metrics ─────────────────────────────────────────────────────────
 
 const webhookLatency = new Trend('mixed_webhook_latency_ms');
@@ -40,7 +41,7 @@ const totalRequests = new Counter('mixed_total_requests');
 
 // ── Configuration ─────────────────────────────────────────────────────────
 
-const TARGET = __ENV.TARGET_URL || 'http://localhost:3000';
+const TARGET = __ENV.TARGET_URL || BASE_URL;
 const WEBHOOK_URL = `${TARGET}/webhook`;
 const HEALTH_URL = `${TARGET}/health`;
 const QUEUE_HEALTH_URL = `${TARGET}/health/queue`;
@@ -49,6 +50,7 @@ const METRICS_URL = `${TARGET}/metrics`;
 // ── Options ───────────────────────────────────────────────────────────────
 
 export const options = {
+  ...baseOptions,
   stages: [
     { duration: '30s', target: 40 },
     { duration: '30s', target: 120 },
@@ -106,7 +108,8 @@ export default function () {
         'Content-Type': 'application/json',
         'X-GitHub-Event': webhookEventType(),
         'X-GitHub-Delivery': 'mixed-' + Math.random().toString(36).substring(2, 15),
-        'X-Hub-Signature-256': 'sha256=' + Math.random().toString(36).substring(2, 66),
+        // NOTE: X-Hub-Signature-256 intentionally omitted.
+        // The server skips verification when no signature header is present.
       };
 
       const start = Date.now();

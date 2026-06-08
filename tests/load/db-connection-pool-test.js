@@ -30,6 +30,7 @@ import http from 'k6/http';
 import { check, sleep, group } from 'k6';
 import { Rate, Trend, Gauge } from 'k6/metrics';
 
+import { BASE_URL, baseOptions } from './k6.config.js';
 // ── Custom Metrics ─────────────────────────────────────────────────────────
 
 const healthLatency = new Trend('db_health_query_ms');
@@ -39,7 +40,7 @@ const poolUtilization = new Gauge('db_pool_utilization_pct');
 
 // ── Configuration ─────────────────────────────────────────────────────────
 
-const TARGET = __ENV.TARGET_URL || 'http://localhost:3000';
+const TARGET = __ENV.TARGET_URL || BASE_URL;
 const HEALTH_URL = `${TARGET}/health`;
 const READY_URL = `${TARGET}/health/ready`;
 const DB_POOL_MAX = parseInt(__ENV.DB_POOL_MAX || '10');
@@ -47,6 +48,7 @@ const DB_POOL_MAX = parseInt(__ENV.DB_POOL_MAX || '10');
 // ── Options ───────────────────────────────────────────────────────────────
 
 export const options = {
+  ...baseOptions,
   stages: [
     { duration: '10s', target: 10 },
     { duration: '20s', target: 50 },
