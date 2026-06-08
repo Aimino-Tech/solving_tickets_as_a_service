@@ -17,7 +17,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 // ── Module-level mocks ──────────────────────────────────────────────────────
 // Prevent .env loading and keep the logger quiet during tests.
 
-vi.mock('dotenv/config');
+vi.mock('dotenv/config', () => ({}));
 
 const mockRootLogger = vi.hoisted(() => ({
   error: vi.fn(),
@@ -321,7 +321,7 @@ describe('config', () => {
     it('calls process.exit(1) when required env vars are missing', async () => {
       vi.resetModules();
 
-      vi.mock('dotenv/config');
+      vi.mock('dotenv/config', () => ({}));
 
       // Clear all env stubs so the required vars are absent
       vi.unstubAllEnvs();
