@@ -63,6 +63,19 @@ jobs:
           path: bench-output.txt
           retention-days: 30
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Generate benchmark report
+        run: |
+          if [ -f tests/bench/benchmark-results.json ]; then
+            python workers/benchmark/generate_report.py \
+              --input tests/bench/benchmark-results.json \
+              --output-dir docs/benchmarks \
+              --badge-dir .github/badges
+          fi
+
       - name: Notify on regression (Slack)
         if: steps.check.outputs.has_regressions == 'true'
         uses: slackapi/slack-github-action@v2.0.0
@@ -71,7 +84,7 @@ jobs:
           webhook-type: incoming-webhook
           payload: |
             {
-              "text": "🚨 *Benchmark Regression Detected*\nRepository: ${{ github.repository }}\nWorkflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nCheck the artifacts for details."
+              "text": "Benchmark Regression Detected\nRepository: ${{ github.repository }}\nWorkflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nCheck the artifacts for details."
             }
         continue-on-error: true
 

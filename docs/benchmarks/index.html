@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STAS Benchmark Dashboard</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1, h2, h3 { color: var(--accent); }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    h2 { font-size: 1.5rem; margin: 2rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+    p { margin-bottom: 1rem; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .stat-card .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .stat-card .value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-top: 0.25rem;
+    }
+    .stat-card .value.green { color: var(--green); }
+    .stat-card .value.yellow { color: var(--yellow); }
+    .stat-card .value.red { color: var(--red); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+    }
+    th {
+      background: var(--surface);
+      color: var(--accent);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    tr:nth-child(even) { background: var(--surface); }
+    tr:hover { background: #1c2128; }
+    code {
+      background: var(--surface);
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.85em;
+    }
+
+    .badge-section {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin: 1rem 0;
+    }
+    .badge-section img { height: 20px; }
+
+    .nav-bar {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-bar a {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .nav-bar a.active { color: var(--accent); font-weight: 600; }
+
+    .embed-content {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+    }
+
+    .footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .footer a { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<nav class="nav-bar">
+  <a href="/" class="active">Benchmark Dashboard</a>
+  <a href="report">Latest Report</a>
+  <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/actions/workflows/bench.yml">
+    CI Runs →
+  </a>
+</nav>
+
+<h1>STAS Benchmark Dashboard</h1>
+<p>
+  Automated benchmark results for the STAS agent pipeline.
+  Results are updated automatically after each benchmark CI run.
+</p>
+
+<div class="badge-section">
+  <img src="https://github.com/Aimino-Tech/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg" alt="CI">
+  <img src="https://github.com/Aimino-Tech/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg" alt="CD">
+  <img src="badge.svg" alt="Benchmark" id="badge-img">
+</div>
+
+<div class="stats-grid" id="stats-grid">
+  <div class="stat-card">
+    <div class="label">Overall Mean</div>
+    <div class="value" id="stat-mean">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Suites</div>
+    <div class="value" id="stat-suites">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Benchmarks</div>
+    <div class="value" id="stat-benchmarks">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Last Updated</div>
+    <div class="value" id="stat-updated" style="font-size:1rem">—</div>
+  </div>
+</div>
+
+<h2>Model Comparison (Mean Latency)</h2>
+<p>Comparison of TabICL against baseline and competing frameworks.</p>
+<div class="embed-content" id="comparison-table">
+  <p><em>Loading comparison data...</em></p>
+</div>
+
+<h2>Per-Suite Results</h2>
+<div id="suite-tables">
+  <p><em>Loading suite data...</em></p>
+</div>
+
+<h2>Benchmark Reports</h2>
+<ul>
+  <li><a href="report">Latest Detailed Report (HTML)</a></li>
+  <li><a href="report.md">Latest Detailed Report (Markdown)</a></li>
+  <li><a href="comparison.json">Comparison Data (JSON)</a></li>
+  <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/actions/workflows/bench.yml">
+    View All Benchmark Runs →
+  </a></li>
+</ul>
+
+<div class="footer">
+  <p>
+    Auto-generated by the STAS CI pipeline.
+    <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">
+      View on GitHub →
+    </a>
+  </p>
+</div>
+
+<script>
+async function loadDashboard() {
+  try {
+    const resp = await fetch('comparison.json');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+
+    const suites = data.suites || [];
+    const totalBenchmarks = suites.reduce((s, c) => s + (c.benchmark_count || 0), 0);
+    const means = suites.map(s => s.tabicl_mean_ms).filter(v => v > 0);
+    const overallMean = means.length ? (means.reduce((a, b) => a + b, 0) / means.length) : 0;
+
+    document.getElementById('stat-mean').textContent = overallMean.toFixed(4) + ' ms';
+    document.getElementById('stat-suites').textContent = suites.length;
+    document.getElementById('stat-benchmarks').textContent = totalBenchmarks;
+    document.getElementById('stat-updated').textContent = data.generated_at || '—';
+
+    const badgeImg = document.getElementById('badge-img');
+    if (badgeImg) badgeImg.src = 'badge.svg?' + Date.now();
+
+    if (suites.length > 0) {
+      const keys = ['XGBoost', 'LightGBM', 'CatBoost'];
+      const hasCompetitors = suites.some(s => keys.some(k => s[k.toLowerCase() + '_mean_ms'] !== undefined));
+
+      let html = '<table><thead><tr>';
+      html += '<th>Suite</th><th>TabICL (ms)</th><th>Baseline (ms)</th><th>Δ Baseline</th>';
+      if (hasCompetitors) {
+        html += '<th>XGBoost (ms)</th><th>Δ XGBoost</th>';
+        html += '<th>LightGBM (ms)</th><th>Δ LightGBM</th>';
+        html += '<th>CatBoost (ms)</th><th>Δ CatBoost</th>';
+      }
+      html += '</tr></thead><tbody>';
+
+      for (const suite of suites) {
+        html += '<tr><td><strong>' + suite.suite + '</strong></td>';
+        html += '<td>' + suite.tabicl_mean_ms.toFixed(4) + '</td>';
+        html += '<td>' + (suite.baseline_mean_ms !== undefined ? suite.baseline_mean_ms.toFixed(4) : '—') + '</td>';
+        html += '<td>' + (suite.delta_vs_baseline_pct !== undefined ? suite.delta_vs_baseline_pct.toFixed(2) + '%' : '—') + '</td>';
+        if (hasCompetitors) {
+          for (const key of keys) {
+            const val = suite[key.toLowerCase() + '_mean_ms'];
+            const delta = suite['delta_vs_' + key.toLowerCase() + '_pct'];
+            html += '<td>' + (val !== undefined ? val.toFixed(4) : '—') + '</td>';
+            html += '<td>' + (delta !== undefined ? delta.toFixed(2) + '%' : '—') + '</td>';
+          }
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      document.getElementById('comparison-table').innerHTML = html;
+    }
+
+    let suiteHtml = '';
+    for (const suite of suites) {
+      suiteHtml += '<h3>' + suite.suite + '</h3>';
+      suiteHtml += '<p>' + suite.benchmark_count + ' benchmarks, TabICL mean: ' + suite.tabicl_mean_ms.toFixed(4) + ' ms</p>';
+    }
+    document.getElementById('suite-tables').innerHTML = suiteHtml || '<p>No suite data available.</p>';
+
+  } catch (err) {
+    console.error('Failed to load dashboard data:', err);
+    document.getElementById('stats-grid').innerHTML =
+      '<p style="color: var(--red)">Failed to load benchmark data. Run the benchmark workflow first.</p>';
+    document.getElementById('comparison-table').innerHTML =
+      '<p><em>No comparison data yet - run benchmarks to generate.</em></p>';
+  }
+}
+loadDashboard();
+</script>
+
+</body>
+</html>

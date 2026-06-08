@@ -1,13 +1,15 @@
-# STAS — Solving Tickets As A Service
+# STAS - Solving Tickets As A Service
 
-![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)
-![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)
+![CI](https://github.com/Aimino-Tech/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)
+![CD](https://github.com/Aimino-Tech/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Benchmark](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/.github/badges/benchmark.svg)
+[![Benchmark Dashboard](https://img.shields.io/badge/Benchmark-Dashboard-blue)](https://Aimino-Tech.github.io/solving_tickets_as_a_service/)
+[![Leaderboard](https://img.shields.io/badge/Leaderboard-Latest_Results-brightgreen)](https://Aimino-Tech.github.io/solving_tickets_as_a_service/leaderboard)
 
 **Label a GitHub issue. Get a pull request.**
 
-STAS is an open-source GitHub bot that takes a labeled issue, investigates your codebase, writes a fix, runs your tests, and opens a PR. Backed by [OpenCode](https://opencode.ai) — the 162K ★ open-source coding agent.
+STAS is an open-source GitHub bot that takes a labeled issue, investigates your codebase, writes a fix, runs your tests, and opens a PR. Backed by [OpenCode](https://opencode.ai) - the 162K star open-source coding agent.
 
 ```mermaid
 flowchart LR
@@ -104,7 +106,7 @@ bash plugin/tools/stas-status.sh
 
 ### OpenCode integration
 
-STAS is built on top of OpenCode. The `WORKFLOW.md` at the project root defines how the OpenCode agent (Sisyphus) autonomously works on tickets — from `Backlog` → `Todo` → `In Progress` → `Human Review` → `Done`, with mandatory anti-mockup scans at every gate.
+STAS is built on top of OpenCode. The `WORKFLOW.md` at the project root defines how the OpenCode agent (Sisyphus) autonomously works on tickets - from `Backlog` to `Todo` to `In Progress` to `Human Review` to `Done`, with mandatory anti-mockup scans at every gate.
 
 For OpenCode users: add `@tarquinen/stas-plugin` to your opencode.json `plugin` array, and the agent can invoke dev tools via slash commands during development.
 
@@ -117,35 +119,35 @@ For OpenCode users: add `@tarquinen/stas-plugin` to your opencode.json `plugin` 
 | Infrastructure | You manage | We manage |
 | Cost | Your API usage | $49/mo flat |
 | Limits | Unlimited (your keys) | 100 fixes/mo then usage-based |
-| Dashboard | — | Analytics, audit log, config |
+| Dashboard | - | Analytics, audit log, config |
 | Support | GitHub issues | Slack, email, SLA |
 
 ## Architecture
 
 ```
 GitHub Issue (labeled)
-       │
-       ▼
+       |
+       v
    Webhook Server (Express)
-       │
-       ├── Verify signature
-       ├── Post "working on it" comment
-       ├── Build prompt from issue context
-       │
-       ▼
+       |
+       +-- Verify signature
+       +-- Post "working on it" comment
+       +-- Build prompt from issue context
+       |
+       v
   OpenCode Serve (:4096)
-       │
-       ├── Clone repo
-       ├── Investigate root cause
-       ├── Write fix + regression test
-       ├── Run test suite
-       ├── Commit & push branch
-       │
-       ▼
+       |
+       +-- Clone repo
+       +-- Investigate root cause
+       +-- Write fix + regression test
+       +-- Run test suite
+       +-- Commit & push branch
+       |
+       v
   GitHub API
-       │
-       ├── Open draft PR
-       └── Post result comment
+       |
+       +-- Open draft PR
+       +-- Post result comment
 ```
 
 ## Configuration
@@ -154,9 +156,9 @@ All config via environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `GITHUB_APP_ID` | — | GitHub App ID |
-| `GITHUB_PRIVATE_KEY` | — | App private key (PEM) |
-| `GITHUB_WEBHOOK_SECRET` | — | Webhook secret |
+| `GITHUB_APP_ID` | - | GitHub App ID |
+| `GITHUB_PRIVATE_KEY` | - | App private key (PEM) |
+| `GITHUB_WEBHOOK_SECRET` | - | Webhook secret |
 | `OPENCODE_URL` | `http://localhost:4096` | OpenCode serve endpoint |
 | `OPENCODE_MODEL` | `anthropic/claude-sonnet-4-20250514` | Model to use |
 | `STAS_LABEL` | `stas:fix` | Issue label to trigger on |
@@ -165,7 +167,7 @@ All config via environment variables:
 
 ## Deployment
 
-See [`DEVELOPMENT.md`](DEVELOPMENT.md) for a comprehensive deployment guide covering local dev, Railway, Fly.io, and Kubernetes.
+See `DEVELOPMENT.md` for a comprehensive deployment guide covering local dev, Railway, Fly.io, and Kubernetes.
 
 ### One-Click Deploy
 
@@ -216,14 +218,14 @@ docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
 ```
 
 The production stack includes:
-- **PostgreSQL 16** — primary database
-- **Redis 7** — Celery result backend + caching
-- **RabbitMQ 4** — message broker for Celery
-- **stas-webhook** — Express.js API server (horizontally scalable)
-- **stas-worker** — Celery worker pool (horizontally scalable via `--scale`)
-- **celery-beat** — periodic task scheduler
-- **Flower** — Celery monitoring dashboard (port 5555)
-- **Nginx** — reverse proxy with TLS termination and load balancing
+- **PostgreSQL 16** - primary database
+- **Redis 7** - Celery result backend + caching
+- **RabbitMQ 4** - message broker for Celery
+- **stas-webhook** - Express.js API server (horizontally scalable)
+- **stas-worker** - Celery worker pool (horizontally scalable via `--scale`)
+- **celery-beat** - periodic task scheduler
+- **Flower** - Celery monitoring dashboard (port 5555)
+- **Nginx** - reverse proxy with TLS termination and load balancing
 
 See `DEVELOPMENT.md` for details on all deployment options.
 
@@ -248,13 +250,23 @@ STAS ships with comprehensive documentation:
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Local development and deployment guide |
 
 
+## Benchmark Results
+
+Benchmark results are automatically published to GitHub Pages after each CI run:
+
+- [Benchmark Dashboard](https://Aimino-Tech.github.io/solving_tickets_as_a_service/) - Latest results and comparison tables
+- [Leaderboard](https://Aimino-Tech.github.io/solving_tickets_as_a_service/leaderboard) - Historical leaderboard data
+- [Detailed Report](https://Aimino-Tech.github.io/solving_tickets_as_a_service/benchmarks/report) - Full comparison report with delta
+
+The benchmark suite compares TabICL performance against XGBoost, LightGBM, and CatBoost across multiple pipeline stages.
+
 ## Roadmap
 
-- [x] Webhook receiver & GitHub App integration
+- [x] Webhook receiver and GitHub App integration
 - [x] OpenCode agent dispatch
 - [x] PR creation with fix
-- [x] Two-phase triage (cheap model classifies → expensive model fixes)
-- [x] Sandbox isolation (E2B — 10+ language runtimes)
+- [x] Two-phase triage (cheap model classifies to expensive model fixes)
+- [x] Sandbox isolation (E2B - 10+ language runtimes)
 - [x] Regression test verification gate
 - [x] Real-time status streaming to issue comments
 - [ ] Dashboard for run history
@@ -262,4 +274,4 @@ STAS ships with comprehensive documentation:
 
 ## License
 
-MIT — use it, modify it, ship it.
+MIT - use it, modify it, ship it.

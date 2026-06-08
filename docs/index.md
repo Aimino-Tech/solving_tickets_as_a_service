@@ -15,9 +15,17 @@ This site shows automated benchmark results for the STAS agent pipeline.
 
 | Model | Accuracy | F1 Score | Avg Time |
 |-------|----------|----------|----------|
-| TabICL (this PR) | — | — | — |
-| main (baseline) | — | — | — |
-| XGBoost | — | — | — |
-| **Delta** | — | — | — |
+| TabICL (this PR) | - | - | - |
+| main (baseline) | - | - | - |
+| XGBoost | - | - | - |
+| LightGBM | - | - | - |
+| CatBoost | - | - | - |
+| **Delta** | - | - | - |
+
+## Benchmark Reports
+
+- [Detailed Report](/benchmarks/report) - Full comparison with per-benchmark breakdown
+- [Benchmark Dashboard](/benchmarks/) - Interactive dashboard with live data
+- [Comparison Data](/benchmarks/comparison.json) - Raw comparison data (JSON)
 
 > Last updated: {{ site.time | date: "%Y-%m-%d %H:%M UTC" }}
