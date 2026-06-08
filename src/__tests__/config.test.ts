@@ -255,11 +255,46 @@ describe('config', () => {
       expect(cfg.stas.devSkipWebhookVerify).toBe(true);
     });
 
-    it('coerces DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY — non-empty string is truthy', () => {
+    it('coerces DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY — string "false" is correctly false', () => {
       vi.stubEnv('DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY', 'false');
       const cfg = configModule.requireConfig();
-      // z.coerce.boolean uses Boolean("false") which is true (non-empty string)
+      expect(cfg.stas.devSkipWebhookVerify).toBe(false);
+    });
+
+    it('coerces DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY — string "0" is correctly false', () => {
+      vi.stubEnv('DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY', '0');
+      const cfg = configModule.requireConfig();
+      expect(cfg.stas.devSkipWebhookVerify).toBe(false);
+    });
+
+    it('coerces DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY — string "1" is correctly true', () => {
+      vi.stubEnv('DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY', '1');
+      const cfg = configModule.requireConfig();
       expect(cfg.stas.devSkipWebhookVerify).toBe(true);
+    });
+
+    it('coerces boolean env vars correctly — CI_MONITOR_ENABLED=false stays false', () => {
+      vi.stubEnv('CI_MONITOR_ENABLED', 'false');
+      const cfg = configModule.requireConfig();
+      expect(cfg.ci.monitorEnabled).toBe(false);
+    });
+
+    it('coerces boolean env vars correctly — CI_MONITOR_ENABLED=true', () => {
+      vi.stubEnv('CI_MONITOR_ENABLED', 'true');
+      const cfg = configModule.requireConfig();
+      expect(cfg.ci.monitorEnabled).toBe(true);
+    });
+
+    it('coerces boolean env vars correctly — DATABASE_SSL=false stays false', () => {
+      vi.stubEnv('DATABASE_SSL', 'false');
+      const cfg = configModule.requireConfig();
+      expect(cfg.database.ssl).toBe(false);
+    });
+
+    it('coerces boolean env vars correctly — DATABASE_SSL=true', () => {
+      vi.stubEnv('DATABASE_SSL', 'true');
+      const cfg = configModule.requireConfig();
+      expect(cfg.database.ssl).toBe(true);
     });
 
     it('throws with a descriptive error message listing all failures', () => {
@@ -285,6 +320,8 @@ describe('config', () => {
   describe('module-level validation on import', () => {
     it('calls process.exit(1) when required env vars are missing', async () => {
       vi.resetModules();
+
+      vi.mock('dotenv/config');
 
       // Clear all env stubs so the required vars are absent
       vi.unstubAllEnvs();

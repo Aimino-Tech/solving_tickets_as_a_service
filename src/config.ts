@@ -9,6 +9,19 @@ import 'dotenv/config';
 import { z } from 'zod';
 import { rootLogger } from './utils/logger.js';
 
+function coerceBoolean(defaultVal: boolean) {
+  return z.preprocess((val) => {
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') {
+      const lower = val.trim().toLowerCase();
+      if (lower === 'true' || lower === '1') return true;
+      if (lower === 'false' || lower === '0' || lower === '') return false;
+    }
+    if (val === undefined || val === null) return defaultVal;
+    return defaultVal;
+  }, z.boolean());
+}
+
 // ---------------------------------------------------------------------------
 // Schema
 // ---------------------------------------------------------------------------
@@ -49,7 +62,7 @@ const envSchema = z.object({
   RABBITMQ_TLS_KEY_PATH: z.string().optional(),
   RABBITMQ_TLS_CA_PATH: z.string().optional(),
   RABBITMQ_TLS_SERVER_NAME: z.string().optional(),
-  RABBITMQ_TLS_REJECT_UNAUTHORIZED: z.coerce.boolean().default(true),
+  RABBITMQ_TLS_REJECT_UNAUTHORIZED: coerceBoolean(true),
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
@@ -73,7 +86,7 @@ const envSchema = z.object({
   // Sandbox — Docker
   DOCKER_IMAGE: z.string().default('ubuntu:24.04'),
   DOCKER_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
-  DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(true),
+  DOCKER_NETWORK_RESTRICT: coerceBoolean(true),
   DOCKER_ALLOWED_HOSTS: z
     .string()
     .default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io,rubygems.org,repo1.maven.org,packagist.org,getcomposer.org'),
@@ -84,11 +97,11 @@ const envSchema = z.object({
 
   // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
-  STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
+  STAS_MONTHLY_QUOTA_ENABLED: coerceBoolean(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_LABEL: z.string().default("stas:fix"),
   BOT_NAME: z.string().default("STAS"),
-  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),
+  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: coerceBoolean(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
@@ -149,7 +162,7 @@ const envSchema = z.object({
   USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
 
   // CI Monitor
-  CI_MONITOR_ENABLED: z.coerce.boolean().default(false),
+  CI_MONITOR_ENABLED: coerceBoolean(false),
   CI_MONITOR_REPOS: z.string().default(""),
   CI_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(2),
   CI_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(300000),
@@ -162,8 +175,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
-  DATABASE_SSL: z.coerce.boolean().default(false),
-  DATABASE_ENABLE_AUDIT_PERSISTENCE: z.coerce.boolean().default(false),
+  DATABASE_SSL: coerceBoolean(false),
+  DATABASE_ENABLE_AUDIT_PERSISTENCE: coerceBoolean(false),
 
   // ── Security ──────────────────────────────────────────────────────────────
   ADMIN_API_KEY: z.string().optional(),
@@ -172,17 +185,17 @@ const envSchema = z.object({
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
 
   // ── IP Allowlist ──
-  IP_ALLOWLIST_ENABLED: z.coerce.boolean().default(false),
+  IP_ALLOWLIST_ENABLED: coerceBoolean(false),
   IP_ALLOWLIST: z.string().default(''),
 
   // ── Sandbox Security ──
-  SANDBOX_PRIVILEGED: z.coerce.boolean().default(false),
-  SANDBOX_READONLY_ROOT: z.coerce.boolean().default(true),
+  SANDBOX_PRIVILEGED: coerceBoolean(false),
+  SANDBOX_READONLY_ROOT: coerceBoolean(true),
   SANDBOX_MEMORY_LIMIT: z.string().default('512m'),
   SANDBOX_CPU_LIMIT: z.string().default('0.5'),
   SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
-  SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
+  SANDBOX_NETWORK_ENABLED: coerceBoolean(false),
 
   // Rate limiting (credit-based)
   ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
