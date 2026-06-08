@@ -12,6 +12,8 @@
   },
   "scripts": {
     "init": "tsx scripts/init.ts",
+    "setup": "bash scripts/setup.sh",
+    "doctor": "bash scripts/doctor.sh",
     "dev": "tsx watch src/index.ts",
     "dev:api": "RUN_MODE=api tsx watch src/index.ts",
     "dev:worker": "RUN_MODE=worker tsx watch src/index.ts",
@@ -52,7 +54,13 @@
     "test:load:queue": "k6 run tests/load/queue-throughput-test.js",
     "test:load:mixed": "k6 run tests/load/mixed-workload-test.js",
     "test:load:all": "bash tests/load/load-test-runner.sh",
-    "bench:ci": "npx tsx scripts/bench.ts --ci"
+    "bench:ci": "npx tsx scripts/bench.ts --ci",
+    "supply-chain:sbom": "bash scripts/supply-chain.sh sbom",
+    "supply-chain:audit-npm": "bash scripts/supply-chain.sh audit-npm",
+    "supply-chain:audit-pip": "bash scripts/supply-chain.sh audit-pip",
+    "supply-chain:verify-lock": "bash scripts/supply-chain.sh verify-lock",
+    "supply-chain:scan-docker": "bash scripts/supply-chain.sh scan-docker",
+    "supply-chain:all": "bash scripts/supply-chain.sh all"
   },
   "dependencies": {
     "@octokit/auth-app": "^7.1.0",

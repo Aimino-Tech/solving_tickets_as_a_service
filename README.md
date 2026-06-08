@@ -27,6 +27,30 @@ Every fix runs in an isolated sandbox. Your code is never stored. Full audit tra
 
 ## Quick Start
 
+### One-command setup (recommended)
+
+```bash
+# Clone and set up everything automatically
+git clone https://github.com/tamnguyen08/solving_tickets_as_a_service
+cd solving_tickets_as_a_service
+npm run setup
+```
+
+Then start the bot:
+
+```bash
+# Start OpenCode (agent backend, in another terminal)
+opencode serve --port 4096
+
+# Start the bot
+npm run dev
+
+# Verify it's running
+curl http://localhost:3000/health
+```
+
+### Manual setup
+
 ```bash
 # 1. Clone and install
 git clone https://github.com/tamnguyen08/solving_tickets_as_a_service

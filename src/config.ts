@@ -67,6 +67,13 @@ const envSchema = z.object({
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
+ 
+  // OpenCode Health Check
+  OPENCODE_HEALTH_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
+  OPENCODE_HEALTH_CACHE_TTL_MS: z.coerce.number().int().positive().default(30000),
+  OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(3),
+  OPENCODE_HEALTH_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+  OPENCODE_HEALTH_STARTUP_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
 
   // Timeouts
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
@@ -182,6 +189,9 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('*'),
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
+
+  // ── CSP / Security Headers ──
+  CSP_REPORT_URI: z.string().default('/api/v1/csp-violation-report'),
 
   // ── IP Allowlist ──
   IP_ALLOWLIST_ENABLED: coerceBoolean(false),
@@ -312,6 +322,14 @@ function buildConfig(env: ParsedEnv) {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
+    },
+
+    opencodeHealth: {
+      pollIntervalMs: env.OPENCODE_HEALTH_POLL_INTERVAL_MS,
+      cacheTtlMs: env.OPENCODE_HEALTH_CACHE_TTL_MS,
+      circuitBreakerThreshold: env.OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD,
+      requestTimeoutMs: env.OPENCODE_HEALTH_REQUEST_TIMEOUT_MS,
+      startupTimeoutMs: env.OPENCODE_HEALTH_STARTUP_TIMEOUT_MS,
     },
 
     gitlab: {
@@ -477,6 +495,7 @@ function buildConfig(env: ParsedEnv) {
       corsOrigin: env.CORS_ORIGIN,
       requestBodyLimit: env.REQUEST_BODY_LIMIT,
       webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
+      cspReportUri: env.CSP_REPORT_URI,
 
       ipAllowlist: {
         enabled: env.IP_ALLOWLIST_ENABLED,

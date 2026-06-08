@@ -42,6 +42,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import helmet from 'helmet';
+import { buildHelmetConfig, handleCspViolationReport } from './security/securityHeaders.js';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { config } from './config.js';
 import { getQueueHealth } from './health/queueHealth.js';
@@ -74,6 +75,7 @@ import { dashboardRouter } from './routes/dashboard.js';
 import { adminDashboardRouter } from './routes/adminDashboard.js';
 import { billingRouter, initBilling } from './billing/index.js';
 import { addBreadcrumb, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
+import { opencodeHealth } from './health/opencodeHealth.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -97,8 +99,22 @@ function parseSize(size: string): number {
 export function createApp(): express.Application {
   const app = express();
 
-  // -- Security headers (Helmet) -------------------------------------------
-  app.use(helmet());
+  // -- Security headers (Helmet with explicit CSP and security headers) ---------
+  //
+  // The buildHelmetConfig() function detects whether the dashboard build
+  // is present and generates CSP directives accordingly:
+  //   - Dashboard mode: allows scripts/styles from 'self' for SPA functionality
+  //   - API-only mode:  maximally restrictive (default-src 'none')
+  //
+  // Additional headers added:
+  //   - Cross-Origin-Embedder-Policy: require-corp
+  //   - Cross-Origin-Opener-Policy: same-origin
+  //   - Permissions-Policy: camera=(), microphone=(), geolocation=()
+  //   - Strict-Transport-Security (production only)
+  //   - Referrer-Policy: strict-origin-when-cross-origin
+  //   - Standard helmet headers (X-Frame-Options, X-Content-Type-Options, etc.)
+  // ---------------------------------------------------------------------------------
+  app.use(helmet(buildHelmetConfig()));
 
   // -- CORS -----------------------------------------------------------------
   app.use(cors({
@@ -175,6 +191,11 @@ export function createApp(): express.Application {
   });
   app.use('/webhook', limiter);
 
+  // -- CSP violation report endpoint --------------------------------------------
+  // Browsers POST violation reports here when CSP directives are breached.
+  // Logged at WARN level for security monitoring.
+  app.post('/api/v1/csp-violation-report', handleCspViolationReport);
+
   // -- Slack Bolt receiver (interactive messages) ---------------------------
   const bolt = getSlackBoltApp();
   bolt.mountOn(app);
@@ -201,7 +222,7 @@ export function createApp(): express.Application {
         worker: { status: 'ok' },
         queue: { status: 'unknown' },
         database: { status: dbStatus },
-        opencode: { status: 'unknown' },
+        opencode: { status: opencodeHealth.getStatus().status },
         sentry: { status: config.sentry.dsn ? 'connected' : 'disabled' },
       },
     });
@@ -240,18 +261,14 @@ export function createApp(): express.Application {
       checks.queue = { status: 'error', error: String(err) };
     }
 
-    // Check OpenCode connectivity
-    try {
-      const response = await fetch(`${config.opencode.url}/health`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      checks.opencode = {
-        status: response.ok ? 'ok' : 'error',
-        ...(response.ok ? {} : { error: `HTTP ${response.status}` }),
-      };
-    } catch (err) {
-      checks.opencode = { status: 'error', error: String(err) };
-    }
+    // Check OpenCode connectivity (from cached health client)
+    const ocStatus = opencodeHealth.getStatus();
+    checks.opencode = {
+      status: ocStatus.status === 'healthy' ? 'ok' : ocStatus.status,
+      ...(ocStatus.status === 'healthy'
+        ? {}
+        : { error: `circuit=${ocStatus.circuit}, failures=${ocStatus.consecutiveFailures}, http=${ocStatus.httpStatus}` }),
+    };
 
     // Overall readiness — all checks must pass
     const allOk = Object.values(checks).every((c) => c.status === 'ok');
@@ -286,10 +303,23 @@ export function createApp(): express.Application {
     }
   });
 
+  // -- OpenCode health endpoint ---------------------------------------------
+  app.get('/health/opencode', async (_req: Request, res: Response) => {
+    try {
+      const status = await opencodeHealth.checkNow();
+      const httpStatus = status.status === 'healthy' ? 200 : status.status === 'degraded' ? 503 : 503;
+      res.status(httpStatus).json(status);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to get OpenCode health', details: String(err) });
+    }
+  });
+
   // -- Prometheus metrics endpoint ------------------------------------------
   app.get('/metrics', (_req: Request, res: Response) => {
+    const webhookMetrics = renderMetrics();
+    const bridgeMetricsOutput = bridgeMetrics.render();
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.send(renderMetrics());
+    res.send(webhookMetrics + '\n' + bridgeMetricsOutput);
 
   });
 
@@ -336,7 +366,7 @@ export function createApp(): express.Application {
     try {
       parsedPayload = rawBody ? JSON.parse(rawBody.toString()) : req.body;
       // Store payload for downstream middleware (rate limit)
-      (req as Record<string, unknown>).parsedPayload = parsedPayload;
+      (req as unknown as Record<string, unknown>).parsedPayload = parsedPayload;
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to parse webhook payload');
       res.status(400).json({ error: 'Invalid JSON payload' });
