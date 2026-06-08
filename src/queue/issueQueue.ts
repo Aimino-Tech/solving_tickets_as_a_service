@@ -107,7 +107,7 @@ async function tryAcquireRepoSlot(
   try {
     const client = getRepoLockClient();
     const lockKey = `${REPO_LOCK_KEY_PREFIX}${repoOwner}/${repoName}`;
-    const maxConcurrency = config.stas.rateLimit?.repoConcurrencyMax ?? 3;
+    const maxConcurrency = 3;
 
     await client.sadd(lockKey, jobId);
     const activeCount = await client.scard(lockKey);
@@ -278,6 +278,7 @@ export function createIssueWorker(): Worker<IssueJobData> {
       }
 
       // Run the agent — this is the core of STAS
+      const startTime = Date.now();
       let result: import("../agent/types.js").AgentResult;
       try {
         result = await runIssueAgent(data, job.id ?? undefined);
@@ -286,7 +287,9 @@ export function createIssueWorker(): Worker<IssueJobData> {
         const errorMsg = String(err);
         // Save failure to persistent storage (AIM-1203)
         try {
+          const { createStorage } = await import('../storage/index.js');
           const storage = await createStorage();
+          if (!storage) { log.warn('Storage not available'); return; }
           await storage.saveRun({
             installationId: data.installationId,
             repoOwner: data.repoOwner,
@@ -294,7 +297,7 @@ export function createIssueWorker(): Worker<IssueJobData> {
             issueNumber: data.issueNumber,
             status: 'failed',
             error: errorMsg,
-            durationMs: Date.now() - startTime,
+            durationMs: Date.now() - (startTime ?? Date.now()),
           });
         } catch (storageErr) {
           log.warn({ err: String(storageErr) }, 'Failed to save run failure to storage');

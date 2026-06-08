@@ -20,6 +20,49 @@ import type {
   UsageRecord,
 } from '../db/schema/index.js';
 
+// ── Run record types (used by lightweight storage backends) ───────────
+
+export interface RunRecord {
+  id?: number;
+  installationId: number;
+  repoOwner: string;
+  repoName: string;
+  issueNumber: number;
+  status: string;
+  confidence?: string;
+  summary?: string;
+  prUrl?: string;
+  branchName?: string;
+  error?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  durationMs?: number;
+  modelUsed?: string;
+}
+
+export interface RunFilter {
+  repo?: string;
+  status?: string;
+  issueNumber?: number;
+  startDate?: Date;
+  endDate?: Date;
+  limit?: number;
+  offset?: number;
+}
+
+export interface RunStats {
+  total: number;
+  passRate: number;
+  avgDurationMs: number;
+}
+
+export interface RunFilters {
+  status?: string;
+  repo?: string;
+  startedAfter?: Date;
+  startedBefore?: Date;
+}
+
 export interface StorageBackend {
   // -------------------------------------------------------------------------
   // Lifecycle
@@ -33,6 +76,9 @@ export interface StorageBackend {
 
   /** Check the health of the storage backend. */
   health(): Promise<{ ok: boolean; latencyMs: number }>;
+
+  /** Close/release resources (used by lightweight backends). */
+  close(): Promise<void>;
 
   // -------------------------------------------------------------------------
   // Accounts
@@ -56,13 +102,8 @@ export interface StorageBackend {
   deleteTeam(id: number): Promise<boolean>;
   listTeams(accountId?: number, limit?: number, offset?: number): Promise<Team[]>;
 
-  addTeamMember(data: NewTeamMember): Promise<TeamMember>;
-  removeTeamMember(teamId: number, accountId: number): Promise<boolean>;
-  getTeamMembers(teamId: number): Promise<TeamMember[]>;
-  updateTeamMemberRole(teamId: number, accountId: number, role: string): Promise<TeamMember | undefined>;
-
   // -------------------------------------------------------------------------
-  // Run History
+  // Run History (Drizzle ORM schema)
   // -------------------------------------------------------------------------
 
   createRun(data: NewRunHistory): Promise<RunHistory>;
@@ -73,6 +114,16 @@ export interface StorageBackend {
   markRunCancelled(id: number): Promise<RunHistory | undefined>;
   listRuns(accountId: number, limit?: number, offset?: number, filters?: RunFilters): Promise<RunHistory[]>;
   latestRunForIssue(accountId: number, issueId: number): Promise<RunHistory | undefined>;
+
+  // -------------------------------------------------------------------------
+  // Run History (lightweight — used by SQLite / Postgres backends)
+  // -------------------------------------------------------------------------
+
+  saveRun(run: RunRecord): Promise<RunRecord>;
+  getRun(id: number | string): Promise<RunRecord | undefined>;
+  listRuns(limit: number, offset: number, filters?: RunFilter): Promise<RunRecord[]>;
+  countRuns(filter?: RunFilter): Promise<number>;
+  getRunStats(filter: RunFilter): Promise<RunStats>;
 
   // -------------------------------------------------------------------------
   // Usage Tracking
@@ -92,13 +143,6 @@ export interface StorageBackend {
   listAuditLogs(accountId: number, limit?: number, offset?: number): Promise<AuditLog[]>;
   listAuditLogsByAction(action: string, limit?: number, offset?: number): Promise<AuditLog[]>;
   listAuditLogsByDateRange(startDate: Date, endDate: Date, limit?: number, offset?: number): Promise<AuditLog[]>;
-}
-
-export interface RunFilters {
-  status?: string;
-  repo?: string;
-  startedAfter?: Date;
-  startedBefore?: Date;
 }
 
 export type StorageBackendConstructor = new (...args: unknown[]) => StorageBackend;

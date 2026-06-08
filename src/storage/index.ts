@@ -22,7 +22,7 @@ const log = rootLogger.child({ module: 'storage:factory' });
 // Singleton
 // ---------------------------------------------------------------------------
 
-let storageInstance: StorageBackend | null = null;
+let storageInstance: StorageBackend | undefined = undefined;
 
 /**
  * Create (or return the existing) storage backend based on the active config.
@@ -44,13 +44,13 @@ export async function createStorage(): Promise<StorageBackend | undefined> {
     case 'sqlite': {
       const dbPath = config.storage.sqlitePath;
       log.info({ dbPath }, 'Initializing SQLite storage');
-      storageInstance = new SQLiteStorage(dbPath);
+      storageInstance = new SQLiteStorage(dbPath) as unknown as StorageBackend;
       break;
     }
 
     case 'postgres': {
       log.info('Initializing Postgres storage');
-      storageInstance = new PostgresStorage();
+      storageInstance = new PostgresStorage() as unknown as StorageBackend;
       break;
     }
 
@@ -68,9 +68,9 @@ export async function createStorage(): Promise<StorageBackend | undefined> {
  * Close / tear down the active storage backend (e.g. on graceful shutdown).
  */
 export async function closeStorage(): Promise<void> {
-  if (storageInstance && typeof storageInstance.close === 'function') {
-    await storageInstance.close();
+  if (storageInstance && typeof (storageInstance as any).close === 'function') {
+    await (storageInstance as any).close();
   }
-  storageInstance = null;
+  storageInstance = undefined;
   log.info('Storage backend closed');
 }

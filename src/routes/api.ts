@@ -1,11 +1,26 @@
 import { Router, type Request, type Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { requireAuth } from '../security/authMiddleware.js';
 
 const log = rootLogger.child({ module: 'api-routes' });
+
+// ---------------------------------------------------------------------------
+// Rate Limiting: 60 requests per minute per IP on API endpoints
+// ---------------------------------------------------------------------------
+
+const apiLimiter = rateLimit({
+  windowMs: 60_000, // 1 minute
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
+});
+
 const router = Router();
 
+router.use(apiLimiter);
 router.use(requireAuth);
 
 router.get('/runs', async (req: Request, res: Response) => {
@@ -16,6 +31,7 @@ router.get('/runs', async (req: Request, res: Response) => {
     const offset = Math.abs(Number(req.query.offset) || 0);
     const status = req.query.status as string | undefined;
     const repo = req.query.repo as string | undefined;
+    if (!storage) { res.status(500).json({ error: 'Storage not available' }); return; }
     const runs = await storage.listRuns(limit, offset, { status, repo });
     const total = await storage.countRuns({ status, repo });
     res.json({ runs, total, limit, offset });
@@ -29,6 +45,7 @@ router.get('/runs/:id', async (req: Request, res: Response) => {
   try {
     const { createStorage } = await import('../storage/index.js');
     const storage = await createStorage();
+    if (!storage) { res.status(500).json({ error: 'Storage not available' }); return; }
     const run = await storage.getRun(req.params.id);
     if (!run) {
       res.status(404).json({ error: 'Run not found' });
@@ -65,6 +82,7 @@ router.get('/stats', async (_req: Request, res: Response) => {
   try {
     const { createStorage } = await import('../storage/index.js');
     const storage = await createStorage();
+    if (!storage) { res.status(500).json({ error: 'Storage not available' }); return; }
     const totalRuns = await storage.countRuns({});
     const successfulRuns = await storage.countRuns({ status: 'success' });
     const failedRuns = await storage.countRuns({ status: 'failed' });

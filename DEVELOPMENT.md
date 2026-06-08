@@ -247,3 +247,46 @@ The bot consists of two processes (API server + worker) that communicate via Red
 - **Worker** processes jobs by dispatching them to OpenCode
 
 In production, you can run both in a single container (`RUN_MODE=both`) or scale them independently (`RUN_MODE=api` / `RUN_MODE=worker`).
+
+
+## Dashboard Deployment
+
+STAS includes a React/Vite dashboard for run history and analytics. In production, the dashboard is built and served by the same Express server.
+
+### Local Development
+
+```bash
+# Install dashboard dependencies
+cd dashboard && npm install
+
+# Start dashboard dev server (separate terminal, port 5173)
+cd dashboard && npm run dev
+
+# The root dev server proxies API requests to :3000
+# The Vite dev server runs on :5173 with hot-reload
+```
+
+### Production Build
+
+The dashboard is automatically built during the Docker image build (see `Dockerfile`). When running directly:
+
+```bash
+# Build the dashboard
+npm run build:dashboard
+
+# Build everything (API + dashboard)
+npm run build:all
+```
+
+### How It Works
+
+1. **Build**: `npm run build:dashboard` compiles the Vite app to `dashboard/dist/`
+2. **Serve**: In production (`NODE_ENV=production`), the Express server checks if `dashboard/dist/` exists and serves it as static content
+3. **SPA Fallback**: All non-API routes (`/*` that don't start with `/api`, `/health`, `/webhook`, etc.) serve `index.html` — enabling client-side routing
+4. **Nginx Caching**: Static assets under `/assets/` are served with aggressive caching headers (`max-age=31536000, immutable`)
+
+### Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `DASHBOARD_URL` | (auto) | Override dashboard URL for API proxying in dev |

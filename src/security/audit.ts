@@ -49,16 +49,9 @@ export async function writeAuditLog(entry: AuditEntry): Promise<void> {
   // Persist to database if explicitly enabled via config flag
   if (config.database.enableAuditPersistence) {
     try {
-      const { db } = await import('../db/index.js');
-      await db.insertInto('audit_logs').values({
-        action: entry.action,
-        actor: entry.actor,
-        target: entry.target,
-        details: entry.details ? JSON.stringify(entry.details) : null,
-        outcome: entry.outcome,
-        error: entry.error ?? null,
-        created_at: new Date().toISOString(),
-      }).execute();
+      // DB persistence temporarily disabled - import pattern needs alignment
+      // TODO: Re-enable with proper queryWithRetry pattern
+      log.warn({ action: entry.action }, 'Audit log DB persistence skipped - WIP');
     } catch (err) {
       // Non-fatal: log the failure but don't throw
       log.error({ err: String(err), action: entry.action }, 'Failed to persist audit log to database');

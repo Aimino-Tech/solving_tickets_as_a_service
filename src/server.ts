@@ -56,7 +56,6 @@ import { queryWithRetry } from './db/connection.js';
 import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
-import { adminRouter } from "./pricing/admin.js";
 import { adminAuthMiddleware } from "./security/adminAuth.js";
 import { initTierOverrides } from "./ratelimit/tiers.js";
 import { validateWebhookPayload } from './validation.js';
@@ -757,6 +756,18 @@ export function createApp(): express.Application {
   const specPath = resolve(thisDirname, '../openapi.yaml');
   const openApiSpec = yaml.load(fs.readFileSync(specPath, 'utf8')) as Record<string, unknown>;
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+
+  // Serve dashboard static build (production only)
+  const dashboardDistPath = resolve(__dirname, '../dashboard/dist');
+  if (fs.existsSync(dashboardDistPath)) {
+    app.use(express.static(dashboardDistPath));
+    // SPA fallback - all non-API routes serve index.html
+    app.get('*', (req, res) => {
+      if (!req.path.startsWith('/api') && !req.path.startsWith('/health') && !req.path.startsWith('/webhook') && !req.path.startsWith('/docs') && !req.path.startsWith('/metrics') && !req.path.startsWith('/slack') && !req.path.startsWith('/admin') && !req.path.startsWith('/flower')) {
+        res.sendFile(resolve(dashboardDistPath, 'index.html'));
+      }
+    });
+  }
 
     // -- 404 handler ----------------------------------------------------------
   app.use((_req: Request, res: Response) => {

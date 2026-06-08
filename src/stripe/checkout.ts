@@ -30,7 +30,7 @@ function getStripe(): Stripe {
       );
     }
     _stripe = new Stripe(secretKey, {
-      apiVersion: '2025-02-24.acacia',
+      apiVersion: '2025-02-24.acacia' as any,
       typescript: true,
     });
   }

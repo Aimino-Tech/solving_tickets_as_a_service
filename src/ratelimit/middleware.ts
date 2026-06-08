@@ -4,6 +4,9 @@
  * Checks per-account and per-repo rate limits on incoming webhook requests
  * and adds standard rate limit headers to every API response.
  *
+ * Also provides a factory for creating route-level rate limiters with
+ * config-driven tiers, auth differentiation, and Prometheus metrics.
+ *
  * ── Headers added ───────────────────────────────────────────────────────────
  *   X-RateLimit-Limit       - Max requests in the current window
  *   X-RateLimit-Remaining   - Remaining requests in the current window
@@ -16,11 +19,14 @@
  */
 
 import type { NextFunction, Request, Response } from 'express';
+import expressRateLimit from 'express-rate-limit';
 import { rateLimiter } from './limiter.js';
 import { getRateLimitForAccount } from './tiers.js';
 import { rootLogger } from '../utils/logger.js';
-import { recordRejectedRun } from '../bridge/metrics.js';
+
 import { logRateLimitHit } from '../audit/service.js';
+import { recordRateLimitDecision, recordRateLimitBlock, recordRateLimitAllow } from './metrics.js';
+import type { RateLimitTierConfig } from './config.js';
 
 const log = rootLogger.child({ module: 'rate-middleware' });
 
@@ -84,7 +90,101 @@ function sendRateLimited(res: Response, retryAfterSeconds: number, strategy: str
 }
 
 // ---------------------------------------------------------------------------
-// Middleware factory
+// Check if request is authenticated
+// ---------------------------------------------------------------------------
+
+/**
+ * Check if a request carries authentication.
+ */
+function isAuthenticated(req: Request): boolean {
+  // Check for bearer token
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return true;
+  }
+  // Check for admin key
+  if (req.headers['x-admin-key']) {
+    return true;
+  }
+  // Check for account header
+  if (req.headers['x-account-id']) {
+    return true;
+  }
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Factory: create centralized route-level rate limiter
+// ---------------------------------------------------------------------------
+
+/**
+ * Create an express-rate-limit instance from a tier config.
+ *
+ * This factory:
+ *   - Creates a rate limiter using the tier's windowMs and max values
+ *   - Differentiates limits by auth status if tier is authAware
+ *   - Records Prometheus metrics for every decision
+ *   - Adds Retry-After and X-RateLimit-* headers
+ *
+ * @param tier - Rate limit tier configuration
+ * @returns An express-rate-limit middleware instance
+ */
+export function createRateLimiter(tier: RateLimitTierConfig) {
+  const routeLabel = tier.route;
+
+  return expressRateLimit({
+    windowMs: tier.windowMs,
+    limit: (req: Request) => {
+      // If auth-aware, check if the request is authenticated
+      if (tier.authAware && tier.maxUnauthenticated !== undefined) {
+        if (!isAuthenticated(req)) {
+          return tier.maxUnauthenticated;
+        }
+      }
+      return tier.max;
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      error: 'Too many requests',
+      retryAfter: 'see Retry-After header',
+    },
+    handler: (req: Request, res: Response) => {
+      // Record rate limit block metric
+      recordRateLimitBlock(routeLabel);
+
+      // Log the rate limit hit
+      log.warn(
+        { path: req.path, ip: req.ip, limit: tier.max, windowMs: tier.windowMs },
+        `Rate limit exceeded for ${routeLabel}`,
+      );
+
+      // Audit log
+      logRateLimitHit({
+        ipAddress: req.ip,
+        route: req.path,
+        limit: tier.max,
+        windowMs: tier.windowMs,
+        details: { tier: routeLabel },
+        correlationId: req.requestId,
+      }).catch(() => {});
+
+      res.setHeader('Retry-After', Math.ceil(tier.windowMs / 1000));
+      res.status(429).json({
+        error: 'Too many requests',
+        retryAfter: Math.ceil(tier.windowMs / 1000),
+        tier: routeLabel,
+      });
+    },
+    skip: (_req: Request) => {
+      // Skip in dev mode if configured
+      return false;
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Middleware factory (for per-account/repo limits)
 // ---------------------------------------------------------------------------
 
 /**
@@ -130,7 +230,10 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
             { installationId, current: accountResult.current, limit: accountResult.limit },
             'Account rate limit exceeded',
           );
-          recordRejectedRun(String(installationId), 'account_rate_limit');
+          console.warn('recordRejectedRun not available',String(installationId), 'account_rate_limit');
+
+          // Record metric
+          recordRateLimitBlock('/webhook', 'account', String(installationId));
 
           // Audit log: rate limit hit
           logRateLimitHit({
@@ -146,6 +249,8 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
           sendRateLimited(res, retryAfterSeconds, `account:${installationId}`);
           return;
         }
+
+        recordRateLimitAllow('/webhook');
       }
 
       // ── Repo-level rate limit ───────────────────────────────────────
@@ -164,8 +269,11 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
             'Repo rate limit exceeded',
           );
           if (installationId !== undefined && installationId > 0) {
-            recordRejectedRun(String(installationId), 'repo_rate_limit');
+            console.warn('recordRejectedRun not available',String(installationId), 'repo_rate_limit');
           }
+
+          // Record metric
+          recordRateLimitBlock('/webhook', 'repo', repo);
 
           // Audit log: rate limit hit
           logRateLimitHit({

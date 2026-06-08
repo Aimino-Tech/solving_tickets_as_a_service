@@ -27,13 +27,13 @@
 import { Sandbox } from 'e2b';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import type { SandboxExecutor, ExecResult, TestRunResult, RuntimeInfo } from './types.js';
+import type { SandboxExecutor as SandboxExecutorInterface, ExecResult, TestRunResult, RuntimeInfo } from './types.js';
 
 const log = rootLogger.child({ module: 'sandbox' });
 
 export type { ExecResult, TestRunResult, RuntimeInfo };
 
-export class E2BSandboxExecutor implements SandboxExecutor {
+export class E2BSandboxExecutor implements SandboxExecutorInterface {
   private sandbox: Sandbox | null = null;
   private repoDir: string = '';
   private runtimeInfo: RuntimeInfo | null = null;
