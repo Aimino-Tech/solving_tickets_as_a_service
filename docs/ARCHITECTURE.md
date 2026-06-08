@@ -734,4 +734,61 @@ Additional service directories:
        │  E2B Sandbox  │  │  Docker      │
        │  (cloud)      │  │  (local)     │
        └──────────────┘  └──────────────┘
+
+
+---
+
+## Performance Baseline & Capacity Planning
+
+> **NOTE**: This section documents the load testing infrastructure and projected capacity limits.
+> Baseline metrics must be established by running the k6 scenarios against a production-like stack
+> and recording results in `tests/load/results/`.
+
+### Load Test Scenarios
+
+Located in `tests/load/`, four k6 scenarios model production traffic:
+
+| Scenario | File | Endpoints | Metrics |
+|---|---|---|---|
+| Webhook Throughput | `webhook-load-test.js` | `POST /webhook` | Throughput (req/s), latency (p50/p95/p99), error rate, rate-limited count |
+| DB Connection Pool | `db-connection-pool-test.js` | `GET /health`, `GET /health/ready` | Connection acquisition latency, pool exhaustion behavior |
+| Queue Throughput | `queue-throughput-test.js` | `POST /webhook`, `GET /health/queue` | Enqueue latency, queue depth, worker active jobs |
+| Mixed Production | `mixed-workload-test.js` | `POST /webhook`, `GET /health`, `GET /health/queue`, `GET /metrics` | Per-endpoint latency under mixed traffic |
+
+Run all scenarios:
+```bash
+npm run test:load:all
+# or with custom target:
+TARGET_URL=https://staging.stas.dev npm run test:load:all
 ```
+
+### Estimated Capacity Bounds (to be validated)
+
+| Resource | Projected Limit | Bottleneck Likelihood |
+|---|---|---|
+| Webhooks/sec (single instance) | ~200 req/s | Medium — rate limiter, CPU |
+| Concurrent agent runs (single worker) | ~5-10 | High — OpenCode process memory |
+| DB connection pool | ~25 connections | Medium — PostgreSQL `max_connections` |
+| Redis/BullMQ throughput | ~1000 jobs/s | Low — Redis is typically not the bottleneck |
+| RabbitMQ message throughput | ~500 msg/s | Low — RabbitMQ handles higher throughput |
+
+### Top 3 Likely Bottlenecks
+
+1. **OpenCode agent memory** — each agent run spawns a Node.js process that can consume 500MB-2GB RAM. Worker count is the primary scaling lever.
+2. **Webhook rate limiter** — `express-rate-limit` is configured per-instance. Under burst traffic (200+ VUs), rate limiting will trigger HTTP 429, reducing effective throughput.
+3. **Database connection pool** — PostgreSQL `max_connections` defaults to 100. With 25 connections reserved for webhook + worker pools, connection starvation occurs under simultaneous health-check storms.
+
+### Autoscaling Recommendations
+
+| Component | Metric | Scale Trigger | Min | Max |
+|---|---|---|---|---|
+| Webhook API | CPU > 70% for 2m | req/s per instance | 2 | 10 |
+| Worker | Queue depth > 50 for 1m | pending jobs | 1 | 20 |
+| DB pool | Connection utilization > 80% | active connections | 10 | 50 |
+
+### Future Work
+
+- [ ] Establish baseline metrics by running `npm run test:load:all` against staging
+- [ ] Record results as JSON artifacts in CI (daily cron via `.github/workflows/bench.yml`)
+- [ ] Document actual bottleneck analysis after first production run
+- [ ] Implement CI regression gate: fail if p95 latency regresses >10%
