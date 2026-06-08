@@ -6,7 +6,7 @@
 #   - Parallel independent jobs (lint, typecheck, test, build, e2e)
 #   - Workflow concurrency: cancels in-progress runs on same branch
 #   - E2E job with Docker Compose services (Redis)
-#   - Coverage threshold (minimum 70%)
+#   - Coverage thresholds enforced by vitest config
 #   - workflow_dispatch trigger for manual runs
 # =============================================================================
 
@@ -91,7 +91,7 @@ jobs:
         run: npm run typecheck
 
   ##############################################################################
-  # UNIT TESTS + COVERAGE (min 70% line coverage enforced)
+  # UNIT TESTS + COVERAGE (thresholds enforced by vitest.config.ts)
   ##############################################################################
   test:
     name: Unit Tests (Vitest)
@@ -111,23 +111,6 @@ jobs:
 
       - name: Run tests with coverage
         run: npm run test:coverage
-
-      - name: Enforce minimum 70% line coverage
-        run: |
-          COVERAGE=$(npx vitest run --coverage --reporter=json 2>/dev/null | \
-            grep -o '"lines":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9.]*' | \
-            grep -o '"pct":[0-9.]*' | grep -o '[0-9.]*' | head -1)
-          if [ -z "$COVERAGE" ]; then
-            echo "⚠️  Could not parse coverage — check vitest output"
-            exit 1
-          fi
-          echo "📊 Line coverage: ${COVERAGE}%"
-          MIN_COVERAGE=70
-          if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
-            echo "❌ Coverage ${COVERAGE}% is below minimum ${MIN_COVERAGE}%"
-            exit 1
-          fi
-          echo "✅ Coverage ${COVERAGE}% meets threshold of ${MIN_COVERAGE}%"
 
   ##############################################################################
   # BUILD
