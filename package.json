@@ -65,7 +65,8 @@
     "db:migrate:test:check": "tsx scripts/test-migrations.ts --check",
     "db:migrate:bench": "tsx scripts/bench-migrations.ts",
     "db:migrate:bench:ci": "tsx scripts/bench-migrations.ts --ci --json",
-    "test:db-migrations": "vitest run src/__tests__/db/"
+    "test:db-migrations": "vitest run src/__tests__/db/",
+    "release:dry-run": "bash scripts/release-dry-run.sh"
   },
   "dependencies": {
     "@octokit/auth-app": "^7.1.0",
