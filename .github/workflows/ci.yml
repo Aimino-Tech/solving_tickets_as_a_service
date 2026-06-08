@@ -9,8 +9,12 @@
 #   - Coverage thresholds enforced by vitest config
 #   - workflow_dispatch trigger for manual runs
 #   - Dockerfile linting via hadolint
-#   - Docker image vulnerability scanning via Trivy
+#   - Docker image vulnerability scanning via Grype
 #   - Docker Bench Security audit
+#   - CycloneDX SBOM generation
+#   - npm audit enforcement (fail on high/critical)
+#   - pip-audit for Python dependency scanning
+#   - package-lock.json integrity verification
 # =============================================================================
 
 name: CI
@@ -37,6 +41,7 @@ concurrency:
 
 env:
   NODE_VERSION: "22"
+  PYTHON_VERSION: "3.12"
   CI: true
 
 jobs:
@@ -138,6 +143,89 @@ jobs:
           exit-code: 1
 
   ##############################################################################
+  # SBOM GENERATION (CycloneDX)
+  ##############################################################################
+  sbom:
+    name: Generate SBOM (CycloneDX)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate CycloneDX SBOM (JSON)
+        run: |
+          mkdir -p sbom
+          npx --yes @cyclonedx/cyclonedx-npm \
+            --output-format JSON \
+            --output-file sbom/sbom.cyclonedx.json
+
+      - name: Generate CycloneDX SBOM (XML)
+        run: |
+          npx --yes @cyclonedx/cyclonedx-npm \
+            --output-format XML \
+            --output-file sbom/sbom.cyclonedx.xml || true
+
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
+          retention-days: 90
+
+  ##############################################################################
+  # PACKAGE-LOCK INTEGRITY VERIFICATION
+  ##############################################################################
+  lockfile-integrity:
+    name: Lockfile Integrity Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Verify lockfile version
+        run: |
+          VERSION=$(node -e "console.log(require('./package-lock.json').lockfileVersion)")
+          if [ "$VERSION" != "3" ]; then
+            echo "ERROR: Expected lockfileVersion 3, got $VERSION"
+            exit 1
+          fi
+          echo "Lockfile version: v$VERSION"
+
+      - name: Check all packages have integrity hashes
+        run: |
+          MISSING=$(node -e "
+            const lock = require('./package-lock.json');
+            const pkgs = Object.keys(lock.packages || {});
+            const missing = pkgs.filter(p => {
+              const meta = lock.packages[p];
+              return meta && !meta.link && !meta.dev && !meta.peer && !meta.bundled && !meta.integrity;
+            });
+            if (missing.length > 0) {
+              console.log('Packages missing integrity hashes:');
+              missing.forEach(p => console.log('  ' + p));
+              process.exit(1);
+            }
+            console.log('All ' + pkgs.length + ' packages have integrity hashes');
+          ")
+
+      - name: Verify lockfile consistency with node_modules
+        run: |
+          npm ci
+          npm ls --all > /dev/null 2>&1 && echo "Lockfile is consistent" || { echo "Lockfile inconsistent"; exit 1; }
+
+  ##############################################################################
   # TYPE CHECK
   ##############################################################################
   typecheck:
@@ -200,7 +288,7 @@ jobs:
       - run: npm run build
 
   ##############################################################################
-  # SECURITY AUDIT
+  # SECURITY AUDIT (npm audit)
   ##############################################################################
   audit:
     name: Security Audit (npm audit)
@@ -216,3 +304,91 @@ jobs:
       - name: Run npm audit (fail on high/critical)
         run: npm audit --audit-level=high
         continue-on-error: false
+
+  ##############################################################################
+  # PYTHON DEPENDENCY SCANNING (pip-audit)
+  ##############################################################################
+  pip-audit:
+    name: Python Dep Scan (pip-audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: workers/requirements.txt
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run pip-audit on workers dependencies
+        run: |
+          pip-audit --requirement workers/requirements.txt \
+            --desc \
+            --strict \
+            --fix=no
+
+  ##############################################################################
+  # DOCKER IMAGE SCANNING (Grype)
+  ##############################################################################
+  grype-scan:
+    name: Docker Image Scan (Grype)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t stas-bot:ci -f Dockerfile .
+
+      - name: Scan image with Grype
+        uses: anchore/scan-action@v6
+        with:
+          image: stas-bot:ci
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true
+
+      - name: Generate Grype SARIF report
+        uses: anchore/scan-action@v6
+        with:
+          image: stas-bot:ci
+          severity-cutoff: high
+          only-fixed: true
+          output-format: sarif
+
+      - name: Upload Grype SARIF to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+          category: grype-docker
+
+  ##############################################################################
+  # E2E TESTS
+  ##############################################################################
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [lint, build]
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_e2e != 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Start services and run E2E tests
+        run: npm run test:e2e:ci

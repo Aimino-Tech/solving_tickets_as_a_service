@@ -31,3 +31,6 @@ Thumbs.db
 
 # Debug logs
 npm-debug.log*
+
+# Supply chain: Generated SBOM artifacts (CI generates these)
+sbom/

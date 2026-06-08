@@ -455,3 +455,175 @@ flowchart TB
 - [ ] Dependencies are pinned to specific versions
 - [ ] Container images are scanned for vulnerabilities
 - [ ] No secrets are committed to the repository
+
+---
+
+## 11. Vulnerability Response Process
+
+> **How STAS handles reported vulnerabilities and dependency flaws.**
+
+### 11.1 Scope
+
+This process covers:
+- **Code vulnerabilities** — flaws in STAS source code that introduce security risks
+- **Dependency vulnerabilities** — CVEs in npm, pip, or other dependencies
+- **Infrastructure vulnerabilities** — Docker image, CI/CD pipeline, or deployment config issues
+- **Supply chain attacks** — Compromised upstream packages, typo-squatting, dependency confusion
+
+### 11.2 Reporting a Vulnerability
+
+**DO NOT file a public GitHub issue for security vulnerabilities.**
+
+Instead, report via one of these private channels:
+
+| Method | Contact | Expected Response Time |
+|---|---|---|
+| **Email** | `security@aimino.com` | 24 hours (business) |
+| **GitHub Private Vulnerability Reporting** | Navigate to repo → `Security` tab → `Report a vulnerability` | 48 hours |
+| **Linear** | File a private issue on our internal board (invite-only) | 24 hours |
+
+Please include:
+1. Description of the vulnerability and potential impact
+2. Steps to reproduce or a proof of concept
+3. Affected versions and components
+4. Suggested fix or mitigation (if known)
+
+### 11.3 Triage and Prioritization
+
+| Severity | Response SLA | Fix Timeline | Example |
+|---|---|---|---|
+| **CRITICAL** | 4 hours | 24 hours | Remote code execution, auth bypass, leaked credentials |
+| **HIGH** | 24 hours | 7 days | SQL injection, privilege escalation, sensitive data exposure |
+| **MEDIUM** | 72 hours | 30 days | XSS, CSRF, missing rate limiting |
+| **LOW** | 1 week | 90 days | Missing security headers, verbose error messages |
+
+### 11.4 Dependency Vulnerability Handling
+
+#### Automated Detection
+
+STAS employs multiple layers of automated dependency scanning:
+
+| Layer | Tool | Frequency | Scope |
+|---|---|---|---|
+| **CI/CD** | `npm audit` | Every push/PR | npm runtime + dev deps |
+| **CI/CD** | `pip-audit` | Every push/PR | Python/workers deps |
+| **CI/CD** | `grype` | Every push/PR | Docker image (OS + app packages) |
+| **CI/CD** | `trivy` | Every push/PR | IaC misconfigurations |
+| **CI/CD** | `sbom` (CycloneDX) | Every push/PR | Full dependency inventory |
+| **Dependabot** | GitHub-native | Weekly | npm + pip + GitHub Actions |
+| **Scheduled** | `supply-chain.sh all` | Ongoing | Local developer tooling |
+
+#### When a CVE is detected
+
+```mermaid
+flowchart TD
+    DETECT[CVE Detected by scan] --> TRIAGE{Severity?}
+    TRIAGE -->|CRITICAL| ALERT[Pager/Slack alert]
+    TRIAGE -->|HIGH| NEXT[Next sprint]
+    TRIAGE -->|MEDIUM/LOW| BACKLOG[Add to backlog]
+
+    ALERT --> INVESTIGATE{Has fix?}
+    INVESTIGATE -->|Yes, patch available| AUTO[Auto-merge Dependabot PR]
+    INVESTIGATE -->|No patch| WORKAROUND[Apply workaround/pin]
+
+    AUTO --> VERIFY[Verify passing CI]
+    WORKAROUND --> DOCUMENT[Document in security advisory]
+
+    NEXT --> SCHEDULE[Schedule in current sprint]
+    SCHEDULE --> APPLY[Apply patch or upgrade]
+    APPLY --> VERIFY
+```
+
+#### Remediation steps
+
+1. **Immediate (CRITICAL only)**: Pin the vulnerable dependency to a safe version, or apply a temporary workaround (e.g., disabling the affected feature)
+2. **Short-term (HIGH)**: Upgrade to the patched version. If none exists, evaluate alternate dependencies
+3. **Long-term (MEDIUM/LOW)**: Schedule the fix in the regular sprint cycle
+
+#### Dependency update workflow
+
+```bash
+# Check for vulnerabilities locally
+./scripts/supply-chain.sh audit-npm    # npm audit
+./scripts/supply-chain.sh audit-pip    # pip-audit
+
+# Check specific dependency
+npm audit --json | jq '.vulnerabilities["<package-name>"]'
+
+# Update a dependency
+npm update <package-name> --save
+# or for major upgrades
+npm install <package-name>@latest --save
+
+# Regenerate lockfile with integrity hashes
+npm ci
+
+# Verify everything passes
+./scripts/supply-chain.sh all
+```
+
+### 11.5 Supply Chain Attack Mitigations
+
+STAS implements the following defenses against supply chain attacks:
+
+| Threat | Mitigation |
+|---|---|
+| **Dependency confusion** | Lockfiles pin exact versions with integrity hashes |
+| **Typosquatting** | Dependencies reviewed via Dependabot PRs before merge |
+| **Compromised upstream** | `npm audit` + `pip-audit` scan every build |
+| **Docker base image tampering** | Pinned `node:22-alpine` and `python:3.12-slim` tags |
+| **Man-in-the-middle** | npm registry uses HTTPS; pip uses hashed requirements |
+| **Malicious PRs from Dependabot** | Auto-merge disabled; all PRs require review |
+| **Lockfile tampering** | Integrity hash verification in CI and Docker build |
+
+### 11.6 SBOM (Software Bill of Materials)
+
+Every CI build generates a CycloneDX SBOM, available as a build artifact:
+
+- **Format**: JSON (CycloneDX 1.6) and XML
+- **Location**: CI artifact named `sbom/`
+- **Retention**: 90 days
+- **Contents**: All npm dependencies with versions, licenses, and integrity hashes
+
+To generate locally:
+
+```bash
+./scripts/supply-chain.sh sbom
+# Output: sbom/sbom.cyclonedx.json
+```
+
+### 11.7 Security Contacts
+
+| Role | Contact | Purpose |
+|---|---|---|
+| **Security Lead** | `tam@aimino.com` | Vulnerability coordination |
+| **Security Team** | `security@aimino.com` | General security reports |
+| **Emergency** | Private GitHub vulnerability report | Critical issue disclosure |
+
+### 11.8 Disclosure Policy
+
+1. **Report received** → Acknowledged within 24 hours (CRITICAL: 4 hours)
+2. **Investigation** → Triage and severity assessment within 48 hours
+3. **Fix development** → Timeline determined by severity (see §11.3)
+4. **Patch release** → Fixed version published to npm/GHCR
+5. **Public disclosure** → Security advisory published on GitHub after fix is released and verified
+
+We follow **coordinated disclosure**: we will not release details until a fix is available and deployed, unless the vulnerability is already public.
+
+### 11.9 Security Checklist for Release
+
+Before any production release:
+
+- [ ] All CI supply chain jobs pass (sbom, audit, pip-audit, lockfile integrity, grype)
+- [ ] No HIGH or CRITICAL vulnerabilities in dependencies
+- [ ] Dependabot PRs reviewed and merged for weekly updates
+- [ ] SBOM generated and attached to release notes
+- [ ] Docker image scanned with Grype (no unfixed HIGH/CRITICAL)
+- [ ] `package-lock.json` integrity hashes verified
+- [ ] `workers/requirements.txt` dependencies pinned to exact versions
+- [ ] Security contacts notified of any outstanding issues
+
+---
+
+> **Last updated**: 2026-06-08
+> **Review cadence**: Quarterly, or after any security incident

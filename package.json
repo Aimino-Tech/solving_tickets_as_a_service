@@ -46,7 +46,13 @@
     "workers:dev": "celery -A workers.celery_app worker --loglevel=info --concurrency=2",
     "workers:beat": "celery -A workers.celery_app beat --loglevel=info",
     "workers:flower": "celery -A workers.celery_app flower --port=5555 --loglevel=info",
-    "test:e2e:ci": "vitest run --config vitest.e2e.config.ts"
+    "test:e2e:ci": "vitest run --config vitest.e2e.config.ts",
+    "supply-chain:sbom": "bash scripts/supply-chain.sh sbom",
+    "supply-chain:audit-npm": "bash scripts/supply-chain.sh audit-npm",
+    "supply-chain:audit-pip": "bash scripts/supply-chain.sh audit-pip",
+    "supply-chain:verify-lock": "bash scripts/supply-chain.sh verify-lock",
+    "supply-chain:scan-docker": "bash scripts/supply-chain.sh scan-docker",
+    "supply-chain:all": "bash scripts/supply-chain.sh all"
   },
   "dependencies": {
     "@octokit/auth-app": "^7.1.0",
