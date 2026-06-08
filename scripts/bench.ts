@@ -267,8 +267,8 @@ function detectRegressions(
 
       // Check p95/p99
       for (const percentile of ['p95', 'p99'] as const) {
-        const baselineVal = (baselineBench as any)[percentile];
-        const currentVal = (stat as any)[percentile];
+        const baselineVal = (baselineBench as Record<string, number>)[percentile];
+        const currentVal = (stat as Record<string, number>)[percentile];
         if (baselineVal && currentVal && baselineVal > 0) {
           const change = ((currentVal - baselineVal) / baselineVal) * 100;
           if (change > thresholdPercent) {

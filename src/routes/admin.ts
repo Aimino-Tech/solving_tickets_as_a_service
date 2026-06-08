@@ -334,7 +334,7 @@ router.get('/audit-logs', async (req: Request, res: Response) => {
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
     const result = await auditRepository.query({
-      actorType: req.query.actorType as any,
+      actorType: req.query.actorType as string | undefined,
       actorId: req.query.actorId as string,
       action: req.query.action as string,
       resourceType: req.query.resourceType as string,
@@ -431,21 +431,21 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
       const { createGithubWebhooks } = await import('../webhooks/github.js');
       const { createIssueQueue } = await import('../queue/issueQueue.js');
       const queue = createIssueQueue();
-      const githubWebhooks: any = createGithubWebhooks(queue);
+      const githubWebhooks = createGithubWebhooks(queue);
 
       const payload = typeof webhookEvent.payload === 'string'
         ? webhookEvent.payload
         : JSON.stringify(webhookEvent.payload);
 
-      await (githubWebhooks as any).verifyAndReceive({
+      await githubWebhooks.verifyAndReceive({
         id: `replay-${webhookEvent.id}-${Date.now()}`,
-        name: webhookEvent.event_type as any,
+        name: webhookEvent.event_type as EmitterWebhookEventName,
         payload,
         signature: '', // Skip verification for replay
       });
 
-      if (typeof (githubWebhooks as any).close === 'function') {
-        await (githubWebhooks as any).close();
+      if (typeof githubWebhooks.close === 'function') {
+        await githubWebhooks.close();
       }
       await queue.close();
     } else {

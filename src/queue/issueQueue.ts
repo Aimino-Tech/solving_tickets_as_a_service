@@ -216,7 +216,7 @@ export function createIssueQueue(): Queue<IssueJobData, unknown, string, IssueJo
   });
 
   // Expose queue for pause/resume admin endpoints
-  (queue as any).__queueName = QUEUE_NAME;
+  (queue as { __queueName: string }).__queueName = QUEUE_NAME;
 
   log.info({ maxRetries: config.queue.maxRetries, retryDelays: config.queue.retryDelays }, "Issue queue created");
   return queue;

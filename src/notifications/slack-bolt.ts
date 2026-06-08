@@ -203,7 +203,7 @@ export class SlackBoltApp {
         blocks,
         unfurl_links: false,
         unfurl_media: false,
-      } as any);
+      } as Parameters<typeof this.app.client.chat.postMessage>[0]);
       log.debug(
         { event, channel, repo: `${data.repoOwner}/${data.repoName}`, issueNumber: data.issueNumber },
         'Interactive Slack message sent',

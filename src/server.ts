@@ -337,7 +337,7 @@ export function createApp(): express.Application {
     try {
       parsedPayload = rawBody ? JSON.parse(rawBody.toString()) : req.body;
       // Store payload for downstream middleware (rate limit)
-      (req as any).parsedPayload = parsedPayload;
+      (req as Record<string, unknown>).parsedPayload = parsedPayload;
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to parse webhook payload');
       res.status(400).json({ error: 'Invalid JSON payload' });
@@ -374,7 +374,7 @@ export function createApp(): express.Application {
       try {
         await githubWebhooks.verifyAndReceive({
           id: deliveryId,
-          name: event as any,
+          name: event as EmitterWebhookEventName,
           payload: rawBody.toString(),
           signature,
         });
@@ -390,7 +390,7 @@ export function createApp(): express.Application {
       try {
         await githubWebhooks.verifyAndReceive({
           id: deliveryId || crypto.randomUUID(),
-          name: event as any,
+          name: event as EmitterWebhookEventName,
           payload,
           signature: signature || '',
         });
@@ -547,7 +547,7 @@ export function createApp(): express.Application {
     // Log the webhook event
     const eventId = await logWebhookReceived({
       source,
-      eventType: (payload as any)?.type || 'unknown',
+      eventType: (payload as Record<string, unknown>)?.type as string || 'unknown',
       deliveryId: undefined,
       payload,
     });
@@ -629,7 +629,7 @@ export function createApp(): express.Application {
     // Log the webhook event
     const eventId = await logWebhookReceived({
       source,
-      eventType: (payload as any)?.webhookEvent || 'unknown',
+      eventType: (payload as Record<string, unknown>)?.webhookEvent as string || 'unknown',
       deliveryId: undefined,
       payload,
     });
