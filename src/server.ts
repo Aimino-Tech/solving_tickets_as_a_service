@@ -47,7 +47,7 @@ import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { config } from './config.js';
 import { getQueueHealth } from './health/queueHealth.js';
 import { bridgeMetrics } from './bridge/metrics.js';
-import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
+import { enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
@@ -340,10 +340,10 @@ export function createApp(): express.Application {
   }
 
   // ── Webhook receiver ─────────────────────────────────────────────
-  const queue = createIssueQueue();
-  const githubWebhooks = createGithubWebhooks(queue);
-  const gitlabHandler = createGitlabWebhooks(queue);
-  const bitbucketHandler = createBitbucketWebhooks(queue);
+  
+  const githubWebhooks = createGithubWebhooks();
+  const gitlabHandler = createGitlabWebhooks();
+  const bitbucketHandler = createBitbucketWebhooks();
 
   // -- GitHub webhook handler (shared between /webhook and /webhook/github) --
   async function handleGithubWebhook(req: Request, res: Response): Promise<void> {
@@ -618,7 +618,7 @@ export function createApp(): express.Application {
             trackerTicketId: ticket.id,
           };
 
-          await enqueueIssue(queue, jobData);
+          await enqueueIssue(undefined, jobData);
         } else {
           log.warn(
             'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Linear ticket not enqueued',
@@ -700,7 +700,7 @@ export function createApp(): express.Application {
             trackerTicketId: ticket.id,
           };
 
-          await enqueueIssue(queue, jobData);
+          await enqueueIssue(undefined, jobData);
         } else {
           log.warn(
             'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Jira ticket not enqueued',

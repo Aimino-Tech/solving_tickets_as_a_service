@@ -1,20 +1,13 @@
 /**
- * Unit tests for src/health/queueHealth.ts — Queue health monitoring.
+ * Unit tests for src/health/queueHealth.ts — Queue health monitoring (RabbitMQ).
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-
-const mockRedis = {
-  llen: vi.fn(), zcount: vi.fn(), connect: vi.fn(), quit: vi.fn(), on: vi.fn(),
-  status: 'wait',
-};
-
-vi.mock('ioredis', () => ({ default: vi.fn(() => mockRedis), Redis: vi.fn(() => mockRedis) }));
 
 vi.mock('../../config.js', () => ({
   config: {
     queue: { redisUrl: 'redis://localhost:6379' },
     monitoring: { queueDepthWarnThreshold: 50, queueDepthCritThreshold: 200, dlqRetentionDays: 7, queueDepthAlertMinutes: 5 },
-    rabbitmq: { url: '' },
+    rabbitmq: { url: 'amqp://guest:guest@localhost:5672/stas' },
   },
 }));
 
@@ -22,7 +15,15 @@ vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
 
-vi.mock('../../queue/rabbitmq.js', () => ({ isConnected: vi.fn(() => false) }));
+// Mock RabbitMQ connection — disconnected by default
+const mockIsConnected = vi.fn(() => false);
+vi.mock('../../queue/rabbitmq.js', () => ({
+  isConnected: mockIsConnected,
+  QUEUES: {
+    issuesFix: { name: 'stas.issues.fix', exchange: 'stas.issues', routingKey: 'fix' },
+    triage: { name: 'stas.agents.triage', exchange: 'stas.agents', routingKey: 'triage' },
+  },
+}));
 
 vi.mock('../../bridge/metrics.js', () => ({
   bridgeMetrics: { setGauge: vi.fn(), incrementCounter: vi.fn() },
@@ -38,44 +39,47 @@ describe('health/queueHealth', () => {
   });
 
   describe('getQueueHealth', () => {
-    it('returns a healthy report when queues are empty', async () => {
-      mockRedis.llen.mockResolvedValue(0);
-      mockRedis.zcount.mockResolvedValue(0);
+    it('returns a healthy report when RabbitMQ is disconnected', async () => {
+      mockIsConnected.mockReturnValue(false);
 
       const report = await qh.getQueueHealth();
       expect(report.status).toBe('healthy');
       expect(report.summary.totalMessages).toBe(0);
+      expect(report.rabbitmq.connected).toBe(false);
       expect(report.timestamp).toBeDefined();
     });
 
-    it('returns degraded when queue depth exceeds warn threshold', async () => {
-      mockRedis.llen.mockImplementation((key: string) => {
-        if (key.includes(':wait')) return Promise.resolve(60);
-        return Promise.resolve(0);
+    it('returns healthy when connected and queues are empty', async () => {
+      mockIsConnected.mockReturnValue(true);
+      // Mock fetch to return empty queues
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue([]),
       });
-      mockRedis.zcount.mockResolvedValue(0);
 
       const report = await qh.getQueueHealth();
-      expect(report.status).toBe('warn');
-      expect(report.summary.queuesWithWarnings).toBeGreaterThan(0);
+      expect(report.status).toBe('healthy');
+      expect(report.rabbitmq.connected).toBe(true);
     });
 
-    it('returns critical when queue depth exceeds crit threshold', async () => {
-      mockRedis.llen.mockImplementation((key: string) => {
-        if (key.includes(':wait')) return Promise.resolve(250);
-        return Promise.resolve(0);
+    it('returns degraded when a main queue exceeds warn threshold', async () => {
+      mockIsConnected.mockReturnValue(true);
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue([
+          { name: 'stas.issues.fix', messages: 60, messages_ready: 60, messages_unacknowledged: 0, consumers: 0 },
+        ]),
       });
-      mockRedis.zcount.mockResolvedValue(0);
 
       const report = await qh.getQueueHealth();
-      expect(report.status).toBe('critical');
+      expect(report.status).toBe('degraded');
+      expect(report.summary.queuesWithWarnings).toBeGreaterThan(0);
     });
   });
 
   describe('hasCriticalQueues', () => {
     it('returns empty arrays when healthy', async () => {
-      mockRedis.llen.mockResolvedValue(0);
-      mockRedis.zcount.mockResolvedValue(0);
+      mockIsConnected.mockReturnValue(false);
 
       const result = await qh.hasCriticalQueues();
       expect(result.critical).toEqual([]);
@@ -83,24 +87,10 @@ describe('health/queueHealth', () => {
     });
   });
 
-  describe('getDLQSummary', () => {
-    it('returns summary of DLQ entries', async () => {
-      mockRedis.llen.mockImplementation((key: string) => {
-        if (key.includes('dlq')) return Promise.resolve(5);
-        return Promise.resolve(0);
-      });
-      mockRedis.zcount.mockResolvedValue(0);
-
-      const summary = await qh.getDLQSummary();
-      expect(summary.totalDlqMessages).toBeGreaterThan(0);
-    });
-  });
-
   describe('closeHealthRedis', () => {
-    it('closes the Redis connection', async () => {
-      mockRedis.quit.mockResolvedValue('OK');
-      await qh.closeHealthRedis();
-      expect(mockRedis.quit).toHaveBeenCalled();
+    it('is a no-op after BullMQ removal', async () => {
+      // Should not throw
+      await expect(qh.closeHealthRedis()).resolves.toBeUndefined();
     });
   });
 });
