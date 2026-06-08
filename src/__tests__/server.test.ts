@@ -55,6 +55,7 @@ const { mockLoggerChild } = vi.hoisted(() => {
   return { mockLoggerChild: logger };
 });
 
+const mockCreateIssueQueue = vi.hoisted(() => vi.fn().mockReturnValue({ add: vi.fn(), close: vi.fn() }));
 const mockEnqueueIssue = vi.hoisted(() => vi.fn().mockResolvedValue('job-mock-id'));
 const mockVerifyAndReceive = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockCreateGithubWebhooks = vi.hoisted(() =>
