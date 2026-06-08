@@ -23,13 +23,17 @@ export default defineConfig({
       },
     },
 
-    // Global setup/teardown
+    // Global setup/teardown (runs in main process before workers)
     globalSetup: ['tests/e2e/harness/setup.ts'],
     globalTeardown: ['tests/e2e/harness/teardown.ts'],
 
-    // Setup files run in worker before test files — sets env vars
-    // before any source module imports (like config.ts) happen.
-    setupFiles: ['tests/e2e/harness/env-patch.ts'],
+    // Setup files run in worker before test files, in order:
+    // 1. env-patch.ts — sets env vars so config validation passes
+    // 2. mock-setup.ts — mocks modules with side effects (queue, db, etc.)
+    setupFiles: [
+      'tests/e2e/harness/env-patch.ts',
+      'tests/e2e/harness/mock-setup.ts',
+    ],
 
     // Don't restore mocks between tests (E2E uses real instances)
     restoreMocks: false,

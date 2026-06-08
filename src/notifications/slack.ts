@@ -12,7 +12,7 @@ function formatCurrency(amountCents: number, currency: string): string {
   return `${(amountCents / 100).toFixed(2)} ${currency.toUpperCase()}`;
 }
 
-function buildTextMessage(
+export function buildTextMessage(
   event: NotificationEvent,
   data: NotificationData,
 ): string {

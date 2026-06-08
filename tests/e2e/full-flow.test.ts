@@ -105,6 +105,13 @@ const { mockConfig } = vi.hoisted(() => {
         model: "anthropic/claude-sonnet-4-20250514",
         fallbackModels: ["gpt-4o", "claude-haiku"],
       },
+      opencodeHealth: {
+        pollIntervalMs: 15000,
+        cacheTtlMs: 30000,
+        circuitBreakerThreshold: 3,
+        requestTimeoutMs: 5000,
+        startupTimeoutMs: 30000,
+      },
       gitlab: {
         url: "https://gitlab.com",
         token: "mock-gitlab-token",
@@ -145,8 +152,10 @@ const { mockConfig } = vi.hoisted(() => {
         devSkipWebhookVerify: true,
         maxAgentIterations: 40,
         maxIssueComments: 15,
-        rateLimitWindowMs: 60000,
-        rateLimitMax: 30,
+        rateLimit: {
+          windowMs: 60000,
+          max: 30,
+        },
         defaultTier: "free" as const,
         monthlyQuotaEnabled: true,
       },
@@ -332,17 +341,16 @@ vi.mock("../../src/metering/routes.js", () => ({ usageRouter: vi.fn() }));
 
 import { createApp } from "../../src/server.js";
 import {
-  sampleIssueLabeledPayload,
-  sampleNonTargetLabelPayload,
-  sampleMissingInstallationPayload,
-  sampleMarketplacePurchasePayload,
-  sampleIssueEditedWithTargetPayload,
-  signPayload,
+  githubIssuesLabeledStasFix as sampleIssueLabeledPayload,
+  githubIssuesLabeledOther as sampleNonTargetLabelPayload,
+  githubIssuesOpened as sampleMissingInstallationPayload,
+  githubMarketplacePurchased as sampleMarketplacePurchasePayload,
+  githubIssuesEditedWithStasFix as sampleIssueEditedWithTargetPayload,
 } from "./fixtures/webhooks/github.js";
-import { sampleGitlabIssuePayload } from "./fixtures/webhooks/gitlab.js";
-import { sampleBitbucketIssueCreatedPayload } from "./fixtures/webhooks/bitbucket.js";
-import { sampleLinearWebhookPayload } from "./fixtures/webhooks/linear.js";
-import { sampleJiraWebhookPayload } from "./fixtures/webhooks/jira.js";
+import { gitlabIssueHookLabeled as sampleGitlabIssuePayload } from "./fixtures/webhooks/gitlab.js";
+import { bitbucketPullRequestCreated as sampleBitbucketIssueCreatedPayload } from "./fixtures/webhooks/bitbucket.js";
+import { linearIssueCreate as sampleLinearWebhookPayload } from "./fixtures/webhooks/linear.js";
+import { jiraIssueCreated as sampleJiraWebhookPayload } from "./fixtures/webhooks/jira.js";
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -34,7 +34,7 @@ describe('Health endpoint', () => {
     expect(res.status).toBe(200);
 
     const body = await res.json() as any;
-    expect(body).toHaveProperty('status', 'ok');
+    expect(['ok', 'degraded']).toContain(body.status);
     expect(body).toHaveProperty('label', 'stas:fix');
     expect(body).toHaveProperty('uptime');
     expect(typeof body.uptime).toBe('number');

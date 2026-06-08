@@ -141,14 +141,13 @@ describe('SlackNotificationService.sendNotification()', () => {
     await service.sendNotification('fix_started', sampleData);
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://hooks.slack.com/test-webhook',
-      expect.objectContaining({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: expect.stringContaining('STAS is investigating'),
-      }),
-    );
+    const callUrl = mockFetch.mock.calls[0][0];
+    const callOpts = mockFetch.mock.calls[0][1];
+    expect(callUrl).toBe('https://hooks.slack.com/test-webhook');
+    expect(callOpts.method).toBe('POST');
+    expect(callOpts.headers['Content-Type']).toBe('application/json');
+    const parsedBody = JSON.parse(callOpts.body);
+    expect(parsedBody.text).toContain('*STAS* is investigating');
 
     vi.unstubAllGlobals();
   });
