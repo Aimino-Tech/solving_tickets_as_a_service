@@ -42,6 +42,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import helmet from 'helmet';
+import { buildHelmetConfig, handleCspViolationReport } from './security/securityHeaders.js';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { config } from './config.js';
 import { getQueueHealth } from './health/queueHealth.js';
@@ -97,8 +98,22 @@ function parseSize(size: string): number {
 export function createApp(): express.Application {
   const app = express();
 
-  // -- Security headers (Helmet) -------------------------------------------
-  app.use(helmet());
+  // -- Security headers (Helmet with explicit CSP and security headers) ---------
+  //
+  // The buildHelmetConfig() function detects whether the dashboard build
+  // is present and generates CSP directives accordingly:
+  //   - Dashboard mode: allows scripts/styles from 'self' for SPA functionality
+  //   - API-only mode:  maximally restrictive (default-src 'none')
+  //
+  // Additional headers added:
+  //   - Cross-Origin-Embedder-Policy: require-corp
+  //   - Cross-Origin-Opener-Policy: same-origin
+  //   - Permissions-Policy: camera=(), microphone=(), geolocation=()
+  //   - Strict-Transport-Security (production only)
+  //   - Referrer-Policy: strict-origin-when-cross-origin
+  //   - Standard helmet headers (X-Frame-Options, X-Content-Type-Options, etc.)
+  // ---------------------------------------------------------------------------------
+  app.use(helmet(buildHelmetConfig()));
 
   // -- CORS -----------------------------------------------------------------
   app.use(cors({
@@ -174,6 +189,11 @@ export function createApp(): express.Application {
     message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
   });
   app.use('/webhook', limiter);
+
+  // -- CSP violation report endpoint --------------------------------------------
+  // Browsers POST violation reports here when CSP directives are breached.
+  // Logged at WARN level for security monitoring.
+  app.post('/api/v1/csp-violation-report', handleCspViolationReport);
 
   // -- Slack Bolt receiver (interactive messages) ---------------------------
   const bolt = getSlackBoltApp();
