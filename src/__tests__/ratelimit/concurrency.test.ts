@@ -51,13 +51,12 @@ vi.mock('../../config.js', () => ({
 }));
 
 vi.mock('../../ratelimit/tiers.js', () => ({
-  getConcurrencyLimitForAccount: vi.fn().mockImplementation((id: number) => {
-    // Account 1 = Free (1), Account 2 = Pro (3), Account 3 = Enterprise (10)
+  getConcurrencyLimitForAccount: (id: number) => {
     if (id === 1) return 1;
     if (id === 2) return 3;
     if (id === 3) return 10;
-    return 1; // default free
-  }),
+    return 1;
+  },
 }));
 
 // Import after mocks are set up
@@ -69,7 +68,7 @@ describe('ConcurrencyManager', () => {
   let manager: InstanceType<typeof ConcurrencyManager>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockRedisConstructor.default.mockImplementation(() => mockRedisClient);
     manager = new ConcurrencyManager({ timeoutSeconds: 600 });
 
     // Default: not at capacity
@@ -81,7 +80,7 @@ describe('ConcurrencyManager', () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    // vitest.config restoreMocks:true handles mock restoration
   });
 
   // ── acquire ────────────────────────────────────────────────────────────

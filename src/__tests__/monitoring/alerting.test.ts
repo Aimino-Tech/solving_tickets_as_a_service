@@ -53,7 +53,7 @@ describe('monitoring/alerting', () => {
     });
 
     it('alerts warning when depth exceeds warn threshold', () => {
-      alerting.checkQueueDepth(80, 1);
+      alerting.checkQueueDepth(80, 5);
       expect(mockAddBreadcrumb).toHaveBeenCalled();
     });
 
