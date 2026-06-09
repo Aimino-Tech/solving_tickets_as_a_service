@@ -22,6 +22,7 @@ import { rootLogger } from '../utils/logger.js';
 import type { IssueJobData, MessageEnvelope, TriageData } from '../utils/types.js';
 import { connect, publish, isConnected } from './rabbitmq.js';
 import type { PublishOptions } from './rabbitmq.js';
+import { isFeatureEnabled } from '../services/featureFlags.js';
 
 const log = rootLogger.child({ module: 'producers' });
 
@@ -125,6 +126,19 @@ async function ensureConnected(): Promise<boolean> {
   }
 }
 
+/**
+ * Check the `rabbitmq_backend` feature flag.
+ * When disabled, queue publishing is skipped and callers should handle
+ * the job via BullMQ or in-process execution instead.
+ */
+async function isRabbitMqBackendEnabled(): Promise<boolean> {
+  const enabled = await isFeatureEnabled('rabbitmq_backend');
+  if (!enabled) {
+    log.warn('RabbitMQ backend disabled by feature flag — queue jobs will not be published to RabbitMQ');
+  }
+  return enabled;
+}
+
 // ---------------------------------------------------------------------------
 // Producer functions
 // ---------------------------------------------------------------------------
@@ -143,6 +157,8 @@ export async function publishFixJob(
   data: IssueJobData,
   options?: { correlationId?: string; replyTo?: string; retryCount?: number },
 ): Promise<boolean> {
+  if (!(await isRabbitMqBackendEnabled())) return false;
+
   const repo = `${data.repoOwner}/${data.repoName}`;
   const dedupKey = `fix:${data.installationId}:${repo}#${data.issueNumber}`;
 
@@ -195,6 +211,8 @@ export async function publishTriageJob(
   data: TriageData,
   options?: { correlationId?: string; replyTo?: string; retryCount?: number },
 ): Promise<boolean> {
+  if (!(await isRabbitMqBackendEnabled())) return false;
+
   const repo = `${data.repoOwner}/${data.repoName}`;
   const dedupKey = `triage:${data.installationId}:${repo}#${data.issueNumber}`;
 
@@ -259,6 +277,8 @@ export async function publishVerificationJob(
   data: import('../utils/types.js').VerificationData,
   options?: { correlationId?: string; replyTo?: string; retryCount?: number },
 ): Promise<boolean> {
+  if (!(await isRabbitMqBackendEnabled())) return false;
+
   const dedupKey = `verification:${data.sandboxId}`;
 
   // Dedup check
@@ -298,6 +318,8 @@ export async function publishPRCreationJob(
   data: import('../utils/types.js').PRCreationData,
   options?: { correlationId?: string; replyTo?: string; retryCount?: number },
 ): Promise<boolean> {
+  if (!(await isRabbitMqBackendEnabled())) return false;
+
   const repo = `${data.repoOwner}/${data.repoName}`;
   const dedupKey = `pr:${data.installationId}:${repo}#${data.issueNumber}`;
 
@@ -338,6 +360,8 @@ export async function publishNotificationJob(
   data: import('../utils/types.js').NotificationData,
   options?: { correlationId?: string; replyTo?: string; retryCount?: number },
 ): Promise<boolean> {
+  if (!(await isRabbitMqBackendEnabled())) return false;
+
   const dedupKey = `notification:${data.channel}:${crypto.createHash('md5').update(data.message).digest('hex')}`;
 
   // Dedup check
