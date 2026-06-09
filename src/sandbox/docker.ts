@@ -712,8 +712,7 @@ export class DockerSandbox implements SandboxExecutor {
     args.push('--cap-drop', 'ALL');
     args.push('--cap-add', 'NET_ADMIN'); // needed for iptables
     args.push('--cap-add', 'NET_RAW');   // needed for iptables
-    args.push('--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=1g');
-    args.push('--tmpfs', `${CONTAINER_WORKDIR}:rw,noexec,nosuid,size=2g`);
+    args.push('--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=2g');
 
     // Network
     args.push('--network', 'bridge');
