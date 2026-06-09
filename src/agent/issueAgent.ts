@@ -43,6 +43,7 @@ import { rootLogger, jobLogger } from "../utils/logger.js";
 import { addBreadcrumb, setUserContext } from "../monitoring/sentry.js";
 import * as messages from "../github/messages.js";
 import { getTracker } from "../trackers/index.js";
+import { writeBack } from "../trackers/writeBack.js";
 import { validateIssue } from "./issueValidator.js";
 import { isFeatureEnabled } from "../services/featureFlags.js";
 const log = rootLogger.child({ module: 'issue-agent' });
@@ -87,6 +88,27 @@ async function withTimeout<T>(
 }
 
 /**
+ * Helper: call writeBack if the job has a tracker ticket ID.
+ * This is a no-op if trackerTicketId is not set.
+ */
+async function writeBackIfTracked(
+  data: IssueJobData,
+  agentResult: AgentResult,
+  prUrl?: string,
+  prNumber?: number,
+): Promise<void> {
+  if (data.trackerType && data.trackerTicketId) {
+    await writeBack({
+      trackerType: data.trackerType,
+      trackerTicketId: data.trackerTicketId,
+      agentResult,
+      prUrl,
+      prNumber,
+    });
+  }
+}
+
+/**
  * Run the full agent pipeline for an issue.
  */
 export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise<AgentResult> {
@@ -121,23 +143,27 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     if (triage.type === 'feature') {
       logger.info('Issue is a feature request — skipping');
       await postComment(installationId, repoOwner, repoName, issueNumber, messages.featureSkipComment());
-      return {
+      const featureResult: AgentResult = {
         summary: 'Issue is a feature request, not a bug. Skipping.',
         confidence: 'low',
         fixReady: false,
         noFixReason: 'Feature requests are not handled by the bot.',
       };
+      await writeBackIfTracked(data, featureResult);
+      return featureResult;
     }
 
     if (triage.type === 'question') {
       logger.info('Issue is a question — skipping');
       await postComment(installationId, repoOwner, repoName, issueNumber, messages.questionSkipComment());
-      return {
+      const questionResult: AgentResult = {
         summary: 'Issue is a question, not a bug. Skipping.',
         confidence: 'low',
         fixReady: false,
         noFixReason: 'Questions and support requests are not handled by the bot.',
       };
+      await writeBackIfTracked(data, questionResult);
+      return questionResult;
     }
 
     // Post "working on it" comment
@@ -236,13 +262,15 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
         await sandbox.destroy();
         sandbox = null;
 
-        return {
+        const phantomResult: AgentResult = {
           summary: "Issue references non-existent code — skipping.",
           confidence: "low",
           fixReady: false,
           noFixReason: validationResult.skipReason,
           investigationOnly: true,
         };
+        await writeBackIfTracked(data, phantomResult);
+        return phantomResult;
       }
     }
 
@@ -334,6 +362,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
         await sandbox.destroy();
         sandbox = null;
 
+        await writeBackIfTracked(data, fallbackResult);
         return fallbackResult;
       }
 
@@ -341,12 +370,14 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       await sandbox.destroy();
       sandbox = null;
 
-      return {
+      const noFallbackResult: AgentResult = {
         summary: openCodeResult.errors?.[0] ?? 'OpenCode agent failed',
         confidence: 'low',
         fixReady: false,
         noFixReason: 'OpenCode agent failed and fallback fix is disabled by feature flag.',
       };
+      await writeBackIfTracked(data, noFallbackResult);
+      return noFallbackResult;
     }
 
     // ── Phase 6.5: Verification (post-fix) ────────────────────────────
@@ -419,15 +450,10 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       installationId,
     });
 
-    // ── Phase 8: Cleanup ──────────────────────────────────────────────
-    if (sandbox) {
-      await sandbox.destroy();
-      sandbox = null;
-    }
-
-    return {
+    // ── Phase 7.5: Write back to tracker ──────────────────────────────
+    const successResult: AgentResult = {
       summary: openCodeResult.summary,
-      confidence: openCodeResult.confidence,
+      confidence: finalConfidence,
       fixReady: true,
       prUrl: dispatchResult.prUrl,
       branchName: openCodeResult.branchName,
@@ -435,6 +461,15 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       testOutput: openCodeResult.testOutput,
       verification,
     };
+    await writeBackIfTracked(data, successResult, dispatchResult.prUrl, dispatchResult.prNumber);
+
+    // ── Phase 8: Cleanup ──────────────────────────────────────────────
+    if (sandbox) {
+      await sandbox.destroy();
+      sandbox = null;
+    }
+
+    return successResult;
   } catch (err) {
     if (heartbeatTimer) {
       clearInterval(heartbeatTimer);
@@ -481,13 +516,17 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       }
     }
 
-    return {
+    const errorResult: AgentResult = {
       summary: 'Agent pipeline encountered an error',
       confidence: 'low',
       fixReady: false,
       errors: [errorMsg],
       noFixReason: `An error occurred: ${errorMsg}`,
     };
+    // writeBack updates status + posts a comment; the extra postComment above is kept
+    // for backward compat (immediate feedback) — writeBack.warn catch prevents double-failure
+    await writeBackIfTracked(data, errorResult);
+    return errorResult;
   } finally {
     if (watchdog) {
       clearTimeout(watchdog);
