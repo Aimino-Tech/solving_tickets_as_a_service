@@ -59,6 +59,7 @@ vi.mock('../../config.js', () => ({
       apiKey: 'test-api-key',
       templateId: 'test-template',
       sandboxTimeoutMs: 300_000,
+      workDir: undefined,
     },
   },
 }));
@@ -165,6 +166,12 @@ describe('SandboxExecutor', () => {
       };
 
       mockSandboxInstance.commands.run.mockImplementation((command: string) => {
+        if (command === 'echo $HOME') {
+          return { stdout: '/home/user', stderr: '', exitCode: 0 };
+        }
+        if (command.startsWith('mkdir -p')) {
+          return { stdout: '', stderr: '', exitCode: 0 };
+        }
         if (command.startsWith('git clone')) {
           return { stdout: '', stderr: '', exitCode: 0 };
         }
@@ -302,6 +309,87 @@ describe('SandboxExecutor', () => {
       (executor as any).sandbox = null;
 
       await expect(executor.boot()).rejects.toThrow('Failed to clone repo: Repository not found');
+    });
+
+    it('queries $HOME during boot', async () => {
+      setupBootMock();
+      const executor = new SandboxExecutor(
+        'https://github.com/owner/repo.git',
+        'owner',
+        'repo',
+        123,
+        vi.fn().mockResolvedValue('token'),
+      );
+      (executor as any).sandbox = null;
+      await executor.boot();
+
+      const homeCall = mockSandboxInstance.commands.run.mock.calls.find(
+        ([cmd]: string[]) => cmd === 'echo $HOME',
+      );
+      expect(homeCall).toBeDefined();
+    });
+
+    it('creates workdir with mkdir -p before cloning', async () => {
+      setupBootMock();
+      const executor = new SandboxExecutor(
+        'https://github.com/owner/repo.git',
+        'owner',
+        'repo',
+        123,
+        vi.fn().mockResolvedValue('token'),
+      );
+      (executor as any).sandbox = null;
+      await executor.boot();
+
+      const calls = mockSandboxInstance.commands.run.mock.calls.map(([cmd]: string[]) => cmd);
+      const mkdirIdx = calls.findIndex((c: string) => c.startsWith('mkdir -p'));
+      const cloneIdx = calls.findIndex((c: string) => c.startsWith('git clone'));
+      expect(mkdirIdx).toBeGreaterThanOrEqual(0);
+      expect(cloneIdx).toBeGreaterThan(mkdirIdx);
+      expect(calls[mkdirIdx]).toBe('mkdir -p /home/user');
+    });
+
+    it('falls back to /tmp when $HOME is empty', async () => {
+      mockSandboxInstance.commands.run.mockImplementation((command: string) => {
+        if (command === 'echo $HOME') {
+          return { stdout: '', stderr: '', exitCode: 0 };
+        }
+        if (command.startsWith('mkdir -p')) {
+          return { stdout: '', stderr: '', exitCode: 0 };
+        }
+        if (command.startsWith('git clone')) {
+          return { stdout: '', stderr: '', exitCode: 0 };
+        }
+        if (command.startsWith('ls -la')) {
+          return { stdout: 'package.json\ntsconfig.json\n', stderr: '', exitCode: 0 };
+        }
+        if (command.includes('cat') && command.includes('package.json')) {
+          return { stdout: JSON.stringify({}), stderr: '', exitCode: 0 };
+        }
+        if (command.includes('--version')) {
+          return { stdout: 'v1.0.0', stderr: '', exitCode: 0 };
+        }
+        if (command.includes('install')) {
+          return { stdout: '', stderr: '', exitCode: 0 };
+        }
+        return { stdout: '', stderr: '', exitCode: 0 };
+      });
+
+      const executor = new SandboxExecutor(
+        'https://github.com/owner/repo.git',
+        'owner',
+        'repo',
+        123,
+        vi.fn().mockResolvedValue('token'),
+      );
+      (executor as any).sandbox = null;
+      await executor.boot();
+
+      const calls = mockSandboxInstance.commands.run.mock.calls.map(([cmd]: string[]) => cmd);
+      const mkdirIdx = calls.findIndex((c: string) => c.startsWith('mkdir -p'));
+      const cloneIdx = calls.findIndex((c: string) => c.startsWith('git clone'));
+      expect(calls[mkdirIdx]).toBe('mkdir -p /tmp');
+      expect(calls[cloneIdx]).toContain('/tmp/repo');
     });
   });
 

@@ -73,10 +73,20 @@ export class E2BSandboxExecutor implements SandboxExecutorInterface {
       throw new Error(`Failed to get installation token for sandbox ${this.sandbox.sandboxId}: ${String(err)}`);
     }
 
+    // Determine sandbox working directory (config override → $HOME → /tmp fallback)
+    let workDir: string;
+    if (config.e2b.workDir) {
+      workDir = config.e2b.workDir;
+    } else {
+      const homeResult = await this.exec('echo $HOME', 10_000);
+      workDir = homeResult.stdout.trim() || '/tmp';
+    }
+
+    await this.exec(`mkdir -p ${workDir}`, 30_000);
+    this.repoDir = `${workDir}/${this.repoName}`;
+
     // Clone the repo with auth
     const authUrl = this.repoUrl.replace('https://', `https://x-access-token:${this.installationToken}@`);
-    this.repoDir = `/home/user/${this.repoName}`;
-
     const cloneResult = await this.exec(`git clone --depth 1 ${authUrl} ${this.repoDir}`, 120_000);
     if (cloneResult.exitCode !== 0) {
       throw new Error(`Failed to clone repo: ${cloneResult.stderr}`);

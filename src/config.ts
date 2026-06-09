@@ -89,6 +89,7 @@ const envSchema = z.object({
   E2B_API_KEY: z.string().optional(),
   E2B_TEMPLATE_ID: z.string().default('stas-default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+  E2B_WORK_DIR: z.string().optional(),
 
   // Sandbox — Docker
   DOCKER_IMAGE: z.string().default('ubuntu:24.04'),
@@ -353,6 +354,7 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
+      workDir: env.E2B_WORK_DIR,
     },
 
     docker: {
