@@ -2,12 +2,15 @@ import { Redis } from 'ioredis';
 import { queryWithRetry } from '../db/connection.js';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { auditRepository } from '../audit/repository.js';
 
 const log = rootLogger.child({ module: 'feature-flags' });
 
 let redisClient: Redis | null = null;
 
 const DEFAULT_TTL = config.featureFlags.defaultTtlSeconds;
+const ERROR_WINDOW_MS = 5 * 60 * 1000;
+const AUTO_DISABLE_THRESHOLD = config.featureFlags.autoDisableThreshold;
 
 type FlagResolution = 'db_account' | 'db_global' | 'env';
 
@@ -46,6 +49,90 @@ function cacheKey(accountId: number | null, flag: string): string {
   return `stas:flags:${scope}:${flag}`;
 }
 
+function callsKey(flag: string): string {
+  return `stas:flags:metrics:${flag}:calls`;
+}
+
+function errorsKey(flag: string): string {
+  return `stas:flags:metrics:${flag}:errors`;
+}
+
+// ── Error rate tracking ──────────────────────────────────────────────────────
+
+export async function recordFlagCall(flag: string): Promise<void> {
+  try {
+    const redis = getRedis();
+    const now = Date.now();
+    const member = `${now}:${Math.random().toString(36).slice(2, 8)}`;
+    await redis.zadd(callsKey(flag), now, member);
+    await redis.expire(callsKey(flag), Math.ceil(ERROR_WINDOW_MS / 1000) + 60);
+  } catch (err) {
+    log.error({ err: String(err), flag }, 'Failed to record flag call');
+  }
+}
+
+export async function recordFlagError(flag: string): Promise<void> {
+  try {
+    const redis = getRedis();
+    const now = Date.now();
+    const member = `${now}:${Math.random().toString(36).slice(2, 8)}`;
+    await redis.zadd(errorsKey(flag), now, member);
+    await redis.expire(errorsKey(flag), Math.ceil(ERROR_WINDOW_MS / 1000) + 60);
+  } catch (err) {
+    log.error({ err: String(err), flag }, 'Failed to record flag error');
+  }
+}
+
+export async function getErrorRate(flag: string): Promise<number> {
+  try {
+    const redis = getRedis();
+    const now = Date.now();
+    const windowStart = now - ERROR_WINDOW_MS;
+
+    await redis.zremrangebyscore(callsKey(flag), 0, windowStart).catch(() => {});
+    await redis.zremrangebyscore(errorsKey(flag), 0, windowStart).catch(() => {});
+
+    const [calls, errors] = await Promise.all([
+      redis.zcard(callsKey(flag)),
+      redis.zcard(errorsKey(flag)),
+    ]);
+
+    if (calls === 0) return 0;
+    return errors / calls;
+  } catch (err) {
+    log.error({ err: String(err), flag }, 'Failed to get error rate');
+    return 0;
+  }
+}
+
+export async function checkAndAutoDisable(flag: string): Promise<boolean> {
+  try {
+    const rate = await getErrorRate(flag);
+    if (rate <= AUTO_DISABLE_THRESHOLD) return false;
+
+    await setFeatureFlag(flag, false);
+    log.warn({
+      flag, errorRate: rate, threshold: AUTO_DISABLE_THRESHOLD,
+    }, 'Feature flag auto-disabled due to high error rate');
+
+    await auditRepository.insert({
+      actorType: 'system',
+      actorId: 'feature-flags',
+      action: 'feature_flag.auto_disabled',
+      resourceType: 'feature_flag',
+      resourceId: flag,
+      details: { errorRate: rate, threshold: AUTO_DISABLE_THRESHOLD },
+    });
+
+    return true;
+  } catch (err) {
+    log.error({ err: String(err), flag }, 'Failed to check auto-disable');
+    return false;
+  }
+}
+
+// ── Flag resolution ──────────────────────────────────────────────────────────
+
 export async function isFeatureEnabled(flag: string, accountId?: number): Promise<boolean> {
   try {
     if (accountId) {
@@ -56,6 +143,10 @@ export async function isFeatureEnabled(flag: string, accountId?: number): Promis
       if (result.rows.length > 0) {
         const resolved: ResolvedFlag = { flag, enabled: result.rows[0].enabled, source: 'db_account' };
         log.debug({ flag, accountId, enabled: resolved.enabled, source: resolved.source }, 'Feature flag resolved');
+        if (resolved.enabled) {
+          const disabled = await checkAndAutoDisable(flag);
+          if (disabled) return false;
+        }
         return result.rows[0].enabled;
       }
     }
@@ -66,6 +157,10 @@ export async function isFeatureEnabled(flag: string, accountId?: number): Promis
     );
     if (globalResult.rows.length > 0) {
       log.debug({ flag, enabled: globalResult.rows[0].enabled, source: 'db_global' }, 'Feature flag resolved');
+      if (globalResult.rows[0].enabled) {
+        const disabled = await checkAndAutoDisable(flag);
+        if (disabled) return false;
+      }
       return globalResult.rows[0].enabled;
     }
 

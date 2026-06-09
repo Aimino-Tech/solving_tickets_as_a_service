@@ -1,16 +1,28 @@
 /**
  * Unit tests for src/services/featureFlags.ts — Feature flag resolution.
  */
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
-const mockRedis = { on: vi.fn(), quit: vi.fn() };
+const mockRedis = {
+  on: vi.fn(),
+  quit: vi.fn().mockResolvedValue(undefined),
+  zadd: vi.fn().mockResolvedValue(1),
+  zremrangebyscore: vi.fn().mockResolvedValue(0),
+  zcard: vi.fn().mockResolvedValue(0),
+  expire: vi.fn().mockResolvedValue(1),
+};
 vi.mock('ioredis', () => ({ default: vi.fn(() => mockRedis), Redis: vi.fn(() => mockRedis) }));
 
 const mockQuery = vi.fn();
 vi.mock('../../db/connection.js', () => ({ queryWithRetry: mockQuery }));
 
+const mockAuditInsert = vi.fn().mockResolvedValue({ id: 1 });
+vi.mock('../../audit/repository.js', () => ({
+  auditRepository: { insert: mockAuditInsert },
+}));
+
 vi.mock('../../config.js', () => ({
-  config: { queue: { redisUrl: 'redis://localhost:6379' }, featureFlags: { defaultTtlSeconds: 300 } },
+  config: { queue: { redisUrl: 'redis://localhost:6379' }, featureFlags: { defaultTtlSeconds: 300, autoDisableThreshold: 0.05 } },
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -22,11 +34,144 @@ describe('services/featureFlags', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    // Re-apply default mock return values after clearAllMocks
+    mockRedis.zadd.mockResolvedValue(1);
+    mockRedis.zremrangebyscore.mockResolvedValue(0);
+    mockRedis.zcard.mockResolvedValue(0);
+    mockRedis.expire.mockResolvedValue(1);
+    mockRedis.quit.mockResolvedValue(undefined);
     ff = await import('../../services/featureFlags.js');
   });
 
+  afterEach(() => {
+    delete process.env.FLAG_TEST_FLAG;
+    vi.unstubAllEnvs();
+  });
+
+  // ── Error rate tracking ──────────────────────────────────────────────────
+
+  describe('recordFlagCall', () => {
+    it('adds a timestamped entry to the calls sorted set', async () => {
+      await ff.recordFlagCall('test_flag');
+      expect(mockRedis.zadd).toHaveBeenCalledWith(
+        'stas:flags:metrics:test_flag:calls',
+        expect.any(Number),
+        expect.any(String),
+      );
+    });
+
+    it('sets expiry on the calls key', async () => {
+      await ff.recordFlagCall('test_flag');
+      expect(mockRedis.expire).toHaveBeenCalledWith(
+        'stas:flags:metrics:test_flag:calls',
+        expect.any(Number),
+      );
+    });
+  });
+
+  describe('recordFlagError', () => {
+    it('adds a timestamped entry to the errors sorted set', async () => {
+      await ff.recordFlagError('test_flag');
+      expect(mockRedis.zadd).toHaveBeenCalledWith(
+        'stas:flags:metrics:test_flag:errors',
+        expect.any(Number),
+        expect.any(String),
+      );
+    });
+
+    it('sets expiry on the errors key', async () => {
+      await ff.recordFlagError('test_flag');
+      expect(mockRedis.expire).toHaveBeenCalledWith(
+        'stas:flags:metrics:test_flag:errors',
+        expect.any(Number),
+      );
+    });
+  });
+
+  describe('getErrorRate', () => {
+    it('returns 0 when no calls recorded', async () => {
+      mockRedis.zcard.mockResolvedValue(0);
+      const rate = await ff.getErrorRate('test_flag');
+      expect(rate).toBe(0);
+    });
+
+    it('prunes old entries before counting', async () => {
+      mockRedis.zcard.mockResolvedValue(10);
+      await ff.getErrorRate('test_flag');
+      expect(mockRedis.zremrangebyscore).toHaveBeenCalledTimes(2);
+    });
+
+    it('calculates errors / calls ratio', async () => {
+      mockRedis.zcard
+        .mockResolvedValueOnce(100)
+        .mockResolvedValueOnce(5);
+      const rate = await ff.getErrorRate('test_flag');
+      expect(rate).toBe(0.05);
+    });
+
+    it('returns 0 gracefully on Redis error', async () => {
+      mockRedis.zcard.mockRejectedValue(new Error('Redis down'));
+      const rate = await ff.getErrorRate('test_flag');
+      expect(rate).toBe(0);
+    });
+  });
+
+  describe('checkAndAutoDisable', () => {
+    it('disables flag globally when error rate exceeds threshold', async () => {
+      mockRedis.zcard
+        .mockResolvedValueOnce(100)
+        .mockResolvedValueOnce(20);
+      mockQuery.mockResolvedValue({ rowCount: 1 });
+
+      const result = await ff.checkAndAutoDisable('test_flag');
+      expect(result).toBe(true);
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO feature_flags'),
+        ['test_flag', false],
+      );
+    });
+
+    it('logs audit entry when auto-disabling', async () => {
+      mockRedis.zcard
+        .mockResolvedValueOnce(100)
+        .mockResolvedValueOnce(20);
+      mockQuery.mockResolvedValue({ rowCount: 1 });
+
+      await ff.checkAndAutoDisable('test_flag');
+      expect(mockAuditInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'feature_flag.auto_disabled',
+          resourceId: 'test_flag',
+          details: expect.objectContaining({ errorRate: 0.2, threshold: 0.05 }),
+        }),
+      );
+    });
+
+    it('does nothing when error rate is below threshold', async () => {
+      mockRedis.zcard
+        .mockResolvedValueOnce(100)
+        .mockResolvedValueOnce(1);
+
+      const result = await ff.checkAndAutoDisable('test_flag');
+      expect(result).toBe(false);
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when no calls recorded', async () => {
+      mockRedis.zcard.mockResolvedValue(0);
+
+      const result = await ff.checkAndAutoDisable('test_flag');
+      expect(result).toBe(false);
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Flag resolution ──────────────────────────────────────────────────────
+
   describe('isFeatureEnabled', () => {
     it('returns true from account-level DB flag', async () => {
+      mockRedis.zcard.mockResolvedValue(0);
       mockQuery.mockResolvedValue({ rows: [{ enabled: true }] });
       const result = await ff.isFeatureEnabled('test_flag', 42);
       expect(result).toBe(true);
@@ -39,6 +184,7 @@ describe('services/featureFlags', () => {
     });
 
     it('falls back to global DB flag when no account-level', async () => {
+      mockRedis.zcard.mockResolvedValue(0);
       mockQuery.mockResolvedValueOnce({ rows: [] });
       mockQuery.mockResolvedValueOnce({ rows: [{ enabled: true }] });
       const result = await ff.isFeatureEnabled('test_flag', 42);
@@ -63,6 +209,26 @@ describe('services/featureFlags', () => {
       mockQuery.mockRejectedValue(new Error('DB down'));
       const result = await ff.isFeatureEnabled('test_flag');
       expect(result).toBe(false);
+    });
+
+    it('auto-disables and returns false when error rate exceeds threshold', async () => {
+      mockRedis.zcard
+        .mockResolvedValueOnce(100)
+        .mockResolvedValueOnce(20);
+      mockQuery.mockResolvedValue({ rows: [{ enabled: true }] });
+      mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+
+      const result = await ff.isFeatureEnabled('test_flag', 42);
+      expect(result).toBe(false);
+    });
+
+    it('does not check auto-disable for env-var flags', async () => {
+      mockQuery.mockResolvedValue({ rows: [] });
+      process.env.FLAG_TEST_FLAG = 'true';
+
+      const result = await ff.isFeatureEnabled('test_flag', 42);
+      expect(result).toBe(true);
+      expect(mockRedis.zcard).not.toHaveBeenCalled();
     });
   });
 
