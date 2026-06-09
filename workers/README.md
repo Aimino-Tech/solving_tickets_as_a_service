@@ -30,6 +30,27 @@ Start Flower for task monitoring:
 celery -A celery_app flower --port=5555
 ```
 
+## Running modes
+
+### Plan A: Full Docker (production)
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Plan B: Containerless development (fast iteration)
+
+```bash
+make dev-infra     # Redis + RabbitMQ in Docker (lightweight)
+make dev-webhook   # Express on host
+make dev-worker    # Celery on host
+```
+
+**Note**: Plan B has NO Docker sandbox. Sandbox tasks will fail with
+"E2B_API_KEY not configured" error. This is by design — sandbox
+tasks need Docker. For testing sandbox code, use Plan A.
+For testing non-sandbox tasks (triage, notifications), Plan B works fine.
+
 ## Docker
 
 ```bash
