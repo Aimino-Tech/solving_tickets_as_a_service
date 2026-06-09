@@ -266,11 +266,12 @@ function generateEnvFile(env: EnvVars): string {
   lines.push(`OPENCODE_MODEL=${env.OPENCODE_MODEL}`);
   lines.push("");
 
-  // Triage LLM
-  if (env.OPENAI_API_KEY) {
-    h("=== Triage LLM ===");
-    lines.push(`OPENAI_API_KEY=${env.OPENAI_API_KEY}`);
-    lines.push(`OPENAI_CHEAP_MODEL=${env.OPENAI_CHEAP_MODEL}`);
+  // OpenCode Go Direct LLM
+  if (env.OPENCODE_API_KEY) {
+    h("=== OpenCode Go Direct LLM ===");
+    lines.push(`OPENCODE_API_KEY=${env.OPENCODE_API_KEY}`);
+    lines.push(`OPENCODE_CHEAP_MODEL=${env.OPENCODE_CHEAP_MODEL}`);
+    lines.push(`OPENCODE_FIX_MODEL=${env.OPENCODE_FIX_MODEL}`);
     lines.push("");
   }
 
@@ -416,27 +417,31 @@ async function main(): Promise<void> {
   printValue("OPENCODE_MODEL", env.OPENCODE_MODEL);
 
   // ==========================================================================
-  // SECTION 4: Triage LLM
+  // SECTION 4: OpenCode Go Direct LLM
   // ==========================================================================
   printSection(
-    "Triage LLM (Optional)",
-    "A cheap model for classifying issues before the fix agent runs.\n" +
-      "  Helps filter noise and estimate scope before spending on a full agent run.\n" +
-      "  If skipped, all labeled issues pass through without classification.",
+    "OpenCode Go Direct LLM (Optional)",
+    "OpenCode Go provides an OpenAI-compatible endpoint for issue triage (cheap model)\n" +
+      "  and fallback fixes (powerful model). Replaces the separate OpenAI dependency.\n" +
+      "  If skipped, triage and fallback fixes are not available.",
   );
 
-  const useTriage = await confirm("Configure triage LLM?", false);
-  if (useTriage) {
-    env.OPENAI_API_KEY = await ask("OpenAI API key (for triage)", {
+  const useOpencodeGo = await confirm("Configure OpenCode Go direct LLM?", false);
+  if (useOpencodeGo) {
+    env.OPENCODE_API_KEY = await ask("OpenCode Go API key (replaces OpenAI)", {
       validate: (v) => (v && v.startsWith("sk-") ? null : v ? "Looks like it should start with 'sk-'" : null),
     });
-    if (env.OPENAI_API_KEY) {
-      printValue("OPENAI_API_KEY", env.OPENAI_API_KEY);
+    if (env.OPENCODE_API_KEY) {
+      printValue("OPENCODE_API_KEY", env.OPENCODE_API_KEY);
     }
-    env.OPENAI_CHEAP_MODEL = await ask("Triage model", {
-      default: "gpt-4o-mini",
+    env.OPENCODE_CHEAP_MODEL = await ask("Triage model (cheap)", {
+      default: "deepseek-v4-flash",
     });
-    printValue("OPENAI_CHEAP_MODEL", env.OPENAI_CHEAP_MODEL);
+    printValue("OPENCODE_CHEAP_MODEL", env.OPENCODE_CHEAP_MODEL);
+    env.OPENCODE_FIX_MODEL = await ask("Fix model (powerful)", {
+      default: "deepseek-v4-pro",
+    });
+    printValue("OPENCODE_FIX_MODEL", env.OPENCODE_FIX_MODEL);
   }
 
   // ==========================================================================

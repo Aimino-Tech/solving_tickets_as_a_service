@@ -66,9 +66,10 @@ STAS uses two separate models for different phases:
 Controls which issues are routed to the fix agent:
 
 ```bash
-# .env — Triage model (cheap, fast)
-OPENAI_API_KEY=sk-...  # Required for triage
-OPENAI_CHEAP_MODEL=gpt-4o-mini
+# .env — OpenCode Go direct LLM (triage + fallback fix)
+OPENCODE_API_KEY=sk-...  # Required for triage and fallback fixes
+OPENCODE_CHEAP_MODEL=deepseek-v4-flash
+OPENCODE_FIX_MODEL=deepseek-v4-pro
 ```
 
 Other options:

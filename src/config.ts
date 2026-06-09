@@ -81,9 +81,10 @@ const envSchema = z.object({
   PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(300_000),
   PHASE_TIMEOUT_PRCREATION_MS: z.coerce.number().int().positive().default(30_000),
 
-  // OpenAI / triage
-  OPENAI_API_KEY: z.string().optional(),
-  OPENAI_CHEAP_MODEL: z.string().default('gpt-4o-mini'),
+  // OpenCode Go direct LLM endpoint (replaces OpenAI / triage)
+  OPENCODE_API_KEY: z.string().optional(),
+  OPENCODE_CHEAP_MODEL: z.string().default('deepseek-v4-flash'),
+  OPENCODE_FIX_MODEL: z.string().default('deepseek-v4-pro'),
 
   // Sandbox — E2B
   E2B_API_KEY: z.string().optional(),
@@ -322,6 +323,9 @@ function buildConfig(env: ParsedEnv) {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
+      apiKey: env.OPENCODE_API_KEY,
+      cheapModel: env.OPENCODE_CHEAP_MODEL,
+      fixModel: env.OPENCODE_FIX_MODEL,
     },
 
     opencodeHealth: {
@@ -342,11 +346,6 @@ function buildConfig(env: ParsedEnv) {
       username: env.BITBUCKET_USERNAME ?? '',
       appPassword: env.BITBUCKET_APP_PASSWORD ?? '',
       webhookSecret: env.BITBUCKET_WEBHOOK_SECRET ?? '',
-    },
-
-    openai: {
-      apiKey: env.OPENAI_API_KEY,
-      cheapModel: env.OPENAI_CHEAP_MODEL,
     },
 
     e2b: {

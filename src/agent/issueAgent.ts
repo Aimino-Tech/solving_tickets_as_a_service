@@ -428,7 +428,10 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
  * Classify the issue using a cheap OpenAI model.
  */
 async function classifyIssue(title: string, body: string): Promise<TriageResult> {
-  const openai = new OpenAI({ apiKey: config.openai.apiKey });
+  const llm = new OpenAI({
+    baseURL: 'https://opencode.ai/zen/go/v1',
+    apiKey: config.opencode.apiKey,
+  });
 
   const prompt = `You are a triage agent. Given a GitHub issue, classify it.
 
@@ -446,8 +449,8 @@ Reply with a JSON object:
 Only respond with the JSON object, no other text.`;
 
   try {
-    const model = config.openai.cheapModel || 'gpt-4o-mini';
-    const response = await openai.chat.completions.create({
+    const model = config.opencode.cheapModel || 'deepseek-v4-flash';
+    const response = await llm.chat.completions.create({
       model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0,
@@ -1015,8 +1018,11 @@ async function attemptBasicFix(
       pushBranch: (branch) => sandbox.pushBranch(branch),
     });
 
-    // Try to use the cheap OpenAI model for a simpler fix attempt
-    const openai = new OpenAI({ apiKey: config.openai.apiKey });
+    // Try to use the powerful OpenCode Go model for a simpler fix attempt
+    const llm = new OpenAI({
+      baseURL: 'https://opencode.ai/zen/go/v1',
+      apiKey: config.opencode.apiKey,
+    });
     const issueContext = [`Issue #${data.issueNumber}: ${data.issueTitle}`, data.issueBody || '', ...comments].join(
       '\n\n',
     );
@@ -1036,9 +1042,9 @@ async function attemptBasicFix(
       'Output the result as JSON: { summary, confidence, branchName }',
     ].join('\n');
 
-    const fallbackModel = config.openai.cheapModel || 'gpt-4o-mini';
-    const response = await openai.chat.completions.create({
-      model: fallbackModel,
+    const fixModel = config.opencode.fixModel || 'deepseek-v4-pro';
+    const response = await llm.chat.completions.create({
+      model: fixModel,
       messages: [
         { role: 'system', content: systemPrompt },
         {
