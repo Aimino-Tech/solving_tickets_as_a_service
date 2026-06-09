@@ -1,0 +1,28 @@
+[Mon Jun  8 05:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+usage: hermes_marketing_check.py [-h] [--sheet-id SHEET_ID]
+                                 [--sheet-tab SHEET_TAB]
+hermes_marketing_check.py: error: unrecognized arguments: --hermes-endpoint http://localhost:8787
+[Tue Jun  9 09:00:01 AM CEST 2026] TICK — working hours, checking sheet...
+usage: hermes_marketing_check.py [-h] [--sheet-id SHEET_ID]
+                                 [--sheet-tab SHEET_TAB]
+hermes_marketing_check.py: error: unrecognized arguments: --hermes-endpoint http://localhost:8787
+[Tue Jun  9 09:05:01 AM CEST 2026] TICK — working hours, checking sheet...
+usage: hermes_marketing_check.py [-h] [--sheet-id SHEET_ID]
+                                 [--sheet-tab SHEET_TAB]
+hermes_marketing_check.py: error: unrecognized arguments: --hermes-endpoint http://localhost:8787
+[Tue Jun  9 10:05:01 AM CEST 2026] TICK — working hours, checking sheet...
+usage: hermes_marketing_check.py [-h] [--sheet-id SHEET_ID]
+                                 [--sheet-tab SHEET_TAB]
+hermes_marketing_check.py: error: unrecognized arguments: --hermes-endpoint http://localhost:8787
+[Tue Jun  9 11:05:01 AM CEST 2026] TICK — working hours, checking sheet...
+usage: hermes_marketing_check.py [-h] [--sheet-id SHEET_ID]
+                                 [--sheet-tab SHEET_TAB]
+hermes_marketing_check.py: error: unrecognized arguments: --hermes-endpoint http://localhost:8787
+[Tue Jun  9 12:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+usage: hermes_marketing_check.py [-h] [--sheet-id SHEET_ID]
+                                 [--sheet-tab SHEET_TAB]
+hermes_marketing_check.py: error: unrecognized arguments: --hermes-endpoint http://localhost:8787
+[Tue Jun  9 01:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+usage: hermes_marketing_check.py [-h] [--sheet-id SHEET_ID]
+                                 [--sheet-tab SHEET_TAB]
+hermes_marketing_check.py: error: unrecognized arguments: --hermes-endpoint http://localhost:8787

@@ -1,0 +1,17 @@
+# ============================================================
+# Hermes Marketing Cron — install with: crontab crontab
+# ============================================================
+# Runs once per hour during working hours (Mon-Fri 9-18).
+# The script itself also checks the hour, so the crontab
+# can be kept simple.
+# ============================================================
+
+# ── Environment ──────────────────────────────────────────────
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+
+# ── Minute 5 of every hour (9-17), Mon-Fri ──
+5 9-17 * * 1-5   cd /home/agent/Documents/hermes-agent/cron && bash hermes-marketing-cron.sh
+
+# ── Also at 09:00 sharp ────────────────────────────────────
+0 9 * * 1-5      cd /home/agent/Documents/hermes-agent/cron && bash hermes-marketing-cron.sh
