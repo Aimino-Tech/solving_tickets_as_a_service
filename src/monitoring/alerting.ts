@@ -518,6 +518,52 @@ export function reportRateLimitHit(
 }
 
 /**
+ * Check error rate for a feature flag and alert if it exceeds thresholds.
+ *
+ * Rule: if error_rate > threshold for a flagged feature → Slack alert
+ *
+ * @param flag - The feature flag name
+ * @param errorRatePercent - Current error rate percentage for this feature
+ * @param windowMinutes - The time window over which the rate was calculated
+ * @param totalRequests - Total requests in the window (for context)
+ */
+export function checkFeatureFlagErrorRate(
+  flag: string,
+  errorRatePercent: number,
+  windowMinutes: number,
+  totalRequests?: number,
+): void {
+  const warnThreshold = config.alerting.warnErrorRatePercent;
+  const critThreshold = config.alerting.critErrorRatePercent;
+
+  const context: Record<string, unknown> = {
+    flag,
+    errorRatePercent,
+    windowMinutes,
+    threshold: warnThreshold,
+    totalRequests,
+  };
+
+  if (errorRatePercent > critThreshold && windowMinutes >= 5) {
+    dispatchAlert({
+      severity: 'critical',
+      rule: `feature_flag_error_rate_critical_${flag}`,
+      message: `Feature flag "${flag}" error rate ${errorRatePercent.toFixed(1)}% exceeds critical threshold ${critThreshold}% over ${windowMinutes} min window (total requests: ${totalRequests ?? 'unknown'})`,
+      context,
+      timestamp: new Date().toISOString(),
+    });
+  } else if (errorRatePercent > warnThreshold && windowMinutes >= 5) {
+    dispatchAlert({
+      severity: 'warning',
+      rule: `feature_flag_error_rate_warning_${flag}`,
+      message: `Feature flag "${flag}" error rate ${errorRatePercent.toFixed(1)}% exceeds warning threshold ${warnThreshold}% over ${windowMinutes} min window (total requests: ${totalRequests ?? 'unknown'})`,
+      context,
+      timestamp: new Date().toISOString(),
+    });
+  }
+}
+
+/**
  * Report a successful fix run.
  */
 export function reportFixRunSuccess(
