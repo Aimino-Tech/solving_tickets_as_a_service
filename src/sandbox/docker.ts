@@ -1,103 +1,64 @@
-/**
- * Docker sandbox — isolates fix execution in a local Docker container.
- *
- * Serves as a fallback when E2B is unavailable. Uses Dockerode to manage
- * container lifecycle and host volume mounts for file operations.
- *
- * Handles:
- * - Container lifecycle (create, exec, destroy)
- * - Repo cloning with auth token
- * - Runtime detection (10+ languages)
- * - Dependency installation
- * - File operations through host volume mount
- * - Static analysis (tsc, ruff, etc.)
- * - Test execution
- * - Network restriction via iptables
- * - Resource limits (memory, CPU)
- * - Git push
- *
- * ── Error Handling Audit ────────────────────────────────────────────
- * ✅ boot() wraps container create and token fetch with context
- * ✅ boot() clone failure throws with stderr context
- * ✅ path traversal detection in validatePath() for read/write/remove
- * ✅ readFile/writeFile/removeFile catch with descriptive messages
- * ✅ destroy() catches container kill/remove failures (non-fatal, logs warning)
- * ✅ pushBranch() wraps all git operations with context
- * ✅ installDeps() failure is non-fatal (logs warning, continues)
- * ────────────────────────────────────────────────────────────────────
- */
-
-import { execSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, writeFileSync, unlinkSync, rmSync } from 'node:fs';
+import { mkdtempSync, existsSync, rmSync } from 'node:fs';
+import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
+import Docker from 'dockerode';
+import { Writable } from 'node:stream';
+
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import type { ProgressCallback, SandboxExecutor, ExecResult, TestRunResult, RuntimeInfo } from './types.js';
 
 const log = rootLogger.child({ module: 'docker-sandbox' });
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 interface ContainerInfo {
   id: string;
   name: string;
 }
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const DOCKER_TIMEOUT_MS = 120_000;
-const CONTAINER_WORKDIR = '/home/user';
+const CONTAINER_WORKDIR = '/home/node';
 
-// ---------------------------------------------------------------------------
-// Helper: run a docker command and return parsed result
-// ---------------------------------------------------------------------------
+function collectExecOutput(
+  stream: NodeJS.ReadableStream,
+): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
 
-function dockerCmd(args: string[], timeoutMs = DOCKER_TIMEOUT_MS): ExecResult {
-  try {
-    const result = spawnSync('docker', args, {
-      timeout: timeoutMs,
-      encoding: 'utf-8',
-      maxBuffer: 10 * 1024 * 1024, // 10MB
+    const stdoutStream = new Writable({
+      write(chunk: Buffer, _encoding: string, callback: (error?: Error | null) => void) {
+        stdoutChunks.push(chunk);
+        callback();
+      },
     });
-    return {
-      stdout: result.stdout?.trim() ?? '',
-      stderr: result.stderr?.trim() ?? '',
-      exitCode: result.status ?? -1,
-    };
-  } catch (err) {
-    return {
-      stdout: '',
-      stderr: `docker command failed: ${String(err)}`,
-      exitCode: -1,
-    };
-  }
-}
 
-function dockerExecCmd(
-  containerId: string,
-  command: string,
-  timeoutMs = DOCKER_TIMEOUT_MS,
-  workdir?: string,
-): ExecResult {
-  const args = ['exec'];
-  if (workdir) {
-    args.push('-w', workdir);
-  }
-  args.push(containerId, '/bin/sh', '-c', command);
-  return dockerCmd(args, timeoutMs);
-}
+    const stderrStream = new Writable({
+      write(chunk: Buffer, _encoding: string, callback: (error?: Error | null) => void) {
+        stderrChunks.push(chunk);
+        callback();
+      },
+    });
 
-// ---------------------------------------------------------------------------
-// DockerSandbox
-// ---------------------------------------------------------------------------
+    const docker = new Docker();
+    docker.modem.demuxStream(stream, stdoutStream, stderrStream);
+
+    stream.on('end', () => {
+      const stdout = Buffer.concat(stdoutChunks).toString('utf-8').trimEnd();
+      const stderr = Buffer.concat(stderrChunks).toString('utf-8').trimEnd();
+      resolve({ stdout, stderr });
+    });
+
+    stream.on('error', (err: Error) => {
+      reject(err);
+    });
+  });
+}
 
 export class DockerSandbox implements SandboxExecutor {
+  private docker: Docker;
   private container: ContainerInfo | null = null;
+  private dockerContainer: Docker.Container | null = null;
   private tempDir: string = '';
   private repoDir: string = '';
   private repoHostPath: string = '';
@@ -110,76 +71,52 @@ export class DockerSandbox implements SandboxExecutor {
     private repoName: string,
     private installationId: number,
     private getToken: (installationId: number) => Promise<string>,
-  ) {}
+  ) {
+    this.docker = new Docker();
+  }
 
-  // ── Public API ────────────────────────────────────────────────────
-
-  /**
-   * Boot the sandbox: pull image, create container, clone repo, detect runtime, install deps.
-   */
-  async boot(_onProgress?: ProgressCallback): Promise<void> {
+  async boot(): Promise<void> {
     log.info('Booting Docker sandbox');
 
-    // 1. Verify Docker is available
-    const versionResult = dockerCmd(['--version']);
-    if (versionResult.exitCode !== 0) {
-      throw new Error(`Docker is not available: ${versionResult.stderr || 'command not found'}`);
-    }
-    log.info({ version: versionResult.stdout }, 'Docker available');
+    const versionResult = await this.docker.version();
+    log.info({ version: versionResult.Version }, 'Docker available');
 
-    // 2. Pull the configured image
     const image = config.docker.image;
     log.info({ image }, 'Pulling Docker image');
-    const pullResult = dockerCmd(['pull', image], 300_000);
-    if (pullResult.exitCode !== 0) {
-      throw new Error(`Failed to pull Docker image '${image}': ${pullResult.stderr}`);
-    }
+    await this.pullImage(image);
     log.info({ image }, 'Image pulled');
 
-    // 3. Create temp directory for volume mount
     try {
       this.tempDir = mkdtempSync(join(tmpdir(), 'stas-sandbox-'));
     } catch (err) {
       throw new Error(`Failed to create temp directory: ${String(err)}`);
     }
 
-    // 4. Get installation token for auth
     try {
       this.installationToken = await this.getToken(this.installationId);
     } catch (err) {
       throw new Error(`Failed to get installation token: ${String(err)}`);
     }
 
-    // 5. Create container with resource limits and network restrictions
     const containerName = `stas-sandbox-${this.repoName}-${Date.now().toString(36)}`;
-    const createArgs = this.buildCreateArgs(image, containerName);
+    const createOpts = this.buildCreateOpts(image, containerName);
 
     log.info({ containerName }, 'Creating container');
-    const createResult = dockerCmd(createArgs);
-    if (createResult.exitCode !== 0) {
-      throw new Error(`Failed to create container: ${createResult.stderr}`);
-    }
-
-    // Extract container ID from output
+    const container = await this.docker.createContainer(createOpts);
     this.container = {
-      id: createResult.stdout,
+      id: container.id,
       name: containerName,
     };
-    log.info({ containerId: this.container.id }, 'Container created');
+    this.dockerContainer = container;
+    log.info({ containerId: container.id }, 'Container created');
 
-    // 6. Start the container
-    const startResult = dockerCmd(['start', this.container.id]);
-    if (startResult.exitCode !== 0) {
-      throw new Error(`Failed to start container: ${startResult.stderr}`);
-    }
+    await container.start();
     log.info('Container started');
 
-    // 7. Apply network restrictions if enabled
     if (config.docker.networkRestrict) {
       await this.applyNetworkRestrictions();
     }
 
-    // 8. Clone the repo
     const authUrl = this.repoUrl.replace('https://', `https://x-access-token:${this.installationToken}@`);
     this.repoHostPath = join(this.tempDir, this.repoName);
     this.repoDir = `${CONTAINER_WORKDIR}/${this.repoName}`;
@@ -190,113 +127,121 @@ export class DockerSandbox implements SandboxExecutor {
     }
     log.info('Repo cloned successfully');
 
-    // 9. Detect runtime
     this.runtimeInfo = await this.detectRuntime();
     log.info({ runtime: this.runtimeInfo }, 'Runtime detected');
 
-    // 10. Install dependencies
     await this.installDeps();
   }
 
-  /**
-   * Execute a command in the container using docker exec.
-   */
   async exec(command: string, timeoutMs: number = 60_000): Promise<ExecResult> {
     this.ensureBooted();
-    return dockerExecCmd(this.container!.id, command, timeoutMs, this.repoDir);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const execInstance = await this.dockerContainer!.exec({
+        Cmd: ['/bin/sh', '-c', command],
+        AttachStdout: true,
+        AttachStderr: true,
+        WorkingDir: this.repoDir,
+      });
+
+      const stream = await execInstance.start({
+        Detach: false,
+        Tty: false,
+        stdin: false,
+      });
+
+      const { stdout, stderr } = await collectExecOutput(stream);
+
+      let exitCode = 0;
+      try {
+        const inspect = await execInstance.inspect();
+        exitCode = inspect.ExitCode ?? -1;
+      } catch {
+        exitCode = -1;
+      }
+
+      if (controller.signal.aborted) {
+        return { stdout, stderr, exitCode: -1 };
+      }
+
+      return { stdout, stderr, exitCode };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  /**
-   * Convenience wrapper for tool commands.
-   */
   async execForTools(command: string, timeoutMs: number = 60_000): Promise<ExecResult> {
     return this.exec(command, timeoutMs);
   }
 
-  /**
-   * Read a file from the host volume mount with path traversal protection.
-   */
   async readFile(filePath: string): Promise<string> {
     this.ensureBooted();
     this.validatePath(filePath);
 
     const hostPath = this.resolveHostPath(filePath);
     try {
-      return readFileSync(hostPath, 'utf-8');
+      return await readFile(hostPath, 'utf-8');
     } catch (err) {
       throw new Error(`Failed to read file ${filePath}: ${String(err)}`);
     }
   }
 
-  /**
-   * Write a file to the host volume mount with path traversal protection.
-   */
   async writeFile(filePath: string, content: string): Promise<void> {
     this.ensureBooted();
     this.validatePath(filePath);
 
     const hostPath = this.resolveHostPath(filePath);
     try {
-      // Ensure parent directory exists
       const parentDir = hostPath.includes(sep) ? hostPath.substring(0, hostPath.lastIndexOf(sep)) : '.';
       if (parentDir !== '.') {
-        // mkdir -p via docker exec since the dir is in the container
         const containerParent = filePath.startsWith('/')
           ? filePath.substring(0, filePath.lastIndexOf('/'))
           : `${this.repoDir}/${filePath.substring(0, filePath.lastIndexOf('/'))}`;
         await this.exec(`mkdir -p "${containerParent}"`);
       }
-      writeFileSync(hostPath, content, 'utf-8');
+      await writeFile(hostPath, content, 'utf-8');
     } catch (err) {
       throw new Error(`Failed to write file ${filePath}: ${String(err)}`);
     }
   }
 
-  /**
-   * Remove a file from the host volume mount with path traversal protection.
-   */
   async removeFile(filePath: string): Promise<void> {
     this.ensureBooted();
     this.validatePath(filePath);
 
     const hostPath = this.resolveHostPath(filePath);
     try {
-      unlinkSync(hostPath);
+      await unlink(hostPath);
     } catch (err) {
       throw new Error(`Failed to remove file ${filePath}: ${String(err)}`);
     }
   }
 
-  /**
-   * Push changes to a new branch on GitHub.
-   */
   async pushBranch(branchName: string): Promise<void> {
     this.ensureBooted();
 
     log.info({ branchName }, 'Pushing branch');
 
     try {
-      // Configure git
       await this.exec(`git config user.email "stas-bot@users.noreply.github.com"`);
       await this.exec(`git config user.name "STAS Bot"`);
 
-      // Add all changes
       await this.exec(`git add -A`);
 
-      // Check if there's anything to commit
       const statusResult = await this.exec(`git status --porcelain`);
       if (!statusResult.stdout.trim()) {
         log.warn('No changes to commit');
         return;
       }
 
-      // Commit
       const commitResult = await this.exec(`git commit -m "fix: automated fix by STAS"`);
       if (commitResult.exitCode !== 0 && !commitResult.stderr.includes('nothing to commit')) {
         throw new Error(`Failed to commit: ${commitResult.stderr}`);
       }
 
-      // Push
       const authUrl = this.repoUrl.replace('https://', `https://x-access-token:${this.installationToken}@`);
       await this.exec(`git remote set-url origin "${authUrl}"`);
       await this.exec(`git checkout -b "${branchName}"`);
@@ -314,16 +259,10 @@ export class DockerSandbox implements SandboxExecutor {
     }
   }
 
-  /**
-   * Check if the project has a test suite configured.
-   */
   hasTestSuite(): boolean {
     return !!(this.runtimeInfo?.testCommand);
   }
 
-  /**
-   * Run a specific test file or test pattern.
-   */
   async runSpecificTest(testPath: string): Promise<TestRunResult> {
     this.ensureBooted();
     if (!this.runtimeInfo) throw new Error('Runtime not detected');
@@ -370,9 +309,6 @@ export class DockerSandbox implements SandboxExecutor {
     };
   }
 
-  /**
-   * Auto-detect and run the test suite.
-   */
   async runTests(): Promise<TestRunResult> {
     this.ensureBooted();
     if (!this.runtimeInfo) throw new Error('Runtime not detected');
@@ -394,9 +330,6 @@ export class DockerSandbox implements SandboxExecutor {
     };
   }
 
-  /**
-   * Auto-format modified files.
-   */
   async formatCode(): Promise<void> {
     this.ensureBooted();
     if (!this.runtimeInfo) throw new Error('Runtime not detected');
@@ -408,9 +341,6 @@ export class DockerSandbox implements SandboxExecutor {
     }
   }
 
-  /**
-   * Run static analysis on the codebase.
-   */
   async analyzeCode(): Promise<string> {
     this.ensureBooted();
     if (!this.runtimeInfo) throw new Error('Runtime not detected');
@@ -422,9 +352,6 @@ export class DockerSandbox implements SandboxExecutor {
     return `${result.stdout}\n${result.stderr}`.trim();
   }
 
-  /**
-   * Auto-detect the project runtime environment.
-   */
   async detectRuntime(): Promise<RuntimeInfo> {
     this.ensureBooted();
 
@@ -439,7 +366,6 @@ export class DockerSandbox implements SandboxExecutor {
 
     const files = await this.exec('ls -la', 10_000);
 
-    // Node / JavaScript
     if (files.stdout.includes('package.json')) {
       const pkgJson = await this.exec(`cat "${this.repoDir}/package.json"`);
       let nodeVersion = '';
@@ -479,7 +405,6 @@ export class DockerSandbox implements SandboxExecutor {
       };
     }
 
-    // Python
     if (
       files.stdout.includes('requirements.txt') ||
       files.stdout.includes('setup.py') ||
@@ -503,7 +428,6 @@ export class DockerSandbox implements SandboxExecutor {
       };
     }
 
-    // Go
     if (files.stdout.includes('go.mod')) {
       return {
         language: 'go',
@@ -515,7 +439,6 @@ export class DockerSandbox implements SandboxExecutor {
       };
     }
 
-    // Rust
     if (files.stdout.includes('Cargo.toml')) {
       return {
         language: 'rust',
@@ -527,7 +450,6 @@ export class DockerSandbox implements SandboxExecutor {
       };
     }
 
-    // Ruby
     if (files.stdout.includes('Gemfile')) {
       return {
         language: 'ruby',
@@ -539,7 +461,6 @@ export class DockerSandbox implements SandboxExecutor {
       };
     }
 
-    // Java
     if (
       files.stdout.includes('pom.xml') ||
       files.stdout.includes('build.gradle') ||
@@ -556,7 +477,6 @@ export class DockerSandbox implements SandboxExecutor {
       };
     }
 
-    // PHP
     if (files.stdout.includes('composer.json')) {
       return {
         language: 'php',
@@ -568,7 +488,6 @@ export class DockerSandbox implements SandboxExecutor {
       };
     }
 
-    // Swift
     if (files.stdout.includes('Package.swift')) {
       return {
         language: 'swift',
@@ -580,7 +499,6 @@ export class DockerSandbox implements SandboxExecutor {
       };
     }
 
-    // Dart / Flutter
     if (files.stdout.includes('pubspec.yaml')) {
       return {
         language: 'dart',
@@ -592,7 +510,6 @@ export class DockerSandbox implements SandboxExecutor {
       };
     }
 
-    // Elixir
     if (files.stdout.includes('mix.exs')) {
       return {
         language: 'elixir',
@@ -604,7 +521,6 @@ export class DockerSandbox implements SandboxExecutor {
       };
     }
 
-    // C++ (CMake)
     if (files.stdout.includes('CMakeLists.txt')) {
       return {
         language: 'cpp',
@@ -616,7 +532,6 @@ export class DockerSandbox implements SandboxExecutor {
       };
     }
 
-    // .NET / C#
     if (files.stdout.includes('*.csproj') || files.stdout.includes('*.sln')) {
       return {
         language: 'dotnet',
@@ -632,9 +547,6 @@ export class DockerSandbox implements SandboxExecutor {
     return defaults;
   }
 
-  /**
-   * Install dependencies based on detected runtime.
-   */
   async installDeps(): Promise<void> {
     if (!this.runtimeInfo?.installCommand) return;
 
@@ -645,29 +557,26 @@ export class DockerSandbox implements SandboxExecutor {
     }
   }
 
-  /**
-   * Destroy the sandbox: stop/remove container, clean up temp dirs.
-   */
   async destroy(): Promise<void> {
-    if (this.container) {
-      log.info({ containerId: this.container.id }, 'Destroying Docker sandbox');
+    if (this.dockerContainer) {
+      log.info({ containerId: this.container?.id }, 'Destroying Docker sandbox');
 
-      // Stop container (best-effort)
-      const stopResult = dockerCmd(['stop', '--time', '5', this.container.id]);
-      if (stopResult.exitCode !== 0) {
-        log.warn({ err: stopResult.stderr }, 'Error stopping container (non-fatal)');
+      try {
+        await this.dockerContainer.stop({ t: 5 });
+      } catch (err) {
+        log.warn({ err: String(err) }, 'Error stopping container (non-fatal)');
       }
 
-      // Remove container
-      const rmResult = dockerCmd(['rm', '--force', '--volumes', this.container.id]);
-      if (rmResult.exitCode !== 0) {
-        log.warn({ err: rmResult.stderr }, 'Error removing container (non-fatal)');
+      try {
+        await this.dockerContainer.remove({ force: true, v: true });
+      } catch (err) {
+        log.warn({ err: String(err) }, 'Error removing container (non-fatal)');
       }
 
       this.container = null;
+      this.dockerContainer = null;
     }
 
-    // Clean up temp directory
     if (this.tempDir && existsSync(this.tempDir)) {
       try {
         rmSync(this.tempDir, { recursive: true, force: true });
@@ -681,63 +590,54 @@ export class DockerSandbox implements SandboxExecutor {
 
   // ── Private ───────────────────────────────────────────────────────
 
-  /**
-   * Build docker create arguments with resource limits and volume mounts.
-   */
-  private buildCreateArgs(image: string, containerName: string): string[] {
-    const args: string[] = ['create', '--init', '--rm'];
-
-    // Container name
-    args.push('--name', containerName);
-
-    // Volume mount for repo
-    args.push('-v', `${this.tempDir}:${CONTAINER_WORKDIR}`);
-
-    // Working directory
-    args.push('-w', CONTAINER_WORKDIR);
-
-    // Resource limits
-    const memory = config.docker.containerMemory;
-    if (memory) {
-      args.push('--memory', memory);
-    }
-
-    const cpu = config.docker.containerCpu;
-    if (cpu) {
-      args.push('--cpus', String(cpu));
-    }
-
-    // Security options
-    args.push('--security-opt', 'no-new-privileges:true');
-    args.push('--cap-drop', 'ALL');
-    args.push('--cap-add', 'NET_ADMIN'); // needed for iptables
-    args.push('--cap-add', 'NET_RAW');   // needed for iptables
-    args.push('--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=2g');
-
-    // Network
-    args.push('--network', 'bridge');
-    if (config.docker.networkRestrict) {
-      args.push('--dns', '1.1.1.1');
-      args.push('--dns', '8.8.8.8');
-    }
-
-    // Env vars
-    args.push('-e', `HOME=${CONTAINER_WORKDIR}`);
-    args.push('-e', 'USER=user');
-
-    // Image
-    args.push(image);
-
-    // Keep container running
-    args.push('tail', '-f', '/dev/null');
-
-    return args;
+  private async pullImage(image: string): Promise<void> {
+    const stream = await this.docker.pull(image);
+    await new Promise<void>((resolve, reject) => {
+      this.docker.modem.followProgress(stream, (err: Error | null) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
   }
 
-  /**
-   * Apply iptables-based network restrictions inside the container.
-   * Whitelists: GitHub API, configured LLM providers, package registries.
-   */
+  private buildCreateOpts(image: string, containerName: string): Docker.ContainerCreateOptions {
+    const env: string[] = [
+      `HOME=${CONTAINER_WORKDIR}`,
+      'USER=node',
+    ];
+
+    const ulimits: Docker.Ulimit[] = [
+      { Name: 'nofile', Soft: 1024, Hard: 1024 },
+      { Name: 'nproc', Soft: 512, Hard: 512 },
+    ];
+
+    const hostConfig: Docker.HostConfig = {
+      Init: true,
+      Binds: [`${this.tempDir}:${CONTAINER_WORKDIR}`],
+      Memory: config.docker.containerMemory ? parseMemoryToBytes(config.docker.containerMemory) : undefined,
+      NanoCpus: config.docker.containerCpu ? config.docker.containerCpu * 1e9 : undefined,
+      CapDrop: ['ALL'],
+      Ulimits: ulimits,
+      PidsLimit: 256,
+      NetworkMode: 'bridge',
+      SecurityOpt: ['no-new-privileges:true'],
+      ReadonlyRootfs: true,
+      Tmpfs: { '/tmp': 'rw,noexec,nosuid,size=2g' },
+      Dns: config.docker.networkRestrict ? ['1.1.1.1', '8.8.8.8'] : undefined,
+    };
+
+    return {
+      Image: image,
+      name: containerName,
+      Cmd: ['tail', '-f', '/dev/null'],
+      WorkingDir: CONTAINER_WORKDIR,
+      Env: env,
+      HostConfig: hostConfig,
+      User: '1000:1000',
+      StopTimeout: 5,
+    };
+  }
+
   private async applyNetworkRestrictions(): Promise<void> {
     if (!this.container) return;
 
@@ -747,26 +647,20 @@ export class DockerSandbox implements SandboxExecutor {
     log.info({ allowedHosts }, 'Applying network restrictions via iptables');
 
     try {
-      // Set default policy to DROP
       await this.exec('iptables -P INPUT DROP');
       await this.exec('iptables -P FORWARD DROP');
       await this.exec('iptables -P OUTPUT DROP');
 
-      // Allow loopback
       await this.exec('iptables -A INPUT -i lo -j ACCEPT');
       await this.exec('iptables -A OUTPUT -o lo -j ACCEPT');
 
-      // Allow established connections
       await this.exec('iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT');
       await this.exec('iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT');
 
-      // Allow DNS
       await this.exec('iptables -A OUTPUT -p udp --dport 53 -j ACCEPT');
       await this.exec('iptables -A OUTPUT -p tcp --dport 53 -j ACCEPT');
 
-      // Allow each configured host
       for (const host of allowedHosts) {
-        // Resolve hostname to IPs
         const resolveResult = await this.exec(`getent hosts ${host} | awk '{ print $1 }'`);
         if (resolveResult.exitCode === 0 && resolveResult.stdout.trim()) {
           const ips = resolveResult.stdout.trim().split('\n');
@@ -784,24 +678,16 @@ export class DockerSandbox implements SandboxExecutor {
     }
   }
 
-  /**
-   * Resolve a sandbox file path to a host filesystem path.
-   */
   private resolveHostPath(filePath: string): string {
     if (filePath.startsWith('/')) {
-      // Absolute path: map CONTAINER_WORKDIR prefix to tempDir
       if (filePath.startsWith(CONTAINER_WORKDIR)) {
         return join(this.tempDir, filePath.slice(CONTAINER_WORKDIR.length));
       }
-      return filePath; // outside repo dir, use as-is
+      return filePath;
     }
-    // Relative path: join with repoDir on host
     return join(this.repoHostPath, filePath);
   }
 
-  /**
-   * Validate file path to prevent directory traversal attacks.
-   */
   private validatePath(filePath: string): void {
     const normalized = filePath.replace(/\\/g, '/');
     if (normalized.includes('..')) {
@@ -809,12 +695,18 @@ export class DockerSandbox implements SandboxExecutor {
     }
   }
 
-  /**
-   * Throw if container is not running.
-   */
   private ensureBooted(): void {
-    if (!this.container) {
+    if (!this.dockerContainer) {
       throw new Error('Sandbox not booted');
     }
   }
+}
+
+function parseMemoryToBytes(mem: string): number {
+  const match = mem.match(/^(\d+(?:\.\d+)?)\s*(b|k|m|g)?$/i);
+  if (!match) return 0;
+  const value = parseFloat(match[1]);
+  const unit = (match[2] || 'b').toLowerCase();
+  const multipliers: Record<string, number> = { b: 1, k: 1024, m: 1024 * 1024, g: 1024 * 1024 * 1024 };
+  return Math.round(value * (multipliers[unit] || 1));
 }
