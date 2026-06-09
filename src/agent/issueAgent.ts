@@ -105,6 +105,8 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 
   let sandbox: SandboxExecutor | null = null;
   let currentPhase = '';
+  const TASK_MAX_DURATION_MS = config.phaseTimeouts.openCodeAgent + 30_000;
+  let watchdog: ReturnType<typeof setTimeout> | null = null;
 
   try {
     // ── Phase 1: Triage ──────────────────────────────────────────────
@@ -196,6 +198,15 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     );
     await postStatus(installationId, repoOwner, repoName, issueNumber,
       `⚙️ **Sandbox ready** — cloned repository, detected runtime, installed dependencies.`);
+
+    // ── Set task-level watchdog timer ─────────────────────────────────
+    watchdog = setTimeout(() => {
+      log.error({ jobId, TASK_MAX_DURATION_MS }, 'Task exceeded max duration — force killing sandbox');
+      if (sandbox) {
+        sandbox.destroy().catch(() => {});
+        sandbox = null;
+      }
+    }, TASK_MAX_DURATION_MS);
 
     // ── Phase 3.2: Issue validation ────────────────────────────────────
     currentPhase = "3.2-issue-validation";
@@ -449,12 +460,17 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       noFixReason: `An error occurred: ${errorMsg}`,
     };
   } finally {
+    if (watchdog) {
+      clearTimeout(watchdog);
+      watchdog = null;
+    }
     if (sandbox) {
       try {
         await sandbox.destroy();
       } catch (err) {
         log.warn({ err: String(err) }, 'Error destroying sandbox in finally');
       }
+      sandbox = null;
     }
   }
 }
