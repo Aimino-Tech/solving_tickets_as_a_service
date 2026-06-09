@@ -266,14 +266,11 @@ function generateEnvFile(env: EnvVars): string {
   lines.push(`OPENCODE_MODEL=${env.OPENCODE_MODEL}`);
   lines.push("");
 
-  // OpenCode Go Direct LLM
-  if (env.OPENCODE_API_KEY) {
-    h("=== OpenCode Go Direct LLM ===");
-    lines.push(`OPENCODE_API_KEY=${env.OPENCODE_API_KEY}`);
-    lines.push(`OPENCODE_CHEAP_MODEL=${env.OPENCODE_CHEAP_MODEL}`);
-    lines.push(`OPENCODE_FIX_MODEL=${env.OPENCODE_FIX_MODEL}`);
-    lines.push("");
-  }
+  // Direct LLM (OpenCode Go)
+  h("=== Direct LLM (OpenCode Go) ===");
+  lines.push(`OPENCODE_DIRECT_MODEL=${env.OPENCODE_DIRECT_MODEL}`);
+  lines.push(`OPENCODE_FALLBACK_MODEL=${env.OPENCODE_FALLBACK_MODEL}`);
+  lines.push("");
 
   // Sandbox
   if (env.E2B_API_KEY) {
@@ -417,32 +414,23 @@ async function main(): Promise<void> {
   printValue("OPENCODE_MODEL", env.OPENCODE_MODEL);
 
   // ==========================================================================
-  // SECTION 4: OpenCode Go Direct LLM
+  // SECTION 4: Triage LLM
   // ==========================================================================
   printSection(
-    "OpenCode Go Direct LLM (Optional)",
-    "OpenCode Go provides an OpenAI-compatible endpoint for issue triage (cheap model)\n" +
-      "  and fallback fixes (powerful model). Replaces the separate OpenAI dependency.\n" +
-      "  If skipped, triage and fallback fixes are not available.",
+    "Direct LLM (OpenCode Go)",
+    "A cheap model for classifying issues before the fix agent runs.\n" +
+      "  Uses OpenCode Go's OpenAI-compatible endpoint. The API key is hardcoded.\n" +
+      "  Default: deepseek-v4-flash (triage), deepseek-v4-pro (fallback fix)",
   );
 
-  const useOpencodeGo = await confirm("Configure OpenCode Go direct LLM?", false);
-  if (useOpencodeGo) {
-    env.OPENCODE_API_KEY = await ask("OpenCode Go API key (replaces OpenAI)", {
-      validate: (v) => (v && v.startsWith("sk-") ? null : v ? "Looks like it should start with 'sk-'" : null),
-    });
-    if (env.OPENCODE_API_KEY) {
-      printValue("OPENCODE_API_KEY", env.OPENCODE_API_KEY);
-    }
-    env.OPENCODE_CHEAP_MODEL = await ask("Triage model (cheap)", {
-      default: "deepseek-v4-flash",
-    });
-    printValue("OPENCODE_CHEAP_MODEL", env.OPENCODE_CHEAP_MODEL);
-    env.OPENCODE_FIX_MODEL = await ask("Fix model (powerful)", {
-      default: "deepseek-v4-pro",
-    });
-    printValue("OPENCODE_FIX_MODEL", env.OPENCODE_FIX_MODEL);
-  }
+  env.OPENCODE_DIRECT_MODEL = await ask("Triage model", {
+    default: "deepseek-v4-flash",
+  });
+  printValue("OPENCODE_DIRECT_MODEL", env.OPENCODE_DIRECT_MODEL);
+  env.OPENCODE_FALLBACK_MODEL = await ask("Fallback fix model", {
+    default: "deepseek-v4-pro",
+  });
+  printValue("OPENCODE_FALLBACK_MODEL", env.OPENCODE_FALLBACK_MODEL);
 
   // ==========================================================================
   // SECTION 5: Sandbox

@@ -3,7 +3,7 @@
  *
  * Takes an issue, classifies it, investigates, and either produces a fix or
  * explains why it can't. The main fix agent loop delegates to OpenCode serve
- * at http://localhost:4096, while classification/triage uses a cheap OpenAI model.
+ * at http://localhost:4096, while classification/triage uses a direct OpenCode Go LLM call.
  *
  * Phases:
  *   1. Triage — classify issue type + difficulty (cheap model)
@@ -428,10 +428,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
  * Classify the issue using a cheap OpenAI model.
  */
 async function classifyIssue(title: string, body: string): Promise<TriageResult> {
-  const llm = new OpenAI({
-    baseURL: 'https://opencode.ai/zen/go/v1',
-    apiKey: config.opencode.apiKey,
-  });
+  const opencode = new OpenAI({ baseURL: config.opencode.direct.baseUrl, apiKey: config.opencode.direct.apiKey });
 
   const prompt = `You are a triage agent. Given a GitHub issue, classify it.
 
@@ -449,8 +446,8 @@ Reply with a JSON object:
 Only respond with the JSON object, no other text.`;
 
   try {
-    const model = config.opencode.cheapModel || 'deepseek-v4-flash';
-    const response = await llm.chat.completions.create({
+    const model = config.opencode.direct.model;
+    const response = await opencode.chat.completions.create({
       model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0,
@@ -1018,11 +1015,8 @@ async function attemptBasicFix(
       pushBranch: (branch) => sandbox.pushBranch(branch),
     });
 
-    // Try to use the powerful OpenCode Go model for a simpler fix attempt
-    const llm = new OpenAI({
-      baseURL: 'https://opencode.ai/zen/go/v1',
-      apiKey: config.opencode.apiKey,
-    });
+    // Try to use the direct OpenCode Go LLM for a simpler fix attempt
+    const opencode = new OpenAI({ baseURL: config.opencode.direct.baseUrl, apiKey: config.opencode.direct.apiKey });
     const issueContext = [`Issue #${data.issueNumber}: ${data.issueTitle}`, data.issueBody || '', ...comments].join(
       '\n\n',
     );
@@ -1042,9 +1036,9 @@ async function attemptBasicFix(
       'Output the result as JSON: { summary, confidence, branchName }',
     ].join('\n');
 
-    const fixModel = config.opencode.fixModel || 'deepseek-v4-pro';
-    const response = await llm.chat.completions.create({
-      model: fixModel,
+    const fallbackModel = config.opencode.direct.fallbackModel;
+    const response = await opencode.chat.completions.create({
+      model: fallbackModel,
       messages: [
         { role: 'system', content: systemPrompt },
         {

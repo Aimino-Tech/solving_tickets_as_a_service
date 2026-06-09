@@ -40,6 +40,8 @@ const envSchema = z.object({
   GITHUB_APP_PRIVATE_KEY_PATH: z.string().optional(),
   GITHUB_WEBHOOK_SECRET: z.string().min(1, 'GITHUB_WEBHOOK_SECRET is required'),
   GITHUB_WEBHOOK_PATH: z.string().default('/webhook'),
+  GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
+  GITHUB_OAUTH_CLIENT_SECRET: z.string().optional(),
 
   // Queue
   REDIS_URL: z.string().default('redis://localhost:6379'),
@@ -49,7 +51,7 @@ const envSchema = z.object({
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
-  QUEUE_BACKEND: z.enum(['rabbitmq']).default('rabbitmq'),
+  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('bullmq'),
 
   // RabbitMQ
   RABBITMQ_URL: z.string().default('amqp://localhost:5672/stas'),
@@ -67,13 +69,6 @@ const envSchema = z.object({
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
- 
-  // OpenCode Health Check
-  OPENCODE_HEALTH_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
-  OPENCODE_HEALTH_CACHE_TTL_MS: z.coerce.number().int().positive().default(30000),
-  OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(3),
-  OPENCODE_HEALTH_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
-  OPENCODE_HEALTH_STARTUP_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
 
   // Timeouts
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
@@ -81,10 +76,10 @@ const envSchema = z.object({
   PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(300_000),
   PHASE_TIMEOUT_PRCREATION_MS: z.coerce.number().int().positive().default(30_000),
 
-  // OpenCode Go direct LLM endpoint (replaces OpenAI / triage)
-  OPENCODE_API_KEY: z.string().optional(),
-  OPENCODE_CHEAP_MODEL: z.string().default('deepseek-v4-flash'),
-  OPENCODE_FIX_MODEL: z.string().default('deepseek-v4-pro'),
+  // OpenCode Go — direct LLM (OpenAI-compatible endpoint)
+  OPENCODE_API_KEY: z.string().min(1, 'OPENCODE_API_KEY is required for direct OpenCode Go LLM calls'),
+  OPENCODE_DIRECT_MODEL: z.string().default('deepseek-v4-flash'),
+  OPENCODE_FALLBACK_MODEL: z.string().default('deepseek-v4-pro'),
 
   // Sandbox — E2B
   E2B_API_KEY: z.string().optional(),
@@ -191,9 +186,6 @@ const envSchema = z.object({
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
 
-  // ── CSP / Security Headers ──
-  CSP_REPORT_URI: z.string().default('/api/v1/csp-violation-report'),
-
   // ── IP Allowlist ──
   IP_ALLOWLIST_ENABLED: coerceBoolean(false),
   IP_ALLOWLIST: z.string().default(''),
@@ -292,6 +284,8 @@ function buildConfig(env: ParsedEnv) {
       privateKeyEnv: env.GITHUB_APP_PRIVATE_KEY,
       webhookSecret: env.GITHUB_WEBHOOK_SECRET,
       webhookPath: env.GITHUB_WEBHOOK_PATH,
+      oauthClientId: env.GITHUB_OAUTH_CLIENT_ID,
+      oauthClientSecret: env.GITHUB_OAUTH_CLIENT_SECRET,
     },
 
     queue: {
@@ -323,17 +317,12 @@ function buildConfig(env: ParsedEnv) {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
-      apiKey: env.OPENCODE_API_KEY,
-      cheapModel: env.OPENCODE_CHEAP_MODEL,
-      fixModel: env.OPENCODE_FIX_MODEL,
-    },
-
-    opencodeHealth: {
-      pollIntervalMs: env.OPENCODE_HEALTH_POLL_INTERVAL_MS,
-      cacheTtlMs: env.OPENCODE_HEALTH_CACHE_TTL_MS,
-      circuitBreakerThreshold: env.OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD,
-      requestTimeoutMs: env.OPENCODE_HEALTH_REQUEST_TIMEOUT_MS,
-      startupTimeoutMs: env.OPENCODE_HEALTH_STARTUP_TIMEOUT_MS,
+      direct: {
+        apiKey: env.OPENCODE_API_KEY,
+        baseUrl: 'https://opencode.ai/zen/go/v1',
+        model: env.OPENCODE_DIRECT_MODEL,
+        fallbackModel: env.OPENCODE_FALLBACK_MODEL,
+      },
     },
 
     gitlab: {
@@ -494,7 +483,6 @@ function buildConfig(env: ParsedEnv) {
       corsOrigin: env.CORS_ORIGIN,
       requestBodyLimit: env.REQUEST_BODY_LIMIT,
       webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
-      cspReportUri: env.CSP_REPORT_URI,
 
       ipAllowlist: {
         enabled: env.IP_ALLOWLIST_ENABLED,

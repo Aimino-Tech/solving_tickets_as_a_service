@@ -24,8 +24,6 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import express, { type Express, type Request, type Response } from 'express';
 import { createApp } from '../../../src/server.js';
-import type { TestHarnessOptions } from './env.js';
-import { setupTestEnvironment } from './env.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,6 +48,19 @@ export interface MockOpenCodeServer {
   /** Default response for any incoming request */
   defaultResponse: { status: number; body: unknown };
   baseUrl: string;
+}
+
+export interface TestHarnessOptions {
+  /** Port for the STAS Express server (0 = random) */
+  stasPort?: number;
+  /** Port for the mock GitHub API server (0 = random) */
+  githubApiPort?: number;
+  /** Port for the mock OpenCode server (0 = random) */
+  openCodePort?: number;
+  /** Override environment variables */
+  env?: Record<string, string>;
+  /** Enable verbose logging during tests */
+  verbose?: boolean;
 }
 
 export interface TestHarness {
@@ -193,6 +204,37 @@ export function createMockOpenCodeServer(): MockOpenCodeServer {
 // ---------------------------------------------------------------------------
 // Environment setup
 // ---------------------------------------------------------------------------
+
+/**
+ * Set up environment variables for E2E testing.
+ * Call BEFORE importing any STAS modules.
+ */
+export function setupTestEnvironment(options?: TestHarnessOptions): void {
+  process.env.TEST = 'true';
+  process.env.NODE_ENV = 'test';
+  process.env.LOG_LEVEL = options?.verbose ? 'debug' : 'silent';
+  process.env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY = 'true';
+  process.env.STAS_LABEL = 'stas:fix';
+  process.env.GITHUB_APP_ID = process.env.GITHUB_APP_ID ?? '999999';
+  process.env.GITHUB_WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET ?? 'test-secret';
+  process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
+  process.env.OPENCODE_URL = process.env.OPENCODE_URL ?? 'http://localhost:4096';
+  process.env.OPENCODE_DIRECT_MODEL = process.env.OPENCODE_DIRECT_MODEL ?? 'deepseek-v4-flash';
+
+  // Disable external integrations for tests
+  process.env.SLACK_WEBHOOK_URL = '';
+  process.env.E2B_API_KEY = '';
+  process.env.LINEAR_API_KEY = '';
+  process.env.JIRA_URL = '';
+  process.env.STRIPE_SECRET_KEY = '';
+  process.env.ADMIN_API_KEY = 'test-admin-key';
+  process.env.IP_ALLOWLIST_ENABLED = 'false';
+
+  // Override with any custom env vars
+  if (options?.env) {
+    Object.assign(process.env, options.env);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Harness creation
