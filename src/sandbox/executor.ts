@@ -27,7 +27,7 @@
 import { Sandbox } from 'e2b';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import type { SandboxExecutor as SandboxExecutorInterface, ExecResult, TestRunResult, RuntimeInfo } from './types.js';
+import type { ProgressCallback, SandboxExecutor as SandboxExecutorInterface, ExecResult, TestRunResult, RuntimeInfo } from './types.js';
 
 const log = rootLogger.child({ module: 'sandbox' });
 
@@ -38,6 +38,7 @@ export class E2BSandboxExecutor implements SandboxExecutorInterface {
   private repoDir: string = '';
   private runtimeInfo: RuntimeInfo | null = null;
   private installationToken: string = '';
+  private progressCallback: ProgressCallback | null = null;
 
   constructor(
     private repoUrl: string,
@@ -47,11 +48,23 @@ export class E2BSandboxExecutor implements SandboxExecutorInterface {
     private getToken: (installationId: number) => Promise<string>,
   ) {}
 
+  private reportProgress(phase: string, progress: number, message?: string): void {
+    if (this.progressCallback) {
+      try {
+        this.progressCallback(phase, progress, message);
+      } catch {
+        /* ignore heartbeat failures — non-fatal */
+      }
+    }
+  }
+
   /**
    * Boot the sandbox: create instance, clone repo, detect runtime, install deps.
    */
-  async boot(): Promise<void> {
+  async boot(onProgress?: ProgressCallback): Promise<void> {
+    this.progressCallback = onProgress ?? null;
     log.info('Booting E2B sandbox');
+    this.reportProgress('boot', 0, 'Creating sandbox instance');
 
     // Create the sandbox
     try {
@@ -65,6 +78,7 @@ export class E2BSandboxExecutor implements SandboxExecutorInterface {
     }
 
     log.info({ sandboxId: this.sandbox.sandboxId }, 'Sandbox created');
+    this.reportProgress('boot', 15, 'Sandbox created, fetching installation token');
 
     // Get installation token for auth
     try {
@@ -72,6 +86,8 @@ export class E2BSandboxExecutor implements SandboxExecutorInterface {
     } catch (err) {
       throw new Error(`Failed to get installation token for sandbox ${this.sandbox.sandboxId}: ${String(err)}`);
     }
+
+    this.reportProgress('boot', 25, 'Installation token obtained, cloning repository');
 
     // Clone the repo with auth
     const authUrl = this.repoUrl.replace('https://', `https://x-access-token:${this.installationToken}@`);
@@ -82,13 +98,16 @@ export class E2BSandboxExecutor implements SandboxExecutorInterface {
       throw new Error(`Failed to clone repo: ${cloneResult.stderr}`);
     }
     log.info('Repo cloned successfully');
+    this.reportProgress('boot', 50, 'Repository cloned, detecting runtime');
 
     // Detect runtime
     this.runtimeInfo = await this.detectRuntime();
     log.info({ runtime: this.runtimeInfo }, 'Runtime detected');
+    this.reportProgress('boot', 70, `Runtime detected: ${this.runtimeInfo.language}`);
 
     // Install dependencies
     await this.installDeps();
+    this.reportProgress('boot', 100, 'Sandbox ready');
   }
 
   /**

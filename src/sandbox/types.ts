@@ -34,9 +34,11 @@ export interface RuntimeInfo {
 // Common interface
 // ---------------------------------------------------------------------------
 
+export type ProgressCallback = (phase: string, progress: number, message?: string) => void;
+
 export interface SandboxExecutor {
   /** Boot the sandbox: create instance, clone repo, detect runtime, install deps. */
-  boot(): Promise<void>;
+  boot(onProgress?: ProgressCallback): Promise<void>;
 
   /** Execute a command in the sandbox. */
   exec(command: string, timeoutMs?: number): Promise<ExecResult>;
