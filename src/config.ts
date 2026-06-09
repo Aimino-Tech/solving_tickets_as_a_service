@@ -97,6 +97,7 @@ const envSchema = z.object({
   DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(2),
 
   // STAS
+  PHANTOM_ISSUE_MAX_RETRIES: z.coerce.number().int().positive().default(2),
 
   // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
@@ -391,6 +392,7 @@ function buildConfig(env: ParsedEnv) {
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
       maxAgentIterations: env.MAX_AGENT_ITERATIONS,
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
+      phantomIssueMaxRetries: env.PHANTOM_ISSUE_MAX_RETRIES,
       rateLimit: {
         windowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
         max: env.STAS_RATE_LIMIT_MAX,

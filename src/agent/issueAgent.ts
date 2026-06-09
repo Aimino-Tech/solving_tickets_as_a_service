@@ -43,6 +43,8 @@ import { rootLogger, jobLogger } from "../utils/logger.js";
 import { addBreadcrumb, setUserContext } from "../monitoring/sentry.js";
 import * as messages from "../github/messages.js";
 import { getTracker } from "../trackers/index.js";
+import { validateIssue } from "./issueValidator.js";
+import * as issueValidatorMessages from "../github/messages.js";
 const log = rootLogger.child({ module: 'issue-agent' });
 
 // ---------------------------------------------------------------------------
@@ -194,6 +196,41 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     );
     await postStatus(installationId, repoOwner, repoName, issueNumber,
       `⚙️ **Sandbox ready** — cloned repository, detected runtime, installed dependencies.`);
+
+    // ── Phase 3.2: Issue validation ────────────────────────────────────
+    currentPhase = "3.2-issue-validation";
+    logger.info("Phase 3.2: Validating issue file references");
+    const validation = await validateIssue(sandbox, issueTitle, issueBody ?? "", triage);
+
+    if (validation.shouldSkip) {
+      logger.warn(
+        { missingFiles: validation.missingFiles, referencedFiles: validation.referencedFiles },
+        'Phantom issue detected — skipping agent dispatch',
+      );
+      await postComment(
+        installationId,
+        repoOwner,
+        repoName,
+        issueNumber,
+        issueValidatorMessages.phantomIssueComment(validation.missingFiles, validation.skipReason ?? ''),
+      );
+      await sandbox.destroy();
+      sandbox = null;
+      return {
+        summary: `Skipped phantom issue: referenced files ${validation.missingFiles.join(', ')} do not exist in this repository.`,
+        confidence: 'low',
+        fixReady: false,
+        noFixReason: validation.skipReason,
+        investigationOnly: true,
+      };
+    }
+
+    if (validation.missingFiles.length > 0) {
+      logger.warn(
+        { missingFiles: validation.missingFiles, existingFiles: validation.existingFiles },
+        'Issue references some non-existent files — proceeding with caution',
+      );
+    }
 
     // ── Phase 3.5: Baseline test run ──────────────────────────────────
     currentPhase = "3.5-baseline-tests";

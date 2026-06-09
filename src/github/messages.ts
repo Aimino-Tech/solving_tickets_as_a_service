@@ -287,6 +287,25 @@ export function deadLetterComment(
 }
 
 /**
+ * Phantom issue — the issue references files that don't exist.
+ */
+export function phantomIssueComment(missingFiles: string[], skipReason: string): string {
+  return [
+    `### 👻 Phantom Issue Detected`,
+    '',
+    skipReason,
+    '',
+    '**Missing file paths**:',
+    ...missingFiles.map((f) => `- \`${f}\``),
+    '',
+    'The issue may originate from a fork, an unmerged branch, or a different codebase.',
+    'No agent dispatch was attempted.',
+    '',
+    BOT_SIGNATURE,
+  ].join('\n');
+}
+
+/**
  * CI failure follow-up — a PR's CI checks failed.
  */
 export function ciFailureComment(prNumber: number, failedChecks: string[]): string {
