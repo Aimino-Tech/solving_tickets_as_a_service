@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { verifyLinearWebhookSignature, handleLinearWebhook } from '../trackers/linear.js';
+import { bridgeLinearTicket } from '../trackers/linearBridge.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './eventLogger.js';
 import { recordWebhookDuration } from './metrics.js';
 import { rootLogger } from '../utils/logger.js';
@@ -41,6 +42,12 @@ router.post('/webhooks/linear', async (req: Request, res: Response) => {
 
     const payload = JSON.parse(rawBody.toString('utf-8'));
     const result = await handleLinearWebhook(payload);
+
+    if (result?.ticketId && (result.action === 'create' || result.action === 'update')) {
+      bridgeLinearTicket(result.ticketId).catch((err) => {
+        log.error({ err: String(err), ticketId: result.ticketId }, 'Bridge to GitHub issue failed');
+      });
+    }
 
     if (eventId) await logWebhookProcessed(eventId);
     recordWebhookDuration(source, Date.now() - startTime);
