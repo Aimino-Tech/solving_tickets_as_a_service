@@ -138,6 +138,22 @@ services:
       - stas-net
     restart: unless-stopped
 
+  # ── Egress Proxy ──────────────────────────────────────────────────
+  stas-egress-proxy:
+    build:
+      context: ./docker/squid
+      dockerfile: Dockerfile
+    image: stas-egress-proxy:latest
+    container_name: stas-egress-proxy
+    ports:
+      - "3128:3128"
+    environment:
+      ALLOWED_DOMAINS: ${DOCKER_ALLOWED_HOSTS:-api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io}
+    networks:
+      - stas-net
+      - stas_agent-net
+    restart: unless-stopped
+
 volumes:
   redis-data:
   rabbitmq-data:
@@ -145,3 +161,7 @@ volumes:
 networks:
   stas-net:
     driver: bridge
+  stas_agent-net:
+    driver: bridge
+    internal: false
+    name: stas_agent-net
