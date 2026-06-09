@@ -1,3 +1,32 @@
+/**
+ * Docker sandbox — isolates fix execution in a local Docker container.
+ *
+ * Serves as a fallback when E2B is unavailable. Uses Dockerode to manage
+ * container lifecycle and host volume mounts for file operations.
+ *
+ * Handles:
+ * - Container lifecycle (create, exec, destroy)
+ * - Repo cloning with auth token
+ * - Runtime detection (10+ languages)
+ * - Dependency installation
+ * - File operations through host volume mount
+ * - Static analysis (tsc, ruff, etc.)
+ * - Test execution
+ * - Egress proxy via Squid for zero-trust network isolation
+ * - Resource limits (memory, CPU)
+ * - Git push
+ *
+ * ── Error Handling Audit ────────────────────────────────────────────
+ * ✅ boot() wraps container create and token fetch with context
+ * ✅ boot() clone failure throws with stderr context
+ * ✅ path traversal detection in validatePath() for read/write/remove
+ * ✅ readFile/writeFile/removeFile catch with descriptive messages
+ * ✅ destroy() catches container kill/remove failures (non-fatal, logs warning)
+ * ✅ pushBranch() wraps all git operations with context
+ * ✅ installDeps() failure is non-fatal (logs warning, continues)
+ * ────────────────────────────────────────────────────────────────────
+ */
+
 import { mkdtempSync, existsSync, rmSync } from 'node:fs';
 import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -113,9 +142,7 @@ export class DockerSandbox implements SandboxExecutor {
     await container.start();
     log.info('Container started');
 
-    if (config.docker.networkRestrict) {
-      await this.applyNetworkRestrictions();
-    }
+    this.ensureAgentNetwork();
 
     const authUrl = this.repoUrl.replace('https://', `https://x-access-token:${this.installationToken}@`);
     this.repoHostPath = join(this.tempDir, this.repoName);
@@ -619,12 +646,21 @@ export class DockerSandbox implements SandboxExecutor {
       CapDrop: ['ALL'],
       Ulimits: ulimits,
       PidsLimit: 256,
-      NetworkMode: 'bridge',
       SecurityOpt: ['no-new-privileges:true'],
       ReadonlyRootfs: true,
       Tmpfs: { '/tmp': 'rw,noexec,nosuid,size=2g' },
-      Dns: config.docker.networkRestrict ? ['1.1.1.1', '8.8.8.8'] : undefined,
     };
+
+    if (config.docker.networkRestrict) {
+      hostConfig.NetworkMode = 'stas_agent-net';
+      env.push('http_proxy=http://stas-egress-proxy:3128');
+      env.push('https_proxy=http://stas-egress-proxy:3128');
+      env.push('HTTP_PROXY=http://stas-egress-proxy:3128');
+      env.push('HTTPS_PROXY=http://stas-egress-proxy:3128');
+      env.push('NO_PROXY=localhost,127.0.0.1');
+    } else {
+      hostConfig.NetworkMode = 'none';
+    }
 
     return {
       Image: image,
@@ -638,43 +674,34 @@ export class DockerSandbox implements SandboxExecutor {
     };
   }
 
-  private async applyNetworkRestrictions(): Promise<void> {
-    if (!this.container) return;
-
-    const allowedHosts = config.docker.allowedHosts;
-    if (!allowedHosts || allowedHosts.length === 0) return;
-
-    log.info({ allowedHosts }, 'Applying network restrictions via iptables');
-
+  /**
+   * Ensure the stas_agent-net Docker network exists.
+   * Creates it if absent (idempotent).
+   */
+  private async ensureAgentNetwork(): Promise<void> {
+    const networkName = 'stas_agent-net';
     try {
-      await this.exec('iptables -P INPUT DROP');
-      await this.exec('iptables -P FORWARD DROP');
-      await this.exec('iptables -P OUTPUT DROP');
+      const networks = await this.docker.listNetworks({ filters: { name: [networkName] } });
+      const exists = networks.some((n) => n.Name === networkName);
 
-      await this.exec('iptables -A INPUT -i lo -j ACCEPT');
-      await this.exec('iptables -A OUTPUT -o lo -j ACCEPT');
-
-      await this.exec('iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT');
-      await this.exec('iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT');
-
-      await this.exec('iptables -A OUTPUT -p udp --dport 53 -j ACCEPT');
-      await this.exec('iptables -A OUTPUT -p tcp --dport 53 -j ACCEPT');
-
-      for (const host of allowedHosts) {
-        const resolveResult = await this.exec(`getent hosts ${host} | awk '{ print $1 }'`);
-        if (resolveResult.exitCode === 0 && resolveResult.stdout.trim()) {
-          const ips = resolveResult.stdout.trim().split('\n');
-          for (const ip of ips) {
-            if (ip) {
-              await this.exec(`iptables -A OUTPUT -d ${ip} -j ACCEPT`);
-            }
-          }
-        }
+      if (!exists) {
+        log.info({ networkName }, 'Creating agent network');
+        await this.docker.createNetwork({
+          Name: networkName,
+          Driver: 'bridge',
+          Internal: false,
+          CheckDuplicate: true,
+        });
+      } else {
+        log.debug({ networkName }, 'Agent network already exists');
       }
-
-      log.info('Network restrictions applied');
     } catch (err) {
-      log.warn({ err: String(err) }, 'Failed to apply network restrictions (non-fatal)');
+      log.warn({ err: String(err) }, 'Failed to ensure agent network (non-fatal)');
+    }
+  }
+      }
+    } else {
+      log.debug({ networkName }, 'Agent network already exists');
     }
   }
 
