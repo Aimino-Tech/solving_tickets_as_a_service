@@ -27,6 +27,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
+import { config } from '../config.js';
 import { creditsRepository } from '../db/repositories/CreditsRepository.js';
 import { createCheckoutSession } from '../stripe/checkout.js';
 import { CREDIT_PACKS } from '../stripe/credit-packs.js';
@@ -74,7 +75,7 @@ function requireAccount(req: Request, res: Response): number | null {
 
 function requireAdmin(req: Request, res: Response): boolean {
   const adminKey = req.headers['x-admin-key'];
-  const expectedKey = process.env.ADMIN_API_KEY;
+  const expectedKey = config.admin.apiKey;
   if (!expectedKey) {
     res.status(501).json({
       error: 'Not Implemented',

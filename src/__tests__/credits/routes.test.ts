@@ -1,7 +1,14 @@
 /**
  * Unit tests for src/credits/routes.ts — Credit system REST API routes.
  */
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeAll, describe, expect, it, vi, beforeEach } from 'vitest';
+
+beforeAll(() => {
+  vi.stubEnv('GITHUB_APP_ID', 'test-app-123');
+  vi.stubEnv('GITHUB_WEBHOOK_SECRET', 'test-webhook-secret-456');
+  vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
+  vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-api-key');
+});
 
 const mockGetBalance = vi.fn();
 const mockGetTransactions = vi.fn();
