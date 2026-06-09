@@ -68,6 +68,7 @@ import { featureFlagsRouter } from './routes/featureFlags.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
 import { recordWebhookDuration } from './webhooks/metrics.js';
 import { renderMetrics } from './webhooks/metrics.js';
+import { renderFeatureFlagMetrics } from './featureFlags/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
@@ -318,8 +319,9 @@ export function createApp(): express.Application {
   app.get('/metrics', (_req: Request, res: Response) => {
     const webhookMetrics = renderMetrics();
     const bridgeMetricsOutput = bridgeMetrics.render();
+    const featureFlagMetrics = renderFeatureFlagMetrics();
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.send(webhookMetrics + '\n' + bridgeMetricsOutput);
+    res.send(webhookMetrics + '\n' + bridgeMetricsOutput + '\n' + featureFlagMetrics);
 
   });
 

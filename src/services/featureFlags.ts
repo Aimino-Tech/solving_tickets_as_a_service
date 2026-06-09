@@ -2,6 +2,7 @@ import { Redis } from 'ioredis';
 import { queryWithRetry } from '../db/connection.js';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { recordFeatureFlagEvaluation, recordFeatureFlagOverride } from '../featureFlags/metrics.js';
 
 const log = rootLogger.child({ module: 'feature-flags' });
 
@@ -54,9 +55,11 @@ export async function isFeatureEnabled(flag: string, accountId?: number): Promis
         [accountId, flag],
       );
       if (result.rows.length > 0) {
-        const resolved: ResolvedFlag = { flag, enabled: result.rows[0].enabled, source: 'db_account' };
+        const enabled = result.rows[0].enabled;
+        const resolved: ResolvedFlag = { flag, enabled, source: 'db_account' };
         log.debug({ flag, accountId, enabled: resolved.enabled, source: resolved.source }, 'Feature flag resolved');
-        return result.rows[0].enabled;
+        recordFeatureFlagEvaluation(flag, enabled ? 'enabled' : 'disabled');
+        return enabled;
       }
     }
 
@@ -65,20 +68,25 @@ export async function isFeatureEnabled(flag: string, accountId?: number): Promis
       [flag],
     );
     if (globalResult.rows.length > 0) {
-      log.debug({ flag, enabled: globalResult.rows[0].enabled, source: 'db_global' }, 'Feature flag resolved');
-      return globalResult.rows[0].enabled;
+      const enabled = globalResult.rows[0].enabled;
+      log.debug({ flag, enabled: enabled, source: 'db_global' }, 'Feature flag resolved');
+      recordFeatureFlagEvaluation(flag, enabled ? 'enabled' : 'disabled');
+      return enabled;
     }
 
     const envValue = process.env[`FLAG_${flag.toUpperCase()}`];
     if (envValue !== undefined) {
       const enabled = envValue === '1' || envValue.toLowerCase() === 'true';
       log.debug({ flag, enabled, source: 'env' }, 'Feature flag resolved');
+      recordFeatureFlagEvaluation(flag, enabled ? 'enabled' : 'disabled');
       return enabled;
     }
 
+    recordFeatureFlagEvaluation(flag, 'disabled');
     return false;
   } catch (err) {
     log.error({ err: String(err), flag, accountId }, 'Feature flag resolution failed');
+    recordFeatureFlagEvaluation(flag, 'disabled');
     return false;
   }
 }
@@ -107,6 +115,7 @@ export async function setFeatureFlag(
       );
     }
     log.info({ flag, enabled, accountId }, 'Feature flag updated');
+    recordFeatureFlagOverride(flag, accountId ? String(accountId) : 'global');
   } catch (err) {
     log.error({ err: String(err), flag, enabled, accountId }, 'Failed to set feature flag');
     throw err;

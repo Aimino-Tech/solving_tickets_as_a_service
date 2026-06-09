@@ -375,6 +375,78 @@
           }
         }
       }
+    },
+    {
+      "id": 14,
+      "title": "Feature Flag Evaluations",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 38 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum by(flag, result) (rate(feature_flag_evaluations_total[5m]))",
+          "legendFormat": "{{flag}} ({{result}})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "min": 0,
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
+        }
+      },
+      "description": "Rate of feature flag evaluations per second, broken down by flag name and result (enabled/disabled)"
+    },
+    {
+      "id": 15,
+      "title": "Feature Flag Overrides",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 38 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum by(flag, account) (rate(feature_flag_overrides_total[5m]))",
+          "legendFormat": "{{flag}} (account {{account}})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "min": 0,
+          "custom": { "drawStyle": "bars", "fillOpacity": 50 }
+        }
+      },
+      "description": "Rate of feature flag override/set operations per second, by flag and account"
+    },
+    {
+      "id": 16,
+      "title": "Feature Flag Rollout %",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 46 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(feature_flag_evaluations_total{result=\"enabled\"}) / (sum(feature_flag_evaluations_total{result=\"enabled\"}) + sum(feature_flag_evaluations_total{result=\"disabled\"})) * 100",
+          "legendFormat": "Rollout %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 10 },
+              { "color": "green", "value": 50 }
+            ]
+          }
+        }
+      },
+      "description": "Percentage of feature flag evaluations that returned enabled (rollout adoption)"
     }
   ],
   "rows": [],
