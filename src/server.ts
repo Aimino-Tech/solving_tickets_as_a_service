@@ -64,6 +64,7 @@ import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
+import { linearWebhookRouter } from './webhooks/linear.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
 import { recordWebhookDuration } from './webhooks/metrics.js';
@@ -779,6 +780,9 @@ export function createApp(): express.Application {
 
     await wrappedHandler(req, res, () => {});
   });
+
+  // -- Linear webhook -------------------------------------------------------
+  app.use(linearWebhookRouter);
 
   // -- Feature flags admin API ------------------------------------------------
   app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
