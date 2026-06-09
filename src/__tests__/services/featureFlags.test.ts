@@ -313,4 +313,118 @@ describe('services/featureFlags', () => {
       expect(flags).toEqual([]);
     });
   });
+
+  describe('enabledFor', () => {
+    it('returns true from account-level DB flag', async () => {
+      mockRedis.get.mockResolvedValue(null);
+      mockQuery.mockResolvedValue({ rows: [{ enabled: true, percentage_rollout: 0 }] });
+      const result = await ff.enabledFor('test_flag', 42);
+      expect(result).toBe(true);
+    });
+
+    it('returns false from account-level DB flag', async () => {
+      mockRedis.get.mockResolvedValue(null);
+      mockQuery.mockResolvedValue({ rows: [{ enabled: false, percentage_rollout: 0 }] });
+      const result = await ff.enabledFor('test_flag', 42);
+      expect(result).toBe(false);
+    });
+
+    it('uses percentage rollout when set on global flag', async () => {
+      mockRedis.get.mockResolvedValue(null);
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+      mockQuery.mockResolvedValueOnce({ rows: [{ enabled: true, percentage_rollout: 100 }] });
+      const result = await ff.enabledFor('rollout_flag', 42);
+      expect(result).toBe(true);
+    });
+
+    it('returns false when hash exceeds percentage', async () => {
+      mockRedis.get.mockResolvedValue(null);
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+      mockQuery.mockResolvedValueOnce({ rows: [{ enabled: false, percentage_rollout: 50 }] });
+      // With 50% rollout, about half the accounts should get it
+      const results = new Set<boolean>();
+      for (let i = 1; i <= 50; i++) {
+        mockRedis.get.mockResolvedValue(null);
+        mockQuery.mockResolvedValueOnce({ rows: [] });
+        mockQuery.mockResolvedValueOnce({ rows: [{ enabled: false, percentage_rollout: 50 }] });
+        results.add(await ff.enabledFor('rollout_flag', i));
+      }
+      expect(results.has(true)).toBe(true);
+      expect(results.has(false)).toBe(true);
+    });
+  });
+
+  describe('hashPercentage', () => {
+    it('returns a value between 0 and 99', () => {
+      for (let i = 1; i <= 100; i++) {
+        const hash = ff.hashPercentage('test_flag', i);
+        expect(hash).toBeGreaterThanOrEqual(0);
+        expect(hash).toBeLessThan(100);
+      }
+    });
+
+    it('returns the same value for same inputs', () => {
+      const hash1 = ff.hashPercentage('test_flag', 42);
+      const hash2 = ff.hashPercentage('test_flag', 42);
+      expect(hash1).toBe(hash2);
+    });
+
+    it('returns different values for different accountIds', () => {
+      const hash1 = ff.hashPercentage('test_flag', 1);
+      const hash2 = ff.hashPercentage('test_flag', 2);
+      expect(hash1).not.toBe(hash2);
+    });
+
+    it('returns different values for different flags', () => {
+      const hash1 = ff.hashPercentage('flag_a', 42);
+      const hash2 = ff.hashPercentage('flag_b', 42);
+      expect(hash1).not.toBe(hash2);
+    });
+
+    it('distributes roughly evenly across 100 buckets', () => {
+      const buckets = new Array(100).fill(0);
+      for (let i = 1; i <= 5000; i++) {
+        const hash = ff.hashPercentage('uniform_test', i);
+        buckets[hash]++;
+      }
+      const avg = 5000 / 100;
+      const maxDeviation = buckets.reduce((max, count) => Math.max(max, Math.abs(count - avg)), 0);
+      expect(maxDeviation / avg).toBeLessThan(0.5);
+    });
+  });
+
+  describe('invalidateCache', () => {
+    it('deletes the cache key', async () => {
+      await ff.invalidateCache('test_flag', 42);
+      expect(mockRedis.del).toHaveBeenCalledWith(expect.stringContaining('stas:flags:account:42:test_flag'));
+    });
+
+    it('deletes global cache key when no accountId', async () => {
+      await ff.invalidateCache('test_flag');
+      expect(mockRedis.del).toHaveBeenCalledWith(expect.stringContaining('stas:flags:global:test_flag'));
+    });
+  });
+
+  describe('setAccountOverride', () => {
+    it('creates account-level flag', async () => {
+      mockQuery.mockResolvedValue({ rowCount: 1 });
+      await ff.setAccountOverride('test_flag', 42, true);
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO feature_flags'),
+        [42, 'test_flag', true, 0],
+      );
+    });
+  });
+
+  describe('removeAccountOverride', () => {
+    it('deletes account-level flag and invalidates cache', async () => {
+      mockQuery.mockResolvedValue({ rowCount: 1 });
+      await ff.removeAccountOverride('test_flag', 42);
+      expect(mockRedis.del).toHaveBeenCalled();
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM feature_flags'),
+        ['test_flag', 42],
+      );
+    });
+  });
 });
