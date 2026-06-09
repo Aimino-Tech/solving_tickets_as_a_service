@@ -15,27 +15,32 @@ import { config } from "../config.js";
 import type { IssueJobData } from "../utils/types.js";
 import { rootLogger } from "../utils/logger.js";
 import { addBreadcrumb } from "../monitoring/sentry.js";
+import { enabledFor } from "../services/featureFlags.js";
 
 const log = rootLogger.child({ module: 'issue-queue' });
 
-/**
- * Enqueue an issue for processing via RabbitMQ.
- *
- * @param data - The issue job data to enqueue
- * @returns "rabbitmq" on success, undefined on failure
- */
 export async function enqueueIssue(
   _queue: undefined,
   data: IssueJobData,
 ): Promise<string | undefined> {
   const repo = `${data.repoOwner}/${data.repoName}`;
 
-  addBreadcrumb('queue', 'Enqueueing issue via RabbitMQ', {
+  const useRabbitmq = await enabledFor('rabbitmq_backend', data.installationId);
+  const effectiveBackend = useRabbitmq ? 'rabbitmq' : 'fallback';
+
+  addBreadcrumb('queue', 'Enqueueing issue', {
     repo,
     issueNumber: String(data.issueNumber),
     installationId: String(data.installationId),
-    backend: config.queue.backend,
+    backend: effectiveBackend,
   });
+
+  if (!useRabbitmq) {
+    log.warn(
+      { repo, issueNumber: data.issueNumber },
+      'RabbitMQ backend disabled via feature flag, using fallback',
+    );
+  }
 
   try {
     const { publishFixJob } = await import('./producers.js');
@@ -46,12 +51,12 @@ export async function enqueueIssue(
         { repo, issueNumber: data.issueNumber },
         'Issue published to RabbitMQ',
       );
-      return 'rabbitmq';
+      return effectiveBackend;
     }
 
     log.warn(
       { repo, issueNumber: data.issueNumber },
-      'Failed to publish issue to RabbitMQ — publish returned false',
+      'Failed to publish issue — publish returned false',
     );
     return undefined;
   } catch (err) {
@@ -61,7 +66,7 @@ export async function enqueueIssue(
         repo,
         issueNumber: data.issueNumber,
       },
-      'Failed to enqueue issue via RabbitMQ',
+      'Failed to enqueue issue',
     );
     return undefined;
   }

@@ -6,6 +6,9 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 const mockRedis = {
   on: vi.fn(),
   quit: vi.fn().mockResolvedValue(undefined),
+  get: vi.fn().mockResolvedValue(null),
+  setex: vi.fn().mockResolvedValue('OK'),
+  del: vi.fn().mockResolvedValue(1),
   zadd: vi.fn().mockResolvedValue(1),
   zremrangebyscore: vi.fn().mockResolvedValue(0),
   zcard: vi.fn().mockResolvedValue(0),
@@ -29,12 +32,20 @@ vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
 
+vi.mock('../../featureFlags/metrics.js', () => ({
+  recordFeatureFlagEvaluation: vi.fn(),
+  recordFeatureFlagOverride: vi.fn(),
+}));
+
 describe('services/featureFlags', () => {
   let ff: typeof import('../../services/featureFlags.js');
 
   beforeEach(async () => {
     vi.clearAllMocks();
     // Re-apply default mock return values after clearAllMocks
+    mockRedis.get.mockResolvedValue(null);
+    mockRedis.setex.mockResolvedValue('OK');
+    mockRedis.del.mockResolvedValue(1);
     mockRedis.zadd.mockResolvedValue(1);
     mockRedis.zremrangebyscore.mockResolvedValue(0);
     mockRedis.zcard.mockResolvedValue(0);
@@ -128,7 +139,7 @@ describe('services/featureFlags', () => {
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO feature_flags'),
-        ['test_flag', false],
+        ['test_flag', false, 0],
       );
     });
 
@@ -238,7 +249,7 @@ describe('services/featureFlags', () => {
       await ff.setFeatureFlag('test_flag', true, 42);
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO feature_flags'),
-        [42, 'test_flag', true],
+        [42, 'test_flag', true, 0],
       );
     });
 
@@ -247,7 +258,7 @@ describe('services/featureFlags', () => {
       await ff.setFeatureFlag('test_flag', false);
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO feature_flags'),
-        ['test_flag', false],
+        ['test_flag', false, 0],
       );
     });
   });
