@@ -15,12 +15,12 @@ const mockLogger = vi.hoisted(() => ({
 vi.mock('../../config.js', () => ({
   config: {
     docker: {
-      image: 'ubuntu:22.04',
+      image: 'node:22-alpine',
       sandboxTimeoutMs: 120_000,
       networkRestrict: false,
       allowedHosts: [],
       containerMemory: '2g',
-      containerCpu: 2,
+      containerCpu: 1,
     },
   },
 }));
@@ -31,14 +31,30 @@ vi.mock('../../utils/logger.js', () => ({
   },
 }));
 
-vi.mock('node:child_process', () => ({
-  execSync: vi.fn(),
-  spawnSync: vi.fn(),
-}));
+vi.mock('dockerode', () => {
+  const mockContainer = {
+    id: 'mock-container-id',
+    start: vi.fn(),
+    stop: vi.fn(),
+    remove: vi.fn(),
+    exec: vi.fn(),
+  };
+  const mockDocker = vi.fn(() => ({
+    version: vi.fn().mockResolvedValue({ Version: '24.0.0' }),
+    pull: vi.fn().mockResolvedValue(undefined),
+    createContainer: vi.fn().mockResolvedValue(mockContainer),
+    getContainer: vi.fn().mockReturnValue(mockContainer),
+    modem: {
+      demuxStream: vi.fn(),
+      followProgress: vi.fn((_stream, cb) => cb(null)),
+    },
+  }));
+  return { default: mockDocker };
+});
 
 import { DockerSandbox } from '../../sandbox/docker.js';
 
-const CONTAINER_WORKDIR = '/home/user';
+const CONTAINER_WORKDIR = '/home/node';
 
 function createDockerSandbox(): DockerSandbox {
   const getToken = vi.fn<(installationId: number) => Promise<string>>().mockResolvedValue('mock-token');
@@ -59,74 +75,112 @@ describe('DockerSandbox', () => {
     mockLogger.child.mockReturnValue(mockLogger);
   });
 
-  describe('buildCreateArgs()', () => {
-    it('produces no duplicate mount targets for the same path', () => {
+  describe('buildCreateOpts()', () => {
+    it('sets the working directory to CONTAINER_WORKDIR', () => {
       const sandbox = createDockerSandbox();
-      const args = (sandbox as any).buildCreateArgs('ubuntu:22.04', 'test-container');
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
 
-      const volumeMounts = args.filter(
-        (_: string, i: number) => args[i - 1] === '-v',
-      );
-      const tmpfsMounts = args.filter(
-        (_: string, i: number) => args[i - 1] === '--tmpfs',
-      );
-
-      const volumePaths = volumeMounts.map((v: string) => v.split(':')[1]);
-      const tmpfsPaths = tmpfsMounts.map((t: string) => t.split(':')[0]);
-
-      for (const path of volumePaths) {
-        expect(tmpfsPaths).not.toContain(path);
-      }
-
-      expect(volumePaths).toContain(CONTAINER_WORKDIR);
+      expect(opts.WorkingDir).toBe(CONTAINER_WORKDIR);
     });
 
     it('has a volume mount for CONTAINER_WORKDIR', () => {
       const sandbox = createDockerSandbox();
-      const args = (sandbox as any).buildCreateArgs('ubuntu:22.04', 'test-container');
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
 
-      const volumeMounts = args.filter(
-        (_: string, i: number) => args[i - 1] === '-v',
+      expect(opts.HostConfig.Binds).toBeDefined();
+      const workdirBind = (opts.HostConfig.Binds as string[]).find(
+        (b: string) => b.endsWith(`:${CONTAINER_WORKDIR}`),
       );
-      const workdirVolumes = volumeMounts.filter((v: string) =>
-        v.endsWith(`:${CONTAINER_WORKDIR}`),
-      );
-      expect(workdirVolumes.length).toBe(1);
-    });
-
-    it('does not have a tmpfs mount for CONTAINER_WORKDIR', () => {
-      const sandbox = createDockerSandbox();
-      const args = (sandbox as any).buildCreateArgs('ubuntu:22.04', 'test-container');
-
-      const tmpfsMounts = args.filter(
-        (_: string, i: number) => args[i - 1] === '--tmpfs',
-      );
-      const workdirTmpfs = tmpfsMounts.filter((t: string) =>
-        t.startsWith(`${CONTAINER_WORKDIR}:`),
-      );
-      expect(workdirTmpfs.length).toBe(0);
+      expect(workdirBind).toBeDefined();
     });
 
     it('keeps the /tmp tmpfs mount', () => {
       const sandbox = createDockerSandbox();
-      const args = (sandbox as any).buildCreateArgs('ubuntu:22.04', 'test-container');
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
 
-      const tmpfsMounts = args.filter(
-        (_: string, i: number) => args[i - 1] === '--tmpfs',
-      );
-      const tmpTmpfs = tmpfsMounts.filter((t: string) =>
-        t.startsWith('/tmp:'),
-      );
-      expect(tmpTmpfs.length).toBe(1);
+      expect(opts.HostConfig.Tmpfs).toBeDefined();
+      expect((opts.HostConfig.Tmpfs as Record<string, string>)['/tmp']).toBeDefined();
     });
 
-    it('sets the working directory to CONTAINER_WORKDIR', () => {
+    it('does not have a tmpfs mount for CONTAINER_WORKDIR', () => {
       const sandbox = createDockerSandbox();
-      const args = (sandbox as any).buildCreateArgs('ubuntu:22.04', 'test-container');
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
 
-      const wdIndex = args.indexOf('-w');
-      expect(wdIndex).not.toBe(-1);
-      expect(args[wdIndex + 1]).toBe(CONTAINER_WORKDIR);
+      const tmpfs = opts.HostConfig.Tmpfs as Record<string, string> | undefined;
+      if (tmpfs) {
+        expect(Object.keys(tmpfs)).not.toContain(CONTAINER_WORKDIR);
+      }
+    });
+
+    it('includes hardened resource limits', () => {
+      const sandbox = createDockerSandbox();
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
+
+      expect(opts.HostConfig.PidsLimit).toBe(256);
+      expect(opts.HostConfig.Ulimits).toHaveLength(2);
+      expect(opts.HostConfig.Ulimits[0].Name).toBe('nofile');
+      expect(opts.HostConfig.Ulimits[0].Soft).toBe(1024);
+      expect(opts.HostConfig.Ulimits[0].Hard).toBe(1024);
+      expect(opts.HostConfig.Ulimits[1].Name).toBe('nproc');
+      expect(opts.HostConfig.Ulimits[1].Soft).toBe(512);
+      expect(opts.HostConfig.Ulimits[1].Hard).toBe(512);
+    });
+
+    it('runs as non-root user', () => {
+      const sandbox = createDockerSandbox();
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
+
+      expect(opts.User).toBe('1000:1000');
+    });
+
+    it('sets stop timeout to 5s', () => {
+      const sandbox = createDockerSandbox();
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
+
+      expect(opts.StopTimeout).toBe(5);
+    });
+
+    it('drops ALL capabilities', () => {
+      const sandbox = createDockerSandbox();
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
+
+      expect(opts.HostConfig.CapDrop).toContain('ALL');
+    });
+
+    it('does not add NET_ADMIN or NET_RAW capabilities', () => {
+      const sandbox = createDockerSandbox();
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
+
+      const capAdd = opts.HostConfig.CapAdd;
+      expect(capAdd).toBeUndefined();
+    });
+
+    it('includes Init for proper PID 1 handling', () => {
+      const sandbox = createDockerSandbox();
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
+
+      expect(opts.HostConfig.Init).toBe(true);
+    });
+
+    it('includes security-opt no-new-privileges', () => {
+      const sandbox = createDockerSandbox();
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
+
+      expect(opts.HostConfig.SecurityOpt).toContain('no-new-privileges:true');
+    });
+
+    it('uses memory limit from config', () => {
+      const sandbox = createDockerSandbox();
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
+
+      expect(opts.HostConfig.Memory).toBeGreaterThan(0);
+    });
+
+    it('uses cpu limit from config', () => {
+      const sandbox = createDockerSandbox();
+      const opts = (sandbox as any).buildCreateOpts('node:22-alpine', 'test-container');
+
+      expect(opts.HostConfig.NanoCpus).toBe(1 * 1e9);
     });
   });
 });
