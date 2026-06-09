@@ -12,7 +12,7 @@
  * - File operations through host volume mount
  * - Static analysis (tsc, ruff, etc.)
  * - Test execution
- * - Network restriction via iptables
+ * - Egress proxy via Squid for zero-trust network isolation
  * - Resource limits (memory, CPU)
  * - Git push
  *
@@ -174,10 +174,8 @@ export class DockerSandbox implements SandboxExecutor {
     }
     log.info('Container started');
 
-    // 7. Apply network restrictions if enabled
-    if (config.docker.networkRestrict) {
-      await this.applyNetworkRestrictions();
-    }
+    // 7. Ensure the agent network exists
+    this.ensureAgentNetwork();
 
     // 8. Clone the repo
     const authUrl = this.repoUrl.replace('https://', `https://x-access-token:${this.installationToken}@`);
@@ -710,15 +708,18 @@ export class DockerSandbox implements SandboxExecutor {
     // Security options
     args.push('--security-opt', 'no-new-privileges:true');
     args.push('--cap-drop', 'ALL');
-    args.push('--cap-add', 'NET_ADMIN'); // needed for iptables
-    args.push('--cap-add', 'NET_RAW');   // needed for iptables
     args.push('--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=2g');
 
-    // Network
-    args.push('--network', 'bridge');
+    // Network: egress proxy or none
     if (config.docker.networkRestrict) {
-      args.push('--dns', '1.1.1.1');
-      args.push('--dns', '8.8.8.8');
+      args.push('--network', 'stas_agent-net');
+      args.push('-e', 'http_proxy=http://stas-egress-proxy:3128');
+      args.push('-e', 'https_proxy=http://stas-egress-proxy:3128');
+      args.push('-e', 'HTTP_PROXY=http://stas-egress-proxy:3128');
+      args.push('-e', 'HTTPS_PROXY=http://stas-egress-proxy:3128');
+      args.push('-e', 'NO_PROXY=localhost,127.0.0.1');
+    } else {
+      args.push('--network', 'none');
     }
 
     // Env vars
@@ -735,52 +736,22 @@ export class DockerSandbox implements SandboxExecutor {
   }
 
   /**
-   * Apply iptables-based network restrictions inside the container.
-   * Whitelists: GitHub API, configured LLM providers, package registries.
+   * Ensure the stas_agent-net Docker network exists.
+   * Creates it if absent (idempotent).
    */
-  private async applyNetworkRestrictions(): Promise<void> {
-    if (!this.container) return;
+  private ensureAgentNetwork(): void {
+    const networkName = 'stas_agent-net';
+    const networkResult = dockerCmd(['network', 'ls', '--filter', `name=${networkName}`, '--format', '{{.Name}}']);
+    const exists = networkResult.stdout.trim() === networkName;
 
-    const allowedHosts = config.docker.allowedHosts;
-    if (!allowedHosts || allowedHosts.length === 0) return;
-
-    log.info({ allowedHosts }, 'Applying network restrictions via iptables');
-
-    try {
-      // Set default policy to DROP
-      await this.exec('iptables -P INPUT DROP');
-      await this.exec('iptables -P FORWARD DROP');
-      await this.exec('iptables -P OUTPUT DROP');
-
-      // Allow loopback
-      await this.exec('iptables -A INPUT -i lo -j ACCEPT');
-      await this.exec('iptables -A OUTPUT -o lo -j ACCEPT');
-
-      // Allow established connections
-      await this.exec('iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT');
-      await this.exec('iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT');
-
-      // Allow DNS
-      await this.exec('iptables -A OUTPUT -p udp --dport 53 -j ACCEPT');
-      await this.exec('iptables -A OUTPUT -p tcp --dport 53 -j ACCEPT');
-
-      // Allow each configured host
-      for (const host of allowedHosts) {
-        // Resolve hostname to IPs
-        const resolveResult = await this.exec(`getent hosts ${host} | awk '{ print $1 }'`);
-        if (resolveResult.exitCode === 0 && resolveResult.stdout.trim()) {
-          const ips = resolveResult.stdout.trim().split('\n');
-          for (const ip of ips) {
-            if (ip) {
-              await this.exec(`iptables -A OUTPUT -d ${ip} -j ACCEPT`);
-            }
-          }
-        }
+    if (!exists) {
+      log.info({ networkName }, 'Creating agent network');
+      const createResult = dockerCmd(['network', 'create', '--driver', 'bridge', '--internal', 'false', networkName]);
+      if (createResult.exitCode !== 0) {
+        log.warn({ err: createResult.stderr }, 'Failed to create agent network (non-fatal, may already exist)');
       }
-
-      log.info('Network restrictions applied');
-    } catch (err) {
-      log.warn({ err: String(err) }, 'Failed to apply network restrictions (non-fatal)');
+    } else {
+      log.debug({ networkName }, 'Agent network already exists');
     }
   }
 
