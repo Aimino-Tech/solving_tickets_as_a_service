@@ -151,7 +151,7 @@ See [STRATEGY.md](../STRATEGY.md) for detailed economics:
 ### Can I use my own API key?
 
 **Yes.** As a self-hosted OSS user, you bring your own API key for:
-- Triage LLM: `OPENAI_API_KEY`
+- Triage LLM / fallback fix: `OPENCODE_API_KEY` (OpenCode Go direct LLM endpoint)
 - Fix agent: Configured in OpenCode's environment (OpenCode uses the model's native API key)
 
 The cloud version routes through our AGI, which you don't need to configure.

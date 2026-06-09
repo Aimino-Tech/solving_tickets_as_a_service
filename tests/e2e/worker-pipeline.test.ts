@@ -357,7 +357,7 @@ async function startCeleryWorker(): Promise<void> {
         REDIS_URL: BACKEND_URL,
         PYTHONPATH: WORKERS_DIR,
         // Mock external dependencies — tasks gracefully use placeholders
-        OPENAI_API_KEY: "",
+        OPENCODE_API_KEY: "",
         E2B_API_KEY: "",
         GITHUB_TOKEN: "",
         // Point to mock servers instead of real services

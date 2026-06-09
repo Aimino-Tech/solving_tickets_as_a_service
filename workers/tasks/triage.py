@@ -7,7 +7,10 @@ from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
+client = OpenAI(
+    api_key=os.getenv("OPENCODE_API_KEY", ""),
+    base_url="https://opencode.ai/zen/go/v1",
+)
 
 
 @shared_task(
@@ -20,7 +23,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
 def triage_issue(self, issue_data: dict) -> dict:
     logger.info("Triaging issue — title=%s", issue_data.get("title", "untitled"))
     try:
-        model = os.getenv("OPENAI_CHEAP_MODEL", "gpt-4o-mini")
+        model = os.getenv("OPENCODE_CHEAP_MODEL", "deepseek-v4-flash")
         prompt = (
             f"Classify this GitHub issue:\n"
             f"Title: {issue_data.get('title', '')}\n"
@@ -37,7 +40,7 @@ def triage_issue(self, issue_data: dict) -> dict:
             logger.info("Triage result — %s", result)
             return {"issue_data": issue_data, "triage_result": result}
         else:
-            logger.warning("No OPENAI_API_KEY set — skipping LLM triage")
+            logger.warning("No OPENCODE_API_KEY set — skipping LLM triage")
             return {
                 "issue_data": issue_data,
                 "triage_result": {"category": "unknown", "scope": "medium", "confidence": 0},

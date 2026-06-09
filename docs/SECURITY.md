@@ -292,7 +292,7 @@ Key security properties:
 | Key | Where Used | Storage |
 |---|---|---|
 | `E2B_API_KEY` | Cloud sandbox creation | Environment variable |
-| `OPENAI_API_KEY` | Triage LLM | Environment variable |
+| `OPENCODE_API_KEY` | OpenCode Go direct LLM (triage + fallback fix) | Environment variable |
 | `STRIPE_SECRET_KEY` | Stripe API | Environment variable |
 | `LINEAR_API_KEY` | Linear integration | Environment variable |
 | `JIRA_API_TOKEN` | Jira integration | Environment variable |

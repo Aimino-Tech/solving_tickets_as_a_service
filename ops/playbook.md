@@ -149,7 +149,7 @@ curl -f http://localhost:4096/health
 #### Step 2: Check API Keys (1 min)
 
 ```bash
-grep -E "OPENAI_API_KEY|ANTHROPIC_API_KEY|OPENCODE_MODEL" .env
+grep -E "OPENCODE_API_KEY|ANTHROPIC_API_KEY|OPENCODE_MODEL" .env
 ```
 
 #### Step 3: Check E2B Sandbox (1 min)

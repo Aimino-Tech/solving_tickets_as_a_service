@@ -480,7 +480,7 @@ The test uses mock HTTP servers instead of real services:
 |---|---|---|
 | **OpenCode serve** | 9409 | Responds to `POST /run` with mock agent results |
 | **GitHub API** | 9410 | Handles PR creation, comments, refs |
-| **OpenAI API** | — | Gracefully skipped (empty `OPENAI_API_KEY`) |
+| **OpenCode Go LLM** | — | Gracefully skipped (empty `OPENCODE_API_KEY`) |
 | **E2B Sandbox** | — | Returns placeholder (empty `E2B_API_KEY`) |
 
 ### CI Integration
