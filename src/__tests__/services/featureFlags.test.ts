@@ -22,7 +22,10 @@ vi.mock('../../audit/repository.js', () => ({
 }));
 
 vi.mock('../../config.js', () => ({
-  config: { queue: { redisUrl: 'redis://localhost:6379' }, featureFlags: { defaultTtlSeconds: 300, autoDisableThreshold: 0.05 } },
+  config: {
+    queue: { redisUrl: 'redis://localhost:6379' },
+    featureFlags: { defaultTtlSeconds: 300, autoDisableThreshold: 0.05 },
+  },
 }));
 
 vi.mock('../../utils/logger.js', () => ({

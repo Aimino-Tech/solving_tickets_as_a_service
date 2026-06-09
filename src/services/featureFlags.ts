@@ -131,6 +131,14 @@ export async function checkAndAutoDisable(flag: string): Promise<boolean> {
   }
 }
 
+function recordFeatureFlagEvaluation(flag: string, result: 'enabled' | 'disabled'): void {
+  log.debug({ flag, result }, 'Feature flag evaluation');
+}
+
+function recordFeatureFlagOverride(flag: string, _scope: string): void {
+  log.info({ flag, scope: _scope }, 'Feature flag overridden');
+}
+
 // ── Flag resolution ──────────────────────────────────────────────────────────
 
 export async function isFeatureEnabled(flag: string, accountId?: number): Promise<boolean> {
