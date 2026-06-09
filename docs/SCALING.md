@@ -432,6 +432,66 @@ DOCKER_CONTAINER_CPU=0.5
 
 ---
 
+## Development Mode (Plan B)
+
+For fast local experimentation and CI, STAS supports a containerless development mode
+that avoids spinning up the full production stack.
+
+### When to use Plan B
+
+| Use Case | Plan A (prod) | Plan B (dev) |
+|---|---|---|
+| Full sandbox testing | ✅ Required | ❌ No sandbox |
+| Triage / notification tasks | ✅ Works | ✅ Works |
+| Debugging a Celery task | ✅ Works | ✅ Faster |
+| CI for non-sandbox tests | ❌ Overkill | ✅ Lightweight |
+| Quick iteration on worker code | ❌ Slow rebuild | ✅ Instant |
+
+### Setup
+
+```bash
+# 1. Start minimal infra (Redis + RabbitMQ only)
+make dev-infra
+
+# 2. Run the webhook directly on host
+make dev-webhook
+
+# 3. Run Celery worker directly on host
+make dev-worker QUEUE=triage,dispatch,verification,pr_creation,notifications
+```
+
+### Limitations
+
+- **No Docker sandbox** — sandbox tasks (`stas.agents.sandbox`) will fail with
+  `"E2B_API_KEY not configured"`. This is intentional.
+- **No sandbox-svc** — the `SANDBOX_SVC_URL` environment variable is not set,
+  so sandbox-proxy tasks are also unavailable.
+- **Host dependencies** — requires Python 3.11+ with pip, Node.js 20+, and a
+  local Redis/RabbitMQ (provided via `make dev-infra` Docker containers).
+
+### Architecture
+
+```
+Host (Plan B)
+┌─────────────────────────────────────────┐
+│  make dev-infra          make dev-webhook│
+│  ┌──────────┐  Redis    ┌────────────┐  │
+│  │  Docker  │◄─────────►│  Express   │  │
+│  │  Redis   │           │  :3000     │  │
+│  │  Rabbit  │◄──AMQP───►│            │  │
+│  └──────────┘           └────────────┘  │
+│                              │           │
+│                    ┌─────────▼────────┐  │
+│                    │  Celery Worker   │  │
+│                    │  (host process)  │  │
+│                    │  :9090 metrics   │  │
+│                    └──────────────────┘  │
+│                          │               │
+│                    (no sandbox —         │
+│                     sandbox tasks fail)  │
+└─────────────────────────────────────────┘
+```
+
 ## Operations
 
 ### Adding a Worker
