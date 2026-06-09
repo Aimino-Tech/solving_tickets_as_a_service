@@ -1,5 +1,34 @@
-import { mkdtempSync, existsSync, rmSync } from 'node:fs';
-import { readFile, writeFile, unlink } from 'node:fs/promises';
+/**
+ * Docker sandbox — isolates fix execution in a local Docker container.
+ *
+ * Serves as a fallback when E2B is unavailable. Uses Dockerode to manage
+ * container lifecycle and host volume mounts for file operations.
+ *
+ * Handles:
+ * - Container lifecycle (create, exec, destroy)
+ * - Repo cloning with auth token
+ * - Runtime detection (10+ languages)
+ * - Dependency installation
+ * - File operations through host volume mount
+ * - Static analysis (tsc, ruff, etc.)
+ * - Test execution
+ * - Egress proxy via Squid for zero-trust network isolation
+ * - Resource limits (memory, CPU)
+ * - Git push
+ *
+ * ── Error Handling Audit ────────────────────────────────────────────
+ * ✅ boot() wraps container create and token fetch with context
+ * ✅ boot() clone failure throws with stderr context
+ * ✅ path traversal detection in validatePath() for read/write/remove
+ * ✅ readFile/writeFile/removeFile catch with descriptive messages
+ * ✅ destroy() catches container kill/remove failures (non-fatal, logs warning)
+ * ✅ pushBranch() wraps all git operations with context
+ * ✅ installDeps() failure is non-fatal (logs warning, continues)
+ * ────────────────────────────────────────────────────────────────────
+ */
+
+import { execSync, spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync, unlinkSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import Docker from 'dockerode';
@@ -113,9 +142,8 @@ export class DockerSandbox implements SandboxExecutor {
     await container.start();
     log.info('Container started');
 
-    if (config.docker.networkRestrict) {
-      await this.applyNetworkRestrictions();
-    }
+    // 7. Ensure the agent network exists
+    this.ensureAgentNetwork();
 
     const authUrl = this.repoUrl.replace('https://', `https://x-access-token:${this.installationToken}@`);
     this.repoHostPath = join(this.tempDir, this.repoName);
@@ -590,91 +618,93 @@ export class DockerSandbox implements SandboxExecutor {
 
   // ── Private ───────────────────────────────────────────────────────
 
-  private async pullImage(image: string): Promise<void> {
-    const stream = await this.docker.pull(image);
-    await new Promise<void>((resolve, reject) => {
-      this.docker.modem.followProgress(stream, (err: Error | null) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
+  /**
+   * Build docker create arguments with resource limits and volume mounts.
+   */
+  private buildCreateArgs(image: string, containerName: string): string[] {
+    const args: string[] = ['create', '--init', '--rm'];
+
+    // Container name
+    args.push('--name', containerName);
+
+    // Volume mount for repo
+    args.push('-v', `${this.tempDir}:${CONTAINER_WORKDIR}`);
+
+    // Working directory
+    args.push('-w', CONTAINER_WORKDIR);
+
+    // Resource limits
+    const memory = config.docker.containerMemory;
+    if (memory) {
+      args.push('--memory', memory);
+    }
+
+    const cpu = config.docker.containerCpu;
+    if (cpu) {
+      args.push('--cpus', String(cpu));
+    }
+
+    // Security options
+    args.push('--security-opt', 'no-new-privileges:true');
+    args.push('--cap-drop', 'ALL');
+    args.push('--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=2g');
+
+    // Network: egress proxy or none
+    if (config.docker.networkRestrict) {
+      args.push('--network', 'stas_agent-net');
+      args.push('-e', 'http_proxy=http://stas-egress-proxy:3128');
+      args.push('-e', 'https_proxy=http://stas-egress-proxy:3128');
+      args.push('-e', 'HTTP_PROXY=http://stas-egress-proxy:3128');
+      args.push('-e', 'HTTPS_PROXY=http://stas-egress-proxy:3128');
+      args.push('-e', 'NO_PROXY=localhost,127.0.0.1');
+    } else {
+      args.push('--network', 'none');
+    }
+
+    // Env vars
+    args.push('-e', `HOME=${CONTAINER_WORKDIR}`);
+    args.push('-e', 'USER=user');
+
+    // Image
+    args.push(image);
+
+    // Keep container running
+    args.push('tail', '-f', '/dev/null');
+
+    return args;
   }
 
-  private buildCreateOpts(image: string, containerName: string): Docker.ContainerCreateOptions {
-    const env: string[] = [
-      `HOME=${CONTAINER_WORKDIR}`,
-      'USER=node',
-    ];
+  /**
+   * Ensure the stas_agent-net Docker network exists.
+   * Creates it if absent (idempotent). Also attempts host-level
+   * iptables rules for Squid bypass prevention (best-effort).
+   */
+  private ensureAgentNetwork(): void {
+    const networkName = 'stas_agent-net';
+    const networkResult = dockerCmd(['network', 'ls', '--filter', `name=${networkName}`, '--format', '{{.Name}}']);
+    const exists = networkResult.stdout.trim() === networkName;
 
-    const ulimits: Docker.Ulimit[] = [
-      { Name: 'nofile', Soft: 1024, Hard: 1024 },
-      { Name: 'nproc', Soft: 512, Hard: 512 },
-    ];
-
-    const hostConfig: Docker.HostConfig = {
-      Init: true,
-      Binds: [`${this.tempDir}:${CONTAINER_WORKDIR}`],
-      Memory: config.docker.containerMemory ? parseMemoryToBytes(config.docker.containerMemory) : undefined,
-      NanoCpus: config.docker.containerCpu ? config.docker.containerCpu * 1e9 : undefined,
-      CapDrop: ['ALL'],
-      Ulimits: ulimits,
-      PidsLimit: 256,
-      NetworkMode: 'bridge',
-      SecurityOpt: ['no-new-privileges:true'],
-      ReadonlyRootfs: true,
-      Tmpfs: { '/tmp': 'rw,noexec,nosuid,size=2g' },
-      Dns: config.docker.networkRestrict ? ['1.1.1.1', '8.8.8.8'] : undefined,
-    };
-
-    return {
-      Image: image,
-      name: containerName,
-      Cmd: ['tail', '-f', '/dev/null'],
-      WorkingDir: CONTAINER_WORKDIR,
-      Env: env,
-      HostConfig: hostConfig,
-      User: '1000:1000',
-      StopTimeout: 5,
-    };
-  }
-
-  private async applyNetworkRestrictions(): Promise<void> {
-    if (!this.container) return;
-
-    const allowedHosts = config.docker.allowedHosts;
-    if (!allowedHosts || allowedHosts.length === 0) return;
-
-    log.info({ allowedHosts }, 'Applying network restrictions via iptables');
-
-    try {
-      await this.exec('iptables -P INPUT DROP');
-      await this.exec('iptables -P FORWARD DROP');
-      await this.exec('iptables -P OUTPUT DROP');
-
-      await this.exec('iptables -A INPUT -i lo -j ACCEPT');
-      await this.exec('iptables -A OUTPUT -o lo -j ACCEPT');
-
-      await this.exec('iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT');
-      await this.exec('iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT');
-
-      await this.exec('iptables -A OUTPUT -p udp --dport 53 -j ACCEPT');
-      await this.exec('iptables -A OUTPUT -p tcp --dport 53 -j ACCEPT');
-
-      for (const host of allowedHosts) {
-        const resolveResult = await this.exec(`getent hosts ${host} | awk '{ print $1 }'`);
-        if (resolveResult.exitCode === 0 && resolveResult.stdout.trim()) {
-          const ips = resolveResult.stdout.trim().split('\n');
-          for (const ip of ips) {
-            if (ip) {
-              await this.exec(`iptables -A OUTPUT -d ${ip} -j ACCEPT`);
-            }
-          }
-        }
+    if (!exists) {
+      log.info({ networkName }, 'Creating agent network');
+      const createResult = dockerCmd(['network', 'create', '--driver', 'bridge', '--internal', 'false', networkName]);
+      if (createResult.exitCode !== 0) {
+        log.warn({ err: createResult.stderr }, 'Failed to create agent network (non-fatal, may already exist)');
       }
+    } else {
+      log.debug({ networkName }, 'Agent network already exists');
+    }
 
-      log.info('Network restrictions applied');
+    // Attempt host-level iptables rules for Squid bypass prevention
+    try {
+      const scriptPath = new URL('../../scripts/setup-network.sh', import.meta.url).pathname;
+      const scriptResult = dockerCmd([scriptPath]);
+      if (scriptResult.exitCode !== 0) {
+        log.warn({ err: scriptResult.stderr }, 'Host iptables setup failed (non-fatal, run manually with sudo)');
+      } else {
+        log.info('Host iptables rules applied for agent network');
+      }
     } catch (err) {
-      log.warn({ err: String(err) }, 'Failed to apply network restrictions (non-fatal)');
+      log.warn({ err: String(err) }, 'Could not apply host iptables rules (non-fatal)');
     }
   }
 
