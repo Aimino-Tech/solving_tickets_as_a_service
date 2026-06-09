@@ -78,3 +78,11 @@ export function linearCommentCreate() {
     createdAt: '2025-05-02T08:00:00.000Z',
   };
 }
+
+/**
+ * Alias for linearIssueCreate — used by full-flow.test.ts
+ * Returns a complete Linear issue creation webhook payload.
+ */
+export function sampleLinearWebhookPayload() {
+  return linearIssueCreate();
+}
