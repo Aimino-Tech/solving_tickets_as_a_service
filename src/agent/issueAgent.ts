@@ -43,6 +43,7 @@ import { rootLogger, jobLogger } from "../utils/logger.js";
 import { addBreadcrumb, setUserContext } from "../monitoring/sentry.js";
 import * as messages from "../github/messages.js";
 import { getTracker } from "../trackers/index.js";
+import { validateIssue } from "./issueValidator.js";
 const log = rootLogger.child({ module: 'issue-agent' });
 
 // ---------------------------------------------------------------------------
@@ -103,6 +104,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 
   let sandbox: SandboxExecutor | null = null;
   let currentPhase = '';
+  let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
 
   try {
     // ── Phase 1: Triage ──────────────────────────────────────────────
@@ -179,21 +181,59 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     currentPhase = '3-boot-sandbox';
     logger.info('Phase 3: Booting sandbox');
     sandbox = createSandbox(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
-    await sandbox.boot();
-    await postStatus(
-      installationId,
-      repoOwner,
-      repoName,
-      issueNumber,
-      `⚙️ **Sandbox ready** — cloned repository, detected runtime, installed dependencies.`,
-    );
+
+    const logHeartbeat = (_phase: string, _progress: number, message?: string) => {
+      logger.info({ sandboxPhase: _phase, progress: _progress }, message || 'Sandbox progress');
+    };
+    heartbeatTimer = setInterval(() => {
+      logger.debug({ currentPhase }, 'Job heartbeat — still processing');
+    }, config.rabbitmq.taskHeartbeatIntervalMs);
+
     await withTimeout(
-      sandbox.boot(),
+      sandbox.boot(logHeartbeat),
       config.phaseTimeouts.sandboxBoot,
       "3-boot-sandbox",
     );
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = undefined;
+
     await postStatus(installationId, repoOwner, repoName, issueNumber,
       `⚙️ **Sandbox ready** — cloned repository, detected runtime, installed dependencies.`);
+
+    // ── Phase 3.2: Issue validation ───────────────────────────────────
+    currentPhase = "3.2-issue-validation";
+    logger.info("Phase 3.2: Validating issue against repository");
+
+    const validationResult = await validateIssue(sandbox, issueTitle, issueBody ?? "", triage);
+
+    if (validationResult.missingFiles.length > 0) {
+      logger.warn(
+        { missingFiles: validationResult.missingFiles, isPhantom: validationResult.isPhantomIssue },
+        "Issue references non-existent files",
+      );
+
+      if (validationResult.isPhantomIssue) {
+        logger.info("Phantom issue detected — skipping agent dispatch");
+        await postComment(
+          installationId,
+          repoOwner,
+          repoName,
+          issueNumber,
+          messages.phantomIssueComment(validationResult.missingFiles, validationResult.skipReason!),
+        );
+
+        await sandbox.destroy();
+        sandbox = null;
+
+        return {
+          summary: "Issue references non-existent code — skipping.",
+          confidence: "low",
+          fixReady: false,
+          noFixReason: validationResult.skipReason,
+          investigationOnly: true,
+        };
+      }
+    }
 
     // ── Phase 3.5: Baseline test run ──────────────────────────────────
     currentPhase = "3.5-baseline-tests";
@@ -363,6 +403,10 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       verification,
     };
   } catch (err) {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = undefined;
+    }
     const errorMsg = String(err);
     logger.error({ err: errorMsg, phase: currentPhase }, 'Agent pipeline failed during phase');
 
@@ -412,6 +456,10 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       noFixReason: `An error occurred: ${errorMsg}`,
     };
   } finally {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = undefined;
+    }
     if (sandbox) {
       try {
         await sandbox.destroy();

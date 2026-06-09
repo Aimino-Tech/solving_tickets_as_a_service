@@ -33,7 +33,7 @@ import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import type { SandboxExecutor, ExecResult, TestRunResult, RuntimeInfo } from './types.js';
+import type { ProgressCallback, SandboxExecutor, ExecResult, TestRunResult, RuntimeInfo } from './types.js';
 
 const log = rootLogger.child({ module: 'docker-sandbox' });
 
@@ -117,7 +117,7 @@ export class DockerSandbox implements SandboxExecutor {
   /**
    * Boot the sandbox: pull image, create container, clone repo, detect runtime, install deps.
    */
-  async boot(): Promise<void> {
+  async boot(_onProgress?: ProgressCallback): Promise<void> {
     log.info('Booting Docker sandbox');
 
     // 1. Verify Docker is available
