@@ -59,6 +59,27 @@ function errorsKey(flag: string): string {
   return `stas:flags:metrics:${flag}:errors`;
 }
 
+// ── Consistent hashing for percentage rollout ────────────────────────────────
+
+export function hashPercentage(flag: string, accountId: number): number {
+  const hash = crypto.createHash('sha256').update(`${flag}:${accountId}`).digest('hex');
+  return parseInt(hash.slice(0, 8), 16) % 100;
+}
+
+// ── Caching ──────────────────────────────────────────────────────────────────
+
+async function cacheResult(key: string, enabled: boolean): Promise<void> {
+  const redis = getRedis();
+  await redis.setex(key, DEFAULT_TTL, enabled ? '1' : '0').catch(() => {});
+}
+
+export async function invalidateCache(flag: string, accountId?: number): Promise<void> {
+  const redis = getRedis();
+  const rKey = cacheKey(accountId ?? null, flag);
+  await redis.del(rKey).catch(() => {});
+  log.debug({ flag, accountId }, 'Feature flag cache invalidated');
+}
+
 // ── Error rate tracking ──────────────────────────────────────────────────────
 
 export async function recordFlagCall(flag: string): Promise<void> {
@@ -131,14 +152,6 @@ export async function checkAndAutoDisable(flag: string): Promise<boolean> {
     log.error({ err: String(err), flag }, 'Failed to check auto-disable');
     return false;
   }
-}
-
-function recordFeatureFlagEvaluation(flag: string, result: 'enabled' | 'disabled'): void {
-  log.debug({ flag, result }, 'Feature flag evaluation');
-}
-
-function recordFeatureFlagOverride(flag: string, _scope: string): void {
-  log.info({ flag, scope: _scope }, 'Feature flag overridden');
 }
 
 // ── Flag resolution ──────────────────────────────────────────────────────────
