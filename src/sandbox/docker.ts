@@ -676,7 +676,8 @@ export class DockerSandbox implements SandboxExecutor {
 
   /**
    * Ensure the stas_agent-net Docker network exists.
-   * Creates it if absent (idempotent).
+   * Creates it if absent (idempotent). Also attempts host-level
+   * iptables rules for Squid bypass prevention (best-effort).
    */
   private async ensureAgentNetwork(): Promise<void> {
     const networkName = 'stas_agent-net';
@@ -702,6 +703,19 @@ export class DockerSandbox implements SandboxExecutor {
       }
     } else {
       log.debug({ networkName }, 'Agent network already exists');
+    }
+
+    // Attempt host-level iptables rules for Squid bypass prevention
+    try {
+      const scriptPath = new URL('../../scripts/setup-network.sh', import.meta.url).pathname;
+      const scriptResult = dockerCmd([scriptPath]);
+      if (scriptResult.exitCode !== 0) {
+        log.warn({ err: scriptResult.stderr }, 'Host iptables setup failed (non-fatal, run manually with sudo)');
+      } else {
+        log.info('Host iptables rules applied for agent network');
+      }
+    } catch (err) {
+      log.warn({ err: String(err) }, 'Could not apply host iptables rules (non-fatal)');
     }
   }
 
