@@ -24,7 +24,7 @@ export const QUEUES = {
 } as const;
 
 interface RabbitMQState {
-  connection: Connection | null;
+  connection: ChannelModel | null;
   publishChannel: Channel | null;
   consumeChannel: Channel | null;
   reconnectAttempts: number;
@@ -131,7 +131,7 @@ export async function connect(options?: {
     const connection = useTls
       ? await amqpConnect(url, tlsOptions)
       : await amqpConnect(url);
-    state.connection = connection as unknown as Connection;
+    state.connection = connection;
 
     connection.on('error', (err) => {
       log.error({ err: String(err) }, 'RabbitMQ connection error');
@@ -264,7 +264,7 @@ export async function gracefulShutdown(): Promise<void> {
 
   try {
     if (state.connection) {
-      await (state.connection as any).close();
+      await state.connection.close();
     }
   } catch (err) {
     log.warn({ err: String(err) }, 'Error closing connection');

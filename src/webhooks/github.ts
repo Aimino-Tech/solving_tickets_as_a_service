@@ -91,7 +91,11 @@ export function createGithubWebhooks(): Webhooks {
     try {
       const { createStorage } = await import('../storage/index.js');
       const storage = await createStorage();
-      await (storage as any).saveRun({
+      if (!storage) {
+        log.warn('Storage not available - cannot save pending RunRecord');
+        return;
+      }
+      await storage.saveRun({
         installationId: jobData.installationId,
         repoOwner: jobData.repoOwner,
         repoName: jobData.repoName,

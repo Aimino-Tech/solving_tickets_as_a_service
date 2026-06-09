@@ -68,8 +68,8 @@ export async function createStorage(): Promise<StorageBackend | undefined> {
  * Close / tear down the active storage backend (e.g. on graceful shutdown).
  */
 export async function closeStorage(): Promise<void> {
-  if (storageInstance && typeof (storageInstance as any).close === 'function') {
-    await (storageInstance as any).close();
+  if (storageInstance && typeof storageInstance.close === 'function') {
+    await storageInstance.close();
   }
   storageInstance = undefined;
   log.info('Storage backend closed');
