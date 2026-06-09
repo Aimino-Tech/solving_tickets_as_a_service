@@ -221,6 +221,8 @@ The `docker-compose.prod.yml` at the project root provides a full production sta
 persistent storage, TLS termination, monitoring, and automated backups. It is designed
 for single-host production deployments and can scale horizontally.
 
+> 🔧 For operations guidance (service management, scaling, monitoring, common failures, upgrades), see the [Production Runbook](ops/runbook.md). For alert response procedures, see the [Alert Playbook](ops/playbook.md).
+
 ### Quick Start
 
 ```bash

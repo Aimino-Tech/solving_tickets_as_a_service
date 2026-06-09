@@ -434,6 +434,8 @@ flowchart TB
 
 ### For Production Deployment
 
+> 🔧 See the [Production Runbook Security Incidents section](../ops/runbook.md#7-security-incidents) for operational security procedures (credential rotation, incident response, patching).
+
 - [ ] `GITHUB_WEBHOOK_SECRET` is set to a strong, unique value
 - [ ] `DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY` is `false` or unset
 - [ ] `ADMIN_API_KEY` is set to a cryptographically random value
@@ -461,6 +463,8 @@ flowchart TB
 ## 11. Vulnerability Response Process
 
 > **How STAS handles reported vulnerabilities and dependency flaws.**
+>
+> For operational incident response (credential rotation, unauthorized access response, vulnerability patching, SSL renewal), see the [Security Incidents section of the Production Runbook](../ops/runbook.md#7-security-incidents).
 
 ### 11.1 Scope
 

@@ -166,6 +166,7 @@ All config via environment variables:
 ## Deployment
 
 See [`DEVELOPMENT.md`](DEVELOPMENT.md) for a comprehensive deployment guide covering local dev, Railway, Fly.io, and Kubernetes.
+For day-2 operations (scaling, monitoring, incident response), see the [Production Runbook](ops/runbook.md) and [Alert Playbook](ops/playbook.md).
 
 ### One-Click Deploy
 
@@ -246,6 +247,8 @@ STAS ships with comprehensive documentation:
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, testing, PR process, code style |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community guidelines |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Local development and deployment guide |
+| [ops/runbook.md](ops/runbook.md) | Production deployment runbook — service mgmt, scaling, monitoring, failures |
+| [ops/playbook.md](ops/playbook.md) | Alert response playbooks for common incidents |
 
 
 ## Roadmap
