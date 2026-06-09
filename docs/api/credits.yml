@@ -1,0 +1,534 @@
+openapi: 3.0.3
+info:
+  title: STAS Credit System API
+  description: |
+    Credit management endpoints for the STAS platform. Users purchase credit
+    packs via Stripe Checkout, and each automated fix run deducts credits
+    from their balance.
+  version: 1.0.0
+  contact:
+    name: STAS Team
+    url: https://github.com/Aimino-Tech/solving_tickets_as_a_service
+
+servers:
+  - url: https://stas.dev/api/v1
+    description: Production server
+  - url: http://localhost:3000/api/v1
+    description: Local development
+
+paths:
+  # ============================================================================
+  # GET /credits/balance
+  # ============================================================================
+  /credits/balance:
+    get:
+      operationId: getCreditBalance
+      summary: Get current credit balance
+      description: |
+        Returns the current credit balance and lifetime credits for the
+        authenticated account. If no balance row exists yet, a zero-balance
+        row is created automatically.
+      tags:
+        - Credits
+      security:
+        - AccountIdHeader: []
+      responses:
+        '200':
+          description: Current credit balance
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - accountId
+                  - balance
+                  - lifetimeCredits
+                properties:
+                  accountId:
+                    type: integer
+                    description: Authenticated account ID
+                    example: 42
+                  balance:
+                    type: integer
+                    description: Current spendable credit balance
+                    example: 1500
+                  lifetimeCredits:
+                    type: integer
+                    description: Total credits ever purchased
+                    example: 5000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================================================
+  # GET /credits/transactions
+  # ============================================================================
+  /credits/transactions:
+    get:
+      operationId: getCreditTransactions
+      summary: Get paginated transaction history
+      description: |
+        Returns a paginated list of credit transactions for the authenticated
+        account, ordered by most recent first.
+      tags:
+        - Credits
+      security:
+        - AccountIdHeader: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of transactions per page (1-100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          description: Number of transactions to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Paginated transaction list
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - transactions
+                  - pagination
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CreditTransaction'
+                  pagination:
+                    type: object
+                    required:
+                      - limit
+                      - offset
+                      - total
+                    properties:
+                      limit:
+                        type: integer
+                        example: 50
+                      offset:
+                        type: integer
+                        example: 0
+                      total:
+                        type: integer
+                        description: Total number of transactions matching the query
+                        example: 123
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================================================
+  # POST /credits/top-up
+  # ============================================================================
+  /credits/top-up:
+    post:
+      operationId: createCreditTopUp
+      summary: Initiate credit purchase via Stripe Checkout
+      description: |
+        Creates a Stripe Checkout session for purchasing a credit pack.
+        On successful payment, the Stripe webhook handler credits the
+        user's account automatically.
+      tags:
+        - Credits
+      security:
+        - AccountIdHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - priceId
+                - successUrl
+                - cancelUrl
+              properties:
+                priceId:
+                  type: string
+                  description: Stripe Price ID for the desired credit pack
+                  example: price_500credits
+                successUrl:
+                  type: string
+                  format: uri
+                  description: Redirect URL on successful payment
+                  example: https://dashboard.stas.dev/credits/success
+                cancelUrl:
+                  type: string
+                  format: uri
+                  description: Redirect URL if user cancels
+                  example: https://dashboard.stas.dev/credits
+      responses:
+        '200':
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - url
+                  - sessionId
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    description: Stripe Checkout session URL (redirect user here)
+                    example: https://checkout.stripe.com/pay/cs_test_abc123
+                  sessionId:
+                    type: string
+                    description: Stripe Checkout session identifier
+                    example: cs_test_abc123
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown price ID
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                  - message
+                  - validPriceIds
+                properties:
+                  error:
+                    type: string
+                    example: Unknown price ID
+                  message:
+                    type: string
+                    example: Unknown price ID "price_invalid"
+                  validPriceIds:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - price_100credits
+                      - price_500credits
+                      - price_2000credits
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================================================
+  # GET /credits/usage
+  # ============================================================================
+  /credits/usage:
+    get:
+      operationId: getCreditUsage
+      summary: Get credit usage statistics
+      description: |
+        Returns aggregated credit consumption per period (daily, weekly,
+        or monthly). Shows total credits consumed and transaction count
+        for each period, ordered by most recent first (up to 12 periods).
+      tags:
+        - Credits
+      security:
+        - AccountIdHeader: []
+      parameters:
+        - name: period
+          in: query
+          description: Aggregation period
+          schema:
+            type: string
+            enum:
+              - daily
+              - weekly
+              - monthly
+            default: monthly
+      responses:
+        '200':
+          description: Usage statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - accountId
+                  - period
+                  - usage
+                properties:
+                  accountId:
+                    type: integer
+                    example: 42
+                  period:
+                    type: string
+                    enum:
+                      - daily
+                      - weekly
+                      - monthly
+                    example: monthly
+                  usage:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - periodStart
+                        - totalCredits
+                        - totalTransactions
+                      properties:
+                        periodStart:
+                          type: string
+                          format: date-time
+                          description: Start of the aggregation period
+                          example: '2025-01-01T00:00:00Z'
+                        totalCredits:
+                          type: integer
+                          description: Total credits consumed in this period
+                          example: 150
+                        totalTransactions:
+                          type: integer
+                          description: Number of debit transactions in this period
+                          example: 3
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================================================
+  # POST /admin/credits/adjust
+  # ============================================================================
+  /admin/credits/adjust:
+    post:
+      operationId: adminAdjustCredits
+      summary: Manually adjust credits (admin only)
+      description: |
+        Admin-only endpoint to manually credit or debit an account.
+        Requires `x-admin-key` header matching the configured `ADMIN_API_KEY`.
+
+        - Positive `amount`: credits the account
+        - Negative `amount`: debits the account (fails with 402 if insufficient)
+      tags:
+        - Admin
+      security:
+        - AdminKeyHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - accountId
+                - amount
+              properties:
+                accountId:
+                  type: integer
+                  description: Target account ID
+                  example: 42
+                amount:
+                  type: integer
+                  description: >
+                    Positive to credit, negative to debit. Must not be zero.
+                  example: 500
+                description:
+                  type: string
+                  description: Reason for the adjustment
+                  example: Customer compensation for outage
+                type:
+                  type: string
+                  enum:
+                    - purchase
+                    - refund
+                    - adjustment
+                  default: adjustment
+                  description: Transaction type classification
+      responses:
+        '200':
+          description: Adjustment applied
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - accountId
+                  - newBalance
+                  - amount
+                  - type
+                  - description
+                properties:
+                  accountId:
+                    type: integer
+                    example: 42
+                  newBalance:
+                    type: integer
+                    description: Account balance after the adjustment
+                    example: 2000
+                  amount:
+                    type: integer
+                    description: The adjustment amount (positive or negative)
+                    example: 500
+                  type:
+                    type: string
+                    example: adjustment
+                  description:
+                    type: string
+                    nullable: true
+                    example: Customer compensation for outage
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Insufficient credits for debit
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                  - message
+                properties:
+                  error:
+                    type: string
+                    example: Insufficient credits
+                  message:
+                    type: string
+                    example: Cannot deduct 1000 credits. Account 42 has insufficient balance.
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '501':
+          description: Admin API not configured
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                  - message
+                properties:
+                  error:
+                    type: string
+                    example: Not Implemented
+                  message:
+                    type: string
+                    example: Admin API is not configured. Set ADMIN_API_KEY environment variable to enable.
+
+components:
+  schemas:
+    CreditTransaction:
+      type: object
+      required:
+        - id
+        - accountId
+        - amount
+        - type
+        - createdAt
+      properties:
+        id:
+          type: integer
+          description: Transaction ID
+          example: 1
+        accountId:
+          type: integer
+          description: Account that owns this transaction
+          example: 42
+        amount:
+          type: integer
+          description: >
+            Positive for credits (purchases, refunds, adjustments).
+            Negative for debits (usage).
+          example: 100
+        type:
+          type: string
+          enum:
+            - purchase
+            - usage
+            - refund
+            - adjustment
+          description: Transaction category
+          example: purchase
+        description:
+          type: string
+          nullable: true
+          description: Optional human-readable description
+          example: Credit purchase - 500 + 50 Bonus
+        stripePaymentIntentId:
+          type: string
+          nullable: true
+          description: Stripe payment intent ID (for purchase transactions)
+          example: pi_3Qz2ABCdefGHIjklM5nOPqr
+        createdAt:
+          type: string
+          format: date-time
+          description: When the transaction was recorded
+          example: '2025-01-15T10:30:00Z'
+
+  securitySchemes:
+    AccountIdHeader:
+      type: apiKey
+      in: header
+      name: x-account-id
+      description: |
+        The authenticated account ID. Regular users obtain this after
+        authenticating via GitHub OAuth.
+    AdminKeyHeader:
+      type: apiKey
+      in: header
+      name: x-admin-key
+      description: |
+        Admin API key for privileged operations. Must match the configured
+        `ADMIN_API_KEY` environment variable.
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - error
+              - message
+            properties:
+              error:
+                type: string
+                example: Unauthorized
+              message:
+                type: string
+                example: Missing or invalid x-account-id header.
+    ValidationError:
+      description: Invalid request parameters or body
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - error
+              - details
+            properties:
+              error:
+                type: string
+                example: Invalid request body
+              details:
+                type: array
+                items:
+                  type: string
+                example:
+                  - 'priceId: priceId is required'
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - error
+            properties:
+              error:
+                type: string
+                example: Internal server error
