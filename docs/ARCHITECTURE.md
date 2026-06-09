@@ -677,6 +677,8 @@ Additional service directories:
 
 ## Deployment Topologies
 
+> 🔧 For operational details on running these topologies in production (startup, scaling, monitoring, upgrades, failure recovery), see the [Production Runbook](../ops/runbook.md). For incident-specific response procedures, see the [Alert Playbook](../ops/playbook.md).
+
 ### Development (Single Container)
 
 ```

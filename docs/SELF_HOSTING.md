@@ -504,6 +504,8 @@ fly scale count 2
 
 ## Production Checklist
 
+> 🔧 For ongoing operations after going live (service management, scaling, monitoring, failure recovery), see the [Production Runbook](../ops/runbook.md). For alert-specific response procedures (queue depth, worker failures, backup issues), see the [Alert Playbook](../ops/playbook.md).
+
 ### Before Going Live
 
 - [ ] **GitHub App**: Webhook URL is set to your production domain with HTTPS
