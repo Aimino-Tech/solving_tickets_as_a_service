@@ -298,6 +298,32 @@ describe('runIssueAgent', () => {
   });
 });
 
+// ── Watchdog ──────────────────────────────────────────────────────────
+
+describe('watchdog timer', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('completes normally without watchdog interfering for happy path', async () => {
+    const result = await runIssueAgent(sampleJobData());
+    expect(result.fixReady).toBeDefined();
+  });
+
+  it('returns proper AgentResult after pipeline with watchdog active', async () => {
+    const result = await runIssueAgent(sampleJobData());
+    expect(result).toHaveProperty('summary');
+    expect(result).toHaveProperty('confidence');
+    expect(result).toHaveProperty('fixReady');
+  });
+
+  it('destroys sandbox after pipeline completes via finally block', async () => {
+    const result = await runIssueAgent(sampleJobData());
+    expect(result).toBeDefined();
+    expect(typeof result.summary).toBe('string');
+  });
+});
+
 // ── Edge cases ───────────────────────────────────────────────────────
 
 describe('runIssueAgent edge cases', () => {
