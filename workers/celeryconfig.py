@@ -36,6 +36,11 @@ beat_schedule = {
         "schedule": crontab(minute="*/1"),
         "args": (),
     },
+    "sandbox-gc-every-10-minutes": {
+        "task": "workers.tasks.sandbox_gc.sandbox_gc",
+        "schedule": 600.0,
+        "args": (),
+    },
 }
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")

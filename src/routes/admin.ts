@@ -546,4 +546,21 @@ router.post('/queue/clear-dlq', async (_req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// POST /admin/gc/sweep — trigger sandbox container GC sweep
+// ---------------------------------------------------------------------------
+
+router.post('/gc/sweep', async (_req: Request, res: Response) => {
+  try {
+    const { SandboxGC } = await import('../sandbox/gc.js');
+    const gc = new SandboxGC();
+    const cleaned = await gc.sweep();
+    log.info({ cleaned }, 'Admin triggered sandbox GC sweep');
+    res.json({ cleaned, timestamp: new Date().toISOString() });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to run sandbox GC sweep');
+    res.status(500).json({ error: 'GC sweep failed' });
+  }
+});
+
 export { router as adminRouter };

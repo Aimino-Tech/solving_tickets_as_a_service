@@ -22,6 +22,9 @@ import type {
 const log = rootLogger.child({ module: 'sandbox-factory' });
 
 export type { SandboxExecutor, ExecResult, TestRunResult, RuntimeInfo };
+export type { PoolConfig } from './pool.js';
+export { SandboxPool } from './pool.js';
+export { SandboxGC } from './gc.js';
 
 function isDockerAvailable(): boolean {
   try {
