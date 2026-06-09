@@ -42,6 +42,7 @@ describe('config', () => {
     vi.stubEnv('GITHUB_APP_ID', 'test-app-123');
     vi.stubEnv('GITHUB_WEBHOOK_SECRET', 'test-webhook-secret-456');
     vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
+    vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-api-key');
 
     // Override vitest's NODE_ENV=test so the module-level default is "development"
     vi.stubEnv('NODE_ENV', 'development');
@@ -142,6 +143,7 @@ describe('config', () => {
       vi.stubEnv('GITHUB_APP_ID', 'test-app-123');
       vi.stubEnv('GITHUB_WEBHOOK_SECRET', 'test-webhook-secret-456');
       vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
+      vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-api-key');
     });
 
     afterEach(() => {
@@ -350,7 +352,6 @@ describe('config', () => {
       expect(cfg).toHaveProperty("github");
       expect(cfg).toHaveProperty("queue");
       expect(cfg).toHaveProperty("opencode");
-      expect(cfg).toHaveProperty("openai");
       expect(cfg).toHaveProperty("e2b");
       expect(cfg).toHaveProperty("stas");
       expect(cfg).toHaveProperty("fixTimeoutMs");
@@ -366,6 +367,7 @@ describe('config', () => {
       expect(cfg.opencode).toHaveProperty("url");
       expect(cfg.opencode).toHaveProperty("model");
       expect(cfg.opencode).toHaveProperty("fallbackModels");
+      expect(cfg.opencode.direct).toHaveProperty("apiKey");
       expect(cfg.e2b).toHaveProperty("sandboxTimeoutMs");
       expect(cfg.stas).toHaveProperty("rateLimit.max");
       expect(cfg.phaseTimeouts).toHaveProperty("triage");
