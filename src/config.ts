@@ -58,6 +58,9 @@ const envSchema = z.object({
   RABBITMQ_PREFETCH_COUNT: z.coerce.number().int().positive().default(10),
   RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5000),
   RABBITMQ_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
+  RABBITMQ_TASK_SOFT_TIME_LIMIT_MS: z.coerce.number().int().positive().default(600_000),
+  RABBITMQ_TASK_TIME_LIMIT_MS: z.coerce.number().int().positive().default(660_000),
+  RABBITMQ_TASK_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
 
   // RabbitMQ TLS (for amqps:// connections)
   RABBITMQ_TLS_CERT_PATH: z.string().optional(),
@@ -85,6 +88,7 @@ const envSchema = z.object({
   E2B_API_KEY: z.string().optional(),
   E2B_TEMPLATE_ID: z.string().default('stas-default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+  E2B_WORK_DIR: z.string().optional(),
 
   // Sandbox — Docker
   DOCKER_IMAGE: z.string().default('ubuntu:24.04'),
@@ -110,6 +114,7 @@ const envSchema = z.object({
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  PHANTOM_ISSUE_MAX_RETRIES: z.coerce.number().int().nonnegative().default(2),
   // Admin API
   ADMIN_API_KEY: z.string().optional(),
 
@@ -305,6 +310,9 @@ function buildConfig(env: ParsedEnv) {
       prefetchCount: env.RABBITMQ_PREFETCH_COUNT,
       reconnectDelayMs: env.RABBITMQ_RECONNECT_DELAY_MS,
       maxReconnectAttempts: env.RABBITMQ_MAX_RECONNECT_ATTEMPTS,
+      taskSoftTimeLimitMs: env.RABBITMQ_TASK_SOFT_TIME_LIMIT_MS,
+      taskTimeLimitMs: env.RABBITMQ_TASK_TIME_LIMIT_MS,
+      taskHeartbeatIntervalMs: env.RABBITMQ_TASK_HEARTBEAT_INTERVAL_MS,
       tls: {
         certPath: env.RABBITMQ_TLS_CERT_PATH,
         keyPath: env.RABBITMQ_TLS_KEY_PATH,
@@ -342,6 +350,7 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
+      workDir: env.E2B_WORK_DIR,
     },
 
     docker: {
@@ -397,6 +406,7 @@ function buildConfig(env: ParsedEnv) {
         windowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
         max: env.STAS_RATE_LIMIT_MAX,
       },
+      phantomIssueMaxRetries: env.PHANTOM_ISSUE_MAX_RETRIES,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
     },
