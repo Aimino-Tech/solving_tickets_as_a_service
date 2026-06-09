@@ -67,6 +67,7 @@ const envSchema = z.object({
   RABBITMQ_TLS_REJECT_UNAUTHORIZED: coerceBoolean(true),
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
+  OPENCODE_API_KEY: z.string().optional(),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
@@ -316,6 +317,7 @@ function buildConfig(env: ParsedEnv) {
 
     opencode: {
       url: env.OPENCODE_URL,
+      apiKey: env.OPENCODE_API_KEY,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
       direct: {
@@ -362,7 +364,7 @@ function buildConfig(env: ParsedEnv) {
     },
 
     admin: {
-      apiKey: env.ADMIN_API_KEY ?? '',
+      apiKey: env.ADMIN_API_KEY,
       rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
     },
 
