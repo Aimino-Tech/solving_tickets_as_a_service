@@ -65,7 +65,10 @@ opencode serve --port 4096
 cp .env.example .env
 # Fill in GITHUB_APP_ID, GITHUB_PRIVATE_KEY, GITHUB_WEBHOOK_SECRET
 
-# 4. Run
+# 4. Seed the database with a demo user (optional, for dashboard testing)
+npx tsx src/db/seed.ts
+
+# 5. Run
 npm run dev
 ```
 
@@ -162,6 +165,64 @@ All config via environment variables:
 | `STAS_LABEL` | `stas:fix` | Issue label to trigger on |
 | `STAS_MAX_CONCURRENT` | `3` | Max concurrent fix runs |
 | `STAS_PORT` | `3000` | Webhook server port |
+
+## User Accounts & Authentication
+
+STAS uses GitHub-based authentication. User accounts are tied to GitHub App installations — when you install the GitHub App on a repository, an account is automatically created. The dashboard provides a UI for viewing runs, analytics, and settings.
+
+### Creating a Demo User
+
+For local development, a seed script creates a demo account with sample data:
+
+```bash
+# Run migrations and seed the database
+npx tsx src/db/seed.ts
+```
+
+This creates:
+- A demo account with email `demo@example.com`
+- 1,000 initial credits
+- Sample usage records for testing the dashboard
+
+The seed script is idempotent — it checks for existing data and skips if the database is already seeded. To reset, drop and recreate the database, then run `npx tsx src/db/seed.ts` again.
+
+### Dashboard Authentication
+
+The STAS dashboard at `/` uses GitHub OAuth for authentication. To enable it:
+
+1. Create a GitHub OAuth App at https://github.com/settings/developers
+2. Set the callback URL to `http://localhost:3000/api/auth/callback` (for local dev)
+3. Configure the following environment variables:
+
+```bash
+GITHUB_OAUTH_CLIENT_ID=your-oauth-client-id
+GITHUB_OAUTH_CLIENT_SECRET=your-oauth-client-secret
+```
+
+### Creating Custom Users via Database
+
+Accounts are created automatically when a GitHub App installation event is received. For development or testing, you can insert accounts directly into the database:
+
+```sql
+INSERT INTO accounts (github_installation_id, email, name, tier, created_at, updated_at)
+VALUES (12345679, 'custom@example.com', 'Custom User', 'free', NOW(), NOW());
+
+-- Add initial credits
+INSERT INTO credit_balances (account_id, balance, lifetime_credits)
+VALUES ((SELECT id FROM accounts WHERE email = 'custom@example.com'), 1000, 1000);
+```
+
+Available tiers: `free`, `pro`, `enterprise`.
+
+### Account Management Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/me` | Current account info (requires dashboard auth) |
+| `GET` | `/admin/accounts` | List all accounts (admin only) |
+| `GET` | `/admin/accounts/:id` | Get account details (admin only) |
+| `POST` | `/admin/accounts/:id/adjust-credits` | Adjust credit balance (admin only) |
+| `POST` | `/admin/accounts/:id/change-tier` | Change account tier (admin only) |
 
 ## E2E Testing
 
