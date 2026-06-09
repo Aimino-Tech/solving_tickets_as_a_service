@@ -76,6 +76,8 @@ import { adminDashboardRouter } from './routes/adminDashboard.js';
 import { billingRouter, initBilling } from './billing/index.js';
 import { addBreadcrumb, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
 import { opencodeHealth } from './health/opencodeHealth.js';
+import { getWorkersHealth } from './health/workers.js';
+import { getDependenciesHealth } from './health/dependencies.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -311,6 +313,28 @@ export function createApp(): express.Application {
       res.status(httpStatus).json(status);
     } catch (err) {
       res.status(500).json({ error: 'Failed to get OpenCode health', details: String(err) });
+    }
+  });
+
+  // -- Worker health endpoint ------------------------------------------------
+  app.get('/health/workers', (_req: Request, res: Response) => {
+    try {
+      const report = getWorkersHealth();
+      const httpStatus = report.status === 'ok' ? 200 : 503;
+      res.status(httpStatus).json(report);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to get workers health', details: String(err) });
+    }
+  });
+
+  // -- Dependencies health endpoint -----------------------------------------
+  app.get('/health/dependencies', async (_req: Request, res: Response) => {
+    try {
+      const report = await getDependenciesHealth();
+      const httpStatus = report.status === 'ok' ? 200 : 503;
+      res.status(httpStatus).json(report);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to get dependencies health', details: String(err) });
     }
   });
 

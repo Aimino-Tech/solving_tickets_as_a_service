@@ -88,6 +88,96 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /health/workers:
+    get:
+      tags:
+        - Health
+      summary: Worker health status
+      description: Returns the heartbeat status of all registered worker processes.
+      operationId: getWorkersHealth
+      responses:
+        "200":
+          description: Worker status information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkersHealthResponse"
+              example:
+                status: "ok"
+                totalWorkers: 2
+                aliveWorkers: 2
+                deadWorkers: 0
+                workers:
+                  - workerId: "worker-host-1:12345"
+                    lastHeartbeat: "2026-06-09T10:00:00.000Z"
+                    isAlive: true
+                    secondsSinceHeartbeat: 15
+                  - workerId: "worker-host-2:12346"
+                    lastHeartbeat: "2026-06-09T10:00:05.000Z"
+                    isAlive: true
+                    secondsSinceHeartbeat: 10
+                timestamp: "2026-06-09T10:00:20.000Z"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /health/dependencies:
+    get:
+      tags:
+        - Health
+      summary: External dependency health
+      description: Returns the health status of all external service dependencies (database, Redis, RabbitMQ, OpenCode, Sentry).
+      operationId: getDependenciesHealth
+      responses:
+        "200":
+          description: Dependency health information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DependenciesHealthResponse"
+              example:
+                status: "ok"
+                dependencies:
+                  - name: "database"
+                    status: "ok"
+                    latencyMs: 3
+                  - name: "redis"
+                    status: "ok"
+                    latencyMs: 2
+                  - name: "rabbitmq"
+                    status: "ok"
+                    latencyMs: 1
+                  - name: "opencode"
+                    status: "ok"
+                  - name: "sentry"
+                    status: "disabled"
+                timestamp: "2026-06-09T10:00:20.000Z"
+        "503":
+          description: One or more dependencies are unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DependenciesHealthResponse"
+              example:
+                status: "degraded"
+                dependencies:
+                  - name: "database"
+                    status: "ok"
+                    latencyMs: 3
+                  - name: "redis"
+                    status: "error"
+                    error: "connect ECONNREFUSED 127.0.0.1:6379"
+                  - name: "rabbitmq"
+                    status: "ok"
+                    latencyMs: 1
+                  - name: "opencode"
+                    status: "error"
+                    error: "circuit=open, failures=3, http=503"
+                  - name: "sentry"
+                    status: "disabled"
+                timestamp: "2026-06-09T10:00:20.000Z"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   # ──────────────────────────────────────────────────────────────────────────
   # Webhooks — GitHub
   # ──────────────────────────────────────────────────────────────────────────
@@ -1301,6 +1391,98 @@ components:
         - label
         - uptime
         - timestamp
+
+    WorkersHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+          description: Overall worker health status
+        totalWorkers:
+          type: integer
+          description: Total number of tracked workers
+        aliveWorkers:
+          type: integer
+          description: Number of workers with recent heartbeats
+        deadWorkers:
+          type: integer
+          description: Number of workers without recent heartbeats
+        workers:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkerHeartbeatEntry"
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - status
+        - totalWorkers
+        - aliveWorkers
+        - deadWorkers
+        - workers
+        - timestamp
+
+    WorkerHeartbeatEntry:
+      type: object
+      properties:
+        workerId:
+          type: string
+          description: Unique worker identifier (e.g., hostname:pid)
+        lastHeartbeat:
+          type: string
+          format: date-time
+          description: ISO timestamp of the last heartbeat
+        isAlive:
+          type: boolean
+          description: Whether the worker is considered alive (heartbeat within 2 minutes)
+        secondsSinceHeartbeat:
+          type: integer
+          description: Seconds elapsed since the last heartbeat
+      required:
+        - workerId
+        - lastHeartbeat
+        - isAlive
+        - secondsSinceHeartbeat
+
+    DependenciesHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+          description: Overall dependency health status
+        dependencies:
+          type: array
+          items:
+            $ref: "#/components/schemas/DependencyCheckResult"
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - status
+        - dependencies
+        - timestamp
+
+    DependencyCheckResult:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Dependency name (e.g., database, redis, rabbitmq, opencode, sentry)
+        status:
+          type: string
+          enum: [ok, error, disabled]
+          description: Health status of the dependency
+        error:
+          type: string
+          description: Error message if status is error
+        latencyMs:
+          type: integer
+          description: Response latency in milliseconds (if applicable)
+      required:
+        - name
+        - status
 
     # ── Error Responses ────────────────────────────────────────────────────
     ErrorResponse:
