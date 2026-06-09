@@ -44,6 +44,7 @@ import { addBreadcrumb, setUserContext } from "../monitoring/sentry.js";
 import * as messages from "../github/messages.js";
 import { getTracker } from "../trackers/index.js";
 import { validateIssue } from "./issueValidator.js";
+import { isFeatureEnabled } from "../services/featureFlags.js";
 const log = rootLogger.child({ module: 'issue-agent' });
 
 // ---------------------------------------------------------------------------
@@ -112,7 +113,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     currentPhase = "1-triage";
     logger.info("Phase 1: Classifying issue");
     const triage = await withTimeout(
-      classifyIssue(issueTitle, issueBody ?? ""),
+      classifyIssue(issueTitle, issueBody ?? "", installationId),
       config.phaseTimeouts.triage,
       "1-triage",
     );
@@ -325,25 +326,47 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     if (!openCodeResult.success) {
       logger.error({ error: openCodeResult.errors?.[0] }, "OpenCode agent failed");
 
-      // Try basic fix approach as fallback
-      logger.info('Attempting basic fix fallback');
-      const fallbackResult = await attemptBasicFix(sandbox, data, triage, comments);
+      const fallbackEnabled = await isFeatureEnabled('fallback_fix_enabled', installationId);
+      if (fallbackEnabled) {
+        logger.info('Attempting basic fix fallback');
+        const fallbackResult = await attemptBasicFix(sandbox, data, triage, comments);
 
+        await sandbox.destroy();
+        sandbox = null;
+
+        return fallbackResult;
+      }
+
+      logger.info('Fallback fix disabled by feature flag — returning error');
       await sandbox.destroy();
       sandbox = null;
 
-      return fallbackResult;
+      return {
+        summary: openCodeResult.errors?.[0] ?? 'OpenCode agent failed',
+        confidence: 'low',
+        fixReady: false,
+        noFixReason: 'OpenCode agent failed and fallback fix is disabled by feature flag.',
+      };
     }
 
     // ── Phase 6.5: Verification (post-fix) ────────────────────────────
     currentPhase = "6.5-verification";
     logger.info("Phase 6.5: Running verification");
-    const verification = await runVerification(
-      sandbox,
-      baselineTestResult,
-      baselineTestFiles,
-      logger,
-    );
+    const regressionVerification = await isFeatureEnabled('regression_verification', installationId);
+    const verification = regressionVerification
+      ? await runVerification(sandbox, baselineTestResult, baselineTestFiles, logger)
+      : {
+          baseline: baselineTestResult,
+          postFix: null,
+          regressionTestCreated: false,
+          regressionTestPassedOnOriginal: null,
+          regressionTestPassedOnFix: null,
+          preExistingTestsRegressed: false,
+          unverified: !baselineTestResult,
+          details: baselineTestResult
+            ? ['Regression verification disabled by feature flag']
+            : ['No test suite configured'],
+        };
     if (verification.details.length > 0) {
       logger.info({ details: verification.details }, "Verification results");
     }
@@ -485,11 +508,37 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 
 /**
  * Classify the issue using a cheap OpenAI model.
+ * Checks `advanced_triage` and `new_triage_prompt` feature flags.
  */
-async function classifyIssue(title: string, body: string): Promise<TriageResult> {
+async function classifyIssue(title: string, body: string, installationId?: number): Promise<TriageResult> {
   const opencode = new OpenAI({ baseURL: config.opencode.direct.baseUrl, apiKey: config.opencode.direct.apiKey });
 
-  const prompt = `You are a triage agent. Given a GitHub issue, classify it.
+  const [useAdvancedTriage, useNewTriagePrompt] = await Promise.all([
+    isFeatureEnabled('advanced_triage', installationId),
+    isFeatureEnabled('new_triage_prompt', installationId),
+  ]);
+
+  const prompt = useNewTriagePrompt
+    ? `You are a triage agent. Given a GitHub issue, classify the issue type and difficulty.
+
+Title: ${title}
+Body: ${(body || '(no body)').slice(0, 3000)}
+
+Instructions:
+- Focus on whether this is a bug, feature request, question, or unclear.
+- For bugs, estimate difficulty based on how many files likely need changes.
+- List specific files that are likely relevant.
+
+Reply with a JSON object:
+{
+  "type": "bug" | "feature" | "question" | "unknown",
+  "difficulty": "easy" | "medium" | "hard" | "unknown",
+  "relevantFiles": ["list of file paths that might be relevant"],
+  "summary": "one-line summary of the issue"
+}
+
+Only respond with the JSON object, no other text.`
+    : `You are a triage agent. Given a GitHub issue, classify it.
 
 Title: ${title}
 Body: ${(body || '(no body)').slice(0, 3000)}
@@ -505,7 +554,7 @@ Reply with a JSON object:
 Only respond with the JSON object, no other text.`;
 
   try {
-    const model = config.opencode.direct.model;
+    const model = useAdvancedTriage ? config.opencode.direct.fallbackModel : config.opencode.direct.model;
     const response = await opencode.chat.completions.create({
       model,
       messages: [{ role: 'user', content: prompt }],
