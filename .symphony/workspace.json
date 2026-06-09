@@ -1,8 +1,14 @@
 {
   "created_at": "2026-06-09T08:30:06.919041Z",
+<<<<<<< Updated upstream
   "issue_id": "e31f2e4f-8b26-4711-8c9e-802baabecedf",
   "issue_identifier": "AIM-1252",
   "opencode_session_id": "ses_1541bf97bffeDC9SlcNLhfn8rd",
+=======
+  "issue_id": "10dc57e0-aa68-400b-aefd-eabaf4c88200",
+  "issue_identifier": "AIM-1260",
+  "opencode_session_id": "ses_154162736ffehxxUtJ11kCt1cR",
+>>>>>>> Stashed changes
   "project_name": "STAS - Solving Tickets As A Service",
   "project_slug": "6468f4e37c55",
   "worker_host": null
