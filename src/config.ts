@@ -87,14 +87,14 @@ const envSchema = z.object({
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // Sandbox — Docker
-  DOCKER_IMAGE: z.string().default('ubuntu:24.04'),
+  DOCKER_IMAGE: z.string().default('node:22-alpine'),
   DOCKER_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
   DOCKER_NETWORK_RESTRICT: coerceBoolean(true),
   DOCKER_ALLOWED_HOSTS: z
     .string()
     .default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io,rubygems.org,repo1.maven.org,packagist.org,getcomposer.org'),
-  DOCKER_CONTAINER_MEMORY: z.string().default('4g'),
-  DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(2),
+  DOCKER_CONTAINER_MEMORY: z.string().default('2g'),
+  DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(1),
 
   // STAS
   PHANTOM_ISSUE_MAX_RETRIES: z.coerce.number().int().positive().default(2),
