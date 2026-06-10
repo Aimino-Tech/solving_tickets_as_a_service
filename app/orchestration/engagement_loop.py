@@ -56,6 +56,11 @@ class OrchestratorEngine:
         adapters = {}
         adapters["indian_engagement"] = self._poll_indian_engagement
         adapters["campaign_metrics"] = self._poll_campaign_metrics
+        adapters["twitter_mentions"] = self._poll_twitter_mentions
+        adapters["twitter_search"] = self._poll_twitter_search
+        adapters["twitter_mentions_poller"] = self._poll_twitter_mentions_poller
+        adapters["twitter_product_mentions"] = self._poll_twitter_product_mentions
+        adapters["campaign_oxide_metrics"] = self._poll_oxide_campaign_metrics
         return adapters
 
     def _poll_indian_engagement(self) -> list[dict[str, Any]]:
@@ -105,6 +110,101 @@ class OrchestratorEngine:
             }]
         except Exception as e:
             print(f"Campaign metrics poll failed: {e}", file=sys.stderr)
+            return []
+
+    def _poll_twitter_mentions(self) -> list[dict[str, Any]]:
+        try:
+            from app.orchestration.engagement.twitter_mentions_poller import (
+                poll_twitter_for_orchestrator,
+            )
+            from app.tracking.office_oxide_mcp_tracker import tracker as oxide_tracker
+            return poll_twitter_for_orchestrator(tracker=oxide_tracker)
+        except Exception as e:
+            print(f"Twitter mentions poll failed: {e}", file=sys.stderr)
+            return []
+
+    def _poll_twitter_search(self) -> list[dict[str, Any]]:
+        try:
+            from app.orchestration.engagement.twitter_mentions_poller import (
+                poll_twitter_for_orchestrator,
+            )
+            from app.tracking.office_oxide_mcp_tracker import tracker as oxide_tracker
+            return poll_twitter_for_orchestrator(tracker=oxide_tracker)
+        except Exception as e:
+            print(f"Twitter search poll failed: {e}", file=sys.stderr)
+            return []
+
+    def _poll_twitter_mentions_poller(self) -> list[dict[str, Any]]:
+        try:
+            from app.orchestration.engagement.twitter_mentions_poller import (
+                poll_twitter_for_orchestrator,
+            )
+            return poll_twitter_for_orchestrator()
+        except Exception as e:
+            print(f"Twitter mentions poller failed: {e}", file=sys.stderr)
+            return []
+
+    def _poll_twitter_product_mentions(self) -> list[dict[str, Any]]:
+        try:
+            from app.orchestration.engagement.twitter_mentions_poller import (
+                TwitterMentionsPoller,
+            )
+            from app.tracking.office_oxide_mcp_tracker import tracker as oxide_tracker
+            poller = TwitterMentionsPoller(tracker=oxide_tracker)
+            return poller.poll_product_mentions(max_results=30)
+        except Exception as e:
+            print(f"Twitter product mentions poll failed: {e}", file=sys.stderr)
+            return []
+
+    def _poll_oxide_campaign_metrics(self) -> list[dict[str, Any]]:
+        try:
+            import httpx
+            repo = "Aimino-Tech/office-oxide-mcp"
+            pkg = "office-oxide-mcp"
+            stars = None
+            downloads = None
+            try:
+                resp = httpx.get(f"https://api.github.com/repos/{repo}", timeout=15)
+                if resp.status_code == 200:
+                    stars = resp.json().get("stargazers_count", 0)
+            except Exception:
+                pass
+            try:
+                resp = httpx.get(f"https://api.npmjs.org/downloads/point/last-week/{pkg}", timeout=15)
+                if resp.status_code == 200:
+                    downloads = resp.json().get("downloads", 0)
+            except Exception:
+                pass
+            cargo_downloads = None
+            try:
+                resp = httpx.get(
+                    f"https://crates.io/api/v1/crates/{pkg}",
+                    headers={"User-Agent": "office-oxide-mcp-tracker/1.0"},
+                    timeout=15,
+                )
+                if resp.status_code == 200:
+                    cargo_downloads = resp.json().get("crate", {}).get("downloads", 0)
+            except Exception:
+                pass
+            try:
+                from app.tracking.office_oxide_mcp_tracker import tracker as oxide_tracker
+                oxide_tracker.track_metrics(
+                    campaign="office-oxide-mcp-twitter-guerrilla",
+                    github_stars=stars,
+                    npm_downloads=downloads,
+                    cargo_downloads=cargo_downloads,
+                )
+            except Exception:
+                pass
+            return [{
+                "id": f"oxide_metrics_{int(time.time())}",
+                "platform": "github",
+                "content_snippet": f"Stars: {stars}, npm downloads: {downloads}",
+                "source_url": f"https://github.com/{repo}",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }]
+        except Exception as e:
+            print(f"Office-oxide metrics poll failed: {e}", file=sys.stderr)
             return []
 
     def analyze(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
