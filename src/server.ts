@@ -73,6 +73,7 @@ import { renderFeatureFlagMetrics } from './featureFlags/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
+import { frontierRouter } from './routes/frontier.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { adminDashboardRouter } from './routes/adminDashboard.js';
 import { billingRouter, initBilling } from './billing/index.js';
@@ -801,6 +802,9 @@ export function createApp(): express.Application {
 
   // ── Billing API ───────────────────────────────────────────────────
   app.use('/api/v1/billing', billingRouter);
+
+  // ── Frontier API ────────────────────────────────────────────────
+  app.use('/frontier', frontierRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────
   // GET /admin/webhooks (paginated, filterable)
