@@ -1,29 +1,23 @@
 ---
-tracker:
-  kind: github
-  endpoint: https://github.com/NousResearch/hermes-agent
-
 hooks:
   before_run:
-    - "source .venv/bin/activate 2>/dev/null || source venv/bin/activate 2>/dev/null || true"
-
+  - source .venv/bin/activate 2>/dev/null || source venv/bin/activate 2>/dev/null
+    || true
 agent:
   backend: opencode
   default_effort: 3
   max_turns: 90
-
 opencode:
   agent: claude
   model: deepseek-v4-flash
   approval_policy: auto_approve_terminal
-  turn_timeout_ms: 300_000
+  turn_timeout_ms: 300000
   plugins:
-    - ralph-loop
-    - review-work
-    - refactor
-    - handoff
+  - ralph-loop
+  - review-work
+  - refactor
+  - handoff
 ---
-
 # Hermes Agent — Development Workflow
 
 ## Quick Reference
