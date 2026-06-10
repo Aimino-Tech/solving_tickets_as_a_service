@@ -1,7 +1,7 @@
-"""Fast HTML MCP Marketing Action Tracker.
+"""Marketing action trackers.
 
-Tracks every Openclaw marketing action to:
-  - Local file system at ./fast-html-mcp-server-marketing/ (always active)
+Tracks every marketing action to:
+  - Local file system (always active)
   - Google Sheets spreadsheet (if GOOGLE_SHEETS_CREDENTIALS is set)
 
 Usage:
@@ -10,7 +10,9 @@ Usage:
 """
 
 from app.tracking.fast_html_mcp_tracker import FastHtmlMCPTracker
+from app.tracking.office_oxide_mcp_tracker import OfficeOxideMCPTracker
 
 tracker = FastHtmlMCPTracker()
+office_oxide_tracker = OfficeOxideMCPTracker()
 
-__all__ = ["tracker", "FastHtmlMCPTracker"]
+__all__ = ["tracker", "office_oxide_tracker", "FastHtmlMCPTracker", "OfficeOxideMCPTracker"]
