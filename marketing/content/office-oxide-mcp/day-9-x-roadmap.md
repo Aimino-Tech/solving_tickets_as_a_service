@@ -3,54 +3,58 @@
 ---
 
 **Tweet 1/7**
-You've been asking what's next for office-oxide-mcp. Here's the honest roadmap — including what's shipping this month and what's further out. 🧵
+What's coming next for office-oxide-mcp? Here's the roadmap I'm sharing publicly — planned features, estimated timelines, and how you can influence the优先级. 🧵
 
 **Tweet 2/7**
-Shipping this month:
-- Google Sheets bridge (read/write via API)
-- Image extraction from Word/PDF docs
-- Batch processing API (process 100s of docs in one call)
-- Template library (10+ pre-built report templates)
+v0.2 — PDF Power (shipping this week)
+- PDF write/create from structured data
+- PDF form filling (fill in PDF forms programmatically)
+- PDF image extraction
+- Improved text extraction with layout preservation
 
-Google Sheets is the #1 request by far. Working on it now.
+The most requested feature by a wide margin. PDF is becoming the primary format for agent document workflows.
 
 **Tweet 3/7**
-Next quarter:
-- PowerPoint (.pptx) read/create
-- Database-backed document storage (SQLite)
-- Watch mode (auto-process documents in a directory)
-- Web UI for template management
+v0.3 — Template Engine (2 weeks)
+- Create DOCX/XLSX templates with `{{variable}}` syntax
+- Template library with reusable components (headers, footers, cover pages)
+- Conditional sections (if/else in templates)
+- Template preview before generation
 
-PowerPoint support keeps coming up — agents creating slide decks autonomously.
+Goal: let non-technical team members create templates that agents fill automatically.
 
 **Tweet 4/7**
-Future experiments:
-- Document diff (compare two docx files, show changes as MCP tool output)
-- OCR pipeline (scan PDF → extract text → process)
-- Natural language query for Excel ("what was Q3 revenue?")
-- Plugin system for custom format handlers
+v0.4 — Streaming & Scale (3 weeks)
+- Streaming reads for XLSX files >100MB
+- Memory-mapped PDF parsing for large documents
+- Batch processing API (process 100 files in one call)
+- Parallel document operations
 
-These are ideas, not commitments. Community interest determines priority.
+Target: handle enterprise-scale document workloads without breaking a sweat.
 
 **Tweet 5/7**
-The north star: make office-oxide-mcp the standard document layer for AI agents.
+v0.5 — Format Expansion (4 weeks)
+- Google Docs ↔ Office format bridge
+- Markdown → DOCX/PDF conversion pipeline
+- HTML → Office format (for web-to-document workflows)
+- Image → PDF (scan-to-document)
 
-Every agent should be able to read, write, and understand Office documents. Not through fragile prompt engineering — through purpose-built MCP tools.
-
-That's the vision. Office formats aren't going away. Agents need to talk to them.
+Covering the full document lifecycle, from web content to final deliverable.
 
 **Tweet 6/7**
-How you can shape the roadmap:
-- Open a GitHub issue with your use case
-- Upvote existing feature requests
-- Share what you're building in Discussions
-- Contribute a PR (Rust welcome, but docs/CI/community also help)
+Beyond v0.5:
+- MCP directory auto-submit integration
+- Usage analytics dashboard (self-hosted, privacy-first)
+- Plugin system for custom format handlers
+- WebAssembly build for browser-based document processing
 
-Open source means the community decides what matters.
+The goal is to make office-oxide-mcp the standard agent interface for all document operations.
 
 **Tweet 7/7**
-The immediate priority: make the current feature set rock-solid before adding more.
+This roadmap is driven by community feedback. Every GitHub issue, Discussion post, and PR shapes what gets built next.
 
-Stable, fast, well-documented tools beat a bloated feature set every time. office-oxide-mcp does 8 things well today. I'd rather keep it tight than add 20 things that work okay.
+If there's a feature you need, open an issue or upvote an existing one. The features with the most community demand get prioritized.
 
-⭐ github.com/Aimino-Tech/office-oxide-mcp
+Next stop: v0.2 with PDF write support. Shipping this week.
+
+⭐ github.com/Aimino-Tech/office-oxide-mcp/discussions

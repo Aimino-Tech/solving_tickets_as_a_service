@@ -83,15 +83,20 @@ def cmd_research(args):
         logger.info("HN: found %d relevant stories", sum(1 for s in stories if s["matched"]))
 
     if not args.platform or args.platform == "twitter":
-        from .twitter_engage import TwitterEngager
+        from .twitter_engage import TwitterEngager, TWITTER_SEARCH_QUERIES
         t = TwitterEngager()
-        tweets = t.search(max_results=args.limit)
+        if args.mentions:
+            poll_result = t.poll_for_mentions()
+            tweets = poll_result.get("mentions", [])
+            logger.info("Twitter: found %d mentions", len(tweets))
+        else:
+            tweets = t.search_relevant(queries=TWITTER_SEARCH_QUERIES, max_results=args.limit)
+            logger.info("Twitter: found %d search results", len(tweets))
         for tweet in tweets:
-            relevance = score_relevance(tweet["text"], "twitter")
-            log_engagement("twitter", str(tweet["id"]), "research", tweet["text"][:200],
+            relevance = score_relevance(tweet.get("text", tweet.get("title", "")), "twitter")
+            log_engagement("twitter", str(tweet["id"]), "research", tweet.get("text", "")[:200],
                            metadata={"author_id": tweet["author_id"], "relevance_score": relevance.get("score"), "relevance_label": relevance.get("label")})
             all_results.append({"platform": "twitter", "relevance": relevance, **tweet})
-        logger.info("Twitter: found %d tweets", len(tweets))
 
     if args.output:
         with open(args.output, "w") as f:
@@ -195,6 +200,54 @@ def cmd_init_db(args):
     print("Tables:", [t[0] for t in tables])
 
 
+def cmd_twitter_poll(args):
+    from .twitter_engage import TwitterEngager
+    t = TwitterEngager()
+    result = t.poll_for_mentions(since_id=args.since_id)
+    mentions = result.get("mentions", [])
+    print(f"Found {len(mentions)} mention(s)")
+    for m in mentions:
+        print(f"  @{m.get('author_id')}: {m.get('text', '')[:150]}")
+    if args.since_id is None and result.get("last_mention_id"):
+        print(f"\nLast mention ID: {result['last_mention_id']}")
+        print("Use --since-id <id> next time to poll from this point.")
+    tracker_result = {}
+    try:
+        from app.tracking.office_oxide_mcp_tracker import tracker as oxide_tracker
+        for m in mentions:
+            oxide_tracker.track_mention(
+                mention_id=m.get("id"),
+                author_handle=m.get("author_id", "?"),
+                tweet_text=m.get("text", ""),
+                sentiment="neutral",
+            )
+        tracker_result["tracked"] = len(mentions)
+    except Exception as e:
+        tracker_result["error"] = str(e)
+    return result
+
+
+def cmd_twitter_search(args):
+    from .twitter_engage import TwitterEngager, TWITTER_SEARCH_QUERIES
+    t = TwitterEngager()
+    results = t.search_relevant(queries=TWITTER_SEARCH_QUERIES, max_results=args.limit)
+    print(f"Found {len(results)} relevant tweet(s)")
+    for r in results:
+        print(f"  [{r.get('query', '?')[:40]}] @{r.get('author_id')}: {r.get('text', '')[:150]}")
+    try:
+        from app.tracking.office_oxide_mcp_tracker import tracker as oxide_tracker
+        for r in results:
+            oxide_tracker.track_mention(
+                mention_id=r.get("id"),
+                author_handle=r.get("author_id", "?"),
+                tweet_text=r.get("text", ""),
+                engagement_type="search",
+            )
+    except Exception as e:
+        print(f"Tracking note: {e}")
+    return results
+
+
 def main():
     logging.basicConfig(
         level=logging.INFO,
@@ -209,6 +262,7 @@ def main():
     p_research.add_argument("--platform", choices=["reddit", "hn", "twitter"], help="Filter by platform")
     p_research.add_argument("--limit", type=int, default=25, help="Results per platform")
     p_research.add_argument("--output", help="Save results to JSON file")
+    p_research.add_argument("--mentions", action="store_true", help="Poll Twitter mentions instead of search")
 
     p_engage = sub.add_parser("engage", help="Process pending engagements (draft + reply)")
     p_engage.add_argument("--dry-run", action="store_true", help="Draft only, don't post")
@@ -219,6 +273,12 @@ def main():
 
     p_verify = sub.add_parser("verify-auth", help="Verify platform authentication")
     p_verify.add_argument("--platform", choices=["reddit", "hn", "twitter"], help="Filter by platform")
+
+    p_poll = sub.add_parser("twitter-poll", help="Poll Twitter mentions for office-oxide-mcp")
+    p_poll.add_argument("--since-id", help="Start from this tweet ID")
+
+    p_search = sub.add_parser("twitter-search", help="Search Twitter for office-oxide-mcp mentions")
+    p_search.add_argument("--limit", type=int, default=40)
 
     p_init = sub.add_parser("init-db", help="Initialize DuckDB schema")
 
@@ -235,6 +295,10 @@ def main():
         cmd_status(args)
     elif args.command == "verify-auth":
         cmd_verify_auth(args)
+    elif args.command == "twitter-poll":
+        cmd_twitter_poll(args)
+    elif args.command == "twitter-search":
+        cmd_twitter_search(args)
     elif args.command == "init-db":
         cmd_init_db(args)
 
