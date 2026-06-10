@@ -188,12 +188,24 @@ class OrchestratorEngine:
                     downloads = resp.json().get("downloads", 0)
             except Exception:
                 pass
+            cargo_downloads = None
+            try:
+                resp = httpx.get(
+                    f"https://crates.io/api/v1/crates/{pkg}",
+                    headers={"User-Agent": "office-oxide-mcp-tracker/1.0"},
+                    timeout=15,
+                )
+                if resp.status_code == 200:
+                    cargo_downloads = resp.json().get("crate", {}).get("downloads", 0)
+            except Exception:
+                pass
             try:
                 from app.tracking.office_oxide_mcp_tracker import tracker as oxide_tracker
                 oxide_tracker.track_metrics(
                     campaign="office-oxide-mcp-twitter-guerrilla",
                     github_stars=stars,
                     npm_downloads=downloads,
+                    cargo_downloads=cargo_downloads,
                 )
             except Exception:
                 pass
