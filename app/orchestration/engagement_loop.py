@@ -58,6 +58,8 @@ class OrchestratorEngine:
         adapters["campaign_metrics"] = self._poll_campaign_metrics
         adapters["twitter_mentions"] = self._poll_twitter_mentions
         adapters["twitter_search"] = self._poll_twitter_search
+        adapters["twitter_mentions_poller"] = self._poll_twitter_mentions_poller
+        adapters["twitter_product_mentions"] = self._poll_twitter_product_mentions
         adapters["campaign_oxide_metrics"] = self._poll_oxide_campaign_metrics
         return adapters
 
@@ -130,6 +132,28 @@ class OrchestratorEngine:
             return poll_twitter_for_orchestrator(tracker=oxide_tracker)
         except Exception as e:
             print(f"Twitter search poll failed: {e}", file=sys.stderr)
+            return []
+
+    def _poll_twitter_mentions_poller(self) -> list[dict[str, Any]]:
+        try:
+            from app.orchestration.engagement.twitter_mentions_poller import (
+                poll_twitter_for_orchestrator,
+            )
+            return poll_twitter_for_orchestrator()
+        except Exception as e:
+            print(f"Twitter mentions poller failed: {e}", file=sys.stderr)
+            return []
+
+    def _poll_twitter_product_mentions(self) -> list[dict[str, Any]]:
+        try:
+            from app.orchestration.engagement.twitter_mentions_poller import (
+                TwitterMentionsPoller,
+            )
+            from app.tracking.office_oxide_mcp_tracker import tracker as oxide_tracker
+            poller = TwitterMentionsPoller(tracker=oxide_tracker)
+            return poller.poll_product_mentions(max_results=30)
+        except Exception as e:
+            print(f"Twitter product mentions poll failed: {e}", file=sys.stderr)
             return []
 
     def _poll_oxide_campaign_metrics(self) -> list[dict[str, Any]]:
