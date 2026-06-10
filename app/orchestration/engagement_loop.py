@@ -56,6 +56,7 @@ class OrchestratorEngine:
         adapters = {}
         adapters["indian_engagement"] = self._poll_indian_engagement
         adapters["campaign_metrics"] = self._poll_campaign_metrics
+        adapters["twitter_mentions"] = self._poll_twitter_mentions
         return adapters
 
     def _poll_indian_engagement(self) -> list[dict[str, Any]]:
@@ -105,6 +106,39 @@ class OrchestratorEngine:
             }]
         except Exception as e:
             print(f"Campaign metrics poll failed: {e}", file=sys.stderr)
+            return []
+
+    def _poll_twitter_mentions(self) -> list[dict[str, Any]]:
+        try:
+            from app.orchestration.engagement.twitter_engage import TwitterEngager
+            engager = TwitterEngager()
+            search_queries = [
+                '#MCP OR #ModelContextProtocol OR "MCP server" -is:retweet',
+                '"office documents" OR "document processing" AI agent',
+                'Rust MCP OR "MCP server" Rust',
+                '"self-hosted" document processing',
+            ]
+            seen_ids = set()
+            results = []
+            for query in search_queries:
+                tweets = engager.search(query=query, max_results=40)
+                for tweet in tweets:
+                    tid = tweet.get("id")
+                    if tid in seen_ids:
+                        continue
+                    seen_ids.add(tid)
+                    results.append({
+                        "id": f"x_{tid}",
+                        "platform": "x",
+                        "content_snippet": tweet.get("text", "")[:300],
+                        "source_url": f"https://x.com/i/web/status/{tid}",
+                        "author_id": tweet.get("author_id"),
+                        "created_at": tweet.get("created_at", ""),
+                        "metrics": tweet.get("metrics", {}),
+                    })
+            return results
+        except Exception as e:
+            print(f"Twitter mentions poll failed: {e}", file=sys.stderr)
             return []
 
     def analyze(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
