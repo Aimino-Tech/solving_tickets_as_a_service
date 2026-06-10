@@ -112,59 +112,22 @@ class OrchestratorEngine:
 
     def _poll_twitter_mentions(self) -> list[dict[str, Any]]:
         try:
-            from app.orchestration.engagement.twitter_engage import TwitterEngager
-            engager = TwitterEngager()
-            state_key = "twitter_last_mention_id"
-            since_id = self.orch.get_state(state_key)
-            poll_result = engager.poll_for_mentions(since_id=since_id)
-            results = []
-            for tweet in poll_result.get("mentions", []):
-                tid = tweet.get("id")
-                results.append({
-                    "id": f"x_mention_{tid}",
-                    "platform": "x",
-                    "content_snippet": tweet.get("text", "")[:300],
-                    "source_url": f"https://x.com/i/web/status/{tid}",
-                    "author_id": tweet.get("author_id"),
-                    "created_at": tweet.get("created_at", ""),
-                    "metrics": tweet.get("metrics", {}),
-                    "type": "mention",
-                    "conversation_id": tweet.get("conversation_id"),
-                })
-            last_id = poll_result.get("last_mention_id")
-            if last_id:
-                self.orch.set_state(state_key, last_id)
-            return results
+            from app.orchestration.engagement.twitter_mentions_poller import (
+                poll_twitter_for_orchestrator,
+            )
+            from app.tracking.office_oxide_mcp_tracker import tracker as oxide_tracker
+            return poll_twitter_for_orchestrator(tracker=oxide_tracker)
         except Exception as e:
             print(f"Twitter mentions poll failed: {e}", file=sys.stderr)
             return []
 
     def _poll_twitter_search(self) -> list[dict[str, Any]]:
         try:
-            from app.orchestration.engagement.twitter_engage import (
-                TwitterEngager, TWITTER_SEARCH_QUERIES,
+            from app.orchestration.engagement.twitter_mentions_poller import (
+                poll_twitter_for_orchestrator,
             )
-            engager = TwitterEngager()
-            search_results = engager.search_relevant(queries=TWITTER_SEARCH_QUERIES, max_results=40)
-            results = []
-            seen = set()
-            for tweet in search_results:
-                tid = tweet.get("id")
-                if tid in seen:
-                    continue
-                seen.add(tid)
-                results.append({
-                    "id": f"x_search_{tid}",
-                    "platform": "x",
-                    "content_snippet": tweet.get("text", "")[:300],
-                    "source_url": f"https://x.com/i/web/status/{tid}",
-                    "author_id": tweet.get("author_id"),
-                    "created_at": tweet.get("created_at", ""),
-                    "metrics": tweet.get("metrics", {}),
-                    "type": "search",
-                    "matched_query": tweet.get("query"),
-                })
-            return results
+            from app.tracking.office_oxide_mcp_tracker import tracker as oxide_tracker
+            return poll_twitter_for_orchestrator(tracker=oxide_tracker)
         except Exception as e:
             print(f"Twitter search poll failed: {e}", file=sys.stderr)
             return []
