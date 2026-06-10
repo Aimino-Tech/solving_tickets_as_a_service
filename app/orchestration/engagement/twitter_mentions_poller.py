@@ -1,10 +1,3 @@
-"""Twitter mentions poller for guerrilla campaign engagement loop.
-
-Polls Twitter for mentions of specific keywords and product names,
-records them in the office-oxide-mcp tracker, and feeds into the
-orchestrator engagement pipeline.
-"""
-
 import json
 import logging
 import os
@@ -35,13 +28,6 @@ PRODUCT_HANDLES = [
 
 
 class TwitterMentionsPoller:
-    """Polls Twitter for mentions and relevant conversations.
-
-    Uses Tweepy to search recent tweets matching campaign keywords.
-    Results are tracked in the OfficeOxideMCPTracker and returned
-    in the format expected by the orchestrator engagement pipeline.
-    """
-
     def __init__(self, tracker=None):
         self._client = None
         self.tracker = tracker
@@ -60,30 +46,6 @@ class TwitterMentionsPoller:
         )
         return self._client
 
-    def poll_mentions(self, max_results: int = 50) -> list[dict[str, Any]]:
-        """Search Twitter for recent mentions matching campaign keywords.
-
-        Returns a list of mention dicts compatible with the orchestrator
-        engagement pipeline (same shape as Reddit/HN poll results).
-        """
-        results = []
-        seen_ids: set[str] = set()
-
-        for query in TWITTER_SEARCH_QUERIES:
-            try:
-                batch = self._search_query(query, max_results=min(max_results, 20))
-                for mention in batch:
-                    mid = mention["id"]
-                    if mid not in seen_ids:
-                        seen_ids.add(mid)
-                        results.append(mention)
-            except Exception as e:
-                logger.warning("Twitter poll failed for query %r: %s", query, e)
-
-        results.sort(key=lambda r: r.get("created_at", ""), reverse=True)
-        self._last_poll_time = time.time()
-        return results
-
     def _search_query(self, query: str, max_results: int = 20) -> list[dict[str, Any]]:
         client = self._get_client()
         response = client.search_recent_tweets(
@@ -96,12 +58,10 @@ class TwitterMentionsPoller:
         mentions = []
         if not response.data:
             return mentions
-
         users_map = {}
         if response.includes and "users" in response.includes:
             for u in response.includes["users"]:
                 users_map[u.id] = u.username
-
         for tweet in response.data:
             author_username = users_map.get(tweet.author_id, "unknown")
             mention = {
@@ -124,7 +84,6 @@ class TwitterMentionsPoller:
                     for rt in (tweet.referenced_tweets or [])
                 ],
             }
-
             if self.tracker:
                 self.tracker.track_mention(
                     mention_id=mention["id"],
@@ -133,17 +92,27 @@ class TwitterMentionsPoller:
                     sentiment="neutral",
                     replied=False,
                 )
-
             mentions.append(mention)
-
         return mentions
 
-    def poll_product_mentions(self, max_results: int = 30) -> list[dict[str, Any]]:
-        """Specifically search for mentions of the office-oxide-mcp product.
+    def poll_mentions(self, max_results: int = 50) -> list[dict[str, Any]]:
+        results = []
+        seen_ids: set[str] = set()
+        for query in TWITTER_SEARCH_QUERIES:
+            try:
+                batch = self._search_query(query, max_results=min(max_results, 20))
+                for mention in batch:
+                    mid = mention["id"]
+                    if mid not in seen_ids:
+                        seen_ids.add(mid)
+                        results.append(mention)
+            except Exception as e:
+                logger.warning("Twitter poll failed for query %r: %s", query, e)
+        results.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+        self._last_poll_time = time.time()
+        return results
 
-        Uses tighter queries to find direct product mentions vs general
-        keyword matches. Results are higher precision.
-        """
+    def poll_product_mentions(self, max_results: int = 30) -> list[dict[str, Any]]:
         results = []
         for handle in PRODUCT_HANDLES:
             try:
@@ -157,12 +126,10 @@ class TwitterMentionsPoller:
                 )
                 if not response.data:
                     continue
-
                 users_map = {}
                 if response.includes and "users" in response.includes:
                     for u in response.includes["users"]:
                         users_map[u.id] = u.username
-
                 for tweet in response.data:
                     author_username = users_map.get(tweet.author_id, "unknown")
                     results.append({
@@ -177,7 +144,6 @@ class TwitterMentionsPoller:
                         "match_type": "direct_product_mention",
                         "query_matched": handle,
                     })
-
                     if self.tracker:
                         self.tracker.track_mention(
                             mention_id=str(tweet.id),
@@ -188,11 +154,9 @@ class TwitterMentionsPoller:
                         )
             except Exception as e:
                 logger.warning("Product mention poll failed for %r: %s", handle, e)
-
         return results
 
     def verify_auth(self) -> dict[str, Any]:
-        """Verify Twitter API authentication is working."""
         try:
             client = self._get_client()
             me = client.get_me()
@@ -204,17 +168,9 @@ class TwitterMentionsPoller:
 
 
 def poll_twitter_for_orchestrator(tracker=None) -> list[dict[str, Any]]:
-    """Adapter function for the orchestrator's _discover_adapters().
-
-    Returns a flat list of mention dicts in the format expected by
-    the engagement pipeline's analyze/decide/engage phases.
-
-    This is the entry point wired into OrchestratorEngine.
-    """
     poller = TwitterMentionsPoller(tracker=tracker)
     mentions = poller.poll_mentions(max_results=50)
     product_mentions = poller.poll_product_mentions(max_results=30)
-
     all_mentions = mentions + product_mentions
     seen = set()
     unique = []
@@ -222,7 +178,6 @@ def poll_twitter_for_orchestrator(tracker=None) -> list[dict[str, Any]]:
         if m["id"] not in seen:
             seen.add(m["id"])
             unique.append(m)
-
     logger.info("Twitter poll: %d general + %d product = %d unique mentions",
                 len(mentions), len(product_mentions), len(unique))
     return unique
