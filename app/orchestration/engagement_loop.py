@@ -57,6 +57,8 @@ class OrchestratorEngine:
         adapters["indian_engagement"] = self._poll_indian_engagement
         adapters["campaign_metrics"] = self._poll_campaign_metrics
         adapters["twitter_mentions"] = self._poll_twitter_mentions
+        adapters["twitter_search"] = self._poll_twitter_search
+        adapters["campaign_oxide_metrics"] = self._poll_oxide_campaign_metrics
         return adapters
 
     def _poll_indian_engagement(self) -> list[dict[str, Any]]:
@@ -112,33 +114,98 @@ class OrchestratorEngine:
         try:
             from app.orchestration.engagement.twitter_engage import TwitterEngager
             engager = TwitterEngager()
-            search_queries = [
-                '#MCP OR #ModelContextProtocol OR "MCP server" -is:retweet',
-                '"office documents" OR "document processing" AI agent',
-                'Rust MCP OR "MCP server" Rust',
-                '"self-hosted" document processing',
-            ]
-            seen_ids = set()
+            state_key = "twitter_last_mention_id"
+            since_id = self.orch.get_state(state_key)
+            poll_result = engager.poll_for_mentions(since_id=since_id)
             results = []
-            for query in search_queries:
-                tweets = engager.search(query=query, max_results=40)
-                for tweet in tweets:
-                    tid = tweet.get("id")
-                    if tid in seen_ids:
-                        continue
-                    seen_ids.add(tid)
-                    results.append({
-                        "id": f"x_{tid}",
-                        "platform": "x",
-                        "content_snippet": tweet.get("text", "")[:300],
-                        "source_url": f"https://x.com/i/web/status/{tid}",
-                        "author_id": tweet.get("author_id"),
-                        "created_at": tweet.get("created_at", ""),
-                        "metrics": tweet.get("metrics", {}),
-                    })
+            for tweet in poll_result.get("mentions", []):
+                tid = tweet.get("id")
+                results.append({
+                    "id": f"x_mention_{tid}",
+                    "platform": "x",
+                    "content_snippet": tweet.get("text", "")[:300],
+                    "source_url": f"https://x.com/i/web/status/{tid}",
+                    "author_id": tweet.get("author_id"),
+                    "created_at": tweet.get("created_at", ""),
+                    "metrics": tweet.get("metrics", {}),
+                    "type": "mention",
+                    "conversation_id": tweet.get("conversation_id"),
+                })
+            last_id = poll_result.get("last_mention_id")
+            if last_id:
+                self.orch.set_state(state_key, last_id)
             return results
         except Exception as e:
             print(f"Twitter mentions poll failed: {e}", file=sys.stderr)
+            return []
+
+    def _poll_twitter_search(self) -> list[dict[str, Any]]:
+        try:
+            from app.orchestration.engagement.twitter_engage import (
+                TwitterEngager, TWITTER_SEARCH_QUERIES,
+            )
+            engager = TwitterEngager()
+            search_results = engager.search_relevant(queries=TWITTER_SEARCH_QUERIES, max_results=40)
+            results = []
+            seen = set()
+            for tweet in search_results:
+                tid = tweet.get("id")
+                if tid in seen:
+                    continue
+                seen.add(tid)
+                results.append({
+                    "id": f"x_search_{tid}",
+                    "platform": "x",
+                    "content_snippet": tweet.get("text", "")[:300],
+                    "source_url": f"https://x.com/i/web/status/{tid}",
+                    "author_id": tweet.get("author_id"),
+                    "created_at": tweet.get("created_at", ""),
+                    "metrics": tweet.get("metrics", {}),
+                    "type": "search",
+                    "matched_query": tweet.get("query"),
+                })
+            return results
+        except Exception as e:
+            print(f"Twitter search poll failed: {e}", file=sys.stderr)
+            return []
+
+    def _poll_oxide_campaign_metrics(self) -> list[dict[str, Any]]:
+        try:
+            import httpx
+            repo = "Aimino-Tech/office-oxide-mcp"
+            pkg = "office-oxide-mcp"
+            stars = None
+            downloads = None
+            try:
+                resp = httpx.get(f"https://api.github.com/repos/{repo}", timeout=15)
+                if resp.status_code == 200:
+                    stars = resp.json().get("stargazers_count", 0)
+            except Exception:
+                pass
+            try:
+                resp = httpx.get(f"https://api.npmjs.org/downloads/point/last-week/{pkg}", timeout=15)
+                if resp.status_code == 200:
+                    downloads = resp.json().get("downloads", 0)
+            except Exception:
+                pass
+            try:
+                from app.tracking.office_oxide_mcp_tracker import tracker as oxide_tracker
+                oxide_tracker.track_metrics(
+                    campaign="office-oxide-mcp-twitter-guerrilla",
+                    github_stars=stars,
+                    npm_downloads=downloads,
+                )
+            except Exception:
+                pass
+            return [{
+                "id": f"oxide_metrics_{int(time.time())}",
+                "platform": "github",
+                "content_snippet": f"Stars: {stars}, npm downloads: {downloads}",
+                "source_url": f"https://github.com/{repo}",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }]
+        except Exception as e:
+            print(f"Office-oxide metrics poll failed: {e}", file=sys.stderr)
             return []
 
     def analyze(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
