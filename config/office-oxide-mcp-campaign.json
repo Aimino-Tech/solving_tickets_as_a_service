@@ -1,0 +1,85 @@
+{
+  "$schema": "https://docs.openclaw.ai/campaign-schema.json",
+  "campaign": "office-oxide-mcp-twitter-guerrilla",
+  "version": "1.0.0",
+  "start_date": "2026-06-10",
+  "end_date": "2026-06-24",
+  "description": "14-day Twitter guerrilla campaign for office-oxide-mcp — Office document MCP server (Word, Excel, PDF)",
+  "schedule": {
+    "monitor": "*/15 * * * *",
+    "engage": "*/30 * * * *",
+    "daily_digest": "0 8 * * *"
+  },
+  "platforms": {
+    "x": {
+      "enabled": true,
+      "thread_limit": 1,
+      "reply_limit": 8,
+      "tweet_limit": 4,
+      "publish_window": "07:00-19:00",
+      "accounts": ["@Hello374565", "@SlowGuyChiu", "@Pro_Shame"],
+      "search_queries": [
+        "office automation MCP server",
+        "Word document generation AI",
+        "Excel automation LLM",
+        "PDF generation agent",
+        "document processing MCP",
+        "self-hosted document generation",
+        "open source office tools",
+        "MCP server document workflow"
+      ]
+    },
+    "discord": {
+      "enabled": true,
+      "channels": ["mcp", "automation", "python"],
+      "reply_limit": 5
+    },
+    "reddit": {
+      "enabled": true,
+      "post_limit": 2,
+      "subreddits": ["MCP", "selfhosted", "automation", "Python"],
+      "publish_window": "09:00-18:00"
+    }
+  },
+  "content": {
+    "kit_path": "marketing/content/office-oxide-mcp/",
+    "pieces": [
+      {"day": 1, "file": "day-1-x-launch-announce.md", "platform": "x", "title": "Launch Announcement Thread"},
+      {"day": 2, "file": "day-2-x-vs-saas.md", "platform": "x", "title": "SaaS vs Self-Hosted Thread"},
+      {"day": 3, "file": "day-3-x-tech-deep-dive.md", "platform": "x", "title": "Technical Deep Dive Thread"},
+      {"day": 4, "file": "day-4-x-use-cases.md", "platform": "x", "title": "Real-World Use Cases Thread"},
+      {"day": 5, "file": "day-5-x-comparison.md", "platform": "x", "title": "Comparison with Existing Tools Thread"},
+      {"day": 6, "file": "day-6-x-community.md", "platform": "x", "title": "Community Engagement Thread"},
+      {"day": 7, "file": "day-7-x-metrics-check.md", "platform": "x", "title": "Week 1 Metrics Update"},
+      {"day": 8, "file": "day-8-x-tips-tricks.md", "platform": "x", "title": "Tips & Tricks Thread"},
+      {"day": 9, "file": "day-9-x-roadmap.md", "platform": "x", "title": "Roadmap & Future Plans Thread"},
+      {"day": 10, "file": "day-10-x-showcase.md", "platform": "x", "title": "User Showcase Thread"},
+      {"day": 11, "file": "day-11-x-integration.md", "platform": "x", "title": "Integration Spotlight Thread"},
+      {"day": 12, "file": "day-12-x-performance.md", "platform": "x", "title": "Performance Benchmarks Thread"},
+      {"day": 13, "file": "day-13-x-retro.md", "platform": "x", "title": "Retrospective Thread"},
+      {"day": 14, "file": "day-14-x-wrap-up.md", "platform": "x", "title": "Campaign Wrap-Up Thread"}
+    ]
+  },
+  "monitoring": {
+    "github_repo": "Aimino-Tech/office-oxide-mcp",
+    "npm_package": "office-oxide-mcp",
+    "cargo_crate": "office-oxide-mcp",
+    "metrics": {
+      "github_stars": {"check_interval": "*/30 * * * *", "target_14d": 100},
+      "npm_downloads": {"check_interval": "0 */6 * * *"},
+      "cargo_downloads": {"check_interval": "0 */12 * * *"}
+    }
+  },
+  "engagement_rules": {
+    "approval_gate": "auto",
+    "max_daily_posts": {
+      "x": 4,
+      "discord": 5,
+      "reddit": 2
+    },
+    "auto_reply_threshold": 60,
+    "reply_within_hours": 12,
+    "twitter_search_window_minutes": 15,
+    "twitter_mention_poll_interval_seconds": 900
+  }
+}

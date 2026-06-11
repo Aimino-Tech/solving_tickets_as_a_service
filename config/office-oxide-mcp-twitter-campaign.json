@@ -1,0 +1,98 @@
+{
+  "$schema": "https://docs.openclaw.ai/campaign-schema.json",
+  "campaign": "office-oxide-mcp-twitter-guerrilla",
+  "version": "1.0.0",
+  "start_date": "2026-06-11",
+  "end_date": "2026-06-25",
+  "description": "14-day Twitter guerrilla campaign for office-oxide-mcp — Office document processing via MCP",
+  "product": {
+    "name": "office-oxide-mcp",
+    "repo": "Aimino-Tech/office-oxide-mcp",
+    "description": "Office document MCP integration — Rust-based MCP server for reading, writing, and converting Office documents (DOCX, XLSX, PPTX) via AI agents",
+    "features": [
+      "Read & parse DOCX, XLSX, PPTX files",
+      "Create Office documents from structured data",
+      "Convert between formats (DOCX → HTML, XLSX → CSV, etc.)",
+      "Rust-based — sub-millisecond parsing, minimal memory",
+      "Self-hosted, no cloud dependency, no API keys",
+      "Works with any MCP client (Claude, Cursor, VS Code)"
+    ]
+  },
+  "schedule": {
+    "monitor": "*/15 * * * *",
+    "engage": "*/30 * * * *",
+    "daily_digest": "0 9 * * *"
+  },
+  "platforms": {
+    "x": {
+      "enabled": true,
+      "thread_limit": 2,
+      "reply_limit": 8,
+      "publish_window": "08:00-20:00 UTC",
+      "hashtags": ["MCP", "OfficeAutomation", "OpenSource", "Rust", "DocumentProcessing", "AIAgents", "SelfHosted"],
+      "target_accounts": [
+        "anthropic", "OpenAI", "olangret", "rustlang", "libreoffice"
+      ]
+    },
+    "reddit": {
+      "enabled": true,
+      "post_limit": 2,
+      "subreddits": ["MCP", "selfhosted", "rust", "office", "opensource"],
+      "publish_window": "09:00-18:00 UTC"
+    }
+  },
+  "content": {
+    "kit_path": "marketing/content/office-oxide-mcp/",
+    "pieces": [
+      {"day": 1, "file": "day-1-launch-thread.md", "platform": "x", "title": "Launch thread — Office documents via MCP"},
+      {"day": 2, "file": "day-2-technical-deep-dive.md", "platform": "x", "title": "Why Rust for Office document parsing"},
+      {"day": 3, "file": "day-3-use-case-thread.md", "platform": "x", "title": "Who needs Office document MCP?"},
+      {"day": 4, "file": "day-4-comparison.md", "platform": "x", "title": "office-oxide-mcp vs Pandoc, python-pptx, openpyxl"},
+      {"day": 5, "file": "day-5-metrics-update.md", "platform": "x", "title": "Community response & engagement update"},
+      {"day": 7, "file": "day-7-integration-guide.md", "platform": "x", "title": "How to integrate with Claude/Cursor/VSCode"},
+      {"day": 10, "file": "day-10-community-highlights.md", "platform": "x", "title": "Community projects & use cases"},
+      {"day": 14, "file": "day-14-wrapup.md", "platform": "x", "title": "Two-week retrospective & roadmap"}
+    ]
+  },
+  "guerrilla_tactics": {
+    "search_queries": [
+      '"office documents" MCP',
+      '"DOCX" AI agent',
+      '"Excel" MCP OR "spreadsheet" AI',
+      '"PowerPoint" automation open source',
+      '"document processing" self-hosted',
+      '"parse DOCX" Python OR Rust',
+      '"convert XLSX" open source',
+      '"PPTX" generation tool'
+    ],
+    "engagement_rules": {
+      "value_first_ratio": 90,
+      "subtle_mention_ratio": 10,
+      "max_replies_per_thread": 2,
+      "reply_window_hours": 48,
+      "cooldown_minutes": 30
+    },
+    "target_categories": [
+      {"topic": "Office automation pain points", "angle": "offer solution"},
+      {"topic": "MCP server discussions", "angle": "add technical insight"},
+      {"topic": "Document format conversion", "angle": "showcase Rust perf"},
+      {"topic": "Self-hosted tooling", "angle": "no cloud dependency"},
+      {"topic": "AI agent workflows", "angle": "MCP integration pattern"}
+    ]
+  },
+  "monitoring": {
+    "github_repo": "Aimino-Tech/office-oxide-mcp",
+    "metrics": {
+      "github_stars": {"check_interval": "*/30 * * * *", "target_14d": 100},
+      "x_mentions": {"check_interval": "*/15 * * * *"},
+      "x_engagement_rate": {"check_interval": "0 12 * * *"}
+    }
+  },
+  "engagement_rules": {
+    "approval_gate": "auto",
+    "max_daily_posts": {"x": 4, "reddit": 2},
+    "auto_reply_threshold": 60,
+    "reply_within_hours": 24,
+    "brand_voice": "Technical, helpful, not salesy. Add value first. Show, don't tell. When appropriate, ask questions to understand their use case."
+  }
+}
