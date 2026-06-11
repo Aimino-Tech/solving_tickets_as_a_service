@@ -110,3 +110,15 @@ hermes_marketing_check.py: error: unrecognized arguments: --hermes-endpoint http
 usage: hermes_marketing_check.py [-h] [--sheet-id SHEET_ID]
                                  [--sheet-tab SHEET_TAB]
 hermes_marketing_check.py: error: unrecognized arguments: --hermes-endpoint http://localhost:8787
+[Thu Jun 11 03:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+usage: hermes_marketing_check.py [-h] [--sheet-id SHEET_ID]
+                                 [--sheet-tab SHEET_TAB]
+hermes_marketing_check.py: error: unrecognized arguments: --hermes-endpoint http://localhost:8787
+[Thu Jun 11 04:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+usage: hermes_marketing_check.py [-h] [--sheet-id SHEET_ID]
+                                 [--sheet-tab SHEET_TAB]
+hermes_marketing_check.py: error: unrecognized arguments: --hermes-endpoint http://localhost:8787
+[Thu Jun 11 05:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+usage: hermes_marketing_check.py [-h] [--sheet-id SHEET_ID]
+                                 [--sheet-tab SHEET_TAB]
+hermes_marketing_check.py: error: unrecognized arguments: --hermes-endpoint http://localhost:8787
