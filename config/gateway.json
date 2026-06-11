@@ -181,6 +181,31 @@
         "name": "visual-content-token-check",
         "cron": "0 */6 * * *",
         "prompt": "Check all visual platform OAuth tokens. Verify TIKTOK_ACCESS_TOKEN, INSTAGRAM_ACCESS_TOKEN, YOUTUBE_ACCESS_TOKEN, FACEBOOK_PAGE_ACCESS_TOKEN are valid. Refresh any expired tokens. Report failures via Telegram."
+      },
+      {
+        "name": "odw-metrics-poll",
+        "cron": "*/30 * * * *",
+        "prompt": "Collect office-oxide-mcp campaign metrics. Poll GitHub stars for Aimino-Tech/opendocswork-mcp and npm downloads for @aimino/opendocswork-mcp. Log to campaign_metrics table. Target: 500 stars in 30 days."
+      },
+      {
+        "name": "odw-x-mentions-scan",
+        "cron": "*/15 * * * *",
+        "prompt": "Scan X/Twitter for mentions of office-oxide-mcp, opendocswork, 'mcp office', 'mcp document'. Log findings to campaign_metrics table. Flag any negative sentiment requiring response."
+      },
+      {
+        "name": "odw-campaign-status",
+        "cron": "0 8 * * *",
+        "prompt": "Report office-oxide-mcp multi-platform campaign daily status. Show campaign day number (started 2026-06-10), today's scheduled content pieces from config/odw-multi-platform-campaign.json, pending tasks, latest GitHub stars and npm downloads. Highlight any blocking issues."
+      },
+      {
+        "name": "odw-engagement-monitor",
+        "cron": "0 */4 * * *",
+        "prompt": "Check all ODW campaign threads for new replies needing response. Scan Reddit, HN, LinkedIn, X for replies to our posts. Draft responses for pending replies."
+      },
+      {
+        "name": "odw-hn-check",
+        "cron": "0 * * * *",
+        "prompt": "Check Hacker News for Show HN: office-oxide-mcp post. Monitor upvotes and comments. Report if post hits front page or gets significant traction. Log to campaign_metrics table."
       }
     ]
   },

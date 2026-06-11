@@ -2300,6 +2300,55 @@ def delegate_task(
 
     total_duration = round(time.monotonic() - overall_start, 2)
 
+    # For batch tasks: handle partial success / all-failed scenarios.
+    # A task is "successful" if it produced a response (status == "completed").
+    # Interrupted tasks (parent interrupt) are excluded from both counts
+    # since they reflect an external cancellation, not a task failure.
+    if n_tasks > 1:
+        successful = [r for r in results if r.get("status") == "completed"]
+        failed = [r for r in results if r.get("status") in ("error", "timeout", "failed")]
+
+        if len(failed) == n_tasks:
+            # All tasks failed — return overall failure
+            errors_list = []
+            for r in failed:
+                idx = r["task_index"]
+                errors_list.append({
+                    "task_index": idx,
+                    "goal": task_list[idx]["goal"] if idx < len(task_list) else "",
+                    "error": r.get("error", "Unknown error"),
+                })
+            return json.dumps({
+                "success": False,
+                "partial": False,
+                "message": f"All {n_tasks} tasks failed.",
+                "errors": errors_list,
+                "total_duration_seconds": total_duration,
+            }, ensure_ascii=False, indent=2)
+
+        if successful and failed:
+            # Partial success — return successful results alongside errors
+            errors_list = []
+            for r in failed:
+                idx = r["task_index"]
+                errors_list.append({
+                    "task_index": idx,
+                    "goal": task_list[idx]["goal"] if idx < len(task_list) else "",
+                    "error": r.get("error", "Unknown error"),
+                })
+            return json.dumps({
+                "success": True,
+                "partial": True,
+                "message": (
+                    f"Completed {len(successful)}/{n_tasks} tasks. "
+                    f"{len(failed)} task(s) failed."
+                ),
+                "results": successful,
+                "errors": errors_list,
+                "total_duration_seconds": total_duration,
+            }, ensure_ascii=False, indent=2)
+
+    # All tasks succeeded (or single task) — return normal format
     return json.dumps(
         {
             "results": results,

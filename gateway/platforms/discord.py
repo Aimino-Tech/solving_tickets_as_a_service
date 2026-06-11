@@ -34,6 +34,7 @@ _DISCORD_COMMAND_SYNC_MAX_RATE_LIMIT_SLEEP_SECONDS = 30.0
 try:
     import discord
     from discord import Message as DiscordMessage, Intents
+    from discord.errors import PrivilegedIntentsRequired
     from discord.ext import commands
     DISCORD_AVAILABLE = True
 except ImportError:
@@ -41,6 +42,7 @@ except ImportError:
     discord = None
     DiscordMessage = Any
     Intents = Any
+    PrivilegedIntentsRequired = Exception
     commands = None
 
 import sys
@@ -657,6 +659,10 @@ class DiscordAdapter(BasePlatformAdapter):
             # that aren't enabled in the Discord Developer Portal can prevent the
             # bot from coming online at all, so avoid requesting members intent
             # unless it is actually necessary.
+            #
+            # Fallback: if the developer portal hasn't enabled privileged intents,
+            # we catch PrivilegedIntentsRequired, reconnect with message_content=False,
+            # and fetch message content via REST API instead.
             intents = Intents.default()
             intents.message_content = True
             intents.dm_messages = True
@@ -666,6 +672,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 or bool(self._allowed_role_ids)  # Need members intent for role lookup
             )
             intents.voice_states = True
+            self._no_message_content_intent = False
 
             # Resolve proxy (DISCORD_PROXY > generic env vars > macOS system proxy)
             from gateway.platforms.base import resolve_proxy_url, proxy_kwargs_for_bot
@@ -700,160 +707,56 @@ class DiscordAdapter(BasePlatformAdapter):
                 **proxy_kwargs_for_bot(proxy_url),
             )
             adapter_self = self  # capture for closure
-
-            # Register event handlers
-            @self._client.event
-            async def on_ready():
-                logger.info("[%s] Connected as %s", adapter_self.name, adapter_self._client.user)
-
-                # Resolve any usernames in the allowed list to numeric IDs
-                await adapter_self._resolve_allowed_usernames()
-                adapter_self._ready_event.set()
-
-                if adapter_self._post_connect_task and not adapter_self._post_connect_task.done():
-                    adapter_self._post_connect_task.cancel()
-                adapter_self._post_connect_task = asyncio.create_task(
-                    adapter_self._run_post_connect_initialization()
-                )
-
-            @self._client.event
-            async def on_message(message: DiscordMessage):
-                # Block until _resolve_allowed_usernames has swapped
-                # any raw usernames in DISCORD_ALLOWED_USERS for numeric
-                # IDs (otherwise on_message's author.id lookup can miss).
-                if not adapter_self._ready_event.is_set():
-                    try:
-                        await asyncio.wait_for(adapter_self._ready_event.wait(), timeout=30.0)
-                    except asyncio.TimeoutError:
-                        pass
-
-                # Dedup: Discord RESUME replays events after reconnects (#4777)
-                if adapter_self._dedup.is_duplicate(str(message.id)):
-                    return
-
-                # Always ignore our own messages
-                if message.author == self._client.user:
-                    return
-
-                # Ignore Discord system messages (thread renames, pins, member joins, etc.)
-                # Allow both default and reply types — replies have a distinct MessageType.
-                if message.type not in {discord.MessageType.default, discord.MessageType.reply}:
-                    return
-
-                # Bot message filtering (DISCORD_ALLOW_BOTS):
-                #   "none"     — ignore all other bots (default)
-                #   "mentions" — accept bot messages only when they @mention us
-                #   "all"      — accept all bot messages
-                # Must run BEFORE the user allowlist check so that bots
-                # permitted by DISCORD_ALLOW_BOTS are not rejected for
-                # not being in DISCORD_ALLOWED_USERS (fixes #4466).
-                if getattr(message.author, "bot", False):
-                    allow_bots = os.getenv("DISCORD_ALLOW_BOTS", "none").lower().strip()
-                    if allow_bots == "none":
-                        return
-                    elif allow_bots == "mentions":
-                        if not self._client.user or self._client.user not in message.mentions:
-                            return
-                    # "all" falls through; bot is permitted — skip the
-                    # human-user allowlist below (bots aren't in it).
-                else:
-                    # Non-bot: enforce the configured user/role allowlists.
-                    # Pass guild + is_dm so role checks are scoped to the
-                    # originating guild (prevents cross-guild DM bypass, see
-                    # _is_allowed_user docstring).
-                    _msg_guild = getattr(message, "guild", None)
-                    _is_dm = isinstance(message.channel, discord.DMChannel) or _msg_guild is None
-                    if not self._is_allowed_user(
-                        str(message.author.id),
-                        message.author,
-                        guild=_msg_guild,
-                        is_dm=_is_dm,
-                    ):
-                        return
-                
-                # Multi-agent filtering: if the message mentions specific bots
-                # but NOT this bot, the sender is talking to another agent —
-                # stay silent.  Messages with no bot mentions (general chat)
-                # still fall through to _handle_message for the existing
-                # DISCORD_REQUIRE_MENTION check.
-                #
-                # This replaces the older DISCORD_IGNORE_NO_MENTION logic
-                # with bot-aware filtering that works correctly when multiple
-                # agents share a channel.
-                if not isinstance(message.channel, discord.DMChannel) and message.mentions:
-                    _self_mentioned = (
-                        self._client.user is not None
-                        and self._client.user in message.mentions
-                    )
-                    _other_bots_mentioned = any(
-                        m.bot and m != self._client.user
-                        for m in message.mentions
-                    )
-                    # If other bots are mentioned but we're not → not for us
-                    if _other_bots_mentioned and not _self_mentioned:
-                        return
-                    # If humans are mentioned but we're not → not for us
-                    # (preserves old DISCORD_IGNORE_NO_MENTION=true behavior)
-                    # EXCEPT in free-response channels where the bot should
-                    # answer regardless of who is mentioned.
-                    _ignore_no_mention = os.getenv(
-                        "DISCORD_IGNORE_NO_MENTION", "true"
-                    ).lower() in {"true", "1", "yes"}
-                    if _ignore_no_mention and not _self_mentioned and not _other_bots_mentioned:
-                        _channel_id = str(message.channel.id)
-                        _parent_id = None
-                        if hasattr(message.channel, "parent_id") and message.channel.parent_id:
-                            _parent_id = str(message.channel.parent_id)
-                        _free_channels = adapter_self._discord_free_response_channels()
-                        _channel_ids = {_channel_id}
-                        if _parent_id:
-                            _channel_ids.add(_parent_id)
-                        if "*" not in _free_channels and not (_channel_ids & _free_channels):
-                            return
-
-                await self._handle_message(message)
-
-            @self._client.event
-            async def on_voice_state_update(member, before, after):
-                """Track voice channel join/leave events."""
-                # Only track channels where the bot is connected
-                bot_guild_ids = set(adapter_self._voice_clients.keys())
-                if not bot_guild_ids:
-                    return
-                guild_id = member.guild.id
-                if guild_id not in bot_guild_ids:
-                    return
-                # Ignore the bot itself
-                if member == adapter_self._client.user:
-                    return
-
-                joined = before.channel is None and after.channel is not None
-                left = before.channel is not None and after.channel is None
-                switched = (
-                    before.channel is not None
-                    and after.channel is not None
-                    and before.channel != after.channel
-                )
-
-                if joined or left or switched:
-                    logger.info(
-                        "Voice state: %s (%d) %s (guild %d)",
-                        member.display_name,
-                        member.id,
-                        "joined " + after.channel.name if joined
-                        else "left " + before.channel.name if left
-                        else f"moved {before.channel.name} -> {after.channel.name}",
-                        guild_id,
-                    )
-
-            # Register slash commands
-            if self._slash_commands:
-                self._register_slash_commands()
+            self._register_event_handlers(adapter_self)
 
             # Start the bot in background
             self._bot_task = asyncio.create_task(self._client.start(self.config.token))
 
             # Wait for ready
+            await asyncio.wait_for(self._ready_event.wait(), timeout=30)
+
+            self._running = True
+            return True
+
+        except PrivilegedIntentsRequired:
+            logger.warning(
+                "[%s] Privileged intents not enabled in Discord Developer Portal. "
+                "Falling back to reduced intents and REST API for message content. "
+                "Enable 'MESSAGE CONTENT INTENT' at "
+                "https://discord.com/developers/applications/%s/bot for full functionality.",
+                self.name, self.config.token.split(".")[0] if "." in self.config.token else "?",
+            )
+            self._no_message_content_intent = True
+
+            if self._client is not None:
+                try:
+                    if not self._client.is_closed():
+                        await self._client.close()
+                except Exception:
+                    pass
+                finally:
+                    self._client = None
+
+            # Re-create client without privileged intents
+            reduced_intents = Intents.default()
+            reduced_intents.message_content = False
+            reduced_intents.dm_messages = True
+            reduced_intents.guild_messages = True
+            reduced_intents.members = False  # Can't request without portal toggle
+            reduced_intents.voice_states = True
+
+            self._client = commands.Bot(
+                command_prefix="!",
+                intents=reduced_intents,
+                allowed_mentions=_build_allowed_mentions(),
+                **proxy_kwargs_for_bot(proxy_url),
+            )
+
+            # Re-register event handlers on the new client (also handles slash commands)
+            adapter_self = self
+            self._register_event_handlers(adapter_self)
+
+            self._bot_task = asyncio.create_task(self._client.start(self.config.token))
             await asyncio.wait_for(self._ready_event.wait(), timeout=30)
 
             self._running = True
@@ -898,6 +801,195 @@ class DiscordAdapter(BasePlatformAdapter):
         self._release_platform_lock()
 
         logger.info("[%s] Disconnected", self.name)
+
+    # ------------------------------------------------------------------
+    # Event handler registration & REST content fallback
+    # ------------------------------------------------------------------
+
+    async def _fetch_message_content(self, message: "DiscordMessage") -> str:
+        """Fetch message content via REST API when intents are unavailable.
+
+        The message received via gateway websocket has empty ``.content``
+        because the bot lacks the ``message_content`` privileged intent.
+        This method re-fetches the message from the REST API to get the
+        actual content.
+        """
+        if not self._no_message_content_intent:
+            return message.content
+        # Only fetch if content is empty (should always be true when
+        # _no_message_content_intent is set, but be defensive).
+        if message.content:
+            return message.content
+        try:
+            fetched = await message.channel.fetch_message(message.id)
+            return fetched.content
+        except Exception as exc:
+            logger.debug(
+                "[%s] Failed to fetch message %d content via REST: %s",
+                self.name, message.id, exc,
+            )
+            return message.content
+
+    def _register_event_handlers(self, adapter_self: "DiscordAdapter") -> None:
+        """Register gateway event handlers on the current client.
+
+        Extracted so it can be called from both the primary connect path
+        and the PrivilegedIntentsRequired retry path.
+        """
+        # --- on_ready ----------------------------------------------------
+        @self._client.event
+        async def on_ready():
+            logger.info("[%s] Connected as %s", adapter_self.name, adapter_self._client.user)
+
+            # Resolve any usernames in the allowed list to numeric IDs
+            await adapter_self._resolve_allowed_usernames()
+            adapter_self._ready_event.set()
+
+            if adapter_self._post_connect_task and not adapter_self._post_connect_task.done():
+                adapter_self._post_connect_task.cancel()
+            adapter_self._post_connect_task = asyncio.create_task(
+                adapter_self._run_post_connect_initialization()
+            )
+
+        # --- on_message --------------------------------------------------
+        @self._client.event
+        async def on_message(message: "DiscordMessage"):
+            # Fetch real message content via REST when intents are missing
+            if adapter_self._no_message_content_intent and not message.content:
+                message.content = await adapter_self._fetch_message_content(message)
+
+            # Block until _resolve_allowed_usernames has swapped
+            # any raw usernames in DISCORD_ALLOWED_USERS for numeric
+            # IDs (otherwise on_message's author.id lookup can miss).
+            if not adapter_self._ready_event.is_set():
+                try:
+                    await asyncio.wait_for(adapter_self._ready_event.wait(), timeout=30.0)
+                except asyncio.TimeoutError:
+                    pass
+
+            # Dedup: Discord RESUME replays events after reconnects (#4777)
+            if adapter_self._dedup.is_duplicate(str(message.id)):
+                return
+
+            # Always ignore our own messages
+            if message.author == self._client.user:
+                return
+
+            # Ignore Discord system messages (thread renames, pins, member joins, etc.)
+            # Allow both default and reply types — replies have a distinct MessageType.
+            if message.type not in {discord.MessageType.default, discord.MessageType.reply}:
+                return
+
+            # Bot message filtering (DISCORD_ALLOW_BOTS):
+            #   "none"     — ignore all other bots (default)
+            #   "mentions" — accept bot messages only when they @mention us
+            #   "all"      — accept all bot messages
+            # Must run BEFORE the user allowlist check so that bots
+            # permitted by DISCORD_ALLOW_BOTS are not rejected for
+            # not being in DISCORD_ALLOWED_USERS (fixes #4466).
+            if getattr(message.author, "bot", False):
+                allow_bots = os.getenv("DISCORD_ALLOW_BOTS", "none").lower().strip()
+                if allow_bots == "none":
+                    return
+                elif allow_bots == "mentions":
+                    if not self._client.user or self._client.user not in message.mentions:
+                        return
+                # "all" falls through; bot is permitted — skip the
+                # human-user allowlist below (bots aren't in it).
+            else:
+                # Non-bot: enforce the configured user/role allowlists.
+                # Pass guild + is_dm so role checks are scoped to the
+                # originating guild (prevents cross-guild DM bypass, see
+                # _is_allowed_user docstring).
+                _msg_guild = getattr(message, "guild", None)
+                _is_dm = isinstance(message.channel, discord.DMChannel) or _msg_guild is None
+                if not self._is_allowed_user(
+                    str(message.author.id),
+                    message.author,
+                    guild=_msg_guild,
+                    is_dm=_is_dm,
+                ):
+                    return
+
+            # Multi-agent filtering: if the message mentions specific bots
+            # but NOT this bot, the sender is talking to another agent —
+            # stay silent.  Messages with no bot mentions (general chat)
+            # still fall through to _handle_message for the existing
+            # DISCORD_REQUIRE_MENTION check.
+            #
+            # This replaces the older DISCORD_IGNORE_NO_MENTION logic
+            # with bot-aware filtering that works correctly when multiple
+            # agents share a channel.
+            if not isinstance(message.channel, discord.DMChannel) and message.mentions:
+                _self_mentioned = (
+                    self._client.user is not None
+                    and self._client.user in message.mentions
+                )
+                _other_bots_mentioned = any(
+                    m.bot and m != self._client.user
+                    for m in message.mentions
+                )
+                # If other bots are mentioned but we're not → not for us
+                if _other_bots_mentioned and not _self_mentioned:
+                    return
+                # If humans are mentioned but we're not → not for us
+                # (preserves old DISCORD_IGNORE_NO_MENTION=true behavior)
+                # EXCEPT in free-response channels where the bot should
+                # answer regardless of who is mentioned.
+                _ignore_no_mention = os.getenv(
+                    "DISCORD_IGNORE_NO_MENTION", "true"
+                ).lower() in {"true", "1", "yes"}
+                if _ignore_no_mention and not _self_mentioned and not _other_bots_mentioned:
+                    _channel_id = str(message.channel.id)
+                    _parent_id = None
+                    if hasattr(message.channel, "parent_id") and message.channel.parent_id:
+                        _parent_id = str(message.channel.parent_id)
+                    _free_channels = adapter_self._discord_free_response_channels()
+                    _channel_ids = {_channel_id}
+                    if _parent_id:
+                        _channel_ids.add(_parent_id)
+                    if "*" not in _free_channels and not (_channel_ids & _free_channels):
+                        return
+
+            await self._handle_message(message)
+
+        # --- on_voice_state_update ---------------------------------------
+        @self._client.event
+        async def on_voice_state_update(member, before, after):
+            """Track voice channel join/leave events."""
+            # Only track channels where the bot is connected
+            bot_guild_ids = set(adapter_self._voice_clients.keys())
+            if not bot_guild_ids:
+                return
+            guild_id = member.guild.id
+            if guild_id not in bot_guild_ids:
+                return
+            # Ignore the bot itself
+            if member == adapter_self._client.user:
+                return
+
+            joined = before.channel is None and after.channel is not None
+            left = before.channel is not None and after.channel is None
+            switched = (
+                before.channel is not None
+                and after.channel is not None
+                and before.channel != after.channel
+            )
+
+            if joined or left or switched:
+                logger.info(
+                    "Voice state: %s (%d) %s (guild %d)",
+                    member.display_name,
+                    member.id,
+                    "joined " + after.channel.name if joined
+                    else "left " + before.channel.name if left
+                    else f"moved {before.channel.name} -> {after.channel.name}",
+                    guild_id,
+                )
+
+        # --- slash commands ----------------------------------------------
+        if self._slash_commands:
+            self._register_slash_commands()
 
     def _command_sync_state_path(self) -> _Path:
         from hermes_constants import get_hermes_home

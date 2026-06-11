@@ -56,6 +56,7 @@ class OrchestratorEngine:
         adapters = {}
         adapters["indian_engagement"] = self._poll_indian_engagement
         adapters["campaign_metrics"] = self._poll_campaign_metrics
+        adapters["twitter_mentions"] = self._poll_twitter
         return adapters
 
     def _poll_indian_engagement(self) -> list[dict[str, Any]]:
@@ -105,6 +106,32 @@ class OrchestratorEngine:
             }]
         except Exception as e:
             print(f"Campaign metrics poll failed: {e}", file=sys.stderr)
+            return []
+
+    def _poll_twitter(self) -> list[dict[str, Any]]:
+        """Poll Twitter for relevant mentions using TwitterEngager."""
+        try:
+            from app.orchestration.engagement.twitter_engage import TwitterEngager
+            engager = TwitterEngager()
+            tweets = engager.search(max_results=30)
+            results = []
+            for tweet in tweets:
+                tweet_url = f"https://twitter.com/i/web/status/{tweet['id']}"
+                results.append({
+                    "id": f"tw_{tweet['id']}",
+                    "platform": "twitter",
+                    "content_snippet": tweet.get("text", "")[:300],
+                    "source_url": tweet_url,
+                    "created_at": tweet.get("created_at", ""),
+                    "author_id": tweet.get("author_id"),
+                    "metrics": tweet.get("metrics", {}),
+                })
+            return results
+        except ImportError:
+            print("TwitterEngager not available (tweepy missing)", file=sys.stderr)
+            return []
+        except Exception as e:
+            print(f"Twitter poll failed: {e}", file=sys.stderr)
             return []
 
     def analyze(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:

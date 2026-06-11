@@ -10,6 +10,8 @@ the argparse subparsers on demand.
 from __future__ import annotations
 
 import argparse
+import json
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -473,6 +475,161 @@ def _cmd_list_archived(args) -> int:
     return 0
 
 
+def _print_report(report_dir: Path) -> int:
+    """Print the report from *report_dir* (REPORT.md if present, else run.json summary).
+
+    Returns 0 on success, 1 if neither file can be read.
+    """
+    report_file = report_dir / "REPORT.md"
+    if report_file.exists():
+        print(report_file.read_text(encoding="utf-8"))
+        return 0
+
+    run_json = report_dir / "run.json"
+    if not run_json.exists():
+        print(f"curator: no REPORT.md or run.json in {report_dir.name}")
+        return 1
+
+    try:
+        data = json.loads(run_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"curator: failed to read run.json: {e}")
+        return 1
+
+    started = data.get("started_at", "?")
+    duration = data.get("duration_seconds", 0) or 0
+    mins, secs = divmod(int(duration), 60)
+    dur_label = f"{mins}m {secs}s" if mins else f"{secs}s"
+    mode = data.get("mode", "?")
+    dry_run = data.get("dry_run", False)
+    llm_summary = data.get("llm_summary") or ""
+
+    print(f"Curator Run: {report_dir.name}")
+    print(f"  started:     {started[:19] if len(started) >= 19 else started}")
+    print(f"  duration:    {dur_label}")
+    print(f"  mode:        {mode}")
+    if dry_run:
+        print("  dry-run:     yes")
+
+    before = data.get("before", [])
+    after = data.get("after", [])
+    print(f"  skills before: {len(before)}")
+    print(f"  skills after:  {len(after)}")
+
+    transitions = data.get("state_transitions", [])
+    if transitions:
+        print(f"\n  state transitions ({len(transitions)}):")
+        for t in transitions:
+            print(f"    {t['name']}: {t['from']} -> {t['to']}")
+
+    consolidated = data.get("consolidated", [])
+    if consolidated:
+        print(f"\n  consolidated ({len(consolidated)}):")
+        for c in consolidated:
+            name = c.get("name", "?")
+            into = c.get("into", "?")
+            rationale = c.get("rationale", "")
+            suffix = f"  ({rationale})" if rationale else ""
+            print(f"    {name} -> {into}{suffix}")
+
+    pruned = data.get("pruned", [])
+    if pruned:
+        print(f"\n  pruned/archived ({len(pruned)}):")
+        for p in pruned:
+            name = p.get("name", "?")
+            rationale = p.get("rationale", "")
+            suffix = f"  ({rationale})" if rationale else ""
+            print(f"    {name}{suffix}")
+
+    added = data.get("added", [])
+    if added:
+        print(f"\n  added ({len(added)}): {', '.join(added)}")
+
+    if llm_summary:
+        print(f"\n  llm summary: {llm_summary}")
+
+    print(f"\n  (raw data: {run_json})")
+    return 0
+
+
+def _cmd_report(args) -> int:
+    """Show curator run report — latest, by --id <stamp>, or list all with --list.
+
+    Reports live under ``~/.hermes/logs/curator/<YYYYMMDD-HHMMSS>/`` as
+    ``REPORT.md`` (human) + ``run.json`` (machine).  If ``REPORT.md`` is
+    missing the function falls back to a simplified text rendering of
+    ``run.json``.
+    """
+    from agent import curator
+
+    reports_root = curator._reports_root()
+    if not reports_root.is_dir():
+        print("curator: reports directory does not exist — no runs yet")
+        return 1
+
+    # Directories matching YYYYMMDD-HHMMSS (optionally with a -N suffix)
+    _stamp_like = re.compile(r"^\d{8}-\d{6}(?:-\d+)?$")
+    report_dirs: list[Path] = []
+    for d in reversed(sorted(reports_root.iterdir())):
+        if d.is_dir() and _stamp_like.match(d.name):
+            report_dirs.append(d)
+    report_dirs.reverse()
+
+    if not report_dirs:
+        print("curator: no curator run reports found")
+        return 1
+
+    if getattr(args, "list", False):
+        header = f"{'Report ID':22s}  {'REPORT.md':10s}  {'Mode':8s}  {'Duration':10s}  {'Date'}"
+        print(header)
+        print("-" * len(header))
+        for d in reversed(report_dirs):
+            has_report = "yes" if (d / "REPORT.md").is_file() else "no"
+            run_json_path = d / "run.json"
+            mode = "?"
+            duration = "?"
+            date_str = "?"
+            if run_json_path.is_file():
+                try:
+                    data = json.loads(run_json_path.read_text(encoding="utf-8"))
+                    mode = (data.get("mode", "?") or "?")[:8]
+                    secs = data.get("duration_seconds", 0) or 0
+                    mins, secs_rem = divmod(int(secs), 60)
+                    duration = f"{mins}m {secs_rem}s" if mins else f"{secs_rem}s"
+                    started = data.get("started_at", "")
+                    if started:
+                        try:
+                            dt = datetime.fromisoformat(started)
+                            date_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+                        except (TypeError, ValueError):
+                            date_str = str(started)[:19]
+                except (OSError, json.JSONDecodeError):
+                    pass
+            print(f"{d.name:22s}  {has_report:10s}  {mode:8s}  {duration:10s}  {date_str}")
+        return 0
+
+    report_id = getattr(args, "report_id", None)
+    if report_id:
+        target = reports_root / report_id
+        if not target.is_dir():
+            matches = [d for d in report_dirs if d.name.startswith(report_id)]
+            if len(matches) == 0:
+                print(f"curator: no report matching '{report_id}'")
+                return 1
+            target = matches[0]
+        return _print_report(target)
+
+    state = curator.load_state()
+    last_path = state.get("last_report_path")
+    if last_path:
+        lp = Path(last_path)
+        if lp.is_dir():
+            return _print_report(lp)
+
+    _latest = report_dirs[-1]
+    return _print_report(_latest)
+
+
 # ---------------------------------------------------------------------------
 # argparse wiring (called from hermes_cli.main)
 # ---------------------------------------------------------------------------
@@ -550,6 +707,14 @@ def register_cli(parent: argparse.ArgumentParser) -> None:
         help="Show what would be archived without doing it",
     )
     p_prune.set_defaults(func=_cmd_prune)
+
+    p_report = subs.add_parser("report", help="Show curator run report (latest, or by --id)")
+    p_report.add_argument("--list", action="store_true", help="List all available reports")
+    p_report.add_argument(
+        "--id", dest="report_id", default=None,
+        help="Report ID (stamp like 20240610-091500)",
+    )
+    p_report.set_defaults(func=_cmd_report)
 
     p_backup = subs.add_parser(
         "backup",

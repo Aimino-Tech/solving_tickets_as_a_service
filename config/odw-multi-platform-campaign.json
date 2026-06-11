@@ -1,0 +1,138 @@
+{
+  "$schema": "https://docs.openclaw.ai/campaign-schema.json",
+  "campaign": "odw-multi-platform-launch",
+  "version": "1.0.0",
+  "start_date": "2026-06-10",
+  "end_date": "2026-07-10",
+  "description": "30-day multi-platform organic launch campaign for office-oxide-mcp (Rust-native MCP server for Office docs)",
+  "product": {
+    "name": "office-oxide-mcp",
+    "display_name": "office-oxide-mcp",
+    "repository": "https://github.com/Aimino-Tech/opendocswork-mcp",
+    "npm": "@aimino/opendocswork-mcp",
+    "version": "0.2.0",
+    "description": "Rust-native MCP server for Office document processing — XLSX, DOCX, PPTX, PDF",
+    "badges": ["MIT", "Apache-2.0", "142+ stars", "Rust-native"],
+    "positioning": {
+      "tagline": "Open-source Rust-native MCP server for Office documents",
+      "competitors": ["Aspose (paid)", "python-pptx/openpyxl/python-docx (slow)", "LibreOffice (heavy)"],
+      "strengths": ["10-100x faster than Python", "<50ms cold start", "<2MB idle memory", "MIT license"],
+      "use_cases": ["AI toolchain document processing", "Automated report generation", "Batch Office conversion", "PDF form filling"]
+    }
+  },
+  "strategy": {
+    "type": "guerrilla",
+    "value_ratio": 0.90,
+    "mention_ratio": 0.10,
+    "core_narrative": "Rust-native MCP server for Office documents — faster, lighter, and MIT-licensed",
+    "platform_roles": {
+      "reddit": "existing_operations (unchanged)",
+      "x": "real_time_engagement + threads",
+      "linkedin": "professional_authority + carousels",
+      "hacker_news": "technical_depth + show_hn"
+    }
+  },
+  "schedule": {
+    "monitor": "*/15 * * * *",
+    "engage": "*/30 * * * *",
+    "daily_digest": "0 8 * * *",
+    "weekly_review": "0 9 * * 1"
+  },
+  "platforms": {
+    "reddit": {
+      "enabled": true,
+      "note": "Existing operations continue unchanged — 9 waves across r/MCP, r/selfhosted, r/SaaS, etc.",
+      "post_limit": 3,
+      "reply_limit": 10,
+      "publish_window": "09:00-18:00"
+    },
+    "x": {
+      "enabled": true,
+      "thread_limit": 1,
+      "tweet_limit": 3,
+      "reply_limit": 5,
+      "quote_limit": 2,
+      "publish_window": "08:00-20:00",
+      "accounts": {
+        "primary": "@AiminoTech",
+        "personal": "dev_account_tbd"
+      },
+      "tools": ["xurl"]
+    },
+    "linkedin": {
+      "enabled": true,
+      "post_limit": 1,
+      "publish_window": "07:00-10:00",
+      "requires_human": true,
+      "notes": "All posts from personal profile. Links in first comment only. Reactivate Chrome profile 4."
+    },
+    "hacker_news": {
+      "enabled": true,
+      "type": "show_hn",
+      "requires_human": true,
+      "requires_karma_31": true,
+      "publish_window": "08:00-11:00",
+      "notes": "NO LLM-generated text. Show HN must link to working product. Manual submission via browser."
+    }
+  },
+  "content": {
+    "kit_path": "marketing/content/odw/",
+    "angles": [
+      "performance: Rust 10-100x faster than Python for Office doc parsing",
+      "architecture: Coherence Engine with Entity DAG and BFS propagation",
+      "multi_format: XLSX + DOCX + PPTX + PDF in one MCP server",
+      "pdf: AcroForm, XFA, flat scanned overlay support",
+      "open_source: MIT-licensed alternative to paid tools",
+      "mcp_ecosystem: MCP servers for AI toolchains",
+      "engineering_story: building a parser in Rust",
+      "benchmark: Rust SIMD vs Python for document processing"
+    ],
+    "pieces": [
+      {"day": 1, "platform": "show_hn", "title": "Show HN: Rust-native MCP server for Office docs — 10-100x faster than Python", "angle": "performance"},
+      {"day": 1, "platform": "x", "title": "Launch thread: Rust MCP server for Office parsing", "angle": "performance"},
+      {"day": 2, "platform": "linkedin", "title": "I benchmarked Rust vs Python for 50MB Excel files. The results surprised me.", "angle": "benchmark"},
+      {"day": 2, "platform": "reddit", "title": "MCP server in Rust for Office documents — architecture breakdown", "angle": "architecture"},
+      {"day": 3, "platform": "x", "title": "Code snippet + benchmark visual", "angle": "benchmark"},
+      {"day": 4, "platform": "linkedin", "title": "Building a Coherence Engine: Entity DAG with BFS for document processing", "angle": "architecture"},
+      {"day": 5, "platform": "x", "title": "The borrow checker taught me how to design better parsers", "angle": "engineering_story"},
+      {"day": 6, "platform": "reddit", "title": "Why we chose Rust for MCP server infrastructure (and the trade-offs)", "angle": "mcp_ecosystem"},
+      {"day": 7, "platform": "x", "title": "Thread: What I learned implementing XFA PDF forms in Rust", "angle": "pdf"},
+      {"day": 8, "platform": "linkedin", "title": "Open sourcing our Rust MCP server for Office docs", "angle": "open_source"},
+      {"day": 9, "platform": "x", "title": "Our MCP server now handles 4 formats — XLSX, DOCX, PPTX, PDF in one tool", "angle": "multi_format"},
+      {"day": 10, "platform": "reddit", "title": "Rust-native vs Python for Office parsing: benchmark comparison", "angle": "benchmark"},
+      {"day": 11, "platform": "x", "title": "Thread: MCP servers are the new API gateways for AI tools", "angle": "mcp_ecosystem"},
+      {"day": 12, "platform": "linkedin", "title": "5 engineering lessons from building a Rust MCP server", "angle": "engineering_story"},
+      {"day": 14, "platform": "x", "title": "Metrics update + what's next", "angle": "open_source"},
+      {"day": 15, "platform": "linkedin", "title": "Why MIT license matters for developer tools (carousel)", "angle": "open_source"},
+      {"day": 16, "platform": "reddit", "title": "PDF form filling with Rust MCP — supporting AcroForm, XFA, and scanned overlays", "angle": "pdf"},
+      {"day": 18, "platform": "x", "title": "Thread: Zero-copy XML parsing with quick-xml", "angle": "architecture"},
+      {"day": 20, "platform": "linkedin", "title": "Rust vs Python for document parsing: the full benchmark breakdown (carousel)", "angle": "benchmark"},
+      {"day": 22, "platform": "x", "title": "What's next for office-oxide-mcp roadmap", "angle": "open_source"},
+      {"day": 25, "platform": "reddit", "title": "Coherence Engine explained: cross-format document processing", "angle": "architecture"},
+      {"day": 28, "platform": "x", "title": "Thread: How MCP servers change AI tool design", "angle": "mcp_ecosystem"},
+      {"day": 30, "platform": "linkedin", "title": "30-day retrospective: launching an open source MCP server", "angle": "engineering_story"}
+    ]
+  },
+  "monitoring": {
+    "github_repo": "Aimino-Tech/opendocswork-mcp",
+    "npm_package": "@aimino/opendocswork-mcp",
+    "metrics": {
+      "github_stars": {"check_interval": "*/30 * * * *", "target_30d": 500},
+      "npm_downloads": {"check_interval": "0 */6 * * *"},
+      "x_mentions": {"check_interval": "*/15 * * * *", "keywords": ["office-oxide-mcp", "opendocswork", "mcp office", "mcp document"]}
+    }
+  },
+  "engagement_rules": {
+    "approval_gate": "auto",
+    "max_daily_posts": {
+      "reddit": 3,
+      "x": 3,
+      "linkedin": 1,
+      "hacker_news": 1
+    },
+    "max_daily_actions": 10,
+    "auto_reply_threshold": 60,
+    "reply_within_hours": 24,
+    "cross_platform_spacing_hours": 48
+  }
+}

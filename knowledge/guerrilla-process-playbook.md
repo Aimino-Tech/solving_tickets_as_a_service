@@ -284,6 +284,35 @@ Track in the Google Sheet:
   this specific thing but I get how it sounds." Then disengage.
 - Never argue with mods. Never argue with angry commenters. Delete and retreat.
 
+#### Reply Tracking & Response System
+
+**Tools:**
+- `~/.hermes/reply_tracker.py` — Detects replies via OAuth API or CDP fallback
+- `~/.hermes/reply_responder.py` — Drafts and posts responses
+- Google Sheet "reply-tracking" tab — Tracks all replies and responses
+- Cron job `reddit-reply-monitor` (395cfc771649) — Runs 5x daily (09, 12, 15, 18, 21 UTC)
+
+**Workflow:**
+1. Reply tracker checks Reddit inbox for all 5 accounts
+2. New replies logged to sheet with RT### IDs
+3. Responder classifies reply type (question/agreement/pushback/product_q/thanks/general)
+4. Agent drafts response matching account persona
+5. Response posted via OAuth API
+6. Sheet updated with response text and timestamp
+
+**Response Pacing:**
+- Max 1 reply per account per 10 minutes
+- Don't reply to the same thread more than twice in a row
+- Space replies across different accounts
+- Reply within 24h of original reply (credibility window)
+
+**Manual commands:**
+```bash
+python3 ~/.hermes/reply_tracker.py          # Check for new replies
+python3 ~/.hermes/reply_responder.py --list  # List pending replies
+python3 ~/.hermes/reply_tracker.py --dry-run # Dry run (no sheet writes)
+```
+
 ---
 
 ### Phase 5: Post-Mortem & Knowledge Capture
@@ -561,6 +590,40 @@ REPEAT (or END)
 | "Looks like you've been doing that a lot" message | Rate limit | Stop all activity from that account for 24h |
 | Mod removes your comment | Rule violation detected | Read the sub's rules carefully before next post |
 | Mod bans your account | Serious violation | DO NOT appeal. Mark account lost. Switch permanently. |
+
+---
+
+## 8. Multi-Platform Expansion
+
+### Platform Priority & Readiness
+
+| Platform | Status | Tooling | Posting | Pacing |
+|----------|--------|---------|---------|--------|
+| Reddit | 🟢 Active | 5 Chrome profiles + Playwright | Manual (browser automation) | 2-3/day/account |
+| Twitter/X | 🟡 Ready (setup only) | Browser automation via Playwright | Manual | 1-2 threads/week |
+| Hacker News | 🟡 Ready (setup only) | Browser automation via Playwright | Manual | 1 Show HN /week |
+| LinkedIn | 🟡 Ready (setup only) | Browser automation via Playwright | Manual | 1 post/2-3 days |
+| Discord | ⚪ Planned | MCP server (need implementation) | TBD | TBD |
+
+### Execution Rules by Platform
+
+| Dimension | Reddit | HN | Twitter | LinkedIn |
+|-----------|--------|----|---------|----------|
+| Max posts/day | 2-3/account | 0-1/account | 2-3 total | 1 total |
+| Product mention | 10% of comments | Never in title; optional in comment | In last tweet of thread | In comments (not post body) |
+| Comment reply window | 24h | 24h | 12h | 4h |
+| Engagement style | Community member | Peer builder | Opinionated learner | Industry professional |
+| Cross-posting | Never same content | Different angle entirely | Thread adapted | Long-form adaptation |
+
+### Campaign-Level Coordination
+
+When running a campaign across multiple platforms:
+
+1. **Content waterfall:** Write the long-form version (LinkedIn or blog post) → extract thread → extract comments. Don't create content from scratch per platform.
+2. **Time-boxed platforms:** HN Show HN runs once per product milestone (not daily). Twitter threads run weekly. LinkedIn runs 2-3x/week.
+3. **Cross-platform tracking:** Log all posts from all platforms in the same Google Sheet, with a "Platform" column added.
+4. **Voice variation per platform:** The LinkedIn version of a story is "industry insight". The HN version is "technical retrospective". The Reddit version is "fellow enthusiast sharing experience". The Twitter version is "hot take with data".
+5. **No same-day multi-platform posting:** If you post on HN Tuesday, don't also post about the same product on Reddit Tuesday. Space by 48h minimum.
 
 ---
 

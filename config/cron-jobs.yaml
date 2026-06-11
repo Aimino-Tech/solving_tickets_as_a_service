@@ -1,0 +1,96 @@
+# ODW Multi-Platform Campaign — Scheduled Posting Calendar
+# Hermes-native cron jobs (use `hermes cron add` or the cronjob tool)
+# NOTE: OpenCode API exhausted until ~June 7 — activate once key resets.
+# All times UTC.
+
+# ── Twitter/X Threads (via xurl skill) ─────────────────────────
+
+- job_name: odw-x-benchmark-thread
+  schedule: "2026-06-15T08:00:00Z"
+  prompt: >
+    Post the Rust vs Python benchmark thread for office-oxide-mcp.
+    Mood: technical/humblebrag. Include benchmark chart image from
+    content-kit/odw/visuals/. Use account: primary.
+  skills: ["xurl"]
+  model: claude-sonnet-4-20250514
+  provider: anthropic
+
+- job_name: odw-x-borrow-checker-story
+  schedule: "2026-06-17T10:00:00Z"
+  prompt: >
+    Post the borrow checker engineering story thread for
+    office-oxide-mcp (6 tweets). Use account: primary.
+  skills: ["xurl"]
+  provider: anthropic
+
+- job_name: odw-x-show-hn-tease
+  schedule: "2026-06-19T14:00:00Z"
+  prompt: >
+    Post teaser for Show HN submission: "We're submitting
+    office-oxide-mcp to HN tomorrow — feedback welcome ahead of time."
+    Use account: primary.
+  skills: ["xurl"]
+  provider: anthropic
+
+- job_name: odw-x-mcp-ecosystem-thread
+  schedule: "2026-06-21T09:00:00Z"
+  prompt: >
+    Post the "MCP servers are the new API gateways" educational
+    thread (5 tweets). Use account: primary.
+  skills: ["xurl"]
+  provider: anthropic
+
+- job_name: odw-x-coherence-engine
+  schedule: "2026-06-24T08:00:00Z"
+  prompt: >
+    Post the Coherence Engine architecture thread (4 tweets).
+    Use account: primary.
+  skills: ["xurl"]
+  provider: anthropic
+
+- job_name: odw-x-pdf-form-thread
+  schedule: "2026-06-29T10:00:00Z"
+  prompt: >
+    Post the PDF form technologies thread (6 tweets, 3 types of
+    PDF forms). Use account: primary.
+  skills: ["xurl"]
+  provider: anthropic
+
+- job_name: odw-x-open-source-week
+  schedule: "2026-07-04T08:00:00Z"
+  prompt: >
+    Post open source contribution callout + featured PRs.
+    Mood: community/grateful. Use account: primary.
+  skills: ["xurl"]
+  provider: anthropic
+
+- job_name: odw-x-final-recap
+  schedule: "2026-07-10T08:00:00Z"
+  prompt: >
+    Post campaign retrospective: what we learned launching
+    office-oxide-mcp across X, HN, LinkedIn, Reddit.
+    Use account: primary.
+  skills: ["xurl"]
+  provider: anthropic
+
+# ── LinkedIn Posts (manual — requires human browser) ────────────
+#
+# These can't be automated via cron because LinkedIn post body links
+# trigger reach penalties. Use first-comment link posting.
+#
+# Scheduled pieces from campaign plan:
+#   Jun 11 — I benchmarked Rust vs Python for 50MB Excel files
+#   Jun 13 — Coherence Engine: Entity DAG + BFS for doc processing
+#   Jun 17 — Open sourcing our Rust MCP server for Office docs
+#   Jun 20 — 5 engineering lessons from building a Rust MCP server
+#   Jun 24 — Why MIT license matters for developer tools (carousel)
+#   Jun 29 — Rust vs Python full benchmark breakdown (carousel)
+#   Jul 10 — 30-day retrospective: launching an open source MCP server
+
+# ── Hacker News (manual — Show HN) ──────────────────────────────
+#
+# Submit via browser (NO LLM-generated text per dang's rule):
+#   2026-06-20 — Show HN: Rust-native MCP server for Office docs
+#                Title: Show HN: Rust-native MCP server for Office
+#                docs — 10-100x faster than Python
+#                Link: https://github.com/Aimino-Tech/opendocswork-mcp

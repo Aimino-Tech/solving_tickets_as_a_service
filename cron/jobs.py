@@ -524,6 +524,8 @@ def create_job(
     workdir: Optional[str] = None,
     profile: Optional[str] = None,
     no_agent: bool = False,
+    retry_count: Optional[int] = None,
+    retry_delay_seconds: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Create a new cron job.
@@ -573,6 +575,10 @@ def create_job(
                 and deliver its stdout directly. Empty stdout = silent (no
                 delivery). Requires ``script`` to be set. Ideal for classic
                 watchdogs and periodic alerts that don't need LLM reasoning.
+        retry_count: Optional max number of retry attempts on failure.
+                None or 0 means no retry. Example: 3 means up to 3 retries.
+        retry_delay_seconds: Optional seconds between retry attempts.
+                Defaults to 300 (5 minutes). Only used when retry_count is set.
 
     Returns:
         The created job dict
@@ -662,6 +668,11 @@ def create_job(
         "enabled_toolsets": normalized_toolsets,
         "workdir": normalized_workdir,
         "profile": normalized_profile,
+        "retry": {
+            "max_retries": retry_count,
+            "delay_seconds": retry_delay_seconds or 300,
+            "attempts_made": 0,
+        },
     }
 
     jobs = load_jobs()
@@ -750,6 +761,17 @@ def update_job(job_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]
                 updates["profile"] = None
             else:
                 updates["profile"] = _normalize_profile(_profile)
+
+        # Handle retry field merge: merge provided retry values with existing
+        if "retry" in updates:
+            existing_retry = job.get("retry") or {}
+            incoming_retry = updates["retry"]
+            if incoming_retry is None:
+                updates["retry"] = None
+            else:
+                merged = dict(existing_retry)
+                merged.update(incoming_retry)
+                updates["retry"] = merged
 
         updated = _apply_skill_fields({**job, **updates})
         schedule_changed = "schedule" in updates
@@ -875,7 +897,40 @@ def mark_job_run(job_id: str, success: bool, error: Optional[str] = None,
                 job["last_error"] = error if not success else None
                 # Track delivery failures separately — cleared on successful delivery
                 job["last_delivery_error"] = delivery_error
-                
+
+                # Retry logic: on failure, if retry is configured, attempt a retry
+                # before marking the job as permanently failed.
+                if not success and job.get("retry") and job["retry"].get("max_retries") is not None and job["retry"]["max_retries"] > 0:
+                    retry = job["retry"]
+                    retry["attempts_made"] = retry.get("attempts_made", 0) + 1
+                    max_retries = retry["max_retries"]
+                    delay = retry.get("delay_seconds", 300)
+                    if retry["attempts_made"] < max_retries:
+                        job["state"] = "retrying"
+                        retry_at = _hermes_now() + timedelta(seconds=delay)
+                        job["next_run_at"] = retry_at.isoformat()
+                        logger.info(
+                            "Job '%s' failed (attempt %d/%d), retrying in %ds",
+                            job.get("name", job["id"]),
+                            retry["attempts_made"],
+                            max_retries,
+                            delay,
+                        )
+                        save_jobs(jobs)
+                        return
+                    else:
+                        # Exhausted all retries — mark as permanent error
+                        job["last_status"] = "error"
+                        job["state"] = "error"
+                        logger.info(
+                            "Job '%s' failed after %d attempt(s), giving up",
+                            job.get("name", job["id"]),
+                            max_retries,
+                        )
+                        # Fall through to existing scheduling logic below so
+                        # the job is still subject to normal next-run or
+                        # repeat-limit handling
+
                 # Increment completed count
                 if job.get("repeat"):
                     job["repeat"]["completed"] = job["repeat"].get("completed", 0) + 1

@@ -528,3 +528,37 @@ Every rule exists because the corresponding **AI tell** makes content recognizab
 - Low burstiness → fix: target std dev > 6.0
 
 Think of this as **generation-time slop removal**. Write clean the first time.
+
+---
+
+## Platform-Specific Voice Guides
+
+### Reddit (existing)
+90/10 rule, 2-3 comments/day/account, 9-wave campaign structure.
+Voice: knowledgeable fellow enthusiast, never a marketer.
+
+### Twitter/X
+- Threads: hook in tweet 1, data in tweets 2-4, link in tweet 5
+- Voice: opinionated but humble. "I learned X building Y."
+- Avoid: exclamation points on every tweet, hashtags (>1 looks desperate)
+- Link spacing: 1 link per thread max (in last tweet)
+- Visuals: benchmark charts > screenshots > text walls
+- Reply ratio: 70% replies (to establishment accounts), 30% original posts
+
+### Hacker News
+- **CRITICAL RULE**: NO LLM-generated text (dang's 2026 rule)
+- Show HN: facts-only in title, technical detail in comment, no marketing language
+- Comments: personal experience, data points, "I built X and learned Y"
+- Tone: assume the audience is smarter than you (they are)
+- Upvote patterns: first comment should be technical, not promotional
+- Never: "we're building", "check out our", "we think"
+- Always: "I built", "what I found", "my experience"
+
+### LinkedIn
+- Max 1 post/day
+- Links in post body = reach penalty. Use "🔗 in comments" or first comment.
+- Personal profile > company page for engagement
+- Long-form posts (1000-2000 chars) outperform short ones
+- Carousel posts (PDF) perform best for technical content
+- Reply to comments within 2 hours of posting for algorithm boost
+- Voice: professional opinion, industry insight, "I've learned"

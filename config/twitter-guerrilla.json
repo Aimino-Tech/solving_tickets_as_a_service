@@ -1,0 +1,74 @@
+{
+  "$schema": "https://docs.openclaw.ai/campaign-schema.json",
+  "campaign": "twitter-guerrilla-opendocswork",
+  "version": "1.0.0",
+  "product": {
+    "name": "office-oxide-mcp",
+    "repository": "https://github.com/Aimino-Tech/opendocswork-mcp",
+    "description": "Rust-native MCP server for document processing and office file conversion",
+    "badges": ["MIT", "Apache-2.0", "141+ stars"]
+  },
+  "description": "Twitter guerrilla marketing for office-oxide-mcp — organic seeding, engagement, and community building",
+  "strategy": {
+    "type": "guerrilla",
+    "value_ratio": 0.90,
+    "mention_ratio": 0.10,
+    "pacing": "2-3 tweets/day",
+    "tones": ["conversational", "technical", "curious"]
+  },
+  "schedule": {
+    "monitor": "*/15 * * * *",
+    "engage": "*/30 * * * *",
+    "daily_digest": "0 8 * * *"
+  },
+  "platforms": {
+    "x": {
+      "enabled": true,
+      "thread_limit": 1,
+      "tweet_limit": 3,
+      "reply_limit": 5,
+      "quote_limit": 2,
+      "publish_window": "08:00-20:00"
+    }
+  },
+  "content": {
+    "draft_source": "app/platforms/twitter/content_drafts/templates.py",
+    "topics": [
+      "MCP servers and tool integration",
+      "Rust vs Python for tooling",
+      "Document processing workflows",
+      "Open-source sustainability",
+      "Developer productivity tools",
+      "AI-assisted coding workflows"
+    ],
+    "hooks": [
+      "compare MCP servers in the wild",
+      "share real dev workflow frustrations",
+      "ask the community for recommendations",
+      "post small technical insights from building in Rust"
+    ]
+  },
+  "monitoring": {
+    "mentions": {
+      "check_interval": "*/15 * * * *",
+      "keywords": ["office-oxide-mcp", "opendocswork", "mcp document", "mcp office"],
+      "include_replies": true
+    },
+    "metrics": {
+      "github_stars": {"check_interval": "*/30 * * * *", "target_30d": 300},
+      "tweet_engagement": {"check_interval": "0 */6 * * *"},
+      "follower_growth": {"check_interval": "0 8 * * *"}
+    }
+  },
+  "engagement_rules": {
+    "approval_gate": "auto",
+    "max_daily_actions": 8,
+    "auto_reply_threshold": 60,
+    "reply_within_hours": 24,
+    "mention_response": {
+      "positive": "engage_and_amplify",
+      "neutral": "add_value_and_inform",
+      "negative": "address_and_redirect"
+    }
+  }
+}
