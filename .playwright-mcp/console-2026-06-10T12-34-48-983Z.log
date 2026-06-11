@@ -1,0 +1,113 @@
+[     105ms] [LOG] [FAST CONNECT] wss://gateway.discord.gg/?encoding=json&v=9&compress=zlib-stream, encoding: json, version: 9 @ https://discord.com/login:28
+[     382ms] [LOG] [FAST CONNECT] connected in 276ms @ https://discord.com/login:28
+[     486ms] [LOG] [FAST CONNECT] session is not required, skipping fast connect early identify @ https://discord.com/assets/fast-connect.a2144a5e6a684242.js:0
+[    2903ms] [INFO] %c[libdiscore] 
+font-weight: bold;
+color: purple;
+ [experiment_manager] Loaded experiments from cache @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    3024ms] [LOG] %c[ProcessUtilsElectron] 
+font-weight: bold;
+color: purple;
+ setMemoryInformation not available. @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    3225ms] [LOG] %c[default] 
+font-weight: bold;
+color: purple;
+ [BUILD INFO] Release Channel: stable, Build Number: 559653, Version Hash: 3c20cde108d77c8f3775867ed77eda93b77eb305 @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    3236ms] [LOG] AppCrashedFatalReport: getLastCrash not supported. @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    3468ms] [INFO] %c[libdiscore] 
+font-weight: bold;
+color: purple;
+ The answer for life the universe and everything is: 42 @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    3698ms] [LOG] %cHold Up! color: #5865f2; -webkit-text-stroke: 2px black; font-size: 72px; font-weight: bold; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    3698ms] [LOG] %cIf someone told you to copy/paste something here you have an 11/10 chance you're being scammed. font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    3698ms] [LOG] %cPasting anything in here could give attackers access to your Discord account. font-size: 18px; font-weight: bold; color: red; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4497ms] [LOG] %c[Routing/Utils] 
+font-weight: bold;
+color: purple;
+ transitionTo - Transitioning to /app @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4527ms] [INFO] %c[GatewaySocket] 
+font-weight: bold;
+color: purple;
+ [CONNECT] wss://gateway.discord.gg, encoding: json, version: 9, compression: zlib-stream @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4528ms] [LOG] %c[GatewaySocket] 
+font-weight: bold;
+color: purple;
+ [FAST CONNECT] successfully took over websocket, state: {open: true, identify: false, gateway: wss://gateway.discord.gg/?encoding=json&v=9&compress=zlib-stream, messages: 1} @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4529ms] [INFO] %c[GatewaySocket] 
+font-weight: bold;
+color: purple;
+ [CONNECTED] wss://gateway.discord.gg/?encoding=json&v=9&compress=zlib-stream in 1 ms @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4699ms] [LOG] %cHold Up! color: #5865f2; -webkit-text-stroke: 2px black; font-size: 72px; font-weight: bold; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4699ms] [LOG] %cIf someone told you to copy/paste something here you have an 11/10 chance you're being scammed. font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4699ms] [LOG] %cPasting anything in here could give attackers access to your Discord account. font-size: 18px; font-weight: bold; color: red; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4918ms] [INFO] %c[GatewaySocket] 
+font-weight: bold;
+color: purple;
+ [READY] took 390ms, as 0b8ea65930c6902d39b8256c1779aabd @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4922ms] [LOG] %c[Flux] 
+font-weight: bold;
+color: purple;
+ Dispatching CONNECTION_OPEN @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4930ms] [LOG] %c[DatabaseManager] 
+font-weight: bold;
+color: purple;
+ removing database (user: 1507012341147897888, database: undefined) @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5615ms] [INFO] %c[GatewaySocket] 
+font-weight: bold;
+color: purple;
+ [READY_SUPPLEMENTAL] took 1088ms @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5634ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://discord.com/api/v9/users/@me/referrals/eligibility:0
+[    5641ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://discord.com/api/v9/users/@me/affinities/v2/users:0
+[    5793ms] [LOG] %cHold Up! color: #5865f2; -webkit-text-stroke: 2px black; font-size: 72px; font-weight: bold; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5793ms] [LOG] %cIf someone told you to copy/paste something here you have an 11/10 chance you're being scammed. font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5793ms] [LOG] %cPasting anything in here could give attackers access to your Discord account. font-size: 18px; font-weight: bold; color: red; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    6793ms] [LOG] %cHold Up! color: #5865f2; -webkit-text-stroke: 2px black; font-size: 72px; font-weight: bold; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    6793ms] [LOG] %cIf someone told you to copy/paste something here you have an 11/10 chance you're being scammed. font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    6793ms] [LOG] %cPasting anything in here could give attackers access to your Discord account. font-size: 18px; font-weight: bold; color: red; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    7765ms] [INFO] %c[OverlayKeybindExperimentManager] 
+font-weight: bold;
+color: purple;
+ Experiments initializing... @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    7780ms] [INFO] %c[OverlayKeybindExperimentManager] 
+font-weight: bold;
+color: purple;
+ Experiments initialized @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    7800ms] [LOG] %cHold Up! color: #5865f2; -webkit-text-stroke: 2px black; font-size: 72px; font-weight: bold; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    7800ms] [LOG] %cIf someone told you to copy/paste something here you have an 11/10 chance you're being scammed. font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    7800ms] [LOG] %cPasting anything in here could give attackers access to your Discord account. font-size: 18px; font-weight: bold; color: red; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    7800ms] [LOG] %cUnless you understand exactly what you are doing, close this window and stay safe. font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    7800ms] [LOG] %cIf you do understand exactly what you are doing, you should come work with us https://discord.com/jobs font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    7819ms] [INFO] %c[LibDaveManager] 
+font-weight: bold;
+color: purple;
+ DAVE loaded @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    7819ms] [INFO] %c[LibDaveManager] 
+font-weight: bold;
+color: purple;
+ Successfully initialized DAVE @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    7819ms] [INFO] %c[MediaEngineWebRTC] 
+font-weight: bold;
+color: purple;
+ Successfully initialized DAVE, version: 1 @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    7924ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://discord.com/api/v9/users/@me/affinities/v2/users:0
+[    7955ms] [INFO] %c[SignalHelpers.web] 
+font-weight: bold;
+color: purple;
+ signalAllAcceptedCredentials {rpId: discord.com, encodedUserId: MPMD-4wmT1MU6fu9YkAQIA, allAcceptedCredentialIds: Array(0)} @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    8019ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://discord.com/api/v9/users/@me/billing/user-offer:0
+[   13040ms] [WARNING] The resource https://discord.com/assets/189422196a4f8b53.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   13040ms] [WARNING] The resource https://discord.com/assets/ce3b8055f5114434.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   13040ms] [WARNING] The resource https://discord.com/assets/cb2006dbced0e246.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   13040ms] [WARNING] The resource https://discord.com/assets/7a6a566c2e88a35d.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   13040ms] [WARNING] The resource https://discord.com/assets/e52f0cba712e2fb4.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   13040ms] [WARNING] The resource https://discord.com/assets/dd24010f3cf7def7.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   17777ms] [INFO] %c[libdiscore] 
+font-weight: bold;
+color: purple;
+ [BlockedDomainsStore] Successfully fetched blocked domains @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[   20776ms] [WARNING] The resource https://discord.com/assets/189422196a4f8b53.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   20776ms] [WARNING] The resource https://discord.com/assets/ce3b8055f5114434.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   20776ms] [WARNING] The resource https://discord.com/assets/cb2006dbced0e246.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   20776ms] [WARNING] The resource https://discord.com/assets/7a6a566c2e88a35d.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   20776ms] [WARNING] The resource https://discord.com/assets/e52f0cba712e2fb4.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   20776ms] [WARNING] The resource https://discord.com/assets/dd24010f3cf7def7.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0

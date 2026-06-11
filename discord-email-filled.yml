@@ -1,0 +1,50 @@
+- generic [ref=e1]:
+  - generic [ref=e35]:
+    - log
+    - log
+  - generic [ref=e2]:
+    - img
+    - img
+    - generic [ref=e41]:
+      - generic [ref=e42]:
+        - button "Go back" [ref=e44] [cursor=pointer]:
+          - generic [ref=e46]:
+            - img [ref=e47]
+            - generic [ref=e49]: Go back
+        - generic [ref=e50]:
+          - heading "Welcome back!" [level=1] [ref=e51]
+          - generic [ref=e52]: We're so excited to see you again!
+        - generic [ref=e53]:
+          - generic [ref=e55]:
+            - generic [ref=e57]:
+              - text: Email or Phone Number
+              - generic [ref=e58]: "*"
+            - textbox "Email or Phone Number" [active] [ref=e62]:
+              - /placeholder: ""
+              - text: xdn1@aimino.de
+          - generic [ref=e63]:
+            - generic [ref=e65]:
+              - text: Password
+              - generic [ref=e66]: "*"
+            - textbox "Password" [ref=e70]:
+              - /placeholder: ""
+          - button "Forgot your password?" [ref=e72] [cursor=pointer]:
+            - generic [ref=e73]: Forgot your password?
+          - button "Log In" [ref=e75] [cursor=pointer]:
+            - generic [ref=e78]: Log In
+          - generic [ref=e79]:
+            - text: Need an account?
+            - button "Register" [ref=e81] [cursor=pointer]:
+              - generic [ref=e82]: Register
+      - generic [ref=e86]:
+        - img "QR code to log in with the Discord mobile app" [ref=e87]:
+          - img [ref=e89]
+        - heading "Log in with QR Code" [level=2] [ref=e93]
+        - generic [ref=e94]:
+          - text: Scan this with the
+          - strong [ref=e95]: Discord mobile app
+          - text: to log in instantly.
+        - button "Or, sign in with passkey" [ref=e97] [cursor=pointer]:
+          - generic [ref=e98]: Or, sign in with passkey
+  - generic:
+    - img

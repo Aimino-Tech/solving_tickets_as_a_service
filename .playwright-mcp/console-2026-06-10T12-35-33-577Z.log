@@ -1,0 +1,172 @@
+[     136ms] [LOG] [FAST CONNECT] wss://gateway.discord.gg/?encoding=json&v=9&compress=zlib-stream, encoding: json, version: 9 @ https://discord.com/login:28
+[     375ms] [LOG] [FAST CONNECT] session is not required, skipping fast connect early identify @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[     456ms] [INFO] %c[libdiscore] 
+font-weight: bold;
+color: purple;
+ [experiment_manager] Loaded experiments from cache @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[     539ms] [LOG] %c[ProcessUtilsElectron] 
+font-weight: bold;
+color: purple;
+ setMemoryInformation not available. @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[     726ms] [LOG] %c[default] 
+font-weight: bold;
+color: purple;
+ [BUILD INFO] Release Channel: stable, Build Number: 559653, Version Hash: 3c20cde108d77c8f3775867ed77eda93b77eb305 @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[     735ms] [LOG] AppCrashedFatalReport: getLastCrash not supported. @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[     969ms] [INFO] %c[libdiscore] 
+font-weight: bold;
+color: purple;
+ The answer for life the universe and everything is: 42 @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    1065ms] [WARNING] [PostMessageTransport] Protocol error: event data should be an Array! @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    1065ms] [WARNING] [PostMessageTransport] Protocol error: event data should be an Array! @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    1344ms] [LOG] %cHold Up! color: #5865f2; -webkit-text-stroke: 2px black; font-size: 72px; font-weight: bold; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    1344ms] [LOG] %cIf someone told you to copy/paste something here you have an 11/10 chance you're being scammed. font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    1344ms] [LOG] %cPasting anything in here could give attackers access to your Discord account. font-size: 18px; font-weight: bold; color: red; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    1861ms] [LOG] %c[Routing/Utils] 
+font-weight: bold;
+color: purple;
+ transitionTo - Transitioning to /app @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    1891ms] [INFO] %c[GatewaySocket] 
+font-weight: bold;
+color: purple;
+ [CONNECT] wss://gateway.discord.gg, encoding: json, version: 9, compression: zlib-stream @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    1892ms] [LOG] %c[GatewaySocket] 
+font-weight: bold;
+color: purple;
+ [FAST CONNECT] successfully took over websocket, state: {open: true, identify: false, gateway: wss://gateway.discord.gg/?encoding=json&v=9&compress=zlib-stream, messages: 1} @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    1892ms] [INFO] %c[GatewaySocket] 
+font-weight: bold;
+color: purple;
+ [CONNECTED] wss://gateway.discord.gg/?encoding=json&v=9&compress=zlib-stream in 2 ms @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    2200ms] [INFO] %c[GatewaySocket] 
+font-weight: bold;
+color: purple;
+ [READY] took 309ms, as 083544caaab589c23489ed6d25507a1f @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    2204ms] [LOG] %c[Flux] 
+font-weight: bold;
+color: purple;
+ Dispatching CONNECTION_OPEN @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    2209ms] [LOG] %c[DatabaseManager] 
+font-weight: bold;
+color: purple;
+ removing database (user: 1507012341147897888, database: undefined) @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    2940ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://discord.com/api/v9/users/@me/referrals/eligibility:0
+[    2950ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://discord.com/api/v9/users/@me/affinities/v2/users:0
+[    2972ms] [INFO] %c[GatewaySocket] 
+font-weight: bold;
+color: purple;
+ [READY_SUPPLEMENTAL] took 1082ms @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    2976ms] [LOG] %cHold Up! color: #5865f2; -webkit-text-stroke: 2px black; font-size: 72px; font-weight: bold; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    2976ms] [LOG] %cIf someone told you to copy/paste something here you have an 11/10 chance you're being scammed. font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    2976ms] [LOG] %cPasting anything in here could give attackers access to your Discord account. font-size: 18px; font-weight: bold; color: red; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    3977ms] [LOG] %cHold Up! color: #5865f2; -webkit-text-stroke: 2px black; font-size: 72px; font-weight: bold; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    3977ms] [LOG] %cIf someone told you to copy/paste something here you have an 11/10 chance you're being scammed. font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    3977ms] [LOG] %cPasting anything in here could give attackers access to your Discord account. font-size: 18px; font-weight: bold; color: red; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4977ms] [LOG] %cHold Up! color: #5865f2; -webkit-text-stroke: 2px black; font-size: 72px; font-weight: bold; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4977ms] [LOG] %cIf someone told you to copy/paste something here you have an 11/10 chance you're being scammed. font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    4977ms] [LOG] %cPasting anything in here could give attackers access to your Discord account. font-size: 18px; font-weight: bold; color: red; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5149ms] [INFO] %c[OverlayKeybindExperimentManager] 
+font-weight: bold;
+color: purple;
+ Experiments initializing... @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5166ms] [INFO] %c[OverlayKeybindExperimentManager] 
+font-weight: bold;
+color: purple;
+ Experiments initialized @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5205ms] [INFO] %c[LibDaveManager] 
+font-weight: bold;
+color: purple;
+ DAVE loaded @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5205ms] [INFO] %c[LibDaveManager] 
+font-weight: bold;
+color: purple;
+ Successfully initialized DAVE @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5206ms] [INFO] %c[MediaEngineWebRTC] 
+font-weight: bold;
+color: purple;
+ Successfully initialized DAVE, version: 1 @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5340ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://discord.com/api/v9/users/@me/billing/user-offer:0
+[    5368ms] [INFO] %c[SignalHelpers.web] 
+font-weight: bold;
+color: purple;
+ signalAllAcceptedCredentials {rpId: discord.com, encodedUserId: MPMD-4wmT1MU6fu9YkAQIA, allAcceptedCredentialIds: Array(0)} @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5381ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://discord.com/api/v9/users/@me/affinities/v2/users:0
+[    5978ms] [LOG] %cHold Up! color: #5865f2; -webkit-text-stroke: 2px black; font-size: 72px; font-weight: bold; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5978ms] [LOG] %cIf someone told you to copy/paste something here you have an 11/10 chance you're being scammed. font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5978ms] [LOG] %cPasting anything in here could give attackers access to your Discord account. font-size: 18px; font-weight: bold; color: red; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5978ms] [LOG] %cUnless you understand exactly what you are doing, close this window and stay safe. font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[    5978ms] [LOG] %cIf you do understand exactly what you are doing, you should come work with us https://discord.com/jobs font-size: 16px; @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[   12011ms] [WARNING] The resource https://discord.com/assets/189422196a4f8b53.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   12012ms] [WARNING] The resource https://discord.com/assets/ce3b8055f5114434.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   12012ms] [WARNING] The resource https://discord.com/assets/cb2006dbced0e246.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   12012ms] [WARNING] The resource https://discord.com/assets/7a6a566c2e88a35d.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   12012ms] [WARNING] The resource https://discord.com/assets/e52f0cba712e2fb4.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   12012ms] [WARNING] The resource https://discord.com/assets/dd24010f3cf7def7.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   15170ms] [INFO] %c[libdiscore] 
+font-weight: bold;
+color: purple;
+ [BlockedDomainsStore] Successfully fetched blocked domains @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[   18168ms] [WARNING] The resource https://discord.com/assets/189422196a4f8b53.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   18168ms] [WARNING] The resource https://discord.com/assets/ce3b8055f5114434.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   18168ms] [WARNING] The resource https://discord.com/assets/cb2006dbced0e246.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   18168ms] [WARNING] The resource https://discord.com/assets/7a6a566c2e88a35d.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   18168ms] [WARNING] The resource https://discord.com/assets/e52f0cba712e2fb4.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   18168ms] [WARNING] The resource https://discord.com/assets/dd24010f3cf7def7.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/@me:0
+[   32806ms] [LOG] %c[MessageActionCreators] 
+font-weight: bold;
+color: purple;
+ Fetching messages for 1514222624153014314 between undefined and undefined. jump={"jumpType":"ANIMATED"} @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[   32825ms] [LOG] %c[Routing/Utils] 
+font-weight: bold;
+color: purple;
+ transitionTo - Transitioning to /channels/1514222622215241729/1514222624153014314 @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[   33334ms] [LOG] %c[discord_protos.discord_users.v1.PreloadedUserSettings] 
+font-weight: bold;
+color: purple;
+ Updating userContent with delay 0 @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[   33340ms] [LOG] %c[discord_protos.discord_users.v1.PreloadedUserSettings] 
+font-weight: bold;
+color: purple;
+ Scheduling save from markDirty @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[   33486ms] [LOG] %c[MessageActionCreators] 
+font-weight: bold;
+color: purple;
+ Fetched 1 messages for 1514222624153014314 isBefore:false isAfter:false @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[   33488ms] [INFO] %c[ChannelMessages] 
+font-weight: bold;
+color: purple;
+ loadComplete: resetting state for channelId=1514222624153014314, sending.length=0 @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[   33499ms] [LOG] %c[discord_protos.discord_users.v1.PreloadedUserSettings] 
+font-weight: bold;
+color: purple;
+ Persisting proto @ https://discord.com/assets/sentry.dc5ff4b65dcda7df.js:14
+[   37211ms] [WARNING] The resource https://discord.com/assets/189422196a4f8b53.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   37211ms] [WARNING] The resource https://discord.com/assets/ce3b8055f5114434.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   37211ms] [WARNING] The resource https://discord.com/assets/cb2006dbced0e246.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   37211ms] [WARNING] The resource https://discord.com/assets/7a6a566c2e88a35d.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   37211ms] [WARNING] The resource https://discord.com/assets/e52f0cba712e2fb4.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   37211ms] [WARNING] The resource https://discord.com/assets/dd24010f3cf7def7.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   40657ms] [WARNING] The resource https://discord.com/assets/189422196a4f8b53.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   40657ms] [WARNING] The resource https://discord.com/assets/ce3b8055f5114434.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   40657ms] [WARNING] The resource https://discord.com/assets/cb2006dbced0e246.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   40658ms] [WARNING] The resource https://discord.com/assets/7a6a566c2e88a35d.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   40658ms] [WARNING] The resource https://discord.com/assets/e52f0cba712e2fb4.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   40658ms] [WARNING] The resource https://discord.com/assets/dd24010f3cf7def7.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   60285ms] [WARNING] The resource https://discord.com/assets/189422196a4f8b53.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   60285ms] [WARNING] The resource https://discord.com/assets/ce3b8055f5114434.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   60285ms] [WARNING] The resource https://discord.com/assets/cb2006dbced0e246.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   60285ms] [WARNING] The resource https://discord.com/assets/7a6a566c2e88a35d.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   60285ms] [WARNING] The resource https://discord.com/assets/e52f0cba712e2fb4.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   60285ms] [WARNING] The resource https://discord.com/assets/dd24010f3cf7def7.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   69230ms] [WARNING] The resource https://discord.com/assets/189422196a4f8b53.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   69231ms] [WARNING] The resource https://discord.com/assets/ce3b8055f5114434.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   69232ms] [WARNING] The resource https://discord.com/assets/cb2006dbced0e246.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   69232ms] [WARNING] The resource https://discord.com/assets/7a6a566c2e88a35d.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   69232ms] [WARNING] The resource https://discord.com/assets/e52f0cba712e2fb4.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   69232ms] [WARNING] The resource https://discord.com/assets/dd24010f3cf7def7.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   78520ms] [WARNING] The resource https://discord.com/assets/189422196a4f8b53.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   78520ms] [WARNING] The resource https://discord.com/assets/ce3b8055f5114434.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   78520ms] [WARNING] The resource https://discord.com/assets/cb2006dbced0e246.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   78520ms] [WARNING] The resource https://discord.com/assets/7a6a566c2e88a35d.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   78520ms] [WARNING] The resource https://discord.com/assets/e52f0cba712e2fb4.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
+[   78520ms] [WARNING] The resource https://discord.com/assets/dd24010f3cf7def7.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://discord.com/channels/1514222622215241729/1514222624153014314:0
