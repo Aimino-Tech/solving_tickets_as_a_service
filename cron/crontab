@@ -15,3 +15,6 @@ PATH=/usr/local/bin:/usr/bin:/bin
 
 # ── Also at 09:00 sharp ────────────────────────────────────
 0 9 * * 1-5      cd /home/agent/Documents/hermes-agent/cron && bash hermes-marketing-cron.sh
+
+# ── Daily git auto-commit at 21:00 ─────────────────────────
+0 21 * * *       cd /home/agent/Documents/hermes-agent/cron && bash hermes-git-autocommit.sh
