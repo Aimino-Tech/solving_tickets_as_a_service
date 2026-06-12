@@ -23,3 +23,4 @@ vi.stubEnv('GITHUB_APP_ID', 'test-app-id');
 vi.stubEnv('GITHUB_WEBHOOK_SECRET', 'test-webhook-secret');
 vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
 vi.stubEnv('NODE_ENV', 'test');
+vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-key');
