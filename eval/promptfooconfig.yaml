@@ -1,0 +1,26 @@
+# =============================================================================
+# promptfoo eval configuration for STAS smoke tests
+#
+# This config provides the default model provider and output format settings
+# used by all smoke test cases.
+#
+# Test-specific configuration is in eval/test-cases/*.yml and is included
+# at runtime via the --tests flag.
+# =============================================================================
+
+# Default provider for smoke tests (can be overridden per test)
+providers:
+  - id: openai:gpt-4o-mini
+    config:
+      temperature: 0
+      max_tokens: 1024
+
+# Default output format
+outputPath: eval/results/
+
+# Default test options
+defaultTest:
+  options:
+    provider:
+      text:
+        temperature: 0
