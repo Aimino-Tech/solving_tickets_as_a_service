@@ -1,8 +1,8 @@
 /**
  * ActionDispatcher — decides what action to take based on agent results.
  *
- * Thin wrapper that delegates API operations to the platform abstraction
- * layer (src/platforms/) while keeping backward compatibility for consumers
+ * Thin wrapper that delegates to the platform abstraction layer for
+ * message templates while keeping backward compatibility for consumers
  * that import this class.
  *
  * After the agent loop completes, this class examines the result confidence
@@ -19,9 +19,10 @@
  */
 
 import type { AgentResult } from '../agent/types.js';
+import type { Octokit } from '@octokit/rest';
 import type { SandboxExecutor } from '../sandbox/types.js';
 import { rootLogger } from '../utils/logger.js';
-import { createGitHubClient, type GitHubPlatformClient } from '../platforms/github/index.js';
+import { getOctokit } from './auth.js';
 import * as messages from '../platforms/messages.js';
 import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
 
@@ -57,29 +58,28 @@ export class ActionDispatcher {
     // Set Sentry user context for error correlation
     setUserContext(installationId, `${repoOwner}/${repoName}`);
 
-    // Create a platform client via the abstraction layer
-    const client = await createGitHubClient(installationId);
+    const octokit = await getOctokit(installationId);
     const baseBranch = repoDefaultBranch || 'main';
 
     try {
       // 1. Already fixed — just post a comment
       if (agentResult.alreadyFixed) {
         const body = messages.alreadyFixedComment(agentResult);
-        await this.postComment(client, repoOwner, repoName, issueNumber, body);
+        await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
         return { action: 'comment_posted', commentBody: body };
       }
 
       // 2. No fix possible — post explanation
       if (!agentResult.fixReady) {
         const body = messages.noFixComment(agentResult, params.relevantPRs);
-        await this.postComment(client, repoOwner, repoName, issueNumber, body);
+        await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
         return { action: 'comment_posted', commentBody: body };
       }
 
       // 3. Investigation only — post findings
       if (agentResult.investigationOnly) {
         const body = messages.investigationComment(agentResult.summary);
-        await this.postComment(client, repoOwner, repoName, issueNumber, body);
+        await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
         return { action: 'comment_posted', commentBody: body };
       }
 
@@ -104,7 +104,7 @@ export class ActionDispatcher {
       // 6a. Pre-existing tests regressed — block PR creation, branch already pushed
       if (agentResult.verification?.preExistingTestsRegressed) {
         const body = messages.regressionBlockComment(agentResult);
-        await this.postComment(client, repoOwner, repoName, issueNumber, body);
+        await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
         return { action: "comment_posted", commentBody: body };
       }
 
@@ -119,23 +119,23 @@ export class ActionDispatcher {
           branchName,
         });
 
-        const pr = await client.createPullRequest({
-          repoOwner,
-          repoName,
+        const pr = await octokit.pulls.create({
+          owner: repoOwner,
+          repo: repoName,
           title: `Fix: ${issueTitle}`,
           head: branchName,
           base: baseBranch,
           body: prBody,
         });
 
-        const body = messages.highConfidenceIssueComment(pr.number, agentResult);
-        await this.postComment(client, repoOwner, repoName, issueNumber, body);
+        const body = messages.highConfidenceIssueComment(pr.data.number, agentResult);
+        await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
-        log.info({ prNumber: pr.number }, 'High-confidence PR created');
+        log.info({ prNumber: pr.data.number }, 'High-confidence PR created');
 
         addBreadcrumb('pr', 'High-confidence PR created', {
-          prNumber: String(pr.number),
-          prUrl: pr.url,
+          prNumber: String(pr.data.number),
+          prUrl: pr.data.html_url,
           repo: `${repoOwner}/${repoName}`,
           issueNumber: String(issueNumber),
           confidence: 'high',
@@ -143,8 +143,8 @@ export class ActionDispatcher {
 
         return {
           action: 'pr_created',
-          prUrl: pr.url,
-          prNumber: pr.number,
+          prUrl: pr.data.html_url,
+          prNumber: pr.data.number,
         };
       }
 
@@ -158,9 +158,9 @@ export class ActionDispatcher {
           branchName,
         });
 
-        const pr = await client.createPullRequest({
-          repoOwner,
-          repoName,
+        const pr = await octokit.pulls.create({
+          owner: repoOwner,
+          repo: repoName,
           title: `[WIP] Fix: ${issueTitle}`,
           head: branchName,
           base: baseBranch,
@@ -168,14 +168,14 @@ export class ActionDispatcher {
           draft: true,
         });
 
-        const body = messages.draftIssueComment(pr.number, agentResult);
-        await this.postComment(client, repoOwner, repoName, issueNumber, body);
+        const body = messages.draftIssueComment(pr.data.number, agentResult);
+        await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
-        log.info({ prNumber: pr.number }, 'Draft PR created');
+        log.info({ prNumber: pr.data.number }, 'Draft PR created');
 
         addBreadcrumb('pr', 'Draft PR created', {
-          prNumber: String(pr.number),
-          prUrl: pr.url,
+          prNumber: String(pr.data.number),
+          prUrl: pr.data.html_url,
           repo: `${repoOwner}/${repoName}`,
           issueNumber: String(issueNumber),
           confidence: 'medium',
@@ -183,15 +183,15 @@ export class ActionDispatcher {
 
         return {
           action: 'draft_pr_created',
-          prUrl: pr.url,
-          prNumber: pr.number,
+          prUrl: pr.data.html_url,
+          prNumber: pr.data.number,
         };
       }
 
       // Low confidence — post comment with branch info but no PR
       const testOutput = agentResult.testOutput || '';
       const lowBody = messages.lowConfidenceComment(agentResult, testOutput);
-      await this.postComment(client, repoOwner, repoName, issueNumber, lowBody);
+      await this.postComment(octokit, repoOwner, repoName, issueNumber, lowBody);
 
       return { action: 'comment_posted', commentBody: lowBody };
     } catch (err) {
@@ -206,7 +206,7 @@ export class ActionDispatcher {
       // Fallback: post error comment
       const errorBody = messages.errorComment(`Action dispatch failed: ${String(err)}`);
       try {
-        await this.postComment(client, repoOwner, repoName, issueNumber, errorBody);
+        await this.postComment(octokit, repoOwner, repoName, issueNumber, errorBody);
       } catch (commentErr) {
         log.error(
           { err: String(commentErr), issueNumber, repoOwner, repoName },
@@ -219,20 +219,25 @@ export class ActionDispatcher {
   }
 
   /**
-   * Post a comment to an issue using the platform client.
+   * Post a comment to a GitHub issue using Octokit.
    * Logs context on failure and re-throws so callers can handle.
    */
   private async postComment(
-    client: GitHubPlatformClient,
+    octokit: Octokit,
     owner: string,
     repo: string,
     issueNumber: number,
     body: string,
   ): Promise<void> {
     try {
-      await client.createComment(`${owner}/${repo}`, issueNumber, body);
+      await octokit.issues.createComment({
+        owner,
+        repo,
+        issue_number: issueNumber,
+        body,
+      });
     } catch (err) {
-      log.warn({ err: String(err), owner, repo, issueNumber }, 'Failed to post comment to issue');
+      log.warn({ err: String(err), owner, repo, issueNumber }, 'Failed to post comment to GitHub issue');
       throw err;
     }
   }

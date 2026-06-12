@@ -56,13 +56,14 @@ vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => mockLoggerChild) },
 }));
 
-vi.mock('../auth.js', () => ({
+vi.mock('../../github/auth.js', () => ({
   getOctokit: vi.fn().mockResolvedValue(mockOctokitInstance),
 }));
 
 vi.mock('../../config.js', () => ({
   config: {
     stas: { botName: 'STAS', label: 'stas:fix' },
+    sentry: { dsn: undefined },
     github: {
       appId: 'test-app',
       webhookSecret: 'test-secret',
