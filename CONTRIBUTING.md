@@ -178,6 +178,21 @@ solving_tickets_as_a_service/
 - **Biome** — Code formatting and linting
 - **Vitest** — Testing framework
 
+### Evaluation Pipeline
+
+See `evaluation/README.md` for the full eval pipeline documentation.
+
+Quick start:
+```bash
+# Run smoke eval (3 critical tests)
+make eval-smoke
+
+# Full eval via Docker Compose (starts LangFuse + Postgres)
+make eval-up
+make eval-full
+make eval-down
+```
+
 ### Code Style (Biome)
 
 ```bash
