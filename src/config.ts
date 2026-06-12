@@ -250,6 +250,10 @@ const envSchema = z.object({
   METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
+
+  // RapidAPI
+  RAPIDAPI_PROXY_SECRET: z.string().default(""),
+  RAPIDAPI_PROVIDER_KEY: z.string().default(""),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -537,6 +541,11 @@ function buildConfig(env: ParsedEnv) {
       sandbox: env.USAGE_CREDITS_SANDBOX,
     },
 
+
+    rapidapi: {
+      proxySecret: env.RAPIDAPI_PROXY_SECRET,
+      providerKey: env.RAPIDAPI_PROVIDER_KEY,
+    },
     storage: {
       type: env.STORAGE_TYPE,
       sqlitePath: env.SQLITE_PATH,
