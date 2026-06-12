@@ -1,12 +1,15 @@
 /**
  * @deprecated Use `@stas/github-client` instead.
  * This file is a thin wrapper around the standalone package for backward compatibility.
+ * Extended with platform awareness for Bitbucket/GitLab.
  */
 import { rootLogger } from '../utils/logger.js';
 import { getOctokit } from './auth.js';
 import { addBreadcrumb } from '../monitoring/sentry.js';
 import { dispatchAction } from '@stas/github-client';
 import type { SandboxExecutor } from '../sandbox/types.js';
+import type { PlatformClient, CreatePullRequestParams } from '../webhooks/base.js';
+import { getPlatformClient } from '../platforms/registry.js';
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
 
@@ -21,6 +24,7 @@ export interface DispatchParams {
   repoName: string;
   installationId: number;
   repoDefaultBranch?: string;
+  platform?: string;
 }
 
 export interface DispatchResult {
@@ -32,7 +36,11 @@ export interface DispatchResult {
 
 export class ActionDispatcher {
   async dispatch(params: DispatchParams): Promise<DispatchResult> {
-    const { issueNumber, issueTitle, agentResult, sandbox, repoOwner, repoName, installationId, repoDefaultBranch } = params;
+    const { issueNumber, issueTitle, agentResult, sandbox, repoOwner, repoName, installationId, repoDefaultBranch, platform } = params;
+
+    if (platform && platform !== 'github') {
+      return this.dispatchToPlatform(platform, params);
+    }
 
     const octokit = await getOctokit(installationId);
 
@@ -61,5 +69,47 @@ export class ActionDispatcher {
       },
       { issueNumber, issueTitle, agentResult, repoOwner, repoName, baseBranch: repoDefaultBranch },
     );
+  }
+
+  private async dispatchToPlatform(
+    platform: string,
+    params: DispatchParams,
+  ): Promise<DispatchResult> {
+    const { issueNumber, issueTitle, agentResult, sandbox, repoOwner, repoName, repoDefaultBranch } = params;
+    const client = getPlatformClient(platform as Parameters<typeof getPlatformClient>[0]);
+    if (!client) {
+      log.error({ platform }, 'No platform client registered for platform');
+      return { action: 'error' };
+    }
+
+    try {
+      if (!agentResult.fixReady) {
+        return { action: 'comment_posted' };
+      }
+
+      const bb = repoDefaultBranch || 'main';
+      const branchName = `stas/fix-${issueNumber}-${Date.now().toString(36)}`;
+      await sandbox.pushBranch(branchName);
+
+      const prParams: CreatePullRequestParams = {
+        repoOwner,
+        repoName,
+        title: `Fix: ${issueTitle}`,
+        head: branchName,
+        base: bb,
+        body: agentResult.summary || '',
+        draft: agentResult.confidence !== 'high',
+      };
+
+      const pr = await client.createPullRequest(prParams);
+      log.info({ prNumber: pr.number, platform }, 'Platform PR created');
+
+      await client.createComment(repoOwner, repoName, issueNumber, `### ✅ STAS Fix Complete\n\nA fix has been created and is ready for review.\n\n**PR**: ${pr.url}`);
+
+      return { action: 'pr_created', prUrl: pr.url, prNumber: pr.number };
+    } catch (err) {
+      log.error({ err: String(err), platform }, 'Platform dispatch failed');
+      return { action: 'error' };
+    }
   }
 }
