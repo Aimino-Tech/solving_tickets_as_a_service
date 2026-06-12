@@ -1,6 +1,10 @@
 /**
  * ActionDispatcher — decides what action to take based on agent results.
  *
+ * Thin wrapper that delegates to the platform abstraction layer for
+ * message templates while keeping backward compatibility for consumers
+ * that import this class.
+ *
  * After the agent loop completes, this class examines the result confidence
  * and takes the appropriate action: create PR (draft or ready), post comments,
  * or flag for human attention.
@@ -15,10 +19,11 @@
  */
 
 import type { AgentResult } from '../agent/types.js';
+import type { Octokit } from '@octokit/rest';
 import type { SandboxExecutor } from '../sandbox/types.js';
 import { rootLogger } from '../utils/logger.js';
 import { getOctokit } from './auth.js';
-import * as messages from './messages.js';
+import * as messages from '../platforms/messages.js';
 import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
@@ -218,7 +223,7 @@ export class ActionDispatcher {
    * Logs context on failure and re-throws so callers can handle.
    */
   private async postComment(
-    octokit: ReturnType<typeof getOctokit> extends Promise<infer T> ? T : never,
+    octokit: Octokit,
     owner: string,
     repo: string,
     issueNumber: number,

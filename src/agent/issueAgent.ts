@@ -32,13 +32,15 @@
 
 import OpenAI from "openai";
 import { config } from "../config.js";
-import { getOctokit, getInstallationToken } from "../github/auth.js";
+import { getInstallationToken } from "../github/auth.js";
 import { ActionDispatcher } from "../github/actionDispatcher.js";
 import { createSandbox } from "../sandbox/index.js";
 import type { SandboxExecutor } from "../sandbox/types.js";
 import { buildTools, type SandboxTools } from "./tools.js";
 import type { AgentResult, TriageResult, VerificationResult, TestBaseline } from "./types.js";
 import type { IssueJobData } from "../utils/types.js";
+import type { PlatformClient } from "../platforms/interface.js";
+import { createGitHubClient } from "../platforms/github/index.js";
 import { rootLogger, jobLogger } from "../utils/logger.js";
 import { addBreadcrumb, setUserContext } from "../monitoring/sentry.js";
 import * as messages from "../github/messages.js";
@@ -103,8 +105,11 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 
   let sandbox: SandboxExecutor | null = null;
   let currentPhase = '';
+  let client: PlatformClient | null = null;
 
   try {
+    client = await createGitHubClient(installationId);
+
     // ── Phase 1: Triage ──────────────────────────────────────────────
     currentPhase = "1-triage";
     logger.info("Phase 1: Classifying issue");
@@ -341,6 +346,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
         verification,
       },
       sandbox,
+      client,
       repoOwner,
       repoName,
       installationId,
