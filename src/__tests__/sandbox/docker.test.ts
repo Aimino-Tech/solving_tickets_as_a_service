@@ -1,0 +1,153 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockLogger = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  child: vi.fn(),
+}));
+
+vi.mock('../../config.js', () => ({
+  config: {
+    docker: {
+      image: 'node:22-alpine',
+      sandboxTimeoutMs: 120_000,
+      networkRestrict: false,
+      allowedHosts: [],
+      containerMemory: '2g',
+      containerCpu: 1,
+    },
+  },
+}));
+
+vi.mock('../../utils/logger.js', () => ({
+  rootLogger: {
+    child: vi.fn().mockReturnValue(mockLogger),
+  },
+}));
+
+vi.mock('dockerode', () => {
+  const mockContainer = {
+    id: 'mock-container-id',
+    start: vi.fn(),
+    stop: vi.fn(),
+    remove: vi.fn(),
+    exec: vi.fn(),
+  };
+  const mockDocker = vi.fn(() => ({
+    version: vi.fn().mockResolvedValue({ Version: '24.0.0' }),
+    pull: vi.fn().mockResolvedValue(undefined),
+    createContainer: vi.fn().mockResolvedValue(mockContainer),
+    getContainer: vi.fn().mockReturnValue(mockContainer),
+    modem: {
+      demuxStream: vi.fn(),
+      followProgress: vi.fn((_stream, cb) => cb(null)),
+    },
+  }));
+  return { default: mockDocker };
+});
+
+import { DockerSandbox } from '../../sandbox/docker.js';
+
+const CONTAINER_WORKDIR = '/home/node';
+
+function createDockerSandbox(): DockerSandbox {
+  const getToken = vi.fn<(installationId: number) => Promise<string>>().mockResolvedValue('mock-token');
+  const sandbox = new DockerSandbox(
+    'https://github.com/owner/repo.git',
+    'owner',
+    'repo',
+    123,
+    getToken,
+  );
+  (sandbox as any).tempDir = '/tmp/stas-sandbox-test';
+  return sandbox;
+}
+
+describe('DockerSandbox', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockLogger.child.mockReturnValue(mockLogger);
+  });
+
+  describe('buildCreateArgs()', () => {
+    it('produces no duplicate mount targets for the same path', () => {
+      const sandbox = createDockerSandbox();
+      const args = (sandbox as any).buildCreateArgs('node:22-alpine', 'test-container');
+
+      const volumeMounts = args.filter(
+        (_: string, i: number) => args[i - 1] === '-v',
+      );
+      const tmpfsMounts = args.filter(
+        (_: string, i: number) => args[i - 1] === '--tmpfs',
+      );
+
+      const volumePaths = volumeMounts.map((v: string) => v.split(':')[1]);
+      const tmpfsPaths = tmpfsMounts.map((t: string) => t.split(':')[0]);
+
+      for (const path of volumePaths) {
+        expect(tmpfsPaths).not.toContain(path);
+      }
+
+      expect(volumePaths).toContain(CONTAINER_WORKDIR);
+    });
+
+    it('has a volume mount for CONTAINER_WORKDIR', () => {
+      const sandbox = createDockerSandbox();
+      const args = (sandbox as any).buildCreateArgs('node:22-alpine', 'test-container');
+
+      const volumeMounts = args.filter(
+        (_: string, i: number) => args[i - 1] === '-v',
+      );
+      const workdirVolumes = volumeMounts.filter((v: string) =>
+        v.endsWith(`:${CONTAINER_WORKDIR}`),
+      );
+      expect(workdirVolumes.length).toBe(1);
+    });
+
+    it('does not have a tmpfs mount for CONTAINER_WORKDIR', () => {
+      const sandbox = createDockerSandbox();
+      const args = (sandbox as any).buildCreateArgs('node:22-alpine', 'test-container');
+
+      const tmpfsMounts = args.filter(
+        (_: string, i: number) => args[i - 1] === '--tmpfs',
+      );
+      const workdirTmpfs = tmpfsMounts.filter((t: string) =>
+        t.startsWith(`${CONTAINER_WORKDIR}:`),
+      );
+      expect(workdirTmpfs.length).toBe(0);
+    });
+
+    it('keeps the /tmp tmpfs mount', () => {
+      const sandbox = createDockerSandbox();
+      const args = (sandbox as any).buildCreateArgs('node:22-alpine', 'test-container');
+
+      const tmpfsMounts = args.filter(
+        (_: string, i: number) => args[i - 1] === '--tmpfs',
+      );
+      const tmpTmpfs = tmpfsMounts.filter((t: string) =>
+        t.startsWith('/tmp:'),
+      );
+      expect(tmpTmpfs.length).toBe(1);
+    });
+
+    it('sets the working directory to CONTAINER_WORKDIR', () => {
+      const sandbox = createDockerSandbox();
+      const args = (sandbox as any).buildCreateArgs('node:22-alpine', 'test-container');
+
+      const wdIndex = args.indexOf('-w');
+      expect(wdIndex).not.toBe(-1);
+      expect(args[wdIndex + 1]).toBe(CONTAINER_WORKDIR);
+    });
+
+    it('includes stas-sandbox=true label', () => {
+      const sandbox = createDockerSandbox();
+      const args = (sandbox as any).buildCreateArgs('node:22-alpine', 'test-container');
+
+      const labelIndex = args.indexOf('--label');
+      expect(labelIndex).not.toBe(-1);
+      expect(args[labelIndex + 1]).toBe('stas-sandbox=true');
+    });
+  });
+});

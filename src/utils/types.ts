@@ -99,3 +99,39 @@ export interface AgentResult {
   /** Agent produced a fix but it failed verification (tests didn't pass). */
   verificationFailed?: boolean;
 }
+
+/**
+ * Verification job data sent to the stas.agents.verification queue.
+ */
+export interface VerificationData {
+  sandboxId: string;
+  testCommand: string;
+  repoUrl?: string;
+  commitSha?: string;
+}
+
+/**
+ * PR creation job data sent to the stas.agents.pr_creation queue.
+ */
+export interface PRCreationData {
+  installationId: number;
+  repoOwner: string;
+  repoName: string;
+  issueNumber: number;
+  branchName: string;
+  fixSummary: string;
+  prTitle: string;
+  prBody: string;
+  repoPrivate?: boolean;
+}
+
+/**
+ * Notification job data sent to the stas.events.notifications queue.
+ */
+export interface NotificationData {
+  channel: 'slack' | 'webhook' | 'email';
+  message: string;
+  severity?: 'info' | 'warn' | 'error';
+  source?: string;
+  metadata?: Record<string, unknown>;
+}

@@ -27,10 +27,21 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 // Hoisted mocks
 // ---------------------------------------------------------------------------
 
+vi.hoisted(() => {
+  // Prevent process handlers from calling process.exit during tests
+  const origOn = process.on.bind(process);
+  process.on = vi.fn((event: string, handler: (...args: any[]) => void) => {
+    if (event === 'uncaughtException' || event === 'unhandledRejection') {
+      return process;
+    }
+    return origOn(event, handler);
+  });
+});
+
 const { mockLoggerChild } = vi.hoisted(() => {
-  const logger = {
+  const makeLogger = () => ({
     level: 'silent',
-    child: vi.fn(),
+    child: vi.fn<(...args: any[]) => any>(),
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
@@ -38,13 +49,14 @@ const { mockLoggerChild } = vi.hoisted(() => {
     fatal: vi.fn(),
     trace: vi.fn(),
     silent: vi.fn(),
-  };
+  });
+  const logger = makeLogger();
   logger.child = vi.fn(() => logger);
   return { mockLoggerChild: logger };
 });
 
-const mockEnqueueIssue = vi.hoisted(() => vi.fn().mockResolvedValue('job-mock-id'));
 const mockCreateIssueQueue = vi.hoisted(() => vi.fn().mockReturnValue({ add: vi.fn(), close: vi.fn() }));
+const mockEnqueueIssue = vi.hoisted(() => vi.fn().mockResolvedValue('job-mock-id'));
 const mockVerifyAndReceive = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockCreateGithubWebhooks = vi.hoisted(() =>
   vi.fn().mockReturnValue({
@@ -93,14 +105,27 @@ vi.mock('../config.js', () => ({
       label: 'stas:fix',
       botName: 'STAS',
       devSkipWebhookVerify: false,
-      rateLimitWindowMs: 60000,
-      rateLimitMax: 30,
+      rateLimit: { windowMs: 60000, max: 30 },
+
       maxIssueComments: 15,
+    },
+    rabbitmq: {
+      url: 'amqp://localhost:5672/stas',
+      prefetchCount: 10,
+      reconnectDelayMs: 5000,
+      maxReconnectAttempts: 10,
+      tls: {
+        certPath: undefined,
+        keyPath: undefined,
+        caPath: undefined,
+        servername: undefined,
+        rejectUnauthorized: true,
+      },
     },
     queue: {
       redisUrl: 'redis://localhost:6379',
       workerConcurrency: 2,
-      backend: 'bullmq',
+      backend: 'rabbitmq',
       dedupTtl: 120,
       keepCompleted: 200,
       keepFailed: 100,
@@ -118,7 +143,22 @@ vi.mock('../config.js', () => ({
       model: 'test-model',
       fallbackModels: ['gpt-4o'],
     },
+    opencodeHealth: {
+      pollIntervalMs: 15000,
+      cacheTtlMs: 30000,
+      circuitBreakerThreshold: 3,
+      requestTimeoutMs: 5000,
+      startupTimeoutMs: 30000,
+    },
     e2b: { apiKey: 'test', templateId: 'test', sandboxTimeoutMs: 300000 },
+    docker: {
+      image: 'ubuntu:24.04',
+      sandboxTimeoutMs: 300000,
+      networkRestrict: true,
+      allowedHosts: ['api.github.com'],
+      containerMemory: '4g',
+      containerCpu: 2,
+    },
     openai: { apiKey: undefined, cheapModel: 'gpt-4o-mini' },
     slack: {
       webhookUrl: undefined,
@@ -134,10 +174,28 @@ vi.mock('../config.js', () => ({
       defaultRepoName: undefined,
       installationId: 0,
     },
+    security: {
+      corsOrigin: '*',
+      requestBodyLimit: '1mb',
+      webhookBodyLimit: '5mb',
+      cspReportUri: '/api/v1/csp-violation-report',
+      ipAllowlist: { enabled: false, ips: [] },
+      sandbox: {
+        privileged: false,
+        readOnlyRoot: true,
+        memoryLimit: '512m',
+        cpuLimit: '0.5',
+        pidsLimit: 256,
+        diskLimit: '2gb',
+        networkEnabled: false,
+      },
+    },
+    sentry: { dsn: undefined, environment: 'test', tracesSampleRate: 0.1 },
     stripe: { secretKey: undefined, webhookSecret: undefined },
     database: { url: 'postgres://localhost:5432/stas', poolMin: 2, poolMax: 10, ssl: false },
     fixTimeoutMs: 600000,
     featureFlags: { defaultTtlSeconds: 30, autoDisableThreshold: 0.05 },
+    webhookRetry: { pollIntervalMs: 15000, batchSize: 10 },
     metering: { freeMonthlyCredits: 100 },
     usageCredits: { fixRun: 50, triage: 10, sandbox: 5 },
   },
@@ -148,7 +206,6 @@ vi.mock('../utils/logger.js', () => ({
 }));
 
 vi.mock('../queue/issueQueue.js', () => ({
-  createIssueQueue: mockCreateIssueQueue,
   enqueueIssue: mockEnqueueIssue,
 }));
 
@@ -190,6 +247,101 @@ vi.mock('../routes/featureFlags.js', () => ({
   featureFlagsRouter: vi.fn(),
 }));
 
+vi.mock('../monitoring/sentry.js', () => ({
+  setupSentryExpressErrorHandler: vi.fn(),
+  addBreadcrumb: vi.fn(),
+}));
+vi.mock('../db/connection.js', () => ({
+  queryWithRetry: vi.fn().mockResolvedValue({ rows: [{ ok: 1 }] }),
+}));
+vi.mock('../health/queueHealth.js', () => ({
+  getQueueHealth: vi.fn().mockResolvedValue({ status: 'healthy' }),
+}));
+vi.mock('../bridge/metrics.js', () => ({
+  bridgeMetrics: { render: vi.fn().mockReturnValue('') },
+}));
+vi.mock('../health/opencodeHealth.js', () => ({
+  opencodeHealth: {
+    getStatus: vi.fn().mockReturnValue({ status: 'healthy', circuit: 'closed', consecutiveFailures: 0, httpStatus: 200 }),
+    checkNow: vi.fn().mockResolvedValue({ status: 'healthy' }),
+  },
+}));
+vi.mock('../webhooks/eventLogger.js', () => ({
+  logWebhookReceived: vi.fn().mockResolvedValue(1),
+  logWebhookProcessed: vi.fn().mockResolvedValue(undefined),
+  logWebhookFailed: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../webhooks/metrics.js', () => ({
+  recordWebhookDuration: vi.fn(),
+  renderMetrics: vi.fn().mockReturnValue(''),
+}));
+vi.mock('../webhooks/retryWorker.js', () => ({
+  startWebhookRetryWorker: vi.fn(),
+}));
+vi.mock('../routes/adminWebhooks.js', () => ({
+  adminWebhooksRouter: vi.fn(),
+}));
+vi.mock('../routes/admin.js', () => ({
+  adminRouter: vi.fn(),
+}));
+vi.mock('../routes/dashboard.js', () => ({
+  dashboardRouter: vi.fn(),
+}));
+vi.mock('../routes/adminDashboard.js', () => ({
+  adminDashboardRouter: vi.fn(),
+}));
+vi.mock('../billing/index.js', () => ({
+  billingRouter: vi.fn(),
+  initBilling: vi.fn(),
+}));
+vi.mock('../trackers/jira.js', () => ({
+  handleJiraWebhook: vi.fn(),
+  verifyJiraWebhookSignature: vi.fn().mockReturnValue(true),
+}));
+vi.mock('../trackers/linear.js', () => ({
+  handleLinearWebhook: vi.fn().mockReturnValue({ ticketId: 'test-ticket' }),
+  verifyLinearWebhookSignature: vi.fn().mockReturnValue(true),
+}));
+vi.mock('../ratelimit/middleware.js', () => ({
+  rateLimitMiddleware: vi.fn(),
+}));
+vi.mock('../security/securityHeaders.js', () => ({
+  buildHelmetConfig: vi.fn().mockReturnValue({}),
+  handleCspViolationReport: vi.fn(),
+}));
+vi.mock('../security/ipAllowlist.js', () => ({
+  ipAllowlistMiddleware: vi.fn((req, res, next) => next()),
+}));
+vi.mock('helmet', () => ({
+  default: vi.fn(() => (req, res, next) => next()),
+}));
+vi.mock('cors', () => ({
+  default: vi.fn(() => (req, res, next) => next()),
+}));
+vi.mock('express-rate-limit', () => ({
+  default: vi.fn(() => (req, res, next) => next()),
+}));
+vi.mock('swagger-ui-express', () => ({
+  default: {
+    serve: (req, res, next) => next(),
+    setup: vi.fn(() => (req, res, next) => next()),
+  },
+  serve: (req, res, next) => next(),
+  setup: vi.fn(() => (req, res, next) => next()),
+}));
+vi.mock('js-yaml', () => ({
+  default: { load: vi.fn().mockReturnValue({}) },
+  load: vi.fn().mockReturnValue({}),
+}));
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    readFileSync: vi.fn().mockReturnValue(''),
+    existsSync: vi.fn().mockReturnValue(false),
+  };
+});
+
 // ---------------------------------------------------------------------------
 // Suite
 // ---------------------------------------------------------------------------
@@ -197,8 +349,30 @@ vi.mock('../routes/featureFlags.js', () => ({
 describe('server', () => {
   let app: import('express').Application;
 
-  beforeEach(() => {
-    vi.clearAllMocks();
+  beforeEach(async () => {
+    mockLoggerChild.child.mockReturnValue(mockLoggerChild);
+    mockEnqueueIssue.mockResolvedValue('job-mock-id');
+    mockCreateIssueQueue.mockReturnValue({ add: vi.fn(), close: vi.fn() });
+    mockCreateGithubWebhooks.mockReturnValue({
+      verifyAndReceive: mockVerifyAndReceive,
+      on: vi.fn(),
+      receive: vi.fn(),
+    });
+    mockVerifyAndReceive.mockResolvedValue(undefined);
+    mockCreateGitlabWebhooks.mockReturnValue({ handle: vi.fn() });
+    mockCreateBitbucketWebhooks.mockReturnValue({ handle: vi.fn() });
+    mockValidateWebhookPayload.mockReturnValue({ success: true, data: {} });
+    mockCreateStripeWebhookHandler.mockReturnValue(mockStripeHandler);
+    mockGetSlackBoltApp.mockReturnValue({
+      mountOn: vi.fn(),
+      client: { conversations: { open: vi.fn(), invite: vi.fn() } },
+    });
+    mockGetTracker.mockReturnValue(null);
+    const ocHealthMod = await import('../health/opencodeHealth.js');
+    ocHealthMod.opencodeHealth.getStatus.mockReturnValue({ status: 'healthy', circuit: 'closed', consecutiveFailures: 0, httpStatus: 200 });
+    ocHealthMod.opencodeHealth.checkNow.mockResolvedValue({ status: 'healthy' });
+    const dbMod = await import('../db/connection.js');
+    dbMod.queryWithRetry.mockResolvedValue({ rows: [{ ok: 1 }] });
   });
 
   describe('createApp()', () => {
@@ -475,6 +649,9 @@ describe('server', () => {
 
   describe('POST /webhook/stripe', () => {
     it('routes to stripe webhook handler', async () => {
+      mockStripeHandler.mockImplementation((_req: any, res: any) => {
+        res.status(200).json({ received: true });
+      });
       const { createApp } = await import('../server.js');
       app = createApp();
 
@@ -535,9 +712,13 @@ describe('server', () => {
       const server = startServer();
 
       expect(server).toBeDefined();
-      expect(server.listening).toBe(true);
 
-      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await new Promise<void>((resolve) => {
+        server.on('listening', () => {
+          expect(server.listening).toBe(true);
+          server.close(() => resolve());
+        });
+      });
     });
   });
 });
@@ -595,11 +776,26 @@ function fetchApp(
         this.statusCode = code;
         return this;
       },
+      send(body: any) {
+        if (typeof body === 'object' && body !== null) {
+          this._headers['content-type'] = 'application/json';
+          const str = JSON.stringify(body);
+          chunks.push(Buffer.from(str));
+        } else if (body) {
+          chunks.push(Buffer.from(String(body)));
+        }
+        this.end();
+        return this;
+      },
       json(obj: any) {
         const str = JSON.stringify(obj);
-        chunks.push(Buffer.from(str));
         this._headers['content-type'] = 'application/json';
+        chunks.push(Buffer.from(str));
         this.end();
+        return this;
+      },
+      set(field: string, val: string) {
+        this._headers[field] = val;
         return this;
       },
       setHeader(name: string, value: string) {
@@ -629,6 +825,10 @@ function fetchApp(
       },
       writeHead(statusCode: number) {
         this.statusCode = statusCode;
+        return this;
+      },
+      type(contentType: string) {
+        this._headers['content-type'] = contentType;
         return this;
       },
       on: () => {},

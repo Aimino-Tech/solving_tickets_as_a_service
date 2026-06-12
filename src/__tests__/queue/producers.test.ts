@@ -49,7 +49,7 @@ vi.mock('../../config.js', () => ({
     queue: {
       redisUrl: 'redis://localhost:6379',
       dedupTtl: 120,
-      backend: 'both',
+      backend: 'rabbitmq',
     },
     rabbitmq: {
       url: 'amqp://localhost:5672/stas',

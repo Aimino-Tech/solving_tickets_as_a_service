@@ -24,9 +24,9 @@ const mockLogger: any = {
   },
 };
 
-// Mock Stripe SDK
-vi.mock('stripe', () => {
-  const createMockInstance = () => ({
+// Build a mock Stripe client instance whose methods we can control.
+function createMockStripeClient() {
+  return {
     customers: { create: vi.fn(), retrieve: vi.fn() },
     checkout: { sessions: { create: vi.fn() } },
     billingPortal: { sessions: { create: vi.fn() } },
@@ -34,26 +34,40 @@ vi.mock('stripe', () => {
     invoices: { list: vi.fn() },
     products: { create: vi.fn() },
     prices: { create: vi.fn() },
-  });
-  return { default: vi.fn(createMockInstance) };
-});
+  };
+}
+
+let sharedMockClient: ReturnType<typeof createMockStripeClient>;
+vi.mock('stripe', () => ({
+  default: vi.fn(() => sharedMockClient),
+}));
 
 vi.mock('../../config.js', () => mockConfig);
 vi.mock('../../utils/logger.js', () => mockLogger);
 
 describe('billing/stripe', () => {
   let stripe: typeof import('../../billing/stripe.js');
-  let mockStripe: any;
+  let mockStripeClient: ReturnType<typeof createMockStripeClient>;
 
   beforeEach(async () => {
-    const StripeMod = await import('stripe');
-    mockStripe = new StripeMod.default();
+    // Create a fresh mock client for each test
+    mockStripeClient = createMockStripeClient();
+    sharedMockClient = mockStripeClient;
+
+    // Reset modules so the stripe mock picks up our new client
+    vi.resetModules();
+
+    // Import the module under test
     const mod = await import('../../billing/stripe.js');
-    mod.resetStripeClient();
     stripe = mod;
+
+    // Reset the cached Stripe client so getStripeClient() will re-create
+    stripe.resetStripeClient();
   });
 
-  afterEach(() => { vi.clearAllMocks(); });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
   describe('BillingError', () => {
     it('creates an error with message, code, and statusCode', () => {
@@ -75,6 +89,8 @@ describe('billing/stripe', () => {
   describe('getStripeClient', () => {
     it('throws BillingError when secret key is missing', async () => {
       mockConfig.config.stripe.secretKey = '';
+      // Need a fresh import without our spy for this test
+      vi.restoreAllMocks();
       vi.resetModules();
       const mod = await import('../../billing/stripe.js');
       expect(() => mod.getStripeClient()).toThrow('STRIPE_SECRET_KEY is not configured');
@@ -97,6 +113,7 @@ describe('billing/stripe', () => {
     it('clears the cached client', () => {
       const client1 = stripe.getStripeClient();
       stripe.resetStripeClient();
+      sharedMockClient = createMockStripeClient();
       const client2 = stripe.getStripeClient();
       expect(client1).not.toBe(client2);
     });
@@ -104,9 +121,9 @@ describe('billing/stripe', () => {
 
   describe('findOrCreateCustomer', () => {
     it('creates a Stripe customer with account metadata', async () => {
-      mockStripe.customers.create.mockResolvedValue({ id: 'cus_mock', email: 'test@test.com' });
+      mockStripeClient.customers.create.mockResolvedValue({ id: 'cus_mock', email: 'test@test.com' });
       const customer = await stripe.findOrCreateCustomer(42, 'test@test.com', 'Test User');
-      expect(mockStripe.customers.create).toHaveBeenCalledWith({
+      expect(mockStripeClient.customers.create).toHaveBeenCalledWith({
         email: 'test@test.com', name: 'Test User', metadata: { accountId: '42' },
       });
       expect(customer.id).toBe('cus_mock');
@@ -115,16 +132,16 @@ describe('billing/stripe', () => {
 
   describe('getCustomer', () => {
     it('retrieves a Stripe customer by ID', async () => {
-      mockStripe.customers.retrieve.mockResolvedValue({ id: 'cus_mock' });
+      mockStripeClient.customers.retrieve.mockResolvedValue({ id: 'cus_mock' });
       const customer = await stripe.getCustomer('cus_mock');
-      expect(mockStripe.customers.retrieve).toHaveBeenCalledWith('cus_mock');
+      expect(mockStripeClient.customers.retrieve).toHaveBeenCalledWith('cus_mock');
       expect(customer.id).toBe('cus_mock');
     });
   });
 
   describe('createSubscriptionCheckoutSession', () => {
     it('creates a checkout session and returns url + sessionId', async () => {
-      mockStripe.checkout.sessions.create.mockResolvedValue({
+      mockStripeClient.checkout.sessions.create.mockResolvedValue({
         id: 'cs_mock', url: 'https://checkout.stripe.com/pay/cs_mock',
       });
       const result = await stripe.createSubscriptionCheckoutSession({
@@ -143,7 +160,7 @@ describe('billing/stripe', () => {
     });
 
     it('throws BillingError when session has no url', async () => {
-      mockStripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_mock', url: null });
+      mockStripeClient.checkout.sessions.create.mockResolvedValue({ id: 'cs_mock', url: null });
       await expect(stripe.createSubscriptionCheckoutSession({
         accountId: 42, planId: 'solo',
         successUrl: 'https://example.com/success', cancelUrl: 'https://example.com/cancel',
@@ -153,7 +170,7 @@ describe('billing/stripe', () => {
 
   describe('createBillingPortalSession', () => {
     it('creates a billing portal session', async () => {
-      mockStripe.billingPortal.sessions.create.mockResolvedValue({ url: 'https://billing.stripe.com/p/session_mock' });
+      mockStripeClient.billingPortal.sessions.create.mockResolvedValue({ url: 'https://billing.stripe.com/p/session_mock' });
       const result = await stripe.createBillingPortalSession('cus_mock', 'https://example.com/return');
       expect(result.url).toBe('https://billing.stripe.com/p/session_mock');
     });
@@ -161,7 +178,7 @@ describe('billing/stripe', () => {
 
   describe('getSubscription', () => {
     it('retrieves a subscription by ID', async () => {
-      mockStripe.subscriptions.retrieve.mockResolvedValue({ id: 'sub_mock' });
+      mockStripeClient.subscriptions.retrieve.mockResolvedValue({ id: 'sub_mock' });
       const sub = await stripe.getSubscription('sub_mock');
       expect(sub.id).toBe('sub_mock');
     });
@@ -169,16 +186,16 @@ describe('billing/stripe', () => {
 
   describe('cancelSubscriptionAtPeriodEnd', () => {
     it('updates subscription with cancel_at_period_end: true', async () => {
-      mockStripe.subscriptions.update.mockResolvedValue({ id: 'sub_mock', cancel_at_period_end: true });
+      mockStripeClient.subscriptions.update.mockResolvedValue({ id: 'sub_mock', cancel_at_period_end: true });
       const result = await stripe.cancelSubscriptionAtPeriodEnd('sub_mock');
-      expect(mockStripe.subscriptions.update).toHaveBeenCalledWith('sub_mock', { cancel_at_period_end: true });
+      expect(mockStripeClient.subscriptions.update).toHaveBeenCalledWith('sub_mock', { cancel_at_period_end: true });
       expect(result.cancel_at_period_end).toBe(true);
     });
   });
 
   describe('reactivateSubscription', () => {
     it('updates subscription with cancel_at_period_end: false', async () => {
-      mockStripe.subscriptions.update.mockResolvedValue({ id: 'sub_mock', cancel_at_period_end: false });
+      mockStripeClient.subscriptions.update.mockResolvedValue({ id: 'sub_mock', cancel_at_period_end: false });
       const result = await stripe.reactivateSubscription('sub_mock');
       expect(result.cancel_at_period_end).toBe(false);
     });
@@ -186,22 +203,22 @@ describe('billing/stripe', () => {
 
   describe('updateSubscriptionPlan', () => {
     it('updates subscription to a new price', async () => {
-      mockStripe.subscriptions.retrieve.mockResolvedValue({ id: 'sub_mock', items: { data: [{ id: 'si_mock' }] } });
-      mockStripe.subscriptions.update.mockResolvedValue({ id: 'sub_mock' });
+      mockStripeClient.subscriptions.retrieve.mockResolvedValue({ id: 'sub_mock', items: { data: [{ id: 'si_mock' }] } });
+      mockStripeClient.subscriptions.update.mockResolvedValue({ id: 'sub_mock' });
       const result = await stripe.updateSubscriptionPlan('sub_mock', 'price_new');
       expect(result.id).toBe('sub_mock');
     });
 
     it('throws BillingError when subscription has no items', async () => {
-      mockStripe.subscriptions.retrieve.mockResolvedValue({ id: 'sub_mock', items: { data: [] } });
+      mockStripeClient.subscriptions.retrieve.mockResolvedValue({ id: 'sub_mock', items: { data: [] } });
       await expect(stripe.updateSubscriptionPlan('sub_mock', 'price_new')).rejects.toThrow(stripe.BillingError);
     });
   });
 
   describe('createStripeProductsAndPrices', () => {
     it('creates products and prices for billable plans', async () => {
-      mockStripe.products.create.mockResolvedValue({ id: 'prod_mock' });
-      mockStripe.prices.create.mockResolvedValue({ id: 'price_mock' });
+      mockStripeClient.products.create.mockResolvedValue({ id: 'prod_mock' });
+      mockStripeClient.prices.create.mockResolvedValue({ id: 'price_mock' });
       const results = await stripe.createStripeProductsAndPrices();
       expect(results.solo).toBeDefined();
       expect(results.team).toBeDefined();

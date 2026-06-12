@@ -1,0 +1,38 @@
+description: "Agent should detect and install a missing dependency before attempting a fix"
+issue:
+  title: "Error: Cannot find module 'lodash' — missing npm dependency in package.json"
+  body: |
+    ## Bug
+    The `src/format.js` file imports `lodash` but the dependency is not listed
+    in `package.json`. When the project is cloned fresh and `npm install` is run,
+    the `lodash` package is not available.
+
+    ```javascript
+    const _ = require('lodash');
+
+    function formatNames(names) {
+      return _.join(names, ', ');
+    }
+    ```
+
+    ## Expected
+    The agent should:
+    1. Detect the missing dependency (`lodash`)
+    2. Install it via `npm install lodash` (or add it to `package.json`)
+    3. Then proceed to verify the fix or analyze the code
+
+    The agent must not fail by just reporting "missing module" — it should
+    proactively install the dependency.
+
+    ## Steps to reproduce
+    1. Clone the repo fresh
+    2. Run `npm install` (lodash is not listed in package.json)
+    3. Run `node -e "require('./src/format').formatNames(['a', 'b'])"`
+    4. Observe `Error: Cannot find module 'lodash'`
+    5. Fix: add `lodash` to `package.json` dependencies or install it
+repo: https://github.com/example/missing-dep-demo
+expected:
+  outcome: pr_created
+  filesChanged: ["package.json"]
+  minTestsPassing: 1
+timeoutMs: 300000

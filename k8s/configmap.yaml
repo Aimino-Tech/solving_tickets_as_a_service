@@ -28,7 +28,7 @@ data:
 
   # Queue configuration
   WORKER_CONCURRENCY: "4"
-  QUEUE_BACKEND: "both"
+  QUEUE_BACKEND: "rabbitmq"
   QUEUE_DEDUP_TTL_SECONDS: "120"
   QUEUE_MAX_RETRIES: "4"
 

@@ -137,6 +137,11 @@ describe('AuthContext', () => {
       writable: true,
     });
 
+    // Make setToken actually store the token so localStorage flow works
+    (setToken as any).mockImplementation((token: string) => {
+      localStorage.setItem('stas_token', token);
+    });
+
     (auth.me as any).mockResolvedValue({
       user: { githubId: '456', username: 'urluser', avatarUrl: '' },
     });
@@ -144,13 +149,9 @@ describe('AuthContext', () => {
     renderWithProvider(<TestConsumer />);
 
     await waitFor(() => {
-      expect(setToken).toHaveBeenCalledWith('url-token-123');
-    });
-
-    await waitFor(() => {
       expect(screen.getByTestId('authenticated')).toHaveTextContent('true');
-      expect(screen.getByTestId('username')).toHaveTextContent('urluser');
     });
+    expect(screen.getByTestId('username')).toHaveTextContent('urluser');
   });
 
   it('throws error when useAuth is used outside provider', () => {

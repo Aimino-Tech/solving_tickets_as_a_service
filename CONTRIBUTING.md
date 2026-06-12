@@ -18,6 +18,8 @@ STAS is an open-source project (MIT licensed) that turns labeled GitHub issues i
 - [Adding New Features](#adding-new-features)
 - [Documentation](#documentation)
 - [Getting Help](#getting-help)
+- [Release Process](#release-process)
+- [Worker E2E Tests (Celery Pipeline)](#worker-e2e-tests-celery-pipeline)
 
 ---
 
@@ -493,7 +495,7 @@ The test uses mock HTTP servers instead of real services:
 |---|---|---|
 | **OpenCode serve** | 9409 | Responds to `POST /run` with mock agent results |
 | **GitHub API** | 9410 | Handles PR creation, comments, refs |
-| **OpenAI API** | — | Gracefully skipped (empty `OPENAI_API_KEY`) |
+| **OpenCode Go LLM** | — | Gracefully skipped (empty `OPENCODE_API_KEY`) |
 | **E2B Sandbox** | — | Returns placeholder (empty `E2B_API_KEY`) |
 
 ### CI Integration
@@ -535,3 +537,139 @@ If the worker pipeline test fails:
    - Python version mismatch (3.10+ required)
    - pip install failures (network, version conflicts)
    - Worker crashes on startup (check Celery log in test output)
+
+---
+
+## Release Process
+
+STAS follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and uses an automated release pipeline triggered by Git tags.
+
+### Versioning Strategy
+
+See [VERSIONING.md](./VERSIONING.md) for the full versioning strategy document.
+
+Key points:
+- **MAJOR** — Breaking changes (API, database, platform support)
+- **MINOR** — New features, new integrations
+- **PATCH** — Bug fixes, security patches, documentation
+- Pre-release suffixes: `-alpha.N`, `-beta.N`, `-rc.N`
+
+### Pre-Release Checklist
+
+Before every release, run through the [PRE_RELEASE_CHECKLIST.md](./PRE_RELEASE_CHECKLIST.md). This covers:
+
+- Changelog verification
+- CI pipeline status
+- Docker build validation
+- Security scans
+- Documentation checks
+
+### Dry Run
+
+Always perform a dry run before tagging a release:
+
+```bash
+npm run release:dry-run -- --version v0.11.0
+```
+
+This validates:
+1. Git working tree is clean
+2. CHANGELOG.md has an entry for the target version
+3. package.json version
+4. Docker image builds successfully
+
+### Creating a Release
+
+#### 1. Prepare the Release
+
+```bash
+# Ensure you're on main with latest changes
+git checkout main
+git pull origin main
+
+# Review changes since last release
+git log --oneline v<last-version>..HEAD
+
+# Update CHANGELOG.md:
+#   - Move [Unreleased] entries to a new dated section
+#   - Ensure categories are correct (Added, Changed, Fixed, Removed, Security)
+#   - Verify ticket references
+
+# Update package.json version if needed:
+#   node -e "const p=require('./package.json'); p.version='0.11.0'; require('fs').writeFileSync('package.json', JSON.stringify(p,null,2)+'\n')"
+
+# Commit the release preparation
+git add CHANGELOG.md package.json
+git commit -m "chore: prepare release v0.11.0"
+```
+
+#### 2. Tag and Push
+
+```bash
+# Tag the release
+git tag -a v0.11.0 -m "v0.11.0 — Production runbooks, migration testing, rate limit audit"
+
+# Push the tag — this triggers the automated release workflow
+git push origin v0.11.0
+```
+
+#### 3. What Happens Automatically
+
+Pushing a `v*` tag triggers `.github/workflows/release.yml`, which:
+
+1. **Validates** — Verifies tag format, CHANGELOG entry exists
+2. **Builds & pushes Docker image** — Multi-platform build to GHCR with semver tags
+3. **Scans for vulnerabilities** — Trivy scan (HIGH/CRITICAL fails the build)
+4. **Generates SBOM** — CycloneDX software bill of materials
+5. **Creates GitHub Release** — Includes release notes from CHANGELOG, SBOM artifact
+6. **Notifies Slack** — Optional notification via webhook
+
+#### 4. Verify
+
+```bash
+# Check the release on GitHub
+gh release view v0.11.0
+
+# Pull and verify the Docker image
+docker pull ghcr.io/aimino-tech/solving_tickets_as_a_service:v0.11.0
+```
+
+### Release Candidates
+
+For pre-release testing:
+
+```bash
+git tag -a v0.11.0-rc.1 -m "v0.11.0-rc.1 — Release candidate 1"
+git push origin v0.11.0-rc.1
+```
+
+Release candidates:
+- Are marked as `prerelease` on GitHub
+- Are NOT tagged as `latest` on GHCR
+- Follow the same validation and build pipeline
+
+### Hotfix Releases
+
+For urgent fixes to a previous release:
+
+1. Create a branch from the release tag:
+   ```bash
+   git checkout -b hotfix/v0.11.1 v0.11.0
+   ```
+2. Apply the fix
+3. Tag and push:
+   ```bash
+   git tag -a v0.11.1 -m "v0.11.1 — Security patch"
+   git push origin v0.11.1
+   ```
+4. Merge the hotfix back to `main`
+
+### Automation Details
+
+The release workflow is defined in `.github/workflows/release.yml`. It is separate from the CI workflow (`.github/workflows/ci.yml`) and is only triggered by version tags. The CD workflow (`.github/workflows/cd.yml`) handles continuous deployment from the `main` branch.
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | Push/PR to `main` | Lint, typecheck, test, build, security scan |
+| `cd.yml` | Push to `main` | Build & push Docker image (branch + SHA tags) |
+| `release.yml` | Push `v*` tag | Release pipeline, GitHub Release, semver tags |

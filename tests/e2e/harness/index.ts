@@ -219,7 +219,7 @@ export function setupTestEnvironment(options?: TestHarnessOptions): void {
   process.env.GITHUB_WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET ?? 'test-secret';
   process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
   process.env.OPENCODE_URL = process.env.OPENCODE_URL ?? 'http://localhost:4096';
-  process.env.OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? 'sk-test';
+  process.env.OPENCODE_DIRECT_MODEL = process.env.OPENCODE_DIRECT_MODEL ?? 'deepseek-v4-flash';
 
   // Disable external integrations for tests
   process.env.SLACK_WEBHOOK_URL = '';

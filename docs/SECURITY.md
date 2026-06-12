@@ -26,6 +26,8 @@
 - [Rate Limiting](#8-rate-limiting)
 - [Security Configuration Reference](#9-security-configuration-reference)
 - [Security Checklist](#10-security-checklist)
+- [Vulnerability Response Process](#11-vulnerability-response-process)
+- [Security Headers](#12-security-headers)
 
 ---
 
@@ -292,7 +294,7 @@ Key security properties:
 | Key | Where Used | Storage |
 |---|---|---|
 | `E2B_API_KEY` | Cloud sandbox creation | Environment variable |
-| `OPENAI_API_KEY` | Triage LLM | Environment variable |
+| `OPENCODE_API_KEY` | OpenCode Go direct LLM (triage + fallback fix) | Environment variable |
 | `STRIPE_SECRET_KEY` | Stripe API | Environment variable |
 | `LINEAR_API_KEY` | Linear integration | Environment variable |
 | `JIRA_API_TOKEN` | Jira integration | Environment variable |
@@ -434,6 +436,8 @@ flowchart TB
 
 ### For Production Deployment
 
+> 🔧 See the [Production Runbook Security Incidents section](../ops/runbook.md#7-security-incidents) for operational security procedures (credential rotation, incident response, patching).
+
 - [ ] `GITHUB_WEBHOOK_SECRET` is set to a strong, unique value
 - [ ] `DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY` is `false` or unset
 - [ ] `ADMIN_API_KEY` is set to a cryptographically random value
@@ -461,6 +465,8 @@ flowchart TB
 ## 11. Vulnerability Response Process
 
 > **How STAS handles reported vulnerabilities and dependency flaws.**
+>
+> For operational incident response (credential rotation, unauthorized access response, vulnerability patching, SSL renewal), see the [Security Incidents section of the Production Runbook](../ops/runbook.md#7-security-incidents).
 
 ### 11.1 Scope
 
@@ -625,5 +631,234 @@ Before any production release:
 
 ---
 
-> **Last updated**: 2026-06-08
+## 12. Security Headers
+
+> **HTTP security headers configured via Helmet, with environment-aware Content Security Policy.**
+
+All HTTP responses are decorated with security headers via the `helmet` middleware, configured by `buildHelmetConfig()` in `src/security/securityHeaders.ts`.
+
+The configuration supports two modes:
+
+- **API-only mode** — Maximally restrictive CSP (no browser-rendered content expected)
+- **Dashboard mode** — Relaxed CSP allowing scripts and styles from the same origin (for the SPA dashboard)
+
+### 12.1 Content Security Policy
+
+The CSP is the most nuanced security header. It is assembled from a shared base with mode-specific additions.
+
+#### Base Directives (all modes)
+
+| Directive | Value | Purpose |
+|---|---|---|
+| `base-uri` | `'none'` | Prevent `<base>` tag injection |
+| `form-action` | `'none'` | Prevent form submission hijacking |
+| `frame-ancestors` | `'none'` | Prevent clickjacking via `<frame>` / `<iframe>` |
+| `object-src` | `'none'` | Block `<object>`, `<embed>`, `<applet>` attacks |
+| `report-uri` | `/api/v1/csp-violation-report` | Violation reporting endpoint |
+| `upgrade-insecure-requests` | (flag, production only) | Auto-upgrade HTTP→HTTPS |
+
+#### API-Only Mode
+
+When the `dashboard/dist` build directory is absent, CSP is locked down to allow no resources:
+
+| Directive | Value |
+|---|---|
+| `default-src` | `'none'` |
+| `script-src` | `'none'` |
+| `style-src` | `'none'` |
+| `img-src` | `'none'` |
+| `font-src` | `'none'` |
+| `connect-src` | `'none'` |
+| `media-src` | `'none'` |
+| `frame-src` | `'none'` |
+
+#### Dashboard Mode
+
+When `dashboard/dist` exists (the SPA is built and served), CSP allows resources from the same origin:
+
+| Directive | Value | Notes |
+|---|---|---|
+| `default-src` | `'self'` | |
+| `script-src` | `'self'` | |
+| `style-src` | `'self'` `'unsafe-inline'` | Required for React / Tailwind inline styles |
+| `img-src` | `'self'` `data:` | `data:` URIs for inline images |
+| `font-src` | `'self'` | |
+| `connect-src` | `'self'` | API calls from SPA |
+| `manifest-src` | `'self'` | PWA manifest |
+
+#### CSP Violation Reporting
+
+Browsers POST CSP violation reports to `POST /api/v1/csp-violation-report` (handler: `handleCspViolationReport` in `src/security/securityHeaders.ts`).
+
+The handler:
+
+1. Extracts the CSP report from the request body (`csp-report` key or full body)
+2. Logs a structured WARN-level log entry with:
+   - `blocked-uri` — The resource that was blocked
+   - `violated-directive` — The CSP directive that was violated
+   - `effective-directive` — The effective directive checked
+   - `source-file` — The page/script that triggered the violation
+   - Request context (`user-agent`, `source-ip`, `requestId`)
+3. Returns `204 No Content` as required by the CSP specification
+
+```typescript
+// Example CSP violation log entry
+{
+  "level": "warn",
+  "module": "security-headers",
+  "blockedUri": "https://evil.com/malicious.js",
+  "violatedDirective": "script-src",
+  "effectiveDirective": "script-src",
+  "sourceFile": "https://stas.example.com/dashboard/"
+}
+```
+
+#### Mode Detection
+
+The CSP mode is detected **automatically at startup** by checking for the existence of `dashboard/dist/`:
+
+```typescript
+// src/security/securityHeaders.ts
+function dashboardBuildExists(): boolean {
+  const dashboardPath = resolve(currentDir, '../../dashboard/dist');
+  return existsSync(dashboardPath);
+}
+```
+
+This means:
+- Building and deploying the dashboard → CSP switches to dashboard mode
+- API-only deployment (no dashboard build) → CSP stays in restrictive mode
+
+### 12.2 Permissions Policy
+
+All sensitive browser capabilities are explicitly disabled:
+
+```typescript
+const permissionsPolicies: Record<string, string[]> = {
+  camera:           [],
+  microphone:       [],
+  geolocation:      [],
+  displayCapture:   [],
+  fullscreen:       [],
+  'clipboard-read': [],
+  'clipboard-write':[],
+  payment:          [],
+  usb:              [],
+  serial:           [],
+  bluetooth:        [],
+  midi:             [],
+  magnetometer:     [],
+  gyroscope:        [],
+  accelerometer:    [],
+  'ambient-light-sensor': [],
+  'screen-wake-lock':     [],
+  'window-placement':     [],
+  'local-fonts':          [],
+  'idle-detection':       [],
+  'window-management':    [],
+};
+```
+
+Resulting header:
+
+```
+Permissions-Policy: camera=(), microphone=(), geolocation=(), display-capture=(), fullscreen=(), clipboard-read=(), clipboard-write=(), payment=(), usb=(), serial=(), bluetooth=(), midi=(), magnetometer=(), gyroscope=(), accelerometer=(), ambient-light-sensor=(), screen-wake-lock=(), window-placement=(), local-fonts=(), idle-detection=(), window-management=()
+```
+
+### 12.3 Cross-Origin Policies
+
+| Header | Value | Purpose |
+|---|---|---|
+| `Cross-Origin-Embedder-Policy` | `require-corp` | Prevent cross-origin resource loading (Spectre mitigation) |
+| `Cross-Origin-Opener-Policy` | `same-origin` | Isolate browsing context to same-origin documents |
+| `Origin-Agent-Cluster` | `?1` | Request process isolation for the origin |
+
+These headers work together as **cross-origin isolation** — they prevent side-channel attacks (Spectre, Meltdown) by ensuring the application cannot load cross-origin resources that are not explicitly opted in.
+
+### 12.4 Strict Transport Security
+
+HTTP Strict Transport Security (HSTS) is configured **only in production** (to avoid local dev issues with self-signed certificates):
+
+```typescript
+// Production only
+strictTransportSecurity: {
+  maxAge: 31536000,       // 1 year in seconds
+  includeSubDomains: true, // Apply to all subdomains
+  preload: true,           // Eligible for browser preload lists
+}
+```
+
+Header value:
+
+```
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+```
+
+To submit to the HSTS preload list, ensure:
+- The domain serves all subdomains over HTTPS
+- The `max-age` is at least 31536000 (1 year)
+- The `includeSubDomains` and `preload` directives are present
+- Submit at [hstspreload.org](https://hstspreload.org)
+
+### 12.5 Referrer Policy
+
+```
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
+Sends the full URL as referrer for same-origin requests, but only the origin for cross-origin requests. This is the recommended balance between functionality and privacy.
+
+### 12.6 Standard Helmet Headers
+
+| Header | Value | Purpose |
+|---|---|---|
+| `X-Frame-Options` | `DENY` | Prevent clickjacking by blocking all framing |
+| `X-Content-Type-Options` | `nosniff` | Prevent MIME type sniffing |
+| `X-DNS-Prefetch-Control` | `off` | Disable DNS prefetching (privacy) |
+| `X-Download-Options` | `noopen` | Prevent IE/Edge from opening downloads in the app context |
+| `X-Permitted-Cross-Domain-Policies` | `none` | Restrict Adobe Flash/PDF cross-domain access |
+| `X-XSS-Protection` | `0` | Disable legacy XSS auditor (replaced by CSP) |
+
+### 12.7 Configuration Summary
+
+| Header | API-Only | Dashboard | Production Only |
+|---|---|---|---|
+| `Content-Security-Policy` | Restricted (`'none'`) | Relaxed (`'self'`) | Adds `upgrade-insecure-requests` |
+| `Permissions-Policy` | All capabilities disabled | Same | No |
+| `Cross-Origin-Embedder-Policy` | `require-corp` | Same | No |
+| `Cross-Origin-Opener-Policy` | `same-origin` | Same | No |
+| `Origin-Agent-Cluster` | `?1` | Same | No |
+| `Strict-Transport-Security` | — | — | Yes (1 year, preload) |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Same | No |
+| `X-Frame-Options` | `DENY` | Same | No |
+| `X-Content-Type-Options` | `nosniff` | Same | No |
+| `X-DNS-Prefetch-Control` | `off` | Same | No |
+| `X-Download-Options` | `noopen` | Same | No |
+| `X-Permitted-Cross-Domain-Policies` | `none` | Same | No |
+| `X-XSS-Protection` | `0` | Same | No |
+| `Origin-Agent-Cluster` | `?1` | Same | No |
+
+### 12.8 Implementation
+
+```typescript
+// src/server.ts — applied globally via Express middleware
+app.use(helmet(buildHelmetConfig()));
+
+// src/security/securityHeaders.ts — configuration builder
+export function buildHelmetConfig(): HelmetOptions {
+  const isProduction = config.nodeEnv === 'production';
+  const isDashboardMode = getHasDashboardBuild();
+
+  // ... directive assembly + Permissions-Policy + all standard headers
+
+  return helmetConfig;
+}
+
+// CSP violation report handler
+app.post('/api/v1/csp-violation-report', handleCspViolationReport);
+```
+
+---
+
+> **Last updated**: 2026-06-09
 > **Review cadence**: Quarterly, or after any security incident

@@ -47,7 +47,7 @@ import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { config } from './config.js';
 import { getQueueHealth } from './health/queueHealth.js';
 import { bridgeMetrics } from './bridge/metrics.js';
-import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
+import { enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
@@ -64,18 +64,23 @@ import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
+import { linearWebhookRouter } from './webhooks/linear.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
 import { recordWebhookDuration } from './webhooks/metrics.js';
 import { renderMetrics } from './webhooks/metrics.js';
+import { renderFeatureFlagMetrics } from './featureFlags/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
+import { frontierRouter } from './routes/frontier.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { adminDashboardRouter } from './routes/adminDashboard.js';
 import { billingRouter, initBilling } from './billing/index.js';
 import { addBreadcrumb, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
 import { opencodeHealth } from './health/opencodeHealth.js';
+import { getWorkersHealth } from './health/workers.js';
+import { getDependenciesHealth } from './health/dependencies.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -314,12 +319,35 @@ export function createApp(): express.Application {
     }
   });
 
+  // -- Worker health endpoint ------------------------------------------------
+  app.get('/health/workers', (_req: Request, res: Response) => {
+    try {
+      const report = getWorkersHealth();
+      const httpStatus = report.status === 'ok' ? 200 : 503;
+      res.status(httpStatus).json(report);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to get workers health', details: String(err) });
+    }
+  });
+
+  // -- Dependencies health endpoint -----------------------------------------
+  app.get('/health/dependencies', async (_req: Request, res: Response) => {
+    try {
+      const report = await getDependenciesHealth();
+      const httpStatus = report.status === 'ok' ? 200 : 503;
+      res.status(httpStatus).json(report);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to get dependencies health', details: String(err) });
+    }
+  });
+
   // -- Prometheus metrics endpoint ------------------------------------------
   app.get('/metrics', (_req: Request, res: Response) => {
     const webhookMetrics = renderMetrics();
     const bridgeMetricsOutput = bridgeMetrics.render();
+    const featureFlagMetrics = renderFeatureFlagMetrics();
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.send(webhookMetrics + '\n' + bridgeMetricsOutput);
+    res.send(webhookMetrics + '\n' + bridgeMetricsOutput + '\n' + featureFlagMetrics);
 
   });
 
@@ -340,10 +368,10 @@ export function createApp(): express.Application {
   }
 
   // ── Webhook receiver ─────────────────────────────────────────────
-  const queue = createIssueQueue();
-  const githubWebhooks = createGithubWebhooks(queue);
-  const gitlabHandler = createGitlabWebhooks(queue);
-  const bitbucketHandler = createBitbucketWebhooks(queue);
+  
+  const githubWebhooks = createGithubWebhooks();
+  const gitlabHandler = createGitlabWebhooks();
+  const bitbucketHandler = createBitbucketWebhooks();
 
   // -- GitHub webhook handler (shared between /webhook and /webhook/github) --
   async function handleGithubWebhook(req: Request, res: Response): Promise<void> {
@@ -618,7 +646,7 @@ export function createApp(): express.Application {
             trackerTicketId: ticket.id,
           };
 
-          await enqueueIssue(queue, jobData);
+          await enqueueIssue(undefined, jobData);
         } else {
           log.warn(
             'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Linear ticket not enqueued',
@@ -700,7 +728,7 @@ export function createApp(): express.Application {
             trackerTicketId: ticket.id,
           };
 
-          await enqueueIssue(queue, jobData);
+          await enqueueIssue(undefined, jobData);
         } else {
           log.warn(
             'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Jira ticket not enqueued',
@@ -754,6 +782,9 @@ export function createApp(): express.Application {
     await wrappedHandler(req, res, () => {});
   });
 
+  // -- Linear webhook -------------------------------------------------------
+  app.use(linearWebhookRouter);
+
   // -- Feature flags admin API ------------------------------------------------
   app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
 
@@ -771,6 +802,9 @@ export function createApp(): express.Application {
 
   // ── Billing API ───────────────────────────────────────────────────
   app.use('/api/v1/billing', billingRouter);
+
+  // ── Frontier API ────────────────────────────────────────────────
+  app.use('/frontier', frontierRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────
   // GET /admin/webhooks (paginated, filterable)
@@ -853,15 +887,19 @@ export function startServer(): import('http').Server {
 
 // -- Process-level error handlers --------------------------------------------
 
-process.on('uncaughtException', (err) => {
-  log.error({ err: String(err), stack: (err as Error).stack }, 'Uncaught exception -- shutting down');
-  process.exit(1);
-});
+if (process.env.NODE_ENV !== 'test') {
+  process.on('uncaughtException', (err) => {
+    log.error({ err: String(err), stack: (err as Error).stack }, 'Uncaught exception -- shutting down');
+    process.exit(1);
+  });
+}
 
-process.on('unhandledRejection', (reason) => {
-  log.error({ err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection -- shutting down');
-  process.exit(1);
-});
+if (process.env.NODE_ENV !== 'test') {
+  process.on('unhandledRejection', (reason) => {
+    log.error({ err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection -- shutting down');
+    process.exit(1);
+  });
+}
 
 // -- Helper: Capture raw body for webhook signature verification -------------
 

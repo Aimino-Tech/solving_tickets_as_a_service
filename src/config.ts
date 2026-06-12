@@ -40,6 +40,8 @@ const envSchema = z.object({
   GITHUB_APP_PRIVATE_KEY_PATH: z.string().optional(),
   GITHUB_WEBHOOK_SECRET: z.string().min(1, 'GITHUB_WEBHOOK_SECRET is required'),
   GITHUB_WEBHOOK_PATH: z.string().default('/webhook'),
+  GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
+  GITHUB_OAUTH_CLIENT_SECRET: z.string().optional(),
 
   // Queue
   REDIS_URL: z.string().default('redis://localhost:6379'),
@@ -56,6 +58,9 @@ const envSchema = z.object({
   RABBITMQ_PREFETCH_COUNT: z.coerce.number().int().positive().default(10),
   RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5000),
   RABBITMQ_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
+  RABBITMQ_TASK_SOFT_TIME_LIMIT_MS: z.coerce.number().int().positive().default(600_000),
+  RABBITMQ_TASK_TIME_LIMIT_MS: z.coerce.number().int().positive().default(660_000),
+  RABBITMQ_TASK_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
 
   // RabbitMQ TLS (for amqps:// connections)
   RABBITMQ_TLS_CERT_PATH: z.string().optional(),
@@ -65,15 +70,9 @@ const envSchema = z.object({
   RABBITMQ_TLS_REJECT_UNAUTHORIZED: coerceBoolean(true),
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
+  OPENCODE_API_KEY: z.string().optional(),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
- 
-  // OpenCode Health Check
-  OPENCODE_HEALTH_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
-  OPENCODE_HEALTH_CACHE_TTL_MS: z.coerce.number().int().positive().default(30000),
-  OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(3),
-  OPENCODE_HEALTH_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
-  OPENCODE_HEALTH_STARTUP_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
 
   // Timeouts
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
@@ -81,26 +80,31 @@ const envSchema = z.object({
   PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(300_000),
   PHASE_TIMEOUT_PRCREATION_MS: z.coerce.number().int().positive().default(30_000),
 
-  // OpenAI / triage
-  OPENAI_API_KEY: z.string().optional(),
-  OPENAI_CHEAP_MODEL: z.string().default('gpt-4o-mini'),
+  // OpenCode Go — direct LLM (OpenAI-compatible endpoint)
+  OPENCODE_API_KEY: z.string().min(1, 'OPENCODE_API_KEY is required for direct OpenCode Go LLM calls'),
+  OPENCODE_DIRECT_MODEL: z.string().default('deepseek-v4-flash'),
+  OPENCODE_FALLBACK_MODEL: z.string().default('deepseek-v4-pro'),
 
   // Sandbox — E2B
   E2B_API_KEY: z.string().optional(),
   E2B_TEMPLATE_ID: z.string().default('stas-default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+  E2B_WORK_DIR: z.string().optional(),
+  E2B_EVAL_TEMPLATE_ID: z.string().default('stas-eval-hardened'),
+  E2B_EVAL_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // Sandbox — Docker
-  DOCKER_IMAGE: z.string().default('ubuntu:24.04'),
+  DOCKER_IMAGE: z.string().default('node:22-alpine'),
   DOCKER_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
   DOCKER_NETWORK_RESTRICT: coerceBoolean(true),
   DOCKER_ALLOWED_HOSTS: z
     .string()
     .default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io,rubygems.org,repo1.maven.org,packagist.org,getcomposer.org'),
-  DOCKER_CONTAINER_MEMORY: z.string().default('4g'),
-  DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(2),
+  DOCKER_CONTAINER_MEMORY: z.string().default('2g'),
+  DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(1),
 
   // STAS
+  PHANTOM_ISSUE_MAX_RETRIES: z.coerce.number().int().positive().default(2),
 
   // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
@@ -113,6 +117,7 @@ const envSchema = z.object({
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  PHANTOM_ISSUE_MAX_RETRIES: z.coerce.number().int().nonnegative().default(2),
   // Admin API
   ADMIN_API_KEY: z.string().optional(),
 
@@ -130,6 +135,7 @@ const envSchema = z.object({
   BITBUCKET_USERNAME: z.string().optional(),
   BITBUCKET_APP_PASSWORD: z.string().optional(),
   BITBUCKET_WEBHOOK_SECRET: z.string().optional(),
+  BITBUCKET_BASE_URL: z.string().default('https://api.bitbucket.org'),
 
   // Slack notifications
   SLACK_WEBHOOK_URL: z.string().optional(),
@@ -189,9 +195,6 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('*'),
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
-
-  // ── CSP / Security Headers ──
-  CSP_REPORT_URI: z.string().default('/api/v1/csp-violation-report'),
 
   // ── IP Allowlist ──
   IP_ALLOWLIST_ENABLED: coerceBoolean(false),
@@ -291,6 +294,8 @@ function buildConfig(env: ParsedEnv) {
       privateKeyEnv: env.GITHUB_APP_PRIVATE_KEY,
       webhookSecret: env.GITHUB_WEBHOOK_SECRET,
       webhookPath: env.GITHUB_WEBHOOK_PATH,
+      oauthClientId: env.GITHUB_OAUTH_CLIENT_ID,
+      oauthClientSecret: env.GITHUB_OAUTH_CLIENT_SECRET,
     },
 
     queue: {
@@ -309,6 +314,9 @@ function buildConfig(env: ParsedEnv) {
       prefetchCount: env.RABBITMQ_PREFETCH_COUNT,
       reconnectDelayMs: env.RABBITMQ_RECONNECT_DELAY_MS,
       maxReconnectAttempts: env.RABBITMQ_MAX_RECONNECT_ATTEMPTS,
+      taskSoftTimeLimitMs: env.RABBITMQ_TASK_SOFT_TIME_LIMIT_MS,
+      taskTimeLimitMs: env.RABBITMQ_TASK_TIME_LIMIT_MS,
+      taskHeartbeatIntervalMs: env.RABBITMQ_TASK_HEARTBEAT_INTERVAL_MS,
       tls: {
         certPath: env.RABBITMQ_TLS_CERT_PATH,
         keyPath: env.RABBITMQ_TLS_KEY_PATH,
@@ -320,16 +328,15 @@ function buildConfig(env: ParsedEnv) {
 
     opencode: {
       url: env.OPENCODE_URL,
+      apiKey: env.OPENCODE_API_KEY,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
-    },
-
-    opencodeHealth: {
-      pollIntervalMs: env.OPENCODE_HEALTH_POLL_INTERVAL_MS,
-      cacheTtlMs: env.OPENCODE_HEALTH_CACHE_TTL_MS,
-      circuitBreakerThreshold: env.OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD,
-      requestTimeoutMs: env.OPENCODE_HEALTH_REQUEST_TIMEOUT_MS,
-      startupTimeoutMs: env.OPENCODE_HEALTH_STARTUP_TIMEOUT_MS,
+      direct: {
+        apiKey: env.OPENCODE_API_KEY,
+        baseUrl: 'https://opencode.ai/zen/go/v1',
+        model: env.OPENCODE_DIRECT_MODEL,
+        fallbackModel: env.OPENCODE_FALLBACK_MODEL,
+      },
     },
 
     gitlab: {
@@ -342,17 +349,16 @@ function buildConfig(env: ParsedEnv) {
       username: env.BITBUCKET_USERNAME ?? '',
       appPassword: env.BITBUCKET_APP_PASSWORD ?? '',
       webhookSecret: env.BITBUCKET_WEBHOOK_SECRET ?? '',
-    },
-
-    openai: {
-      apiKey: env.OPENAI_API_KEY,
-      cheapModel: env.OPENAI_CHEAP_MODEL,
+      baseUrl: env.BITBUCKET_BASE_URL,
     },
 
     e2b: {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
+      workDir: env.E2B_WORK_DIR,
+      evalTemplateId: env.E2B_EVAL_TEMPLATE_ID,
+      evalTimeoutMs: env.E2B_EVAL_TIMEOUT_MS,
     },
 
     docker: {
@@ -373,7 +379,7 @@ function buildConfig(env: ParsedEnv) {
     },
 
     admin: {
-      apiKey: env.ADMIN_API_KEY ?? '',
+      apiKey: env.ADMIN_API_KEY,
       rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
     },
 
@@ -403,10 +409,12 @@ function buildConfig(env: ParsedEnv) {
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
       maxAgentIterations: env.MAX_AGENT_ITERATIONS,
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
+      phantomIssueMaxRetries: env.PHANTOM_ISSUE_MAX_RETRIES,
       rateLimit: {
         windowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
         max: env.STAS_RATE_LIMIT_MAX,
       },
+      phantomIssueMaxRetries: env.PHANTOM_ISSUE_MAX_RETRIES,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
     },
@@ -495,7 +503,6 @@ function buildConfig(env: ParsedEnv) {
       corsOrigin: env.CORS_ORIGIN,
       requestBodyLimit: env.REQUEST_BODY_LIMIT,
       webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
-      cspReportUri: env.CSP_REPORT_URI,
 
       ipAllowlist: {
         enabled: env.IP_ALLOWLIST_ENABLED,

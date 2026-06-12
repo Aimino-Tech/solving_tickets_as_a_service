@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { stats } from '@/api/client';
 import type { DashboardStats } from '@/api/types';
 import { Link } from 'react-router-dom';
+import { Activity, CheckCircle, Clock, FolderGit } from 'lucide-react';
 
 export default function DashboardHome() {
   const [data, setData] = useState<DashboardStats | null>(null);
@@ -41,24 +42,28 @@ export default function DashboardHome() {
       value: data.totalRuns.toLocaleString(),
       color: 'text-brand-600',
       bg: 'bg-brand-50',
+      Icon: Activity,
     },
     {
       label: 'Pass Rate',
       value: `${(data.passRate * 100).toFixed(1)}%`,
       color: 'text-green-600',
       bg: 'bg-green-50',
+      Icon: CheckCircle,
     },
     {
       label: 'Avg Duration',
       value: formatDuration(data.avgDurationSeconds),
       color: 'text-blue-600',
       bg: 'bg-blue-50',
+      Icon: Clock,
     },
     {
       label: 'Active Repos',
       value: String(data.activeRepos),
       color: 'text-amber-600',
       bg: 'bg-amber-50',
+      Icon: FolderGit,
     },
   ];
 
@@ -69,7 +74,7 @@ export default function DashboardHome() {
         {cards.map((card) => (
           <div key={card.label} className="card">
             <div className={`inline-flex rounded-lg ${card.bg} p-2`}>
-              <span className={`text-2xl ${card.color}`} />
+              <card.Icon className={card.color} size={24} />
             </div>
             <p className="mt-3 text-sm font-medium text-gray-500">{card.label}</p>
             <p className={`mt-1 text-3xl font-bold ${card.color}`}>{card.value}</p>

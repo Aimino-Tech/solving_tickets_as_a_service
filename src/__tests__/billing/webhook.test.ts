@@ -6,16 +6,18 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 const mockConstructEvent = vi.fn();
 const mockRetrieveSubscription = vi.fn();
 
+const mockConfig = { stripe: { secretKey: 'sk_test_mock', webhookSecret: 'whsec_mock', soloPriceId: 'price_solo_mock', teamPriceId: 'price_team_mock' } };
+
 vi.mock('stripe', () => ({
-  default: vi.fn(() => ({
-    webhooks: { constructEvent: mockConstructEvent },
-    subscriptions: { retrieve: mockRetrieveSubscription },
-  })),
+  default: function() {
+    return {
+      webhooks: { constructEvent: mockConstructEvent },
+      subscriptions: { retrieve: mockRetrieveSubscription },
+    };
+  },
 }));
 
-vi.mock('../../config.js', () => ({
-  config: { stripe: { secretKey: 'sk_test_mock', webhookSecret: 'whsec_mock', soloPriceId: 'price_solo_mock', teamPriceId: 'price_team_mock' } },
-}));
+vi.mock('../../config.js', () => ({ config: mockConfig }));
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
@@ -26,7 +28,9 @@ describe('billing/webhook', () => {
   let mockQuery: any;
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    mockConfig.stripe = { secretKey: 'sk_test_mock', webhookSecret: 'whsec_mock', soloPriceId: 'price_solo_mock', teamPriceId: 'price_team_mock' };
+    mockConstructEvent.mockReturnValue({ type: 'checkout.session.completed', id: 'evt_test', data: { object: {} } });
+    mockRetrieveSubscription.mockResolvedValue({ id: 'sub_test', status: 'active' });
     const mod = await import('../../billing/webhook.js');
     mod.resetBillingWebhookClient();
     webhook = mod;
@@ -35,9 +39,8 @@ describe('billing/webhook', () => {
 
   describe('createBillingWebhookHandler', () => {
     it('returns 500 when webhook secret missing', async () => {
+      mockConfig.stripe.webhookSecret = '';
       vi.resetModules();
-      vi.mock('../../config.js', () => ({ config: { stripe: { secretKey: 'sk_test', webhookSecret: '' } } }));
-      vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) } }));
       const mod = await import('../../billing/webhook.js');
       mod.resetBillingWebhookClient();
       const handler = mod.createBillingWebhookHandler();

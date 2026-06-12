@@ -19,11 +19,12 @@ export const QUEUES = {
   sandbox: { name: 'stas.agents.sandbox', exchange: 'stas.agents', routingKey: 'sandbox' },
   verification: { name: 'stas.agents.verification', exchange: 'stas.agents', routingKey: 'verification' },
   notifications: { name: 'stas.events.notifications', exchange: 'stas.events', routingKey: 'notifications' },
+  prCreation: { name: 'stas.agents.pr_creation', exchange: 'stas.agents', routingKey: 'pr_creation' },
   audit: { name: 'stas.events.audit', exchange: 'stas.events', routingKey: 'audit' },
 } as const;
 
 interface RabbitMQState {
-  connection: Connection | null;
+  connection: ChannelModel | null;
   publishChannel: Channel | null;
   consumeChannel: Channel | null;
   reconnectAttempts: number;
@@ -130,7 +131,7 @@ export async function connect(options?: {
     const connection = useTls
       ? await amqpConnect(url, tlsOptions)
       : await amqpConnect(url);
-    state.connection = connection as unknown as Connection;
+    state.connection = connection;
 
     connection.on('error', (err) => {
       log.error({ err: String(err) }, 'RabbitMQ connection error');
@@ -263,7 +264,7 @@ export async function gracefulShutdown(): Promise<void> {
 
   try {
     if (state.connection) {
-      await (state.connection as any).close();
+      await state.connection.close();
     }
   } catch (err) {
     log.warn({ err: String(err) }, 'Error closing connection');

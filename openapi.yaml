@@ -88,6 +88,96 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /health/workers:
+    get:
+      tags:
+        - Health
+      summary: Worker health status
+      description: Returns the heartbeat status of all registered worker processes.
+      operationId: getWorkersHealth
+      responses:
+        "200":
+          description: Worker status information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkersHealthResponse"
+              example:
+                status: "ok"
+                totalWorkers: 2
+                aliveWorkers: 2
+                deadWorkers: 0
+                workers:
+                  - workerId: "worker-host-1:12345"
+                    lastHeartbeat: "2026-06-09T10:00:00.000Z"
+                    isAlive: true
+                    secondsSinceHeartbeat: 15
+                  - workerId: "worker-host-2:12346"
+                    lastHeartbeat: "2026-06-09T10:00:05.000Z"
+                    isAlive: true
+                    secondsSinceHeartbeat: 10
+                timestamp: "2026-06-09T10:00:20.000Z"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /health/dependencies:
+    get:
+      tags:
+        - Health
+      summary: External dependency health
+      description: Returns the health status of all external service dependencies (database, Redis, RabbitMQ, OpenCode, Sentry).
+      operationId: getDependenciesHealth
+      responses:
+        "200":
+          description: Dependency health information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DependenciesHealthResponse"
+              example:
+                status: "ok"
+                dependencies:
+                  - name: "database"
+                    status: "ok"
+                    latencyMs: 3
+                  - name: "redis"
+                    status: "ok"
+                    latencyMs: 2
+                  - name: "rabbitmq"
+                    status: "ok"
+                    latencyMs: 1
+                  - name: "opencode"
+                    status: "ok"
+                  - name: "sentry"
+                    status: "disabled"
+                timestamp: "2026-06-09T10:00:20.000Z"
+        "503":
+          description: One or more dependencies are unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DependenciesHealthResponse"
+              example:
+                status: "degraded"
+                dependencies:
+                  - name: "database"
+                    status: "ok"
+                    latencyMs: 3
+                  - name: "redis"
+                    status: "error"
+                    error: "connect ECONNREFUSED 127.0.0.1:6379"
+                  - name: "rabbitmq"
+                    status: "ok"
+                    latencyMs: 1
+                  - name: "opencode"
+                    status: "error"
+                    error: "circuit=open, failures=3, http=503"
+                  - name: "sentry"
+                    status: "disabled"
+                timestamp: "2026-06-09T10:00:20.000Z"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   # ──────────────────────────────────────────────────────────────────────────
   # Webhooks — GitHub
   # ──────────────────────────────────────────────────────────────────────────
@@ -651,112 +741,122 @@ paths:
           $ref: "#/components/responses/Unauthorized"
 
   # ──────────────────────────────────────────────────────────────────────────
-  # Credits — Usage Stats
+  # Credits — Usage
   # ──────────────────────────────────────────────────────────────────────────
-  /api/v1/credits/usage/stats:
+  /api/v1/credits/usage:
     get:
       tags:
-        - Usage
-      summary: Aggregate usage statistics
-      description: Returns aggregate usage statistics across all accounts.
-      operationId: getUsageStats
+        - Credits
+      summary: Credit usage statistics
+      description: |
+        Returns credit consumption statistics for the authenticated account,
+        aggregated by day, week, or month. Only deduction transactions
+        (negative amounts) are included.
+      operationId: getCreditUsage
       security:
         - BearerToken: []
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [daily, weekly, monthly]
+            default: monthly
+          description: Aggregation period
       responses:
         "200":
-          description: Aggregate usage statistics
+          description: Usage statistics
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UsageStats"
+                $ref: "#/components/schemas/CreditUsageResponse"
               example:
-                totalRuns: 150
-                totalCredits: 7500
-                averageCreditsPerRun: 50
-                totalDurationMs: 1800000
-                runsBySource:
-                  github: 120
-                  linear: 20
-                  jira: 10
-                runsByModel:
-                  "anthropic/claude-sonnet-4-20250514": 100
-                  "gpt-4o": 50
-                prCreationRate: 85.5
-                fallbackRate: 5.2
+                accountId: 42
+                period: "monthly"
+                usage:
+                  - periodStart: "2026-01-01T00:00:00.000Z"
+                    totalCredits: 150
+                    totalTransactions: 3
+                  - periodStart: "2026-02-01T00:00:00.000Z"
+                    totalCredits: 200
+                    totalTransactions: 4
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # Also include current-month and forecast sub-routes
-  /api/v1/credits/usage/current-month:
-    get:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Admin — Credit Adjust
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/v1/admin/credits/adjust:
+    post:
       tags:
-        - Usage
-      summary: Current month usage
-      description: Returns usage and free tier information for the current month.
-      operationId: getUsageCurrentMonth
-      security:
-        - BearerToken: []
+        - Admin
+      summary: Adjust account credits
+      description: |
+        Admin-only endpoint to manually add or remove credits from an account.
+        Requires `x-admin-key` header matching the configured `ADMIN_API_KEY`.
+        Positive amounts credit the account; negative amounts debit it.
+      operationId: postAdminCreditAdjust
+      parameters:
+        - name: x-admin-key
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Admin API key for authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreditAdjustRequest"
+            examples:
+              credit:
+                summary: Credit account
+                value:
+                  accountId: 42
+                  amount: 500
+                  description: "Customer compensation"
+                  type: adjustment
+              debit:
+                summary: Debit account
+                value:
+                  accountId: 42
+                  amount: -100
+                  description: "Usage correction"
+                  type: adjustment
       responses:
         "200":
-          description: Current month usage data
+          description: Credit adjustment applied
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UsageCurrentMonth"
+                $ref: "#/components/schemas/AdminCreditAdjustResponse"
               example:
-                month: "2026-06"
-                totalCreditsUsed: 450
-                totalRuns: 9
-                freeTierLimit: 100
-                freeTierRemaining: 55
-                withinFreeTier: false
-                costConfig:
-                  triage: 1
-                  opencodePrimary: 10
-                  opencodeFallback: 5
-                  prCreation: 2
-                  retryPenalty: 3
+                accountId: 42
+                newBalance: 2000
+                amount: 500
+                type: adjustment
+                description: "Customer compensation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
-
-  /api/v1/credits/usage/forecast:
-    get:
-      tags:
-        - Usage
-      summary: Usage forecast
-      description: Forecasts end-of-month usage based on current consumption patterns.
-      operationId: getUsageForecast
-      security:
-        - BearerToken: []
-      responses:
-        "200":
-          description: Usage forecast data
+        "402":
+          description: Insufficient credits for debit
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UsageForecast"
+                $ref: "#/components/schemas/ErrorResponse"
               example:
-                forecastDate: "2026-06-05T20:00:00.000Z"
-                month: "2026-06"
-                daysElapsed: 5
-                daysRemaining: 25
-                daysInMonth: 30
-                currentUsage:
-                  credits: 450
-                  runs: 9
-                dailyAverage:
-                  credits: 90
-                  runs: 1.8
-                forecast:
-                  endOfMonthCredits: 2700
-                  endOfMonthRuns: 54
-                  projectedRemainingCredits: 2250
-                freeTier:
-                  limit: 100
-                  wouldExceed: true
-                  estimatedOverage: 2600
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+                error: "Insufficient credits"
+                message: "Cannot deduct 500 credits. Account 42 has insufficient balance."
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   # ──────────────────────────────────────────────────────────────────────────
   # User — Me
@@ -874,7 +974,7 @@ paths:
                 node_env: "production"
                 database: "connected"
                 redis: "connected"
-                queue_backend: "bullmq"
+                queue_backend: "rabbitmq"
                 timestamp: "2026-06-05T20:00:00.000Z"
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -1272,9 +1372,14 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: |
-        API key or admin token provided in the Authorization header.
-        For admin endpoints, use your admin API token.
-        For user endpoints, use your account API key.
+        API key or user token provided in the Authorization header.
+    AdminKey:
+      type: apiKey
+      in: header
+      name: x-admin-key
+      description: |
+        Admin API key provided in the x-admin-key header.
+        Must match the configured ADMIN_API_KEY environment variable.
 
   schemas:
     # ── Health ──────────────────────────────────────────────────────────────
@@ -1301,6 +1406,98 @@ components:
         - label
         - uptime
         - timestamp
+
+    WorkersHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+          description: Overall worker health status
+        totalWorkers:
+          type: integer
+          description: Total number of tracked workers
+        aliveWorkers:
+          type: integer
+          description: Number of workers with recent heartbeats
+        deadWorkers:
+          type: integer
+          description: Number of workers without recent heartbeats
+        workers:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkerHeartbeatEntry"
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - status
+        - totalWorkers
+        - aliveWorkers
+        - deadWorkers
+        - workers
+        - timestamp
+
+    WorkerHeartbeatEntry:
+      type: object
+      properties:
+        workerId:
+          type: string
+          description: Unique worker identifier (e.g., hostname:pid)
+        lastHeartbeat:
+          type: string
+          format: date-time
+          description: ISO timestamp of the last heartbeat
+        isAlive:
+          type: boolean
+          description: Whether the worker is considered alive (heartbeat within 2 minutes)
+        secondsSinceHeartbeat:
+          type: integer
+          description: Seconds elapsed since the last heartbeat
+      required:
+        - workerId
+        - lastHeartbeat
+        - isAlive
+        - secondsSinceHeartbeat
+
+    DependenciesHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+          description: Overall dependency health status
+        dependencies:
+          type: array
+          items:
+            $ref: "#/components/schemas/DependencyCheckResult"
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - status
+        - dependencies
+        - timestamp
+
+    DependencyCheckResult:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Dependency name (e.g., database, redis, rabbitmq, opencode, sentry)
+        status:
+          type: string
+          enum: [ok, error, disabled]
+          description: Health status of the dependency
+        error:
+          type: string
+          description: Error message if status is error
+        latencyMs:
+          type: integer
+          description: Response latency in milliseconds (if applicable)
+      required:
+        - name
+        - status
 
     # ── Error Responses ────────────────────────────────────────────────────
     ErrorResponse:
@@ -1561,100 +1758,90 @@ components:
         - session_id
 
     # ── Usage ───────────────────────────────────────────────────────────────
-    UsageStats:
+    CreditUsageResponse:
       type: object
       properties:
-        totalRuns:
+        accountId:
           type: integer
-        totalCredits:
-          type: integer
-        averageCreditsPerRun:
-          type: number
-        totalDurationMs:
-          type: integer
-        runsBySource:
-          type: object
-          additionalProperties:
-            type: integer
-        runsByModel:
-          type: object
-          additionalProperties:
-            type: integer
-        prCreationRate:
-          type: number
-          description: Percentage of runs that resulted in PR creation
-        fallbackRate:
-          type: number
-          description: Percentage of runs that used fallback model
-      required:
-        - totalRuns
-        - totalCredits
-        - averageCreditsPerRun
-        - totalDurationMs
-        - runsBySource
-        - runsByModel
-        - prCreationRate
-        - fallbackRate
-
-    UsageCurrentMonth:
-      type: object
-      properties:
-        month:
+          description: The authenticated account ID
+        period:
           type: string
-          example: "2026-06"
-        totalCreditsUsed:
-          type: integer
-        totalRuns:
-          type: integer
-        freeTierLimit:
-          type: integer
-        freeTierRemaining:
-          type: integer
-          nullable: true
-        withinFreeTier:
-          type: boolean
-        costConfig:
-          type: object
-          properties:
-            triage:
-              type: integer
-            opencodePrimary:
-              type: integer
-            opencodeFallback:
-              type: integer
-            prCreation:
-              type: integer
-            retryPenalty:
-              type: integer
+          enum: [daily, weekly, monthly]
+          description: Aggregation period
+        usage:
+          type: array
+          items:
+            $ref: "#/components/schemas/UsagePeriod"
       required:
-        - month
-        - totalCreditsUsed
-        - totalRuns
+        - accountId
+        - period
+        - usage
 
-    UsageForecast:
+    UsagePeriod:
       type: object
       properties:
-        forecastDate:
+        periodStart:
           type: string
           format: date-time
-        month:
+          description: Start of the aggregation period
+        totalCredits:
+          type: integer
+          description: Total credits consumed in this period
+        totalTransactions:
+          type: integer
+          description: Number of deduction transactions in this period
+      required:
+        - periodStart
+        - totalCredits
+        - totalTransactions
+
+    AdminCreditAdjustRequest:
+      type: object
+      required:
+        - accountId
+        - amount
+      properties:
+        accountId:
+          type: integer
+          description: Account ID to adjust
+          example: 42
+        amount:
+          type: integer
+          description: >
+            Credit amount. Positive values credit the account (add credits).
+            Negative values debit the account (deduct credits). Must not be zero.
+          example: 500
+        description:
           type: string
-        daysElapsed:
+          description: Reason for the adjustment
+          example: "Customer compensation for outage"
+        type:
+          type: string
+          enum: [purchase, refund, adjustment]
+          default: adjustment
+          description: Transaction type
+
+    AdminCreditAdjustResponse:
+      type: object
+      properties:
+        accountId:
           type: integer
-        daysRemaining:
+        newBalance:
           type: integer
-        daysInMonth:
+          description: Account balance after adjustment
+        amount:
           type: integer
-        currentUsage:
-          type: object
-          properties:
-            credits:
-              type: integer
-            runs:
-              type: integer
-        dailyAverage:
-          type: object
-          properties:
+          description: Amount applied (positive = credit, negative = debit)
+        type:
+          type: string
+        description:
+          type: string
+          nullable: true
+      required:
+        - accountId
+        - newBalance
+        - amount
+        - type
             credits:
               type: number
             runs:

@@ -1,0 +1,30 @@
+description: "Agent must fix a TypeScript type annotation error"
+issue:
+  title: "TS2345: Argument of type 'string | undefined' not assignable to parameter of type 'string' in src/greeter.ts"
+  body: |
+    ## Bug
+    The `greet()` function in `src/greeter.ts` accepts `name` as an optional
+    parameter but passes it directly to `toUpperCase()` which requires `string`.
+
+    ```typescript
+    function greet(name?: string): string {
+      return "Hello, " + name.toUpperCase();
+    }
+    ```
+
+    ## Expected
+    Add a default value or a guard check for the optional parameter.
+    The fix should be either:
+    - `function greet(name: string = "World"): string` or
+    - `function greet(name?: string): string { return "Hello, " + (name ?? "World").toUpperCase(); }`
+
+    ## Steps to reproduce
+    1. Run `npx tsc --noEmit`
+    2. Observe `error TS2345: 'name' is possibly 'undefined'`
+    3. Fix: add a default parameter value or null check
+repo: https://github.com/example/ts-type-annotation-demo
+expected:
+  outcome: pr_created
+  filesChanged: ["src/greeter.ts"]
+  minTestsPassing: 1
+timeoutMs: 300000

@@ -170,13 +170,12 @@ export function createMockCodeIntelInput(): MockCodeIntelInput {
     symbols: [
       'runIssueAgent', 'classifyIssue', 'dispatchToOpenCode',
       'buildCodeIntelligence', 'runVerification', 'attemptBasicFix',
-      'createApp', 'startServer', 'createIssueQueue', 'createIssueWorker',
-      'enqueueIssue', 'createGithubWebhooks', 'SandboxExecutor',
+      'createApp', 'startServer', 'enqueueIssue', 'createGithubWebhooks', 'SandboxExecutor',
     ],
     imports: {
-      'src/server.ts': ['express', '@octokit/webhooks', 'bullmq'],
+      'src/server.ts': ['express', '@octokit/webhooks'],
       'src/agent/issueAgent.ts': ['openai', 'e2b'],
-      'src/queue/issueQueue.ts': ['bullmq'],
+      'src/queue/issueQueue.ts': [],
     },
   };
 }

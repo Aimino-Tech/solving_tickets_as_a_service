@@ -429,9 +429,8 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
     // Re-enqueue based on source
     if (webhookEvent.source === 'github') {
       const { createGithubWebhooks } = await import('../webhooks/github.js');
-      const { createIssueQueue } = await import('../queue/issueQueue.js');
-      const queue = createIssueQueue();
-      const githubWebhooks = createGithubWebhooks(queue);
+      const { enqueueIssue } = await import('../queue/issueQueue.js');
+      const githubWebhooks = createGithubWebhooks();
 
       const payload = typeof webhookEvent.payload === 'string'
         ? webhookEvent.payload
@@ -447,7 +446,6 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
       if (typeof githubWebhooks.close === 'function') {
         await githubWebhooks.close();
       }
-      await queue.close();
     } else {
       res.status(400).json({ error: `Replay not supported for source: ${webhookEvent.source}` });
       return;
@@ -473,52 +471,39 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /admin/queue — queue status
+// GET /admin/queue — queue status (RabbitMQ)
 // ---------------------------------------------------------------------------
 
 router.get('/queue', async (_req: Request, res: Response) => {
   try {
-    const { Queue } = await import('bullmq');
-    const { Queue: QueueRmq } = await import('bullmq');
+    const { isConnected, getPublishChannel, QUEUES } = await import('../queue/rabbitmq.js');
 
-    const mainQueue = new Queue('stas-issues', {
-      connection: { url: config.queue.redisUrl, maxRetriesPerRequest: null, enableReadyCheck: true },
-    });
-    const dlq = new QueueRmq('stas-issues-dlq', {
-      connection: { url: config.queue.redisUrl, maxRetriesPerRequest: null, enableReadyCheck: true },
-    });
-
-    try {
-      const [waiting, active, completed, failed, delayed, dlqCount] = await Promise.all([
-        mainQueue.getWaitingCount(),
-        mainQueue.getActiveCount(),
-        mainQueue.getCompletedCount(),
-        mainQueue.getFailedCount(),
-        mainQueue.getDelayedCount(),
-        dlq.getCompletedCount().catch(() => 0),
-      ]);
-
-      res.json({
-        main: {
-          waiting,
-          active,
-          completed,
-          failed,
-          delayed,
-          total: waiting + active + delayed,
-        },
-        deadLetter: {
-          count: dlqCount,
-        },
-      });
-
-      await mainQueue.close();
-      await dlq.close();
-    } catch (err) {
-      await mainQueue.close().catch(() => {});
-      await dlq.close().catch(() => {});
-      throw err;
+    if (!isConnected()) {
+      res.json({ status: 'not_connected', queues: {} });
+      return;
     }
+
+    const channel = getPublishChannel();
+    const queueStatuses: Record<string, { name: string; messageCount: number; consumerCount: number }> = {};
+
+    for (const [key, q] of Object.entries(QUEUES)) {
+      try {
+        const info = await channel.checkQueue(q.name);
+        queueStatuses[key] = {
+          name: q.name,
+          messageCount: info.messageCount,
+          consumerCount: info.consumerCount,
+        };
+      } catch {
+        queueStatuses[key] = { name: q.name, messageCount: -1, consumerCount: 0 };
+      }
+    }
+
+    res.json({
+      status: 'connected',
+      rabbitmq: true,
+      queues: queueStatuses,
+    });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to get queue status');
     res.status(500).json({ error: 'Failed to get queue status' });
@@ -526,28 +511,55 @@ router.get('/queue', async (_req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /admin/queue/clear-dlq — clear dead letter queue
+// POST /admin/queue/clear-dlq — purge dead letter queues (RabbitMQ)
 // ---------------------------------------------------------------------------
 
 router.post('/queue/clear-dlq', async (_req: Request, res: Response) => {
   try {
-    const { Queue } = await import('bullmq');
-    const dlq = new Queue('stas-issues-dlq', {
-      connection: { url: config.queue.redisUrl, maxRetriesPerRequest: null, enableReadyCheck: true },
-    });
+    const { isConnected, getPublishChannel, QUEUES } = await import('../queue/rabbitmq.js');
 
-    try {
-      await dlq.obliterate({ force: true });
-      log.info('Admin cleared dead-letter queue');
-      res.json({ cleared: true });
-      await dlq.close();
-    } catch (err) {
-      await dlq.close().catch(() => {});
-      throw err;
+    if (!isConnected()) {
+      res.status(503).json({ error: 'RabbitMQ not connected' });
+      return;
     }
+
+    const channel = getPublishChannel();
+    const purged: string[] = [];
+
+    for (const [, q] of Object.entries(QUEUES)) {
+      const dlqName = `${q.name}.dlq`;
+      try {
+        const result = await channel.purgeQueue(dlqName);
+        if (result.messageCount > 0) {
+          purged.push(dlqName);
+        }
+      } catch {
+        // Queue might not exist
+      }
+    }
+
+    log.info({ purgedCount: purged.length, queues: purged }, 'Admin purged dead-letter queues');
+    res.json({ cleared: true, purgedQueues: purged });
   } catch (err) {
-    log.error({ err: String(err) }, 'Failed to clear dead-letter queue');
-    res.status(500).json({ error: 'Failed to clear dead-letter queue' });
+    log.error({ err: String(err) }, 'Failed to clear dead-letter queues');
+    res.status(500).json({ error: 'Failed to clear dead-letter queues' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /admin/gc/sweep — trigger sandbox container GC sweep
+// ---------------------------------------------------------------------------
+
+router.post('/gc/sweep', async (_req: Request, res: Response) => {
+  try {
+    const { SandboxGC } = await import('../sandbox/gc.js');
+    const gc = new SandboxGC();
+    const cleaned = await gc.sweep();
+    log.info({ cleaned }, 'Admin triggered sandbox GC sweep');
+    res.json({ cleaned, timestamp: new Date().toISOString() });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to run sandbox GC sweep');
+    res.status(500).json({ error: 'GC sweep failed' });
   }
 });
 

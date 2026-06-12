@@ -34,7 +34,7 @@ router.get('/github', (_req: Request, res: Response) => {
   const state = crypto.randomUUID();
   const redirectUri = `http://localhost:3000/api/auth/callback`;
   const params = new URLSearchParams({
-    client_id: process.env.GITHUB_OAUTH_CLIENT_ID || '',
+    client_id: config.github.oauthClientId ?? '',
     redirect_uri: redirectUri,
     scope: 'read:user user:email',
     state,
@@ -59,8 +59,8 @@ router.get('/callback', async (req: Request, res: Response) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
-        client_id: process.env.GITHUB_OAUTH_CLIENT_ID || '',
-        client_secret: process.env.GITHUB_OAUTH_CLIENT_SECRET || '',
+        client_id: config.github.oauthClientId ?? '',
+        client_secret: config.github.oauthClientSecret ?? '',
         code,
       }),
     });

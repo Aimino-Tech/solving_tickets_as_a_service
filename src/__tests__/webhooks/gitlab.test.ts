@@ -219,7 +219,7 @@ describe("createGitlabWebhooks", () => {
   });
 
   it("enqueues a job for issue updated with target label", async () => {
-    const handler = createGitlabWebhooks(mockQueue as any);
+    const handler = createGitlabWebhooks();
     await handler.handle("Issue Hook", sampleGitLabIssueLabeledPayload());
 
     expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
@@ -235,14 +235,14 @@ describe("createGitlabWebhooks", () => {
   });
 
   it("does NOT enqueue for issue open without label", async () => {
-    const handler = createGitlabWebhooks(mockQueue as any);
+    const handler = createGitlabWebhooks();
     await handler.handle("Issue Hook", sampleGitLabIssueOpenedPayload());
 
     expect(mockEnqueueIssue).not.toHaveBeenCalled();
   });
 
   it("does NOT enqueue for non-matching event types", async () => {
-    const handler = createGitlabWebhooks(mockQueue as any);
+    const handler = createGitlabWebhooks();
     await handler.handle("Push Hook", {});
 
     expect(mockEnqueueIssue).not.toHaveBeenCalled();
@@ -253,7 +253,7 @@ describe("createGitlabWebhooks", () => {
     payload.object_attributes.labels = [{ title: "other-label" }];
     payload.labels = [{ title: "other-label" }];
 
-    const handler = createGitlabWebhooks(mockQueue as any);
+    const handler = createGitlabWebhooks();
     await handler.handle("Issue Hook", payload);
 
     expect(mockEnqueueIssue).not.toHaveBeenCalled();

@@ -25,6 +25,13 @@ import http from "node:http";
 import { type AddressInfo } from "node:net";
 import crypto from "node:crypto";
 
+/**
+ * Sign a webhook payload body with HMAC-SHA256 using the given secret.
+ */
+function signPayload(body: string, secret: string): string {
+  return "sha256=" + crypto.createHmac("sha256", secret).update(body, "utf8").digest("hex");
+}
+
 // ---------------------------------------------------------------------------
 // Mocks — hoisted before ALL imports by vitest
 // ---------------------------------------------------------------------------
@@ -86,7 +93,7 @@ const { mockConfig } = vi.hoisted(() => {
         keepFailed: 100,
         maxRetries: 4,
         retryDelays: [30000, 120000, 300000, 900000] as number[],
-        backend: "bullmq" as const,
+        backend: "rabbitmq" as const,
       },
       rabbitmq: {
         url: "amqp://localhost:5672/stas",
@@ -104,6 +111,13 @@ const { mockConfig } = vi.hoisted(() => {
         url: "http://localhost:4096",
         model: "anthropic/claude-sonnet-4-20250514",
         fallbackModels: ["gpt-4o", "claude-haiku"],
+      },
+      opencodeHealth: {
+        pollIntervalMs: 15000,
+        cacheTtlMs: 30000,
+        circuitBreakerThreshold: 3,
+        requestTimeoutMs: 5000,
+        startupTimeoutMs: 30000,
       },
       gitlab: {
         url: "https://gitlab.com",
@@ -145,8 +159,10 @@ const { mockConfig } = vi.hoisted(() => {
         devSkipWebhookVerify: true,
         maxAgentIterations: 40,
         maxIssueComments: 15,
-        rateLimitWindowMs: 60000,
-        rateLimitMax: 30,
+        rateLimit: {
+          windowMs: 60000,
+          max: 30,
+        },
         defaultTier: "free" as const,
         monthlyQuotaEnabled: true,
       },
@@ -234,10 +250,6 @@ vi.mock("../../src/utils/logger.js", () => ({
 
 vi.mock("../../src/queue/issueQueue.js", () => ({
   enqueueIssue: mockEnqueueIssue,
-  createIssueQueue: mockCreateIssueQueue,
-  createIssueWorker: vi.fn(),
-  createDeadLetterQueue: vi.fn(),
-  createQueueEvents: vi.fn(() => ({ on: vi.fn(), close: vi.fn() })),
 }));
 
 vi.mock("../../src/github/auth.js", () => ({
@@ -332,17 +344,16 @@ vi.mock("../../src/metering/routes.js", () => ({ usageRouter: vi.fn() }));
 
 import { createApp } from "../../src/server.js";
 import {
-  sampleIssueLabeledPayload,
-  sampleNonTargetLabelPayload,
-  sampleMissingInstallationPayload,
-  sampleMarketplacePurchasePayload,
-  sampleIssueEditedWithTargetPayload,
-  signPayload,
+  githubIssuesLabeledStasFix as sampleIssueLabeledPayload,
+  githubIssuesLabeledOther as sampleNonTargetLabelPayload,
+  githubIssuesOpened as sampleMissingInstallationPayload,
+  githubMarketplacePurchased as sampleMarketplacePurchasePayload,
+  githubIssuesEditedWithStasFix as sampleIssueEditedWithTargetPayload,
 } from "./fixtures/webhooks/github.js";
-import { sampleGitlabIssuePayload } from "./fixtures/webhooks/gitlab.js";
-import { sampleBitbucketIssueCreatedPayload } from "./fixtures/webhooks/bitbucket.js";
-import { sampleLinearWebhookPayload } from "./fixtures/webhooks/linear.js";
-import { sampleJiraWebhookPayload } from "./fixtures/webhooks/jira.js";
+import { gitlabIssueHookLabeled as sampleGitlabIssuePayload } from "./fixtures/webhooks/gitlab.js";
+import { bitbucketPullRequestCreated as sampleBitbucketIssueCreatedPayload } from "./fixtures/webhooks/bitbucket.js";
+import { linearIssueCreate as sampleLinearWebhookPayload } from "./fixtures/webhooks/linear.js";
+import { jiraIssueCreated as sampleJiraWebhookPayload } from "./fixtures/webhooks/jira.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -705,7 +716,7 @@ describe("Full E2E Flow: Webhook → Queue → Agent → PR Creation", () => {
   describe("Retry flow: agent fails → retry scheduled → max retries → DLQ", () => {
     it("enqueues a job that would be retried on failure (config has retry delays)", async () => {
       // This tests that the enqueue path works correctly.
-      // Retry logic lives in the worker (issueQueue.ts createIssueWorker).
+      // Retry logic is now handled by Celery workers (Python via RabbitMQ).
       // Here we verify the queue configuration supports retries.
       const payload = sampleIssueLabeledPayload();
       await sendGithubWebhook(serverUrl, "issues.labeled", payload);

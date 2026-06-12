@@ -1,0 +1,149 @@
+# Group 2: JavaScript/TypeScript Fixes (3 test cases)
+# Test the agent's ability to fix common JS/TS issues.
+
+- description: "JavaScript — closure scope issue in loop"
+  vars:
+    repo: "https://github.com/example/js-bug-repo"
+    title: "All buttons log the same index — closure captures loop variable by reference"
+    description: |
+      When clicking any button in a dynamically generated list, the console always logs 
+      the last index value instead of each button's own index. The issue is a classic 
+      closure-in-loop problem.
+      
+      Steps to reproduce:
+      1. Call createButtons(["Apple", "Banana", "Cherry"]) 
+      2. Click the first button
+      3. Expected: logs "Apple (0)"
+      4. Actual: logs "Cherry (2)"
+      
+      Expected: Each button should log its own label and index.
+    codeContext: |
+      ```javascript
+      function createButtons(items) {
+        const container = document.getElementById("button-container");
+        for (var i = 0; i < items.length; i++) {
+          const btn = document.createElement("button");
+          btn.textContent = items[i];
+          btn.addEventListener("click", function() {
+            console.log(items[i] + " (" + i + ")");
+          });
+          container.appendChild(btn);
+        }
+      }
+      ```
+  assert:
+    - type: llm-rubric
+      value: |
+        The response correctly identifies the closure-scope issue with `var` in a loop.
+        The fix either: (1) changes `var` to `let`, (2) uses an IIFE to capture each 
+        iteration, or (3) uses `Array.prototype.forEach` instead of `for`. The fix 
+        correctly ensures each closure captures its own `i` value.
+    - type: contains-all
+      value:
+        - "closure"
+        - "let"
+        - "var"
+
+- description: "TypeScript — incorrect type guard usage"
+  vars:
+    repo: "https://github.com/example/ts-bug-repo"
+    title: "TypeScript runtime error — type guard checks wrong property"
+    description: |
+      The `processResponse()` function sometimes crashes at runtime with 
+      `TypeError: Cannot read properties of undefined (reading 'map')`. The type guard 
+      `isSuccessResponse()` checks `data` but the actual success responses use `results`.
+      
+      Steps to reproduce:
+      1. Call processResponse({ status: "ok", results: [1, 2, 3] })
+      2. Observe TypeError on response.data.map
+      
+      Expected: Should correctly narrow the type and access the right property.
+    codeContext: |
+      ```typescript
+      interface SuccessResponse {
+        status: "ok";
+        results: number[];
+        timestamp: string;
+      }
+
+      interface ErrorResponse {
+        status: "error";
+        message: string;
+        code: number;
+      }
+
+      type ApiResponse = SuccessResponse | ErrorResponse;
+
+      function isSuccessResponse(r: ApiResponse): r is SuccessResponse {
+        return r.status === "ok" && "data" in r;
+      }
+
+      function processResponse(response: ApiResponse): number[] {
+        if (isSuccessResponse(response)) {
+          return response.results.map((n: number) => n * 2);
+        }
+        throw new Error(response.message);
+      }
+      ```
+  assert:
+    - type: llm-rubric
+      value: |
+        The response correctly identifies that the type guard checks for `"data" in r`
+        but the SuccessResponse interface uses `results`, not `data`. The fix changes
+        `"data" in r` to `"results" in r`. The response explains that this is a 
+        property name mismatch between the type guard and the interface definition.
+    - type: contains-all
+      value:
+        - "type guard"
+        - "\"results\" in r"
+        - "data"
+
+- description: "JavaScript — missing return in async function"
+  vars:
+    repo: "https://github.com/example/js-bug-repo"
+    title: "fetchUserData() returns undefined — missing return on async path"
+    description: |
+      The `fetchUserData()` function returns `undefined` even though it appears to call an 
+      API and store the result. The issue is that one code path uses `await` without
+      returning the resulting promise.
+      
+      Steps to reproduce:
+      1. Call await fetchUserData(42)
+      2. Observe result is undefined
+      3. Network request succeeds (data is fetched)
+      
+      Expected: Should return the fetched user data object.
+    codeContext: |
+      ```javascript
+      async function fetchUserData(userId) {
+        if (!userId) {
+          return null;
+        }
+
+        const cached = cache.get(`user:${userId}`);
+        if (cached) {
+          return cached;
+        }
+
+        const response = await fetch(`/api/users/${userId}`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = response.json();
+        cache.set(`user:${userId}`, data);
+        return data;
+      }
+      ```
+  assert:
+    - type: llm-rubric
+      value: |
+        The response correctly identifies that `response.json()` returns a Promise and
+        needs to be awaited: `await response.json()`. The fix adds `await` before 
+        `response.json()`. The response explains that without `await`, the function 
+        returns a pending Promise that resolves to undefined when consumed.
+    - type: contains-all
+      value:
+        - "await"
+        - "response.json()"
+        - "Promise"

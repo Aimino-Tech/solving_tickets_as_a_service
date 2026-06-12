@@ -17,7 +17,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 // ── Module-level mocks ──────────────────────────────────────────────────────
 // Prevent .env loading and keep the logger quiet during tests.
 
-vi.mock('dotenv/config');
+vi.mock('dotenv/config', () => ({}));
 
 const mockRootLogger = vi.hoisted(() => ({
   error: vi.fn(),
@@ -42,6 +42,7 @@ describe('config', () => {
     vi.stubEnv('GITHUB_APP_ID', 'test-app-123');
     vi.stubEnv('GITHUB_WEBHOOK_SECRET', 'test-webhook-secret-456');
     vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
+    vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-api-key');
 
     // Override vitest's NODE_ENV=test so the module-level default is "development"
     vi.stubEnv('NODE_ENV', 'development');
@@ -142,6 +143,7 @@ describe('config', () => {
       vi.stubEnv('GITHUB_APP_ID', 'test-app-123');
       vi.stubEnv('GITHUB_WEBHOOK_SECRET', 'test-webhook-secret-456');
       vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
+      vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-api-key');
     });
 
     afterEach(() => {
@@ -321,7 +323,7 @@ describe('config', () => {
     it('calls process.exit(1) when required env vars are missing', async () => {
       vi.resetModules();
 
-      vi.mock('dotenv/config');
+      vi.mock('dotenv/config', () => ({}));
 
       // Clear all env stubs so the required vars are absent
       vi.unstubAllEnvs();
@@ -350,7 +352,6 @@ describe('config', () => {
       expect(cfg).toHaveProperty("github");
       expect(cfg).toHaveProperty("queue");
       expect(cfg).toHaveProperty("opencode");
-      expect(cfg).toHaveProperty("openai");
       expect(cfg).toHaveProperty("e2b");
       expect(cfg).toHaveProperty("stas");
       expect(cfg).toHaveProperty("fixTimeoutMs");
@@ -366,6 +367,7 @@ describe('config', () => {
       expect(cfg.opencode).toHaveProperty("url");
       expect(cfg.opencode).toHaveProperty("model");
       expect(cfg.opencode).toHaveProperty("fallbackModels");
+      expect(cfg.opencode.direct).toHaveProperty("apiKey");
       expect(cfg.e2b).toHaveProperty("sandboxTimeoutMs");
       expect(cfg.stas).toHaveProperty("rateLimit.max");
       expect(cfg.phaseTimeouts).toHaveProperty("triage");

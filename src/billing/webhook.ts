@@ -42,8 +42,8 @@ function getStripe(): Stripe {
     if (!secretKey) {
       throw new Error('STRIPE_SECRET_KEY is not configured.');
     }
-    _stripe = new Stripe(secretKey, {
-      apiVersion: '2025-02-24.acacia' as any,
+    _stripe = new (Stripe as unknown as { new(key: string, config?: Record<string, unknown>): Stripe })(secretKey, {
+      apiVersion: '2025-02-24.acacia',
       typescript: true,
     });
   }

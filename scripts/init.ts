@@ -253,6 +253,12 @@ function generateEnvFile(env: EnvVars): string {
   // Replace actual newlines with literal \n for single-line .env values
   lines.push(`GITHUB_APP_PRIVATE_KEY=${env.GITHUB_APP_PRIVATE_KEY.replace(/\n/g, "\\n")}`);
   lines.push(`GITHUB_WEBHOOK_SECRET=${env.GITHUB_WEBHOOK_SECRET}`);
+  if (env.GITHUB_OAUTH_CLIENT_ID) {
+    lines.push(`GITHUB_OAUTH_CLIENT_ID=${env.GITHUB_OAUTH_CLIENT_ID}`);
+  }
+  if (env.GITHUB_OAUTH_CLIENT_SECRET) {
+    lines.push(`GITHUB_OAUTH_CLIENT_SECRET=${env.GITHUB_OAUTH_CLIENT_SECRET}`);
+  }
   lines.push("");
 
   // Redis
@@ -264,15 +270,16 @@ function generateEnvFile(env: EnvVars): string {
   h("=== OpenCode ===");
   lines.push(`OPENCODE_URL=${env.OPENCODE_URL}`);
   lines.push(`OPENCODE_MODEL=${env.OPENCODE_MODEL}`);
+  if (env.OPENCODE_API_KEY) {
+    lines.push(`OPENCODE_API_KEY=${env.OPENCODE_API_KEY}`);
+  }
   lines.push("");
 
-  // Triage LLM
-  if (env.OPENAI_API_KEY) {
-    h("=== Triage LLM ===");
-    lines.push(`OPENAI_API_KEY=${env.OPENAI_API_KEY}`);
-    lines.push(`OPENAI_CHEAP_MODEL=${env.OPENAI_CHEAP_MODEL}`);
-    lines.push("");
-  }
+  // Direct LLM (OpenCode Go)
+  h("=== Direct LLM (OpenCode Go) ===");
+  lines.push(`OPENCODE_DIRECT_MODEL=${env.OPENCODE_DIRECT_MODEL}`);
+  lines.push(`OPENCODE_FALLBACK_MODEL=${env.OPENCODE_FALLBACK_MODEL}`);
+  lines.push("");
 
   // Sandbox
   if (env.E2B_API_KEY) {
@@ -289,6 +296,10 @@ function generateEnvFile(env: EnvVars): string {
 
   if (env.PORT) {
     lines.push(`PORT=${env.PORT}`);
+  }
+
+  if (env.ADMIN_API_KEY) {
+    lines.push(`ADMIN_API_KEY=${env.ADMIN_API_KEY}`);
   }
 
   // Optional extras
@@ -369,6 +380,18 @@ async function main(): Promise<void> {
   if (moreGitHub) {
     const webhookPath = await ask("Webhook path", { default: "/webhook" });
     if (webhookPath !== "/webhook") env.GITHUB_WEBHOOK_PATH = webhookPath;
+
+    const oauthId = await ask("GitHub OAuth client ID", { required: false });
+    if (oauthId) {
+      env.GITHUB_OAUTH_CLIENT_ID = oauthId;
+      printValue("GITHUB_OAUTH_CLIENT_ID", oauthId);
+    }
+
+    const oauthSecret = await ask("GitHub OAuth client secret", { required: false });
+    if (oauthSecret) {
+      env.GITHUB_OAUTH_CLIENT_SECRET = oauthSecret;
+      printValue("GITHUB_OAUTH_CLIENT_SECRET", oauthSecret);
+    }
   }
 
   // ==========================================================================
@@ -415,29 +438,34 @@ async function main(): Promise<void> {
   });
   printValue("OPENCODE_MODEL", env.OPENCODE_MODEL);
 
+  const useOpencodeKey = await confirm("Configure OpenCode API key?", false);
+  if (useOpencodeKey) {
+    env.OPENCODE_API_KEY = await ask("OpenCode API key", {
+      validate: (v) => (v && v.length < 10 ? "Looks too short for an API key" : null),
+    });
+    if (env.OPENCODE_API_KEY) {
+      printValue("OPENCODE_API_KEY", env.OPENCODE_API_KEY);
+    }
+  }
+
   // ==========================================================================
   // SECTION 4: Triage LLM
   // ==========================================================================
   printSection(
-    "Triage LLM (Optional)",
+    "Direct LLM (OpenCode Go)",
     "A cheap model for classifying issues before the fix agent runs.\n" +
-      "  Helps filter noise and estimate scope before spending on a full agent run.\n" +
-      "  If skipped, all labeled issues pass through without classification.",
+      "  Uses OpenCode Go's OpenAI-compatible endpoint. The API key is hardcoded.\n" +
+      "  Default: deepseek-v4-flash (triage), deepseek-v4-pro (fallback fix)",
   );
 
-  const useTriage = await confirm("Configure triage LLM?", false);
-  if (useTriage) {
-    env.OPENAI_API_KEY = await ask("OpenAI API key (for triage)", {
-      validate: (v) => (v && v.startsWith("sk-") ? null : v ? "Looks like it should start with 'sk-'" : null),
-    });
-    if (env.OPENAI_API_KEY) {
-      printValue("OPENAI_API_KEY", env.OPENAI_API_KEY);
-    }
-    env.OPENAI_CHEAP_MODEL = await ask("Triage model", {
-      default: "gpt-4o-mini",
-    });
-    printValue("OPENAI_CHEAP_MODEL", env.OPENAI_CHEAP_MODEL);
-  }
+  env.OPENCODE_DIRECT_MODEL = await ask("Triage model", {
+    default: "deepseek-v4-flash",
+  });
+  printValue("OPENCODE_DIRECT_MODEL", env.OPENCODE_DIRECT_MODEL);
+  env.OPENCODE_FALLBACK_MODEL = await ask("Fallback fix model", {
+    default: "deepseek-v4-pro",
+  });
+  printValue("OPENCODE_FALLBACK_MODEL", env.OPENCODE_FALLBACK_MODEL);
 
   // ==========================================================================
   // SECTION 5: Sandbox
@@ -480,6 +508,16 @@ async function main(): Promise<void> {
     default: "STAS",
   });
   printValue("BOT_NAME", env.BOT_NAME);
+
+  const configureAdmin = await confirm("Configure admin API key?", false);
+  if (configureAdmin) {
+    env.ADMIN_API_KEY = await ask("Admin API key", {
+      validate: (v) => (v && v.length < 8 ? "Should be at least 8 characters" : null),
+    });
+    if (env.ADMIN_API_KEY) {
+      printValue("ADMIN_API_KEY", env.ADMIN_API_KEY);
+    }
+  }
 
   const customPort = await confirm("Use a custom webhook port?", false);
   if (customPort) {
