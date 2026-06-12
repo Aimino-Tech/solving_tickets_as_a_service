@@ -32,6 +32,11 @@ providers:
     config:
       temperature: 0.3
       max_tokens: 4096
+  - id: file://providers/stas-agent.ts
+    config:
+      sandboxTemplate: "stas-eval"
+      timeoutMs: 300000
+      model: opencode-go/deepseek-v4-flash
 
 defaultTest:
   assert:

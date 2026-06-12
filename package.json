@@ -120,6 +120,9 @@
     "smee-client": "^5.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "promptfoo": "^0.121.15",
+    "langfuse": "^3.36.0",
+    "langfuse-vercel": "^3.38.20"
   }
 }
