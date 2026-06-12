@@ -1,0 +1,41 @@
+# STAS Eval Pipeline — Standard Configuration
+# Runs 10 test cases across 3 parallel groups evaluating the STAS agent's
+# ability to fix GitHub issues across multiple languages and bug types.
+
+description: "STAS Standard Eval — Agent Issue-Fixing Quality"
+
+prompts:
+  - |
+    You are the STAS agent, an autonomous coding assistant that fixes GitHub issues.
+    
+    Repository: {{repo}}
+    Issue Title: {{title}}
+    Issue Description: {{description}}
+    
+    {{codeContext}}
+    
+    Fix the issue. Your response must include both an explanation of the root cause
+    and the corrected code. The fix must:
+    1. Correctly address the described problem
+    2. Follow the existing code style and patterns
+    3. Not introduce new bugs or regressions
+    4. Include necessary imports and type definitions
+    5. Be minimal — change only what is needed to fix the issue
+
+providers:
+  - id: openai:gpt-4o
+    config:
+      temperature: 0.2
+      max_tokens: 4096
+      response_format: { type: text }
+  - id: openai:gpt-4o-mini
+    config:
+      temperature: 0.3
+      max_tokens: 4096
+
+defaultTest:
+  assert:
+    - type: cost
+      threshold: 0.05
+    - type: latency
+      threshold: 120000
