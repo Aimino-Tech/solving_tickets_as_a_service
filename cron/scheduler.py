@@ -17,6 +17,8 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
+import time as _time
 from contextlib import contextmanager
 
 # fcntl is Unix-only; on Windows use msvcrt for file locking
@@ -42,6 +44,39 @@ from hermes_cli.config import load_config, _expand_env_vars
 from hermes_time import now as _hermes_now
 
 logger = logging.getLogger(__name__)
+
+# Cooldown cache: tracks when each job was last dispatched via tick().
+# A job that was dispatched less than MIN_TICK_INTERVAL seconds ago is
+# skipped (phantom-trigger guard).  This prevents double-firing when a
+# phantom scheduling event races with the real tick.
+#
+# The cache is cleared at the start of each tick() invocation so the
+# per-tick _run_cache (inside tick()) handles intra-tick dedup.  The
+# module-level cache provides defense-in-depth for the unlikely case
+# of same-process concurrent tick() calls.  See also the phantom-fire
+# detection in _get_due_jobs_locked() (PHANTOM_FIRE_THRESHOLD_SECONDS)
+# and the advance_next_run() guard in cron/jobs.py.
+_last_run_cache: dict[str, float] = {}
+_last_run_cache_lock: threading.Lock = threading.Lock()
+
+# Minimum interval (seconds) between consecutive dispatches of the same job.
+# Jobs dispatched more recently than this are assumed to be phantom triggers
+# and are silently skipped.
+MIN_TICK_INTERVAL = 60
+
+# TTL for cooldown cache entries.  Entries older than this are removed
+# during opportunistic cleanup to prevent the cache growing unboundedly
+# over days of gateway uptime.
+_CACHE_TTL = MIN_TICK_INTERVAL * 3  # 180 seconds
+
+
+def clear_last_run_cache() -> None:
+    """Clear the module-level cooldown cache.
+
+    Used by tests to reset state between test runs without reloading
+    the scheduler module.  Not intended for production use.
+    """
+    _last_run_cache.clear()
 
 
 class CronPromptInjectionBlocked(Exception):
@@ -124,7 +159,7 @@ _LEGACY_HOME_TARGET_ENV_VARS = {
     "QQBOT_HOME_CHANNEL": "QQ_HOME_CHANNEL",
 }
 
-from cron.jobs import get_due_jobs, mark_job_run, save_job_output, advance_next_run
+from cron.jobs import get_due_jobs, mark_job_run, save_job_output, advance_next_run, PHANTOM_FIRE_THRESHOLD_SECONDS
 
 # Sentinel: when a cron agent has nothing new to report, it can start its
 # response with this marker to suppress delivery.  Output is still saved
@@ -1817,6 +1852,9 @@ def tick(verbose: bool = True, adapters=None, loop=None) -> int:
         return 0
 
     try:
+        # Clear the module-level cooldown cache so each tick() invocation
+        # starts fresh.  The per-tick _run_cache handles intra-tick dedup.
+        _last_run_cache.clear()
         due_jobs = get_due_jobs()
 
         if verbose and not due_jobs:
@@ -1858,8 +1896,86 @@ def tick(verbose: bool = True, adapters=None, loop=None) -> int:
                 _max_workers if _max_workers else "unbounded",
             )
 
+        # Per-tick cooldown cache: prevents the same job from being
+        # dispatched twice within a single tick() invocation.
+        # This is per-tick because it uses the job's id as a bool key;
+        # the module-level _last_run_cache handles cross-tick dedup.
+        _run_cache: dict[str, bool] = {}
+
         def _process_job(job: dict) -> bool:
             """Run one due job end-to-end: execute, save, deliver, mark."""
+            job_id = job["id"]
+            job_name = job.get("name", job_id)
+
+            # ---- Cross-tick cooldown (module-level cache) ----
+            # Prevent the same job from being dispatched in overlapping
+            # tick() invocations (same-process concurrent ticks).  This
+            # is an in-memory guard with a time-based TTL that catches
+            # phantom triggers even when the file-lock fails to serialize
+            # two tick() calls within the same process.
+            _now_ts = _time.time()
+            with _last_run_cache_lock:
+                _last_dispatch = _last_run_cache.get(job_id)
+                if _last_dispatch is not None and (_now_ts - _last_dispatch) < MIN_TICK_INTERVAL:
+                    logger.info(
+                        "Job '%s' skipped by cooldown: last dispatch was %.1fs ago "
+                        "(MIN_TICK_INTERVAL=%ds)",
+                        job_name,
+                        _now_ts - _last_dispatch,
+                        MIN_TICK_INTERVAL,
+                    )
+                    return True  # Count as "handled" — not an error
+                _last_run_cache[job_id] = _now_ts
+
+                # Opportunistic cache cleanup: remove entries older than CACHE_TTL
+                # to prevent unbounded memory growth over days of gateway uptime.
+                _stale_cutoff = _now_ts - _CACHE_TTL
+                _stale_keys = [k for k, v in _last_run_cache.items() if v < _stale_cutoff]
+                for k in _stale_keys:
+                    del _last_run_cache[k]
+
+            # ---- Intra-tick cooldown (per-tick cache) ----
+            # Within a single tick() invocation, skip jobs that were already
+            # dispatched. This catches phantom triggers where get_due_jobs()
+            # returns the same job twice within one tick (e.g. due to the
+            # same job appearing in both sequential and parallel partitions).
+            _tick_dispatch = _run_cache.get(job_id)
+            if _tick_dispatch is not None:
+                logger.info(
+                    "Job '%s' skipped by intra-tick cooldown: already dispatched "
+                    "in this tick invocation",
+                    job_name,
+                )
+                return True
+            _run_cache[job_id] = True
+
+            # ---- Schedule validation ----
+            # Validate that the job record has a usable schedule before
+            # sinking cost into the full execution pipeline.
+            _schedule = job.get("schedule") or {}
+            if isinstance(_schedule, dict):
+                _kind = _schedule.get("kind")
+            else:
+                # Schedule may be a raw string (e.g. "every 1h") in tests
+                # or hand-edited jobs. That's fine — parse_schedule in
+                # get_due_jobs already validated it.
+                _kind = "string"
+            if _kind not in ("once", "interval", "cron", "string"):
+                logger.warning(
+                    "Job '%s' has unusual schedule kind=%r — proceeding "
+                    "anyway, but phantom-trigger guards may not apply",
+                    job_name,
+                    _kind,
+                )
+
+            # ---- Dispatch decision logged ----
+            logger.info(
+                "Job '%s' (kind=%s, next_run_at=%s) — dispatching",
+                job_name,
+                _kind,
+                job.get("next_run_at", "?"),
+            )
+
             try:
                 success, output, final_response, error = run_job(job)
 

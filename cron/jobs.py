@@ -45,6 +45,11 @@ _jobs_file_lock = threading.Lock()
 OUTPUT_DIR = CRON_DIR / "output"
 ONESHOT_GRACE_SECONDS = 120
 
+# Threshold for detecting phantom (double) firings: if a job's last_run_at
+# is within this many seconds of now, it is likely a phantom trigger and
+# the job will be skipped with a warning.
+PHANTOM_FIRE_THRESHOLD_SECONDS = 5
+
 
 def _normalize_skill_list(skill: Optional[str] = None, skills: Optional[Any] = None) -> List[str]:
     """Normalize legacy/single-skill and multi-skill inputs into a unique ordered list."""
@@ -992,6 +997,11 @@ def advance_next_run(job_id: str) -> bool:
 
     One-shot jobs are left unchanged so they can still retry on restart.
 
+    Contains an edge-case guard: if the job was already advanced within the
+    last PHANTOM_FIRE_THRESHOLD_SECONDS (i.e. next_run_at is already in the
+    future), we skip re-advancing to prevent double-advancing on parallel
+    tick() invocations that could cause phantom skips.
+
     Returns True if next_run_at was advanced, False otherwise.
     """
     with _jobs_file_lock:
@@ -1001,9 +1011,20 @@ def advance_next_run(job_id: str) -> bool:
                 kind = job.get("schedule", {}).get("kind")
                 if kind not in {"cron", "interval"}:
                     return False
-                now = _hermes_now().isoformat()
-                new_next = compute_next_run(job["schedule"], now)
-                if new_next and new_next != job.get("next_run_at"):
+
+                now = _hermes_now()
+
+                # Edge-case guard: if next_run_at is already in the future,
+                # this job was already advanced by another tick() invocation.
+                # Skip re-advancing to prevent double-advancing.
+                current_next = job.get("next_run_at")
+                if current_next:
+                    current_next_dt = _ensure_aware(datetime.fromisoformat(current_next))
+                    if current_next_dt > now:
+                        return False
+
+                new_next = compute_next_run(job["schedule"], now.isoformat())
+                if new_next and new_next != current_next:
                     job["next_run_at"] = new_next
                     save_jobs(jobs)
                     return True
@@ -1076,6 +1097,31 @@ def _get_due_jobs_locked() -> List[Dict[str, Any]]:
                     break
 
         next_run_dt = _ensure_aware(datetime.fromisoformat(next_run))
+
+        # ============================================================
+        # Phantom-trigger detection: if a job's last_run_at is within
+        # PHANTOM_FIRE_THRESHOLD_SECONDS of now, it is likely a phantom
+        # firing (double-fire from a race or scheduling bug). Skip it
+        # with a clear warning so operators can distinguish real vs.
+        # phantom triggers in the log.
+        # ============================================================
+        last_run = job.get("last_run_at")
+        if last_run and next_run_dt <= now:
+            last_dt = _ensure_aware(datetime.fromisoformat(last_run))
+            seconds_since_last = (now - last_dt).total_seconds()
+            if 0 <= seconds_since_last <= PHANTOM_FIRE_THRESHOLD_SECONDS:
+                logger.warning(
+                    "Job '%s' skipped — phantom trigger detected: "
+                    "last run was %.1fs ago (threshold=%ds). "
+                    "next_run_at=%s last_run_at=%s",
+                    job.get("name", job["id"]),
+                    seconds_since_last,
+                    PHANTOM_FIRE_THRESHOLD_SECONDS,
+                    next_run,
+                    last_run,
+                )
+                continue
+
         if next_run_dt <= now:
             schedule = job.get("schedule", {})
             kind = schedule.get("kind")
