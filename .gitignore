@@ -29,3 +29,4 @@ stas-private-key.pem
 *.swp
 Thumbs.db
 .vscode/
+eval/results/
