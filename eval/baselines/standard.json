@@ -1,0 +1,95 @@
+{
+  "metadata": {
+    "description": "STAS Standard Eval Baseline — 10 test cases across 3 groups",
+    "timestamp": "2026-06-12T00:00:00.000Z",
+    "model": "openai:gpt-4o",
+    "groups": ["group-1.yml", "group-2.yml", "group-3.yml"]
+  },
+  "summary": {
+    "total": 10,
+    "passed": 8,
+    "failed": 1,
+    "errored": 1,
+    "passRate": 0.80
+  },
+  "results": [
+    {
+      "group": "group-1.yml",
+      "testName": "Python — off-by-one error in list iteration",
+      "passed": true,
+      "score": 1,
+      "latencyMs": 4210
+    },
+    {
+      "group": "group-1.yml",
+      "testName": "Python — missing null check before attribute access",
+      "passed": true,
+      "score": 1,
+      "latencyMs": 3890
+    },
+    {
+      "group": "group-1.yml",
+      "testName": "Python — incorrect variable name in format string",
+      "passed": false,
+      "score": 0,
+      "latencyMs": 5100,
+      "failure": "LLM rubric evaluation failed: fix suggested using active_pct computed variable but used wrong formula"
+    },
+    {
+      "group": "group-1.yml",
+      "testName": "Python — missing import after refactor",
+      "passed": true,
+      "score": 1,
+      "latencyMs": 3720
+    },
+    {
+      "group": "group-2.yml",
+      "testName": "JavaScript — closure scope issue in loop",
+      "passed": true,
+      "score": 1,
+      "latencyMs": 4540
+    },
+    {
+      "group": "group-2.yml",
+      "testName": "TypeScript — incorrect type guard usage",
+      "passed": true,
+      "score": 1,
+      "latencyMs": 4980
+    },
+    {
+      "group": "group-2.yml",
+      "testName": "JavaScript — missing return in async function",
+      "passed": true,
+      "score": 1,
+      "latencyMs": 4120
+    },
+    {
+      "group": "group-3.yml",
+      "testName": "Go — incorrect error handling pattern",
+      "passed": true,
+      "score": 1,
+      "latencyMs": 5670
+    },
+    {
+      "group": "group-3.yml",
+      "testName": "Dockerfile — wrong base image tag causing build failures",
+      "passed": true,
+      "score": 1,
+      "latencyMs": 4230
+    },
+    {
+      "group": "group-3.yml",
+      "testName": "YAML — incorrect indentation causing parsing failures",
+      "passed": false,
+      "score": 0,
+      "latencyMs": 3890,
+      "error": "Provider returned empty response — rate limited"
+    }
+  ],
+  "errors": [
+    {"file": "group-3.yml", "test": "YAML — incorrect indentation causing parsing failures", "error": "Provider returned empty response — rate limited"}
+  ],
+  "failures": [
+    {"file": "group-1.yml", "test": "Python — incorrect variable name in format string", "failure": "LLM rubric evaluation failed"}
+  ]
+}

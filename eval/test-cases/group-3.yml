@@ -1,0 +1,155 @@
+# Group 3: Go and General Fixes (3 test cases)
+# Test the agent's ability to fix Go issues and configuration errors.
+
+- description: "Go — incorrect error handling pattern"
+  vars:
+    repo: "https://github.com/example/go-bug-repo"
+    title: "Silent data loss — readFile() ignores partial read errors"
+    description: |
+      The `readConfig()` function sometimes returns incomplete data without reporting an 
+      error. The issue is that `ioutil.ReadFile` is used correctly, but the surrounding 
+      error handling pattern masks read failures by always falling through to defaults.
+      
+      STEPS TO REPRODUCE:
+      1. Create a config file with valid JSON but mark it read-only for the current user
+      2. Call readConfig("/etc/app/config.json")  
+      3. Observe zero values returned instead of actual config or error
+      
+      Expected: Should return an error when the file cannot be fully read.
+    codeContext: |
+      ```go
+      package config
+
+      import (
+          "encoding/json"
+          "io/ioutil"
+          "log"
+      )
+
+      type Config struct {
+          Host string `json:"host"`
+          Port int    `json:"port"`
+      }
+
+      func ReadConfig(path string) *Config {
+          data, err := ioutil.ReadFile(path)
+          if err != nil {
+              log.Printf("warning: could not read config: %v, using defaults", err)
+              return &Config{Host: "localhost", Port: 8080}
+          }
+
+          var cfg Config
+          if err := json.Unmarshal(data, &cfg); err != nil {
+              log.Printf("warning: could not parse config: %v, using defaults", err)
+              return &Config{Host: "localhost", Port: 8080}
+          }
+          return &cfg
+      }
+      ```
+  assert:
+    - type: llm-rubric
+      value: |
+        The response correctly identifies that silently swallowing read/parse errors by
+        returning defaults is a poor error handling pattern that can mask real failures.
+        The fix should either: (1) propagate errors to the caller by returning 
+        `(*Config, error)` instead of `*Config`, or (2) raise a fatal error. The response
+        recommends proper error propagation as the idiomatic Go approach.
+    - type: contains-all
+      value:
+        - "error"
+        - "return"
+        - "propagat"
+
+- description: "Dockerfile — wrong base image tag causing build failures"
+  vars:
+    repo: "https://github.com/example/docker-bug-repo"
+    title: "Docker build fails — node:18-alpine image tag does not exist for arm64"
+    description: |
+      The Docker build fails on ARM64 (Apple Silicon/M1) machines with:
+      `no matching manifest for linux/arm64/v8 in the manifest list entries`.
+      
+      The issue is that `node:18-alpine` is a floating tag that doesn't have multi-arch 
+      support for older Node 18 releases.
+      
+      Steps to reproduce:
+      1. Run `docker buildx build --platform linux/arm64 .` on an M1 Mac
+      2. Observe manifest not found error
+      
+      Expected: Build should succeed on both amd64 and arm64 architectures.
+    codeContext: |
+      ```dockerfile
+      FROM node:18-alpine
+
+      WORKDIR /app
+
+      COPY package*.json ./
+      RUN npm ci --only=production
+
+      COPY . .
+
+      EXPOSE 3000
+      CMD ["node", "dist/index.js"]
+      ```
+  assert:
+    - type: llm-rubric
+      value: |
+        The response correctly identifies that `node:18-alpine` is a floating tag that 
+        may not support multi-arch builds. The fix pins to a specific digest or uses a 
+        fully versioned tag like `node:18.20-alpine3.19` or `--platform=$BUILDPLATFORM` 
+        with buildx. The response explains the multi-arch compatibility issue.
+    - type: contains-all
+      value:
+        - "node:18"
+        - "alpine"
+        - "multi-arch"
+        - "platform"
+
+- description: "YAML — incorrect indentation causing parsing failures"
+  vars:
+    repo: "https://github.com/example/yaml-bug-repo"
+    title: "CI pipeline fails — invalid YAML indentation in workflow config"
+    description: |
+      The GitHub Actions workflow file fails validation with:
+      `You have an error in your yaml syntax on line 12`
+      
+      The issue is inconsistent indentation in the `steps` section — some lines use 
+      3 spaces instead of 2, breaking the YAML structure.
+      
+      Steps to reproduce:
+      1. Push the workflow file to a repository with GitHub Actions enabled
+      2. Observe YAML syntax error in the Actions tab
+      
+      Expected: Workflow file should parse correctly.
+    codeContext: |
+      ```yaml
+      name: CI
+      on:
+        push:
+          branches: [main]
+
+      jobs:
+        test:
+          runs-on: ubuntu-latest
+          steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                node-version: "20"
+           - name: Install dependencies
+             run: npm ci
+           - name: Run tests
+             run: npm test
+      ```
+  assert:
+    - type: llm-rubric
+      value: |
+        The response correctly identifies the YAML indentation inconsistency: the last
+        two steps (`- name: Install dependencies` and `- name: Run tests`) use 3 spaces
+        of indentation instead of matching the 4-space (or 2-space relative to `steps:`)
+        alignment used by the first two steps. The fix normalizes all step entries to 
+        the same indentation level.
+    - type: contains-all
+      value:
+        - "indentation"
+        - "YAML"
+        - "spaces"
