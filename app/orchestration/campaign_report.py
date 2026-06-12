@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import praw
 
 from app.common.config import settings
+from app.platforms.reddit_auth import get_reddit_client
 from orchestrator_state import get_repository
 
 REPORT_DIR = Path(__file__).parent.parent / "reports"
@@ -55,22 +57,10 @@ def fetch_reddit_stats(subreddit: str = "developersIndia", query: str = "fast-ht
             reddit_proxy_pool,
         )
 
-        import praw
-        client_id = os.getenv("REDDIT_CLIENT_ID", "")
-        if not client_id:
-            return {"platform": "reddit", "status": "skipped", "note": "No REDDIT_CLIENT_ID"}
-
         ua = rotate_user_agent()
         proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
 
-        reddit = praw.Reddit(
-            client_id=client_id,
-            client_secret=os.getenv("REDDIT_CLIENT_SECRET", ""),
-            user_agent=ua,
-            username=os.getenv("REDDIT_USERNAME", ""),
-            password=os.getenv("REDDIT_PASSWORD", ""),
-            requestor_kwargs={"proxy": proxy_url} if proxy_url else {},
-        )
+        reddit = get_reddit_client(proxy=proxy_url, user_agent=ua)
         sub = reddit.subreddit(subreddit)
 
         results = []

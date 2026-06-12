@@ -335,6 +335,7 @@ class RedditOAuthManager:
         username: Optional[str] = None,
         password: Optional[str] = None,
         hermes_home: Optional[Path] = None,
+        proxy: Optional[str] = None,
     ):
         self._client_id = client_id or _DEFAULT_CLIENT_ID
         self._client_secret = client_secret or _DEFAULT_CLIENT_SECRET
@@ -342,6 +343,7 @@ class RedditOAuthManager:
         self._username = username or _DEFAULT_USERNAME
         self._password = password or _DEFAULT_PASSWORD
         self._hermes_home = hermes_home
+        self._proxy = proxy
 
         self.reddit: Optional[praw.Reddit] = None
 
@@ -397,6 +399,10 @@ class RedditOAuthManager:
         token_data = load_token(self._hermes_home)
         access_token = token_data.get("access_token", "")
 
+        kwargs: dict = {}
+        if self._proxy:
+            kwargs["requestor_kwargs"] = {"proxy": self._proxy}
+
         if access_token:
             # Use the OAuth2 bearer token directly (read-only authorizer).
             return praw.Reddit(
@@ -404,6 +410,7 @@ class RedditOAuthManager:
                 client_secret=self._client_secret,
                 user_agent=self._user_agent,
                 access_token=access_token,
+                **kwargs,
             )
 
         # Fall back to script-type (password) auth for the initial handshake.
@@ -414,6 +421,7 @@ class RedditOAuthManager:
             user_agent=self._user_agent,
             username=self._username,
             password=self._password,
+            **kwargs,
         )
 
     # ── Public entry points ───────────────────────────────────────────────
@@ -504,14 +512,27 @@ def _get_default_manager() -> RedditOAuthManager:
     return _default_manager
 
 
-def get_reddit_client() -> praw.Reddit:
+def get_reddit_client(
+    proxy: Optional[str] = None,
+    user_agent: Optional[str] = None,
+) -> praw.Reddit:
     """Return an authenticated PRAW :class:`praw.Reddit` instance.
 
     Uses the module-level default :class:`RedditOAuthManager`, which reads
     credentials from environment variables (``REDDIT_CLIENT_ID``,
     ``REDDIT_CLIENT_SECRET``, ``REDDIT_USERNAME``, ``REDDIT_PASSWORD``).
 
+    When *proxy* or *user_agent* are provided, a dedicated
+    :class:`RedditOAuthManager` is created so each call can use different
+    credentials for rotation purposes, while still benefiting from OAuth2
+    token lifecycle management.
+
     The token is auto-refreshed transparently when expired.
+
+    Args:
+        proxy: Optional proxy URL (e.g. ``socks5://user:pass@1.2.3.4:1080``).
+        user_agent: Optional user-agent string.  When omitted, the default
+            from ``REDDIT_USER_AGENT`` env var is used.
 
     Returns:
         A ready-to-use :class:`praw.Reddit` instance.
@@ -524,4 +545,7 @@ def get_reddit_client() -> praw.Reddit:
         for post in reddit.subreddit("all").hot(limit=5):
             print(post.title)
     """
-    return _get_default_manager().get_client()
+    if proxy is None and user_agent is None:
+        return _get_default_manager().get_client()
+    manager = RedditOAuthManager(proxy=proxy, user_agent=user_agent)
+    return manager.get_client()

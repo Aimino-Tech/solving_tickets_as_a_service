@@ -15,11 +15,9 @@ Provides:
 from __future__ import annotations
 
 import logging
-import os
 from typing import Optional
 
-import praw
-
+from app.platforms.reddit_auth import get_reddit_client
 from app.platforms.reddit_ratelimit import (
     call_with_backoff,
     is_rate_limit_error,
@@ -36,30 +34,6 @@ KEYWORDS = [
     "data pipeline", "etl", "web scraper", "api integration",
     "data quality", "data migration", "data collection",
 ]
-
-# ---------------------------------------------------------------------------
-# Reddit client factory with user-agent rotation & proxy support
-# ---------------------------------------------------------------------------
-
-
-def _get_reddit(user_agent: Optional[str] = None):
-    """Create a PRAW Reddit instance with rotated user-agent and optional proxy."""
-    ua = user_agent or rotate_user_agent()
-    logger.debug("Creating PRAW instance with UA: %s ...", ua[:60])
-
-    proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
-    if proxy_url:
-        logger.info("Using proxy: %s", proxy_url[:40])
-
-    return praw.Reddit(
-        client_id=os.getenv("REDDIT_CLIENT_ID"),
-        client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
-        password=os.getenv("REDDIT_PASSWORD"),
-        user_agent=ua,
-        username=os.getenv("REDDIT_USERNAME"),
-        requestor_kwargs={"proxy": proxy_url} if proxy_url else {},
-    )
-
 
 # ---------------------------------------------------------------------------
 # Generic PRAW call wrapper with backoff
@@ -124,7 +98,9 @@ def keywords_match(text: str) -> bool:
 
 def search_subreddits(subreddits: str = "MCP+opensource+devtools", limit: int = 25) -> list[dict]:
     """Search multiple subreddits for hot posts and check keyword relevance."""
-    reddit = _get_reddit()
+    ua = rotate_user_agent()
+    proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
+    reddit = get_reddit_client(proxy=proxy_url, user_agent=ua)
     subreddit = reddit.subreddit(subreddits)
 
     posts = _call_with_backoff(
@@ -156,7 +132,9 @@ def search_by_keywords(
     limit: int = 25,
 ) -> list[dict]:
     """Search subreddits by keyword query."""
-    reddit = _get_reddit()
+    ua = rotate_user_agent()
+    proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
+    reddit = get_reddit_client(proxy=proxy_url, user_agent=ua)
     subreddit = reddit.subreddit(subreddits)
     q = query or " OR ".join(KEYWORDS[:5])
 
@@ -185,7 +163,9 @@ def search_by_keywords(
 
 def reply_to_submission(submission_id: str, reply_text: str) -> Optional[str]:
     """Reply to a Reddit submission."""
-    reddit = _get_reddit()
+    ua = rotate_user_agent()
+    proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
+    reddit = get_reddit_client(proxy=proxy_url, user_agent=ua)
 
     try:
         submission = _call_with_backoff(
@@ -206,7 +186,9 @@ def reply_to_submission(submission_id: str, reply_text: str) -> Optional[str]:
 
 def reply_to_comment(comment_id: str, reply_text: str) -> Optional[str]:
     """Reply to an existing Reddit comment."""
-    reddit = _get_reddit()
+    ua = rotate_user_agent()
+    proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
+    reddit = get_reddit_client(proxy=proxy_url, user_agent=ua)
 
     try:
         comment_obj = _call_with_backoff(
@@ -227,7 +209,9 @@ def reply_to_comment(comment_id: str, reply_text: str) -> Optional[str]:
 
 def verify_auth() -> str:
     """Verify Reddit authentication by fetching the current user."""
-    reddit = _get_reddit()
+    ua = rotate_user_agent()
+    proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
+    reddit = get_reddit_client(proxy=proxy_url, user_agent=ua)
     user = _call_with_backoff(
         reddit.user.me,
         operation_id="verify_auth",
@@ -245,7 +229,9 @@ class RedditEngager:
     """Convenience wrapper around the Reddit engagement functions."""
 
     def __init__(self) -> None:
-        self.reddit = _get_reddit()
+        ua = rotate_user_agent()
+        proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
+        self.reddit = get_reddit_client(proxy=proxy_url, user_agent=ua)
 
     def verify(self) -> str:
         return str(_call_with_backoff(

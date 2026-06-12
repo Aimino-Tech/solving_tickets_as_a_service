@@ -16,13 +16,11 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import sys
 from pathlib import Path
 from typing import Optional
 
-import praw
-
+from app.platforms.reddit_auth import get_reddit_client
 from app.platforms.reddit_ratelimit import (
     RedditRateLimiter,
     call_with_backoff,
@@ -35,48 +33,8 @@ from app.platforms.reddit_ratelimit import (
 
 logger = logging.getLogger(__name__)
 
-REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
-REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
-REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "openclaw-india-engagement/1.0")
-REDDIT_USERNAME = os.getenv("REDDIT_USERNAME", "")
-REDDIT_PASSWORD = os.getenv("REDDIT_PASSWORD", "")
-
 TARGET_SUBREDDIT = "developersIndia"
 KEYWORDS = ["mcp", "opensource", "openclaw", "fossunited", "modelcontextprotocol"]
-
-# ---------------------------------------------------------------------------
-# Reddit client factory with user-agent rotation
-# ---------------------------------------------------------------------------
-
-
-def _reddit(user_agent: Optional[str] = None) -> praw.Reddit:
-    """Create a PRAW Reddit instance, optionally with a rotated user-agent.
-
-    Args:
-        user_agent: Explicit user-agent string.  If omitted, a random one is
-            picked from the DEFAULT_USER_AGENTS pool (see
-            ``app.platforms.reddit_ratelimit.rotate_user_agent``).
-
-    Returns:
-        A configured ``praw.Reddit`` instance.
-    """
-    ua = user_agent or rotate_user_agent()
-    logger.debug("Creating PRAW instance with UA: %s", ua[:80])
-
-    # If the proxy pool has proxies, pass one to PRAW
-    proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
-    if proxy_url:
-        logger.info("Using proxy: %s", proxy_url[:40])
-
-    return praw.Reddit(
-        client_id=REDDIT_CLIENT_ID,
-        client_secret=REDDIT_CLIENT_SECRET,
-        user_agent=ua,
-        username=REDDIT_USERNAME,
-        password=REDDIT_PASSWORD,
-        requestor_kwargs={"proxy": proxy_url} if proxy_url else {},
-    )
-
 
 # ---------------------------------------------------------------------------
 # Engagement logger
@@ -149,7 +107,7 @@ def _call_with_backoff(fn, *args, operation_id: str = "default", **kwargs):
                     "operation": operation_id,
                     "status_code": status_code,
                     "error": error_msg[:500],
-                    "user_agent": REDDIT_USER_AGENT,
+                    "user_agent": rotate_user_agent(),
                 },
             )
         raise
@@ -171,7 +129,9 @@ def monitor_subreddit(query: str = None, limit: int = 25, sort: str = "hot") -> 
     Returns:
         List of post dicts with id, title, url, score, num_comments, etc.
     """
-    reddit = _reddit()
+    ua = rotate_user_agent()
+    proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
+    reddit = get_reddit_client(proxy=proxy_url, user_agent=ua)
     subreddit = reddit.subreddit(TARGET_SUBREDDIT)
 
     sort_methods = {
@@ -210,7 +170,9 @@ def search_subreddit(query: str, limit: int = 25, sort: str = "relevance") -> li
     Yields:
         Post dicts one at a time (generator).
     """
-    reddit = _reddit()
+    ua = rotate_user_agent()
+    proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
+    reddit = get_reddit_client(proxy=proxy_url, user_agent=ua)
     subreddit = reddit.subreddit(TARGET_SUBREDDIT)
 
     sort_methods = {"relevance": "relevance", "new": "new", "top": "top", "comments": "comments"}
@@ -246,7 +208,9 @@ def reply_to_post(post_url_or_id: str, reply_text: str) -> Optional[str]:
     Returns:
         The new comment ID, or ``None`` on failure.
     """
-    reddit = _reddit()
+    ua = rotate_user_agent()
+    proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
+    reddit = get_reddit_client(proxy=proxy_url, user_agent=ua)
 
     # Fetch submission
     try:
@@ -297,7 +261,9 @@ def reply_to_comment(comment_id: str, reply_text: str) -> Optional[str]:
     Returns:
         The new comment ID, or ``None`` on failure.
     """
-    reddit = _reddit()
+    ua = rotate_user_agent()
+    proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
+    reddit = get_reddit_client(proxy=proxy_url, user_agent=ua)
 
     try:
         comment = _call_with_backoff(
@@ -331,7 +297,9 @@ def get_ama_schedule() -> list[dict]:
     Returns:
         List of AMA post dicts.
     """
-    reddit = _reddit()
+    ua = rotate_user_agent()
+    proxy_url = reddit_proxy_pool.get_next_proxy() if reddit_proxy_pool.has_proxies else None
+    reddit = get_reddit_client(proxy=proxy_url, user_agent=ua)
     subreddit = reddit.subreddit(TARGET_SUBREDDIT)
 
     posts = _call_with_backoff(

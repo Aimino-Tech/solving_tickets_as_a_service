@@ -7,10 +7,9 @@ class TestRedditModule:
     def test_imports(self):
         from app.orchestration.engagement.reddit_engage import (
             RedditEngager, keywords_match, search_subreddits, reply_to_submission,
-            _get_reddit, _call_with_backoff,
+            _call_with_backoff,
         )
         assert RedditEngager is not None
-        assert _get_reddit is not None
         assert _call_with_backoff is not None
 
     def test_keywords_match(self):

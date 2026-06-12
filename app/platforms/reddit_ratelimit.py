@@ -308,6 +308,7 @@ class RedditProxyPool:
         for proxy in self._proxies:
             if proxy.url == proxy_url:
                 proxy.failure_count = 0
+                proxy.is_alive = True
                 break
 
     def list_proxies(self) -> list[dict]:
