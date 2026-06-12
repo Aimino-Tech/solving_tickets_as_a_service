@@ -10,6 +10,23 @@ import httpx
 
 from app.common.config import settings
 
+# Slack notification support (optional — gracefully no-ops when not configured)
+try:
+    from app.notifications.slack_notifier import (
+        notify_campaign_status,
+        notify_error,
+    )
+    _HAS_SLACK_NOTIFIER = True
+except ImportError:
+    _HAS_SLACK_NOTIFIER = False
+
+    def notify_campaign_status(*args, **kwargs) -> bool:  # type: ignore
+        return False
+
+    def notify_error(*args, **kwargs) -> bool:  # type: ignore
+        return False
+
+
 CAMPAIGN_SCHEDULE: list[dict[str, Any]] = [
     {"day": 1, "title": "Launch Announcement", "platforms": ["devto", "x", "linkedin"],
      "topic": "Meet fast-html-mcp: A production-grade MCP server for fetching and processing web content"},
@@ -78,6 +95,7 @@ def post_to_devto(title: str, body: str, tags: list[str] | None = None) -> dict[
         _log(f"Dev.to: published '{title}' (ID: {result.get('id')})")
         return {"platform": "devto", "status": "published", "url": result.get("url"), "id": result.get("id")}
     except Exception as e:
+        notify_error("Dev.to", str(e))
         return {"platform": "devto", "status": "error", "error": str(e)}
 
 
@@ -93,6 +111,7 @@ def post_to_x(title: str, body: str) -> dict[str, Any]:
         _log(f"X: tweeted '{title[:50]}...'")
         return {"platform": "x", "status": "posted", "tweet_id": result}
     except Exception as e:
+        notify_error("X (Twitter)", str(e))
         return {"platform": "x", "status": "error", "error": str(e)}
 
 
@@ -107,6 +126,7 @@ def post_to_linkedin(title: str, body: str) -> dict[str, Any]:
         _log(f"LinkedIn: posted '{title[:50]}...'")
         return {"platform": "linkedin", "status": "posted", "result": result}
     except Exception as e:
+        notify_error("LinkedIn", str(e))
         return {"platform": "linkedin", "status": "error", "error": str(e)}
 
 
@@ -157,6 +177,34 @@ def execute_day(day: int) -> dict[str, Any]:
         else:
             results.append({"platform": platform, "status": "skipped", "note": f"No poster for {platform}"})
 
+    # Send Slack notification for day execution results
+    errors = [r for r in results if r.get("status") == "error"]
+    published = [r for r in results if r.get("status") in ("published", "posted")]
+    skipped = [r for r in results if r.get("status") == "skipped"]
+
+    details = {
+        "day": str(day),
+        "published": str(len(published)),
+        "errors": str(len(errors)),
+        "skipped": str(len(skipped)),
+    }
+
+    if errors:
+        # Send an error alert if any platform failed
+        error_messages = "; ".join(
+            f"{e['platform']}: {e.get('error', 'unknown error')}" for e in errors
+        )
+        notify_error(
+            plan["title"],
+            f"Errors during Day {day} execution: {error_messages}",
+        )
+    else:
+        notify_campaign_status(
+            plan["title"],
+            f"Day {day} completed",
+            details=details,
+        )
+
     return {"day": day, "title": plan["title"], "results": results}
 
 
@@ -172,7 +220,13 @@ def check_and_advance() -> dict[str, Any]:
         state["current_day"] = 1
         save_campaign_state(state)
         _log("Campaign started!")
-        return execute_day(1)
+        result = execute_day(1)
+        notify_campaign_status(
+            "Campaign Launch",
+            "started",
+            details={"day": "1", "campaign": CAMPAIGN_SCHEDULE[0]["title"]},
+        )
+        return result
 
     started = datetime.fromisoformat(state["started_at"])
     elapsed_days = (now - started).days
@@ -187,6 +241,11 @@ def check_and_advance() -> dict[str, Any]:
         if state["current_day"] > len(CAMPAIGN_SCHEDULE):
             state["completed"] = True
             _log("Campaign complete!")
+            notify_campaign_status(
+                "Campaign Complete",
+                "completed",
+                details={"total_days": str(len(CAMPAIGN_SCHEDULE))},
+            )
         save_campaign_state(state)
         return {"status": "advanced", "advanced_from": current_day, "advanced_to": state["current_day"], "completed": state["completed"]}
 

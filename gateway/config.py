@@ -407,6 +407,34 @@ class StreamingConfig:
         )
 
 
+@dataclass
+class SlackNotificationsConfig:
+    """Configuration for Slack campaign/notification channels."""
+    enabled: bool = False
+    channel: Optional[str] = None  # Slack channel ID for notifications
+    campaign_alerts: bool = False  # Send campaign status/error alerts
+    daily_summary: bool = False  # Send daily campaign summaries
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "enabled": self.enabled,
+            "channel": self.channel,
+            "campaign_alerts": self.campaign_alerts,
+            "daily_summary": self.daily_summary,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SlackNotificationsConfig":
+        if not data:
+            return cls()
+        return cls(
+            enabled=_coerce_bool(data.get("enabled"), False),
+            channel=data.get("channel"),
+            campaign_alerts=_coerce_bool(data.get("campaign_alerts"), False),
+            daily_summary=_coerce_bool(data.get("daily_summary"), False),
+        )
+
+
 # -----------------------------------------------------------------------------
 # Built-in platform connection checkers
 # -----------------------------------------------------------------------------
@@ -485,6 +513,9 @@ class GatewayConfig:
 
     # Streaming configuration
     streaming: StreamingConfig = field(default_factory=StreamingConfig)
+
+    # Slack notification channels
+    slack_notifications: SlackNotificationsConfig = field(default_factory=SlackNotificationsConfig)
 
     # Session store pruning: drop SessionEntry records older than this many
     # days from the in-memory dict and sessions.json.  Keeps the store from
@@ -585,6 +616,7 @@ class GatewayConfig:
             "thread_sessions_per_user": self.thread_sessions_per_user,
             "unauthorized_dm_behavior": self.unauthorized_dm_behavior,
             "streaming": self.streaming.to_dict(),
+            "slack_notifications": self.slack_notifications.to_dict(),
             "session_store_max_age_days": self.session_store_max_age_days,
         }
     
@@ -653,6 +685,7 @@ class GatewayConfig:
             thread_sessions_per_user=_coerce_bool(thread_sessions_per_user, False),
             unauthorized_dm_behavior=unauthorized_dm_behavior,
             streaming=StreamingConfig.from_dict(data.get("streaming", {})),
+            slack_notifications=SlackNotificationsConfig.from_dict(data.get("slack_notifications", {})),
             session_store_max_age_days=session_store_max_age_days,
         )
 
@@ -925,6 +958,11 @@ def load_gateway_config() -> GatewayConfig:
                     if isinstance(ac, list):
                         ac = ",".join(str(v) for v in ac)
                     os.environ["SLACK_ALLOWED_CHANNELS"] = str(ac)
+
+            # Slack notifications config
+            notif_cfg = slack_cfg.get("notifications", {})
+            if isinstance(notif_cfg, dict):
+                gw_data["slack_notifications"] = notif_cfg
 
             # Discord settings → env vars (env vars take precedence)
             discord_cfg = yaml_cfg.get("discord", {})
@@ -1394,6 +1432,20 @@ def _apply_env_overrides(config: GatewayConfig) -> None:
             name=os.getenv("SLACK_HOME_CHANNEL_NAME", ""),
             thread_id=os.getenv("SLACK_HOME_CHANNEL_THREAD_ID") or None,
         )
+    
+    # Slack notification env-var overrides
+    _slack_notif_enabled = os.getenv("SLACK_NOTIFICATIONS_ENABLED")
+    if _slack_notif_enabled is not None:
+        config.slack_notifications.enabled = _coerce_bool(_slack_notif_enabled, False)
+    _slack_notif_channel = os.getenv("SLACK_NOTIFICATION_CHANNEL")
+    if _slack_notif_channel is not None:
+        config.slack_notifications.channel = _slack_notif_channel
+    _slack_notif_alerts = os.getenv("SLACK_NOTIFICATION_CAMPAIGN_ALERTS")
+    if _slack_notif_alerts is not None:
+        config.slack_notifications.campaign_alerts = _coerce_bool(_slack_notif_alerts, False)
+    _slack_notif_summary = os.getenv("SLACK_NOTIFICATION_DAILY_SUMMARY")
+    if _slack_notif_summary is not None:
+        config.slack_notifications.daily_summary = _coerce_bool(_slack_notif_summary, False)
     
     # Signal
     signal_url = os.getenv("SIGNAL_HTTP_URL")
