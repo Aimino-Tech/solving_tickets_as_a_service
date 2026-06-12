@@ -1,0 +1,32 @@
+description: "Agent must fix a JavaScript variable scoping bug (var vs let)"
+issue:
+  title: "Counter values incorrect due to var hoisting in src/tracker.js"
+  body: |
+    ## Bug
+    The `createCounters()` function in `src/tracker.js` uses `var` inside
+    a loop, causing all closures to share the same variable due to hoisting.
+
+    ```javascript
+    function createCounters() {
+      var counters = [];
+      for (var i = 0; i < 5; i++) {
+        counters.push(function() { return i; });
+      }
+      return counters;
+    }
+    ```
+
+    ## Expected
+    Change `var i` to `let i` so each closure captures its own loop iteration value.
+    After the fix, `createCounters()[0]()` should return `0`, `createCounters()[1]()` should return `1`, etc.
+
+    ## Steps to reproduce
+    1. Run `node -e "const { createCounters } = require('./src/tracker'); const c = createCounters(); console.log(c[0](), c[1](), c[2]());"`
+    2. Observe `5 5 5` (all return the same value)
+    3. Fix: change `var i` to `let i` in the for loop
+repo: https://github.com/example/js-scope-bug-demo
+expected:
+  outcome: pr_created
+  filesChanged: ["src/tracker.js"]
+  minTestsPassing: 1
+timeoutMs: 300000

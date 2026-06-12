@@ -1,0 +1,30 @@
+description: "Agent must fix a missing import in a Go source file"
+issue:
+  title: "undefined: fmt in src/printer.go — missing fmt import"
+  body: |
+    ## Bug
+    The `PrintMessage()` function in `src/printer.go` calls `fmt.Println()`
+    but the `"fmt"` import is missing from the import block.
+
+    ```go
+    package printer
+
+    func PrintMessage(msg string) {
+        fmt.Println("Message:", msg)
+    }
+    ```
+
+    ## Expected
+    Add `"fmt"` to the import block at the top of the file.
+    The file should compile and run without errors.
+
+    ## Steps to reproduce
+    1. Run `go build ./...` in the repo root
+    2. Observe `undefined: fmt` compilation error
+    3. Fix: add `import "fmt"` after the package declaration
+repo: https://github.com/example/go-missing-import-demo
+expected:
+  outcome: pr_created
+  filesChanged: ["src/printer.go"]
+  minTestsPassing: 1
+timeoutMs: 300000

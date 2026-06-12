@@ -1,0 +1,27 @@
+description: "Agent must fix a missing import in a Python script"
+issue:
+  title: "NameError: name 'Path' is not defined in src/utils.py"
+  body: |
+    ## Bug
+    The `get_project_root()` function in `src/utils.py` uses `Path` from
+    `pathlib` but the import statement is missing.
+
+    ```python
+    def get_project_root() -> Path:
+        return Path(__file__).resolve().parent.parent
+    ```
+
+    ## Expected
+    Add `from pathlib import Path` at the top of the file.
+    The function should return a `Path` object pointing to the project root.
+
+    ## Steps to reproduce
+    1. Run `python -c "from src.utils import get_project_root"`
+    2. Observe `NameError: name 'Path' is not defined`
+    3. Fix: add `from pathlib import Path` to imports
+repo: https://github.com/example/python-missing-import-demo
+expected:
+  outcome: pr_created
+  filesChanged: ["src/utils.py"]
+  minTestsPassing: 1
+timeoutMs: 300000

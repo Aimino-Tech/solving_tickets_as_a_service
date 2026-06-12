@@ -1,0 +1,29 @@
+description: "Agent must fix a Python syntax error (missing colon on function definition)"
+issue:
+  title: "SyntaxError in parse_config(): missing colon on function definition"
+  body: |
+    ## Bug
+    The `parse_config()` function in `src/config.py` has a syntax error:
+    a colon is missing on the function definition line.
+
+    ```python
+    def parse_config(filepath)  # <-- missing colon
+        import json
+        with open(filepath) as f:
+            return json.load(f)
+    ```
+
+    ## Expected
+    Add the missing colon after the function signature `def parse_config(filepath):`.
+    The file should parse without SyntaxError and the function should work correctly.
+
+    ## Steps to reproduce
+    1. Run `python -c "from src.config import parse_config"`
+    2. Observe `SyntaxError: invalid syntax`
+    3. Fix: add colon after `def parse_config(filepath)`
+repo: https://github.com/example/python-syntax-error-demo
+expected:
+  outcome: pr_created
+  filesChanged: ["src/config.py"]
+  minTestsPassing: 1
+timeoutMs: 300000
