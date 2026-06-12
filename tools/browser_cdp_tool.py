@@ -33,12 +33,13 @@ CDP_DOCS_URL = "https://chromedevtools.github.io/devtools-protocol/"
 # Wrap the import so a clean error surfaces if the package is ever absent.
 try:
     import websockets
-    from websockets.exceptions import WebSocketException
+    from websockets.exceptions import WebSocketException, ConnectionClosed
 
     _WS_AVAILABLE = True
 except ImportError:
     websockets = None  # type: ignore[assignment]
     WebSocketException = Exception  # type: ignore[assignment,misc]
+    ConnectionClosed = Exception  # type: ignore[assignment,misc]
     _WS_AVAILABLE = False
 
 
@@ -87,6 +88,114 @@ def _resolve_cdp_endpoint() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Connection health check
+# ---------------------------------------------------------------------------
+
+
+async def _health_check(ws) -> bool:
+    """Quick health check by sending Browser.getVersion.
+
+    Also logs CDP backend version for diagnostics on success.
+    """
+    try:
+        check_id = 9999
+        await ws.send(
+            json.dumps({
+                "id": check_id,
+                "method": "Browser.getVersion",
+                "params": {},
+            })
+        )
+        deadline = asyncio.get_running_loop().time() + 5.0
+        while True:
+            remaining = deadline - asyncio.get_running_loop().time()
+            if remaining <= 0:
+                return False
+            raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
+            msg = json.loads(raw)
+            if msg.get("id") == check_id:
+                if "result" in msg:
+                    _r = msg["result"]
+                    logger.info(
+                        "CDP health check OK - backend: %s, protocol: %s",
+                        _r.get("product", "unknown"),
+                        _r.get("protocolVersion", "unknown"),
+                    )
+                    return True
+                return False
+            # Ignore events while waiting for health check response
+    except Exception as exc:
+        logger.debug("CDP health check failed: %s", exc)
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Target attachment
+# ---------------------------------------------------------------------------
+
+
+async def _attach_to_target(
+    ws,
+    target_id: str,
+    timeout: float,
+    next_id: int,
+    *,
+    flatten: bool,
+) -> tuple[Optional[str], int]:
+    """Attach to a CDP target, returning (session_id, next_id).
+
+    Args:
+        ws: The WebSocket connection.
+        target_id: The target ID to attach to.
+        timeout: Timeout in seconds for the attach operation.
+        next_id: The next message ID to use.
+        flatten: Whether to use flatten=True or flatten=False.
+
+    Returns:
+        Tuple of (session_id, next_id).
+
+    Raises:
+        TimeoutError: If the attach operation times out.
+        RuntimeError: If the attach operation fails.
+    """
+    attach_id = next_id
+    next_id += 1
+    await ws.send(
+        json.dumps({
+            "id": attach_id,
+            "method": "Target.attachToTarget",
+            "params": {"targetId": target_id, "flatten": flatten},
+        })
+    )
+    deadline = asyncio.get_running_loop().time() + timeout
+    while True:
+        remaining = deadline - asyncio.get_running_loop().time()
+        if remaining <= 0:
+            raise TimeoutError(
+                f"Timed out attaching to target {target_id} (flatten={flatten})"
+            )
+        try:
+            raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
+        except TimeoutError:
+            raise TimeoutError(
+                f"Timed out attaching to target {target_id} (flatten={flatten})"
+            )
+        msg = json.loads(raw)
+        if msg.get("id") == attach_id:
+            if "error" in msg:
+                raise RuntimeError(
+                    f"Target.attachToTarget (flatten={flatten}) failed: {msg['error']}"
+                )
+            session_id = msg.get("result", {}).get("sessionId")
+            if not session_id:
+                raise RuntimeError(
+                    f"Target.attachToTarget (flatten={flatten}) did not return a sessionId"
+                )
+            return session_id, next_id
+        # Ignore events (messages without "id") while waiting
+
+
+# ---------------------------------------------------------------------------
 # Core CDP call
 # ---------------------------------------------------------------------------
 
@@ -106,85 +215,124 @@ async def _cdp_call(
     When ``target_id`` is None, ``method`` is sent at browser level — which
     works for ``Target.*``, ``Browser.*``, ``Storage.*`` and a few other
     globally-scoped domains.
+
+    If ``flatten=True`` attach fails, automatically falls back to
+    ``flatten=False`` which is more compatible with some CDP backends
+    (e.g., Browserbase, Camofox).
+
+    Includes connection health check before dispatching commands and
+    auto-reconnect if the WebSocket drops (retried once).
     """
     assert websockets is not None  # guarded by _WS_AVAILABLE at call-site
 
-    async with websockets.connect(
-        ws_url,
-        max_size=None,  # CDP responses (e.g. DOM.getDocument) can be large
-        open_timeout=timeout,
-        close_timeout=5,
-        ping_interval=None,  # CDP server doesn't expect pings
-    ) as ws:
-        next_id = 1
-        session_id: Optional[str] = None
+    async def _do_call() -> Dict[str, Any]:
+        async with websockets.connect(
+            ws_url,
+            max_size=None,  # CDP responses (e.g. DOM.getDocument) can be large
+            open_timeout=timeout,
+            close_timeout=5,
+            ping_interval=None,  # CDP server doesn't expect pings
+        ) as ws:
+            next_id = 1
+            session_id: Optional[str] = None
 
-        # --- Step 1: attach to target if requested ---
-        if target_id:
-            attach_id = next_id
+            # --- Step 1: attach to target if requested ---
+            if target_id:
+                # Try flatten=True first (standard/most common)
+                try:
+                    session_id, next_id = await _attach_to_target(
+                        ws, target_id, timeout, next_id, flatten=True,
+                    )
+                    logger.info(
+                        "CDP attached to target %s with flatten=True, sessionId=%s",
+                        target_id, session_id,
+                    )
+                except (RuntimeError, TimeoutError) as exc:
+                    # Advance next_id: the message was already sent with the
+                    # current next_id, so the next call must use next_id + 1
+                    # even though the attach failed (the response ID space
+                    # is already consumed).
+                    next_id += 1
+                    logger.warning(
+                        "CDP attach with flatten=True failed: %s. "
+                        "Retrying with flatten=False (fallback).",
+                        exc,
+                    )
+                    try:
+                        session_id, next_id = await _attach_to_target(
+                            ws, target_id, timeout, next_id, flatten=False,
+                        )
+                        logger.info(
+                            "CDP attached to target %s with flatten=False "
+                            "(fallback), sessionId=%s",
+                            target_id, session_id,
+                        )
+                    except (RuntimeError, TimeoutError) as exc2:
+                        logger.error(
+                            "CDP attach to target %s failed with both "
+                            "flatten=True and flatten=False: %s",
+                            target_id, exc2,
+                        )
+                        raise
+
+            # --- Step 2: health check before dispatching the real method ---
+            if target_id:
+                healthy = await _health_check(ws)
+                if not healthy:
+                    logger.warning(
+                        "CDP health check failed for target %s "
+                        "(sessionId=%s). Proceeding anyway — connection "
+                        "may be unreliable.",
+                        target_id, session_id,
+                    )
+
+            # --- Step 3: dispatch the real method ---
+            call_id = next_id
             next_id += 1
-            await ws.send(
-                json.dumps(
-                    {
-                        "id": attach_id,
-                        "method": "Target.attachToTarget",
-                        "params": {"targetId": target_id, "flatten": True},
-                    }
-                )
-            )
+            req: Dict[str, Any] = {
+                "id": call_id,
+                "method": method,
+                "params": params or {},
+            }
+            if session_id:
+                req["sessionId"] = session_id
+            await ws.send(json.dumps(req))
+
+            # --- Step 4: wait for response ---
             deadline = asyncio.get_running_loop().time() + timeout
             while True:
                 remaining = deadline - asyncio.get_running_loop().time()
                 if remaining <= 0:
                     raise TimeoutError(
-                        f"Timed out attaching to target {target_id}"
+                        f"Timed out waiting for response to {method}"
                     )
-                raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
+                try:
+                    raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
+                except TimeoutError:
+                    raise TimeoutError(
+                        f"Timed out waiting for response to {method}"
+                    )
                 msg = json.loads(raw)
-                if msg.get("id") == attach_id:
+                if msg.get("id") == call_id:
                     if "error" in msg:
-                        raise RuntimeError(
-                            f"Target.attachToTarget failed: {msg['error']}"
-                        )
-                    session_id = msg.get("result", {}).get("sessionId")
-                    if not session_id:
-                        raise RuntimeError(
-                            "Target.attachToTarget did not return a sessionId"
-                        )
-                    break
-                # Ignore events (messages without "id") while waiting
+                        raise RuntimeError(f"CDP error: {msg['error']}")
+                    logger.debug(
+                        "CDP call %s succeeded (target=%s, sessionId=%s)",
+                        method, target_id, session_id,
+                    )
+                    return msg.get("result", {})
+                # Ignore events / out-of-order responses
 
-        # --- Step 2: dispatch the real method ---
-        call_id = next_id
-        next_id += 1
-        req: Dict[str, Any] = {
-            "id": call_id,
-            "method": method,
-            "params": params or {},
-        }
-        if session_id:
-            req["sessionId"] = session_id
-        await ws.send(json.dumps(req))
-
-        deadline = asyncio.get_running_loop().time() + timeout
-        while True:
-            remaining = deadline - asyncio.get_running_loop().time()
-            if remaining <= 0:
-                raise TimeoutError(
-                    f"Timed out waiting for response to {method}"
-                )
-            raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
-            msg = json.loads(raw)
-            if msg.get("id") == call_id:
-                if "error" in msg:
-                    raise RuntimeError(f"CDP error: {msg['error']}")
-                return msg.get("result", {})
-            # Ignore events / out-of-order responses
-
-
-# ---------------------------------------------------------------------------
-# Public tool function
-# ---------------------------------------------------------------------------
+    try:
+        return await _do_call()
+    except ConnectionClosed as exc:
+        logger.warning(
+            "CDP WebSocket closed during call to %s (target=%s): %s. "
+            "Retrying once.",
+            method, target_id, exc,
+        )
+        # Retry once
+        return await _do_call()
 
 
 def _browser_cdp_via_supervisor(
@@ -314,7 +462,9 @@ def browser_cdp(
         target_id: Optional target/tab ID for page-level methods.  When set,
             we first attach to the target (``flatten=True``) and send
             ``method`` with the resulting ``sessionId``.  Uses a fresh
-            stateless CDP connection.
+            stateless CDP connection.  If the ``flatten=True`` attach
+            fails (some backends do not support it), automatically falls
+            back to ``flatten=False``.
         frame_id: Optional cross-origin (OOPIF) iframe ``frame_id`` from
             ``browser_snapshot.frame_tree.children[]``.  When set (and the
             frame is an OOPIF with a live session tracked by the CDP
@@ -466,6 +616,12 @@ BROWSER_CDP_SCHEMA: Dict[str, Any] = {
         "and event subscriptions do not persist between calls. For stateful "
         "workflows, prefer the dedicated browser tools or use frame_id "
         "routing."
+        "- The tool automatically falls back to ``flatten=False`` for "
+        "``Target.attachToTarget`` if the ``flatten=True`` variant fails. "
+        "This improves compatibility with CDP backends like Browserbase "
+        "and Camofox that may not support flattened sessions. "
+        "A connection health check is performed before each command, "
+        "and dropped WebSockets are automatically retried once."
     ),
     "parameters": {
         "type": "object",

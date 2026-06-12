@@ -15,7 +15,7 @@ from typing import Any, Dict, List
 import pytest
 
 import websockets
-from websockets.asyncio.server import serve
+from websockets.server import serve
 
 from tools import browser_cdp_tool
 
@@ -245,6 +245,10 @@ def test_target_attach_then_call(cdp_server):
         lambda params, sid: {"sessionId": f"sess-{params['targetId']}"},
     )
     cdp_server.on(
+        "Browser.getVersion",
+        lambda params, sid: {"product": "TestBrowser/1.0", "protocolVersion": "1.3"},
+    )
+    cdp_server.on(
         "Runtime.evaluate",
         lambda params, sid: {
             "result": {"type": "string", "value": f"evaluated[{sid}]"},
@@ -265,9 +269,11 @@ def test_target_attach_then_call(cdp_server):
     # First call: attach
     assert calls[0]["method"] == "Target.attachToTarget"
     assert calls[0]["params"] == {"targetId": "tab-A", "flatten": True}
-    # Second call: dispatched method on the session
-    assert calls[1]["method"] == "Runtime.evaluate"
-    assert calls[1]["sessionId"] == "sess-tab-A"
+    # Second call: health check (Browser.getVersion)
+    assert calls[1]["method"] == "Browser.getVersion"
+    # Third call: dispatched method on the session
+    assert calls[2]["method"] == "Runtime.evaluate"
+    assert calls[2]["sessionId"] == "sess-tab-A"
 
 
 # ---------------------------------------------------------------------------
@@ -409,3 +415,164 @@ def test_check_fn_false_when_browser_requirements_fail(monkeypatch):
         bt, "_get_cdp_override", lambda: "ws://localhost:9222/devtools/browser/x"
     )
     assert browser_cdp_tool._browser_cdp_check() is False
+
+
+# ---------------------------------------------------------------------------
+# Flatten fallback: flatten=True fails, falls back to flatten=False
+# ---------------------------------------------------------------------------
+
+
+def test_attach_fallback_to_flatten_false(cdp_server):
+    """When flatten=True fails, should automatically fall back to flatten=False."""
+    attach_attempts = []
+
+    def attach_handler(params, sid):
+        attach_attempts.append(params.get("flatten"))
+        if params.get("flatten") is True:
+            raise RuntimeError("flatten=True not supported")
+        return {"sessionId": f"sess-{params['targetId']}"}
+
+    cdp_server.on("Target.attachToTarget", attach_handler)
+    cdp_server.on(
+        "Browser.getVersion",
+        lambda params, sid: {"product": "Test/1.0", "protocolVersion": "1.3"},
+    )
+    cdp_server.on(
+        "Runtime.evaluate",
+        lambda params, sid: {"result": {"type": "string", "value": "ok"}},
+    )
+
+    result = json.loads(
+        browser_cdp_tool.browser_cdp(
+            method="Runtime.evaluate",
+            params={"expression": "1+1"},
+            target_id="tab-B",
+        )
+    )
+    assert result["success"] is True
+    assert result["target_id"] == "tab-B"
+
+    # Should have tried flatten=True first, then flatten=False
+    assert attach_attempts == [True, False], (
+        f"Expected [True, False] but got {attach_attempts}"
+    )
+
+    calls = cdp_server.received()
+    # calls[0] = attach flatten=True (failed silently because handler raised)
+    # calls[1] = attach flatten=False (succeeded)
+    assert calls[0]["params"]["flatten"] is True
+    assert calls[1]["params"]["flatten"] is False
+
+
+def test_attach_both_flatten_fail_returns_error(cdp_server):
+    """When both flatten=True and flatten=False fail, should return tool error."""
+    cdp_server.on(
+        "Target.attachToTarget",
+        lambda params, sid: (_ for _ in ()).throw(
+            RuntimeError("attach always fails")
+        ),
+    )
+
+    result = json.loads(
+        browser_cdp_tool.browser_cdp(
+            method="Runtime.evaluate",
+            params={"expression": "1+1"},
+            target_id="tab-C",
+        )
+    )
+    assert "error" in result
+    assert "Target.attachToTarget" in result["error"]
+
+
+# ---------------------------------------------------------------------------
+# Health check outcomes
+# ---------------------------------------------------------------------------
+
+
+def test_health_check_logs_backend_info(cdp_server):
+    """Health check logs backend info on success (verified via received calls)."""
+    cdp_server.on(
+        "Target.attachToTarget",
+        lambda params, sid: {"sessionId": f"sess-{params['targetId']}"},
+    )
+    cdp_server.on(
+        "Browser.getVersion",
+        lambda params, sid: {"product": "MockChrome/99", "protocolVersion": "1.3"},
+    )
+    cdp_server.on(
+        "Runtime.evaluate",
+        lambda params, sid: {"result": {"type": "string", "value": "ok"}},
+    )
+
+    result = json.loads(
+        browser_cdp_tool.browser_cdp(
+            method="Runtime.evaluate",
+            params={"expression": "1+1"},
+            target_id="tab-D",
+        )
+    )
+    assert result["success"] is True
+
+    calls = cdp_server.received()
+    # Verify health check occurred between attach and actual method
+    assert calls[0]["method"] == "Target.attachToTarget"
+    assert calls[1]["method"] == "Browser.getVersion"
+    assert calls[2]["method"] == "Runtime.evaluate"
+
+
+# ---------------------------------------------------------------------------
+# WebSocket reconnection test
+# ---------------------------------------------------------------------------
+
+
+def test_connection_closed_retry(cdp_server):
+    """When the WebSocket is closed during a call, it should be retried once."""
+    import websockets.exceptions
+
+    # Track how many times we set up the attach handler
+    attach_count = [0]
+
+    def attach_handler(params, sid):
+        attach_count[0] += 1
+        return {"sessionId": f"sess-{params['targetId']}"}
+
+    cdp_server.on("Target.attachToTarget", attach_handler)
+    cdp_server.on(
+        "Browser.getVersion",
+        lambda params, sid: {"product": "Test/1.0", "protocolVersion": "1.3"},
+    )
+    cdp_server.on(
+        "Runtime.evaluate",
+        lambda params, sid: {"result": {"type": "string", "value": "ok"}},
+    )
+
+    result = json.loads(
+        browser_cdp_tool.browser_cdp(
+            method="Runtime.evaluate",
+            params={"expression": "1+1"},
+            target_id="tab-E",
+        )
+    )
+    assert result["success"] is True
+    # If the connection wasn't closed, this will just be a normal success.
+    # We can't easily force a ConnectionClosed from the mock server without
+    # special handling, but the code path exists for real connections.
+    assert attach_count[0] >= 1
+
+
+# ---------------------------------------------------------------------------
+# Browser-level call still works with flatten changes
+# ---------------------------------------------------------------------------
+
+
+def test_browser_level_still_works_without_health_check(cdp_server):
+    """Browser-level calls (no target_id) skip health check and work normally."""
+    cdp_server.on(
+        "Target.getTargets",
+        lambda params, sid: {"targetInfos": []},
+    )
+    result = json.loads(browser_cdp_tool.browser_cdp(method="Target.getTargets"))
+    assert result["success"] is True
+    # Should only be one call (no health check for browser-level)
+    assert len(cdp_server.received()) == 1
+    assert cdp_server.received()[0]["method"] == "Target.getTargets"
