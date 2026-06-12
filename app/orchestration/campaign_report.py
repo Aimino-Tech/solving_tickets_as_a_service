@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import logging
 import os
 import sys
 from datetime import datetime, timezone
@@ -13,6 +14,8 @@ from orchestrator_state import get_repository
 
 REPORT_DIR = Path(__file__).parent.parent / "reports"
 REPORT_INTERVAL_HOURS = 24
+
+logger = logging.getLogger(__name__)
 
 
 def _log(msg: str) -> None:
@@ -157,6 +160,115 @@ def format_markdown_report(report: dict[str, Any]) -> str:
             lines.append("")
 
     return "\n".join(lines)
+
+
+def write_report_to_sheets(
+    report: dict[str, Any],
+    spreadsheet_id: str | None = None,
+) -> bool:
+    """Write a campaign report row to Google Sheets using safe write utilities.
+
+    Uses the ``safe_append_row`` helper from ``app.tracking.sheet_content_writer``
+    to ensure content exceeding the 50 000 character cell limit is truncated
+    rather than causing a write error.
+
+    Args:
+        report: The report dict (from ``build_report`` or similar).
+        spreadsheet_id: Optional override for the target spreadsheet ID.
+
+    Returns:
+        True if the write succeeded, False otherwise.
+    """
+    try:
+        from app.tracking.sheet_content_writer import safe_append_row, validate_content_length
+        from app.tracking.sheets_backend import GoogleSheetsBackend, MAX_CELL_LENGTH, UNIFIED_HEADERS
+    except ImportError as exc:
+        logger.warning("[campaign_report] Cannot write to sheets: %s", exc)
+        return False
+
+    backend = GoogleSheetsBackend()
+    if not backend.ensure_ready():
+        logger.warning("[campaign_report] Google Sheets backend not ready")
+        return False
+
+    ws = backend._ws
+    if ws is None:
+        return False
+
+    # Build a flat row from the report dict aligned to UNIFIED_HEADERS.
+    row: list[str] = []
+    for header in UNIFIED_HEADERS[:-1]:  # exclude content_overflow
+        if header == "id":
+            row.append(f"report-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}")
+        elif header == "type":
+            row.append("campaign_report")
+        elif header == "timestamp":
+            row.append(report.get("report_generated_at", datetime.now(timezone.utc).isoformat()))
+        elif header == "campaign":
+            row.append("campaign_report")
+        elif header == "status":
+            row.append("ok")
+        elif header == "raw_data":
+            row.append(json.dumps(report, default=str))
+        elif header == "phases":
+            row.append("")
+        else:
+            row.append("")
+
+    # Validate content lengths before writing
+    over_limit = validate_content_length({"raw_data": row[UNIFIED_HEADERS.index("raw_data")]})
+    if over_limit:
+        field_name, actual_len = over_limit[0]
+        logger.warning(
+            "[campaign_report] %s exceeds cell limit (%d > %d chars) — will be truncated",
+            field_name,
+            actual_len,
+            MAX_CELL_LENGTH,
+        )
+
+    safe_append_row(ws, row)
+    _log("Campaign report written to Google Sheets")
+    return True
+
+
+def write_markdown_to_sheets(
+    markdown: str,
+    sheet_title: str = "Campaign Report",
+) -> bool:
+    """Write a markdown report to a Google Sheet using safe content writer.
+
+    Uses ``write_large_content`` to handle markdown strings that may exceed
+    the 50 000 character cell limit by splitting content across cells.
+
+    Args:
+        markdown: The markdown report string.
+        sheet_title: Title for the worksheet cell prefix.
+
+    Returns:
+        True if the write succeeded, False otherwise.
+    """
+    try:
+        from app.tracking.sheet_content_writer import write_large_content
+        from app.tracking.sheets_backend import GoogleSheetsBackend
+    except ImportError as exc:
+        logger.warning("[campaign_report] Cannot write markdown to sheets: %s", exc)
+        return False
+
+    backend = GoogleSheetsBackend()
+    if not backend.ensure_ready():
+        logger.warning("[campaign_report] Google Sheets backend not ready")
+        return False
+
+    ws = backend._ws
+    if ws is None:
+        return False
+
+    # Prepend a label so the sheet row is self-describing
+    content = f"[{sheet_title} — {datetime.now(timezone.utc).isoformat()}]\n\n{markdown}"
+
+    cells_written = write_large_content(ws, content)
+    _log(f"Markdown report written to Google Sheets ({cells_written} cells)")
+    return True
 
 
 if __name__ == "__main__":
