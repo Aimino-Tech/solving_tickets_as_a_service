@@ -1,0 +1,45 @@
+description: "Agent must fix a nil pointer dereference in Go"
+issue:
+  title: "nil pointer dereference in GetUserDisplayName() when user is nil in src/user.go"
+  body: |
+    ## Bug
+    The `GetUserDisplayName()` function in `src/user.go` accesses
+    `user.Name` without checking if `user` is nil, causing a panic
+    when a nil pointer is passed.
+
+    ```go
+    package user
+
+    type User struct {
+        Name string
+        Email string
+    }
+
+    func GetUserDisplayName(user *User) string {
+        return user.Name
+    }
+    ```
+
+    ## Expected
+    Add a nil check before accessing `user.Name`. If `user` is nil,
+    return an empty string or a default value like `"Anonymous"`.
+
+    ```go
+    func GetUserDisplayName(user *User) string {
+        if user == nil {
+            return "Anonymous"
+        }
+        return user.Name
+    }
+    ```
+
+    ## Steps to reproduce
+    1. Run `go test ./...` or call `GetUserDisplayName(nil)`
+    2. Observe `panic: runtime error: invalid memory address or nil pointer dereference`
+    3. Fix: add nil check at the start of the function
+repo: https://github.com/example/go-nil-pointer-demo
+expected:
+  outcome: pr_created
+  filesChanged: ["src/user.go"]
+  minTestsPassing: 1
+timeoutMs: 300000

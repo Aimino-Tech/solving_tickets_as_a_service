@@ -1,0 +1,36 @@
+# STAS Eval Test Suite Manifest
+# This file indexes all test cases in the eval/test-cases/ directory.
+# Each entry references a single YAML file containing the full test
+# case definition (issue, repo, expected outcome).
+
+version: 1.0
+description: "Test cases for STAS agent eval pipeline — covering Python, JavaScript/TypeScript, Go, and edge cases"
+
+categories:
+  python:
+    description: "Python fix test cases"
+    cases:
+      - file: fix-python-syntax-error.yml
+      - file: fix-python-import.yml
+      - file: fix-python-type-error.yml
+
+  javascript:
+    description: "JavaScript/TypeScript fix test cases"
+    cases:
+      - file: fix-js-variable-scope.yml
+      - file: fix-js-async-await.yml
+      - file: fix-ts-type-annotation.yml
+
+  go:
+    description: "Go fix test cases"
+    cases:
+      - file: fix-go-import.yml
+      - file: fix-go-nil-check.yml
+
+  edge:
+    description: "Edge case test cases"
+    cases:
+      - file: edge-empty-repo.yml
+      - file: edge-missing-dep.yml
+
+totalCases: 10

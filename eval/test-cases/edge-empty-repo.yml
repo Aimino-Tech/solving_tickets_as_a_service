@@ -1,0 +1,27 @@
+description: "Agent should gracefully handle an empty repository with no source files"
+issue:
+  title: "Repository appears to be empty — no source code found"
+  body: |
+    ## Bug
+    The repository at `https://github.com/example/empty-repo` appears to contain
+    no source code files. It only has a `.gitkeep` file and a README.
+
+    When the agent attempts to clone and analyze this repo, it should
+    gracefully detect the empty state and return an appropriate error message
+    rather than crashing or hanging indefinitely.
+
+    ## Expected behavior
+    The agent should:
+    1. Clone the repository successfully
+    2. Detect that there are no source files to analyze
+    3. Return an error message indicating the repo is empty
+    4. Not attempt to create a PR or modify the repo
+
+    This is a valid edge case — real-world agents must handle empty repos
+    without crashing.
+repo: https://github.com/example/empty-repo-demo
+expected:
+  outcome: error_returned
+  filesChanged: []
+  minTestsPassing: 0
+timeoutMs: 120000
