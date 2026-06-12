@@ -4,26 +4,19 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-import praw
-
-REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
-REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
-REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "openclaw-india-engagement/1.0")
-REDDIT_USERNAME = os.getenv("REDDIT_USERNAME", "")
-REDDIT_PASSWORD = os.getenv("REDDIT_PASSWORD", "")
+from app.platforms.reddit_auth import get_reddit_client
 
 TARGET_SUBREDDIT = "developersIndia"
 KEYWORDS = ["mcp", "opensource", "openclaw", "fossunited", "modelcontextprotocol"]
 
 
-def _reddit() -> praw.Reddit:
-    return praw.Reddit(
-        client_id=REDDIT_CLIENT_ID,
-        client_secret=REDDIT_CLIENT_SECRET,
-        user_agent=REDDIT_USER_AGENT,
-        username=REDDIT_USERNAME,
-        password=REDDIT_PASSWORD,
-    )
+def _reddit():
+    """Return an authenticated PRAW client via RedditOAuthManager.
+
+    Uses the managed OAuth2 flow with automatic token refresh instead of
+    raw password-based authentication.
+    """
+    return get_reddit_client()
 
 
 def _log_engagement(platform: str, action: str, status: str, metadata: dict = None):

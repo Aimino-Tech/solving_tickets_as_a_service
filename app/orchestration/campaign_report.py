@@ -48,17 +48,11 @@ def fetch_devto_stats(username: str | None = None) -> dict[str, Any]:
 
 def fetch_reddit_stats(subreddit: str = "developersIndia", query: str = "fast-html-mcp") -> dict[str, Any]:
     try:
-        import praw
+        from app.platforms.reddit_auth import get_reddit_client
         client_id = os.getenv("REDDIT_CLIENT_ID", "")
         if not client_id:
             return {"platform": "reddit", "status": "skipped", "note": "No REDDIT_CLIENT_ID"}
-        reddit = praw.Reddit(
-            client_id=client_id,
-            client_secret=os.getenv("REDDIT_CLIENT_SECRET", ""),
-            user_agent="openclaw-mcp-marketing/1.0",
-            username=os.getenv("REDDIT_USERNAME", ""),
-            password=os.getenv("REDDIT_PASSWORD", ""),
-        )
+        reddit = get_reddit_client()
         sub = reddit.subreddit(subreddit)
         results = []
         for post in sub.search(query, limit=25):

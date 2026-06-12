@@ -1,8 +1,10 @@
-"""Reddit engagement adapter using PRAW."""
+"""Reddit engagement adapter using PRAW with OAuth2 token management."""
 
 import os
 import re
 import logging
+
+from app.platforms.reddit_auth import get_reddit_client
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +16,12 @@ KEYWORDS = [
 
 
 def _get_reddit():
-    import praw
-    return praw.Reddit(
-        client_id=os.getenv("REDDIT_CLIENT_ID"),
-        client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
-        password=os.getenv("REDDIT_PASSWORD"),
-        user_agent=os.getenv("REDDIT_USER_AGENT", "openclaw:v1.0 (by u/openclaw_agent)"),
-        username=os.getenv("REDDIT_USERNAME"),
-    )
+    """Return an authenticated PRAW client via RedditOAuthManager.
+
+    Uses the managed OAuth2 flow with automatic token refresh instead of
+    raw password-based authentication.
+    """
+    return get_reddit_client()
 
 
 def keywords_match(text):

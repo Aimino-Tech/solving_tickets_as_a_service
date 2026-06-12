@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 # ── Constants ────────────────────────────────────────────────────────────────
 
 REDDIT_TOKEN_URL = "https://www.reddit.com/api/v1/access_token"
+REDDIT_REVOKE_URL = "https://www.reddit.com/api/v1/revoke_token"
 
 # Refresh the token when fewer than this many seconds remain before expiry.
 REFRESH_BUFFER_SECONDS = 300  # 5 minutes
@@ -144,8 +145,8 @@ def refresh_access_token(
 
     # Fall back to password grant if no refresh token is available.
     if not rt:
-        username = _DEFAULT_USERNAME
-        password = _DEFAULT_PASSWORD
+        username = os.getenv("REDDIT_USERNAME", "")
+        password = os.getenv("REDDIT_PASSWORD", "")
         if not username or not password:
             logger.error(
                 "Reddit OAuth refresh failed: no refresh token available "
@@ -216,6 +217,88 @@ def refresh_access_token(
         logger.warning("Token refreshed but could not persist to disk")
 
     return True, new_token
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Token revocation
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+def revoke_access_token(
+    client_id: Optional[str] = None,
+    client_secret: Optional[str] = None,
+    token: Optional[str] = None,
+    token_type_hint: str = "access_token",
+    hermes_home: Optional[Path] = None,
+) -> bool:
+    """Revoke a Reddit access or refresh token via the OAuth2 revocation endpoint.
+
+    After revocation the stored token file is cleared so stale credentials
+    cannot be reused.
+
+    Args:
+        client_id: Reddit OAuth2 client ID.  Falls back to REDDIT_CLIENT_ID
+            env var.
+        client_secret: Reddit OAuth2 client secret.  Falls back to
+            REDDIT_CLIENT_SECRET env var.
+        token: The token to revoke.  When None (the default), the stored
+            access token is used.
+        token_type_hint: ``"access_token"`` or ``"refresh_token"``.
+            Defaults to ``"access_token"``.
+        hermes_home: Override Hermes home for token storage.
+
+    Returns:
+        True if the revocation request succeeded (HTTP 200) or the token
+        file was already empty.  False on network or server error.
+    """
+    from app.platforms.reddit_token_storage import clear_token, load_token
+
+    cid = client_id or _DEFAULT_CLIENT_ID
+    secret = client_secret or _DEFAULT_CLIENT_SECRET
+
+    if not cid or not secret:
+        logger.error(
+            "Reddit token revocation failed: REDDIT_CLIENT_ID and "
+            "REDDIT_CLIENT_SECRET must be set"
+        )
+        return False
+
+    stored = load_token(hermes_home)
+    tkn = token or stored.get("access_token", "")
+    if not tkn:
+        logger.info("No token to revoke - clearing storage")
+        clear_token(hermes_home)
+        return True
+
+    auth = httpx.BasicAuth(username=cid, password=secret)
+    data = {"token": tkn, "token_type_hint": token_type_hint}
+
+    try:
+        resp = httpx.post(
+            REDDIT_REVOKE_URL,
+            auth=auth,
+            data=data,
+            headers={"User-Agent": _DEFAULT_USER_AGENT},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        logger.info("Reddit token revoked successfully")
+    except httpx.HTTPStatusError as exc:
+        logger.warning(
+            "Reddit token revocation returned HTTP %s: %s",
+            exc.response.status_code,
+            exc.response.text[:500],
+        )
+        return False
+    except (httpx.RequestError, ValueError) as exc:
+        logger.warning("Reddit token revocation request failed: %s", exc)
+        return False
+    except Exception as exc:
+        logger.warning("Reddit token revocation unexpected error: %s", exc)
+        return False
+
+    clear_token(hermes_home)
+    return True
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -364,6 +447,9 @@ class RedditOAuthManager:
         try:
             client = self.get_client()
             user = client.user.me()
+            if user is None:
+                logger.warning("Reddit OAuth verification failed: user is None (not authenticated)")
+                return None
             username = str(user)
             logger.info("Reddit OAuth verified: authenticated as %s", username)
             return username
@@ -378,6 +464,25 @@ class RedditOAuthManager:
         error during an API call.
         """
         self.reddit = None
+
+    def revoke_token(self) -> bool:
+        """Revoke the current access token and clear stored credentials.
+
+        Also invalidates the cached PRAW client so that the next call to
+        :meth:`get_client` starts fresh.
+
+        Returns:
+            True if the token was revoked (or no token existed).
+        """
+        self.invalidate_client()
+        success = revoke_access_token(
+            client_id=self._client_id,
+            client_secret=self._client_secret,
+            hermes_home=self._hermes_home,
+        )
+        if success:
+            logger.info("Reddit OAuth token revoked and storage cleared")
+        return success
 
 
 # ══════════════════════════════════════════════════════════════════════════════

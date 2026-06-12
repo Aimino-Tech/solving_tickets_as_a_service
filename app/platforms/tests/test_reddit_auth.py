@@ -13,7 +13,12 @@ import time
 from pathlib import Path
 from unittest import mock
 
+import httpx
+import praw
 import pytest
+import httpx
+
+import praw
 
 # Module under test
 from app.platforms import reddit_auth
@@ -102,9 +107,9 @@ class TestValidateToken:
         assert reddit_auth.validate_token(valid_token_data) is False
 
     def test_exactly_at_buffer_boundary(self, valid_token_data: dict):
-        """A token exactly 5 minutes from expiry is still valid (boundary)."""
+        """A token exactly 5 minutes from expiry is within buffer and needs refresh."""
         valid_token_data["expires_at"] = time.time() + 300  # exactly 5 min
-        assert reddit_auth.validate_token(valid_token_data) is True
+        assert reddit_auth.validate_token(valid_token_data) is False
 
     def test_custom_buffer(self, valid_token_data: dict):
         """Custom buffer should be respected."""
@@ -455,6 +460,126 @@ class TestRefreshAccessToken:
         assert success is True
         assert token["access_token"] == "password_grant_token"
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Token revocation tests
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class TestRevokeAccessToken:
+    """Tests for :func:`reddit_auth.revoke_access_token`."""
+
+    def test_revoke_with_no_token_stored(self, temp_hermes_home: Path):
+        """Revoke should succeed when no token exists on disk."""
+        success = reddit_auth.revoke_access_token(
+            client_id="test_client_id",
+            client_secret="test_client_secret",
+            hermes_home=temp_hermes_home,
+        )
+        assert success is True
+
+    def test_revoke_missing_credentials(self, temp_hermes_home: Path):
+        """Revoke should return False when no client_id is available."""
+        success = reddit_auth.revoke_access_token(
+            client_id="",
+            client_secret="",
+            hermes_home=temp_hermes_home,
+        )
+        assert success is False
+
+    @mock.patch("app.platforms.reddit_auth.httpx.post")
+    def test_successful_revoke(
+        self, mock_post, temp_hermes_home: Path, valid_token_data: dict
+    ):
+        """A successful HTTP revocation should clear the token file."""
+        reddit_token_storage.save_token(valid_token_data, temp_hermes_home)
+        assert reddit_token_storage.token_exists(temp_hermes_home) is True
+
+        mock_response = mock.MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        success = reddit_auth.revoke_access_token(
+            client_id="test_client_id",
+            client_secret="test_client_secret",
+            hermes_home=temp_hermes_home,
+        )
+        assert success is True
+        # Token should be cleared from disk.
+        assert reddit_token_storage.token_exists(temp_hermes_home) is False
+
+    @mock.patch("app.platforms.reddit_auth.httpx.post")
+    def test_revoke_http_error(
+        self, mock_post, temp_hermes_home: Path, valid_token_data: dict
+    ):
+        """An HTTP error should return failure and preserve the token."""
+        reddit_token_storage.save_token(valid_token_data, temp_hermes_home)
+
+        mock_response = mock.MagicMock()
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "400 Bad Request",
+            request=mock.MagicMock(),
+            response=mock.MagicMock(status_code=400, text="Bad Request"),
+        )
+        mock_post.return_value = mock_response
+
+        success = reddit_auth.revoke_access_token(
+            client_id="test_client_id",
+            client_secret="test_client_secret",
+            hermes_home=temp_hermes_home,
+        )
+        assert success is False
+        # Token should be preserved on error.
+        assert reddit_token_storage.token_exists(temp_hermes_home) is True
+
+    @mock.patch("app.platforms.reddit_auth.httpx.post")
+    def test_revoke_with_custom_token(
+        self, mock_post, temp_hermes_home: Path
+    ):
+        """Revoke with an explicit token (not from stored file)."""
+        mock_response = mock.MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        success = reddit_auth.revoke_access_token(
+            client_id="test_client_id",
+            client_secret="test_client_secret",
+            token="custom_token_to_revoke",
+            hermes_home=temp_hermes_home,
+        )
+        assert success is True
+
+
+class TestRedditOAuthManagerRevoke:
+    """Tests for :meth:`reddit_auth.RedditOAuthManager.revoke_token`."""
+
+    def test_revoke_token_delegates(
+        self, temp_hermes_home: Path, valid_token_data: dict
+    ):
+        """Manager.revoke_token should call revoke_access_token."""
+        reddit_token_storage.save_token(valid_token_data, temp_hermes_home)
+        manager = reddit_auth.RedditOAuthManager(hermes_home=temp_hermes_home)
+
+        with mock.patch(
+            "app.platforms.reddit_auth.revoke_access_token", return_value=True
+        ) as mock_revoke:
+            result = manager.revoke_token()
+            mock_revoke.assert_called_once()
+            assert result is True
+
+    def test_revoke_invalidates_client(
+        self, temp_hermes_home: Path
+    ):
+        """revoke_token should invalidate the cached client."""
+        manager = reddit_auth.RedditOAuthManager(hermes_home=temp_hermes_home)
+        manager.reddit = mock.MagicMock()
+        assert manager.reddit is not None
+
+        with mock.patch(
+            "app.platforms.reddit_auth.revoke_access_token", return_value=True
+        ):
+            manager.revoke_token()
+            assert manager.reddit is None
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Module-level convenience functions
