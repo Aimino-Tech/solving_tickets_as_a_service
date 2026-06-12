@@ -2,8 +2,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    // Look for test files in src/__tests__
-    dir: "src/__tests__",
+    include: ["src/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)", "eval/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
 
     // Node environment for backend testing
     environment: "node",

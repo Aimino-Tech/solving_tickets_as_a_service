@@ -90,6 +90,8 @@ const envSchema = z.object({
   E2B_TEMPLATE_ID: z.string().default('stas-default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
   E2B_WORK_DIR: z.string().optional(),
+  E2B_EVAL_TEMPLATE_ID: z.string().default('stas-eval-hardened'),
+  E2B_EVAL_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // Sandbox — Docker
   DOCKER_IMAGE: z.string().default('node:22-alpine'),
@@ -355,6 +357,8 @@ function buildConfig(env: ParsedEnv) {
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
       workDir: env.E2B_WORK_DIR,
+      evalTemplateId: env.E2B_EVAL_TEMPLATE_ID,
+      evalTimeoutMs: env.E2B_EVAL_TIMEOUT_MS,
     },
 
     docker: {
