@@ -315,6 +315,16 @@ STAS ships with comprehensive documentation:
 | [ops/runbook.md](ops/runbook.md) | Production deployment runbook — service mgmt, scaling, monitoring, failures |
 | [ops/playbook.md](ops/playbook.md) | Alert response playbooks for common incidents |
 
+## Multi-Platform
+
+STAS now supports multiple Git hosting platforms. See the [Platforms documentation](docs/platforms/README.md) for setup guides:
+
+- **GitHub** — Live, fully supported
+- **GitLab** — Beta (self-hosted and GitLab.com)
+- **Bitbucket** — Beta (Bitbucket Cloud)
+
+Each platform has its own webhook integration, agent pipeline, CI configuration, and eval test strategy. Platform-specific setup guides are in [`docs/platforms/`](docs/platforms/README.md).
+
 
 ## Roadmap
 
