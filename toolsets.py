@@ -70,6 +70,13 @@ _HERMES_CORE_TOOLS = [
     "kanban_unblock",
     # Computer use (macOS, gated on cua-driver being installed via check_fn)
     "computer_use",
+    # Marketing campaign tools
+    "campaign_create", "campaign_list", "campaign_status",
+    "action_log", "action_query",
+    "account_status", "account_warmup_progress",
+    "humanization_check",
+    "release_check",
+    "market_report",
 ]
 
 
@@ -256,6 +263,19 @@ TOOLSETS = {
             "kanban_unblock",
         ],
         "includes": [],
+    },
+
+    "marketing": {
+        "description": "Autonomous marketing campaign tools: create campaigns, log actions, check account warmup, verify content humanization, monitor GitHub releases.",
+        "tools": [
+            "campaign_create", "campaign_list", "campaign_status",
+            "action_log", "action_query",
+            "account_status", "account_warmup_progress",
+            "humanization_check",
+            "release_check",
+            "market_report",
+        ],
+        "includes": []
     },
 
     "discord": {

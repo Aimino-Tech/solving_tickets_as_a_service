@@ -8,6 +8,16 @@ set -euo pipefail
 #   1. Checks if within working hours (Mon-Fri 9-18)
 #   2. Queries Google Sheet for pending items
 #   3. Only calls Hermes if there's actual work
+#
+# Cron scheduling (via crontab or systemd timer):
+#   */1 9-18 * * 1-5  <PATH>/hermes-marketing-cron.sh        # hourly check
+#   0 8 * * *           <PATH>/hermes-marketing-cron.sh --daily-digest  # P0.6 daily digest
+#
+# The daily digest (~08 UTC) runs::
+#   python3 hermes_marketing_check.py --daily-digest
+#
+# The sheet-sync runs independently::
+#   python3 hermes_marketing_check.py --sheet-sync
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

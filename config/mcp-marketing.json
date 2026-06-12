@@ -1,21 +1,21 @@
 {
   "version": "1.0.0",
   "product": {
-    "name": "fast-html-mcp",
-    "npm_package": "@surfsense/fast-html-mcp",
+    "name": "opentalk2html-notmd",
+    "npm_package": "@aimino/opentalk2html-notmd",
     "repository": "https://github.com/Aimino-Tech/fast-html-mcp",
-    "description": "High-performance HTML-to-MCP server for fetching, processing, and converting web content into structured MCP resources"
+    "description": "Five-tier MCP server for lightning-fast HTML generation from AI agents"
   },
   "directories": [
-    {"name": "smithery", "url": "https://smithery.ai/server/@surfsense/fast-html-mcp", "method": "api"},
-    {"name": "mcp.so", "url": "https://mcp.so/server/@surfsense/fast-html-mcp", "method": "api"},
-    {"name": "glama", "url": "https://glama.ai/mcp/servers/@surfsense/fast-html-mcp", "method": "api"},
+    {"name": "smithery", "url": "https://smithery.ai/server/@aimino/opentalk2html-notmd", "method": "api"},
+    {"name": "mcp.so", "url": "https://mcp.so/server/@aimino/opentalk2html-notmd", "method": "api"},
+    {"name": "glama", "url": "https://glama.ai/mcp/servers/@aimino/opentalk2html-notmd", "method": "api"},
     {"name": "awesome-mcp-servers", "url": "https://github.com/punkpeye/awesome-mcp-servers", "method": "pr", "repo": "punkpeye/awesome-mcp-servers"},
     {"name": "mcp-get", "url": "https://mcp-get.com/", "method": "manual"},
     {"name": "mcp-marketplace", "url": "https://mcp-marketplace.dev", "method": "api"},
     {"name": "mcp-hub", "url": "https://mcp-hub.com", "method": "api"},
     {"name": "mcp-registry", "url": "https://mcp-registry.com", "method": "api"},
-    {"name": "npm", "url": "https://www.npmjs.com/package/@surfsense/fast-html-mcp", "method": "npm"},
+    {"name": "npm", "url": "https://www.npmjs.com/package/@aimino/opentalk2html-notmd", "method": "npm"},
     {"name": "mcp-cheatsheet", "url": "https://mcp-cheatsheet.com/", "method": "manual"}
   ],
   "campaign": {
