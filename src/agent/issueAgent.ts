@@ -46,6 +46,8 @@ import { getTracker } from "../trackers/index.js";
 import { writeBack } from "../trackers/writeBack.js";
 import { validateIssue } from "./issueValidator.js";
 import { isFeatureEnabled } from "../services/featureFlags.js";
+import { getPlatformClient } from "../platforms/registry.js";
+import type { PlatformClient } from "../webhooks/base.js";
 const log = rootLogger.child({ module: 'issue-agent' });
 
 // ---------------------------------------------------------------------------
@@ -119,11 +121,10 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     issueNumber: data.issueNumber,
   });
 
-  const { installationId, repoOwner, repoName, repoPrivate, issueNumber, issueTitle, issueBody } = data;
+  const { installationId, repoOwner, repoName, repoPrivate, issueNumber, issueTitle, issueBody, source } = data;
 
-  const repoUrl = repoPrivate
-    ? `https://github.com/${repoOwner}/${repoName}`
-    : `https://github.com/${repoOwner}/${repoName}`;
+  const host = source === 'bitbucket' ? 'bitbucket.org' : source === 'gitlab' ? 'gitlab.com' : 'github.com';
+  const repoUrl = `https://${host}/${repoOwner}/${repoName}`;
 
   let sandbox: SandboxExecutor | null = null;
   let currentPhase = '';
@@ -142,7 +143,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 
     if (triage.type === 'feature') {
       logger.info('Issue is a feature request — skipping');
-      await postComment(installationId, repoOwner, repoName, issueNumber, messages.featureSkipComment());
+      await postComment(installationId, repoOwner, repoName, issueNumber, messages.featureSkipComment(), source);
       const featureResult: AgentResult = {
         summary: 'Issue is a feature request, not a bug. Skipping.',
         confidence: 'low',
@@ -155,7 +156,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 
     if (triage.type === 'question') {
       logger.info('Issue is a question — skipping');
-      await postComment(installationId, repoOwner, repoName, issueNumber, messages.questionSkipComment());
+      await postComment(installationId, repoOwner, repoName, issueNumber, messages.questionSkipComment(), source);
       const questionResult: AgentResult = {
         summary: 'Issue is a question, not a bug. Skipping.',
         confidence: 'low',
@@ -173,6 +174,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       repoName,
       issueNumber,
       `### 🔍 STAS Investigating\n\nIssue classified as **${triage.type}** (difficulty: ${triage.difficulty}).\n\nI'll investigate and work on a fix.\n\n`,
+      source,
     );
 
     // Post "working on it" to tracker if applicable
@@ -203,6 +205,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       repoName,
       issueNumber,
       `📖 **Analyzing issue** — reviewed ${comments.length} comments for context.`,
+      source,
     );
 
     // ── Phase 3: Boot sandbox ─────────────────────────────────────────
@@ -226,7 +229,8 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     heartbeatTimer = undefined;
 
     await postStatus(installationId, repoOwner, repoName, issueNumber,
-      `⚙️ **Sandbox ready** — cloned repository, detected runtime, installed dependencies.`);
+      `⚙️ **Sandbox ready** — cloned repository, detected runtime, installed dependencies.`,
+      source);
 
     // ── Set task-level watchdog timer ─────────────────────────────────
     watchdog = setTimeout(() => {
@@ -257,6 +261,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
           repoName,
           issueNumber,
           messages.phantomIssueComment(validationResult.missingFiles, validationResult.skipReason!),
+          source,
         );
 
         await sandbox.destroy();
@@ -297,16 +302,16 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 
         logger.info({ passed: baseline.passed, duration: baseline.durationMs }, "Baseline tests complete");
         await postStatus(installationId, repoOwner, repoName, issueNumber,
-          `🧪 **Baseline tests** — ${baseline.passed ? "passed" : "failed"} (${baseline.durationMs}ms)`);
+          `🧪 **Baseline tests** — ${baseline.passed ? "passed" : "failed"} (${baseline.durationMs}ms)`, source);
       } else {
         logger.info("No test suite configured — verification will be unverified");
         await postStatus(installationId, repoOwner, repoName, issueNumber,
-          `⚠️ **No test suite detected** — verification will be marked as unverified.`);
+          `⚠️ **No test suite detected** — verification will be marked as unverified.`, source);
       }
     } catch (err) {
       logger.warn({ err: String(err) }, "Baseline test run failed (non-fatal)");
       await postStatus(installationId, repoOwner, repoName, issueNumber,
-        `⚠️ **Baseline test error** — could not run test suite.`);
+        `⚠️ **Baseline test error** — could not run test suite.`, source);
     }
 
     // ── Phase 4: Static analysis ──────────────────────────────────────
@@ -314,7 +319,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     logger.info('Phase 4: Running static analysis');
     const analysisResult = await sandbox.analyzeCode();
     await postStatus(installationId, repoOwner, repoName, issueNumber,
-      `📊 **Static analysis** — completed analysis of codebase.`);
+      `📊 **Static analysis** — completed analysis of codebase.`, source);
 
     // ── Phase 5: Build code intelligence ──────────────────────────────
     currentPhase = '5-code-intelligence';
@@ -330,6 +335,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       repoName,
       issueNumber,
       `🤖 **Running fix agent** — investigating root cause and writing fix (may take a few minutes).`,
+      source,
     );
 
     const openCodeResult = await withTimeout(
@@ -346,6 +352,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
         codeIntel,
         installationToken: await getInstallationToken(installationId),
         installationId,
+        source,
       }),
       config.phaseTimeouts.openCodeAgent,
       "6-opencode-agent",
@@ -403,19 +410,19 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     }
     if (verification.unverified) {
       await postStatus(installationId, repoOwner, repoName, issueNumber,
-        `⚠️ **Unverified** — no test suite detected, skipping verification.`);
+        `⚠️ **Unverified** — no test suite detected, skipping verification.`, source);
     } else if (verification.preExistingTestsRegressed) {
       await postStatus(installationId, repoOwner, repoName, issueNumber,
-        `❌ **Regression detected** — existing tests that previously passed are now failing.`);
+        `❌ **Regression detected** — existing tests that previously passed are now failing.`, source);
     } else if (verification.regressionTestPassedOnOriginal === false) {
       await postStatus(installationId, repoOwner, repoName, issueNumber,
-        `⚠️ **Regression test issue** — the regression test does not fail on original code.`);
+        `⚠️ **Regression test issue** — the regression test does not fail on original code.`, source);
     } else if (verification.regressionTestPassedOnFix === false) {
       await postStatus(installationId, repoOwner, repoName, issueNumber,
-        `⚠️ **Regression test issue** — the regression test does not pass on fixed code.`);
+        `⚠️ **Regression test issue** — the regression test does not pass on fixed code.`, source);
     } else {
       await postStatus(installationId, repoOwner, repoName, issueNumber,
-        `✅ **Verification passed** — no regressions detected, regression test validated.`);
+        `✅ **Verification passed** — no regressions detected, regression test validated.`, source);
     }
 
     // ── Phase 7: Dispatch action ──────────────────────────────────────
@@ -448,6 +455,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       repoOwner,
       repoName,
       installationId,
+      platform: source,
     });
 
     // ── Phase 7.5: Write back to tracker ──────────────────────────────
@@ -487,6 +495,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
           repoName,
           issueNumber,
           messages.timeoutComment(err.phase, err.timeoutMs),
+          source,
         );
       } else {
         await postComment(
@@ -495,6 +504,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
           repoName,
           issueNumber,
           messages.errorComment(`[Phase: ${currentPhase}] ${errorMsg}`),
+          source,
         );
       }
     } catch (commentErr) {
@@ -695,6 +705,7 @@ interface OpenCodeDispatchParams {
   installationToken: string;
   installationId: number;
   baselineTestResult?: TestBaseline | null;
+  source?: string;
 }
 
 interface OpenCodeDispatchResult {
@@ -728,6 +739,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
     installationToken,
     installationId,
     baselineTestResult,
+    source,
   } = params;
 
   const prompt = buildOpenCodePrompt({
@@ -766,6 +778,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
           repoName,
           issueNumber,
           messages.retryComment(i + 1, model, lastError),
+          source,
         );
       } catch {
         // non-fatal
@@ -797,6 +810,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
             repoName,
             issueNumber,
             messages.modelFallbackComment(models[i + 1] ?? "none", errorText),
+            source,
           );
         } catch {
           // non-fatal
@@ -844,6 +858,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
             repoName,
             issueNumber,
             messages.timeoutComment(`6-opencode-agent (model: ${model})`, config.phaseTimeouts.openCodeAgent),
+            source,
           );
         } catch {
           // non-fatal
@@ -1283,13 +1298,14 @@ async function postStatus(
   repo: string,
   issueNumber: number,
   message: string,
+  source?: string,
 ): Promise<void> {
-  await postComment(installationId, owner, repo, issueNumber, `> 🤖 **STAS:** ${message}`);
+  await postComment(installationId, owner, repo, issueNumber, `> 🤖 **STAS:** ${message}`, source);
 }
 
 /**
- * Post a comment to an issue via raw fetch (used early in the pipeline
- * before we have an Octokit instance handy).
+ * Post a comment to an issue. Uses the platform-specific client when
+ * `source` is provided, otherwise falls back to GitHub Octokit.
  */
 async function postComment(
   installationId: number,
@@ -1297,8 +1313,16 @@ async function postComment(
   repo: string,
   issueNumber: number,
   body: string,
+  source?: string,
 ): Promise<void> {
   try {
+    if (source && source !== 'github') {
+      const client = getPlatformClient(source as Parameters<typeof getPlatformClient>[0]);
+      if (client) {
+        await client.createComment(owner, repo, issueNumber, body);
+        return;
+      }
+    }
     const octokit = await getOctokit(installationId);
     await octokit.issues.createComment({
       owner,

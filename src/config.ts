@@ -133,6 +133,7 @@ const envSchema = z.object({
   BITBUCKET_USERNAME: z.string().optional(),
   BITBUCKET_APP_PASSWORD: z.string().optional(),
   BITBUCKET_WEBHOOK_SECRET: z.string().optional(),
+  BITBUCKET_BASE_URL: z.string().default('https://api.bitbucket.org'),
 
   // Slack notifications
   SLACK_WEBHOOK_URL: z.string().optional(),
@@ -346,6 +347,7 @@ function buildConfig(env: ParsedEnv) {
       username: env.BITBUCKET_USERNAME ?? '',
       appPassword: env.BITBUCKET_APP_PASSWORD ?? '',
       webhookSecret: env.BITBUCKET_WEBHOOK_SECRET ?? '',
+      baseUrl: env.BITBUCKET_BASE_URL,
     },
 
     e2b: {
