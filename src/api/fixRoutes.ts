@@ -151,7 +151,7 @@ router.post('/', async (req: Request, res: Response) => {
       const repoOwner = urlParts[urlParts.length - 2];
       const repoName = urlParts[urlParts.length - 1];
 
-      await enqueueIssue(null as unknown as import('bullmq').Queue, {
+      await enqueueIssue(undefined, {
         installationId: 0,
         repoOwner,
         repoName,
@@ -160,11 +160,7 @@ router.post('/', async (req: Request, res: Response) => {
         issueTitle,
         issueBody,
         source: 'rapidapi',
-        metadata: {
-          rapidapiJobId: jobId,
-          language: language ?? null,
-          plan: req.plan ?? 'free',
-        },
+        billingPlan: req.plan ?? 'free',
       });
 
       // Update job status to show it's been dispatched
