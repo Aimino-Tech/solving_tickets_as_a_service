@@ -1,0 +1,74 @@
+image: node:20
+
+definitions:
+  caches:
+    npm: node_modules
+  steps:
+    - step: &install
+        name: Install dependencies
+        caches: [npm]
+        script:
+          - npm ci
+
+    - step: &eval-smoke
+        name: Eval Smoke
+        caches: [npm]
+        script:
+          - npm ci
+          - npx promptfoo eval --max-concurrency 1 --tests eval/test-cases/smoke.txt
+        artifacts:
+          - eval/results/latest/
+
+    - step: &eval-standard
+        name: Eval Standard
+        caches: [npm]
+        script:
+          - npm ci
+          - npx promptfoo eval --tests eval/test-cases/standard.txt
+        artifacts:
+          - eval/results/latest/
+
+    - step: &eval-full
+        name: Eval Full + Red Team
+        caches: [npm]
+        script:
+          - npm ci
+          - npx promptfoo eval --tests eval/test-cases/full.txt
+          - npx promptfoo redteam run
+        artifacts:
+          - eval/results/latest/
+
+    - step: &benchmark-badge
+        name: Benchmark Badge
+        caches: [npm]
+        script:
+          - npm ci
+          - npx promptfoo eval --tests eval/test-cases/benchmark.txt
+          - bun run eval:badge --output eval/badges/pass-rate.svg
+        artifacts:
+          - eval/badges/pass-rate.svg
+
+pipelines:
+  # Push to any branch — smoke eval only (free plan: sequential)
+  branches:
+    '{feature/*,bugfix/*,develop}':
+      - step: *eval-smoke
+
+  # Pull requests — standard eval
+  pull-requests:
+    '**':
+      - step: *install
+      - step: *eval-standard
+
+  # Nightly — full eval + red team + benchmark (requires paid plan)
+  custom:
+    nightly:
+      - step: *eval-full
+      - step: *benchmark-badge
+
+  # Manual trigger
+  custom:
+    full-eval:
+      - step: *eval-full
+    benchmark:
+      - step: *benchmark-badge
