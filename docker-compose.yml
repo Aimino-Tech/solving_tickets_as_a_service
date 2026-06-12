@@ -45,6 +45,8 @@ services:
       - "15672:15672"
       - "5671:5671"
     environment:
+      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
+      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
       RABBITMQ_DEFAULT_USER: stas-app
       RABBITMQ_DEFAULT_PASS: stas-app-password
       RABBITMQ_DEFAULT_VHOST: /stas
@@ -76,6 +78,8 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
+      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
+      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
       - REDIS_URL=redis://stas-redis:6379
       - RABBITMQ_URL=amqp://stas-app:stas-app-password@stas-rabbitmq:5672/stas
       - OPENCODE_URL=http://opencode:4096
@@ -96,6 +100,8 @@ services:
       redis:
         condition: service_healthy
     environment:
+      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
+      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
       - CELERY_BROKER_URL=pyamqp://guest:guest@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REDIS_URL=redis://redis:6379/0
@@ -114,6 +120,8 @@ services:
       redis:
         condition: service_healthy
     environment:
+      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
+      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
       - CELERY_BROKER_URL=pyamqp://guest:guest@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REDIS_URL=redis://redis:6379/0
@@ -131,6 +139,8 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
+      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
+      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
       - CELERY_BROKER_URL=pyamqp://guest:guest@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     command: ["celery", "--broker=pyamqp://guest:guest@rabbitmq:5672//", "flower", "--port=5555"]

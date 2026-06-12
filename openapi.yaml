@@ -3,6 +3,43 @@ info:
   title: STAS API — Solving Tickets As A Service
   description: |
     STAS is an open-source GitHub bot that turns labeled issues into pull requests.
+
+    ## RapidAPI Marketplace
+    
+    STAS is also available as a payable API on the [RapidAPI Marketplace](https://rapidapi.com/).
+    Subscribe to a plan to get an API key and start submitting fix jobs programmatically.
+    
+    Endpoints marked with the `RapidAPI` tag require a valid RapidAPI subscription.
+    Use `X-RapidAPI-Key` header for authentication and `X-RapidAPI-Proxy-Secret` for proxy validation.
+    
+    ### Rate Limiting (RapidAPI)
+    
+    RapidAPI subscribers are rate-limited by plan tier:
+    - **Free**: 10 requests/day
+    - **Pro**: 100 requests/day
+    - **Enterprise**: 1000 requests/day
+    
+    Rate limit headers are returned with every response:
+    - `X-RateLimit-Limit` — Maximum requests per window
+    - `X-RateLimit-Remaining` — Requests remaining in the current window
+    - `X-RateLimit-Plan` — Your current plan tier
+    - `Retry-After` — Seconds to wait before retrying (only on 429 responses)
+    
+    ### Example Curl
+    
+    ```bash
+    # Submit a fix job
+    curl -X POST https://stas-rapidapi.p.rapidapi.com/api/fix \
+      -H "Content-Type: application/json" \
+      -H "X-RapidAPI-Key: your-rapidapi-key" \
+      -H "X-RapidAPI-Proxy-Secret: your-proxy-secret" \
+      -d '{"repoUrl": "https://github.com/owner/repo", "issueTitle": "Fix login bug", "issueBody": "Login returns 500 for special chars"}'
+    
+    # Poll job status
+    curl https://stas-rapidapi.p.rapidapi.com/api/fix/<jobId> \
+      -H "X-RapidAPI-Key: your-rapidapi-key" \
+      -H "X-RapidAPI-Proxy-Secret: your-proxy-secret"
+    ```
     This API powers the webhook receiver, credit management, usage metering, and admin dashboard.
 
     ## Authentication
@@ -47,6 +84,10 @@ servers:
     description: Local development
 
 tags:
+  - name: RapidAPI
+    description: RapidAPI Marketplace endpoints (requires subscription)
+  - name: Eval
+    description: Public eval results for STAS benchmark performance
   - name: Health
     description: Health check endpoints
   - name: Webhooks
@@ -1365,8 +1406,252 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # RapidAPI — Fix Submission
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/fix:
+    post:
+      tags:
+        - RapidAPI
+      summary: Submit a fix job
+      description: |
+        Submits a new fix job for an issue in a GitHub repository.
+        Returns a jobId immediately (<500ms) that can be used to poll for results.
+        
+        The job is queued and processed asynchronously. Poll `GET /api/fix/{jobId}`
+        to check status and retrieve the result.
+      operationId: submitFixJob
+      security:
+        - RapidAPIKey: []
+      parameters:
+        - name: X-RapidAPI-Proxy-Secret
+          in: header
+          required: true
+          schema:
+            type: string
+          description: RapidAPI proxy secret for request validation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FixRequest"
+            examples:
+              fixBug:
+                summary: Fix a login bug
+                value:
+                  repoUrl: "https://github.com/owner/repo"
+                  issueTitle: "Fix login bug"
+                  issueBody: "The login endpoint returns 500 when the email contains special characters."
+                  language: "typescript"
+      responses:
+        "201":
+          description: Fix job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FixResponse"
+              example:
+                jobId: "550e8400-e29b-41d4-a716-446655440000"
+                status: "queued"
+                pollUrl: "https://stas-rapidapi.p.rapidapi.com/api/fix/550e8400-e29b-41d4-a716-446655440000"
+                createdAt: "2026-06-12T12:00:00.000Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RapidAPIRateLimited"
+
+  /api/fix/{jobId}:
+    get:
+      tags:
+        - RapidAPI
+      summary: Poll fix job status
+      description: |
+        Returns the current status of a fix job. Poll this endpoint to
+        check if the fix has completed. When status is "completed", the
+        response includes the result URL and eval score.
+      operationId: getFixJobStatus
+      security:
+        - RapidAPIKey: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Job UUID returned from POST /api/fix
+        - name: X-RapidAPI-Proxy-Secret
+          in: header
+          required: true
+          schema:
+            type: string
+          description: RapidAPI proxy secret for request validation
+      responses:
+        "200":
+          description: Job status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatusResponse"
+              examples:
+                queued:
+                  summary: Job is queued
+                  value:
+                    jobId: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "queued"
+                    createdAt: "2026-06-12T12:00:00.000Z"
+                    updatedAt: "2026-06-12T12:00:00.000Z"
+                completed:
+                  summary: Job completed successfully
+                  value:
+                    jobId: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "completed"
+                    resultUrl: "https://github.com/owner/repo/pull/42"
+                    prUrl: "https://github.com/owner/repo/pull/42"
+                    evalScore: 92
+                    createdAt: "2026-06-12T12:00:00.000Z"
+                    updatedAt: "2026-06-12T12:05:00.000Z"
+                    completedAt: "2026-06-12T12:05:00.000Z"
+                failed:
+                  summary: Job failed
+                  value:
+                    jobId: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "failed"
+                    error: "Repository not found or access denied"
+                    createdAt: "2026-06-12T12:00:00.000Z"
+                    updatedAt: "2026-06-12T12:00:30.000Z"
+                    completedAt: "2026-06-12T12:00:30.000Z"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RapidAPIRateLimited"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # RapidAPI — Eval Results (public, no auth)
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/eval/results:
+    get:
+      tags:
+        - Eval
+      summary: Aggregate eval results
+      description: |
+        Returns aggregate benchmark results for STAS across all supported
+        languages. No authentication required — use this to evaluate STAS
+        performance before subscribing.
+        
+        Results include overall pass rate, per-category scores, and trend data.
+      operationId: getEvalResults
+      responses:
+        "200":
+          description: Eval results retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvalResults"
+              example:
+                overallPassRate: 0.845
+                totalTests: 200
+                passedTests: 169
+                failedTests: 31
+                categories:
+                  - category: "typescript"
+                    total: 50
+                    passed: 45
+                    passRate: 0.9
+                    averageScore: 88
+                  - category: "python"
+                    total: 50
+                    passed: 42
+                    passRate: 0.84
+                    averageScore: 82
+                  - category: "javascript"
+                    total: 50
+                    passed: 43
+                    passRate: 0.86
+                    averageScore: 85
+                  - category: "go"
+                    total: 25
+                    passed: 20
+                    passRate: 0.8
+                    averageScore: 78
+                  - category: "rust"
+                    total: 25
+                    passed: 19
+                    passRate: 0.76
+                    averageScore: 74
+                trend:
+                  - 0.82
+                  - 0.83
+                  - 0.84
+                  - 0.845
+                  - 0.84
+                  - 0.85
+                  - 0.845
+                timestamp: "2026-06-12T12:00:00.000Z"
+
+  /api/eval/latest:
+    get:
+      tags:
+        - Eval
+      summary: Latest eval run
+      description: |
+        Returns the latest full eval run with detailed per-test-case results.
+        No authentication required.
+      operationId: getLatestEvalRun
+      responses:
+        "200":
+          description: Latest eval run retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LatestEvalRun"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # RapidAPI — Health
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/health:
+    get:
+      tags:
+        - Health
+      summary: RapidAPI health check
+      description: |
+        Public health check endpoint for the RapidAPI service.
+        Returns service status and current timestamp.
+      operationId: getRapidApiHealth
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RapidApiHealthResponse"
+              example:
+                status: "ok"
+                service: "STAS RapidAPI"
+                timestamp: "2026-06-12T12:00:00.000Z"
+
 components:
   securitySchemes:
+    RapidAPIKey:
+      type: apiKey
+      in: header
+      name: X-RapidAPI-Key
+      description: |
+        API key for the RapidAPI Marketplace. Subscribe to a plan at
+        https://rapidapi.com/ to get your API key.
+        
+        Pass the key in the `X-RapidAPI-Key` header with every request to
+        RapidAPI-protected endpoints.
+        
+        **Rate limit headers** are returned with every response:
+        - `X-RateLimit-Limit` — Maximum requests per window (based on plan)
+        - `X-RateLimit-Remaining` — Requests remaining in current window
+        - `X-RateLimit-Plan` — Your current plan tier
+    
     BearerToken:
       type: http
       scheme: bearer
@@ -2070,6 +2355,222 @@ components:
           type: integer
           description: Optional account ID for account-specific overrides
 
+
+    # ── RapidAPI ──────────────────────────────────────────────────────────────
+    RapidApiHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+        service:
+          type: string
+          example: "STAS RapidAPI"
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - status
+        - service
+        - timestamp
+
+    FixRequest:
+      type: object
+      required:
+        - repoUrl
+        - issueTitle
+        - issueBody
+      properties:
+        repoUrl:
+          type: string
+          format: uri
+          description: GitHub repository URL
+          example: "https://github.com/owner/repo"
+        issueTitle:
+          type: string
+          maxLength: 500
+          description: Issue title
+          example: "Fix login bug"
+        issueBody:
+          type: string
+          maxLength: 50000
+          description: Issue body / description
+          example: "The login endpoint returns 500 when the email contains special characters."
+        language:
+          type: string
+          maxLength: 50
+          description: Optional language hint
+          example: "typescript"
+
+    FixResponse:
+      type: object
+      required:
+        - jobId
+        - status
+        - pollUrl
+        - createdAt
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          description: UUID identifying the fix job
+        status:
+          type: string
+          enum: [queued]
+          description: Initial job status
+        pollUrl:
+          type: string
+          format: uri
+          description: URL to poll for job status updates
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO timestamp of job creation
+
+    JobStatusResponse:
+      type: object
+      required:
+        - jobId
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          description: UUID of the job
+        status:
+          type: string
+          enum: [queued, running, completed, failed]
+          description: Current job status
+        error:
+          type: string
+          description: Error message (only present when status is "failed")
+        resultUrl:
+          type: string
+          format: uri
+          description: Result URL for the fix (only when status is "completed")
+        prUrl:
+          type: string
+          format: uri
+          description: GitHub PR URL if a pull request was created
+        evalScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Eval score (0-100) if the fix was evaluated
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    EvalCategoryScore:
+      type: object
+      properties:
+        category:
+          type: string
+          example: "typescript"
+        total:
+          type: integer
+          description: Number of test cases in this category
+        passed:
+          type: integer
+          description: Number of passed test cases
+        passRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Pass rate as a decimal
+        averageScore:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Average score (0-100)
+
+    EvalResults:
+      type: object
+      properties:
+        overallPassRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Overall pass rate
+        totalTests:
+          type: integer
+          description: Total number of test cases
+        passedTests:
+          type: integer
+          description: Number of passed test cases
+        failedTests:
+          type: integer
+          description: Number of failed test cases
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvalCategoryScore"
+        trend:
+          type: array
+          items:
+            type: number
+          description: Pass rate trend data (last N runs)
+        timestamp:
+          type: string
+          format: date-time
+
+    LatestEvalRun:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: Unique eval run ID
+        timestamp:
+          type: string
+          format: date-time
+        overallPassRate:
+          type: number
+          format: float
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              testCase:
+                type: string
+              category:
+                type: string
+              passed:
+                type: boolean
+              score:
+                type: number
+              durationMs:
+                type: integer
+              error:
+                type: string
+                nullable: true
+        categorySummary:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvalCategoryScore"
+        trend:
+          type: object
+          properties:
+            previousPassRate:
+              type: number
+              format: float
+            change:
+              type: number
+              format: float
+              description: Positive value means improvement
+
   responses:
     WebhookAccepted:
       description: Webhook accepted for processing
@@ -2107,6 +2608,46 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    RapidAPIRateLimited:
+      description: Rate limit exceeded for your RapidAPI plan tier
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Maximum requests per window for your plan
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Requests remaining in current window
+        X-RateLimit-Plan:
+          schema:
+            type: string
+          description: Your current plan tier (free, pro, enterprise)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Rate limit exceeded"
+              plan:
+                type: string
+                example: "free"
+              limit:
+                type: integer
+                example: 10
+              remaining:
+                type: integer
+                example: 0
+              resetAt:
+                type: string
+                format: date-time
+
     RateLimited:
       description: Too many requests — rate limit exceeded
       headers:

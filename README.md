@@ -166,284 +166,68 @@ All config via environment variables:
 | `STAS_MAX_CONCURRENT` | `3` | Max concurrent fix runs |
 | `STAS_PORT` | `3000` | Webhook server port |
 
-## User Accounts & Authentication
 
-STAS uses GitHub-based authentication. User accounts are tied to GitHub App installations — when you install the GitHub App on a repository, an account is automatically created. The dashboard provides a UI for viewing runs, analytics, and settings.
+## RapidAPI Marketplace
 
-### Creating a Demo User
+STAS is also available as a payable API on the [RapidAPI Marketplace](https://rapidapi.com/).
+Subscribe to a plan and get instant access to STAS's fix capabilities without hosting anything yourself.
 
-For local development, a seed script creates a demo account with sample data:
+### Features
 
-```bash
-# Run migrations and seed the database
-npx tsx src/db/seed.ts
-```
+- **Fix Submission** — Submit a GitHub issue URL and get a fix PR created automatically
+- **Job Polling** — Poll for status and results with a simple job ID
+- **Public Eval Results** — See STAS benchmark performance before subscribing
+- **Tiered Plans** — Free (10 req/day), Pro (100 req/day), Enterprise (1000 req/day)
 
-This creates:
-- A demo account with email `demo@example.com`
-- 1,000 initial credits
-- Sample usage records for testing the dashboard
-
-The seed script is idempotent — it checks for existing data and skips if the database is already seeded. To reset, drop and recreate the database, then run `npx tsx src/db/seed.ts` again.
-
-### Dashboard Authentication
-
-The STAS dashboard at `/` uses GitHub OAuth for authentication. To enable it:
-
-1. Create a GitHub OAuth App at https://github.com/settings/developers
-2. Set the callback URL to `http://localhost:3000/api/auth/callback` (for local dev)
-3. Configure the following environment variables:
+### Quickstart
 
 ```bash
-GITHUB_OAUTH_CLIENT_ID=your-oauth-client-id
-GITHUB_OAUTH_CLIENT_SECRET=your-oauth-client-secret
+# 1. Subscribe at RapidAPI Marketplace (link below)
+# 2. Get your API key and proxy secret
+
+# 3. Submit a fix job
+curl -X POST https://stas-rapidapi.p.rapidapi.com/api/fix \
+  -H "Content-Type: application/json" \
+  -H "X-RapidAPI-Key: your-rapidapi-key" \
+  -H "X-RapidAPI-Proxy-Secret: your-proxy-secret" \
+  -d '{
+    "repoUrl": "https://github.com/owner/repo",
+    "issueTitle": "Fix login validation bug",
+    "issueBody": "The login endpoint returns 500 when the email contains special characters like + or &."
+  }'
+
+# 4. Poll for results
+curl https://stas-rapidapi.p.rapidapi.com/api/fix/<jobId> \
+  -H "X-RapidAPI-Key: your-rapidapi-key" \
+  -H "X-RapidAPI-Proxy-Secret: your-proxy-secret"
+
+# 5. Check public eval results (no auth needed)
+curl https://stas-rapidapi.p.rapidapi.com/api/eval/results
 ```
 
-### Creating Custom Users via Database
+### Endpoints
 
-Accounts are created automatically when a GitHub App installation event is received. For development or testing, you can insert accounts directly into the database:
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/fix` | RapidAPI Key + Proxy Secret | Submit a fix job |
+| GET | `/api/fix/{jobId}` | RapidAPI Key + Proxy Secret | Poll job status |
+| GET | `/api/eval/results` | None | Aggregate eval results |
+| GET | `/api/eval/latest` | None | Latest full eval run |
+| GET | `/api/health` | None | Service health check |
 
-```sql
-INSERT INTO accounts (github_installation_id, email, name, tier, created_at, updated_at)
-VALUES (12345679, 'custom@example.com', 'Custom User', 'free', NOW(), NOW());
+### Deployment
 
--- Add initial credits
-INSERT INTO credit_balances (account_id, balance, lifetime_credits)
-VALUES ((SELECT id FROM accounts WHERE email = 'custom@example.com'), 1000, 1000);
-```
-
-Available tiers: `free`, `pro`, `enterprise`.
-
-### Account Management Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/me` | Current account info (requires dashboard auth) |
-| `GET` | `/admin/accounts` | List all accounts (admin only) |
-| `GET` | `/admin/accounts/:id` | Get account details (admin only) |
-| `POST` | `/admin/accounts/:id/adjust-credits` | Adjust credit balance (admin only) |
-| `POST` | `/admin/accounts/:id/change-tier` | Change account tier (admin only) |
-
-## E2E Testing
-
-STAS includes a comprehensive end-to-end test suite that validates the full webhook → queue → agent → PR pipeline with mocked external dependencies.
-
-### Prerequisites
-
-- **Node.js** 18+
-- **Docker** (for Redis and RabbitMQ containers)
-- **npm** dependencies installed (`npm install`)
-
-### Quick Start
+To deploy your own RapidAPI endpoint:
 
 ```bash
-# 1. Start dependencies (Redis + RabbitMQ)
-docker compose -f docker-compose.e2e.yml up -d
+# 1. Set RapidAPI env vars
+export RAPIDAPI_PROXY_SECRET="your-secret"
+export RAPIDAPI_PROVIDER_KEY="your-provider-key"
 
-# 2. Run the E2E test suite
-npm run test:e2e
-
-# 3. Stop dependencies when done
-docker compose -f docker-compose.e2e.yml down
+# 2. Deploy STAS as usual (see Deployment section above)
+# 3. Sync OpenAPI spec to RapidAPI
+bash scripts/rapidapi-sync.sh
 ```
-
-### Test Directory Structure
-
-```
-tests/e2e/
-├── harness/                    # Test harness — programmatic test infrastructure
-│   ├── index.ts                # createTestHarness() — full harness factory
-│   ├── env.ts                  # setupTestEnvironment() — env var configuration
-│   ├── env-patch.ts            # Process-level env setup (runs first in workers)
-│   ├── mock-config.ts          # createMockConfig() — shared mock config factory
-│   ├── mock-setup.ts           # Module mocks for database, queue, GitHub, etc.
-│   ├── setup.ts                # Global vitest setup (one-time)
-│   └── teardown.ts             # Global vitest teardown (one-time)
-├── fixtures/
-│   └── webhooks/               # Realistic webhook payload factories
-│       ├── github.ts           # GitHub: issues.labeled, issues.opened, marketplace, etc.
-│       ├── gitlab.ts           # GitLab: issue hooks, merge request hooks
-│       ├── bitbucket.ts        # Bitbucket: pull request created
-│       ├── linear.ts           # Linear: issue create/update
-│       ├── jira.ts             # Jira: issue created/updated/deleted
-│       └── slack.ts            # Slack: slash commands, interactive events
-├── mocks/
-│   ├── githubApi.ts            # Re-exports createMockGitHubApiServer from harness
-│   └── opencode.ts             # Re-exports createMockOpenCodeServer from harness
-├── vitest.config.e2e.ts        # E2E-specific vitest config (legacy, in subdir)
-├── baseline.test.ts            # Health endpoint, basic webhook acceptance, 404
-├── full-flow.test.ts           # Complete pipeline validation (mocked)
-├── linear-webhook.test.ts      # Linear webhook integration tests
-├── jira-webhook.test.ts        # Jira webhook integration tests
-├── slack-notification.test.ts  # Slack notification dispatch tests
-├── worker-pipeline.test.ts     # Celery worker pipeline (dedicated config, requires RabbitMQ)
-├── worker_pipeline_helper.py   # Python helper for Celery worker pipeline tests
-├── setup.ts                    # Global E2E setup (delegates to harness)
-└── teardown.ts                 # Global E2E teardown (delegates to harness)
-```
-
-### How to Write New E2E Tests
-
-Every E2E test uses the `createTestHarness()` factory, which spins up:
-- The real STAS Express app (with mocked dependencies)
-- A mock GitHub API server (responds to PR/comment/ref API calls)
-- A mock OpenCode serve endpoint (returns controlled agent results)
-- All configured on random ports to avoid conflicts
-
-**Basic test structure:**
-
-```ts
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestHarness } from './harness/index.js';
-import type { TestHarness } from './harness/index.js';
-
-let harness: TestHarness;
-
-beforeAll(async () => {
-  harness = await createTestHarness({ verbose: false });
-}, 30_000);
-
-afterAll(async () => {
-  await harness.stop();
-}, 10_000);
-
-it('receives a webhook and returns 202', async () => {
-  const res = await harness.sendWebhook('/webhook', {
-    action: 'labeled',
-    issue: { number: 42, title: 'Test issue', body: 'Test body', labels: [{ name: 'stas:fix' }] },
-    installation: { id: 555 },
-    repository: { owner: { login: 'owner' }, name: 'test-repo', private: false },
-  });
-  expect(res.status).toBe(202);
-});
-```
-
-**Using webhook fixtures:**
-
-```ts
-import { githubIssuesLabeledStasFix } from './fixtures/webhooks/github.js';
-
-it('handles a labeled issue webhook', async () => {
-  const payload = githubIssuesLabeledStasFix();
-  const res = await harness.sendWebhook('/webhook', payload);
-  expect(res.status).toBe(202);
-});
-```
-
-**Customizing the harness:**
-
-```ts
-// Pass custom env vars, enable verbose logging, or set specific ports
-const harness = await createTestHarness({
-  verbose: true,
-  stasPort: 3099,
-  env: {
-    STAS_LABEL: 'custom:label',
-    GITHUB_WEBHOOK_SECRET: 'my-secret',
-  },
-});
-```
-
-**Inspecting mock server interactions:**
-
-```ts
-it('posts a comment to GitHub', async () => {
-  await harness.sendWebhook('/webhook', githubIssuesLabeledStasFix());
-  // Give the async handler time to process
-  await new Promise((r) => setTimeout(r, 500));
-
-  const requests = harness.githubApi.receivedRequests;
-  expect(requests.length).toBeGreaterThan(0);
-  expect(requests[0].method).toBe('POST');
-  expect(requests[0].url).toContain('/issues/42/comments');
-});
-```
-
-### Available npm Scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm run test:e2e` | Start Docker deps, run E2E tests, stop Docker deps |
-| `npm run test:e2e:watch` | Start Redis only, run E2E in watch mode |
-| `npm run test:e2e:docker` | Run E2E entirely in Docker (test runner + deps) |
-| `npm run test:e2e:ci` | Run E2E tests without Docker lifecycle (for CI) |
-
-### How the Test Harness Works
-
-The harness (`tests/e2e/harness/index.ts`) performs these steps in order:
-
-1. **Environment setup** — `setupTestEnvironment()` sets env vars so the STAS config module validates successfully at import time
-2. **Mock servers** — Creates and starts mock HTTP servers for GitHub API and OpenCode serve on random ports
-3. **App creation** — Calls `createApp()` from the real STAS Express app
-4. **HTTP server** — Starts the Express app on a random port
-5. **Returns helpers** — `sendWebhook()` signs payloads with the test webhook secret and sends them to the STAS server
-
-Mock servers record all received requests in `receivedRequests[]` for test assertions. The GitHub API mock has sensible defaults (responds to PR creation, comments, ref lookups) that can be overridden:
-
-```ts
-// Override a specific endpoint response
-harness.githubApi.responses.set('GET /repos/owner/repo', {
-  status: 200,
-  body: { name: 'test-repo', private: false },
-});
-```
-
-### Docker Compose Configuration
-
-The E2E Docker Compose file (`docker-compose.e2e.yml`) starts two services:
-
-| Service | Image | Port(s) | Purpose |
-|---------|-------|---------|---------|
-| **redis** | `redis:7-alpine` | `16379:6379` | BullMQ queue backend, Celery result backend |
-| **rabbitmq** | `rabbitmq:4-management-alpine` | `5672:5672`, `15672:15672` | Celery broker |
-
-Key details:
-- Redis runs with persistence disabled (`--appendonly no --save ""`, `tmpfs: /data`)
-- RabbitMQ uses default `guest/guest` credentials
-- Both containers join the `stas-e2e-net` bridge network
-- Resource limits: Redis (128 MB / 0.3 CPU), RabbitMQ (256 MB / 0.5 CPU)
-- Health checks ensure services are ready before tests begin
-
-To start only the dependencies without running tests:
-
-```bash
-docker compose -f docker-compose.e2e.yml up -d redis rabbitmq
-```
-
-### Writing Tests That Use Mock Servers
-
-For tests that need fine-grained control over mock responses or need to inspect mock interactions:
-
-**Standalone mock usage (without the full harness):**
-
-```ts
-import { createMockGitHubApiServer } from '../mocks/githubApi.js';
-
-const githubApi = createMockGitHubApiServer();
-await new Promise((r) => githubApi.server.listen(0, r));
-// Use githubApi.receivedRequests and githubApi.responses
-await new Promise((r) => githubApi.server.close(r));
-```
-
-**Mock OpenCode serve:**
-
-```ts
-import { createMockOpenCodeServer } from '../mocks/opencode.js';
-
-const openCode = createMockOpenCodeServer();
-openCode.defaultResponse = {
-  status: 200,
-  body: { status: 'completed', result: { summary: 'Custom fix', fixReady: true } },
-};
-await new Promise((r) => openCode.server.listen(0, r));
-// ... make requests via the STAS app pointing at this server
-await new Promise((r) => openCode.server.close(r));
-```
-
-### CI Integration
-
-In CI, the `npm run test:e2e:ci` script runs the E2E tests without Docker lifecycle management. CI pipelines should start Redis and RabbitMQ separately (e.g., as GitHub Actions services). See `.github/workflows/ci.yml` for the current CI configuration.
-
 ## Deployment
 
 See [`DEVELOPMENT.md`](DEVELOPMENT.md) for a comprehensive deployment guide covering local dev, Railway, Fly.io, and Kubernetes.
