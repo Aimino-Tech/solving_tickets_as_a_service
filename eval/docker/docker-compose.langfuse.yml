@@ -1,0 +1,63 @@
+# =============================================================================
+# LangFuse Self-Hosted — Local Development
+#
+# Starts LangFuse with a PostgreSQL backend so you can inspect traces
+# emitted by the STAS eval pipeline during local development.
+#
+# Usage:
+#   docker compose -f eval/docker/docker-compose.langfuse.yml up -d
+#
+# Access the LangFuse UI at http://localhost:3000
+#
+# The eval pipeline exports traces via OpenTelemetry to LangFuse at the
+# same host. See eval/tracing/otel-setup.ts for the exporter config.
+#
+# Environment variables consumed by the eval runner:
+#   LANGFUSE_HOST        (default: http://localhost:3000)
+#   LANGFUSE_PUBLIC_KEY  (found in LangFuse UI: Settings → API Keys)
+#   LANGFUSE_SECRET_KEY  (found in LangFuse UI: Settings → API Keys)
+# =============================================================================
+
+services:
+  langfuse:
+    image: ghcr.io/langfuse/langfuse:latest
+    container_name: stas-langfuse
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/langfuse
+      - NEXTAUTH_SECRET=dev-secret
+      - SALT=dev-salt
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    container_name: stas-langfuse-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: langfuse
+    ports:
+      - "5433:5432"
+    volumes:
+      - langfuse-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d langfuse"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  langfuse-pgdata:
+    driver: local
