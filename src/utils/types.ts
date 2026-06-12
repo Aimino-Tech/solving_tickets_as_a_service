@@ -12,7 +12,7 @@ export interface IssueJobData {
   issueBody: string | null;
 
   /** Source platform that originated this job. Defaults to "github". */
-  source?: 'github' | 'gitlab' | 'bitbucket' | 'linear' | 'jira';
+  source?: 'github' | 'gitlab' | 'bitbucket' | 'linear' | 'jira' | 'rapidapi';
 
   /** Tracker ticket ID (Linear issue ID or Jira issue key) for cross-platform sync. */
   trackerTicketId?: string;
@@ -40,7 +40,7 @@ export interface TriageData {
   issueBody: string | null;
 
   /** Source platform that originated this job. Defaults to "github". */
-  source?: 'github' | 'gitlab' | 'bitbucket' | 'linear' | 'jira';
+  source?: 'github' | 'gitlab' | 'bitbucket' | 'linear' | 'jira' | 'rapidapi';
 
   /** Tracker ticket ID (Linear issue ID or Jira issue key) for cross-platform sync. */
   trackerTicketId?: string;
