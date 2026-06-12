@@ -246,6 +246,16 @@ STAS ships with comprehensive documentation:
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community guidelines |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Local development and deployment guide |
 
+## Multi-Platform
+
+STAS now supports multiple Git hosting platforms. See the [Platforms documentation](docs/platforms/README.md) for setup guides:
+
+- **GitHub** — Live, fully supported
+- **GitLab** — Beta (self-hosted and GitLab.com)
+- **Bitbucket** — Beta (Bitbucket Cloud)
+
+Each platform has its own webhook integration, agent pipeline, CI configuration, and eval test strategy. Platform-specific setup guides are in [`docs/platforms/`](docs/platforms/README.md).
+
 
 ## Roadmap
 
