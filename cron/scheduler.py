@@ -49,6 +49,13 @@ logger = logging.getLogger(__name__)
 # A job that was dispatched less than MIN_TICK_INTERVAL seconds ago is
 # skipped (phantom-trigger guard).  This prevents double-firing when a
 # phantom scheduling event races with the real tick.
+#
+# The cache is cleared at the start of each tick() invocation so the
+# per-tick _run_cache (inside tick()) handles intra-tick dedup.  The
+# module-level cache provides defense-in-depth for the unlikely case
+# of same-process concurrent tick() calls.  See also the phantom-fire
+# detection in _get_due_jobs_locked() (PHANTOM_FIRE_THRESHOLD_SECONDS)
+# and the advance_next_run() guard in cron/jobs.py.
 _last_run_cache: dict[str, float] = {}
 _last_run_cache_lock: threading.Lock = threading.Lock()
 
@@ -61,6 +68,15 @@ MIN_TICK_INTERVAL = 60
 # during opportunistic cleanup to prevent the cache growing unboundedly
 # over days of gateway uptime.
 _CACHE_TTL = MIN_TICK_INTERVAL * 3  # 180 seconds
+
+
+def clear_last_run_cache() -> None:
+    """Clear the module-level cooldown cache.
+
+    Used by tests to reset state between test runs without reloading
+    the scheduler module.  Not intended for production use.
+    """
+    _last_run_cache.clear()
 
 
 class CronPromptInjectionBlocked(Exception):
@@ -1836,6 +1852,9 @@ def tick(verbose: bool = True, adapters=None, loop=None) -> int:
         return 0
 
     try:
+        # Clear the module-level cooldown cache so each tick() invocation
+        # starts fresh.  The per-tick _run_cache handles intra-tick dedup.
+        _last_run_cache.clear()
         due_jobs = get_due_jobs()
 
         if verbose and not due_jobs:

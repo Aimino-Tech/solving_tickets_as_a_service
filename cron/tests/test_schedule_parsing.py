@@ -381,3 +381,145 @@ class TestPhantomFireThresholdConstant:
         from cron.jobs import PHANTOM_FIRE_THRESHOLD_SECONDS
         assert isinstance(PHANTOM_FIRE_THRESHOLD_SECONDS, int)
         assert 1 <= PHANTOM_FIRE_THRESHOLD_SECONDS <= 10
+
+
+# =========================================================================
+# Cooldown Cache — Cross-Tick Dispatch Protection
+# =========================================================================
+
+class TestCooldownCache:
+    """Test that the module-level _last_run_cache prevents phantom
+    dispatches across overlapping tick() invocations."""
+
+    def test_cooldown_blocks_recent_dispatch(self, monkeypatch):
+        """A job dispatched less than MIN_TICK_INTERVAL seconds ago must
+        be blocked by the cross-tick cooldown cache."""
+        from cron.scheduler import (
+            _last_run_cache, _last_run_cache_lock,
+            MIN_TICK_INTERVAL, _CACHE_TTL,
+        )
+        import time as _time
+
+        job_id = "test-job-123"
+        now = _time.time()
+
+        # Simulate: job was dispatched 10 seconds ago
+        with _last_run_cache_lock:
+            _last_run_cache[job_id] = now - 10
+
+        # Now simulate a check: 10 < 60, so should be blocked
+        with _last_run_cache_lock:
+            last = _last_run_cache.get(job_id)
+            assert last is not None
+            assert (_time.time() - last) < MIN_TICK_INTERVAL
+
+        # Clean up
+        with _last_run_cache_lock:
+            _last_run_cache.pop(job_id, None)
+
+    def test_cooldown_allows_old_dispatch(self, monkeypatch):
+        """A job dispatched more than MIN_TICK_INTERVAL seconds ago must
+        NOT be blocked by the cooldown cache (the TTL handles cleanup)."""
+        from cron.scheduler import (
+            _last_run_cache, _last_run_cache_lock,
+            MIN_TICK_INTERVAL,
+        )
+        import time as _time
+
+        job_id = "test-job-456"
+        now = _time.time()
+
+        # Simulate: job was dispatched 120 seconds ago (> MIN_TICK_INTERVAL)
+        with _last_run_cache_lock:
+            _last_run_cache[job_id] = now - 120
+
+        # Should NOT be blocked (120 >= 60)
+        with _last_run_cache_lock:
+            last = _last_run_cache.get(job_id)
+            assert (_time.time() - last) >= MIN_TICK_INTERVAL
+
+        # Clean up
+        with _last_run_cache_lock:
+            _last_run_cache.pop(job_id, None)
+
+    def test_cache_cleanup_removes_stale_entries(self, monkeypatch):
+        """Cache entries older than _CACHE_TTL must be cleaned up."""
+        from cron.scheduler import (
+            _last_run_cache, _last_run_cache_lock, _CACHE_TTL,
+        )
+        import time as _time
+
+        now = _time.time()
+        stale_id = "stale-job"
+        fresh_id = "fresh-job"
+
+        with _last_run_cache_lock:
+            _last_run_cache[stale_id] = now - _CACHE_TTL - 10  # 10s past TTL
+            _last_run_cache[fresh_id] = now - 10  # Well within TTL
+
+            # Cleanup
+            _stale_cutoff = now - _CACHE_TTL
+            _stale_keys = [k for k, v in _last_run_cache.items() if v < _stale_cutoff]
+            for k in _stale_keys:
+                del _last_run_cache[k]
+
+            assert stale_id not in _last_run_cache, "Stale entry should be removed"
+            assert fresh_id in _last_run_cache, "Fresh entry should remain"
+
+        # Final cleanup
+        with _last_run_cache_lock:
+            _last_run_cache.pop(fresh_id, None)
+            _last_run_cache.pop(stale_id, None)
+
+    def test_concurrent_cache_access_no_race(self, monkeypatch):
+        """Multiple threads accessing _last_run_cache must not race."""
+        from cron.scheduler import (
+            _last_run_cache, _last_run_cache_lock, MIN_TICK_INTERVAL,
+        )
+        import time as _time
+        import threading as _threading
+
+        job_id = "race-test-job"
+        results: list = []
+        errors: list = []
+
+        def check_cache(thread_id: int):
+            now = _time.time()
+            with _last_run_cache_lock:
+                last = _last_run_cache.get(job_id)
+                if last is not None and (now - last) < MIN_TICK_INTERVAL:
+                    results.append("blocked")
+                    return
+                _last_run_cache[job_id] = now
+                results.append("passed")
+
+        # Fire 10 threads simultaneously — without the lock, some would
+        # pass through (race on check-then-set). With the lock, exactly
+        # one should pass and the rest should be blocked.
+        threads = [
+            _threading.Thread(target=check_cache, args=(i,))
+            for i in range(10)
+        ]
+
+        # Clear cache first
+        with _last_run_cache_lock:
+            _last_run_cache.pop(job_id, None)
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        with _last_run_cache_lock:
+            _last_run_cache.pop(job_id, None)
+
+        # Only one thread should have passed (the first to acquire the lock)
+        passed_count = results.count("passed")
+        blocked_count = results.count("blocked")
+        assert passed_count == 1, (
+            f"Expected exactly 1 thread to pass, got {passed_count}. "
+            f"Results: passed={passed_count}, blocked={blocked_count}"
+        )
+        assert blocked_count == 9, (
+            f"Expected 9 threads blocked, got {blocked_count}"
+        )
