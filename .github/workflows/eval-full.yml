@@ -1,0 +1,261 @@
+# =============================================================================
+# Eval Full (Nightly) — 30-test suite + Red Team security scan + badge update
+#
+# Runs daily at 06:00 UTC via cron, or can be triggered manually via
+# workflow_dispatch.  Test cases are split into three parallel groups
+# (eval-group-1, eval-group-2, eval-group-3).  A parallel red-team job
+# executes the Promptfoo red team security scan.  All four jobs feed into
+# a report aggregation job that produces the final regression report and
+# updates the benchmark SVG badge.
+#
+# Jobs:
+#   eval-group-1  — fix-python-syntax-error, fix-python-import,
+#                   fix-python-type-error, fix-js-variable-scope
+#   eval-group-2  — fix-js-async-await, fix-ts-type-annotation,
+#                   fix-go-import, fix-go-nil-check
+#   eval-group-3  — edge-empty-repo, edge-missing-dep
+#   red-team      — Promptfoo red team security scan (harmful, PII,
+#                   overreliance)
+#   report        — aggregates all results, generates markdown/JSON report,
+#                   produces SVG badge, commits badge update
+# =============================================================================
+
+name: Eval Full (Nightly)
+
+on:
+  schedule:
+    # Daily at 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      eval_group:
+        description: 'Which eval group to run (all, group1, group2, group3, redteam)'
+        required: false
+        default: 'all'
+      skip_badge_commit:
+        description: 'Skip committing badge update (true/false)'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  CI: true
+
+jobs:
+  ##############################################################################
+  # EVAL GROUP 1 — Python + JS test cases
+  ##############################################################################
+  eval-group-1:
+    name: Eval Group 1 (Python + JS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.eval_group == 'all' || github.event.inputs.eval_group == 'group1' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run eval group 1
+        run: |
+          npx promptfoo eval \
+            --config eval/promptfooconfig.yaml \
+            --tests eval/test-cases/fix-python-syntax-error.yml \
+            --tests eval/test-cases/fix-python-import.yml \
+            --tests eval/test-cases/fix-python-type-error.yml \
+            --tests eval/test-cases/fix-js-variable-scope.yml \
+            --output eval/results/group1-${{ github.sha }}.json
+
+      - name: Upload group 1 results
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-group1-results
+          path: eval/results/group1-*.json
+          retention-days: 30
+
+  ##############################################################################
+  # EVAL GROUP 2 — JS/TS + Go test cases
+  ##############################################################################
+  eval-group-2:
+    name: Eval Group 2 (JS/TS + Go)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.eval_group == 'all' || github.event.inputs.eval_group == 'group2' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run eval group 2
+        run: |
+          npx promptfoo eval \
+            --config eval/promptfooconfig.yaml \
+            --tests eval/test-cases/fix-js-async-await.yml \
+            --tests eval/test-cases/fix-ts-type-annotation.yml \
+            --tests eval/test-cases/fix-go-import.yml \
+            --tests eval/test-cases/fix-go-nil-check.yml \
+            --output eval/results/group2-${{ github.sha }}.json
+
+      - name: Upload group 2 results
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-group2-results
+          path: eval/results/group2-*.json
+          retention-days: 30
+
+  ##############################################################################
+  # EVAL GROUP 3 — Edge case test cases
+  ##############################################################################
+  eval-group-3:
+    name: Eval Group 3 (Edge Cases)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.eval_group == 'all' || github.event.inputs.eval_group == 'group3' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run eval group 3
+        run: |
+          npx promptfoo eval \
+            --config eval/promptfooconfig.yaml \
+            --tests eval/test-cases/edge-empty-repo.yml \
+            --tests eval/test-cases/edge-missing-dep.yml \
+            --output eval/results/group3-${{ github.sha }}.json
+
+      - name: Upload group 3 results
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-group3-results
+          path: eval/results/group3-*.json
+          retention-days: 30
+
+  ##############################################################################
+  # RED TEAM — Promptfoo red team security scan
+  ##############################################################################
+  red-team:
+    name: Red Team Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.eval_group == 'all' || github.event.inputs.eval_group == 'redteam' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Promptfoo red team
+        run: |
+          npx promptfoo redteam run \
+            --config eval/scripts/red-team-config.yml \
+            --output eval/results/redteam-${{ github.sha }}.json
+
+      - name: Upload red team results
+        uses: actions/upload-artifact@v4
+        with:
+          name: redteam-results
+          path: eval/results/redteam-*.json
+          retention-days: 30
+
+  ##############################################################################
+  # REPORT — Aggregate all results, generate report, update badge
+  ##############################################################################
+  report:
+    name: Generate Report & Badge
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [eval-group-1, eval-group-2, eval-group-3, red-team]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need full fetch so we can push badge commit
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: eval/results/artifacts
+
+      - name: Consolidate results
+        run: |
+          mkdir -p eval/results
+          # Copy all result JSONs into a flat directory
+          find eval/results/artifacts -name '*.json' -exec cp {} eval/results/ \; 2>/dev/null || true
+          ls -la eval/results/
+
+      - name: Generate full regression report
+        run: |
+          node eval/scripts/full-report.mjs \
+            --input-dir eval/results \
+            --output eval/results/full-report.json \
+            --markdown eval/results/full-report.md
+
+      - name: Generate aggregated results for badge
+        run: |
+          node eval/scripts/badge-gen.mjs \
+            --input eval/results/full-report.json \
+            --output eval/badges/pass-rate.svg
+
+      - name: Upload full report
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-eval-report
+          path: |
+            eval/results/full-report.json
+            eval/results/full-report.md
+            eval/badges/pass-rate.svg
+          retention-days: 90
+
+      - name: Commit badge update
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_badge_commit != 'true' }}
+        run: |
+          git config user.name "stas-benchmark-bot"
+          git config user.email "bot@stas.dev"
+          git add eval/badges/
+          # Only commit if there are changes
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update benchmark badge [skip ci]"
+            git push
+          else
+            echo "No badge changes to commit"
+          fi
