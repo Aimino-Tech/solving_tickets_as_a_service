@@ -1,0 +1,11 @@
+# Smoke test: fix a Python syntax error
+# TODO: populate with actual promptfoo test case
+description: "Fix Python syntax error"
+prompts: ["Fix the syntax error in this Python code:\n```python\ndef hello():\nprint('world')\n```"]
+tests:
+  - description: "Python syntax error is fixed"
+    assert:
+      - type: contains-all
+        value:
+          - "def hello():"
+          - "print('world')"
