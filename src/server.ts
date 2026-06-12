@@ -81,6 +81,7 @@ import { addBreadcrumb, setupSentryExpressErrorHandler } from './monitoring/sent
 import { opencodeHealth } from './health/opencodeHealth.js';
 import { getWorkersHealth } from './health/workers.js';
 import { getDependenciesHealth } from './health/dependencies.js';
+import rapidApiRouter from './api/router.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -820,6 +821,9 @@ export function createApp(): express.Application {
   const specPath = resolve(thisDirname, '../openapi.yaml');
   const openApiSpec = yaml.load(fs.readFileSync(specPath, 'utf8')) as Record<string, unknown>;
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+
+  // ── RapidAPI ─────────────────────────────────────────────────
+  app.use(rapidApiRouter);
 
   // Serve dashboard static build (production only)
   const dashboardDistPath = resolve(__dirname, '../dashboard/dist');

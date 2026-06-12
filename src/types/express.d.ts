@@ -1,8 +1,8 @@
 /**
  * Global Express type augmentation.
  *
- * Extends the Express Request interface with a `requestId` property
- * used for request correlation across the system.
+ * Extends the Express Request interface with properties used for
+ * request correlation, authentication, and plan-based rate limiting.
  */
 
 declare global {
@@ -11,6 +11,8 @@ declare global {
       requestId?: string;
       adminId?: string;
       accountId?: string;
+      /** Subscriber plan tier set by RapidAPI auth middleware */
+      plan?: 'free' | 'pro' | 'enterprise';
     }
   }
 }
