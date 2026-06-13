@@ -39,3 +39,47 @@ no changes added to commit (use "git add" and/or "git commit -a")
 [Thu Jun 11 09:00:06 PM CEST 2026] PUSH OK — all done
 [Thu Jun 11 09:00:06 PM CEST 2026] DONE
 
+[Fri Jun 12 09:00:01 PM CEST 2026] CHECK — running git status...
+[Fri Jun 12 09:00:01 PM CEST 2026] CHANGES DETECTED — committing and pushing...
+[Fri Jun 12 09:00:01 PM CEST 2026] On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   config/mcp-marketing.json
+	modified:   cron/hermes-git-autocommit.log
+	modified:   cron/hermes-marketing-cron.sh
+	modified:   cron/hermes-marketing.log
+	modified:   cron/hermes_marketing_check.py
+	modified:   toolsets.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	linear-mcp.sh
+	marketing/__init__.py
+	marketing/config.py
+	marketing/dashboard.py
+	marketing/execution_engine.py
+	marketing/execution_state.py
+	marketing/humanization_gate.py
+	marketing/invariants.py
+	marketing/metrics.py
+	marketing/planner.py
+	marketing/platforms/
+	marketing/reply_monitor.py
+	marketing/review.py
+	marketing/sheet_sync.py
+	marketing/store.py
+	marketing/support.py
+	marketing/warmup.py
+	tests/marketing/
+	tools/github_release_monitor.py
+	tools/marketing_tool.py
+
+no changes added to commit (use "git add" and/or "git commit -a")
+[Fri Jun 12 09:00:01 PM CEST 2026] COMMIT OK
+[Fri Jun 12 09:00:03 PM CEST 2026] PULL/REBASE OK
+[Fri Jun 12 09:00:06 PM CEST 2026] PUSH OK — all done
+[Fri Jun 12 09:00:06 PM CEST 2026] DONE
+
