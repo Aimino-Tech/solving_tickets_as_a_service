@@ -1,0 +1,13 @@
+{
+  "type": "engagement",
+  "id": "threads-post-1-20260615-132441",
+  "timestamp": "2026-06-15T13:24:41.712197+00:00",
+  "platform": "threads",
+  "action": "post",
+  "target_url": "https://www.threads.net/@xdn12026",
+  "target_author": "xdn12026",
+  "target_content": "Original post about MCP servers",
+  "content_preview": "MCP servers are quietly becoming the most underrated layer in AI tooling. Everyone's obsessed with model benchmarks. Meanwhile, MCP is solving the real problem: how agents actually connect to the world. Give your agent a server that talks to docs, databases, APIs \u2014 suddenly it's not just smart, it's useful. The future isn't bigger models. It's better plumbing. \ud83d\udd27 #MCP #AIInfrastructure #AIEngineering #BuildInPublic #LLM",
+  "score": 0,
+  "status": "completed"
+}

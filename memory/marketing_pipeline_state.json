@@ -1,0 +1,18 @@
+{
+  "last_check": "2026-06-15T14:00:19",
+  "ready_products": [
+    {
+      "code": "ODW",
+      "name": "opendocswork-mcp",
+      "marketplaces_published": 4,
+      "platforms": ["crates.io", "npm", "PyPI", "ClawHub"]
+    },
+    {
+      "code": "OT2H",
+      "name": "OpenTalk2HTML-NotMD",
+      "marketplaces_published": 2,
+      "platforms": ["GitHub", "npm"]
+    }
+  ],
+  "total_ready": 2
+}

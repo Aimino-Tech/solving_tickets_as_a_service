@@ -27,7 +27,7 @@ LOCK_FILE="/tmp/hermes-marketing-cron.lock"
 # --- Config ---
 # Google Sheet ID (Tracking marketing)
 SHEET_ID="1Nf_H61D4GGq5aFlypAHlW_f1Uaso1c4OmJ9QRz5qRaY"
-SHEET_TAB="guerrilla-content-plan"
+SHEET_TAB="reddit-campaign"
 # Hermes gateway endpoint
 HERMES_ENDPOINT="http://localhost:8787"
 HERMES_API_KEY="${HERMES_MARKETING_API_KEY:-}"

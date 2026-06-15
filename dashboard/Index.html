@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aimino Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:#f1f5f9;color:#1e293b}
+.hdr{background:#fff;border-bottom:1px solid #e2e8f0;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0}
+.hdr h1{font-size:17px;font-weight:700}
+.tabs{display:flex;gap:2px;background:#f1f5f9;border-radius:8px;padding:3px}
+.tab{padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;color:#64748b;border:none;background:0 0}
+.tab.on{color:#fff;background:#3b82f6}
+.tab:hover{color:#1e293b}
+.m{padding:16px 20px;max-width:1200px;margin:0 auto}
+.ld{text-align:center;padding:50px;color:#64748b}
+.sp{width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;animation:sp .7s linear infinite;margin:0 auto 10px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.sc{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px}
+.sl{font-size:10px;font-weight:600;text-transform:uppercase;color:#94a3b8}
+.sv{font-size:24px;font-weight:700;margin-top:2px}
+.st{font-size:14px;font-weight:600;margin:16px 0 10px}
+.pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:20px}
+.pc{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px;cursor:pointer;transition:.15s}
+.pc:hover{border-color:#3b82f6;box-shadow:0 2px 8px rgba(59,130,246,.12)}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.pn{font-size:15px;font-weight:700}
+.pi{font-size:10px;color:#94a3b8}
+.qb{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800}
+.qa{background:#dcfce7;color:#16a34a;border:2px solid #16a34a}
+.qb2{background:#fef9c3;color:#ca8a04;border:2px solid #ca8a04}
+.qc{background:#ffedd5;color:#ea580c;border:2px solid #ea580c}
+.qd{background:#fee2e2;color:#dc2626;border:2px solid #dc2626}
+.pd{font-size:11px;color:#64748b;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pb{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.pi2{width:16px;height:16px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0}
+.pr{background:#ff4500}.pt{background:#1da1f2}.pl{background:#0077b5}.ph2{background:#ff6600}.pdi{background:#5865f2}.pm{background:#6366f1}
+.pn2{font-size:10px;color:#64748b;width:60px}
+.pp{flex:1;height:4px;background:#f1f5f9;border-radius:2px;overflow:hidden}
+.pf{height:100%;border-radius:2px}
+.pc2{font-size:10px;font-weight:600;width:30px;text-align:right}
+.pf2{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9;font-size:10px;color:#64748b}
+.cg{display:grid;grid-template-columns:5fr 3fr;gap:12px;margin-bottom:20px}
+.cc{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px}
+.ct{font-size:12px;font-weight:600;margin-bottom:10px}
+.cw{position:relative;height:200px}
+.gi{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:11px}
+.gl{color:#64748b;width:80px}
+.gb{flex:1;height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden}
+.gbf{height:100%;border-radius:3px}
+.gn{width:50px;text-align:right;font-weight:600}
+.al{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.ac{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px}
+.al2{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
+.ai{display:flex;gap:6px;padding:6px;border-radius:4px;background:#f8fafc}
+.ad{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.dr{background:#ff4500}.dt{background:#1da1f2}
+.ac2{flex:1;min-width:0;font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.am{font-size:9px;color:#94a3b8}
+.mo{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:200;display:none;align-items:center;justify-content:center}
+.mo.on{display:flex}
+.ml{background:#fff;border-radius:10px;width:90%;max-width:700px;max-height:85vh;overflow-y:auto;padding:20px}
+.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.mx{width:26px;height:26px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:13px}
+.mx:hover{background:#fee2e2}
+.stb{width:100%;border-collapse:collapse;font-size:11px}
+.stb th{text-align:left;padding:4px 6px;border-bottom:1px solid #e2e8f0;color:#94a3b8;font-size:9px;text-transform:uppercase}
+.stb td{padding:6px;border-bottom:1px solid #f1f5f9;color:#64748b}
+</style>
+</head>
+<body>
+<div class="hdr">
+<h1>📊 Aimino Tech Dashboard</h1>
+<div class="tabs">
+<button class="tab on" onclick="go('ov',this)">Overview</button>
+<button class="tab" onclick="go('pr',this)">Projects</button>
+<button class="tab" onclick="go('pl',this)">Platforms</button>
+<button class="tab" onclick="go('ac',this)">Activity</button>
+</div>
+</div>
+<div class="m" id="m"><div class="ld" id="ld"><div class="sp"></div>Loading...</div></div>
+<div class="mo" id="mo" onclick="if(event.target===this)cm()"><div class="ml" id="ml"></div></div>
+<script>
+var D=null,T='ov',ch={};
+function go(t,el){T=t;document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on')});el.classList.add('on');r();}
+function ld(){document.getElementById('ld').style.display='block';google.script.run.withSuccessHandler(function(d){D=d;r()}).withFailureHandler(function(e){document.getElementById('m').innerHTML='<div style="color:#dc2626">❌ '+e.message+'</div>'}).getOverview();}
+function r(){if(!D)return;var m=document.getElementById('m');m.innerHTML='';
+switch(T){case'ov':ov(m);break;case'pr':pr(m);break;case'pl':pl(m);break;case'ac':ac(m);break;}}
+function ov(m){
+  var p=D.platforms,rt=p.reddit.t,rp=p.reddit.r,er=rt>0?Math.round(rp/rt*100):0;
+  m.innerHTML='<div class="sg"><div class="sc"><div class="sl">Reddit</div><div class="sv">'+rt+'</div></div><div class="sc"><div class="sl">Executed</div><div class="sv" style="color:#16a34a">'+rp+'</div></div><div class="sc"><div class="sl">Exec Rate</div><div class="sv" style="color:'+(er>=70?'#16a34a':'#ea580c')+'">'+er+'%</div></div><div class="sc"><div class="sl">Twitter</div><div class="sv">'+p.twitter.t+'</div></div><div class="sc"><div class="sl">LinkedIn</div><div class="sv">'+p.linkedin.t+'</div></div><div class="sc"><div class="sl">HN</div><div class="sv">'+p.hackernews.t+'</div></div></div>'+
+  '<div class="st">🎯 Projects</div><div class="pg">'+D.projects.map(cph).join('')+'</div>'+
+  '<div class="cg"><div class="cc"><div class="ct">📈 Trend (14 days)</div><div class="cw"><canvas id="tc"></canvas></div></div><div class="cc"><div class="ct">🎯 Goals</div><div id="gl"></div></div></div>'+
+  '<div class="al"><div class="cc"><div class="ct">📝 Recent</div><div class="al2" id="rl"></div></div><div class="cc"><div class="ct">📊 Top Subreddits</div><div id="st"></div></div></div>';
+  tc();gl(er,p);rl();stb();}
+function cph(p){var g=gs(p.qs);var pts=[{k:'reddit',n:'Reddit',i:'🔴',c:'#ff4500',v:D.platforms.reddit.t},{k:'twitter',n:'Twitter',i:'🐦',c:'#1da1f2',v:D.platforms.twitter.t},{k:'linkedin',n:'LinkedIn',i:'💼',c:'#0077b5',v:D.platforms.linkedin.t},{k:'hackernews',n:'HN',i:'🟠',c:'#ff6600',v:D.platforms.hackernews.t},{k:'discord',n:'Discord',i:'💬',c:'#5865f2',v:D.platforms.discord.t},{k:'marketplaces',n:'Markets',i:'📦',c:'#6366f1',v:D.platforms.marketplaces.t}];var mx=Math.max.apply(null,pts.map(function(x){return x.v}).concat([1]));
+  var bars=pts.map(function(x){var pct=(x.v/mx)*100;return'<div class="pb"><div class="pi2 '+x.k.replace('reddit','pr').replace('discord','pdi')+'">'+x.i+'</div><div class="pn2">'+x.n+'</div><div class="pp"><div class="pf" style="width:'+pct+'%;background:'+x.c+'"></div></div><div class="pc2">'+x.v+'</div></div>';}).join('');
+  return'<div class="pc" onclick="op(\''+p.id+'\')"><div class="ph"><div><div class="pn">'+p.name+'</div><div class="pi">'+p.id+'</div></div><div class="qb '+g.c+'">'+g.l+'</div></div><div class="pd">'+(p.desc||'')+'</div>'+bars+'<div class="pf2"><span>'+p.status+'</span><strong>'+Object.values(D.platforms).reduce(function(s,x){return s+(x.t||0)},0)+' actions</strong></div></div>';}
+function gs(s){if(s>=80)return{l:'A',c:'qa'};if(s>=60)return{l:'B',c:'qb2'};if(s>=40)return{l:'C',c:'qc'};return{l:'D',c:'qd'};}
+function tc(){var ctx=document.getElementById('tc');if(!ctx||!D.trend)return;if(ch.t)ch.t.destroy();ch.t=new Chart(ctx,{type:'bar',data:{labels:D.trend.map(function(t){return t.d.substring(5)}),datasets:[{data:D.trend.map(function(t){return t.c}),backgroundColor:'rgba(59,130,246,.7)',borderRadius:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:8}}},y:{grid:{color:'#f1f5f9'},beginAtZero:true}}}});}
+function gl(er,p){var c=document.getElementById('gl');if(!c)return;var g=[{l:'Execution',v:er+'%',p:er,col:er>=70?'#16a34a':'#ea580c'},{l:'Quality',v:(D.projects[0]||{}).qs+'/100',p:(D.projects[0]||{}).qs||0,col:((D.projects[0]||{}).qs||0)>=60?'#16a34a':'#ea580c'}];
+  c.innerHTML=g.map(function(x){return'<div class="gi"><div class="gl">'+x.l+'</div><div class="gb"><div class="gbf" style="width:'+x.p+'%;background:'+x.col+'"></div></div><div class="gn" style="color:'+x.col+'">'+x.v+'</div></div>';}).join('');}
+function rl(){google.script.run.withSuccessHandler(function(items){var c=document.getElementById('rl');if(!c)return;c.innerHTML=items.slice(0,8).map(function(i){var dc=i.p==='Reddit'?'dr':'dt';return'<div class="ai"><div class="ad '+dc+'"></div><div class="ac2">'+esc(i.c||'')+'</div></div>';}).join('');}).getActivity();}
+function stb(){var c=document.getElementById('st');if(!c||!D.subs)return;var s=Object.entries(D.subs).sort(function(a,b){return b[1].t-a[1].t}).slice(0,8);var mx=s.length>0?s[0][1].t:1;
+  c.innerHTML='<table class="stb"><thead><tr><th>Sub</th><th>Total</th><th>Done</th><th></th></tr></thead><tbody>'+s.map(function(e){var r=e[1].t>0?Math.round(e[1].r/e[1].t*100):0;return'<tr><td style="color:#3b82f6;font-weight:500">r/'+e[0]+'</td><td>'+e[1].t+'</td><td style="color:#16a34a">'+e[1].r+'</td><td><div style="width:'+(e[1].t/mx*100)+'%;height:4px;background:#3b82f6;border-radius:2px"></div></td></tr>';}).join('')+'</tbody></table>';}
+function pr(m){m.innerHTML='<div class="st">🎯 All Projects</div><div class="pg">'+D.projects.map(cph).join('')+'</div>';}
+function op(id){document.getElementById('mo').classList.add('on');document.getElementById('ml').innerHTML='<div class="ld"><div class="sp"></div>Loading...</div>';google.script.run.withSuccessHandler(function(d){if(d.error){document.getElementById('ml').innerHTML='<div>'+d.error+'</div>';return;}var p=d.project;var ct=d.contentTypes||{};var ctH=Object.entries(ct).map(function(e){return'<div style="background:#f1f5f9;padding:4px 10px;border-radius:4px;font-size:11px"><strong>'+e[1]+'</strong> '+e[0]+'</div>';}).join('');
+document.getElementById('ml').innerHTML='<div class="mh"><div><div style="font-size:16px;font-weight:700">'+p.name+'</div><div style="font-size:10px;color:#94a3b8">'+p.id+' · '+p.url+'</div></div><button class="mx" onclick="cm()">✕</button></div><div style="font-size:12px;color:#64748b;margin-bottom:12px">'+(p.desc||'')+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="background:#f8fafc;padding:10px;border-radius:6px"><div style="font-size:9px;color:#94a3b8">AUDIENCE</div><div style="font-size:11px">'+(p.audience||'N/A')+'</div></div><div style="background:#f8fafc;padding:10px;border-radius:6px"><div style="font-size:9px;color:#94a3b8">PAIN POINT</div><div style="font-size:11px">'+(p.painPoint||'N/A')+'</div></div></div><div class="cc" style="margin-bottom:12px"><div class="ct">Content Types</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+ctH+'</div></div><div class="cc"><div class="ct">Recent Activity</div><div class="al2">'+(d.recentActivity||[]).slice(0,10).map(function(a){return'<div class="ai"><div class="ac2">'+esc(a.content||'')+'</div><div class="am">'+(a.date||'').substring(0,10)+'</div></div>';}).join('')+'</div></div>';}).withFailureHandler(function(e){document.getElementById('ml').innerHTML='<div>Error: '+e.message+'</div>';}).getProjectDetail(id);}
+function cm(){document.getElementById('mo').classList.remove('on');}
+function ac(m){m.innerHTML='<div class="st">📝 Activity</div><div class="al2" id="al2" style="max-height:500px"></div>';google.script.run.withSuccessHandler(function(items){document.getElementById('al2').innerHTML=items.map(function(i){var dc=i.p==='Reddit'?'dr':'dt';return'<div class="ai"><div class="ad '+dc+'"></div><div style="flex:1"><div style="font-size:10px;font-weight:600;color:#1e293b">'+i.p+'</div><div class="ac2">'+esc(i.c||'')+'</div></div><div class="am">'+(i.d||'').substring(0,10)+'</div></div>';}).join('');}).getActivity(30);}
+function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+setInterval(ld,300000);
+document.addEventListener('DOMContentLoaded',ld);
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+{
+  "tweets": [
+    {
+      "author": "8004scan",
+      "text": "Some example prompts:\n\n\u201cWhat\u2019s the Identity Registry address on Base?\u201d\n\n\u201cFind AI agents that support the MCP protocol.\u201d\n\n\u201cNotify me when my agent gets new feedback.\u201d\n\nClaude Code can load the relevant ERC-8004 context when needed, so builders can move faster without manually",
+      "url": "/8004_scan/status/2066460974757118445/analytics",
+      "id": "2066460974757118445",
+      "time": "2026-06-15T10:01:04.000Z",
+      "likes": "",
+      "retweets": "",
+      "replies": "1"
+    },
+    {
+      "author": "Inem | Freelance Funded CEO",
+      "text": "3. Building with the Claude API\n\nBuild applications using Claude API models\n\nLink: \nhttps://\nanthropic.skilljar.com/claude-with-th\ne-anthropic-api\n\u2026\n\n4. Introduction to Model Context Protocol\n\nConnect Claude with tools using MCP\n\n\nhttps://\nanthropic.skilljar.com/introduction-t\no-model\n\u2026",
+      "url": "/_inemesitetim/status/2066457956745359381/analytics",
+      "id": "2066457956745359381",
+      "time": "2026-06-15T09:49:04.000Z",
+      "likes": "1",
+      "retweets": "",
+      "replies": "1"
+    },
+    {
+      "author": "Crypto Wolf",
+      "text": " While most holders wait for the next pump, \n@AppKaskad\n is giving \n$KAS\n real utility today.\n\nDeposit iKAS, access stablecoin liquidity, earn yield, and keep exposure to Kaspa\u2019s upside\u2014all without selling your position.\n\nThe protocol combines:\n AI-powered automation\n",
+      "url": "/CryptoWolfGL/status/2066457573944156626/analytics",
+      "id": "2066457573944156626",
+      "time": "2026-06-15T09:47:33.000Z",
+      "likes": "1",
+      "retweets": "",
+      "replies": ""
+    },
+    {
+      "author": "Small Doctor",
+      "text": "Another major milestone is their Model Context Protocol (MCP) integration. AI agents can now connect directly to commerce infrastructure, creating entirely new ways for software to buy services on behalf of users.\nCrypto x AI is becoming a real category.",
+      "url": "/Oxsmalldoctor/status/2066457485938979049/analytics",
+      "id": "2066457485938979049",
+      "time": "2026-06-15T09:47:12.000Z",
+      "likes": "",
+      "retweets": "",
+      "replies": "1"
+    },
+    {
+      "author": "Karl G. Schneider",
+      "text": "GitHub - tomtom-international/tomtom-maps-mcp: A Model Context Protocol (MCP) server providing TomTom's location services, search, routing, and traffic data to AI agents. \u00b7 GitHub",
+      "url": "/schneika/status/2066454520670916610/analytics",
+      "id": "2066454520670916610",
+      "time": "2026-06-15T09:35:25.000Z",
+      "likes": "",
+      "retweets": "",
+      "replies": ""
+    },
+    {
+      "author": "Ali Murtaza",
+      "text": "8/\nThis changed how I look at MCP.\nMCP is not only an integration protocol.\n\nIt is an enterprise control pattern for agentic AI.\n\nIt helps define what the AI can access, what it can do, and how every action is governed.",
+      "url": "/mralimurtaza/status/2066446569449374012/analytics",
+      "id": "2066446569449374012",
+      "time": "2026-06-15T09:03:49.000Z",
+      "likes": "1",
+      "retweets": "",
+      "replies": "1"
+    },
+    {
+      "author": "Ali Murtaza",
+      "text": "3/\nThese systems can include:\n\u2022 Documents\n\u2022 Databases\n\u2022 APIs\n\u2022 Ticketing platforms\n\u2022 Email workflows\n\u2022 RAG pipelines\n\u2022 Knowledge bases\n\nThat is where MCP \u2014 Model Context Protocol \u2014 becomes powerful.",
+      "url": "/mralimurtaza/status/2066446557814374553/analytics",
+      "id": "2066446557814374553",
+      "time": "2026-06-15T09:03:46.000Z",
+      "likes": "",
+      "retweets": "",
+      "replies": "1"
+    }
+  ],
+  "count": 7,
+  "url": "https://x.com/search?q=MCP+protocol&src=typed_query&f=live"
+}

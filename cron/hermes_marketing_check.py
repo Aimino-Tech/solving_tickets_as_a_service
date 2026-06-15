@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hourly marketing check: reads the guerrilla-content-plan sheet, decides what needs doing.
+"""Hourly marketing check: reads the reddit-campaign sheet, decides what needs doing.
 
 Modes
 -----
@@ -25,7 +25,7 @@ from urllib.request import Request, urlopen
 from google.auth.transport.requests import Request as AuthRequest
 from google.oauth2.service_account import Credentials
 
-# ── Sheet column indices (guerrilla-content-plan, 0-indexed) ──
+# ── Sheet column indices (reddit-campaign, 0-indexed) ──
 COL_CONTENT_ID = 0  # ContentID (ODW###)
 COL_ACTION_TYPE = 1  # ActionType (reply comment / post)
 COL_PLATFORM = 2  # Platform
@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 def get_args():
     p = argparse.ArgumentParser()
     p.add_argument("--sheet-id", default=SHEET_ID)
-    p.add_argument("--sheet-tab", default="guerrilla-content-plan")
+    p.add_argument("--sheet-tab", default="reddit-campaign")
     p.add_argument("--hermes-endpoint", default=None, help="(Unused — accepted for cron-script backward compat)")
     p.add_argument("--daily-digest", action="store_true", help="Print daily campaign digest")
     p.add_argument("--sheet-sync", action="store_true", help="Run bidirectional sheet ↔ DB sync")
@@ -293,7 +293,7 @@ def main():
     # ── Default: hourly working-hours check (unchanged behaviour) ──────────
     rows, headers = get_sheet_data(args.sheet_id, args.sheet_tab)
     if not rows:
-        print("No data rows found in guerrilla-content-plan.")
+        print("No data rows found in reddit-campaign.")
         return
 
     today = datetime.utcnow().strftime("%Y-%m-%d")

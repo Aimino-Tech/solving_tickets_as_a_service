@@ -356,3 +356,362 @@ Daily check: 325 planned / 0 pending / 0 ReadyForBrowser / 20 posted
 Ready to post now: 136 items with verified URLs
 Need threads found: 189 items
 [Fri Jun 12 04:05:03 PM CEST 2026] DONE
+[Mon Jun 15 09:00:01 AM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-15):
+   📋 planned: 325
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 4 (xdn4 - J0llibee_yummy): 42 items
+   Reddit-General: 39 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   AI-LLM: 18 items
+   Developer: 18 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   Business-Marketing: 9 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+   DevOps-Data: 3 items
+   Niche: 3 items
+
+   📋 planned WITH URLs (ready to post): 136
+   📋 planned WITHOUT URLs (need threads): 189
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT012 on Profile 2 (xdn2 - Slow-Guy-Chiu)
+   URL: https://old.reddit.com/r/selfhosted/comments/v9ync3/
+
+Daily check: 325 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 136 items with verified URLs
+Need threads found: 189 items
+[Mon Jun 15 09:00:02 AM CEST 2026] DONE
+[Mon Jun 15 09:05:01 AM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-15):
+   📋 planned: 327
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 4 (xdn4 - J0llibee_yummy): 42 items
+   Reddit-General: 39 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   AI-LLM: 18 items
+   Developer: 18 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   Business-Marketing: 9 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+   DevOps-Data: 3 items
+   Niche: 3 items
+   HN (xdnaimino): 2 items
+
+   📋 planned WITH URLs (ready to post): 138
+   📋 planned WITHOUT URLs (need threads): 189
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT012 on Profile 2 (xdn2 - Slow-Guy-Chiu)
+   URL: https://old.reddit.com/r/selfhosted/comments/v9ync3/
+
+Daily check: 327 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 138 items with verified URLs
+Need threads found: 189 items
+[Mon Jun 15 09:05:02 AM CEST 2026] DONE
+[Mon Jun 15 10:05:01 AM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-15):
+   📋 planned: 325
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 4 (xdn4 - J0llibee_yummy): 42 items
+   Reddit-General: 39 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   AI-LLM: 18 items
+   Developer: 18 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   Business-Marketing: 9 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+   DevOps-Data: 3 items
+   Niche: 3 items
+
+   📋 planned WITH URLs (ready to post): 136
+   📋 planned WITHOUT URLs (need threads): 189
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT012 on Profile 2 (xdn2 - Slow-Guy-Chiu)
+   URL: https://old.reddit.com/r/selfhosted/comments/v9ync3/
+
+Daily check: 325 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 136 items with verified URLs
+Need threads found: 189 items
+[Mon Jun 15 10:05:03 AM CEST 2026] DONE
+[Mon Jun 15 11:05:01 AM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-15):
+   📋 planned: 400
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   unassigned: 81 items
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 4 (xdn4 - J0llibee_yummy): 42 items
+   Reddit-General: 39 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   AI-LLM: 18 items
+   Developer: 18 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   Business-Marketing: 9 items
+   J0llibee_yummy: 6 items
+   DevOps-Data: 3 items
+   Niche: 3 items
+
+   📋 planned WITH URLs (ready to post): 136
+   📋 planned WITHOUT URLs (need threads): 264
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT012 on Profile 2 (xdn2 - Slow-Guy-Chiu)
+   URL: https://old.reddit.com/r/selfhosted/comments/v9ync3/
+
+Daily check: 400 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 136 items with verified URLs
+Need threads found: 264 items
+[Mon Jun 15 11:05:02 AM CEST 2026] DONE
+[Mon Jun 15 12:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-15):
+   📋 planned: 400
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   unassigned: 81 items
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 4 (xdn4 - J0llibee_yummy): 42 items
+   Reddit-General: 39 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   AI-LLM: 18 items
+   Developer: 18 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   Business-Marketing: 9 items
+   J0llibee_yummy: 6 items
+   DevOps-Data: 3 items
+   Niche: 3 items
+
+   📋 planned WITH URLs (ready to post): 136
+   📋 planned WITHOUT URLs (need threads): 264
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT012 on Profile 2 (xdn2 - Slow-Guy-Chiu)
+   URL: https://old.reddit.com/r/selfhosted/comments/v9ync3/
+
+Daily check: 400 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 136 items with verified URLs
+Need threads found: 264 items
+[Mon Jun 15 12:05:03 PM CEST 2026] DONE
+[Mon Jun 15 01:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-15):
+   📋 planned: 400
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   unassigned: 81 items
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 4 (xdn4 - J0llibee_yummy): 42 items
+   Reddit-General: 39 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   AI-LLM: 18 items
+   Developer: 18 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   Business-Marketing: 9 items
+   J0llibee_yummy: 6 items
+   DevOps-Data: 3 items
+   Niche: 3 items
+
+   📋 planned WITH URLs (ready to post): 136
+   📋 planned WITHOUT URLs (need threads): 264
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT012 on Profile 2 (xdn2 - Slow-Guy-Chiu)
+   URL: https://old.reddit.com/r/selfhosted/comments/v9ync3/
+
+Daily check: 400 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 136 items with verified URLs
+Need threads found: 264 items
+[Mon Jun 15 01:05:03 PM CEST 2026] DONE
+[Mon Jun 15 02:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-15):
+   📋 planned: 400
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   unassigned: 81 items
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 4 (xdn4 - J0llibee_yummy): 42 items
+   Reddit-General: 39 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   AI-LLM: 18 items
+   Developer: 18 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   Business-Marketing: 9 items
+   J0llibee_yummy: 6 items
+   DevOps-Data: 3 items
+   Niche: 3 items
+
+   📋 planned WITH URLs (ready to post): 136
+   📋 planned WITHOUT URLs (need threads): 264
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT012 on Profile 2 (xdn2 - Slow-Guy-Chiu)
+   URL: https://old.reddit.com/r/selfhosted/comments/v9ync3/
+
+Daily check: 400 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 136 items with verified URLs
+Need threads found: 264 items
+[Mon Jun 15 02:05:03 PM CEST 2026] DONE
+[Mon Jun 15 03:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-15):
+   📋 planned: 400
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   unassigned: 81 items
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 4 (xdn4 - J0llibee_yummy): 42 items
+   Reddit-General: 39 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   AI-LLM: 18 items
+   Developer: 18 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   Business-Marketing: 9 items
+   J0llibee_yummy: 6 items
+   DevOps-Data: 3 items
+   Niche: 3 items
+
+   📋 planned WITH URLs (ready to post): 136
+   📋 planned WITHOUT URLs (need threads): 264
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT012 on Profile 2 (xdn2 - Slow-Guy-Chiu)
+   URL: https://old.reddit.com/r/selfhosted/comments/v9ync3/
+
+Daily check: 400 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 136 items with verified URLs
+Need threads found: 264 items
+[Mon Jun 15 03:05:02 PM CEST 2026] DONE
+[Mon Jun 15 04:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-15):
+   📋 planned: 235
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 4 (xdn4 - J0llibee_yummy): 42 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+
+   📋 planned WITH URLs (ready to post): 136
+   📋 planned WITHOUT URLs (need threads): 99
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT012 on Profile 2 (xdn2 - Slow-Guy-Chiu)
+   URL: https://old.reddit.com/r/selfhosted/comments/v9ync3/
+
+Daily check: 235 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 136 items with verified URLs
+Need threads found: 99 items
+[Mon Jun 15 04:05:02 PM CEST 2026] DONE
+[Mon Jun 15 05:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-15):
+   📋 planned: 235
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 4 (xdn4 - J0llibee_yummy): 42 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+
+   📋 planned WITH URLs (ready to post): 136
+   📋 planned WITHOUT URLs (need threads): 99
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT012 on Profile 2 (xdn2 - Slow-Guy-Chiu)
+   URL: https://old.reddit.com/r/selfhosted/comments/v9ync3/
+
+Daily check: 235 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 136 items with verified URLs
+Need threads found: 99 items
+[Mon Jun 15 05:05:02 PM CEST 2026] DONE

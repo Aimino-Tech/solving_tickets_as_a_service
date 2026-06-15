@@ -10,7 +10,7 @@ creds = service_account.Credentials.from_service_account_file(
     scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
 )
 client = gspread.authorize(creds)
-ws = client.open_by_key('1Nf_H61D4GGq5aFlypAHlW_f1Uaso1c4OmJ9QRz5qRaY').worksheet('guerrilla-content-plan')
+ws = client.open_by_key('1Nf_H61D4GGq5aFlypAHlW_f1Uaso1c4OmJ9QRz5qRaY').worksheet('reddit-campaign')
 
 # Get ODW007 rows - full content (check both row 26 and row 127)
 all_rows = ws.get_all_values()
