@@ -326,6 +326,13 @@ TOOLSETS = {
         "includes": []
     },
 
+    "monitoring": {
+        "description": "Monitoring dashboard — gateway state, memory, cron, disk, and alert metrics",
+        "tools": [
+            "monitoring_query_metrics", "monitoring_list_alerts",
+        ],
+        "includes": []
+    },
 
     # Scenario-specific toolsets
     
