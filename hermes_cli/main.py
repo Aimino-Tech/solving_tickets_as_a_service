@@ -6025,6 +6025,49 @@ def cmd_cron(args):
     cron_command(args)
 
 
+def cmd_monitoring(args):
+    """Monitoring alert management."""
+    from plugins.monitoring.monitor_store import MetricsStore
+
+    store = MetricsStore()
+    sub = args.monitoring_command
+
+    if sub == "create":
+        name = args.create_name
+        store.create_alert(
+            name=name,
+            metric_name=args.metric,
+            condition=args.condition,
+            threshold=args.threshold,
+            duration_seconds=args.duration or 0,
+            delivery=args.deliver or "origin",
+        )
+        print(f"Alert '{name}' created.")
+    elif sub == "list":
+        alerts = store.get_alert_configs()
+        if not alerts:
+            print("No alert configs.")
+            return
+        print(f"{'Name':<20} {'Metric':<20} {'Cond':<6} {'Threshold':<10} {'Duration':<10} {'Delivery':<12} {'Enabled':<8}")
+        print("-" * 90)
+        for a in alerts:
+            print(f"{a['name']:<20} {a['metric_name']:<20} {a['condition']:<6} {a['threshold']:<10} {a['duration_seconds']:<10} {a['delivery']:<12} {'Yes' if a['enabled'] else 'No':<8}")
+    elif sub == "delete":
+        name = args.delete_name
+        if store.delete_alert(name):
+            print(f"Alert '{name}' deleted.")
+        else:
+            print(f"Alert '{name}' not found.")
+    elif sub == "get":
+        name = args.get_name
+        alert = store.get_alert(name)
+        if alert:
+            for k, v in alert.items():
+                print(f"{k}: {v}")
+        else:
+            print(f"Alert '{name}' not found.")
+
+
 def cmd_webhook(args):
     """Webhook subscription management."""
     from hermes_cli.webhook import webhook_command
@@ -11723,6 +11766,43 @@ def main():
     _add_accept_hooks_flag(cron_tick)
     _add_accept_hooks_flag(cron_parser)
     cron_parser.set_defaults(func=cmd_cron)
+
+    # =========================================================================
+    # monitoring command
+    # =========================================================================
+    monitoring_parser = subparsers.add_parser(
+        "monitoring",
+        help="Monitoring alert management",
+        description="Manage threshold-based alert configurations",
+    )
+    monitoring_subparsers = monitoring_parser.add_subparsers(dest="monitoring_command")
+
+    # monitoring alert create
+    alert_create = monitoring_subparsers.add_parser(
+        "create", help="Create a new alert config"
+    )
+    alert_create.add_argument("create_name", metavar="name", help="Alert name")
+    alert_create.add_argument("--metric", required=True, help="Metric name to monitor")
+    alert_create.add_argument("--condition", default=">", help="Condition: >, >=, <, <=, ==, !=")
+    alert_create.add_argument("--threshold", type=float, required=True, help="Threshold value")
+    alert_create.add_argument("--duration", type=int, default=0, help="Duration in seconds for sustained check (0=instant)")
+    alert_create.add_argument("--deliver", default="origin", help="Delivery target: origin, local, telegram, discord")
+
+    # monitoring alert list
+    monitoring_subparsers.add_parser("list", help="List all alert configs")
+
+    # monitoring alert delete
+    alert_delete = monitoring_subparsers.add_parser(
+        "delete", help="Delete an alert config"
+    )
+    alert_delete.add_argument("delete_name", metavar="name", help="Alert name to delete")
+
+    # monitoring alert get
+    alert_get = monitoring_subparsers.add_parser(
+        "get", help="Get alert config details"
+    )
+    alert_get.add_argument("get_name", metavar="name", help="Alert name")
+    monitoring_parser.set_defaults(func=cmd_monitoring)
 
     # =========================================================================
     # webhook command
