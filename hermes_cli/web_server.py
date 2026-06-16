@@ -637,6 +637,70 @@ async def get_monitoring_summary():
     return _build_monitoring_summary(store)
 
 
+@app.post("/api/monitoring/webhook/sheets-push")
+async def monitoring_webhook_sheets_push(token: str = "", request: Request = None):
+    webhook_token = None
+    try:
+        from hermes_cli.config import load_config
+        cfg = load_config()
+        webhook_token = cfg.get("monitoring", {}).get("webhook_token")
+    except Exception:
+        pass
+
+    if webhook_token:
+        provided = token or request.query_params.get("token", "") if request else token
+        if not hmac.compare_digest(str(provided), str(webhook_token)):
+            raise HTTPException(status_code=401, detail="Invalid or missing webhook token")
+
+    try:
+        from plugins.monitoring.monitor_store import MetricsStore
+        from gateway.status import read_runtime_status
+        from cron.jobs import load_jobs
+        from hermes_constants import get_hermes_home
+
+        store = MetricsStore()
+        status = read_runtime_status()
+        jobs = load_jobs()
+
+        names = store.list_metric_names()
+        latest: dict = {}
+        for n in names:
+            try:
+                v = store.query_latest(n)
+                if v:
+                    latest[n] = v
+            except Exception:
+                pass
+
+        gateway_info = None
+        if status:
+            gateway_info = {
+                "state": status.get("gateway_state"),
+                "active_agents": status.get("active_agents", 0),
+            }
+
+        cron_info = {
+            "total": len(jobs),
+            "error": sum(1 for j in jobs if j.get("error_count", 0) > 0),
+            "enabled": sum(1 for j in jobs if j.get("enabled", True)),
+        }
+
+        memory_info = None
+        rss = latest.get("memory.rss_mb")
+        if rss:
+            memory_info = {"rss_mb": rss.get("value")}
+
+        return {
+            "gateway": gateway_info,
+            "memory": memory_info,
+            "cron": cron_info,
+            "metrics": latest,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @app.get("/api/status")
 async def get_status():
     current_ver, latest_ver = check_config_version()
