@@ -98,21 +98,6 @@ def _build_html(
         "failed": "err",
     }.get(gateway_state, "muted")
 
-    # Uptime from clock ticks
-    uptime_str = ""
-    if start_time and pid:
-        try:
-            stat_path = Path(f"/proc/{pid}/stat")
-            if stat_path.exists():
-                fields = stat_path.read_text(encoding="utf-8").split()
-                boot_ticks = int(fields[21])
-                clk_tck = os.sysconf(os.sysconf_names["SC_CLK_TCK"])
-                now_ticks = _boot_time_ticks() + int(time_ticks_since_boot())
-            uptime_str = _format_uptime(None)
-        except (OSError, ValueError, AttributeError, KeyError):
-            pass
-
-    # Try to compute uptime from /proc/uptime
     uptime_seconds = 0
     if pid:
         try:
@@ -296,25 +281,6 @@ def _format_uptime(seconds: int | None) -> str:
     d = seconds // 86400
     h = (seconds % 86400) // 3600
     return f"{d}d {h}h"
-
-
-def _boot_time_ticks() -> int:
-    try:
-        with open("/proc/stat", encoding="utf-8") as f:
-            for line in f:
-                if line.startswith("btime "):
-                    return int(line.split()[1])
-    except (OSError, ValueError, IndexError):
-        pass
-    return 0
-
-
-def time_ticks_since_boot() -> int:
-    try:
-        with open("/proc/uptime", encoding="utf-8") as f:
-            return int(float(f.read().split()[0]))
-    except (OSError, ValueError, IndexError):
-        return 0
 
 
 def main() -> None:
