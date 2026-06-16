@@ -119,6 +119,7 @@ _PUBLIC_API_PATHS: frozenset = frozenset({
     "/api/dashboard/themes",
     "/api/dashboard/plugins",
     "/api/dashboard/plugins/rescan",
+    "/api/monitoring/dashboard",
 })
 
 
@@ -532,6 +533,14 @@ def _probe_gateway_health() -> tuple[bool, dict | None]:
         except Exception:
             continue
     return False, None
+
+
+@app.get("/api/monitoring/dashboard")
+async def get_monitoring_dashboard():
+    path = get_hermes_home() / "monitoring" / "dashboard.html"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Dashboard not generated yet. Run `python scripts/gateway-health-report.py` first.")
+    return HTMLResponse(path.read_text(encoding="utf-8"))
 
 
 @app.get("/api/status")
