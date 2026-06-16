@@ -12,6 +12,7 @@ DB_PATH = HERMES_HOME / "monitoring.db"
 
 class MetricsStore:
     _local = threading.local()
+    _write_lock = threading.Lock()
 
     def __init__(self, db_path: str | Path = DB_PATH):
         self.db_path = str(db_path)
@@ -36,6 +37,7 @@ class MetricsStore:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
                     value REAL NOT NULL,
+                    tags TEXT,
                     recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -55,21 +57,85 @@ class MetricsStore:
                 )
             """)
             conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_metrics_name_time 
+                CREATE INDEX IF NOT EXISTS idx_metrics_name
+                ON metrics(name)
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_metrics_ts
+                ON metrics(recorded_at)
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_metrics_name_ts
                 ON metrics(name, recorded_at)
             """)
             conn.commit()
+            self._migrate_v1_add_tags(conn)
         finally:
             conn.close()
 
-    def record(self, name: str, value: float, recorded_at: str | None = None) -> None:
+    def _migrate_v1_add_tags(self, conn: sqlite3.Connection) -> None:
+        try:
+            conn.execute("ALTER TABLE metrics ADD COLUMN tags TEXT")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
+
+    def record(self, name: str, value: float, recorded_at: str | None = None, tags: dict | None = None) -> None:
         if recorded_at is None:
             recorded_at = datetime.now(timezone.utc).isoformat()
-        self.conn.execute(
-            "INSERT INTO metrics (name, value, recorded_at) VALUES (?, ?, ?)",
-            (name, value, recorded_at),
-        )
-        self.conn.commit()
+        tags_json = json.dumps(tags) if tags else None
+        with self._write_lock:
+            self.conn.execute(
+                "INSERT INTO metrics (name, value, tags, recorded_at) VALUES (?, ?, ?, ?)",
+                (name, value, tags_json, recorded_at),
+            )
+            self.conn.commit()
+
+    def record_batch(self, points: list[dict[str, Any]]) -> None:
+        with self._write_lock:
+            rows = []
+            for p in points:
+                name = p["name"]
+                value = p["value"]
+                tags = json.dumps(p.get("tags")) if p.get("tags") else None
+                ts = p.get("recorded_at") or datetime.now(timezone.utc).isoformat()
+                rows.append((name, value, tags, ts))
+            self.conn.executemany(
+                "INSERT INTO metrics (name, value, tags, recorded_at) VALUES (?, ?, ?, ?)",
+                rows,
+            )
+            self.conn.commit()
+
+    def query(
+        self,
+        name: str,
+        since: str | None = None,
+        until: str | None = None,
+        limit: int = 1000,
+    ) -> list[dict[str, Any]]:
+        conditions = ["name = ?"]
+        params: list[Any] = [name]
+        if since:
+            conditions.append("recorded_at >= ?")
+            params.append(since)
+        if until:
+            conditions.append("recorded_at <= ?")
+            params.append(until)
+        where = " AND ".join(conditions)
+        rows = self.conn.execute(
+            f"SELECT value, tags, recorded_at FROM metrics WHERE {where} ORDER BY recorded_at DESC LIMIT ?",
+            (*params, limit),
+        ).fetchall()
+        result = []
+        for r in rows:
+            d = {"value": r["value"], "recorded_at": r["recorded_at"]}
+            if r["tags"]:
+                try:
+                    d["tags"] = json.loads(r["tags"])
+                except (json.JSONDecodeError, TypeError):
+                    d["tags"] = r["tags"]
+            result.append(d)
+        return result
 
     def query_values(self, metric_name: str, since: str | None = None) -> list[dict[str, Any]]:
         if since:
@@ -84,12 +150,57 @@ class MetricsStore:
             ).fetchall()
         return [dict(r) for r in rows]
 
+    def query_latest(self, name: str) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT value, tags, recorded_at FROM metrics WHERE name = ? ORDER BY recorded_at DESC LIMIT 1",
+            (name,),
+        ).fetchone()
+        if not row:
+            return None
+        d = {"value": row["value"], "recorded_at": row["recorded_at"]}
+        if row["tags"]:
+            try:
+                d["tags"] = json.loads(row["tags"])
+            except (json.JSONDecodeError, TypeError):
+                d["tags"] = row["tags"]
+        return d
+
     def query_latest_value(self, metric_name: str) -> dict[str, Any] | None:
         row = self.conn.execute(
             "SELECT value, recorded_at FROM metrics WHERE name = ? ORDER BY recorded_at DESC LIMIT 1",
             (metric_name,),
         ).fetchone()
         return dict(row) if row else None
+
+    def query_aggregate(
+        self,
+        name: str,
+        since: str,
+        agg: str = "avg",
+    ) -> dict[str, Any] | None:
+        agg_map = {"avg": "AVG", "min": "MIN", "max": "MAX", "sum": "SUM", "count": "COUNT"}
+        sql_agg = agg_map.get(agg, "AVG")
+        row = self.conn.execute(
+            f"SELECT {sql_agg}(value) AS value, COUNT(*) AS count FROM metrics WHERE name = ? AND recorded_at >= ?",
+            (name, since),
+        ).fetchone()
+        if not row or row[0] is None:
+            return None
+        return {"value": row["value"], "count": row["count"], "agg": agg}
+
+    def list_metric_names(self) -> list[str]:
+        rows = self.conn.execute(
+            "SELECT DISTINCT name FROM metrics ORDER BY name"
+        ).fetchall()
+        return [r["name"] for r in rows]
+
+    def prune(self, before_ts: str) -> int:
+        with self._write_lock:
+            c = self.conn.execute(
+                "DELETE FROM metrics WHERE recorded_at < ?", (before_ts,)
+            )
+            self.conn.commit()
+            return c.rowcount
 
     def create_alert(
         self,

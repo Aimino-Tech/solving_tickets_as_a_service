@@ -1,0 +1,13 @@
+{
+  "name": "monitoring",
+  "label": "Monitoring",
+  "description": "Real-time monitoring dashboard — gateway, memory, cron, and system metrics",
+  "icon": "Activity",
+  "version": "1.0.0",
+  "tab": {
+    "path": "/monitoring",
+    "position": "after:settings"
+  },
+  "entry": "dist/index.js",
+  "api": "plugin_api.py"
+}

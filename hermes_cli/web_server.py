@@ -120,6 +120,8 @@ _PUBLIC_API_PATHS: frozenset = frozenset({
     "/api/dashboard/plugins",
     "/api/dashboard/plugins/rescan",
     "/api/monitoring/dashboard",
+    "/api/monitoring/status",
+    "/api/monitoring/metrics/names",
 })
 
 
@@ -541,6 +543,98 @@ async def get_monitoring_dashboard():
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dashboard not generated yet. Run `python scripts/gateway-health-report.py` first.")
     return HTMLResponse(path.read_text(encoding="utf-8"))
+
+
+# ---------------------------------------------------------------------------
+# Monitoring API endpoints — powered by MetricsStore (Phase 1+)
+# ---------------------------------------------------------------------------
+
+from plugins.monitoring.monitor_store import MetricsStore as _MetricsStore
+
+
+def _get_monitoring_store():
+    return _MetricsStore()
+
+
+MONITORING_SUMMARY_CACHE: dict[str, Any] = {}
+MONITORING_SUMMARY_LOCK = threading.Lock()
+
+
+def _build_monitoring_summary(store: _MetricsStore) -> dict[str, Any]:
+    names = store.list_metric_names()
+    latest_values: dict[str, Any] = {}
+    for n in names:
+        try:
+            v = store.query_latest(n)
+            if v:
+                latest_values[n] = v
+        except Exception:
+            pass
+    return {
+        "metric_names": names,
+        "latest_values": latest_values,
+        "metric_count": len(names),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/api/monitoring/status")
+async def get_monitoring_status():
+    store = _get_monitoring_store()
+    names = store.list_metric_names()
+    return {
+        "status": "ok",
+        "metric_count": len(names),
+        "metrics_db": str(store.db_path),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/api/monitoring/metrics/names")
+async def get_metric_names():
+    store = _get_monitoring_store()
+    return {"names": store.list_metric_names(), "count": len(store.list_metric_names())}
+
+
+@app.get("/api/monitoring/metrics")
+async def get_metrics(
+    name: str = "",
+    since: str = "",
+    until: str = "",
+    agg: str = "",
+    limit: int = 1000,
+):
+    store = _get_monitoring_store()
+    if not name:
+        raise HTTPException(status_code=400, detail="name parameter is required")
+    since_param = since or None
+    until_param = until or None
+    if agg and agg in ("avg", "min", "max", "sum", "count"):
+        if not since:
+            raise HTTPException(status_code=400, detail="since parameter is required for aggregation")
+        result = store.query_aggregate(name, since, agg=agg)
+        if result is None:
+            raise HTTPException(status_code=404, detail=f"No data for metric '{name}' since {since}")
+        return result
+    values = store.query(name, since=since_param, until=until_param, limit=limit)
+    return {"name": name, "values": values, "count": len(values)}
+
+
+@app.get("/api/monitoring/metrics/latest")
+async def get_metric_latest(name: str = ""):
+    if not name:
+        raise HTTPException(status_code=400, detail="name parameter is required")
+    store = _get_monitoring_store()
+    result = store.query_latest(name)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"No data for metric '{name}'")
+    return {"name": name, **result}
+
+
+@app.get("/api/monitoring/summary")
+async def get_monitoring_summary():
+    store = _get_monitoring_store()
+    return _build_monitoring_summary(store)
 
 
 @app.post("/api/monitoring/webhook/sheets-push")
