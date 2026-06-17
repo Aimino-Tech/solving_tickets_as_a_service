@@ -1,0 +1,404 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "platform-engagement",
+    "title": "Platform Engagement",
+    "description": "Per-platform campaign performance breakdown. Action distribution, success rates, and engagement quality metrics by platform.",
+    "tags": ["hermes", "marketing", "platform"],
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "weekStart": "monday",
+    "refresh": "10m",
+    "schemaVersion": 38,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Actions by Platform",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "none",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "displayLabels": ["percent", "name", "value"],
+          "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "values": ["value", "percent"] },
+          "pieType": "pie",
+          "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+          "tooltip": { "mode": "single", "sort": "desc" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT COALESCE(platform, 'unknown') AS platform, COUNT(*) AS value FROM actions GROUP BY platform ORDER BY value DESC",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Engagement per Platform",
+        "type": "bargauge",
+        "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "none",
+            "custom": { "minVizWidth": 0, "minVizHeight": 10 }
+          },
+          "overrides": []
+        },
+        "options": {
+          "displayMode": "gradient",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+          "showUnfilled": true,
+          "valueMode": "text"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT a.platform, COUNT(*) AS value FROM actions a JOIN engagement_snapshots e ON e.campaign_id = a.campaign_id AND e.platform = a.platform GROUP BY a.platform ORDER BY value DESC",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Platform Success Rate",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "custom": { "align": "auto", "displayMode": "auto" },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "none"
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "success_rate" }, "properties": [
+              { "id": "unit", "value": "percent" },
+              { "id": "decimals", "value": 1 },
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "color", "value": { "mode": "thresholds" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "orange", "value": 30 },
+                { "color": "yellow", "value": 50 },
+                { "color": "green", "value": 75 }
+              ]}}
+            ]},
+            { "matcher": { "id": "byName", "options": "total" }, "properties": [{ "id": "unit", "value": "none" }] },
+            { "matcher": { "id": "byName", "options": "completed" }, "properties": [{ "id": "unit", "value": "none" }] }
+          ]
+        },
+        "options": {
+          "cellHeight": "sm",
+          "footer": { "countRows": false, "enablePagination": false, "fields": "", "reducer": ["sum"] },
+          "showHeader": true,
+          "sortBy": [{ "desc": true, "displayName": "success_rate" }]
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT platform, COUNT(*) AS total, SUM(CASE WHEN status IN ('completed','done','posted') THEN 1 ELSE 0 END) AS completed, ROUND(100.0 * SUM(CASE WHEN status IN ('completed','done','posted') THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS success_rate FROM actions GROUP BY platform ORDER BY success_rate DESC",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Platform Activity Timeline",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "pointSize": 3,
+              "scaleDistribution": { "type": "linear" },
+              "showPoints": "never",
+              "spanNulls": true,
+              "stacking": { "group": "A", "mode": "normal" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "none"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": { "calcs": ["max", "mean", "last"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+          "tooltip": { "mode": "multi", "sort": "desc" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT DATE(timestamp) AS time, platform, COUNT(*) AS value FROM actions WHERE $__timeFilter(timestamp) GROUP BY DATE(timestamp), platform ORDER BY time",
+            "format": "time_series",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Platform Stats",
+        "type": "stat",
+        "gridPos": { "h": 3, "w": 6, "x": 0, "y": 16 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "text", "value": null },
+              { "color": "blue", "value": 1 }
+            ]},
+            "unit": "none",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "center",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT 'Platforms Active' AS name, COUNT(DISTINCT platform) AS value FROM actions",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Top Platform",
+        "type": "stat",
+        "gridPos": { "h": 3, "w": 6, "x": 6, "y": 16 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "text", "value": null },
+              { "color": "green", "value": 1 }
+            ]},
+            "unit": "none",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "center",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT platform AS name, COUNT(*) AS value FROM actions GROUP BY platform ORDER BY value DESC LIMIT 1",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Total Platform Actions",
+        "type": "stat",
+        "gridPos": { "h": 3, "w": 6, "x": 12, "y": 16 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "text", "value": null },
+              { "color": "purple", "value": 1 }
+            ]},
+            "unit": "none",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "center",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT 'Total' AS name, COUNT(*) AS value FROM actions",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Avg Success Rate",
+        "type": "stat",
+        "gridPos": { "h": 3, "w": 6, "x": 18, "y": 16 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 30 },
+              { "color": "yellow", "value": 50 },
+              { "color": "green", "value": 75 }
+            ]},
+            "unit": "percent",
+            "decimals": 1
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "center",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT ROUND(AVG(success_rate), 1) AS value FROM (SELECT platform, 100.0 * SUM(CASE WHEN status IN ('completed','done','posted') THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) AS success_rate FROM actions GROUP BY platform)",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Engagement Snapshots by Platform",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "custom": { "align": "auto", "displayMode": "auto" },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "none"
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "reply_rate" }, "properties": [{ "id": "unit", "value": "percentunit" }, { "id": "decimals", "value": 2 }] },
+            { "matcher": { "id": "byName", "options": "snapshot_date" }, "properties": [{ "id": "custom.displayMode", "value": "dateTimeWithMs" }] }
+          ]
+        },
+        "options": {
+          "cellHeight": "sm",
+          "footer": { "countRows": false, "enablePagination": true, "fields": "", "reducer": ["sum"] },
+          "showHeader": true,
+          "sortBy": [{ "desc": true, "displayName": "snapshot_date" }]
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT c.name AS campaign, e.platform, e.snapshot_date, e.total_posts, e.total_comments, e.total_replies, e.positive_signals, e.neutral_signals, e.negative_signals, e.unique_interactors, ROUND(e.reply_rate, 2) AS reply_rate FROM engagement_snapshots e JOIN campaigns c ON c.id = e.campaign_id ORDER BY e.snapshot_date DESC LIMIT 50",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Action Type Distribution",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "none",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "displayLabels": ["percent", "name", "value"],
+          "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "values": ["value", "percent"] },
+          "pieType": "donut",
+          "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+          "tooltip": { "mode": "single", "sort": "desc" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT action_type, COUNT(*) AS value FROM actions GROUP BY action_type ORDER BY value DESC LIMIT 10",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "datasource",
+          "type": "datasource",
+          "query": "grafana-duckdb-datasource",
+          "current": { "value": "P0DuckDB" },
+          "hide": 2,
+          "refresh": 1,
+          "skipUrlSync": false
+        },
+        {
+          "name": "platform",
+          "type": "query",
+          "query": "SELECT DISTINCT platform FROM actions ORDER BY platform",
+          "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+          "current": { "selected": true, "text": "All", "value": "$__all" },
+          "hide": 0,
+          "includeAll": true,
+          "multi": false,
+          "refresh": 2,
+          "sort": 1,
+          "skipUrlSync": false,
+          "allValue": ".*",
+          "definition": "SELECT DISTINCT platform FROM actions ORDER BY platform"
+        }
+      ]
+    },
+    "links": [
+      { "title": "ROI Overview", "type": "dashboards", "tags": ["hermes", "roi"], "keepTime": true },
+      { "title": "Marketing Funnel", "type": "dashboards", "tags": ["hermes", "funnel"], "keepTime": true },
+      { "title": "Sentiment Analysis", "type": "dashboards", "tags": ["hermes", "sentiment"], "keepTime": true },
+      { "title": "GitHub & npm Traffic", "type": "dashboards", "tags": ["hermes", "traffic"], "keepTime": true }
+    ]
+  }
+}

@@ -60,12 +60,12 @@
       {
         "name": "marketing-scan",
         "cron": "*/15 * * * *",
-        "prompt": "Run engagement research cycle: scan Reddit, HN, and Twitter for MCP-related mentions. Use python3 scripts/engagement/cli.py research. Log all findings to DuckDB. Report new opportunities via Telegram."
+        "prompt": "Run engagement research cycle: scan HN and Twitter for MCP-related mentions. REDDIT SKIPPED — IP blocked since 2026-06-16. Use python3 scripts/engagement/cli.py research. Log all findings to DuckDB. Report new opportunities via Telegram."
       },
       {
         "name": "marketing-engage",
         "cron": "0 * * * *",
-        "prompt": "Process pending engagements: draft replies using LLM and post to approved platforms. Use python3 scripts/engagement/cli.py engage --approval auto. Log results to DuckDB."
+        "prompt": "Process pending engagements: draft replies using LLM and post to approved platforms. REDDIT SKIPPED — IP blocked since 2026-06-16. Use python3 scripts/engagement/cli.py engage --approval auto. Log results to DuckDB."
       },
       {
         "name": "daily-marketing-brief",
@@ -75,7 +75,7 @@
       {
         "name": "marketing-followup",
         "cron": "0 */4 * * *",
-        "prompt": "Check conversation threads needing follow-up. Scan DuckDB for engagements with replies that need responses. Draft follow-up replies."
+        "prompt": "Check conversation threads needing follow-up. Scan DuckDB for engagements with replies that need responses. Skip Reddit threads — IP blocked since 2026-06-16. Draft follow-up replies for other platforms."
       },
       {
         "name": "token-refresh",
@@ -92,11 +92,12 @@
         "cron": "0 16 * * 5",
         "prompt": "Review this week's expenses. Categorize transactions. Flag missing receipts."
       },
-      {
-        "name": "reddit-india-monitor",
-        "cron": "0 * * * *",
-        "prompt": "Check r/developersIndia for MCP/opensource mentions. Reply if relevant opportunity found. Log to engagement DuckDB."
-      },
+      // PAUSED 2026-06-16: Reddit IP blocked entirely. Resume after infra rebuild.
+      // {
+      //   "name": "reddit-india-monitor",
+      //   "cron": "0 * * * *",
+      //   "prompt": "Check r/developersIndia for MCP/opensource mentions. Reply if relevant opportunity found. Log to engagement DuckDB."
+      // },
       {
         "name": "telegram-india-poll",
         "cron": "*/30 * * * *",
@@ -200,7 +201,7 @@
       {
         "name": "odw-engagement-monitor",
         "cron": "0 */4 * * *",
-        "prompt": "Check all ODW campaign threads for new replies needing response. Scan Reddit, HN, LinkedIn, X for replies to our posts. Draft responses for pending replies."
+        "prompt": "Check all ODW campaign threads for new replies needing response. Scan HN, LinkedIn, X for replies to our posts. REDDIT SKIPPED — IP blocked since 2026-06-16. Draft responses for pending replies."
       },
       {
         "name": "odw-hn-check",

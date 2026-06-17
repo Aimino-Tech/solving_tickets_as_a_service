@@ -1,0 +1,360 @@
+/*
+ * ROI Dashboard — Marketing funnel visualization styles.
+ *
+ * All colors reference theme CSS vars so the dashboard reskins with the
+ * active dashboard theme. Fallback hex values for standalone contexts.
+ */
+
+/* ------------------------------------------------------------------ */
+/*  Design tokens (theme-aware with fallbacks)                         */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --roi-bg-dark: var(--color-background, #1a1a2e);
+  --roi-bg-card: var(--color-card, #16213e);
+  --roi-accent: var(--color-ring, #00d4ff);
+  --roi-success: var(--color-success, #00e676);
+  --roi-warning: var(--color-warning, #ff9100);
+  --roi-danger: var(--color-destructive, #ff1744);
+  --roi-text-primary: var(--color-foreground, #ffffff);
+  --roi-text-secondary: var(--color-muted-foreground, #8892b0);
+  --roi-text-muted: #5a6380;
+  --roi-border: var(--color-border, rgba(120, 120, 140, 0.25));
+  --roi-radius: var(--radius, 0.5rem);
+  --roi-radius-sm: var(--radius-sm, 0.25rem);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Container                                                          */
+/* ------------------------------------------------------------------ */
+
+.roi-funnel-container {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.roi-funnel-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Empty state                                                        */
+/* ------------------------------------------------------------------ */
+
+.roi-funnel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.roi-funnel-empty-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  opacity: 0.5;
+}
+
+.roi-funnel-empty-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--roi-text-primary);
+}
+
+.roi-funnel-empty-hint {
+  font-size: 0.85rem;
+  color: var(--roi-text-secondary);
+  max-width: 280px;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Single stage                                                       */
+/* ------------------------------------------------------------------ */
+
+.roi-funnel-single {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 1rem;
+}
+
+.roi-funnel-single-bar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 2rem;
+  background: var(--roi-bg-card);
+  border: 1px solid var(--roi-accent);
+  border-radius: var(--roi-radius);
+  min-width: 260px;
+}
+
+.roi-funnel-single-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--roi-text-primary);
+}
+
+.roi-funnel-single-count {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: var(--roi-accent);
+}
+
+.roi-funnel-single-note {
+  font-size: 0.8rem;
+  color: var(--roi-text-secondary);
+  font-style: italic;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Bottleneck warning                                                 */
+/* ------------------------------------------------------------------ */
+
+.roi-funnel-bottleneck {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.25rem 1rem;
+  margin-bottom: 1rem;
+  background: color-mix(in srgb, var(--roi-danger) 10%, var(--roi-bg-card));
+  border: 1px solid color-mix(in srgb, var(--roi-danger) 35%, transparent);
+  border-radius: var(--roi-radius);
+}
+
+.roi-funnel-bottleneck-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.roi-funnel-bottleneck-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--roi-danger);
+}
+
+.roi-funnel-bottleneck-detail {
+  font-size: 0.82rem;
+  color: var(--roi-text-secondary);
+  text-align: center;
+  max-width: 400px;
+  line-height: 1.4;
+}
+
+.roi-funnel-bottleneck-detail strong {
+  color: var(--roi-text-primary);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Dashboard layout                                                   */
+/* ------------------------------------------------------------------ */
+
+.roi-dashboard {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.roi-dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--roi-border);
+}
+
+.roi-dashboard-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--roi-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.roi-dashboard-title-icon {
+  color: var(--roi-accent);
+  font-size: 1.1rem;
+}
+
+.roi-dashboard-meta {
+  font-size: 0.8rem;
+  color: var(--roi-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+/* ---- Tab navigation ---- */
+
+.roi-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--roi-border);
+}
+
+.roi-tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--roi-text-secondary);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.roi-tab:hover {
+  color: var(--roi-text-primary);
+}
+
+.roi-tab--active {
+  color: var(--roi-accent);
+  border-bottom-color: var(--roi-accent);
+  font-weight: 600;
+}
+
+/* ---- Tab panels ---- */
+
+.roi-tab-panel {
+  display: none;
+  padding: 0.5rem 0;
+}
+
+.roi-tab-panel--active {
+  display: block;
+}
+
+/* ---- Card containers ---- */
+
+.roi-card {
+  background: var(--roi-bg-card);
+  border: 1px solid var(--roi-border);
+  border-radius: var(--roi-radius);
+  padding: 1rem;
+}
+
+.roi-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.roi-card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--roi-text-primary);
+}
+
+.roi-card-subtitle {
+  font-size: 0.75rem;
+  color: var(--roi-text-secondary);
+}
+
+/* ---- Stat grid ---- */
+
+.roi-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.roi-stat {
+  background: color-mix(in srgb, var(--roi-bg-card) 80%, transparent);
+  border: 1px solid var(--roi-border);
+  border-radius: var(--roi-radius-sm);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.roi-stat-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: var(--roi-text-secondary);
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.roi-stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: var(--roi-text-primary);
+}
+
+.roi-stat-value--accent { color: var(--roi-accent); }
+.roi-stat-value--success { color: var(--roi-success); }
+.roi-stat-value--warning { color: var(--roi-warning); }
+.roi-stat-value--danger { color: var(--roi-danger); }
+
+/* ---- Loading state ---- */
+
+.roi-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 0.5rem;
+  color: var(--roi-text-secondary);
+  font-size: 0.85rem;
+}
+
+.roi-loading-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--roi-border);
+  border-top-color: var(--roi-accent);
+  border-radius: 50%;
+  animation: roi-spin 0.8s linear infinite;
+}
+
+@keyframes roi-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Placeholder for future panels ---- */
+
+.roi-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  gap: 0.5rem;
+  border: 1px dashed var(--roi-border);
+  border-radius: var(--roi-radius);
+  color: var(--roi-text-muted);
+  font-size: 0.85rem;
+}
+
+.roi-placeholder-icon {
+  font-size: 1.5rem;
+  opacity: 0.5;
+}
+
+/* ---- Error state ---- */
+
+.roi-error {
+  padding: 1rem;
+  background: color-mix(in srgb, var(--roi-danger) 8%, var(--roi-bg-card));
+  border: 1px solid color-mix(in srgb, var(--roi-danger) 30%, transparent);
+  border-radius: var(--roi-radius);
+  color: var(--roi-danger);
+  font-size: 0.85rem;
+  text-align: center;
+}

@@ -115,3 +115,186 @@ no changes added to commit (use "git add" and/or "git commit -a")
 [Sun Jun 14 09:00:04 PM CEST 2026] PUSH OK — all done
 [Sun Jun 14 09:00:04 PM CEST 2026] DONE
 
+[Mon Jun 15 09:00:01 PM CEST 2026] CHECK — running git status...
+[Mon Jun 15 09:00:01 PM CEST 2026] CHANGES DETECTED — committing and pushing...
+[Mon Jun 15 09:00:01 PM CEST 2026] On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   _check_odw007.py
+	modified:   _check_state.py
+	modified:   _get_odw_content.py
+	deleted:    check_sheet.py
+	modified:   cron/hermes-git-autocommit.log
+	modified:   cron/hermes-marketing-cron.sh
+	modified:   cron/hermes-marketing.log
+	modified:   cron/hermes_marketing_check.py
+	modified:   post_comment.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	add_ot2h_marketplaces.py
+	analyze_replies.py
+	check_all_products.py
+	check_odawork0492.py
+	check_ot2h.py
+	check_po.py
+	check_removed_comment.py
+	check_reply_proof.py
+	check_urls.py
+	daily_monitoring_report.py
+	daily_monitoring_report.py.bak
+	daily_monitoring_report.py.bak2
+	dashboard/
+	fast-html-mcp-server-marketing/
+	ig_login_cdp.py
+	marketing-pipeline-plan.md
+	marketing-tracking.md
+	memory/marketing_pipeline_state.json
+	memory/pipeline_readiness.json
+	monitor.py
+	pipeline_ready.py
+	scripts/cdp_check.py
+	scripts/check_creds.py
+	scripts/check_login_detailed.py
+	scripts/check_login_status.py
+	scripts/check_login_v2.py
+	scripts/check_sheet.py
+	scripts/check_tabs.py
+	scripts/debug_cdp.py
+	scripts/post_replies.py
+	scripts/post_reply_final.py
+	scripts/post_reply_scroll.py
+	scripts/post_reply_v2.py
+	scripts/post_reply_v3.py
+	scripts/post_reply_v4.py
+	scripts/post_single_reply.py
+	scripts/quick_test.py
+	scripts/search_tweets.py
+	scripts/twitter_check_login.py
+	scripts/twitter_login.py
+	scripts/twitter_login2.py
+	scripts/twitter_search.py
+	scripts/twitter_search2.py
+	scripts/twitter_search3.py
+	scripts/twitter_search_results.json
+	scripts/twitter_status.py
+	scripts/twitter_try_search.py
+	social-media-posts.md
+	tmp_read_skill.py
+	tmp_read_skill2.py
+	tmp_sheet_check.py
+	tmp_sheet_read.py
+	verify_comments.py
+	verify_via_chrome.py
+
+no changes added to commit (use "git add" and/or "git commit -a")
+[Mon Jun 15 09:00:02 PM CEST 2026] COMMIT OK
+[Mon Jun 15 09:00:08 PM CEST 2026] PULL/REBASE OK
+[Mon Jun 15 09:00:10 PM CEST 2026] PUSH OK — all done
+[Mon Jun 15 09:00:10 PM CEST 2026] DONE
+
+[Tue Jun 16 09:00:01 PM CEST 2026] CHECK — running git status...
+[Tue Jun 16 09:00:01 PM CEST 2026] CHANGES DETECTED — committing and pushing...
+[Tue Jun 16 09:00:01 PM CEST 2026] On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	deleted:    README.zh-CN.md
+	deleted:    RELEASE_v0.10.0.md
+	deleted:    RELEASE_v0.11.0.md
+	deleted:    RELEASE_v0.12.0.md
+	deleted:    RELEASE_v0.13.0.md
+	deleted:    RELEASE_v0.14.0.md
+	deleted:    RELEASE_v0.2.0.md
+	deleted:    RELEASE_v0.3.0.md
+	deleted:    RELEASE_v0.4.0.md
+	deleted:    RELEASE_v0.5.0.md
+	deleted:    RELEASE_v0.6.0.md
+	deleted:    RELEASE_v0.7.0.md
+	deleted:    RELEASE_v0.8.0.md
+	deleted:    RELEASE_v0.9.0.md
+	modified:   config/gateway.json
+	modified:   cron/hermes-git-autocommit.log
+	modified:   cron/hermes-marketing.log
+	modified:   cron/hermes_marketing_check.py
+	modified:   hermes_cli/web_server.py
+	modified:   knowledge/guerrilla-process-playbook.md
+	modified:   marketing/sheet_sync.py
+	modified:   marketing/store.py
+	modified:   plugins/monitoring/__init__.py
+	modified:   plugins/monitoring/monitor_store.py
+	modified:   tui_gateway/server.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	agent-skills-marketing.md
+	check_all_reddit.py
+	check_cdp.py
+	check_ports.py
+	check_ports2.py
+	check_reddit_cdp.py
+	check_reddit_v2.py
+	config/proxy-recommendation.md
+	config/reddit-profiles.yaml
+	copywriting-guide-social-media.md
+	debug_cdp.py
+	guerrilla-seeding-drafts.md
+	knowledge/reddit-infra-guide.md
+	marketing/content/ot2h/
+	marketing/quality_score.py
+	marketing/roi_arch.py
+	memory/last-pipeline-check.md
+	memory/reddit-block-diagnosis-2026-06-16.md
+	memory/reddit-block-postmortem-2026-06-16.md
+	memory/shadowban-log.json
+	plugins/monitoring/alert_rules.py
+	plugins/monitoring/dashboard/
+	plugins/roi-dashboard/
+	plugins/roi/
+	quick_verify.py
+	scripts/evaluate-marketing-alerts.py
+	scripts/shadowban_monitor.py
+	skills-ref/
+	skills/monitoring/
+	tests/cron/test_hermes_marketing_check.py
+	tests/marketing/test_cron_job_log.py
+	tests/marketing/test_engagement_classifier.py
+	tests/marketing/test_predictive_indicator.py
+	tests/marketing/test_quality_score.py
+	tests/marketing/test_roi_analytics.py
+	tests/marketing/test_sheet_sync_multi_tab.py
+	tests/plugins/test_cron_jobs_plugin.py
+	tests/plugins/test_marketing_alerts.py
+	tests/plugins/test_roi_dashboard_plugin.py
+	threads-content-rewrite.md
+	tmp_add_summary.py
+	tmp_browse_li_feed.py
+	tmp_browse_like_v2.py
+	tmp_check_chrome.py
+	tmp_check_feed_text.py
+	tmp_check_li_at.py
+	tmp_check_li_chrome.py
+	tmp_check_li_cookies.py
+	tmp_check_li_state.py
+	tmp_detailed_browse.py
+	tmp_find_likes.py
+	tmp_like_final.py
+	tmp_like_posts.py
+	tmp_linkedin_check.py
+	tmp_log_browse.py
+	tmp_one_more.py
+	ui-tui/src/monitoring-dashboard.tsx
+	verify_batch3.py
+	verify_continue.py
+	verify_final.py
+	verify_final_batch.py
+
+no changes added to commit (use "git add" and/or "git commit -a")
+[Tue Jun 16 09:00:01 PM CEST 2026] COMMIT OK
+[Tue Jun 16 09:00:07 PM CEST 2026] PULL/REBASE FAILED — needs manual conflict resolution
+

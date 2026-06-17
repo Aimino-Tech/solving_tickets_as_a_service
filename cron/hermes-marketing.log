@@ -715,3 +715,283 @@ Daily check: 235 planned / 0 pending / 0 ReadyForBrowser / 20 posted
 Ready to post now: 136 items with verified URLs
 Need threads found: 99 items
 [Mon Jun 15 05:05:02 PM CEST 2026] DONE
+[Tue Jun 16 09:00:01 AM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-16):
+   📋 planned: 237
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 4 (xdn4 - J0llibee_yummy): 43 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+   Profile 3 (xdn3 - ProShame): 1 items
+
+   📋 planned WITH URLs (ready to post): 138
+   📋 planned WITHOUT URLs (need threads): 99
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT028 on Profile 4 (xdn4 - J0llibee_yummy)
+   URL: https://old.reddit.com/r/LocalLLaMA/ (when accessible)
+
+Daily check: 237 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 138 items with verified URLs
+Need threads found: 99 items
+[Tue Jun 16 09:00:02 AM CEST 2026] DONE
+[Tue Jun 16 09:05:01 AM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-16):
+   📋 planned: 237
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 4 (xdn4 - J0llibee_yummy): 43 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+   Profile 3 (xdn3 - ProShame): 1 items
+
+   📋 planned WITH URLs (ready to post): 138
+   📋 planned WITHOUT URLs (need threads): 99
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT028 on Profile 4 (xdn4 - J0llibee_yummy)
+   URL: https://old.reddit.com/r/LocalLLaMA/ (when accessible)
+
+Daily check: 237 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 138 items with verified URLs
+Need threads found: 99 items
+[Tue Jun 16 09:05:03 AM CEST 2026] DONE
+[Tue Jun 16 10:05:01 AM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-16):
+   📋 planned: 237
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 4 (xdn4 - J0llibee_yummy): 43 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+   Profile 3 (xdn3 - ProShame): 1 items
+
+   📋 planned WITH URLs (ready to post): 138
+   📋 planned WITHOUT URLs (need threads): 99
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT028 on Profile 4 (xdn4 - J0llibee_yummy)
+   URL: https://old.reddit.com/r/LocalLLaMA/ (when accessible)
+
+Daily check: 237 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 138 items with verified URLs
+Need threads found: 99 items
+[Tue Jun 16 10:05:03 AM CEST 2026] DONE
+[Tue Jun 16 11:05:01 AM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-16):
+   📋 planned: 237
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 4 (xdn4 - J0llibee_yummy): 43 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+   Profile 3 (xdn3 - ProShame): 1 items
+
+   📋 planned WITH URLs (ready to post): 138
+   📋 planned WITHOUT URLs (need threads): 99
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT028 on Profile 4 (xdn4 - J0llibee_yummy)
+   URL: https://old.reddit.com/r/LocalLLaMA/ (when accessible)
+
+Daily check: 237 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 138 items with verified URLs
+Need threads found: 99 items
+[Tue Jun 16 11:05:02 AM CEST 2026] DONE
+[Tue Jun 16 12:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-16):
+   📋 planned: 237
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 4 (xdn4 - J0llibee_yummy): 43 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+   Profile 3 (xdn3 - ProShame): 1 items
+
+   📋 planned WITH URLs (ready to post): 138
+   📋 planned WITHOUT URLs (need threads): 99
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT028 on Profile 4 (xdn4 - J0llibee_yummy)
+   URL: https://old.reddit.com/r/LocalLLaMA/ (when accessible)
+
+Daily check: 237 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 138 items with verified URLs
+Need threads found: 99 items
+[Tue Jun 16 12:05:03 PM CEST 2026] DONE
+[Tue Jun 16 01:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-16):
+   📋 planned: 237
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 4 (xdn4 - J0llibee_yummy): 43 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+   Profile 3 (xdn3 - ProShame): 1 items
+
+   📋 planned WITH URLs (ready to post): 138
+   📋 planned WITHOUT URLs (need threads): 99
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT028 on Profile 4 (xdn4 - J0llibee_yummy)
+   URL: https://old.reddit.com/r/LocalLLaMA/ (when accessible)
+
+Daily check: 237 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 138 items with verified URLs
+Need threads found: 99 items
+[Tue Jun 16 01:05:02 PM CEST 2026] DONE
+[Tue Jun 16 02:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-16):
+   📋 planned: 237
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 4 (xdn4 - J0llibee_yummy): 43 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+   Profile 3 (xdn3 - ProShame): 1 items
+
+   📋 planned WITH URLs (ready to post): 138
+   📋 planned WITHOUT URLs (need threads): 99
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT028 on Profile 4 (xdn4 - J0llibee_yummy)
+   URL: https://old.reddit.com/r/LocalLLaMA/ (when accessible)
+
+Daily check: 237 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 138 items with verified URLs
+Need threads found: 99 items
+[Tue Jun 16 02:05:03 PM CEST 2026] DONE
+[Tue Jun 16 03:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+/home/agent/Documents/hermes-agent/cron/hermes_marketing_check.py:299: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  today = datetime.utcnow().strftime("%Y-%m-%d")
+📊 Sheet scan (2026-06-16):
+   📋 planned: 237
+   ⏳ pending (needs thread): 0
+   🖥️  ReadyForBrowser: 0
+   ✅ already posted: 20
+
+📋 Pending by profile:
+   Profile 5 (xdn8 - Love-KCF): 49 items
+   Profile 4 (xdn4 - J0llibee_yummy): 43 items
+   Profile 2 (xdn2 - Slow-Guy-Chiu): 42 items
+   Profile 3 (xdn3 - Pro_Shame): 35 items
+   Profile 1 (xdn1 - CommentAwkward3993): 24 items
+   Love_KCF: 16 items
+   Profile 5 (xdn5 - Love-KCF): 15 items
+   unassigned: 6 items
+   J0llibee_yummy: 6 items
+   Profile 3 (xdn3 - ProShame): 1 items
+
+   📋 planned WITH URLs (ready to post): 138
+   📋 planned WITHOUT URLs (need threads): 99
+   ⏳ pending items (need threads): 0
+
+🔍 Next actionable: OT028 on Profile 4 (xdn4 - J0llibee_yummy)
+   URL: https://old.reddit.com/r/LocalLLaMA/ (when accessible)
+
+Daily check: 237 planned / 0 pending / 0 ReadyForBrowser / 20 posted
+Ready to post now: 138 items with verified URLs
+Need threads found: 99 items
+[Tue Jun 16 03:05:04 PM CEST 2026] DONE
+[Tue Jun 16 04:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+ERROR: Cannot import CampaignStore — No module named 'marketing'
+[Tue Jun 16 05:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+ERROR: Cannot import CampaignStore — No module named 'marketing'
+[Wed Jun 17 09:00:01 AM CEST 2026] TICK — working hours, checking sheet...
+ERROR: Cannot import CampaignStore — No module named 'marketing'
+[Wed Jun 17 09:05:01 AM CEST 2026] TICK — working hours, checking sheet...
+ERROR: Cannot import CampaignStore — No module named 'marketing'
+[Wed Jun 17 10:05:01 AM CEST 2026] TICK — working hours, checking sheet...
+ERROR: Cannot import CampaignStore — No module named 'marketing'
+[Wed Jun 17 11:05:01 AM CEST 2026] TICK — working hours, checking sheet...
+ERROR: Cannot import CampaignStore — No module named 'marketing'
+[Wed Jun 17 12:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+ERROR: Cannot import CampaignStore — No module named 'marketing'
+[Wed Jun 17 01:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+ERROR: Cannot import CampaignStore — No module named 'marketing'
+[Wed Jun 17 02:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+ERROR: Cannot import CampaignStore — No module named 'marketing'
+[Wed Jun 17 03:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+ERROR: Cannot import CampaignStore — No module named 'marketing'
+[Wed Jun 17 04:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+ERROR: Cannot import CampaignStore — No module named 'marketing'
+[Wed Jun 17 05:05:01 PM CEST 2026] TICK — working hours, checking sheet...
+ERROR: Cannot import CampaignStore — No module named 'marketing'

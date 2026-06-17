@@ -1,0 +1,563 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "github-npm-traffic",
+    "title": "GitHub & npm Traffic",
+    "description": "Open-source adoption metrics: GitHub stars, npm downloads, growth rates, and trend predictions for Aimino's OSS packages.",
+    "tags": ["hermes", "marketing", "traffic"],
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "weekStart": "monday",
+    "refresh": "15m",
+    "schemaVersion": 38,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "GitHub Stars",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "fixed" },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 25,
+              "gradientMode": "opacity",
+              "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "pointSize": 3,
+              "scaleDistribution": { "type": "linear" },
+              "showPoints": "auto",
+              "spanNulls": true,
+              "stacking": { "group": "A", "mode": "none" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "short",
+            "decimals": 0,
+            "color": { "fixedColor": "#6e5494", "mode": "fixed" }
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": { "calcs": ["max", "mean", "last", "diff"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+          "tooltip": { "mode": "multi", "sort": "none" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT DATE(collected_at) AS time, SUM(github_stars) AS value FROM metrics WHERE $__timeFilter(collected_at) GROUP BY DATE(collected_at) ORDER BY time",
+            "format": "time_series",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "npm Downloads",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "fixed" },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 25,
+              "gradientMode": "opacity",
+              "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "pointSize": 3,
+              "scaleDistribution": { "type": "linear" },
+              "showPoints": "auto",
+              "spanNulls": true,
+              "stacking": { "group": "A", "mode": "none" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "short",
+            "decimals": 0,
+            "color": { "fixedColor": "#cb3837", "mode": "fixed" }
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": { "calcs": ["max", "mean", "last", "diff"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+          "tooltip": { "mode": "multi", "sort": "none" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT DATE(collected_at) AS time, SUM(npm_downloads) AS value FROM metrics WHERE $__timeFilter(collected_at) GROUP BY DATE(collected_at) ORDER BY time",
+            "format": "time_series",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Current Stars",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 3, "x": 0, "y": 8 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "fixed" },
+            "noValue": "0",
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "text", "value": null },
+              { "color": "purple", "value": 1 }
+            ]},
+            "unit": "short",
+            "decimals": 0,
+            "color": { "fixedColor": "#6e5494", "mode": "fixed" }
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT 'GitHub Stars' AS metric, COALESCE(SUM(github_stars), 0) AS value FROM metrics WHERE collected_at = (SELECT MAX(collected_at) FROM metrics)",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Stars Growth (30d)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 3, "x": 3, "y": 8 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "noValue": "+0",
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0 },
+              { "color": "green", "value": 1 }
+            ]},
+            "unit": "short",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT COALESCE(MAX(github_stars), 0) - COALESCE(MIN(github_stars), 0) AS value FROM metrics WHERE collected_at >= DATE('now', '-30 days')",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Current Downloads",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 3, "x": 6, "y": 8 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "fixed" },
+            "noValue": "0",
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "text", "value": null },
+              { "color": "red", "value": 1 }
+            ]},
+            "unit": "short",
+            "decimals": 0,
+            "color": { "fixedColor": "#cb3837", "mode": "fixed" }
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT 'npm Downloads' AS metric, COALESCE(SUM(npm_downloads), 0) AS value FROM metrics WHERE collected_at = (SELECT MAX(collected_at) FROM metrics)",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Downloads Growth (30d)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 3, "x": 9, "y": 8 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "noValue": "+0",
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0 },
+              { "color": "green", "value": 100 }
+            ]},
+            "unit": "short",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT COALESCE(MAX(npm_downloads), 0) - COALESCE(MIN(npm_downloads), 0) AS value FROM metrics WHERE collected_at >= DATE('now', '-30 days')",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Stars Growth Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 3, "x": 12, "y": 8 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "noValue": "0%",
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0 },
+              { "color": "yellow", "value": 10 },
+              { "color": "green", "value": 25 }
+            ]},
+            "unit": "percent",
+            "decimals": 1
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "WITH star_data AS (SELECT MIN(github_stars) AS old_stars, MAX(github_stars) AS new_stars FROM metrics WHERE collected_at >= DATE('now', '-30 days')) SELECT CASE WHEN old_stars > 0 THEN ROUND(100.0 * (new_stars - old_stars) / old_stars, 1) ELSE 0 END AS value FROM star_data",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Download Growth Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 3, "x": 15, "y": 8 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "noValue": "0%",
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0 },
+              { "color": "yellow", "value": 25 },
+              { "color": "green", "value": 50 }
+            ]},
+            "unit": "percent",
+            "decimals": 1
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "WITH dl_data AS (SELECT MIN(npm_downloads) AS old_dl, MAX(npm_downloads) AS new_dl FROM metrics WHERE collected_at >= DATE('now', '-30 days')) SELECT CASE WHEN old_dl > 0 THEN ROUND(100.0 * (new_dl - old_dl) / old_dl, 1) ELSE 0 END AS value FROM dl_data",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Stars 7d Forecast",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 3, "x": 18, "y": 8 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "noValue": "0",
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "text", "value": null },
+              { "color": "purple", "value": 1 }
+            ]},
+            "unit": "short",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "WITH daily AS (SELECT DATE(collected_at) AS d, MAX(github_stars) AS s FROM metrics GROUP BY d), trend AS (SELECT AVG(s) AS avg_stars, (MAX(s) - MIN(s)) / NULLIF(COUNT(*), 1) AS daily_delta FROM daily WHERE d >= DATE('now', '-14 days')) SELECT CAST(ROUND((SELECT s FROM daily ORDER BY d DESC LIMIT 1) + 7 * daily_delta) AS INTEGER) AS value FROM trend",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Downloads 7d Forecast",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 3, "x": 21, "y": 8 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "noValue": "0",
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "text", "value": null },
+              { "color": "red", "value": 1 }
+            ]},
+            "unit": "short",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "WITH daily AS (SELECT DATE(collected_at) AS d, MAX(npm_downloads) AS dl FROM metrics GROUP BY d), trend AS (SELECT AVG(dl) AS avg_dl, (MAX(dl) - MIN(dl)) / NULLIF(COUNT(*), 1) AS daily_delta FROM daily WHERE d >= DATE('now', '-14 days')) SELECT CAST(ROUND((SELECT dl FROM daily ORDER BY d DESC LIMIT 1) + 7 * daily_delta) AS INTEGER) AS value FROM trend",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Combined Metrics Table",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "custom": { "align": "auto", "displayMode": "auto" },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "none"
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "collected_at" }, "properties": [{ "id": "custom.displayMode", "value": "dateTimeWithMs" }] },
+            { "matcher": { "id": "byName", "options": "github_stars" }, "properties": [{ "id": "color", "value": { "fixedColor": "#6e5494", "mode": "fixed" } }, { "id": "custom.displayMode", "value": "color-background" }] },
+            { "matcher": { "id": "byName", "options": "npm_downloads" }, "properties": [{ "id": "color", "value": { "fixedColor": "#cb3837", "mode": "fixed" } }, { "id": "custom.displayMode", "value": "color-background" }] }
+          ]
+        },
+        "options": {
+          "cellHeight": "sm",
+          "footer": { "countRows": false, "enablePagination": true, "fields": "", "reducer": ["sum"] },
+          "showHeader": true,
+          "sortBy": [{ "desc": true, "displayName": "collected_at" }]
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT m.collected_at, c.name AS campaign, m.github_stars, m.npm_downloads, m.x_mentions, m.sheet_row_count FROM metrics m JOIN campaigns c ON c.id = m.campaign_id WHERE $__timeFilter(m.collected_at) ORDER BY m.collected_at DESC LIMIT 100",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Stars vs Downloads (Dual Axis)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "opacity",
+              "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "pointSize": 3,
+              "scaleDistribution": { "type": "linear" },
+              "showPoints": "never",
+              "spanNulls": true,
+              "stacking": { "group": "A", "mode": "none" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "short"
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "github_stars" }, "properties": [
+              { "id": "color", "value": { "fixedColor": "#6e5494", "mode": "fixed" } },
+              { "id": "custom.axisPlacement", "value": "left" },
+              { "id": "custom.fillOpacity", "value": 20 },
+              { "id": "custom.lineWidth", "value": 3 }
+            ]},
+            { "matcher": { "id": "byName", "options": "npm_downloads" }, "properties": [
+              { "id": "color", "value": { "fixedColor": "#cb3837", "mode": "fixed" } },
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "custom.fillOpacity", "value": 10 },
+              { "id": "custom.lineStyle", "value": { "fill": "solid", "dash": [10, 5] } },
+              { "id": "custom.lineWidth", "value": 2 }
+            ]}
+          ]
+        },
+        "options": {
+          "legend": { "calcs": ["max", "last", "diff"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+          "tooltip": { "mode": "multi", "sort": "none" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT DATE(collected_at) AS time, SUM(github_stars) AS github_stars, SUM(npm_downloads) AS npm_downloads FROM metrics WHERE $__timeFilter(collected_at) GROUP BY DATE(collected_at) ORDER BY time",
+            "format": "time_series",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Campaign vs Metrics Correlation",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "custom": { "align": "auto", "displayMode": "auto" },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "none"
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "star_growth" }, "properties": [{ "id": "unit", "value": "short" }, { "id": "decimals", "value": 0 }] },
+            { "matcher": { "id": "byName", "options": "dl_growth" }, "properties": [{ "id": "unit", "value": "short" }, { "id": "decimals", "value": 0 }] }
+          ]
+        },
+        "options": {
+          "cellHeight": "sm",
+          "footer": { "countRows": false, "enablePagination": false, "fields": "", "reducer": ["sum"] },
+          "showHeader": true,
+          "sortBy": [{ "desc": true, "displayName": "star_growth" }]
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT c.name AS campaign, c.status, COUNT(a.id) AS total_actions, COALESCE(MAX(m.github_stars), 0) AS github_stars, COALESCE(MAX(m.npm_downloads), 0) AS npm_downloads, (COALESCE(MAX(m.github_stars), 0) - COALESCE(MIN(m.github_stars), 0)) AS star_growth, (COALESCE(MAX(m.npm_downloads), 0) - COALESCE(MIN(m.npm_downloads), 0)) AS dl_growth FROM campaigns c LEFT JOIN actions a ON a.campaign_id = c.id LEFT JOIN metrics m ON m.campaign_id = c.id GROUP BY c.id, c.name, c.status ORDER BY star_growth DESC",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "datasource",
+          "type": "datasource",
+          "query": "grafana-duckdb-datasource",
+          "current": { "value": "P0DuckDB" },
+          "hide": 2,
+          "refresh": 1,
+          "skipUrlSync": false
+        },
+        {
+          "name": "campaign",
+          "type": "query",
+          "query": "SELECT DISTINCT c.name FROM campaigns c ORDER BY c.name",
+          "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+          "current": { "selected": true, "text": "All", "value": "$__all" },
+          "hide": 0,
+          "includeAll": true,
+          "multi": false,
+          "refresh": 2,
+          "sort": 1,
+          "skipUrlSync": false,
+          "allValue": ".*",
+          "definition": "SELECT DISTINCT name FROM campaigns ORDER BY name"
+        }
+      ]
+    },
+    "links": [
+      { "title": "ROI Overview", "type": "dashboards", "tags": ["hermes", "roi"], "keepTime": true },
+      { "title": "Marketing Funnel", "type": "dashboards", "tags": ["hermes", "funnel"], "keepTime": true },
+      { "title": "Platform Engagement", "type": "dashboards", "tags": ["hermes", "platform"], "keepTime": true },
+      { "title": "Sentiment Analysis", "type": "dashboards", "tags": ["hermes", "sentiment"], "keepTime": true }
+    ]
+  }
+}

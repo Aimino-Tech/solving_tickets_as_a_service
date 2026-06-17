@@ -1,0 +1,52 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Grafana Datasource: Marketing DuckDB
+# ──────────────────────────────────────────────────────────────────────────────
+# Connects to the Hermes marketing SQLite database via the DuckDB Grafana
+# plugin, which reads SQLite files natively.
+#
+# Engine: DuckDB (community plugin)
+#   - Installed via GF_INSTALL_PLUGINS env var
+#   - Reads the Hermes marketing database directly
+#   - Supports full SQL including window functions and CTEs
+#
+# Fallback: If the DuckDB plugin is unavailable, use the companion Python
+#   bridge service (sqlite-bridge/) which exposes the same data via
+#   Grafana's built-in Simple JSON datasource.
+#
+# See docker-compose.grafana.yml for the service definition.
+# ──────────────────────────────────────────────────────────────────────────────
+
+apiVersion: 1
+
+datasources:
+  - name: Marketing DuckDB
+    type: grafana-duckdb-datasource
+    access: proxy
+    isDefault: true
+    uid: P0DuckDB
+    jsonData:
+      # Path inside the Grafana container — the DB is mounted at /data/marketing/
+      path: /data/marketing/campaigns.db
+      # DuckDB-specific options
+      options:
+        # Enable the sqlite, excel, and parquet DuckDB extensions
+        extensions:
+          - sqlite
+          - parquet
+        # Thread count for parallel queries
+        threads: 4
+        # Memory limit (256 MB for the sidecar)
+        memory_limit: "256MB"
+        # Read-only mode prevents accidental writes
+        read_only: true
+    editable: false
+
+  - name: Marketing JSON Bridge
+    type: grafana-simple-json-datasource
+    access: proxy
+    uid: P0JSONBridge
+    isDefault: false
+    jsonData:
+      # URL of the Python bridge service (defined in docker-compose.grafana.yml)
+      url: http://marketing-bridge:8080
+    editable: false

@@ -1,0 +1,9 @@
+name: campaign_analytics
+version: 1.0.0
+description: "Campaign analytics and metrics tracking. Logs posts, comments, engagement to local DB and optional Langfuse dashboard. Tracks agent costs and ROI."
+author: Hermes-Agent
+kind: backend
+provides_tools:
+  - analytics_log
+  - analytics_report
+  - analytics_dashboard

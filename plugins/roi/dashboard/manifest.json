@@ -1,0 +1,14 @@
+{
+  "name": "roi-dashboard",
+  "label": "ROI",
+  "description": "Marketing ROI Dashboard — campaign performance, engagement metrics, sentiment, and traffic analytics",
+  "icon": "BarChart3",
+  "version": "1.0.0",
+  "tab": {
+    "path": "/roi",
+    "position": "after:analytics"
+  },
+  "entry": "dist/index.js",
+  "css": null,
+  "api": "plugin_api.py"
+}

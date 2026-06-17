@@ -1,0 +1,42 @@
+# Reddit accounts monitored by shadowban_monitor.py
+# Each entry: username, associated profile, email
+# Status key: used by the monitor script to decide which accounts to check
+#   active: currently monitored and checked each run
+#   archived: no longer monitored, skipped during checks
+#   pending_setup: account not yet created, skipped
+
+accounts:
+  - username: "CommentAwkward3993"
+    profile: "Default"
+    email: "xdn1@aimino.de"
+    status: "active"
+
+  - username: "Slow-Guy-Chiu"
+    profile: "Profile 2"
+    email: "xdn2@aimino.de"
+    status: "active"
+
+  - username: "Pro_Shame"
+    profile: "Profile 3"
+    email: "xdn3@aimino.de"
+    status: "active"
+
+  - username: "J0llibee_yummy"
+    profile: "Profile 4"
+    email: "xdn4@aimino.de"
+    status: "active"
+
+  - username: "Love-KCF"
+    profile: "Profile 4"
+    email: "xdn4@aimino.de"
+    status: "active"
+
+  - username: null
+    profile: "Profile 5"
+    email: "xdn5@aimino.de"
+    status: "pending_setup"
+
+  - username: null
+    profile: "Profile 6"
+    email: "xdn6@aimino.de"
+    status: "pending_setup"

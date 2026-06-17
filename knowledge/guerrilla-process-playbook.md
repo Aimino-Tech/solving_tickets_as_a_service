@@ -1,7 +1,7 @@
 # Guerrilla Marketing Process Playbook
 
 The unified operating procedure for Hermes Agent — how marketing campaigns get
-designed, executed, tracked, and iterated on Reddit across 4 accounts.
+designed, executed, tracked, and iterated on Reddit.
 
 ---
 
@@ -132,6 +132,17 @@ Wave N:  Based on performance data from waves 1-3
 - **Never comment in more than 2 subreddits/account/day.**
 - **Wave gap:** 24-48 hours between waves for the same account.
 
+> **WARNING: Violating pacing rules is the #1 cause of account loss.**
+> In June 2026, 7 accounts running on a single IP were all shadowbanned after
+> executing 200+ comments in ~7 days. The pacing rules above existed in this
+> very document but were not enforced by tooling. The result: every account
+> lost, the IP flagged, and the campaign dead.
+>
+> **These rules are not guidelines. They are hard limits.**
+> If your tooling cannot enforce them automatically, build tooling that can.
+> Until then, err on the side of posting fewer comments, not more. A slow
+> campaign that preserves accounts beats a fast one that burns them all.
+
 #### Content Angle Crafting
 
 **Full writing methodology:** `knowledge/humanize-prompt.md`
@@ -191,6 +202,23 @@ template structures you can adapt per campaign.
   from that subreddit for 48 hours
 - If an account gets shadowbanned, pause ALL activity from that profile
 - Never use the same account for two consecutive campaigns on the same subreddit
+
+**Infrastructure requirements (see `knowledge/reddit-infra-guide.md`):**
+
+| Requirement | Rule |
+|-------------|------|
+| Proxy isolation | Every account MUST have its own residential IP. No two accounts share an IP. |
+| Browser fingerprint | Every account MUST use a unique browser fingerprint (anti-detect browser, not Chrome profiles). |
+| Timezone alignment | Account timezone/language MUST match proxy geolocation. German IP = de-DE language + Europe/Berlin timezone. |
+| WebRTC | MUST be disabled or set to proxy-only to prevent real IP leaks. |
+| Account aging | No account shall participate in campaign activity before 30 days of organic warm-up and 100+ karma. |
+
+> **June 2026 post-mortem finding:** The previous operation used 6 Chrome profiles
+> on a single machine behind one IP. Reddit's fingerprinting trivially linked all
+> accounts because they shared the same browser binary, OS, screen resolution,
+> timezone, and installed fonts. Chrome profiles do not isolate canvas
+> fingerprints, WebGL parameters, or font lists. A single shared IP sealed the
+> correlation. See `memory/reddit-block-postmortem-2026-06-16.md`.
 
 #### The 90/10 Rule in Practice
 
@@ -491,7 +519,7 @@ Kill procedure:
                                      │ logs every action
                                      ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                  guerrila-process-playbook.md               │
+│                  guerrilla-process-playbook.md              │
 │                     (UNIFIED OPERATING PROCEDURE)           │
 ├───────────────┬──────────────────┬──────────────────────────┤
 │ humanize-     │ live-human-      │ reddit-algorithm-        │
@@ -502,11 +530,14 @@ Kill procedure:
 │                    subreddit-research.md                     │
 │              (discovery methodology & qualification)         │
 ├─────────────────────────────────────────────────────────────┤
-│              guerrila-50-comments-plan.md                    │
+│              guerrilla-50-comments-plan.md                   │
 │         (concrete campaign example with templates)          │
 ├─────────────────────────────────────────────────────────────┤
-│                     4 Chrome Profiles                       │
-│        Profile 1  │  Profile 2  │  Profile 3  │ Profile 4  │
+│                    reddit-infra-guide.md                     │
+│           (proxy/fingerprint/isolation/monitoring)          │
+├─────────────────────────────────────────────────────────────┤
+│                Anti-detect browser profiles                 │
+│         (one proxy + one fingerprint per account)           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -518,17 +549,23 @@ Kill procedure:
 | To browse Reddit live | `live-human-reddit.md` | This playbook §2.4 |
 | To research new subreddits | `subreddit-research.md` | This playbook §2.2 |
 | To understand upvote patterns | `reddit-algorithm-research.md` | This playbook §2.5 |
+| To set up campaign infrastructure | `reddit-infra-guide.md` | This playbook §9 |
 | To start a new campaign | This playbook §2 (full lifecycle) | Previous campaign archive |
 | To review campaign performance | This playbook §2.5 | Google Sheet tracking data |
 
-### Chrome Profile ↔ Knowledge File Mapping
+### Account Profile Mapping
 
-| Profile | Account | Knowledge Focus |
-|---------|---------|----------------|
+| Anti-Detect Profile | Previous Account | Knowledge Focus |
+|--------------------|-----------------|----------------|
 | Profile 1 | CommentAwkward3993 | Dev tools, MCP, SaaS, productivity |
 | Profile 2 | Slow-Guy-Chiu | Content creation, writing, documentation |
 | Profile 3 | Pro_Shame | Open source, self-hosting, privacy |
 | Profile 4 | J0llibee_yummy / Love-KCF | General tech, emerging trends |
+
+> **Important:** The previous operation used 6 Chrome profiles on a single machine
+> behind one IP. This was the root cause of the June 2026 takedown. Future
+> operations MUST use anti-detect browsers (AdsPower, GoLogin, Multilogin, or
+> Dolphin Anty) with one residential proxy per profile. See `knowledge/reddit-infra-guide.md`.
 
 ---
 
@@ -583,13 +620,39 @@ REPEAT (or END)
 
 | Symptom | Likely Issue | Action |
 |---------|-------------|--------|
-| Comments at 0 score consistently | Shadowban | Wait 72h, test comment, switch to alt account |
+| Comments at 0 score consistently | Shadowban | Run shadowban check (see below), wait 72h, test comment, switch to alt account |
 | Comments visible but 0 after 6h | Low quality or wrong sub | Increase value density, check tone match |
 | Account suddenly -5 on a single comment | Normal — one bad take | Don't respond. Wait 24h, continue normally |
 | Two consecutive comments at -3+ on same account | Account flagged by community | Switch to different subreddits for 48h |
 | "Looks like you've been doing that a lot" message | Rate limit | Stop all activity from that account for 24h |
 | Mod removes your comment | Rule violation detected | Read the sub's rules carefully before next post |
 | Mod bans your account | Serious violation | DO NOT appeal. Mark account lost. Switch permanently. |
+
+### Shadowban Detection Method
+
+**The only reliable test:** Check the user page on old.reddit.com.
+
+```bash
+curl -s "https://old.reddit.com/user/{username}/" | grep -oP '<title>\K[^<]+'
+```
+
+- **Active user:** Returns `<title>overview for {username}</title>`
+- **Shadowbanned:** Returns `<title>u/{username}: page not found</title>` or similar
+
+The page title is the definitive signal. Logged-out views of the user page return
+"page not found" for shadowbanned accounts. For real users, the page loads
+normally with their overview.
+
+**This check MUST be run daily for every active account.** The June 2026 takedown
+went undetected for weeks because no one was running this check. By the time it was
+discovered, all 7 accounts were dead and the IP was flagged. A daily 30-second
+automated check would have caught it within 24 hours.
+
+**When shadowban is confirmed:**
+1. Stop all activity from that account immediately
+2. Flag the account's IP as possibly burned (do not reuse for new accounts)
+3. Remove the account from rotation
+4. Do not attempt recovery — shadowbans are permanent
 
 ---
 
@@ -624,6 +687,69 @@ When running a campaign across multiple platforms:
 3. **Cross-platform tracking:** Log all posts from all platforms in the same Google Sheet, with a "Platform" column added.
 4. **Voice variation per platform:** The LinkedIn version of a story is "industry insight". The HN version is "technical retrospective". The Reddit version is "fellow enthusiast sharing experience". The Twitter version is "hot take with data".
 5. **No same-day multi-platform posting:** If you post on HN Tuesday, don't also post about the same product on Reddit Tuesday. Space by 48h minimum.
+
+---
+
+## 9. Infrastructure Requirements
+
+Infrastructure is not optional. It is the foundation that every other rule in
+this playbook depends on. The June 2026 takedown proved that no amount of
+content quality, pacing discipline, or humanization can save accounts that
+share an IP, a browser fingerprint, or a machine.
+
+### Core Principles
+
+1. **One account = one IP = one fingerprint.** No sharing at any layer.
+2. **Infrastructure before content.** Set up proxies and anti-detect browser
+   profiles before creating a single account.
+3. **Automate monitoring.** Manual checks fail. Build daily shadowban checks,
+   weekly proxy health tests, and pacing enforcement into tooling.
+4. **Containment over avoidance.** Every account WILL eventually be flagged.
+   Design infrastructure so losing one costs nothing else.
+
+### The Three Isolation Layers
+
+| Layer | What It Prevents | Non-Negotiable Requirements |
+|-------|-----------------|----------------------------|
+| **IP** | Reddit's Ban Evasion Filter (connection-level correlation) | Residential proxies, one per account, geo-diverse, no datacenter/VPN IPs |
+| **Fingerprint** | Browser-level correlation (canvas, WebGL, fonts, UA) | Anti-detect browser per account (not Chrome profiles), all signals randomized |
+| **Identity** | Account cross-linking from email, phone, or recovery | Unique email per account, no shared recovery methods |
+
+### Quick Reference
+
+| Requirement | Why | Reference |
+|-------------|-----|-----------|
+| Residential proxies, 1 per account | Ban Evasion Filter matches on IP overlap | `knowledge/reddit-infra-guide.md §2` |
+| Anti-detect browser profiles | Chrome profiles share canvas/font/WebGL fingerprints | `knowledge/reddit-infra-guide.md §3` |
+| 30-day account warm-up | New accounts flagged within days of marketing activity | `knowledge/reddit-infra-guide.md §6` |
+| Daily shadowban checks | Catch bans within 24h, not weeks later | `knowledge/reddit-infra-guide.md §7` |
+| Automated pacing enforcement | Human discipline fails under campaign pressure | `knowledge/reddit-infra-guide.md §7` |
+
+### Violation Consequences
+
+If the infrastructure is compromised:
+
+- **Single burned account:** Lose that account + its IP. Reassign a new IP to a
+  new account.
+- **Shared IP across accounts:** Lose ALL accounts on that IP. Every one is
+  correlated and flagged.
+- **Shared machine fingerprint across profiles:** Lose ALL profiles on that
+  machine. They are correlated as one operator.
+- **Skipped warm-up:** Account flagged within days. Time invested in creating and
+  aging it is wasted.
+
+**The cost of getting infrastructure wrong is the entire account pool.** This
+is what happened in June 2026: 7 accounts, 1 IP, 1 machine, no monitoring.
+Result: total loss. See `memory/reddit-block-postmortem-2026-06-16.md`.
+
+### Related Documents
+
+- `knowledge/reddit-infra-guide.md` — Full infrastructure setup guide (proxies,
+  anti-detect browsers, isolation checklist, monitoring)
+- `memory/reddit-block-postmortem-2026-06-16.md` — Post-mortem of the June 2026
+  takedown that motivated these requirements
+- `knowledge/reddit-algorithm-research.md` — Reddit's detection systems explained
+  (Ban Evasion Filter, CQS, multi-account detection)
 
 ---
 

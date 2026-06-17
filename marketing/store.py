@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from hermes_constants import get_hermes_home
+from marketing.roi_arch import SCHEMA_EXTENSIONS_SQL
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,25 @@ CREATE INDEX IF NOT EXISTS idx_actions_platform
     ON actions(platform);
 CREATE INDEX IF NOT EXISTS idx_metrics_campaign
     ON metrics(campaign_id);
+
+CREATE TABLE IF NOT EXISTS cron_job_log (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_name        TEXT NOT NULL,
+    job_type        TEXT NOT NULL,
+    platform        TEXT,
+    status          TEXT NOT NULL,
+    started_at      TEXT NOT NULL,
+    completed_at    TEXT,
+    duration_ms     INTEGER,
+    result_summary  TEXT,
+    error_message   TEXT,
+    created_at      TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_cron_job_date
+    ON cron_job_log(started_at);
+CREATE INDEX IF NOT EXISTS idx_cron_job_status
+    ON cron_job_log(status);
 """
 
 
@@ -130,6 +150,7 @@ class CampaignStore:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA foreign_keys=ON")
         conn.executescript(_SCHEMA_SQL)
+        conn.executescript(SCHEMA_EXTENSIONS_SQL)
         conn.commit()
         self._conn = conn
 
@@ -469,6 +490,370 @@ class CampaignStore:
     def sync_from_sheet(self) -> None:
         """Stub — actual Google Sheet download is implemented in P0.6."""
         logger.warning("sync_from_sheet() called but not yet implemented (P0.6)")
+
+    # ── schema extensions ─────────────────────────────────────────────────
+
+    def execute_schema_extensions(self) -> None:
+        """Create the extension tables: funnel_events, engagement_snapshots,
+        ai_recommendations, campaign_performance."""
+        with self._lock:
+            self.conn.executescript(SCHEMA_EXTENSIONS_SQL)
+            self.conn.commit()
+
+    # ── funnel_events ──────────────────────────────────────────────────────
+
+    def insert_funnel_event(self, **kwargs: Any) -> int:
+        """Insert a funnel event. Returns the event ID.
+
+        Keyword args
+        ------------
+        campaign_id : str (required)
+        action_id : int, optional
+        platform : str, optional  (default ``""``)
+        event_type : str, optional  (default ``"awareness"``)
+        engagement_type : str, optional
+        signal_direction : str, optional  (default ``"neutral"``)
+        source_url : str, optional
+        profile_name : str, optional
+        metric_value : float, optional  (default ``1.0``)
+        metadata_json : str, optional  (default ``"{}"``)
+        occurred_at : str, optional  (default now)
+        """
+        now = _now()
+        cur = self._execute(
+            """INSERT INTO funnel_events
+               (campaign_id, action_id, platform, event_type, engagement_type,
+                signal_direction, source_url, profile_name, metric_value,
+                metadata_json, occurred_at, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                kwargs.get("campaign_id", ""),
+                kwargs.get("action_id"),
+                kwargs.get("platform", ""),
+                kwargs.get("event_type", "awareness"),
+                kwargs.get("engagement_type"),
+                kwargs.get("signal_direction", "neutral"),
+                kwargs.get("source_url"),
+                kwargs.get("profile_name"),
+                kwargs.get("metric_value", 1.0),
+                kwargs.get("metadata_json", "{}"),
+                kwargs.get("occurred_at", now),
+                now,
+            ),
+            commit=True,
+        )
+        return cur.lastrowid  # type: ignore[return-value]
+
+    def get_funnel_events(
+        self,
+        campaign_id: str,
+        since: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """List funnel events for a campaign, optionally after *since*."""
+        if since:
+            return self._fetchall(
+                "SELECT * FROM funnel_events"
+                " WHERE campaign_id = ? AND occurred_at >= ?"
+                " ORDER BY occurred_at DESC",
+                (campaign_id, since),
+            )
+        return self._fetchall(
+            "SELECT * FROM funnel_events"
+            " WHERE campaign_id = ? ORDER BY occurred_at DESC",
+            (campaign_id,),
+        )
+
+    # ── engagement_snapshots ───────────────────────────────────────────────
+
+    def insert_engagement_snapshot(self, **kwargs: Any) -> int:
+        """Insert an engagement snapshot. Returns the snapshot ID.
+
+        Keyword args
+        ------------
+        campaign_id : str (required)
+        platform : str (required)
+        snapshot_date : str (required)
+        collected_at : str, optional  (default now)
+        total_posts : int, optional  (default ``0``)
+        total_comments : int, optional  (default ``0``)
+        total_replies : int, optional  (default ``0``)
+        positive_signals : int, optional  (default ``0``)
+        neutral_signals : int, optional  (default ``0``)
+        negative_signals : int, optional  (default ``0``)
+        avg_reply_depth : float, optional  (default ``0.0``)
+        unique_interactors : int, optional  (default ``0``)
+        reply_rate : float, optional  (default ``0.0``)
+        """
+        now = _now()
+        cur = self._execute(
+            """INSERT INTO engagement_snapshots
+               (campaign_id, platform, snapshot_date, collected_at,
+                total_posts, total_comments, total_replies,
+                positive_signals, neutral_signals, negative_signals,
+                avg_reply_depth, unique_interactors, reply_rate,
+                created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                kwargs.get("campaign_id", ""),
+                kwargs.get("platform", ""),
+                kwargs.get("snapshot_date", ""),
+                kwargs.get("collected_at", now),
+                kwargs.get("total_posts", 0),
+                kwargs.get("total_comments", 0),
+                kwargs.get("total_replies", 0),
+                kwargs.get("positive_signals", 0),
+                kwargs.get("neutral_signals", 0),
+                kwargs.get("negative_signals", 0),
+                kwargs.get("avg_reply_depth", 0.0),
+                kwargs.get("unique_interactors", 0),
+                kwargs.get("reply_rate", 0.0),
+                now,
+            ),
+            commit=True,
+        )
+        return cur.lastrowid  # type: ignore[return-value]
+
+    def get_engagement_snapshots(
+        self,
+        campaign_id: str,
+        since: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """List engagement snapshots for a campaign, optionally after *since*."""
+        if since:
+            return self._fetchall(
+                "SELECT * FROM engagement_snapshots"
+                " WHERE campaign_id = ? AND snapshot_date >= ?"
+                " ORDER BY snapshot_date DESC",
+                (campaign_id, since),
+            )
+        return self._fetchall(
+            "SELECT * FROM engagement_snapshots"
+            " WHERE campaign_id = ? ORDER BY snapshot_date DESC",
+            (campaign_id,),
+        )
+
+    # ── campaign_performance ───────────────────────────────────────────────
+
+    def insert_campaign_performance(self, **kwargs: Any) -> int:
+        """Insert a campaign performance summary. Returns the row ID.
+
+        Keyword args
+        ------------
+        campaign_id : str (required)
+        computed_at : str, optional  (default now)
+        awareness_count : int, optional  (default ``0``)
+        engagement_count : int, optional  (default ``0``)
+        interest_count : int, optional  (default ``0``)
+        consideration_count : int, optional  (default ``0``)
+        conversion_count : int, optional  (default ``0``)
+        retention_count : int, optional  (default ``0``)
+        awareness_to_engagement : float, optional  (default ``0.0``)
+        engagement_to_interest : float, optional  (default ``0.0``)
+        interest_to_consideration : float, optional  (default ``0.0``)
+        consideration_to_conversion : float, optional  (default ``0.0``)
+        conversion_to_retention : float, optional  (default ``0.0``)
+        total_signals : int, optional  (default ``0``)
+        positive_signals : int, optional  (default ``0``)
+        negative_signals : int, optional  (default ``0``)
+        signal_ratio : float, optional  (default ``0.0``)
+        estimated_reach : int, optional  (default ``0``)
+        engagement_rate : float, optional  (default ``0.0``)
+        """
+        now = _now()
+        cur = self._execute(
+            """INSERT INTO campaign_performance
+               (campaign_id, computed_at,
+                awareness_count, engagement_count, interest_count,
+                consideration_count, conversion_count, retention_count,
+                awareness_to_engagement, engagement_to_interest,
+                interest_to_consideration, consideration_to_conversion,
+                conversion_to_retention,
+                total_signals, positive_signals, negative_signals,
+                signal_ratio, estimated_reach, engagement_rate,
+                created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                kwargs.get("campaign_id", ""),
+                kwargs.get("computed_at", now),
+                kwargs.get("awareness_count", 0),
+                kwargs.get("engagement_count", 0),
+                kwargs.get("interest_count", 0),
+                kwargs.get("consideration_count", 0),
+                kwargs.get("conversion_count", 0),
+                kwargs.get("retention_count", 0),
+                kwargs.get("awareness_to_engagement", 0.0),
+                kwargs.get("engagement_to_interest", 0.0),
+                kwargs.get("interest_to_consideration", 0.0),
+                kwargs.get("consideration_to_conversion", 0.0),
+                kwargs.get("conversion_to_retention", 0.0),
+                kwargs.get("total_signals", 0),
+                kwargs.get("positive_signals", 0),
+                kwargs.get("negative_signals", 0),
+                kwargs.get("signal_ratio", 0.0),
+                kwargs.get("estimated_reach", 0),
+                kwargs.get("engagement_rate", 0.0),
+                now,
+            ),
+            commit=True,
+        )
+        return cur.lastrowid  # type: ignore[return-value]
+
+    def get_campaign_performance(
+        self,
+        campaign_id: str,
+        limit: int = 1,
+    ) -> list[dict[str, Any]]:
+        """Return the latest *limit* performance rows for a campaign."""
+        return self._fetchall(
+            "SELECT * FROM campaign_performance"
+            " WHERE campaign_id = ? ORDER BY computed_at DESC LIMIT ?",
+            (campaign_id, limit),
+        )
+
+    # ── ai_recommendations ─────────────────────────────────────────────────
+
+    def insert_ai_recommendation(self, **kwargs: Any) -> int:
+        """Insert an AI recommendation. Returns the recommendation ID.
+
+        Keyword args
+        ------------
+        campaign_id : str (required)
+        recommendation_type : str (required)
+        title : str (required)
+        description : str (required)
+        rationale : str, optional  (default ``""``)
+        expected_impact : str, optional  (default ``""``)
+        confidence : float, optional  (default ``0.5``)
+        status : str, optional  (default ``"pending"``)
+        metrics_before : str, optional  (default ``"{}"``)
+        metrics_after : str, optional  (default ``"{}"``)
+        applied_at : str, optional
+        """
+        now = _now()
+        cur = self._execute(
+            """INSERT INTO ai_recommendations
+               (campaign_id, recommendation_type, title, description,
+                rationale, expected_impact, confidence, status,
+                metrics_before, metrics_after, applied_at,
+                created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                kwargs.get("campaign_id", ""),
+                kwargs.get("recommendation_type", ""),
+                kwargs.get("title", ""),
+                kwargs.get("description", ""),
+                kwargs.get("rationale", ""),
+                kwargs.get("expected_impact", ""),
+                kwargs.get("confidence", 0.5),
+                kwargs.get("status", "pending"),
+                kwargs.get("metrics_before", "{}"),
+                kwargs.get("metrics_after", "{}"),
+                kwargs.get("applied_at"),
+                now,
+                now,
+            ),
+            commit=True,
+        )
+        return cur.lastrowid  # type: ignore[return-value]
+
+    # ── cron_job_log ──────────────────────────────────────────────────────
+
+    def insert_cron_job_log(
+        self,
+        job_name: str,
+        job_type: str,
+        status: str,
+        *,
+        platform: str | None = None,
+        started_at: str | None = None,
+        completed_at: str | None = None,
+        duration_ms: int | None = None,
+        result_summary: str | None = None,
+        error_message: str | None = None,
+    ) -> int:
+        """Insert a row into ``cron_job_log``.
+
+        Returns the auto-incremented row id.
+        """
+        now = _now()
+        cur = self._execute(
+            """INSERT INTO cron_job_log
+               (job_name, job_type, platform, status,
+                started_at, completed_at, duration_ms,
+                result_summary, error_message, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                job_name,
+                job_type,
+                platform,
+                status,
+                started_at or now,
+                completed_at,
+                duration_ms,
+                result_summary,
+                error_message,
+                now,
+            ),
+            commit=True,
+        )
+        return cur.lastrowid  # type: ignore[return-value]
+
+    def update_cron_job_log(
+        self,
+        row_id: int,
+        *,
+        status: str | None = None,
+        completed_at: str | None = None,
+        duration_ms: int | None = None,
+        result_summary: str | None = None,
+        error_message: str | None = None,
+    ) -> None:
+        """Update a ``cron_job_log`` row (e.g. set status to 'completed')."""
+        updates: dict[str, object] = {}
+        if status is not None:
+            updates["status"] = status
+        if completed_at is not None:
+            updates["completed_at"] = completed_at
+        if duration_ms is not None:
+            updates["duration_ms"] = duration_ms
+        if result_summary is not None:
+            updates["result_summary"] = result_summary
+        if error_message is not None:
+            updates["error_message"] = error_message
+        if not updates:
+            return
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        params: list[object] = list(updates.values()) + [row_id]
+        self._execute(
+            f"UPDATE cron_job_log SET {set_clause} WHERE id = ?",
+            tuple(params),
+            commit=True,
+        )
+
+    def get_cron_job_log(
+        self,
+        limit: int = 20,
+        *,
+        job_type: str | None = None,
+        status: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return recent ``cron_job_log`` rows, newest first."""
+        conditions: list[str] = []
+        params: list[Any] = []
+        if job_type:
+            conditions.append("job_type = ?")
+            params.append(job_type)
+        if status:
+            conditions.append("status = ?")
+            params.append(status)
+        where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+        sql = (
+            "SELECT * FROM cron_job_log"
+            f"{where}"
+            " ORDER BY id DESC LIMIT ?"
+        )
+        params.append(limit)
+        return self._fetchall(sql, tuple(params))
 
     # ── context manager ───────────────────────────────────────────────────
 

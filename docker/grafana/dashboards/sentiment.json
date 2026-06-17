@@ -1,0 +1,398 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "sentiment",
+    "title": "Sentiment Analysis",
+    "description": "Signal direction tracking \u2014 positive, neutral, and negative engagement signals over time. Sentiment ratio and platform-level breakdown.",
+    "tags": ["hermes", "marketing", "sentiment"],
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "weekStart": "monday",
+    "refresh": "10m",
+    "schemaVersion": 38,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Signal Timeline",
+        "type": "timeseries",
+        "gridPos": { "h": 10, "w": 14, "x": 0, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 25,
+              "gradientMode": "opacity",
+              "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "pointSize": 3,
+              "scaleDistribution": { "type": "linear" },
+              "showPoints": "never",
+              "spanNulls": true,
+              "stacking": { "group": "A", "mode": "normal" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "none"
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "positive" }, "properties": [{ "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }] },
+            { "matcher": { "id": "byName", "options": "neutral" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FFB347", "mode": "fixed" } }] },
+            { "matcher": { "id": "byName", "options": "negative" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FF4444", "mode": "fixed" } }] }
+          ]
+        },
+        "options": {
+          "legend": { "calcs": ["max", "sum", "last"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+          "tooltip": { "mode": "multi", "sort": "none" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT DATE(occurred_at) AS time, signal_direction, COUNT(*) AS value FROM funnel_events WHERE $__timeFilter(occurred_at) GROUP BY DATE(occurred_at), signal_direction ORDER BY time",
+            "format": "time_series",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Signal Ratio",
+        "type": "gauge",
+        "gridPos": { "h": 5, "w": 5, "x": 14, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.25 },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "green", "value": 0.75 }
+            ]},
+            "unit": "percentunit",
+            "decimals": 2,
+            "min": 0,
+            "max": 1
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT COALESCE(AVG(signal_ratio), 0) AS value FROM campaign_performance",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Total Signals",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 5, "x": 19, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "text", "value": null },
+              { "color": "blue", "value": 1 }
+            ]},
+            "unit": "none",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT COALESCE(SUM(total_signals), 0) AS value FROM campaign_performance",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Positive Ratio",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 5, "x": 14, "y": 5 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 25 },
+              { "color": "yellow", "value": 50 },
+              { "color": "green", "value": 75 }
+            ]},
+            "unit": "percent",
+            "decimals": 1
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT CASE WHEN (COALESCE(SUM(positive_signals), 0) + COALESCE(SUM(negative_signals), 0)) > 0 THEN ROUND(100.0 * SUM(positive_signals) / (SUM(positive_signals) + SUM(negative_signals)), 1) ELSE 0 END AS value FROM campaign_performance",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Negative Count",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 5, "x": 19, "y": 5 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 20 }
+            ]},
+            "unit": "none",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT COALESCE(SUM(negative_signals), 0) AS value FROM campaign_performance",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Sentiment by Platform",
+        "type": "bargauge",
+        "gridPos": { "h": 8, "w": 10, "x": 0, "y": 10 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.25 },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "green", "value": 0.75 }
+            ]},
+            "unit": "percentunit",
+            "decimals": 2,
+            "custom": { "minVizWidth": 0, "minVizHeight": 10 }
+          },
+          "overrides": []
+        },
+        "options": {
+          "displayMode": "gradient",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "showUnfilled": true,
+          "valueMode": "text"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT e.platform, ROUND(1.0 * SUM(e.positive_signals) / NULLIF((SUM(e.positive_signals) + SUM(e.negative_signals)), 0), 2) AS value FROM engagement_snapshots e GROUP BY e.platform HAVING (SUM(e.positive_signals) + SUM(e.negative_signals)) > 0 ORDER BY value DESC",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Signal Count by Platform",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 14, "x": 10, "y": 10 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "custom": { "align": "auto", "displayMode": "auto" },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "none"
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "signal_ratio" }, "properties": [
+              { "id": "unit", "value": "percentunit" },
+              { "id": "decimals", "value": 2 },
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "color", "value": { "mode": "thresholds" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "orange", "value": 0.25 },
+                { "color": "yellow", "value": 0.5 },
+                { "color": "green", "value": 0.75 }
+              ]}}
+            ]}
+          ]
+        },
+        "options": {
+          "cellHeight": "sm",
+          "footer": { "countRows": false, "enablePagination": false, "fields": "", "reducer": ["sum"] },
+          "showHeader": true,
+          "sortBy": [{ "desc": true, "displayName": "total_signals" }]
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT c.name AS campaign, e.platform, e.total_posts, e.total_comments, e.total_replies, e.positive_signals, e.neutral_signals, e.negative_signals, e.unique_interactors, ROUND(1.0 * e.positive_signals / NULLIF((e.positive_signals + e.negative_signals), 0), 2) AS signal_ratio FROM engagement_snapshots e JOIN campaigns c ON c.id = e.campaign_id WHERE e.id IN (SELECT MAX(id) FROM engagement_snapshots GROUP BY campaign_id, platform) ORDER BY total_posts DESC LIMIT 30",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Signal Direction Distribution (All Time)",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 18 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "none",
+            "decimals": 0
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "positive" }, "properties": [{ "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }] },
+            { "matcher": { "id": "byName", "options": "neutral" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FFB347", "mode": "fixed" } }] },
+            { "matcher": { "id": "byName", "options": "negative" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FF4444", "mode": "fixed" } }] }
+          ]
+        },
+        "options": {
+          "displayLabels": ["percent", "name", "value"],
+          "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "values": ["value", "percent"] },
+          "pieType": "pie",
+          "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+          "tooltip": { "mode": "single", "sort": "desc" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT signal_direction, COUNT(*) AS value FROM funnel_events GROUP BY signal_direction ORDER BY value DESC",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Recent Signals",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 16, "x": 8, "y": 18 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "custom": { "align": "auto", "displayMode": "auto" },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "none"
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "signal_direction" }, "properties": [
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "color", "value": { "mode": "thresholds" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "green", "value": null },
+                { "color": "semi-dark-green", "value": "positive" },
+                { "color": "semi-dark-orange", "value": "neutral" },
+                { "color": "semi-dark-red", "value": "negative" }
+              ]}}
+            ]},
+            { "matcher": { "id": "byName", "options": "occurred_at" }, "properties": [{ "id": "custom.displayMode", "value": "dateTimeWithMs" }] }
+          ]
+        },
+        "options": {
+          "cellHeight": "sm",
+          "footer": { "countRows": false, "enablePagination": true, "fields": "", "reducer": ["sum"] },
+          "showHeader": true,
+          "sortBy": [{ "desc": true, "displayName": "occurred_at" }]
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT f.occurred_at, c.name AS campaign, f.platform, f.event_type, f.signal_direction, f.engagement_type, f.profile_name FROM funnel_events f JOIN campaigns c ON c.id = f.campaign_id WHERE $__timeFilter(f.occurred_at) ORDER BY f.occurred_at DESC LIMIT 50",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "datasource",
+          "type": "datasource",
+          "query": "grafana-duckdb-datasource",
+          "current": { "value": "P0DuckDB" },
+          "hide": 2,
+          "refresh": 1,
+          "skipUrlSync": false
+        },
+        {
+          "name": "signal_filter",
+          "type": "query",
+          "query": "SELECT DISTINCT signal_direction FROM funnel_events ORDER BY signal_direction",
+          "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+          "current": { "selected": true, "text": "All", "value": "$__all" },
+          "hide": 0,
+          "includeAll": true,
+          "multi": true,
+          "refresh": 2,
+          "sort": 1,
+          "skipUrlSync": false,
+          "allValue": ".*",
+          "definition": "SELECT DISTINCT signal_direction FROM funnel_events ORDER BY signal_direction"
+        }
+      ]
+    },
+    "links": [
+      { "title": "ROI Overview", "type": "dashboards", "tags": ["hermes", "roi"], "keepTime": true },
+      { "title": "Marketing Funnel", "type": "dashboards", "tags": ["hermes", "funnel"], "keepTime": true },
+      { "title": "Platform Engagement", "type": "dashboards", "tags": ["hermes", "platform"], "keepTime": true },
+      { "title": "GitHub & npm Traffic", "type": "dashboards", "tags": ["hermes", "traffic"], "keepTime": true }
+    ]
+  }
+}

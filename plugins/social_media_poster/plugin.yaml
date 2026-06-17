@@ -1,0 +1,10 @@
+name: social_media_poster
+version: 1.0.0
+description: "Auto-publish content to social media with retry/reconnect. Wraps chrome_connector with intelligent error handling, health checks, and batch posting."
+author: Hermes-Agent
+kind: backend
+provides_tools:
+  - sm_post
+  - sm_comment
+  - sm_batch_post
+  - sm_health

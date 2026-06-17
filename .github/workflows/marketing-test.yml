@@ -1,0 +1,50 @@
+name: Marketing Tests
+
+on:
+  pull_request:
+    paths:
+      - "marketing/**"
+      - "tests/marketing/**"
+      - ".github/workflows/marketing-test.yml"
+  push:
+    branches: [main]
+    paths:
+      - "marketing/**"
+      - "tests/marketing/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketing-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: |
+          uv venv .venv --python 3.11
+          source .venv/bin/activate
+          uv pip install -e ".[marketing,dev]"
+
+      - name: Download NLTK VADER lexicon
+        run: |
+          source .venv/bin/activate
+          python -c "import nltk; nltk.download('vader_lexicon', quiet=True)"
+
+      - name: Run marketing tests
+        run: |
+          source .venv/bin/activate
+          scripts/run_tests.sh tests/marketing/ -q

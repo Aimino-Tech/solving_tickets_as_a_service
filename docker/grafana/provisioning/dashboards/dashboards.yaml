@@ -1,0 +1,25 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Grafana Dashboard Provisioning
+# ──────────────────────────────────────────────────────────────────────────────
+# Auto-loads all pre-built Hermes Marketing ROI dashboards from the
+# /var/lib/grafana/dashboards directory (mounted as a read-only volume).
+#
+# Dashboards are version-controlled JSON files — edit them directly, no
+# manual Grafana export needed.  Restart Grafana (or hit the provisioning
+# API) to pick up changes.
+# ──────────────────────────────────────────────────────────────────────────────
+
+apiVersion: 1
+
+providers:
+  - name: "Hermes Marketing ROI"
+    orgId: 1
+    folder: "Marketing ROI"
+    folderUid: "marketing-roi"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

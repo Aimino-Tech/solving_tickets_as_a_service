@@ -1,0 +1,96 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# docker-compose.grafana.yml — Marketing ROI Dashboard Stack
+# ──────────────────────────────────────────────────────────────────────────────
+# Adds Grafana + SQLite bridge services to the Hermes docker-compose stack.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.grafana.yml up -d
+#
+# This starts:
+#   1. hermes-grafana     — Grafana 11.x OSS with pre-loaded dashboards
+#   2. marketing-bridge   — Python API bridge: SQLite → Grafana Simple JSON
+#
+# Access:
+#   http://localhost:3000   — Grafana (admin / hermes)
+#   http://localhost:8081   — Bridge health check
+#
+# Data:
+#   ~/.hermes/marketing/   — Mounted into both services
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: hermes-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./docker/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ~/.hermes/marketing:/data/marketing:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=hermes
+      # Install the DuckDB datasource community plugin (reads SQLite natively)
+      - GF_INSTALL_PLUGINS=https://github.com/sunangel-laser/grafana-duckdb-datasource/releases/latest/download/grafana-duckdb-datasource.zip;grafana-duckdb-datasource
+      # Also install the Simple JSON datasource (fallback via Python bridge)
+      - GF_PLUGINS_ENABLE_ALPHA=true
+      - GF_LOG_LEVEL=info
+      - GF_SERVER_HTTP_PORT=3000
+    depends_on:
+      marketing-bridge:
+        condition: service_started
+    user: "0:0"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - hermes-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  marketing-bridge:
+    build:
+      context: ./docker/grafana/sqlite-bridge
+      dockerfile: Dockerfile
+    container_name: hermes-marketing-bridge
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - ~/.hermes/marketing:/data/marketing:ro
+    environment:
+      - DB_PATH=/data/marketing/campaigns.db
+      - HOST=0.0.0.0
+      - PORT=8080
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - hermes-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  grafana-data:
+
+networks:
+  hermes-net:
+    name: hermes-net
+    driver: bridge

@@ -1,0 +1,469 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "funnel",
+    "title": "Marketing Funnel",
+    "description": "Conversion funnel visualization: awareness \u2192 engagement \u2192 interest \u2192 consideration \u2192 conversion \u2192 retention. Tracks user progression and drop-off at each stage.",
+    "tags": ["hermes", "marketing", "funnel"],
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "weekStart": "monday",
+    "refresh": "10m",
+    "schemaVersion": 38,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Funnel Overview",
+        "type": "bargauge",
+        "gridPos": { "h": 10, "w": 8, "x": 0, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "semi-dark-green", "value": null },
+              { "color": "semi-dark-blue", "value": 5 },
+              { "color": "semi-dark-purple", "value": 20 },
+              { "color": "semi-dark-orange", "value": 50 },
+              { "color": "semi-dark-red", "value": 100 }
+            ]},
+            "unit": "none",
+            "custom": { "minVizWidth": 0, "minVizHeight": 10 }
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "Awareness" }, "properties": [{ "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }] },
+            { "matcher": { "id": "byName", "options": "Engagement" }, "properties": [{ "id": "color", "value": { "fixedColor": "#5794F2", "mode": "fixed" } }] },
+            { "matcher": { "id": "byName", "options": "Interest" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } }] },
+            { "matcher": { "id": "byName", "options": "Consideration" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FF4444", "mode": "fixed" } }] },
+            { "matcher": { "id": "byName", "options": "Conversion" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FF85D0", "mode": "fixed" } }] },
+            { "matcher": { "id": "byName", "options": "Retention" }, "properties": [{ "id": "color", "value": { "fixedColor": "#B877D9", "mode": "fixed" } }] }
+          ]
+        },
+        "options": {
+          "displayMode": "gradient",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+          "showUnfilled": true,
+          "valueMode": "text"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT 'Awareness' AS stage, COALESCE(SUM(awareness_count), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "awareness"
+          },
+          {
+            "rawSql": "SELECT 'Engagement' AS stage, COALESCE(SUM(engagement_count), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "engagement"
+          },
+          {
+            "rawSql": "SELECT 'Interest' AS stage, COALESCE(SUM(interest_count), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "interest"
+          },
+          {
+            "rawSql": "SELECT 'Consideration' AS stage, COALESCE(SUM(consideration_count), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "consideration"
+          },
+          {
+            "rawSql": "SELECT 'Conversion' AS stage, COALESCE(SUM(conversion_count), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "conversion"
+          },
+          {
+            "rawSql": "SELECT 'Retention' AS stage, COALESCE(SUM(retention_count), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "retention"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "A \u2192 E Rate",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 3, "x": 8, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.1 },
+              { "color": "yellow", "value": 0.3 },
+              { "color": "green", "value": 0.5 }
+            ]},
+            "unit": "percentunit",
+            "decimals": 1
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT COALESCE(AVG(awareness_to_engagement), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "E \u2192 I Rate",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 3, "x": 11, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.1 },
+              { "color": "yellow", "value": 0.25 },
+              { "color": "green", "value": 0.4 }
+            ]},
+            "unit": "percentunit",
+            "decimals": 1
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT COALESCE(AVG(engagement_to_interest), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "I \u2192 C Rate",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 3, "x": 14, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.1 },
+              { "color": "yellow", "value": 0.2 },
+              { "color": "green", "value": 0.35 }
+            ]},
+            "unit": "percentunit",
+            "decimals": 1
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT COALESCE(AVG(interest_to_consideration), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "C \u2192 V Rate",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 3, "x": 17, "y": 0 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.05 },
+              { "color": "yellow", "value": 0.15 },
+              { "color": "green", "value": 0.25 }
+            ]},
+            "unit": "percentunit",
+            "decimals": 1
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "textMode": "auto"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT COALESCE(AVG(consideration_to_conversion), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Funnel Events Over Time",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 20,
+              "gradientMode": "none",
+              "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "pointSize": 3,
+              "scaleDistribution": { "type": "linear" },
+              "showPoints": "never",
+              "spanNulls": true,
+              "stacking": { "group": "A", "mode": "normal" },
+              "thresholdsStyle": { "mode": "off" }
+            },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "none"
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "awareness" }, "properties": [{ "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }] },
+            { "matcher": { "id": "byName", "options": "engagement" }, "properties": [{ "id": "color", "value": { "fixedColor": "#5794F2", "mode": "fixed" } }] },
+            { "matcher": { "id": "byName", "options": "conversion" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FF85D0", "mode": "fixed" } }] }
+          ]
+        },
+        "options": {
+          "legend": { "calcs": ["max", "last"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+          "tooltip": { "mode": "multi", "sort": "none" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT DATE(occurred_at) AS time, event_type, COUNT(*) AS value FROM funnel_events WHERE $__timeFilter(occurred_at) GROUP BY DATE(occurred_at), event_type ORDER BY time",
+            "format": "time_series",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Funnel Drop-off Analysis",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "custom": { "align": "auto", "displayMode": "auto" },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "none"
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "drop_off" }, "properties": [
+              { "id": "unit", "value": "percent" },
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "color", "value": { "mode": "thresholds" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "green", "value": null },
+                { "color": "orange", "value": 30 },
+                { "color": "red", "value": 60 }
+              ]}}
+            ]}
+          ]
+        },
+        "options": {
+          "cellHeight": "sm",
+          "footer": { "countRows": false, "enablePagination": false, "fields": "", "reducer": ["sum"] },
+          "showHeader": true,
+          "sortBy": [{ "desc": true, "displayName": "computed_at" }]
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT c.name AS campaign, p.computed_at, p.awareness_count, p.engagement_count, p.interest_count, p.consideration_count, p.conversion_count, p.retention_count, ROUND((1.0 - p.engagement_count * 1.0 / NULLIF(p.awareness_count, 0)) * 100, 1) AS drop_off FROM campaign_performance p JOIN campaigns c ON c.id = p.campaign_id WHERE p.id IN (SELECT MAX(id) FROM campaign_performance GROUP BY campaign_id) ORDER BY drop_off DESC",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Conversion Flow",
+        "type": "bargauge",
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 13 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "percentunit",
+            "decimals": 2,
+            "custom": { "minVizWidth": 0, "minVizHeight": 10 }
+          },
+          "overrides": []
+        },
+        "options": {
+          "displayMode": "gradient",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "orientation": "vertical",
+          "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false },
+          "showUnfilled": true,
+          "valueMode": "text"
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT 'A\u2192E' AS conversion, COALESCE(AVG(awareness_to_engagement), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "ae"
+          },
+          {
+            "rawSql": "SELECT 'E\u2192I' AS conversion, COALESCE(AVG(engagement_to_interest), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "ei"
+          },
+          {
+            "rawSql": "SELECT 'I\u2192C' AS conversion, COALESCE(AVG(interest_to_consideration), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "ic"
+          },
+          {
+            "rawSql": "SELECT 'C\u2192V' AS conversion, COALESCE(AVG(consideration_to_conversion), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "cv"
+          },
+          {
+            "rawSql": "SELECT 'V\u2192R' AS conversion, COALESCE(AVG(conversion_to_retention), 0) AS value FROM campaign_performance WHERE computed_at = (SELECT MAX(computed_at) FROM campaign_performance)",
+            "format": "table",
+            "refId": "vr"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Funnel Summary",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 13 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "custom": { "align": "auto", "displayMode": "auto" },
+            "mappings": [],
+            "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+            "unit": "none"
+          },
+          "overrides": []
+        },
+        "options": {
+          "cellHeight": "sm",
+          "footer": { "countRows": false, "enablePagination": false, "fields": "", "reducer": ["sum"] },
+          "showHeader": true,
+          "sortBy": [{ "desc": true, "displayName": "computed_at" }]
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT c.name, p.computed_at, p.total_signals, p.positive_signals, p.negative_signals, ROUND(p.signal_ratio, 2) AS signal_ratio, p.estimated_reach, ROUND(p.engagement_rate, 3) AS eng_rate, ROUND(p.quality_score, 1) AS quality FROM campaign_performance p JOIN campaigns c ON c.id = p.campaign_id WHERE p.id IN (SELECT MAX(id) FROM campaign_performance GROUP BY campaign_id) ORDER BY p.computed_at DESC",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Stage Distribution (Last 30d)",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 13 },
+        "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "none",
+            "decimals": 0
+          },
+          "overrides": []
+        },
+        "options": {
+          "displayLabels": ["percent", "name"],
+          "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "values": ["value", "percent"] },
+          "pieType": "donut",
+          "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+          "tooltip": { "mode": "single", "sort": "desc" }
+        },
+        "targets": [
+          {
+            "rawSql": "SELECT event_type, COUNT(*) AS value FROM funnel_events WHERE occurred_at >= DATE('now', '-30 days') GROUP BY event_type ORDER BY value DESC",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "datasource",
+          "type": "datasource",
+          "query": "grafana-duckdb-datasource",
+          "current": { "value": "P0DuckDB" },
+          "hide": 2,
+          "refresh": 1,
+          "skipUrlSync": false
+        },
+        {
+          "name": "campaign",
+          "type": "query",
+          "query": "SELECT DISTINCT c.name FROM campaigns c ORDER BY c.name",
+          "datasource": { "type": "grafana-duckdb-datasource", "uid": "P0DuckDB" },
+          "current": { "selected": true, "text": "All", "value": "$__all" },
+          "hide": 0,
+          "includeAll": true,
+          "multi": true,
+          "refresh": 2,
+          "sort": 1,
+          "skipUrlSync": false,
+          "allValue": ".*",
+          "definition": "SELECT DISTINCT name FROM campaigns ORDER BY name"
+        }
+      ]
+    },
+    "links": [
+      { "title": "ROI Overview", "type": "dashboards", "tags": ["hermes", "roi"], "keepTime": true },
+      { "title": "Platform Engagement", "type": "dashboards", "tags": ["hermes", "platform"], "keepTime": true },
+      { "title": "Sentiment Analysis", "type": "dashboards", "tags": ["hermes", "sentiment"], "keepTime": true },
+      { "title": "GitHub & npm Traffic", "type": "dashboards", "tags": ["hermes", "traffic"], "keepTime": true }
+    ]
+  }
+}

@@ -6766,3 +6766,112 @@ def _(rid, params: dict) -> dict:
         return _err(rid, 5002, "command timed out (30s)")
     except Exception as e:
         return _err(rid, 5003, str(e))
+
+
+# ── Methods: monitoring ──────────────────────────────────────────────
+
+
+@method("get_monitoring_data")
+def _(rid, params: dict) -> dict:
+    """Aggregate gateway, platform, memory, and cron status for the TUI dashboard."""
+    import resource
+    from datetime import datetime, timezone
+
+    result: dict[str, Any] = {
+        "gateway": {
+            "state": "unknown",
+            "activeAgents": 0,
+            "pid": None,
+            "uptime": None,
+        },
+        "platforms": {},
+        "memory": [],
+        "cron": {
+            "totalJobs": 0,
+            "errorCount": 0,
+            "lastRun": None,
+            "jobs": [],
+        },
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+
+    # ── Gateway state ───────────────────────────────────────────────
+    try:
+        from gateway.status import read_runtime_status
+
+        gw_status = read_runtime_status()
+        if gw_status and isinstance(gw_status, dict):
+            result["gateway"]["state"] = str(gw_status.get("gateway_state") or "unknown")
+            result["gateway"]["activeAgents"] = int(gw_status.get("active_agents") or 0)
+            result["gateway"]["pid"] = gw_status.get("pid")
+            platforms_raw = gw_status.get("platforms") or {}
+            if isinstance(platforms_raw, dict):
+                result["platforms"] = {
+                    str(name): {
+                        "connected": str(info.get("state", "")).lower() in {"connected", "running", "started", "ready"},
+                        "state": str(info.get("state") or "unknown"),
+                        "error": str(info.get("error_message") or "") or None,
+                        "lastActivity": str(info.get("updated_at") or "") or None,
+                    }
+                    for name, info in platforms_raw.items()
+                    if isinstance(info, dict)
+                }
+    except Exception as exc:
+        logger.debug("get_monitoring_data: gateway.status failed: %s", exc)
+
+    # ── Memory RSS (process RSS in MB) ──────────────────────────────
+    try:
+        rss_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        # Linux returns bytes, macOS/BSD returns KB
+        if hasattr(resource, "RLIMIT_RSS") or not sys.platform.startswith("darwin"):
+            # Linux: ru_maxrss is in KB
+            rss_mb = rss_bytes / 1024
+        else:
+            # macOS/BSD: ru_maxrss is in bytes
+            rss_mb = rss_bytes / (1024 * 1024)
+
+        now = int(datetime.now(timezone.utc).timestamp())
+        result["memory"].append({
+            "value": round(rss_mb, 1),
+            "label": "RSS",
+            "timestamp": now,
+        })
+
+        try:
+            from plugins.monitoring.monitor_store import MetricsStore
+
+            store = MetricsStore()
+            recent = store.query("system.memory_rss_mb", limit=12)
+            if recent:
+                result["memory"] = [
+                    {
+                        "value": round(float(r["value"]), 1),
+                        "label": "RSS",
+                        "timestamp": r["recorded_at"],
+                    }
+                    for r in recent[:12]
+                ]
+        except Exception:
+            pass
+    except Exception as exc:
+        logger.debug("get_monitoring_data: memory read failed: %s", exc)
+
+    # ── Cron status ─────────────────────────────────────────────────
+    try:
+        from cron.jobs import load_jobs
+
+        jobs = load_jobs()
+        result["cron"]["totalJobs"] = len(jobs)
+        result["cron"]["jobs"] = [
+            {
+                "name": str(j.get("name") or j.get("task", "")[:40] or "unnamed"),
+                "schedule": str(j.get("schedule") or j.get("interval", "")),
+            }
+            for j in jobs[:20]
+        ]
+        error_count = sum(1 for j in jobs if isinstance(j, dict) and j.get("last_error"))
+        result["cron"]["errorCount"] = error_count
+    except Exception as exc:
+        logger.debug("get_monitoring_data: cron.jobs failed: %s", exc)
+
+    return _ok(rid, result)

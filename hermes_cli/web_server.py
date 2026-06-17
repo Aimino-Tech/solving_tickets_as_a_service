@@ -4677,6 +4677,7 @@ def _mount_plugin_api_routes():
 # Mount plugin API routes before the SPA catch-all.
 _mount_plugin_api_routes()
 
+
 mount_spa(app)
 
 

@@ -1,0 +1,88 @@
+name: Daily Marketing Data Collection
+
+on:
+  schedule:
+    # Run daily at 06:00 UTC
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      log_level:
+        description: "Log level"
+        required: false
+        default: "INFO"
+        type: choice
+        options:
+          - DEBUG
+          - INFO
+          - WARNING
+          - ERROR
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-collect-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: |
+          uv venv .venv --python 3.11
+          source .venv/bin/activate
+          uv pip install -e ".[marketing]"
+
+      - name: Ensure HERMES_HOME directory exists
+        run: |
+          mkdir -p ~/.hermes/marketing/db
+          mkdir -p ~/.hermes/marketing/backups
+
+      - name: Backup existing DuckDB (if any)
+        run: |
+          if [ -f ~/.hermes/marketing/marketing.db ]; then
+            cp ~/.hermes/marketing/marketing.db \
+               ~/.hermes/marketing/backups/marketing-$(date +%Y-%m-%d).db
+            echo "Backup created: marketing-$(date +%Y-%m-%d).db"
+          else
+            echo "No existing database to back up."
+          fi
+
+      - name: Run marketing data collectors
+        run: |
+          source .venv/bin/activate
+          python -m marketing.collectors.run_all
+        env:
+          HERMES_HOME: "${{ runner.home }}/.hermes"
+          REDDIT_CLIENT_ID: "${{ secrets.REDDIT_CLIENT_ID }}"
+          REDDIT_CLIENT_SECRET: "${{ secrets.REDDIT_CLIENT_SECRET }}"
+          REDDIT_USER_AGENT: "hermes-agent/${GITHUB_SHA}"
+          GITHUB_TOKEN: "${{ secrets.GH_PAT }}"
+          LOG_LEVEL: "${{ inputs.log_level || 'INFO' }}"
+
+      - name: Upload DuckDB as artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: marketing-db-${{ github.run_id }}
+          path: |
+            ~/.hermes/marketing/marketing.db
+            ~/.hermes/marketing/backups/marketing-*.db
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Marketing data collection failed. Check the workflow logs."
+          echo "::notice::Failed run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

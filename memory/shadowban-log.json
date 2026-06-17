@@ -1,0 +1,82 @@
+[
+  {
+    "username": "CommentAwkward3993",
+    "status": "shadowbanned",
+    "detected_at": "2026-06-16T08:39:38",
+    "page_title": "u/CommentAwkward3993: page not found",
+    "http_status": 404,
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "username": "Slow-Guy-Chiu",
+    "status": "shadowbanned",
+    "detected_at": "2026-06-16T08:39:38",
+    "page_title": "u/Slow-Guy-Chiu: page not found",
+    "http_status": 404,
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "username": "Pro_Shame",
+    "status": "shadowbanned",
+    "detected_at": "2026-06-16T08:39:38",
+    "page_title": "u/Pro_Shame: page not found",
+    "http_status": 404,
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "username": "J0llibee_yummy",
+    "status": "shadowbanned",
+    "detected_at": "2026-06-16T08:39:38",
+    "page_title": "u/J0llibee_yummy: page not found",
+    "http_status": 404,
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "username": "Love-KCF",
+    "status": "shadowbanned",
+    "detected_at": "2026-06-16T08:39:38",
+    "page_title": "reddit.com: page not found",
+    "http_status": 404,
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "username": "CommentAwkward3993",
+    "status": "shadowbanned",
+    "detected_at": "2026-06-16T08:39:46",
+    "page_title": "u/CommentAwkward3993: page not found",
+    "http_status": 404,
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "username": "Slow-Guy-Chiu",
+    "status": "shadowbanned",
+    "detected_at": "2026-06-16T08:39:46",
+    "page_title": "u/Slow-Guy-Chiu: page not found",
+    "http_status": 404,
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "username": "Pro_Shame",
+    "status": "shadowbanned",
+    "detected_at": "2026-06-16T08:39:46",
+    "page_title": "u/Pro_Shame: page not found",
+    "http_status": 404,
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "username": "J0llibee_yummy",
+    "status": "shadowbanned",
+    "detected_at": "2026-06-16T08:39:46",
+    "page_title": "u/J0llibee_yummy: page not found",
+    "http_status": 404,
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "username": "Love-KCF",
+    "status": "shadowbanned",
+    "detected_at": "2026-06-16T08:39:46",
+    "page_title": "reddit.com: page not found",
+    "http_status": 404,
+    "error": "HTTP 404: Not Found"
+  }
+]

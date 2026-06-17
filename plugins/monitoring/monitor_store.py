@@ -6,8 +6,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-HERMES_HOME = Path(os.path.expanduser("~/.hermes"))
-DB_PATH = HERMES_HOME / "monitoring.db"
+from hermes_constants import get_hermes_home
+
+_HERMES_HOME = get_hermes_home()
+_MONITORING_DIR = _HERMES_HOME / "monitoring"
+DB_PATH = _MONITORING_DIR / "metrics.db"
 
 
 class MetricsStore:
@@ -28,7 +31,7 @@ class MetricsStore:
         return self._local.conn
 
     def _init_db(self) -> None:
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        _MONITORING_DIR.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(self.db_path)
         try:
             conn.execute("PRAGMA journal_mode=WAL")
@@ -40,6 +43,18 @@ class MetricsStore:
                     tags TEXT,
                     recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_metrics_name 
+                ON metrics(name)
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_metrics_ts 
+                ON metrics(recorded_at)
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_metrics_name_ts 
+                ON metrics(name, recorded_at)
             """)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS alert_configs (
@@ -138,17 +153,21 @@ class MetricsStore:
         return result
 
     def query_values(self, metric_name: str, since: str | None = None) -> list[dict[str, Any]]:
+        # Legacy compatibility shim
+        since_ts = None
         if since:
-            rows = self.conn.execute(
-                "SELECT value, recorded_at FROM metrics WHERE name = ? AND recorded_at >= ? ORDER BY recorded_at DESC",
-                (metric_name, since),
-            ).fetchall()
-        else:
-            rows = self.conn.execute(
-                "SELECT value, recorded_at FROM metrics WHERE name = ? ORDER BY recorded_at DESC LIMIT 1",
-                (metric_name,),
-            ).fetchall()
-        return [dict(r) for r in rows]
+            try:
+                dt = datetime.fromisoformat(since)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                since_ts = int(dt.timestamp())
+            except (ValueError, TypeError):
+                pass
+        rows = self.query(metric_name, since=since_ts, limit=10000) if since_ts else self.query(metric_name, limit=1)
+        result = []
+        for r in rows:
+            result.append({"value": r["value"], "recorded_at": r["recorded_at"]})
+        return result
 
     def query_latest(self, name: str) -> dict[str, Any] | None:
         row = self.conn.execute(
@@ -166,11 +185,10 @@ class MetricsStore:
         return d
 
     def query_latest_value(self, metric_name: str) -> dict[str, Any] | None:
-        row = self.conn.execute(
-            "SELECT value, recorded_at FROM metrics WHERE name = ? ORDER BY recorded_at DESC LIMIT 1",
-            (metric_name,),
-        ).fetchone()
-        return dict(row) if row else None
+        latest = self.query_latest(metric_name)
+        if latest:
+            return {"value": latest["value"], "recorded_at": latest["recorded_at"]}
+        return None
 
     def query_aggregate(
         self,

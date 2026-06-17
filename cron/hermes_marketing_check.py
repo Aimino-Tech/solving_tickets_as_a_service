@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import sys
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 from urllib.error import URLError
@@ -55,6 +56,7 @@ def get_args():
     p.add_argument("--hermes-endpoint", default=None, help="(Unused — accepted for cron-script backward compat)")
     p.add_argument("--daily-digest", action="store_true", help="Print daily campaign digest")
     p.add_argument("--sheet-sync", action="store_true", help="Run bidirectional sheet ↔ DB sync")
+    p.add_argument("--compute", action="store_true", help="Compute campaign performance for all active campaigns")
     return p.parse_args()
 
 
@@ -265,38 +267,86 @@ def _run_sheet_sync(args: argparse.Namespace) -> str | None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Main
+#  Compute Mode
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def main():
-    args = get_args()
+def _run_compute() -> dict:
+    """Compute campaign performance for all active campaigns using ROIAnalyticsEngine.
 
-    # ── Sheet-sync mode ────────────────────────────────────────────────────
-    if args.sheet_sync:
-        err = _run_sheet_sync(args)
-        if err:
-            print(err, file=sys.stderr)
-            sys.exit(1)
-        # If daily-digest is also requested, continue to digest below.
-        if not args.daily_digest:
-            return
+    Returns a dict with summary stats and per-campaign results.
+    """
+    try:
+        from marketing.roi_arch import ROIAnalyticsEngine
+        from marketing.store import CampaignStore
+    except ImportError as exc:
+        return {"action": "compute", "error": f"Cannot import marketing modules — {exc}"}
 
-    # ── Daily-digest mode ─────────────────────────────────────────────────
-    if args.daily_digest:
-        err = _run_daily_digest(args)
-        if err:
-            print(err, file=sys.stderr)
-            sys.exit(1)
-        return  # digest is standalone
+    try:
+        store = CampaignStore()
+        engine = ROIAnalyticsEngine()
+    except Exception as exc:
+        return {"action": "compute", "error": f"Failed to initialise data stores — {exc}"}
 
-    # ── Default: hourly working-hours check (unchanged behaviour) ──────────
-    rows, headers = get_sheet_data(args.sheet_id, args.sheet_tab)
+    campaigns = store.list_campaigns(status="active")
+    results: list[dict] = []
+
+    for campaign in campaigns:
+        campaign_id = campaign["id"]
+        try:
+            perf = engine.compute_campaign_performance(campaign_id, store)
+            if perf:
+                results.append({
+                    "campaign_id": campaign_id,
+                    "campaign_name": campaign.get("name", campaign_id),
+                    "status": "completed",
+                    "quality_score": perf.get("quality_score", 0),
+                    "total_signals": perf.get("total_signals", 0),
+                    "engagement_rate": perf.get("engagement_rate", 0.0),
+                })
+            else:
+                results.append({
+                    "campaign_id": campaign_id,
+                    "status": "skipped",
+                    "reason": "empty data",
+                })
+        except Exception as e:
+            results.append({
+                "campaign_id": campaign_id,
+                "status": "error",
+                "error": str(e),
+            })
+
+    summary = {
+        "total": len(campaigns),
+        "completed": sum(1 for r in results if r["status"] == "completed"),
+        "skipped": sum(1 for r in results if r["status"] == "skipped"),
+        "errors": sum(1 for r in results if r["status"] == "error"),
+    }
+
+    return {"summary": summary, "results": results, "action": "compute"}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Hourly Check
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _run_hourly_check(args: argparse.Namespace) -> str | None:
+    """Default hourly working-hours check — reads sheet, prints summary.
+
+    Returns ``None`` on success, an error string on failure.
+    """
+    try:
+        rows, headers = get_sheet_data(args.sheet_id, args.sheet_tab)
+    except Exception as exc:
+        return f"ERROR: Failed to read sheet data — {exc}"
+
     if not rows:
         print("No data rows found in reddit-campaign.")
-        return
+        return None
 
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     # Categorize items by status
     planned = [r for r in rows if len(r) > COL_STATUS and "planned" in r[COL_STATUS]]
@@ -339,6 +389,120 @@ def main():
         f"Need threads found: {len(no_url) + len(pending)} items"
     )
     print(f"\n{summary}")
+    return None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Cron-job logging wrapper
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _run_with_cron_logging(
+    func: Callable[..., str | None],
+    args: tuple[Any, ...],
+    *,
+    job_name: str,
+    job_type: str,
+    store: Any,
+    platform: str | None = None,
+) -> str | None:
+    """Wrap a function call with ``cron_job_log`` start / completion logging.
+
+    Returns the wrapped function's return value.
+    """
+    started_at = datetime.now(timezone.utc).isoformat()
+    log_id = store.insert_cron_job_log(
+        job_name=job_name,
+        job_type=job_type,
+        status="running",
+        platform=platform,
+        started_at=started_at,
+    )
+    try:
+        result = func(*args)
+        completed_at = datetime.now(timezone.utc).isoformat()
+        duration_ms = _compute_duration_ms(started_at, completed_at)
+        store.update_cron_job_log(
+            log_id,
+            status="completed",
+            completed_at=completed_at,
+            duration_ms=duration_ms,
+            result_summary=str(result)[:500] if result else None,
+        )
+        return result
+    except Exception as exc:
+        completed_at = datetime.now(timezone.utc).isoformat()
+        duration_ms = _compute_duration_ms(started_at, completed_at)
+        store.update_cron_job_log(
+            log_id,
+            status="failed",
+            completed_at=completed_at,
+            duration_ms=duration_ms,
+            error_message=str(exc)[:1000],
+        )
+        raise
+
+
+def _compute_duration_ms(start_iso: str, end_iso: str) -> int:
+    """Compute milliseconds between two ISO-8601 timestamps."""
+    delta = datetime.fromisoformat(end_iso) - datetime.fromisoformat(start_iso)
+    return int(delta.total_seconds() * 1000)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Main
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def main():
+    args = get_args()
+
+    try:
+        from marketing.store import CampaignStore
+    except ImportError as exc:
+        print(f"ERROR: Cannot import CampaignStore — {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    store = CampaignStore()
+
+    # ── Compute mode ───────────────────────────────────────────────────────
+    if args.compute:
+        result = _run_compute()
+        print(json.dumps(result, indent=2, default=str))
+        return
+
+    # ── Sheet-sync mode ────────────────────────────────────────────────────
+    if args.sheet_sync:
+        err = _run_with_cron_logging(
+            _run_sheet_sync, (args,),
+            job_name="sheet-sync", job_type="sync", store=store,
+        )
+        if err:
+            print(err, file=sys.stderr)
+            sys.exit(1)
+        # If daily-digest is also requested, continue to digest below.
+        if not args.daily_digest:
+            return
+
+    # ── Daily-digest mode ─────────────────────────────────────────────────
+    if args.daily_digest:
+        err = _run_with_cron_logging(
+            _run_daily_digest, (args,),
+            job_name="daily-digest", job_type="digest", store=store,
+        )
+        if err:
+            print(err, file=sys.stderr)
+            sys.exit(1)
+        return  # digest is standalone
+
+    # ── Default: hourly working-hours check ────────────────────────────────
+    err = _run_with_cron_logging(
+        _run_hourly_check, (args,),
+        job_name="hourly-check", job_type="monitor", store=store,
+    )
+    if err:
+        print(err, file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 (function() {
   'use strict';
 
@@ -186,4 +187,198 @@
       if (vis && vis.style.display !== 'none') renderOverview();
     }, 10000);
   };
+=======
+(function () {
+  "use strict";
+
+  var API = "/api/plugins/monitoring";
+  var TOKEN = window.__HERMES_SESSION_TOKEN__ || "";
+
+  function authHeaders() {
+    return TOKEN ? { Authorization: "Bearer " + TOKEN } : {};
+  }
+
+  function api(path) {
+    return fetch(API + path, { headers: authHeaders() }).then(function (r) {
+      if (!r.ok) return r.json().then(function (e) { throw new Error(e.detail || r.statusText); });
+      return r.json();
+    });
+  }
+
+  function escape(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function ago(ts) {
+    if (!ts) return "—";
+    var s = Math.floor((Date.now() / 1000 - (typeof ts === "number" ? ts : new Date(ts).getTime() / 1000)));
+    if (s < 60) return s + "s";
+    if (s < 3600) return Math.floor(s / 60) + "m";
+    if (s < 86400) return Math.floor(s / 3600) + "h";
+    return Math.floor(s / 86400) + "d";
+  }
+
+  function tabId() { return window.location.hash.slice(1) || "overview"; }
+
+  function render(root) {
+    var state = { summary: null, metrics: null, alerts: null, loading: true, error: null };
+
+    function setState(partial) {
+      for (var k in partial) state[k] = partial[k];
+      renderView();
+    }
+
+    function renderView() {
+      var tab = tabId();
+      root.innerHTML =
+        '<div class="mon-dash">' +
+          '<div class="mon-nav">' +
+            '<a href="#overview" class="mon-nav-item' + (tab === "overview" ? " mon-nav-item--active" : "") + '">Overview</a>' +
+            '<a href="#metrics" class="mon-nav-item' + (tab === "metrics" ? " mon-nav-item--active" : "") + '">Metrics</a>' +
+            '<a href="#alerts" class="mon-nav-item' + (tab === "alerts" ? " mon-nav-item--active" : "") + '">Alerts</a>' +
+            '<a href="#cron" class="mon-nav-item' + (tab === "cron" ? " mon-nav-item--active" : "") + '">Cron</a>' +
+          '</div>' +
+          '<div class="mon-content">' +
+            (state.loading ? '<div class="mon-loading">Loading monitoring data…</div>' :
+             state.error ? '<div class="mon-error">' + escape(state.error) + '</div>' :
+             tab === "overview" ? renderOverview() :
+             tab === "metrics" ? renderMetrics() :
+             tab === "alerts" ? renderAlerts() :
+             tab === "cron" ? renderCron() : "") +
+          '</div>' +
+        '</div>';
+    }
+
+    function renderOverview() {
+      var s = state.summary;
+      if (!s) return "";
+      var gw = s.gateway || {};
+      var plats = gw.platforms || {};
+      var platHtml = "";
+      for (var k in plats) {
+        var p = plats[k];
+        platHtml += '<div class="mon-stat"><span class="mon-stat-label">' + escape(k) +
+          '</span><span class="mon-stat-value">' + escape(p.state || "?") + "</span></div>";
+      }
+      var metrics = s.metrics || {};
+      var mList = Object.keys(metrics).slice(0, 20);
+      var mHtml = "";
+      for (var i = 0; i < mList.length; i++) {
+        var m = metrics[mList[i]];
+        mHtml += '<div class="mon-stat"><span class="mon-stat-label">' + escape(mList[i]) +
+          '</span><span class="mon-stat-value">' + escape(m.value != null ? m.value : "—") +
+          '</span><span class="mon-stat-ago">' + ago(m.recorded_at) + "</span></div>";
+      }
+      return '<div class="mon-grid">' +
+        '<div class="mon-section"><div class="mon-section-title">Gateway</div>' +
+          '<div class="mon-stat"><span class="mon-stat-label">State</span><span class="mon-stat-value">' + escape(gw.state) + "</span></div>" +
+          '<div class="mon-stat"><span class="mon-stat-label">PID</span><span class="mon-stat-value">' + (gw.pid || "—") + "</span></div>" +
+          '<div class="mon-stat"><span class="mon-stat-label">Active Agents</span><span class="mon-stat-value">' + (gw.active_agents || 0) + "</span></div>" +
+        "</div>" +
+        '<div class="mon-section"><div class="mon-section-title">Platforms</div>' + platHtml + "</div>" +
+        '<div class="mon-section"><div class="mon-section-title">Metrics (latest ' + mList.length + ")</div>" + mHtml + "</div>" +
+        '<div class="mon-section"><div class="mon-section-title">Alerts</div>' +
+          '<div class="mon-stat"><span class="mon-stat-label">Total</span><span class="mon-stat-value">' + (s.alerts ? s.alerts.total : 0) + "</span></div>" +
+          '<div class="mon-stat"><span class="mon-stat-label">Firing</span><span class="mon-stat-value mon-stat-value--warn">' + (s.alerts ? s.alerts.firing : 0) + "</span></div>" +
+        "</div>" +
+        '<div class="mon-section"><div class="mon-section-title">Cron</div>' +
+          '<div class="mon-stat"><span class="mon-stat-label">Total</span><span class="mon-stat-value">' + (s.cron ? s.cron.total : 0) + "</span></div>" +
+          '<div class="mon-stat"><span class="mon-stat-label">Enabled</span><span class="mon-stat-value">' + (s.cron ? s.cron.enabled : 0) + "</span></div>" +
+          '<div class="mon-stat"><span class="mon-stat-label">Errors</span><span class="mon-stat-value mon-stat-value--err">' + (s.cron ? s.cron.error : 0) + "</span></div>" +
+        "</div>" +
+      "</div>";
+    }
+
+    function renderMetrics() {
+      var m = state.metrics;
+      if (!m || !m.metrics) return "<div class=mon-loading>Loading metrics…</div>";
+      var names = Object.keys(m.metrics);
+      if (names.length === 0) return '<div class="mon-empty">No metrics recorded yet.</div>';
+      var html = '<table class="mon-table"><thead><tr><th>Metric</th><th>Latest Value</th><th>Age</th></tr></thead><tbody>';
+      for (var i = 0; i < names.length; i++) {
+        var rows = m.metrics[names[i]];
+        var latest = rows && rows.length > 0 ? rows[0] : null;
+        var val = latest ? latest.value : "—";
+        var ts = latest ? ago(latest.recorded_at) : "—";
+        html += "<tr><td>" + escape(names[i]) + "</td><td>" + escape(val) + "</td><td>" + ts + "</td></tr>";
+      }
+      html += "</tbody></table>";
+      return html;
+    }
+
+    function renderAlerts() {
+      var a = state.alerts;
+      if (!a || !a.alerts) return "<div class=mon-loading>Loading alerts…</div>";
+      if (a.alerts.length === 0) return '<div class="mon-empty">No alert configurations defined.</div>';
+      var html = '<table class="mon-table"><thead><tr><th>Name</th><th>Metric</th><th>Condition</th><th>Threshold</th><th>Last Fired</th><th>Status</th></tr></thead><tbody>';
+      for (var i = 0; i < a.alerts.length; i++) {
+        var al = a.alerts[i];
+        var firing = al.last_fired_at ? "firing" : "ok";
+        html += "<tr>" +
+          "<td>" + escape(al.name) + "</td>" +
+          "<td>" + escape(al.metric_name) + "</td>" +
+          "<td>" + escape(al.condition) + "</td>" +
+          "<td>" + escape(al.threshold) + "</td>" +
+          "<td>" + ago(al.last_fired_at) + "</td>" +
+          '<td><span class="mon-badge mon-badge--' + firing + '">' + firing + "</span></td>" +
+          "</tr>";
+      }
+      html += "</tbody></table>";
+      return html;
+    }
+
+    function renderCron() {
+      if (!state.summary || !state.summary.cron) return "<div class=mon-loading>Loading cron…</div>";
+      var jobs = state.summary.cron.jobs || [];
+      if (jobs.length === 0) return '<div class="mon-empty">No cron jobs scheduled.</div>';
+      var html = '<table class="mon-table"><thead><tr><th>Name</th><th>Schedule</th><th>Enabled</th><th>Last Status</th><th>Last Run</th></tr></thead><tbody>';
+      for (var i = 0; i < jobs.length; i++) {
+        var j = jobs[i];
+        var status = j.last_status || "never";
+        var statusClass = status === "error" ? "err" : status === "success" ? "ok" : "";
+        html += "<tr>" +
+          "<td>" + escape(j.name || j.id || "—") + "</td>" +
+          "<td>" + escape(j.schedule || "—") + "</td>" +
+          "<td>" + (j.enabled !== false ? "✓" : "✗") + "</td>" +
+          '<td><span class="mon-badge mon-badge--' + statusClass + '">' + escape(status) + "</span></td>" +
+          "<td>" + ago(j.last_run_at) + "</td>" +
+          "</tr>";
+      }
+      html += "</tbody></table>";
+      return html;
+    }
+
+    function loadAll() {
+      setState({ loading: true, error: null });
+      api("/summary").then(function (d) {
+        state.summary = d;
+        return api("/metrics");
+      }).then(function (d) {
+        state.metrics = d;
+        return api("/alerts");
+      }).then(function (d) {
+        state.alerts = d;
+        state.loading = false;
+        renderView();
+      }).catch(function (e) {
+        state.loading = false;
+        state.error = e.message || String(e);
+        renderView();
+      });
+    }
+
+    window.addEventListener("hashchange", renderView);
+    loadAll();
+    renderView();
+  }
+
+  var mount = document.getElementById("plugin-mount") || document.querySelector("[data-plugin=monitoring]");
+  if (!mount) {
+    var observer = new MutationObserver(function () {
+      mount = document.getElementById("plugin-mount") || document.querySelector("[data-plugin=monitoring]");
+      if (mount) { observer.disconnect(); render(mount); }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return;
+  }
+  render(mount);
+>>>>>>> 2437ffe (auto: daily commit 2026-06-16 21:00:01)
 })();

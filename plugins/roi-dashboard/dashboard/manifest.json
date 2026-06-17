@@ -1,0 +1,14 @@
+{
+  "name": "roi-dashboard",
+  "label": "ROI Dashboard",
+  "description": "Marketing ROI analytics — funnel visualization, campaign performance, conversion tracking",
+  "icon": "TrendingUp",
+  "version": "1.0.0",
+  "tab": {
+    "path": "/roi",
+    "position": "after:skills"
+  },
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}

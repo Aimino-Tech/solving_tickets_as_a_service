@@ -1,0 +1,13 @@
+name: chrome_connector
+version: 1.0.0
+description: "Unified Chrome Browser profile connector for social platforms. Manages Chrome instances via CDP for Twitter/X, LinkedIn, Reddit, Threads, HN, and Discord. Auto-restart, health checks, persistent sessions."
+author: Hermes-Agent
+kind: backend
+provides_tools:
+  - chrome_status
+  - chrome_start
+  - chrome_stop
+  - chrome_post
+  - chrome_read
+  - chrome_search
+  - chrome_comment

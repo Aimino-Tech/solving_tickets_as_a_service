@@ -1,0 +1,9 @@
+name: trend_scanner
+version: 1.0.0
+description: "Real-time trend scanning for guerrilla marketing. Scans Reddit, Twitter, HN, Google Trends for market signals. Auto-retry with Chrome profiles."
+author: Hermes-Agent
+kind: backend
+provides_tools:
+  - trend_scan
+  - trend_watch
+  - trend_report
