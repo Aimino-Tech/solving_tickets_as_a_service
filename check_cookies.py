@@ -1,22 +1,66 @@
-import sqlite3
-import os
+#!/usr/bin/env python3
+import sqlite3, os
 
-db_path = os.path.expanduser("~/.config/google-chrome/Profile 8/Default/Cookies")
-print(f"DB path: {db_path}")
-print(f"Exists: {os.path.exists(db_path)}")
-print(f"Size: {os.path.getsize(db_path)} bytes")
+# Check if cookies exist in the LinkedIn profile
+cookie_path = '/home/agent/.hermes/chrome_profiles/_linkedin_ducnguyen/Default/Cookies'
+if os.path.exists(cookie_path):
+    try:
+        conn = sqlite3.connect(cookie_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT host_key, name, has_expires FROM cookies WHERE host_key LIKE '%linkedin.com%' AND name='li_at'")
+        rows = cursor.fetchall()
+        print(f"li_at cookies found: {len(rows)}")
+        for row in rows:
+            print(f"  {row}")
+        cursor.execute("SELECT host_key, name FROM cookies WHERE host_key LIKE '%linkedin%'")
+        all_linkedin = cursor.fetchall()
+        print(f"\nAll LinkedIn cookies ({len(all_linkedin)}):")
+        for row in all_linkedin:
+            print(f"  {row[0]:50s} | {row[1]}")
+        conn.close()
+    except Exception as e:
+        print(f"Error reading cookies: {e}")
+else:
+    print(f"Cookie file not found at {cookie_path}")
 
-conn = sqlite3.connect(db_path)
-cursor = conn.execute("SELECT name, host_key, LENGTH(encrypted_value), expires_utc FROM cookies WHERE name='li_at'")
-rows = cursor.fetchall()
-for r in rows:
-    print(f"Cookie: {r[0]}, Host: {r[1]}, EncryptedLen: {r[2]}, Expires: {r[3]}")
-if not rows:
-    print("NO li_at cookie found in Profile 8!")
+# Also check the main Chrome profile
+cookie_path2 = '/home/agent/.config/google-chrome/Default/Cookies'
+if os.path.exists(cookie_path2):
+    try:
+        conn = sqlite3.connect(cookie_path2)
+        cursor = conn.cursor()
+        cursor.execute("SELECT host_key, name FROM cookies WHERE host_key LIKE '%linkedin%'")
+        rows = cursor.fetchall()
+        print(f"\nMain profile LinkedIn cookies ({len(rows)}):")
+        for row in rows:
+            print(f"  {row}")
+        conn.close()
+    except Exception as e:
+        print(f"Error reading main cookies: {e}")
 
-# Also check all cookie names
-cursor2 = conn.execute("SELECT DISTINCT name FROM cookies ORDER BY name")
-all_names = [r[0] for r in cursor2.fetchall()]
-print(f"\nAll cookie names in Profile 8: {all_names[:20]}...")
+# Check Profile 2
+cookie_path3 = '/home/agent/.config/google-chrome/Profile 2/Cookies'
+if os.path.exists(cookie_path3):
+    try:
+        conn = sqlite3.connect(cookie_path3)
+        cursor = conn.cursor()
+        cursor.execute("SELECT host_key, name FROM cookies WHERE host_key LIKE '%linkedin%'")
+        rows = cursor.fetchall()
+        print(f"\nProfile 2 LinkedIn cookies ({len(rows)}):")
+        for row in rows:
+            print(f"  {row}")
+        conn.close()
+    except Exception as e:
+        print(f"Error reading Profile 2 cookies: {e}")
+else:
+    print(f"Profile 2 cookie file not found")
 
-conn.close()
+# Search for credentials in hermes config
+print("\n=== Checking for stored app passwords ===")
+pw_path = '/home/agent/.hermes/config.yaml'
+if os.path.exists(pw_path):
+    with open(pw_path) as f:
+        content = f.read()
+    for line in content.split('\n'):
+        if 'password' in line.lower() or 'secret' in line.lower() or 'pass' in line.lower():
+            print(f"  Config: {line.strip()[:80]}")

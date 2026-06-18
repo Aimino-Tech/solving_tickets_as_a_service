@@ -1,0 +1,19 @@
+{
+  "last_check": "2026-06-18T07:00:40",
+  "ready_products": [
+    {
+      "id": "ODW",
+      "name": "opendocswork-mcp",
+      "marketplaces_published": 4,
+      "total_marketplaces": 5,
+      "status": "READY"
+    },
+    {
+      "id": "OT2H",
+      "name": "OpenTalk2HTML-NotMD",
+      "marketplaces_published": 1,
+      "total_marketplaces": 1,
+      "status": "READY"
+    }
+  ]
+}

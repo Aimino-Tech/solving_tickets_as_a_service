@@ -298,3 +298,178 @@ no changes added to commit (use "git add" and/or "git commit -a")
 [Tue Jun 16 09:00:01 PM CEST 2026] COMMIT OK
 [Tue Jun 16 09:00:07 PM CEST 2026] PULL/REBASE FAILED — needs manual conflict resolution
 
+[Wed Jun 17 09:00:01 PM CEST 2026] CHECK — running git status...
+[Wed Jun 17 09:00:01 PM CEST 2026] CHANGES DETECTED — committing and pushing...
+[Wed Jun 17 09:00:01 PM CEST 2026] interactive rebase in progress; onto 3ec43b9
+Last command done (1 command done):
+   pick 2437ffe # auto: daily commit 2026-06-16 21:00:01
+No commands remaining.
+You are currently rebasing branch 'main' on '3ec43b9'.
+  (fix conflicts and then run "git rebase --continue")
+  (use "git rebase --skip" to skip this patch)
+  (use "git rebase --abort" to check out the original branch)
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	deleted:    README.zh-CN.md
+	deleted:    RELEASE_v0.10.0.md
+	deleted:    RELEASE_v0.11.0.md
+	deleted:    RELEASE_v0.12.0.md
+	deleted:    RELEASE_v0.13.0.md
+	deleted:    RELEASE_v0.14.0.md
+	deleted:    RELEASE_v0.2.0.md
+	deleted:    RELEASE_v0.3.0.md
+	deleted:    RELEASE_v0.4.0.md
+	deleted:    RELEASE_v0.5.0.md
+	deleted:    RELEASE_v0.6.0.md
+	deleted:    RELEASE_v0.7.0.md
+	deleted:    RELEASE_v0.8.0.md
+	deleted:    RELEASE_v0.9.0.md
+	new file:   agent-skills-marketing.md
+	new file:   check_all_reddit.py
+	new file:   check_cdp.py
+	new file:   check_ports.py
+	new file:   check_ports2.py
+	new file:   check_reddit_cdp.py
+	new file:   check_reddit_v2.py
+	modified:   config/gateway.json
+	new file:   config/proxy-recommendation.md
+	new file:   config/reddit-profiles.yaml
+	new file:   copywriting-guide-social-media.md
+	modified:   cron/hermes-git-autocommit.log
+	modified:   cron/hermes-marketing.log
+	modified:   cron/hermes_marketing_check.py
+	new file:   debug_cdp.py
+	new file:   guerrilla-seeding-drafts.md
+	modified:   knowledge/guerrilla-process-playbook.md
+	new file:   knowledge/reddit-infra-guide.md
+	new file:   marketing/content/ot2h/comments/persona-a/warmup.md
+	new file:   marketing/content/ot2h/comments/persona-a/wave-1.md
+	new file:   marketing/content/ot2h/comments/persona-b/warmup.md
+	new file:   marketing/content/ot2h/comments/persona-b/wave-1.md
+	new file:   marketing/content/ot2h/comments/persona-c/warmup.md
+	new file:   marketing/content/ot2h/comments/persona-c/wave-1.md
+	new file:   marketing/quality_score.py
+	new file:   marketing/roi_arch.py
+	modified:   marketing/sheet_sync.py
+	modified:   marketing/store.py
+	new file:   memory/last-pipeline-check.md
+	new file:   memory/reddit-block-diagnosis-2026-06-16.md
+	new file:   memory/reddit-block-postmortem-2026-06-16.md
+	new file:   memory/shadowban-log.json
+	new file:   plugins/monitoring/alert_rules.py
+	new file:   plugins/monitoring/dashboard/dist/style.css
+	new file:   plugins/roi-dashboard/dashboard/dist/funnel-viz.js
+	new file:   plugins/roi-dashboard/dashboard/dist/index.js
+	new file:   plugins/roi-dashboard/dashboard/dist/style.css
+	new file:   plugins/roi-dashboard/dashboard/manifest.json
+	new file:   plugins/roi-dashboard/dashboard/plugin_api.py
+	new file:   plugins/roi/__init__.py
+	new file:   plugins/roi/dashboard/dist/index.js
+	new file:   plugins/roi/dashboard/dist/style.css
+	new file:   plugins/roi/dashboard/manifest.json
+	new file:   plugins/roi/dashboard/plugin_api.py
+	new file:   quick_verify.py
+	new file:   scripts/evaluate-marketing-alerts.py
+	new file:   scripts/shadowban_monitor.py
+	new file:   skills-ref/copy-editing.md
+	new file:   skills-ref/copywriting-hooks.md
+	new file:   skills-ref/copywriting-tone-of-voice-creator.md
+	new file:   skills-ref/copywriting.md
+	new file:   skills-ref/directory-submissions.md
+	new file:   skills-ref/social.md
+	new file:   tests/cron/test_hermes_marketing_check.py
+	new file:   tests/marketing/test_cron_job_log.py
+	new file:   tests/marketing/test_engagement_classifier.py
+	new file:   tests/marketing/test_predictive_indicator.py
+	new file:   tests/marketing/test_quality_score.py
+	new file:   tests/marketing/test_roi_analytics.py
+	new file:   tests/marketing/test_sheet_sync_multi_tab.py
+	new file:   tests/plugins/test_cron_jobs_plugin.py
+	new file:   tests/plugins/test_marketing_alerts.py
+	new file:   tests/plugins/test_roi_dashboard_plugin.py
+	new file:   threads-content-rewrite.md
+	new file:   tmp_add_summary.py
+	new file:   tmp_browse_li_feed.py
+	new file:   tmp_browse_like_v2.py
+	new file:   tmp_check_chrome.py
+	new file:   tmp_check_feed_text.py
+	new file:   tmp_check_li_at.py
+	new file:   tmp_check_li_chrome.py
+	new file:   tmp_check_li_cookies.py
+	new file:   tmp_check_li_state.py
+	new file:   tmp_detailed_browse.py
+	new file:   tmp_find_likes.py
+	new file:   tmp_like_final.py
+	new file:   tmp_like_posts.py
+	new file:   tmp_linkedin_check.py
+	new file:   tmp_log_browse.py
+	new file:   tmp_one_more.py
+	modified:   tui_gateway/server.py
+	new file:   ui-tui/src/monitoring-dashboard.tsx
+	new file:   verify_batch3.py
+	new file:   verify_continue.py
+	new file:   verify_final.py
+	new file:   verify_final_batch.py
+
+Unmerged paths:
+  (use "git restore --staged <file>..." to unstage)
+  (use "git add <file>..." to mark resolution)
+	both modified:   hermes_cli/web_server.py
+	both modified:   plugins/monitoring/__init__.py
+	both added:      plugins/monitoring/dashboard/dist/index.js
+	both added:      plugins/monitoring/dashboard/manifest.json
+	both added:      plugins/monitoring/dashboard/plugin_api.py
+	both modified:   plugins/monitoring/monitor_store.py
+	both added:      skills/monitoring/SKILL.md
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   cron/hermes-git-autocommit.log
+	modified:   cron/hermes-marketing.log
+	modified:   marketing/roi_arch.py
+	modified:   marketing/sheet_sync.py
+	modified:   memory/last-pipeline-check.md
+	modified:   package-lock.json
+	modified:   package.json
+	deleted:    plugins/roi/__init__.py
+	modified:   plugins/roi/dashboard/dist/index.js
+	deleted:    plugins/roi/dashboard/dist/style.css
+	modified:   plugins/roi/dashboard/manifest.json
+	modified:   plugins/roi/dashboard/plugin_api.py
+	modified:   pyproject.toml
+	modified:   tests/marketing/test_roi_analytics.py
+	modified:   tests/marketing/test_sheet_sync_multi_tab.py
+	modified:   uv.lock
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.github/workflows/daily-collect.yml
+	.github/workflows/marketing-test.yml
+	check_cookies.py
+	check_sheet.py
+	check_sheet2.py
+	dashboard.html
+	docker-compose.grafana.yml
+	docker/grafana/
+	marketing/campaign_optimizer.py
+	marketing/collectors/
+	marketing/duckdb_store.py
+	marketing/sentiment/
+	navigate_linkedin.py
+	plugins/campaign_analytics/
+	plugins/chrome_connector/
+	plugins/example-dashboard/dashboard/dist/
+	plugins/social_media_poster/
+	plugins/trend_scanner/
+	scripts/hn_karma_builder.py
+	scripts/refresh_dashboard.py
+	sheet_result.json
+	tests/marketing/collectors/
+	tests/marketing/sentiment/
+	tests/marketing/test_duckdb_store.py
+	~/
+[Wed Jun 17 09:00:01 PM CEST 2026] COMMIT OK
+[Wed Jun 17 09:00:02 PM CEST 2026] PULL/REBASE FAILED — needs manual conflict resolution
+
