@@ -155,7 +155,6 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
   // ── Security ──────────────────────────────────────────────────────────────
-  ADMIN_API_KEY: z.string().optional(),
   ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   CORS_ORIGIN: z.string().default('*'),
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
@@ -174,10 +173,6 @@ const envSchema = z.object({
   SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
-
-  // Feature Flags
-  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
-  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
   // Sentry
   SENTRY_DSN: z.string().optional(),

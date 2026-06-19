@@ -1,4 +1,4 @@
-import { connect, type Channel, type Connection, type ChannelModel } from 'amqplib';
+import { connect as amqpConnect, type Channel, type ChannelModel } from 'amqplib';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -22,7 +22,7 @@ export const QUEUES = {
 } as const;
 
 interface RabbitMQState {
-  connection: Connection | null;
+  connection: ChannelModel | null;
   publishChannel: Channel | null;
   consumeChannel: Channel | null;
   reconnectAttempts: number;
@@ -72,7 +72,7 @@ export async function connect(options?: {
   const url = options?.url ?? getUrl();
 
   try {
-    const connection = await connect(url);
+    const connection = await amqpConnect(url);
     state.connection = connection;
 
     connection.on('error', (err) => {
