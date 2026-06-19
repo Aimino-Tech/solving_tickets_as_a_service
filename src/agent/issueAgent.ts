@@ -39,7 +39,8 @@ import { createSandbox } from "../sandbox/index.js";
 import type { SandboxExecutor } from "../sandbox/types.js";
 import { buildTools, type SandboxTools } from "./tools.js";
 import { runQualityGates } from "./qualityGates.js";
-import type { AgentResult, GroundingRequirement, GroundingResult, QualityGatesResult, TestBaseline, TriageResult, VerificationResult } from "./types.js";
+import type { AgentResult, GroundingRequirement, GroundingResult, QualityGatesResult, QualityGateResult, TestBaseline, TriageResult, VerificationResult } from "./types.js";
+import { runAllQualityGates } from "./quality-gates.js";
 import type { IssueJobData } from "../utils/types.js";
 import type { PlatformClient } from "../platforms/interface.js";
 import { createGitHubClient } from "../platforms/github/index.js";
@@ -398,6 +399,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       baselineTestResult,
       baselineTestFiles,
       logger,
+      openCodeResult.diff ?? '',
     );
 
     receiptManifest = addReceipt(
@@ -1158,6 +1160,7 @@ async function runVerification(
   baseline: TestBaseline | null,
   testFilesBefore: string[],
   logger: { info: (obj: object, msg: string) => void; warn: (obj: object, msg: string) => void },
+  diff: string = '',
 ): Promise<VerificationResult> {
   const details: string[] = [];
   let regressionTestCreated = false;
@@ -1167,7 +1170,22 @@ async function runVerification(
   const unverified = false;
   let postFix: TestBaseline | null = null;
 
+  let qualityGates: QualityGateResult[] = [];
+  try {
+    qualityGates = await runAllQualityGates(sandbox, diff);
+  } catch (err) {
+    details.push(`Quality gates error: ${String(err)}`);
+    qualityGates = [];
+  }
+
   if (!sandbox.hasTestSuite()) {
+    const qgFailed = qualityGates.filter(g => !g.passed);
+    if (qgFailed.length > 0) {
+      details.push(`QUALITY GATES: ${qgFailed.length}/4 gate(s) failed`);
+      for (const g of qgFailed) {
+        details.push(`  ${g.gate} (${g.ossTool}): ${g.details.join('; ')}`);
+      }
+    }
     return {
       baseline: null,
       postFix: null,
@@ -1176,7 +1194,8 @@ async function runVerification(
       regressionTestPassedOnFix: null,
       preExistingTestsRegressed: false,
       unverified: true,
-      details: ['No test suite configured'],
+      details,
+      qualityGates,
     };
   }
 
@@ -1260,6 +1279,7 @@ async function runVerification(
     preExistingTestsRegressed,
     unverified,
     details,
+    qualityGates,
   };
 }
 

@@ -19,7 +19,7 @@
  */
 
 import { type ReceiptManifest, verifyAllReceipts } from '../agent/receipts.js';
-import type { AgentResult } from '../agent/types.js';
+import type { AgentResult, QualityGateResult } from '../agent/types.js';
 import type { Octokit } from '@octokit/rest';
 import type { SandboxExecutor } from '../sandbox/types.js';
 import { rootLogger } from '../utils/logger.js';
@@ -108,6 +108,21 @@ export class ActionDispatcher {
           return { action: 'comment_posted' };
         }
         log.info({ issueNumber }, 'Receipt gate passed — all phases have valid receipts');
+      }
+
+      const qualityGates = agentResult.verification?.qualityGates;
+      if (qualityGates && qualityGates.length > 0) {
+        const failedGates = qualityGates.filter(g => !g.passed);
+        if (failedGates.length > 0) {
+          log.warn(
+            { issueNumber, failedGates: failedGates.map(g => ({ gate: g.gate, tool: g.ossTool })) },
+            `Quality gates blocked: ${failedGates.length} gate(s) failed`,
+          );
+          const body = messages.qualityGatesBlockComment(failedGates, agentResult.summary);
+          await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
+          return { action: 'comment_posted', commentBody: body };
+        }
+        log.info({ issueNumber }, 'All quality gates passed');
       }
 
       // 5. Push branch and gather changed files

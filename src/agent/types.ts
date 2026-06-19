@@ -55,6 +55,16 @@ export interface QualityGatesResult {
   canRetry: boolean;
 }
 
+export interface QualityGateResult {
+  gate: 'reality' | 'compile' | 'test_integrity' | 'hallucination';
+  passed: boolean;
+  ossTool: string;
+  command: string;
+  stdout: string;
+  stderr: string;
+  details: string[];
+}
+
 export interface VerificationResult {
   baseline: TestBaseline | null;
   postFix: TestBaseline | null;
@@ -64,6 +74,7 @@ export interface VerificationResult {
   preExistingTestsRegressed: boolean;
   unverified: boolean;
   details: string[];
+  qualityGates: QualityGateResult[];
 }
 
 export interface GroundingRequirement {
