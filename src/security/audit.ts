@@ -19,6 +19,7 @@
 
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { auditLogRepository } from '../db/repositories/AuditLogRepository.js';
 
 const log = rootLogger.child({ module: 'audit' });
 
@@ -49,17 +50,18 @@ export async function writeAuditLog(entry: AuditEntry): Promise<void> {
   // Persist to database if explicitly enabled via config flag
   if (config.database.enableAuditPersistence) {
     try {
-      const { queryWithRetry } = await import('../db/connection.js');
-      const sql = `INSERT INTO audit_logs (action, actor, target, details, outcome, error, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`;
-      await queryWithRetry(sql, [
-        entry.action,
-        entry.actor,
-        entry.target,
-        entry.details ? JSON.stringify(entry.details) : null,
-        entry.outcome,
-        entry.error ?? null,
-        new Date().toISOString(),
-      ]);
+      await auditLogRepository.log({
+        actorType: 'system',
+        actorId: entry.actor,
+        action: entry.action,
+        resourceType: 'account',
+        resourceId: entry.target,
+        details: {
+          ...entry.details,
+          outcome: entry.outcome,
+          error: entry.error,
+        },
+      });
     } catch (err) {
       // Non-fatal: log the failure but don't throw
       log.error({ err: String(err), action: entry.action }, 'Failed to persist audit log to database');

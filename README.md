@@ -3,13 +3,7 @@
 ![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)
 ![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
-
-[![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml)
-[![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml)
-
-[![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml)
-[![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml)
+![Benchmark](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/.github/badges/benchmark.svg)
 
 **Label a GitHub issue. Get a pull request.**
 
@@ -34,6 +28,30 @@ Every fix runs in an isolated sandbox. Your code is never stored. Full audit tra
 
 ## Quick Start
 
+### One-command setup (recommended)
+
+```bash
+# Clone and set up everything automatically
+git clone https://github.com/tamnguyen08/solving_tickets_as_a_service
+cd solving_tickets_as_a_service
+npm run setup
+```
+
+Then start the bot:
+
+```bash
+# Start OpenCode (agent backend, in another terminal)
+opencode serve --port 4096
+
+# Start the bot
+npm run dev
+
+# Verify it's running
+curl http://localhost:3000/health
+```
+
+### Manual setup
+
 ```bash
 # 1. Clone and install
 git clone https://github.com/tamnguyen08/solving_tickets_as_a_service
@@ -47,7 +65,10 @@ opencode serve --port 4096
 cp .env.example .env
 # Fill in GITHUB_APP_ID, GITHUB_PRIVATE_KEY, GITHUB_WEBHOOK_SECRET
 
-# 4. Run
+# 4. Seed the database with a demo user (optional, for dashboard testing)
+npx tsx src/db/seed.ts
+
+# 5. Run
 npm run dev
 ```
 
@@ -145,9 +166,72 @@ All config via environment variables:
 | `STAS_MAX_CONCURRENT` | `3` | Max concurrent fix runs |
 | `STAS_PORT` | `3000` | Webhook server port |
 
+
+## RapidAPI Marketplace
+
+STAS is also available as a payable API on the [RapidAPI Marketplace](https://rapidapi.com/).
+Subscribe to a plan and get instant access to STAS's fix capabilities without hosting anything yourself.
+
+### Features
+
+- **Fix Submission** — Submit a GitHub issue URL and get a fix PR created automatically
+- **Job Polling** — Poll for status and results with a simple job ID
+- **Public Eval Results** — See STAS benchmark performance before subscribing
+- **Tiered Plans** — Free (10 req/day), Pro (100 req/day), Enterprise (1000 req/day)
+
+### Quickstart
+
+```bash
+# 1. Subscribe at RapidAPI Marketplace (link below)
+# 2. Get your API key and proxy secret
+
+# 3. Submit a fix job
+curl -X POST https://stas-rapidapi.p.rapidapi.com/api/fix \
+  -H "Content-Type: application/json" \
+  -H "X-RapidAPI-Key: your-rapidapi-key" \
+  -H "X-RapidAPI-Proxy-Secret: your-proxy-secret" \
+  -d '{
+    "repoUrl": "https://github.com/owner/repo",
+    "issueTitle": "Fix login validation bug",
+    "issueBody": "The login endpoint returns 500 when the email contains special characters like + or &."
+  }'
+
+# 4. Poll for results
+curl https://stas-rapidapi.p.rapidapi.com/api/fix/<jobId> \
+  -H "X-RapidAPI-Key: your-rapidapi-key" \
+  -H "X-RapidAPI-Proxy-Secret: your-proxy-secret"
+
+# 5. Check public eval results (no auth needed)
+curl https://stas-rapidapi.p.rapidapi.com/api/eval/results
+```
+
+### Endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/fix` | RapidAPI Key + Proxy Secret | Submit a fix job |
+| GET | `/api/fix/{jobId}` | RapidAPI Key + Proxy Secret | Poll job status |
+| GET | `/api/eval/results` | None | Aggregate eval results |
+| GET | `/api/eval/latest` | None | Latest full eval run |
+| GET | `/api/health` | None | Service health check |
+
+### Deployment
+
+To deploy your own RapidAPI endpoint:
+
+```bash
+# 1. Set RapidAPI env vars
+export RAPIDAPI_PROXY_SECRET="your-secret"
+export RAPIDAPI_PROVIDER_KEY="your-provider-key"
+
+# 2. Deploy STAS as usual (see Deployment section above)
+# 3. Sync OpenAPI spec to RapidAPI
+bash scripts/rapidapi-sync.sh
+```
 ## Deployment
 
 See [`DEVELOPMENT.md`](DEVELOPMENT.md) for a comprehensive deployment guide covering local dev, Railway, Fly.io, and Kubernetes.
+For day-2 operations (scaling, monitoring, incident response), see the [Production Runbook](ops/runbook.md) and [Alert Playbook](ops/playbook.md).
 
 ### One-Click Deploy
 
@@ -182,15 +266,65 @@ docker run -p 3000:3000 --env-file .env stas-bot
 
 ### Docker Compose
 
+#### Development
 ```bash
+# Start Redis + bot with hot-reload
 docker compose up
 ```
 
-Starts Redis + bot with hot-reload. See `DEVELOPMENT.md` for details.
+#### Production Stack
+```bash
+# Start full production stack (Redis, RabbitMQ, PostgreSQL, webhook, workers, Nginx)
+docker compose -f docker-compose.prod.yml up -d
+
+# Scale workers horizontally (e.g., 4 worker replicas)
+docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
+```
+
+The production stack includes:
+- **PostgreSQL 16** — primary database
+- **Redis 7** — Celery result backend + caching
+- **RabbitMQ 4** — message broker for Celery
+- **stas-webhook** — Express.js API server (horizontally scalable)
+- **stas-worker** — Celery worker pool (horizontally scalable via `--scale`)
+- **celery-beat** — periodic task scheduler
+- **Flower** — Celery monitoring dashboard (port 5555)
+- **Nginx** — reverse proxy with TLS termination and load balancing
+
+See `DEVELOPMENT.md` for details on all deployment options.
 
 ### Kubernetes
 
 See `k8s/` for example manifests.
+
+
+## Documentation
+
+STAS ships with comprehensive documentation:
+
+| Document | Description |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Deep-dive into the pipeline: webhooks, queue, agent, sandbox, security |
+| [SECURITY.md](docs/SECURITY.md) | Security model: webhook verification, sandbox isolation, prompt injection protection |
+| [SELF_HOSTING.md](docs/SELF_HOSTING.md) | Step-by-step self-hosting guide: Docker, Kubernetes, Railway, Fly.io |
+| [CUSTOMIZATION.md](docs/CUSTOMIZATION.md) | Customizing labels, models, tools, PR templates, and environment |
+| [FAQ.md](docs/FAQ.md) | Frequently asked questions about STAS, alternatives, and troubleshooting |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, testing, PR process, code style |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community guidelines |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | Local development and deployment guide |
+| [ops/runbook.md](ops/runbook.md) | Production deployment runbook — service mgmt, scaling, monitoring, failures |
+| [ops/playbook.md](ops/playbook.md) | Alert response playbooks for common incidents |
+
+## Multi-Platform
+
+STAS now supports multiple Git hosting platforms. See the [Platforms documentation](docs/platforms/README.md) for setup guides:
+
+- **GitHub** — Live, fully supported
+- **GitLab** — Beta (self-hosted and GitLab.com)
+- **Bitbucket** — Beta (Bitbucket Cloud)
+
+Each platform has its own webhook integration, agent pipeline, CI configuration, and eval test strategy. Platform-specific setup guides are in [`docs/platforms/`](docs/platforms/README.md).
+
 
 ## Roadmap
 

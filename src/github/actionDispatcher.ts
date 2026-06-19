@@ -1,6 +1,10 @@
 /**
  * ActionDispatcher — decides what action to take based on agent results.
  *
+ * Thin wrapper that delegates to the platform abstraction layer for
+ * message templates while keeping backward compatibility for consumers
+ * that import this class.
+ *
  * After the agent loop completes, this class examines the result confidence
  * and takes the appropriate action: create PR (draft or ready), post comments,
  * or flag for human attention.
@@ -10,15 +14,18 @@
  * ✅ Diff-gathering failure logs a warning (non-fatal, continues)
  * ✅ Error comment posting has its own try/catch fallback
  * ✅ postComment() logs warning on failure (non-fatal)
+ * ✅ Sentry breadcrumbs for PR creation actions
  * ────────────────────────────────────────────────────────────────────
  */
 
 import { type ReceiptManifest, verifyAllReceipts } from '../agent/receipts.js';
 import type { AgentResult } from '../agent/types.js';
-import type { SandboxExecutor } from '../sandbox/executor.js';
+import type { Octokit } from '@octokit/rest';
+import type { SandboxExecutor } from '../sandbox/types.js';
 import { rootLogger } from '../utils/logger.js';
 import { getOctokit } from './auth.js';
-import * as messages from './messages.js';
+import * as messages from '../platforms/messages.js';
+import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
 
@@ -50,6 +57,9 @@ export class ActionDispatcher {
   async dispatch(params: DispatchParams): Promise<DispatchResult> {
     const { issueNumber, issueTitle, agentResult, sandbox, repoOwner, repoName, installationId, repoDefaultBranch } =
       params;
+
+    // Set Sentry user context for error correlation
+    setUserContext(installationId, `${repoOwner}/${repoName}`);
 
     const octokit = await getOctokit(installationId);
     const baseBranch = repoDefaultBranch || 'main';
@@ -108,7 +118,7 @@ export class ActionDispatcher {
       try {
         const diffResult = await sandbox.exec(
           // biome-ignore lint/suspicious/noExplicitAny: private field access needed
-          `git -C ${(sandbox as any).repoDir || `/home/user/${repoName}`} diff --name-only origin/${baseBranch}...${branchName} 2>/dev/null || true`,
+          `git -C ${(sandbox as { repoDir?: string }).repoDir || `/home/user/${repoName}`} diff --name-only origin/${baseBranch}...${branchName} 2>/dev/null || true`,
         );
         changedFiles = diffResult.stdout.split('\n').filter(Boolean);
       } catch (err) {
@@ -150,6 +160,15 @@ export class ActionDispatcher {
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
         log.info({ prNumber: pr.data.number }, 'High-confidence PR created');
+
+        addBreadcrumb('pr', 'High-confidence PR created', {
+          prNumber: String(pr.data.number),
+          prUrl: pr.data.html_url,
+          repo: `${repoOwner}/${repoName}`,
+          issueNumber: String(issueNumber),
+          confidence: 'high',
+        });
+
         return {
           action: 'pr_created',
           prUrl: pr.data.html_url,
@@ -182,6 +201,15 @@ export class ActionDispatcher {
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
         log.info({ prNumber: pr.data.number }, 'Draft PR created');
+
+        addBreadcrumb('pr', 'Draft PR created', {
+          prNumber: String(pr.data.number),
+          prUrl: pr.data.html_url,
+          repo: `${repoOwner}/${repoName}`,
+          issueNumber: String(issueNumber),
+          confidence: 'medium',
+        });
+
         return {
           action: 'draft_pr_created',
           prUrl: pr.data.html_url,
@@ -197,6 +225,12 @@ export class ActionDispatcher {
       return { action: 'comment_posted', commentBody: lowBody };
     } catch (err) {
       log.error({ err: String(err), issueNumber, repoOwner, repoName }, 'Error dispatching action');
+
+      addBreadcrumb('pr', 'PR creation failed', {
+        repo: `${repoOwner}/${repoName}`,
+        issueNumber: String(issueNumber),
+        error: String(err),
+      });
 
       // Fallback: post error comment
       const errorBody = messages.errorComment(`Action dispatch failed: ${String(err)}`);
@@ -218,7 +252,7 @@ export class ActionDispatcher {
    * Logs context on failure and re-throws so callers can handle.
    */
   private async postComment(
-    octokit: ReturnType<typeof getOctokit> extends Promise<infer T> ? T : never,
+    octokit: Octokit,
     owner: string,
     repo: string,
     issueNumber: number,

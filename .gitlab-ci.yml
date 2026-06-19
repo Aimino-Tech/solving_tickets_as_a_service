@@ -1,0 +1,87 @@
+stages:
+  - eval-smoke
+  - eval-standard
+  - eval-full
+  - deploy-badge
+
+variables:
+  NODE_VERSION: "20"
+  PROMPTFOO_CACHE_DIR: "${CI_PROJECT_DIR}/.promptfoo-cache"
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - ${PROMPTFOO_CACHE_DIR}/
+
+before_script:
+  - node --version
+  - npm --version
+  - npm ci
+
+# ── Smoke eval: runs on every push ──────────────────────────────────────────
+
+eval-smoke:
+  stage: eval-smoke
+  image: node:${NODE_VERSION}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - npx promptfoo eval --max-concurrency 2 --tests eval/test-cases/smoke.txt --output eval/results/smoke-${CI_JOB_ID}.json
+  artifacts:
+    paths:
+      - eval/results/smoke-${CI_JOB_ID}.json
+    reports:
+      metrics: eval/results/smoke-${CI_JOB_ID}.json
+    expire_in: 30 days
+
+# ── Standard eval: runs on MR creation/update (covers full test suite) ──────
+
+eval-standard:
+  stage: eval-standard
+  image: node:${NODE_VERSION}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - eval/test-cases/**/*
+  parallel: 2
+  script:
+    - npx promptfoo eval --tests eval/test-cases/standard.txt --output eval/results/standard-${CI_JOB_ID}.json
+  artifacts:
+    paths:
+      - eval/results/standard-${CI_JOB_ID}.json
+    expire_in: 30 days
+
+# ── Full eval + red team: runs nightly via schedule ─────────────────────────
+
+eval-full:
+  stage: eval-full
+  image: node:${NODE_VERSION}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  script:
+    - npx promptfoo eval --tests eval/test-cases/full.txt --output eval/results/full-${CI_JOB_ID}.json
+    - npx promptfoo redteam run --output eval/results/redteam-${CI_JOB_ID}.json
+  artifacts:
+    paths:
+      - eval/results/full-${CI_JOB_ID}.json
+      - eval/results/redteam-${CI_JOB_ID}.json
+    expire_in: 90 days
+
+# ── Benchmark badge generation ──────────────────────────────────────────────
+
+deploy-badge:
+  stage: deploy-badge
+  image: node:${NODE_VERSION}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  script:
+    - npx promptfoo eval --tests eval/test-cases/benchmark.txt --output eval/results/benchmark-${CI_JOB_ID}.json
+    - bun run eval:badge --output eval/badges/pass-rate.svg
+  artifacts:
+    paths:
+      - eval/badges/pass-rate.svg
+    expire_in: never

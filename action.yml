@@ -1,0 +1,41 @@
+name: 'STAS Eval Pipeline'
+description: 'Run AI agent evaluation against regression benchmarks using STAS'
+author: 'Aimino Tech'
+branding:
+  icon: 'check-square'
+  color: 'blue'
+
+inputs:
+  api-key:
+    description: 'STAS API key for authentication'
+    required: true
+  eval-suite:
+    description: 'Eval suite to run: smoke | standard | full'
+    default: 'smoke'
+    required: false
+  langfuse-public-key:
+    description: 'LangFuse public key for trace export (optional)'
+    required: false
+  langfuse-secret-key:
+    description: 'LangFuse secret key for trace export (optional)'
+    required: false
+  stas-api-url:
+    description: 'STAS API base URL'
+    default: 'https://api.stas.aimino.io'
+    required: false
+
+outputs:
+  pass-rate:
+    description: 'Overall pass rate percentage'
+  pass-rate-delta:
+    description: 'Change in pass rate compared to baseline'
+  langfuse-trace-url:
+    description: 'URL to LangFuse trace for this run'
+  regression-detected:
+    description: 'Whether a regression was detected (true/false)'
+  status:
+    description: 'Run status: passed | failed | error'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

@@ -8,7 +8,7 @@
  * Phases:
  *   1. Triage — classify issue type + difficulty (cheap model)
  *   2. Fetch comments — gather up to 15 issue comments for context
- *   3. Boot sandbox — E2B sandbox with cloned repo
+ *   3. Boot sandbox — sandbox with cloned repo (E2B or Docker)
  *   3.5 Baseline tests — run test suite before any changes
  *   4. Static analysis — tsc --noEmit etc.
  *   5. Code intelligence — symbol index, import tracing
@@ -30,19 +30,22 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
-import OpenAI from 'openai';
-import { config } from '../config.js';
-import { ActionDispatcher } from '../github/actionDispatcher.js';
-import { getInstallationToken, getOctokit } from '../github/auth.js';
-import * as messages from '../github/messages.js';
-import { SandboxExecutor } from '../sandbox/executor.js';
-import { getTracker } from '../trackers/index.js';
-import { jobLogger, rootLogger } from '../utils/logger.js';
-import type { IssueJobData } from '../utils/types.js';
-import { addReceipt, createManifest, createReceipt, serializeReceiptsJson } from './receipts.js';
-import { buildTools, type SandboxTools } from './tools.js';
-import type { AgentResult, TestBaseline, TriageResult, VerificationResult } from './types.js';
-
+import OpenAI from "openai";
+import { config } from "../config.js";
+import { getInstallationToken } from "../github/auth.js";
+import { ActionDispatcher } from "../github/actionDispatcher.js";
+import { createSandbox } from "../sandbox/index.js";
+import type { SandboxExecutor } from "../sandbox/types.js";
+import { buildTools, type SandboxTools } from "./tools.js";
+import { runQualityGates } from "./qualityGates.js";
+import type { AgentResult, TriageResult, VerificationResult, TestBaseline, QualityGatesResult } from "./types.js";
+import type { IssueJobData } from "../utils/types.js";
+import type { PlatformClient } from "../platforms/interface.js";
+import { createGitHubClient } from "../platforms/github/index.js";
+import { rootLogger, jobLogger } from "../utils/logger.js";
+import { addBreadcrumb, setUserContext } from "../monitoring/sentry.js";
+import * as messages from "../github/messages.js";
+import { getTracker } from "../trackers/index.js";
 const log = rootLogger.child({ module: 'issue-agent' });
 
 // ---------------------------------------------------------------------------
@@ -99,9 +102,11 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 
   let sandbox: SandboxExecutor | null = null;
   let currentPhase = '';
-  let receiptManifest = createManifest();
+  let client: PlatformClient | null = null;
 
   try {
+    client = await createGitHubClient(installationId);
+
     // ── Phase 1: Triage ──────────────────────────────────────────────
     currentPhase = '1-triage';
     logger.info('Phase 1: Classifying issue');
@@ -156,7 +161,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
             data.trackerTicketId,
             `### 🔍 STAS Investigating\n\n**Issue**: ${data.issueTitle}\n\nIssue classified as **${triage.type}** (difficulty: ${triage.difficulty}).\n\nI'll investigate and work on a fix.\n\n`,
           )
-          .catch((err) => {
+          .catch((err: unknown) => {
             log.warn(
               { err: String(err), trackerType: data.trackerType, ticketId: data.trackerTicketId },
               'Failed to post initial tracker comment',
@@ -180,7 +185,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     // ── Phase 3: Boot sandbox ─────────────────────────────────────────
     currentPhase = '3-boot-sandbox';
     logger.info('Phase 3: Booting sandbox');
-    sandbox = new SandboxExecutor(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
+    sandbox = createSandbox(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
     await sandbox.boot();
     await postStatus(
       installationId,
@@ -276,7 +281,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       `🤖 **Running fix agent** — investigating root cause and writing fix (may take a few minutes).`,
     );
 
-    const openCodeResult = await withTimeout(
+    let openCodeResult = await withTimeout(
       dispatchToOpenCode({
         repoOwner,
         repoName,
@@ -307,14 +312,60 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       return fallbackResult;
     }
 
-    receiptManifest = addReceipt(
-      receiptManifest,
-      createReceipt(
-        'investigate',
-        { issue: { title: issueTitle, body: issueBody }, comments, triage, analysis: analysisResult, codeIntel },
-        { summary: openCodeResult.summary, branch: openCodeResult.branchName, errors: openCodeResult.errors },
-        `issue:#${issueNumber}/investigate`,
-      ),
+    // ── Phase 6.2: Quality Gates ────────────────────────────────────
+    currentPhase = "6.2-quality-gates";
+    logger.info("Phase 6.2: Running quality gates");
+
+    const qualityGatesResult = await runQualityGates(
+      sandbox,
+      openCodeResult.diff ?? "",
+      0,
+      3,
+    );
+
+    await postStatus(
+      installationId,
+      repoOwner,
+      repoName,
+      issueNumber,
+      qualityGatesResult.passed
+        ? `✅ **Quality gates passed** — all 4 gates approved.`
+        : `❌ **Quality gates failed** — ${qualityGatesResult.gates.filter(g => !g.passed).length} gate(s) blocked. ${qualityGatesResult.canRetry ? "Will retry fix generation." : "Max retries reached — escalating to human."}`,
+    );
+
+    if (!qualityGatesResult.passed) {
+      if (qualityGatesResult.canRetry) {
+        logger.info({ retryCount: qualityGatesResult.retryCount, maxRetries: qualityGatesResult.maxRetries }, "Quality gates failed, regenerating fix");
+        const updatedResult = await retryWithRegeneration(params, qualityGatesResult);
+        if (!updatedResult.success) {
+          return {
+            summary: "Quality gates rejected fix after all retries",
+            confidence: "low",
+            fixReady: false,
+            errors: ["All retry attempts failed quality gates"],
+            noFixReason: "Fix failed all quality gates after max retries. Escalated to human.",
+          };
+        }
+        openCodeResult = updatedResult;
+      } else {
+        return {
+          summary: `Quality gates blocked fix after ${qualityGatesResult.retryCount} attempt(s)`,
+          confidence: "low",
+          fixReady: false,
+          errors: [...qualityGatesResult.gates.filter(g => !g.passed).map(g => `Gate "${g.gate}" failed: ${g.reason}`)],
+          noFixReason: "Fix failed quality gates. Max retries reached — escalated to human.",
+        };
+      }
+    }
+
+    // ── Phase 6.5: Verification (post-fix) ────────────────────────────
+    currentPhase = "6.5-verification";
+    logger.info("Phase 6.5: Running verification");
+    const verification = await runVerification(
+      sandbox,
+      baselineTestResult,
+      baselineTestFiles,
+      logger,
     );
 
     receiptManifest = addReceipt(
@@ -416,6 +467,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
         verification,
       },
       sandbox,
+      client,
       repoOwner,
       repoName,
       installationId,
@@ -475,7 +527,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
             data.trackerTicketId,
             `### ❌ STAS Error\n\nAn error occurred during fix analysis:\n\n\`\`\`\n${errorMsg.slice(0, 2000)}\n\`\`\`\n\n**Phase**: ${currentPhase}`,
           )
-          .catch((e) => {
+          .catch((e: unknown) => {
             logger.warn({ err: String(e) }, 'Failed to post error to tracker');
           });
       }
@@ -612,6 +664,7 @@ async function buildCodeIntelligence(sandbox: SandboxExecutor): Promise<CodeInte
 // ── Phase 6: OpenCode dispatch ──────────────────────────────────────
 
 interface OpenCodeDispatchParams {
+  repoUrl: string;
   repoOwner: string;
   repoName: string;
   issueNumber: number;
@@ -644,6 +697,7 @@ interface OpenCodeDispatchResult {
  */
 async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenCodeDispatchResult> {
   const {
+    repoUrl,
     repoOwner,
     repoName,
     issueNumber,
@@ -659,6 +713,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
   } = params;
 
   const prompt = buildOpenCodePrompt({
+    repoUrl,
     repoOwner,
     repoName,
     issueNumber,
@@ -788,6 +843,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
  * Build the system prompt for the OpenCode agent.
  */
 function buildOpenCodePrompt(params: {
+  repoUrl: string;
   repoOwner: string;
   repoName: string;
   issueNumber: number;
@@ -900,6 +956,97 @@ function buildOpenCodePrompt(params: {
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+/**
+ * Re-dispatch to OpenCode with retry context when quality gates fail.
+ */
+async function retryWithRegeneration(
+  params: OpenCodeDispatchParams,
+  gatesResult: QualityGatesResult,
+): Promise<OpenCodeDispatchResult> {
+  const failedGates = gatesResult.gates.filter(g => !g.passed);
+  const retryPrompt = `\n\n## Quality Gate Retry (Attempt ${gatesResult.retryCount + 1}/${gatesResult.maxRetries})
+
+The previous fix was REJECTED by the following quality gate(s):
+${failedGates.map(g => `- **${g.gate}**: ${g.reason}${g.details ? `\n  ${g.details}` : ''}`).join('\n')}
+
+Please regenerate the fix addressing ALL of the above issues.
+Make sure:
+1. Every file reference in your diff points to an existing file
+2. The code compiles without errors (tsc --noEmit)
+3. Tests contain real assertions (no expect(true).toBe(true))
+4. All imported packages exist on npm
+
+Do NOT repeat the same mistakes. The retry counter is finite.\n`;
+
+  const { repoUrl, repoOwner, repoName, issueNumber, issueTitle, issueBody, comments, triage, analysisResult, codeIntel, baselineTestResult } = params;
+
+  const prompt = buildOpenCodePrompt({
+    repoUrl,
+    repoOwner,
+    repoName,
+    issueNumber,
+    issueTitle,
+    issueBody,
+    comments,
+    triage,
+    analysisResult,
+    codeIntel,
+    baselineTestResult,
+  }) + retryPrompt;
+
+  const sanitizedPrompt = sanitizeUserContent(prompt);
+  const models = [config.opencode.model, ...config.opencode.fallbackModels];
+  let lastError: string | undefined;
+
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
+    try {
+      const response = await fetch(`${config.opencode.url}/api/run`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${params.installationToken}`,
+        },
+        body: JSON.stringify({ prompt: sanitizedPrompt, model }),
+      });
+
+      if (!response.ok) {
+        lastError = await response.text().catch(() => "unknown error");
+        continue;
+      }
+
+      const result = (await response.json()) as Record<string, unknown>;
+      const summary = String(result.summary || "Agent completed retry.");
+      const diff = result.diff ? String(result.diff) : undefined;
+      const branchName = result.branch ? String(result.branch) : undefined;
+      const testOutput = result.testOutput ? String(result.testOutput) : undefined;
+      const confidence = parseConfidence(result);
+      const errorList = result.errors ? (result.errors as string[]) : undefined;
+
+      return {
+        success: true,
+        summary,
+        confidence,
+        branchName,
+        diff,
+        testOutput,
+        errors: errorList,
+        metadata: result.metadata as Record<string, unknown> | undefined,
+      };
+    } catch (err) {
+      lastError = String(err);
+      continue;
+    }
+  }
+
+  return {
+    success: false,
+    summary: "Retry failed on all models",
+    confidence: "low",
+    errors: lastError ? [lastError] : ["All retry models failed"],
+  };
 }
 
 /**
@@ -1146,11 +1293,11 @@ async function attemptBasicFix(
           fixReady: false,
           verification: {
             baseline: null,
-            postFix: { passed: false, output: postFixTestOutput, command: '', durationMs: 0 },
+            postFix: { passed: false, output: postFixTestOutput, command: 'npm test', durationMs: 0 },
             regressionTestCreated: false,
             regressionTestPassedOnOriginal: null,
             regressionTestPassedOnFix: null,
-            preExistingTestsRegressed: false,
+            preExistingTestsRegressed: true,
             unverified: false,
             details: ['Fix failed verification — tests did not pass after changes'],
           },

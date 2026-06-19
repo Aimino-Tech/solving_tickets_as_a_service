@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
-import type { Queue } from 'bullmq';
+
 import { config } from '../config.js';
 import { enqueueIssue } from '../queue/issueQueue.js';
 import { rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
 import type { CreatePullRequestParams, PlatformClient, PlatformWebhook, PlatformWebhookEvent } from './base.js';
+import { bitbucketPlatformClient } from '../platforms/bitbucket/index.js';
 
 const log = rootLogger.child({ module: 'webhooks-bitbucket' });
 
@@ -48,11 +49,6 @@ interface BitbucketPullRequestPayload {
     destination: { branch: { name: string } };
     links: { html: { href: string } };
   };
-}
-
-function getAuthHeader(): string {
-  const encoded = Buffer.from(`${config.bitbucket.username}:${config.bitbucket.appPassword}`).toString('base64');
-  return `Basic ${encoded}`;
 }
 
 export const bitbucketWebhook: PlatformWebhook = {
@@ -116,73 +112,9 @@ export const bitbucketWebhook: PlatformWebhook = {
   },
 };
 
-export const bitbucketClient: PlatformClient = {
-  platform: 'bitbucket',
+export const bitbucketClient: PlatformClient = bitbucketPlatformClient;
 
-  async createComment(repoOwner: string, repoName: string, issueNumber: number, body: string): Promise<void> {
-    const url = `https://api.bitbucket.org/2.0/repositories/${repoOwner}/${repoName}/issues/${issueNumber}/comments`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: getAuthHeader(),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ content: { raw: body } }),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      log.error(
-        { status: response.status, body: text, repoOwner, repoName, issueNumber },
-        'Failed to create Bitbucket comment',
-      );
-      throw new Error(`Bitbucket comment failed: ${response.status} ${text}`);
-    }
-  },
-
-  async createPullRequest(params: CreatePullRequestParams): Promise<{ url: string; number: number }> {
-    const url = `https://api.bitbucket.org/2.0/repositories/${params.repoOwner}/${params.repoName}/pullrequests`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: getAuthHeader(),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        title: params.title,
-        description: params.body,
-        source: { branch: { name: params.head } },
-        destination: { branch: { name: params.base } },
-      }),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      log.error({ status: response.status, body: text }, 'Failed to create Bitbucket pull request');
-      throw new Error(`Bitbucket PR failed: ${response.status} ${text}`);
-    }
-
-    const pr = (await response.json()) as { links: { html: { href: string } }; id: number };
-    return { url: pr.links.html.href, number: pr.id };
-  },
-
-  toIssueJobData(event: PlatformWebhookEvent): IssueJobData {
-    return {
-      installationId: Number(event.issue.installationId ?? 0),
-      repoOwner: event.issue.repoOwner,
-      repoName: event.issue.repoName,
-      repoPrivate: event.issue.repoPrivate,
-      issueNumber: event.issue.number,
-      issueTitle: event.issue.title,
-      issueBody: event.issue.body,
-      source: 'bitbucket',
-    };
-  },
-};
-
-export function createBitbucketWebhooks(queue: Queue<IssueJobData>) {
+export function createBitbucketWebhooks() {
   const handler = {
     platform: 'bitbucket' as const,
 
@@ -220,7 +152,7 @@ export function createBitbucketWebhooks(queue: Queue<IssueJobData>) {
         const jobData = bitbucketClient.toIssueJobData(parsed);
 
         try {
-          await enqueueIssue(queue, jobData);
+          await enqueueIssue(undefined, jobData);
         } catch (err) {
           log.error(
             { err: String(err), repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },

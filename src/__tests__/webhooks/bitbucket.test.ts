@@ -190,7 +190,7 @@ describe("createBitbucketWebhooks", () => {
   });
 
   it("enqueues a job for issue created event", async () => {
-    const handler = createBitbucketWebhooks(mockQueue as any);
+    const handler = createBitbucketWebhooks();
 
     const rawPayload = JSON.stringify(sampleBitbucketIssueCreatedPayload());
     const expected = crypto.createHmac("sha256", "test-secret").update(rawPayload, "utf8").digest("hex");
@@ -211,7 +211,7 @@ describe("createBitbucketWebhooks", () => {
   });
 
   it("does NOT enqueue for pull request created events", async () => {
-    const handler = createBitbucketWebhooks(mockQueue as any);
+    const handler = createBitbucketWebhooks();
 
     const rawPayload = JSON.stringify(sampleBitbucketPullRequestCreatedPayload());
     const expected = crypto.createHmac("sha256", "test-secret").update(rawPayload, "utf8").digest("hex");
@@ -223,14 +223,14 @@ describe("createBitbucketWebhooks", () => {
   });
 
   it("does NOT enqueue when signature verification fails", async () => {
-    const handler = createBitbucketWebhooks(mockQueue as any);
+    const handler = createBitbucketWebhooks();
     await handler.handle(JSON.stringify({ event: "issue:created" }), "sha256=invalid");
 
     expect(mockEnqueueIssue).not.toHaveBeenCalled();
   });
 
   it("does NOT enqueue for non-matching events", async () => {
-    const handler = createBitbucketWebhooks(mockQueue as any);
+    const handler = createBitbucketWebhooks();
 
     const rawPayload = JSON.stringify({ event: "repo:push" });
     const expected = crypto.createHmac("sha256", "test-secret").update(rawPayload, "utf8").digest("hex");

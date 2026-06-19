@@ -1,0 +1,9 @@
+# Smoke test: handle an empty/minimal repo gracefully
+# TODO: populate with actual promptfoo test case
+description: "Handle empty repo edge case"
+prompts: ["What is the current state of this repository?"]
+tests:
+  - description: "Empty repo is handled gracefully"
+    assert:
+      - type: not-contains
+        value: "error"

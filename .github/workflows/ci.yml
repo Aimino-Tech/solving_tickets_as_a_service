@@ -1,3 +1,23 @@
+# =============================================================================
+# STAS CI — Lint, TypeCheck, Test (with coverage), Build, and E2E
+#
+# Optimizations:
+#   - Dependency caching via actions/setup-node (npm ci ~5s)
+#   - Parallel independent jobs (lint, typecheck, test, build, e2e)
+#   - Workflow concurrency: cancels in-progress runs on same branch
+#   - E2E job with Docker Compose services (Redis)
+#   - Worker E2E job with Docker Compose services (Redis + RabbitMQ)
+#   - Coverage thresholds enforced by vitest config
+#   - workflow_dispatch trigger for manual runs
+#   - Dockerfile linting via hadolint
+#   - Docker image vulnerability scanning via Grype
+#   - Docker Bench Security audit
+#   - CycloneDX SBOM generation
+#   - npm audit enforcement (fail on high/critical)
+#   - pip-audit for Python dependency scanning
+#   - package-lock.json integrity verification
+# =============================================================================
+
 name: CI
 
 on:
@@ -5,74 +25,319 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_lint:
+        description: "Skip lint job (true/false)"
+        required: false
+        default: "false"
+      skip_e2e:
+        description: "Skip E2E tests (true/false)"
+        required: false
+        default: "false"
+      skip_worker_e2e:
+        description: "Skip Worker E2E tests (true/false)"
+        required: false
+        default: "false"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   NODE_VERSION: "22"
+  PYTHON_VERSION: "3.12"
+  CI: true
 
 jobs:
+  ##############################################################################
+  # LINT — fast-fail gate: if lint fails, dependent jobs are skipped
+  ##############################################################################
   lint:
     name: Lint (Biome)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [22]
+    timeout-minutes: 5
+    outputs:
+      skipped: ${{ steps.check-skip.outputs.skipped }}
+    steps:
+      - name: Check lint skip flag
+        id: check-skip
+        run: echo "skipped=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_lint == 'true' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.check-skip.outputs.skipped != 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.check-skip.outputs.skipped != 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.check-skip.outputs.skipped != 'true'
+        run: npm ci
+
+      - name: Run Biome lint
+        if: steps.check-skip.outputs.skipped != 'true'
+        run: npm run lint:ci
+
+  ##############################################################################
+  # DOCKERFILE LINT (hadolint)
+  ##############################################################################
+  docker-lint:
+    name: Dockerfile Lint (hadolint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+
+      - name: Lint Dockerfile with hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+
+      - name: Lint workers/Dockerfile with hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: workers/Dockerfile
+          failure-threshold: warning
+
+  ##############################################################################
+  # DOCKER BENCH SECURITY
+  ##############################################################################
+  docker-bench:
+    name: Docker Bench Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Docker Bench Security
+        run: |
+          docker run --rm \
+            --pid=host \
+            --userns=host \
+            --cap-add=audit_control \
+            -v /etc:/etc:ro \
+            -v /usr/bin/containerd:/usr/bin/containerd:ro \
+            -v /usr/bin/runc:/usr/bin/runc:ro \
+            -v /usr/lib/systemd:/usr/lib/systemd:ro \
+            -v /var/lib:/var/lib:ro \
+            -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            docker/docker-bench-security:latest
+        continue-on-error: true
+
+  ##############################################################################
+  # TRIVY CONFIG SCAN (Dockerfile vulnerabilities)
+  ##############################################################################
+  docker-scan:
+    name: Dockerfile Scan (Trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan Dockerfile with Trivy (config/misconfig)
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+  ##############################################################################
+  # SBOM GENERATION (CycloneDX)
+  ##############################################################################
+  sbom:
+    name: Generate SBOM (CycloneDX)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
-      - run: npm run lint
 
-  type-check:
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate CycloneDX SBOM (JSON)
+        run: |
+          mkdir -p sbom
+          npx --yes @cyclonedx/cyclonedx-npm \
+            --output-format JSON \
+            --output-file sbom/sbom.cyclonedx.json
+
+      - name: Generate CycloneDX SBOM (XML)
+        run: |
+          npx --yes @cyclonedx/cyclonedx-npm \
+            --output-format XML \
+            --output-file sbom/sbom.cyclonedx.xml || true
+
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
+          retention-days: 90
+
+  ##############################################################################
+  # PACKAGE-LOCK INTEGRITY VERIFICATION
+  ##############################################################################
+  lockfile-integrity:
+    name: Lockfile Integrity Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Verify lockfile version
+        run: |
+          VERSION=$(node -e "console.log(require('./package-lock.json').lockfileVersion)")
+          if [ "$VERSION" != "3" ]; then
+            echo "ERROR: Expected lockfileVersion 3, got $VERSION"
+            exit 1
+          fi
+          echo "Lockfile version: v$VERSION"
+
+      - name: Check all packages have integrity hashes
+        run: |
+          MISSING=$(node -e "
+            const lock = require('./package-lock.json');
+            const pkgs = Object.keys(lock.packages || {});
+            const missing = pkgs.filter(p => {
+              const meta = lock.packages[p];
+              return meta && !meta.link && !meta.dev && !meta.peer && !meta.bundled && !meta.integrity;
+            });
+            if (missing.length > 0) {
+              console.log('Packages missing integrity hashes:');
+              missing.forEach(p => console.log('  ' + p));
+              process.exit(1);
+            }
+            console.log('All ' + pkgs.length + ' packages have integrity hashes');
+          ")
+
+      - name: Verify lockfile consistency with node_modules
+        run: |
+          npm ci
+          npm ls --all > /dev/null 2>&1 && echo "Lockfile is consistent" || { echo "Lockfile inconsistent"; exit 1; }
+
+  ##############################################################################
+  # TYPE CHECK
+  ##############################################################################
+  typecheck:
     name: Type Check (tsc)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [22]
+    needs: [lint]
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
-      - run: npm run typecheck
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check types
+        run: npm run typecheck
+
+  ##############################################################################
+  # UNIT TESTS + COVERAGE (thresholds enforced by vitest.config.ts)
+  ##############################################################################
   test:
-    name: Test (Vitest)
+    name: Unit Tests (Vitest)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [22]
+    needs: [lint]
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
-      - run: npm test
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+  ##############################################################################
+  # BUILD
+  ##############################################################################
   build:
     name: Build (tsc)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [22]
+    needs: [lint]
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
       - run: npm run build
 
+
+  ##############################################################################
+  # MIGRATION INTEGRITY CHECK — validates migration file structure, pairing,
+  # naming conventions, order, and content integrity (no DB needed)
+  ##############################################################################
+  migration-integrity:
+    name: Migration Integrity Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run migration integrity check
+        run: npm run db:migrate:test:check
+
+  ##############################################################################
+  # MIGRATION BENCHMARK — validates migration file processing timing
+  ##############################################################################
+  migration-benchmark:
+    name: Migration Benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run migration benchmarks
+        run: npm run db:migrate:bench:ci
+
+
+  ##############################################################################
+  # SECURITY AUDIT (npm audit)
+  ##############################################################################
   audit:
     name: Security Audit (npm audit)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -83,3 +348,153 @@ jobs:
       - name: Run npm audit (fail on high/critical)
         run: npm audit --audit-level=high
         continue-on-error: false
+
+  ##############################################################################
+  # PYTHON DEPENDENCY SCANNING (pip-audit)
+  ##############################################################################
+  pip-audit:
+    name: Python Dep Scan (pip-audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: workers/requirements.txt
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run pip-audit on workers dependencies
+        run: |
+          pip-audit --requirement workers/requirements.txt \
+            --desc \
+            --strict \
+            --fix=no
+
+  ##############################################################################
+  # DOCKER IMAGE SCANNING (Grype)
+  ##############################################################################
+  grype-scan:
+    name: Docker Image Scan (Grype)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t stas-bot:ci -f Dockerfile .
+
+      - name: Scan image with Grype
+        uses: anchore/scan-action@v6
+        with:
+          image: stas-bot:ci
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true
+
+      - name: Generate Grype SARIF report
+        uses: anchore/scan-action@v6
+        with:
+          image: stas-bot:ci
+          severity-cutoff: high
+          only-fixed: true
+          output-format: sarif
+
+      - name: Upload Grype SARIF to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+          category: grype-docker
+
+  ##############################################################################
+  # E2E TESTS (Redis) — baseline and full-flow webhook tests
+  ##############################################################################
+  e2e:
+    name: E2E Tests (Redis)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [lint, build]
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_e2e != 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Start Docker services (Redis)
+        run: docker compose -f docker-compose.e2e.yml up -d redis
+
+      - name: Wait for Redis
+        run: |
+          for i in $(seq 1 30); do
+            docker exec stas-e2e-redis redis-cli ping && break
+            sleep 1
+          done
+
+      - name: Run E2E tests
+        run: npm run test:e2e:ci
+
+      - name: Stop Docker services
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml down --remove-orphans
+
+  ##############################################################################
+  # WORKER E2E TESTS (Redis + RabbitMQ) — full Celery worker pipeline
+  ##############################################################################
+  worker-e2e:
+    name: Worker E2E Tests (Redis + RabbitMQ)
+    runs-on: ubuntu-latest
+    needs: [lint]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Start Docker services (Redis + RabbitMQ)
+        run: docker compose -f docker-compose.e2e.yml up -d redis rabbitmq
+
+      - name: Wait for Redis
+        run: |
+          for i in $(seq 1 30); do
+            docker exec stas-e2e-redis redis-cli ping && break
+            sleep 1
+          done
+
+      - name: Wait for RabbitMQ
+        run: |
+          for i in $(seq 1 30); do
+            docker inspect stas-e2e-rabbitmq --format '{{.State.Health.Status}}' | grep healthy && break
+            sleep 2
+          done
+
+      - name: Run Worker E2E tests
+        run: npm run test:worker
+
+      - name: Stop Docker services
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml down --remove-orphans -t 5

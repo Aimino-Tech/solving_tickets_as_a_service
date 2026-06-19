@@ -12,13 +12,19 @@ export interface IssueJobData {
   issueBody: string | null;
 
   /** Source platform that originated this job. Defaults to "github". */
-  source?: 'github' | 'gitlab' | 'bitbucket' | 'linear' | 'jira';
+  source?: 'github' | 'gitlab' | 'bitbucket' | 'linear' | 'jira' | 'rapidapi';
 
   /** Tracker ticket ID (Linear issue ID or Jira issue key) for cross-platform sync. */
   trackerTicketId?: string;
 
   /** Tracker platform type for posting results back to the source. */
   trackerType?: 'linear' | 'jira';
+
+  /** Billing tier for this account — determines priority and rate limits. */
+  billingPlan?: 'free' | 'pro' | 'enterprise';
+
+  /** Job priority (lower = higher priority). Free=30, Pro=20, Enterprise=10. */
+  priority?: number;
 }
 
 /**
@@ -34,13 +40,19 @@ export interface TriageData {
   issueBody: string | null;
 
   /** Source platform that originated this job. Defaults to "github". */
-  source?: 'github' | 'gitlab' | 'bitbucket' | 'linear' | 'jira';
+  source?: 'github' | 'gitlab' | 'bitbucket' | 'linear' | 'jira' | 'rapidapi';
 
   /** Tracker ticket ID (Linear issue ID or Jira issue key) for cross-platform sync. */
   trackerTicketId?: string;
 
   /** Tracker platform type for posting results back to the source. */
   trackerType?: 'linear' | 'jira';
+
+  /** Billing tier for this account — determines priority and rate limits. */
+  billingPlan?: 'free' | 'pro' | 'enterprise';
+
+  /** Job priority (lower = higher priority). Free=30, Pro=20, Enterprise=10. */
+  priority?: number;
 }
 
 /**
@@ -86,4 +98,40 @@ export interface AgentResult {
   investigationOnly?: boolean;
   /** Agent produced a fix but it failed verification (tests didn't pass). */
   verificationFailed?: boolean;
+}
+
+/**
+ * Verification job data sent to the stas.agents.verification queue.
+ */
+export interface VerificationData {
+  sandboxId: string;
+  testCommand: string;
+  repoUrl?: string;
+  commitSha?: string;
+}
+
+/**
+ * PR creation job data sent to the stas.agents.pr_creation queue.
+ */
+export interface PRCreationData {
+  installationId: number;
+  repoOwner: string;
+  repoName: string;
+  issueNumber: number;
+  branchName: string;
+  fixSummary: string;
+  prTitle: string;
+  prBody: string;
+  repoPrivate?: boolean;
+}
+
+/**
+ * Notification job data sent to the stas.events.notifications queue.
+ */
+export interface NotificationData {
+  channel: 'slack' | 'webhook' | 'email';
+  message: string;
+  severity?: 'info' | 'warn' | 'error';
+  source?: string;
+  metadata?: Record<string, unknown>;
 }
