@@ -11,7 +11,7 @@ import { createMessage, type MessageEnvelope } from '../../bridge/types.js';
 
 // ── Mocks ─────────────────────────────────────────────────────────
 
-const mockChannel = {
+const mockChannel = vi.hoisted(() => ({
   prefetch: vi.fn().mockResolvedValue(undefined),
   assertExchange: vi.fn().mockResolvedValue(undefined),
   assertQueue: vi.fn().mockResolvedValue({ queue: 'mock-queue' }),
@@ -22,13 +22,13 @@ const mockChannel = {
   nack: vi.fn(),
   close: vi.fn().mockResolvedValue(undefined),
   on: vi.fn(),
-};
+}));
 
-const mockConnection = {
+const mockConnection = vi.hoisted(() => ({
   createChannel: vi.fn().mockResolvedValue(mockChannel),
   close: vi.fn().mockResolvedValue(undefined),
   on: vi.fn(),
-};
+}));
 
 vi.mock('amqplib', () => ({
   connect: vi.fn().mockResolvedValue(mockConnection),

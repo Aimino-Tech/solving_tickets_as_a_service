@@ -5,7 +5,7 @@
  * a display label, and an amount in cents for the Checkout session.
  */
 
-export const CREDIT_PACKS = {
+export const CREDIT_PACKS = Object.freeze({
   small: {
     priceId: 'price_100credits',
     credits: 100,
@@ -27,7 +27,7 @@ export const CREDIT_PACKS = {
     label: '2000 + 200 Bonus',
     amount: 15000, // $150.00 in cents
   },
-} as const;
+} as const);
 
 export type CreditPackKey = keyof typeof CREDIT_PACKS;
 
