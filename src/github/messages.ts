@@ -5,6 +5,7 @@
  * predictable across all interactions.
  */
 
+import { type ReceiptManifest, receiptsToMarkdown } from '../agent/receipts.js';
 import type { AgentResult } from '../agent/types.js';
 import { config } from '../config.js';
 
@@ -202,88 +203,75 @@ export function timeoutComment(phase: string, timeoutMs: number): string {
   const seconds = Math.round(timeoutMs / 1000);
   return [
     `### ⏱️ Phase Timed Out — ${phase}`,
-    "",
+    '',
     `The **${phase}** phase exceeded its time limit of ${seconds}s.`,
-    "",
-    "This could indicate a performance issue or an unexpected state.",
-    "The pipeline will move to the next phase or abort if this is a critical phase.",
+    '',
+    'This could indicate a performance issue or an unexpected state.',
+    'The pipeline will move to the next phase or abort if this is a critical phase.',
     BOT_SIGNATURE,
-  ].join("\n");
+  ].join('\n');
 }
 
 /**
  * Model retry — switching to a fallback model after a failure.
  */
-export function retryComment(
-  attempt: number,
-  model: string,
-  error: string,
-): string {
+export function retryComment(attempt: number, model: string, error: string): string {
   return [
     `### 🔄 Retrying — Attempt ${attempt}`,
-    "",
+    '',
     `The previous attempt failed with model \`${model}\`.`,
-    "",
+    '',
     `**Error**: \`${error.slice(0, 1000)}\``,
-    "",
-    "Retrying with next fallback model.",
+    '',
+    'Retrying with next fallback model.',
     BOT_SIGNATURE,
-  ].join("\n");
+  ].join('\n');
 }
 
 /**
  * Model fallback — a fallback model was selected.
  */
-export function modelFallbackComment(
-  model: string,
-  previousError: string,
-): string {
+export function modelFallbackComment(model: string, previousError: string): string {
   return [
     `### 🔄 Fallback Model — ${model}`,
-    "",
+    '',
     `Switching to fallback model \`${model}\` after primary model failure.`,
-    "",
+    '',
     `**Previous error**: \`${previousError.slice(0, 1000)}\``,
-    "",
+    '',
     BOT_SIGNATURE,
-  ].join("\n");
+  ].join('\n');
 }
 
 /**
  * Queue retry — a job is being retried after a failure.
  */
-export function queueRetryComment(
-  attempt: number,
-  maxRetries: number,
-  error: string,
-): string {
+export function queueRetryComment(attempt: number, maxRetries: number, error: string): string {
   return [
     `### 🔄 Queue Retry — Attempt ${attempt}/${maxRetries}`,
-    "",
+    '',
     `The issue processing job failed and will be retried.`,
-    "",
+    '',
     `**Error**: \`${error.slice(0, 1000)}\``,
-    "",
+    '',
     BOT_SIGNATURE,
-  ].join("\n");
+  ].join('\n');
 }
 
 /**
  * Dead letter — job has exhausted all retries.
  */
-export function deadLetterComment(
-  error: string,
-): string {
+export function deadLetterComment(error: string): string {
   return [
     `### ❌ Max Retries Exceeded`,
-    "",
-    "The issue processing job has exhausted all retry attempts and has been moved to the dead-letter queue.",
-    "",
+    '',
+    'The issue processing job has exhausted all retry attempts and has been moved to the dead-letter queue.',
+    '',
     `**Final error**: \`${error.slice(0, 1000)}\``,
-    "",
-    "A human operator will need to investigate this issue manually.",
+    '',
+    'A human operator will need to investigate this issue manually.',
     BOT_SIGNATURE,
-  ].join("\n");
+  ].join('\n');
 }
 
 /**
@@ -309,23 +297,21 @@ export function regressionBlockComment(result: AgentResult): string {
   const ver = result.verification;
   return [
     `### ❌ Regression Detected — PR Blocked`,
-    "",
+    '',
     result.summary,
-    "",
-    "Pre-existing tests that were passing **before** the fix are now **failing**.",
-    "",
-    ver?.details.length
-      ? ver.details.map((d) => `- ${d}`).join("\n")
-      : "",
-    "",
-    "The fix introduces regressions in previously passing tests. Please review the changes",
-    "and ensure existing functionality is preserved.",
-    "",
-    "A branch with the attempted changes has been pushed for inspection.",
+    '',
+    'Pre-existing tests that were passing **before** the fix are now **failing**.',
+    '',
+    ver?.details.length ? ver.details.map((d) => `- ${d}`).join('\n') : '',
+    '',
+    'The fix introduces regressions in previously passing tests. Please review the changes',
+    'and ensure existing functionality is preserved.',
+    '',
+    'A branch with the attempted changes has been pushed for inspection.',
     BOT_SIGNATURE,
   ]
     .filter(Boolean)
-    .join("\n");
+    .join('\n');
 }
 
 /**
@@ -333,52 +319,43 @@ export function regressionBlockComment(result: AgentResult): string {
  */
 export function verificationWarningComment(result: AgentResult): string {
   const ver = result.verification;
-  if (!ver) return "";
+  if (!ver) return '';
 
-  const lines: string[] = [
-    `### ⚠️ Verification Warnings`,
-    "",
-  ];
+  const lines: string[] = [`### ⚠️ Verification Warnings`, ''];
 
   if (ver.regressionTestPassedOnOriginal === false) {
     lines.push(
-      "- The regression test does **not fail** when run against the original code.",
-      "  It may not properly validate the bug fix.",
+      '- The regression test does **not fail** when run against the original code.',
+      '  It may not properly validate the bug fix.',
     );
   }
   if (ver.regressionTestPassedOnFix === false) {
-    lines.push(
-      "- The regression test does **not pass** on the fixed code.",
-      "  The test may need adjustment.",
-    );
+    lines.push('- The regression test does **not pass** on the fixed code.', '  The test may need adjustment.');
   }
   if (ver.regressionTestCreated === false) {
-    lines.push(
-      "- No new regression test file was detected.",
-      "  Manual verification is recommended.",
-    );
+    lines.push('- No new regression test file was detected.', '  Manual verification is recommended.');
   }
 
   if (ver.unverified) {
     lines.push(
-      "- No test suite was detected. Verification was skipped.",
-      "  Manual testing is recommended before merging.",
+      '- No test suite was detected. Verification was skipped.',
+      '  Manual testing is recommended before merging.',
     );
   }
 
   if (ver.details.length > 0) {
     lines.push(
-      "",
-      "<details><summary>Verification Details</summary>",
-      "",
+      '',
+      '<details><summary>Verification Details</summary>',
+      '',
       ...ver.details.map((d) => `- ${d}`),
-      "",
-      "</details>",
+      '',
+      '</details>',
     );
   }
 
-  lines.push("", BOT_SIGNATURE);
-  return lines.join("\n");
+  lines.push('', BOT_SIGNATURE);
+  return lines.join('\n');
 }
 
 /**
@@ -390,34 +367,32 @@ export function buildPRBody(params: {
   fileLinks: string[];
   isDraft: boolean;
   branchName: string;
+  receiptManifest?: ReceiptManifest;
 }): string {
-  const { issueNumber, result, fileLinks, branchName } = params;
+  const { issueNumber, result, fileLinks, branchName, receiptManifest } = params;
 
   const ver = result.verification;
   const verSection: string[] = [];
 
   if (ver) {
     if (ver.unverified) {
-      verSection.push("⚠️ **Unverified**: No test suite detected. Manual testing recommended.");
+      verSection.push('⚠️ **Unverified**: No test suite detected. Manual testing recommended.');
     } else {
       const checks: string[] = [];
-      checks.push(ver.preExistingTestsRegressed ? "❌" : "✅");
-      checks.push("No pre-existing test regressions");
+      checks.push(ver.preExistingTestsRegressed ? '❌' : '✅');
+      checks.push('No pre-existing test regressions');
 
       if (ver.regressionTestCreated) {
-        checks.push(ver.regressionTestPassedOnOriginal ? "✅" : "❌");
-        checks.push("Regression test fails on original code");
+        checks.push(ver.regressionTestPassedOnOriginal ? '✅' : '❌');
+        checks.push('Regression test fails on original code');
 
-        checks.push(ver.regressionTestPassedOnFix ? "✅" : "❌");
-        checks.push("Regression test passes on fix");
+        checks.push(ver.regressionTestPassedOnFix ? '✅' : '❌');
+        checks.push('Regression test passes on fix');
       } else {
-        checks.push("⚠️ No regression test detected");
+        checks.push('⚠️ No regression test detected');
       }
 
-      verSection.push(
-        "| Check | Status |",
-        "|---|---|",
-      );
+      verSection.push('| Check | Status |', '|---|---|');
       for (let i = 0; i < checks.length; i += 2) {
         verSection.push(`| ${checks[i]} ${checks[i + 1]} |`);
       }
@@ -436,8 +411,8 @@ export function buildPRBody(params: {
     fileLinks.length > 0 ? fileLinks.map((f) => `- \`${f}\``).join('\n') : '_(file list not available)_',
     '',
     `## Verification`,
-    "",
-    verSection.length > 0 ? verSection.join("\n") + "\n" : "",
+    '',
+    verSection.length > 0 ? verSection.join('\n') + '\n' : '',
     result.testOutput
       ? `<details><summary>Test Output</summary>\n\n\`\`\`\n${result.testOutput.slice(0, 5000)}\n\`\`\`\n</details>`
       : 'Tests were run as part of the fix process.',
@@ -445,6 +420,8 @@ export function buildPRBody(params: {
     `## Branch`,
     '',
     `\`${branchName}\``,
+    '',
+    receiptManifest ? receiptsToMarkdown(receiptManifest) : '',
     '',
     '---',
     '',

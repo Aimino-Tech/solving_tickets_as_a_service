@@ -13,6 +13,7 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
+import { type ReceiptManifest, verifyAllReceipts } from '../agent/receipts.js';
 import type { AgentResult } from '../agent/types.js';
 import type { SandboxExecutor } from '../sandbox/executor.js';
 import { rootLogger } from '../utils/logger.js';
@@ -31,6 +32,8 @@ export interface DispatchParams {
   repoName: string;
   installationId: number;
   repoDefaultBranch?: string;
+  receiptManifest?: ReceiptManifest;
+  receiptsJson?: string;
 }
 
 export interface DispatchResult {
@@ -73,6 +76,30 @@ export class ActionDispatcher {
         return { action: 'comment_posted', commentBody: body };
       }
 
+      if (params.receiptManifest) {
+        const receiptCheck = verifyAllReceipts(params.receiptManifest);
+        if (!receiptCheck.valid) {
+          const missingList = receiptCheck.missing.join(', ');
+          log.warn(
+            { issueNumber, missingPhases: receiptCheck.missing },
+            `Receipt gate blocked: missing receipts for phases: ${missingList}`,
+          );
+          await this.postComment(
+            octokit,
+            repoOwner,
+            repoName,
+            issueNumber,
+            `### ❌ Receipt Gate Blocked — Missing Receipts\n\n` +
+              `The following pipeline phases have no receipts:\n\n` +
+              `${receiptCheck.missing.map((p) => `- \`${p}\``).join('\n')}\n\n` +
+              `All phases must produce valid receipts before a PR can be created.\n\n` +
+              `_Receipt manifest generated: ${params.receiptManifest.createdAt}_`,
+          );
+          return { action: 'comment_posted' };
+        }
+        log.info({ issueNumber }, 'Receipt gate passed — all phases have valid receipts');
+      }
+
       // 5. Push branch and gather changed files
       const branchName = `stas/fix-${issueNumber}-${Date.now().toString(36)}`;
       await sandbox.pushBranch(branchName);
@@ -95,11 +122,11 @@ export class ActionDispatcher {
       if (agentResult.verification?.preExistingTestsRegressed) {
         const body = messages.regressionBlockComment(agentResult);
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
-        return { action: "comment_posted", commentBody: body };
+        return { action: 'comment_posted', commentBody: body };
       }
 
       // 6b. Create PR based on confidence
-      if (agentResult.confidence === "high") {
+      if (agentResult.confidence === 'high') {
         // Create a non-draft PR
         const prBody = messages.buildPRBody({
           issueNumber,
@@ -107,6 +134,7 @@ export class ActionDispatcher {
           fileLinks: changedFiles,
           isDraft: false,
           branchName,
+          receiptManifest: params.receiptManifest,
         });
 
         const pr = await octokit.pulls.create({
@@ -137,6 +165,7 @@ export class ActionDispatcher {
           fileLinks: changedFiles,
           isDraft: true,
           branchName,
+          receiptManifest: params.receiptManifest,
         });
 
         const pr = await octokit.pulls.create({
