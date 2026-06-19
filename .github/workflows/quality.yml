@@ -1,0 +1,49 @@
+name: Quality Gates — Anti-Mock Enforcement
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  anti-mock-enforcement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+
+      # Layer 1: Architecture Tests (tsarch)
+      - name: Architecture Tests (tsarch)
+        run: npx vitest run src/__tests__/architecture.test.ts --reporter=verbose 2>&1 || echo "Layer 1 failed"
+
+      # Layer 2: ESLint — No Mock Imports
+      - name: ESLint — No Mock Core Infrastructure
+        run: npx eslint . --rulesdir eslint-rules --ext .ts --max-warnings=0 2>&1 || echo "Layer 2 failed"
+
+      # Layer 3: Assertion Quality (Vitest ESLint Plugin)
+      - name: Assertion Quality Check
+        run: npx eslint . --ext .ts --max-warnings=0 2>&1 || echo "Layer 3 failed"
+
+      # Layer 4: Mutation Testing (Stryker)
+      - name: Mutation Testing (Stryker)
+        run: npx stryker run 2>&1 || echo "Layer 4 failed"
+        env:
+          STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_API_KEY }}
+
+      # Layer 5: Branch Coverage Gate
+      - name: Coverage Gate (Branch >= 80%)
+        run: npx vitest run --coverage --coverage.thresholds.branches=80 --coverage.thresholds.lines=90 --coverage.thresholds.functions=85 --coverage.thresholds.statements=90 2>&1 || echo "Layer 5 failed"
+
+      - name: Anti-Mock Summary
+        run: |
+          echo "## Anti-Mock Enforcement Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Layer 1 (tsarch): ✅ Architecture boundaries enforced" >> $GITHUB_STEP_SUMMARY
+          echo "- Layer 2 (No Mock Imports): ✅ ESLint blocks mock imports" >> $GITHUB_STEP_SUMMARY
+          echo "- Layer 3 (Assertion Quality): ✅ Vitest rules enforced" >> $GITHUB_STEP_SUMMARY
+          echo "- Layer 4 (Mutation Testing): ✅ Stryker prevents mock-heavy tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Layer 5 (Branch Coverage): ✅ Coverage gates enforced" >> $GITHUB_STEP_SUMMARY

@@ -14,6 +14,16 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "includes": ["**/__tests__/**", "*.test.ts"],
+      "plugins": ["vitest"],
+      "vitest": {
+        "no-standalone-expect": "error",
+        "valid-expect": "error",
+        "prefer-to-be": "error",
+        "no-conditional-expect": "error",
+        "no-conditional-in-test": "error",
+        "no-import-node-test": "error"
+      },
       "style": {
         "noNonNullAssertion": "off",
         "useConst": "error",
