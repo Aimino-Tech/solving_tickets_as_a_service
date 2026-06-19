@@ -40,6 +40,7 @@ import type { AgentResult, TriageResult, VerificationResult, TestBaseline } from
 import type { IssueJobData } from "../utils/types.js";
 import { rootLogger, jobLogger } from "../utils/logger.js";
 import * as messages from "../github/messages.js";
+import { getTracker } from "../trackers/index.js";
 
 const log = rootLogger.child({ module: 'issue-agent' });
 
@@ -253,7 +254,6 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 
     const openCodeResult = await withTimeout(
       dispatchToOpenCode({
-        repoUrl,
         repoOwner,
         repoName,
         issueNumber,
@@ -543,6 +543,7 @@ interface OpenCodeDispatchParams {
   analysisResult: string;
   codeIntel: CodeIntel;
   installationToken: string;
+  installationId: number;
   baselineTestResult?: TestBaseline | null;
 }
 
@@ -574,6 +575,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
     analysisResult,
     codeIntel,
     installationToken,
+    installationId,
     baselineTestResult,
   } = params;
 
@@ -727,7 +729,7 @@ function buildOpenCodePrompt(params: {
   codeIntel: CodeIntel;
   baselineTestResult?: TestBaseline | null;
 }): string {
-  const { repoUrl, repoOwner, repoName, issueNumber, issueTitle, issueBody, comments, triage, analysisResult, codeIntel, baselineTestResult } = params;
+  const { repoOwner, repoName, issueNumber, issueTitle, issueBody, comments, triage, analysisResult, codeIntel, baselineTestResult } = params;
 
   return [
     '# STAS Fix Agent',
@@ -1079,7 +1081,16 @@ async function attemptBasicFix(
           summary: `[Fallback] ${summary}`,
           confidence: 'low',
           fixReady: false,
-          verificationFailed: true,
+          verification: {
+            baseline: null,
+            postFix: { passed: false, output: postFixTestOutput, command: '', durationMs: 0 },
+            regressionTestCreated: false,
+            regressionTestPassedOnOriginal: null,
+            regressionTestPassedOnFix: null,
+            preExistingTestsRegressed: false,
+            unverified: false,
+            details: ['Fix failed verification — tests did not pass after changes'],
+          },
           branchName: undefined,
           testOutput: postFixTestOutput,
           errors: ['Fix failed verification — tests did not pass after changes'],
