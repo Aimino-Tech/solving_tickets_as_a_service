@@ -305,6 +305,29 @@ npm run test:e2e
 - [ ] Documentation is updated
 - [ ] Commit messages follow conventions
 
+### CI Gates (Leave It Cleaner)
+
+Every PR automatically runs three enforcement gates via `.github/scripts/ci-gates.sh`:
+
+| Gate | Check | What It Blocks |
+|---|---|---|
+| **Gate 1 — LSP Diagnostics** | `tsc --noEmit` on all changed files | Any TypeScript/type error, pre-existing or new |
+| **Gate 2 — Test Regression** | Compare test results on base vs PR head | Previously-passing tests that now fail |
+| **Gate 3 — Lint Diff** | `biome check --changed --since=<base>` | New lint warnings introduced by the PR |
+
+**These gates are mandatory.** There is no skip mechanism. If a gate fails:
+1. Fix the root cause in the changed files
+2. Push a new commit — the gates re-run automatically
+3. Do not add `// biome-ignore` or `@ts-expect-error` to bypass checks
+
+Run the gates locally before pushing:
+```bash
+bash .github/scripts/ci-gates.sh 1   # Diagnostics
+bash .github/scripts/ci-gates.sh 2   # Regression
+bash .github/scripts/ci-gates.sh 3   # Lint diff
+bash .github/scripts/ci-gates.sh all # All three
+```
+
 ### 4. Submitting
 
 1. Push your branch
@@ -497,6 +520,16 @@ The test uses mock HTTP servers instead of real services:
 | **GitHub API** | 9410 | Handles PR creation, comments, refs |
 | **OpenCode Go LLM** | — | Gracefully skipped (empty `OPENCODE_API_KEY`) |
 | **E2B Sandbox** | — | Returns placeholder (empty `E2B_API_KEY`) |
+
+### CI Gates (Leave It Cleaner)
+
+Every PR also runs three CI Gates that enforce code quality on every changed file:
+
+- **Gate 1 (LSP Diagnostics)**: `tsc --noEmit` on all files, zero tolerance for any errors
+- **Gate 2 (Test Regression)**: Runs tests on base branch, then PR head, blocks on regressions
+- **Gate 3 (Lint Diff)**: `biome check --changed` on PR files, blocks new warnings
+
+Run locally: `bash .github/scripts/ci-gates.sh all`
 
 ### CI Integration
 

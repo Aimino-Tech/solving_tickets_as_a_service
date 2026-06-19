@@ -16,6 +16,7 @@
 #   - npm audit enforcement (fail on high/critical)
 #   - pip-audit for Python dependency scanning
 #   - package-lock.json integrity verification
+#   - CI Gates (Leave It Cleaner): LSP diagnostics regression test check, lint diff
 # =============================================================================
 
 name: CI
@@ -498,3 +499,45 @@ jobs:
       - name: Stop Docker services
         if: always()
         run: docker compose -f docker-compose.e2e.yml down --remove-orphans -t 5
+
+  ##############################################################################
+  # CI GATES — "Leave It Cleaner Than You Found It" enforcement
+  #
+  # Three gates that run on every PR to enforce code quality:
+  #   Gate 1 — LSP/TypeScript diagnostics on changed files (zero-tolerance)
+  #   Gate 2 — Test regression check (base vs head comparison)
+  #   Gate 3 — Lint diff check (block new warnings)
+  #
+  # These gates are always required — no skip flags, no exceptions.
+  # If any gate fails, the PR is BLOCKED until the issue is fixed.
+  # =============================================================================
+  ci-gates:
+    name: CI Gates (Leave It Cleaner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Gate 1 — LSP Diagnostics on changed files
+        id: gate-1
+        run: |
+          echo "BASE_SHA=${{ github.event.pull_request.base.sha || 'origin/main' }}" >> "$GITHUB_ENV"
+          bash .github/scripts/ci-gates.sh 1
+
+      - name: Gate 2 — Test Regression Check
+        id: gate-2
+        run: bash .github/scripts/ci-gates.sh 2
+
+      - name: Gate 3 — Lint Diff Check
+        id: gate-3
+        run: bash .github/scripts/ci-gates.sh 3
