@@ -8,7 +8,7 @@
  * predictable across all interactions and platforms.
  */
 
-import type { AgentResult } from '../agent/types.js';
+import type { AgentResult, QualityGateResult } from '../agent/types.js';
 import { config } from '../config.js';
 
 const BOT_NAME = config.stas.botName;
@@ -333,6 +333,71 @@ export function regressionBlockComment(result: AgentResult): string {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+/**
+ * Quality gates failure — one or more OSS quality gates blocked the fix.
+ * Posts detailed evidence for each failed gate.
+ */
+export function qualityGatesBlockComment(failedGates: QualityGateResult[], summary: string): string {
+  const sections: string[] = [
+    `### ❌ Quality Gates Blocked — PR Not Created`,
+    '',
+    summary,
+    '',
+    `The fix was rejected by **${failedGates.length} quality gate(s)**. Each gate uses an OSS tool to verify the agent's output.`,
+    '',
+  ];
+
+  for (const gate of failedGates) {
+    sections.push(
+      `<details><summary>❌ Gate: ${gate.gate} (${gate.ossTool})</summary>`,
+      '',
+      '| Field | Value |',
+      '|---|---|',
+      `| Gate | \`${gate.gate}\` |`,
+      `| OSS Tool | \`${gate.ossTool}\` |`,
+      `| Command | \`${gate.command}\` |`,
+      '',
+    );
+
+    if (gate.stdout) {
+      sections.push(
+        '**stdout:**',
+        '```',
+        gate.stdout.slice(0, 2000),
+        '```',
+        '',
+      );
+    }
+    if (gate.stderr) {
+      sections.push(
+        '**stderr:**',
+        '```',
+        gate.stderr.slice(0, 2000),
+        '```',
+        '',
+      );
+    }
+    if (gate.details.length > 0) {
+      sections.push(
+        '**Details:**',
+        '',
+        ...gate.details.map(d => `- ${d}`),
+        '',
+      );
+    }
+
+    sections.push('</details>', '');
+  }
+
+  sections.push(
+    '**Retry with fix**: Address each failed gate above and re-label the issue with `stas:fix` to trigger a new attempt.',
+    '',
+    BOT_SIGNATURE,
+  );
+
+  return sections.join('\n');
 }
 
 /**
