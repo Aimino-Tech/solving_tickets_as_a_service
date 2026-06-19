@@ -37,6 +37,7 @@ import { ActionDispatcher } from "../github/actionDispatcher.js";
 import { createSandbox } from "../sandbox/index.js";
 import type { SandboxExecutor } from "../sandbox/types.js";
 import { buildTools, type SandboxTools } from "./tools.js";
+import { checkIssueGrounding } from "./issueGrounding.js";
 import type { AgentResult, TriageResult, VerificationResult, TestBaseline } from "./types.js";
 import type { IssueJobData } from "../utils/types.js";
 import type { PlatformClient } from "../platforms/interface.js";
@@ -179,6 +180,41 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       issueNumber,
       `📖 **Analyzing issue** — reviewed ${comments.length} comments for context.`,
     );
+
+    // ── Phase 2.5: Issue Grounding ──────────────────────────────────
+    currentPhase = "2.5-issue-grounding";
+    logger.info("Phase 2.5: Checking issue grounding");
+    const groundingResult = await checkIssueGrounding(
+      issueTitle,
+      issueBody,
+      comments,
+      triage,
+    );
+    if (!groundingResult.passed) {
+      const ungroundedDetails = groundingResult.ungrounded
+        .map(u => `- "${u.requirement.slice(0, 80)}" (similarity: ${(u.similarity * 100).toFixed(0)}%)`)
+        .join('\n');
+      logger.warn(
+        { ungroundedCount: groundingResult.ungrounded.length, totalReq: groundingResult.requirementsChecked },
+        "Issue grounding failed — requirements not found in issue text",
+      );
+      await postStatus(
+        installationId,
+        repoOwner,
+        repoName,
+        issueNumber,
+        `⚠️ **Grounding check** — ${groundingResult.ungrounded.length} requirement(s) not grounded in issue text. Proceeding with caution.`,
+      );
+    } else {
+      logger.info({ requirementsChecked: groundingResult.requirementsChecked }, "Issue grounding passed");
+      await postStatus(
+        installationId,
+        repoOwner,
+        repoName,
+        issueNumber,
+        `✅ **Grounding check passed** — all ${groundingResult.requirementsChecked} requirements map to issue content.`,
+      );
+    }
 
     // ── Phase 3: Boot sandbox ─────────────────────────────────────────
     currentPhase = '3-boot-sandbox';
