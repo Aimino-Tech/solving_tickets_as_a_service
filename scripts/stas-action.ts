@@ -14,10 +14,8 @@
  */
 
 import { Octokit } from "@octokit/rest";
-import OpenAI from "openai";
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 // ── Environment ────────────────────────────────────────────────────────────
 
@@ -29,6 +27,10 @@ const ENV = {
   ISSUE_TITLE: process.env.ISSUE_TITLE || "",
   ISSUE_BODY: process.env.ISSUE_BODY || "",
   BASE_BRANCH: process.env.BASE_BRANCH || "main",
+  // OpenCode AI (primary)
+  OPENCODE_URL: process.env.OPENCODE_URL || "",
+  OPENCODE_API_KEY: process.env.OPENCODE_API_KEY || "",
+  OPENCODE_MODEL: process.env.OPENCODE_MODEL || "",
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
   OPENAI_CHEAP_MODEL: process.env.OPENAI_CHEAP_MODEL || "gpt-4o-mini",
   BOT_NAME: process.env.BOT_NAME || "STAS",
@@ -50,9 +52,78 @@ function requiredEnv(): void {
 // ── Clients ────────────────────────────────────────────────────────────────
 
 const octokit = new Octokit({ auth: ENV.GITHUB_TOKEN });
-const openai = ENV.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: ENV.OPENAI_API_KEY })
-  : null;
+
+// AI provider config — tries OpenCode API first, then OpenAI, then none
+const AI = (() => {
+  if (ENV.OPENCODE_API_KEY && ENV.OPENCODE_URL) {
+    console.log(`AI: using OpenCode API at ${ENV.OPENCODE_URL}`);
+    return { provider: "opencode" as const };
+  }
+  if (ENV.OPENAI_API_KEY) {
+    console.log("AI: using OpenAI API");
+    return { provider: "openai" as const };
+  }
+  console.log("AI: no API key — using rule-based fallback");
+  return { provider: "none" as const };
+})();
+
+/** Call the configured AI provider with a prompt. Returns the response text or null. */
+async function callAI(
+  prompt: string,
+  options?: { model?: string; system?: string; json?: boolean },
+): Promise<string | null> {
+  if (AI.provider === "opencode") {
+    const body: Record<string, unknown> = {
+      prompt,
+      model: options?.model || ENV.OPENCODE_MODEL || "anthropic/claude-sonnet-4-20250514",
+    };
+    if (options?.system) body.system = options.system;
+    if (options?.json) body.response_format = { type: "json_object" };
+
+    try {
+      const res = await fetch(`${ENV.OPENCODE_URL}/api/run`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${ENV.OPENCODE_API_KEY}`,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        console.warn(`OpenCode API returned ${res.status}: ${await res.text().catch(() => "unknown")}`);
+        return null;
+      }
+      const data = (await res.json()) as Record<string, unknown>;
+      return (data.summary as string) || (data.response as string) || null;
+    } catch (err) {
+      console.warn("OpenCode API call failed:", String(err));
+      return null;
+    }
+  }
+
+  if (AI.provider === "openai") {
+    const { OpenAI } = await import("openai");
+    const openai = new OpenAI({ apiKey: ENV.OPENAI_API_KEY });
+    try {
+      const messages: { role: string; content: string }[] = [];
+      if (options?.system) messages.push({ role: "system", content: options.system });
+      messages.push({ role: "user", content: prompt });
+
+      const response = await openai.chat.completions.create({
+        model: options?.model || ENV.OPENAI_CHEAP_MODEL,
+        messages: messages as never[],
+        temperature: 0,
+        ...(options?.json ? { response_format: { type: "json_object" } } : {}),
+      });
+      return response.choices[0]?.message?.content || null;
+    } catch (err) {
+      console.warn("OpenAI call failed:", String(err));
+      return null;
+    }
+  }
+
+  return null;
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -149,63 +220,66 @@ function run(
 // ── Triage ─────────────────────────────────────────────────────────────────
 
 async function runTriage(): Promise<TriageResult> {
-  if (!openai) {
-    console.log("No OpenAI key — skipping triage");
-    return {
-      type: "unknown",
-      difficulty: "unknown",
-      relevantFiles: [],
-      summary: "",
-    };
-  }
+  if (AI.provider !== "none") {
+    console.log("Running AI triage...");
+    const prompt = [
+      "You are a triage agent. Given a GitHub issue, classify it.",
+      "",
+      `Title: ${ENV.ISSUE_TITLE}`,
+      `Body: ${(ENV.ISSUE_BODY || "(no body)").slice(0, 3000)}`,
+      "",
+      'Reply with a JSON object:',
+      '{',
+      '  "type": "bug" | "feature" | "question" | "unknown",',
+      '  "difficulty": "easy" | "medium" | "hard" | "unknown",',
+      '  "relevantFiles": ["list of file paths that might be relevant"],',
+      '  "summary": "one-line summary of the issue"',
+      '}',
+      "",
+      "Only respond with the JSON object, no other text.",
+    ].join("\n");
 
-  console.log("Running triage...");
-  try {
-    const response = await openai.chat.completions.create({
-      model: ENV.OPENAI_CHEAP_MODEL,
-      messages: [
-        {
-          role: "user",
-          content: [
-            "You are a triage agent. Given a GitHub issue, classify it.",
-            "",
-            `Title: ${ENV.ISSUE_TITLE}`,
-            `Body: ${(ENV.ISSUE_BODY || "(no body)").slice(0, 3000)}`,
-            "",
-            'Reply with a JSON object:',
-            '{',
-            '  "type": "bug" | "feature" | "question" | "unknown",',
-            '  "difficulty": "easy" | "medium" | "hard" | "unknown",',
-            '  "relevantFiles": ["list of file paths that might be relevant"],',
-            '  "summary": "one-line summary of the issue"',
-            '}',
-            "",
-            "Only respond with the JSON object, no other text.",
-          ].join("\n"),
-        },
-      ],
-      temperature: 0,
-      response_format: { type: "json_object" },
+    const content = await callAI(prompt, {
+      model: AI.provider === "opencode" ? ENV.OPENCODE_MODEL || "anthropic/claude-sonnet-4-20250514" : ENV.OPENAI_CHEAP_MODEL,
+      json: true,
     });
 
-    const content = response.choices[0]?.message?.content;
     if (content) {
-      const parsed = JSON.parse(content) as TriageResult;
-      console.log(
-        `Triage: ${parsed.type} (difficulty: ${parsed.difficulty})`,
-      );
-      return {
-        type: parsed.type || "unknown",
-        difficulty: parsed.difficulty || "unknown",
-        relevantFiles: parsed.relevantFiles || [],
-        summary: parsed.summary || "",
-      };
+      try {
+        const parsed = JSON.parse(content) as TriageResult;
+        console.log(`Triage: ${parsed.type} (difficulty: ${parsed.difficulty})`);
+        return {
+          type: parsed.type || "unknown",
+          difficulty: parsed.difficulty || "unknown",
+          relevantFiles: parsed.relevantFiles || [],
+          summary: parsed.summary || "",
+        };
+      } catch {
+        console.warn("Failed to parse triage JSON");
+      }
     }
-  } catch (err) {
-    console.warn("Triage failed:", String(err));
   }
 
-  return { type: "unknown", difficulty: "unknown", relevantFiles: [], summary: "" };
+  // Rule-based fallback
+  console.log("Using rule-based triage");
+  const titleLower = ENV.ISSUE_TITLE.toLowerCase();
+  const bodyLower = (ENV.ISSUE_BODY || "").toLowerCase();
+  const content = `${titleLower} ${bodyLower}`;
+
+  let type: TriageResult["type"] = "bug";
+  if (/\b(feature|request|suggestion|want|would like|proposal)\b/i.test(content)) {
+    type = content.includes("bug") || content.includes("fix") || content.includes("error") ? "bug" : "feature";
+  }
+  if (/\b(question|how to|help|what is|tutorial|guide)\b/i.test(content)) {
+    type = "question";
+  }
+
+  return {
+    type,
+    difficulty: "unknown",
+    relevantFiles: [],
+    summary: "",
+  };
 }
 
 // ── Analysis ───────────────────────────────────────────────────────────────
@@ -250,14 +324,14 @@ async function attemptFix(
   analysis: AnalysisResult,
   comments: string[],
 ): Promise<FixResult> {
-  if (!openai || triage.type !== "bug") {
+  if (AI.provider === "none" || triage.type !== "bug") {
     console.log(
-      `Skipping fix: ${!openai ? "no OpenAI key" : `issue type is ${triage.type}`}`,
+      `Skipping fix: ${AI.provider === "none" ? "no AI provider configured" : `issue type is ${triage.type}`}`,
     );
     return { applied: false, summary: "Fix skipped", changes: [], errors: [] };
   }
 
-  console.log("Attempting fix via OpenAI...");
+  console.log(`Attempting fix via ${AI.provider}...`);
 
   // Read relevant files
   const relevantFiles = triage.relevantFiles.filter((f) => {
@@ -325,19 +399,18 @@ async function attemptFix(
   ].join("\n");
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o", // Use full model for code generation
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.1,
+    const message = await callAI(userPrompt, {
+      system: systemPrompt,
+      model: AI.provider === "opencode"
+        ? ENV.OPENCODE_MODEL || "anthropic/claude-sonnet-4-20250514"
+        : "gpt-4o",
     });
+    if (!message) {
+      return { applied: false, summary: "AI returned no response", changes: [], errors: ["No response from AI"] };
+    }
 
-    const message = response.choices[0]?.message?.content || "";
-    console.log("OpenAI response length:", message.length);
+    console.log("AI response length:", message.length);
 
-    // Parse diff blocks from the response
     const diffBlocks = message.match(/```diff\n[\s\S]*?```/g) || [];
     const changes: FixResult["changes"] = [];
 
