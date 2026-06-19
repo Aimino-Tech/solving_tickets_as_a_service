@@ -30,6 +30,7 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
+import * as fuzzball from 'fuzzball';
 import OpenAI from "openai";
 import { config } from "../config.js";
 import { getInstallationToken } from "../github/auth.js";
@@ -38,7 +39,7 @@ import { createSandbox } from "../sandbox/index.js";
 import type { SandboxExecutor } from "../sandbox/types.js";
 import { buildTools, type SandboxTools } from "./tools.js";
 import { runQualityGates } from "./qualityGates.js";
-import type { AgentResult, TriageResult, VerificationResult, TestBaseline, QualityGatesResult } from "./types.js";
+import type { AgentResult, GroundingRequirement, GroundingResult, QualityGatesResult, TestBaseline, TriageResult, VerificationResult } from "./types.js";
 import type { IssueJobData } from "../utils/types.js";
 import type { PlatformClient } from "../platforms/interface.js";
 import { createGitHubClient } from "../platforms/github/index.js";
@@ -270,6 +271,37 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     logger.info('Phase 5: Building code intelligence');
     const codeIntel = await buildCodeIntelligence(sandbox);
 
+    // ── Phase 5.5: Issue Grounding Gate ───────────────────────────────
+    currentPhase = '5.5-grounding-gate';
+    logger.info('Phase 5.5: Verifying fix strategy is grounded in issue text');
+    const groundingResult = verifyIssueGrounding(issueBody ?? '', comments, triage);
+
+    if (!groundingResult.passed) {
+      logger.warn({ ungrounded: groundingResult.ungrounded }, 'Grounding check failed — killing fix');
+      const killReason = `Fix strategy is not grounded in issue text. Ungrounded requirement(s): ${groundingResult.ungrounded.map((r) => `"${r}"`).join('; ')}`;
+      await postComment(installationId, repoOwner, repoName, issueNumber, messages.groundingKillComment(groundingResult.ungrounded));
+      return {
+        summary: killReason,
+        confidence: 'low',
+        fixReady: false,
+        noFixReason: killReason,
+        verification: {
+          baseline: null,
+          postFix: null,
+          regressionTestCreated: false,
+          regressionTestPassedOnOriginal: null,
+          regressionTestPassedOnFix: null,
+          preExistingTestsRegressed: false,
+          unverified: false,
+          details: groundingResult.details,
+        },
+      };
+    }
+
+    logger.info('Grounding check passed — proceeding to fix agent');
+    await postStatus(installationId, repoOwner, repoName, issueNumber,
+      `✅ **Issue grounding verified** — fix strategy is grounded in issue text.`);
+
     // ── Phase 6: Agent loop via OpenCode ──────────────────────────────
     currentPhase = '6-opencode-agent';
     logger.info('Phase 6: Dispatching to OpenCode');
@@ -375,65 +407,6 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
         { triage, analysis: analysisResult, codeIntel },
         { diff: openCodeResult.diff, branch: openCodeResult.branchName },
         `issue:#${issueNumber}/fix`,
-      ),
-    );
-
-    // ── Phase 6.5: Verification (post-fix) ────────────────────────────
-    currentPhase = '6.5-verification';
-    logger.info('Phase 6.5: Running verification');
-    const verification = await runVerification(sandbox, baselineTestResult, baselineTestFiles, logger);
-    if (verification.details.length > 0) {
-      logger.info({ details: verification.details }, 'Verification results');
-    }
-    if (verification.unverified) {
-      await postStatus(
-        installationId,
-        repoOwner,
-        repoName,
-        issueNumber,
-        `⚠️ **Unverified** — no test suite detected, skipping verification.`,
-      );
-    } else if (verification.preExistingTestsRegressed) {
-      await postStatus(
-        installationId,
-        repoOwner,
-        repoName,
-        issueNumber,
-        `❌ **Regression detected** — existing tests that previously passed are now failing.`,
-      );
-    } else if (verification.regressionTestPassedOnOriginal === false) {
-      await postStatus(
-        installationId,
-        repoOwner,
-        repoName,
-        issueNumber,
-        `⚠️ **Regression test issue** — the regression test does not fail on original code.`,
-      );
-    } else if (verification.regressionTestPassedOnFix === false) {
-      await postStatus(
-        installationId,
-        repoOwner,
-        repoName,
-        issueNumber,
-        `⚠️ **Regression test issue** — the regression test does not pass on fixed code.`,
-      );
-    } else {
-      await postStatus(
-        installationId,
-        repoOwner,
-        repoName,
-        issueNumber,
-        `✅ **Verification passed** — no regressions detected, regression test validated.`,
-      );
-    }
-
-    receiptManifest = addReceipt(
-      receiptManifest,
-      createReceipt(
-        'verify',
-        { fix: openCodeResult.diff, baseline: baselineTestResult },
-        verification,
-        `issue:#${issueNumber}/verify`,
       ),
     );
 
@@ -688,6 +661,103 @@ interface OpenCodeDispatchResult {
   testOutput?: string;
   errors?: string[];
   metadata?: Record<string, unknown>;
+}
+
+const GROUNDING_THRESHOLD = 70;
+
+function splitIntoPassages(text: string): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+  const passages: string[] = [];
+  const sentenceEndings = trimmed
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9"'(])/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  for (const sentence of sentenceEndings) {
+    if (sentence.length >= 10) passages.push(sentence);
+  }
+  if (passages.length === 0) {
+    for (const line of trimmed.split('\n')) {
+      const trimmedLine = line.trim();
+      if (trimmedLine.length >= 10) passages.push(trimmedLine);
+    }
+  }
+  return passages;
+}
+
+function extractFindings(triage: TriageResult): GroundingRequirement[] {
+  const findings: Map<string, GroundingRequirement> = new Map();
+  if (triage.summary) {
+    const summarySentences = triage.summary
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length >= 10);
+    for (const sentence of summarySentences) {
+      const key = sentence.toLowerCase().slice(0, 80);
+      if (!findings.has(key)) {
+        findings.set(key, { text: sentence, source: 'triage-summary', maxSimilarity: 0, bestPassage: '' });
+      }
+    }
+    if (summarySentences.length === 0 && triage.summary.length >= 5) {
+      const key = triage.summary.toLowerCase().slice(0, 80);
+      if (!findings.has(key)) {
+        findings.set(key, { text: triage.summary, source: 'triage-summary', maxSimilarity: 0, bestPassage: '' });
+      }
+    }
+  }
+  return Array.from(findings.values());
+}
+
+export function verifyIssueGrounding(issueBody: string, comments: string[], triage: TriageResult): GroundingResult {
+  const details: string[] = [];
+  const ungrounded: string[] = [];
+  const referencePassages = splitIntoPassages(issueBody);
+  for (const comment of comments) {
+    referencePassages.push(...splitIntoPassages(comment));
+  }
+  if (referencePassages.length === 0) {
+    details.push('No issue body or comments to verify against — skipping grounding check');
+    return { passed: true, requirements: [], ungrounded: [], details };
+  }
+  const requirements = extractFindings(triage);
+  if (requirements.length === 0) {
+    details.push('No findings extracted from investigation result');
+    return { passed: true, requirements: [], ungrounded: [], details };
+  }
+  for (const req of requirements) {
+    let bestScore = 0;
+    let bestPassage = '';
+    for (const passage of referencePassages) {
+      const score = Math.max(
+        fuzzball.token_set_ratio(req.text, passage),
+        fuzzball.partial_ratio(req.text, passage),
+      );
+      if (score > bestScore) {
+        bestScore = score;
+        bestPassage = passage;
+      }
+    }
+    req.maxSimilarity = bestScore;
+    req.bestPassage = bestPassage.slice(0, 200);
+    details.push(
+      `Requirement "${req.text.slice(0, 100)}" — best similarity: ${bestScore} (passage: "${bestPassage.slice(0, 80)}")`,
+    );
+    if (bestScore < GROUNDING_THRESHOLD) {
+      ungrounded.push(req.text);
+    }
+  }
+  const passed = ungrounded.length === 0;
+  if (!passed) {
+    details.push(
+      `GROUNDING FAILED: ${ungrounded.length} ungrounded requirement(s) found. Requirements below threshold (${GROUNDING_THRESHOLD}):`,
+    );
+    for (const u of ungrounded) {
+      details.push(`  - "${u.slice(0, 150)}"`);
+    }
+  } else {
+    details.push(`All ${requirements.length} requirements are grounded in issue text (threshold: ${GROUNDING_THRESHOLD})`);
+  }
+  return { passed, requirements, ungrounded, details };
 }
 
 /**

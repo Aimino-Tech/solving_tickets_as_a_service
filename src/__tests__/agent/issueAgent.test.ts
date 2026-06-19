@@ -178,8 +178,13 @@ vi.mock('../../trackers/index.js', () => ({
 // Imports under test
 // ---------------------------------------------------------------------------
 
-import { runIssueAgent } from '../../agent/issueAgent.js';
+import { runIssueAgent, verifyIssueGrounding } from '../../agent/issueAgent.js';
 import type { IssueJobData } from '../../utils/types.js';
+import type { TriageResult } from '../../agent/types.js';
+
+function makeGroundedTriage(overrides?: Partial<TriageResult>): TriageResult {
+  return { type: 'bug', difficulty: 'medium', summary: 'Login button crashes when clicked', ...overrides };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -371,5 +376,58 @@ describe('runIssueAgent edge cases', () => {
     for (const r of results) {
       expect(r).toBeDefined();
     }
+  });
+});
+
+describe('verifyIssueGrounding', () => {
+  it('passes when triage summary is grounded in issue body', () => {
+    const result = verifyIssueGrounding(
+      'The login button crashes when clicked. This happens on Chrome and Firefox.',
+      [],
+      makeGroundedTriage(),
+    );
+    expect(result.passed).toBe(true);
+    expect(result.ungrounded).toHaveLength(0);
+  });
+
+  it('fails when triage summary is completely unrelated to issue body', () => {
+    const result = verifyIssueGrounding(
+      'The database connection pool is exhausted after running batch migrations on PostgreSQL 15.',
+      [],
+      makeGroundedTriage({ summary: 'Fix the CSS styling for the mobile navigation menu' }),
+    );
+    expect(result.passed).toBe(false);
+    expect(result.ungrounded.length).toBeGreaterThan(0);
+  });
+
+  it('passes when triage summary matches a comment even if body is empty', () => {
+    const result = verifyIssueGrounding(
+      '',
+      ['Actually I think the login button crash is caused by the null pointer in the event handler'],
+      makeGroundedTriage(),
+    );
+    expect(result.passed).toBe(true);
+  });
+
+  it('passes when both issue body and comments are empty', () => {
+    const result = verifyIssueGrounding('', [], makeGroundedTriage({ summary: 'Fix login button' }));
+    expect(result.passed).toBe(true);
+    expect(result.details[0]).toContain('No issue body or comments to verify against');
+  });
+
+  it('passes when triage summary is empty', () => {
+    const result = verifyIssueGrounding('The login button crashes when clicked.', [], makeGroundedTriage({ summary: '' }));
+    expect(result.passed).toBe(true);
+  });
+
+  it('reports ungrounded requirements with details', () => {
+    const result = verifyIssueGrounding(
+      'Please add pagination to the user list endpoint.',
+      [],
+      makeGroundedTriage({ summary: 'Fix the database connection timeout issue in the payment worker' }),
+    );
+    expect(result.passed).toBe(false);
+    expect(result.ungrounded.length).toBeGreaterThan(0);
+    expect(result.details.length).toBeGreaterThan(0);
   });
 });
