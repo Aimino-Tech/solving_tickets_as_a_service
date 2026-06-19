@@ -40,7 +40,7 @@ function getStripe(): Stripe {
       throw new Error('STRIPE_SECRET_KEY is not configured.');
     }
     _stripe = new Stripe(secretKey, {
-      apiVersion: '2025-02-24.acacia',
+      apiVersion: '2026-05-27.dahlia',
       typescript: true,
     });
   }
@@ -193,7 +193,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
  * Handle `invoice.paid` - subscription-based credit top-up.
  */
 async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
-  const subscriptionId = invoice.subscription;
+  const subscriptionId = (invoice as unknown as Record<string, unknown>).subscription as string | null;
   const customerId = invoice.customer;
 
   log.info(
@@ -215,7 +215,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
  */
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
   const customerId = invoice.customer;
-  const subscriptionId = invoice.subscription;
+  const subscriptionId = (invoice as unknown as Record<string, unknown>).subscription as string | null;
 
   log.warn(
     {
@@ -237,6 +237,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void
  * Handle `customer.subscription.updated` - plan changes.
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
+  const sub = subscription as unknown as Record<string, unknown>;
   const customerId = subscription.customer;
   const plan = subscription.items.data[0]?.price?.nickname ?? 'unknown';
 
@@ -246,8 +247,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
       customerId: customerId?.toString() ?? 'none',
       status: subscription.status,
       plan,
-      currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+      currentPeriodStart: new Date((sub.current_period_start as number) * 1000).toISOString(),
+      currentPeriodEnd: new Date((sub.current_period_end as number) * 1000).toISOString(),
     },
     'Subscription updated',
   );
