@@ -594,7 +594,7 @@ export function createApp(): express.Application {
     // Wrap the handler to capture success/failure for event logging
     const wrappedHandler = async (req2: Request, res2: Response, next2: NextFunction) => {
       try {
-        await stripeWebhookHandler(req2, res2, next2);
+        await stripeWebhookHandler(req2, res2);
         if (eventId) await logWebhookProcessed(eventId);
       } catch (err) {
         if (eventId) await logWebhookFailed(eventId, String(err));

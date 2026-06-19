@@ -19,7 +19,7 @@
  * ───────────────────────────────────────────────────────────────────
  */
 
-import { connect, type Channel, type Connection, type ConsumeMessage } from 'amqplib';
+import { connect, type Channel, type ChannelModel, type ConsumeMessage } from 'amqplib';
 import { EventEmitter } from 'node:events';
 import { randomUUID, createHash } from 'node:crypto';
 import { Redis } from 'ioredis';
@@ -200,7 +200,7 @@ export interface BridgeOptions {
  *   - Redis/local fallback when RabbitMQ is down
  */
 export class CrossServiceBridge {
-  private connection: Connection | null = null;
+  private connection: ChannelModel | null = null;
   private channel: Channel | null = null;
   private readonly options: Required<BridgeOptions>;
   private shutdownInitiated = false;
@@ -269,7 +269,7 @@ export class CrossServiceBridge {
     try {
       this.connection = await connect(this.options.url);
 
-      this.connection.on('error', (err) => {
+      this.connection.on('error', (err: unknown) => {
         log.error({ err: String(err) }, 'Bridge RabbitMQ connection error');
         this.emitter.emit('disconnected');
         this.scheduleReconnect();
@@ -343,7 +343,7 @@ export class CrossServiceBridge {
     // RabbitMQ delivers reply messages directly to this consumer
     await this.channel.consume(
       RPC_REPLY_QUEUE,
-      (msg) => {
+      (msg: import('amqplib').ConsumeMessage | null) => {
         if (!msg) return;
         this.handleRpcReply(msg);
       },
@@ -554,7 +554,7 @@ export class CrossServiceBridge {
 
         await this.channel.consume(
           queue,
-          (msg) => {
+          (msg: import('amqplib').ConsumeMessage | null) => {
             if (!msg) return;
 
             try {
