@@ -66,6 +66,20 @@ export interface VerificationResult {
   details: string[];
 }
 
+export interface GroundingRequirement {
+  text: string;
+  source: 'triage-summary';
+  maxSimilarity: number;
+  bestPassage: string;
+}
+
+export interface GroundingResult {
+  passed: boolean;
+  requirements: GroundingRequirement[];
+  ungrounded: string[];
+  details: string[];
+}
+
 export interface AgentResult {
   summary: string;
   confidence: 'high' | 'medium' | 'low';

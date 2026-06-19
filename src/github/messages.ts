@@ -94,6 +94,24 @@ export function verificationWarningComment(result: Record<string, unknown>, botN
   return vwComment(result as unknown as AgentResult, botName);
 }
 
+export function groundingKillComment(ungrounded: string[], _botName?: string): string {
+  return [
+    `### ❌ Fix Aborted — Issue Grounding Check Failed`,
+    '',
+    'The investigation produced findings that are **not grounded** in the actual issue text.',
+    'This prevents the fix agent from acting on hallucinated requirements.',
+    '',
+    '**Ungrounded requirement(s):**',
+    '',
+    ...ungrounded.map((r) => `- \`${r.slice(0, 200)}\``),
+    '',
+    'The bot will not proceed with a fix until the issue text supports the claimed requirements.',
+    '',
+    'If you believe this is a mistake, please update the issue description to clarify the requirements and re-label.',
+    BOT_SIGNATURE,
+  ].join('\n');
+}
+
 export function buildPRBody(params: {
   issueNumber: number;
   result: Record<string, unknown>;
