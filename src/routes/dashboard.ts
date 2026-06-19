@@ -17,7 +17,7 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'dashboard-api' });
 
-const router = Router();
+const router: Router = Router();
 
 // ---------------------------------------------------------------------------
 // Rate Limiting: 60 requests per minute per IP on dashboard endpoints

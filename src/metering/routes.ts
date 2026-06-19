@@ -11,7 +11,7 @@ import { Router, type Request, type Response } from 'express';
 import { getUsageStore } from './tracker.js';
 import { getCostConfig, isWithinFreeTier } from './costs.js';
 
-const router = Router();
+const router: Router = Router();
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/credits/usage/stats

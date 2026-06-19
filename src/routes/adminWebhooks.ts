@@ -21,7 +21,7 @@ import type { WebhookEventsFilter } from '../db/repositories/WebhookEventsReposi
 
 const log = rootLogger.child({ module: 'admin-webhooks' });
 
-const router = Router();
+const router: Router = Router();
 
 // All admin webhook routes require authentication
 router.use(adminAuthMiddleware);

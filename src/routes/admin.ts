@@ -25,7 +25,7 @@ const log = rootLogger.child({ module: 'admin-api' });
 // Router
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 // ---------------------------------------------------------------------------
 // Admin API Key Authentication (shared middleware from security/adminAuth.ts)
