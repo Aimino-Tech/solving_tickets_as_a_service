@@ -1,0 +1,28 @@
+description: "Agent must fix a type mismatch in Python string concatenation"
+issue:
+  title: "TypeError: can only concatenate str (not 'int') to str in src/report.py"
+  body: |
+    ## Bug
+    The `generate_summary()` function in `src/report.py` tries to concatenate
+    a string with an integer without converting the integer first.
+
+    ```python
+    def generate_summary(items: list[dict]) -> str:
+        total = sum(item["value"] for item in items)
+        return "Total: " + total
+    ```
+
+    ## Expected
+    Convert `total` to string before concatenation.
+    The fix should be `return "Total: " + str(total)`.
+
+    ## Steps to reproduce
+    1. Run `python -c "from src.report import generate_summary; print(generate_summary([{'value': 10}, {'value': 20}]))"`
+    2. Observe `TypeError: can only concatenate str (not 'int') to str`
+    3. Fix: wrap `total` with `str()`
+repo: https://github.com/example/python-type-error-demo
+expected:
+  outcome: pr_created
+  filesChanged: ["src/report.py"]
+  minTestsPassing: 1
+timeoutMs: 300000

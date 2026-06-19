@@ -1,0 +1,10 @@
+# Smoke test: fix a JavaScript variable scope issue
+# TODO: populate with actual promptfoo test case
+description: "Fix JavaScript variable scope"
+prompts: ["Fix the variable scope issue in this JavaScript code:\n```javascript\nfor (var i = 0; i < 5; i++) {\n  setTimeout(() => console.log(i), 100)\n}\n```"]
+tests:
+  - description: "JavaScript variable scope is fixed"
+    assert:
+      - type: contains-all
+        value:
+          - "let i"

@@ -67,7 +67,7 @@ class CircuitBreaker {
 
   constructor(options: Partial<CircuitBreakerOptions> = {}) {
     this.options = {
-      threshold: options.threshold ?? config.bridge.circuitBreakerThreshold,
+      threshold: options.threshold ?? 5,
       cooldownMs: CIRCUIT_HALF_OPEN_TIMEOUT_MS,
     };
   }
@@ -217,10 +217,10 @@ export class CrossServiceBridge {
     this.options = {
       url: options.url ?? config.rabbitmq.url,
       prefetchCount: options.prefetchCount ?? config.rabbitmq.prefetchCount,
-      rpcTimeoutMs: options.rpcTimeoutMs ?? config.bridge.rpcTimeoutMs,
-      maxRetries: options.maxRetries ?? config.bridge.maxRetries,
-      circuitBreakerThreshold: options.circuitBreakerThreshold ?? config.bridge.circuitBreakerThreshold,
-      fallbackBackend: options.fallbackBackend ?? config.bridge.fallbackBackend,
+      rpcTimeoutMs: options.rpcTimeoutMs ?? 30000,
+      maxRetries: options.maxRetries ?? 3,
+      circuitBreakerThreshold: options.circuitBreakerThreshold ?? 5,
+      fallbackBackend: options.fallbackBackend ?? 'local',
     };
 
     this.circuitBreaker = new CircuitBreaker({ threshold: this.options.circuitBreakerThreshold });
@@ -286,7 +286,7 @@ export class CrossServiceBridge {
       });
 
       this.channel = await this.connection.createChannel();
-      await this.channel.prefetch(this.options.prefetchCount);
+      await this.channel!.prefetch(this.options.prefetchCount);
       await this.declareTopology();
 
       // Set up RPC reply consumer for Direct Reply-To

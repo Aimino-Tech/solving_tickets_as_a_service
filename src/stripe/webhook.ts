@@ -6,8 +6,8 @@
  *
  *   - `checkout.session.completed`        -> credit account with purchased credits
  *   - `invoice.paid`                      -> subscription-based credit top-up
- *   - `invoice.payment_failed`            -> log and notify
- *   - `customer.subscription.updated`     -> handle plan changes
+ *   - `invoice.payment_failed`            -> log and notify account holder
+ *   - `customer.subscription.updated`     -> sync billing plan in database
  *   - `customer.subscription.deleted`     -> downgrade to free tier
  *
  * --- Error Handling Audit ---------------------------------------------------
@@ -16,6 +16,8 @@
  * - Missing webhook secret handled with 500
  * - Unknown events logged and acknowledged (200)
  * - Per-event error handling - one failing event does not crash others
+ * - Database lookups for customer-to-account mapping are wrapped in try/catch
+ * - Notification failures are non-fatal (logged but don't throw)
  * ---------------------------------------------------------------------------
  */
 
@@ -24,7 +26,15 @@ import Stripe from 'stripe';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { creditsRepository } from '../db/repositories/CreditsRepository.js';
+import { billingRepository } from '../db/repositories/BillingRepository.js';
+import { accountsRepository } from '../db/repositories/AccountsRepository.js';
+import { createSlackNotifier } from '../notifications/index.js';
 import { CREDIT_PACKS } from './credit-packs.js';
+
+interface StripeSubscriptionWithPeriod extends Stripe.Subscription {
+  current_period_start: number;
+  current_period_end: number;
+}
 
 const log = rootLogger.child({ module: 'stripe-webhook' });
 
@@ -39,8 +49,8 @@ function getStripe(): Stripe {
     if (!secretKey) {
       throw new Error('STRIPE_SECRET_KEY is not configured.');
     }
-    _stripe = new Stripe(secretKey, {
-      apiVersion: '2026-05-27.dahlia',
+    _stripe = new (Stripe as unknown as { new(key: string, config?: Record<string, unknown>): Stripe })(secretKey, {
+      apiVersion: '2025-02-24.acacia',
       typescript: true,
     });
   }
@@ -184,44 +194,84 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
   } catch (err) {
     log.error(
       { err: String(err), accountId: Number(accountId), sessionId: session.id },
-'Failed to credit account after checkout — manual reconciliation required',
+      'Failed to credit account after checkout — manual reconciliation required',
     );
   }
 }
 
 /**
  * Handle `invoice.paid` - subscription-based credit top-up.
+ *
+ * Looks up the account by Stripe customer ID, then adds the
+ * subscription monthly credits to their balance.
  */
 async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
-  const subscriptionId = (invoice as unknown as Record<string, unknown>).subscription as string | null;
   const customerId = invoice.customer;
+  const subscriptionId = (invoice as { subscription?: unknown }).subscription?.toString() ?? null;
 
   log.info(
     {
       invoiceId: invoice.id,
-      subscriptionId: subscriptionId?.toString() ?? 'none',
+      subscriptionId: subscriptionId ?? 'none',
       customerId: customerId?.toString() ?? 'none',
       amountPaid: invoice.amount_paid,
       currency: invoice.currency,
     },
-    'Invoice paid - subscription credit top-up would be processed here',
+    'Invoice paid - processing subscription credit top-up',
   );
 
-  // TODO: Look up the account by customer ID, then add subscription credits.
+  if (!customerId) {
+    log.warn({ invoiceId: invoice.id }, 'Invoice paid but no customer ID');
+    return;
+  }
+
+  try {
+    // Look up the account by Stripe customer ID
+    const billing = await billingRepository.findByStripeCustomerId(customerId.toString());
+    if (!billing) {
+      log.warn(
+        { invoiceId: invoice.id, customerId: customerId.toString() },
+        'No billing record found for customer - cannot add subscription credits',
+      );
+      return;
+    }
+
+    // Credit the account with the monthly subscription allotment
+    const subscriptionCredits = config.metering.freeMonthlyCredits;
+    await creditsRepository.credit(billing.accountId, subscriptionCredits, {
+      type: 'subscription',
+      description: `Monthly subscription credit top-up (invoice ${invoice.id})`,
+      stripePaymentIntentId: invoice.payment_intent?.toString(),
+    });
+
+    const balance = await creditsRepository.getBalance(billing.accountId);
+    log.info(
+      { accountId: billing.accountId, creditsAdded: subscriptionCredits, newBalance: balance.balance },
+      'Account credited with subscription credits after invoice paid',
+    );
+  } catch (err) {
+    log.error(
+      { err: String(err), invoiceId: invoice.id, customerId: customerId?.toString() },
+      'Failed to process subscription credit top-up after invoice paid',
+    );
+  }
 }
 
 /**
- * Handle `invoice.payment_failed` - log and notify.
+ * Handle `invoice.payment_failed` - notify the account holder.
+ *
+ * Looks up the account by Stripe customer ID and sends a notification
+ * via the configured notification service (Slack/email).
  */
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
   const customerId = invoice.customer;
-  const subscriptionId = (invoice as unknown as Record<string, unknown>).subscription as string | null;
+  const subscriptionId = (invoice as { subscription?: unknown }).subscription?.toString() ?? null;
 
   log.warn(
     {
       invoiceId: invoice.id,
       customerId: customerId?.toString() ?? 'none',
-      subscriptionId: subscriptionId?.toString() ?? 'none',
+      subscriptionId: subscriptionId ?? 'none',
       attemptCount: invoice.attempt_count,
       nextAttempt: invoice.next_payment_attempt
         ? new Date(invoice.next_payment_attempt * 1000).toISOString()
@@ -230,34 +280,160 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void
     'Invoice payment failed',
   );
 
-  // TODO: Notify the account holder about the failed payment.
+  if (!customerId) {
+    log.warn({ invoiceId: invoice.id }, 'Invoice payment failed but no customer ID - cannot notify');
+    return;
+  }
+
+  try {
+    // Look up the account by Stripe customer ID
+    const billing = await billingRepository.findByStripeCustomerId(customerId.toString());
+    if (!billing) {
+      log.warn(
+        { invoiceId: invoice.id, customerId: customerId.toString() },
+        'No billing record found for customer - cannot send payment failure notification',
+      );
+      return;
+    }
+
+    const account = await accountsRepository.findById(billing.accountId);
+
+    // Build notification metadata
+    const metadata: Record<string, unknown> = {
+      invoiceId: invoice.id,
+      subscriptionId,
+      amountCents: invoice.amount_due,
+      currency: invoice.currency,
+      attemptCount: invoice.attempt_count,
+      nextAttempt: invoice.next_payment_attempt
+        ? new Date(invoice.next_payment_attempt * 1000).toISOString()
+        : null,
+    };
+
+    // Send notification via Slack
+    const notifier = createSlackNotifier();
+    await notifier.sendNotification('payment_failed', {
+      repoOwner: '',
+      repoName: '',
+      issueNumber: 0,
+      issueTitle: 'Stripe Payment Failed',
+      reason: `Invoice ${invoice.id} for ${(invoice.amount_due / 100).toFixed(2)} ${invoice.currency.toUpperCase()} failed after ${invoice.attempt_count} attempt(s).`,
+      email: account?.email ?? undefined,
+      botName: config.stas.botName,
+      metadata,
+    });
+
+    log.info(
+      { accountId: billing.accountId, invoiceId: invoice.id },
+      'Payment failure notification sent',
+    );
+  } catch (err) {
+    log.error(
+      { err: String(err), invoiceId: invoice.id, customerId: customerId?.toString() },
+      'Failed to send payment failure notification',
+    );
+  }
 }
 
 /**
- * Handle `customer.subscription.updated` - plan changes.
+ * Handle `customer.subscription.updated` - sync billing plan in the database.
+ *
+ * Maps the Stripe subscription's price ID to the corresponding STAS plan
+ * and updates the billing record for the account.
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
   const sub = subscription as unknown as Record<string, unknown>;
   const customerId = subscription.customer;
-  const plan = subscription.items.data[0]?.price?.nickname ?? 'unknown';
+  const priceId = subscription.items.data[0]?.price?.id ?? '';
+  const planNickname = subscription.items.data[0]?.price?.nickname ?? 'unknown';
+  const sub = subscription as StripeSubscriptionWithPeriod;
 
   log.info(
     {
       subscriptionId: subscription.id,
       customerId: customerId?.toString() ?? 'none',
       status: subscription.status,
-      plan,
-      currentPeriodStart: new Date((sub.current_period_start as number) * 1000).toISOString(),
-      currentPeriodEnd: new Date((sub.current_period_end as number) * 1000).toISOString(),
+      plan: planNickname,
+      priceId,
+      currentPeriodStart: new Date(sub.current_period_start * 1000).toISOString(),
+      currentPeriodEnd: new Date(sub.current_period_end * 1000).toISOString(),
     },
-    'Subscription updated',
+    'Subscription updated - syncing billing plan',
   );
 
-  // TODO: Update the account's billing plan in the database.
+  if (!customerId) {
+    log.warn({ subscriptionId: subscription.id }, 'Subscription updated but no customer ID');
+    return;
+  }
+
+  try {
+    // Look up the account by Stripe customer ID
+    const billing = await billingRepository.findByStripeCustomerId(customerId.toString());
+    if (!billing) {
+      log.warn(
+        { subscriptionId: subscription.id, customerId: customerId.toString() },
+        'No billing record found for customer - cannot update billing plan',
+      );
+      return;
+    }
+
+    // Map Stripe price ID to STAS plan ID
+    let planId: string;
+    if (priceId === config.stripe.soloPriceId) {
+      planId = 'solo';
+    } else if (priceId === config.stripe.teamPriceId) {
+      planId = 'team';
+    } else {
+      // Fall back to checking all known plan price IDs
+      const { getPlanByPriceId } = await import('../billing/plans.js');
+      const matchedPlan = getPlanByPriceId(priceId);
+      planId = matchedPlan?.id ?? 'free';
+    }
+
+    const status = subscription.status === 'active'
+      ? 'active'
+      : subscription.status === 'past_due'
+        ? 'past_due'
+        : 'canceled';
+
+    const currentPeriodStart = new Date(sub.current_period_start * 1000);
+    const currentPeriodEnd = new Date(sub.current_period_end * 1000);
+
+    await billingRepository.update(billing.accountId, {
+      plan: planId,
+      status,
+      currentPeriodStart,
+      currentPeriodEnd,
+      stripeSubscriptionId: subscription.id,
+    });
+
+    // Also sync the account-level tier field
+    const tier =
+      planId === 'enterprise' ? 'enterprise'
+      : planId === 'solo' || planId === 'team' ? 'pro'
+      : 'free';
+
+    await accountsRepository.update(billing.accountId, {
+      tier,
+    });
+
+    log.info(
+      { accountId: billing.accountId, subscriptionId: subscription.id, planId, tier },
+      'Billing plan synced to database after subscription update',
+    );
+  } catch (err) {
+    log.error(
+      { err: String(err), subscriptionId: subscription.id, customerId: customerId?.toString() },
+      'Failed to sync billing plan in database',
+    );
+  }
 }
 
 /**
- * Handle `customer.subscription.deleted` - downgrade to free tier.
+ * Handle `customer.subscription.deleted` - downgrade the account to the free tier.
+ *
+ * Updates both the billing record (plan, status, clears subscription ID)
+ * and the account record (tier) to reflect the free tier.
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
   const customerId = subscription.customer;
@@ -267,10 +443,47 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Pro
       subscriptionId: subscription.id,
       customerId: customerId?.toString() ?? 'none',
     },
-    'Subscription deleted - account downgraded to free tier',
+    'Subscription deleted - downgrading account to free tier',
   );
 
-  // TODO: Downgrade the account to the free tier in the database.
+  if (!customerId) {
+    log.warn({ subscriptionId: subscription.id }, 'Subscription deleted but no customer ID');
+    return;
+  }
+
+  try {
+    // Look up the account by Stripe customer ID
+    const billing = await billingRepository.findByStripeCustomerId(customerId.toString());
+    if (!billing) {
+      log.warn(
+        { subscriptionId: subscription.id, customerId: customerId.toString() },
+        'No billing record found for customer - cannot downgrade',
+      );
+      return;
+    }
+
+    // Downgrade billing record to free tier
+    await billingRepository.update(billing.accountId, {
+      plan: 'free',
+      status: 'canceled',
+      stripeSubscriptionId: null,
+    });
+
+    // Also update the account-level tier
+    await accountsRepository.update(billing.accountId, {
+      tier: 'free',
+    });
+
+    log.info(
+      { accountId: billing.accountId, subscriptionId: subscription.id },
+      'Account downgraded to free tier after subscription deletion',
+    );
+  } catch (err) {
+    log.error(
+      { err: String(err), subscriptionId: subscription.id, customerId: customerId?.toString() },
+      'Failed to downgrade account to free tier',
+    );
+  }
 }
 
 /**

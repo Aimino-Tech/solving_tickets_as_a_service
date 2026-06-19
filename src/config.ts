@@ -9,6 +9,19 @@ import 'dotenv/config';
 import { z } from 'zod';
 import { rootLogger } from './utils/logger.js';
 
+function coerceBoolean(defaultVal: boolean) {
+  return z.preprocess((val) => {
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') {
+      const lower = val.trim().toLowerCase();
+      if (lower === 'true' || lower === '1') return true;
+      if (lower === 'false' || lower === '0' || lower === '') return false;
+    }
+    if (val === undefined || val === null) return defaultVal;
+    return defaultVal;
+  }, z.boolean());
+}
+
 // ---------------------------------------------------------------------------
 // Schema
 // ---------------------------------------------------------------------------
@@ -27,6 +40,8 @@ const envSchema = z.object({
   GITHUB_APP_PRIVATE_KEY_PATH: z.string().optional(),
   GITHUB_WEBHOOK_SECRET: z.string().min(1, 'GITHUB_WEBHOOK_SECRET is required'),
   GITHUB_WEBHOOK_PATH: z.string().default('/webhook'),
+  GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
+  GITHUB_OAUTH_CLIENT_SECRET: z.string().optional(),
 
   // Queue
   REDIS_URL: z.string().default('redis://localhost:6379'),
@@ -36,22 +51,26 @@ const envSchema = z.object({
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
-  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('both'),
+  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('bullmq'),
 
   // RabbitMQ
   RABBITMQ_URL: z.string().default('amqp://localhost:5672/stas'),
   RABBITMQ_PREFETCH_COUNT: z.coerce.number().int().positive().default(10),
   RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5000),
   RABBITMQ_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
+  RABBITMQ_TASK_SOFT_TIME_LIMIT_MS: z.coerce.number().int().positive().default(600_000),
+  RABBITMQ_TASK_TIME_LIMIT_MS: z.coerce.number().int().positive().default(660_000),
+  RABBITMQ_TASK_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
 
-  // Bridge
-  BRIDGE_RPC_TIMEOUT: z.coerce.number().int().positive().default(30000),
-  BRIDGE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(3),
-  BRIDGE_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(5),
-  QUEUE_FALLBACK_BACKEND: z.enum(['redis', 'local', 'none']).default('redis'),
-
+  // RabbitMQ TLS (for amqps:// connections)
+  RABBITMQ_TLS_CERT_PATH: z.string().optional(),
+  RABBITMQ_TLS_KEY_PATH: z.string().optional(),
+  RABBITMQ_TLS_CA_PATH: z.string().optional(),
+  RABBITMQ_TLS_SERVER_NAME: z.string().optional(),
+  RABBITMQ_TLS_REJECT_UNAUTHORIZED: coerceBoolean(true),
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
+  OPENCODE_API_KEY: z.string().optional(),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
@@ -61,27 +80,44 @@ const envSchema = z.object({
   PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(300_000),
   PHASE_TIMEOUT_PRCREATION_MS: z.coerce.number().int().positive().default(30_000),
 
-  // OpenAI / triage
-  OPENAI_API_KEY: z.string().optional(),
-  OPENAI_CHEAP_MODEL: z.string().default('gpt-4o-mini'),
+  // OpenCode Go — direct LLM (OpenAI-compatible endpoint)
+  OPENCODE_API_KEY: z.string().min(1, 'OPENCODE_API_KEY is required for direct OpenCode Go LLM calls'),
+  OPENCODE_DIRECT_MODEL: z.string().default('deepseek-v4-flash'),
+  OPENCODE_FALLBACK_MODEL: z.string().default('deepseek-v4-pro'),
 
-  // Sandbox
+  // Sandbox — E2B
   E2B_API_KEY: z.string().optional(),
   E2B_TEMPLATE_ID: z.string().default('stas-default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+  E2B_WORK_DIR: z.string().optional(),
+  E2B_EVAL_TEMPLATE_ID: z.string().default('stas-eval-hardened'),
+  E2B_EVAL_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+
+  // Sandbox — Docker
+  DOCKER_IMAGE: z.string().default('node:22-alpine'),
+  DOCKER_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+  DOCKER_NETWORK_RESTRICT: coerceBoolean(true),
+  DOCKER_ALLOWED_HOSTS: z
+    .string()
+    .default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io,rubygems.org,repo1.maven.org,packagist.org,getcomposer.org'),
+  DOCKER_CONTAINER_MEMORY: z.string().default('2g'),
+  DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(1),
 
   // STAS
+  PHANTOM_ISSUE_MAX_RETRIES: z.coerce.number().int().positive().default(2),
 
   // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
-  STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
-  STAS_LABEL: z.string().default('stas:fix'),
-  BOT_NAME: z.string().default('STAS'),
-  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),
+  STAS_MONTHLY_QUOTA_ENABLED: coerceBoolean(true),
+  STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
+  STAS_LABEL: z.string().default("stas:fix"),
+  BOT_NAME: z.string().default("STAS"),
+  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: coerceBoolean(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  PHANTOM_ISSUE_MAX_RETRIES: z.coerce.number().int().nonnegative().default(2),
   // Admin API
   ADMIN_API_KEY: z.string().optional(),
 
@@ -99,6 +135,7 @@ const envSchema = z.object({
   BITBUCKET_USERNAME: z.string().optional(),
   BITBUCKET_APP_PASSWORD: z.string().optional(),
   BITBUCKET_WEBHOOK_SECRET: z.string().optional(),
+  BITBUCKET_BASE_URL: z.string().default('https://api.bitbucket.org'),
 
   // Slack notifications
   SLACK_WEBHOOK_URL: z.string().optional(),
@@ -129,10 +166,19 @@ const envSchema = z.object({
   STRIPE_PRICE_100_CREDITS: z.string().default('price_100credits'),
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
+  STRIPE_SOLO_PRICE_ID: z.string().default(''),
+  STRIPE_TEAM_PRICE_ID: z.string().default(''),
 
+  // Usage metering
   USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
   USAGE_CREDITS_TRIAGE: z.coerce.number().int().positive().default(10),
   USAGE_CREDITS_SANDBOX: z.coerce.number().int().positive().default(5),
+
+  // CI Monitor
+  CI_MONITOR_ENABLED: coerceBoolean(false),
+  CI_MONITOR_REPOS: z.string().default(""),
+  CI_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(2),
+  CI_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(300000),
 
   // Feature flags
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
@@ -142,37 +188,40 @@ const envSchema = z.object({
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
-  DATABASE_SSL: z.coerce.boolean().default(false),
-  DATABASE_ENABLE_AUDIT_PERSISTENCE: z.coerce.boolean().default(false),
-
-  // Rate limiting (credit-based)
-  STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
-  STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
-  STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
-
-  // Logging
-  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  DATABASE_SSL: coerceBoolean(false),
+  DATABASE_ENABLE_AUDIT_PERSISTENCE: coerceBoolean(false),
 
   // ── Security ──────────────────────────────────────────────────────────────
-  ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   CORS_ORIGIN: z.string().default('*'),
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
 
   // ── IP Allowlist ──
-  IP_ALLOWLIST_ENABLED: z.coerce.boolean().default(false),
+  IP_ALLOWLIST_ENABLED: coerceBoolean(false),
   IP_ALLOWLIST: z.string().default(''),
-  // Comma-separated list of IPs or CIDR ranges allowed to access webhooks
 
   // ── Sandbox Security ──
-  SANDBOX_PRIVILEGED: z.coerce.boolean().default(false),
-  SANDBOX_READONLY_ROOT: z.coerce.boolean().default(true),
+  SANDBOX_PRIVILEGED: coerceBoolean(false),
+  SANDBOX_READONLY_ROOT: coerceBoolean(true),
   SANDBOX_MEMORY_LIMIT: z.string().default('512m'),
   SANDBOX_CPU_LIMIT: z.string().default('0.5'),
   SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
-  SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
+  SANDBOX_NETWORK_ENABLED: coerceBoolean(false),
+
+  // Rate limiting (credit-based)
+  ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
+  STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
+  STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
+
+  // Storage
+  STORAGE_TYPE: z.enum(['sqlite', 'postgres']).default('sqlite'),
+  SQLITE_PATH: z.string().default('/tmp/stas.db'),
+
+  // Logging
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
   // Sentry
   SENTRY_DSN: z.string().optional(),
@@ -189,8 +238,8 @@ const envSchema = z.object({
   ALERT_SLACK_CHANNEL: z.string().default('#stas-alerts'),
   ALERT_WARN_QUEUE_DEPTH: z.coerce.number().int().positive().default(50),
   ALERT_CRIT_QUEUE_DEPTH: z.coerce.number().int().positive().default(200),
-  ALERT_WARN_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(10),
-  ALERT_CRIT_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(30),
+  ALERT_WARN_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(5),
+  ALERT_CRIT_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(20),
   // Metering / Usage Tracking
   METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
   METERING_COST_OPENCODE_PRIMARY: z.coerce.number().int().positive().default(10),
@@ -201,6 +250,10 @@ const envSchema = z.object({
   METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
+
+  // RapidAPI
+  RAPIDAPI_PROXY_SECRET: z.string().default(""),
+  RAPIDAPI_PROVIDER_KEY: z.string().default(""),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -228,6 +281,11 @@ function parseConcurrencyOverrides(raw: string): Record<string, number> {
 }
 
 function buildConfig(env: ParsedEnv) {
+  // Parse allowed hosts from comma-separated string
+  const allowedHosts = env.DOCKER_ALLOWED_HOSTS.split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   return {
     port: env.PORT,
     runMode: env.RUN_MODE,
@@ -240,6 +298,8 @@ function buildConfig(env: ParsedEnv) {
       privateKeyEnv: env.GITHUB_APP_PRIVATE_KEY,
       webhookSecret: env.GITHUB_WEBHOOK_SECRET,
       webhookPath: env.GITHUB_WEBHOOK_PATH,
+      oauthClientId: env.GITHUB_OAUTH_CLIENT_ID,
+      oauthClientSecret: env.GITHUB_OAUTH_CLIENT_SECRET,
     },
 
     queue: {
@@ -258,19 +318,29 @@ function buildConfig(env: ParsedEnv) {
       prefetchCount: env.RABBITMQ_PREFETCH_COUNT,
       reconnectDelayMs: env.RABBITMQ_RECONNECT_DELAY_MS,
       maxReconnectAttempts: env.RABBITMQ_MAX_RECONNECT_ATTEMPTS,
-    },
-
-    bridge: {
-      rpcTimeoutMs: env.BRIDGE_RPC_TIMEOUT,
-      maxRetries: env.BRIDGE_MAX_RETRIES,
-      circuitBreakerThreshold: env.BRIDGE_CIRCUIT_BREAKER_THRESHOLD,
-      fallbackBackend: env.QUEUE_FALLBACK_BACKEND,
+      taskSoftTimeLimitMs: env.RABBITMQ_TASK_SOFT_TIME_LIMIT_MS,
+      taskTimeLimitMs: env.RABBITMQ_TASK_TIME_LIMIT_MS,
+      taskHeartbeatIntervalMs: env.RABBITMQ_TASK_HEARTBEAT_INTERVAL_MS,
+      tls: {
+        certPath: env.RABBITMQ_TLS_CERT_PATH,
+        keyPath: env.RABBITMQ_TLS_KEY_PATH,
+        caPath: env.RABBITMQ_TLS_CA_PATH,
+        servername: env.RABBITMQ_TLS_SERVER_NAME,
+        rejectUnauthorized: env.RABBITMQ_TLS_REJECT_UNAUTHORIZED,
+      },
     },
 
     opencode: {
       url: env.OPENCODE_URL,
+      apiKey: env.OPENCODE_API_KEY,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
+      direct: {
+        apiKey: env.OPENCODE_API_KEY,
+        baseUrl: 'https://opencode.ai/zen/go/v1',
+        model: env.OPENCODE_DIRECT_MODEL,
+        fallbackModel: env.OPENCODE_FALLBACK_MODEL,
+      },
     },
 
     gitlab: {
@@ -283,17 +353,25 @@ function buildConfig(env: ParsedEnv) {
       username: env.BITBUCKET_USERNAME ?? '',
       appPassword: env.BITBUCKET_APP_PASSWORD ?? '',
       webhookSecret: env.BITBUCKET_WEBHOOK_SECRET ?? '',
-    },
-
-    openai: {
-      apiKey: env.OPENAI_API_KEY,
-      cheapModel: env.OPENAI_CHEAP_MODEL,
+      baseUrl: env.BITBUCKET_BASE_URL,
     },
 
     e2b: {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
+      workDir: env.E2B_WORK_DIR,
+      evalTemplateId: env.E2B_EVAL_TEMPLATE_ID,
+      evalTimeoutMs: env.E2B_EVAL_TIMEOUT_MS,
+    },
+
+    docker: {
+      image: env.DOCKER_IMAGE,
+      sandboxTimeoutMs: env.DOCKER_SANDBOX_TIMEOUT_MS,
+      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
+      allowedHosts,
+      containerMemory: env.DOCKER_CONTAINER_MEMORY,
+      containerCpu: env.DOCKER_CONTAINER_CPU,
     },
 
     slack: {
@@ -305,7 +383,7 @@ function buildConfig(env: ParsedEnv) {
     },
 
     admin: {
-      apiKey: env.ADMIN_API_KEY ?? '',
+      apiKey: env.ADMIN_API_KEY,
       rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
     },
 
@@ -335,10 +413,21 @@ function buildConfig(env: ParsedEnv) {
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
       maxAgentIterations: env.MAX_AGENT_ITERATIONS,
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
-      rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
-      rateLimitMax: env.STAS_RATE_LIMIT_MAX,
+      phantomIssueMaxRetries: env.PHANTOM_ISSUE_MAX_RETRIES,
+      rateLimit: {
+        windowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
+        max: env.STAS_RATE_LIMIT_MAX,
+      },
+      phantomIssueMaxRetries: env.PHANTOM_ISSUE_MAX_RETRIES,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    },
+
+    ci: {
+      monitorEnabled: env.CI_MONITOR_ENABLED,
+      repos: env.CI_MONITOR_REPOS.split(",").map((s) => s.trim()).filter(Boolean),
+      failureThreshold: env.CI_FAILURE_THRESHOLD,
+      pollIntervalMs: env.CI_POLL_INTERVAL_MS,
     },
 
     webhookRetry: {
@@ -364,6 +453,8 @@ function buildConfig(env: ParsedEnv) {
       price100Credits: env.STRIPE_PRICE_100_CREDITS,
       price500Credits: env.STRIPE_PRICE_500_CREDITS,
       price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
+      soloPriceId: env.STRIPE_SOLO_PRICE_ID,
+      teamPriceId: env.STRIPE_TEAM_PRICE_ID,
     },
 
     database: {
@@ -448,6 +539,16 @@ function buildConfig(env: ParsedEnv) {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+
+    rapidapi: {
+      proxySecret: env.RAPIDAPI_PROXY_SECRET,
+      providerKey: env.RAPIDAPI_PROVIDER_KEY,
+    },
+    storage: {
+      type: env.STORAGE_TYPE,
+      sqlitePath: env.SQLITE_PATH,
     },
   } as const;
 }

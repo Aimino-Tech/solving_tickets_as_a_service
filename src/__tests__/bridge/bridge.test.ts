@@ -10,25 +10,31 @@ import { CrossServiceBridge } from '../../bridge/bridge.js';
 import { createMessage, type MessageEnvelope } from '../../bridge/types.js';
 
 // ── Mocks ─────────────────────────────────────────────────────────
+// Use a single vi.hoisted() block to avoid temporal dead zone issues
+// when mockConnection references mockChannel.
 
-const mockChannel = vi.hoisted(() => ({
-  prefetch: vi.fn().mockResolvedValue(undefined),
-  assertExchange: vi.fn().mockResolvedValue(undefined),
-  assertQueue: vi.fn().mockResolvedValue({ queue: 'mock-queue' }),
-  bindQueue: vi.fn().mockResolvedValue(undefined),
-  publish: vi.fn().mockReturnValue(true),
-  consume: vi.fn().mockResolvedValue({ consumerTag: 'mock-tag' }),
-  ack: vi.fn(),
-  nack: vi.fn(),
-  close: vi.fn().mockResolvedValue(undefined),
-  on: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  const mockChannel = {
+    prefetch: vi.fn().mockResolvedValue(undefined),
+    assertExchange: vi.fn().mockResolvedValue(undefined),
+    assertQueue: vi.fn().mockResolvedValue({ queue: 'mock-queue' }),
+    bindQueue: vi.fn().mockResolvedValue(undefined),
+    publish: vi.fn().mockReturnValue(true),
+    consume: vi.fn().mockResolvedValue({ consumerTag: 'mock-tag' }),
+    ack: vi.fn(),
+    nack: vi.fn(),
+    close: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn(),
+  };
 
-const mockConnection = vi.hoisted(() => ({
-  createChannel: vi.fn().mockResolvedValue(mockChannel),
-  close: vi.fn().mockResolvedValue(undefined),
-  on: vi.fn(),
-}));
+  const mockConnection = {
+    createChannel: vi.fn().mockResolvedValue(mockChannel),
+    close: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn(),
+  };
+
+  return { mockChannel, mockConnection };
+});
 
 vi.mock('amqplib', () => ({
   connect: vi.fn().mockResolvedValue(mockConnection),
@@ -107,14 +113,14 @@ describe('CrossServiceBridge', () => {
     it('connects to RabbitMQ and declares topology', async () => {
       await bridge.connect();
 
-      expect(mockConnection.createChannel).toHaveBeenCalledTimes(1);
-      expect(mockChannel.prefetch).toHaveBeenCalledWith(10);
-      expect(mockChannel.assertExchange).toHaveBeenCalledWith(
+      expect(bridgeMocks.mockConnection.createChannel).toHaveBeenCalledTimes(1);
+      expect(bridgeMocks.mockChannel.prefetch).toHaveBeenCalledWith(10);
+      expect(bridgeMocks.mockChannel.assertExchange).toHaveBeenCalledWith(
         'stas.bridge',
         'topic',
         { durable: true },
       );
-      expect(mockChannel.assertExchange).toHaveBeenCalledWith(
+      expect(bridgeMocks.mockChannel.assertExchange).toHaveBeenCalledWith(
         'stas.bridge.dlx',
         'direct',
         { durable: true },
@@ -123,7 +129,7 @@ describe('CrossServiceBridge', () => {
 
     it('sets up RPC reply consumer on connect', async () => {
       await bridge.connect();
-      expect(mockChannel.consume).toHaveBeenCalledWith(
+      expect(bridgeMocks.mockChannel.consume).toHaveBeenCalledWith(
         'amq.rabbitmq.reply-to',
         expect.any(Function),
         { noAck: true },
@@ -145,10 +151,10 @@ describe('CrossServiceBridge', () => {
 
     it('skips reconnection if already connected', async () => {
       await bridge.connect();
-      const createChannelCalls = mockConnection.createChannel.mock.calls.length;
+      const createChannelCalls = bridgeMocks.mockConnection.createChannel.mock.calls.length;
 
       await bridge.connect();
-      expect(mockConnection.createChannel).toHaveBeenCalledTimes(createChannelCalls);
+      expect(bridgeMocks.mockConnection.createChannel).toHaveBeenCalledTimes(createChannelCalls);
     });
   });
 
@@ -164,7 +170,7 @@ describe('CrossServiceBridge', () => {
       const result = await bridge.publish('stas.agents.triage', msg);
 
       expect(result).toBe(true);
-      expect(mockChannel.publish).toHaveBeenCalledWith(
+      expect(bridgeMocks.mockChannel.publish).toHaveBeenCalledWith(
         'stas.bridge',
         'stas.agents.triage',
         expect.any(Buffer),
@@ -178,14 +184,14 @@ describe('CrossServiceBridge', () => {
     });
 
     it('returns false when publish fails and no fallback', async () => {
-      mockChannel.publish.mockReturnValueOnce(false);
+      bridgeMocks.mockChannel.publish.mockReturnValueOnce(false);
       const msg = createMessage('job.fix', 'nodejs-webhook', {});
       const result = await bridge.publish('test-queue', msg);
       expect(result).toBe(false);
     });
 
     it('falls back to channel when publish throws', async () => {
-      mockChannel.publish.mockImplementationOnce(() => {
+      bridgeMocks.mockChannel.publish.mockImplementationOnce(() => {
         throw new Error('Channel error');
       });
 
@@ -206,16 +212,16 @@ describe('CrossServiceBridge', () => {
       const handler = vi.fn();
       await bridge.subscribe('test-queue', handler);
 
-      expect(mockChannel.assertQueue).toHaveBeenCalledWith(
+      expect(bridgeMocks.mockChannel.assertQueue).toHaveBeenCalledWith(
         'test-queue',
         expect.objectContaining({ durable: true }),
       );
-      expect(mockChannel.bindQueue).toHaveBeenCalledWith(
+      expect(bridgeMocks.mockChannel.bindQueue).toHaveBeenCalledWith(
         'test-queue',
         'stas.bridge',
         'test-queue',
       );
-      expect(mockChannel.consume).toHaveBeenCalledWith(
+      expect(bridgeMocks.mockChannel.consume).toHaveBeenCalledWith(
         'test-queue',
         expect.any(Function),
         { noAck: false },
@@ -228,7 +234,7 @@ describe('CrossServiceBridge', () => {
 
       // Simulate message delivery
       const msg = createMessage('job.fix', 'nodejs-webhook', {});
-      const consumeCall = mockChannel.consume.mock.calls[0][1];
+      const consumeCall = bridgeMocks.mockChannel.consume.mock.calls[0][1];
       const consumeMessage = {
         content: Buffer.from(JSON.stringify(msg)),
         properties: { messageId: msg.messageId, correlationId: msg.correlationId },
@@ -240,7 +246,7 @@ describe('CrossServiceBridge', () => {
         messageId: msg.messageId,
         type: 'job.fix',
       }));
-      expect(mockChannel.ack).toHaveBeenCalledTimes(1);
+      expect(bridgeMocks.mockChannel.ack).toHaveBeenCalledTimes(1);
     });
 
     it('nacks messages that fail processing', async () => {
@@ -251,14 +257,14 @@ describe('CrossServiceBridge', () => {
       await bridge.subscribe('test-queue', handler);
 
       const msg = createMessage('job.fix', 'nodejs-webhook', {});
-      const consumeCall = mockChannel.consume.mock.calls[0][1];
+      const consumeCall = bridgeMocks.mockChannel.consume.mock.calls[0][1];
       const consumeMessage = {
         content: Buffer.from(JSON.stringify(msg)),
         properties: { messageId: msg.messageId, correlationId: msg.correlationId },
       };
       consumeCall(consumeMessage);
 
-      expect(mockChannel.nack).toHaveBeenCalled();
+      expect(bridgeMocks.mockChannel.nack).toHaveBeenCalled();
     });
   });
 
@@ -277,14 +283,14 @@ describe('CrossServiceBridge', () => {
       const rpcPromise = bridge.rpc('test-queue', msg, 5000);
 
       // Simulate reply via Direct Reply-To consumer
-      const consumeCall = mockChannel.consume.mock.calls.find(
+      const consumeCall = bridgeMocks.mockChannel.consume.mock.calls.find(
         (call: any) => call[0] === 'amq.rabbitmq.reply-to',
       );
       const replyConsumer = consumeCall ? consumeCall[1] : null;
 
       // Give the RPC setup time to register the callback
       await vi.waitFor(() => {
-        expect(mockChannel.publish).toHaveBeenCalled();
+        expect(bridgeMocks.mockChannel.publish).toHaveBeenCalled();
       });
 
       // Simulate the reply
@@ -370,8 +376,8 @@ describe('CrossServiceBridge', () => {
       await bridge.connect();
       await bridge.shutdown();
 
-      expect(mockChannel.close).toHaveBeenCalled();
-      expect(mockConnection.close).toHaveBeenCalled();
+      expect(bridgeMocks.mockChannel.close).toHaveBeenCalled();
+      expect(bridgeMocks.mockConnection.close).toHaveBeenCalled();
     });
 
     it('is safe to call multiple times', async () => {

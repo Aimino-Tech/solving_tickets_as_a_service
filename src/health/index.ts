@@ -20,3 +20,12 @@ export {
 } from './scheduled.js';
 
 export { bridgeMetrics } from '../bridge/metrics.js';
+
+export { opencodeHealth } from './opencodeHealth.js';
+export type { OpenCodeHealthStatus } from './opencodeHealth.js';
+
+export { getWorkersHealth } from './workers.js';
+export type { WorkersHealthReport } from './workers.js';
+
+export { getDependenciesHealth } from './dependencies.js';
+export type { DependenciesHealthReport, DependencyCheckResult } from './dependencies.js';

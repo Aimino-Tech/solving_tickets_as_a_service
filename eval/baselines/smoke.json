@@ -1,0 +1,27 @@
+{
+  "name": "smoke-eval-baseline",
+  "version": "1.0.0",
+  "description": "Initial baseline for smoke eval (3 critical test cases). Expects 100% pass rate.",
+  "createdAt": "2026-06-12T00:00:00.000Z",
+  "passRate": 1.0,
+  "totalTests": 3,
+  "passedTests": 3,
+  "failedTests": 0,
+  "results": [
+    {
+      "test": "fix-python-syntax-error",
+      "pass": true,
+      "expected": true
+    },
+    {
+      "test": "fix-js-variable-scope",
+      "pass": true,
+      "expected": true
+    },
+    {
+      "test": "edge-empty-repo",
+      "pass": true,
+      "expected": true
+    }
+  ]
+}

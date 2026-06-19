@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: langfuse
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  langfuse:
+    image: ghcr.io/langfuse/langfuse:latest
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/langfuse
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me-in-production}
+      NEXTAUTH_URL: http://localhost:3000
+      SALT: ${LANGFUSE_SALT:-change-me-salt}
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000/api/public/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  stas-eval:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      E2B_API_KEY: ${E2B_API_KEY:?E2B_API_KEY is required}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:?required}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:?required}
+      LANGFUSE_HOST: http://langfuse:3000
+    depends_on:
+      langfuse:
+        condition: service_healthy
+    volumes:
+      - ./eval-results:/app/eval-results
+
+volumes:
+  pgdata:

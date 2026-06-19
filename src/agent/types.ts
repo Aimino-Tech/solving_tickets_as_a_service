@@ -40,6 +40,21 @@ export interface TestBaseline {
   failedTests?: number;
 }
 
+export interface GateResult {
+  gate: string;
+  passed: boolean;
+  reason?: string;
+  details?: string;
+}
+
+export interface QualityGatesResult {
+  passed: boolean;
+  gates: GateResult[];
+  retryCount: number;
+  maxRetries: number;
+  canRetry: boolean;
+}
+
 export interface VerificationResult {
   baseline: TestBaseline | null;
   postFix: TestBaseline | null;

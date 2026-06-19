@@ -92,9 +92,10 @@ REDIS_URL=redis://localhost:6379
 OPENCODE_URL=http://localhost:4096
 OPENCODE_MODEL=anthropic/claude-sonnet-4-20250514
 
-# === Triage LLM (optional) ===
-# OPENAI_API_KEY=sk-...
-# OPENAI_CHEAP_MODEL=gpt-4o-mini
+# === OpenCode Go Direct LLM (optional, replaces OpenAI) ===
+# OPENCODE_API_KEY=sk-...
+# OPENCODE_CHEAP_MODEL=deepseek-v4-flash
+# OPENCODE_FIX_MODEL=deepseek-v4-pro
 
 # === Sandbox (E2B - optional for dev) ===
 # E2B_API_KEY=...

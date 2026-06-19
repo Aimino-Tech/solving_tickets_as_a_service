@@ -36,15 +36,25 @@ services:
     # without access to the stas-net internal network
 
   rabbitmq:
-    image: rabbitmq:4-management-alpine
+    build:
+      context: .
+      dockerfile: docker/rabbitmq/Dockerfile
     container_name: stas-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
+      - "5671:5671"
     environment:
+      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
+      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
       RABBITMQ_DEFAULT_USER: stas-app
       RABBITMQ_DEFAULT_PASS: stas-app-password
       RABBITMQ_DEFAULT_VHOST: /stas
+      STAS_MONITOR_PASSWORD: stas-monitor-password
+      STAS_DEV_VHOST: /stas-dev
+      STAS_APP_USER: stas-app
+      STAS_MONITOR_USER: stas-monitor
+      STAS_VHOST: /stas
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
@@ -68,6 +78,8 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
+      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
+      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
       - REDIS_URL=redis://stas-redis:6379
       - RABBITMQ_URL=amqp://stas-app:stas-app-password@stas-rabbitmq:5672/stas
       - OPENCODE_URL=http://opencode:4096
@@ -88,6 +100,8 @@ services:
       redis:
         condition: service_healthy
     environment:
+      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
+      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
       - CELERY_BROKER_URL=pyamqp://guest:guest@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REDIS_URL=redis://redis:6379/0
@@ -106,6 +120,8 @@ services:
       redis:
         condition: service_healthy
     environment:
+      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
+      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
       - CELERY_BROKER_URL=pyamqp://guest:guest@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REDIS_URL=redis://redis:6379/0
@@ -123,11 +139,29 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
+      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
+      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
       - CELERY_BROKER_URL=pyamqp://guest:guest@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     command: ["celery", "--broker=pyamqp://guest:guest@rabbitmq:5672//", "flower", "--port=5555"]
     networks:
       - stas-net
+    restart: unless-stopped
+
+  # ── Egress Proxy ──────────────────────────────────────────────────
+  stas-egress-proxy:
+    build:
+      context: ./docker/squid
+      dockerfile: Dockerfile
+    image: stas-egress-proxy:latest
+    container_name: stas-egress-proxy
+    ports:
+      - "3128:3128"
+    environment:
+      ALLOWED_DOMAINS: ${DOCKER_ALLOWED_HOSTS:-api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io}
+    networks:
+      - stas-net
+      - stas_agent-net
     restart: unless-stopped
 
 volumes:
@@ -137,3 +171,7 @@ volumes:
 networks:
   stas-net:
     driver: bridge
+  stas_agent-net:
+    driver: bridge
+    internal: false
+    name: stas_agent-net
