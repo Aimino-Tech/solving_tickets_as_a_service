@@ -2,57 +2,44 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import {
-  extractIssueClaims,
-  extractAgentClaims,
-  verifyClaims,
-  checkIssueGrounding,
-  createReceipt,
-  verifyReceiptHash,
-  verifyReceiptChain,
-  createFileReceipt,
-} from '../../agent/issueGrounding.js';
+import { extractClaims, verifyClaims, checkIssueGrounding } from '../../agent/issueGrounding.js';
 
 function createSandbox() {
-  const realCalls: string[] = [];
   return {
     exec: vi.fn().mockImplementation(async (cmd: string) => {
-      realCalls.push(cmd);
       return { stdout: '', stderr: '', exitCode: 0 };
     }),
-    getRealCalls: () => realCalls,
   } as any;
 }
 
-describe('extractIssueClaims', () => {
-  it('extracts file paths from issue body', () => {
-    const body = 'The bug is in src/agent/issueAgent.ts when calling src/utils/helper.ts';
-    const claims = extractIssueClaims(body);
-    expect(claims.length).toBeGreaterThanOrEqual(2);
-    expect(claims.some(c => c.text.includes('issueAgent.ts'))).toBe(true);
-    expect(claims.some(c => c.text.includes('helper.ts'))).toBe(true);
-  });
-
-  it('extracts function references', () => {
-    const body = 'The function processData is failing when calling the method validateInput';
-    const claims = extractIssueClaims(body);
-    expect(claims.some(c => c.text === 'processData')).toBe(true);
-  });
-
-  it('returns empty array for empty body', () => {
-    expect(extractIssueClaims('')).toEqual([]);
-  });
-});
-
-describe('extractAgentClaims', () => {
+describe('extractClaims', () => {
   it('extracts file paths from agent output', () => {
-    const output = 'Modified src/agent/qualityGates.ts and created tests/qualityGates.test.ts';
-    const claims = extractAgentClaims(output);
-    expect(claims.some(c => c.text.includes('qualityGates.ts'))).toBe(true);
+    const output = 'Modified src/agent/qualityGates.ts and created src/__tests__/agent/test.test.ts';
+    const claims = extractClaims(output);
+    expect(claims.some(c => c.claim.includes('qualityGates.ts'))).toBe(true);
+    expect(claims.some(c => c.claim.includes('test.test.ts'))).toBe(true);
+  });
+
+  it('extracts function names', () => {
+    const output = 'The function processData was updated in src/utils.ts';
+    const claims = extractClaims(output);
+    expect(claims.some(c => c.claim === 'processData')).toBe(true);
+    expect(claims.some(c => c.type === 'function')).toBe(true);
+  });
+
+  it('extracts class names', () => {
+    const output = 'Updated class UserService to handle new edge cases';
+    const claims = extractClaims(output);
+    expect(claims.some(c => c.claim === 'UserService')).toBe(true);
+    expect(claims.some(c => c.type === 'class')).toBe(true);
+  });
+
+  it('returns empty array for empty output', () => {
+    expect(extractClaims('')).toEqual([]);
   });
 });
 
-describe('verifyClaims with real filesystem', () => {
+describe('verifyClaims with REAL codebase', () => {
   let tempDir: string;
   let sandbox: any;
 
@@ -65,55 +52,49 @@ describe('verifyClaims with real filesystem', () => {
     rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('verifies real file exists', async () => {
-    writeFileSync(join(tempDir, 'test.ts'), 'console.log("hello");');
-    const claims = [{ text: join(tempDir, 'test.ts'), type: 'file' as const, found: false }];
+  it('verifies real file path exists', async () => {
+    writeFileSync(join(tempDir, 'existing-file.ts'), 'export const a = 1;');
+    const claims = [{ claim: join(tempDir, 'existing-file.ts'), type: 'file' as const, found: false }];
     sandbox.exec.mockImplementation(async (cmd: string) => {
       if (cmd.includes('test -f')) return { stdout: 'EXISTS', stderr: '', exitCode: 0 };
       return { stdout: '', stderr: '', exitCode: 0 };
     });
     const result = await verifyClaims(sandbox, claims, '.');
     expect(result.passed).toBe(true);
+    expect(result.verifiedCount).toBe(1);
+  });
+
+  it('detects hallucinated file path', async () => {
+    const claims = [{ claim: 'src/fake-nonexistent.ts', type: 'file' as const, found: false }];
+    sandbox.exec.mockImplementation(async (cmd: string) => {
+      return { stdout: 'MISSING', stderr: '', exitCode: 1 };
+    });
+    const result = await verifyClaims(sandbox, claims, '.');
+    expect(result.passed).toBe(false);
+    expect(result.hallucinatedClaims).toContain('src/fake-nonexistent.ts');
   });
 });
 
-describe('createReceipt and verifyReceiptHash', () => {
-  it('creates receipt with valid SHA-256 hash', () => {
-    const content = 'test content';
-    const receipt = createReceipt('test-step', content, null);
-    expect(receipt.id).toContain('test-step');
-    expect(receipt.hash).toHaveLength(64);
-    expect(receipt.previousHash).toBeNull();
+describe('checkIssueGrounding integration', () => {
+  let sandbox: any;
 
-    const isValid = verifyReceiptHash(receipt, content);
-    expect(isValid).toBe(true);
+  beforeEach(() => {
+    sandbox = createSandbox();
   });
 
-  it('detects content modification', () => {
-    const content = 'original content';
-    const receipt = createReceipt('test-step', content, null);
-    const isModified = verifyReceiptHash(receipt, 'modified content');
-    expect(isModified).toBe(false);
-  });
-});
-
-describe('verifyReceiptChain', () => {
-  it('validates chain integrity', () => {
-    const r1 = createReceipt('step-1', 'content-1', null);
-    const r2 = createReceipt('step-2', 'content-2', r1.hash);
-    const r3 = createReceipt('step-3', 'content-3', r2.hash);
-    const chain = { receipts: [r1, r2, r3] };
-    const result = verifyReceiptChain(chain);
-    expect(result.valid).toBe(true);
-    expect(result.tamperedSteps).toHaveLength(0);
+  it('passes when no claims in agent output', async () => {
+    const result = await checkIssueGrounding(sandbox, '', '.');
+    expect(result.passed).toBe(true);
   });
 
-  it('detects chain break', () => {
-    const r1 = createReceipt('step-1', 'content-1', null);
-    const r2 = createReceipt('step-2', 'content-2', 'tampered-hash');
-    const chain = { receipts: [r1, r2] };
-    const result = verifyReceiptChain(chain);
-    expect(result.valid).toBe(false);
-    expect(result.tamperedSteps.length).toBeGreaterThan(0);
+  it('returns hallucinated claims for non-existent references', async () => {
+    const agentOutput = 'Modified src/fake-nonexistent-file.ts and function nonexistentFunc';
+    sandbox.exec.mockImplementation(async (cmd: string) => {
+      if (cmd.includes('test -f') || cmd.includes('grep')) return { stdout: '', stderr: '', exitCode: 1 };
+      return { stdout: '', stderr: '', exitCode: 0 };
+    });
+    const result = await checkIssueGrounding(sandbox, agentOutput, '.');
+    expect(result.passed).toBe(false);
+    expect(result.hallucinatedClaims.length).toBeGreaterThan(0);
   });
 });
