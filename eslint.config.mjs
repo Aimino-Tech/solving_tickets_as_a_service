@@ -31,9 +31,10 @@ export default [
           { name: '../sandbox/executor', message: 'DO NOT import sandbox/executor directly in tests — use real sandbox tests instead' },
           { name: '../../sandbox/executor', message: 'DO NOT import sandbox/executor directly in tests — use real sandbox tests instead' },
           { name: 'agent/qualityGates', message: 'Quality gates must be tested with real execution, not mocks' },
-          { name: './qualityGates', message: 'Quality gates must be tested with real execution, not mocks' },
-          { name: '../qualityGates', message: 'Quality gates must be tested with real execution, not mocks' },
-          { name: '../../qualityGates', message: 'Quality gates must be tested with real execution, not mocks' },
+          { name: './agent/qualityGates', message: 'Quality gates must be tested with real execution, not mocks' },
+          { name: '../agent/qualityGates', message: 'Quality gates must be tested with real execution, not mocks' },
+          { name: '../../agent/qualityGates', message: 'Quality gates must be tested with real execution, not mocks' },
+          { name: '../../../agent/qualityGates', message: 'Quality gates must be tested with real execution, not mocks' },
         ],
       }],
       'custom/no-mock-core-infra': ['error', {
