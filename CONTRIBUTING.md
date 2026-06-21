@@ -328,6 +328,22 @@ bash .github/scripts/ci-gates.sh 3   # Lint diff
 bash .github/scripts/ci-gates.sh all # All three
 ```
 
+### Anti-Mock Enforcement (5-Layer Defense)
+
+Research shows AI-generated tests often mock core infrastructure instead of testing against real execution, producing false confidence. STAS runs 5 enforcement layers on every PR to prevent this:
+
+| Layer | Tool | What It Blocks | Why |
+|---|---|---|---|
+| **Layer 1 — Architecture** | tsarch | Static imports of `sandbox/executor` in tests (except executor tests) | Prevents test files from directly importing sandbox internals for mocking |
+| **Layer 2 — Mock Imports** | ESLint custom rule + `no-restricted-imports` | `vi.mock`/`jest.mock` calls targeting `SandboxExecutor`, `qualityGates`, `ActionDispatcher` | Catches the most common AI test pattern: mocking core infrastructure |
+| **Layer 3 — Assertion Quality** | `@vitest/eslint-plugin` | `expect(true).toBe(true)`, standalone expects, conditional expects | Blocks assertion-padding patterns that make tests pass vacuously |
+| **Layer 4 — Mutation Testing** | Stryker | Code with < 60% mutation score | Tests that mock everything won't catch mutations in real code |
+| **Layer 5 — Branch Coverage** | c8 (vitest coverage) | Branch coverage < 80% | Prevents line-coverage gaming — forces testing both truthy and falsy paths |
+
+These layers run as the `anti-mock-enforcement` job in `.github/workflows/quality.yml`. All five must pass before merging.
+
+**For contributors**: Write tests against real execution paths, not mocks. If you need to test sandbox behavior, use the real executor test suite. If you need to test quality gates, run them against real code.
+
 ### 4. Submitting
 
 1. Push your branch
