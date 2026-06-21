@@ -11,4 +11,14 @@ describe('no mock on core infrastructure', () => {
       .check();
     expect(violations).toEqual([]);
   });
+
+  it('test files must not import qualityGates module (except qualityGates-related test files)', { timeout: 60000 }, async () => {
+    const violations = await filesOfProject()
+      .matchingPattern('.*/__tests__/(?!agent/(?:qualityGates|hallucinationGates|syntheticDataCheck)\\.test).*')
+      .shouldNot()
+      .dependOnFiles()
+      .matchingPattern('.*/agent/qualityGates')
+      .check();
+    expect(violations).toEqual([]);
+  });
 });

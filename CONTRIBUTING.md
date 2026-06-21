@@ -333,16 +333,23 @@ bash .github/scripts/ci-gates.sh all # All three
 Research shows AI-generated tests often mock core infrastructure instead of testing against real execution, producing false confidence. STAS runs 5 enforcement layers on every PR to prevent this:
 
 | Layer | Tool | What It Blocks | Why |
-|---|---|---|---|
-| **Layer 1 — Architecture** | tsarch | Static imports of `sandbox/executor` in tests (except executor tests) | Prevents test files from directly importing sandbox internals for mocking |
-| **Layer 2 — Mock Imports** | ESLint custom rule + `no-restricted-imports` | `vi.mock`/`jest.mock` calls targeting `SandboxExecutor`, `qualityGates`, `ActionDispatcher` | Catches the most common AI test pattern: mocking core infrastructure |
-| **Layer 3 — Assertion Quality** | `@vitest/eslint-plugin` | `expect(true).toBe(true)`, standalone expects, conditional expects | Blocks assertion-padding patterns that make tests pass vacuously |
-| **Layer 4 — Mutation Testing** | Stryker | Code with < 60% mutation score | Tests that mock everything won't catch mutations in real code |
-| **Layer 5 — Branch Coverage** | c8 (vitest coverage) | Branch coverage < 80% | Prevents line-coverage gaming — forces testing both truthy and falsy paths |
+|---|---|---|---|---|
+| **Layer 1 — Architecture** | tsarch | Static imports of `sandbox/executor` and `qualityGates` in tests (test files for those modules are exempted) | Prevents test files from directly importing core infrastructure for mocking |
+| **Layer 2+3 — ESLint** | `no-restricted-imports` + custom `no-mock-core-infra` + `@vitest/eslint-plugin` | Static imports via `no-restricted-imports`; `vi.mock`/`jest.mock` calls targeting file paths containing `sandbox/executor`, `qualityGates`, `actionDispatcher`; assertion-quality issues (`expect(true).toBe(true)`, standalone expects, conditional expects) | Catches mock patterns at the import level AND at the assertion level |
+| **Layer 4 — Mutation Testing** | Stryker | Code with < 60% mutation score (blocking — no `continue-on-error`) | Tests that mock everything won't catch mutations in real code |
+| **Layer 5 — Branch Coverage** | c8 (vitest coverage) | Branch coverage < 80%, lines < 90%, functions < 85%, statements < 90% | Prevents line-coverage gaming — branch coverage forces testing both truthy and falsy paths |
 
-These layers run as the `anti-mock-enforcement` job in `.github/workflows/quality.yml`. All five must pass before merging.
+These layers run as the `anti-mock-enforcement` job in `.github/workflows/quality.yml`. All five must pass before merging. The Stryker step is **blocking** (`break` threshold at 60%) — it does NOT use `continue-on-error`.
 
-**For contributors**: Write tests against real execution paths, not mocks. If you need to test sandbox behavior, use the real executor test suite. If you need to test quality gates, run them against real code.
+**For contributors**: Write tests against real execution paths, not mocks. If you need to test sandbox behavior, use the real executor test suite. If you need to test quality gates, run them against real code. If you need to test the action dispatcher, use the action dispatcher test suite. Do NOT mock these modules in other test files.
+
+**Quick reference — run enforcement layers locally:**
+```bash
+npm run test:architecture    # Layer 1: tsarch
+npm run lint:eslint          # Layer 2+3: ESLint rules
+npm run test:mutation        # Layer 4: Stryker (mutation testing)
+npm run test:coverage        # Layer 5: branch/line coverage
+```
 
 ### 4. Submitting
 

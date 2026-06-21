@@ -24,8 +24,20 @@ export default [
       },
     },
     rules: {
+      'no-restricted-imports': ['error', {
+        paths: [
+          { name: 'sandbox/executor', message: 'DO NOT import sandbox/executor directly in tests — use real sandbox tests instead' },
+          { name: './sandbox/executor', message: 'DO NOT import sandbox/executor directly in tests — use real sandbox tests instead' },
+          { name: '../sandbox/executor', message: 'DO NOT import sandbox/executor directly in tests — use real sandbox tests instead' },
+          { name: '../../sandbox/executor', message: 'DO NOT import sandbox/executor directly in tests — use real sandbox tests instead' },
+          { name: 'agent/qualityGates', message: 'Quality gates must be tested with real execution, not mocks' },
+          { name: './qualityGates', message: 'Quality gates must be tested with real execution, not mocks' },
+          { name: '../qualityGates', message: 'Quality gates must be tested with real execution, not mocks' },
+          { name: '../../qualityGates', message: 'Quality gates must be tested with real execution, not mocks' },
+        ],
+      }],
       'custom/no-mock-core-infra': ['error', {
-        forbiddenPatterns: ['SandboxExecutor', 'qualityGates', 'ActionDispatcher'],
+        forbiddenPatterns: ['sandbox/executor', 'qualityGates', 'actionDispatcher'],
       }],
       'vitest/no-standalone-expect': 'error',
       'vitest/valid-expect': 'error',
@@ -44,6 +56,7 @@ export default [
     ],
     rules: {
       'custom/no-mock-core-infra': 'off',
+      'no-restricted-imports': 'off',
     },
   },
 ];

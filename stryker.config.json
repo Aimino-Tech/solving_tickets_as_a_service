@@ -3,5 +3,6 @@
   "testRunner": "vitest",
   "mutate": ["src/agent/qualityGates.ts", "src/agent/issueAgent.ts"],
   "thresholds": { "high": 80, "low": 60, "break": 60 },
-  "timeoutMS": 60000
+  "timeoutMS": 60000,
+  "coverageAnalysis": "all"
 }

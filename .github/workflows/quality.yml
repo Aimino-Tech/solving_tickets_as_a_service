@@ -32,21 +32,16 @@ jobs:
       - name: Layer 1 — Architecture Tests (tsarch)
         run: npx vitest run src/__tests__/architecture.test.ts --reporter=verbose
 
-      # Layer 2: ESLint — Block mock imports and custom no-mock-core-infra rule
-      - name: Layer 2 — ESLint No Mock Imports
+      # Layer 2+3: ESLint — no-restricted-imports + custom no-mock-core-infra + @vitest/eslint-plugin rules
+      - name: Layer 2+3 — ESLint (Mock Imports + Assertion Quality)
         run: npx eslint src/__tests__/ --max-warnings=0
 
-      # Layer 3: Assertion Quality — eslint-plugin-vitest rules
-      - name: Layer 3 — Assertion Quality (vitest eslint plugin)
-        run: npx eslint src/__tests__/ --max-warnings=0
-
-      # Layer 4: Mutation Score — Stryker
+      # Layer 4: Mutation Score — Stryker (break threshold 60%)
       - name: Layer 4 — Mutation Testing (Stryker)
         run: npx stryker run
-        continue-on-error: true
         env:
           STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_API_KEY }}
 
       # Layer 5: Branch Coverage — c8 hard gate
       - name: Layer 5 — Branch Coverage Gate
-        run: npx vitest run --coverage --coverage.thresholds.branches=80
+        run: npx vitest run --coverage --coverage.thresholds.branches=80 --coverage.thresholds.lines=90 --coverage.thresholds.functions=85 --coverage.thresholds.statements=90

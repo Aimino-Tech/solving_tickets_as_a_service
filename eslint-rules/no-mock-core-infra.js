@@ -2,7 +2,7 @@ export default {
   meta: {
     type: 'suggestion',
     docs: {
-      description: 'Disallow mocking core infrastructure modules',
+      description: 'Disallow vi.mock/jest.mock of core infrastructure modules by file path',
     },
     schema: [
       {
@@ -21,9 +21,7 @@ export default {
     const options = context.options[0] || {};
     const forbiddenPatterns = options.forbiddenPatterns || [];
 
-    function checkMockCall(node, calleeName) {
-      if (calleeName !== 'mock' && calleeName !== 'fn') return;
-
+    function checkMockCall(node) {
       const args = node.arguments;
       if (args.length === 0) return;
 
@@ -48,7 +46,9 @@ export default {
         const objectName = node.callee.object.name;
         if (objectName !== 'vi' && objectName !== 'jest') return;
         if (node.callee.property.type !== 'Identifier') return;
-        checkMockCall(node, node.callee.property.name);
+        const propName = node.callee.property.name;
+        if (propName !== 'mock') return;
+        checkMockCall(node);
       },
     };
   },
