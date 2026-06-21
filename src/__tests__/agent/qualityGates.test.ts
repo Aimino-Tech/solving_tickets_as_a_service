@@ -114,12 +114,13 @@ describe('gateCompileCheck (REAL execution)', () => {
 
   it('detects real TypeScript type error', async () => {
     writeFileSync(join(tempDir, 'broken.ts'), 'const x: number = "string";');
+    let stderr = '';
     try {
       execSync('npx tsc --noEmit --project tsconfig.json 2>&1', { cwd: tempDir, stdio: 'pipe' });
     } catch (e: any) {
-      const stderr = e.stderr?.toString() || e.stdout?.toString() || '';
-      expect(stderr).toMatch(/Type.*string.*number|TS2322/);
+      stderr = e.stderr?.toString() || e.stdout?.toString() || '';
     }
+    expect(stderr).toMatch(/Type.*string.*number|TS2322/);
   });
 });
 
