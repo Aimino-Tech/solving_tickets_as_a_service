@@ -49,7 +49,7 @@ vi.mock('../../config.js', () => ({
 // Because the module uses `new Redis(...)` inside getRedisClient(), we need to
 // mock the Redis constructor.  We do this by hoisting the mock before imports.
 const mockRedisConstructor = vi.hoisted(() => ({
-  default: vi.fn().mockImplementation(() => mockRedisClient),
+  default: function () { return mockRedisClient; },
 }));
 vi.mock('ioredis', () => ({
   Redis: mockRedisConstructor.default,
@@ -59,6 +59,7 @@ describe('RateLimiter', () => {
   let limiter: RateLimiter;
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRedisClient.pipeline.mockReturnValue(mockPipeline);
     limiter = new RateLimiter({ windowMs: 60_000, max: 10 });
     // Default pipeline exec returns empty results
     mockPipeline.exec.mockResolvedValue([

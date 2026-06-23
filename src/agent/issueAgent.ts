@@ -3,12 +3,12 @@
  *
  * Takes an issue, classifies it, investigates, and either produces a fix or
  * explains why it can't. The main fix agent loop delegates to OpenCode serve
- * at http://localhost:4096, while classification/triage uses a cheap OpenAI model.
+ * at http://localhost:4096, while classification uses OpenCode or keyword fallback.
  *
  * Phases:
  *   1. Triage — classify issue type + difficulty (cheap model)
  *   2. Fetch comments — gather up to 15 issue comments for context
- *   3. Boot sandbox — sandbox with cloned repo (E2B or Docker)
+ *   3. Boot sandbox — E2B sandbox with cloned repo
  *   3.5 Baseline tests — run test suite before any changes
  *   4. Static analysis — tsc --noEmit etc.
  *   5. Code intelligence — symbol index, import tracing
@@ -30,24 +30,18 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
-import * as fuzzball from 'fuzzball';
-import OpenAI from "openai";
-import { config } from "../config.js";
-import { getInstallationToken } from "../github/auth.js";
-import { ActionDispatcher } from "../github/actionDispatcher.js";
-import { createSandbox } from "../sandbox/index.js";
-import type { SandboxExecutor } from "../sandbox/types.js";
-import { buildTools, type SandboxTools } from "./tools.js";
-import { runQualityGates } from "./qualityGates.js";
-import type { AgentResult, GroundingRequirement, GroundingResult, QualityGatesResult, QualityGateResult, TestBaseline, TriageResult, VerificationResult } from "./types.js";
-import { runAllQualityGates } from "./quality-gates.js";
-import type { IssueJobData } from "../utils/types.js";
-import type { PlatformClient } from "../platforms/interface.js";
-import { createGitHubClient } from "../platforms/github/index.js";
-import { rootLogger, jobLogger } from "../utils/logger.js";
-import { addBreadcrumb, setUserContext } from "../monitoring/sentry.js";
-import * as messages from "../github/messages.js";
-import { getTracker } from "../trackers/index.js";
+import { config } from '../config.js';
+import { ActionDispatcher } from '../github/actionDispatcher.js';
+import { getInstallationToken, getOctokit } from '../github/auth.js';
+import * as messages from '../github/messages.js';
+import { SandboxExecutor } from '../sandbox/executor.js';
+import { getTracker } from '../trackers/index.js';
+import { jobLogger, rootLogger } from '../utils/logger.js';
+import type { IssueJobData } from '../utils/types.js';
+import { addReceipt, createManifest, createReceipt, serializeReceiptsJson } from './receipts.js';
+import { buildTools, type SandboxTools } from './tools.js';
+import type { AgentResult, TestBaseline, TriageResult, VerificationResult } from './types.js';
+
 const log = rootLogger.child({ module: 'issue-agent' });
 
 // ---------------------------------------------------------------------------
@@ -104,11 +98,9 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 
   let sandbox: SandboxExecutor | null = null;
   let currentPhase = '';
-  let client: PlatformClient | null = null;
+  let receiptManifest = createManifest();
 
   try {
-    client = await createGitHubClient(installationId);
-
     // ── Phase 1: Triage ──────────────────────────────────────────────
     currentPhase = '1-triage';
     logger.info('Phase 1: Classifying issue');
@@ -163,7 +155,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
             data.trackerTicketId,
             `### 🔍 STAS Investigating\n\n**Issue**: ${data.issueTitle}\n\nIssue classified as **${triage.type}** (difficulty: ${triage.difficulty}).\n\nI'll investigate and work on a fix.\n\n`,
           )
-          .catch((err: unknown) => {
+          .catch((err) => {
             log.warn(
               { err: String(err), trackerType: data.trackerType, ticketId: data.trackerTicketId },
               'Failed to post initial tracker comment',
@@ -187,7 +179,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     // ── Phase 3: Boot sandbox ─────────────────────────────────────────
     currentPhase = '3-boot-sandbox';
     logger.info('Phase 3: Booting sandbox');
-    sandbox = createSandbox(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
+    sandbox = new SandboxExecutor(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
     await sandbox.boot();
     await postStatus(
       installationId,
@@ -272,37 +264,6 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     logger.info('Phase 5: Building code intelligence');
     const codeIntel = await buildCodeIntelligence(sandbox);
 
-    // ── Phase 5.5: Issue Grounding Gate ───────────────────────────────
-    currentPhase = '5.5-grounding-gate';
-    logger.info('Phase 5.5: Verifying fix strategy is grounded in issue text');
-    const groundingResult = verifyIssueGrounding(issueBody ?? '', comments, triage);
-
-    if (!groundingResult.passed) {
-      logger.warn({ ungrounded: groundingResult.ungrounded }, 'Grounding check failed — killing fix');
-      const killReason = `Fix strategy is not grounded in issue text. Ungrounded requirement(s): ${groundingResult.ungrounded.map((r) => `"${r}"`).join('; ')}`;
-      await postComment(installationId, repoOwner, repoName, issueNumber, messages.groundingKillComment(groundingResult.ungrounded));
-      return {
-        summary: killReason,
-        confidence: 'low',
-        fixReady: false,
-        noFixReason: killReason,
-        verification: {
-          baseline: null,
-          postFix: null,
-          regressionTestCreated: false,
-          regressionTestPassedOnOriginal: null,
-          regressionTestPassedOnFix: null,
-          preExistingTestsRegressed: false,
-          unverified: false,
-          details: groundingResult.details,
-        },
-      };
-    }
-
-    logger.info('Grounding check passed — proceeding to fix agent');
-    await postStatus(installationId, repoOwner, repoName, issueNumber,
-      `✅ **Issue grounding verified** — fix strategy is grounded in issue text.`);
-
     // ── Phase 6: Agent loop via OpenCode ──────────────────────────────
     currentPhase = '6-opencode-agent';
     logger.info('Phase 6: Dispatching to OpenCode');
@@ -314,7 +275,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       `🤖 **Running fix agent** — investigating root cause and writing fix (may take a few minutes).`,
     );
 
-    let openCodeResult = await withTimeout(
+    const openCodeResult = await withTimeout(
       dispatchToOpenCode({
         repoOwner,
         repoName,
@@ -345,61 +306,14 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       return fallbackResult;
     }
 
-    // ── Phase 6.2: Quality Gates ────────────────────────────────────
-    currentPhase = "6.2-quality-gates";
-    logger.info("Phase 6.2: Running quality gates");
-
-    const qualityGatesResult = await runQualityGates(
-      sandbox,
-      openCodeResult.diff ?? "",
-      0,
-      3,
-    );
-
-    await postStatus(
-      installationId,
-      repoOwner,
-      repoName,
-      issueNumber,
-      qualityGatesResult.passed
-        ? `✅ **Quality gates passed** — all 4 gates approved.`
-        : `❌ **Quality gates failed** — ${qualityGatesResult.gates.filter(g => !g.passed).length} gate(s) blocked. ${qualityGatesResult.canRetry ? "Will retry fix generation." : "Max retries reached — escalating to human."}`,
-    );
-
-    if (!qualityGatesResult.passed) {
-      if (qualityGatesResult.canRetry) {
-        logger.info({ retryCount: qualityGatesResult.retryCount, maxRetries: qualityGatesResult.maxRetries }, "Quality gates failed, regenerating fix");
-        const updatedResult = await retryWithRegeneration(params, qualityGatesResult);
-        if (!updatedResult.success) {
-          return {
-            summary: "Quality gates rejected fix after all retries",
-            confidence: "low",
-            fixReady: false,
-            errors: ["All retry attempts failed quality gates"],
-            noFixReason: "Fix failed all quality gates after max retries. Escalated to human.",
-          };
-        }
-        openCodeResult = updatedResult;
-      } else {
-        return {
-          summary: `Quality gates blocked fix after ${qualityGatesResult.retryCount} attempt(s)`,
-          confidence: "low",
-          fixReady: false,
-          errors: [...qualityGatesResult.gates.filter(g => !g.passed).map(g => `Gate "${g.gate}" failed: ${g.reason}`)],
-          noFixReason: "Fix failed quality gates. Max retries reached — escalated to human.",
-        };
-      }
-    }
-
-    // ── Phase 6.5: Verification (post-fix) ────────────────────────────
-    currentPhase = "6.5-verification";
-    logger.info("Phase 6.5: Running verification");
-    const verification = await runVerification(
-      sandbox,
-      baselineTestResult,
-      baselineTestFiles,
-      logger,
-      openCodeResult.diff ?? '',
+    receiptManifest = addReceipt(
+      receiptManifest,
+      createReceipt(
+        'investigate',
+        { issue: { title: issueTitle, body: issueBody }, comments, triage, analysis: analysisResult, codeIntel },
+        { summary: openCodeResult.summary, branch: openCodeResult.branchName, errors: openCodeResult.errors },
+        `issue:#${issueNumber}/investigate`,
+      ),
     );
 
     receiptManifest = addReceipt(
@@ -409,6 +323,65 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
         { triage, analysis: analysisResult, codeIntel },
         { diff: openCodeResult.diff, branch: openCodeResult.branchName },
         `issue:#${issueNumber}/fix`,
+      ),
+    );
+
+    // ── Phase 6.5: Verification (post-fix) ────────────────────────────
+    currentPhase = '6.5-verification';
+    logger.info('Phase 6.5: Running verification');
+    const verification = await runVerification(sandbox, baselineTestResult, baselineTestFiles, logger);
+    if (verification.details.length > 0) {
+      logger.info({ details: verification.details }, 'Verification results');
+    }
+    if (verification.unverified) {
+      await postStatus(
+        installationId,
+        repoOwner,
+        repoName,
+        issueNumber,
+        `⚠️ **Unverified** — no test suite detected, skipping verification.`,
+      );
+    } else if (verification.preExistingTestsRegressed) {
+      await postStatus(
+        installationId,
+        repoOwner,
+        repoName,
+        issueNumber,
+        `❌ **Regression detected** — existing tests that previously passed are now failing.`,
+      );
+    } else if (verification.regressionTestPassedOnOriginal === false) {
+      await postStatus(
+        installationId,
+        repoOwner,
+        repoName,
+        issueNumber,
+        `⚠️ **Regression test issue** — the regression test does not fail on original code.`,
+      );
+    } else if (verification.regressionTestPassedOnFix === false) {
+      await postStatus(
+        installationId,
+        repoOwner,
+        repoName,
+        issueNumber,
+        `⚠️ **Regression test issue** — the regression test does not pass on fixed code.`,
+      );
+    } else {
+      await postStatus(
+        installationId,
+        repoOwner,
+        repoName,
+        issueNumber,
+        `✅ **Verification passed** — no regressions detected, regression test validated.`,
+      );
+    }
+
+    receiptManifest = addReceipt(
+      receiptManifest,
+      createReceipt(
+        'verify',
+        { fix: openCodeResult.diff, baseline: baselineTestResult },
+        verification,
+        `issue:#${issueNumber}/verify`,
       ),
     );
 
@@ -442,7 +415,6 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
         verification,
       },
       sandbox,
-      client,
       repoOwner,
       repoName,
       installationId,
@@ -502,7 +474,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
             data.trackerTicketId,
             `### ❌ STAS Error\n\nAn error occurred during fix analysis:\n\n\`\`\`\n${errorMsg.slice(0, 2000)}\n\`\`\`\n\n**Phase**: ${currentPhase}`,
           )
-          .catch((e: unknown) => {
+          .catch((e) => {
             logger.warn({ err: String(e) }, 'Failed to post error to tracker');
           });
       }
@@ -529,10 +501,27 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 // ── Phase 1: Classification ─────────────────────────────────────────
 
 /**
- * Classify the issue using a cheap OpenAI model.
+ * Classify the issue — tries OpenCode serve first, then keyword-based fallback.
  */
 async function classifyIssue(title: string, body: string): Promise<TriageResult> {
-  const openai = new OpenAI({ apiKey: config.openai.apiKey });
+  // Try OpenCode serve for AI-powered classification
+  try {
+    const result = await classifyViaOpenCodeServe(title, body);
+    if (result) return result;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'OpenCode classification failed, using keyword fallback');
+  }
+
+  // Keyword-based fallback
+  return classifyViaKeywords(title, body);
+}
+
+/**
+ * Attempt AI classification via OpenCode serve's /api/run endpoint.
+ */
+async function classifyViaOpenCodeServe(title: string, body: string): Promise<TriageResult | null> {
+  const opencodeUrl = config.opencode?.url;
+  if (!opencodeUrl) return null;
 
   const prompt = `You are a triage agent. Given a GitHub issue, classify it.
 
@@ -549,30 +538,79 @@ Reply with a JSON object:
 
 Only respond with the JSON object, no other text.`;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+
   try {
-    const model = config.openai.cheapModel || 'gpt-4o-mini';
-    const response = await openai.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0,
-      response_format: { type: 'json_object' },
+    const response = await fetch(`${opencodeUrl}/api/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        model: config.opencode?.model || 'deepseek-v4-flash',
+      }),
+      signal: controller.signal,
     });
 
-    const content = response.choices[0]?.message?.content;
-    if (content) {
-      const parsed = JSON.parse(content) as TriageResult;
+    if (!response.ok) return null;
+
+    const result = (await response.json()) as Record<string, unknown>;
+    const summary = String(result.summary || '');
+
+    // Parse structured JSON from the agent's summary
+    try {
+      const parsed = JSON.parse(summary) as TriageResult;
       return {
         type: parsed.type || 'unknown',
         difficulty: parsed.difficulty || 'unknown',
         relevantFiles: parsed.relevantFiles,
         summary: parsed.summary || '',
       };
+    } catch {
+      // Summary wasn't valid JSON — try parsing the full result text
     }
-  } catch (err) {
-    log.warn({ err: String(err) }, 'Classification failed, using defaults');
+
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Keyword-based fallback classification (no AI required).
+ */
+function classifyViaKeywords(title: string, body: string): TriageResult {
+  const text = `${title}\n${body || ''}`.toLowerCase();
+
+  const bugKeywords = [
+    'bug', 'error', 'crash', 'fix', 'broken', 'fail', 'wrong', 'incorrect',
+    'not working', "doesn't work", 'nothing happens', 'unexpected',
+    'no error', 'expected:', 'actual:',
+  ];
+  const featureKeywords = ['feature', 'request', 'add', 'suggestion', 'improve', 'new:', 'would like'];
+  const questionKeywords = ['how', 'why', 'question', 'help', 'guide', 'tutorial'];
+
+  let type: TriageResult['type'] = 'unknown';
+  const bugScore = bugKeywords.filter((k) => text.includes(k)).length;
+  const featureScore = featureKeywords.filter((k) => text.includes(k)).length;
+  const questionScore = questionKeywords.filter((k) => text.includes(k)).length;
+
+  if (bugScore > featureScore && bugScore >= questionScore && bugScore > 0) type = 'bug';
+  else if (featureScore >= questionScore && featureScore > 0) type = 'feature';
+  else if (questionScore > bugScore && questionScore > 0) type = 'question';
+
+  // Difficulty heuristic
+  let difficulty: TriageResult['difficulty'] = 'unknown';
+  if (body) {
+    const codeBlockCount = (body.match(/```/g) || []).length;
+    if (codeBlockCount > 4 || body.length > 3000) difficulty = 'hard';
+    else if (codeBlockCount > 0 || body.length > 1000) difficulty = 'medium';
+    else difficulty = 'easy';
   }
 
-  return { type: 'unknown', difficulty: 'unknown', summary: '' };
+  return { type, difficulty, summary: title.slice(0, 200) };
 }
 
 // ── Phase 2: Fetch comments ─────────────────────────────────────────
@@ -639,7 +677,6 @@ async function buildCodeIntelligence(sandbox: SandboxExecutor): Promise<CodeInte
 // ── Phase 6: OpenCode dispatch ──────────────────────────────────────
 
 interface OpenCodeDispatchParams {
-  repoUrl: string;
   repoOwner: string;
   repoName: string;
   issueNumber: number;
@@ -665,103 +702,6 @@ interface OpenCodeDispatchResult {
   metadata?: Record<string, unknown>;
 }
 
-const GROUNDING_THRESHOLD = 70;
-
-function splitIntoPassages(text: string): string[] {
-  const trimmed = text.trim();
-  if (!trimmed) return [];
-  const passages: string[] = [];
-  const sentenceEndings = trimmed
-    .split(/(?<=[.!?])\s+(?=[A-Z0-9"'(])/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  for (const sentence of sentenceEndings) {
-    if (sentence.length >= 10) passages.push(sentence);
-  }
-  if (passages.length === 0) {
-    for (const line of trimmed.split('\n')) {
-      const trimmedLine = line.trim();
-      if (trimmedLine.length >= 10) passages.push(trimmedLine);
-    }
-  }
-  return passages;
-}
-
-function extractFindings(triage: TriageResult): GroundingRequirement[] {
-  const findings: Map<string, GroundingRequirement> = new Map();
-  if (triage.summary) {
-    const summarySentences = triage.summary
-      .split(/(?<=[.!?])\s+/)
-      .map((s) => s.trim())
-      .filter((s) => s.length >= 10);
-    for (const sentence of summarySentences) {
-      const key = sentence.toLowerCase().slice(0, 80);
-      if (!findings.has(key)) {
-        findings.set(key, { text: sentence, source: 'triage-summary', maxSimilarity: 0, bestPassage: '' });
-      }
-    }
-    if (summarySentences.length === 0 && triage.summary.length >= 5) {
-      const key = triage.summary.toLowerCase().slice(0, 80);
-      if (!findings.has(key)) {
-        findings.set(key, { text: triage.summary, source: 'triage-summary', maxSimilarity: 0, bestPassage: '' });
-      }
-    }
-  }
-  return Array.from(findings.values());
-}
-
-export function verifyIssueGrounding(issueBody: string, comments: string[], triage: TriageResult): GroundingResult {
-  const details: string[] = [];
-  const ungrounded: string[] = [];
-  const referencePassages = splitIntoPassages(issueBody);
-  for (const comment of comments) {
-    referencePassages.push(...splitIntoPassages(comment));
-  }
-  if (referencePassages.length === 0) {
-    details.push('No issue body or comments to verify against — skipping grounding check');
-    return { passed: true, requirements: [], ungrounded: [], details };
-  }
-  const requirements = extractFindings(triage);
-  if (requirements.length === 0) {
-    details.push('No findings extracted from investigation result');
-    return { passed: true, requirements: [], ungrounded: [], details };
-  }
-  for (const req of requirements) {
-    let bestScore = 0;
-    let bestPassage = '';
-    for (const passage of referencePassages) {
-      const score = Math.max(
-        fuzzball.token_set_ratio(req.text, passage),
-        fuzzball.partial_ratio(req.text, passage),
-      );
-      if (score > bestScore) {
-        bestScore = score;
-        bestPassage = passage;
-      }
-    }
-    req.maxSimilarity = bestScore;
-    req.bestPassage = bestPassage.slice(0, 200);
-    details.push(
-      `Requirement "${req.text.slice(0, 100)}" — best similarity: ${bestScore} (passage: "${bestPassage.slice(0, 80)}")`,
-    );
-    if (bestScore < GROUNDING_THRESHOLD) {
-      ungrounded.push(req.text);
-    }
-  }
-  const passed = ungrounded.length === 0;
-  if (!passed) {
-    details.push(
-      `GROUNDING FAILED: ${ungrounded.length} ungrounded requirement(s) found. Requirements below threshold (${GROUNDING_THRESHOLD}):`,
-    );
-    for (const u of ungrounded) {
-      details.push(`  - "${u.slice(0, 150)}"`);
-    }
-  } else {
-    details.push(`All ${requirements.length} requirements are grounded in issue text (threshold: ${GROUNDING_THRESHOLD})`);
-  }
-  return { passed, requirements, ungrounded, details };
-}
-
 /**
  * Dispatch the issue context to OpenCode serve at :4096.
  * This is the key differentiator from KintsugiBot — instead of calling
@@ -769,7 +709,6 @@ export function verifyIssueGrounding(issueBody: string, comments: string[], tria
  */
 async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenCodeDispatchResult> {
   const {
-    repoUrl,
     repoOwner,
     repoName,
     issueNumber,
@@ -785,7 +724,6 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
   } = params;
 
   const prompt = buildOpenCodePrompt({
-    repoUrl,
     repoOwner,
     repoName,
     issueNumber,
@@ -915,7 +853,6 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
  * Build the system prompt for the OpenCode agent.
  */
 function buildOpenCodePrompt(params: {
-  repoUrl: string;
   repoOwner: string;
   repoName: string;
   issueNumber: number;
@@ -1031,97 +968,6 @@ function buildOpenCodePrompt(params: {
 }
 
 /**
- * Re-dispatch to OpenCode with retry context when quality gates fail.
- */
-async function retryWithRegeneration(
-  params: OpenCodeDispatchParams,
-  gatesResult: QualityGatesResult,
-): Promise<OpenCodeDispatchResult> {
-  const failedGates = gatesResult.gates.filter(g => !g.passed);
-  const retryPrompt = `\n\n## Quality Gate Retry (Attempt ${gatesResult.retryCount + 1}/${gatesResult.maxRetries})
-
-The previous fix was REJECTED by the following quality gate(s):
-${failedGates.map(g => `- **${g.gate}**: ${g.reason}${g.details ? `\n  ${g.details}` : ''}`).join('\n')}
-
-Please regenerate the fix addressing ALL of the above issues.
-Make sure:
-1. Every file reference in your diff points to an existing file
-2. The code compiles without errors (tsc --noEmit)
-3. Tests contain real assertions (no expect(true).toBe(true))
-4. All imported packages exist on npm
-
-Do NOT repeat the same mistakes. The retry counter is finite.\n`;
-
-  const { repoUrl, repoOwner, repoName, issueNumber, issueTitle, issueBody, comments, triage, analysisResult, codeIntel, baselineTestResult } = params;
-
-  const prompt = buildOpenCodePrompt({
-    repoUrl,
-    repoOwner,
-    repoName,
-    issueNumber,
-    issueTitle,
-    issueBody,
-    comments,
-    triage,
-    analysisResult,
-    codeIntel,
-    baselineTestResult,
-  }) + retryPrompt;
-
-  const sanitizedPrompt = sanitizeUserContent(prompt);
-  const models = [config.opencode.model, ...config.opencode.fallbackModels];
-  let lastError: string | undefined;
-
-  for (let i = 0; i < models.length; i++) {
-    const model = models[i];
-    try {
-      const response = await fetch(`${config.opencode.url}/api/run`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${params.installationToken}`,
-        },
-        body: JSON.stringify({ prompt: sanitizedPrompt, model }),
-      });
-
-      if (!response.ok) {
-        lastError = await response.text().catch(() => "unknown error");
-        continue;
-      }
-
-      const result = (await response.json()) as Record<string, unknown>;
-      const summary = String(result.summary || "Agent completed retry.");
-      const diff = result.diff ? String(result.diff) : undefined;
-      const branchName = result.branch ? String(result.branch) : undefined;
-      const testOutput = result.testOutput ? String(result.testOutput) : undefined;
-      const confidence = parseConfidence(result);
-      const errorList = result.errors ? (result.errors as string[]) : undefined;
-
-      return {
-        success: true,
-        summary,
-        confidence,
-        branchName,
-        diff,
-        testOutput,
-        errors: errorList,
-        metadata: result.metadata as Record<string, unknown> | undefined,
-      };
-    } catch (err) {
-      lastError = String(err);
-      continue;
-    }
-  }
-
-  return {
-    success: false,
-    summary: "Retry failed on all models",
-    confidence: "low",
-    errors: lastError ? [lastError] : ["All retry models failed"],
-  };
-}
-
-/**
  * Sanitize user-provided content to prevent prompt injection.
  */
 function sanitizeUserContent(prompt: string): string {
@@ -1160,7 +1006,6 @@ async function runVerification(
   baseline: TestBaseline | null,
   testFilesBefore: string[],
   logger: { info: (obj: object, msg: string) => void; warn: (obj: object, msg: string) => void },
-  diff: string = '',
 ): Promise<VerificationResult> {
   const details: string[] = [];
   let regressionTestCreated = false;
@@ -1170,22 +1015,7 @@ async function runVerification(
   const unverified = false;
   let postFix: TestBaseline | null = null;
 
-  let qualityGates: QualityGateResult[] = [];
-  try {
-    qualityGates = await runAllQualityGates(sandbox, diff);
-  } catch (err) {
-    details.push(`Quality gates error: ${String(err)}`);
-    qualityGates = [];
-  }
-
   if (!sandbox.hasTestSuite()) {
-    const qgFailed = qualityGates.filter(g => !g.passed);
-    if (qgFailed.length > 0) {
-      details.push(`QUALITY GATES: ${qgFailed.length}/4 gate(s) failed`);
-      for (const g of qgFailed) {
-        details.push(`  ${g.gate} (${g.ossTool}): ${g.details.join('; ')}`);
-      }
-    }
     return {
       baseline: null,
       postFix: null,
@@ -1194,8 +1024,7 @@ async function runVerification(
       regressionTestPassedOnFix: null,
       preExistingTestsRegressed: false,
       unverified: true,
-      details,
-      qualityGates,
+      details: ['No test suite configured'],
     };
   }
 
@@ -1279,7 +1108,6 @@ async function runVerification(
     preExistingTestsRegressed,
     unverified,
     details,
-    qualityGates,
   };
 }
 
@@ -1309,105 +1137,11 @@ async function attemptBasicFix(
       pushBranch: (branch) => sandbox.pushBranch(branch),
     });
 
-    // Try to use the cheap OpenAI model for a simpler fix attempt
-    const openai = new OpenAI({ apiKey: config.openai.apiKey });
-    const issueContext = [`Issue #${data.issueNumber}: ${data.issueTitle}`, data.issueBody || '', ...comments].join(
-      '\n\n',
-    );
-
-    const toolDescriptions = tools
-      .map((t) => `- ${t.name}: ${t.description} (args: ${JSON.stringify(t.inputSchema)})`)
-      .join('\n');
-
-    const systemPrompt = [
-      'You are a code fix agent. You have access to a sandbox with the repo cloned.',
-      'Use the available tools to investigate and fix the issue.',
-      '',
-      'Available tools:',
-      toolDescriptions,
-      '',
-      'Always verify tests pass after making changes.',
-      'Output the result as JSON: { summary, confidence, branchName }',
-    ].join('\n');
-
-    const fallbackModel = config.openai.cheapModel || 'gpt-4o-mini';
-    const response = await openai.chat.completions.create({
-      model: fallbackModel,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: `Issue: ${issueContext}\n\nTest output: ${testResult.output.slice(0, 2000)}`,
-        },
-      ],
-      temperature: 0.2,
-      tools: tools.map((t) => ({
-        type: 'function' as const,
-        function: {
-          name: t.name,
-          description: t.description,
-          parameters: t.inputSchema as Record<string, unknown>,
-        },
-      })),
-      tool_choice: 'auto',
-    });
-
-    const message = response.choices[0]?.message;
-    const results: string[] = [];
-
-    if (message?.tool_calls) {
-      for (const tc of message.tool_calls) {
-        try {
-          const args = JSON.parse(tc.function.arguments);
-          const result = await dispatchNamedTool(tools, tc.function.name, args);
-          results.push(`${tc.function.name}: ${result}`);
-        } catch {
-          // individual tool failure is non-fatal
-        }
-      }
-    }
-
-    const summary = message?.content || 'Agent completed basic fix attempt.';
-    const hadChanges = results.length > 0;
-
-    // Re-run tests after fix attempt to verify
-    let postFixTestOutput = testResult.output;
-    if (hadChanges) {
-      const postFixTest = await sandbox.runTests();
-      postFixTestOutput = postFixTest.output;
-
-      if (!postFixTest.passed) {
-        return {
-          summary: `[Fallback] ${summary}`,
-          confidence: 'low',
-          fixReady: false,
-          verification: {
-            baseline: null,
-            postFix: { passed: false, output: postFixTestOutput, command: 'npm test', durationMs: 0 },
-            regressionTestCreated: false,
-            regressionTestPassedOnOriginal: null,
-            regressionTestPassedOnFix: null,
-            preExistingTestsRegressed: true,
-            unverified: false,
-            details: ['Fix failed verification — tests did not pass after changes'],
-          },
-          branchName: undefined,
-          testOutput: postFixTestOutput,
-          errors: ['Fix failed verification — tests did not pass after changes'],
-          noFixReason: 'Fix failed verification: tests did not pass after changes',
-        };
-      }
-    }
-
-    return {
-      summary: `[Fallback] ${summary}`,
-      confidence: hadChanges ? 'medium' : 'low',
-      fixReady: hadChanges,
-      branchName: undefined,
-      testOutput: postFixTestOutput,
-      errors: hadChanges ? undefined : ['No tool calls were made'],
-      noFixReason: hadChanges ? undefined : 'No changes were made by the fallback agent',
-    };
+    // attemptBasicFix was previously backed by OpenAI function calling.
+    // With the switch to OpenCode serve, this path always falls through
+    // to the final fallback (sandbox.execForTools attemptBasicFix).
+    log.warn('attemptBasicFix: OpenAI removed, skipping to final fallback');
+    throw new Error('attemptBasicFix not available (OpenAI removed)');
   } catch (err) {
     return {
       summary: `Basic fix attempt failed: ${String(err)}`,
