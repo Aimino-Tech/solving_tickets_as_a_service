@@ -204,6 +204,10 @@ See `k8s/` for example manifests.
 - [ ] Dashboard for run history
 - [ ] Cloud hosted version
 
+## Contributing
+
+We welcome contributions! See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development setup, testing, PR process, and code style.
+
 ## License
 
 MIT — use it, modify it, ship it.
