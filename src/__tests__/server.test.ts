@@ -206,6 +206,7 @@ vi.mock('../utils/logger.js', () => ({
 }));
 
 vi.mock('../queue/issueQueue.js', () => ({
+  createIssueQueue: mockCreateIssueQueue,
   enqueueIssue: mockEnqueueIssue,
 }));
 
@@ -303,7 +304,7 @@ vi.mock('../trackers/linear.js', () => ({
   verifyLinearWebhookSignature: vi.fn().mockReturnValue(true),
 }));
 vi.mock('../ratelimit/middleware.js', () => ({
-  rateLimitMiddleware: vi.fn(),
+  rateLimitMiddleware: vi.fn(() => (req, res, next) => next()),
 }));
 vi.mock('../security/securityHeaders.js', () => ({
   buildHelmetConfig: vi.fn().mockReturnValue({}),
