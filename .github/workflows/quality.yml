@@ -1,0 +1,47 @@
+name: Anti-Mock Quality Gates
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  anti-mock-enforcement:
+    name: Anti-Mock Enforcement (5 Layers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Layer 1: Architecture — tsarch prevents static imports of sandbox/executor
+      - name: Layer 1 — Architecture Tests (tsarch)
+        run: npx vitest run src/__tests__/architecture.test.ts --reporter=verbose
+
+      # Layer 2+3: ESLint — no-restricted-imports + custom no-mock-core-infra + @vitest/eslint-plugin rules
+      - name: Layer 2+3 — ESLint (Mock Imports + Assertion Quality)
+        run: npx eslint src/__tests__/ --max-warnings=0
+
+      # Layer 4: Mutation Score — Stryker (break threshold 60%)
+      - name: Layer 4 — Mutation Testing (Stryker)
+        run: npx stryker run
+        env:
+          STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_API_KEY }}
+
+      # Layer 5: Branch Coverage — c8 hard gate
+      - name: Layer 5 — Branch Coverage Gate
+        run: npx vitest run --coverage --coverage.thresholds.branches=80 --coverage.thresholds.lines=90 --coverage.thresholds.functions=85 --coverage.thresholds.statements=90
