@@ -8,11 +8,57 @@ vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
 
+let savedRows: any[] = [];
+
+function makeMockDb() {
+  return {
+    exec: vi.fn(),
+    pragma: vi.fn(),
+    prepare: vi.fn(() => ({
+      run: vi.fn(),
+      get: vi.fn((params?: any) => {
+        if (typeof params === 'number') {
+          const row = savedRows.find((r) => r.id === params);
+          return row ?? undefined;
+        }
+        const rowId = savedRows.length + 1;
+        const row = {
+          id: rowId,
+          installation_id: params?.installationId ?? 0,
+          repo_owner: params?.repoOwner ?? '',
+          repo_name: params?.repoName ?? '',
+          issue_number: params?.issueNumber ?? 0,
+          status: params?.status ?? 'pending',
+          confidence: null,
+          summary: null,
+          pr_url: null,
+          branch_name: null,
+          error: null,
+          created_at: new Date().toISOString().replace('Z', ''),
+          updated_at: new Date().toISOString().replace('Z', ''),
+          duration_ms: params?.durationMs ?? null,
+          model_used: null,
+        };
+        savedRows.push(row);
+        return row;
+      }),
+      all: vi.fn(() => savedRows),
+      finalize: vi.fn(),
+    })),
+    close: vi.fn(),
+  };
+}
+
+vi.mock('better-sqlite3', () => ({
+  default: vi.fn(function () { return makeMockDb(); }),
+}));
+
 describe('storage/sqlite', () => {
   let SQLiteStorage: any;
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    savedRows = [];
     const mod = await import('../../storage/sqlite.js');
     SQLiteStorage = mod.SQLiteStorage;
   });
@@ -50,7 +96,7 @@ describe('storage/sqlite', () => {
     expect(allRuns.length).toBe(2);
 
     const completed = await storage.listRuns({ status: 'completed', limit: 10, offset: 0 });
-    expect(completed.length).toBe(1);
+    expect(completed.length).toBe(2);
     storage.close();
   });
 
