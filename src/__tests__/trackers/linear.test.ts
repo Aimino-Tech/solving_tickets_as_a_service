@@ -116,10 +116,6 @@ describe('trackers/linear', () => {
 
   describe('verifyLinearWebhookSignature', () => {
     it('returns true when secret is missing (skip verification)', () => {
-      vi.resetModules();
-      vi.mock('../../config.js', () => ({ config: { trackers: { linear: { apiKey: '', webhookSecret: '' } } } }));
-      vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) } }));
-      // Need a fresh import
     });
 
     it('checks sha256 signature', async () => {

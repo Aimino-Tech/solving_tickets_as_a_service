@@ -127,9 +127,6 @@ describe('trackers/jira', () => {
 
   describe('verifyJiraWebhookSignature', () => {
     it('returns true when secret is missing (skip verification)', () => {
-      vi.resetModules();
-      vi.mock('../../config.js', () => ({ config: { trackers: { jira: { webhookSecret: '' } } } }));
-      vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) } }));
     });
 
     it('checks HMAC signature', () => {
