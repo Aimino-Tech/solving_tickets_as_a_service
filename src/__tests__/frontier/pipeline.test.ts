@@ -107,12 +107,13 @@ describe('frontier/pipeline', () => {
   });
 
   it('respects task timeout', async () => {
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(), 100);
     fetchMock.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(mockOk({})), 50000)));
 
-    const task = makeTask({ description: 'Slow test', timeoutMs: 2000 });
-    const result = await pipeline.runPipeline(task, makeConfig());
-    expect(result).toBeDefined();
+    const task = makeTask({ description: 'Slow test', timeoutMs: 500 });
+    const config = makeConfig();
+    config.aetherCommand.timeoutMs = 100;
+    config.opencode.timeoutMs = 100;
+    const result = await pipeline.runPipeline(task, config);
+    expect(result.passed).toBe(false);
   }, 10000);
 });

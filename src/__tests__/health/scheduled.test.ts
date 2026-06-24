@@ -33,11 +33,13 @@ describe('health/scheduled', () => {
 
   describe('startScheduledTasks', () => {
     it('starts all scheduled timers', () => {
-      const setIntervalSpy = vi.spyOn(global, 'setInterval');
+      vi.useFakeTimers();
       scheduled.startScheduledTasks();
-      expect(setIntervalSpy).toHaveBeenCalled();
-      setIntervalSpy.mockRestore();
-    });
+      const timers = vi.getTimerCount();
+      expect(timers).toBeGreaterThan(0);
+      vi.useRealTimers();
+      scheduled.stopScheduledTasks();
+    }, 10000);
   });
 
   describe('stopScheduledTasks', () => {
