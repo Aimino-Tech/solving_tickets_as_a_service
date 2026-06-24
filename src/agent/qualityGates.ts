@@ -279,3 +279,239 @@ export async function runQualityGates(
     canRetry: retryCount < maxRetries,
   };
 }
+
+// ── Hallucination gates ──────────────────────────────────────────────────────
+
+export async function gateHallucinationGrep(
+  _sandbox: import('../sandbox/types.js').SandboxExecutor,
+  _agentOutput: string,
+): Promise<GateResult> {
+  const start = Date.now();
+  if (!_agentOutput) {
+    return { gate: 'hallucination-grep', passed: true, duration: Date.now() - start, reason: 'No agent output to check' };
+  }
+
+  // Parse agent output for file path claims
+  const fileClaimRe = /(?:created|modified|updated|added|changed)\s+(?:file\s+)?`?([a-zA-Z0-9_\-./]+\.(?:ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|swift|php|c|cpp|h|cs|dart|vue|svelte|css|scss|less|json|yaml|yml|toml|md|sql))`?/gi;
+  const claims: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = fileClaimRe.exec(_agentOutput)) !== null) {
+    claims.push(m[1]);
+  }
+
+  if (claims.length === 0) {
+    return { gate: 'hallucination-grep', passed: true, duration: Date.now() - start, reason: 'No file claims in agent output' };
+  }
+
+  // Check each claimed file
+  const missing: string[] = [];
+  for (const filePath of claims) {
+    try {
+      const safePath = filePath.replace(/'/g, "'\\''");
+      const result = await _sandbox.exec(`test -f '${safePath}' && echo EXISTS || echo MISSING`, 10_000);
+      if (result.stdout.trim() !== 'EXISTS') {
+        missing.push(filePath);
+      }
+    } catch {
+      missing.push(filePath);
+    }
+  }
+
+  if (missing.length > 0) {
+    return {
+      gate: 'hallucination-grep',
+      passed: false,
+      duration: Date.now() - start,
+      reason: `Referenced files do not exist: ${missing.join(', ')}`,
+      details: missing.join('\n'),
+    };
+  }
+
+  return { gate: 'hallucination-grep', passed: true, duration: Date.now() - start, reason: 'All claimed files exist' };
+}
+
+export async function gateGhostcheck(
+  _sandbox: import('../sandbox/types.js').SandboxExecutor,
+  _diff: string,
+): Promise<GateResult> {
+  const start = Date.now();
+  if (!_diff) {
+    return { gate: 'ghostcheck', passed: true, duration: Date.now() - start, reason: 'No diff to check' };
+  }
+
+  const importRe = /(?:from\s+['"]|require\s*\(\s*['"])([^'"]+)['"]/g;
+  const externalImports = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = importRe.exec(_diff)) !== null) {
+    const modulePath = m[1];
+    if (!modulePath.startsWith('.')) {
+      const pkgName = modulePath.startsWith('@')
+        ? modulePath.split('/').slice(0, 2).join('/')
+        : modulePath.split('/')[0];
+      if (pkgName && !pkgName.startsWith('node:') && pkgName !== '') {
+        externalImports.add(pkgName);
+      }
+    }
+  }
+
+  if (externalImports.size === 0) {
+    return { gate: 'ghostcheck', passed: true, duration: Date.now() - start, reason: 'No new external imports detected' };
+  }
+
+  const phantomPackages: string[] = [];
+  for (const pkg of externalImports) {
+    try {
+      const result = await _sandbox.exec(`npm view ${pkg} version 2>&1 || true`, 30_000);
+      if (result.stderr.includes('E404') || result.stderr.includes('404') || result.stdout.includes('404')) {
+        phantomPackages.push(pkg);
+      }
+    } catch {
+      phantomPackages.push(pkg);
+    }
+  }
+
+  if (phantomPackages.length > 0) {
+    return {
+      gate: 'ghostcheck',
+      passed: false,
+      duration: Date.now() - start,
+      reason: `Ghost packages detected: ${phantomPackages.join(', ')}`,
+      details: `Non-existent packages: ${phantomPackages.join(', ')}`,
+    };
+  }
+
+  return { gate: 'ghostcheck', passed: true, duration: Date.now() - start, reason: 'All imports resolve to known packages' };
+}
+
+export async function gateVerdictTestIntegrity(
+  _sandbox: import('../sandbox/types.js').SandboxExecutor,
+  _diff: string,
+): Promise<GateResult> {
+  const start = Date.now();
+  if (!_diff) {
+    return { gate: 'verdict-test-integrity', passed: true, duration: Date.now() - start, reason: 'No diff to check' };
+  }
+
+  // Check for vacuous test patterns
+  const vacuousPatterns = [
+    /expect\(\s*true\s*\)\.toBe\(\s*true\s*\)/,
+    /expect\(\s*false\s*\)\.toBe\(\s*false\s*\)/,
+    /expect\(\s*1\s*\)\.toBe\(\s*1\s*\)/,
+  ];
+
+  for (const pattern of vacuousPatterns) {
+    if (pattern.test(_diff)) {
+      return {
+        gate: 'verdict-test-integrity',
+        passed: false,
+        duration: Date.now() - start,
+        reason: 'Vacuous assertion detected',
+        details: `Vacuous test: ${pattern}`,
+      };
+    }
+  }
+
+  const addedLines = _diff.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
+  const hasAssertions = addedLines.some(l =>
+    l.includes('expect(') || l.includes('.should(') || l.includes('assert.') || l.includes('assertEquals'),
+  );
+
+  if (!hasAssertions) {
+    return {
+      gate: 'verdict-test-integrity',
+      passed: false,
+      duration: Date.now() - start,
+      reason: 'No real assertions found in test code',
+    };
+  }
+
+  return { gate: 'verdict-test-integrity', passed: true, duration: Date.now() - start, reason: 'Tests contain real assertions' };
+}
+
+export async function gateTraceCorePatterns(
+  _sandbox: import('../sandbox/types.js').SandboxExecutor,
+  _diff: string,
+): Promise<GateResult> {
+  const start = Date.now();
+  if (!_diff) {
+    return { gate: 'trace-core-patterns', passed: true, duration: Date.now() - start, reason: 'No diff to check' };
+  }
+
+  const highSeverityPatterns = [
+    /try\s*\{[^}]*\}\s*catch\s*\(\s*\)\s*\{/,
+    /catch\s*\([^)]*\)\s*\{\s*\}/,
+  ];
+
+  const reasons: string[] = [];
+  for (const pattern of highSeverityPatterns) {
+    if (pattern.test(_diff)) {
+      reasons.push(`high-severity`);
+    }
+  }
+
+  if (reasons.length > 0) {
+    return {
+      gate: 'trace-core-patterns',
+      passed: false,
+      duration: Date.now() - start,
+      reason: 'high-severity AI failure patterns detected',
+      details: `Detected ${reasons.length} high-severity patterns`,
+    };
+  }
+
+  return { gate: 'trace-core-patterns', passed: true, duration: Date.now() - start, reason: 'No AI failure patterns detected' };
+}
+
+export async function gateSyntheticDataCheck(
+  _sandbox: import('../sandbox/types.js').SandboxExecutor,
+  diff: string,
+): Promise<GateResult> {
+  const start = Date.now();
+  if (!diff) {
+    return { gate: 'synthetic-data-check', passed: true, duration: Date.now() - start, reason: 'No diff to check' };
+  }
+
+  const addedLines = diff.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
+  const addedCode = addedLines.map(l => l.slice(1)).join('\n').toLowerCase();
+
+  const hasFetch = /fetch\s*\(/.test(addedCode);
+  const hasLargeData = (addedCode.match(/\{.*id.*name.*\}/g) || []).length >= 4;
+  const hasPlaceholderValues = /test@example\.com|foo@bar\.com|placeholder|sample@test\.com/.test(addedCode);
+  const hasDataClaim = /fetch|get|load|query/.test(addedCode) && !hasFetch;
+
+  if (hasPlaceholderValues) {
+    return {
+      gate: 'synthetic-data-check',
+      passed: false,
+      duration: Date.now() - start,
+      reason: 'Placeholder values detected in generated data',
+      details: 'hardcoded',
+    };
+  }
+
+  if (hasLargeData && !hasFetch) {
+    return {
+      gate: 'synthetic-data-check',
+      passed: false,
+      duration: Date.now() - start,
+      reason: 'Large hardcoded data array without fetch call',
+      details: 'hardcoded',
+    };
+  }
+
+  if (hasLargeData && hasFetch) {
+    return { gate: 'synthetic-data-check', passed: true, duration: Date.now() - start, reason: 'Large array has matching fetch call' };
+  }
+
+  if (hasDataClaim) {
+    return {
+      gate: 'synthetic-data-check',
+      passed: false,
+      duration: Date.now() - start,
+      reason: 'Data claim without matching fetch call',
+      details: 'fetch',
+    };
+  }
+
+  return { gate: 'synthetic-data-check', passed: true, duration: Date.now() - start, reason: 'Legitimate code with real API calls' };
+}

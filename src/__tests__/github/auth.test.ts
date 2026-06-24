@@ -52,14 +52,41 @@ const { mockCreateAppAuth, mockAuthFn, mockOctokitConstructor, mockReadFileSync,
 // a dynamic require("node:crypto") inside convertPkcs1ToPkcs8 which
 // vi.mock cannot intercept.
 vi.mock('node:fs', () => ({ readFileSync: mockReadFileSync }));
-vi.mock('@octokit/auth-app', () => ({ createAppAuth: mockCreateAppAuth }));
-vi.mock('@octokit/rest', () => ({
-  Octokit: class MockOctokit {
-    constructor(...args: any[]) {
-      mockOctokitConstructor(...args);
-    }
-  },
-}));
+vi.mock('@stas/github-client', () => {
+  const convertPkcs1ToPkcs8 = (pkcs1Pem: string) => { throw new Error(`Failed to convert PKCS#1 private key to PKCS#8: simulated`); };
+  const loadPrivateKey = (config: { privateKey: string }, options?: { readFileSync?: (path: string) => string }) => {
+    if (options?.readFileSync) return options.readFileSync(config.privateKey);
+    const pem = config.privateKey.replace(/\\n/g, '\n').replace(/\r\n/g, '\n').trim();
+    if (pem.includes('-----BEGIN RSA PRIVATE KEY-----')) return convertPkcs1ToPkcs8(pem);
+    return pem;
+  };
+  const createAuth = (config: { appId: string | number; privateKey: string }, loadKey?: (c: any) => string) => {
+    const privateKey = (loadKey ?? loadPrivateKey)(config);
+    mockCreateAppAuth({ appId: config.appId, privateKey });
+    return mockAuthFn;
+  };
+  const createAppOctokit = (config: { appId: string | number; privateKey: string }, loadKey?: (c: any) => string) => {
+    const privateKey = (loadKey ?? loadPrivateKey)(config);
+    mockOctokitConstructor({ authStrategy: mockCreateAppAuth, auth: { appId: config.appId, privateKey } });
+    return {};
+  };
+  return {
+    loadPrivateKey,
+    convertPkcs1ToPkcs8,
+    createAuth,
+    createAppOctokit,
+    createInstallationOctokit: async (auth: any, installationId: number) => {
+      const { token } = await auth({ type: 'installation', installationId });
+      mockOctokitConstructor({ auth: token });
+      return { auth: token };
+    },
+    getInstallationToken: async (auth: any, installationId: number) => {
+      const { token } = await auth({ type: 'installation', installationId });
+      return token;
+    },
+    GitHubAppConfig: class {},
+  };
+});
 vi.mock('../../config.js', () => ({ config: mockConfig }));
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: mockLoggerChild },

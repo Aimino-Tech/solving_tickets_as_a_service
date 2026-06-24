@@ -174,48 +174,6 @@ describe('runMigrations', () => {
   let mockExistsSync: ReturnType<typeof vi.fn>;
   let mockReaddirSync: ReturnType<typeof vi.fn>;
   let mockReadFileSync: ReturnType<typeof vi.fn>;
-  const fsMocks = vi.hoisted(() => ({
-    existsSync: vi.fn(),
-    readdirSync: vi.fn(),
-    readFileSync: vi.fn(),
-  }));
-
-  beforeEach(async () => {
-    vi.resetModules();
-
-    mockQueryWithRetry = vi.fn();
-    mockExistsSync = fsMockFns.existsSync;
-    mockReaddirSync = fsMockFns.readdirSync;
-    mockReadFileSync = fsMockFns.readFileSync;
-
-    vi.mock('node:fs', () => ({
-      existsSync: (...args: any[]) => fsMockFns.existsSync(...args),
-      readdirSync: (...args: any[]) => fsMockFns.readdirSync(...args),
-      readFileSync: (...args: any[]) => fsMockFns.readFileSync(...args),
-      mkdirSync: vi.fn(),
-    }));
-
-    vi.mock('../../db/connection.js', () => ({
-      queryWithRetry: (...args: any[]) => mockQueryWithRetry(...args),
-      closePool: vi.fn(),
-      getPool: vi.fn(() => ({
-        connect: vi.fn(() => ({
-          query: vi.fn(),
-          release: vi.fn(),
-        })),
-      })),
-    }));
-
-    vi.mock('../../utils/logger.js', () => ({
-      rootLogger: { child: vi.fn(() => ({
-        info: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-        debug: vi.fn(),
-      })) },
-    }));
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -320,47 +278,6 @@ describe('rollbackLastBatch', () => {
   let mockExistsSync: ReturnType<typeof vi.fn>;
   let mockReaddirSync: ReturnType<typeof vi.fn>;
   let mockReadFileSync: ReturnType<typeof vi.fn>;
-  const fsMocks = vi.hoisted(() => ({
-    existsSync: vi.fn(),
-    readdirSync: vi.fn(),
-    readFileSync: vi.fn(),
-  }));
-
-  beforeEach(async () => {
-    vi.resetModules();
-
-    mockQueryWithRetry = vi.fn();
-    mockExistsSync = fsMockFns.existsSync;
-    mockReaddirSync = fsMockFns.readdirSync;
-    mockReadFileSync = fsMockFns.readFileSync;
-
-    vi.mock('node:fs', () => ({
-      existsSync: (...args: any[]) => mockExistsSync(...args),
-      readdirSync: (...args: any[]) => mockReaddirSync(...args),
-      readFileSync: (...args: any[]) => mockReadFileSync(...args),
-    }));
-
-    vi.mock('../../db/connection.js', () => ({
-      queryWithRetry: (...args: any[]) => mockQueryWithRetry(...args),
-      closePool: vi.fn(),
-      getPool: vi.fn(() => ({
-        connect: vi.fn(() => ({
-          query: vi.fn().mockResolvedValue({}),
-          release: vi.fn(),
-        })),
-      })),
-    }));
-
-    vi.mock('../../utils/logger.js', () => ({
-      rootLogger: { child: vi.fn(() => ({
-        info: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-        debug: vi.fn(),
-      })) },
-    }));
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -525,48 +442,6 @@ describe('dry-run mode', () => {
   let mockExistsSync: ReturnType<typeof vi.fn>;
   let mockReaddirSync: ReturnType<typeof vi.fn>;
   let mockReadFileSync: ReturnType<typeof vi.fn>;
-  const fsMocks = vi.hoisted(() => ({
-    existsSync: vi.fn(),
-    readdirSync: vi.fn(),
-    readFileSync: vi.fn(),
-  }));
-
-  beforeEach(async () => {
-    vi.resetModules();
-
-    mockQueryWithRetry = vi.fn();
-    mockExistsSync = fsMockFns.existsSync;
-    mockReaddirSync = fsMockFns.readdirSync;
-    mockReadFileSync = fsMockFns.readFileSync;
-
-    vi.mock('node:fs', () => ({
-      existsSync: (...args: any[]) => fsMockFns.existsSync(...args),
-      readdirSync: (...args: any[]) => fsMockFns.readdirSync(...args),
-      readFileSync: (...args: any[]) => fsMockFns.readFileSync(...args),
-      mkdirSync: vi.fn(),
-    }));
-
-    vi.mock('../../db/connection.js', () => ({
-      queryWithRetry: (...args: any[]) => mockQueryWithRetry(...args),
-      closePool: vi.fn(),
-      getPool: vi.fn(() => ({
-        connect: vi.fn(() => ({
-          query: vi.fn(),
-          release: vi.fn(),
-        })),
-      })),
-    }));
-
-    vi.mock('../../utils/logger.js', () => ({
-      rootLogger: { child: vi.fn(() => ({
-        info: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-        debug: vi.fn(),
-      })) },
-    }));
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
   });

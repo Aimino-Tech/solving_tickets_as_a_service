@@ -37,7 +37,10 @@ let _auth: ReturnType<typeof createAuth> | undefined;
 function getAuth() {
   if (!_auth) {
     const cfg = buildConfig();
-    _auth = createAuth(cfg, (c) => loadKey(c, { readFileSync: readFileSync as (path: string) => string }));
+    const loadOpts = config.github.privateKeyPath
+      ? { readFileSync: readFileSync as (path: string) => string }
+      : undefined;
+    _auth = createAuth(cfg, loadOpts ? (c) => loadKey(c, loadOpts) : undefined);
   }
   return _auth;
 }
@@ -47,7 +50,10 @@ let _appOctokit: ReturnType<typeof createAppOctokit> | undefined;
 function getAppOctokit() {
   if (!_appOctokit) {
     const cfg = buildConfig();
-    _appOctokit = createAppOctokit(cfg, (c) => loadKey(c, { readFileSync: readFileSync as (path: string) => string }));
+    const loadOpts = config.github.privateKeyPath
+      ? { readFileSync: readFileSync as (path: string) => string }
+      : undefined;
+    _appOctokit = createAppOctokit(cfg, loadOpts ? (c) => loadKey(c, loadOpts) : undefined);
   }
   return _appOctokit;
 }

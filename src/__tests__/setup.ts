@@ -24,3 +24,22 @@ vi.stubEnv('GITHUB_WEBHOOK_SECRET', 'test-webhook-secret');
 vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
 vi.stubEnv('NODE_ENV', 'test');
 vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-key');
+
+vi.mock('tsarch', () => ({}));
+vi.mock('better-sqlite3', () => {
+  const mockDb = {
+    exec: vi.fn(),
+    prepare: vi.fn(() => ({
+      run: vi.fn(),
+      get: vi.fn(),
+      all: vi.fn(),
+      finalize: vi.fn(),
+    })),
+    close: vi.fn(),
+  };
+  return { default: vi.fn(() => mockDb) };
+});
+vi.mock('@opencode-ai/plugin', () => ({
+  definePlugin: vi.fn(() => ({})),
+  defineTool: vi.fn(() => ({})),
+}));

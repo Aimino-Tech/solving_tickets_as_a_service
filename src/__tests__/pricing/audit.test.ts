@@ -20,7 +20,8 @@ vi.mock('../../config.js', () => ({
 }));
 
 // Create a shared mock Redis client
-const mockRedisClient = {
+const mockRedisClient = vi.hoisted(() => {
+  const client = {
   lpush: vi.fn(),
   ltrim: vi.fn(),
   lrange: vi.fn(),
@@ -34,14 +35,18 @@ const mockRedisClient = {
   quit: vi.fn(),
   on: vi.fn(),
 };
+  };
 
-// Make pipeline return a self-referencing mock
-mockRedisClient.pipeline.mockReturnValue({
-  lpush: vi.fn().mockReturnThis(),
-  ltrim: vi.fn().mockReturnThis(),
-  zadd: vi.fn().mockReturnThis(),
-  expire: vi.fn().mockReturnThis(),
-  exec: vi.fn().mockResolvedValue([[null, 1], [null, 1]]),
+  // Make pipeline return a self-referencing mock
+  client.pipeline.mockReturnValue({
+    lpush: vi.fn().mockReturnThis(),
+    ltrim: vi.fn().mockReturnThis(),
+    zadd: vi.fn().mockReturnThis(),
+    expire: vi.fn().mockReturnThis(),
+    exec: vi.fn().mockResolvedValue([[null, 1], [null, 1]]),
+  });
+
+  return client;
 });
 
 vi.mock('ioredis', () => ({

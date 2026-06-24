@@ -40,8 +40,13 @@ describe('gateRealityCheck (AC1: hallucination-grep)', () => {
 
   it('fails when a referenced file does not exist — AC1', async () => {
     const diff = '+ import { foo } from `src/utils/nonexistent.ts`\n+ Uses `src/utils/also-missing.ts` for parsing.';
+    let callCount = 0;
     const sandbox = mockSandbox({
-      exec: vi.fn().mockResolvedValue({ stdout: 'MISSING', stderr: '', exitCode: 1 }),
+      exec: vi.fn().mockImplementation(async (cmd: string) => {
+        callCount++;
+        if (callCount === 1) return { stdout: '', stderr: 'command not found', exitCode: 127 };
+        return { stdout: 'MISSING', stderr: '', exitCode: 1 };
+      }),
     });
     const result = await gateRealityCheck(sandbox, diff);
     expect(result.passed).toBe(false);
@@ -52,11 +57,14 @@ describe('gateRealityCheck (AC1: hallucination-grep)', () => {
 
   it('fails when a referenced function does not exist', async () => {
     const diff = '+ Uses `src/utils/helper.ts` which has `export function optimizeResults()`';
+    let callCount = 0;
     const sandbox = mockSandbox({
-      exec: vi.fn()
-        .mockResolvedValueOnce({ stdout: 'EXISTS', stderr: '', exitCode: 0 })
-        .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 1 })
-        .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 1 }),
+      exec: vi.fn().mockImplementation(async (cmd: string) => {
+        callCount++;
+        if (callCount === 1) return { stdout: '', stderr: 'command not found', exitCode: 127 };
+        if (callCount === 2) return { stdout: 'EXISTS', stderr: '', exitCode: 0 };
+        return { stdout: '', stderr: '', exitCode: 1 };
+      }),
     });
     const result = await gateRealityCheck(sandbox, diff);
     expect(result.passed).toBe(false);
@@ -65,8 +73,13 @@ describe('gateRealityCheck (AC1: hallucination-grep)', () => {
 
   it('passes when all referenced files exist', async () => {
     const diff = '+ import { foo } from `src/utils/existing.ts`';
+    let callCount = 0;
     const sandbox = mockSandbox({
-      exec: vi.fn().mockResolvedValue({ stdout: 'EXISTS', stderr: '', exitCode: 0 }),
+      exec: vi.fn().mockImplementation(async (cmd: string) => {
+        callCount++;
+        if (callCount === 1) return { stdout: '', stderr: 'command not found', exitCode: 127 };
+        return { stdout: 'EXISTS', stderr: '', exitCode: 0 };
+      }),
     });
     const result = await gateRealityCheck(sandbox, diff);
     expect(result.passed).toBe(true);
@@ -74,7 +87,12 @@ describe('gateRealityCheck (AC1: hallucination-grep)', () => {
 
   it('uses sandbox.exec for all checks — AC8', async () => {
     const diff = '+ import { bar } from `src/services/worker.ts`';
-    const execMock = vi.fn().mockResolvedValue({ stdout: 'EXISTS', stderr: '', exitCode: 0 });
+    let callCount = 0;
+    const execMock = vi.fn().mockImplementation(async (cmd: string) => {
+      callCount++;
+      if (callCount === 1) return { stdout: '', stderr: 'command not found', exitCode: 127 };
+      return { stdout: 'EXISTS', stderr: '', exitCode: 0 };
+    });
     const sandbox = mockSandbox({ exec: execMock });
     await gateRealityCheck(sandbox, diff);
     const execCalls = execMock.mock.calls;
@@ -185,8 +203,13 @@ describe('gateHallucinationScan', () => {
 
   it('detects AI hallucination patterns (example.com, TODO) — AC2', async () => {
     const diff = '+ const url = "https://example.com/api"\n+ // TODO: implement error handling';
+    let callCount = 0;
     const sandbox = mockSandbox({
-      exec: vi.fn().mockResolvedValue({ stdout: 'NOT FOUND', stderr: 'command not found', exitCode: 127 }),
+      exec: vi.fn().mockImplementation(async () => {
+        callCount++;
+        if (callCount <= 2) return { stdout: '', stderr: 'command not found', exitCode: 127 };
+        return { stdout: '', stderr: '', exitCode: 0 };
+      }),
     });
     const result = await gateHallucinationScan(sandbox, diff);
     expect(result.passed).toBe(false);
@@ -196,11 +219,14 @@ describe('gateHallucinationScan', () => {
   it('detects non-existent npm packages via sandbox.exec — AC2', async () => {
     const diff = "+ import { parseFlow } from 'nonexistent-analysis-pkg'";
     const sandbox = mockSandbox();
-    const execMock = vi.fn()
-      .mockResolvedValueOnce({ stdout: 'NOT FOUND', stderr: 'command not found', exitCode: 127 })
-      .mockResolvedValueOnce({ stdout: 'NOT FOUND', stderr: 'command not found', exitCode: 127 })
-      .mockResolvedValueOnce({ stdout: '{}', stderr: '', exitCode: 0 })
-      .mockResolvedValueOnce({ stdout: '', stderr: 'npm ERR! 404 Not Found', exitCode: 1 });
+    let callCount = 0;
+    const execMock = vi.fn().mockImplementation(async (cmd: string) => {
+      callCount++;
+      if (callCount === 1) return { stdout: '', stderr: 'command not found', exitCode: 127 };
+      if (callCount === 2) return { stdout: '', stderr: 'command not found', exitCode: 127 };
+      if (callCount === 3) return { stdout: '{}', stderr: '', exitCode: 0 };
+      return { stdout: '', stderr: 'npm ERR! 404 Not Found', exitCode: 1 };
+    });
     sandbox.exec = execMock;
     const result = await gateHallucinationScan(sandbox, diff);
     expect(result.passed).toBe(false);

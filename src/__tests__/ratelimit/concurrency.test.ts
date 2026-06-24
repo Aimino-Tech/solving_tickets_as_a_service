@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
-const mockRedisClient = {
+const mockRedisClient = vi.hoisted(() => ({
   sadd: vi.fn(),
   scard: vi.fn(),
   srem: vi.fn(),
@@ -23,14 +23,10 @@ const mockRedisClient = {
   hget: vi.fn(),
   on: vi.fn().mockReturnThis(),
   quit: vi.fn().mockResolvedValue(undefined),
-};
-
-const mockRedisConstructor = vi.hoisted(() => ({
-  default: vi.fn().mockImplementation(() => mockRedisClient),
 }));
 
 vi.mock('ioredis', () => ({
-  Redis: mockRedisConstructor.default,
+  Redis: vi.fn(() => mockRedisClient),
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -61,6 +57,9 @@ vi.mock('../../ratelimit/tiers.js', () => ({
 
 // Import after mocks are set up
 const { ConcurrencyManager } = await import('../../ratelimit/concurrency.js');
+// Verify the source file uses imports, not require
+import { config as testConfig } from '../../config.js';
+console.log('TEST CONFIG:', testConfig.queue.redisUrl);
 
 // ── Suite ──────────────────────────────────────────────────────────────────
 

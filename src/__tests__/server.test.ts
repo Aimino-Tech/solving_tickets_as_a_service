@@ -206,6 +206,7 @@ vi.mock('../utils/logger.js', () => ({
 }));
 
 vi.mock('../queue/issueQueue.js', () => ({
+  createIssueQueue: mockCreateIssueQueue,
   enqueueIssue: mockEnqueueIssue,
 }));
 
@@ -303,7 +304,7 @@ vi.mock('../trackers/linear.js', () => ({
   verifyLinearWebhookSignature: vi.fn().mockReturnValue(true),
 }));
 vi.mock('../ratelimit/middleware.js', () => ({
-  rateLimitMiddleware: vi.fn(),
+  rateLimitMiddleware: vi.fn(() => (req: any, res: any, next: any) => next()),
 }));
 vi.mock('../security/securityHeaders.js', () => ({
   buildHelmetConfig: vi.fn().mockReturnValue({}),
@@ -744,6 +745,56 @@ function fetchApp(
     headers?: Record<string, string>;
     body?: string;
   },
+): Promise<FetchResponse> {
+  return new Promise((resolve, reject) => {
+    const server = require('http').createServer(app);
+    server.listen(0, '127.0.0.1', () => {
+      const addr = server.address();
+      if (!addr || typeof addr === 'string') {
+        server.close();
+        reject(new Error('Failed to get server address'));
+        return;
+      }
+      const port = addr.port;
+      const method = options?.method ?? 'GET';
+      const headers = options?.headers ?? {};
+
+      const req = require('http').request(
+        { hostname: '127.0.0.1', port, path, method, headers },
+        (res: any) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: any) => chunks.push(Buffer.from(chunk)));
+          res.on('end', () => {
+            server.close();
+            const responseHeaders: Record<string, string> = {};
+            if (res.headers) {
+              for (const [key, value] of Object.entries(res.headers)) {
+                if (value !== undefined) {
+                  responseHeaders[key] = Array.isArray(value) ? value.join(', ') : String(value);
+                }
+              }
+            }
+            resolve({
+              status: res.statusCode ?? 200,
+              body: Buffer.concat(chunks).toString('utf-8'),
+              headers: responseHeaders,
+            });
+          });
+        },
+      );
+
+      req.on('error', (err: Error) => {
+        server.close();
+        reject(err);
+      });
+
+      if (options?.body) {
+        req.write(options.body);
+      }
+      req.end();
+    });
+  });
+},
 ): Promise<FetchResponse> {
   return new Promise((resolve, reject) => {
     const method = options?.method ?? 'GET';

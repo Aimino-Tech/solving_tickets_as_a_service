@@ -3,7 +3,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
-const mockRedis = {
+const mockRedis = vi.hoisted(() => ({
   on: vi.fn(),
   quit: vi.fn().mockResolvedValue(undefined),
   get: vi.fn().mockResolvedValue(null),
@@ -13,8 +13,8 @@ const mockRedis = {
   zremrangebyscore: vi.fn().mockResolvedValue(0),
   zcard: vi.fn().mockResolvedValue(0),
   expire: vi.fn().mockResolvedValue(1),
-};
-vi.mock('ioredis', () => ({ default: vi.fn(() => mockRedis), Redis: vi.fn(() => mockRedis) }));
+}));
+vi.mock('ioredis', () => ({ default: vi.fn(function() { return mockRedis; }), Redis: vi.fn(function() { return mockRedis; }) }));
 
 const mockQuery = vi.fn();
 vi.mock('../../db/connection.js', () => ({ queryWithRetry: mockQuery }));

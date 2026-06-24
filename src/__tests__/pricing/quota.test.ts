@@ -21,8 +21,8 @@ vi.mock('../../config.js', () => ({
 }));
 
 // Create a mock Redis client factory that we can control
-const mockRedisClient = {
-  zcount: vi.fn(),
+const mockRedisClient = vi.hoisted(() => {
+  const client = {  zcount: vi.fn(),
   zadd: vi.fn(),
   expire: vi.fn(),
   pipeline: vi.fn(),
@@ -44,15 +44,18 @@ const mockRedisClient = {
   set: vi.fn(),
   quit: vi.fn(),
   on: vi.fn(),
-};
+  };
 
-// Make pipeline return a self-referencing mock
-mockRedisClient.pipeline.mockReturnValue({
-  zadd: vi.fn().mockReturnThis(),
-  expire: vi.fn().mockReturnThis(),
-  lpush: vi.fn().mockReturnThis(),
-  ltrim: vi.fn().mockReturnThis(),
-  exec: vi.fn().mockResolvedValue([[null, 1], [null, 1]]),
+  // Make pipeline return a self-referencing mock
+  client.pipeline.mockReturnValue({
+    zadd: vi.fn().mockReturnThis(),
+    expire: vi.fn().mockReturnThis(),
+    lpush: vi.fn().mockReturnThis(),
+    ltrim: vi.fn().mockReturnThis(),
+    exec: vi.fn().mockResolvedValue([[null, 1], [null, 1]]),
+  });
+
+  return client;
 });
 
 vi.mock('ioredis', () => ({

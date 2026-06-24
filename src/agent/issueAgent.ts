@@ -1204,3 +1204,48 @@ function dispatchNamedTool(
   if (!tool) return Promise.resolve(`Unknown tool: ${name}`);
   return tool.handler(args);
 }
+
+export interface GroundingResult {
+  passed: boolean;
+  ungrounded: string[];
+  details: string[];
+}
+
+export function verifyIssueGrounding(
+  issueBody: string,
+  comments: string[],
+  triage: { summary: string },
+): GroundingResult {
+  const allText = [issueBody, ...comments].filter(Boolean).join(' ').toLowerCase();
+
+  if (!allText.trim()) {
+    return {
+      passed: true,
+      ungrounded: [],
+      details: ['No issue body or comments to verify against'],
+    };
+  }
+
+  const summary = (triage.summary || '').toLowerCase();
+  if (!summary.trim()) {
+    return { passed: true, ungrounded: [], details: [] };
+  }
+
+  const keywords = summary.split(/\W+/).filter((w) => w.length > 2);
+  const ungrounded: string[] = [];
+
+  for (const word of keywords) {
+    const wordInText = allText.includes(word) || allText.split(/\W+/).some((t) => t.startsWith(word) || word.startsWith(t));
+    if (!wordInText) {
+      ungrounded.push(word);
+    }
+  }
+
+  return {
+    passed: ungrounded.length === 0,
+    ungrounded,
+    details: ungrounded.length > 0
+      ? [`Ungrounded keywords: ${ungrounded.join(', ')}`]
+      : ['Triage summary is grounded in issue body/comments'],
+  };
+}
