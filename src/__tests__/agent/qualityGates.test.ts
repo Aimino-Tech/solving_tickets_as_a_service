@@ -23,8 +23,8 @@ function createRealSandbox(tempDir: string) {
     exec: vi.fn().mockImplementation(async (cmd: string, timeout?: number): Promise<ExecResult> => {
       recordedCalls.push({ cmd, timeout: timeout || 0 });
       try {
-        const result = execSync(cmd, { cwd: tempDir, timeout: timeout || 30000, stdio: 'pipe' });
-        return { stdout: result.stdout.toString(), stderr: result.stderr.toString(), exitCode: 0 };
+        const buf = execSync(cmd, { cwd: tempDir, timeout: timeout || 30000, stdio: 'pipe', shell: true });
+        return { stdout: buf.toString(), stderr: '', exitCode: 0 };
       } catch (e: any) {
         return { stdout: e.stdout?.toString() || '', stderr: e.stderr?.toString() || '', exitCode: e.status || 1 };
       }
@@ -33,7 +33,7 @@ function createRealSandbox(tempDir: string) {
   } as any;
 }
 
-describe('gateRealityCheck (REAL execution)', () => {
+describe('AC1: gateRealityCheck (REAL execution)', () => {
   let tempDir: string;
   let sandbox: any;
 
@@ -51,22 +51,10 @@ describe('gateRealityCheck (REAL execution)', () => {
     expect(result.passed).toBe(true);
   });
 
-  it('detects non-existent file in real filesystem', async () => {
-    writeFileSync(join(tempDir, 'real.ts'), 'export const x = 1;');
+  it('detects non-existent file in real filesystem — AC1', async () => {
+    mkdirSync(join(tempDir, 'src'), { recursive: true });
+    writeFileSync(join(tempDir, 'src/real.ts'), 'export const x = 1;');
     const diff = '+ import { foo } from `src/real.ts`\n+ import { bar } from `src/fake.ts`';
-    sandbox.exec.mockImplementation(async (cmd: string) => {
-      const parts = cmd.match(/test -f '([^']+)'/);
-      if (parts) {
-        const filePath = join(tempDir, parts[1]);
-        try {
-          const result = execSync(`test -f '${filePath}' && echo EXISTS || echo MISSING`, { cwd: tempDir });
-          return { stdout: result.toString().trim(), stderr: '', exitCode: 0 };
-        } catch {
-          return { stdout: 'MISSING', stderr: '', exitCode: 1 };
-        }
-      }
-      return { stdout: 'EXISTS', stderr: '', exitCode: 0 };
-    });
     const result = await gateRealityCheck(sandbox, diff);
     expect(result.passed).toBe(false);
     expect(result.reason).toContain('fake');
@@ -76,26 +64,24 @@ describe('gateRealityCheck (REAL execution)', () => {
     mkdirSync(join(tempDir, 'src/utils'), { recursive: true });
     writeFileSync(join(tempDir, 'src/utils/existing.ts'), 'export const x = 1;');
     const diff = '+ import { foo } from `src/utils/existing.ts`';
-    sandbox.exec.mockImplementation(async (cmd: string) => {
-      return { stdout: 'EXISTS', stderr: '', exitCode: 0 };
-    });
     const result = await gateRealityCheck(sandbox, diff);
     expect(result.passed).toBe(true);
   });
 });
 
-describe('gateCompileCheck (REAL execution)', () => {
+describe('AC3: gateCompileCheck (REAL tsc)', () => {
   let tempDir: string;
   let sandbox: any;
 
   beforeEach(() => {
-    tempDir = mkdtempSync(join(tmpdir(), 'stas-tsc-'));
+    tempDir = mkdtempSync(join(process.cwd(), 'stas-tsc-'));
     writeFileSync(join(tempDir, 'tsconfig.json'), JSON.stringify({
       compilerOptions: {
         target: 'ES2020',
         module: 'ESNext',
         strict: true,
         noEmit: true,
+        skipLibCheck: true,
       },
     }));
     sandbox = createRealSandbox(tempDir);
@@ -107,24 +93,19 @@ describe('gateCompileCheck (REAL execution)', () => {
 
   it('passes when tsc has no errors', async () => {
     writeFileSync(join(tempDir, 'valid.ts'), 'const x: number = 1;');
-    sandbox.exec.mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 });
     const result = await gateCompileCheck(sandbox);
     expect(result.passed).toBe(true);
   });
 
-  it('detects real TypeScript type error', async () => {
+  it('catches REAL TypeScript type error — AC3', async () => {
     writeFileSync(join(tempDir, 'broken.ts'), 'const x: number = "string";');
-    let stderr = '';
-    try {
-      execSync('npx tsc --noEmit --project tsconfig.json 2>&1', { cwd: tempDir, stdio: 'pipe' });
-    } catch (e: any) {
-      stderr = e.stderr?.toString() || e.stdout?.toString() || '';
-    }
-    expect(stderr).toMatch(/Type.*string.*number|TS2322/);
+    const result = await gateCompileCheck(sandbox);
+    expect(result.passed).toBe(false);
+    expect(result.details).toContain('TS2322');
   });
 });
 
-describe('gateTestCheck (REAL execution)', () => {
+describe('AC5: gateTestCheck (REAL execution)', () => {
   let sandbox: any;
 
   beforeEach(() => {
@@ -136,7 +117,7 @@ describe('gateTestCheck (REAL execution)', () => {
     expect(result.passed).toBe(true);
   });
 
-  it('detects vacuous assertion in diff', async () => {
+  it('detects vacuous assertion in diff — AC5', async () => {
     const diff = `+ describe('test', () => {
 +   it('should work', () => {
 +     expect(true).toBe(true);
@@ -159,7 +140,7 @@ describe('gateTestCheck (REAL execution)', () => {
   });
 });
 
-describe('gateHallucinationCheck (REAL execution)', () => {
+describe('AC7: gateHallucinationCheck (REAL placeholder content)', () => {
   let tempDir: string;
   let sandbox: any;
 
@@ -177,7 +158,7 @@ describe('gateHallucinationCheck (REAL execution)', () => {
     expect(result.passed).toBe(true);
   });
 
-  it('detects non-existent npm package', async () => {
+  it('detects non-existent npm package via sandbox.exec — AC7', async () => {
     writeFileSync(join(tempDir, 'package.json'), JSON.stringify({ name: 'test', dependencies: {} }));
     const diff = 'import { something } from \'this-package-definitely-does-not-exist-12345\'';
     const result = await gateHallucinationCheck(sandbox, diff);
@@ -186,7 +167,7 @@ describe('gateHallucinationCheck (REAL execution)', () => {
   });
 });
 
-describe('runQualityGates', () => {
+describe('runQualityGates (integration)', () => {
   let sandbox: any;
 
   beforeEach(() => {
@@ -195,14 +176,14 @@ describe('runQualityGates', () => {
     } as any;
   });
 
-  it('runs all gates and returns results', async () => {
+  it('runs all 4 gates and returns results', async () => {
     const result = await runQualityGates(sandbox, '', 0, 3);
     expect(result.gates).toHaveLength(4);
     expect(result.retryCount).toBe(0);
     expect(result.maxRetries).toBe(3);
   });
 
-  it('supports retry', async () => {
+  it('supports retry correctly', async () => {
     const result = await runQualityGates(sandbox, '', 2, 3);
     expect(result.canRetry).toBe(true);
     const exhausted = await runQualityGates(sandbox, '', 3, 3);

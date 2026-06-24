@@ -63,6 +63,8 @@ const envSchema = z.object({
   // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
   STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
+  STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
+  STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
   STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),
@@ -316,6 +318,7 @@ function buildConfig(env: ParsedEnv) {
       critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
     },
     stas: {
+      mode: env.STAS_MODE,
       label: env.STAS_LABEL,
       botName: env.BOT_NAME,
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
