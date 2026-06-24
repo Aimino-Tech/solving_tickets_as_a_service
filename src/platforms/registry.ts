@@ -1,16 +1,45 @@
 /**
  * PlatformClient registry — factory that returns the right client for a
- * given platform configuration.
+ * given platform configuration, with a registration-based pattern for tests.
  *
  * Usage:
  *   const client = getClient({ platform: 'github', token: '…' });
  *   const issue = await client.getIssue('owner/repo', 42);
+ *
+ * For tests / simple use:
+ *   registerPlatformClient('github', myClient);
+ *   const client = getPlatformClient('github');
  */
 
 import type { PlatformClient, PlatformConfig } from './interface.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'platform-registry' });
+
+const registeredClients = new Map<string, PlatformClient>();
+
+/**
+ * Register a pre-created PlatformClient instance for a platform.
+ * Useful in tests or when you want to inject a singleton.
+ */
+export function registerPlatformClient(platform: string, client: PlatformClient): void {
+  registeredClients.set(platform, client);
+}
+
+/**
+ * Get a registered PlatformClient by platform name.
+ * Returns undefined if the platform has not been registered.
+ */
+export function getPlatformClient(platform: string): PlatformClient | undefined {
+  return registeredClients.get(platform);
+}
+
+/**
+ * Get all registered platform clients.
+ */
+export function getAllPlatformClients(): Map<string, PlatformClient> {
+  return registeredClients;
+}
 
 /**
  * Get a PlatformClient for the given configuration.

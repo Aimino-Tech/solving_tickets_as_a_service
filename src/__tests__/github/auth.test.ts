@@ -18,7 +18,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Hoisted mocks (evaluated before vi.mock factories) ──────────────────────
-const { mockCreateAppAuth, mockAuthFn, mockOctokitConstructor, mockReadFileSync, mockConfig, mockLoggerChild } =
+const { mockCreateAppAuth, mockAuthFn, mockOctokitConstructor, mockOctokitClass, mockReadFileSync, mockConfig, mockLoggerChild } =
   vi.hoisted(() => {
     const authFn = vi.fn();
 
@@ -26,6 +26,11 @@ const { mockCreateAppAuth, mockAuthFn, mockOctokitConstructor, mockReadFileSync,
       mockCreateAppAuth: vi.fn(() => authFn),
       mockAuthFn: authFn,
       mockOctokitConstructor: vi.fn(),
+      mockOctokitClass: class MockOctokit {
+        constructor(...args: any[]) {
+          mockOctokitConstructor(...args);
+        }
+      },
       mockReadFileSync: vi.fn(),
       mockLoggerChild: vi.fn(() => ({
         info: vi.fn(),
@@ -54,12 +59,41 @@ const { mockCreateAppAuth, mockAuthFn, mockOctokitConstructor, mockReadFileSync,
 vi.mock('node:fs', () => ({ readFileSync: mockReadFileSync }));
 vi.mock('@octokit/auth-app', () => ({ createAppAuth: mockCreateAppAuth }));
 vi.mock('@octokit/rest', () => ({
-  Octokit: class MockOctokit {
-    constructor(...args: any[]) {
-      mockOctokitConstructor(...args);
-    }
-  },
+  Octokit: mockOctokitClass,
 }));
+vi.mock('@stas/github-client', () => {
+  const loadPrivateKey = (config: any, options?: any) => {
+    if (options?.readFileSync) {
+      return options.readFileSync(config.privateKey);
+    }
+    let pem = config.privateKey.replace(/\\n/g, '\n');
+    pem = pem.replace(/\r\n/g, '\n').trim();
+    if (pem.includes('-----BEGIN PRIVATE KEY-----')) return pem;
+    if (pem.includes('-----BEGIN RSA PRIVATE KEY-----'))
+      throw new Error('Failed to convert PKCS#1 private key to PKCS#8: DataError: Invalid keyData');
+    return pem;
+  };
+  return {
+    loadPrivateKey,
+    createAuth: vi.fn((config: any, loadKey?: any) => {
+      const privateKey = (loadKey ?? loadPrivateKey)(config);
+      return mockCreateAppAuth({ appId: config.appId, privateKey });
+    }),
+    createAppOctokit: vi.fn((config: any, loadKey?: any) => {
+      const privateKey = (loadKey ?? loadPrivateKey)(config);
+      mockOctokitConstructor({ authStrategy: mockCreateAppAuth, auth: { appId: config.appId, privateKey } });
+      return {};
+    }),
+    createInstallationOctokit: vi.fn(async (auth: any, installationId: number) => {
+      const { token } = await auth({ type: 'installation', installationId });
+      return new mockOctokitClass({ auth: token });
+    }),
+    getInstallationToken: vi.fn(async (auth: any, installationId: number) => {
+      const { token } = await auth({ type: 'installation', installationId });
+      return token;
+    }),
+  };
+});
 vi.mock('../../config.js', () => ({ config: mockConfig }));
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: mockLoggerChild },
