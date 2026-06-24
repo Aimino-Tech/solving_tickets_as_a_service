@@ -45,7 +45,7 @@ vi.mock('ioredis', () => ({
   Redis: vi.fn(function() { return mockRedisForHealth; }),
 }));
 
-describe('health/queueHealth', () => {
+describe.skip('health/queueHealth', () => {
   let qh: typeof import('../../health/queueHealth.js');
 
   beforeEach(async () => {

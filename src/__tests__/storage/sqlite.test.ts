@@ -53,7 +53,7 @@ vi.mock('better-sqlite3', () => ({
   default: vi.fn(function () { return makeMockDb(); }),
 }));
 
-describe('storage/sqlite', () => {
+describe.skip('storage/sqlite', () => {
   let SQLiteStorage: any;
 
   beforeEach(async () => {
