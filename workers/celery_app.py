@@ -81,6 +81,12 @@ if ENABLE_METRICS:
         logger.warning("Failed to start metrics — %s", exc)
 
 
+@app.task(name="workers.celery_app.ping")
+def ping():
+    """Simple liveness check."""
+    return {"status": "pong"}
+
+
 @app.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
     logger.info(

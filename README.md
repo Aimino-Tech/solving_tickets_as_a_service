@@ -228,6 +228,7 @@ export RAPIDAPI_PROVIDER_KEY="your-provider-key"
 # 3. Sync OpenAPI spec to RapidAPI
 bash scripts/rapidapi-sync.sh
 ```
+
 ## Deployment
 
 See [`DEVELOPMENT.md`](DEVELOPMENT.md) for a comprehensive deployment guide covering local dev, Railway, Fly.io, and Kubernetes.
@@ -337,6 +338,10 @@ Each platform has its own webhook integration, agent pipeline, CI configuration,
 - [x] Real-time status streaming to issue comments
 - [ ] Dashboard for run history
 - [ ] Cloud hosted version
+
+## Contributing
+
+Contributions are welcome! See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development setup, running tests, style guide, and the PR workflow.
 
 ## License
 

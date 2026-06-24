@@ -1,8 +1,8 @@
 /**
- * Queue Health — monitoring for RabbitMQ queue health.
+ * Queue Health — monitoring for BullMQ queue health.
  *
  * Provides:
- *   - Queue depth checks (RabbitMQ via Management API)
+ *   - Queue depth checks (BullMQ via Redis)
  *   - DLQ message count monitoring
  *   - Worker liveness checks
  *   - Structured health report for /health/queue endpoint
@@ -14,12 +14,17 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
+import { Redis } from 'ioredis';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import * as rabbitmq from '../queue/rabbitmq.js';
-import { bridgeMetrics, recordConsumerLag } from '../bridge/metrics.js';
+import { bridgeMetrics } from '../bridge/metrics.js';
 
 const log = rootLogger.child({ module: 'queue-health' });
+
+// ── Constants ───────────────────────────────────────────────────────
+
+const QUEUE_NAME = 'stas-issues';
+const DLQ_NAME = 'stas-issues-dlq';
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -34,11 +39,6 @@ export interface QueueHealthReport {
     queuesWithCritical: number;
   };
   queues: QueueHealthEntry[];
-  rabbitmq: {
-    connected: boolean;
-    pendingMessages: number;
-    consumers: number;
-  };
 }
 
 export interface QueueHealthEntry {
@@ -49,50 +49,56 @@ export interface QueueHealthEntry {
   consumers?: number;
 }
 
-// ── RabbitMQ Management API client ──────────────────────────────────
+// ── Redis-based queue depth (for BullMQ queues) ────────────────────
 
-interface RabbitMQQueueInfo {
-  name: string;
-  messages: number;
-  messages_ready: number;
-  messages_unacknowledged: number;
-  consumers: number;
+let redis: Redis | null = null;
+
+function getRedis(): Redis {
+  if (!redis) {
+    redis = new Redis(config.queue.redisUrl, {
+      maxRetriesPerRequest: null,
+      enableReadyCheck: true,
+      retryStrategy: (times: number) => {
+        const delay = Math.min(times * 100, 3000);
+        log.warn({ attempt: times }, 'Redis health connection retry in ${delay}ms');
+        return delay;
+      },
+      lazyConnect: true,
+    });
+  }
+  return redis;
 }
 
-async function fetchRabbitMQQueues(): Promise<RabbitMQQueueInfo[]> {
-  const url = config.rabbitmq.url;
-  if (!url || rabbitmq.isConnected() === false) {
-    return [];
-  }
-
+async function getBullMQQueueDepth(queueName: string): Promise<number> {
   try {
-    const parsed = new URL(url);
-    const mgmtBase = 'http://' + parsed.hostname + ':15672';
-    const vhost = (parsed.pathname || '/').replace(/^\//, '');
-    const username = parsed.username || 'guest';
-    const password = parsed.password || 'guest';
-    const auth = Buffer.from(username + ':' + password).toString('base64');
-
-    const response = await fetch(
-      mgmtBase + '/api/queues/' + encodeURIComponent(vhost),
-      {
-        headers: {
-          Authorization: 'Basic ' + auth,
-          Accept: 'application/json',
-        },
-        signal: AbortSignal.timeout(5000),
-      },
-    );
-
-    if (!response.ok) {
-      log.warn({ status: response.status }, 'RabbitMQ Management API returned error');
-      return [];
+    const r = getRedis();
+    if (!r.status || r.status === 'end' || r.status === 'close') {
+      await r.connect().catch(() => {});
     }
 
-    return (await response.json()) as RabbitMQQueueInfo[];
+    const [wait, active, delayed, paused] = await Promise.all([
+      r.llen('bull:' + queueName + ':wait').catch(() => 0),
+      r.llen('bull:' + queueName + ':active').catch(() => 0),
+      r.zcount('bull:' + queueName + ':delayed', '-inf', '+inf').catch(() => 0),
+      r.llen('bull:' + queueName + ':paused').catch(() => 0),
+    ]);
+
+    return (wait ?? 0) + (active ?? 0) + (delayed ?? 0) + (paused ?? 0);
   } catch (err) {
-    log.warn({ err: String(err) }, 'Failed to fetch RabbitMQ queue info');
-    return [];
+    log.warn({ err: String(err), queueName }, 'Failed to get BullMQ queue depth');
+    return -1;
+  }
+}
+
+async function getBullMQFailedCount(queueName: string): Promise<number> {
+  try {
+    const r = getRedis();
+    if (!r.status || r.status === 'end' || r.status === 'close') {
+      await r.connect().catch(() => {});
+    }
+    return (await r.zcount('bull:' + queueName + ':failed', '-inf', '+inf').catch(() => 0)) ?? 0;
+  } catch {
+    return -1;
   }
 }
 
@@ -112,7 +118,11 @@ function queueStatus(depth: number, isDlq: boolean): 'ok' | 'warn' | 'critical' 
 export async function getQueueHealth(): Promise<QueueHealthReport> {
   const timestamp = new Date().toISOString();
 
-  const rabbitQueues = await fetchRabbitMQQueues();
+  const [mainDepth, dlqDepth, failedCount] = await Promise.all([
+    getBullMQQueueDepth(QUEUE_NAME),
+    getBullMQQueueDepth(DLQ_NAME),
+    getBullMQFailedCount(QUEUE_NAME),
+  ]);
 
   const queueEntries: QueueHealthEntry[] = [];
   let totalMessages = 0;
@@ -120,24 +130,25 @@ export async function getQueueHealth(): Promise<QueueHealthReport> {
   let queuesWithWarnings = 0;
   let queuesWithCritical = 0;
 
-  // RabbitMQ queues
-  let rabbitPending = 0;
-  let rabbitConsumers = 0;
-  for (const q of rabbitQueues) {
-    const isDlq = q.name.endsWith('.dlq');
-    const s = queueStatus(q.messages, isDlq);
-    queueEntries.push({ name: q.name, type: isDlq ? 'dlq' : 'main', depth: q.messages, status: s, consumers: q.consumers });
-    totalMessages += q.messages;
-    if (isDlq) dlqMessages += q.messages;
+  // BullMQ queues
+  const bullQueues = [
+    { name: QUEUE_NAME, type: 'main' as const, depth: mainDepth },
+    { name: DLQ_NAME, type: 'dlq' as const, depth: dlqDepth },
+  ];
+
+  for (const q of bullQueues) {
+    const s = queueStatus(q.depth, q.type === 'dlq');
+    queueEntries.push({ name: q.name, type: q.type, depth: Math.max(0, q.depth), status: s });
+    totalMessages += Math.max(0, q.depth);
+    if (q.type === 'dlq') dlqMessages += Math.max(0, q.depth);
     if (s === 'warn') queuesWithWarnings++;
     if (s === 'critical') queuesWithCritical++;
-    rabbitPending += q.messages_ready ?? 0;
-    rabbitConsumers += q.consumers ?? 0;
-    recordConsumerLag(q.name, q.messages_ready ?? 0);
   }
 
-  // Prometheus gauges — RabbitMQ only
-  bridgeMetrics.setGauge('queue_depth', { type: 'rabbitmq' }, Math.max(0, totalMessages));
+  // Prometheus gauges
+  bridgeMetrics.setGauge('queue_depth', { queue: QUEUE_NAME, type: 'bullmq' }, Math.max(0, mainDepth));
+  bridgeMetrics.setGauge('queue_depth', { queue: DLQ_NAME, type: 'bullmq' }, Math.max(0, dlqDepth));
+  bridgeMetrics.setGauge('queue_depth', { queue: 'failed', type: 'bullmq' }, Math.max(0, failedCount));
 
   let overallStatus: QueueHealthReport['status'] = 'healthy';
   if (queuesWithCritical > 0) overallStatus = 'critical';
@@ -149,16 +160,11 @@ export async function getQueueHealth(): Promise<QueueHealthReport> {
     summary: {
       totalMessages,
       dlqMessages,
-      activeWorkers: rabbitConsumers,
+      activeWorkers: 0,
       queuesWithWarnings,
       queuesWithCritical,
     },
     queues: queueEntries,
-    rabbitmq: {
-      connected: rabbitmq.isConnected(),
-      pendingMessages: rabbitPending,
-      consumers: rabbitConsumers,
-    },
   };
 }
 
@@ -169,14 +175,6 @@ export async function hasCriticalQueues(): Promise<{ critical: string[]; warning
   return { critical, warning };
 }
 
-/**
- * Close the health Redis connection (no-op after BullMQ removal).
- * Kept for backward compatibility.
- */
-export async function closeHealthRedis(): Promise<void> {
-  // No-op — BullMQ Redis connection no longer maintained by queue health
-}
-
 export async function getDLQSummary(): Promise<{ totalDlqMessages: number; queuesWithMessages: string[] }> {
   const report = await getQueueHealth();
   const dlqEntries = report.queues.filter((q) => q.type === 'dlq' && q.depth > 0);
@@ -184,4 +182,11 @@ export async function getDLQSummary(): Promise<{ totalDlqMessages: number; queue
     totalDlqMessages: report.summary.dlqMessages,
     queuesWithMessages: dlqEntries.map((q) => q.name + ' (' + q.depth + ')'),
   };
+}
+
+export async function closeHealthRedis(): Promise<void> {
+  if (redis) {
+    try { await redis.quit(); } catch { /* non-fatal */ }
+    redis = null;
+  }
 }
