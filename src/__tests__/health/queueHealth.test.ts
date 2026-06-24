@@ -53,19 +53,14 @@ describe('health/queueHealth', () => {
   });
 
   describe('getQueueHealth', () => {
-    it('returns a healthy report when RabbitMQ is disconnected', async () => {
-      mockIsConnected.mockReturnValue(false);
-
+    it('returns a healthy report when queue depth is zero', async () => {
       const report = await qh.getQueueHealth();
       expect(report.status).toBe('healthy');
       expect(report.summary.totalMessages).toBe(0);
-      expect(report.rabbitmq.connected).toBe(false);
       expect(report.timestamp).toBeDefined();
     });
 
     it('returns healthy when connected and queues are empty', async () => {
-      mockIsConnected.mockReturnValue(true);
-      // Mock fetch to return empty queues
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: vi.fn().mockResolvedValue([]),
@@ -73,16 +68,15 @@ describe('health/queueHealth', () => {
 
       const report = await qh.getQueueHealth();
       expect(report.status).toBe('healthy');
-      expect(report.rabbitmq.connected).toBe(true);
     });
 
     it('returns degraded when a main queue exceeds warn threshold', async () => {
-      mockIsConnected.mockReturnValue(true);
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue([
-          { name: 'stas.issues.fix', messages: 60, messages_ready: 60, messages_unacknowledged: 0, consumers: 0 },
-        ]),
+      const { closeHealthRedis } = await import('../../health/queueHealth.js');
+      await closeHealthRedis();
+
+      mockRedisForHealth.llen = vi.fn().mockImplementation((key: string) => {
+        if (key.includes('stas-issues:wait')) return Promise.resolve(60);
+        return Promise.resolve(0);
       });
 
       const report = await qh.getQueueHealth();

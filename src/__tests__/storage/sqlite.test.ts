@@ -17,6 +17,10 @@ function makeMockDb() {
     prepare: vi.fn(() => ({
       run: vi.fn(),
       get: vi.fn((params?: any) => {
+        if (typeof params === 'number') {
+          const row = savedRows.find((r) => r.id === params);
+          return row ?? undefined;
+        }
         const rowId = savedRows.length + 1;
         const row = {
           id: rowId,

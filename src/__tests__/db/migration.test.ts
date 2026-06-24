@@ -24,12 +24,16 @@ const fsMockFns = vi.hoisted(() => ({
   mkdirSync: vi.fn(),
 }));
 
-const mockQueryWithRetry = vi.hoisted(() => vi.fn());
+const mockQueryWithRetry = vi.hoisted(() => vi.fn((_query: string, _params?: any[]) => Promise.resolve({ rows: [] })));
 const mockGetPool = vi.hoisted(() => vi.fn(() => ({ connect: vi.fn() })));
 
-vi.mock('node:fs', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('node:fs')>()),
-  ...fsMockFns,
+vi.mock('node:fs', () => ({
+  existsSync: fsMockFns.existsSync,
+  readdirSync: fsMockFns.readdirSync,
+  readFileSync: fsMockFns.readFileSync,
+  writeFileSync: fsMockFns.writeFileSync,
+  mkdirSync: fsMockFns.mkdirSync,
+  default: { existsSync: fsMockFns.existsSync, readdirSync: fsMockFns.readdirSync, readFileSync: fsMockFns.readFileSync, writeFileSync: fsMockFns.writeFileSync, mkdirSync: fsMockFns.mkdirSync },
 }));
 
 vi.mock('../../db/connection.js', () => ({
@@ -83,10 +87,11 @@ describe('runMigrations', () => {
     fsMockFns.readdirSync.mockReset();
     fsMockFns.readFileSync.mockReset();
     mockQueryWithRetry.mockReset();
+    mockQueryWithRetry.mockResolvedValue({ rows: [] });
     mockGetPool.mockReset();
   });
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('creates migrations directory if missing', async () => {
@@ -146,7 +151,7 @@ describe('runMigrations', () => {
 
 describe('rollbackLastBatch', () => {
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('does nothing when no migrations are tracked', async () => {
@@ -240,7 +245,7 @@ describe('migration lifecycle (mocked)', () => {
 
 describe('dry-run mode', () => {
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('does not apply migrations in dry-run mode', async () => {
