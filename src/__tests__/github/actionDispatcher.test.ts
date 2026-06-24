@@ -62,7 +62,7 @@ vi.mock('../../github/auth.js', () => ({
 
 vi.mock('../../config.js', () => ({
   config: {
-    stas: { botName: 'STAS', label: 'stas:fix' },
+    stas: { mode: 'oss', botName: 'STAS', label: 'stas:fix' },
     sentry: { dsn: undefined },
     github: {
       appId: 'test-app',
@@ -433,6 +433,53 @@ describe('ActionDispatcher', () => {
       // Should not throw even if error comment fails
       const result = await dispatcher.dispatch(params);
       expect(result.action).toBe('error');
+    });
+  });
+
+  // ── Receipt gate (OSS mode) ──────────────────────────────────────────
+
+  describe('receipt gate — OSS mode', () => {
+    it('skips receipt verification when mode is oss', async () => {
+      const params = createDispatchParams({
+        confidence: 'high',
+        receiptManifest: {
+          receipts: {},
+          createdAt: new Date().toISOString(),
+        },
+      });
+      const result = await dispatcher.dispatch(params);
+
+      expect(result.action).toBe('pr_created');
+      expect(result.prNumber).toBe(42);
+    });
+
+    it('does not post receipt-blocked comment in OSS mode', async () => {
+      const params = createDispatchParams({
+        confidence: 'high',
+        receiptManifest: {
+          receipts: {},
+          createdAt: new Date().toISOString(),
+        },
+      });
+      await dispatcher.dispatch(params);
+
+      const receiptBlockComment = mockCreateComment.mock.calls.find(
+        (c: any[]) => c[0]?.body?.includes?.('Receipt Gate Blocked'),
+      );
+      expect(receiptBlockComment).toBeUndefined();
+    });
+
+    it('proceeds with PR creation even with empty receipts in OSS mode', async () => {
+      const params = createDispatchParams({
+        confidence: 'high',
+        receiptManifest: {
+          receipts: {},
+          createdAt: new Date().toISOString(),
+        },
+      });
+      await dispatcher.dispatch(params);
+
+      expect(mockPullsCreate).toHaveBeenCalled();
     });
   });
 
