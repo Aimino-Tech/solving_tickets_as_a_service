@@ -24,6 +24,14 @@ vi.mock('../../billing/trial.js', () => ({
   startTrial: vi.fn(),
 }));
 
+vi.mock('../../billing/plans.js', () => ({
+  PLANS: { solo: { name: 'Solo', priceId: 'price_solo' }, team: { name: 'Team', priceId: 'price_team' } },
+}));
+
+vi.mock('../../billing/webhook.js', () => ({
+  createBillingWebhookHandler: vi.fn(() => (req: any, res: any) => res.status(200).json({ received: true })),
+}));
+
 describe('billing/routes', () => {
   it('exports billingRouter', async () => {
     const mod = await import('../../billing/routes.js');
