@@ -64,6 +64,9 @@ app.conf.update(
     worker_concurrency=concurrency,
 )
 
+# Disable pidbox remote control (RabbitMQ 4.x removed transient_nonexcl_queues)
+app.conf.worker_enable_remote_control = False
+
 app.autodiscover_tasks(["workers.tasks", "workers.consumers"])
 
 # ── Initialize Metrics (Prometheus) ────────────────────────────────
