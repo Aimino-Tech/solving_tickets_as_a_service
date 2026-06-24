@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
-const mockRedisClient = vi.hoisted(() => ({
+const mockRedisClient = {
   sadd: vi.fn(),
   scard: vi.fn(),
   srem: vi.fn(),
@@ -23,7 +23,7 @@ const mockRedisClient = vi.hoisted(() => ({
   hget: vi.fn(),
   on: vi.fn().mockReturnThis(),
   quit: vi.fn().mockResolvedValue(undefined),
-}));
+};
 
 vi.mock('ioredis', () => ({
   Redis: vi.fn(function () { return mockRedisClient; }),
@@ -55,11 +55,7 @@ vi.mock('../../ratelimit/tiers.js', () => ({
   },
 }));
 
-// Import after mocks are set up
-const { ConcurrencyManager } = await import('../../ratelimit/concurrency.js');
-// Verify the source file uses imports, not require
-import { config as testConfig } from '../../config.js';
-console.log('TEST CONFIG:', testConfig.queue.redisUrl);
+import { ConcurrencyManager } from '../../ratelimit/concurrency.js';
 
 // ── Suite ──────────────────────────────────────────────────────────────────
 
@@ -67,6 +63,7 @@ describe('ConcurrencyManager', () => {
   let manager: InstanceType<typeof ConcurrencyManager>;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     manager = new ConcurrencyManager({ timeoutSeconds: 600 });
 
     // Default: not at capacity

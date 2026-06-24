@@ -30,6 +30,20 @@ vi.mock('../../bridge/metrics.js', () => ({
   recordConsumerLag: vi.fn(),
 }));
 
+const mockRedisForHealth = {
+  llen: vi.fn().mockResolvedValue(0),
+  zcount: vi.fn().mockResolvedValue(0),
+  zadd: vi.fn().mockResolvedValue(1),
+  expire: vi.fn().mockResolvedValue(1),
+  connect: vi.fn().mockResolvedValue(undefined),
+  quit: vi.fn().mockResolvedValue(undefined),
+  on: vi.fn(),
+  status: 'close',
+};
+vi.mock('ioredis', () => ({
+  Redis: vi.fn(() => mockRedisForHealth),
+}));
+
 describe('health/queueHealth', () => {
   let qh: typeof import('../../health/queueHealth.js');
 
