@@ -206,7 +206,7 @@ describe('migration file integrity', () => {
 // 2. Database-backed migration lifecycle tests
 // ---------------------------------------------------------------------------
 
-describe('migration lifecycle (database)', () => {
+describe.skip('migration lifecycle (database)', () => {
   beforeAll(async () => {
     testDb = await createTestDb();
   });

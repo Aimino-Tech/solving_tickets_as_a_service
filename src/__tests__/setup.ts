@@ -54,48 +54,7 @@ vi.stubEnv('RABBITMQ_ISSUE_QUEUE', 'test-queue');
 vi.stubEnv('DATABASE_URL', 'postgres://localhost:5432/test');
 vi.stubEnv('STAS_MONTHLY_QUOTA', '1000');
 vi.stubEnv('STAS_RATE_LIMIT_MAX', '100');
-
-vi.mock('../config.js', () => ({
-  config: {
-    queue: { redisUrl: 'redis://localhost:6379' },
-    trackers: {
-      linear: { apiKey: 'lin-api-key', webhookSecret: 'lin-webhook-secret' },
-      jira: { url: 'https://jira.example.com', email: 'test@test.com', apiToken: 'token', webhookSecret: 'jira-webhook-secret' },
-      defaultRepoOwner: 'test-owner',
-      defaultRepoName: 'test-repo',
-      installationId: 123,
-    },
-    stas: {
-      botName: 'STAS',
-      label: 'stas:fix',
-      rateLimitWindowMs: 60000,
-      rateLimitMax: 100,
-      monthlyQuotaEnabled: true,
-      defaultTier: 'free',
-    },
-    docker: {
-      image: 'node:22-alpine',
-      sandboxTimeoutMs: 120_000,
-      networkRestrict: false,
-      allowedHosts: [],
-      containerMemory: '2g',
-      containerCpu: 1,
-    },
-    slack: {
-      botToken: '',
-      signingSecret: '',
-      channel: '#stas-test',
-      interactionsPath: '/slack/events',
-    },
-    sentry: { dsn: '' },
-    rapidapi: { proxySecret: 'test-proxy-secret' },
-    encryption: { key: 'test-encryption-key-32bytes!' },
-    jwt: { secret: 'test-jwt-secret' },
-    server: { port: 3000 },
-    opencode: { url: 'http://localhost:4096', apiKey: 'test-opencode-key' },
-    session: { secret: 'test-session-secret' },
-  },
-}));
+vi.stubEnv('JIRA_URL', 'https://test-jira.example.com');
 
 const mockFilesOfProject = vi.hoisted(() => {
   const chain = {
@@ -222,13 +181,19 @@ const mockToolSchema = {
   optional: vi.fn(() => schemaChainable()),
 };
 
-const mockTool = Object.assign(vi.fn(), {
-  schema: mockToolSchema,
-  create: vi.fn(() => ({
+const mockTool = Object.assign(
+  vi.fn(() => ({
     execute: vi.fn().mockResolvedValue({ output: 'mock output', metadata: { tool: 'mock' } }),
     schema: mockToolSchema,
   })),
-});
+  {
+    schema: mockToolSchema,
+    create: vi.fn(() => ({
+      execute: vi.fn().mockResolvedValue({ output: 'mock output', metadata: { tool: 'mock' } }),
+      schema: mockToolSchema,
+    })),
+  },
+);
 
 vi.mock('@opencode-ai/plugin', () => ({
   tool: mockTool as any,

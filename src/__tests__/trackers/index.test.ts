@@ -51,8 +51,10 @@ describe('trackers/index', () => {
   });
 
   describe('getTracker', () => {
-    it('returns undefined for uninitialized tracker', () => {
-      expect(trackers.getTracker('linear')).toBeUndefined();
+    it('returns undefined for uninitialized tracker', async () => {
+      vi.resetModules();
+      const mod = await import('../../trackers/index.js');
+      expect(mod.getTracker('linear')).toBeUndefined();
     });
   });
 });

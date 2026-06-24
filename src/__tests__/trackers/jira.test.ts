@@ -3,6 +3,16 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
+const mockJiraConfig = vi.hoisted(() => ({
+  trackers: {
+    jira: { url: 'https://jira.example.com', email: 'test@test.com', apiToken: 'token', webhookSecret: 'jira-webhook-secret' },
+  },
+}));
+
+vi.mock('../../config.js', () => ({
+  config: mockJiraConfig,
+}));
+
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
@@ -15,6 +25,7 @@ describe('trackers/jira', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    vi.resetModules();
     jira = await import('../../trackers/jira.js');
   });
 
@@ -118,12 +129,6 @@ describe('trackers/jira', () => {
   });
 
   describe('verifyJiraWebhookSignature', () => {
-    it('returns true when secret is missing (skip verification)', () => {
-      vi.resetModules();
-      vi.mock('../../config.js', () => ({ config: { trackers: { jira: { webhookSecret: '' } } } }));
-      vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) } }));
-    });
-
     it('checks HMAC signature', () => {
       const rawBody = Buffer.from('{"test": true}');
       const result = jira.verifyJiraWebhookSignature(rawBody, 'a'.repeat(64));

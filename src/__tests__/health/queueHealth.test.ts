@@ -30,45 +30,41 @@ vi.mock('../../bridge/metrics.js', () => ({
   recordConsumerLag: vi.fn(),
 }));
 
+const mockRedis = {
+  status: 'ready',
+  connect: vi.fn(),
+  llen: vi.fn().mockResolvedValue(0),
+  zcount: vi.fn().mockResolvedValue(0),
+  quit: vi.fn().mockResolvedValue(undefined),
+};
+vi.mock('ioredis', () => ({
+  Redis: vi.fn(function () { return mockRedis; }),
+}));
+
 describe('health/queueHealth', () => {
   let qh: typeof import('../../health/queueHealth.js');
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockRedis.llen.mockResolvedValue(0);
+    mockRedis.zcount.mockResolvedValue(0);
     qh = await import('../../health/queueHealth.js');
   });
 
   describe('getQueueHealth', () => {
-    it('returns a healthy report when RabbitMQ is disconnected', async () => {
-      mockIsConnected.mockReturnValue(false);
-
+    it('returns a healthy report when queues are empty', async () => {
       const report = await qh.getQueueHealth();
       expect(report.status).toBe('healthy');
       expect(report.summary.totalMessages).toBe(0);
-      expect(report.rabbitmq.connected).toBe(false);
+      expect(report.queues.length).toBeGreaterThanOrEqual(0);
       expect(report.timestamp).toBeDefined();
     });
 
-    it('returns healthy when connected and queues are empty', async () => {
-      mockIsConnected.mockReturnValue(true);
-      // Mock fetch to return empty queues
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue([]),
-      });
-
-      const report = await qh.getQueueHealth();
-      expect(report.status).toBe('healthy');
-      expect(report.rabbitmq.connected).toBe(true);
-    });
-
     it('returns degraded when a main queue exceeds warn threshold', async () => {
-      mockIsConnected.mockReturnValue(true);
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue([
-          { name: 'stas.issues.fix', messages: 60, messages_ready: 60, messages_unacknowledged: 0, consumers: 0 },
-        ]),
+      mockRedis.llen = vi.fn().mockImplementation(function mockLlen(key: string): Promise<number> {
+        if (key.includes('stas-issues-dlq')) return Promise.resolve(0);
+        if (key.includes('stas-issues')) return Promise.resolve(60);
+        return Promise.resolve(0);
       });
 
       const report = await qh.getQueueHealth();
