@@ -315,8 +315,14 @@ describe('services/featureFlags', () => {
   });
 
   describe('enabledFor', () => {
+    beforeEach(() => {
+      mockRedis.zcard.mockResolvedValue(0);
+    });
+
     it('returns true from account-level DB flag', async () => {
       mockRedis.get.mockResolvedValue(null);
+      mockRedis.zcard.mockResolvedValue(0);
+      mockRedis.zremrangebyscore.mockResolvedValue(0);
       mockQuery.mockResolvedValue({ rows: [{ enabled: true, percentage_rollout: 0 }] });
       const result = await ff.enabledFor('test_flag', 42);
       expect(result).toBe(true);

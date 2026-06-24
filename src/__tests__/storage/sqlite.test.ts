@@ -1,48 +1,44 @@
-/**
- * Unit tests for src/storage/sqlite.ts — SQLite storage backend.
- * Uses an in-memory SQLite database for testing.
- */
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
 
 let savedRows: any[] = [];
+let rowIdCounter = 0;
 
 function makeMockDb() {
   return {
     exec: vi.fn(),
     pragma: vi.fn(),
     prepare: vi.fn(() => ({
-      run: vi.fn(),
       get: vi.fn((params?: any) => {
-        if (typeof params === 'number') {
-          const row = savedRows.find((r) => r.id === params);
-          return row ?? undefined;
+        if (params == null) {
+          return { total: savedRows.length, pass_rate: savedRows.length > 0 ? savedRows.filter((r: any) => r.status === 'completed').length / savedRows.length : 0, avg_duration_ms: savedRows.length > 0 ? savedRows.reduce((s: number, r: any) => s + (r.duration_ms || 0), 0) / savedRows.length : 0 };
         }
-        const rowId = savedRows.length + 1;
-        const row = {
-          id: rowId,
-          installation_id: params?.installationId ?? 0,
-          repo_owner: params?.repoOwner ?? '',
-          repo_name: params?.repoName ?? '',
-          issue_number: params?.issueNumber ?? 0,
-          status: params?.status ?? 'pending',
-          confidence: null,
-          summary: null,
-          pr_url: null,
-          branch_name: null,
-          error: null,
-          created_at: new Date().toISOString().replace('Z', ''),
-          updated_at: new Date().toISOString().replace('Z', ''),
-          duration_ms: params?.durationMs ?? null,
-          model_used: null,
-        };
+        if (typeof params === 'number') {
+          return savedRows.find((r: any) => r.id === params) ?? undefined;
+        }
+        rowIdCounter++;
+        const row: any = { id: rowIdCounter };
+        row.installation_id = params.installationId ?? 0;
+        row.repo_owner = params.repoOwner ?? '';
+        row.repo_name = params.repoName ?? '';
+        row.issue_number = params.issueNumber ?? 0;
+        row.status = params.status ?? 'pending';
+        row.confidence = params.confidence ?? null;
+        row.summary = params.summary ?? null;
+        row.pr_url = params.prUrl ?? null;
+        row.branch_name = params.branchName ?? null;
+        row.error = params.error ?? null;
+        row.created_at = new Date().toISOString().replace('Z', '');
+        row.updated_at = new Date().toISOString().replace('Z', '');
+        row.duration_ms = params.durationMs ?? null;
+        row.model_used = params.modelUsed ?? null;
         savedRows.push(row);
         return row;
       }),
-      all: vi.fn(() => savedRows),
+      all: vi.fn(() => [...savedRows]),
       finalize: vi.fn(),
     })),
     close: vi.fn(),
