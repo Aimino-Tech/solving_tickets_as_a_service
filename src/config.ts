@@ -67,7 +67,13 @@ const envSchema = z.object({
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
   STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
-  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),
+  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
@@ -341,10 +347,15 @@ function buildConfig(env: ParsedEnv) {
       creditsSandbox: env.USAGE_CREDITS_SANDBOX,
     },
 
+    ci: {
+      monitorEnabled: env.CI_MONITOR_ENABLED,
+    },
+
     rateLimit: {
       defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
       ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
       adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
+      max: env.STAS_RATE_LIMIT_MAX,
     },
 
     stripe: {

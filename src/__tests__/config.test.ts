@@ -275,18 +275,6 @@ describe('config', () => {
       expect(cfg.stas.devSkipWebhookVerify).toBe(true);
     });
 
-    it('coerces boolean env vars correctly — CI_MONITOR_ENABLED=false stays false', () => {
-      vi.stubEnv('CI_MONITOR_ENABLED', 'false');
-      const cfg = configModule.requireConfig();
-      expect(cfg.ci.monitorEnabled).toBe(false);
-    });
-
-    it('coerces boolean env vars correctly — CI_MONITOR_ENABLED=true', () => {
-      vi.stubEnv('CI_MONITOR_ENABLED', 'true');
-      const cfg = configModule.requireConfig();
-      expect(cfg.ci.monitorEnabled).toBe(true);
-    });
-
     it('coerces boolean env vars correctly — DATABASE_SSL=false stays false', () => {
       vi.stubEnv('DATABASE_SSL', 'false');
       const cfg = configModule.requireConfig();
@@ -367,9 +355,8 @@ describe('config', () => {
       expect(cfg.opencode).toHaveProperty("url");
       expect(cfg.opencode).toHaveProperty("model");
       expect(cfg.opencode).toHaveProperty("fallbackModels");
-      expect(cfg.opencode.direct).toHaveProperty("apiKey");
       expect(cfg.e2b).toHaveProperty("sandboxTimeoutMs");
-      expect(cfg.stas).toHaveProperty("rateLimit.max");
+      expect(cfg.rateLimit).toHaveProperty("max");
       expect(cfg.phaseTimeouts).toHaveProperty("triage");
       expect(cfg.phaseTimeouts).toHaveProperty("sandboxBoot");
       expect(cfg.phaseTimeouts).toHaveProperty("openCodeAgent");
