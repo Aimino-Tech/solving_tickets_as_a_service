@@ -5,7 +5,7 @@ vi.mock('../../github/auth.js', () => ({ getOctokit: mockGetOctokit }));
 
 const mockGetTicket = vi.fn();
 vi.mock('../../trackers/linear.js', () => ({
-  LinearTracker: vi.fn(function() { return { getTicket: mockGetTicket }; }),
+  LinearTracker: vi.fn(function () { return { getTicket: mockGetTicket }; }),
 }));
 
 vi.mock('../../config.js', () => ({

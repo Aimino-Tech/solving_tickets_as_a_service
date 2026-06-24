@@ -3,20 +3,12 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
-vi.mock('../../config.js', () => ({
-  config: {
-    trackers: {
-      linear: { apiKey: 'lin-api-key', webhookSecret: 'lin-webhook-secret' },
-    },
-  },
-}));
-
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
+
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
 describe('trackers/linear', () => {
   let linear: typeof import('../../trackers/linear.js');

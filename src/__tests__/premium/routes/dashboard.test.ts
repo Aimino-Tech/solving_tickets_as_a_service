@@ -118,8 +118,7 @@ describe('premium dashboard routes', () => {
 
   describe('GET /runs/:id', () => {
     it('returns a run by id if found', async () => {
-      const { req, res } = mockReqRes('GET', '/runs/:id');
-      req.params = { id: 'any-id' };
+      const { req, res } = mockReqRes('GET', '/runs/any-id');
       await invokeRoute(router, 'get', '/runs/:id', req, res);
 
       expect(res.statusCode).toBe(200);
@@ -128,9 +127,7 @@ describe('premium dashboard routes', () => {
     });
 
     it('returns 404 if run not found', async () => {
-      // We need to find a UUID that won't match any mock run
-      const { req, res } = mockReqRes('GET', '/runs/:id');
-      req.params = { id: '00000000-0000-0000-0000-000000000000' };
+      const { req, res } = mockReqRes('GET', '/runs/00000000-0000-0000-0000-000000000000');
       await invokeRoute(router, 'get', '/runs/:id', req, res);
 
       expect(res.statusCode).toBe(404);
@@ -193,8 +190,7 @@ describe('premium dashboard routes', () => {
 
   describe('DELETE /repos/:id', () => {
     it('disconnects a repo', async () => {
-      const { req, res } = mockReqRes('DELETE', '/repos/:id');
-      req.params = { id: 'repo-1' };
+      const { req, res } = mockReqRes('DELETE', '/repos/repo-1');
       await invokeRoute(router, 'delete', '/repos/:id', req, res);
 
       expect(res.statusCode).toBe(200);
@@ -360,7 +356,18 @@ async function invokeRoute(
       if (routeMethods[method] && matchesPath(routePath, path, req)) {
         for (const handler of layer.route.stack) {
           await new Promise<void>((resolve) => {
-            handler.handle(req, res, () => resolve());
+            const done = () => resolve();
+            res.end = done;
+            res.send = done;
+            res.json = ((original: any) => function (this: any, obj: any) {
+              this._body = JSON.stringify(obj);
+              this._headers['content-type'] = 'application/json';
+              done();
+              return this;
+            })(res.json);
+            res.sendStatus = done;
+            res.redirect = done;
+            handler.handle(req, res, done);
           });
         }
         return;

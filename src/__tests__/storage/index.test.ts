@@ -14,11 +14,11 @@ vi.mock('../../utils/logger.js', () => ({
 }));
 
 vi.mock('../../storage/sqlite.js', () => ({
-  SQLiteStorage: vi.fn(() => ({ close: vi.fn() })),
+  SQLiteStorage: vi.fn(function () { return { close: vi.fn() }; }),
 }));
 
 vi.mock('../../storage/postgres/index.js', () => ({
-  PostgresStorage: vi.fn(() => ({ close: vi.fn() })),
+  PostgresStorage: vi.fn(function () { return { close: vi.fn() }; }),
 }));
 
 describe('storage/index', () => {

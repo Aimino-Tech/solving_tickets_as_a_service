@@ -27,11 +27,11 @@ vi.mock('../../ratelimit/tiers.js', () => ({
   getTierForAccount: vi.fn(),
 }));
 
-vi.mock('../tiers.js', () => ({
+vi.mock('../../pricing/tiers.js', () => ({
   getFeatureGate: vi.fn(),
 }));
 
-vi.mock('../quota.js', () => ({
+vi.mock('../../pricing/quota.js', () => ({
   getMonthlyUsage: vi.fn(),
 }));
 

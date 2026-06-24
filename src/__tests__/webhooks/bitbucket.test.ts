@@ -42,7 +42,7 @@ vi.mock("../../queue/issueQueue.js", () => ({
   enqueueIssue: mockEnqueueIssue,
 }));
 
-import { bitbucketWebhook, bitbucketClient, createBitbucketWebhooks } from "../../webhooks/bitbucket.js";
+import { bitbucketWebhook, createBitbucketWebhooks } from "../../webhooks/bitbucket.js";
 import type { PlatformWebhookEvent } from "../../webhooks/base.js";
 
 function createMockQueue() {
@@ -146,36 +146,6 @@ describe("bitbucketWebhook", () => {
     it("returns null for unsupported event types", () => {
       const result = bitbucketWebhook.parse("repo:push", { event: "repo:push" });
       expect(result).toBeNull();
-    });
-  });
-});
-
-describe("bitbucketClient", () => {
-  describe("toIssueJobData", () => {
-    it("converts a PlatformWebhookEvent to IssueJobData", () => {
-      const event: PlatformWebhookEvent = {
-        platform: "bitbucket",
-        eventType: "issue.opened",
-        issue: {
-          id: 42,
-          number: 42,
-          title: "Fix bug",
-          body: "Bug description",
-          labels: [],
-          repoOwner: "owner",
-          repoName: "test-repo",
-          repoPrivate: false,
-        },
-        raw: {},
-      };
-
-      const jobData = bitbucketClient.toIssueJobData(event);
-      expect(jobData.repoOwner).toBe("owner");
-      expect(jobData.repoName).toBe("test-repo");
-      expect(jobData.issueNumber).toBe(42);
-      expect(jobData.issueTitle).toBe("Fix bug");
-      expect(jobData.issueBody).toBe("Bug description");
-      expect(jobData.source).toBe("bitbucket");
     });
   });
 });

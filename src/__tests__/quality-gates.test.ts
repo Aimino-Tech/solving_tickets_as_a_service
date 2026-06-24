@@ -224,7 +224,7 @@ describe('gateHallucinationScan', () => {
       callCount++;
       if (callCount === 1) return { stdout: '', stderr: 'command not found', exitCode: 127 };
       if (callCount === 2) return { stdout: '', stderr: 'command not found', exitCode: 127 };
-      if (callCount === 3) return { stdout: '{}', stderr: '', exitCode: 0 };
+      if (callCount === 3) return { stdout: '', stderr: 'npm ERR! 404 Not Found', exitCode: 1 };
       return { stdout: '', stderr: 'npm ERR! 404 Not Found', exitCode: 1 };
     });
     sandbox.exec = execMock;

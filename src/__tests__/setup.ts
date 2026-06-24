@@ -24,22 +24,214 @@ vi.stubEnv('GITHUB_WEBHOOK_SECRET', 'test-webhook-secret');
 vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
 vi.stubEnv('NODE_ENV', 'test');
 vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-key');
+vi.stubEnv('LINEAR_API_KEY', 'test-linear-key');
+vi.stubEnv('JIRA_URL', 'https://test-jira.example.com');
+vi.stubEnv('JIRA_EMAIL', 'test@test.com');
+vi.stubEnv('JIRA_API_TOKEN', 'test-jira-token');
+vi.stubEnv('LINEAR_WEBHOOK_SECRET', 'test-linear-webhook');
+vi.stubEnv('JIRA_WEBHOOK_SECRET', 'test-jira-webhook');
+vi.stubEnv('TRACKER_DEFAULT_REPO_OWNER', 'test-owner');
+vi.stubEnv('TRACKER_DEFAULT_REPO_NAME', 'test-repo');
+vi.stubEnv('TRACKER_INSTALLATION_ID', '123');
+vi.stubEnv('STAS_LABEL', 'stas:fix');
+vi.stubEnv('GITHUB_APP_ID', 'test-app-id');
+vi.stubEnv('GITHUB_WEBHOOK_SECRET', 'test-webhook-secret');
+vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
+vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-key');
+vi.stubEnv('RAPIDAPI_PROXY_SECRET', 'test-rapidapi-secret');
+vi.stubEnv('SESSION_SECRET', 'test-session-secret');
+vi.stubEnv('DATABASE_URL', 'postgresql://test:test@localhost:5432/test');
+vi.stubEnv('STAS_JWT_SECRET', 'test-jwt-secret');
+vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_mock');
+vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'whsec_mock');
+vi.stubEnv('JIRA_EMAIL', 'test@example.com');
+vi.stubEnv('JIRA_API_TOKEN', 'test-jira-token');
+vi.stubEnv('LINEAR_API_KEY', 'test-linear-key');
+vi.stubEnv('SLACK_BOT_TOKEN', 'xoxb-test-token');
+vi.stubEnv('SLACK_SIGNING_SECRET', 'test-signing-secret');
+vi.stubEnv('RABBITMQ_URL', 'amqp://localhost');
+vi.stubEnv('RABBITMQ_ISSUE_QUEUE', 'test-queue');
+vi.stubEnv('DATABASE_URL', 'postgres://localhost:5432/test');
+vi.stubEnv('STAS_MONTHLY_QUOTA', '1000');
+vi.stubEnv('STAS_RATE_LIMIT_MAX', '100');
 
-vi.mock('tsarch', () => ({}));
-vi.mock('better-sqlite3', () => {
-  const mockDb = {
-    exec: vi.fn(),
-    prepare: vi.fn(() => ({
-      run: vi.fn(),
+vi.mock('../config.js', () => ({
+  config: {
+    queue: { redisUrl: 'redis://localhost:6379' },
+    trackers: {
+      linear: { apiKey: 'lin-api-key', webhookSecret: 'lin-webhook-secret' },
+      jira: { url: 'https://jira.example.com', email: 'test@test.com', apiToken: 'token', webhookSecret: 'jira-webhook-secret' },
+      defaultRepoOwner: 'test-owner',
+      defaultRepoName: 'test-repo',
+      installationId: 123,
+    },
+    stas: {
+      botName: 'STAS',
+      label: 'stas:fix',
+      rateLimitWindowMs: 60000,
+      rateLimitMax: 100,
+      monthlyQuotaEnabled: true,
+      defaultTier: 'free',
+    },
+    docker: {
+      image: 'node:22-alpine',
+      sandboxTimeoutMs: 120_000,
+      networkRestrict: false,
+      allowedHosts: [],
+      containerMemory: '2g',
+      containerCpu: 1,
+    },
+    slack: {
+      botToken: '',
+      signingSecret: '',
+      channel: '#stas-test',
+      interactionsPath: '/slack/events',
+    },
+    sentry: { dsn: '' },
+    rapidapi: { proxySecret: 'test-proxy-secret' },
+    encryption: { key: 'test-encryption-key-32bytes!' },
+    jwt: { secret: 'test-jwt-secret' },
+    server: { port: 3000 },
+    opencode: { url: 'http://localhost:4096', apiKey: 'test-opencode-key' },
+    session: { secret: 'test-session-secret' },
+  },
+}));
+
+const mockFilesOfProject = vi.hoisted(() => {
+  const chain = {
+    matchingPattern: vi.fn().mockReturnThis(),
+    shouldNot: vi.fn().mockReturnThis(),
+    dependOnFiles: vi.fn().mockReturnThis(),
+    check: vi.fn().mockResolvedValue([]),
+  };
+  return vi.fn(() => chain);
+});
+
+vi.mock('tsarch', () => ({
+  filesOfProject: mockFilesOfProject,
+}));
+
+const mockBetterSqlite3Db = vi.hoisted(() => ({
+  exec: vi.fn(),
+  pragma: vi.fn(),
+  prepare: vi.fn(() => ({
+    run: vi.fn(),
+    get: vi.fn(),
+    all: vi.fn(),
+    finalize: vi.fn(),
+  })),
+  close: vi.fn(),
+}));
+
+vi.mock('better-sqlite3', () => ({
+  default: vi.fn(function () { return mockBetterSqlite3Db; }),
+}));
+
+vi.mock('ioredis', () => {
+  const Redis = vi.fn();
+  Redis.prototype = {
+    on: vi.fn(),
+    get: vi.fn(),
+    set: vi.fn(),
+    del: vi.fn(),
+    incr: vi.fn(),
+    expire: vi.fn(),
+    lpush: vi.fn(),
+    ltrim: vi.fn(),
+    lrange: vi.fn(),
+    llen: vi.fn(),
+    zadd: vi.fn(),
+    zrange: vi.fn(),
+    zremrangebyscore: vi.fn(),
+    zcard: vi.fn(),
+    multi: vi.fn(() => ({
+      exec: vi.fn(),
+      zremrangebyscore: vi.fn(),
+      zadd: vi.fn(),
+      zcard: vi.fn(),
+      lpush: vi.fn(),
+      ltrim: vi.fn(),
+      del: vi.fn(),
+      incr: vi.fn(),
+      expire: vi.fn(),
+      set: vi.fn(),
       get: vi.fn(),
-      all: vi.fn(),
-      finalize: vi.fn(),
+    })),
+    pipeline: vi.fn(() => ({
+      exec: vi.fn(),
+      zremrangebyscore: vi.fn(),
+      zadd: vi.fn(),
+      zcard: vi.fn(),
+      lpush: vi.fn(),
+      ltrim: vi.fn(),
+      del: vi.fn(),
+      incr: vi.fn(),
+      expire: vi.fn(),
+      set: vi.fn(),
+      get: vi.fn(),
+    })),
+    status: 'ready',
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    quit: vi.fn(),
+  };
+  return { default: Redis };
+});
+
+vi.mock('bullmq', () => ({
+  Queue: vi.fn(() => ({
+    add: vi.fn(),
+    getJob: vi.fn(),
+    getJobs: vi.fn(),
+    obliterate: vi.fn(),
+    close: vi.fn(),
+  })),
+  Worker: vi.fn(() => ({
+    on: vi.fn(),
+    close: vi.fn(),
+  })),
+  QueueEvents: vi.fn(() => ({
+    on: vi.fn(),
+    close: vi.fn(),
+  })),
+}));
+
+vi.mock('amqplib', () => ({
+  connect: vi.fn(() => ({
+    createChannel: vi.fn(() => ({
+      assertQueue: vi.fn(),
+      sendToQueue: vi.fn(),
+      consume: vi.fn(),
+      ack: vi.fn(),
+      nack: vi.fn(),
+      close: vi.fn(),
     })),
     close: vi.fn(),
-  };
-  return { default: vi.fn(() => mockDb) };
+  })),
+}));
+
+const schemaChainable = () => ({
+  default: vi.fn(() => schemaChainable()),
+  optional: vi.fn(() => schemaChainable()),
+  describe: vi.fn(() => schemaChainable()),
 });
+
+const mockToolSchema = {
+  string: vi.fn(() => schemaChainable()),
+  number: vi.fn(() => schemaChainable()),
+  optional: vi.fn(() => schemaChainable()),
+};
+
+const mockTool = Object.assign(vi.fn(), {
+  schema: mockToolSchema,
+  create: vi.fn(() => ({
+    execute: vi.fn().mockResolvedValue({ output: 'mock output', metadata: { tool: 'mock' } }),
+    schema: mockToolSchema,
+  })),
+});
+
 vi.mock('@opencode-ai/plugin', () => ({
+  tool: mockTool as any,
   definePlugin: vi.fn(() => ({})),
   defineTool: vi.fn(() => ({})),
 }));

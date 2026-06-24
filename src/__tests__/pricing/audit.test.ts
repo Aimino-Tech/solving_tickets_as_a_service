@@ -34,7 +34,6 @@ const mockRedisClient = vi.hoisted(() => {
   zcount: vi.fn(),
   quit: vi.fn(),
   on: vi.fn(),
-};
   };
 
   // Make pipeline return a self-referencing mock
@@ -50,7 +49,7 @@ const mockRedisClient = vi.hoisted(() => {
 });
 
 vi.mock('ioredis', () => ({
-  default: vi.fn(() => mockRedisClient),
+  Redis: vi.fn(function () { return mockRedisClient; }),
 }));
 
 import {

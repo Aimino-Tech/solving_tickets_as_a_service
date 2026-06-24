@@ -26,7 +26,7 @@ const mockRedisClient = vi.hoisted(() => ({
 }));
 
 vi.mock('ioredis', () => ({
-  Redis: vi.fn(() => mockRedisClient),
+  Redis: vi.fn(function () { return mockRedisClient; }),
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -67,7 +67,6 @@ describe('ConcurrencyManager', () => {
   let manager: InstanceType<typeof ConcurrencyManager>;
 
   beforeEach(() => {
-    mockRedisConstructor.default.mockImplementation(() => mockRedisClient);
     manager = new ConcurrencyManager({ timeoutSeconds: 600 });
 
     // Default: not at capacity
