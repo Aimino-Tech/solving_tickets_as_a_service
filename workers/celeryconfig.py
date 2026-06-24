@@ -55,6 +55,9 @@ task_hard_time_limit = 600
 
 worker_prefetch_multiplier = 1
 
+worker_enable_remote_control = False
+broker_connection_retry_on_startup = True
+
 task_default_queue = "stas.agents.triage"
 
 task_queues = [
