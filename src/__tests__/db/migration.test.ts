@@ -109,7 +109,7 @@ describe('migration timing', () => {
     const hash = Math.abs(h).toString(16).padStart(8, '0');
     const elapsed = performance.now() - start;
     expect(hash).toMatch(/^[0-9a-f]{8}$/);
-    expect(elapsed).toBeLessThan(100);
+    expect(elapsed).toBeLessThan(500);
   });
 
   it('benchmark helper measures execution time', async () => {

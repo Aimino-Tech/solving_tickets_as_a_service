@@ -107,12 +107,20 @@ describe('frontier/pipeline', () => {
   });
 
   it('respects task timeout', async () => {
-    fetchMock.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(mockOk({})), 50000)));
+    fetchMock.mockImplementation((_url: string, options?: { signal?: AbortSignal }) => {
+      return new Promise((_resolve, reject) => {
+        if (options?.signal) {
+          options.signal.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        }
+      });
+    });
 
     const task = makeTask({ description: 'Slow test', timeoutMs: 500 });
     const config = makeConfig();
-    config.aetherCommand.timeoutMs = 100;
-    config.opencode.timeoutMs = 100;
+    config.aetherCommand.timeoutMs = 50;
+    config.opencode.timeoutMs = 50;
     const result = await pipeline.runPipeline(task, config);
     expect(result.passed).toBe(false);
   }, 10000);

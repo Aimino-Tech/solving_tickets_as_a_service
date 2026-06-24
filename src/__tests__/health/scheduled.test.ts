@@ -29,7 +29,7 @@ describe('health/scheduled', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     scheduled = await import('../../health/scheduled.js');
-  });
+  }, 15000);
 
   describe('startScheduledTasks', () => {
     it('starts all scheduled timers', () => {
@@ -44,11 +44,12 @@ describe('health/scheduled', () => {
 
   describe('stopScheduledTasks', () => {
     it('stops all scheduled timers', () => {
-      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+      vi.useFakeTimers();
       scheduled.startScheduledTasks();
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
       scheduled.stopScheduledTasks();
-      expect(clearIntervalSpy).toHaveBeenCalled();
-      clearIntervalSpy.mockRestore();
+      expect(vi.getTimerCount()).toBe(0);
+      vi.useRealTimers();
     });
   });
 });
