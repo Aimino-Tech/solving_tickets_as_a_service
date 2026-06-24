@@ -45,7 +45,8 @@ mockRedisClient.pipeline.mockReturnValue({
 });
 
 vi.mock('ioredis', () => ({
-  default: vi.fn(() => mockRedisClient),
+  default: function() { return mockRedisClient; },
+  Redis: function() { return mockRedisClient; },
 }));
 
 import {
