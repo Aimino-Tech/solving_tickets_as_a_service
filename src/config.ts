@@ -9,6 +9,19 @@ import 'dotenv/config';
 import { z } from 'zod';
 import { rootLogger } from './utils/logger.js';
 
+function coerceBoolean(defaultVal: boolean) {
+  return z.preprocess((val) => {
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') {
+      const lower = val.trim().toLowerCase();
+      if (lower === 'true' || lower === '1') return true;
+      if (lower === 'false' || lower === '0' || lower === '') return false;
+    }
+    if (val === undefined || val === null) return defaultVal;
+    return defaultVal;
+  }, z.boolean());
+}
+
 // ---------------------------------------------------------------------------
 // Schema
 // ---------------------------------------------------------------------------
@@ -62,10 +75,12 @@ const envSchema = z.object({
 
   // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
-  STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
-  STAS_LABEL: z.string().default('stas:fix'),
-  BOT_NAME: z.string().default('STAS'),
-  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),
+  STAS_MONTHLY_QUOTA_ENABLED: coerceBoolean(true),
+  STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
+  STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
+  STAS_LABEL: z.string().default("stas:fix"),
+  BOT_NAME: z.string().default("STAS"),
+  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: coerceBoolean(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
@@ -316,6 +331,7 @@ function buildConfig(env: ParsedEnv) {
       critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
     },
     stas: {
+      mode: env.STAS_MODE,
       label: env.STAS_LABEL,
       botName: env.BOT_NAME,
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,

@@ -26,6 +26,7 @@ import { rootLogger } from '../utils/logger.js';
 import { getOctokit } from './auth.js';
 import * as messages from '../platforms/messages.js';
 import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
+import { config } from '../config.js';
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
 
@@ -87,27 +88,34 @@ export class ActionDispatcher {
       }
 
       if (params.receiptManifest) {
-        const receiptCheck = verifyAllReceipts(params.receiptManifest);
-        if (!receiptCheck.valid) {
-          const missingList = receiptCheck.missing.join(', ');
-          log.warn(
-            { issueNumber, missingPhases: receiptCheck.missing },
-            `Receipt gate blocked: missing receipts for phases: ${missingList}`,
+        if (config.stas.mode === 'oss') {
+          log.info(
+            { issueNumber, mode: config.stas.mode },
+            'OSS mode — skipping receipt verification gate',
           );
-          await this.postComment(
-            octokit,
-            repoOwner,
-            repoName,
-            issueNumber,
-            `### ❌ Receipt Gate Blocked — Missing Receipts\n\n` +
-              `The following pipeline phases have no receipts:\n\n` +
-              `${receiptCheck.missing.map((p) => `- \`${p}\``).join('\n')}\n\n` +
-              `All phases must produce valid receipts before a PR can be created.\n\n` +
-              `_Receipt manifest generated: ${params.receiptManifest.createdAt}_`,
-          );
-          return { action: 'comment_posted' };
+        } else {
+          const receiptCheck = verifyAllReceipts(params.receiptManifest);
+          if (!receiptCheck.valid) {
+            const missingList = receiptCheck.missing.join(', ');
+            log.warn(
+              { issueNumber, missingPhases: receiptCheck.missing },
+              `Receipt gate blocked: missing receipts for phases: ${missingList}`,
+            );
+            await this.postComment(
+              octokit,
+              repoOwner,
+              repoName,
+              issueNumber,
+              `### ❌ Receipt Gate Blocked — Missing Receipts\n\n` +
+                `The following pipeline phases have no receipts:\n\n` +
+                `${receiptCheck.missing.map((p) => `- \`${p}\``).join('\n')}\n\n` +
+                `All phases must produce valid receipts before a PR can be created.\n\n` +
+                `_Receipt manifest generated: ${params.receiptManifest.createdAt}_`,
+            );
+            return { action: 'comment_posted' };
+          }
+          log.info({ issueNumber }, 'Receipt gate passed — all phases have valid receipts');
         }
-        log.info({ issueNumber }, 'Receipt gate passed — all phases have valid receipts');
       }
 
       const qualityGates = agentResult.verification?.qualityGates;
