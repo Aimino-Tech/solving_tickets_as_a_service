@@ -46,6 +46,7 @@ describe('services/featureFlags', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     // Re-apply default mock return values after clearAllMocks
+    mockQuery.mockResolvedValue({ rows: [] });
     mockRedis.get.mockResolvedValue(null);
     mockRedis.setex.mockResolvedValue('OK');
     mockRedis.del.mockResolvedValue(1);
@@ -316,14 +317,16 @@ describe('services/featureFlags', () => {
 
   describe('enabledFor', () => {
     it('returns true from account-level DB flag', async () => {
-      mockRedis.get.mockResolvedValue(null);
       mockQuery.mockResolvedValue({ rows: [{ enabled: true, percentage_rollout: 0 }] });
+      mockRedis.get.mockResolvedValue(null);
+      mockRedis.zcard.mockResolvedValue(0);
       const result = await ff.enabledFor('test_flag', 42);
       expect(result).toBe(true);
     });
 
     it('returns false from account-level DB flag', async () => {
       mockRedis.get.mockResolvedValue(null);
+      mockRedis.zcard.mockResolvedValue(0);
       mockQuery.mockResolvedValue({ rows: [{ enabled: false, percentage_rollout: 0 }] });
       const result = await ff.enabledFor('test_flag', 42);
       expect(result).toBe(false);

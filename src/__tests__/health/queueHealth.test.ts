@@ -41,7 +41,8 @@ const mockRedisForHealth = {
   status: 'close',
 };
 vi.mock('ioredis', () => ({
-  Redis: vi.fn(() => mockRedisForHealth),
+  default: vi.fn(function() { return mockRedisForHealth; }),
+  Redis: vi.fn(function() { return mockRedisForHealth; }),
 }));
 
 describe('health/queueHealth', () => {
@@ -49,6 +50,8 @@ describe('health/queueHealth', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockRedisForHealth.llen = vi.fn().mockResolvedValue(0);
+    mockRedisForHealth.zcount = vi.fn().mockResolvedValue(0);
     qh = await import('../../health/queueHealth.js');
   });
 

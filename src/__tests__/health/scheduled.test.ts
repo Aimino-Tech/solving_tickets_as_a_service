@@ -13,6 +13,12 @@ vi.mock('../../health/queueHealth.js', () => ({
   getDLQSummary: mockGetDLQSummary,
 }));
 
+vi.mock('../../monitoring/alerting.js', () => ({
+  checkQueueDepth: vi.fn(),
+  checkWorkerHeartbeats: vi.fn(),
+  checkSLOCompliance: vi.fn(),
+}));
+
 vi.mock('../../config.js', () => ({
   config: {
     monitoring: { queueDepthAlertMinutes: 5, dlqRetentionDays: 7, queueDepthWarnThreshold: 50, queueDepthCritThreshold: 200 },
