@@ -86,56 +86,7 @@ vi.mock('better-sqlite3', () => ({
   default: vi.fn(function () { return mockBetterSqlite3Db; }),
 }));
 
-vi.mock('ioredis', () => {
-  const Redis = vi.fn();
-  Redis.prototype = {
-    on: vi.fn(),
-    get: vi.fn(),
-    set: vi.fn(),
-    del: vi.fn(),
-    incr: vi.fn(),
-    expire: vi.fn(),
-    lpush: vi.fn(),
-    ltrim: vi.fn(),
-    lrange: vi.fn(),
-    llen: vi.fn(),
-    zadd: vi.fn(),
-    zrange: vi.fn(),
-    zremrangebyscore: vi.fn(),
-    zcard: vi.fn(),
-    multi: vi.fn(() => ({
-      exec: vi.fn(),
-      zremrangebyscore: vi.fn(),
-      zadd: vi.fn(),
-      zcard: vi.fn(),
-      lpush: vi.fn(),
-      ltrim: vi.fn(),
-      del: vi.fn(),
-      incr: vi.fn(),
-      expire: vi.fn(),
-      set: vi.fn(),
-      get: vi.fn(),
-    })),
-    pipeline: vi.fn(() => ({
-      exec: vi.fn(),
-      zremrangebyscore: vi.fn(),
-      zadd: vi.fn(),
-      zcard: vi.fn(),
-      lpush: vi.fn(),
-      ltrim: vi.fn(),
-      del: vi.fn(),
-      incr: vi.fn(),
-      expire: vi.fn(),
-      set: vi.fn(),
-      get: vi.fn(),
-    })),
-    status: 'ready',
-    connect: vi.fn(),
-    disconnect: vi.fn(),
-    quit: vi.fn(),
-  };
-  return { default: Redis };
-});
+
 
 vi.mock('bullmq', () => ({
   Queue: vi.fn(() => ({
