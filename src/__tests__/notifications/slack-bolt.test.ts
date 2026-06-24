@@ -4,11 +4,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 vi.mock('@slack/bolt', () => ({
-  App: vi.fn(() => ({
+  App: vi.fn(function() { return {
     client: { chat: { postMessage: vi.fn() } },
     action: vi.fn(),
-  })),
-  ExpressReceiver: vi.fn(() => ({ router: { post: vi.fn() } })),
+  }; }),
+  ExpressReceiver: vi.fn(function() { return { router: { post: vi.fn() } }; }),
   LogLevel: { INFO: 'info' },
 }));
 

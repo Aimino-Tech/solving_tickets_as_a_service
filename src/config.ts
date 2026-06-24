@@ -41,6 +41,7 @@ const envSchema = z.object({
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
+  OPENCODE_API_KEY: z.string().optional(),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
   // Timeouts
@@ -59,6 +60,13 @@ const envSchema = z.object({
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // STAS
+  CI_MONITOR_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(false),
 
   // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
@@ -242,6 +250,10 @@ function buildConfig(env: ParsedEnv) {
     logLevel: env.LOG_LEVEL,
     nodeEnv: env.NODE_ENV,
 
+    ci: {
+      monitorEnabled: env.CI_MONITOR_ENABLED,
+    },
+
     github: {
       appId: env.GITHUB_APP_ID,
       privateKeyPath: env.GITHUB_APP_PRIVATE_KEY_PATH,
@@ -265,6 +277,9 @@ function buildConfig(env: ParsedEnv) {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
+      direct: {
+        apiKey: env.OPENCODE_API_KEY,
+      },
     },
 
     gitlab: {
