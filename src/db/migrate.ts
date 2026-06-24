@@ -1,7 +1,7 @@
 /**
  * Database migration runner.
  *
- * Uses drizzle-kit under the hood to apply pending migrations.
+ * Uses raw pg.Pool to apply SQL migration files.
  * Migration tracking is done via a `_migrations` table.
  *
  * Usage:
