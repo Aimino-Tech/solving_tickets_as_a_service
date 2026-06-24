@@ -64,6 +64,9 @@ app.conf.update(
     worker_concurrency=concurrency,
 )
 
+# Disable pidbox remote control (RabbitMQ 4.x removed transient_nonexcl_queues)
+app.conf.worker_enable_remote_control = False
+
 app.autodiscover_tasks(["workers.tasks", "workers.consumers"])
 
 # ── Initialize Metrics (Prometheus) ────────────────────────────────
@@ -79,6 +82,12 @@ if ENABLE_METRICS:
         logger.info("Metrics server started on :%d/metrics", METRICS_PORT)
     except Exception as exc:
         logger.warning("Failed to start metrics — %s", exc)
+
+
+@app.task(name="workers.celery_app.ping")
+def ping():
+    """Simple liveness check."""
+    return {"status": "pong"}
 
 
 @app.on_after_configure.connect

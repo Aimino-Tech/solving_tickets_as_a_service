@@ -1,5 +1,6 @@
 services:
 
+  # ── In-Memory Data Store ──────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: stas-redis
@@ -14,10 +15,6 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
-
-    # ── Security Constraints ──────────────────────────────────────────
-    # Run with least privilege: read-only root FS, no new privileges,
-    # dropped capabilities, resource limits
     cap_drop:
       - ALL
     security_opt:
@@ -29,36 +26,24 @@ services:
     mem_reservation: 256m
     cpus: 0.5
     pids_limit: 256
-    # ──────────────────────────────────────────────────────────────────
     networks:
       - stas-net
-    # Note: Sandbox containers should run on an isolated network
-    # without access to the stas-net internal network
 
+  # ── Message Broker ────────────────────────────────────────────────────
   rabbitmq:
-    build:
-      context: .
-      dockerfile: docker/rabbitmq/Dockerfile
+    image: rabbitmq:4-management-alpine
     container_name: stas-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
-      - "5671:5671"
     environment:
-      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
-      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
-      RABBITMQ_DEFAULT_USER: stas-app
-      RABBITMQ_DEFAULT_PASS: stas-app-password
-      RABBITMQ_DEFAULT_VHOST: /stas
-      STAS_MONITOR_PASSWORD: stas-monitor-password
-      STAS_DEV_VHOST: /stas-dev
-      STAS_APP_USER: stas-app
-      STAS_MONITOR_USER: stas-monitor
-      STAS_VHOST: /stas
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: /
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -66,6 +51,28 @@ services:
     networks:
       - stas-net
 
+  # ── PostgreSQL ────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: stas-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: stas
+      POSTGRES_PASSWORD: stas
+      POSTGRES_DB: stas
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "stas"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - stas-net
+
+  # ── Express Bot (existing) ────────────────────────────────────────────
   bot:
     build: .
     container_name: stas-bot
@@ -75,14 +82,11 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      rabbitmq:
+      postgres:
         condition: service_healthy
     environment:
-      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
-      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
       - REDIS_URL=redis://stas-redis:6379
-      - RABBITMQ_URL=amqp://stas-app:stas-app-password@stas-rabbitmq:5672/stas
-      - OPENCODE_URL=http://opencode:4096
+      - DATABASE_URL=postgres://stas:stas@stas-postgres:5432/stas
       - NODE_ENV=development
     volumes:
       - ./src:/app/src
@@ -90,46 +94,61 @@ services:
       - stas-net
     restart: unless-stopped
 
-  workers-celery:
-    build: ./workers
-    container_name: stas-workers-celery
+  # ── Django Web App ────────────────────────────────────────────────────
+  django:
+    build:
+      context: .
+      dockerfile: stas_project/Dockerfile
+    container_name: stas-django
+    ports:
+      - "8000:8000"
     env_file: .env
     depends_on:
-      rabbitmq:
-        condition: service_healthy
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     environment:
-      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
-      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
-      - CELERY_BROKER_URL=pyamqp://guest:guest@rabbitmq:5672//
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - REDIS_URL=redis://redis:6379/0
-      - OPENCODE_URL=http://opencode:4096
+      - CELERY_BROKER_URL=amqp://guest:guest@stas-rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+      - DATABASE_URL=postgres://stas:stas@stas-postgres:5432/stas
+      - DJANGO_DEBUG=true
+    volumes:
+      - ./stas_project:/app/stas_project
+      - ./workers:/app/workers
     networks:
       - stas-net
     restart: unless-stopped
 
-  celery-beat:
-    build: ./workers
-    container_name: stas-celery-beat
+  # ── Celery Worker ─────────────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: workers/Dockerfile
+    container_name: stas-worker
     env_file: .env
     depends_on:
-      rabbitmq:
-        condition: service_healthy
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     environment:
-      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
-      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
-      - CELERY_BROKER_URL=pyamqp://guest:guest@rabbitmq:5672//
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - REDIS_URL=redis://redis:6379/0
-    command: ["celery", "-A", "celery_app", "beat", "--loglevel=info"]
+      - CELERY_BROKER_URL=amqp://guest:guest@stas-rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+      - DATABASE_URL=postgres://stas:stas@stas-postgres:5432/stas
+      - DJANGO_SETTINGS_MODULE=stas.settings
+    volumes:
+      - ./stas_project:/app/stas_project
+      - ./workers:/app/workers
     networks:
       - stas-net
     restart: unless-stopped
 
+  # ── Flower (Celery Monitor) ────────────────────────────────────────────
   flower:
     image: mher/flower:2.0
     container_name: stas-flower
@@ -139,39 +158,17 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
-      - RAPIDAPI_PROXY_SECRET=${RAPIDAPI_PROXY_SECRET:-}
-      - RAPIDAPI_PROVIDER_KEY=${RAPIDAPI_PROVIDER_KEY:-}
-      - CELERY_BROKER_URL=pyamqp://guest:guest@rabbitmq:5672//
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    command: ["celery", "--broker=pyamqp://guest:guest@rabbitmq:5672//", "flower", "--port=5555"]
+      - CELERY_BROKER_URL=amqp://guest:guest@stas-rabbitmq:5672//
+      - FLOWER_PORT=5555
     networks:
       - stas-net
-    restart: unless-stopped
-
-  # ── Egress Proxy ──────────────────────────────────────────────────
-  stas-egress-proxy:
-    build:
-      context: ./docker/squid
-      dockerfile: Dockerfile
-    image: stas-egress-proxy:latest
-    container_name: stas-egress-proxy
-    ports:
-      - "3128:3128"
-    environment:
-      ALLOWED_DOMAINS: ${DOCKER_ALLOWED_HOSTS:-api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io}
-    networks:
-      - stas-net
-      - stas_agent-net
     restart: unless-stopped
 
 volumes:
   redis-data:
   rabbitmq-data:
+  postgres-data:
 
 networks:
   stas-net:
     driver: bridge
-  stas_agent-net:
-    driver: bridge
-    internal: false
-    name: stas_agent-net
