@@ -59,7 +59,7 @@ const mockRedisClient = vi.hoisted(() => {
 });
 
 vi.mock('ioredis', () => ({
-  default: vi.fn(() => mockRedisClient),
+  Redis: vi.fn(function () { return mockRedisClient; }),
 }));
 
 import {

@@ -49,7 +49,7 @@ vi.mock('../../config.js', () => ({
   },
 }));
 vi.mock('ioredis', () => ({
-  Redis: vi.fn(() => mockRedisClient),
+  Redis: vi.fn(function () { return mockRedisClient; }),
 }));
 // ── Suite ──────────────────────────────────────────────────────────────────
 describe('RateLimiter', () => {

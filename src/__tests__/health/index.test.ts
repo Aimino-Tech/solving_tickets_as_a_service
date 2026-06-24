@@ -4,8 +4,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../health/queueHealth.js', () => ({ getQueueHealth: vi.fn(), hasCriticalQueues: vi.fn(), getDLQSummary: vi.fn(), closeHealthRedis: vi.fn() }));
+vi.mock('../../health/dependencies.js', () => ({ getDependenciesHealth: vi.fn() }));
 vi.mock('../../health/scheduled.js', () => ({ startScheduledTasks: vi.fn(), stopScheduledTasks: vi.fn() }));
 vi.mock('../../bridge/metrics.js', () => ({ bridgeMetrics: { setGauge: vi.fn() } }));
+vi.mock('../../health/workers.js', () => ({ getWorkersHealth: vi.fn() }));
 vi.mock('../../health/opencodeHealth.js', () => ({
   opencodeHealth: {
     start: vi.fn(),
