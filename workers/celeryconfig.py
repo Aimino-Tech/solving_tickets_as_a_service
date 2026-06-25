@@ -40,6 +40,11 @@ beat_schedule = {
         "schedule": 600.0,
         "args": (),
     },
+    "poll-linear-active-issues": {
+        "task": "workers.tasks.linear_poll.poll_active_issues",
+        "schedule": 30.0,
+        "options": {"queue": "stas.issues.triage"},
+    },
 }
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")
@@ -98,4 +103,5 @@ task_routes = {
     "workers.tasks.pr_creation.*": {"queue": "stas.queue.pr"},
     "workers.tasks.notifications.*": {"queue": "stas.queue.notifications"},
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
+    "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
 }
