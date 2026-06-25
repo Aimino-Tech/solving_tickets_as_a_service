@@ -26,6 +26,27 @@ vi.mock('node:fs', () => ({
   existsSync: mockExistsSync,
 }));
 
+const chainable = () => {
+  const c: any = () => c;
+  c.default = () => c;
+  c.describe = () => c;
+  c.string = () => c;
+  c.optional = () => c;
+  c.nullable = () => c;
+  c.array = () => c;
+  c.object = () => c;
+  return c;
+};
+
+const mockTool = Object.assign(
+  vi.fn((def: any) => def),
+  { schema: chainable() },
+);
+
+vi.mock('@opencode-ai/plugin', () => ({
+  tool: mockTool,
+}));
+
 // ── Suite ───────────────────────────────────────────────────────────────────
 
 describe('STAS Plugin', () => {

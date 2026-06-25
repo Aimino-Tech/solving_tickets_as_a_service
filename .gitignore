@@ -1,4 +1,20 @@
+<<<<<<< HEAD
+<<<<<<< HEAD
 
+=======
+<<<<<<< HEAD
+
+=======
+<<<<<<< HEAD
+
+=======
+.venv
+>>>>>>> origin/main
+>>>>>>> origin/main
+>>>>>>> origin/main
+=======
+
+>>>>>>> origin/master
 *~
 # Build output
 *.cert
@@ -30,3 +46,22 @@ stas-private-key.pem
 Thumbs.db
 .vscode/
 eval/results/
+<<<<<<< HEAD
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+.worktrees/
+>>>>>>> origin/main
+>>>>>>> origin/main
+>>>>>>> origin/main
+=======
+>>>>>>> origin/master

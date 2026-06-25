@@ -106,12 +106,7 @@ def _call_github(
     name="workers.tasks.pr_creation.create_pull_request",
     autoretry_for=(Exception,),
 )
-def create_pull_request(
-    self,
-    fix_result: dict,
-    repo_info: dict,
-    correlation_id: str = "",
-) -> dict:
+def create_pull_request(self, fix_result: dict, repo_info: dict) -> dict:
     """
     Create a Pull Request on GitHub using the installation token flow.
 
@@ -134,24 +129,12 @@ def create_pull_request(
     installation_id = repo_info.get("installation_id")
 
     logger.info(
-        json.dumps({
-            "event": "pr_creation.start",
-            "owner": owner,
-            "repo": repo,
-            "branch": branch,
-            "base_branch": base_branch,
-            "correlation_id": correlation_id,
-        })
+        "Creating PR — %s/%s %s→%s (installation_id=%s)",
+        owner, repo, branch, base_branch, installation_id,
     )
 
     if not branch:
-        logger.warning(
-            json.dumps({
-                "event": "pr_creation.skipped",
-                "reason": "no branch provided",
-                "correlation_id": correlation_id,
-            })
-        )
+        logger.warning("No branch provided — skipping PR creation")
         return {
             "repo_info": repo_info,
             "fix_result": fix_result,
@@ -180,14 +163,7 @@ def create_pull_request(
         html_url = result.get("html_url", "")
         pr_number = result.get("number")
 
-        logger.info(
-            json.dumps({
-                "event": "pr_creation.complete",
-                "html_url": html_url,
-                "pr_number": pr_number,
-                "correlation_id": correlation_id,
-            })
-        )
+        logger.info("PR created — %s (#%s)", html_url, pr_number)
         return {
             "repo_info": repo_info,
             "fix_result": fix_result,
@@ -198,14 +174,9 @@ def create_pull_request(
 
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 422:
+            # Likely PR already exists for this branch
             body = exc.response.json()
-            logger.warning(
-                json.dumps({
-                    "event": "pr_creation.already_exists",
-                    "message": body.get("message", ""),
-                    "correlation_id": correlation_id,
-                })
-            )
+            logger.warning("PR may already exist: %s", body.get("message", ""))
             return {
                 "repo_info": repo_info,
                 "fix_result": fix_result,
@@ -213,22 +184,9 @@ def create_pull_request(
                 "status": "already_exists",
                 "error": body.get("errors", body.get("message", "")),
             }
-        logger.error(
-            json.dumps({
-                "event": "pr_creation.error",
-                "error": str(exc),
-                "correlation_id": correlation_id,
-            })
-        )
+        logger.error("GitHub API error: %s", exc)
         raise self.retry(exc=exc)
 
     except Exception as exc:
-        logger.error(
-            json.dumps({
-                "event": "pr_creation.error",
-                "error": str(exc),
-                "correlation_id": correlation_id,
-            }),
-            exc_info=True,
-        )
+        logger.error("PR creation failed — %s", exc, exc_info=True)
         raise self.retry(exc=exc)

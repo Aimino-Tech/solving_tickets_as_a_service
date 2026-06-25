@@ -93,7 +93,7 @@ async function checkWorkerHealth(): Promise<void> {
 
 async function runSloCheck(): Promise<void> {
   try {
-    await checkSLOCompliance();
+    checkSLOCompliance();
   } catch (err) {
     log.error({ err: String(err) }, 'SLO compliance check failed');
   }

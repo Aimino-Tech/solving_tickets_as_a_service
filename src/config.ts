@@ -30,7 +30,6 @@ const envSchema = z.object({
 
   // Queue
   REDIS_URL: z.string().default('redis://localhost:6379'),
-  RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672/stas'),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
   QUEUE_DEDUP_TTL_SECONDS: z.coerce.number().int().positive().default(120),
   QUEUE_KEEP_COMPLETED: z.coerce.number().int().positive().default(200),
@@ -42,7 +41,6 @@ const envSchema = z.object({
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
-  OPENCODE_API_KEY: z.string().optional(),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
   // Timeouts
@@ -61,17 +59,16 @@ const envSchema = z.object({
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // STAS
-  CI_MONITOR_ENABLED: z.preprocess(
+
+  // Pricing
+  STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
+  STAS_MONTHLY_QUOTA_ENABLED: z.preprocess(
     (v) => {
       if (typeof v === 'string') return v === 'true' || v === '1';
       return v;
     },
     z.boolean(),
-  ).default(false),
-
-  // Pricing
-  STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
-  STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
+  ).default(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
   STAS_LABEL: z.string().default('stas:fix'),
@@ -191,6 +188,15 @@ const envSchema = z.object({
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
 
+  // Config CI Monitor
+  CI_MONITOR_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(false),
+
   // Sentry
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENVIRONMENT: z.string().default('development'),
@@ -251,10 +257,6 @@ function buildConfig(env: ParsedEnv) {
     logLevel: env.LOG_LEVEL,
     nodeEnv: env.NODE_ENV,
 
-    ci: {
-      monitorEnabled: env.CI_MONITOR_ENABLED,
-    },
-
     github: {
       appId: env.GITHUB_APP_ID,
       privateKeyPath: env.GITHUB_APP_PRIVATE_KEY_PATH,
@@ -265,7 +267,6 @@ function buildConfig(env: ParsedEnv) {
 
     queue: {
       redisUrl: env.REDIS_URL,
-      rabbitmqUrl: env.RABBITMQ_URL,
       workerConcurrency: env.WORKER_CONCURRENCY,
       dedupTtl: env.QUEUE_DEDUP_TTL_SECONDS,
       keepCompleted: env.QUEUE_KEEP_COMPLETED,
@@ -280,7 +281,7 @@ function buildConfig(env: ParsedEnv) {
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
       direct: {
-        apiKey: env.OPENCODE_API_KEY,
+        apiKey: env.OPENCODE_API_KEY ?? '',
       },
     },
 
@@ -318,6 +319,10 @@ function buildConfig(env: ParsedEnv) {
     admin: {
       apiKey: env.ADMIN_API_KEY ?? '',
       rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
+    },
+
+    ci: {
+      monitorEnabled: env.CI_MONITOR_ENABLED,
     },
 
     sentry: {
@@ -368,7 +373,6 @@ function buildConfig(env: ParsedEnv) {
       defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
       ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
       adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
-      max: env.STAS_RATE_LIMIT_MAX,
     },
 
     stripe: {

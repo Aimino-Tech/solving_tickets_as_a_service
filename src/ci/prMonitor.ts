@@ -15,7 +15,6 @@
  */
 
 import { Octokit } from '@octokit/rest';
-import { Queue } from 'bullmq';
 import { config } from '../config.js';
 import { getOctokit, getInstallationToken } from '../github/auth.js';
 import { rootLogger } from '../utils/logger.js';
@@ -347,7 +346,8 @@ async function handleCIFailure(
 }
 
 /**
- * Attempt an auto-fix iteration on a failing PR by dispatching a BullMQ job.
+ * Attempt an auto-fix iteration on a failing PR.
+ * Updates the PR branch with new commits.
  */
 async function attemptAutoFix(
   tracked: TrackedPR,
@@ -383,6 +383,7 @@ async function attemptAutoFix(
     // non-fatal
   }
 
+  // Get the PR's head ref and repo info
   try {
     const { data: pr } = await octokit.pulls.get({
       owner: repoOwner,
@@ -397,7 +398,9 @@ async function attemptAutoFix(
       return;
     }
 
-    // Read CI log output to understand what failed
+    const [headOwner] = repoFullName.split('/');
+
+    // Read the CI log output to understand what failed
     const failureContext: string[] = [];
     for (const checkName of failedCheckNames) {
       const matchingRun = await findCheckRunByName(octokit, repoOwner, repoName, pr.head.sha, checkName);
@@ -411,38 +414,40 @@ async function attemptAutoFix(
       }
     }
 
-    // Dispatch auto-fix job to BullMQ queue
-    const queue = new Queue('stas-auto-fix', {
-      connection: {
-        url: config.queue.redisUrl || 'redis://localhost:6379',
-        maxRetriesPerRequest: null,
-      },
-    });
-
+    // Attempt to fix by pushing to the PR branch
+    // We use the sandbox to clone, fix, and push — but for simplicity in this
+    // initial implementation, we re-trigger the agent loop by creating a
+    // synthetic issue comment that the agent can pick up.
+    //
+    // TODO: In a future iteration, integrate with the sandbox to directly
+    // apply fixes to the PR branch.
     try {
-      await queue.add('auto-fix', {
-        prNumber,
-        repoOwner,
-        repoName,
-        installationId,
-        headRef,
-        headSha: pr.head.sha,
-        issueId: null,
-        detectedProblem: failedCheckNames.join(', '),
-        problemDetails: failureContext.join('\n'),
-        fixAttempts,
-        createdAt: new Date().toISOString(),
+      await octokit.issues.createComment({
+        owner: repoOwner,
+        repo: repoName,
+        issue_number: prNumber,
+        body: [
+          `### 🔧 Fix Attempt Context`,
+          '',
+          'To apply a fix, I would need to:',
+          '',
+          '1. Clone the PR branch',
+          '2. Read the CI failure output',
+          '3. Apply targeted fixes',
+          '4. Push new commits to the branch',
+          '',
+          'This will be implemented in a follow-up iteration with full sandbox integration.',
+          '',
+          `**Failed checks**: ${failedCheckNames.join(', ')}`,
+          '',
+          `> — ${config.stas.botName} 🤖`,
+        ].join('\n'),
       });
-
-      log.info(
-        { pr: `${repoOwner}/${repoName}#${prNumber}`, attempt: fixAttempts },
-        'Auto-fix job dispatched to BullMQ',
-      );
-    } finally {
-      await queue.close();
+    } catch {
+      // non-fatal
     }
   } catch (err) {
-    log.error({ err: String(err), pr: `${repoOwner}/${repoName}#${prNumber}` }, 'Auto-fix dispatch failed');
+    log.error({ err: String(err), pr: `${repoOwner}/${repoName}#${prNumber}` }, 'Auto-fix attempt failed');
   }
 }
 

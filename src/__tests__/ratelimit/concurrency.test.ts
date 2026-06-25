@@ -25,12 +25,8 @@ const mockRedisClient = {
   quit: vi.fn().mockResolvedValue(undefined),
 };
 
-const mockRedisConstructor = vi.hoisted(() => ({
-  default: function () { return mockRedisClient; },
-}));
-
 vi.mock('ioredis', () => ({
-  Redis: mockRedisConstructor.default,
+  Redis: vi.fn(function () { return mockRedisClient; }),
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -59,8 +55,7 @@ vi.mock('../../ratelimit/tiers.js', () => ({
   },
 }));
 
-// Import after mocks are set up
-const { ConcurrencyManager } = await import('../../ratelimit/concurrency.js');
+import { ConcurrencyManager } from '../../ratelimit/concurrency.js';
 
 // ── Suite ──────────────────────────────────────────────────────────────────
 
@@ -68,6 +63,7 @@ describe('ConcurrencyManager', () => {
   let manager: InstanceType<typeof ConcurrencyManager>;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     manager = new ConcurrencyManager({ timeoutSeconds: 600 });
 
     // Default: not at capacity

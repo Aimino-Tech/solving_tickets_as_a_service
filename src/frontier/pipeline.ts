@@ -180,6 +180,8 @@ export async function runPipeline(
             try {
               await stage.fn(ctx, emit);
               completedStages++;
+              // Retry succeeded — pop error so passed check passes
+              ctx.errors.pop();
               continue;
             } catch (retryErr) {
               ctx.errors.push(String(retryErr));
