@@ -32,23 +32,41 @@ import { connect as amqpConnect, type Channel, type Connection } from 'amqplib';
 const INTEGRATION_URL = process.env.RABBITMQ_INTEGRATION_URL || 'amqp://guest:guest@localhost:5672/stas';
 const SKIP = process.env.RABBITMQ_INTEGRATION_SKIP === 'true';
 
-// Topology definitions matching src/queue/rabbitmq.ts
+// Unified topology matching src/queue/rabbitmq.ts
 const EXCHANGES = {
+  agents: { name: 'stas.agents', type: 'topic' },
   issues: { name: 'stas.issues', type: 'topic' },
-  agents: { name: 'stas.agents', type: 'direct' },
-  events: { name: 'stas.events', type: 'topic' },
+  queue: { name: 'stas.queue', type: 'topic' },
+  events: { name: 'stas.events', type: 'fanout' },
   dlx: { name: 'stas.dlx', type: 'direct' },
 } as const;
 
-const QUEUES = [
-  { name: 'stas.issues.fix', exchange: 'stas.issues', routingKey: 'fix' },
-  { name: 'stas.agents.triage', exchange: 'stas.agents', routingKey: 'triage' },
-  { name: 'stas.agents.opencode', exchange: 'stas.agents', routingKey: 'opencode' },
-  { name: 'stas.agents.sandbox', exchange: 'stas.agents', routingKey: 'sandbox' },
-  { name: 'stas.agents.verification', exchange: 'stas.agents', routingKey: 'verification' },
-  { name: 'stas.events.notifications', exchange: 'stas.events', routingKey: 'notifications' },
-  { name: 'stas.events.audit', exchange: 'stas.events', routingKey: 'audit' },
-] as const;
+interface QueueDef {
+  name: string;
+  exchange: string;
+  routingKey: string;
+  dlq: string;
+}
+
+const QUEUES: QueueDef[] = [
+  // stas.agents exchange
+  { name: 'stas.agents.dispatch', exchange: 'stas.agents', routingKey: 'agent.runner', dlq: 'stas.agents.dispatch.dlq' },
+  { name: 'stas.agents.verification', exchange: 'stas.agents', routingKey: 'agent.verify', dlq: 'stas.agents.verification.dlq' },
+  { name: 'stas.agents.self_audit', exchange: 'stas.agents', routingKey: 'agent.self_audit', dlq: 'stas.agents.self_audit.dlq' },
+  { name: 'stas.agents.sandbox', exchange: 'stas.agents', routingKey: 'agent.sandbox', dlq: 'stas.agents.sandbox.dlq' },
+  // stas.issues exchange
+  { name: 'stas.issues.triage', exchange: 'stas.issues', routingKey: 'triage.request', dlq: 'stas.issues.triage.dlq' },
+  { name: 'stas.issues.health', exchange: 'stas.issues', routingKey: 'health.check', dlq: 'stas.issues.health.dlq' },
+  // stas.queue exchange
+  { name: 'stas.queue.pr', exchange: 'stas.queue', routingKey: 'pr.create', dlq: 'stas.queue.pr.dlq' },
+  { name: 'stas.queue.merge', exchange: 'stas.queue', routingKey: 'merge.process', dlq: 'stas.queue.merge.dlq' },
+  { name: 'stas.queue.notifications', exchange: 'stas.queue', routingKey: 'queue.notify', dlq: 'stas.queue.notifications.dlq' },
+  // stas.events exchange (fanout — routing key is ignored)
+  { name: 'stas.events.event_bus', exchange: 'stas.events', routingKey: '', dlq: 'stas.events.event_bus.dlq' },
+  // stas.dlx exchange
+  { name: 'stas.dlx.retry', exchange: 'stas.dlx', routingKey: 'dlq.retry', dlq: '' },
+  { name: 'stas.dlx.failed', exchange: 'stas.dlx', routingKey: 'dlq.failed', dlq: '' },
+];
 
 // ---------------------------------------------------------------------------
 // Test state
@@ -67,24 +85,29 @@ let topologyDeclared = false;
  * src/queue/rabbitmq.ts::declareTopology() does.
  */
 async function declareTopology(ch: Channel): Promise<void> {
-  // Exchanges
   for (const ex of Object.values(EXCHANGES)) {
     await ch.assertExchange(ex.name, ex.type, { durable: true });
   }
 
-  await ch.assertExchange('stas.dlx', 'direct', { durable: true });
-
-  // Queues + DLQs + bindings
   for (const q of QUEUES) {
-    const dlqName = `${q.name}.dlq`;
+    const isDlxQueue = q.exchange === 'stas.dlx';
+
     await ch.assertQueue(q.name, {
       durable: true,
-      deadLetterExchange: 'stas.dlx',
-      deadLetterRoutingKey: q.name,
+      deadLetterExchange: isDlxQueue ? undefined : 'stas.dlx',
+      deadLetterRoutingKey: isDlxQueue ? undefined : q.name,
     });
-    await ch.assertQueue(dlqName, { durable: true });
-    await ch.bindQueue(q.name, q.exchange, q.routingKey);
-    await ch.bindQueue(dlqName, 'stas.dlx', q.name);
+
+    if (q.routingKey) {
+      await ch.bindQueue(q.name, q.exchange, q.routingKey);
+    } else {
+      await ch.bindQueue(q.name, q.exchange, '');
+    }
+
+    if (q.dlq) {
+      await ch.assertQueue(q.dlq, { durable: true });
+      await ch.bindQueue(q.dlq, 'stas.dlx', q.name);
+    }
   }
 
   topologyDeclared = true;
@@ -100,10 +123,12 @@ async function deleteQueues(ch: Channel): Promise<void> {
     } catch {
       // queue may not exist
     }
-    try {
-      await ch.deleteQueue(`${q.name}.dlq`);
-    } catch {
-      // dlq may not exist
+    if (q.dlq) {
+      try {
+        await ch.deleteQueue(q.dlq);
+      } catch {
+        // dlq may not exist
+      }
     }
   }
 }
@@ -194,7 +219,6 @@ describe('RabbitMQ Integration', () => {
     if (skipIfUnavailable()) return;
 
     for (const [key, ex] of Object.entries(EXCHANGES)) {
-      // assertExchange with passive=true checks existence without creating
       const ok = await channel.assertExchange(ex.name, ex.type, {
         durable: true,
         internal: false,
@@ -208,10 +232,12 @@ describe('RabbitMQ Integration', () => {
     if (skipIfUnavailable()) return;
 
     for (const q of QUEUES) {
+      const isDlxQueue = q.exchange === 'stas.dlx';
+
       const ok = await channel.assertQueue(q.name, {
         durable: true,
-        deadLetterExchange: 'stas.dlx',
-        deadLetterRoutingKey: q.name,
+        deadLetterExchange: isDlxQueue ? undefined : 'stas.dlx',
+        deadLetterRoutingKey: isDlxQueue ? undefined : q.name,
       });
       expect(ok.queue).toBe(q.name);
     }
@@ -221,9 +247,9 @@ describe('RabbitMQ Integration', () => {
     if (skipIfUnavailable()) return;
 
     for (const q of QUEUES) {
-      const dlqName = `${q.name}.dlq`;
-      const ok = await channel.assertQueue(dlqName, { durable: true });
-      expect(ok.queue).toBe(dlqName);
+      if (!q.dlq) continue;
+      const ok = await channel.assertQueue(q.dlq, { durable: true });
+      expect(ok.queue).toBe(q.dlq);
     }
   });
 
@@ -231,10 +257,9 @@ describe('RabbitMQ Integration', () => {
     if (skipIfUnavailable()) return;
 
     for (const q of QUEUES) {
-      // Bind (idempotent — multiple binds are no-ops if binding exists)
-      await channel.bindQueue(q.name, q.exchange, q.routingKey);
+      const rk = q.routingKey || '';
+      await channel.bindQueue(q.name, q.exchange, rk);
 
-      // Verify by checking queue bindings
       const bindings = await channel.checkQueue(q.name);
       expect(bindings.queue).toBe(q.name);
       expect(bindings.consumerCount).toBeGreaterThanOrEqual(0);
@@ -245,16 +270,15 @@ describe('RabbitMQ Integration', () => {
     if (skipIfUnavailable()) return;
 
     for (const q of QUEUES) {
-      const dlqName = `${q.name}.dlq`;
-      await channel.bindQueue(dlqName, 'stas.dlx', q.name);
+      if (!q.dlq) continue;
+      await channel.bindQueue(q.dlq, 'stas.dlx', q.name);
 
-      // Verify DLQ exists
-      const ok = await channel.assertQueue(dlqName, { durable: true });
-      expect(ok.queue).toBe(dlqName);
+      const ok = await channel.assertQueue(q.dlq, { durable: true });
+      expect(ok.queue).toBe(q.dlq);
     }
   });
 
-  it('publishes a message and consumes it from the fix queue', async () => {
+  it('publishes a message and consumes it from the dispatch queue', async () => {
     if (skipIfUnavailable()) return;
 
     const testMessage = {
@@ -262,27 +286,27 @@ describe('RabbitMQ Integration', () => {
       messageId: 'integration-test-msg',
       timestamp: new Date().toISOString(),
       source: 'stas-integration-test',
-      type: 'integration-test',
+      type: 'agent.dispatch',
       payload: { test: true },
     };
 
-    // Publish
+    // Publish to stas.agents exchange with routing key agent.runner
     const published = channel.publish(
-      'stas.issues',
-      'fix',
+      'stas.agents',
+      'agent.runner',
       Buffer.from(JSON.stringify(testMessage)),
       { persistent: true, contentType: 'application/json' },
     );
     expect(published).toBe(true);
 
-    // Consume (with timeout)
+    // Consume from stas.agents.dispatch queue
     const message = await new Promise<any>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Timeout waiting for message on stas.issues.fix'));
+        reject(new Error('Timeout waiting for message on stas.agents.dispatch'));
       }, 5000);
 
       channel.consume(
-        'stas.issues.fix',
+        'stas.agents.dispatch',
         (msg) => {
           if (msg) {
             clearTimeout(timeout);
@@ -295,38 +319,38 @@ describe('RabbitMQ Integration', () => {
 
     expect(message).toBeDefined();
     expect(message.messageId).toBe('integration-test-msg');
-    expect(message.type).toBe('integration-test');
+    expect(message.type).toBe('agent.dispatch');
     expect(message.payload).toEqual({ test: true });
   }, 10000);
 
   it('publishes and consumes with correct routing across topic exchanges', async () => {
     if (skipIfUnavailable()) return;
 
-    const eventMessage = {
+    const triageMessage = {
       version: 1,
-      messageId: 'integration-event-test',
+      messageId: 'integration-triage-test',
       timestamp: new Date().toISOString(),
       source: 'stas-integration-test',
-      type: 'integration-event',
-      payload: { event: 'test' },
+      type: 'triage.request',
+      payload: { issue: '#42' },
     };
 
-    // Publish to events exchange with notifications routing key
+    // Publish to stas.issues exchange with triage.* routing key
     channel.publish(
-      'stas.events',
-      'notifications',
-      Buffer.from(JSON.stringify(eventMessage)),
+      'stas.issues',
+      'triage.request',
+      Buffer.from(JSON.stringify(triageMessage)),
       { persistent: true },
     );
 
-    // Consume from notifications queue
+    // Consume from stas.issues.triage queue
     const message = await new Promise<any>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Timeout waiting for message on stas.events.notifications'));
+        reject(new Error('Timeout waiting for message on stas.issues.triage'));
       }, 5000);
 
       channel.consume(
-        'stas.events.notifications',
+        'stas.issues.triage',
         (msg) => {
           if (msg) {
             clearTimeout(timeout);
@@ -338,17 +362,15 @@ describe('RabbitMQ Integration', () => {
     });
 
     expect(message).toBeDefined();
-    expect(message.messageId).toBe('integration-event-test');
-    expect(message.type).toBe('integration-event');
+    expect(message.messageId).toBe('integration-triage-test');
+    expect(message.type).toBe('triage.request');
   }, 10000);
 
   it('declares the full topology end-to-end with declareTopology()', async () => {
     if (skipIfUnavailable()) return;
 
-    // This tests the actual declareTopology logic from rabbitmq.ts
     await declareTopology(channel);
 
-    // Verify all exchanges exist
     for (const ex of Object.values(EXCHANGES)) {
       const ok = await channel.assertExchange(ex.name, ex.type, {
         durable: true,
@@ -358,13 +380,14 @@ describe('RabbitMQ Integration', () => {
       expect(ok.exchange).toBe(ex.name);
     }
 
-    // Verify all queues and DLQs exist
     for (const q of QUEUES) {
       const ok = await channel.assertQueue(q.name, { durable: true });
       expect(ok.queue).toBe(q.name);
 
-      const dlqOk = await channel.assertQueue(`${q.name}.dlq`, { durable: true });
-      expect(dlqOk.queue).toBe(`${q.name}.dlq`);
+      if (q.dlq) {
+        const dlqOk = await channel.assertQueue(q.dlq, { durable: true });
+        expect(dlqOk.queue).toBe(q.dlq);
+      }
     }
   });
 
@@ -378,9 +401,9 @@ describe('RabbitMQ Integration', () => {
     }
 
     for (const q of QUEUES) {
-      const dlqName = `${q.name}.dlq`;
-      await channel.purgeQueue(dlqName);
-      const ok = await channel.checkQueue(dlqName);
+      if (!q.dlq) continue;
+      await channel.purgeQueue(q.dlq);
+      const ok = await channel.checkQueue(q.dlq);
       expect(ok.messageCount).toBe(0);
     }
   });

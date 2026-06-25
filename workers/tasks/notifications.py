@@ -6,6 +6,7 @@ Supports:
   - Slack webhook messages (if SLACK_WEBHOOK_URL is set)
 """
 
+import json
 import logging
 import os
 from typing import Any
@@ -84,7 +85,13 @@ def _parse_issue_url(url: str) -> dict[str, Any] | None:
     name="workers.tasks.notifications.send_notification",
     autoretry_for=(Exception,),
 )
-def send_notification(self, channel: str, message: str, **kwargs) -> dict:
+def send_notification(
+    self,
+    channel: str,
+    message: str,
+    correlation_id: str = "",
+    **kwargs,
+) -> dict:
     """
     Send a notification via the specified channel.
 
@@ -101,13 +108,20 @@ def send_notification(self, channel: str, message: str, **kwargs) -> dict:
     Returns with status: "sent", "skipped", or "error".
     """
     logger.info(
-        "Sending notification — channel=%s message_len=%d",
-        channel,
-        len(message),
+        json.dumps({
+            "event": "notification.send.start",
+            "channel": channel,
+            "message_length": len(message),
+            "correlation_id": correlation_id,
+        })
     )
 
     try:
-        results: dict[str, Any] = {"channel": channel, "status": "sent"}
+        results: dict[str, Any] = {
+            "channel": channel,
+            "status": "sent",
+            "correlation_id": correlation_id,
+        }
 
         # --- GitHub issue comment ---
         if channel in ("issue-comment", "issue-comment+slack"):
@@ -124,12 +138,20 @@ def send_notification(self, channel: str, message: str, **kwargs) -> dict:
                     installation_id=install_id,
                 )
                 results["comment_url"] = comment.get("html_url", "")
-                logger.info("Issue comment posted — %s", results["comment_url"])
+                logger.info(
+                    json.dumps({
+                        "event": "notification.issue_comment_posted",
+                        "comment_url": results["comment_url"],
+                        "correlation_id": correlation_id,
+                    })
+                )
             else:
                 logger.warning(
-                    "Cannot post issue comment — missing issue_url=%s installation_id=%s",
-                    issue_url,
-                    install_id,
+                    json.dumps({
+                        "event": "notification.issue_comment_skipped",
+                        "reason": "missing issue_url or installation_id",
+                        "correlation_id": correlation_id,
+                    })
                 )
                 results["comment_skipped"] = True
 
@@ -137,15 +159,35 @@ def send_notification(self, channel: str, message: str, **kwargs) -> dict:
         if channel in ("slack", "issue-comment+slack"):
             sent = _send_slack_webhook(message)
             results["slack_sent"] = sent
+            logger.info(
+                json.dumps({
+                    "event": "notification.slack_result",
+                    "sent": sent,
+                    "correlation_id": correlation_id,
+                })
+            )
 
         # --- Log (default fallback) ---
         if channel == "log":
-            logger.info("Notification (log channel): %s", message[:500])
+            logger.info(
+                json.dumps({
+                    "event": "notification.log",
+                    "message_preview": message[:500],
+                    "correlation_id": correlation_id,
+                })
+            )
 
         return results
 
     except Exception as exc:
-        logger.error("Notification failed — %s", exc, exc_info=True)
+        logger.error(
+            json.dumps({
+                "event": "notification.error",
+                "error": str(exc),
+                "correlation_id": correlation_id,
+            }),
+            exc_info=True,
+        )
         raise self.retry(exc=exc)
 
 
@@ -156,29 +198,69 @@ def send_notification(self, channel: str, message: str, **kwargs) -> dict:
     name="workers.tasks.notifications.process_webhook",
     autoretry_for=(Exception,),
 )
-def process_webhook(self, event_type: str, payload: dict) -> dict:
+def process_webhook(
+    self,
+    event_type: str,
+    payload: dict,
+    correlation_id: str = "",
+) -> dict:
     """Route a webhook event to the appropriate handler."""
-    logger.info("Processing webhook — event=%s", event_type)
+    logger.info(
+        json.dumps({
+            "event": "webhook.process.start",
+            "event_type": event_type,
+            "correlation_id": correlation_id,
+        })
+    )
     try:
-        result = {"event_type": event_type, "status": "processed", "handlers": []}
+        result = {
+            "event_type": event_type,
+            "status": "processed",
+            "handlers": [],
+            "correlation_id": correlation_id,
+        }
 
         if event_type == "issues.labeled":
             label = (payload.get("label") or {}).get("name", "")
             if label == os.getenv("STAS_LABEL", "stas:fix"):
-                logger.info("Matched target label=%s, handler=start_pipeline", label)
+                logger.info(
+                    json.dumps({
+                        "event": "webhook.process.label_match",
+                        "label": label,
+                        "handler": "start_pipeline",
+                        "correlation_id": correlation_id,
+                    })
+                )
                 result["handlers"].append("start_pipeline")
-                # In practice, the Django webhook view already starts the pipeline.
-                # This task can be used for follow-up actions like logging.
 
         elif event_type == "issues.opened":
-            logger.info("Issue opened — handler=check_auto_triage")
+            logger.info(
+                json.dumps({
+                    "event": "webhook.process.issue_opened",
+                    "handler": "check_auto_triage",
+                    "correlation_id": correlation_id,
+                })
+            )
             result["handlers"].append("check_auto_triage")
 
         else:
-            logger.debug("No specific handler for event_type=%s", event_type)
+            logger.debug(
+                json.dumps({
+                    "event": "webhook.process.no_handler",
+                    "event_type": event_type,
+                    "correlation_id": correlation_id,
+                })
+            )
 
         return result
 
     except Exception as exc:
-        logger.error("Webhook processing failed — %s", exc, exc_info=True)
+        logger.error(
+            json.dumps({
+                "event": "webhook.process.error",
+                "error": str(exc),
+                "correlation_id": correlation_id,
+            }),
+            exc_info=True,
+        )
         raise self.retry(exc=exc)
