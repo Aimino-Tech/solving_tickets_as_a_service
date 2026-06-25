@@ -407,3 +407,15 @@ def simulate_tier_changes(avg_cost_per_fix_cents: float = 350.0) -> dict[str, An
         }
 
     return results
+
+
+# Model routing summary for quick reference
+MODEL_ROUTING_SUMMARY: dict[str, str] = {
+    "free-simple": "gpt-4o-mini (/bin/bash.05/fix)",
+    "solo-simple": "gpt-4o-mini (/bin/bash.05/fix)",
+    "solo-medium": "deepseek-v4-flash (/bin/bash.15/fix)",
+    "solo-complex": "gpt-4o (/bin/bash.50/fix)",
+    "team-simple": "deepseek-v4-flash (/bin/bash.15/fix)",
+    "team-medium": "claude-3.5-sonnet (/bin/bash.60/fix)",
+    "team-complex": "claude-opus-4 (.64/fix)",
+}
