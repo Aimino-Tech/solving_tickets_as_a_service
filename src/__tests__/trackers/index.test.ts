@@ -30,6 +30,12 @@ describe('trackers/index', () => {
     trackers = await import('../../trackers/index.js');
   });
 
+  describe('getTracker', () => {
+    it('returns undefined for uninitialized tracker', () => {
+      expect(trackers.getTracker('linear')).toBeUndefined();
+    });
+  });
+
   describe('initTrackers', () => {
     it('initializes both trackers when configured', () => {
       trackers.initTrackers();
@@ -47,12 +53,6 @@ describe('trackers/index', () => {
       trackers.initTrackers();
       expect(trackers.hasTracker('linear')).toBe(true);
       expect(trackers.hasTracker('jira')).toBe(true);
-    });
-  });
-
-  describe('getTracker', () => {
-    it('returns undefined for uninitialized tracker', () => {
-      expect(trackers.getTracker('linear')).toBeUndefined();
     });
   });
 });
