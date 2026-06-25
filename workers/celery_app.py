@@ -143,6 +143,17 @@ try:
 except Exception as exc:
     logger.warning("Failed to connect compliance audit middleware -- %s", exc)
 
+# ── Evidence Receipt Middleware ─────────────────────────────────────
+# Captures cryptographically chained evidence receipts for every agent
+# lifecycle transition (Celery task lifecycle events).
+try:
+    from workers.audit.evidence_middleware import connect_evidence_middleware
+
+    connect_evidence_middleware()
+    logger.info("Evidence receipt middleware connected")
+except Exception as exc:
+    logger.warning("Failed to connect evidence receipt middleware -- %s", exc)
+
 # ── Runaway Agent Protection ───────────────────────────────────────
 # Self-registers via @signals.task_prerun.connect at import time.
 # Enforces per-agent timeout, token/cost limits, and max retries.
