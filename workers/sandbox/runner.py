@@ -1,4 +1,11 @@
-"""SandboxRunner — runs test suites inside Docker containers."""
+"""SandboxRunner — runs test suites inside Docker containers.
+
+This module maintains backward compatibility. New code should prefer the
+fallback-chain API in ``workers.sandbox.fallback`` which provides automatic
+provider selection (E2B -> Docker -> Noop) with circuit-breaker support.
+"""
+
+from __future__ import annotations
 
 import logging
 import os
@@ -162,7 +169,11 @@ def detect_test_command(workspace_path: str) -> str:
 
 
 class SandboxRunner:
-    """Run test suites inside Docker containers with resource isolation."""
+    """Run test suites inside Docker containers with resource isolation.
+
+    When *use_fallback_chain* is True (or a FallbackChain is passed) the
+    runner delegates to the fallback chain instead of using Docker directly.
+    """
 
     def __init__(
         self,
@@ -175,6 +186,9 @@ class SandboxRunner:
         read_only_rootfs: bool = True,
         network_disabled: bool = False,
         env_vars: dict[str, str] | None = None,
+        *,
+        use_fallback_chain: bool = False,
+        fallback_chain: Any = None,
     ) -> None:
         self.docker_image = docker_image
         self.timeout_seconds = timeout_seconds
@@ -185,6 +199,8 @@ class SandboxRunner:
         self.read_only_rootfs = read_only_rootfs
         self.network_disabled = network_disabled
         self.env_vars = env_vars or {}
+        self.use_fallback_chain = use_fallback_chain
+        self._fallback_chain = fallback_chain
 
     def run_tests(
         self,
@@ -195,7 +211,23 @@ class SandboxRunner:
         capture_xml: bool = False,
         container_name: str = "",
     ) -> SandboxResult:
-        """Run the test suite in a Docker container."""
+        """Run the test suite in a Docker container.
+
+        When *use_fallback_chain* was set on the constructor this delegates
+        to the fallback chain (E2B -> Docker -> Noop) instead.
+        """
+        if self.use_fallback_chain:
+            from .fallback import FallbackChain
+            chain = self._fallback_chain or FallbackChain()
+            return chain.run_tests(
+                workspace_path=workspace_path,
+                test_command=test_command,
+                capture_json=capture_json,
+                capture_xml=capture_xml,
+                timeout_seconds=self.timeout_seconds,
+                env_vars=self.env_vars,
+            )
+
         ws = Path(workspace_path)
         if not ws.is_dir():
             raise SandboxError(f"Workspace path does not exist: {workspace_path}")
@@ -365,5 +397,9 @@ class SandboxRunner:
 
 
 def create_runner(**kwargs: Any) -> SandboxRunner:
-    """Factory: create a ``SandboxRunner`` from keyword args."""
+    """Factory: create a ``SandboxRunner`` from keyword args.
+
+    Pass ``use_fallback_chain=True`` to enable the fallback chain
+    (E2B -> Docker -> Noop) instead of direct Docker execution.
+    """
     return SandboxRunner(**kwargs)

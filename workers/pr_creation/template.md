@@ -17,3 +17,6 @@ $changed_files_summary
 - [ ] Code follows repo conventions
 - [ ] Self-audit completed
 - [ ] No breaking changes
+
+## Evidence
+> ✅ **Verified fix** — Pass rate: $test_pass_rate% | Cost: $cost_display | [View evidence](docs/benchmarks.md)

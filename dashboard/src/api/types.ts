@@ -55,3 +55,21 @@ export interface PaginatedResponse<T> {
   perPage: number;
   totalPages: number;
 }
+
+export interface BenchmarkEntry {
+  agent: string;
+  passRate: number;
+  costPerFixCents: number;
+  agentNative: boolean;
+  oss: boolean;
+  selfHostable: boolean;
+  note?: string;
+}
+
+export interface BenchmarkPrice {
+  agent: string;
+  model: string;
+  costPerFixCents: number;
+  monthlyMinCents: number;
+  monthlyMaxFixes: number;
+}

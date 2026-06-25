@@ -132,6 +132,29 @@ try:
 except Exception as exc:
     logger.warning("Failed to connect merge queue middleware -- %s", exc)
 
+# ── Runaway Agent Protection ───────────────────────────────────────
+# Self-registers via @signals.task_prerun.connect at import time.
+# Enforces per-agent timeout, token/cost limits, and max retries.
+try:
+    from workers.runaway import middleware  # noqa: F401
+
+    middleware.connect_runaway_middleware()
+    logger.info("Runaway agent middleware connected")
+except Exception as exc:
+    logger.warning("Failed to connect runaway middleware -- %s", exc)
+
+
+# ── Worker Scaling (KEDA / Celery autoscale) ───────────────────────
+# Configures pod-level scaling via KEDA ScaledObject (in k8s/) or falls
+# back to Celery's native --autoscale when KEDA is not deployed.
+try:
+    from workers.scaling import configure_scaling
+
+    configure_scaling(app)
+    logger.info("Worker scaling configured")
+except Exception as exc:
+    logger.warning("Failed to configure worker scaling -- %s", exc)
+
 
 # ── Graceful Shutdown Handler ──────────────────────────────────────
 # Installs SIGTERM handling and task drain via Celery signals.
