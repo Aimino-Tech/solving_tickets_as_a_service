@@ -41,6 +41,11 @@ beat_schedule = {
         "schedule": 600.0,
         "args": (),
     },
+    "billing-usage-sync-to-stripe": {
+        "task": "workers.billing.usage.sync_usage_to_stripe",
+        "schedule": crontab(hour=1, minute=0),
+        "args": (),
+    },
 }
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")
@@ -77,4 +82,5 @@ task_routes = {
     "workers.tasks.verification.*": {"queue": "stas.agents.verification"},
     "workers.tasks.pr_creation.*": {"queue": "stas.agents.pr_creation"},
     "workers.tasks.notifications.*": {"queue": "stas.agents.notifications"},
+    "workers.billing.*": {"queue": "stas.agents.default"},
 }
