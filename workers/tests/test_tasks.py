@@ -1,6 +1,6 @@
 """Tests for Celery worker task definitions."""
 
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from workers.celery_app import app
 
@@ -59,13 +59,83 @@ def test_boot_sandbox(mock_getenv):
     assert result["branch"] == "main"
 
 
-def test_run_verification():
+@patch("workers.tasks.verification.SandboxRunner")
+def test_run_verification(mock_runner_cls):
     from workers.tasks.verification import run_verification
 
+    mock_instance = MagicMock()
+    mock_runner_cls.return_value = mock_instance
+    mock_instance.run_tests.return_value = MagicMock(
+        exit_code=0, timed_out=False, duration_ms=1500, passed=True,
+        raw_output="All tests passed", error_message="",
+        summary=MagicMock(pass_rate=1.0, total=10, passed=10, failed=0, skipped=0, error=0),
+    )
+
     result = run_verification.run("sandbox-123", "pytest")
-    assert "passed" in result
-    assert result["sandbox_id"] == "sandbox-123"
-    assert result["test_command"] == "pytest"
+    assert result["issue_id"] == "sandbox-123"
+    assert result["passed"] is True
+
+
+@patch("workers.tasks.verification.SandboxRunner")
+def test_verify_agent_output_passed(mock_runner_cls):
+    from workers.tasks.verification import verify_agent_output
+
+    mock_instance = MagicMock()
+    mock_runner_cls.return_value = mock_instance
+    mock_instance.run_tests.return_value = MagicMock(
+        exit_code=0, timed_out=False, duration_ms=2500, passed=True,
+        raw_output="10 passed in 1.2s", error_message="",
+        summary=MagicMock(pass_rate=1.0, total=10, passed=10, failed=0, skipped=0, error=0),
+    )
+
+    result = verify_agent_output.run(
+        issue_id="ISS-42", workspace_path="/tmp/test-repo",
+        test_command="pytest", ac_list=["Fix login bug", "Add input validation"],
+    )
+
+    assert result["passed"] is True
+    assert result["score"] >= 0.7
+    assert result["summary"]["total_tests"] == 10
+    assert result["summary"]["test_pass_rate"] == 1.0
+    assert result["status"] == "passed"
+
+
+@patch("workers.tasks.verification.SandboxRunner")
+def test_verify_agent_output_failed(mock_runner_cls):
+    from workers.tasks.verification import verify_agent_output
+
+    mock_instance = MagicMock()
+    mock_runner_cls.return_value = mock_instance
+    mock_instance.run_tests.return_value = MagicMock(
+        exit_code=1, timed_out=False, duration_ms=3000, passed=False,
+        raw_output="3 passed, 5 failed in 2.0s", error_message="",
+        summary=MagicMock(pass_rate=0.375, total=8, passed=3, failed=5, skipped=0, error=0),
+    )
+
+    result = verify_agent_output.run(
+        issue_id="ISS-43", workspace_path="/tmp/test-repo",
+        test_command="pytest", ac_list=[],
+    )
+
+    assert result["passed"] is False
+    assert result["summary"]["test_pass_rate"] == 0.375
+    assert result["status"] == "failed"
+
+
+@patch("workers.tasks.verification.SandboxRunner")
+def test_verify_agent_output_sandbox_error(mock_runner_cls):
+    from workers.tasks.verification import verify_agent_output
+
+    mock_runner_cls.side_effect = FileNotFoundError("Workspace not found")
+
+    result = verify_agent_output.run(
+        issue_id="ISS-44", workspace_path="/nonexistent",
+        test_command="pytest", ac_list=[],
+    )
+
+    assert result["passed"] is False
+    assert result["score"] == 0.0
+    assert result["status"] == "workspace_error"
 
 
 @patch("workers.tasks.pr_creation._get_installation_token")
