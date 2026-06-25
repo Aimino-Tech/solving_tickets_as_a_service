@@ -54,6 +54,7 @@ import { renderMetrics } from './webhooks/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
+import { adminAuditRouter } from './routes/admin_audit.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
 import { slaRouter } from './routes/sla.js';
@@ -65,6 +66,8 @@ import { authRouter } from './routes/auth.js';
 import { reposRouter } from './routes/repos.js';
 import { runsRouter } from './routes/runs.js';
 import { badgeRouter } from './routes/badge.js';
+import { analyticsRouter } from './routes/analytics.js';
+import { viralRouter } from './routes/viral.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -668,6 +671,8 @@ export function createApp(): express.Application {
   // ── Admin API ────────────────────────────────────────
   app.use('/admin', adminRouter);
 
+  app.use('/api/admin/audit', adminAuditRouter);
+
   // ── Dashboard API ──────────────────────────────────────
   app.use('/api/v1/me', dashboardRouter);
 
@@ -704,6 +709,11 @@ export function createApp(): express.Application {
   // GET /badge/:id.svg — shields.io-compatible status badge
   app.use('/badge', badgeRouter);
 
+  // ── Viral discovery endpoints (public, no auth) ───────────────────
+  // GET /discovery/mcp.json — MCP manifest for agent-to-agent discovery
+  // GET /discovery          — Human-readable discovery landing page
+  app.use(viralRouter);
+
   // ── Benchmarks API (public) ──────────────────────────────────────
   app.use('/api/benchmarks', benchmarksRouter);
 
@@ -715,6 +725,10 @@ export function createApp(): express.Application {
 
   // KPI Dashboard API
   app.use('/api/kpi', kpiRouter);
+
+  // Agent Performance Analytics API
+  app.use('/api/analytics', analyticsRouter);
+
 
   // SAML 2.0 SSO routes
   app.use('/api/v1/saml', samlRouter);

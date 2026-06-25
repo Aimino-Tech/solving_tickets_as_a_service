@@ -1,0 +1,30 @@
+{
+  "name": "@aimino/stas-mcp",
+  "description": "MCP server for STAS — Solving Tickets As A Service. Submit GitHub issues, list runs, search codebase, and get automated fix PRs via OpenCode agents.",
+  "version": "1.0.0",
+  "agent": {
+    "name": "stas-agent",
+    "version": "1.0.0",
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "tools": {
+        "list_issues": {"description": "List tracked issues and their STAS fix status", "inputSchema": {"type": "object", "properties": {"status": {"type": "string"}, "repo": {"type": "string"}, "limit": {"type": "integer"}}}},
+        "run_fix": {"description": "Trigger the STAS fix pipeline for a GitHub issue URL.", "inputSchema": {"type": "object", "properties": {"issue_url": {"type": "string"}}, "required": ["issue_url"]}},
+        "check_status": {"description": "Check the current status of a STAS fix run by run_id.", "inputSchema": {"type": "object", "properties": {"run_id": {"type": "string"}}, "required": ["run_id"]}},
+        "get_pr": {"description": "Get the PR URL and details for a completed STAS fix run.", "inputSchema": {"type": "object", "properties": {"run_id": {"type": "string"}}, "required": ["run_id"]}},
+        "search_codebase": {"description": "Search STAS codebase for symbols, files, or patterns.", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}, "repo": {"type": "string"}, "max_results": {"type": "integer"}}, "required": ["query"]}}
+      },
+      "resources": {
+        "stas://runs/{run_id}": {"description": "Full run details."},
+        "stas://issues/{issue_id}": {"description": "Issue details with fix status and PRs."}
+      }
+    }
+  },
+  "command": "python",
+  "args": ["-m", "mcp.stas_mcp", "stdio"],
+  "transport": {
+    "stdio": {"command": "python", "args": ["-m", "mcp.stas_mcp", "stdio"]},
+    "sse": {"url": "http://localhost:4095/sse"},
+    "streamable-http": {"url": "http://localhost:4095/mcp"}
+  }
+}

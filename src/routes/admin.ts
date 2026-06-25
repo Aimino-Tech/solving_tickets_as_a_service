@@ -538,6 +538,16 @@ router.post('/queue/clear-dlq', async (_req: Request, res: Response) => {
       }
     }
 
+    await logAdminAction({
+      adminId: 'admin:api-key',
+      action: 'admin.queue.clear_dlq',
+      resourceType: 'queue',
+      resourceId: 'dlq',
+      details: { purgedQueues: purged },
+      ipAddress: req.ip,
+      correlationId: req.requestId,
+    });
+
     log.info({ purgedCount: purged.length, queues: purged }, 'Admin purged dead-letter queues');
     res.json({ cleared: true, purgedQueues: purged });
   } catch (err) {
@@ -555,6 +565,16 @@ router.post('/gc/sweep', async (_req: Request, res: Response) => {
     const { SandboxGC } = await import('../sandbox/gc.js');
     const gc = new SandboxGC();
     const cleaned = await gc.sweep();
+    await logAdminAction({
+      adminId: 'admin:api-key',
+      action: 'admin.gc.sweep',
+      resourceType: 'sandbox',
+      resourceId: 'gc',
+      details: { containersCleaned: cleaned },
+      ipAddress: req.ip,
+      correlationId: req.requestId,
+    });
+
     log.info({ cleaned }, 'Admin triggered sandbox GC sweep');
     res.json({ cleaned, timestamp: new Date().toISOString() });
   } catch (err) {

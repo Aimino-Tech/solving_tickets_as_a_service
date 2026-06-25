@@ -5,10 +5,13 @@ import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 from urllib.parse import urlparse
+
+from workers.audit.admin_trail import log_admin_action
 from workers.dispatch.pause import get_pause_manager
 
 logger = logging.getLogger(__name__)
 PAUSE_API_PORT = int(os.getenv("PAUSE_API_PORT", "8081"))
+
 
 class PauseAPIHandler(BaseHTTPRequestHandler):
     pm = get_pause_manager()
@@ -39,11 +42,25 @@ class PauseAPIHandler(BaseHTTPRequestHandler):
         try:
             if path.startswith("/api/projects/") and path.endswith("/pause"):
                 slug = path[len("/api/projects/"):-len("/pause")]
-                state = self.pm.pause(slug, paused_by=body.get("paused_by", "api"))
+                paused_by = body.get("paused_by", "api")
+                state = self.pm.pause(slug, paused_by=paused_by)
+                log_admin_action(
+                    actor=paused_by,
+                    action="pause",
+                    resource=f"project:{slug}",
+                    details={"reason": body.get("reason", "")},
+                )
                 self._respond(200, state)
             elif path.startswith("/api/projects/") and path.endswith("/resume"):
                 slug = path[len("/api/projects/"):-len("/resume")]
-                state = self.pm.resume(slug, resumed_by=body.get("resumed_by", "api"))
+                resumed_by = body.get("resumed_by", "api")
+                state = self.pm.resume(slug, resumed_by=resumed_by)
+                log_admin_action(
+                    actor=resumed_by,
+                    action="resume",
+                    resource=f"project:{slug}",
+                    details={},
+                )
                 self._respond(200, state)
             else:
                 self._respond(404, {"error": "Not found"})
@@ -78,6 +95,7 @@ def start_pause_server(port: int = PAUSE_API_PORT) -> None:
         s.serve_forever()
     except KeyboardInterrupt:
         s.shutdown()
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")

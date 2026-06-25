@@ -20,6 +20,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 from urllib.parse import urlparse
 
+from workers.audit.admin_trail import log_admin_action
 from workers.emergency.stop import AGENT_QUEUES, HOLD_QUEUE, get_emergency_stop
 
 logger = logging.getLogger(__name__)
@@ -189,9 +190,21 @@ class EmergencyStopAPIHandler(BaseHTTPRequestHandler):
                 from workers.celery_app import app as celery_app
 
                 state = _activate_emergency(celery_app, reason=reason)
+                log_admin_action(
+                    actor="api",
+                    action="emergency.activate",
+                    resource="system",
+                    details={"reason": reason},
+                )
                 self._respond(200, state)
             elif path == "/api/emergency-stop/resume":
                 state = _deactivate_emergency()
+                log_admin_action(
+                    actor="api",
+                    action="emergency.deactivate",
+                    resource="system",
+                    details={},
+                )
                 self._respond(200, state)
             else:
                 self._respond(404, {"error": "Not found"})
