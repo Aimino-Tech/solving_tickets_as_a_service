@@ -61,6 +61,7 @@ const envSchema = z.object({
   BITBUCKET_USERNAME: z.string().optional(),
   BITBUCKET_APP_PASSWORD: z.string().optional(),
   BITBUCKET_WEBHOOK_SECRET: z.string().optional(),
+  BITBUCKET_BASE_URL: z.string().default('https://api.bitbucket.org'),
 
   SLACK_WEBHOOK_URL: z.string().optional(),
   SLACK_CHANNEL: z.string().optional(),
@@ -98,6 +99,45 @@ const envSchema = z.object({
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
   FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
+  // Storage
+  STORAGE_TYPE: z.enum(['sqlite', 'postgres']).default('sqlite'),
+  STORAGE_SQLITE_PATH: z.string().default('./data/stas.db'),
+
+  // CI monitoring
+  CI_MONITOR_ENABLED: z.coerce.boolean().default(false),
+  CI_REPOS: z.string().default(''),
+  CI_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
+  CI_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(3),
+
+  // OpenCode Health
+  OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(3),
+  OPENCODE_HEALTH_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(30000),
+  OPENCODE_HEALTH_CACHE_TTL_MS: z.coerce.number().int().positive().default(30000),
+  OPENCODE_HEALTH_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
+  OPENCODE_HEALTH_STARTUP_TIMEOUT_MS: z.coerce.number().int().positive().default(120000),
+
+  // RapidAPI
+  RAPIDAPI_PROXY_SECRET: z.string().optional(),
+
+  // GitHub OAuth
+  GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
+  GITHUB_OAUTH_CLIENT_SECRET: z.string().optional(),
+
+  // Stripe pricing plans
+  STRIPE_SOLO_PRICE_ID: z.string().default('price_solo'),
+  STRIPE_TEAM_PRICE_ID: z.string().default('price_team'),
+
+  // Security CSP
+  CSP_REPORT_URI: z.string().optional(),
+
+  // Docker
+  DOCKER_IMAGE: z.string().default('node:20-slim'),
+  DOCKER_CONTAINER_MEMORY: z.string().default('512m'),
+  DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(0.5),
+  DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(true),
+  DOCKER_ALLOWED_HOSTS: z.string().default(''),
+
+  // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
@@ -249,6 +289,39 @@ function buildConfig(env: ParsedEnv) {
       username: env.BITBUCKET_USERNAME ?? '',
       appPassword: env.BITBUCKET_APP_PASSWORD ?? '',
       webhookSecret: env.BITBUCKET_WEBHOOK_SECRET ?? '',
+      baseUrl: env.BITBUCKET_BASE_URL,
+    },
+
+    storage: {
+      type: env.STORAGE_TYPE,
+      sqlitePath: env.STORAGE_SQLITE_PATH,
+    },
+
+    ci: {
+      monitorEnabled: env.CI_MONITOR_ENABLED,
+      repos: env.CI_REPOS.split(',').map((s) => s.trim()).filter(Boolean),
+      pollIntervalMs: env.CI_POLL_INTERVAL_MS,
+      failureThreshold: env.CI_FAILURE_THRESHOLD,
+    },
+
+    opencodeHealth: {
+      circuitBreakerThreshold: env.OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD,
+      pollIntervalMs: env.OPENCODE_HEALTH_POLL_INTERVAL_MS,
+      cacheTtlMs: env.OPENCODE_HEALTH_CACHE_TTL_MS,
+      requestTimeoutMs: env.OPENCODE_HEALTH_REQUEST_TIMEOUT_MS,
+      startupTimeoutMs: env.OPENCODE_HEALTH_STARTUP_TIMEOUT_MS,
+    },
+
+    rapidapi: {
+      proxySecret: env.RAPIDAPI_PROXY_SECRET,
+    },
+
+    docker: {
+      image: env.DOCKER_IMAGE,
+      containerMemory: env.DOCKER_CONTAINER_MEMORY,
+      containerCpu: env.DOCKER_CONTAINER_CPU,
+      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
+      allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
     },
 
     openai: {
@@ -353,6 +426,8 @@ function buildConfig(env: ParsedEnv) {
       price100Credits: env.STRIPE_PRICE_100_CREDITS,
       price500Credits: env.STRIPE_PRICE_500_CREDITS,
       price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
+      soloPriceId: env.STRIPE_SOLO_PRICE_ID,
+      teamPriceId: env.STRIPE_TEAM_PRICE_ID,
     },
 
     dataPrivacy: {
@@ -423,6 +498,7 @@ function buildConfig(env: ParsedEnv) {
       corsOrigin: env.CORS_ORIGIN,
       requestBodyLimit: env.REQUEST_BODY_LIMIT,
       webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
+      cspReportUri: env.CSP_REPORT_URI,
 
       ipAllowlist: {
         enabled: env.IP_ALLOWLIST_ENABLED,

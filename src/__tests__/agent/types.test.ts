@@ -213,6 +213,7 @@ describe("VerificationResult interface", () => {
       preExistingTestsRegressed: false,
       unverified: false,
       details: ["All checks passed"],
+      qualityGates: [],
     };
 
     expect(result.baseline?.passed).toBe(true);
@@ -234,6 +235,7 @@ describe("VerificationResult interface", () => {
       preExistingTestsRegressed: false,
       unverified: true,
       details: ["No test suite configured"],
+      qualityGates: [],
     };
 
     expect(result.unverified).toBe(true);
@@ -262,6 +264,7 @@ describe("VerificationResult interface", () => {
       preExistingTestsRegressed: true,
       unverified: false,
       details: ["REGRESSION: Pre-existing tests that were passing now fail"],
+      qualityGates: [],
     };
 
     expect(result.preExistingTestsRegressed).toBe(true);
@@ -290,6 +293,7 @@ describe("VerificationResult interface", () => {
       preExistingTestsRegressed: false,
       unverified: false,
       details: ["Regression test does not fail on original code"],
+      qualityGates: [],
     };
 
     expect(result.regressionTestPassedOnOriginal).toBe(false);
@@ -306,6 +310,7 @@ describe("VerificationResult interface", () => {
       preExistingTestsRegressed: false,
       unverified: true,
       details: ["No test suite configured"],
+      qualityGates: [],
     };
     expect(result.baseline).toBeNull();
   });
@@ -320,6 +325,7 @@ describe("VerificationResult interface", () => {
       preExistingTestsRegressed: false,
       unverified: true,
       details: [],
+      qualityGates: [],
     };
     expect(result.details).toEqual([]);
   });

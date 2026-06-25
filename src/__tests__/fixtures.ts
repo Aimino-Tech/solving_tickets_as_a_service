@@ -221,6 +221,7 @@ export function sampleVerificationResult(
       "New test file(s) detected: tests/login.regression.test.ts",
       "Regression test tests/login.regression.test.ts: fails on original, passes on fix",
     ],
+    qualityGates: [],
     ...overrides,
   };
 }

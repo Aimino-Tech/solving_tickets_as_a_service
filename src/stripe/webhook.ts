@@ -342,7 +342,6 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void
  * and updates the billing record for the account.
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
-  const sub = subscription as unknown as Record<string, unknown>;
   const customerId = subscription.customer;
   const priceId = subscription.items.data[0]?.price?.id ?? '';
   const planNickname = subscription.items.data[0]?.price?.nickname ?? 'unknown';

@@ -35,6 +35,8 @@ import { ActionDispatcher } from '../github/actionDispatcher.js';
 import { getInstallationToken, getOctokit } from '../github/auth.js';
 import * as messages from '../github/messages.js';
 import { SandboxExecutor } from '../sandbox/executor.js';
+import type { SandboxExecutor as SandboxExecutorInterface } from '../sandbox/types.js';
+import { DockerSandbox } from '../sandbox/docker.js';
 import { getTracker } from '../trackers/index.js';
 import { jobLogger, rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
@@ -96,7 +98,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     ? `https://github.com/${repoOwner}/${repoName}`
     : `https://github.com/${repoOwner}/${repoName}`;
 
-  let sandbox: SandboxExecutor | null = null;
+  let sandbox: SandboxExecutorInterface | null = null;
   let currentPhase = '';
   let receiptManifest = createManifest();
 
@@ -179,16 +181,19 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     // ── Phase 3: Boot sandbox ─────────────────────────────────────────
     currentPhase = '3-boot-sandbox';
     logger.info('Phase 3: Booting sandbox');
-    sandbox = new SandboxExecutor(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
-    await sandbox.boot();
-    await postStatus(
-      installationId,
-      repoOwner,
-      repoName,
-      issueNumber,
-      `⚙️ **Sandbox ready** — cloned repository, detected runtime, installed dependencies.`,
-    );
-    await withTimeout(sandbox.boot(), config.phaseTimeouts.sandboxBoot, '3-boot-sandbox');
+
+    // Try E2B sandbox first, fall back to Docker on failure
+    const e2bSandbox = new SandboxExecutor(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
+    try {
+      await withTimeout(e2bSandbox.boot(), config.phaseTimeouts.sandboxBoot, '3-boot-sandbox');
+      sandbox = e2bSandbox;
+    } catch (e2bErr) {
+      logger.warn({ err: String(e2bErr) }, 'E2B sandbox failed — trying Docker fallback');
+      const dockerSandbox = new DockerSandbox(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
+      await withTimeout(dockerSandbox.boot(), config.phaseTimeouts.sandboxBoot, '3-boot-sandbox');
+      sandbox = dockerSandbox;
+    }
+
     await postStatus(
       installationId,
       repoOwner,
@@ -648,7 +653,7 @@ interface CodeIntel {
   fileStructure: string;
 }
 
-async function buildCodeIntelligence(sandbox: SandboxExecutor): Promise<CodeIntel> {
+async function buildCodeIntelligence(sandbox: SandboxExecutorInterface): Promise<CodeIntel> {
   const intel: CodeIntel = {
     symbols: [],
     imports: {},
@@ -1002,7 +1007,7 @@ function parseConfidence(result: Record<string, unknown>): 'high' | 'medium' | '
  * regressions, and validate regression tests.
  */
 async function runVerification(
-  sandbox: SandboxExecutor,
+  sandbox: SandboxExecutorInterface,
   baseline: TestBaseline | null,
   testFilesBefore: string[],
   logger: { info: (obj: object, msg: string) => void; warn: (obj: object, msg: string) => void },
@@ -1025,6 +1030,7 @@ async function runVerification(
       preExistingTestsRegressed: false,
       unverified: true,
       details: ['No test suite configured'],
+      qualityGates: [],
     };
   }
 
@@ -1108,6 +1114,7 @@ async function runVerification(
     preExistingTestsRegressed,
     unverified,
     details,
+    qualityGates: [],
   };
 }
 
@@ -1118,39 +1125,19 @@ async function runVerification(
  * and a simpler approach.
  */
 async function attemptBasicFix(
-  sandbox: SandboxExecutor,
-  data: IssueJobData,
+  _sandbox: SandboxExecutorInterface,
+  _data: IssueJobData,
   _triage: TriageResult,
-  comments: string[],
+  _comments: string[],
 ): Promise<AgentResult> {
-  try {
-    // Run tests first to see baseline
-    const testResult = await sandbox.runTests();
-
-    // Build the tools
-    const tools = buildTools({
-      readFile: (path) => sandbox.readFile(path),
-      writeFile: (path, content) => sandbox.writeFile(path, content),
-      exec: (cmd) => sandbox.execForTools(cmd),
-      runTests: () => sandbox.runTests(),
-      formatCode: () => sandbox.formatCode(),
-      pushBranch: (branch) => sandbox.pushBranch(branch),
-    });
-
-    // attemptBasicFix was previously backed by OpenAI function calling.
-    // With the switch to OpenCode serve, this path always falls through
-    // to the final fallback (sandbox.execForTools attemptBasicFix).
-    log.warn('attemptBasicFix: OpenAI removed, skipping to final fallback');
-    throw new Error('attemptBasicFix not available (OpenAI removed)');
-  } catch (err) {
-    return {
-      summary: `Basic fix attempt failed: ${String(err)}`,
-      confidence: 'low',
-      fixReady: false,
-      errors: [String(err)],
-      noFixReason: `Agent unavailable and fallback failed: ${String(err)}`,
-    };
-  }
+  log.warn('attemptBasicFix: not available (OpenAI removed)');
+  return {
+    summary: 'Basic fix attempt failed: agent not available',
+    confidence: 'low',
+    fixReady: false,
+    errors: ['attemptBasicFix is no longer supported'],
+    noFixReason: 'Agent unavailable after OpenAI removal',
+  };
 }
 
 // Helpers ────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import type { Queue } from 'bullmq';
 
 import { config } from '../config.js';
 import { enqueueIssue } from '../queue/issueQueue.js';
@@ -117,9 +118,47 @@ export const bitbucketWebhook: PlatformWebhook = {
   },
 };
 
-export const bitbucketClient: PlatformClient = bitbucketPlatformClient;
+function createBitbucketPlatformClient(): BitbucketPlatformClient {
+  const token = `${config.bitbucket.username}:${config.bitbucket.appPassword}`;
+  return new BitbucketPlatformClient(token, config.bitbucket.baseUrl);
+}
 
-export function createBitbucketWebhooks() {
+export const bitbucketClient: PlatformClient = {
+  platform: 'bitbucket',
+
+  async createComment(repoOwner: string, repoName: string, issueNumber: number, body: string): Promise<void> {
+    const client = createBitbucketPlatformClient();
+    await client.createComment(`${repoOwner}/${repoName}`, issueNumber, body);
+  },
+
+  async createPullRequest(params: CreatePullRequestParams): Promise<{ url: string; number: number }> {
+    const client = createBitbucketPlatformClient();
+    const pr = await client.createPullRequest({
+      repoOwner: params.repoOwner,
+      repoName: params.repoName,
+      title: params.title,
+      head: params.head,
+      base: params.base,
+      body: params.body ?? '',
+    });
+    return { url: pr.url, number: pr.number };
+  },
+
+  toIssueJobData(event: PlatformWebhookEvent): IssueJobData {
+    return {
+      installationId: Number(event.issue.installationId ?? 0),
+      repoOwner: event.issue.repoOwner,
+      repoName: event.issue.repoName,
+      repoPrivate: event.issue.repoPrivate,
+      issueNumber: event.issue.number,
+      issueTitle: event.issue.title,
+      issueBody: event.issue.body,
+      source: 'bitbucket',
+    };
+  },
+};
+
+export function createBitbucketWebhooks(queue: Queue<IssueJobData>) {
   const handler = {
     platform: 'bitbucket' as const,
 
@@ -165,7 +204,7 @@ export function createBitbucketWebhooks() {
         };
 
         try {
-          await enqueueIssue(undefined, jobData);
+          await enqueueIssue(queue, jobData);
         } catch (err) {
           log.error(
             { err: String(err), repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },

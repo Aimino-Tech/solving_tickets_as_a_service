@@ -188,4 +188,4 @@ export function clearTierOverride(installationId: number): void {
  * The effective windowMs for the rate limiter — uses the env-var-configured
  * default if set, otherwise falls through to the Free tier's window.
  */
-export const DEFAULT_WINDOW_MS: number = config.stas.rateLimit?.windowMs ?? 60_000;
+export const DEFAULT_WINDOW_MS: number = config.stas.rateLimitWindowMs ?? 60_000;
