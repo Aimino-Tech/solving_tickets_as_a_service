@@ -17,6 +17,9 @@ export interface Run {
     errorMessage?: string;
     createdAt: string;
     updatedAt: string;
+    confidence?: 'high' | 'medium' | 'low';
+    diff?: string;
+    testOutput?: string;
 }
 export interface Repo {
     id: string;

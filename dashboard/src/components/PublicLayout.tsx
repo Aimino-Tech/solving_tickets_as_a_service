@@ -15,6 +15,7 @@ export default function PublicLayout() {
             <Link to="/security" className="text-sm font-medium text-gray-600 hover:text-brand-600">Security</Link>
             <Link to="/privacy" className="text-sm font-medium text-gray-600 hover:text-brand-600">Privacy</Link>
             <Link to="/status" className="text-sm font-medium text-gray-600 hover:text-brand-600">Status</Link>
+            <Link to="/enterprise" className="text-sm font-medium text-brand-600 hover:text-brand-700">Enterprise</Link>
             <Link to="/login" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Sign In</Link>
           </nav>
         </div>
@@ -30,6 +31,7 @@ export default function PublicLayout() {
               <Link to="/security" className="hover:text-brand-600">Security</Link>
               <Link to="/privacy" className="hover:text-brand-600">Privacy</Link>
               <Link to="/dpa" className="hover:text-brand-600">DPA</Link>
+              <Link to="/enterprise" className="hover:text-brand-600">Enterprise</Link>
               <Link to="/status" className="hover:text-brand-600">Status</Link>
             </div>
             <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} STAS. All rights reserved.</p>
