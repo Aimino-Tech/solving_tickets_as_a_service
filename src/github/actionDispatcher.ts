@@ -27,6 +27,7 @@ import { getOctokit } from './auth.js';
 import * as messages from '../platforms/messages.js';
 import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
 import { config } from '../config.js';
+import { scanDiff, buildSecurityAlertMessage } from '../security/diffScanner.js';
 import { runDetectionGate } from '../security/detection-gate.js';
 import { trackGateRun } from '../security/tracking.js';
 
@@ -175,6 +176,21 @@ export class ActionDispatcher {
           { findingCount: gateResult.findings.length },
           'Detection gate passed — no blocking findings',
         );
+      }
+
+      // 4.5b. Direct pattern scan (diffScanner.ts) — catches extra patterns
+      if (gateDiff && gateDiff.trim().length > 0) {
+        const directResult = scanDiff(gateDiff);
+        if (!directResult.safe) {
+          log.warn(
+            { issueNumber, findingCount: directResult.findings.length },
+            'Direct diff scanner blocked PR creation',
+          );
+          const alertBody = buildSecurityAlertMessage(directResult.findings);
+          const commentBody = messages.errorComment(alertBody);
+          await this.postComment(octokit, repoOwner, repoName, issueNumber, commentBody);
+          return { action: 'comment_posted', commentBody: commentBody };
+        }
       }
 
       // 5. Push branch and gather changed files

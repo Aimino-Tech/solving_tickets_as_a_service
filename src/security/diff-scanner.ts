@@ -176,6 +176,58 @@ export const PATTERNS: PatternDef[] = [
     message: 'Dangerous Node.js module required',
   },
 
+  // ── HIGH: System File Writes ─────────────────────────────────────────
+  {
+    severity: 'HIGH',
+    type: 'write-etc',
+    regex: /["'`][^"'`]*\/etc\//g,
+    message: 'Writing to /etc/ — system configuration modification',
+  },
+  {
+    severity: 'HIGH',
+    type: 'write-usr',
+    regex: /["'`][^"'`]*\/usr\/(?!share\/|local\/share\/|lib\/python|local\/lib\/python)/g,
+    message: 'Writing to /usr/ — system binary/library modification',
+  },
+  {
+    severity: 'HIGH',
+    type: 'write-root',
+    regex: /["'`][^"'`]*\/root\//g,
+    message: 'Writing to /root/ — root home directory modification',
+  },
+
+  // ── HIGH: Reverse Shells ──────────────────────────────────────────────
+  {
+    severity: 'HIGH',
+    type: 'reverse-shell',
+    regex: /(?:(?:bash|sh)\s+-i\s*[>&]|nc\s+-e\s+\/|ncat\s+-e\s+\/|revshell|reverse[\s_]*shell|\/dev\/tcp\/[0-9]|mkfifo\s+\/tmp|python\s+-c\s+['"]import\s+(?:pty|socket))/gi,
+    message: 'Reverse shell pattern detected — possible backdoor',
+  },
+
+  // ── HIGH: Environment Variable Exfiltration ───────────────────────────
+  {
+    severity: 'HIGH',
+    type: 'env-exfil',
+    regex: /(?:process\.env|os\.environ|getenv|env\[).*(?:curl|wget|fetch|request|axios|https?:\/\/)/gi,
+    message: 'Environment variables sent to external URL — possible exfiltration',
+  },
+
+  // ── HIGH: CI/CD Config Modification ───────────────────────────────────
+  {
+    severity: 'HIGH',
+    type: 'ci-config-mod',
+    regex: /["'`][^"'`]*(?:\.github\/workflows|\.gitlab-ci\.yml|\.circleci\/|Jenkinsfile|\.drone\.yml|\.woodpecker\/)/g,
+    message: 'CI/CD configuration modification — possible pipeline tampering',
+  },
+
+  // ── HIGH: SSH Key Writes ──────────────────────────────────────────────
+  {
+    severity: 'HIGH',
+    type: 'ssh-key-write',
+    regex: /(?:authorized_keys|id_rsa\b|id_ed25519\b|id_ecdsa\b|ssh-add\s|chmod\s+0[46]00\s+.*ssh)/gi,
+    message: 'SSH key modification detected — possible credential backdoor',
+  },
+
   // ── HIGH: Crypto Miners & Suspicious Network Calls ───────────────────
   {
     severity: 'HIGH',
