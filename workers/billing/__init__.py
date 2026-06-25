@@ -8,18 +8,18 @@ Per-tenant resource isolation:
     - Redis per-tenant rate limit counters
 
 Onboarding automation:
-    - OnboardingStateMachine -- per-tenant onboarding state machine.
-    - onboarding_middleware -- Celery signal gating for incomplete onboarding.
+    - OnboardingStateMachine — per-tenant onboarding state machine.
+    - onboarding_middleware — Celery signal gating for incomplete onboarding.
 
 Modules
 -------
     tenant_isolation
-        TenantIsolationManager -- queue, concurrency, workspace root, and rate
+        TenantIsolationManager — queue, concurrency, workspace root, and rate
         limit management for multi-tenant isolation.
     onboarding
-        OnboardingStateMachine -- per-tenant onboarding state machine.
+        OnboardingStateMachine — per-tenant onboarding state machine.
     onboarding_middleware
-        connect_onboarding_middleware -- Celery signal hook that gates task
+        connect_onboarding_middleware — Celery signal hook that gates task
         dispatch until onboarding is complete.
 """
 
