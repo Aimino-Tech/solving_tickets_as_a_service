@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """
 Linear GraphQL API client for STAS worker processes.
 
@@ -14,6 +15,8 @@ Usage::
 
 from __future__ import annotations
 
+=======
+>>>>>>> origin/main
 import logging
 import os
 from typing import Any
@@ -23,6 +26,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 LINEAR_API_URL = "https://api.linear.app/graphql"
+<<<<<<< HEAD
 LINEAR_API_KEY_ENV = "LINEAR_API_KEY"
 
 # Terminal workflow states that indicate a blocker is resolved
@@ -46,11 +50,20 @@ class LinearClient:
     def __init__(self, api_key: str | None = None) -> None:
         self._api_key = api_key or os.getenv(LINEAR_API_KEY_ENV, "")
         if not self._api_key:
+=======
+
+
+class LinearClient:
+    def __init__(self, api_key: str | None = None) -> None:
+        self.api_key = api_key or os.environ.get("LINEAR_API_KEY", "")
+        if not self.api_key:
+>>>>>>> origin/main
             raise ValueError(
                 "LINEAR_API_KEY is not set. "
                 "Pass api_key= or set the LINEAR_API_KEY environment variable."
             )
 
+<<<<<<< HEAD
         self._http = httpx.Client(
             base_url=LINEAR_API_URL,
             headers={
@@ -74,11 +87,41 @@ class LinearClient:
         mutation = """
         mutation CreateComment($input: CommentCreateInput!) {
             commentCreate(input: $input) {
+=======
+    def _graphql(
+        self,
+        query: str,
+        variables: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        headers = {
+            "Authorization": self.api_key,
+            "Content-Type": "application/json",
+        }
+        with httpx.Client() as client:
+            resp = client.post(
+                LINEAR_API_URL,
+                headers=headers,
+                json={"query": query, "variables": variables or {}},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if "errors" in data:
+                errors = data["errors"]
+                logger.error("Linear API error: %s", errors)
+                raise RuntimeError(f"Linear API error: {errors}")
+            return data.get("data", {})
+
+    def post_comment(self, issue_id: str, body: str) -> dict[str, Any]:
+        mutation = """
+        mutation CommentCreate($issueId: String!, $body: String!) {
+            commentCreate(input: { issueId: $issueId, body: $body }) {
+>>>>>>> origin/main
                 success
                 comment { id }
             }
         }
         """
+<<<<<<< HEAD
         try:
             data = self._request(
                 mutation,
@@ -98,6 +141,14 @@ class LinearClient:
     def transition_issue(self, issue_id: str, state_name: str) -> bool:
         """Move *issue_id* to the workflow state named *state_name*."""
         # 1. Fetch the team for this issue
+=======
+        result = self._graphql(mutation, {"issueId": issue_id, "body": body})
+        comment_data = result.get("commentCreate", {})
+        comment = comment_data.get("comment", {})
+        return {"id": comment.get("id", "")}
+
+    def transition_issue(self, issue_id: str, state_name: str) -> bool:
+>>>>>>> origin/main
         query_issue = """
         query IssueTeam($issueId: String!) {
             issue(id: $issueId) {
@@ -105,13 +156,20 @@ class LinearClient:
             }
         }
         """
+<<<<<<< HEAD
         issue_data = self._request(query_issue, {"issueId": issue_id})
+=======
+        issue_data = self._graphql(query_issue, {"issueId": issue_id})
+>>>>>>> origin/main
         team_id = issue_data.get("issue", {}).get("team", {}).get("id")
         if not team_id:
             logger.warning("Could not find team for issue %s", issue_id)
             return False
 
+<<<<<<< HEAD
         # 2. Get available workflow states for the team
+=======
+>>>>>>> origin/main
         query_states = """
         query TeamStates($teamId: String!) {
             team(id: $teamId) {
@@ -119,7 +177,11 @@ class LinearClient:
             }
         }
         """
+<<<<<<< HEAD
         states_data = self._request(query_states, {"teamId": team_id})
+=======
+        states_data = self._graphql(query_states, {"teamId": team_id})
+>>>>>>> origin/main
         states = (
             states_data.get("team", {}).get("states", {}).get("nodes", [])
         )
@@ -137,7 +199,10 @@ class LinearClient:
             )
             return False
 
+<<<<<<< HEAD
         # 3. Transition
+=======
+>>>>>>> origin/main
         mutation = """
         mutation IssueUpdate($issueId: String!, $stateId: String!) {
             issueUpdate(id: $issueId, input: { stateId: $stateId }) {
@@ -145,7 +210,11 @@ class LinearClient:
             }
         }
         """
+<<<<<<< HEAD
         self._request(mutation, {"issueId": issue_id, "stateId": target["id"]})
+=======
+        self._graphql(mutation, {"issueId": issue_id, "stateId": target["id"]})
+>>>>>>> origin/main
         logger.info(
             "Transitioned issue %s to state '%s' (%s)",
             issue_id,
@@ -153,6 +222,7 @@ class LinearClient:
             target["id"],
         )
         return True
+<<<<<<< HEAD
 
     # ------------------------------------------------------------------
     # Public API - dependency resolution
@@ -257,3 +327,5 @@ class LinearClient:
 
 class LinearAPIError(Exception):
     """Raised when the Linear API returns an error or is unreachable."""
+=======
+>>>>>>> origin/main
