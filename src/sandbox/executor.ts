@@ -46,7 +46,12 @@ export class E2BSandboxExecutor implements SandboxExecutorInterface {
     private repoName: string,
     private installationId: number,
     private getToken: (installationId: number) => Promise<string>,
-  ) {}
+    private fallbackToDocker: boolean = false,
+  ) {
+    if (fallbackToDocker) {
+      log.info('E2B sandbox executor created with Docker fallback enabled');
+    }
+  }
 
   private reportProgress(phase: string, progress: number, message?: string): void {
     if (this.progressCallback) {
