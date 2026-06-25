@@ -61,8 +61,13 @@ import { onboardingRouter } from './routes/onboarding.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
 import { pricingRouter } from './routes/pricing.js';
 import { plgRouter } from './routes/plg.js';
+import { samlRouter } from './routes/saml.js';
+import { enterpriseRouter } from './routes/enterprise.js';
 import { authRouter } from './routes/auth.js';
 import { reposRouter } from './routes/repos.js';
+import { runsRouter } from './routes/runs.js';
+import { badgeRouter } from './routes/badge.js';
+import { kpiRouter } from './routes/kpi.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -696,6 +701,15 @@ export function createApp(): express.Application {
 
   // ── Benchmarks API (public) ──────────────────────────────────────
   app.use('/api/benchmarks', benchmarksRouter);
+
+  // -- Pricing API (public) -----------------------------------------------
+  app.use('/api/pricing', pricingRouter);
+
+  // ── Public runs API and shareable run page (unauthenticated) ─────
+  app.use('/api/runs', runsRouter);
+
+  // ── Badge endpoint (shields.io-compatible SVGs) ──────────────────
+  app.use('/badge', badgeRouter);
 
   // ── PLG self-serve onboarding API ─────────────────────────────────
   app.use('/plg', plgRouter);
