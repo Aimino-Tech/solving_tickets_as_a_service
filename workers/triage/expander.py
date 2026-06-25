@@ -72,14 +72,16 @@ def _parse_llm_response(raw: str) -> dict[str, Any] | None:
 
     # Strip markdown code fences if present
     if text.startswith("```"):
+        # Find the first newline after opening fence
         first_nl = text.find("\n")
         if first_nl != -1:
             text = text[first_nl:]
+        # Strip closing fence
         end_fence = text.rfind("```")
         if end_fence != -1:
             text = text[:end_fence]
         text = text.strip()
-    # Strip leading "json" label
+    # Strip leading/trailing whitespace and any "json" label
     if text.startswith("json"):
         text = text[4:].strip()
 
@@ -214,12 +216,8 @@ def _keyword_fallback(title: str, body: str) -> ExpansionResult:
     effort = "medium"
 
     # Detect common patterns
-    has_error = any(
-        kw in combined for kw in ["error", "crash", "bug", "broken", "fail"]
-    )
-    has_feature = any(
-        kw in combined for kw in ["feature", "request", "add", "implement", "new"]
-    )
+    has_error = any(kw in combined for kw in ["error", "crash", "bug", "broken", "fail"])
+    has_feature = any(kw in combined for kw in ["feature", "request", "add", "implement", "new"])
 
     if has_error:
         acs = [

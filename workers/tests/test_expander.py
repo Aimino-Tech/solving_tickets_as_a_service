@@ -265,7 +265,9 @@ class TestExpandIssue:
             )
         ]
 
-        with patch("workers.triage.expander._get_llm_client") as mock_client_factory:
+        with (
+            patch("workers.triage.expander._get_llm_client") as mock_client_factory,
+        ):
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_client_factory.return_value = mock_client
