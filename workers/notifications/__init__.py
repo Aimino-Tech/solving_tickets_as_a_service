@@ -14,6 +14,8 @@ from workers.notifications import status_comments  # noqa: F401
 from workers.notifications import coalescer  # noqa: F401
 from workers.notifications import rate_limiter  # noqa: F401
 from workers.notifications import spam_filter  # noqa: F401
+from workers.notifications import oss_status  # noqa: F401
+from workers.notifications import oss_coalescer  # noqa: F401
 
 __all__ = [
     "dispatch_to_webhooks",
@@ -21,4 +23,6 @@ __all__ = [
     "coalescer",
     "rate_limiter",
     "spam_filter",
+    "oss_status",
+    "oss_coalescer",
 ]
