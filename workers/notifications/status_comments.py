@@ -49,6 +49,10 @@ import os
 from typing import Any
 
 from workers.notifications.coalescer import StageCoalescer
+from workers.notifications.snippets import (
+    get_evidence,
+    format_evidence_section,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +108,7 @@ STATUS_COMMENTS_ENABLED = os.getenv(
 # ---------------------------------------------------------------------------
 
 _coalescer: StageCoalescer | None = None
+_spam_filter: CommentSpamFilter | None = None
 
 
 def _get_coalescer() -> StageCoalescer:
@@ -117,16 +122,40 @@ def _get_coalescer() -> StageCoalescer:
     return _coalescer
 
 
+def _get_spam_filter() -> CommentSpamFilter:
+    """Return the shared ``CommentSpamFilter`` singleton."""
+    global _spam_filter
+    if _spam_filter is None:
+        _spam_filter = CommentSpamFilter(
+            coalesce_window_seconds=10.0,
+            dedup_window_seconds=30.0,
+            flush_callback=_flush_coalesced_events,
+        )
+    return _spam_filter
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _format_message(stage: str, status: str, message: str) -> str:
+def _format_message(
+    stage: str,
+    status: str,
+    message: str,
+    issue_id: str | None = None,
+) -> str:
     """Format a single stage status update as a comment body."""
     emoji = STAGE_EMOJI.get(stage, "\u2022")  # bullet fallback
     label = STAGE_LABELS.get(stage, stage.title())
-    return f"{emoji} **{label}**: {message}"
+    body = f"{emoji} **{label}**: {message}"
+
+    if issue_id:
+        evidence = get_evidence(issue_id, stage)
+        if evidence:
+            body += format_evidence_section(evidence)
+
+    return body
 
 
 def _sanitize_error(error: str, max_length: int = 500) -> str:
@@ -163,7 +192,7 @@ def _flush_coalesced_events(events: list[dict[str, Any]]) -> None:
         if len(issue_events) == 1:
             # Single event — post as a simple comment
             e = issue_events[0]
-            body = _format_message(e["stage"], e["status"], e["message"])
+            body = _format_message(e["stage"], e["status"], e["message"], issue_id=issue_id)
             _post_to_linear(issue_id, body)
             logger.info(
                 "Posted status comment issue=%s stage=%s status=%s",
@@ -177,6 +206,10 @@ def _flush_coalesced_events(events: list[dict[str, Any]]) -> None:
                 label = STAGE_LABELS.get(e["stage"], e["stage"].title())
                 status_icon = "\u2705" if e["status"] == "completed" else "\u274c"
                 lines.append(f"{emoji} **{label}** {status_icon} \u2014 {e['message']}")
+                if e["status"] == "completed":
+                    evidence = get_evidence(e["issue_id"], e["stage"])
+                    if evidence:
+                        lines.append(format_evidence_section(evidence))
 
             body = "\n".join(lines)
             _post_to_linear(issue_id, body)
@@ -240,7 +273,41 @@ def post_stage_comment(
         logger.debug("Status comments disabled \u2014 skipping stage=%s issue=%s", stage, issue_id)
         return {"status": "disabled"}
 
+    # Rate limiter check (AIM-2059)
+    if COMMENT_RATE_LIMIT_ENABLED:
+        tier = os.getenv(
+            f"ISSUE_{issue_id.upper()}_TIER",
+            os.getenv("STAS_DEFAULT_TIER", "free"),
+        )
+        limiter = get_comment_rate_limiter()
+        rate_result = limiter.check_and_increment(issue_id, tier=tier)
+        if not rate_result.allowed:
+            logger.info(
+                "Comment rate limit exceeded issue=%s tier=%s "
+                "current=%d limit=%d reset_in=%.0fs \u2014 skipping",
+                issue_id, tier, rate_result.current,
+                rate_result.limit, rate_result.reset_after_seconds,
+            )
+            return {
+                "status": "rate_limited",
+                "current": rate_result.current,
+                "limit": rate_result.limit,
+                "reset_after_seconds": rate_result.reset_after_seconds,
+            }
+
+    # Spam filter: dedup and coalesce (AIM-2059)
+    spam_filter = _get_spam_filter()
+    filter_result = spam_filter.filter(issue_id, stage, status, message)
+    if filter_result.action == "skip":
+        logger.debug(
+            "Spam filter skipped duplicate issue=%s stage=%s status=%s",
+            issue_id, stage, status,
+        )
+        return {"status": "skipped", "reason": filter_result.reason}
+
     if status == "completed":
+        if filter_result.action == "coalesce":
+            return {"status": "coalesced", "pending": spam_filter.pending_count}
         coalescer = _get_coalescer()
         coalescer.add_event(issue_id, stage, status, message)
         return {"status": "coalesced"}
@@ -248,7 +315,7 @@ def post_stage_comment(
     if status == "failed":
         message = _sanitize_error(message)
 
-    body = _format_message(stage, status, message)
+    body = _format_message(stage, status, message, issue_id=issue_id)
     try:
         _post_to_linear(issue_id, body)
         logger.info("Posted %s comment issue=%s stage=%s", status, issue_id, stage)
