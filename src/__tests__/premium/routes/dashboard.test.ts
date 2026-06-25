@@ -118,7 +118,7 @@ describe('premium dashboard routes', () => {
 
   describe('GET /runs/:id', () => {
     it('returns a run by id if found', async () => {
-      const { req, res } = mockReqRes('GET', '/runs/any-id');
+      const { req, res } = mockReqRes('GET', '/runs/repo-2');
       await invokeRoute(router, 'get', '/runs/:id', req, res);
 
       expect(res.statusCode).toBe(200);
@@ -342,7 +342,7 @@ function mockReqRes(method: string, path: string) {
 async function invokeRoute(
   router: import('express').Router,
   method: string,
-  path: string,
+  _path: string,
   req: any,
   res: any,
 ): Promise<void> {
@@ -353,7 +353,7 @@ async function invokeRoute(
       const routeMethods = layer.route.methods;
       const routePath = layer.route.path;
 
-      if (routeMethods[method] && matchesPath(routePath, path, req)) {
+      if (routeMethods[method] && matchesPath(routePath, req.path || req.url, req)) {
         for (const handler of layer.route.stack) {
           await new Promise<void>((resolve) => {
             const done = () => resolve();
