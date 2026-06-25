@@ -138,6 +138,31 @@ describe('quotaMiddleware', () => {
     );
   });
 
+  it('allows team tier with correct 500-fix limit', async () => {
+    const req = mockReq({ body: { installation: { id: 555 } } }) as Request;
+    const res = mockRes() as Response;
+    const next = vi.fn() as NextFunction;
+
+    vi.mocked(getTierForAccount).mockReturnValue('team');
+    vi.mocked(getFeatureGate).mockReturnValue({
+      concurrentFixes: 10,
+      monthlyFixQuota: 500,
+      premiumModels: true,
+      maxRetries: 10,
+      sandboxTimeoutMs: 900_000,
+      customWebhooks: true,
+      prioritySupport: true,
+    });
+    vi.mocked(getMonthlyUsage).mockResolvedValue(100);
+
+    await quotaMiddleware()(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(res.setHeader).toHaveBeenCalledWith('X-Tier', 'team');
+    expect(res.setHeader).toHaveBeenCalledWith('X-RateLimit-Limit', '500');
+    expect(res.setHeader).toHaveBeenCalledWith('X-RateLimit-Remaining', '400');
+  });
+
   it('allows enterprise tier regardless of usage', async () => {
     const req = mockReq({ body: { installation: { id: 555 } } }) as Request;
     const res = mockRes() as Response;

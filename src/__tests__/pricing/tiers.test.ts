@@ -21,9 +21,9 @@ import {
 import type { FeatureGate } from '../../pricing/tiers.js';
 
 describe('TIER_FEATURES', () => {
-  it('defines all three tiers', () => {
+  it('defines all four tiers', () => {
     const tiers = Object.keys(TIER_FEATURES);
-    expect(tiers).toEqual(['free', 'pro', 'enterprise']);
+    expect(tiers).toEqual(['free', 'pro', 'team', 'enterprise']);
   });
 
   // ---------------------------------------------------------------------------
@@ -97,13 +97,48 @@ describe('TIER_FEATURES', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Team tier
+  // ---------------------------------------------------------------------------
+  describe('team tier', () => {
+    const team: FeatureGate = TIER_FEATURES.team;
+
+    it('has 10 concurrent fixes', () => {
+      expect(team.concurrentFixes).toBe(10);
+    });
+
+    it('has monthly quota of 500 fixes', () => {
+      expect(team.monthlyFixQuota).toBe(500);
+    });
+
+    it('has premium models', () => {
+      expect(team.premiumModels).toBe(true);
+    });
+
+    it('has 10 max retries', () => {
+      expect(team.maxRetries).toBe(10);
+    });
+
+    it('has 15-minute sandbox timeout', () => {
+      expect(team.sandboxTimeoutMs).toBe(900_000);
+    });
+
+    it('has custom webhooks', () => {
+      expect(team.customWebhooks).toBe(true);
+    });
+
+    it('has priority support', () => {
+      expect(team.prioritySupport).toBe(true);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Enterprise tier
   // ---------------------------------------------------------------------------
   describe('enterprise tier', () => {
     const enterprise: FeatureGate = TIER_FEATURES.enterprise;
 
-    it('has 10+ concurrent fixes', () => {
-      expect(enterprise.concurrentFixes).toBeGreaterThanOrEqual(10);
+    it('has 50 concurrent fixes', () => {
+      expect(enterprise.concurrentFixes).toBe(50);
     });
 
     it('has effectively unlimited monthly quota (999_999+)', () => {
@@ -118,8 +153,8 @@ describe('TIER_FEATURES', () => {
       expect(enterprise.maxRetries).toBe(10);
     });
 
-    it('has 15-minute sandbox timeout', () => {
-      expect(enterprise.sandboxTimeoutMs).toBe(900_000);
+    it('has 30-minute sandbox timeout', () => {
+      expect(enterprise.sandboxTimeoutMs).toBe(1_800_000);
     });
 
     it('has custom webhooks', () => {
@@ -144,6 +179,10 @@ describe('getFeatureGate', () => {
     expect(getFeatureGate('pro')).toBe(TIER_FEATURES.pro);
   });
 
+  it('returns team config for team tier', () => {
+    expect(getFeatureGate('team')).toBe(TIER_FEATURES.team);
+  });
+
   it('returns enterprise config for enterprise tier', () => {
     expect(getFeatureGate('enterprise')).toBe(TIER_FEATURES.enterprise);
   });
@@ -156,6 +195,10 @@ describe('canUsePremiumModels', () => {
 
   it('returns true for pro tier', () => {
     expect(canUsePremiumModels('pro')).toBe(true);
+  });
+
+  it('returns true for team tier', () => {
+    expect(canUsePremiumModels('team')).toBe(true);
   });
 
   it('returns true for enterprise tier', () => {
@@ -172,6 +215,10 @@ describe('getMonthlyQuota', () => {
     expect(getMonthlyQuota('pro')).toBe(100);
   });
 
+  it('returns 500 for team tier', () => {
+    expect(getMonthlyQuota('team')).toBe(500);
+  });
+
   it('returns 999_999+ for enterprise tier', () => {
     expect(getMonthlyQuota('enterprise')).toBeGreaterThanOrEqual(999_999);
   });
@@ -186,8 +233,12 @@ describe('getConcurrentFixesLimit', () => {
     expect(getConcurrentFixesLimit('pro')).toBe(3);
   });
 
-  it('returns 10 for enterprise tier', () => {
-    expect(getConcurrentFixesLimit('enterprise')).toBe(10);
+  it('returns 10 for team tier', () => {
+    expect(getConcurrentFixesLimit('team')).toBe(10);
+  });
+
+  it('returns 50 for enterprise tier', () => {
+    expect(getConcurrentFixesLimit('enterprise')).toBe(50);
   });
 });
 
@@ -198,6 +249,10 @@ describe('getMaxRetries', () => {
 
   it('returns 4 for pro tier', () => {
     expect(getMaxRetries('pro')).toBe(4);
+  });
+
+  it('returns 10 for team tier', () => {
+    expect(getMaxRetries('team')).toBe(10);
   });
 
   it('returns 10 for enterprise tier', () => {
@@ -214,8 +269,12 @@ describe('getSandboxTimeoutMs', () => {
     expect(getSandboxTimeoutMs('pro')).toBe(600_000);
   });
 
-  it('returns 900_000 for enterprise tier', () => {
-    expect(getSandboxTimeoutMs('enterprise')).toBe(900_000);
+  it('returns 900_000 for team tier', () => {
+    expect(getSandboxTimeoutMs('team')).toBe(900_000);
+  });
+
+  it('returns 1_800_000 for enterprise tier', () => {
+    expect(getSandboxTimeoutMs('enterprise')).toBe(1_800_000);
   });
 });
 
@@ -235,37 +294,44 @@ describe('Feature gating - enforcement scenarios', () => {
     expect(canUsePremiumModels('pro')).toBe(true);
   });
 
-  it('model selection is gated: enterprise can use all models', () => {
+  it('model selection is gated: team and enterprise can use all models', () => {
+    expect(canUsePremiumModels('team')).toBe(true);
     expect(canUsePremiumModels('enterprise')).toBe(true);
   });
 
   it('sandbox timeout increases with tier', () => {
     const free = TIER_FEATURES.free.sandboxTimeoutMs;
     const pro = TIER_FEATURES.pro.sandboxTimeoutMs;
+    const team = TIER_FEATURES.team.sandboxTimeoutMs;
     const enterprise = TIER_FEATURES.enterprise.sandboxTimeoutMs;
 
     expect(free).toBeLessThan(pro);
-    expect(pro).toBeLessThan(enterprise);
+    expect(pro).toBeLessThan(team);
+    expect(team).toBeLessThan(enterprise);
   });
 
   it('max retries increase with tier', () => {
     const free = TIER_FEATURES.free.maxRetries;
     const pro = TIER_FEATURES.pro.maxRetries;
+    const team = TIER_FEATURES.team.maxRetries;
     const enterprise = TIER_FEATURES.enterprise.maxRetries;
 
     expect(free).toBeLessThan(pro);
-    expect(pro).toBeLessThan(enterprise);
+    expect(pro).toBeLessThanOrEqual(team);
+    expect(team).toBeLessThanOrEqual(enterprise);
   });
 
-  it('only enterprise has custom webhooks', () => {
+  it('team and enterprise have custom webhooks', () => {
     expect(TIER_FEATURES.free.customWebhooks).toBe(false);
     expect(TIER_FEATURES.pro.customWebhooks).toBe(false);
+    expect(TIER_FEATURES.team.customWebhooks).toBe(true);
     expect(TIER_FEATURES.enterprise.customWebhooks).toBe(true);
   });
 
   it('concurrent fix limits are enforced by tier', () => {
     expect(TIER_FEATURES.free.concurrentFixes).toBe(1);
     expect(TIER_FEATURES.pro.concurrentFixes).toBe(3);
-    expect(TIER_FEATURES.enterprise.concurrentFixes).toBeGreaterThanOrEqual(10);
+    expect(TIER_FEATURES.team.concurrentFixes).toBe(10);
+    expect(TIER_FEATURES.enterprise.concurrentFixes).toBe(50);
   });
 });

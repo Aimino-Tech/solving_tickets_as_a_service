@@ -269,8 +269,29 @@ Standard SaaS unit economics — subsidize acquisition with Free/Solo, monetize 
 | AGI inference | ~$3/fix | Our model, our infra |
 | Sandbox compute | ~$0.50/fix | E2B or similar |
 | Hosting + infra | ~$200/mo | Baseline |
-| 100 fixes on Solo plan | ~$350 cost | $49 revenue → negative margin on Solo |
-| 500 fixes on Team plan | ~$1,750 cost | $149 revenue → needs volume pricing on inference |
+
+### Per-Tier P&L
+
+Assuming average usage at tier limits:
+
+| Tier | Revenue | Fixes/mo | Inference Cost | Sandbox Cost | Infra Share | Total Cost | Gross Margin |
+|---|---|---|---|---|---|---|---|
+| Free (Cloud) | $0 | 10 | $30 | $5 | — | $35 | -100% |
+| Solo | $49 | 100 | $300 | $50 | — | $350 | -614% |
+| Team | $149 | 500 | $1,500 | $250 | — | $1,750 | -1,075% |
+| Enterprise (est.) | $10,000 | 2,000 | $6,000 | $1,000 | $500 | $7,500 | 25% |
+
+**P&L Notes:**
+
+1. **Solo is a deliberate loss-leader.** At 100 fixes/mo, inference alone costs $300 vs $49 revenue. Most Solo users use <30 fixes/mo (~$90 cost → -84% margin, still negative but less severe).
+
+2. **Team is also negative at full utilization** but customers rarely use all 500 fixes. At 30% utilization (150 fixes): ~$450 cost vs $149 revenue → -202% margin.
+
+3. **Enterprise is the profit center.** Volume inference pricing (~$3→$2.50), custom deployment, SLAs.
+
+4. **Path to healthy margins:**
+   - Reduce inference cost to ~$2/fix (volume + model optimization)
+   - Blended gross margin target: 40%+ by Year 2
 
 ---
 

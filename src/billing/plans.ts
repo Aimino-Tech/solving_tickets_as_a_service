@@ -181,13 +181,14 @@ export function getMonthlyFixLimit(planId: PlanId): number {
 /**
  * Map a plan ID to a tier string (used in the rate limiter / pricing modules).
  */
-export function planIdToTier(planId: PlanId): 'free' | 'pro' | 'enterprise' {
+export function planIdToTier(planId: PlanId): 'free' | 'pro' | 'team' | 'enterprise' {
   switch (planId) {
     case 'free':
       return 'free';
     case 'solo':
-    case 'team':
       return 'pro';
+    case 'team':
+      return 'team';
     case 'enterprise':
       return 'enterprise';
   }

@@ -65,7 +65,7 @@ export function createGithubWebhooks(): Webhooks {
     );
 
     const tier = getTierForAccount(payload.installation?.id ?? 0);
-    const priorityMap: Record<string, number> = { enterprise: 10, pro: 20, free: 30 };
+    const priorityMap: Record<string, number> = { enterprise: 10, team: 15, pro: 20, free: 30 };
     const jobData: IssueJobData = {
       installationId: payload.installation?.id ?? 0,
       repoOwner: payload.repository.owner.login,
@@ -163,7 +163,7 @@ export function createGithubWebhooks(): Webhooks {
       );
 
       const tier = getTierForAccount(payload.installation?.id ?? 0);
-      const priorityMap: Record<string, number> = { enterprise: 10, pro: 20, free: 30 };
+      const priorityMap: Record<string, number> = { enterprise: 10, team: 15, pro: 20, free: 30 };
       const jobData: IssueJobData = {
         installationId: payload.installation?.id ?? 0,
         repoOwner: payload.repository.owner.login,
@@ -283,6 +283,7 @@ export function createGithubWebhooks(): Webhooks {
 function mapMarketplacePlan(planName: string): BillingPlan['plan'] {
   const lower = planName.toLowerCase();
   if (lower.includes('enterprise')) return 'enterprise';
+  if (lower.includes('team')) return 'team';
   if (lower.includes('pro') || lower.includes('premium')) return 'pro';
   return 'free';
 }
