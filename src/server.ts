@@ -59,8 +59,11 @@ import { dpaRouter } from './routes/dpa.js';
 import { slaRouter } from './routes/sla.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
+<<<<<<< HEAD
 import { samlRouter } from './routes/saml.js';
 import { enterpriseRouter } from './routes/enterprise.js';
+=======
+import { plgRouter } from './routes/plg.js';
 import { authRouter } from './routes/auth.js';
 import { reposRouter } from './routes/repos.js';
 import { runsRouter } from './routes/runs.js';
@@ -690,6 +693,12 @@ export function createApp(): express.Application {
 
   // ── Onboarding API ──────────────────────────────────────────────
   app.use('/onboarding', onboardingRouter);
+
+  // Auth routes (OAuth login, callback, session)
+  app.use('/api/auth', authRouter);
+
+  // Repos API (repo picker with webhook status)
+  app.use('/api/repos', reposRouter);
 
   // ── Benchmarks API (public) ──────────────────────────────────────
   app.use('/api/benchmarks', benchmarksRouter);
