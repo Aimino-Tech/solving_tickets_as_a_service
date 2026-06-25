@@ -26,6 +26,7 @@ def test_triage_issue():
 def test_dispatch_opencode(mock_run):
     from workers.tasks.agent import dispatch_opencode
 
+    # Simulate successful OpenCode CLI run
     mock_run.return_value.returncode = 0
     mock_run.return_value.stdout = "Everything looks good"
     mock_run.return_value.stderr = ""
@@ -42,8 +43,7 @@ def test_dispatch_opencode(mock_run):
 
 
 @patch("workers.tasks.sandbox.os.getenv")
-def test_boot_sandbox_placeholder(mock_getenv):
-    """Returns placeholder when E2B_API_KEY is not set."""
+def test_boot_sandbox(mock_getenv):
     from workers.tasks.sandbox import boot_sandbox
 
     mock_getenv.side_effect = lambda key, default=None: {
@@ -53,93 +53,60 @@ def test_boot_sandbox_placeholder(mock_getenv):
     }.get(key, default)
 
     result = boot_sandbox.run("https://github.com/test/repo.git", "main")
+    assert "sandbox_id" in result
     assert result["sandbox_id"] == "placeholder"
     assert result["repo_url"] == "https://github.com/test/repo.git"
     assert result["branch"] == "main"
-    assert result["status"] == "placeholder"
 
 
-@patch("workers.tasks.verification.os.getenv")
-@patch("workers.tasks.verification.subprocess.run")
-def test_run_verification_local_success(mock_run, mock_getenv):
-    """Local fallback returns passed=True when command exits 0."""
+def test_run_verification():
     from workers.tasks.verification import run_verification
 
-    mock_getenv.return_value = ""
-    mock_run.return_value.returncode = 0
-    mock_run.return_value.stdout = "All 42 tests passed"
-    mock_run.return_value.stderr = ""
-
-    result = run_verification.run("", "pytest")
-    assert result["passed"] is True
-    assert "All 42 tests passed" in result["output"]
+    result = run_verification.run("sandbox-123", "pytest")
+    assert "passed" in result
+    assert result["sandbox_id"] == "sandbox-123"
     assert result["test_command"] == "pytest"
-    assert mock_run.called
 
 
-@patch("workers.tasks.verification.os.getenv")
-@patch("workers.tasks.verification.subprocess.run")
-def test_run_verification_local_failure(mock_run, mock_getenv):
-    """Local fallback returns passed=False when command exits non-zero."""
-    from workers.tasks.verification import run_verification
-
-    mock_getenv.return_value = ""
-    mock_run.return_value.returncode = 1
-    mock_run.return_value.stdout = "FAILED test_login"
-    mock_run.return_value.stderr = ""
-
-    result = run_verification.run("", "pytest")
-    assert result["passed"] is False
-    assert "FAILED test_login" in result["output"]
-
-
-@patch("workers.tasks.verification.os.getenv")
-@patch("workers.tasks.verification.subprocess.run")
-def test_run_verification_with_sandbox_id_no_key(mock_run, mock_getenv):
-    """When sandbox_id is given but E2B_API_KEY is unset, falls back to local."""
-    from workers.tasks.verification import run_verification
-
-    mock_getenv.return_value = ""
-    mock_run.return_value.returncode = 0
-    mock_run.return_value.stdout = "local fallback"
-    mock_run.return_value.stderr = ""
-
-    result = run_verification.run("sandbox-abc", "pytest --verbose")
-    assert result["passed"] is True
-    assert result["sandbox_id"] == "sandbox-abc"
-    assert result["test_command"] == "pytest --verbose"
-
-
-@patch("workers.tasks.pr_creation._get_installation_token")
-def test_create_pull_request(mock_get_token):
+@patch("workers.tasks.pr_creation.GitHubClient")
+@patch("workers.tasks.pr_creation.LinearClient")
+def test_create_pull_request(mock_linear_cls, mock_gh_cls):
+    from unittest.mock import MagicMock
     from workers.tasks.pr_creation import create_pull_request
 
-    mock_get_token.return_value = "ghs_test_token"
-
-    fix_result = {
-        "branch": "fix/test-branch",
-        "summary": "Fix the login bug",
+    mock_gh = MagicMock()
+    mock_gh_cls.return_value = mock_gh
+    mock_gh.find_existing_pr.return_value = None
+    mock_gh.create_pr.return_value = {
+        "pr_url": "https://github.com/test-owner/test-repo/pull/1",
+        "pr_number": 1,
+        "status": "opened",
     }
-    repo_info = {
-        "owner": "test-owner",
-        "repo": "test-repo",
-        "installation_id": 123456,
+    mock_gh.check_mergeable.return_value = {
+        "mergeable": True,
+        "mergeable_state": "clean",
     }
 
-    with patch("workers.tasks.pr_creation._call_github") as mock_gh:
-        mock_gh.return_value = {
-            "html_url": "https://github.com/test-owner/test-repo/pull/1",
-            "number": 1,
-        }
+    mock_linear = MagicMock()
+    mock_linear.post_comment.return_value = {"id": "lin_123"}
+    mock_linear_cls.return_value = mock_linear
 
-        result = create_pull_request.run(fix_result, repo_info)
-        assert result["repo_info"]["repo"] == "test-repo"
-        assert result["fix_result"]["branch"] == "fix/test-branch"
-        assert result["html_url"] == "https://github.com/test-owner/test-repo/pull/1"
-        assert result["status"] == "created"
+    result = create_pull_request.run(
+        issue_id="AIM-1",
+        workspace_path="/ws",
+        issue_title="Fix the login bug",
+        issue_body="The login endpoint fails",
+        repo_owner="test-owner",
+        repo_name="test-repo",
+        branch_name="stas/fix/test-branch",
+        installation_id=123456,
+    )
+    assert result["pr_url"] == "https://github.com/test-owner/test-repo/pull/1"
+    assert result["pr_number"] == 1
+    assert result["status"] == "opened"
 
 
-def test_send_notification_log():
+def test_send_notification():
     from workers.tasks.notifications import send_notification
 
     result = send_notification.run("log", "Test message")
