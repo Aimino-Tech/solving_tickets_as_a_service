@@ -7,10 +7,13 @@
  *   const issue = await client.getIssue('owner/repo', 42);
  */
 
-import type { PlatformClient, PlatformConfig } from './interface.js';
+import type { PlatformClient } from '../webhooks/base.js';
+import type { PlatformConfig } from './interface.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'platform-registry' });
+
+const clientRegistry = new Map<string, PlatformClient>();
 
 /**
  * Get a PlatformClient for the given configuration.
@@ -50,4 +53,17 @@ export async function getClient(config: PlatformConfig): Promise<PlatformClient>
       throw new Error(msg);
     }
   }
+}
+
+export function registerPlatformClient(name: string, client: PlatformClient): void {
+  clientRegistry.set(name, client);
+  log.info({ platform: name }, 'Registered platform client');
+}
+
+export function getPlatformClient(name: string): PlatformClient | undefined {
+  return clientRegistry.get(name);
+}
+
+export function getAllPlatformClients(): Map<string, PlatformClient> {
+  return clientRegistry;
 }

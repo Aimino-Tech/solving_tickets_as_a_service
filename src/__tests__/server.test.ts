@@ -304,7 +304,7 @@ vi.mock('../trackers/linear.js', () => ({
   verifyLinearWebhookSignature: vi.fn().mockReturnValue(true),
 }));
 vi.mock('../ratelimit/middleware.js', () => ({
-  rateLimitMiddleware: vi.fn(() => (req, res, next) => next()),
+  rateLimitMiddleware: vi.fn(() => (req: any, res: any, next: any) => next()),
 }));
 vi.mock('../security/securityHeaders.js', () => ({
   buildHelmetConfig: vi.fn().mockReturnValue({}),
@@ -747,96 +747,51 @@ function fetchApp(
   },
 ): Promise<FetchResponse> {
   return new Promise((resolve, reject) => {
-    const method = options?.method ?? 'GET';
-    const headers = options?.headers ?? {};
-    const body = options?.body;
+    const server = require('http').createServer(app);
+    server.listen(0, '127.0.0.1', () => {
+      const addr = server.address();
+      if (!addr || typeof addr === 'string') {
+        server.close();
+        reject(new Error('Failed to get server address'));
+        return;
+      }
+      const port = addr.port;
+      const method = options?.method ?? 'GET';
+      const headers = options?.headers ?? {};
 
-    const chunks: Buffer[] = [];
+      const req = require('http').request(
+        { hostname: '127.0.0.1', port, path, method, headers },
+        (res: any) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: any) => chunks.push(Buffer.from(chunk)));
+          res.on('end', () => {
+            server.close();
+            const responseHeaders: Record<string, string> = {};
+            if (res.headers) {
+              for (const [key, value] of Object.entries(res.headers)) {
+                if (value !== undefined) {
+                  responseHeaders[key] = Array.isArray(value) ? value.join(', ') : String(value);
+                }
+              }
+            }
+            resolve({
+              status: res.statusCode ?? 200,
+              body: Buffer.concat(chunks).toString('utf-8'),
+              headers: responseHeaders,
+            });
+          });
+        },
+      );
 
-    // Create a minimal Request-like object
-    const req = {
-      method,
-      url: path,
-      headers,
-      rawBody: body ? Buffer.from(body) : undefined,
-      socket: { setTimeout: () => {} },
-      on: () => {},
-      push: () => {},
-    } as any;
+      req.on('error', (err: Error) => {
+        server.close();
+        reject(err);
+      });
 
-    if (body) {
-      req.push(body);
-    }
-    req.push(null);
-
-    // Create a minimal Response-like object
-    const res = {
-      statusCode: 200,
-      _headers: {} as Record<string, string>,
-      status(code: number) {
-        this.statusCode = code;
-        return this;
-      },
-      send(body: any) {
-        if (typeof body === 'object' && body !== null) {
-          this._headers['content-type'] = 'application/json';
-          const str = JSON.stringify(body);
-          chunks.push(Buffer.from(str));
-        } else if (body) {
-          chunks.push(Buffer.from(String(body)));
-        }
-        this.end();
-        return this;
-      },
-      json(obj: any) {
-        const str = JSON.stringify(obj);
-        this._headers['content-type'] = 'application/json';
-        chunks.push(Buffer.from(str));
-        this.end();
-        return this;
-      },
-      set(field: string, val: string) {
-        this._headers[field] = val;
-        return this;
-      },
-      setHeader(name: string, value: string) {
-        this._headers[name] = value;
-        return this;
-      },
-      getHeader(name: string) {
-        return this._headers[name];
-      },
-      getHeaderNames() {
-        return Object.keys(this._headers);
-      },
-      getHeaders() {
-        return { ...this._headers };
-      },
-      end(chunk?: any) {
-        if (chunk) chunks.push(Buffer.from(chunk));
-        resolve({
-          status: this.statusCode,
-          body: Buffer.concat(chunks).toString('utf-8'),
-          headers: { ...this._headers },
-        });
-      },
-      write(chunk: any) {
-        if (chunk) chunks.push(Buffer.from(chunk));
-        return true;
-      },
-      writeHead(statusCode: number) {
-        this.statusCode = statusCode;
-        return this;
-      },
-      type(contentType: string) {
-        this._headers['content-type'] = contentType;
-        return this;
-      },
-      on: () => {},
-    } as any;
-
-    app(req, res, (err?: any) => {
-      if (err) reject(err);
+      if (options?.body) {
+        req.write(options.body);
+      }
+      req.end();
     });
   });
 }

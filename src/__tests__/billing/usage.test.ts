@@ -3,13 +3,13 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const mockRedisClient = {
+const mockRedisClient = vi.hoisted(() => ({
   zcount: vi.fn(), zadd: vi.fn(), expire: vi.fn(),
   pipeline: vi.fn(() => ({ zadd: vi.fn().mockReturnThis(), expire: vi.fn().mockReturnThis(), exec: vi.fn().mockResolvedValue([]) })),
   del: vi.fn(), quit: vi.fn(), on: vi.fn(),
-};
+}));
 
-vi.mock('ioredis', () => ({ default: vi.fn(() => mockRedisClient), Redis: vi.fn(() => mockRedisClient) }));
+vi.mock('ioredis', () => ({ default: vi.fn(function () { return mockRedisClient; }), Redis: vi.fn(function () { return mockRedisClient; }) }));
 vi.mock('../../config.js', () => ({ config: { queue: { redisUrl: 'redis://localhost:6379' }, stripe: { soloPriceId: 'price_solo_mock', teamPriceId: 'price_team_mock' } } }));
 vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) } }));
 

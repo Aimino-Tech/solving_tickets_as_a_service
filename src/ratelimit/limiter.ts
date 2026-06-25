@@ -116,8 +116,8 @@ export class RateLimiter {
   private readonly max: number;
 
   constructor(options?: Partial<RateLimiterOptions>) {
-    this.windowMs = options?.windowMs ?? config.stas.rateLimit.windowMs;
-    this.max = options?.max ?? config.stas.rateLimit.max;
+    this.windowMs = options?.windowMs ?? config.stas.rateLimitWindowMs;
+    this.max = options?.max ?? config.stas.rateLimitMax;
   }
 
   // ── Public API ──────────────────────────────────────────────────────────

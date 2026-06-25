@@ -287,6 +287,18 @@ describe('config', () => {
       expect(cfg.database.ssl).toBe(true);
     });
 
+    it('coerces boolean env vars correctly — STAS_MONTHLY_QUOTA_ENABLED=false stays false', () => {
+      vi.stubEnv('STAS_MONTHLY_QUOTA_ENABLED', 'false');
+      const cfg = configModule.requireConfig();
+      expect(cfg.stas.monthlyQuotaEnabled).toBe(false);
+    });
+
+    it('coerces boolean env vars correctly — STAS_MONTHLY_QUOTA_ENABLED=true', () => {
+      vi.stubEnv('STAS_MONTHLY_QUOTA_ENABLED', 'true');
+      const cfg = configModule.requireConfig();
+      expect(cfg.stas.monthlyQuotaEnabled).toBe(true);
+    });
+
     it('throws with a descriptive error message listing all failures', () => {
       vi.stubEnv('GITHUB_APP_ID', '');
       vi.stubEnv('GITHUB_WEBHOOK_SECRET', '');
@@ -355,8 +367,9 @@ describe('config', () => {
       expect(cfg.opencode).toHaveProperty("url");
       expect(cfg.opencode).toHaveProperty("model");
       expect(cfg.opencode).toHaveProperty("fallbackModels");
+      expect(cfg.opencode.direct).toHaveProperty("apiKey");
       expect(cfg.e2b).toHaveProperty("sandboxTimeoutMs");
-      expect(cfg.rateLimit).toHaveProperty("max");
+      expect(cfg.stas).toHaveProperty("rateLimitMax");
       expect(cfg.phaseTimeouts).toHaveProperty("triage");
       expect(cfg.phaseTimeouts).toHaveProperty("sandboxBoot");
       expect(cfg.phaseTimeouts).toHaveProperty("openCodeAgent");

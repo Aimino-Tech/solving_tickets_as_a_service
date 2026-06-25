@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.0/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
   "files": {
     "includes": ["**", "!**/node_modules", "!**/dist", "!**/build", "!**/plugin"]
   },
@@ -13,10 +13,16 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended",
+      "recommended": true,
       "style": {
         "noNonNullAssertion": "off",
-        "useConst": "error"
+        "useConst": "error",
+        "noTodoComment": {
+          "level": "warn",
+          "options": {
+            "terms": ["TODO", "FIXME", "HACK", "XXX"]
+          }
+        }
       },
       "complexity": {
         "noBannedTypes": "off",

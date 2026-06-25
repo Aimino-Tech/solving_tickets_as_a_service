@@ -1,13 +1,12 @@
 """
-AgentConcurrencyLimiter --- limits the number of concurrently running agents.
+AgentConcurrencyLimiter — limits concurrent agent executions via Redis.
 
-Uses Redis to track active agent slots across workers.  Designed to prevent
-overwhelming the OpenCode backend or the host machine.
+Uses a Redis SET to track active agent slots. Prevents overwhelming
+the OpenCode backend when many issues are processed simultaneously.
 
 Configuration:
-    ``AGENT_MAX_CONCURRENT`` (env var, default 3) --- maximum concurrent agents.
-    ``AGENT_CONCURRENCY_TIMEOUT_S`` (env var, default 600) --- max time a slot
-    can be held before it's considered stale and eligible for reclamation.
+    AGENT_MAX_CONCURRENT (env var, default 3) — max concurrent agents.
+    AGENT_CONCURRENCY_TIMEOUT_S (env var, default 600) — slot staleness timeout.
 """
 
 import json
@@ -18,246 +17,113 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
 _MAX_CONCURRENT = int(os.getenv("AGENT_MAX_CONCURRENT", "3"))
 _SLOT_TIMEOUT_S = int(os.getenv("AGENT_CONCURRENCY_TIMEOUT_S", "600"))
 _REDIS_KEY = "stas:agent:active_slots"
-_REDIS_SLOT_PREFIX = "stas:agent:slot:"
-
-
-# ---------------------------------------------------------------------------
-# Redis client (lazy)
-# ---------------------------------------------------------------------------
+_SLOT_PREFIX = "stas:agent:slot:"
 
 _REDIS_CLIENT: Optional[Any] = None
 
 
 def _get_redis() -> Optional[Any]:
-    """Lazy-init Redis client."""
     global _REDIS_CLIENT
     if _REDIS_CLIENT is not None:
         return _REDIS_CLIENT
     try:
         import redis as _redis_mod
-
         url = os.getenv("REDIS_URL", os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0"))
         _REDIS_CLIENT = _redis_mod.from_url(url, decode_responses=True)
         _REDIS_CLIENT.ping()
         return _REDIS_CLIENT
     except Exception as exc:
-        logger.warning("AgentConcurrencyLimiter Redis unavailable --- %s", exc)
+        logger.warning("Concurrency limiter Redis unavailable — %s", exc)
         _REDIS_CLIENT = None
         return None
 
 
-# ---------------------------------------------------------------------------
-# AgentConcurrencyLimiter
-# ---------------------------------------------------------------------------
-
 class AgentConcurrencyLimiter:
-    """Limits the number of concurrently running agent processes.
+    """Limits concurrent agent executions.
 
-    Uses a Redis SET to track active issue IDs.  When the set size reaches
-    ``_MAX_CONCURRENT``, new agents are denied a slot until one is released.
+    Uses a Redis SET to track active issue IDs. When the set reaches
+    ``max_concurrent``, ``acquire()`` returns ``False``.
 
     Usage::
 
-        limiter = AgentConcurrencyLimiter()
+        limiter = AgentConcurrencyLimiter(max_concurrent=3)
         if limiter.acquire("issue-42"):
             try:
-                # ... run agent ...
-                pass
+                ... run agent ...
             finally:
                 limiter.release("issue-42")
-        else:
-            logger.info("Concurrency limit reached, queuing")
     """
 
     def __init__(self, max_concurrent: int = _MAX_CONCURRENT) -> None:
         self.max_concurrent = max_concurrent
 
-    # ------------------------------------------------------------------
-    # Acquire
-    # ------------------------------------------------------------------
-
     def acquire(self, issue_id: str) -> bool:
-        """Try to acquire a concurrency slot for ``issue_id``.
-
-        Returns:
-            True if a slot was acquired (caller may proceed).
-            False if the limit is reached (caller should queue/retry).
-        """
+        """Try to acquire a concurrency slot. Returns True if acquired."""
         client = _get_redis()
         if not client:
-            # Redis unavailable: allow (degrade gracefully in dev)
-            logger.warning("Redis unavailable --- allowing agent slot (degraded)")
-            return True
+            return True  # degrade gracefully
 
         try:
-            # -- Prune stale slots ------------------------
-            self._prune_stale_slots(client)
-
-            # -- Check current count ----------------------
-            current = client.scard(_REDIS_KEY)
-            if current is not None and current >= self.max_concurrent:
-                logger.info(
-                    json.dumps({
-                        "event": "concurrency.slot_denied",
-                        "issue_id": issue_id,
-                        "active_slots": current,
-                        "max_concurrent": self.max_concurrent,
-                    })
-                )
+            self._prune_stale(client)
+            member = _SLOT_PREFIX + issue_id
+            current = client.scard(_REDIS_KEY) or 0
+            if current >= self.max_concurrent:
+                logger.info(json.dumps({"event": "concurrency.denied", "issue_id": issue_id, "active": current, "max": self.max_concurrent}))
                 return False
 
-            # -- Acquire slot -----------------------------
-            member = _REDIS_SLOT_PREFIX + issue_id
-            added = client.sadd(_REDIS_KEY, member)
-            if added:
-                # Store metadata for staleness checks
-                slot_meta_key = f"{member}:meta"
-                client.hset(slot_meta_key, mapping={
-                    "issue_id": issue_id,
-                    "acquired_at": str(time.time()),
-                    "ttl": str(_SLOT_TIMEOUT_S),
-                })
-                client.expire(slot_meta_key, _SLOT_TIMEOUT_S + 60)
-
-                current_after = client.scard(_REDIS_KEY)
-                logger.info(
-                    json.dumps({
-                        "event": "concurrency.slot_acquired",
-                        "issue_id": issue_id,
-                        "active_slots": current_after,
-                        "max_concurrent": self.max_concurrent,
-                    })
-                )
+            if client.sadd(_REDIS_KEY, member):
+                meta_key = f"{member}:meta"
+                client.hset(meta_key, mapping={"issue_id": issue_id, "acquired_at": str(time.time())})
+                client.expire(meta_key, _SLOT_TIMEOUT_S + 60)
+                logger.info(json.dumps({"event": "concurrency.acquired", "issue_id": issue_id, "active": client.scard(_REDIS_KEY), "max": self.max_concurrent}))
                 return True
-
-            # Already present (duplicate acquire)
-            logger.warning(
-                json.dumps({
-                    "event": "concurrency.slot_already_held",
-                    "issue_id": issue_id,
-                })
-            )
-            return True
-
+            return True  # already held
         except Exception as exc:
-            logger.error(
-                json.dumps({
-                    "event": "concurrency.acquire_error",
-                    "issue_id": issue_id,
-                    "error": str(exc),
-                })
-            )
-            # Degrade gracefully: allow
+            logger.error(json.dumps({"event": "concurrency.error", "error": str(exc)}))
             return True
-
-    # ------------------------------------------------------------------
-    # Release
-    # ------------------------------------------------------------------
 
     def release(self, issue_id: str) -> None:
-        """Release the concurrency slot held by ``issue_id``."""
+        """Release the concurrency slot."""
         client = _get_redis()
         if not client:
             return
-
         try:
-            member = _REDIS_SLOT_PREFIX + issue_id
-            removed = client.srem(_REDIS_KEY, member)
-            if removed:
-                # Clean up metadata
-                slot_meta_key = f"{member}:meta"
-                client.delete(slot_meta_key)
-
-                current = client.scard(_REDIS_KEY)
-                logger.info(
-                    json.dumps({
-                        "event": "concurrency.slot_released",
-                        "issue_id": issue_id,
-                        "active_slots_remaining": current,
-                    })
-                )
-            else:
-                logger.debug(
-                    "concurrency.slot_not_held issue_id=%s", issue_id
-                )
+            member = _SLOT_PREFIX + issue_id
+            client.srem(_REDIS_KEY, member)
+            client.delete(f"{member}:meta")
         except Exception as exc:
-            logger.error(
-                json.dumps({
-                    "event": "concurrency.release_error",
-                    "issue_id": issue_id,
-                    "error": str(exc),
-                })
-            )
-
-    # ------------------------------------------------------------------
-    # Status
-    # ------------------------------------------------------------------
+            logger.error(json.dumps({"event": "concurrency.release_error", "error": str(exc)}))
 
     def active_count(self) -> int:
-        """Return the number of currently active agent slots."""
         client = _get_redis()
         if not client:
             return 0
         try:
-            count = client.scard(_REDIS_KEY)
-            return count if count is not None else 0
+            return client.scard(_REDIS_KEY) or 0
         except Exception:
             return 0
 
-    def is_acquired(self, issue_id: str) -> bool:
-        """Check if ``issue_id`` currently holds a slot."""
-        client = _get_redis()
-        if not client:
-            return False
+    def _prune_stale(self, client: Any) -> None:
+        """Remove slots that have exceeded the timeout."""
         try:
-            member = _REDIS_SLOT_PREFIX + issue_id
-            return bool(client.sismember(_REDIS_KEY, member))
-        except Exception:
-            return False
-
-    # ------------------------------------------------------------------
-    # Internal
-    # ------------------------------------------------------------------
-
-    def _prune_stale_slots(self, client: Any) -> None:
-        """Remove slots that have exceeded the timeout.
-
-        This prevents dead slots from permanently blocking the concurrency
-        limit when a worker crashes without releasing its slot.
-        """
-        try:
-            members = client.smembers(_REDIS_KEY)
+            members = client.smembers(_REDIS_KEY) or set()
             now = time.time()
-            for member in members or set():
-                slot_meta_key = f"{member}:meta"
-                raw = client.hget(slot_meta_key, "acquired_at")
+            for member in members:
+                meta_key = f"{member}:meta"
+                raw = client.hget(meta_key, "acquired_at")
                 if raw:
                     try:
-                        acquired_at = float(raw)
-                        if now - acquired_at > _SLOT_TIMEOUT_S:
+                        if now - float(raw) > _SLOT_TIMEOUT_S:
                             client.srem(_REDIS_KEY, member)
-                            client.delete(slot_meta_key)
-                            logger.warning(
-                                json.dumps({
-                                    "event": "concurrency.slot_stale_pruned",
-                                    "member": member,
-                                    "age_s": round(now - acquired_at, 1),
-                                })
-                            )
+                            client.delete(meta_key)
                     except (ValueError, TypeError):
-                        # Corrupt metadata --- remove
                         client.srem(_REDIS_KEY, member)
-                        client.delete(slot_meta_key)
-        except Exception as exc:
-            logger.debug("Failed to prune stale slots --- %s", exc)
-
+                        client.delete(meta_key)
+        except Exception:
+            pass
 
 # ---------------------------------------------------------------------------
 # Module-level convenience instance

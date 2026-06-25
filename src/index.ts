@@ -35,7 +35,6 @@ import type { Server } from 'node:http';
 import { config } from './config.js';
 import { startScheduledTasks, stopScheduledTasks } from './health/scheduled.js';
 import { opencodeHealth } from './health/opencodeHealth.js';
-import { closeHealthRedis } from './health/queueHealth.js';
 import { rootLogger } from './utils/logger.js';
 import { addBreadcrumb } from './monitoring/sentry.js';
 
@@ -49,7 +48,7 @@ let shutdownInProgress = false;
  * Fails fast with clear error message if any required service is unreachable.
  */
 async function validateStartupHealth(): Promise<void> {
-  const checks: { name: string; ok: boolean; error?: string; detail?: string }[] = [];
+  const checks: { name: string; ok: boolean; error?: string }[] = [];
 
   // Check Redis
   try {
@@ -95,23 +94,16 @@ async function validateStartupHealth(): Promise<void> {
     checks.push({ name: 'opencode', ok: false, error: opencodeError ?? 'timeout' });
   }
 
-  // Check E2B if configured — verify the configured template exists
+  // Check E2B if configured
   if (config.e2b.apiKey) {
     try {
-      const { validateE2bTemplate } = await import('./sandbox/validate.js');
-      const result = await validateE2bTemplate();
-      if (result.ok) {
-        checks.push({ name: 'e2b', ok: true, detail: `template=${result.templateId}` });
-      } else {
-        const fallbackNote = config.e2b.fallbackToDocker
-          ? ' (Docker fallback enabled)'
-          : '';
-        checks.push({
-          name: 'e2b',
-          ok: false,
-          error: result.error + fallbackNote,
-        });
-      }
+      const { Sandbox } = await import('e2b');
+      const sandbox = await Sandbox.create({
+        apiKey: config.e2b.apiKey,
+        timeoutMs: 5000,
+      });
+      await sandbox.kill();
+      checks.push({ name: 'e2b', ok: true });
     } catch (err) {
       checks.push({ name: 'e2b', ok: false, error: String(err) });
     }
@@ -186,13 +178,6 @@ async function main(): Promise<void> {
 
     // Stop OpenCode health client polling
     opencodeHealth.stop();
-
-    // Close health Redis connection
-    try {
-      await closeHealthRedis();
-    } catch (err) {
-      log.warn({ err: String(err) }, 'Error closing health Redis (non-fatal)');
-    }
 
     process.exit(0);
   };
