@@ -2122,6 +2122,15 @@ components:
         description:
           type: string
           nullable: true
+      required:
+        - accountId
+        - newBalance
+        - amount
+        - type
+            credits:
+              type: number
+            runs:
+              type: number
         forecast:
           type: object
           properties:
@@ -2141,10 +2150,8 @@ components:
             estimatedOverage:
               type: integer
       required:
-        - accountId
-        - newBalance
-        - amount
-        - type
+        - forecastDate
+        - month
 
     # ── User ────────────────────────────────────────────────────────────────
     UserProfile:
