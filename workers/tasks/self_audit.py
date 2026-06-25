@@ -102,13 +102,6 @@ def orchestrate_pipeline(self, issue_data: dict) -> dict:
                 "task": "workers.quality.analyzer.quality_analyze",
             }
 
-        if "skip_expand_ticket" not in issue_data:
-            steps.append("expand_ticket")
-            results["expand_ticket"] = {
-                "status": "queued",
-                "task": "workers.tasks.ticket_expander.expand_ticket",
-            }
-
         steps.append("agent_dispatch")
         results["agent_dispatch"] = {
             "status": "queued",

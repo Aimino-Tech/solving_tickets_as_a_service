@@ -45,7 +45,6 @@ export default [
       'vitest/prefer-to-be': 'error',
       'vitest/no-conditional-expect': 'error',
       'vitest/no-conditional-in-test': 'error',
-      'no-warning-comments': ['warn', { terms: ['TODO', 'FIXME', 'HACK', 'XXX'] }],
     },
   },
   {

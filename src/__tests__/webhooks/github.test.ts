@@ -489,10 +489,12 @@ describe('createGithubWebhooks', () => {
       expect(mockEnqueueIssue).toHaveBeenCalledTimes(2);
       expect(mockEnqueueIssue).toHaveBeenNthCalledWith(
         1,
+        undefined,
         expect.objectContaining({ installationId: 555, repoOwner: 'owner', repoName: 'test-repo', issueNumber: 42 }),
       );
       expect(mockEnqueueIssue).toHaveBeenNthCalledWith(
         2,
+        undefined,
         expect.objectContaining({ installationId: 555, repoOwner: 'owner', repoName: 'test-repo', issueNumber: 42 }),
       );
     });

@@ -45,6 +45,10 @@ async function ensureMigrationTable(): Promise<void> {
 
 async function applyMigration(name: string, sql: string, checksum: string): Promise<void> {
   const client = await getPool().connect();
+  if (!client) {
+    log.error({ migration: name }, 'Failed to get database client');
+    throw new Error('Failed to get database client');
+  }
   try {
     await client.query('BEGIN');
 
@@ -61,7 +65,7 @@ async function applyMigration(name: string, sql: string, checksum: string): Prom
     log.error({ err, migration: name }, 'Migration failed, rolled back');
     throw err;
   } finally {
-    client.release();
+    if (client) client.release();
   }
 }
 
@@ -71,6 +75,7 @@ async function applyMigration(name: string, sql: string, checksum: string): Prom
 
 async function getAppliedMigrations(): Promise<Set<string>> {
   const result = await queryWithRetry<{ name: string }>(`SELECT name FROM "${MIGRATION_TABLE}" ORDER BY id`);
+  if (!result || !result.rows) return new Set();
   return new Set(result.rows.map((r) => r.name));
 }
 
@@ -212,7 +217,7 @@ export async function rollbackLastBatchDryRun(): Promise<DryRunResult[]> {
      ORDER BY id DESC`,
   );
 
-  if (result.rows.length === 0) {
+  if (!result || !result.rows || result.rows.length === 0) {
     log.info('Dry-run: no migrations to roll back');
     return [];
   }
@@ -259,7 +264,7 @@ export async function rollbackLastBatch(): Promise<void> {
      ORDER BY id DESC`,
   );
 
-  if (result.rows.length === 0) {
+  if (!result || !result.rows || result.rows.length === 0) {
     log.info('No migrations to roll back');
     return;
   }

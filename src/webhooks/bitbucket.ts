@@ -5,7 +5,12 @@ import { enqueueIssue } from '../queue/issueQueue.js';
 import { rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
 import type { CreatePullRequestParams, PlatformClient, PlatformWebhook, PlatformWebhookEvent } from './base.js';
-import { bitbucketPlatformClient } from '../platforms/bitbucket/index.js';
+import { BitbucketPlatformClient } from '../platforms/bitbucket/index.js';
+import { createBitbucketConfig } from '../platforms/bitbucket/config.js';
+
+const bbConfig = createBitbucketConfig();
+const bbToken = `${bbConfig.username}:${bbConfig.appPassword}`;
+export const bitbucketPlatformClient = new BitbucketPlatformClient(bbToken, bbConfig.baseUrl);
 
 const log = rootLogger.child({ module: 'webhooks-bitbucket' });
 
@@ -149,7 +154,15 @@ export function createBitbucketWebhooks() {
           'Received Bitbucket issue event',
         );
 
-        const jobData = bitbucketClient.toIssueJobData(parsed);
+        const jobData: IssueJobData = {
+          repoOwner: parsed.issue.repoOwner,
+          repoName: parsed.issue.repoName,
+          issueNumber: parsed.issue.number,
+          issueTitle: parsed.issue.title,
+          issueBody: parsed.issue.body ?? '',
+          installationId: Number(parsed.issue.installationId ?? 0),
+          source: 'bitbucket',
+        };
 
         try {
           await enqueueIssue(undefined, jobData);

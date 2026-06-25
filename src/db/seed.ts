@@ -67,10 +67,10 @@ async function seed(): Promise<void> {
 
   // Create a sample run history
   await pool.query(
-    `INSERT INTO run_history (installation_id, repo_owner, repo_name, issue_number, status, created_at, updated_at, summary)
+    `INSERT INTO run_history (account_id, issue_id, repo, status, started_at, completed_at, result)
      VALUES
-       ($1, 'owner', 'sample-repo', 101, 'completed', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '50 minutes', 'Fix applied successfully'),
-       ($1, 'owner', 'sample-repo', 102, 'failed', NOW() - INTERVAL '2 hours', NOW() - INTERVAL '1 hour', 'Test suite failed')`,
+       ($1, 101, 'owner/sample-repo', 'completed', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '50 minutes', '{"summary": "Fix applied successfully"}'),
+       ($1, 102, 'owner/sample-repo', 'failed', NOW() - INTERVAL '2 hours', NOW() - INTERVAL '1 hour', '{"error": "Test suite failed"}')`,
     [accountId],
   );
 
