@@ -10,6 +10,7 @@ TASK_SANDBOX_RETRY_DELAY = int(os.getenv("CELERY_SANDBOX_RETRY_DELAY_SECONDS", "
 TASK_PR_RETRY_DELAY = int(os.getenv("CELERY_PR_RETRY_DELAY_SECONDS", "30"))
 TASK_NOTIFICATION_RETRY_DELAY = int(os.getenv("CELERY_NOTIFICATION_RETRY_DELAY_SECONDS", "10"))
 TASK_VERIFICATION_RETRY_DELAY = int(os.getenv("CELERY_VERIFICATION_RETRY_DELAY_SECONDS", "30"))
+TASK_TICKET_EXPANDER_RETRY_DELAY = int(os.getenv("CELERY_TICKET_EXPANDER_RETRY_DELAY_SECONDS", "30"))
 
 # ── Beat Schedule (Periodic Tasks) ───────────────────────────────
 from celery.schedules import crontab
@@ -83,6 +84,7 @@ task_queues = [
     # ── stas.queue exchange ───────────────────────────────────
     Queue("stas.queue.pr", stas_queue, routing_key="pr.create"),
     Queue("stas.queue.notifications", stas_queue, routing_key="queue.notify"),
+    Queue("stas.queue.orchestrator", stas_queue, routing_key="orchestrator.#"),
     # ── stas.events exchange (fanout) ─────────────────────────
     Queue("stas.events.event_bus", stas_events),
     # ── stas.dlx exchange ─────────────────────────────────────
@@ -98,4 +100,7 @@ task_routes = {
     "workers.tasks.pr_creation.*": {"queue": "stas.queue.pr"},
     "workers.tasks.notifications.*": {"queue": "stas.queue.notifications"},
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
+    "workers.tasks.ticket_expander.*": {"queue": "stas.issues.triage"},
+    "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
+    "workers.orchestrator.*": {"queue": "stas.queue.orchestrator"},
 }
