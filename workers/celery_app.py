@@ -155,6 +155,18 @@ except Exception as exc:
     logger.warning("Failed to connect runaway middleware -- %s", exc)
 
 
+# ── Claim Middleware (Duplicate Job Prevention) ────────────────────────
+# Self-registers via @signals.task_prerun.connect at import time.
+# Prevents parallel workers from processing the same issue simultaneously.
+try:
+    from workers.dispatch import claim  # noqa: F401
+
+    claim.connect_claim_middleware()
+    logger.info("Claim middleware connected")
+except Exception as exc:
+    logger.warning("Failed to connect claim middleware -- %s", exc)
+
+
 # ── Worker Scaling (KEDA / Celery autoscale) ───────────────────────
 # Configures pod-level scaling via KEDA ScaledObject (in k8s/) or falls
 # back to Celery's native --autoscale when KEDA is not deployed.
