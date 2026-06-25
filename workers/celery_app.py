@@ -122,6 +122,17 @@ try:
 except Exception as exc:
     logger.warning("Failed to connect injection middleware — %s", exc)
 
+# ── Merge Queue Middleware ──────────────────────────────────────────
+# Auto-enqueues PRs into the merge queue after successful creation.
+try:
+    from workers.merge_queue.middleware import connect_merge_queue_middleware
+
+    connect_merge_queue_middleware()
+    logger.info("Merge queue middleware connected")
+except Exception as exc:
+    logger.warning("Failed to connect merge queue middleware -- %s", exc)
+
+
 # ── Graceful Shutdown Handler ──────────────────────────────────────
 # Installs SIGTERM handling and task drain via Celery signals.
 # Must be installed after the app is fully configured.
