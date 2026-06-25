@@ -120,6 +120,45 @@ class ExpansionResult:
     def fallback(cls) -> ExpansionResult:
         return cls.from_dict(FALLBACK_EXPANSION)
 
+    def validate(self) -> list[str]:
+        """Validate the expansion result and return a list of issues.
+
+        Returns:
+            A list of validation issue strings. Empty list means valid.
+        """
+        issues: list[str] = []
+        if not self.summary:
+            issues.append("summary is empty")
+        if not self.context:
+            issues.append("context is empty")
+        if not self.acceptance_criteria:
+            issues.append("acceptance_criteria is empty")
+        elif len(self.acceptance_criteria) < 3:
+            issues.append(
+                f"acceptance_criteria has only {len(self.acceptance_criteria)} items (minimum 3)"
+            )
+        if not self.implementation_plan:
+            issues.append("implementation_plan is empty")
+        if not self.test_spec:
+            issues.append("test_spec is empty")
+        if not (0.0 <= self.confidence <= 1.0):
+            issues.append(f"confidence {self.confidence} is out of range [0.0, 1.0]")
+        if self.estimated_effort not in ("small", "medium", "large"):
+            issues.append(
+                f"estimated_effort '{self.estimated_effort}' not in (small, medium, large)"
+            )
+        return issues
+
+    @property
+    def is_actionable(self) -> bool:
+        """Whether this expansion has enough content to act on."""
+        return (
+            bool(self.summary)
+            and len(self.acceptance_criteria) >= 1
+            and len(self.implementation_plan) >= 1
+            and self.confidence >= 0.3
+        )
+
 
 def get_config() -> dict[str, Any]:
     """Return the full expander configuration as a dict."""
