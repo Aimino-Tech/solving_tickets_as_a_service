@@ -82,6 +82,9 @@ task_queues = [
     Queue("stas.issues.health", stas_issues, routing_key="health.#"),
     # ── stas.queue exchange ───────────────────────────────────
     Queue("stas.queue.pr", stas_queue, routing_key="pr.create"),
+    Queue("stas.queue.review", stas_queue, routing_key="review.#"),
+    Queue("stas.queue.merge", stas_queue, routing_key="merge.process"),
+    Queue("stas.queue.conflict", stas_queue, routing_key="conflict.resolve"),
     Queue("stas.queue.notifications", stas_queue, routing_key="queue.notify"),
     # ── stas.events exchange (fanout) ─────────────────────────
     Queue("stas.events.event_bus", stas_events),
@@ -98,4 +101,8 @@ task_routes = {
     "workers.tasks.pr_creation.*": {"queue": "stas.queue.pr"},
     "workers.tasks.notifications.*": {"queue": "stas.queue.notifications"},
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
+    "workers.tasks.review_orchestrator.*": {"queue": "stas.queue.review"},
+    "workers.tasks.merge_queue.*": {"queue": "stas.queue.merge"},
+    "workers.tasks.conflict_resolver.*": {"queue": "stas.queue.conflict"},
+    "workers.tasks.human_escalation.*": {"queue": "stas.queue.notifications"},
 }
