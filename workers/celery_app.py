@@ -155,6 +155,18 @@ except Exception as exc:
     logger.warning("Failed to connect runaway middleware -- %s", exc)
 
 
+# ── Dedup Middleware (Duplicate Job Prevention) ─────────────────────
+# Self-registers Celery signal handlers at import time to prevent
+# duplicate task execution for the same issue across workers.
+try:
+    from workers.dispatch import dedup_middleware  # noqa: F401
+
+    dedup_middleware.connect_dedup_middleware()
+    logger.info("Dedup middleware connected")
+except Exception as exc:
+    logger.warning("Failed to connect dedup middleware -- %s", exc)
+
+
 # ── Worker Scaling (KEDA / Celery autoscale) ───────────────────────
 # Configures pod-level scaling via KEDA ScaledObject (in k8s/) or falls
 # back to Celery's native --autoscale when KEDA is not deployed.
