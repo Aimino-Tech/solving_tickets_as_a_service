@@ -92,7 +92,6 @@ describe('runMigrations', () => {
     mockFs.readdirSync.mockReset();
     mockFs.readFileSync.mockReset();
     mockQueryWithRetry.mockReset();
-    mockQueryWithRetry.mockResolvedValue({ rows: [] });
     mockGetPool.mockReset();
   });
   afterEach(() => {
@@ -155,6 +154,9 @@ describe('runMigrations', () => {
 });
 
 describe('rollbackLastBatch', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -249,6 +251,9 @@ describe('migration lifecycle (mocked)', () => {
 });
 
 describe('dry-run mode', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
   afterEach(() => {
     vi.clearAllMocks();
   });
