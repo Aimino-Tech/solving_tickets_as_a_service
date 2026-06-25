@@ -57,8 +57,15 @@ const envSchema = z.object({
 
   // Sandbox
   E2B_API_KEY: z.string().optional(),
-  E2B_TEMPLATE_ID: z.string().default('default'),
+  E2B_TEMPLATE_ID: z.string().default('stas-default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+  E2B_FALLBACK_TO_DOCKER: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(true),
 
   // STAS
   CI_MONITOR_ENABLED: z.preprocess(
@@ -305,6 +312,7 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
+      fallbackToDocker: env.E2B_FALLBACK_TO_DOCKER,
     },
 
     slack: {
