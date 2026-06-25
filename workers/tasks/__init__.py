@@ -9,7 +9,7 @@ from .sandbox_gc import sandbox_gc
 from .self_audit import run_self_audit, orchestrate_pipeline, review_decision
 from .adversarial_review import layer1_per_file_analysis, layer2_holistic_review, layer3_oracle_synthesis
 from .linear_poll import poll_active_issues
-from .dependency_resolver import resolve_dependencies
+from .auto_qa import auto_qa_sample
 
 __all__ = [
     "triage_issue",
@@ -31,5 +31,5 @@ __all__ = [
     "layer2_holistic_review",
     "layer3_oracle_synthesis",
     "poll_active_issues",
-    "resolve_dependencies",
+    "auto_qa_sample",
 ]
