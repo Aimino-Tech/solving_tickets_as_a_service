@@ -401,3 +401,53 @@ router.get('/dashboard/accounts/:accountId/usage/total', async (req: Request, re
 });
 
 export { router as dashboardRouter };
+
+// Data Deletion (mounted at /api/v1/me)
+
+router.post('/data/deletion-request', async (req: Request, res: Response) => {
+  try {
+    const accountId = getAccountId(req);
+    if (!accountId) {
+      res.status(400).json({ error: 'Account identification required.' });
+      return;
+    }
+    const { requestDataDeletion } = await import('../security/dataRetention.js');
+    const result = await requestDataDeletion(accountId);
+    res.json({ deletionRequest: result });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to request data deletion');
+    res.status(500).json({ error: 'Failed to request data deletion' });
+  }
+});
+
+router.post('/data/deletion-request/cancel', async (req: Request, res: Response) => {
+  try {
+    const accountId = getAccountId(req);
+    if (!accountId) {
+      res.status(400).json({ error: 'Account identification required.' });
+      return;
+    }
+    const { cancelDeletionRequest } = await import('../security/dataRetention.js');
+    const cancelled = await cancelDeletionRequest(accountId);
+    res.json({ cancelled });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to cancel deletion request');
+    res.status(500).json({ error: 'Failed to cancel deletion request' });
+  }
+});
+
+router.get('/data/deletion-status', async (req: Request, res: Response) => {
+  try {
+    const accountId = getAccountId(req);
+    if (!accountId) {
+      res.status(400).json({ error: 'Account identification required.' });
+      return;
+    }
+    const { getDeletionStatus } = await import('../security/dataRetention.js');
+    const status = await getDeletionStatus(accountId);
+    res.json(status);
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to get deletion status');
+    res.status(500).json({ error: 'Failed to get deletion status' });
+  }
+});

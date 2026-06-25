@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { settings } from '@/api/client';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Settings() {
   const [config, setConfig] = useState<{
@@ -20,6 +21,15 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [deletionStatus, setDeletionStatus] = useState<{
+    activeRequest: {
+      id: number;
+      status: string;
+      scheduled_deletion_at: string;
+    } | null;
+    retentionDays: number;
+  } | null>(null);
+  useAuth();
 
   useEffect(() => {
     settings
@@ -30,7 +40,54 @@ export default function Settings() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+
+    fetchDeletionStatus();
   }, []);
+
+  async function fetchDeletionStatus() {
+    try {
+      const token = localStorage.getItem('stas_token');
+      const res = await fetch('/api/v1/me/data/deletion-status', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setDeletionStatus(await res.json());
+      }
+    } catch {
+      // Non-critical background fetch
+    }
+  }
+
+  async function handleRequestDeletion() {
+    if (!window.confirm('Are you sure you want to request data deletion? This will schedule all your data for permanent removal.')) return;
+    try {
+      const token = localStorage.getItem('stas_token');
+      const res = await fetch('/api/v1/me/data/deletion-request', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setError(null);
+      await fetchDeletionStatus();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to request deletion');
+    }
+  }
+
+  async function handleCancelDeletion() {
+    try {
+      const token = localStorage.getItem('stas_token');
+      const res = await fetch('/api/v1/me/data/deletion-request/cancel', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setError(null);
+      await fetchDeletionStatus();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel deletion request');
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -155,6 +212,48 @@ export default function Settings() {
             )}
           </div>
         </form>
+      </div>
+
+      {/* Data Privacy */}
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+        <h3 className="text-base font-semibold text-red-800">Data Privacy</h3>
+        <p className="mt-1 text-sm text-red-600">
+          Manage your data retention and deletion preferences.
+        </p>
+        {deletionStatus && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-white p-4">
+            <p className="text-sm font-medium text-gray-900">
+              {deletionStatus.activeRequest?.status === 'completed'
+                ? 'Data deletion completed'
+                : deletionStatus.activeRequest?.status === 'pending'
+                  ? 'Deletion requested'
+                  : 'No active deletion request'}
+            </p>
+            {deletionStatus.activeRequest?.status === 'pending' && (
+              <p className="mt-1 text-xs text-gray-500">
+                Scheduled for{' '}
+                {new Date(deletionStatus.activeRequest.scheduled_deletion_at).toLocaleDateString()}
+                {' '}({deletionStatus.retentionDays}-day retention policy)
+              </p>
+            )}
+            <div className="mt-3 flex gap-3">
+              {deletionStatus.activeRequest?.status === 'pending' ? (
+                <button onClick={handleCancelDeletion} className="btn-secondary text-xs">
+                  Cancel Deletion Request
+                </button>
+              ) : (
+                <button onClick={handleRequestDeletion} className="btn-danger text-xs">
+                  Request Data Deletion
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        <p className="mt-3 text-xs text-gray-500">
+          Data is retained for {deletionStatus?.retentionDays ?? 30} days after cancellation,
+          then permanently purged. You can cancel a deletion request at any time before the
+          scheduled date.
+        </p>
       </div>
 
       {/* Danger zone */}
