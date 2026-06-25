@@ -521,10 +521,10 @@ npm run test:worker:watch
    - A Python helper script dispatches a test issue through each stage sequentially:
      - `triage_issue` — classifies the issue (gracefully degrades when no API key)
      - `dispatch_opencode` — calls the mock OpenCode server (avoids real API costs)
-     - `boot_sandbox` — creates a sandbox (returns placeholder when no E2B key)
-     - `run_verification` — runs tests (returns placeholder success)
-     - `create_pull_request` — creates a PR (returns placeholder data)
-     - `send_notification` — sends notification (returns placeholder)
+      - `boot_sandbox` — creates a real E2B sandbox (falls back to placeholder when no E2B key)
+      - `run_verification` — runs test_command in sandbox via E2B or locally via subprocess, returns real pass/fail output
+      - `create_pull_request` — opens a draft PR via GitHub API and returns its URL
+      - `send_notification` — delivers messages to configured Slack/Discord/email channels
    - Each stage emits a JSON result line with stage name, task ID, and status
 
 3. **Assertions**:
@@ -542,7 +542,7 @@ The test uses mock HTTP servers instead of real services:
 | **OpenCode serve** | 9409 | Responds to `POST /run` with mock agent results |
 | **GitHub API** | 9410 | Handles PR creation, comments, refs |
 | **OpenCode Go LLM** | — | Gracefully skipped (empty `OPENCODE_API_KEY`) |
-| **E2B Sandbox** | — | Returns placeholder (empty `E2B_API_KEY`) |
+| **E2B Sandbox** | — | Creates real sandbox when key set; returns placeholder when empty |
 
 ### CI Gates (Leave It Cleaner)
 
