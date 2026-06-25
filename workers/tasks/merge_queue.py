@@ -1,14 +1,31 @@
-import json
+"""
+Celery tasks for the merge queue.
+
+Provides three tasks:
+
+- process_merge_queue -- processes the queue in order
+- resolve_conflicts -- attempts auto-resolve on a conflicted PR
+- label_conflict_pr -- labels a PR as conflict and moves to rework queue
+"""
+
+from __future__ import annotations
+
 import logging
-import os
-import re
-import subprocess
 
 from celery import shared_task
 
-from workers.review.models import MergeResult, MergeStrategy
+from workers.merge_queue.queue import MergeQueue
 
 logger = logging.getLogger(__name__)
+
+_QUEUE: MergeQueue | None = None
+
+
+def _get_queue() -> MergeQueue:
+    global _QUEUE
+    if _QUEUE is None:
+        _QUEUE = MergeQueue()
+    return _QUEUE
 
 
 @shared_task(
@@ -21,96 +38,52 @@ logger = logging.getLogger(__name__)
 def process_merge_queue(
     self,
     issue_id: str,
-    workspace_path: str,
-    pr_url: str,
+    repo_name: str = "",
+    pr_number: int = 0,
+    pr_url: str = "",
+    workspace_path: str = "",
     merge_strategy: str = "squash",
 ) -> dict:
-    logger.info("Processing merge queue -- issue=%s pr=%s strategy=%s", issue_id, pr_url, merge_strategy)
+    """Process the next eligible PR in the merge queue."""
+    queue = _get_queue()
 
-    pr_number = _extract_pr_number(pr_url)
-    if not pr_number:
-        return {"status": "error", "error": f"Could not extract PR number from {pr_url}"}
+    if repo_name and pr_number:
+        existing = queue.get_entry(repo_name, pr_number)
+        if existing is None:
+            queue.enqueue(
+                repo_name=repo_name,
+                pr_number=pr_number,
+                issue_id=issue_id,
+                pr_url=pr_url,
+                merge_strategy=merge_strategy,
+            )
 
-    if _has_conflicts(workspace_path):
-        logger.info("Merge conflicts detected -- issue=%s", issue_id)
-        resolve_conflicts.delay(issue_id, workspace_path, pr_url)
-        return {"status": "conflict", "action": "resolve_conflicts", "issue_id": issue_id}
+    result = queue.process_next(workspace_path=workspace_path or None)
 
-    strategy = MergeStrategy(merge_strategy)
-    result = _merge_pr(workspace_path, pr_number, strategy)
+    status = result.get("status", "unknown")
+    entry = result.get("entry")
 
-    if result.status == "merged":
-        _delete_branch(workspace_path)
-        logger.info("Merge complete -- issue=%s sha=%s", issue_id, result.merge_sha)
+    if status == "no_pending":
+        logger.info("No pending entries in merge queue")
+    elif status == "merged":
+        logger.info("Merge complete -- issue=%s sha=%s", issue_id, result.get("merge_sha", ""))
+    elif status == "conflict":
+        logger.warning("Merge conflict -- issue=%s pr=#%d", issue_id, pr_number)
+        if workspace_path:
+            resolve_conflicts.delay(
+                issue_id=issue_id,
+                repo_name=repo_name or (entry.repo_name if entry else ""),
+                pr_number=pr_number or (entry.pr_number if entry else 0),
+                workspace_path=workspace_path,
+            )
 
-    return result.model_dump()
-
-
-def _extract_pr_number(pr_url: str) -> int | None:
-    match = re.search(r'/pull/(\d+)', pr_url)
-    if match:
-        return int(match.group(1))
-    return None
-
-
-def _has_conflicts(workspace_path: str) -> bool:
-    try:
-        result = subprocess.run(
-            ["git", "merge", "--no-commit", "--no-ff", "FETCH_HEAD"],
-            cwd=workspace_path,
-            capture_output=True, text=True, timeout=30,
-        )
-        subprocess.run(["git", "merge", "--abort"], cwd=workspace_path, capture_output=True, timeout=10)
-        return result.returncode != 0
-    except Exception:
-        return False
-
-
-def _merge_pr(workspace_path: str, pr_number: int, strategy: MergeStrategy) -> MergeResult:
-    try:
-        if strategy == MergeStrategy.squash:
-            cmd = ["git", "merge", "--squash", f"refs/pull/{pr_number}/head"]
-        elif strategy == MergeStrategy.rebase:
-            cmd = ["git", "rebase", f"refs/pull/{pr_number}/head"]
-        else:
-            cmd = ["git", "merge", "--no-ff", f"refs/pull/{pr_number}/head"]
-
-        result = subprocess.run(
-            cmd, cwd=workspace_path, capture_output=True, text=True, timeout=60,
-        )
-
-        if result.returncode != 0:
-            return MergeResult(status="failed", error=result.stderr[:500])
-
-        sha_result = subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=workspace_path, capture_output=True, text=True, timeout=10,
-        )
-        sha = sha_result.stdout.strip()
-
-        subprocess.run(
-            ["git", "push", "origin", "main"], cwd=workspace_path, capture_output=True, timeout=30,
-        )
-
-        return MergeResult(status="merged", merge_sha=sha)
-    except subprocess.TimeoutExpired:
-        return MergeResult(status="failed", error="Merge operation timed out")
-    except Exception as exc:
-        return MergeResult(status="failed", error=str(exc))
-
-
-def _delete_branch(workspace_path: str):
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=workspace_path, capture_output=True, text=True, timeout=10,
-        )
-        branch = result.stdout.strip()
-        subprocess.run(
-            ["git", "push", "origin", "--delete", branch],
-            cwd=workspace_path, capture_output=True, timeout=30,
-        )
-    except Exception as exc:
-        logger.warning("Failed to delete branch: %s", exc)
+    return {
+        "status": status,
+        "issue_id": issue_id,
+        "repo_name": repo_name or (entry.repo_name if entry else repo_name),
+        "pr_number": pr_number or (entry.pr_number if entry else pr_number),
+        "details": result,
+    }
 
 
 @shared_task(
@@ -123,50 +96,63 @@ def _delete_branch(workspace_path: str):
 def resolve_conflicts(
     self,
     issue_id: str,
+    repo_name: str,
+    pr_number: int,
     workspace_path: str,
-    pr_url: str,
 ) -> dict:
-    logger.info("Resolving conflicts -- issue=%s", issue_id)
+    """Attempt to auto-resolve merge conflicts for a PR."""
+    queue = _get_queue()
 
-    try:
-        result = subprocess.run(
-            ["git", "diff", "--name-only", "--diff-filter=U"],
-            cwd=workspace_path, capture_output=True, text=True, timeout=15,
+    if not workspace_path:
+        return {"status": "no_workspace", "issue_id": issue_id, "resolved": [], "failed": []}
+
+    result = queue.resolve_conflicts(repo_name, pr_number, workspace_path)
+
+    if result["status"] == "resolved":
+        process_merge_queue.delay(
+            issue_id=issue_id,
+            repo_name=repo_name,
+            pr_number=pr_number,
+            workspace_path=workspace_path,
         )
-        conflict_files = result.stdout.strip().split("\n") if result.stdout.strip() else []
+        return {"status": "resolved", "issue_id": issue_id, "resolved_files": result["resolved"], "action": "retry_merge"}
 
-        resolved = []
-        failed = []
-        for f in conflict_files:
-            try:
-                subprocess.run(
-                    ["git", "checkout", "--ours", f],
-                    cwd=workspace_path, capture_output=True, timeout=15,
-                )
-                subprocess.run(
-                    ["git", "add", f],
-                    cwd=workspace_path, capture_output=True, timeout=15,
-                )
-                resolved.append(f)
-            except Exception as exc:
-                failed.append({"file": f, "error": str(exc)})
+    if result["failed"]:
+        queue.label_conflict(repo_name, pr_number)
 
-        if failed:
-            return {
-                "status": "partial",
-                "resolved": resolved,
-                "failed": failed,
-                "action": "human_review",
-                "issue_id": issue_id,
-            }
+    return {
+        "status": result.get("status", "failed"),
+        "issue_id": issue_id,
+        "resolved_files": result.get("resolved", []),
+        "failed": result.get("failed", []),
+        "action": "human_review",
+    }
 
-        return {
-            "status": "resolved",
-            "resolved_files": resolved,
-            "action": "retry_merge",
-            "issue_id": issue_id,
-        }
 
-    except Exception as exc:
-        logger.error("Conflict resolution failed -- %s", exc, exc_info=True)
-        raise self.retry(exc=exc)
+@shared_task(
+    bind=True,
+    max_retries=2,
+    default_retry_delay=10,
+    name="workers.tasks.merge_queue.label_conflict_pr",
+    autoretry_for=(Exception,),
+)
+def label_conflict_pr(
+    self,
+    issue_id: str,
+    repo_name: str,
+    pr_number: int,
+) -> dict:
+    """Label a PR as conflict and set its queue status to conflict."""
+    queue = _get_queue()
+    queue.label_conflict(repo_name, pr_number)
+    entry = queue.get_entry(repo_name, pr_number)
+    if entry is not None:
+        queue._set_status(repo_name, pr_number, "conflict", "Human intervention required -- auto-resolve failed")
+    return {
+        "status": "labeled",
+        "issue_id": issue_id,
+        "repo_name": repo_name,
+        "pr_number": pr_number,
+        "label": "conflict",
+        "action": "human_review",
+    }
