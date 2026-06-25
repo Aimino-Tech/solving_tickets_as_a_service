@@ -65,6 +65,7 @@ import { authRouter } from './routes/auth.js';
 import { reposRouter } from './routes/repos.js';
 import { runsRouter } from './routes/runs.js';
 import { badgeRouter } from './routes/badge.js';
+import { analyticsRouter } from './routes/analytics.js';
 import { viralRouter } from './routes/viral.js';
 
 const log = rootLogger.child({ module: 'server' });
@@ -721,6 +722,10 @@ export function createApp(): express.Application {
 
   // KPI Dashboard API
   app.use('/api/kpi', kpiRouter);
+
+  // Agent Performance Analytics API
+  app.use('/api/analytics', analyticsRouter);
+
 
   // SAML 2.0 SSO routes
   app.use('/api/v1/saml', samlRouter);
