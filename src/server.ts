@@ -68,6 +68,7 @@ import { runsRouter } from './routes/runs.js';
 import { badgeRouter } from './routes/badge.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { viralRouter } from './routes/viral.js';
+import { qualityRouter } from './routes/quality.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -713,6 +714,9 @@ export function createApp(): express.Application {
   // GET /discovery/mcp.json — MCP manifest for agent-to-agent discovery
   // GET /discovery          — Human-readable discovery landing page
   app.use(viralRouter);
+
+  // ── Quality Score Card API ───────────────────────────────────────
+  app.use('/api/quality', qualityRouter);
 
   // ── Benchmarks API (public) ──────────────────────────────────────
   app.use('/api/benchmarks', benchmarksRouter);
