@@ -40,11 +40,6 @@ beat_schedule = {
         "schedule": 600.0,
         "args": (),
     },
-    "poll-linear-active-issues": {
-        "task": "workers.tasks.linear_poll.poll_active_issues",
-        "schedule": 30.0,
-        "options": {"queue": "stas.issues.triage"},
-    },
 }
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")
@@ -63,9 +58,6 @@ worker_enable_remote_control = False
 broker_connection_retry_on_startup = True
 
 # ── Unified Exchange Topology ───────────────────────────────────
-# All layers (TypeScript + Celery) use the same exchange names,
-# queue names, and routing keys.
-
 stas_agents = Exchange("stas.agents", type="topic", durable=True)
 stas_issues = Exchange("stas.issues", type="topic", durable=True)
 stas_queue = Exchange("stas.queue", type="topic", durable=True)
@@ -77,20 +69,16 @@ task_default_exchange = "stas.agents"
 task_default_routing_key = "agent.runner"
 
 task_queues = [
-    # ── stas.agents exchange ──────────────────────────────────
     Queue("stas.agents.dispatch", stas_agents, routing_key="agent.runner"),
     Queue("stas.agents.verification", stas_agents, routing_key="agent.verify"),
     Queue("stas.agents.sandbox", stas_agents, routing_key="agent.sandbox"),
     Queue("stas.agents.self_audit", stas_agents, routing_key="agent.self_audit"),
-    # ── stas.issues exchange ──────────────────────────────────
+    Queue("stas.verification", stas_agents, routing_key="agent.build_verify"),
     Queue("stas.issues.triage", stas_issues, routing_key="triage.#"),
     Queue("stas.issues.health", stas_issues, routing_key="health.#"),
-    # ── stas.queue exchange ───────────────────────────────────
     Queue("stas.queue.pr", stas_queue, routing_key="pr.create"),
     Queue("stas.queue.notifications", stas_queue, routing_key="queue.notify"),
-    # ── stas.events exchange (fanout) ─────────────────────────
     Queue("stas.events.event_bus", stas_events),
-    # ── stas.dlx exchange ─────────────────────────────────────
     Queue("stas.dlx.retry", stas_dlx, routing_key="dlq.retry"),
     Queue("stas.dlx.failed", stas_dlx, routing_key="dlq.failed"),
 ]
@@ -100,8 +88,8 @@ task_routes = {
     "workers.tasks.agent.*": {"queue": "stas.agents.dispatch"},
     "workers.tasks.sandbox.*": {"queue": "stas.agents.sandbox"},
     "workers.tasks.verification.*": {"queue": "stas.agents.verification"},
+    "workers.tasks.build_verify.*": {"queue": "stas.verification"},
     "workers.tasks.pr_creation.*": {"queue": "stas.queue.pr"},
     "workers.tasks.notifications.*": {"queue": "stas.queue.notifications"},
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
-    "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
 }
