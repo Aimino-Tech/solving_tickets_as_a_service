@@ -4,6 +4,22 @@
 
 ---
 
+### ⚠️ Self-Host Limitations
+
+Self-hosting STAS is **unlimited** — there are no artificial caps on fixes, repos, or users. However, the self-hosted (OSS) version comes with important caveats:
+
+| Area | Self-Host (OSS) | Cloud Paid ($49–$149/mo) |
+|------|-----------------|--------------------------|
+| **Dashboard** | ❌ No dashboard — CLI + health endpoints only | ✅ Full analytics, audit log, config UI |
+| **Setup** | Manual — you configure GitHub App, Redis, OpenCode, env vars | One-click install |
+| **Infrastructure** | You manage — Docker/K8s/Railway, scaling, backups | We manage |
+| **Support** | Community via GitHub issues | Slack, email, SLA |
+| **Monitoring** | DIY — logs, health checks, Prometheus | Built-in Sentry + alerts |
+
+**Who should self-host?** Developers who want full control, have existing model API keys, and are comfortable operating infrastructure. For everyone else, the [Cloud Free tier](../README.md#business-model) (10 fixes/mo) or a [Paid plan](../STRATEGY.md) may be a better fit.
+
+---
+
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)

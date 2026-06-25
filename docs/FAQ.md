@@ -17,7 +17,7 @@ It's backed by [OpenCode](https://opencode.ai) — the 162K-star open-source cod
 | Open source | Yes (MIT) | No |
 | Self-hostable | Yes | No (SaaS only) |
 | Your model choice | Yes (any OpenCode-compatible model) | No (Claude only) |
-| Price | Free (self-host) or $49/mo (cloud) | $99-$199/mo |
+| Price | Free (self-host, unlimited) / Free (cloud, 10/mo) / $49–$149+/mo | $99-$199/mo |
 | Sandbox isolation | E2B + Docker (configurable) | Proprietary |
 | Issue tracker support | GitHub, GitLab, Bitbucket, Linear, Jira | GitHub only |
 | Multi-platform webhooks | Yes | No |
@@ -129,14 +129,18 @@ Without either, STAS cannot run fix attempts because the code execution needs is
 
 ### How much does it cost to run STAS?
 
-**Self-hosted (OSS)**: You pay for:
+**Self-hosted (OSS)**: Unlimited fixes, but with caveats:
 - **LLM API costs**: ~$2-6 per fix attempt depending on the model
 - **Infrastructure**: ~$10-50/mo for a VPS (Redis + OpenCode + bot)
 - **Sandbox**: Free (Docker) or ~$0.50/fix (E2B cloud)
+- **No dashboard, no SLA, manual setup** — you own the operations
 
 Example monthly cost for 100 fixes with Claude Sonnet + Docker sandbox: **~$250-400**.
 
-**Cloud (coming soon)**: $49/mo flat for 100 fixes, including our AGI model.
+**Cloud Free**: 10 fixes/mo using our AGI model — no API keys, no infra to manage.
+**Cloud Paid** ($49/mo): 100 fixes/mo with full dashboard, analytics, audit log, and support.
+
+**Self-host is unlimited but bare-bones; the cloud free tier gives you a taste of the hosted experience; both point to paid plans for the full feature set.**
 
 ### How does STAS compare cost-wise?
 
@@ -285,12 +289,11 @@ The default is `stas:fix`. See [CUSTOMIZATION.md](./CUSTOMIZATION.md) for more o
 
 ### Does STAS have a dashboard?
 
-The OSS version does not include a dashboard. The cloud version (coming soon) will have:
-- Run history with diff viewer
-- Analytics (fix rate, cost, average time)
-- Audit log
-- Configuration UI
-- Account management
+The **self-hosted (OSS) version** does not include a dashboard. You manage STAS via command line, configuration files, and health endpoints.
+
+The **cloud version** includes a full dashboard:
+- **Cloud Free** (10 fixes/mo): Limited analytics view
+- **Cloud Paid** ($49–$149/mo): Full dashboard with run history, diff viewer, analytics (fix rate, cost, average time), audit log, configuration UI, and account management
 
 ---
 

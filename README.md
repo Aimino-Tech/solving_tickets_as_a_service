@@ -111,17 +111,23 @@ STAS is built on top of OpenCode. The `WORKFLOW.md` at the project root defines 
 
 For OpenCode users: add `@tarquinen/stas-plugin` to your opencode.json `plugin` array, and the agent can invoke dev tools via slash commands during development.
 
-## Self-Hosted vs Cloud
+## Business Model
 
-| Feature | Self-Hosted (OSS) | Cloud (Coming Soon) |
-|---|---|---|
-| Setup | You run it | One-click install |
-| AI model | Your API key, your choice | Our AGI (50% better than GPT-5.5) |
-| Infrastructure | You manage | We manage |
-| Cost | Your API usage | $49/mo flat |
-| Limits | Unlimited (your keys) | 100 fixes/mo then usage-based |
-| Dashboard | — | Analytics, audit log, config |
-| Support | GitHub issues | Slack, email, SLA |
+STAS follows an **open-core model** with two paths to paid plans:
+
+| | Self-Hosted (OSS) | Cloud Free | Cloud Paid |
+|---|---|---|---|
+| **Fixes/mo** | Unlimited | 10 fixes/mo | 100–500+/mo |
+| **AI model** | Your API key, your choice | Our AGI (50% better than GPT-5.5) | Our AGI |
+| **Setup** | Manual — you run it | One-click install | One-click install |
+| **Infrastructure** | You manage | We manage | We manage |
+| **Dashboard** | — | Limited analytics | Full analytics, audit log |
+| **Support** | GitHub issues (community) | Community | Slack, email, SLA |
+| **Cost** | Your API usage | Free | $49–$149/mo |
+
+**Self-host** is unlimited but has caveats: no dashboard, manual setup, community support only. It's ideal for developers who want full control and have their own model API keys.
+
+**Cloud Free** (10 fixes/mo) lets hosted users try STAS risk-free. Both paths point to paid plans ($49/mo Solo, $149/mo Team, custom Enterprise) for full features, higher limits, and support.
 
 ## Architecture
 
