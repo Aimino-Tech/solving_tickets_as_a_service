@@ -24,6 +24,8 @@ Modules
         Dead worker cleanup — revokes tasks for dead workers.
     circuit_breaker
         Circuit breaker — pauses task types after N consecutive failures.
+    tenant_limiter
+        Per-tenant token bucket rate limiter and concurrency limiter (AIM-2017).
     queue_drain
         Queue drain monitor — alerts on backed-up queues.
 """
@@ -84,6 +86,14 @@ from workers.orchestrator.queue_drain import (
     get_queue_depth,
 )
 
+# Multi-tenant isolation (AIM-2017)
+from workers.orchestrator.tenant_limiter import (
+    TenantTokenBucket,
+    TenantConcurrencyLimiter,
+    get_tenant_token_bucket,
+    get_tenant_concurrency_limiter,
+)
+
 __all__ = [
     # Core orchestration
     "PipelineEngine",
@@ -135,4 +145,9 @@ __all__ = [
     "check_queue_drain",
     "check_queue_drain_task",
     "get_queue_depth",
+    # Multi-tenant isolation (AIM-2017)
+    "TenantTokenBucket",
+    "TenantConcurrencyLimiter",
+    "get_tenant_token_bucket",
+    "get_tenant_concurrency_limiter",
 ]
