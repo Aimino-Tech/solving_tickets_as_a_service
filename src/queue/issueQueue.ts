@@ -6,7 +6,12 @@
  *
  * Retry strategy uses exact delays (30s, 2min, 5min, 15min) via manual
  * re-enqueue in the worker, since BullMQ OSS only supports fixed/exponential
- * backoff. After max retries the job is copied to a dead-letter queue.
+ * backoff. After max retries the job is moved to the dead-letter queue.
+ *
+ * ⚠️ DLG REPROCESSING (AIM-2056):
+ * Once a message enters the dead-letter queue, it STAYS there until manually
+ * acknowledged by an admin via the DLQ admin API. No automatic replay occurs.
+ * Full context is logged and alerts are dispatched via Slack/Linear.
  *
  * ── Error Handling Audit ────────────────────────────────────────────
  * ✅ Redis retry strategy with exponential backoff and logging
@@ -16,6 +21,8 @@
  * ✅ enqueueIssue() catches queue.add failures and returns undefined
  * ✅ Retry count and lastError persisted in job data
  * ✅ Dead-letter queue captures jobs after max retries
+ * ✅ DLQ alerts dispatched to Slack/Linear with full trace context
+ * ✅ DLG entries remain dead until manually acknowledged — no auto-replay
  * ────────────────────────────────────────────────────────────────────
  */
 
@@ -32,6 +39,7 @@ import {
   recordMessageFailed,
   recordProcessingDuration,
 } from "../bridge/metrics.js";
+import { recordDeadLetter } from "./deadLetterQueue.js";
 
 const log = rootLogger.child({ module: 'issue-queue' });
 
@@ -158,6 +166,21 @@ export function createIssueWorker(): Worker<IssueJobData> {
           "Fix not ready",
         );
 
+        // Terminal results (e.g., triage classified as 'question' or 'feature')
+        // should never be retried — move directly to dead-letter queue
+        if (result.isTerminal) {
+          log.info(
+            { jobId: job.id, reason: result.noFixReason },
+            "Terminal result — not scheduling retry",
+          );
+          try {
+            await moveToDeadLetter(data, result.errors?.[0] ?? result.noFixReason ?? "Terminal result");
+          } catch (err) {
+            log.error({ err: String(err), jobId: job.id }, "Failed to move terminal result to dead-letter queue");
+          }
+          return result;
+        }
+
         // Schedule a retry if slots remain
         if (retryCount < config.queue.maxRetries) {
           const delay = config.queue.retryDelays[retryCount] ?? 900000;
@@ -171,7 +194,7 @@ export function createIssueWorker(): Worker<IssueJobData> {
             log.error({ err: String(err), jobId: job.id }, "Failed to schedule retry");
           }
         } else {
-          // Max retries exhausted — move to dead-letter queue
+          // Max retries exhausted — move to dead-letter queue (no auto-replay)
           log.warn(
             { jobId: job.id, retryCount },
             "Max retries reached, moving to dead-letter queue",
@@ -250,13 +273,33 @@ export function createIssueWorker(): Worker<IssueJobData> {
         log.error({ err: String(dlqErr), jobId: job.id }, "Failed to schedule retry");
       }
     } else {
-      // Max retries — move to DLQ
+      // Max retries — move to DLQ (no auto-replay, stays dead until manually acknowledged)
       try {
         await moveToDeadLetter(data, errorMsg);
-        log.info(
-          { jobId: job.id, repo: `${data.repoOwner}/${data.repoName}`, issueNumber: data.issueNumber },
-          "Job moved to dead-letter queue",
-        );
+
+        // Record the DLQ in the BullMQ DLQ queue for backup persistence
+        const dlq = createDeadLetterQueue();
+        try {
+          await dlq.add(`dlq-${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}`, {
+            ...data,
+            lastError: errorMsg,
+          } as IssueJobDataWithRetry);
+          log.info(
+            { jobId: job.id, repo: `${data.repoOwner}/${data.repoName}`, issueNumber: data.issueNumber },
+            "Job persisted to BullMQ dead-letter queue",
+          );
+        } finally {
+          await dlq.close();
+        }
+
+        // Remove the failed job from the main queue to prevent reprocessing
+        try {
+          await job.remove();
+          log.debug({ jobId: job.id }, "Removed failed job from main queue after DLQ transfer");
+        } catch {
+          // non-fatal
+        }
+
         bridgeMetrics.incrementCounter('dlq_messages_total', {
           queue: QUEUE_NAME,
           repo: data.repoOwner + '/' + data.repoName,
@@ -305,27 +348,37 @@ async function scheduleRetry(
 
 /**
  * Move a job to the dead-letter queue after exhausting retries.
+ *
+ * ⚠️ AIM-2056: Messages moved to the DLQ remain dead until manually
+ * acknowledged by an admin. No automatic replay mechanism exists.
+ * Full context is logged via recordDeadLetter() and alerts are dispatched.
  */
 async function moveToDeadLetter(
   data: IssueJobDataWithRetry,
   error: string,
 ): Promise<void> {
-  const dlq = createDeadLetterQueue();
-  try {
-    await dlq.add(`dlq-${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}`, {
-      ...data,
-      lastError: error,
-    } as IssueJobDataWithRetry);
+  // Capture stack trace from the current Error context if available
+  const stackTrace = new Error().stack;
 
-    // Post dead letter comment on the issue
+  // Record the DLQ entry with full context via the DLQ management module
+  // This handles: in-memory tracking, structured logging, alert dispatch, metrics
+  await recordDeadLetter(data, error, QUEUE_NAME, stackTrace);
+
+  // Post dead letter comment on the issue
+  try {
     await postIssueComment(data, messages.deadLetterComment(error));
-    log.warn(
-      { repo: data.repoOwner + '/' + data.repoName, issueNumber: data.issueNumber, error },
-      'DLQ alert — job moved to dead-letter queue',
-    );
-  } finally {
-    await dlq.close();
+  } catch {
+    // non-fatal — comment posting failure should not block DLQ recording
   }
+
+  log.warn(
+    {
+      repo: data.repoOwner + '/' + data.repoName,
+      issueNumber: data.issueNumber,
+      error,
+    },
+    'DLQ: job moved to dead-letter queue (no automatic replay)',
+  );
 }
 
 /**

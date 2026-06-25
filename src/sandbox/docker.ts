@@ -143,7 +143,7 @@ export class DockerSandbox implements SandboxExecutor {
     if (tempDir) this.tempDir = tempDir;
   }
 
-  async boot(): Promise<void> {
+  async boot(_onProgress?: ProgressCallback): Promise<void> {
     log.info('Booting Docker sandbox');
 
     if (this.container) {
