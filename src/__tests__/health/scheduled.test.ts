@@ -23,6 +23,12 @@ vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
 
+vi.mock('../../monitoring/alerting.js', () => ({
+  checkQueueDepth: vi.fn(),
+  checkWorkerHeartbeats: vi.fn(),
+  checkSLOCompliance: vi.fn(),
+}));
+
 describe('health/scheduled', () => {
   let scheduled: typeof import('../../health/scheduled.js');
 
