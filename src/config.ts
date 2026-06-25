@@ -59,16 +59,17 @@ const envSchema = z.object({
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // STAS
-
-  // Pricing
-  STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
-  STAS_MONTHLY_QUOTA_ENABLED: z.preprocess(
+  CI_MONITOR_ENABLED: z.preprocess(
     (v) => {
       if (typeof v === 'string') return v === 'true' || v === '1';
       return v;
     },
     z.boolean(),
-  ).default(true),
+  ).default(false),
+
+  // Pricing
+  STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
+  STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
   STAS_LABEL: z.string().default('stas:fix'),
@@ -188,16 +189,25 @@ const envSchema = z.object({
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
 
-  // Config CI Monitor
-  CI_MONITOR_ENABLED: z.preprocess(
+  
+  // ── Malicious Code Detection Gate ──
+  SECURITY_DETECTION_GATE_ENABLED: z.preprocess(
     (v) => {
       if (typeof v === 'string') return v === 'true' || v === '1';
       return v;
     },
     z.boolean(),
-  ).default(false),
+  ).default(true),
+  SECURITY_DETECTION_GATE_BLOCK_ON_HIGH: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(true),
+  SECURITY_DETECTION_GATE_SCANNER: z.enum(['trufflehog', 'gitleaks', 'both']).default('both'),
 
-  // Sentry
+// Sentry
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENVIRONMENT: z.string().default('development'),
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
@@ -281,7 +291,7 @@ function buildConfig(env: ParsedEnv) {
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
       direct: {
-        apiKey: env.OPENCODE_API_KEY ?? '',
+        apiKey: env.OPENCODE_API_KEY,
       },
     },
 
@@ -446,6 +456,11 @@ function buildConfig(env: ParsedEnv) {
         pidsLimit: env.SANDBOX_PIDS_LIMIT,
         diskLimit: env.SANDBOX_DISK_LIMIT,
         networkEnabled: env.SANDBOX_NETWORK_ENABLED,
+      },
+      detectionGate: {
+        enabled: env.SECURITY_DETECTION_GATE_ENABLED,
+        blockOnHigh: env.SECURITY_DETECTION_GATE_BLOCK_ON_HIGH,
+        scanner: env.SECURITY_DETECTION_GATE_SCANNER,
       },
     },
 
