@@ -1,0 +1,7 @@
+- description: STAS Python Security Suite
+- warnOn: all
+- include:
+    kind: [problem, path-problem, alert, path-alert]
+    precision: [high, very-high, medium]
+- import:
+    suites: security-extended

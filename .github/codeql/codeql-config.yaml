@@ -1,0 +1,12 @@
+name: "STAS CodeQL Config"
+disable-default-queries: false
+paths-ignore:
+  - "node_modules"
+  - "dist"
+  - "sbom"
+  - "**/*.min.js"
+queries:
+  - name: Security and Quality (JavaScript/TypeScript)
+    uses: ./.github/codeql/javascript-queries.qls
+  - name: Security (Python)
+    uses: ./.github/codeql/python-queries.qls
