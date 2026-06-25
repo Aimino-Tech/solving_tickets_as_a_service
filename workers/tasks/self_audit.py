@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 )
 def run_self_audit(self, issue_context: dict, verification_result: dict, workspace_path: str = "") -> dict:
     logger.info(
-        "Running self-audit — issue=%s",
+        "Running self-audit \u2014 issue=%s",
         issue_context.get("issue_id", issue_context.get("issue_url", "unknown")),
     )
     try:
@@ -68,7 +68,7 @@ def run_self_audit(self, issue_context: dict, verification_result: dict, workspa
         )
 
         logger.info(
-            "Self-audit complete — passed=%s ac_total=%d missing=%d mockup_findings=%d",
+            "Self-audit complete \u2014 passed=%s ac_total=%d missing=%d mockup_findings=%d",
             result.passed,
             len(result.checklist),
             len(result.missing_items),
@@ -77,7 +77,7 @@ def run_self_audit(self, issue_context: dict, verification_result: dict, workspa
 
         return result.model_dump()
     except Exception as exc:
-        logger.error("Self-audit failed — %s", exc, exc_info=True)
+        logger.error("Self-audit failed \u2014 %s", exc, exc_info=True)
         raise self.retry(exc=exc)
 
 
@@ -89,11 +89,18 @@ def run_self_audit(self, issue_context: dict, verification_result: dict, workspa
     autoretry_for=(Exception,),
 )
 def orchestrate_pipeline(self, issue_data: dict) -> dict:
-    logger.info("Orchestrating pipeline — issue=%s", issue_data.get("issue_id", "unknown"))
+    logger.info("Orchestrating pipeline \u2014 issue=%s", issue_data.get("issue_id", "unknown"))
     try:
         steps: list[str] = []
         results: dict[str, dict] = {}
         pipeline_status = "completed"
+
+        # Dependency resolution runs first, before triage
+        steps.append("dependency_resolution")
+        results["dependency_resolution"] = {
+            "status": "queued",
+            "task": "workers.tasks.dependency_resolver.resolve_dependencies",
+        }
 
         if "skip_quality_analyze" not in issue_data:
             steps.append("quality_analyze")
@@ -145,7 +152,7 @@ def orchestrate_pipeline(self, issue_data: dict) -> dict:
             "pipeline_status": pipeline_status,
         }
     except Exception as exc:
-        logger.error("Pipeline orchestration failed — %s", exc, exc_info=True)
+        logger.error("Pipeline orchestration failed \u2014 %s", exc, exc_info=True)
         raise self.retry(exc=exc)
 
 
@@ -171,15 +178,15 @@ def review_decision(self, pipeline_results: dict) -> dict:
         self_audit = pipeline_results.get("self_audit", {})
         if self_audit.get("passed") is False:
             all_passed = False
-            failures.append("self_audit: failed — missing items or anti-mockup findings present")
+            failures.append("self_audit: failed \u2014 missing items or anti-mockup findings present")
 
         anti_mockup = pipeline_results.get("anti_mockup_scan", {})
         if anti_mockup.get("passed") is False:
             all_passed = False
-            failures.append("anti_mockup_scan: failed — critical or blocking findings present")
+            failures.append("anti_mockup_scan: failed \u2014 critical or blocking findings present")
 
         decision = "pass" if all_passed else "rework"
-        logger.info("Review decision: %s — failures=%s", decision, failures)
+        logger.info("Review decision: %s \u2014 failures=%s", decision, failures)
 
         return {
             "decision": decision,
@@ -188,5 +195,5 @@ def review_decision(self, pipeline_results: dict) -> dict:
             "pipeline_results": pipeline_results,
         }
     except Exception as exc:
-        logger.error("Review decision failed — %s", exc, exc_info=True)
+        logger.error("Review decision failed \u2014 %s", exc, exc_info=True)
         raise self.retry(exc=exc)
