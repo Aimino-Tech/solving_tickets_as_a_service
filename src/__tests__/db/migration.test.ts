@@ -84,12 +84,11 @@ describe('computeChecksum', () => {
 
 describe('runMigrations', () => {
   beforeEach(() => {
-    fsMockFns.existsSync.mockReset();
-    fsMockFns.readdirSync.mockReset();
-    fsMockFns.readFileSync.mockReset();
-    mockQueryWithRetry.mockReset();
-    mockQueryWithRetry.mockResolvedValue({ rows: [] });
-    mockGetPool.mockReset();
+    fsMockFns.existsSync.mockClear();
+    fsMockFns.readdirSync.mockClear();
+    fsMockFns.readFileSync.mockClear();
+    mockQueryWithRetry.mockClear();
+    mockGetPool.mockClear();
   });
   afterEach(() => {
     vi.clearAllMocks();
@@ -105,7 +104,6 @@ describe('runMigrations', () => {
   it('does nothing when no migration files exist', async () => {
     fsMockFns.existsSync.mockReturnValue(true);
     fsMockFns.readdirSync.mockReturnValue([]);
-    mockQueryWithRetry.mockResolvedValue({ rows: [] });
     mockGetPool.mockReturnValue({ connect: vi.fn() });
     const { runMigrations: run } = await import('../../db/migrate.js');
     await run();
@@ -117,9 +115,6 @@ describe('runMigrations', () => {
     fsMockFns.readFileSync
       .mockReturnValueOnce('CREATE TABLE test1 (id INTEGER);')
       .mockReturnValueOnce('CREATE TABLE test2 (id INTEGER);');
-    mockQueryWithRetry
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] });
     const mockClientQuery = vi.fn().mockResolvedValue({});
     const mockClientRelease = vi.fn();
     const mockConnect = vi.fn().mockResolvedValue({
@@ -136,7 +131,6 @@ describe('runMigrations', () => {
     fsMockFns.readdirSync.mockReturnValue(['001_applied.sql', '002_pending.sql']);
     fsMockFns.readFileSync.mockReturnValue('SELECT 1;');
     mockQueryWithRetry
-      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ name: '001_applied.sql' }] });
     const mockClientQuery = vi.fn().mockResolvedValue({});
     const mockClientRelease = vi.fn();
