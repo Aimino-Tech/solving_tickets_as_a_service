@@ -4,7 +4,7 @@ from .sandbox import boot_sandbox
 from .verification import run_verification, verify_agent_output
 from .pr_creation import create_pull_request
 from .notifications import send_notification, process_webhook
-from .periodic import queue_health_check, dlq_cleanup, push_metrics, report_liveness
+from .periodic import queue_health_check, dlq_cleanup, push_metrics, report_liveness, sla_compliance_check
 from . import linear_poll
 from .sandbox_gc import sandbox_gc
 from .multi_verification import multi_round_verify
@@ -27,6 +27,7 @@ __all__ = [
     "dlq_cleanup",
     "push_metrics",
     "report_liveness",
+    "sla_compliance_check",
     "sandbox_gc",
     "multi_round_verify",
     "process_merge_queue",

@@ -155,6 +155,38 @@ def push_metrics(self) -> dict:
 
 @shared_task(
     bind=True,
+    max_retries=2,
+    default_retry_delay=30,
+    autoretry_for=(Exception,),
+    name="workers.tasks.periodic.sla_compliance_check",
+)
+def sla_compliance_check(self) -> dict:
+    try:
+        from workers.billing.sla import get_sla_tracker
+        tracker = get_sla_tracker()
+        tenant_ids = tracker.get_all_tenant_ids()
+        total_breaches = 0
+        active_escalations = 0
+        total_tickets = 0
+        for tid in tenant_ids:
+            status = tracker.get_tenant_status(tid)
+            total_tickets += status.total_tickets
+            total_breaches += status.response_breaches + status.resolution_breaches
+            active_escalations += status.current_escalations
+            record_gauge("stas_sla_tenant_breaches", float(status.response_breaches + status.resolution_breaches), tenant_id=tid, tier=status.tier)
+            record_gauge("stas_sla_tenant_active_tickets", float(status.active_tickets), tenant_id=tid, tier=status.tier)
+        record_gauge("stas_sla_total_tenants", float(len(tenant_ids)))
+        record_gauge("stas_sla_total_breaches", float(total_breaches))
+        record_gauge("stas_sla_active_escalations", float(active_escalations))
+        record_gauge("stas_sla_total_tickets", float(total_tickets))
+        return {"tenants": len(tenant_ids), "total_tickets": total_tickets, "total_breaches": total_breaches, "active_escalations": active_escalations, "timestamp": time.time()}
+    except Exception as exc:
+        logger.error("SLA compliance check failed -- %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(
+    bind=True,
     max_retries=1,
     default_retry_delay=10,
     autoretry_for=(Exception,),
