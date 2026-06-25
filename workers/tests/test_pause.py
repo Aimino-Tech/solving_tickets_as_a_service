@@ -158,7 +158,7 @@ class TestPauseMiddleware:
 
 class TestPollPauseIntegration:
 
-    @patch("workers.dispatch.pause.get_pause_manager")
+    @patch("workers.tasks.linear_poll.get_pause_manager")
     @patch("workers.tasks.linear_poll.get_issues_by_state")
     @patch("workers.tasks.linear_poll.triage")
     def test_skips_paused(self, mock_triage, mock_get_issues, mock_get_pm):
@@ -175,7 +175,7 @@ class TestPollPauseIntegration:
         assert result["dispatched"] == 1
         mock_triage.delay.assert_called_once_with(issue_id="a1", identifier="A-1", pipeline="default", title="Active")
 
-    @patch("workers.dispatch.pause.get_pause_manager")
+    @patch("workers.tasks.linear_poll.get_pause_manager")
     @patch("workers.tasks.linear_poll.get_issues_by_state")
     @patch("workers.tasks.linear_poll.triage")
     def test_dispatches_all_when_none_paused(self, mock_triage, mock_get_issues, mock_get_pm):
