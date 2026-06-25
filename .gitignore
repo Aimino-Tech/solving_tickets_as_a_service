@@ -1,7 +1,11 @@
 <<<<<<< HEAD
 
 =======
+<<<<<<< HEAD
+
+=======
 .venv
+>>>>>>> origin/main
 >>>>>>> origin/main
 *~
 # Build output
@@ -42,5 +46,8 @@ __pycache__/
 *.egg-info/
 <<<<<<< HEAD
 =======
+<<<<<<< HEAD
+=======
 .worktrees/
+>>>>>>> origin/main
 >>>>>>> origin/main
