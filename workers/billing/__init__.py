@@ -33,6 +33,9 @@ Modules
         PQL conversion nudges, upgrade wall, and inactivity alerts.
     middleware
         Celery pre-dispatch gate for plan limits.
+    enterprise
+        Enterprise tier management — pricing, Stripe product, feature flags,
+        compliance artifacts, and SCIM provisioning.
 """
 
 from workers.billing.tenant_isolation import (
@@ -80,6 +83,21 @@ from workers.billing.middleware import (
     connect_tier_middleware,
     check_and_block,
 )
+from workers.billing.enterprise import (
+    EnterprisePlan,
+    EnterpriseFeature,
+    EnterpriseFeatureFlag,
+    EnterpriseProvisioningResult,
+    ComplianceArtifact,
+    get_enterprise_plan,
+    get_enterprise_feature_flags,
+    is_enterprise_feature_enabled,
+    get_compliance_artifacts,
+    create_enterprise_stripe_product,
+    is_enterprise_tier,
+    get_enterprise_tenant_ids,
+    get_enterprise_queue_config,
+)
 
 __all__ = [
     "TenantIsolationManager",
@@ -113,4 +131,17 @@ __all__ = [
     "TierLimitExceeded",
     "connect_tier_middleware",
     "check_and_block",
+    "EnterprisePlan",
+    "EnterpriseFeature",
+    "EnterpriseFeatureFlag",
+    "EnterpriseProvisioningResult",
+    "ComplianceArtifact",
+    "get_enterprise_plan",
+    "get_enterprise_feature_flags",
+    "is_enterprise_feature_enabled",
+    "get_compliance_artifacts",
+    "create_enterprise_stripe_product",
+    "is_enterprise_tier",
+    "get_enterprise_tenant_ids",
+    "get_enterprise_queue_config",
 ]
