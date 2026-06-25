@@ -58,6 +58,10 @@
     "gitleaks": "gitleaks detect --source . -v 2>/dev/null || echo 'gitleaks not installed - install via: brew install gitleaks'",
     "quality-gates": "bash scripts/quality-gates.sh",
     "quality-gates:changed": "bash scripts/quality-gates.sh --changed-only",
+    "leave-it-cleaner": "bash scripts/leave-it-cleaner.sh",
+    "leave-it-cleaner:lsp": "bash scripts/leave-it-cleaner.sh --skip-tests",
+    "leave-it-cleaner:tests": "bash scripts/leave-it-cleaner.sh --skip-lsp",
+    "leave-it-cleaner:json": "bash scripts/leave-it-cleaner.sh --json",
     "release:dry-run": "bash scripts/release-dry-run.sh"
   },
   "dependencies": {

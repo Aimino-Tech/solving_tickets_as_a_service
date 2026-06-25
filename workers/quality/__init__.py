@@ -1,3 +1,12 @@
+from workers.quality.cleaner_gate import (
+    CleanerGateResult,
+    FileDiagnostic,
+    LspDiagnosticsResult,
+    TestSuiteResult,
+    run_cleaner_gate,
+    run_lsp_diagnostics,
+    run_tests_for_files,
+)
 from workers.quality.models import (
     AntiMockupFinding,
     AntiMockupResult,
@@ -19,6 +28,13 @@ __all__ = [
     "get_e2e_spec_template",
     "anti_mockup_scan",
     "inject_anti_stub_prompt",
+    "CleanerGateResult",
+    "FileDiagnostic",
+    "LspDiagnosticsResult",
+    "TestSuiteResult",
+    "run_cleaner_gate",
+    "run_lsp_diagnostics",
+    "run_tests_for_files",
 ]
 
 
