@@ -218,6 +218,17 @@ const envSchema = z.object({
   METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
+
+  // ── Multi-Tenant Isolation (AIM-2017) ─────────────────────────────────────
+  QUEUE_PER_TENANT_PREFIX: z.string().default('stas.tenant.'),
+  QUEUE_PER_TENANT_PREFETCH: z.coerce.number().int().positive().default(1),
+  TENANT_MAX_CONCURRENT_FREE: z.coerce.number().int().positive().default(1),
+  TENANT_MAX_CONCURRENT_PRO: z.coerce.number().int().positive().default(3),
+  TENANT_MAX_CONCURRENT_ENTERPRISE: z.coerce.number().int().positive().default(10),
+  WORKSPACES_ROOT: z.string().default('/workspaces'),
+  TENANT_RATE_LIMIT_FREE_PER_MIN: z.coerce.number().int().positive().default(10),
+  TENANT_RATE_LIMIT_PRO_PER_MIN: z.coerce.number().int().positive().default(60),
+  TENANT_RATE_LIMIT_ENTERPRISE_PER_MIN: z.coerce.number().int().positive().default(300),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -273,6 +284,8 @@ function buildConfig(env: ParsedEnv) {
       maxRetries: env.QUEUE_MAX_RETRIES,
       retryDelays: env.QUEUE_RETRY_DELAYS.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n)),
       backend: 'bullmq' as const,
+      perTenantPrefix: env.QUEUE_PER_TENANT_PREFIX,
+      perTenantPrefetch: env.QUEUE_PER_TENANT_PREFETCH,
     },
 
     opencode: {
@@ -369,6 +382,14 @@ function buildConfig(env: ParsedEnv) {
       ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
       adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
       max: env.STAS_RATE_LIMIT_MAX,
+      tenant: {
+        maxConcurrentFree: env.TENANT_MAX_CONCURRENT_FREE,
+        maxConcurrentPro: env.TENANT_MAX_CONCURRENT_PRO,
+        maxConcurrentEnterprise: env.TENANT_MAX_CONCURRENT_ENTERPRISE,
+        rateLimitFreePerMin: env.TENANT_RATE_LIMIT_FREE_PER_MIN,
+        rateLimitProPerMin: env.TENANT_RATE_LIMIT_PRO_PER_MIN,
+        rateLimitEnterprisePerMin: env.TENANT_RATE_LIMIT_ENTERPRISE_PER_MIN,
+      },
     },
 
     stripe: {
@@ -462,6 +483,9 @@ function buildConfig(env: ParsedEnv) {
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
     },
+
+    // Multi-tenant workspace root
+    workspaceRoot: env.WORKSPACES_ROOT,
   } as const;
 }
 

@@ -66,6 +66,7 @@ stas_issues = Exchange("stas.issues", type="topic", durable=True)
 stas_queue = Exchange("stas.queue", type="topic", durable=True)
 stas_events = Exchange("stas.events", type="fanout", durable=True)
 stas_dlx = Exchange("stas.dlx", type="direct", durable=True)
+stas_tenants = Exchange("stas.tenants", type="topic", durable=True)
 
 task_default_queue = "stas.agents.dispatch"
 task_default_exchange = "stas.agents"
@@ -88,6 +89,8 @@ task_queues = [
     # ── stas.dlx exchange ─────────────────────────────────────
     Queue("stas.dlx.retry", stas_dlx, routing_key="dlq.retry"),
     Queue("stas.dlx.failed", stas_dlx, routing_key="dlq.failed"),
+    # ── stas.tenants exchange ─────────────────────────────────
+    Queue("stas.tenants.dispatch", stas_tenants, routing_key="tenant.#"),
 ]
 
 task_routes = {
