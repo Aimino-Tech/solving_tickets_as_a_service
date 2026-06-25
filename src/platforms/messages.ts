@@ -12,7 +12,7 @@ import type { AgentResult, QualityGateResult } from '../agent/types.js';
 import { config } from '../config.js';
 
 const BOT_NAME = config.stas.botName;
-const BOT_SIGNATURE = `> — ${BOT_NAME} 🤖`;
+export const BOT_SIGNATURE = `> — ${BOT_NAME} 🤖`;
 
 /**
  * High-confidence fix — PR is ready for review (non-draft).

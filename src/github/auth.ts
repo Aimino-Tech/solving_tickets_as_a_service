@@ -12,7 +12,7 @@ import {
   createInstallationOctokit,
   getInstallationToken as getInstallationTokenFromPackage,
   type GitHubAppConfig,
-} from '@stas/github-client';
+} from '../../packages/github-client/src/index.js';
 
 const log = rootLogger.child({ module: 'github-auth' });
 
