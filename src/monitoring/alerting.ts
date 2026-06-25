@@ -345,9 +345,9 @@ export function reportWorkerDown(
  *
  * Called periodically by the scheduled health check task.
  */
-export async function checkSLOCompliance(): Promise<void> {
+export function checkSLOCompliance(): void {
   try {
-    const report = await generateSLOReport();
+    const report = generateSLOReport();
 
     // Record metrics to Prometheus
     recordSLIMetrics(report);

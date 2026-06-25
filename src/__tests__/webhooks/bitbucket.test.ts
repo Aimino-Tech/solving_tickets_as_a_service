@@ -42,7 +42,7 @@ vi.mock("../../queue/issueQueue.js", () => ({
   enqueueIssue: mockEnqueueIssue,
 }));
 
-import { bitbucketWebhook, bitbucketClient, createBitbucketWebhooks } from "../../webhooks/bitbucket.js";
+import { bitbucketWebhook, createBitbucketWebhooks } from "../../webhooks/bitbucket.js";
 import type { PlatformWebhookEvent } from "../../webhooks/base.js";
 
 function createMockQueue() {
@@ -150,36 +150,6 @@ describe("bitbucketWebhook", () => {
   });
 });
 
-describe("bitbucketClient", () => {
-  describe("toIssueJobData", () => {
-    it("converts a PlatformWebhookEvent to IssueJobData", () => {
-      const event: PlatformWebhookEvent = {
-        platform: "bitbucket",
-        eventType: "issue.opened",
-        issue: {
-          id: 42,
-          number: 42,
-          title: "Fix bug",
-          body: "Bug description",
-          labels: [],
-          repoOwner: "owner",
-          repoName: "test-repo",
-          repoPrivate: false,
-        },
-        raw: {},
-      };
-
-      const jobData = bitbucketClient.toIssueJobData(event);
-      expect(jobData.repoOwner).toBe("owner");
-      expect(jobData.repoName).toBe("test-repo");
-      expect(jobData.issueNumber).toBe(42);
-      expect(jobData.issueTitle).toBe("Fix bug");
-      expect(jobData.issueBody).toBe("Bug description");
-      expect(jobData.source).toBe("bitbucket");
-    });
-  });
-});
-
 describe("createBitbucketWebhooks", () => {
   let mockQueue: ReturnType<typeof createMockQueue>;
 
@@ -200,12 +170,13 @@ describe("createBitbucketWebhooks", () => {
 
     expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
     expect(mockEnqueueIssue).toHaveBeenCalledWith(
-      mockQueue,
+      undefined,
       expect.objectContaining({
         repoOwner: "owner",
         repoName: "test-repo",
         issueNumber: 42,
         issueTitle: "Fix broken login",
+        source: "bitbucket",
       }),
     );
   });

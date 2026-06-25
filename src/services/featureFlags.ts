@@ -116,11 +116,11 @@ export async function getErrorRate(flag: string): Promise<number> {
     await redis.zremrangebyscore(errorsKey(flag), 0, windowStart).catch(() => {});
 
     const [calls, errors] = await Promise.all([
-      redis.zcard(callsKey(flag)),
-      redis.zcard(errorsKey(flag)),
+      redis.zcard(callsKey(flag)).catch(() => 0),
+      redis.zcard(errorsKey(flag)).catch(() => 0),
     ]);
 
-    if (calls === 0) return 0;
+    if (!calls || calls === 0) return 0;
     return errors / calls;
   } catch (err) {
     log.error({ err: String(err), flag }, 'Failed to get error rate');

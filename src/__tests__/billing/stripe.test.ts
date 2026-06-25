@@ -39,7 +39,7 @@ function createMockStripeClient() {
 
 let sharedMockClient: ReturnType<typeof createMockStripeClient>;
 vi.mock('stripe', () => ({
-  default: vi.fn(() => sharedMockClient),
+  default: vi.fn(function () { return sharedMockClient; }),
 }));
 
 vi.mock('../../config.js', () => mockConfig);

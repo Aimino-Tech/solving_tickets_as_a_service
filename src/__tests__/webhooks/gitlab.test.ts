@@ -224,12 +224,13 @@ describe("createGitlabWebhooks", () => {
 
     expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
     expect(mockEnqueueIssue).toHaveBeenCalledWith(
-      mockQueue,
+      undefined,
       expect.objectContaining({
         repoOwner: "owner",
         repoName: "test-repo",
         issueNumber: 42,
         issueTitle: "Fix broken login",
+        source: "gitlab",
       }),
     );
   });

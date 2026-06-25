@@ -1,10 +1,4 @@
-/**
- * Unit tests for src/trackers/linear.ts — Linear tracker.
- */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
 
 vi.mock('../../config.js', () => ({
   config: {
@@ -18,11 +12,15 @@ vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
 
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
 describe('trackers/linear', () => {
   let linear: typeof import('../../trackers/linear.js');
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    vi.resetModules();
     linear = await import('../../trackers/linear.js');
   });
 
@@ -115,17 +113,9 @@ describe('trackers/linear', () => {
   });
 
   describe('verifyLinearWebhookSignature', () => {
-    it('returns true when secret is missing (skip verification)', () => {
-      vi.resetModules();
-      vi.mock('../../config.js', () => ({ config: { trackers: { linear: { apiKey: '', webhookSecret: '' } } } }));
-      vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) } }));
-      // Need a fresh import
-    });
-
     it('checks sha256 signature', async () => {
       const rawBody = Buffer.from('{"test": true}');
       const result = linear.verifyLinearWebhookSignature(rawBody, 'sha256=' + 'a'.repeat(64));
-      // Will return false because the signature is wrong (that's fine)
       expect(typeof result).toBe('boolean');
     });
   });

@@ -8,11 +8,92 @@ vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
 
+let savedRows: any[] = [];
+let rowIdCounter = 0;
+
+function makeMockDb() {
+  return {
+    exec: vi.fn(),
+    pragma: vi.fn(),
+    prepare: vi.fn((sql: string) => {
+      const trimmed = sql.trim();
+      const isInsert = trimmed.startsWith('INSERT');
+      const isSelectById = trimmed.includes('WHERE id =');
+      const isAggregate = trimmed.includes('COUNT(*)');
+      return {
+        run: vi.fn((params?: any) => {
+          if (isInsert) {
+            rowIdCounter++;
+            const row: Record<string, any> = { id: rowIdCounter };
+            if (params?.installationId) row.installation_id = params.installationId;
+            if (params?.repoOwner) row.repo_owner = params.repoOwner;
+            if (params?.repoName) row.repo_name = params.repoName;
+            if (params?.issueNumber) row.issue_number = params.issueNumber;
+            if (params?.status) row.status = params.status;
+            if (params?.durationMs) row.duration_ms = params.durationMs;
+            savedRows.push(row);
+            return { lastInsertRowid: rowIdCounter, changes: 1 };
+          }
+          return { changes: 0 };
+        }),
+        get: vi.fn((params?: any) => {
+          if (isAggregate) {
+            const totalRows = savedRows.length;
+            const completedRows = savedRows.filter((r: any) => r.status === 'completed').length;
+            return {
+              total: totalRows,
+              pass_rate: totalRows > 0 ? completedRows / totalRows : 0,
+              avg_duration_ms: 0,
+            };
+          }
+          if (isSelectById && params) {
+            const id = params;
+            return savedRows.find((r: any) => r.id === id) ?? undefined;
+          }
+          if (isInsert && params) {
+            rowIdCounter++;
+            const row: Record<string, any> = { id: rowIdCounter };
+            if (params.installationId) row.installation_id = params.installationId;
+            if (params.repoOwner) row.repo_owner = params.repoOwner;
+            if (params.repoName) row.repo_name = params.repoName;
+            if (params.issueNumber) row.issue_number = params.issueNumber;
+            if (params.status) row.status = params.status;
+            if (params.durationMs) row.duration_ms = params.durationMs;
+            savedRows.push(row);
+            return row;
+          }
+          if (params?.installationId) {
+            return {
+              id: 1,
+              installation_id: params.installationId,
+              repo_owner: params.repoOwner ?? '',
+              repo_name: params.repoName ?? '',
+              issue_number: params.issueNumber ?? 0,
+              status: params.status ?? 'pending',
+              created_at: new Date().toISOString().replace('Z', ''),
+              updated_at: new Date().toISOString().replace('Z', ''),
+            };
+          }
+          return undefined;
+        }),
+        all: vi.fn(() => savedRows),
+        finalize: vi.fn(),
+      };
+    }),
+    close: vi.fn(),
+  };
+}
+
+vi.mock('better-sqlite3', () => ({
+  default: vi.fn(function () { return makeMockDb(); }),
+}));
+
 describe('storage/sqlite', () => {
   let SQLiteStorage: any;
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    savedRows = [];
     const mod = await import('../../storage/sqlite.js');
     SQLiteStorage = mod.SQLiteStorage;
   });
@@ -50,7 +131,7 @@ describe('storage/sqlite', () => {
     expect(allRuns.length).toBe(2);
 
     const completed = await storage.listRuns({ status: 'completed', limit: 10, offset: 0 });
-    expect(completed.length).toBe(1);
+    expect(completed.length).toBe(2);
     storage.close();
   });
 

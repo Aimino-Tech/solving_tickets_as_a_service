@@ -19,8 +19,6 @@ export default defineConfig({
     // Setup file runs before each test file
     setupFiles: ["src/__tests__/setup.ts"],
 
-    testTimeout: 30000,
-
     // Coverage configuration
     coverage: {
       thresholdAutoUpdate: false,

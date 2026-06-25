@@ -21,6 +21,7 @@
  */
 
 import { Redis } from 'ioredis';
+import { config } from '../config.js';
 import { getConcurrencyLimitForAccount } from './tiers.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -70,7 +71,6 @@ export class ConcurrencyManager {
 
   private getClient(): Redis {
     if (!this.redisClient) {
-      const { config } = require('../config.js');
       this.redisClient = new Redis(config.queue.redisUrl, {
         maxRetriesPerRequest: null,
         enableReadyCheck: true,

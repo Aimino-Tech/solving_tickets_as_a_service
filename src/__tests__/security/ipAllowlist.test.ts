@@ -3,12 +3,12 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
+const mockConfig = vi.hoisted(() => ({
+  security: { ipAllowlist: { enabled: false, ips: [] as string[] } },
+}));
+
 vi.mock('../../config.js', () => ({
-  config: {
-    security: {
-      ipAllowlist: { enabled: false, ips: [] },
-    },
-  },
+  config: mockConfig,
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -20,6 +20,8 @@ describe('security/ipAllowlist', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockConfig.security.ipAllowlist = { enabled: false, ips: [] };
+    vi.resetModules();
     ipAllowlist = await import('../../security/ipAllowlist.js');
   });
 
@@ -33,11 +35,7 @@ describe('security/ipAllowlist', () => {
     });
 
     it('rejects when enabled with empty allowlist and non-localhost', async () => {
-      vi.resetModules();
-      vi.mock('../../config.js', () => ({
-        config: { security: { ipAllowlist: { enabled: true, ips: [] } } },
-      }));
-      vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) } }));
+      mockConfig.security.ipAllowlist = { enabled: true, ips: [] };
       const mod = await import('../../security/ipAllowlist.js');
 
       const req = { headers: {}, ip: '10.0.0.1', socket: { remoteAddress: '10.0.0.1' }, path: '/test' } as any;
@@ -49,11 +47,7 @@ describe('security/ipAllowlist', () => {
     });
 
     it('allows localhost when enabled with empty allowlist', async () => {
-      vi.resetModules();
-      vi.mock('../../config.js', () => ({
-        config: { security: { ipAllowlist: { enabled: true, ips: [] } } },
-      }));
-      vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) } }));
+      mockConfig.security.ipAllowlist = { enabled: true, ips: [] };
       const mod = await import('../../security/ipAllowlist.js');
 
       const req = { headers: {}, ip: '127.0.0.1', socket: { remoteAddress: '127.0.0.1' }, path: '/test' } as any;
@@ -64,11 +58,7 @@ describe('security/ipAllowlist', () => {
     });
 
     it('allows IPs in the allowlist', async () => {
-      vi.resetModules();
-      vi.mock('../../config.js', () => ({
-        config: { security: { ipAllowlist: { enabled: true, ips: ['203.0.113.1'] } } },
-      }));
-      vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) } }));
+      mockConfig.security.ipAllowlist = { enabled: true, ips: ['203.0.113.1'] };
       const mod = await import('../../security/ipAllowlist.js');
 
       const req = { headers: {}, ip: '203.0.113.1', socket: { remoteAddress: '203.0.113.1' }, path: '/test' } as any;

@@ -5,7 +5,7 @@ Listens to DLQ queues and triggers alerts when messages are dead-lettered.
 Sends Slack notifications and logs warnings for operational visibility.
 
 Usage:
-    celery -A workers.celery_app worker -Q stas.agents.dispatch.dlq -c 1 -n dlq_alert@%%h
+    celery -A workers.celery_app worker -Q stas.issues.fix.dlq -c 1 -n dlq_alert@%%h
 """
 
 import json
@@ -112,16 +112,13 @@ def log_dlq_alert(queue: str, message_body: str, headers: dict | None = None) ->
 # ── Consumer Setup ──────────────────────────────────────────────────────────
 
 DLQ_QUEUES = [
-    "stas.agents.dispatch.dlq",
-    "stas.agents.verification.dlq",
-    "stas.agents.self_audit.dlq",
+    "stas.issues.fix.dlq",
+    "stas.agents.triage.dlq",
+    "stas.agents.opencode.dlq",
     "stas.agents.sandbox.dlq",
-    "stas.issues.triage.dlq",
-    "stas.issues.health.dlq",
-    "stas.queue.pr.dlq",
-    "stas.queue.merge.dlq",
-    "stas.queue.notifications.dlq",
-    "stas.events.event_bus.dlq",
+    "stas.agents.verification.dlq",
+    "stas.events.notifications.dlq",
+    "stas.events.audit.dlq",
 ]
 
 

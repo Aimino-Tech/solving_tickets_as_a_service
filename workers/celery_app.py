@@ -67,15 +67,7 @@ app.conf.update(
 # Disable pidbox remote control (RabbitMQ 4.x removed transient_nonexcl_queues)
 app.conf.worker_enable_remote_control = False
 
-<<<<<<< HEAD
-app.autodiscover_tasks(["workers.tasks", "workers.consumers", "workers.quality"])
-=======
-<<<<<<< HEAD
-app.autodiscover_tasks(["workers.tasks", "workers.consumers", "workers.quality", "workers.orchestrator"])
-=======
-app.autodiscover_tasks(["workers.tasks", "workers.consumers", "workers.quality"])
->>>>>>> origin/main
->>>>>>> origin/main
+app.autodiscover_tasks(["workers.tasks", "workers.consumers"])
 
 # ── Initialize Metrics (Prometheus) ────────────────────────────────
 METRICS_PORT = int(os.getenv("CELERY_METRICS_PORT", "9090"))
