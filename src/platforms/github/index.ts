@@ -74,12 +74,15 @@ export class GitHubPlatformClient implements PlatformClient {
 
   async updateIssue(repo: string, issueNumber: number, updates: Partial<Issue>): Promise<void> {
     const { owner, repo: repoName } = parseRepo(repo);
-    const params: Record<string, unknown> = { owner, repo: repoName, issue_number: issueNumber };
-    if (updates.title !== undefined) params.title = updates.title;
-    if (updates.body !== undefined) params.body = updates.body;
-    if (updates.state !== undefined) params.state = updates.state;
-    if (updates.labels !== undefined) params.labels = updates.labels;
-    await this.octokit.issues.update(params as any);
+    await this.octokit.issues.update({
+      owner,
+      repo: repoName,
+      issue_number: issueNumber,
+      ...(updates.title !== undefined && { title: updates.title }),
+      ...(updates.body !== undefined && { body: updates.body }),
+      ...(updates.state !== undefined && { state: updates.state }),
+      ...(updates.labels !== undefined && { labels: updates.labels }),
+    });
   }
 
   // ── PR operations ─────────────────────────────────────────────────
