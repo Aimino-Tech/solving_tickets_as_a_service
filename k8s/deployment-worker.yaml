@@ -19,7 +19,15 @@ metadata:
     tier: worker
     component: queue-processor
 spec:
+  # terminationGracePeriodSeconds must exceed the longest task grace
+  # period (300s for agent/sandbox) + preStop sleep (10s) + buffer.
   replicas: 2
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
   selector:
     matchLabels:
       app: stas-worker
@@ -30,6 +38,7 @@ spec:
         tier: worker
         component: queue-processor
     spec:
+      terminationGracePeriodSeconds: 360
       containers:
         - name: worker
           image: ghcr.io/tamnguyen08/stas-worker:latest
@@ -54,6 +63,16 @@ spec:
               value: "worker"
             - name: NODE_ENV
               value: "production"
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - |
+                    sleep 5
+                    # Kubernetes sends SIGTERM after preStop.
+                    # GracefulShutdownHandler intercepts and drains tasks.
           livenessProbe:
             exec:
               command: ["python3", "/app/health.py", "--check"]
