@@ -1,6 +1,5 @@
 from kombu import Exchange, Queue
 
-
 import os
 
 # ── Retry Configuration ─────────────────────────────────────────
@@ -58,23 +57,43 @@ worker_prefetch_multiplier = 1
 worker_enable_remote_control = False
 broker_connection_retry_on_startup = True
 
-task_default_queue = "stas.agents.triage"
+# ── Unified Exchange Topology ───────────────────────────────────
+# All layers (TypeScript + Celery) use the same exchange names,
+# queue names, and routing keys.
+
+stas_agents = Exchange("stas.agents", type="topic", durable=True)
+stas_issues = Exchange("stas.issues", type="topic", durable=True)
+stas_queue = Exchange("stas.queue", type="topic", durable=True)
+stas_events = Exchange("stas.events", type="fanout", durable=True)
+stas_dlx = Exchange("stas.dlx", type="direct", durable=True)
+
+task_default_queue = "stas.agents.dispatch"
+task_default_exchange = "stas.agents"
+task_default_routing_key = "agent.runner"
 
 task_queues = [
-    Queue("stas.agents.triage", Exchange("stas"), routing_key="stas.agents.triage"),
-    Queue("stas.agents.dispatch", Exchange("stas"), routing_key="stas.agents.dispatch"),
-    Queue("stas.agents.sandbox", Exchange("stas"), routing_key="stas.agents.sandbox"),
-    Queue("stas.agents.verification", Exchange("stas"), routing_key="stas.agents.verification"),
-    Queue("stas.agents.pr_creation", Exchange("stas"), routing_key="stas.agents.pr_creation"),
-    Queue("stas.agents.notifications", Exchange("stas"), routing_key="stas.agents.notifications"),
-    Queue("stas.agents.default", Exchange("stas"), routing_key="stas.agents.default"),
+    # ── stas.agents exchange ──────────────────────────────────
+    Queue("stas.agents.dispatch", stas_agents, routing_key="agent.runner"),
+    Queue("stas.agents.verification", stas_agents, routing_key="agent.verify"),
+    Queue("stas.agents.sandbox", stas_agents, routing_key="agent.sandbox"),
+    # ── stas.issues exchange ──────────────────────────────────
+    Queue("stas.issues.triage", stas_issues, routing_key="triage.#"),
+    Queue("stas.issues.health", stas_issues, routing_key="health.#"),
+    # ── stas.queue exchange ───────────────────────────────────
+    Queue("stas.queue.pr", stas_queue, routing_key="pr.create"),
+    Queue("stas.queue.notifications", stas_queue, routing_key="queue.notify"),
+    # ── stas.events exchange (fanout) ─────────────────────────
+    Queue("stas.events.event_bus", stas_events),
+    # ── stas.dlx exchange ─────────────────────────────────────
+    Queue("stas.dlx.retry", stas_dlx, routing_key="dlq.retry"),
+    Queue("stas.dlx.failed", stas_dlx, routing_key="dlq.failed"),
 ]
 
 task_routes = {
-    "workers.tasks.triage.*": {"queue": "stas.agents.triage"},
+    "workers.tasks.triage.*": {"queue": "stas.issues.triage"},
     "workers.tasks.agent.*": {"queue": "stas.agents.dispatch"},
     "workers.tasks.sandbox.*": {"queue": "stas.agents.sandbox"},
     "workers.tasks.verification.*": {"queue": "stas.agents.verification"},
-    "workers.tasks.pr_creation.*": {"queue": "stas.agents.pr_creation"},
-    "workers.tasks.notifications.*": {"queue": "stas.agents.notifications"},
+    "workers.tasks.pr_creation.*": {"queue": "stas.queue.pr"},
+    "workers.tasks.notifications.*": {"queue": "stas.queue.notifications"},
 }
