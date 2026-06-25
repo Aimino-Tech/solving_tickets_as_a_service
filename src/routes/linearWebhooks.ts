@@ -1,7 +1,10 @@
 import { Router, type Request, type Response } from 'express';
 import crypto from 'node:crypto';
 import { rootLogger } from '../utils/logger.js';
+<<<<<<< HEAD
 import { publish } from '../queue/rabbitmq.js';
+=======
+>>>>>>> origin/main
 
 const log = rootLogger.child({ module: 'linear-webhook' });
 
@@ -21,7 +24,11 @@ function verifySignature(payload: string, signature: string): boolean {
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
+<<<<<<< HEAD
 router.post('/linear', async (req: Request, res: Response) => {
+=======
+router.post('/linear', (req: Request, res: Response) => {
+>>>>>>> origin/main
   const signature = req.headers['linear-signature'] as string;
   const rawBody = JSON.stringify(req.body);
 
@@ -36,6 +43,7 @@ router.post('/linear', async (req: Request, res: Response) => {
 
   if (event.type === 'Issue' && event.action === 'update') {
     const issueId = event.data?.id;
+<<<<<<< HEAD
     const issueData = event.data;
     if (issueId) {
       log.info({ issueId }, 'Dispatching immediate triage for updated issue');
@@ -55,6 +63,10 @@ router.post('/linear', async (req: Request, res: Response) => {
       } catch (err) {
         log.error({ err: String(err), issueId }, 'Failed to publish triage message');
       }
+=======
+    if (issueId) {
+      log.info({ issueId }, 'Queueing immediate triage for updated issue');
+>>>>>>> origin/main
     }
   }
 
