@@ -218,6 +218,65 @@ const envSchema = z.object({
   METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
+
+  // ── Self-Healing Infrastructure (AIM-2022) ───────────────────────────────
+  SELF_HEALING_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(true),
+  HEARTBEAT_INTERVAL_MS: z.coerce.number().int().positive().default(15_000),
+  HEARTBEAT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
+  HEARTBEAT_DEAD_AFTER_MS: z.coerce.number().int().positive().default(60_000),
+  STUCK_TASK_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
+  DRAIN_MONITOR_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
+  DLQ_CONSUMER_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(true),
+  STUCK_TASK_MONITOR_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(true),
+  QUEUE_DRAIN_MONITOR_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(true),
+  CIRCUIT_BREAKER_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(5),
+  CIRCUIT_BREAKER_RESET_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
+  // Retry policy defaults
+  RETRY_BASE_DELAY_MS: z.coerce.number().int().positive().default(1_000),
+  RETRY_MULTIPLIER: z.coerce.number().int().positive().default(4),
+  RETRY_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),
+  // Kubernetes worker restart
+  K8S_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(false),
+  K8S_NAMESPACE: z.string().default('default'),
+  // KEDA auto-scaling
+  KEDA_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(false),
+  KEDA_SCALED_OBJECT: z.string().default('stas-worker'),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -461,6 +520,28 @@ function buildConfig(env: ParsedEnv) {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    // ── Self-Healing Infrastructure (AIM-2022) ─────────────────────────────
+    selfHealing: {
+      enabled: env.SELF_HEALING_ENABLED,
+      heartbeatIntervalMs: env.HEARTBEAT_INTERVAL_MS,
+      heartbeatTtlSeconds: env.HEARTBEAT_TTL_SECONDS,
+      heartbeatDeadAfterMs: env.HEARTBEAT_DEAD_AFTER_MS,
+      stuckTaskIntervalMs: env.STUCK_TASK_INTERVAL_MS,
+      drainMonitorIntervalMs: env.DRAIN_MONITOR_INTERVAL_MS,
+      dlqConsumerEnabled: env.DLQ_CONSUMER_ENABLED,
+      stuckTaskMonitorEnabled: env.STUCK_TASK_MONITOR_ENABLED,
+      queueDrainMonitorEnabled: env.QUEUE_DRAIN_MONITOR_ENABLED,
+      circuitBreakerFailureThreshold: env.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
+      circuitBreakerResetTimeoutMs: env.CIRCUIT_BREAKER_RESET_TIMEOUT_MS,
+      retryBaseDelayMs: env.RETRY_BASE_DELAY_MS,
+      retryMultiplier: env.RETRY_MULTIPLIER,
+      retryMaxAttempts: env.RETRY_MAX_ATTEMPTS,
+      k8sEnabled: env.K8S_ENABLED,
+      k8sNamespace: env.K8S_NAMESPACE,
+      kedaEnabled: env.KEDA_ENABLED,
+      kedaScaledObject: env.KEDA_SCALED_OBJECT,
     },
   } as const;
 }
