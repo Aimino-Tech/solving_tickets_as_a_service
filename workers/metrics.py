@@ -159,49 +159,6 @@ try:
         registry=REGISTRY,
     )
 
-    # ── E2B Metrics ─────────────────────────────────────────────
-    e2b_health_check = Gauge(
-        "e2b_health_check",
-        "E2B sandbox health check status (1=healthy, 0=failed)",
-        registry=REGISTRY,
-    )
-    e2b_health_checks_total = Counter(
-        "e2b_health_checks_total",
-        "Total number of E2B health checks performed",
-        ["status"],
-        registry=REGISTRY,
-    )
-    e2b_health_check_failures_total = Counter(
-        "e2b_health_check_failures_total",
-        "E2B health check failures by error type",
-        ["error"],
-        registry=REGISTRY,
-    )
-    e2b_failures_total = Counter(
-        "stas_e2b_failures_total",
-        "E2B sandbox failures by error type and repository",
-        ["repo", "error"],
-        registry=REGISTRY,
-    )
-    e2b_fallback_to_docker_total = Counter(
-        "stas_e2b_fallback_to_docker_total",
-        "E2B to Docker fallback events by repository and reason",
-        ["repo", "reason"],
-        registry=REGISTRY,
-    )
-    e2b_template_valid = Gauge(
-        "e2b_template_valid",
-        "E2B template validation status (1=valid, 0=invalid)",
-        ["template"],
-        registry=REGISTRY,
-    )
-    e2b_template_validation_failures_total = Counter(
-        "e2b_template_validation_failures_total",
-        "E2B template validation failures by template and error type",
-        ["template", "error"],
-        registry=REGISTRY,
-    )
-
     logger.info("Prometheus client metrics initialized")
 
 except ImportError:

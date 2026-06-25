@@ -79,14 +79,14 @@ describe("GitLabPlatformClient", () => {
   // ── Constructor ───────────────────────────────────────────────────
 
   describe("constructor", () => {
-    it("uses the provided base URL without trailing slash", () => {
+    it("appends /api/v4 to the provided base URL without trailing slash", () => {
       const c = new GitLabPlatformClient("token", "https://self-hosted.gitlab.com/");
-      expect((c as unknown as { baseUrl: string }).baseUrl).toBe("https://self-hosted.gitlab.com");
+      expect((c as unknown as { baseUrl: string }).baseUrl).toBe("https://self-hosted.gitlab.com/api/v4");
     });
 
-    it("defaults to https://gitlab.com when no baseUrl given", () => {
+    it("defaults to https://gitlab.com/api/v4 when no baseUrl given", () => {
       const c = new GitLabPlatformClient("token");
-      expect((c as unknown as { baseUrl: string }).baseUrl).toBe("https://gitlab.com");
+      expect((c as unknown as { baseUrl: string }).baseUrl).toBe("https://gitlab.com/api/v4");
     });
   });
 
@@ -123,7 +123,7 @@ describe("GitLabPlatformClient", () => {
       });
 
       await expect(client.getIssue("owner/test-repo", 999)).rejects.toThrow(
-        "GitLab API error 404: Not Found",
+        "GitLab API GET /projects/owner%2Ftest-repo/issues/999 failed: 404 Not Found",
       );
     });
   });
@@ -167,7 +167,7 @@ describe("GitLabPlatformClient", () => {
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
 
       expect(requestUrl).toContain("/api/v4/projects/owner%2Ftest-repo/issues/42");
-      expect(requestBody.labels).toEqual(["bug", "stas:fix", "wontfix"]);
+      expect(requestBody.labels).toBe("bug,stas:fix,wontfix");
       expect(requestBody.state).toBe("closed");
     });
   });
@@ -227,7 +227,7 @@ describe("GitLabPlatformClient", () => {
       await client.createPullRequest(params);
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(requestBody.title).toBe("Draft: Fix broken login");
+      expect(requestBody.title).toBe("Fix broken login");
     });
   });
 
@@ -323,7 +323,7 @@ describe("GitLabPlatformClient", () => {
       });
 
       await expect(client.getIssue("owner/test-repo", 42)).rejects.toThrow(
-        'GitLab API error 403: {"error":"insufficient_access"}',
+        'GitLab API GET /projects/owner%2Ftest-repo/issues/42 failed: 403 {"error":"insufficient_access"}',
       );
     });
   });

@@ -113,7 +113,7 @@ let healthInterval: ReturnType<typeof setInterval> | null = null;
 
 /**
  * Start periodic database health checks (every 30s).
- * Each check runs `SELECT 1`, logs the result, and records to health_checks.
+ * Each check runs `SELECT 1` and logs the result.
  */
 export function startHealthChecks(): void {
   if (healthInterval) return;
@@ -121,29 +121,13 @@ export function startHealthChecks(): void {
   log.info('Starting database health checks (interval: 30s)');
 
   healthInterval = setInterval(async () => {
-    const start = Date.now();
     try {
       const result = await queryWithRetry<{ ok: number }>('SELECT 1 AS ok');
-      const responseTimeMs = Date.now() - start;
-      const healthy = result.rows[0]?.ok === 1;
-
-      await queryWithRetry(
-        `INSERT INTO health_checks (status, response_time_ms) VALUES ($1, $2)`,
-        [healthy ? 'healthy' : 'degraded', responseTimeMs],
-      );
-
-      if (!healthy) {
-        log.warn({ responseTimeMs }, 'Database health check returned unexpected result');
+      if (result.rows[0]?.ok !== 1) {
+        log.warn('Database health check returned unexpected result');
       }
     } catch (err) {
-      const responseTimeMs = Date.now() - start;
-      await queryWithRetry(
-        `INSERT INTO health_checks (status, response_time_ms) VALUES ($1, $2)`,
-        ['unhealthy', responseTimeMs],
-      ).catch((insertErr) => {
-        log.error({ err: String(insertErr) }, 'Failed to record health check result');
-      });
-      log.error({ err, responseTimeMs }, 'Database health check failed');
+      log.error({ err }, 'Database health check failed');
     }
   }, 30_000);
 

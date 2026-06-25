@@ -6,8 +6,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 const mockLinearTracker = { source: 'linear', getTicket: vi.fn(), postComment: vi.fn(), updateStatus: vi.fn(), createLink: vi.fn() };
 const mockJiraTracker = { source: 'jira', getTicket: vi.fn(), postComment: vi.fn(), updateStatus: vi.fn(), createLink: vi.fn() };
 
-vi.mock('../../trackers/linear.js', () => ({ LinearTracker: vi.fn(() => mockLinearTracker) }));
-vi.mock('../../trackers/jira.js', () => ({ JiraTracker: vi.fn(() => mockJiraTracker) }));
+vi.mock('../../trackers/linear.js', () => ({ LinearTracker: vi.fn(function () { return mockLinearTracker; }) }));
+vi.mock('../../trackers/jira.js', () => ({ JiraTracker: vi.fn(function () { return mockJiraTracker; }) }));
 
 vi.mock('../../config.js', () => ({
   config: {
@@ -27,7 +27,15 @@ describe('trackers/index', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    // Force fresh module to avoid stale Map state
+    vi.resetModules();
     trackers = await import('../../trackers/index.js');
+  });
+
+  describe('getTracker', () => {
+    it('returns undefined for uninitialized tracker', () => {
+      expect(trackers.getTracker('linear')).toBeUndefined();
+    });
   });
 
   describe('initTrackers', () => {
@@ -47,12 +55,6 @@ describe('trackers/index', () => {
       trackers.initTrackers();
       expect(trackers.hasTracker('linear')).toBe(true);
       expect(trackers.hasTracker('jira')).toBe(true);
-    });
-  });
-
-  describe('getTracker', () => {
-    it('returns undefined for uninitialized tracker', () => {
-      expect(trackers.getTracker('linear')).toBeUndefined();
     });
   });
 });

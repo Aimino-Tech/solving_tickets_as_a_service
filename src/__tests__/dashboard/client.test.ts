@@ -317,7 +317,7 @@ describe('dashboard API client', () => {
         json: async () => { throw new Error('no json'); },
       });
 
-      await expect(client.auth.me()).rejects.toThrow(/500/);
+      await expect(client.auth.me()).rejects.toThrow(/Internal Server Error/);
     });
 
     it('throws on network error', async () => {

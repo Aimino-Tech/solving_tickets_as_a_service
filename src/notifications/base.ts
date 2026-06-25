@@ -12,8 +12,7 @@ export type NotificationEvent =
   | 'verification_failed'
   | 'error'
   | 'payment_failed'
-  | 'payment_recovered'
-  | 'dlq_alert';
+  | 'payment_recovered';
 
 export interface NotificationData {
   repoOwner: string;

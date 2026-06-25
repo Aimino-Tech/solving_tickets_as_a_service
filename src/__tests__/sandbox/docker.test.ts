@@ -35,16 +35,16 @@ vi.mock('dockerode', () => {
     remove: vi.fn(),
     exec: vi.fn(),
   };
-  const mockDocker = vi.fn(() => ({
-    version: vi.fn().mockResolvedValue({ Version: '24.0.0' }),
-    pull: vi.fn().mockResolvedValue(undefined),
-    createContainer: vi.fn().mockResolvedValue(mockContainer),
-    getContainer: vi.fn().mockReturnValue(mockContainer),
-    modem: {
+  const mockDocker = vi.fn(function () {
+    this.version = vi.fn().mockResolvedValue({ Version: '24.0.0' });
+    this.pull = vi.fn().mockResolvedValue(undefined);
+    this.createContainer = vi.fn().mockResolvedValue(mockContainer);
+    this.getContainer = vi.fn().mockReturnValue(mockContainer);
+    this.modem = {
       demuxStream: vi.fn(),
-      followProgress: vi.fn((_stream, cb) => cb(null)),
-    },
-  }));
+      followProgress: vi.fn((_stream: unknown, cb: (err: unknown) => void) => cb(null)),
+    };
+  });
   return { default: mockDocker };
 });
 

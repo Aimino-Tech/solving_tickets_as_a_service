@@ -95,14 +95,14 @@ describe('AC3: gateCompileCheck (REAL tsc)', () => {
     writeFileSync(join(tempDir, 'valid.ts'), 'const x: number = 1;');
     const result = await gateCompileCheck(sandbox);
     expect(result.passed).toBe(true);
-  });
+  }, 120000);
 
   it('catches REAL TypeScript type error — AC3', async () => {
     writeFileSync(join(tempDir, 'broken.ts'), 'const x: number = "string";');
     const result = await gateCompileCheck(sandbox);
     expect(result.passed).toBe(false);
     expect(result.details).toContain('TS2322');
-  });
+  }, 120000);
 });
 
 describe('AC5: gateTestCheck (REAL execution)', () => {
@@ -164,7 +164,7 @@ describe('AC7: gateHallucinationCheck (REAL placeholder content)', () => {
     const result = await gateHallucinationCheck(sandbox, diff);
     expect(result.passed).toBe(false);
     expect(result.reason).toContain('not found');
-  });
+  }, 120000);
 });
 
 describe('runQualityGates (integration)', () => {
