@@ -36,8 +36,7 @@ def generate_search_queries(issue_body: str, max_queries: int = 5) -> list[str]:
     for match in re.finditer(
         r"\b(?:Redis|PostgreSQL|Docker|Kubernetes|GraphQL|gRPC|REST|HTTP|OpenAPI|"
         r"Celery|RabbitMQ|OpenTelemetry|Sentry|Prometheus|Grafana)\b",
-        issue_body,
-        re.IGNORECASE,
+        issue_body, re.IGNORECASE,
     ):
         candidates.add(match.group())
 
@@ -62,9 +61,7 @@ def augment_plan(
     for idx, step in enumerate(steps):
         task_desc = step.get("task", "")
         if not task_desc:
-            augmented.append({
-                **step, "research": {"codebase_results": [], "web_results": []}
-            })
+            augmented.append({**step, "research": {"codebase_results": [], "web_results": []}})
             continue
 
         queries = generate_search_queries(task_desc, max_queries=3)
@@ -76,32 +73,17 @@ def augment_plan(
         web_results: list[dict[str, Any]] = []
 
         for query in queries:
-            logger.debug(
-                "Step %d/%d --- searching codebase for %r", idx + 1, len(steps), query
-            )
-            codebase_results.extend(
-                search_codebase(query, repo_path=repo_path, max_results=5)
-            )
-            logger.debug(
-                "Step %d/%d --- searching web for %r", idx + 1, len(steps), query
-            )
+            logger.debug("Step %d/%d searching codebase for %r", idx + 1, len(steps), query)
+            codebase_results.extend(search_codebase(query, repo_path=repo_path, max_results=5))
+            logger.debug("Step %d/%d searching web for %r", idx + 1, len(steps), query)
             web_results.extend(search_web(query, max_results=3))
 
-        augmented.append({
-            **step,
-            "research": {
-                "codebase_results": codebase_results,
-                "web_results": web_results,
-            },
-        })
+        augmented.append({**step, "research": {"codebase_results": codebase_results, "web_results": web_results}})
 
     return augmented
 
 
-def build_research_context(
-    steps: list[dict[str, Any]],
-    max_chars: int = 2000,
-) -> str:
+def build_research_context(steps: list[dict[str, Any]], max_chars: int = 2000) -> str:
     parts: list[str] = []
 
     for idx, step in enumerate(steps):
@@ -109,10 +91,8 @@ def build_research_context(
         research = step.get("research")
         if not research:
             continue
-
         cb = research.get("codebase_results", [])
         web = research.get("web_results", [])
-
         if not cb and not web:
             continue
 
@@ -121,9 +101,7 @@ def build_research_context(
             parts.append(f"\n**Codebase hits ({len(cb)}):**")
             parts.append("```")
             for r in cb[:5]:
-                loc = f"{r['file']}:{r['line']}"
-                snippet = r.get("content", "")
-                parts.append(f"  {loc}  {snippet[:120]}")
+                parts.append(f"  {r['file']}:{r['line']}  {r.get('content', '')[:120]}")
             parts.append("```")
         if web:
             parts.append(f"\n**Web results ({len(web)}):**")

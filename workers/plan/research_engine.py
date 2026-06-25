@@ -1,6 +1,5 @@
 """
-Research engine --- search the codebase and web for context to augment plan
-creation.
+Research engine --- search the codebase and web.
 """
 
 from __future__ import annotations
