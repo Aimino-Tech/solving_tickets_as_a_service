@@ -94,6 +94,23 @@ from workers.orchestrator.tenant_limiter import (
     get_tenant_concurrency_limiter,
 )
 
+# Workspace quota & isolation (AIM-2013)
+from workers.orchestrator.quota import (
+    DiskQuota,
+    WorkspaceIsolation,
+    resolve_tier,
+    quota_for_tier,
+    get_disk_quota,
+    get_workspace_isolation,
+)
+
+from workers.orchestrator.workspace_quota import (
+    QuotaManager,
+    PeriodicCleanupTask,
+    get_quota_manager,
+    get_periodic_cleanup,
+)
+
 __all__ = [
     # Core orchestration
     "PipelineEngine",
@@ -150,4 +167,15 @@ __all__ = [
     "TenantConcurrencyLimiter",
     "get_tenant_token_bucket",
     "get_tenant_concurrency_limiter",
+    # Workspace quota & isolation (AIM-2013)
+    "DiskQuota",
+    "WorkspaceIsolation",
+    "resolve_tier",
+    "quota_for_tier",
+    "get_disk_quota",
+    "get_workspace_isolation",
+    "QuotaManager",
+    "PeriodicCleanupTask",
+    "get_quota_manager",
+    "get_periodic_cleanup",
 ]
