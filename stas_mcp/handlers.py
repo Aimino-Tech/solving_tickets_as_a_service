@@ -24,10 +24,6 @@ FIX_REGISTRY_PATH = os.getenv("STAS_FIX_REGISTRY_PATH", "/tmp/stas-fix-registry.
 GITHUB_API_BASE = os.getenv("GITHUB_API_BASE", "https://api.github.com")
 
 
-# ---------------------------------------------------------------------------
-# In-memory + file-backed fix registry
-# ---------------------------------------------------------------------------
-
 _fix_registry: dict[str, dict[str, Any]] | None = None
 
 
@@ -54,11 +50,6 @@ def _save_registry() -> None:
 def _reset_registry() -> None:
     global _fix_registry
     _fix_registry = None
-
-
-# ---------------------------------------------------------------------------
-# Handlers
-# ---------------------------------------------------------------------------
 
 
 async def label_issue(
@@ -220,11 +211,6 @@ async def get_pr(run_id: str) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Resource handler
-# ---------------------------------------------------------------------------
-
-
 async def get_run_resource(run_id: str) -> dict[str, Any]:
     registry = _load_registry()
     entry = registry.get(run_id)
@@ -245,11 +231,6 @@ async def get_run_resource(run_id: str) -> dict[str, Any]:
         "updated_at": entry.get("updated_at"),
         "completed_at": entry.get("completed_at"),
     }
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
 
 
 def _parse_github_issue_url(url: str) -> dict[str, Any] | None:

@@ -54,11 +54,6 @@ Resources:
 )
 
 
-# ---------------------------------------------------------------------------
-# Tools
-# ---------------------------------------------------------------------------
-
-
 @mcp.tool(
     name="stas_label_issue",
     description="Label a GitHub issue with the STAS fix label (or custom label).",
@@ -100,11 +95,6 @@ async def stas_get_pr(run_id: str) -> str:
     return json.dumps(result, indent=2, default=str)
 
 
-# ---------------------------------------------------------------------------
-# Resources
-# ---------------------------------------------------------------------------
-
-
 @mcp.resource(
     uri="stas://runs/{run_id}",
     name="Fix Run Status",
@@ -114,11 +104,6 @@ async def stas_get_pr(run_id: str) -> str:
 async def run_status(run_id: str) -> str:
     result = await get_run_resource(run_id)
     return json.dumps(result, indent=2, default=str)
-
-
-# ---------------------------------------------------------------------------
-# CLI entry points
-# ---------------------------------------------------------------------------
 
 
 def run_stdio() -> None:

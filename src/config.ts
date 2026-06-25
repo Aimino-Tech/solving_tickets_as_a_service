@@ -9,6 +9,8 @@ const envSchema = z.object({
   GITHUB_APP_ID: z.string().min(1, 'GITHUB_APP_ID is required'),
   GITHUB_APP_PRIVATE_KEY: z.string().min(1, 'GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_PATH is required').optional(),
   GITHUB_APP_PRIVATE_KEY_PATH: z.string().optional(),
+  GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
+  GITHUB_OAUTH_CLIENT_SECRET: z.string().optional(),
   GITHUB_WEBHOOK_SECRET: z.string().min(1, 'GITHUB_WEBHOOK_SECRET is required'),
   GITHUB_WEBHOOK_PATH: z.string().default('/webhook'),
 
@@ -213,6 +215,8 @@ function buildConfig(env: ParsedEnv) {
       privateKeyEnv: env.GITHUB_APP_PRIVATE_KEY,
       webhookSecret: env.GITHUB_WEBHOOK_SECRET,
       webhookPath: env.GITHUB_WEBHOOK_PATH,
+      oauthClientId: env.GITHUB_OAUTH_CLIENT_ID ?? '',
+      oauthClientSecret: env.GITHUB_OAUTH_CLIENT_SECRET ?? '',
     },
 
     queue: {
