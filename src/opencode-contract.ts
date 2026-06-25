@@ -303,3 +303,54 @@ export function safeParseResult(raw: unknown) {
 export function parseConfidence(raw: unknown): ConfidenceLevel {
   return confidenceLevelSchema.parse(raw);
 }
+
+export interface McpSubmitIssueRequest {
+  repoOwner: string;
+  repoName: string;
+  issueTitle: string;
+  issueBody: string;
+  labels?: string[];
+  channel?: string;
+  channelTarget?: string;
+}
+
+export interface McpSubmitIssueResponse {
+  runId: string;
+  status: 'queued' | 'accepted';
+  pollUrl: string;
+  createdAt: string;
+}
+
+export interface McpJobStatus {
+  runId: string;
+  status: 'queued' | 'investigating' | 'fixing' | 'testing' | 'verifying' | 'committing' | 'completed' | 'failed' | 'error';
+  progress?: number;
+  message?: string;
+  prUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  errorMessage?: string;
+}
+
+export interface McpRunHistoryEntry {
+  runId: string;
+  repoOwner: string;
+  repoName: string;
+  issueTitle: string;
+  status: string;
+  confidence?: string;
+  prUrl?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+export const mcpSubmitIssueRequestSchema = z.object({
+  repoOwner: z.string().min(1),
+  repoName: z.string().min(1),
+  issueTitle: z.string().min(1).max(500),
+  issueBody: z.string().min(1).max(50000),
+  labels: z.array(z.string()).optional(),
+  channel: z.string().optional(),
+  channelTarget: z.string().optional(),
+}).strict();

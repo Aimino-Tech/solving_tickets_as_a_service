@@ -143,6 +143,8 @@ export function createApp(): express.Application {
       '/webhook/linear',
       '/webhook/jira',
       '/webhook/stripe',
+      '/webhook/telegram',
+      '/webhook/whatsapp',
     ],
     express.raw({ type: 'application/json', limit: config.security.webhookBodyLimit, verify: addRawBody }),
   );
@@ -568,6 +570,44 @@ export function createApp(): express.Application {
     res.status(202).json({ accepted: true });
   });
 
+  app.post('/webhook/telegram', async (req: Request, res: Response) => {
+    const rawBody = (req as { rawBody?: Buffer }).rawBody;
+    let payload: Record<string, unknown>;
+    try {
+      payload = rawBody ? JSON.parse(rawBody.toString()) : req.body;
+    } catch {
+      res.status(400).json({ error: 'Invalid JSON' });
+      return;
+    }
+    const { handleTelegramWebhook } = await import('./channels/telegram.js');
+    const result = await handleTelegramWebhook(payload);
+    res.status(result.ok ? 200 : 500).json(result);
+  });
+
+  app.get('/webhook/whatsapp', async (req: Request, res: Response) => {
+    const { verifyWhatsAppWebhook } = await import('./channels/whatsapp.js');
+    const result = verifyWhatsAppWebhook(req);
+    if (result.verified && result.challenge) {
+      res.type('text/plain').send(result.challenge);
+    } else {
+      res.status(403).send('Verification failed');
+    }
+  });
+
+  app.post('/webhook/whatsapp', async (req: Request, res: Response) => {
+    const rawBody = (req as { rawBody?: Buffer }).rawBody;
+    let payload: Record<string, unknown>;
+    try {
+      payload = rawBody ? JSON.parse(rawBody.toString()) : req.body;
+    } catch {
+      res.status(400).json({ error: 'Invalid JSON' });
+      return;
+    }
+    const { handleWhatsAppWebhook } = await import('./channels/whatsapp.js');
+    const result = await handleWhatsAppWebhook(payload);
+    res.status(result.ok ? 200 : 500).json(result);
+  });
+
   // -- Stripe webhook -------------------------------------------------------
   app.post('/webhook/stripe', async (req: Request, res: Response) => {
     const startTime = Date.now();
@@ -604,6 +644,10 @@ export function createApp(): express.Application {
 
     await wrappedHandler(req, res, () => {});
   });
+
+  // -- MCP server routes (OpenClaw multi-channel API)
+  const { default: mcpRouter } = await import('./routes/mcp.js');
+  app.use(mcpRouter);
 
   // -- Feature flags admin API ------------------------------------------------
   app.use('/api/v1/admin/feature-flags', featureFlagsRouter);

@@ -106,6 +106,24 @@ const envSchema = z.object({
   STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
   STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
 
+  MCP_API_KEY: z.string().optional(),
+  MCP_AUTH_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(true),
+
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_WEBHOOK_PATH: z.string().default('/webhook/telegram'),
+
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_WEBHOOK_PATH: z.string().default('/webhook/whatsapp'),
+  WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+
+  // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
@@ -178,26 +196,164 @@ function buildConfig(env: ParsedEnv) {
     runMode: env.RUN_MODE,
     logLevel: env.LOG_LEVEL,
     nodeEnv: env.NODE_ENV,
-    github: { appId: env.GITHUB_APP_ID, privateKeyPath: env.GITHUB_APP_PRIVATE_KEY_PATH, privateKeyEnv: env.GITHUB_APP_PRIVATE_KEY, webhookSecret: env.GITHUB_WEBHOOK_SECRET, webhookPath: env.GITHUB_WEBHOOK_PATH },
-    queue: { redisUrl: env.REDIS_URL, workerConcurrency: env.WORKER_CONCURRENCY, dedupTtl: env.QUEUE_DEDUP_TTL_SECONDS, keepCompleted: env.QUEUE_KEEP_COMPLETED, keepFailed: env.QUEUE_KEEP_FAILED, maxRetries: env.QUEUE_MAX_RETRIES, retryDelays: env.QUEUE_RETRY_DELAYS.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n)), backend: 'bullmq' as const },
-    opencode: { url: env.OPENCODE_URL, model: env.OPENCODE_MODEL, fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean), direct: { apiKey: env.OPENCODE_API_KEY ?? '' } },
-    gitlab: { url: env.GITLAB_URL, token: env.GITLAB_TOKEN ?? '', webhookSecret: env.GITLAB_WEBHOOK_SECRET ?? '' },
-    bitbucket: { username: env.BITBUCKET_USERNAME ?? '', appPassword: env.BITBUCKET_APP_PASSWORD ?? '', webhookSecret: env.BITBUCKET_WEBHOOK_SECRET ?? '' },
-    openai: { apiKey: env.OPENAI_API_KEY, cheapModel: env.OPENAI_CHEAP_MODEL },
-    e2b: { apiKey: env.E2B_API_KEY, templateId: env.E2B_TEMPLATE_ID, sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS },
-    slack: { webhookUrl: env.SLACK_WEBHOOK_URL, channel: env.SLACK_CHANNEL, botToken: env.SLACK_BOT_TOKEN, signingSecret: env.SLACK_SIGNING_SECRET, interactionsPath: env.SLACK_INTERACTIONS_PATH },
-    admin: { apiKey: env.ADMIN_API_KEY ?? '', rateLimitMax: env.ADMIN_RATE_LIMIT_MAX },
-    ci: { monitorEnabled: env.CI_MONITOR_ENABLED },
-    sentry: { dsn: env.SENTRY_DSN, environment: env.SENTRY_ENVIRONMENT, tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE },
-    monitoring: { queueDepthWarnThreshold: env.HEALTH_QUEUE_DEPTH_WARN_THRESHOLD, queueDepthCritThreshold: env.HEALTH_QUEUE_DEPTH_CRIT_THRESHOLD, queueDepthAlertMinutes: env.HEALTH_QUEUE_DEPTH_ALERT_MINUTES, dlqRetentionDays: env.DLQ_RETENTION_DAYS },
-    alerting: { slackChannel: env.ALERT_SLACK_CHANNEL, warnQueueDepth: env.ALERT_WARN_QUEUE_DEPTH, critQueueDepth: env.ALERT_CRIT_QUEUE_DEPTH, warnErrorRatePercent: env.ALERT_WARN_ERROR_RATE_PERCENT, critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT },
-    stas: { mode: env.STAS_MODE, label: env.STAS_LABEL, botName: env.BOT_NAME, devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY, maxAgentIterations: env.MAX_AGENT_ITERATIONS, maxIssueComments: env.MAX_ISSUE_COMMENTS, rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS, rateLimitMax: env.STAS_RATE_LIMIT_MAX, defaultTier: env.STAS_DEFAULT_TIER, monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED },
-    webhookRetry: { pollIntervalMs: env.WEBHOOK_RETRY_POLL_INTERVAL_MS, batchSize: env.WEBHOOK_RETRY_BATCH_SIZE },
-    usage: { creditsFixRun: env.USAGE_CREDITS_FIX_RUN, creditsTriage: env.USAGE_CREDITS_TRIAGE, creditsSandbox: env.USAGE_CREDITS_SANDBOX },
-    rateLimit: { defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER, ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX, adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES) },
-    stripe: { secretKey: env.STRIPE_SECRET_KEY, webhookSecret: env.STRIPE_WEBHOOK_SECRET, price100Credits: env.STRIPE_PRICE_100_CREDITS, price500Credits: env.STRIPE_PRICE_500_CREDITS, price2000Credits: env.STRIPE_PRICE_2000_CREDITS },
-    dataPrivacy: { dpaVersion: env.DPA_VERSION, requireDpaAcceptance: env.DPA_REQUIRE_ACCEPTANCE, retentionDays: env.DATA_RETENTION_DAYS },
-    database: { url: env.DATABASE_URL, poolMin: env.DATABASE_POOL_MIN, poolMax: env.DATABASE_POOL_MAX, ssl: env.DATABASE_SSL, enableAuditPersistence: env.DATABASE_ENABLE_AUDIT_PERSISTENCE },
+    github: {
+      appId: env.GITHUB_APP_ID,
+      privateKeyPath: env.GITHUB_APP_PRIVATE_KEY_PATH,
+      privateKeyEnv: env.GITHUB_APP_PRIVATE_KEY,
+      webhookSecret: env.GITHUB_WEBHOOK_SECRET,
+      webhookPath: env.GITHUB_WEBHOOK_PATH,
+    },
+
+    queue: {
+      redisUrl: env.REDIS_URL,
+      workerConcurrency: env.WORKER_CONCURRENCY,
+      dedupTtl: env.QUEUE_DEDUP_TTL_SECONDS,
+      keepCompleted: env.QUEUE_KEEP_COMPLETED,
+      keepFailed: env.QUEUE_KEEP_FAILED,
+      maxRetries: env.QUEUE_MAX_RETRIES,
+      retryDelays: env.QUEUE_RETRY_DELAYS.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n)),
+      backend: 'bullmq' as const,
+    },
+
+    opencode: {
+      url: env.OPENCODE_URL,
+      model: env.OPENCODE_MODEL,
+      fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
+      direct: {
+        apiKey: env.OPENCODE_API_KEY ?? '',
+      },
+    },
+
+    gitlab: {
+      url: env.GITLAB_URL,
+      token: env.GITLAB_TOKEN ?? '',
+      webhookSecret: env.GITLAB_WEBHOOK_SECRET ?? '',
+    },
+
+    bitbucket: {
+      username: env.BITBUCKET_USERNAME ?? '',
+      appPassword: env.BITBUCKET_APP_PASSWORD ?? '',
+      webhookSecret: env.BITBUCKET_WEBHOOK_SECRET ?? '',
+    },
+
+    openai: {
+      apiKey: env.OPENAI_API_KEY,
+      cheapModel: env.OPENAI_CHEAP_MODEL,
+    },
+
+    e2b: {
+      apiKey: env.E2B_API_KEY,
+      templateId: env.E2B_TEMPLATE_ID,
+      sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
+    },
+
+    slack: {
+      webhookUrl: env.SLACK_WEBHOOK_URL,
+      channel: env.SLACK_CHANNEL,
+      botToken: env.SLACK_BOT_TOKEN,
+      signingSecret: env.SLACK_SIGNING_SECRET,
+      interactionsPath: env.SLACK_INTERACTIONS_PATH,
+    },
+
+    mcp: {
+      apiKey: env.MCP_API_KEY ?? '',
+      authEnabled: env.MCP_AUTH_ENABLED,
+    },
+
+    telegram: {
+      botToken: env.TELEGRAM_BOT_TOKEN ?? '',
+      webhookPath: env.TELEGRAM_WEBHOOK_PATH,
+    },
+
+    whatsapp: {
+      phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID ?? '',
+      accessToken: env.WHATSAPP_ACCESS_TOKEN ?? '',
+      webhookPath: env.WHATSAPP_WEBHOOK_PATH,
+      verifyToken: env.WHATSAPP_VERIFY_TOKEN ?? '',
+    },
+
+    admin: {
+      apiKey: env.ADMIN_API_KEY ?? '',
+      rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
+    },
+
+    ci: {
+      monitorEnabled: env.CI_MONITOR_ENABLED,
+    },
+
+    sentry: {
+      dsn: env.SENTRY_DSN,
+      environment: env.SENTRY_ENVIRONMENT,
+      tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE,
+    },
+
+    monitoring: {
+      queueDepthWarnThreshold: env.HEALTH_QUEUE_DEPTH_WARN_THRESHOLD,
+      queueDepthCritThreshold: env.HEALTH_QUEUE_DEPTH_CRIT_THRESHOLD,
+      queueDepthAlertMinutes: env.HEALTH_QUEUE_DEPTH_ALERT_MINUTES,
+      dlqRetentionDays: env.DLQ_RETENTION_DAYS,
+    },
+
+    alerting: {
+      slackChannel: env.ALERT_SLACK_CHANNEL,
+      warnQueueDepth: env.ALERT_WARN_QUEUE_DEPTH,
+      critQueueDepth: env.ALERT_CRIT_QUEUE_DEPTH,
+      warnErrorRatePercent: env.ALERT_WARN_ERROR_RATE_PERCENT,
+      critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
+    },
+
+    stas: {
+      mode: env.STAS_MODE,
+      label: env.STAS_LABEL,
+      botName: env.BOT_NAME,
+      devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
+      maxAgentIterations: env.MAX_AGENT_ITERATIONS,
+      maxIssueComments: env.MAX_ISSUE_COMMENTS,
+      rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
+      rateLimitMax: env.STAS_RATE_LIMIT_MAX,
+      defaultTier: env.STAS_DEFAULT_TIER,
+      monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    },
+
+    webhookRetry: {
+      pollIntervalMs: env.WEBHOOK_RETRY_POLL_INTERVAL_MS,
+      batchSize: env.WEBHOOK_RETRY_BATCH_SIZE,
+    },
+
+    usage: {
+      creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
+      creditsTriage: env.USAGE_CREDITS_TRIAGE,
+      creditsSandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    rateLimit: {
+      defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
+      ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
+      adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
+    },
+
+    stripe: {
+      secretKey: env.STRIPE_SECRET_KEY,
+      webhookSecret: env.STRIPE_WEBHOOK_SECRET,
+      price100Credits: env.STRIPE_PRICE_100_CREDITS,
+      price500Credits: env.STRIPE_PRICE_500_CREDITS,
+      price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
+    },
+
+    dataPrivacy: {
+      dpaVersion: env.DPA_VERSION,
+      requireDpaAcceptance: env.DPA_REQUIRE_ACCEPTANCE,
+      retentionDays: env.DATA_RETENTION_DAYS,
+    },
+
+    database: {
+      url: env.DATABASE_URL,
+      poolMin: env.DATABASE_POOL_MIN,
+      poolMax: env.DATABASE_POOL_MAX,
+      ssl: env.DATABASE_SSL,
+      enableAuditPersistence: env.DATABASE_ENABLE_AUDIT_PERSISTENCE,
+    },
+
     fixTimeoutMs: env.FIX_TIMEOUT_MS,
     phaseTimeouts: { triage: env.PHASE_TIMEOUT_TRIAGE_MS, sandboxBoot: env.PHASE_TIMEOUT_SANDBOX_MS, openCodeAgent: env.FIX_TIMEOUT_MS, prCreation: env.PHASE_TIMEOUT_PRCREATION_MS },
     featureFlags: { defaultTtlSeconds: env.FEATURE_FLAGS_DEFAULT_TTL_SECONDS, autoDisableThreshold: env.FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD },
