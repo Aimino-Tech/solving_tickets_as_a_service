@@ -11,6 +11,7 @@ import Repos from '@/pages/Repos';
 import Settings from '@/pages/Settings';
 import Analytics from '@/pages/Analytics';
 import AuditLog from '@/pages/AuditLog';
+import OnboardingWizard from '@/pages/OnboardingWizard';
 
 export default function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="analytics" element={<Analytics />} />
           <Route path="audit" element={<AuditLog />} />
         </Route>
+        <Route path="/onboarding" element={<OnboardingWizard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ErrorBoundary>

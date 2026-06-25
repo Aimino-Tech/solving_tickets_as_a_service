@@ -59,16 +59,17 @@ const envSchema = z.object({
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // STAS
-
-  // Pricing
-  STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
-  STAS_MONTHLY_QUOTA_ENABLED: z.preprocess(
+  CI_MONITOR_ENABLED: z.preprocess(
     (v) => {
       if (typeof v === 'string') return v === 'true' || v === '1';
       return v;
     },
     z.boolean(),
-  ).default(true),
+  ).default(false),
+
+  // Pricing
+  STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
+  STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
   STAS_LABEL: z.string().default('stas:fix'),
@@ -170,6 +171,13 @@ const envSchema = z.object({
 
   // ── Security ──────────────────────────────────────────────────────────────
   ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  // Onboarding
+  GITHUB_APP_URL: z.string().default('https://github.com/apps/stas-bot/installations/new'),
+  LINEAR_CLIENT_ID: z.string().optional(),
+  LINEAR_CLIENT_SECRET: z.string().optional(),
+  ONBOARDING_DEFAULT_LABEL: z.string().default('stas:fix'),
+  ONBOARDING_TEST_ISSUE_TITLE: z.string().default('STAS Onboarding Test Issue'),
+
   CORS_ORIGIN: z.string().default('*'),
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
@@ -187,15 +195,6 @@ const envSchema = z.object({
   SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
-
-  // Config CI Monitor
-  CI_MONITOR_ENABLED: z.preprocess(
-    (v) => {
-      if (typeof v === 'string') return v === 'true' || v === '1';
-      return v;
-    },
-    z.boolean(),
-  ).default(false),
 
   // Sentry
   SENTRY_DSN: z.string().optional(),
@@ -281,7 +280,7 @@ function buildConfig(env: ParsedEnv) {
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
       direct: {
-        apiKey: env.OPENCODE_API_KEY ?? '',
+        apiKey: env.OPENCODE_API_KEY,
       },
     },
 
@@ -430,6 +429,14 @@ function buildConfig(env: ParsedEnv) {
     // ── Security ────────────────────────────────────────────────────────────
     security: {
       adminApiKey: env.ADMIN_API_KEY,
+      onboarding: {
+        defaultLabel: env.ONBOARDING_DEFAULT_LABEL,
+        linearClientId: env.LINEAR_CLIENT_ID,
+        linearClientSecret: env.LINEAR_CLIENT_SECRET,
+        githubAppUrl: env.GITHUB_APP_URL,
+        testIssueTitle: env.ONBOARDING_TEST_ISSUE_TITLE,
+      },
+
       corsOrigin: env.CORS_ORIGIN,
       requestBodyLimit: env.REQUEST_BODY_LIMIT,
       webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
