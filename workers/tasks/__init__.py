@@ -8,6 +8,12 @@ from .periodic import queue_health_check, dlq_cleanup, push_metrics, report_live
 from .sandbox_gc import sandbox_gc
 from .self_audit import run_self_audit, orchestrate_pipeline, review_decision
 from .linear_poll import poll_active_issues
+from .adversarial_review import (
+    layer1_analysis,
+    layer2_holistic,
+    layer3_oracle,
+    full_adversarial_review,
+)
 
 __all__ = [
     "triage_issue",
@@ -26,4 +32,8 @@ __all__ = [
     "orchestrate_pipeline",
     "review_decision",
     "poll_active_issues",
+    "layer1_analysis",
+    "layer2_holistic",
+    "layer3_oracle",
+    "full_adversarial_review",
 ]

@@ -87,6 +87,7 @@ task_queues = [
     Queue("stas.agents.verification", stas_agents, routing_key="agent.verify"),
     Queue("stas.agents.sandbox", stas_agents, routing_key="agent.sandbox"),
     Queue("stas.agents.self_audit", stas_agents, routing_key="agent.self_audit"),
+    Queue("stas.agents.adversarial_review", stas_agents, routing_key="agent.adversarial_review"),
     # ── stas.issues exchange ──────────────────────────────────
     Queue("stas.issues.triage", stas_issues, routing_key="triage.#"),
     Queue("stas.issues.health", stas_issues, routing_key="health.#"),
@@ -108,6 +109,7 @@ task_routes = {
     "workers.tasks.pr_creation.*": {"queue": "stas.queue.pr"},
     "workers.tasks.notifications.*": {"queue": "stas.queue.notifications"},
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
+    "workers.tasks.adversarial_review.*": {"queue": "stas.agents.adversarial_review"},
     "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
     "workers.tasks.pipeline_orchestrator.*": {"queue": "stas.queue.orchestrator"},
 }

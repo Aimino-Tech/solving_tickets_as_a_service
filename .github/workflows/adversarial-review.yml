@@ -1,0 +1,108 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Adversarial Review Pipeline (AIM-1989)
+#
+# Configuration stub for the 3-Layer Adversarial Review Methodology.
+# Layer 1: N parallel subagents per changed file
+# Layer 2: 5 parallel review agents (goals, quality, security, QA, context)
+# Layer 3: Oracle agent synthesises final verdict (PASS / FLAG / FAIL)
+#
+# Environment variables:
+#   ADVERSARIAL_REVIEW_CONFIG — JSON string overriding any default below
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: "Adversarial Review Pipeline (AIM-1989)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      diff_files:
+        description: "Space-separated list of changed file paths"
+        required: true
+      issue_id:
+        description: "Linear/GitHub issue ID"
+        required: true
+      issue_title:
+        description: "Issue title"
+        required: true
+      issue_body:
+        description: "Issue body"
+        required: false
+        default: ""
+
+env:
+  # ── Layer 1: Per-file analysis ─────────────────────────────────────────────
+  # Number of parallel subagents to spawn per changed file
+  ADVERSARIAL_REVIEW_CONFIG: >-
+    {
+      "layer1_subagents_per_file": 2,
+      "layer2_review_categories": [
+        "goals",
+        "code_quality",
+        "security",
+        "hands_on_qa",
+        "context_miner"
+      ],
+      "pass_threshold": 0.8,
+      "flag_threshold": 0.5,
+      "max_retries": 0
+    }
+
+jobs:
+  adversarial-review:
+    name: "3-Layer Adversarial Review"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install celery pytest
+
+      - name: Run Layer 1 — Per-file Analysis
+        id: layer1
+        run: |
+          python -c "
+          from workers.tasks.adversarial_review import layer1_analysis
+          diff_files = '${{ github.event.inputs.diff_files }}'.split()
+          ctx = {
+            'issue_id': '${{ github.event.inputs.issue_id }}',
+            'title': '${{ github.event.inputs.issue_title }}',
+            'body': '${{ github.event.inputs.issue_body }}',
+          }
+          result = layer1_analysis(diff_files, ctx)
+          print('layer1_complete=' + str(result['status']))
+          "
+
+      - name: Run Layer 2 — Holistic Review
+        id: layer2
+        run: |
+          python -c "
+          from workers.tasks.adversarial_review import layer2_holistic
+          ctx = {
+            'issue_id': '${{ github.event.inputs.issue_id }}',
+            'title': '${{ github.event.inputs.issue_title }}',
+            'body': '${{ github.event.inputs.issue_body }}',
+          }
+          # Layer 2 requires Layer 1 reports — in production this is chained
+          print('layer2 requires layer1 reports input')
+          "
+
+      - name: Run Layer 3 — Oracle Verdict
+        id: layer3
+        run: |
+          python -c "
+          from workers.tasks.adversarial_review import layer3_oracle
+          print('layer3 requires layer1 and layer2 reports input')
+          "
+
+      - name: Output Verdict
+        run: |
+          echo "Adversarial review pipeline configuration loaded."
+          echo "See workers/tasks/adversarial_review.py for implementation."

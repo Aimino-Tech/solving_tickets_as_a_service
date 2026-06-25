@@ -6,6 +6,7 @@ PIPELINES: dict[str, list[str]] = {
         "agent",
         "verify",
         "self_audit",
+        "adversarial_review",
         "review",
         "pr",
     ],
@@ -14,6 +15,7 @@ PIPELINES: dict[str, list[str]] = {
         "agent",
         "verify",
         "self_audit",
+        "adversarial_review",
         "review",
         "pr",
     ],
@@ -27,6 +29,7 @@ STAGE_TASKS: dict[str, str] = {
     "agent": "workers.tasks.agent.dispatch_opencode",
     "verify": "workers.tasks.verification.run_verification",
     "self_audit": "workers.tasks.self_audit.run_self_audit",
+    "adversarial_review": "workers.tasks.adversarial_review.full_adversarial_review",
     "review": "workers.tasks.self_audit.review_decision",
     "pr": "workers.tasks.pr_creation.create_pull_request",
 }

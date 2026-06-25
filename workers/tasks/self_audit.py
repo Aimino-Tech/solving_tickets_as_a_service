@@ -126,6 +126,13 @@ def orchestrate_pipeline(self, issue_data: dict) -> dict:
             "task": "workers.quality.anti_mockup_scan.anti_mockup_scan",
         }
 
+        # ── AIM-1989: Insert adversarial review step before review_decision ──
+        steps.append("adversarial_review")
+        results["adversarial_review"] = {
+            "status": "queued",
+            "task": "workers.tasks.adversarial_review.full_adversarial_review",
+        }
+
         steps.append("pr_creation")
         results["pr_creation"] = {
             "status": "queued",
@@ -177,6 +184,18 @@ def review_decision(self, pipeline_results: dict) -> dict:
         if anti_mockup.get("passed") is False:
             all_passed = False
             failures.append("anti_mockup_scan: failed — critical or blocking findings present")
+
+        # ── AIM-1989: Check adversarial review verdict ──
+        adversarial = pipeline_results.get("adversarial_review", {})
+        adversarial_verdict = adversarial.get("verdict", "")
+        if adversarial_verdict == "FAIL":
+            all_passed = False
+            failures.append("adversarial_review: FAIL — see rework instructions for details")
+        elif adversarial_verdict == "FLAG":
+            failures.append("adversarial_review: FLAG — non-blocking concerns noted")
+            # FLAG doesn't block the pipeline but logs it
+            logger.warning("Adversarial review flagged concerns: %s",
+                          adversarial.get("layer3", {}).get("rework_instructions", []))
 
         decision = "pass" if all_passed else "rework"
         logger.info("Review decision: %s — failures=%s", decision, failures)
