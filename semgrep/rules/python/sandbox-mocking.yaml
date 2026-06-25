@@ -1,0 +1,25 @@
+rules:
+  - id: py-sandbox-executor-mocked
+    patterns:
+      - pattern-either:
+          - pattern: '@mock.patch("$PATH.$CLASS")'
+          - pattern: '@unittest.mock.patch("$PATH.$CLASS")'
+      - metavariable-regex: { metavariable: $CLASS, regex: .*(Sandbox|Executor|E2B|DockerSandbox|SandboxExecutor).* }
+    languages: [python]
+    message: Sandbox executor mocked. Use real sandbox.
+    severity: ERROR
+    metadata: { category: security, technology: [unittest, pytest], cwe: "CWE-358" }
+  - id: py-celery-task-security-mock
+    pattern: '@mock.patch($TASK)'
+    metavariable-pattern: { metavariable: $TASK, pattern-regex: .*(validate|sanitize|check|verify|audit).* }
+    languages: [python]
+    message: Security-validation Celery task mocked.
+    severity: ERROR
+    metadata: { category: security, technology: [celery, pytest], cwe: "CWE-358" }
+  - id: py-security-validator-bypass
+    pattern: $MODULE.$VALIDATOR = $MOCK
+    metavariable-regex: { metavariable: $VALIDATOR, regex: .*(validate|sanitize|verify|check|audit).* }
+    languages: [python]
+    message: Security validator replaced with mock.
+    severity: ERROR
+    metadata: { category: security, technology: [unittest, pytest], cwe: "CWE-358" }

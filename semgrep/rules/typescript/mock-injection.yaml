@@ -1,0 +1,32 @@
+rules:
+  - id: ts-mock-security-module
+    pattern: vi.mock($MODULE)
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: Mocking security-sensitive module detected. Use real implementation.
+    severity: ERROR
+    metadata: { category: security, technology: [vitest, jest], cwe: "CWE-358" }
+  - id: ts-mock-dangerous-return
+    pattern: $MOCK.mockReturnValue($VALUE)
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: Mock return with potentially dangerous value.
+    severity: WARNING
+    metadata: { category: security, technology: [vitest, jest], cwe: "CWE-358" }
+  - id: ts-mock-sandbox-replacement
+    patterns:
+      - pattern: $MOCK = $FAKE
+      - pattern-not: $MOCK = null
+      - metavariable-regex: { metavariable: $MOCK, regex: .*(sandbox|Sandbox|E2B|DockerSandbox).* }
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: Sandbox variable replaced with test double.
+    severity: ERROR
+    metadata: { category: security, technology: [vitest, jest], cwe: "CWE-358" }
+  - id: ts-mock-overly-permissive
+    pattern: $MOCK.mockImplementation(($PARAMS) => { })
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: Overly permissive mock accepting any input.
+    severity: WARNING
+    metadata: { category: best-practice, technology: [vitest, jest] }

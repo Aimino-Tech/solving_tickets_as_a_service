@@ -858,6 +858,56 @@ export function buildHelmetConfig(): HelmetOptions {
 app.post('/api/v1/csp-violation-report', handleCspViolationReport);
 ```
 
+
+---
+
+## 13. SOC 2 Readiness
+
+STAS has completed a **SOC 2 Type I readiness assessment** (not certified — just documented readiness). The assessment covers Security, Availability, and Confidentiality trust services criteria.
+
+### SOC 2 Documents
+
+| Document | Description |
+|---|---|
+| [Readiness Assessment](docs/soc2/readiness-assessment.md) | Overall SOC 2 readiness evaluation with gap analysis and remediation roadmap |
+| [Control Mapping](docs/soc2/control-mapping.md) | Detailed mapping of SOC 2 controls to STAS implementations |
+| [Encryption Policy](docs/soc2/encryption-policy.md) | Encryption standards and key management practices |
+| [Access Control Policy](docs/soc2/access-control-policy.md) | Authentication, authorization, and access review processes |
+| [Incident Response Plan](docs/soc2/incident-response-plan.md) | Severity-based incident response procedures |
+
+---
+
+## 14. "Won't Train" Guarantee
+
+**STAS does not train AI models on customer code, issue content, or repository data.** All data processed during a fix run is ephemeral: it exists only within the sandbox for the duration of the fix (~5-30 minutes) and is destroyed when the sandbox is cleaned up.
+
+Full policy: [docs/policies/wont-train.md](docs/policies/wont-train.md)
+
+---
+
+## 15. Data Processing Agreement (DPA)
+
+A Data Processing Agreement (DPA) template is available for enterprise customers. The DPA covers:
+
+- Categories of data processed during fix runs
+- Processing purposes and legal basis
+- Data subject rights and how to exercise them
+- Authorized sub-processors (GitHub, E2B, Railway/Fly.io, Stripe, Sentry)
+- Technical and organizational security measures
+- Data breach notification procedures
+- Data retention and deletion schedules
+
+Full DPA: [docs/policies/data-processing-agreement.md](docs/policies/data-processing-agreement.md)
+
+### Additional Policy Documents
+
+| Document | Description |
+|---|---|
+| [Data Retention & Deletion](docs/policies/data-retention-deletion.md) | Retention schedules and deletion procedures |
+| [Encryption Standards](docs/policies/encryption-standards.md) | Encryption algorithms, key management, TLS configuration |
+| ["Won't Train" Policy](docs/policies/wont-train.md) | Guarantee that customer code is not used for model training |
+| [Data Processing Agreement](docs/policies/data-processing-agreement.md) | DPA template for enterprise signups |
+
 ---
 
 > **Last updated**: 2026-06-09

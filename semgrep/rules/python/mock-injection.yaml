@@ -1,0 +1,38 @@
+rules:
+  - id: py-mock-patch-security-module
+    patterns:
+      - pattern-either:
+          - pattern: '@mock.patch("$MODULE")'
+          - pattern: '@unittest.mock.patch("$MODULE")'
+      - metavariable-regex: { metavariable: $MODULE, regex: .*(sandbox|security|validate|auth|secret|crypto|crypt|sign).* }
+    languages: [python]
+    message: Mock patching security module. Use integration tests.
+    severity: ERROR
+    metadata: { category: security, technology: [unittest, pytest], cwe: "CWE-358" }
+  - id: py-mock-replace-internal
+    pattern: $MODULE.$FUNCTION = mock.MagicMock()
+    metavariable-regex: { metavariable: $MODULE, regex: .*(sandbox|security|auth|validate).* }
+    languages: [python]
+    message: Security function replaced with MagicMock.
+    severity: ERROR
+    metadata: { category: security, technology: [unittest, pytest], cwe: "CWE-358" }
+  - id: py-monkeypatch-security
+    pattern: 'monkeypatch.setattr("$MODULE.$ATTR", $VALUE)'
+    metavariable-regex: { metavariable: $MODULE, regex: .*(sandbox|security|auth|validate|E2B).* }
+    languages: [python]
+    message: Security module monkeypatched in test.
+    severity: ERROR
+    metadata: { category: security, technology: [pytest], cwe: "CWE-358" }
+  - id: py-mock-patch-dangerous-side-effect
+    pattern: $MOCK.side_effect = $EFFECT
+    metavariable-pattern:
+      metavariable: $EFFECT
+      pattern-either:
+        - pattern: Exception
+        - pattern: Exception()
+        - pattern: ValueError
+        - pattern: RuntimeError
+    languages: [python]
+    message: Mock with generic Exception side_effect.
+    severity: WARNING
+    metadata: { category: best-practice, technology: [unittest, pytest] }

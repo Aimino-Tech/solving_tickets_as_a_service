@@ -1,0 +1,56 @@
+rules:
+  - id: ts-test-only-excluded
+    pattern: $TEST.only($DESC, $FN)
+    metavariable-regex: { metavariable: $TEST, regex: ^(it|test|describe)$ }
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: .only excludes all other tests from running.
+    severity: ERROR
+    metadata: { category: correctness, technology: [vitest, jest], cwe: "CWE-1167" }
+  - id: ts-test-skip-without-reason
+    patterns:
+      - pattern: $TEST.skip($DESC, $FN)
+      - pattern-not: $TEST.skip($DESC, $FN, $TIMEOUT)
+      - metavariable-regex: { metavariable: $TEST, regex: ^(it|test|describe)$ }
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: Skipped test without reason.
+    severity: WARNING
+    metadata: { category: best-practice, technology: [vitest, jest] }
+  - id: ts-test-empty-body
+    patterns:
+      - pattern: it($DESC, () => { })
+      - pattern: test($DESC, () => { })
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: Empty test always passes silently.
+    severity: ERROR
+    metadata: { category: correctness, technology: [vitest, jest], cwe: "CWE-1167" }
+  - id: ts-assertions-zero
+    pattern: expect.assertions(0)
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: expect.assertions(0) defeats assertion counting.
+    severity: ERROR
+    metadata: { category: correctness, technology: [vitest, jest], cwe: "CWE-1167" }
+  - id: ts-commented-assertion
+    patterns:
+      - pattern-regex: //\s*expect\s*\(
+      - pattern-regex: //\s*assert\s*\.
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: Commented-out assertion detected.
+    severity: WARNING
+    metadata: { category: best-practice, technology: [vitest, jest] }
+  - id: ts-empty-catch-in-test
+    patterns:
+      - pattern-either:
+          - pattern: try { } catch { }
+          - pattern: try { } catch ($E) { }
+      - pattern-inside: $TEST($DESC, () => { ... })
+      - metavariable-regex: { metavariable: $TEST, regex: ^(it|test)$ }
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: Empty catch block in test silently swallows errors.
+    severity: WARNING
+    metadata: { category: correctness, technology: [vitest, jest] }

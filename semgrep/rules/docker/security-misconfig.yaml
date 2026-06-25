@@ -1,0 +1,51 @@
+rules:
+  - id: docker-privileged-mode
+    pattern: --privileged
+    paths: { include: ["**/Dockerfile*", "**/docker-compose*.yml"] }
+    languages: [docker]
+    message: Docker --privileged disables all isolation. Use --cap-add.
+    severity: ERROR
+    metadata: { category: security, technology: [docker], cwe: "CWE-250" }
+  - id: docker-missing-user
+    patterns:
+      - pattern-not-inside: USER $USER
+      - pattern: FROM $IMAGE
+    paths: { include: ["**/Dockerfile*"] }
+    languages: [docker]
+    message: Dockerfile missing USER directive. Runs as root.
+    severity: ERROR
+    metadata: { category: security, technology: [docker], cwe: "CWE-250" }
+  - id: docker-latest-tag
+    pattern: FROM $IMAGE:latest
+    paths: { include: ["**/Dockerfile*"] }
+    languages: [docker]
+    message: Mutable latest tag. Pin to specific version.
+    severity: WARNING
+    metadata: { category: best-practice, technology: [docker] }
+  - id: docker-add-instead-of-copy
+    pattern: ADD $SRC $DST
+    paths: { include: ["**/Dockerfile*"] }
+    languages: [docker]
+    message: ADD instead of COPY. Use COPY unless extraction needed.
+    severity: WARNING
+    metadata: { category: best-practice, technology: [docker], cwe: "CWE-494" }
+  - id: docker-apt-without-no-cache
+    patterns:
+      - pattern-either:
+          - pattern: RUN apt-get install $PACKAGES
+          - pattern: RUN apk add $PACKAGES
+    paths: { include: ["**/Dockerfile*"] }
+    languages: [docker]
+    message: Package install without --no-cache increases image size.
+    severity: WARNING
+    metadata: { category: best-practice, technology: [docker] }
+  - id: docker-apt-upgrade
+    patterns:
+      - pattern-either:
+          - pattern: RUN apt-get upgrade -y
+          - pattern: RUN apk upgrade
+    paths: { include: ["**/Dockerfile*"] }
+    languages: [docker]
+    message: Unconditional upgrade breaks reproducibility.
+    severity: WARNING
+    metadata: { category: best-practice, technology: [docker] }
