@@ -99,6 +99,7 @@ task_queues = [
     # ── stas.queue exchange ───────────────────────────────────
     Queue("stas.queue.pr", stas_queue, routing_key="pr.create"),
     Queue("stas.queue.notifications", stas_queue, routing_key="queue.notify"),
+    Queue("stas.queue.quality", stas_queue, routing_key="quality.anti_liar"),
     # ── stas.events exchange (fanout) ─────────────────────────
     Queue("stas.events.event_bus", stas_events),
     # ── stas.dlx exchange ─────────────────────────────────────
@@ -118,6 +119,7 @@ task_routes = {
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
     "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
     "workers.tasks.pipeline_orchestrator.*": {"queue": "stas.queue.orchestrator"},
+    "workers.tasks.anti_liar.*": {"queue": "stas.queue.quality"},
     "workers.tasks.anti_liar.*": {"queue": "stas.quality.enforce"},
     "workers.orchestrator.*": {"queue": "stas.queue.orchestrator"},
 }
