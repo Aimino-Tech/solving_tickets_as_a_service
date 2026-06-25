@@ -40,7 +40,7 @@ vi.mock('../../featureFlags/metrics.js', () => ({
   recordFeatureFlagOverride: vi.fn(),
 }));
 
-describe.skip('services/featureFlags', () => {
+describe('services/featureFlags', () => {
   let ff: typeof import('../../services/featureFlags.js');
 
   beforeEach(async () => {
