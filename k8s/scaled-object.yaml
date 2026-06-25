@@ -1,0 +1,131 @@
+# ---------------------------------------------------------------------------
+# STAS KEDA ScaledObject — RabbitMQ-driven worker auto-scaling
+#
+# Scales the stas-worker Deployment from 0 (idle) to 20 replicas based on
+# Celery queue depth. Scale-up is aggressive (30s window); scale-down is
+# graceful (2 min cooldown, gradual pod reduction).
+#
+# Prerequisites
+# -------------
+# 1. KEDA v2+ installed in the cluster.
+# 2. RabbitMQ Management Plugin enabled on the broker.
+# 3. The `stas-secrets` Kubernetes Secret must contain a key
+#    ``RABBITMQ_KEDA_CONNECTION`` with the AMQP URI, e.g.:
+#      amqp://user:password@stas-rabbitmq:5672/stas
+#
+# Install:
+#   kubectl apply -f k8s/scaled-object.yaml
+#
+# Verify:
+#   kubectl get scaledobject stas-worker
+#   kubectl get hpa               # KEDA creates an HPA automatically
+# ---------------------------------------------------------------------------
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: stas-rabbitmq-auth
+  labels:
+    app: stas-worker
+    tier: worker
+spec:
+  secretTargetRef:
+    - parameter: host
+      name: stas-secrets
+      key: RABBITMQ_KEDA_CONNECTION
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: stas-worker
+  labels:
+    app: stas-worker
+    tier: worker
+    component: queue-processor
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: stas-worker
+  minReplicaCount: 0
+  maxReplicaCount: 20
+  pollingInterval: 15
+  cooldownPeriod: 120
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 30
+        scaleDown:
+          stabilizationWindowSeconds: 60
+          policies:
+            - type: Percent
+              value: 50
+              periodSeconds: 60
+  triggers:
+    # Triage queue — short tasks, scale at 5+ backlog
+    - type: rabbitmq
+      metadata:
+        protocol: amqp0-9-1
+        queueName: stas.agents.triage
+        mode: QueueLength
+        value: "5"
+      authenticationRef:
+        name: stas-rabbitmq-auth
+    # Dispatch queue — high-priority agent tasks, scale at 2+ backlog
+    - type: rabbitmq
+      metadata:
+        protocol: amqp0-9-1
+        queueName: stas.agents.dispatch
+        mode: QueueLength
+        value: "2"
+      authenticationRef:
+        name: stas-rabbitmq-auth
+    # Sandbox queue — long-running, tolerate 3+ backlog
+    - type: rabbitmq
+      metadata:
+        protocol: amqp0-9-1
+        queueName: stas.agents.sandbox
+        mode: QueueLength
+        value: "3"
+      authenticationRef:
+        name: stas-rabbitmq-auth
+    # Verification queue — moderate, scale at 3+ backlog
+    - type: rabbitmq
+      metadata:
+        protocol: amqp0-9-1
+        queueName: stas.agents.verification
+        mode: QueueLength
+        value: "3"
+      authenticationRef:
+        name: stas-rabbitmq-auth
+    # PR creation queue — batchable, scale at 5+ backlog
+    - type: rabbitmq
+      metadata:
+        protocol: amqp0-9-1
+        queueName: stas.agents.pr_creation
+        mode: QueueLength
+        value: "5"
+      authenticationRef:
+        name: stas-rabbitmq-auth
+    # Notifications queue — fast, high volume, scale at 10+ backlog
+    - type: rabbitmq
+      metadata:
+        protocol: amqp0-9-1
+        queueName: stas.agents.notifications
+        mode: QueueLength
+        value: "10"
+      authenticationRef:
+        name: stas-rabbitmq-auth
+    # Default queue — catch-all, modest threshold
+    - type: rabbitmq
+      metadata:
+        protocol: amqp0-9-1
+        queueName: stas.agents.default
+        mode: QueueLength
+        value: "5"
+      authenticationRef:
+        name: stas-rabbitmq-auth
