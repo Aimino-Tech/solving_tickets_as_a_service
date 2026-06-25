@@ -46,11 +46,6 @@ beat_schedule = {
         "schedule": crontab(hour=1, minute=0),
         "args": (),
     },
-    "budget-monthly-reset": {
-        "task": "workers.tasks.budget_billing_cycle.monthly_budget_reset",
-        "schedule": crontab(hour=0, minute=0, day_of_month=1),
-        "args": (),
-    },
     "sla-compliance-check": {
         "task": "workers.tasks.periodic.sla_compliance_check",
         "schedule": 300.0,
@@ -93,6 +88,4 @@ task_routes = {
     "workers.tasks.pr_creation.*": {"queue": "stas.agents.pr_creation"},
     "workers.tasks.notifications.*": {"queue": "stas.agents.notifications"},
     "workers.billing.*": {"queue": "stas.agents.default"},
-    "workers.budget.*": {"queue": "stas.agents.default"},
-    "workers.tasks.budget_billing_cycle.*": {"queue": "stas.agents.default"},
 }

@@ -9,7 +9,6 @@ from . import linear_poll
 from .sandbox_gc import sandbox_gc
 from .multi_verification import multi_round_verify
 from .merge_queue import process_merge_queue, resolve_conflicts, label_conflict_pr
-from .budget_billing_cycle import monthly_budget_reset
 
 # Import status-comment signal handlers so they connect at worker start.
 # (Import for side effect — the module registers Celery signal handlers.)
@@ -34,5 +33,4 @@ __all__ = [
     "process_merge_queue",
     "resolve_conflicts",
     "label_conflict_pr",
-    "monthly_budget_reset",
 ]

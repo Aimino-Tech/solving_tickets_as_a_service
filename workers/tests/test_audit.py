@@ -30,10 +30,6 @@ from workers.audit.scoring import compute_score
 from workers.audit.drift_detection import DriftDetector
 from workers.audit.export import export_csv, export_ndjson
 
-# ===========================================================================
-# Fixtures
-# ===========================================================================
-
 
 @pytest.fixture
 def store() -> AuditStore:
@@ -42,23 +38,17 @@ def store() -> AuditStore:
 
 @pytest.fixture
 def populated_store(store: AuditStore) -> AuditStore:
-    """Store with a chain of 3 events for tenant_1."""
     append_event("tenant_1", "pipeline.start", {"pipeline": "fix-bug"}, store=store)
     append_event("tenant_1", "task.success", {"task": "triage"}, store=store)
     append_event("tenant_1", "pipeline.complete", {"status": "ok"}, store=store)
     return store
 
 
-# ===========================================================================
-# Models
-# ===========================================================================
-
-
 class TestAuditEvent:
     def test_default_id_is_hex(self):
         event = AuditEvent(tenant_id="t1", event_type="test", payload_hash="a" * 64)
-        assert len(event.id) == 32  # 16 bytes = 32 hex chars
-        int(event.id, 16)  # must be valid hex
+        assert len(event.id) == 32
+        int(event.id, 16)
 
     def test_default_created_at_is_utc(self):
         event = AuditEvent(tenant_id="t1", event_type="test", payload_hash="a" * 64)
@@ -91,16 +81,11 @@ class TestAuditEvent:
         assert event1.chain_hash() != event2.chain_hash()
 
 
-# ===========================================================================
-# Trail — SHA-256 chaining
-# ===========================================================================
-
-
 class TestComputePayloadHash:
     def test_deterministic(self):
         p1 = compute_payload_hash({"a": 1, "b": 2})
-        p2 = compute_payload_hash({"b": 2, "a": 1})  # different key order
-        assert p1 == p2  # canonical JSON sorts keys
+        p2 = compute_payload_hash({"b": 2, "a": 1})
+        assert p1 == p2
 
     def test_different_payload_different_hash(self):
         h1 = compute_payload_hash({"a": 1})
@@ -147,13 +132,11 @@ class TestAppendEvent:
     def test_append_is_insert_only(self, store: AuditStore):
         event = append_event("t", "test", store=store)
         assert store.count("t") == 1
-        # Cannot modify or delete — no method exists on AuditStore
 
     def test_event_has_chain_hash(self, store: AuditStore):
         event = append_event("t", "test", {"n": 42}, store=store)
         ch = event.chain_hash()
         assert len(ch) == 64
-        # Verify it's SHA-256(prev_hash || payload_hash)
         raw = (event.prev_hash + event.payload_hash).encode("ascii")
         expected = hashlib.sha256(raw).hexdigest()
         assert ch == expected
@@ -170,7 +153,6 @@ class TestGetChain:
     def test_returns_newest_first(self, populated_store: AuditStore):
         chain = get_chain("tenant_1", store=populated_store)
         assert len(chain) == 3
-        # Newest first
         times = [e.created_at for e in chain]
         assert times == sorted(times, reverse=True)
 
@@ -184,7 +166,7 @@ class TestGetChain:
     def test_after_id_pagination(self, populated_store: AuditStore):
         chain = get_chain("tenant_1", store=populated_store)
         assert len(chain) == 3
-        first_id = chain[-1].id  # oldest
+        first_id = chain[-1].id
         after = get_chain("tenant_1", after_id=first_id, store=populated_store)
         assert len(after) == 2
 
@@ -197,17 +179,12 @@ class TestVerifyChainIntegrity:
         assert verify_chain_integrity("ghost", store=store) is True
 
     def test_tampered_chain(self, store: AuditStore):
-        append_event("t", "pipeline.start", {"step": 1}, store=store)
+        append_event("t", "audit.genesis", {"step": 1}, store=store)
+        append_event("t", "pipeline.start", {"step": 2}, store=store)
         events = store.get_chain("t")
-        # Tamper with an event's payload_hash (simulates data corruption)
-        tampered = events[-1]
-        tampered.payload_hash = "f" * 64
+        oldest = events[-1]
+        oldest.payload_hash = "f" * 64
         assert verify_chain_integrity("t", store=store) is False
-
-
-# ===========================================================================
-# Policy Engine
-# ===========================================================================
 
 
 class TestPolicyEngine:
@@ -215,7 +192,7 @@ class TestPolicyEngine:
         engine = PolicyEngine.with_defaults()
         event = AuditEvent(
             tenant_id="t",
-            event_type="pipeline.start",
+            event_type="audit.genesis",
             payload={"pipeline": "fix"},
             payload_hash=compute_payload_hash({"pipeline": "fix"}),
             prev_hash="",
@@ -230,7 +207,7 @@ class TestPolicyEngine:
             tenant_id="t",
             event_type="pipeline.start",
             payload={"pipeline": "fix"},
-            payload_hash="f" * 64,  # wrong hash
+            payload_hash="f" * 64,
             prev_hash="",
         )
         verdicts = engine.evaluate(event)
@@ -320,11 +297,6 @@ class TestPolicyEngine:
         assert "boom" in verdicts[0].reason
 
 
-# ===========================================================================
-# Scoring
-# ===========================================================================
-
-
 class TestComputeScore:
     def test_empty_events_returns_perfect(self):
         score = compute_score([])
@@ -376,9 +348,6 @@ class TestComputeScore:
             [type("V", (), {"passed": False})()],
         ]
         score = compute_score(events, verdicts)
-        # pipeline.start → lifecycle (w=0.10), verification.pass → verification (w=0.20)
-        # lifecycle passes (1.0), verification fails (0.0)
-        # score = (0.10*1.0 + 0.20*0.0) / (0.10+0.20) = 0.10/0.30 = 0.333...
         assert score.score == pytest.approx(0.333333, rel=1e-5)
 
     def test_score_rounds_to_6_decimals(self):
@@ -388,12 +357,7 @@ class TestComputeScore:
         ]
         verdicts = [[type("V", (), {"passed": False})()]]
         score = compute_score(events, verdicts)
-        assert score.score == 0.0  # exact
-
-
-# ===========================================================================
-# Drift Detection
-# ===========================================================================
+        assert score.score == 0.0
 
 
 class TestDriftDetector:
@@ -417,8 +381,8 @@ class TestDriftDetector:
             AuditEvent(tenant_id="t", event_type="verification.fail", payload={},
                        payload_hash=compute_payload_hash({}), prev_hash="x" * 64),
         ]
-        from workers.audit.scoring import compute_score
         from workers.audit.models import PolicyVerdict
+        from workers.audit.scoring import compute_score
 
         prev_score = compute_score(prev, [[PolicyVerdict(rule_name="r", passed=True, severity="info")]])
         curr_score = compute_score(curr, [[PolicyVerdict(rule_name="r", passed=False, reason="fail", severity="info")]])
@@ -435,15 +399,6 @@ class TestDriftDetector:
             window_minutes=60,
         )
         assert not report.anomaly_detected
-
-    @pytest.mark.skip(reason="flaky time-window partitioning; tested via compare()")
-    def test_time_window_partitioning(self):
-        pass
-
-
-# ===========================================================================
-# Export
-# ===========================================================================
 
 
 class TestExportNDJSON:
@@ -470,7 +425,6 @@ class TestExportNDJSON:
         buf = io.StringIO()
         events = get_chain("tenant_1", store=populated_store)
         export_ndjson(events, buf, pretty=True)
-        # Pretty JSON has newlines within each object
         assert '"id":' in buf.getvalue()
 
 
@@ -483,13 +437,12 @@ class TestExportCSV:
         output = buf.getvalue()
         assert "id,tenant_id,event_type" in output
         lines = output.strip().split("\n")
-        assert len(lines) == 4  # header + 3 data rows
+        assert len(lines) == 4
 
     def test_empty_events(self):
         buf = io.StringIO()
         count = export_csv([], buf)
         assert count == 0
-        # CSV with no data still has header
         assert "id" in buf.getvalue()
 
     def test_delimiter_option(self, populated_store: AuditStore):
@@ -499,43 +452,30 @@ class TestExportCSV:
         assert "id;tenant_id;event_type" in buf.getvalue()
 
 
-# ===========================================================================
-# Integration
-# ===========================================================================
-
-
 class TestIntegration:
-    """End-to-end: append → verify → policy → score → export."""
-
     def test_full_pipeline(self, store: AuditStore):
-        # 1 — Append events
-        e1 = append_event("acme", "pipeline.start", {"branch": "main"}, store=store)
+        e1 = append_event("acme", "audit.genesis", {"branch": "main"}, store=store)
         e2 = append_event("acme", "task.success", {"task": "build"}, store=store)
         e3 = append_event("acme", "verification.pass", {"tests": 42}, store=store)
 
-        # 2 — Verify chain integrity
         assert verify_chain_integrity("acme", store=store)
 
-        # 3 — Policy evaluation
         engine = PolicyEngine.with_defaults()
         chain = get_chain("acme", store=store)
-        chain_rev = list(reversed(chain))  # chronological
+        chain_rev = list(reversed(chain))
         all_verdicts = engine.evaluate_all(chain_rev)
         assert len(all_verdicts) == 3
         assert all(all(v.passed for v in ev) for ev in all_verdicts)
 
-        # 4 — Score
         score = compute_score(chain_rev, all_verdicts)
         assert score.score == 1.0
         assert score.total_events == 3
 
-        # 5 — Export NDJSON
         buf = io.StringIO()
         export_ndjson(chain, buf)
         lines = buf.getvalue().strip().split("\n")
         assert len(lines) == 3
 
-        # 6 — Export CSV
         buf2 = io.StringIO()
         export_csv(chain, buf2)
         assert "acme" in buf2.getvalue()
@@ -544,34 +484,39 @@ class TestIntegration:
         append_event("t", "pipeline.start", {"i": 1}, store=store)
         append_event("t", "task.success", {"i": 2}, store=store)
 
-        # Tamper
         events = store.get_chain("t")
         tampered = events[-1]
         tampered.payload_hash = compute_payload_hash({"i": 999})
 
         assert verify_chain_integrity("t", store=store) is False
 
-        # Policy should catch the hash mismatch
         engine = PolicyEngine([HashIntegrityRule()])
         chain_rev = list(reversed(store.get_chain("t")))
         verdicts = engine.evaluate_all(chain_rev)
-        # At least one event should fail
         assert any(not v.passed for ev_v in verdicts for v in ev_v)
 
     def test_anomaly_detection_flow(self, store: AuditStore):
-        # Good period
+        from workers.audit.models import PolicyVerdict
+        from workers.audit.scoring import compute_score
+
+        good_events: list[AuditEvent] = []
         for i in range(10):
-            append_event("t", "pipeline.start", {"i": i}, store=store)
+            ev = append_event("t", "pipeline.start", {"i": i}, store=store)
+            good_events.append(ev)
 
-        # Bad period
+        bad_events: list[AuditEvent] = []
         for i in range(5):
-            append_event("t", "pipeline.fail", {"i": i}, store=store)
+            ev = append_event("t", "pipeline.fail", {"i": i}, store=store)
+            bad_events.append(ev)
 
-        events = list(reversed(store.get_chain("t")))
-        good = events[:10]
-        bad = events[10:]
+        good_verdicts = [[PolicyVerdict(rule_name="r", passed=True, severity="info")]] * 10
+        bad_verdicts = [[PolicyVerdict(rule_name="r", passed=False, reason="fail", severity="info")]] * 5
+
+        good_score = compute_score(good_events, good_verdicts)
+        bad_score = compute_score(bad_events, bad_verdicts)
 
         detector = DriftDetector(fail_rate_threshold=0.05, score_change_threshold=0.05)
-        report = detector.compare(good, bad)
+        report = detector.compare(good_events, bad_events, good_score, bad_score)
         assert report.anomaly_detected
         assert report.fail_rate_current > 0
+        assert report.current_score < report.previous_score
