@@ -191,6 +191,14 @@ const envSchema = z.object({
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
 
+  // Escalation / Human-on-call
+  PAGERDUTY_ROUTING_KEY: z.string().optional(),
+  OPSGENIE_API_KEY: z.string().optional(),
+  ESCALATION_RETRY_THRESHOLD: z.coerce.number().int().positive().default(3),
+  ESCALATION_COMMENT_RATE_LIMIT_MS: z.coerce.number().int().positive().default(30_000),
+  ESCALATION_ACK_TTL_MS: z.coerce.number().int().positive().default(14_400_000),
+  LINEAR_PROJECT_ID: z.string().optional(),
+  LINEAR_INCIDENT_TEAM_ID: z.string().optional(),
   // Sentry
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENVIRONMENT: z.string().default('development'),
@@ -208,6 +216,12 @@ const envSchema = z.object({
   ALERT_CRIT_QUEUE_DEPTH: z.coerce.number().int().positive().default(200),
   ALERT_WARN_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(10),
   ALERT_CRIT_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(30),
+  ALERT_EMAIL_WEBHOOK_URL: z.string().optional(),
+
+  // Human Escalation (AIM-2058)
+  MAX_FAILURES_BEFORE_ESCALATION: z.coerce.number().int().positive().default(3),
+  OPERATOR_WEBHOOK_URL: z.string().optional(),
+  ESCALATION_DEDUP_TTL_HOURS: z.coerce.number().int().positive().default(24),
   // Metering / Usage Tracking
   METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
   METERING_COST_OPENCODE_PRIMARY: z.coerce.number().int().positive().default(10),
@@ -339,6 +353,13 @@ function buildConfig(env: ParsedEnv) {
       critQueueDepth: env.ALERT_CRIT_QUEUE_DEPTH,
       warnErrorRatePercent: env.ALERT_WARN_ERROR_RATE_PERCENT,
       critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
+      emailWebhookUrl: env.ALERT_EMAIL_WEBHOOK_URL,
+    },
+
+    escalation: {
+      maxFailuresBeforeEscalation: env.MAX_FAILURES_BEFORE_ESCALATION,
+      operatorWebhookUrl: env.OPERATOR_WEBHOOK_URL,
+      dedupTtlHours: env.ESCALATION_DEDUP_TTL_HOURS,
     },
     stas: {
       mode: env.STAS_MODE,
@@ -457,6 +478,15 @@ function buildConfig(env: ParsedEnv) {
       sandboxMultiplierMax: env.METERING_SANDBOX_MULTIPLIER_MAX,
     },
 
+    escalation: {
+      pagerdutyRoutingKey: env.PAGERDUTY_ROUTING_KEY,
+      opsgenieApiKey: env.OPSGENIE_API_KEY,
+      retryThreshold: env.ESCALATION_RETRY_THRESHOLD,
+      commentRateLimitMs: env.ESCALATION_COMMENT_RATE_LIMIT_MS,
+      ackTtlMs: env.ESCALATION_ACK_TTL_MS,
+      linearProjectId: env.LINEAR_PROJECT_ID,
+      linearIncidentTeamId: env.LINEAR_INCIDENT_TEAM_ID,
+    },
     usageCredits: {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
