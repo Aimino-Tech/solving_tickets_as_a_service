@@ -11,6 +11,10 @@ from .adversarial_review import layer1_per_file_analysis, layer2_holistic_review
 from .linear_poll import poll_active_issues
 from .ci_polling import poll_ci_checks
 from .auto_qa import auto_qa_sample
+from .anti_liar import anti_liar_enforcement
+
+# Register pipeline orchestrator tasks with Celery app
+from . import pipeline_orchestrator  # noqa: F401
 
 __all__ = [
     "triage_issue",
@@ -34,4 +38,5 @@ __all__ = [
     "poll_active_issues",
     "poll_ci_checks",
     "auto_qa_sample",
+    "anti_liar_enforcement",
 ]
