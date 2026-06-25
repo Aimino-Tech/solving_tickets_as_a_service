@@ -13,7 +13,6 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Left panel — brand / marketing */}
       <div className="hidden flex-1 flex-col justify-between bg-gradient-to-br from-brand-600 to-brand-900 p-12 text-white lg:flex">
         <div>
           <div className="flex items-center gap-3">
@@ -29,6 +28,18 @@ export default function Login() {
           <p className="mt-4 text-lg text-brand-100">
             Label a GitHub issue. Get a pull request. Our AGI does the work.
           </p>
+
+          <div className="mt-6 rounded-lg border border-brand-400/30 bg-brand-500/20 p-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-400 text-sm font-bold text-white">✓</span>
+              <p className="text-sm font-medium text-white">
+                We Never Train on Your Code.{' '}
+                <a href="/security" className="underline text-brand-200 hover:text-white transition-colors">
+                  Read our security policy →
+                </a>
+              </p>
+            </div>
+          </div>
 
           <ul className="mt-8 space-y-3">
             {FEATURES.map((feature) => (
@@ -47,10 +58,8 @@ export default function Login() {
         </p>
       </div>
 
-      {/* Right panel — login form */}
       <div className="flex flex-1 items-center justify-center bg-gray-50 p-8">
         <div className="w-full max-w-sm">
-          {/* Mobile brand */}
           <div className="mb-8 text-center lg:hidden">
             <div className="flex items-center justify-center gap-2">
               <span className="text-2xl">⚡</span>

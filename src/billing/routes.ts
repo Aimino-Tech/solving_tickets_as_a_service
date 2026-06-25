@@ -28,6 +28,8 @@ import {
 } from './stripe.js';
 import { getTrialStatus, startTrial } from './trial.js';
 import { createBillingWebhookHandler } from './webhook.js';
+import { getDpaStatus } from './dpa.js';
+import { config } from '../config.js';
 import { queryWithRetry } from '../db/connection.js';
 
 const log = rootLogger.child({ module: 'billing-api' });
@@ -136,6 +138,27 @@ router.post('/subscription/create-checkout', async (req: Request, res: Response)
     }
 
     // Validate plan exists
+    if (!PLANS[planId]) {
+      res.status(400).json({
+        error: `Unknown plan "${planId}". Valid plans: ${Object.keys(PLANS).join(', ')}`,
+      });
+      return;
+    }
+
+    // Require DPA acceptance for paid plans
+    if (config.dataPrivacy.requireDpaAcceptance && PLANS[planId].amountCents > 0) {
+      const dpaStatus = await getDpaStatus(accountId);
+      if (!dpaStatus.accepted) {
+        res.status(403).json({
+          error: 'DPA acceptance required',
+          code: 'DPA_REQUIRED',
+          dpaVersion: dpaStatus.currentVersion,
+          message: 'You must accept the Data Processing Agreement before subscribing.',
+        });
+        return;
+      }
+    }
+
     if (!PLANS[planId]) {
       res.status(400).json({
         error: `Unknown plan "${planId}". Valid plans: ${Object.keys(PLANS).join(', ')}`,

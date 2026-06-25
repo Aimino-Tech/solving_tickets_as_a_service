@@ -55,6 +55,7 @@ import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { dashboardRouter } from './routes/dashboard.js';
+import { dpaRouter } from './routes/dpa.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -656,6 +657,9 @@ export function createApp(): express.Application {
 
   // ── Dashboard API ──────────────────────────────────────
   app.use('/api/v1/me', dashboardRouter);
+
+  // ── DPA API ──────────────────────────────────────────────
+  app.use('/api/v1/billing', dpaRouter);
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
