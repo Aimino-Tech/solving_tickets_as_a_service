@@ -36,7 +36,7 @@ router.get('/runs', async (req: Request, res: Response) => {
     const status = req.query.status as string | undefined;
     const repo = req.query.repo as string | undefined;
 
-    // TODO: Replace with actual DB queries when DB is wired
+    // TODO: Replace with actual DB queries when DB is wired (AIM-1971)
     const mockData = generateMockRuns();
     let filtered = mockData;
 
@@ -86,7 +86,7 @@ router.get('/runs/:id', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 router.get('/repos', async (_req: Request, res: Response) => {
   try {
-    // TODO: Replace with DB query
+    // TODO: Replace with DB query (AIM-1971)
     const repoList = generateMockRepos();
     res.json(repoList);
   } catch (err) {
@@ -107,7 +107,7 @@ router.post('/repos', async (req: Request, res: Response) => {
       return;
     }
 
-    // TODO: Persist to DB
+    // TODO: Persist to DB (AIM-1971)
     log.info({ owner, repo, installationId, user: req.user?.username }, 'Repo connected');
 
     res.status(201).json({
@@ -130,7 +130,7 @@ router.post('/repos', async (req: Request, res: Response) => {
 router.delete('/repos/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    // TODO: Delete from DB
+    // TODO: Delete from DB (AIM-1971)
     log.info({ repoId: id, user: req.user?.username }, 'Repo disconnected');
     res.json({ success: true });
   } catch (err) {
@@ -144,7 +144,7 @@ router.delete('/repos/:id', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 router.get('/stats', async (_req: Request, res: Response) => {
   try {
-    // TODO: Aggregate from DB
+    // TODO: Aggregate from DB (AIM-1971)
     const mockRuns = generateMockRuns();
     const totalRuns = mockRuns.length;
     const passed = mockRuns.filter((r) => r.status === 'success').length;
@@ -218,7 +218,7 @@ router.get('/audit', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 router.get('/settings', async (_req: Request, res: Response) => {
   try {
-    // TODO: Load from DB/config
+    // TODO: Load from DB/config (AIM-1971)
     res.json({
       label: process.env.STAS_LABEL || 'stas:fix',
       model: process.env.OPENCODE_MODEL || 'aimino/agi-v1',
@@ -238,7 +238,7 @@ router.get('/settings', async (_req: Request, res: Response) => {
 router.put('/settings', async (req: Request, res: Response) => {
   try {
     const updates = req.body;
-    // TODO: Persist to DB
+    // TODO: Persist to DB (AIM-1971)
     log.info({ updates, user: req.user?.username }, 'Settings updated');
     res.json({ success: true });
   } catch (err) {
