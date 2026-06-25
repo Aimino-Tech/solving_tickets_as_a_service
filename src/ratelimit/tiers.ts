@@ -23,7 +23,7 @@ const log = rootLogger.child({ module: 'rate-tiers' });
 // Types
 // ---------------------------------------------------------------------------
 
-export type Tier = 'free' | 'pro' | 'enterprise';
+export type Tier = 'free' | 'pro' | 'team' | 'enterprise';
 
 export interface TierConfig {
   /** Human-readable label. */
@@ -53,6 +53,12 @@ export const TIER_CONFIGS: Record<Tier, TierConfig> = {
     maxConcurrency: 3,
     windowMs: 60_000,
   },
+  team: {
+    label: 'Team',
+    requestsPerWindow: 120,
+    maxConcurrency: 10,
+    windowMs: 60_000,
+  },
   enterprise: {
     label: 'Enterprise',
     requestsPerWindow: 300,
@@ -64,7 +70,7 @@ export const TIER_CONFIGS: Record<Tier, TierConfig> = {
 /**
  * Ordered list of tiers from most restrictive to least restrictive.
  */
-export const TIER_ORDER: Tier[] = ['free', 'pro', 'enterprise'];
+export const TIER_ORDER: Tier[] = ['free', 'pro', 'team', 'enterprise'];
 
 // ---------------------------------------------------------------------------
 // Tier assignment

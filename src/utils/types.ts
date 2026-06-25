@@ -78,7 +78,7 @@ export interface MessageEnvelope {
 }
 
 export interface BillingPlan {
-  plan: 'free' | 'pro' | 'enterprise';
+  plan: 'free' | 'pro' | 'team' | 'enterprise';
   accountId: number;
   effectiveAt: string;
 }

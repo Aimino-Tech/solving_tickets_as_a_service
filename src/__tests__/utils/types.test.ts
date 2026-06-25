@@ -107,19 +107,25 @@ describe('BillingPlan', () => {
     expect(plan.effectiveAt).toBe('2025-01-01T00:00:00Z');
   });
 
-  it("can be constructed with 'pro' and 'enterprise' plans", () => {
+  it("can be constructed with 'pro', 'team', and 'enterprise' plans", () => {
     const pro: BillingPlan = {
       plan: 'pro',
       accountId: 456,
       effectiveAt: '2025-06-01T00:00:00Z',
     };
+    const team: BillingPlan = {
+      plan: 'team',
+      accountId: 789,
+      effectiveAt: '2025-06-15T00:00:00Z',
+    };
     const enterprise: BillingPlan = {
       plan: 'enterprise',
-      accountId: 789,
+      accountId: 101,
       effectiveAt: '2025-06-15T00:00:00Z',
     };
 
     expect(pro.plan).toBe('pro');
+    expect(team.plan).toBe('team');
     expect(enterprise.plan).toBe('enterprise');
   });
 

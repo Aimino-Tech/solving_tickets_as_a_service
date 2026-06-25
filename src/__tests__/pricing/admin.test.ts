@@ -32,6 +32,7 @@ vi.mock('../../ratelimit/tiers.js', () => ({
   TIER_CONFIGS: {
     free: { label: 'Free', requestsPerWindow: 10, maxConcurrency: 1, windowMs: 60000 },
     pro: { label: 'Pro', requestsPerWindow: 60, maxConcurrency: 3, windowMs: 60000 },
+    team: { label: 'Team', requestsPerWindow: 120, maxConcurrency: 10, windowMs: 60000 },
     enterprise: { label: 'Enterprise', requestsPerWindow: 300, maxConcurrency: 10, windowMs: 60000 },
   },
 }));
@@ -46,7 +47,8 @@ vi.mock('../../pricing/tiers.js', () => ({
   TIER_FEATURES: {
     free: { concurrentFixes: 1, monthlyFixQuota: 10, premiumModels: false, maxRetries: 2, sandboxTimeoutMs: 300000, customWebhooks: false, prioritySupport: false },
     pro: { concurrentFixes: 3, monthlyFixQuota: 100, premiumModels: true, maxRetries: 4, sandboxTimeoutMs: 600000, customWebhooks: false, prioritySupport: true },
-    enterprise: { concurrentFixes: 10, monthlyFixQuota: 999999, premiumModels: true, maxRetries: 10, sandboxTimeoutMs: 900000, customWebhooks: true, prioritySupport: true },
+    team: { concurrentFixes: 10, monthlyFixQuota: 500, premiumModels: true, maxRetries: 10, sandboxTimeoutMs: 900000, customWebhooks: true, prioritySupport: true },
+    enterprise: { concurrentFixes: 50, monthlyFixQuota: 999999, premiumModels: true, maxRetries: 10, sandboxTimeoutMs: 1800000, customWebhooks: true, prioritySupport: true },
   },
 }));
 
@@ -122,8 +124,8 @@ describe('adminRouter', () => {
     expect(resetAccountQuota).toHaveBeenCalledWith(12345);
   });
 
-  it('TIER_CONFIGS has all three tiers', () => {
-    expect(Object.keys(TIER_CONFIGS)).toEqual(['free', 'pro', 'enterprise']);
+  it('TIER_CONFIGS has all four tiers', () => {
+    expect(Object.keys(TIER_CONFIGS)).toEqual(['free', 'pro', 'team', 'enterprise']);
     expect(TIER_CONFIGS.free.label).toBe('Free');
     expect(TIER_CONFIGS.pro.label).toBe('Pro');
     expect(TIER_CONFIGS.enterprise.label).toBe('Enterprise');

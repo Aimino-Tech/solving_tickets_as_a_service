@@ -73,12 +73,21 @@ export const TIER_FEATURES: Record<Tier, FeatureGate> = {
     customWebhooks: false,
     prioritySupport: true,
   },
-  enterprise: {
+  team: {
     concurrentFixes: 10,
-    monthlyFixQuota: 999_999,
+    monthlyFixQuota: 500,
     premiumModels: true,
     maxRetries: 10,
     sandboxTimeoutMs: 900_000,
+    customWebhooks: true,
+    prioritySupport: true,
+  },
+  enterprise: {
+    concurrentFixes: 50,
+    monthlyFixQuota: 999_999,
+    premiumModels: true,
+    maxRetries: 10,
+    sandboxTimeoutMs: 1_800_000,
     customWebhooks: true,
     prioritySupport: true,
   },

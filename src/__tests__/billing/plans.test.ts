@@ -104,9 +104,12 @@ describe('billing/plans', () => {
       expect(plans.planIdToTier('free')).toBe('free');
     });
 
-    it('maps solo and team -> pro', () => {
+    it('maps solo -> pro', () => {
       expect(plans.planIdToTier('solo')).toBe('pro');
-      expect(plans.planIdToTier('team')).toBe('pro');
+    });
+
+    it('maps team -> team', () => {
+      expect(plans.planIdToTier('team')).toBe('team');
     });
 
     it('maps enterprise -> enterprise', () => {
