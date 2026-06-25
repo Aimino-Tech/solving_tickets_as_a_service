@@ -28,7 +28,7 @@ const log = rootLogger.child({ module: 'pricing-admin' });
 // Router
 // ---------------------------------------------------------------------------
 
-export const adminRouter = Router();
+export const adminRouter: Router = Router();
 
 // ---------------------------------------------------------------------------
 // GET /admin/tiers/:accountId — Get account tier info

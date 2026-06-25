@@ -1,0 +1,98 @@
+# =============================================================================
+# STAS — Celery Worker Docker Compose (Phase 2)
+#
+# Standalone worker node for the Celery fleet. Each worker has its own Docker
+# daemon, sandbox pool, and GC sweeper. Connects to a shared RabbitMQ broker
+# and Redis result backend.
+#
+# Usage:
+#   docker compose -f docker-compose.worker.yml up -d
+#
+# Scale horizontally:
+#   # Run this on each worker machine — no coordination needed
+#
+# Requires a .env file with at minimum:
+#   CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672
+#   CELERY_RESULT_BACKEND=redis://redis:6379/0
+#   OPENCODE_URL=http://opencode-server:4096
+# =============================================================================
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-restart: &default-restart
+  restart: unless-stopped
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # STAS Worker — Celery worker that processes issue queues
+  # ---------------------------------------------------------------------------
+  stas-worker:
+    build:
+      context: ./workers
+      dockerfile: Dockerfile
+    image: stas-worker:latest
+    container_name: stas-worker
+    restart: unless-stopped
+    command: >
+      celery -A workers.celery_app worker -l info
+      -Q stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications
+      --concurrency=${STAS_WORKER_CONCURRENCY:-4}
+    env_file: .env
+    environment:
+      # Broker & backend — must point to the shared cluster
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-amqp://guest:guest@rabbitmq:5672}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+      # OpenCode — must be network-reachable (not localhost)
+      - OPENCODE_URL=${OPENCODE_URL:-http://opencode-server:4096}
+      # Docker sandbox resource limits per container
+      - DOCKER_CONTAINER_MEMORY=${DOCKER_CONTAINER_MEMORY:-2g}
+      - DOCKER_CONTAINER_CPU=${DOCKER_CONTAINER_CPU:-1}
+      # Worker concurrency
+      - STAS_WORKER_CONCURRENCY=${STAS_WORKER_CONCURRENCY:-4}
+      - WORKER_CONCURRENCY=${STAS_WORKER_CONCURRENCY:-4}
+      # Sentry (optional)
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+    volumes:
+      # Local Docker socket for sandbox container management
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Resource limits for the Celery worker container itself
+    # (not the sandbox containers — those are limited by DOCKER_CONTAINER_*)
+    mem_limit: ${WORKER_MEM_LIMIT:-3g}
+    cpus: ${WORKER_CPU_LIMIT:-1.5}
+    healthcheck:
+      test: ["CMD", "python3", "/app/workers/health.py", "--check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Graceful shutdown — allow running tasks to finish before SIGKILL
+    stop_grace_period: 60s
+    logging: *default-logging
+    # No network config — uses the compose default network, which must be able
+    # to reach RabbitMQ, Redis, and the OpenCode serve instance.
+
+  # ---------------------------------------------------------------------------
+  # Celery Beat — periodic task scheduler (one per fleet)
+  # ---------------------------------------------------------------------------
+  stas-celery-beat:
+    image: stas-worker:latest
+    container_name: stas-celery-beat
+    restart: unless-stopped
+    command: celery -A workers.celery_app beat -l info
+    env_file: .env
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-amqp://guest:guest@rabbitmq:5672}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+    mem_limit: 256m
+    cpus: 0.2
+    # Only run celery-beat on ONE worker in the fleet to avoid duplicate tasks.
+    # Comment out or set replicas=0 on all but one worker node.
+    profiles:
+      - beat
+    logging: *default-logging

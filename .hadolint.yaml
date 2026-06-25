@@ -1,0 +1,24 @@
+# =============================================================================
+# hadolint configuration
+# See: https://github.com/hadolint/hadolint
+# =============================================================================
+
+failure-threshold: warning
+
+override:
+  # DL3008: Pin versions in apt-get install — we upgrade all packages via apt-get upgrade
+  # which is an acceptable alternative for slim base images
+  - image: python:3.12-slim
+    errors:
+      DL3008: style
+
+  # DL3007: Using latest tag is acceptable for distroless base
+  - image: gcr.io/distroless/*
+    errors:
+      DL3007: style
+
+  # DL3042: --no-cache-dir is already used for pip
+  # DL3045: COPY --chown is used
+  # DL4006: SHELL with pipefail is set
+  # DL3018: apk upgrade --no-cache is used
+  # DL3040: npm ci --ignore-scripts is used

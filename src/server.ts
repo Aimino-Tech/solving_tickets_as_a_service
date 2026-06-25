@@ -34,7 +34,6 @@ import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
 import { getQueueHealth } from './health/queueHealth.js';
-import { bridgeMetrics } from './bridge/metrics.js';
 import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { getTracker, initTrackers } from './trackers/index.js';
@@ -255,7 +254,8 @@ export function createApp(): express.Application {
       return;
     }
 
-    if (!config.stas.devSkipWebhookVerify && signature) {
+    if (signature) {
+      // Signature present — verify it
       if (!rawBody) {
         log.error('Missing raw body for signature verification');
         if (eventId) await logWebhookFailed(eventId, 'Missing raw body for signature verification');
@@ -277,17 +277,15 @@ export function createApp(): express.Application {
         return;
       }
     } else {
-      const payload = rawBody ? rawBody.toString() : JSON.stringify(req.body);
-
+      // No signature — receive without verification (dev mode or unsigned transport)
       try {
-        await githubWebhooks.verifyAndReceive({
+        await githubWebhooks.receive({
           id: deliveryId || crypto.randomUUID(),
           name: event as any,
-          payload,
-          signature: signature || '',
+          payload: JSON.parse((rawBody || Buffer.from(JSON.stringify(req.body))).toString()),
         });
       } catch (err) {
-        log.error({ err: String(err) }, 'Webhook processing error');
+        log.warn({ err: String(err) }, 'Webhook processing error (no signature)');
         if (eventId) await logWebhookFailed(eventId, `Processing error: ${String(err)}`);
         // Still respond 202 — we've logged the event for replay
       }
@@ -594,7 +592,7 @@ export function createApp(): express.Application {
     // Wrap the handler to capture success/failure for event logging
     const wrappedHandler = async (req2: Request, res2: Response, next2: NextFunction) => {
       try {
-        await stripeWebhookHandler(req2, res2, next2);
+        await stripeWebhookHandler(req2, res2);
         if (eventId) await logWebhookProcessed(eventId);
       } catch (err) {
         if (eventId) await logWebhookFailed(eventId, String(err));

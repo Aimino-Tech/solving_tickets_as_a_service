@@ -102,12 +102,12 @@ vi.mock('../../utils/logger.js', () => ({
 }));
 
 vi.mock('bullmq', () => ({
-  Queue: vi.fn(() => mocks.mockQueueInstance),
-  Worker: vi.fn((_queueName: string, processor: (job: { id: string; data: IssueJobData }) => Promise<unknown>) => {
+  Queue: vi.fn(function() { return mocks.mockQueueInstance; }),
+  Worker: vi.fn(function(queueName: string, processor: (job: { id: string; data: IssueJobData }) => Promise<unknown>) {
     mocks.workerProcessorRef.current = processor;
     return mocks.mockWorkerInstance;
   }),
-  QueueEvents: vi.fn(() => mocks.mockQueueEventsInstance),
+  QueueEvents: vi.fn(function() { return mocks.mockQueueEventsInstance; }),
 }));
 
 // ---------------------------------------------------------------------------

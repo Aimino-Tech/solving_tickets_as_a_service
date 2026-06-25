@@ -1,0 +1,230 @@
+# =============================================================================
+# STAS Eval Standard — runs on PR ready_for_review or labeled:ready
+#
+# Executes 10 test cases across 3 parallel matrix groups, aggregates results,
+# checks for regression against committed baseline, generates a badge SVG,
+# and posts a PR comment with results.
+#
+# The regression guard exits 1 if pass rate drops >=5% from baseline.
+# All artifacts upload even on failure for post-mortem analysis.
+# =============================================================================
+
+name: Eval Standard
+
+on:
+  pull_request:
+    types: [ready_for_review, labeled]
+    labels: [ready]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  ##############################################################################
+  # EVAL — run 10 test cases in 3 parallel matrix groups
+  ##############################################################################
+  eval-standard:
+    name: Eval Group ${{ matrix.test-group }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      matrix:
+        test-group: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run promptfoo eval — group ${{ matrix.test-group }}
+        id: eval
+        continue-on-error: true
+        run: |
+          mkdir -p eval/results
+          npx --yes promptfoo eval \
+            --config eval/promptfooconfig.yaml \
+            --tests eval/test-cases/group-${{ matrix.test-group }}.yml \
+            --output eval/results/standard-${{ github.sha }}-${{ matrix.test-group }}.json \
+            -o eval/results/standard-${{ github.sha }}-${{ matrix.test-group }}.json
+
+      - name: Verify result file exists
+        run: |
+          if [ -f eval/results/standard-${{ github.sha }}-${{ matrix.test-group }}.json ]; then
+            echo "Result file created successfully"
+          else
+            echo "WARNING: Result file not found — eval may have failed"
+            echo '{"results":[],"error":"eval process failed"}' > eval/results/standard-${{ github.sha }}-${{ matrix.test-group }}.json
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-standard-group-${{ matrix.test-group }}
+          path: eval/results/standard-${{ github.sha }}-${{ matrix.test-group }}.json
+          retention-days: 30
+
+  ##############################################################################
+  # AGGREGATE — collect all matrix results and run regression checks
+  ##############################################################################
+  aggregate:
+    name: Aggregate and Check Regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [eval-standard]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download all eval group artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: eval-standard-group-*
+          path: eval/results/
+          merge-multiple: true
+
+      - name: Rename artifacts to include sha in filename
+        run: |
+          mkdir -p eval/results
+          ls -la eval/results/ 2>/dev/null || true
+          for f in eval/results/standard-*.json; do
+            if [ -f "$f" ]; then
+              base=$(basename "$f")
+              if echo "$base" | grep -qv "${{ github.sha }}"; then
+                group=$(echo "$base" | sed 's/.*-\([0-9]\).json/\1/')
+                cp "$f" "eval/results/standard-${{ github.sha }}-${group}.json"
+              fi
+            fi
+          done
+
+      - name: Aggregate results
+        id: aggregate
+        continue-on-error: true
+        run: node eval/scripts/aggregate.mjs
+
+      - name: Check regression against baseline
+        id: regression
+        continue-on-error: true
+        run: |
+          node eval/scripts/check-regression.mjs \
+            --baseline eval/baselines/standard.json \
+            --current eval/results/aggregated.json \
+            --threshold 0.05
+
+      - name: Store regression result
+        id: regression-result
+        run: |
+          if [ "${{ steps.regression.outcome }}" = "success" ]; then
+            echo "regression_pass=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "regression_pass=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate badge
+        id: badge
+        run: |
+          mkdir -p eval/badges
+          node eval/scripts/badge-gen.mjs \
+            --input eval/results/aggregated.json \
+            --output eval/badges/pass-rate.svg \
+            --variant detailed
+
+      - name: Upload aggregated results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-standard-aggregated
+          path: eval/results/aggregated.json
+          retention-days: 90
+
+      - name: Upload badge
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-standard-badge
+          path: eval/badges/pass-rate.svg
+          retention-days: 90
+
+      - name: Extract summary values for comment
+        id: summary
+        run: |
+          node -e "
+            const d = require('./eval/results/aggregated.json');
+            const b = require('./eval/baselines/standard.json');
+            const passPct = (d.summary.passRate * 100).toFixed(1);
+            const basePct = (b.summary.passRate * 100).toFixed(1);
+            const testSummary = d.summary.passed + '/' + d.summary.total + ' passed, ' +
+              d.summary.failed + ' failed, ' + d.summary.errored + ' errored';
+            const reg = '${{ steps.regression-result.outputs.regression_pass }}';
+            console.log('pass_pct=' + passPct);
+            console.log('base_pct=' + basePct);
+            console.log('test_summary=' + testSummary);
+          " >> "$GITHUB_OUTPUT"
+
+      - name: Post PR comment with results
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: github.event_name == 'pull_request'
+        with:
+          header: eval-results
+          message: |
+            ## Eval Results
+
+            **Pass Rate:** ${{ steps.summary.outputs.pass_pct }}
+            **Tests:** ${{ steps.summary.outputs.test_summary }}
+
+            | Metric | Value |
+            |--------|-------|
+            | Pass Rate | ${{ steps.summary.outputs.pass_pct }} |
+            | Baseline | ${{ steps.summary.outputs.base_pct }} |
+            | Regression | ${{ steps.regression-result.outputs.regression_pass == 'true' && '✅ Pass' || '❌ Regression Detected' }} |
+
+            ![Pass Rate Badge](eval/badges/pass-rate.svg)
+
+  ##############################################################################
+  # REGRESSION GATE — fail the workflow if regression is detected
+  ##############################################################################
+  regression-gate:
+    name: Regression Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [aggregate]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download aggregated results
+        uses: actions/download-artifact@v4
+        with:
+          name: eval-standard-aggregated
+          path: eval/results/
+
+      - name: Check regression (enforce)
+        run: |
+          node eval/scripts/check-regression.mjs \
+            --baseline eval/baselines/standard.json \
+            --current eval/results/aggregated.json \
+            --threshold 0.05

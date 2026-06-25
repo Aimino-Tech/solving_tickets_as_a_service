@@ -1,0 +1,30 @@
+description: "Agent must fix a missing await in an async JavaScript function"
+issue:
+  title: "fetchUserData() returns Promise instead of resolved value in src/api.js"
+  body: |
+    ## Bug
+    The `fetchUserData()` function in `src/api.js` calls `fetch()` but
+    forgets to `await` the promise, so it returns a pending Promise instead
+    of the resolved JSON data.
+
+    ```javascript
+    async function fetchUserData(userId) {
+      const response = fetch(`/api/users/${userId}`);
+      return response.json();
+    }
+    ```
+
+    ## Expected
+    Add `await` before `fetch()` to properly resolve the promise.
+    The function should return the parsed JSON data, not a pending Promise.
+
+    ## Steps to reproduce
+    1. Run the test suite with `npm test`
+    2. Observe that `fetchUserData(1)` returns a Promise object instead of user data
+    3. Fix: change to `const response = await fetch(...)`
+repo: https://github.com/example/js-async-await-demo
+expected:
+  outcome: pr_created
+  filesChanged: ["src/api.js"]
+  minTestsPassing: 1
+timeoutMs: 300000

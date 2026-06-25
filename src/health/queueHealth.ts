@@ -1,8 +1,8 @@
 /**
- * Queue Health — monitoring for BullMQ and RabbitMQ queue health.
+ * Queue Health — monitoring for BullMQ queue health.
  *
  * Provides:
- *   - Queue depth checks (BullMQ via Redis, RabbitMQ via Management API)
+ *   - Queue depth checks (BullMQ via Redis)
  *   - DLQ message count monitoring
  *   - Worker liveness checks
  *   - Structured health report for /health/queue endpoint
@@ -17,8 +17,7 @@
 import { Redis } from 'ioredis';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import * as rabbitmq from '../queue/rabbitmq.js';
-import { bridgeMetrics, recordConsumerLag } from '../bridge/metrics.js';
+import { bridgeMetrics } from '../bridge/metrics.js';
 
 const log = rootLogger.child({ module: 'queue-health' });
 
@@ -40,11 +39,6 @@ export interface QueueHealthReport {
     queuesWithCritical: number;
   };
   queues: QueueHealthEntry[];
-  rabbitmq: {
-    connected: boolean;
-    pendingMessages: number;
-    consumers: number;
-  };
 }
 
 export interface QueueHealthEntry {
@@ -108,53 +102,6 @@ async function getBullMQFailedCount(queueName: string): Promise<number> {
   }
 }
 
-// ── RabbitMQ Management API client ──────────────────────────────────
-
-interface RabbitMQQueueInfo {
-  name: string;
-  messages: number;
-  messages_ready: number;
-  messages_unacknowledged: number;
-  consumers: number;
-}
-
-async function fetchRabbitMQQueues(): Promise<RabbitMQQueueInfo[]> {
-  const url = config.rabbitmq.url;
-  if (!url || rabbitmq.isConnected() === false) {
-    return [];
-  }
-
-  try {
-    const parsed = new URL(url);
-    const mgmtBase = 'http://' + parsed.hostname + ':15672';
-    const vhost = (parsed.pathname || '/').replace(/^\//, '');
-    const username = parsed.username || 'guest';
-    const password = parsed.password || 'guest';
-    const auth = Buffer.from(username + ':' + password).toString('base64');
-
-    const response = await fetch(
-      mgmtBase + '/api/queues/' + encodeURIComponent(vhost),
-      {
-        headers: {
-          Authorization: 'Basic ' + auth,
-          Accept: 'application/json',
-        },
-        signal: AbortSignal.timeout(5000),
-      },
-    );
-
-    if (!response.ok) {
-      log.warn({ status: response.status }, 'RabbitMQ Management API returned error');
-      return [];
-    }
-
-    return (await response.json()) as RabbitMQQueueInfo[];
-  } catch (err) {
-    log.warn({ err: String(err) }, 'Failed to fetch RabbitMQ queue info');
-    return [];
-  }
-}
-
 // ── Health Report ───────────────────────────────────────────────────
 
 function queueStatus(depth: number, isDlq: boolean): 'ok' | 'warn' | 'critical' {
@@ -177,8 +124,6 @@ export async function getQueueHealth(): Promise<QueueHealthReport> {
     getBullMQFailedCount(QUEUE_NAME),
   ]);
 
-  const rabbitQueues = await fetchRabbitMQQueues();
-
   const queueEntries: QueueHealthEntry[] = [];
   let totalMessages = 0;
   let dlqMessages = 0;
@@ -200,22 +145,6 @@ export async function getQueueHealth(): Promise<QueueHealthReport> {
     if (s === 'critical') queuesWithCritical++;
   }
 
-  // RabbitMQ queues
-  let rabbitPending = 0;
-  let rabbitConsumers = 0;
-  for (const q of rabbitQueues) {
-    const isDlq = q.name.endsWith('.dlq');
-    const s = queueStatus(q.messages, isDlq);
-    queueEntries.push({ name: q.name, type: isDlq ? 'dlq' : 'main', depth: q.messages, status: s, consumers: q.consumers });
-    totalMessages += q.messages;
-    if (isDlq) dlqMessages += q.messages;
-    if (s === 'warn') queuesWithWarnings++;
-    if (s === 'critical') queuesWithCritical++;
-    rabbitPending += q.messages_ready ?? 0;
-    rabbitConsumers += q.consumers ?? 0;
-    recordConsumerLag(q.name, q.messages_ready ?? 0);
-  }
-
   // Prometheus gauges
   bridgeMetrics.setGauge('queue_depth', { queue: QUEUE_NAME, type: 'bullmq' }, Math.max(0, mainDepth));
   bridgeMetrics.setGauge('queue_depth', { queue: DLQ_NAME, type: 'bullmq' }, Math.max(0, dlqDepth));
@@ -231,16 +160,11 @@ export async function getQueueHealth(): Promise<QueueHealthReport> {
     summary: {
       totalMessages,
       dlqMessages,
-      activeWorkers: rabbitConsumers,
+      activeWorkers: 0,
       queuesWithWarnings,
       queuesWithCritical,
     },
     queues: queueEntries,
-    rabbitmq: {
-      connected: rabbitmq.isConnected(),
-      pendingMessages: rabbitPending,
-      consumers: rabbitConsumers,
-    },
   };
 }
 

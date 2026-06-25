@@ -1,0 +1,157 @@
+# Group 1: Python Fixes (4 test cases)
+# Test the agent's ability to fix common Python issues.
+
+- description: "Python — off-by-one error in list iteration"
+  vars:
+    repo: "https://github.com/example/python-bug-repo"
+    title: "IndexError when processing user list — off-by-one in clean_users()"
+    description: |
+      The `clean_users()` function crashes with an `IndexError: list index out of range` 
+      when processing the last element. The issue is in the while loop condition.
+      
+      Steps to reproduce:
+      1. Call clean_users([{"name": "Alice"}, {"name": "Bob"}, {"name": "Charlie"}])
+      2. Observe IndexError on the third iteration
+      
+      Expected: All three users should be processed successfully.
+    codeContext: |
+      ```python
+      def clean_users(users):
+          i = 0
+          while i <= len(users):
+              user = users[i]
+              user["name"] = user["name"].strip()
+              i += 1
+          return users
+      ```
+  assert:
+    - type: llm-rubric
+      value: |
+        The response correctly identifies the off-by-one error (using `<=` instead of `<`
+        in the while loop condition) and provides the fix: change `while i <= len(users)` 
+        to `while i < len(users)`. The fix is minimal and correct.
+    - type: contains-all
+      value:
+        - "i < len(users)"
+        - "IndexError"
+        - "off-by-one"
+
+- description: "Python — missing null check before attribute access"
+  vars:
+    repo: "https://github.com/example/python-bug-repo"
+    title: "AttributeError when config section is None — missing null guard in load_config()"
+    description: |
+      The `load_config()` function crashes with `AttributeError: 'NoneType' object has no 
+      attribute 'get'` when a configuration section is missing from the INI file.
+      
+      Steps to reproduce:
+      1. Parse a config file that lacks the [database] section
+      2. Call load_config() 
+      3. Observe AttributeError
+      
+      Expected: Should return default values for missing sections.
+    codeContext: |
+      ```python
+      import configparser
+
+      def load_config(path):
+          parser = configparser.ConfigParser()
+          parser.read(path)
+          db_config = parser["database"]
+          return {
+              "host": db_config.get("host", "localhost"),
+              "port": db_config.getint("port", 5432),
+          }
+      ```
+  assert:
+    - type: llm-rubric
+      value: |
+        The response correctly identifies the missing null check for the "database" section
+        and provides a fix using `parser.has_section("database")` or a try/except pattern
+        to handle missing sections gracefully. The fix returns default values when the 
+        section does not exist.
+    - type: contains-all
+      value:
+        - "NoneType"
+        - "has_section"
+        - "AttributeError"
+
+- description: "Python — incorrect variable name in format string"
+  vars:
+    repo: "https://github.com/example/python-bug-repo" 
+    title: "KeyError in format string — variable name mismatch in generate_report()"
+    description: |
+      The `generate_report()` function raises a `KeyError: 'user_count'` when trying to 
+      format the report string. The format placeholder doesn't match the actual variable name.
+      
+      Steps to reproduce:
+      1. Call generate_report(150, 30)
+      2. Observe KeyError during string formatting
+      
+      Expected: Report string should format correctly using the right variable name.
+    codeContext: |
+      ```python
+      def generate_report(total_users, active_users):
+          return (
+              f"Report:\n"
+              f"  Total users: {total_users}\n"
+              f"  Active users: {active_users}\n"
+              f"  Inactive users: {total_users - active_users}\n"
+              f"  Percentage active: {user_count:.1f}%\n"
+          )
+      ```
+  assert:
+    - type: llm-rubric
+      value: |
+        The response correctly identifies that `{user_count}` in the f-string should be 
+        `{active_users}` (or a computed variable `active_pct`). The fix uses the correct
+        variable name in the format expression.
+    - type: contains-all
+      value:
+        - "KeyError"
+        - "user_count"
+        - "active_users"
+
+- description: "Python — missing import after refactor"
+  vars:
+    repo: "https://github.com/example/python-bug-repo"
+    title: "NameError after refactor — parse_logs() uses undefined datetime"
+    description: |
+      After refactoring the logging module, `parse_logs()` now raises 
+      `NameError: name 'datetime' is not defined`. The function was moved from a file 
+      that had `from datetime import datetime` to a file that doesn't.
+      
+      Steps to reproduce:
+      1. Call parse_logs(["2024-01-01 12:00:00 INFO starting"])
+      2. Observe NameError
+      
+      Expected: Should parse timestamps without import errors.
+    codeContext: |
+      ```python
+      import re
+
+      LOG_PATTERN = re.compile(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) (\w+) (.+)")
+
+      def parse_logs(lines):
+          entries = []
+          for line in lines:
+              match = LOG_PATTERN.match(line)
+              if match:
+                  entries.append({
+                      "timestamp": datetime.strptime(match.group(1), "%Y-%m-%d %H:%M:%S"),
+                      "level": match.group(2),
+                      "message": match.group(3),
+                  })
+          return entries
+      ```
+  assert:
+    - type: llm-rubric
+      value: |
+        The response correctly identifies that `datetime` is used without being imported.
+        The fix adds `from datetime import datetime` at the top of the file. The 
+        explanation notes this is a common refactoring oversight.
+    - type: contains-all
+      value:
+        - "NameError"
+        - "from datetime import datetime"
+        - "import"

@@ -1,33 +1,32 @@
-# Dependencies
-node_modules/
 
+*~
 # Build output
+*.cert
+# Debug logs
+# Dependencies
 dist/
-
-# Environment files (contain secrets - NEVER commit)
+.DS_Store
 .env
-.env.local
+# Environment files (contain secrets - NEVER commit)
 .env.*.local
+.env.local
 .env.production
 .env.staging
-
-# Private keys and secrets
-*.pem
-*.key
-*.cert
-stas-private-key.pem
-.stas-private-key.pem
-
 # IDE
 .idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Debug logs
+*.key
+node_modules
+node_modules/
 npm-debug.log*
+# OS
+*.pem
+# Private keys and secrets
+sbom/
+.stas-private-key.pem
+stas-private-key.pem
+# Supply chain: Generated SBOM artifacts (CI generates these)
+*.swo
+*.swp
+Thumbs.db
+.vscode/
+eval/results/

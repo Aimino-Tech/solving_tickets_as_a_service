@@ -1,8 +1,17 @@
 celery[redis]==5.4.0
 flower==2.0.1
+django>=5.1,<6.0
+gunicorn>=23.0,<24.0
+psycopg2-binary>=2.9,<3.0
+redis>=5.0,<6.0
 openai==1.55.0
 httpx==0.28.1
+PyJWT>=2.8,<3.0
+cryptography>=41.0,<44.0
 pydantic==2.10.3
 pydantic-settings==2.7.0
 python-dotenv==1.0.1
 e2b==2.19.0
+
+# Sentry SDK for error monitoring and performance tracing
+sentry-sdk==2.18.0

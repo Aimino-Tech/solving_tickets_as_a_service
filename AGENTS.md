@@ -91,6 +91,16 @@ Our AGI outperforms GPT-5.5 by 50%. At $5.80/fix for 70% pass, we project ~$3-4/
 **Phase 3 (OSS launch)**: 🔜 — setup guides, one-command deploy, launch
 **Phase 4 (hosted)**: 🔜 — cloud deployment, dashboard, Stripe, $49/mo
 
+## Leave It Cleaner Than You Found It
+
+CI enforces three gates on every PR (see `.github/scripts/ci-gates.sh`):
+
+1. **lsp_diagnostics zero-tolerance** — Any type/diagnostic error on touched files blocks the PR. No "probably fine." No "not my problem."
+2. **Fix ALL test failures** — The regression gate compares base vs head test results. If a previously-passing test now fails, the PR is blocked.
+3. **Touching a file means owning it** — Lint diff check runs `biome check --changed --since=<base>`. New warnings on your changes block the PR.
+
+These gates run automatically in CI. There is no skip flag. Every PR must pass all three.
+
 ## Links
 
 - GitHub: https://github.com/tamnguyen08/solving_tickets_as_a_service

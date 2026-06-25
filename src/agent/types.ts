@@ -40,6 +40,31 @@ export interface TestBaseline {
   failedTests?: number;
 }
 
+export interface GateResult {
+  gate: string;
+  passed: boolean;
+  reason?: string;
+  details?: string;
+}
+
+export interface QualityGatesResult {
+  passed: boolean;
+  gates: GateResult[];
+  retryCount: number;
+  maxRetries: number;
+  canRetry: boolean;
+}
+
+export interface QualityGateResult {
+  gate: 'reality' | 'compile' | 'test_integrity' | 'hallucination';
+  passed: boolean;
+  ossTool: string;
+  command: string;
+  stdout: string;
+  stderr: string;
+  details: string[];
+}
+
 export interface VerificationResult {
   baseline: TestBaseline | null;
   postFix: TestBaseline | null;
@@ -48,6 +73,21 @@ export interface VerificationResult {
   regressionTestPassedOnFix: boolean | null;
   preExistingTestsRegressed: boolean;
   unverified: boolean;
+  details: string[];
+  qualityGates: QualityGateResult[];
+}
+
+export interface GroundingRequirement {
+  text: string;
+  source: 'triage-summary';
+  maxSimilarity: number;
+  bestPassage: string;
+}
+
+export interface GroundingResult {
+  passed: boolean;
+  requirements: GroundingRequirement[];
+  ungrounded: string[];
   details: string[];
 }
 

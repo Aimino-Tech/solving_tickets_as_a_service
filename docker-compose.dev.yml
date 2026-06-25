@@ -1,0 +1,40 @@
+# STAS Development Infrastructure — Plan B
+#
+# Lightweight Docker compose for local experimentation.
+# Only the services that are hard to install natively:
+# Redis (Celery backend) and RabbitMQ (message broker).
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d
+#   make dev-worker QUEUE=notifications   # in another terminal
+#   make dev-webhook                      # in another terminal
+
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: stas-dev-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    mem_limit: 128m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-alpine
+    container_name: stas-dev-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    mem_limit: 256m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

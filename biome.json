@@ -16,7 +16,13 @@
       "recommended": true,
       "style": {
         "noNonNullAssertion": "off",
-        "useConst": "error"
+        "useConst": "error",
+        "noTodoComment": {
+          "level": "warn",
+          "options": {
+            "terms": ["TODO", "FIXME", "HACK", "XXX"]
+          }
+        }
       },
       "complexity": {
         "noBannedTypes": "off",

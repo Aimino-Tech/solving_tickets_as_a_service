@@ -1,0 +1,59 @@
+# =============================================================================
+# Eval Smoke — runs 3 critical promptfoo eval tests on every push
+#
+# Triggers:
+#   - git push to any branch
+#
+# Concurrency:
+#   - Cancels in-progress runs on the same branch (saves CI minutes)
+#
+# Steps:
+#   1. Checkout + Node 20 + npm ci
+#   2. Run 3 critical smoke test cases via promptfoo eval
+#   3. Check regression guard (pass rate must not drop >5% from baseline)
+#   4. Upload results artifact (even on failure)
+#
+# Expected runtime: <=2 minutes
+# =============================================================================
+
+name: Eval Smoke
+on: [push]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eval-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      LANGFUSE_HOST: ${{ vars.LANGFUSE_HOST || '' }}
+      LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY || '' }}
+      LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Run smoke evals (3 critical tests)
+        run: |
+          npx promptfoo eval \
+            --config eval/promptfooconfig.yaml \
+            --tests eval/test-cases/fix-python-syntax-error.yml \
+            --tests eval/test-cases/fix-js-variable-scope.yml \
+            --tests eval/test-cases/edge-empty-repo.yml \
+            --output eval/results/smoke-${{ github.sha }}.json
+      - name: Check regression guard
+        run: |
+          node eval/scripts/check-regression.mjs \
+            --baseline eval/baselines/smoke.json \
+            --current eval/results/smoke-${{ github.sha }}.json \
+            --threshold 0.05
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-smoke-results
+          path: eval/results/smoke-*.json

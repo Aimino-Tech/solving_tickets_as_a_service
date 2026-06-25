@@ -1,223 +1,257 @@
-import { connect, type Channel, type Connection, type ChannelModel } from 'amqplib';
+import { connect as amqpConnect, type Channel } from 'amqplib';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 
+type ChannelModel = Awaited<ReturnType<typeof amqpConnect>>;
+
 const log = rootLogger.child({ module: 'rabbitmq' });
 
+let channelModel: ChannelModel | null = null;
+let publishChannel: Channel | null = null;
+let initialised = false;
+
 export const EXCHANGES = {
-  issues: { name: 'stas.issues', type: 'topic' },
-  agents: { name: 'stas.agents', type: 'direct' },
-  events: { name: 'stas.events', type: 'topic' },
-  dlx: { name: 'stas.dlx', type: 'direct' },
+  agents: { name: 'stas.agents', type: 'topic', options: { durable: true } },
+  issues: { name: 'stas.issues', type: 'topic', options: { durable: true } },
+  queue: { name: 'stas.queue', type: 'topic', options: { durable: true } },
+  events: { name: 'stas.events', type: 'fanout', options: { durable: true } },
+  dlx: { name: 'stas.dlx', type: 'direct', options: { durable: true } },
 } as const;
 
-export const QUEUES = {
-  issuesFix: { name: 'stas.issues.fix', exchange: 'stas.issues', routingKey: 'fix' },
-  triage: { name: 'stas.agents.triage', exchange: 'stas.agents', routingKey: 'triage' },
-  opencode: { name: 'stas.agents.opencode', exchange: 'stas.agents', routingKey: 'opencode' },
-  sandbox: { name: 'stas.agents.sandbox', exchange: 'stas.agents', routingKey: 'sandbox' },
-  verification: { name: 'stas.agents.verification', exchange: 'stas.agents', routingKey: 'verification' },
-  notifications: { name: 'stas.events.notifications', exchange: 'stas.events', routingKey: 'notifications' },
-  audit: { name: 'stas.events.audit', exchange: 'stas.events', routingKey: 'audit' },
-} as const;
-
-interface RabbitMQState {
-  connection: Connection | null;
-  publishChannel: Channel | null;
-  consumeChannel: Channel | null;
-  reconnectAttempts: number;
-  shutdownInitiated: boolean;
+interface QueueBinding {
+  name: string;
+  exchange: string;
+  routingKey: string;
+  dlq: string;
+  dlqRoutingKey: string;
 }
 
-const state: RabbitMQState = {
-  connection: null,
-  publishChannel: null,
-  consumeChannel: null,
-  reconnectAttempts: 0,
-  shutdownInitiated: false,
+export const QUEUES: Record<string, QueueBinding> = {
+  'agents.dispatch': {
+    name: 'stas.agents.dispatch',
+    exchange: 'stas.agents',
+    routingKey: 'agent.runner',
+    dlq: 'stas.agents.dispatch.dlq',
+    dlqRoutingKey: 'stas.agents.dispatch',
+  },
+  'agents.verification': {
+    name: 'stas.agents.verification',
+    exchange: 'stas.agents',
+    routingKey: 'agent.verify',
+    dlq: 'stas.agents.verification.dlq',
+    dlqRoutingKey: 'stas.agents.verification',
+  },
+  'agents.self_audit': {
+    name: 'stas.agents.self_audit',
+    exchange: 'stas.agents',
+    routingKey: 'agent.self_audit',
+    dlq: 'stas.agents.self_audit.dlq',
+    dlqRoutingKey: 'stas.agents.self_audit',
+  },
+  'agents.sandbox': {
+    name: 'stas.agents.sandbox',
+    exchange: 'stas.agents',
+    routingKey: 'agent.sandbox',
+    dlq: 'stas.agents.sandbox.dlq',
+    dlqRoutingKey: 'stas.agents.sandbox',
+  },
+  'issues.triage': {
+    name: 'stas.issues.triage',
+    exchange: 'stas.issues',
+    routingKey: 'triage.*',
+    dlq: 'stas.issues.triage.dlq',
+    dlqRoutingKey: 'stas.issues.triage',
+  },
+  'issues.health': {
+    name: 'stas.issues.health',
+    exchange: 'stas.issues',
+    routingKey: 'health.*',
+    dlq: 'stas.issues.health.dlq',
+    dlqRoutingKey: 'stas.issues.health',
+  },
+  'queue.pr': {
+    name: 'stas.queue.pr',
+    exchange: 'stas.queue',
+    routingKey: 'pr.create',
+    dlq: 'stas.queue.pr.dlq',
+    dlqRoutingKey: 'stas.queue.pr',
+  },
+  'queue.merge': {
+    name: 'stas.queue.merge',
+    exchange: 'stas.queue',
+    routingKey: 'merge.process',
+    dlq: 'stas.queue.merge.dlq',
+    dlqRoutingKey: 'stas.queue.merge',
+  },
+  'queue.notifications': {
+    name: 'stas.queue.notifications',
+    exchange: 'stas.queue',
+    routingKey: 'queue.notify',
+    dlq: 'stas.queue.notifications.dlq',
+    dlqRoutingKey: 'stas.queue.notifications',
+  },
+  'events.event_bus': {
+    name: 'stas.events.event_bus',
+    exchange: 'stas.events',
+    routingKey: '',
+    dlq: 'stas.events.event_bus.dlq',
+    dlqRoutingKey: 'stas.events.event_bus',
+  },
+  'dlx.retry': {
+    name: 'stas.dlx.retry',
+    exchange: 'stas.dlx',
+    routingKey: 'dlq.retry',
+    dlq: '',
+    dlqRoutingKey: '',
+  },
+  'dlx.failed': {
+    name: 'stas.dlx.failed',
+    exchange: 'stas.dlx',
+    routingKey: 'dlq.failed',
+    dlq: '',
+    dlqRoutingKey: '',
+  },
 };
 
 function getUrl(): string {
-  return config.rabbitmq.url;
+  return config.queue.rabbitmqUrl || 'amqp://guest:guest@localhost:5672/stas';
 }
 
-async function declareTopology(channel: Channel): Promise<void> {
-  for (const ex of Object.values(EXCHANGES)) {
-    await channel.assertExchange(ex.name, ex.type, { durable: true });
+export async function connect(): Promise<ChannelModel> {
+  if (channelModel) {
+    return channelModel;
   }
 
-  await channel.assertExchange('stas.dlx', 'direct', { durable: true });
+  const url = getUrl();
+  log.info({ url: url.replace(/\/\/.*@/, '//***@') }, 'Connecting to RabbitMQ');
 
-  for (const q of Object.values(QUEUES)) {
-    const dlqName = `${q.name}.dlq`;
-    await channel.assertQueue(q.name, {
-      durable: true,
-      deadLetterExchange: 'stas.dlx',
-      deadLetterRoutingKey: q.name,
-    });
-    await channel.assertQueue(dlqName, { durable: true });
-    await channel.bindQueue(q.name, q.exchange, q.routingKey);
-    await channel.bindQueue(dlqName, 'stas.dlx', q.name);
-  }
+  const cm = await amqpConnect(url);
+  cm.connection.on('error', (err) => {
+    log.error({ err: String(err) }, 'RabbitMQ connection error');
+  });
+  cm.connection.on('close', () => {
+    log.warn('RabbitMQ connection closed');
+    channelModel = null;
+    publishChannel = null;
+    initialised = false;
+  });
 
-  log.info('RabbitMQ topology declared — exchanges=%d queues=%d', Object.keys(EXCHANGES).length, Object.keys(QUEUES).length);
+  channelModel = cm;
+  log.info('Connected to RabbitMQ');
+  return cm;
 }
 
-export async function connect(options?: {
-  url?: string;
-}): Promise<void> {
-  if (state.connection) return;
-  if (state.shutdownInitiated) return;
-
-  const url = options?.url ?? getUrl();
+export async function declareTopology(): Promise<void> {
+  const cm = await connect();
+  const ch = await cm.createChannel();
 
   try {
-    const connection = await connect(url);
-    state.connection = connection;
+    for (const ex of Object.values(EXCHANGES)) {
+      await ch.assertExchange(ex.name, ex.type, ex.options);
+    }
 
-    connection.on('error', (err) => {
-      log.error({ err: String(err) }, 'RabbitMQ connection error');
-      scheduleReconnect();
-    });
-
-    connection.on('close', () => {
-      log.warn('RabbitMQ connection closed');
-      state.connection = null;
-      state.publishChannel = null;
-      state.consumeChannel = null;
-      if (!state.shutdownInitiated) {
-        scheduleReconnect();
+    for (const [, q] of Object.entries(QUEUES)) {
+      if (!q.name) {
+        continue;
       }
-    });
 
-    const publishChannel = await connection.createChannel();
-    await publishChannel.prefetch(config.rabbitmq.prefetchCount);
-    state.publishChannel = publishChannel;
+      const isDlx = q.exchange === 'stas.dlx';
 
-    const consumeChannel = await connection.createChannel();
-    await consumeChannel.prefetch(config.rabbitmq.prefetchCount);
-    state.consumeChannel = consumeChannel;
+      await ch.assertQueue(q.name, {
+        durable: true,
+        deadLetterExchange: isDlx ? undefined : 'stas.dlx',
+        deadLetterRoutingKey: isDlx ? undefined : q.name,
+      });
 
-    await declareTopology(publishChannel);
+      await ch.bindQueue(q.name, q.exchange, q.routingKey);
 
-    state.reconnectAttempts = 0;
-    log.info('RabbitMQ connected — url=%s', url.replace(/\/\/.*@/, '//***@'));
-  } catch (err) {
-    log.error({ err: String(err) }, 'RabbitMQ connection failed');
-    scheduleReconnect();
-    throw err;
+      if (q.dlq) {
+        await ch.assertQueue(q.dlq, { durable: true });
+        await ch.bindQueue(q.dlq, 'stas.dlx', q.dlqRoutingKey);
+      }
+    }
+
+    initialised = true;
+    log.info('RabbitMQ topology declared');
+  } finally {
+    await ch.close();
   }
 }
 
-function scheduleReconnect(): void {
-  if (state.shutdownInitiated) return;
-  if (state.reconnectAttempts >= config.rabbitmq.maxReconnectAttempts) {
-    log.error(
-      { attempts: state.reconnectAttempts, max: config.rabbitmq.maxReconnectAttempts },
-      'RabbitMQ max reconnection attempts reached',
-    );
-    return;
+export async function initPublishChannel(): Promise<Channel> {
+  if (publishChannel) {
+    return publishChannel;
   }
 
-  state.reconnectAttempts++;
-  const delay = Math.min(
-    config.rabbitmq.reconnectDelayMs * Math.pow(2, state.reconnectAttempts - 1),
-    60000,
-  );
+  const cm = await connect();
+  publishChannel = await cm.createChannel();
 
-  log.info(
-    { attempt: state.reconnectAttempts, delayMs: delay },
-    'Scheduling RabbitMQ reconnection',
-  );
+  if (!initialised) {
+    await declareTopology();
+  }
 
-  setTimeout(() => {
-    connect().catch((err) => {
-      log.error({ err: String(err) }, 'RabbitMQ reconnection failed');
-    });
-  }, delay);
+  publishChannel.on('error', (err) => {
+    log.error({ err: String(err) }, 'Publish channel error');
+    publishChannel = null;
+  });
+  publishChannel.on('close', () => {
+    log.warn('Publish channel closed');
+    publishChannel = null;
+  });
+
+  return publishChannel;
 }
 
 export function getPublishChannel(): Channel {
-  if (!state.publishChannel) {
-    throw new Error('RabbitMQ publish channel not available — call connect() first');
+  if (!publishChannel) {
+    throw new Error('RabbitMQ publish channel not initialised — call initPublishChannel() first');
   }
-  return state.publishChannel;
+  return publishChannel;
 }
 
-export function getConsumeChannel(): Channel {
-  if (!state.consumeChannel) {
-    throw new Error('RabbitMQ consume channel not available — call connect() first');
-  }
-  return state.consumeChannel;
-}
-
-/**
- * Extended publish options that include headers for retry tracking.
- */
-export interface PublishOptions {
-  persistent?: boolean;
-  expiration?: string;
-  headers?: Record<string, string>;
+export function isConnected(): boolean {
+  return channelModel !== null && publishChannel !== null;
 }
 
 export async function publish(
   exchange: string,
   routingKey: string,
-  content: object,
-  options?: PublishOptions,
+  content: unknown,
 ): Promise<boolean> {
-  const channel = getPublishChannel();
+  const ch = await initPublishChannel();
   const buffer = Buffer.from(JSON.stringify(content));
 
-  const published = channel.publish(exchange, routingKey, buffer, {
-    persistent: options?.persistent ?? true,
-    expiration: options?.expiration,
-    headers: options?.headers,
+  const published = ch.publish(exchange, routingKey, buffer, {
+    persistent: true,
     contentType: 'application/json',
-    timestamp: Math.floor(Date.now() / 1000),
   });
 
   if (!published) {
-    log.warn({ exchange, routingKey }, 'RabbitMQ publish returned false — channel may be full');
+    log.warn({ exchange, routingKey }, 'Message not published (channel buffer full)');
   }
 
   return published;
 }
 
-export async function gracefulShutdown(): Promise<void> {
-  state.shutdownInitiated = true;
-
-  try {
-    if (state.publishChannel) {
-      await state.publishChannel.close();
+export async function disconnect(): Promise<void> {
+  if (publishChannel) {
+    try {
+      await publishChannel.close();
+    } catch {
+      // ignore
     }
-  } catch (err) {
-    log.warn({ err: String(err) }, 'Error closing publish channel');
+    publishChannel = null;
   }
 
-  try {
-    if (state.consumeChannel) {
-      await state.consumeChannel.close();
+  if (channelModel) {
+    try {
+      await channelModel.close();
+    } catch {
+      // ignore
     }
-  } catch (err) {
-    log.warn({ err: String(err) }, 'Error closing consume channel');
+    channelModel = null;
   }
 
-  try {
-    if (state.connection) {
-      await state.connection.close();
-    }
-  } catch (err) {
-    log.warn({ err: String(err) }, 'Error closing connection');
-  }
-
-  state.connection = null;
-  state.publishChannel = null;
-  state.consumeChannel = null;
-
-  log.info('RabbitMQ shutdown complete');
-}
-
-export function isConnected(): boolean {
-  return state.connection !== null && state.publishChannel !== null;
+  initialised = false;
+  log.info('Disconnected from RabbitMQ');
 }

@@ -17,7 +17,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 // ── Module-level mocks ──────────────────────────────────────────────────────
 // Prevent .env loading and keep the logger quiet during tests.
 
-vi.mock('dotenv/config');
+vi.mock('dotenv/config', () => ({}));
 
 const mockRootLogger = vi.hoisted(() => ({
   error: vi.fn(),
@@ -42,6 +42,7 @@ describe('config', () => {
     vi.stubEnv('GITHUB_APP_ID', 'test-app-123');
     vi.stubEnv('GITHUB_WEBHOOK_SECRET', 'test-webhook-secret-456');
     vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
+    vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-api-key');
 
     // Override vitest's NODE_ENV=test so the module-level default is "development"
     vi.stubEnv('NODE_ENV', 'development');
@@ -142,6 +143,7 @@ describe('config', () => {
       vi.stubEnv('GITHUB_APP_ID', 'test-app-123');
       vi.stubEnv('GITHUB_WEBHOOK_SECRET', 'test-webhook-secret-456');
       vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
+      vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-api-key');
     });
 
     afterEach(() => {
@@ -255,11 +257,34 @@ describe('config', () => {
       expect(cfg.stas.devSkipWebhookVerify).toBe(true);
     });
 
-    it('coerces DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY — non-empty string is truthy', () => {
+    it('coerces DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY — string "false" is correctly false', () => {
       vi.stubEnv('DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY', 'false');
       const cfg = configModule.requireConfig();
-      // z.coerce.boolean uses Boolean("false") which is true (non-empty string)
+      expect(cfg.stas.devSkipWebhookVerify).toBe(false);
+    });
+
+    it('coerces DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY — string "0" is correctly false', () => {
+      vi.stubEnv('DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY', '0');
+      const cfg = configModule.requireConfig();
+      expect(cfg.stas.devSkipWebhookVerify).toBe(false);
+    });
+
+    it('coerces DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY — string "1" is correctly true', () => {
+      vi.stubEnv('DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY', '1');
+      const cfg = configModule.requireConfig();
       expect(cfg.stas.devSkipWebhookVerify).toBe(true);
+    });
+
+    it('coerces boolean env vars correctly — DATABASE_SSL=false stays false', () => {
+      vi.stubEnv('DATABASE_SSL', 'false');
+      const cfg = configModule.requireConfig();
+      expect(cfg.database.ssl).toBe(false);
+    });
+
+    it('coerces boolean env vars correctly — DATABASE_SSL=true', () => {
+      vi.stubEnv('DATABASE_SSL', 'true');
+      const cfg = configModule.requireConfig();
+      expect(cfg.database.ssl).toBe(true);
     });
 
     it('throws with a descriptive error message listing all failures', () => {
@@ -285,6 +310,8 @@ describe('config', () => {
   describe('module-level validation on import', () => {
     it('calls process.exit(1) when required env vars are missing', async () => {
       vi.resetModules();
+
+      vi.mock('dotenv/config', () => ({}));
 
       // Clear all env stubs so the required vars are absent
       vi.unstubAllEnvs();
@@ -313,7 +340,6 @@ describe('config', () => {
       expect(cfg).toHaveProperty("github");
       expect(cfg).toHaveProperty("queue");
       expect(cfg).toHaveProperty("opencode");
-      expect(cfg).toHaveProperty("openai");
       expect(cfg).toHaveProperty("e2b");
       expect(cfg).toHaveProperty("stas");
       expect(cfg).toHaveProperty("fixTimeoutMs");
@@ -330,7 +356,7 @@ describe('config', () => {
       expect(cfg.opencode).toHaveProperty("model");
       expect(cfg.opencode).toHaveProperty("fallbackModels");
       expect(cfg.e2b).toHaveProperty("sandboxTimeoutMs");
-      expect(cfg.stas).toHaveProperty("rateLimitMax");
+      expect(cfg.rateLimit).toHaveProperty("max");
       expect(cfg.phaseTimeouts).toHaveProperty("triage");
       expect(cfg.phaseTimeouts).toHaveProperty("sandboxBoot");
       expect(cfg.phaseTimeouts).toHaveProperty("openCodeAgent");

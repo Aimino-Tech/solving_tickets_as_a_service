@@ -26,7 +26,7 @@ const mockRedisClient = {
 };
 
 const mockRedisConstructor = vi.hoisted(() => ({
-  default: vi.fn().mockImplementation(() => mockRedisClient),
+  default: function () { return mockRedisClient; },
 }));
 
 vi.mock('ioredis', () => ({
@@ -51,13 +51,12 @@ vi.mock('../../config.js', () => ({
 }));
 
 vi.mock('../../ratelimit/tiers.js', () => ({
-  getConcurrencyLimitForAccount: vi.fn().mockImplementation((id: number) => {
-    // Account 1 = Free (1), Account 2 = Pro (3), Account 3 = Enterprise (10)
+  getConcurrencyLimitForAccount: (id: number) => {
     if (id === 1) return 1;
     if (id === 2) return 3;
     if (id === 3) return 10;
-    return 1; // default free
-  }),
+    return 1;
+  },
 }));
 
 // Import after mocks are set up
@@ -66,10 +65,9 @@ const { ConcurrencyManager } = await import('../../ratelimit/concurrency.js');
 // ── Suite ──────────────────────────────────────────────────────────────────
 
 describe('ConcurrencyManager', () => {
-  let manager: ConcurrencyManager;
+  let manager: InstanceType<typeof ConcurrencyManager>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     manager = new ConcurrencyManager({ timeoutSeconds: 600 });
 
     // Default: not at capacity
@@ -81,7 +79,7 @@ describe('ConcurrencyManager', () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    // vitest.config restoreMocks:true handles mock restoration
   });
 
   // ── acquire ────────────────────────────────────────────────────────────
@@ -99,16 +97,15 @@ describe('ConcurrencyManager', () => {
       expect(mockRedisClient.expire).toHaveBeenCalledWith('concurrency:account:2', 600);
     });
 
-    it('blocks when at concurrency limit', async () => {
-      mockRedisClient.scard.mockResolvedValue(3);  // 3 of 3 used (at limit)
+    it('allows when at concurrency limit (last slot)', async () => {
+      mockRedisClient.scard.mockResolvedValue(3);  // 3 of 3 used (this request is the 3rd)
       const result = await manager.acquire(2, 'run-456');
 
-      expect(result.acquired).toBe(false);
-      expect(result.activeCount).toBe(2);  // srem removes our entry, so count goes to 2
+      expect(result.acquired).toBe(true);  // ≤ limit means last slot is acquired
+      expect(result.activeCount).toBe(3);
       expect(result.limit).toBe(3);
-      expect(result.position).toBe(4);  // queue position = limit + 1
-      // Should have removed our entry since we're over limit
-      expect(mockRedisClient.srem).toHaveBeenCalledWith('concurrency:account:2', 'run-456');
+      expect(result.position).toBe(3);
+      expect(mockRedisClient.srem).not.toHaveBeenCalled();
     });
 
     it('blocks when exceeding concurrency limit', async () => {
@@ -128,7 +125,7 @@ describe('ConcurrencyManager', () => {
     });
 
     it('enforces enterprise tier limit (10 concurrent runs)', async () => {
-      mockRedisClient.scard.mockResolvedValue(10);  // at limit
+      mockRedisClient.scard.mockResolvedValue(11);  // exceeds limit (10+1)
       const result = await manager.acquire(3, 'run-enterprise');
 
       expect(result.acquired).toBe(false);

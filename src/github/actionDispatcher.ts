@@ -1,6 +1,10 @@
 /**
  * ActionDispatcher — decides what action to take based on agent results.
  *
+ * Thin wrapper that delegates to the platform abstraction layer for
+ * message templates while keeping backward compatibility for consumers
+ * that import this class.
+ *
  * After the agent loop completes, this class examines the result confidence
  * and takes the appropriate action: create PR (draft or ready), post comments,
  * or flag for human attention.
@@ -10,14 +14,19 @@
  * ✅ Diff-gathering failure logs a warning (non-fatal, continues)
  * ✅ Error comment posting has its own try/catch fallback
  * ✅ postComment() logs warning on failure (non-fatal)
+ * ✅ Sentry breadcrumbs for PR creation actions
  * ────────────────────────────────────────────────────────────────────
  */
 
-import type { AgentResult } from '../agent/types.js';
-import type { SandboxExecutor } from '../sandbox/executor.js';
+import { type ReceiptManifest, verifyAllReceipts } from '../agent/receipts.js';
+import type { AgentResult, QualityGateResult } from '../agent/types.js';
+import type { Octokit } from '@octokit/rest';
+import type { SandboxExecutor } from '../sandbox/types.js';
 import { rootLogger } from '../utils/logger.js';
 import { getOctokit } from './auth.js';
-import * as messages from './messages.js';
+import * as messages from '../platforms/messages.js';
+import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
+import { config } from '../config.js';
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
 
@@ -31,6 +40,8 @@ export interface DispatchParams {
   repoName: string;
   installationId: number;
   repoDefaultBranch?: string;
+  receiptManifest?: ReceiptManifest;
+  receiptsJson?: string;
 }
 
 export interface DispatchResult {
@@ -47,6 +58,9 @@ export class ActionDispatcher {
   async dispatch(params: DispatchParams): Promise<DispatchResult> {
     const { issueNumber, issueTitle, agentResult, sandbox, repoOwner, repoName, installationId, repoDefaultBranch } =
       params;
+
+    // Set Sentry user context for error correlation
+    setUserContext(installationId, `${repoOwner}/${repoName}`);
 
     const octokit = await getOctokit(installationId);
     const baseBranch = repoDefaultBranch || 'main';
@@ -73,6 +87,52 @@ export class ActionDispatcher {
         return { action: 'comment_posted', commentBody: body };
       }
 
+      if (params.receiptManifest) {
+        if (config.stas.mode === 'oss') {
+          log.info(
+            { issueNumber, mode: config.stas.mode },
+            'OSS mode — skipping receipt verification gate',
+          );
+        } else {
+          const receiptCheck = verifyAllReceipts(params.receiptManifest);
+          if (!receiptCheck.valid) {
+            const missingList = receiptCheck.missing.join(', ');
+            log.warn(
+              { issueNumber, missingPhases: receiptCheck.missing },
+              `Receipt gate blocked: missing receipts for phases: ${missingList}`,
+            );
+            await this.postComment(
+              octokit,
+              repoOwner,
+              repoName,
+              issueNumber,
+              `### ❌ Receipt Gate Blocked — Missing Receipts\n\n` +
+                `The following pipeline phases have no receipts:\n\n` +
+                `${receiptCheck.missing.map((p) => `- \`${p}\``).join('\n')}\n\n` +
+                `All phases must produce valid receipts before a PR can be created.\n\n` +
+                `_Receipt manifest generated: ${params.receiptManifest.createdAt}_`,
+            );
+            return { action: 'comment_posted' };
+          }
+          log.info({ issueNumber }, 'Receipt gate passed — all phases have valid receipts');
+        }
+      }
+
+      const qualityGates = agentResult.verification?.qualityGates;
+      if (qualityGates && qualityGates.length > 0) {
+        const failedGates = qualityGates.filter(g => !g.passed);
+        if (failedGates.length > 0) {
+          log.warn(
+            { issueNumber, failedGates: failedGates.map(g => ({ gate: g.gate, tool: g.ossTool })) },
+            `Quality gates blocked: ${failedGates.length} gate(s) failed`,
+          );
+          const body = messages.qualityGatesBlockComment(failedGates, agentResult.summary);
+          await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
+          return { action: 'comment_posted', commentBody: body };
+        }
+        log.info({ issueNumber }, 'All quality gates passed');
+      }
+
       // 5. Push branch and gather changed files
       const branchName = `stas/fix-${issueNumber}-${Date.now().toString(36)}`;
       await sandbox.pushBranch(branchName);
@@ -81,7 +141,7 @@ export class ActionDispatcher {
       try {
         const diffResult = await sandbox.exec(
           // biome-ignore lint/suspicious/noExplicitAny: private field access needed
-          `git -C ${(sandbox as any).repoDir || `/home/user/${repoName}`} diff --name-only origin/${baseBranch}...${branchName} 2>/dev/null || true`,
+          `git -C ${(sandbox as { repoDir?: string }).repoDir || `/home/user/${repoName}`} diff --name-only origin/${baseBranch}...${branchName} 2>/dev/null || true`,
         );
         changedFiles = diffResult.stdout.split('\n').filter(Boolean);
       } catch (err) {
@@ -95,11 +155,11 @@ export class ActionDispatcher {
       if (agentResult.verification?.preExistingTestsRegressed) {
         const body = messages.regressionBlockComment(agentResult);
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
-        return { action: "comment_posted", commentBody: body };
+        return { action: 'comment_posted', commentBody: body };
       }
 
       // 6b. Create PR based on confidence
-      if (agentResult.confidence === "high") {
+      if (agentResult.confidence === 'high') {
         // Create a non-draft PR
         const prBody = messages.buildPRBody({
           issueNumber,
@@ -107,6 +167,7 @@ export class ActionDispatcher {
           fileLinks: changedFiles,
           isDraft: false,
           branchName,
+          receiptManifest: params.receiptManifest,
         });
 
         const pr = await octokit.pulls.create({
@@ -122,6 +183,15 @@ export class ActionDispatcher {
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
         log.info({ prNumber: pr.data.number }, 'High-confidence PR created');
+
+        addBreadcrumb('pr', 'High-confidence PR created', {
+          prNumber: String(pr.data.number),
+          prUrl: pr.data.html_url,
+          repo: `${repoOwner}/${repoName}`,
+          issueNumber: String(issueNumber),
+          confidence: 'high',
+        });
+
         return {
           action: 'pr_created',
           prUrl: pr.data.html_url,
@@ -137,6 +207,7 @@ export class ActionDispatcher {
           fileLinks: changedFiles,
           isDraft: true,
           branchName,
+          receiptManifest: params.receiptManifest,
         });
 
         const pr = await octokit.pulls.create({
@@ -153,6 +224,15 @@ export class ActionDispatcher {
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
         log.info({ prNumber: pr.data.number }, 'Draft PR created');
+
+        addBreadcrumb('pr', 'Draft PR created', {
+          prNumber: String(pr.data.number),
+          prUrl: pr.data.html_url,
+          repo: `${repoOwner}/${repoName}`,
+          issueNumber: String(issueNumber),
+          confidence: 'medium',
+        });
+
         return {
           action: 'draft_pr_created',
           prUrl: pr.data.html_url,
@@ -168,6 +248,12 @@ export class ActionDispatcher {
       return { action: 'comment_posted', commentBody: lowBody };
     } catch (err) {
       log.error({ err: String(err), issueNumber, repoOwner, repoName }, 'Error dispatching action');
+
+      addBreadcrumb('pr', 'PR creation failed', {
+        repo: `${repoOwner}/${repoName}`,
+        issueNumber: String(issueNumber),
+        error: String(err),
+      });
 
       // Fallback: post error comment
       const errorBody = messages.errorComment(`Action dispatch failed: ${String(err)}`);
@@ -189,7 +275,7 @@ export class ActionDispatcher {
    * Logs context on failure and re-throws so callers can handle.
    */
   private async postComment(
-    octokit: ReturnType<typeof getOctokit> extends Promise<infer T> ? T : never,
+    octokit: Octokit,
     owner: string,
     repo: string,
     issueNumber: number,

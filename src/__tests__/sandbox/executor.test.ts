@@ -86,7 +86,7 @@ const DEFAULT_OK: ExecResult = { stdout: '', stderr: '', exitCode: 0 };
  * Create a SandboxExecutor with the sandbox field pre-initialised so callers
  * can test methods without going through boot().
  */
-function createExecutor(): SandboxExecutor {
+function createExecutor(): import('../../sandbox/types.js').SandboxExecutor {
   const getToken = vi.fn<(installationId: number) => Promise<string>>().mockResolvedValue('mock-installation-token');
   const executor = new SandboxExecutor('https://github.com/owner/repo.git', 'owner', 'repo', 123, getToken);
   // Bypass boot() — set private fields directly

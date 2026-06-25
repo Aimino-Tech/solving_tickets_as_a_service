@@ -87,11 +87,11 @@ export const marketplacePurchaseSchema = z.object({
  * Map of webhook event names (x-github-event header value) to their
  * corresponding Zod validation schemas.
  */
-export const webhookSchemas = {
+export const webhookSchemas = Object.freeze({
   'issues.labeled': issueLabeledSchema,
   'issues.opened': issueOpenedSchema,
   marketplace_purchase: marketplacePurchaseSchema,
-} as const;
+} as const);
 
 export type WebhookEventName = keyof typeof webhookSchemas;
 

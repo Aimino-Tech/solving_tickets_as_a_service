@@ -1,15 +1,14 @@
-/**
- * Global test setup for STAS.
- *
- * - Sets TEST env var so config knows we're in test mode
- * - Clears all mocks before each test (via beforeEach)
- */
-
 import { beforeEach, vi } from 'vitest';
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-// Ensure we're in test mode
-process.env.TEST = 'true';
+vi.stubEnv('TEST', 'true');
+vi.stubEnv('GITHUB_APP_ID', 'test-app-id');
+vi.stubEnv('GITHUB_WEBHOOK_SECRET', 'test-webhook-secret');
+vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
+vi.stubEnv('NODE_ENV', 'test');
+vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-key');
+
+vi.mock('tsarch', () => ({}));

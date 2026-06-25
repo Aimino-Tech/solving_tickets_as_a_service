@@ -31,7 +31,11 @@ const mockStripeInstance = {
 };
 
 vi.mock('stripe', () => ({
-  default: vi.fn(() => mockStripeInstance),
+  default: class {
+    constructor() {
+      return mockStripeInstance;
+    }
+  },
 }));
 
 // Mock the config module so stripe.secretKey is set

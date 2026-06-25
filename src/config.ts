@@ -30,29 +30,19 @@ const envSchema = z.object({
 
   // Queue
   REDIS_URL: z.string().default('redis://localhost:6379'),
+  RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672/stas'),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
   QUEUE_DEDUP_TTL_SECONDS: z.coerce.number().int().positive().default(120),
   QUEUE_KEEP_COMPLETED: z.coerce.number().int().positive().default(200),
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
-  QUEUE_BACKEND: z.enum(['bullmq', 'rabbitmq', 'both']).default('both'),
 
-  // RabbitMQ
-  RABBITMQ_URL: z.string().default('amqp://localhost:5672/stas'),
-  RABBITMQ_PREFETCH_COUNT: z.coerce.number().int().positive().default(10),
-  RABBITMQ_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(5000),
-  RABBITMQ_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
-
-  // Bridge
-  BRIDGE_RPC_TIMEOUT: z.coerce.number().int().positive().default(30000),
-  BRIDGE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(3),
-  BRIDGE_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(5),
-  QUEUE_FALLBACK_BACKEND: z.enum(['redis', 'local', 'none']).default('redis'),
 
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
+  OPENCODE_API_KEY: z.string().optional(),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
   // Timeouts
@@ -67,17 +57,32 @@ const envSchema = z.object({
 
   // Sandbox
   E2B_API_KEY: z.string().optional(),
-  E2B_TEMPLATE_ID: z.string().default('stas-default'),
+  E2B_TEMPLATE_ID: z.string().default('default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   // STAS
+  CI_MONITOR_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(false),
 
   // Pricing
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
   STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
+  STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
+  STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
   STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
-  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.coerce.boolean().default(false),
+  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
@@ -142,8 +147,20 @@ const envSchema = z.object({
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
-  DATABASE_SSL: z.coerce.boolean().default(false),
-  DATABASE_ENABLE_AUDIT_PERSISTENCE: z.coerce.boolean().default(false),
+  DATABASE_SSL: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(false),
+  DATABASE_ENABLE_AUDIT_PERSISTENCE: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(false),
 
   // Rate limiting (credit-based)
   STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
@@ -155,7 +172,6 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
   // ── Security ──────────────────────────────────────────────────────────────
-  ADMIN_API_KEY: z.string().optional(),
   ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   CORS_ORIGIN: z.string().default('*'),
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
@@ -174,10 +190,6 @@ const envSchema = z.object({
   SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
-
-  // Feature Flags
-  FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
-  FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
   // Sentry
   SENTRY_DSN: z.string().optional(),
@@ -239,6 +251,10 @@ function buildConfig(env: ParsedEnv) {
     logLevel: env.LOG_LEVEL,
     nodeEnv: env.NODE_ENV,
 
+    ci: {
+      monitorEnabled: env.CI_MONITOR_ENABLED,
+    },
+
     github: {
       appId: env.GITHUB_APP_ID,
       privateKeyPath: env.GITHUB_APP_PRIVATE_KEY_PATH,
@@ -249,33 +265,23 @@ function buildConfig(env: ParsedEnv) {
 
     queue: {
       redisUrl: env.REDIS_URL,
+      rabbitmqUrl: env.RABBITMQ_URL,
       workerConcurrency: env.WORKER_CONCURRENCY,
       dedupTtl: env.QUEUE_DEDUP_TTL_SECONDS,
       keepCompleted: env.QUEUE_KEEP_COMPLETED,
       keepFailed: env.QUEUE_KEEP_FAILED,
       maxRetries: env.QUEUE_MAX_RETRIES,
       retryDelays: env.QUEUE_RETRY_DELAYS.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n)),
-      backend: env.QUEUE_BACKEND,
-    },
-
-    rabbitmq: {
-      url: env.RABBITMQ_URL,
-      prefetchCount: env.RABBITMQ_PREFETCH_COUNT,
-      reconnectDelayMs: env.RABBITMQ_RECONNECT_DELAY_MS,
-      maxReconnectAttempts: env.RABBITMQ_MAX_RECONNECT_ATTEMPTS,
-    },
-
-    bridge: {
-      rpcTimeoutMs: env.BRIDGE_RPC_TIMEOUT,
-      maxRetries: env.BRIDGE_MAX_RETRIES,
-      circuitBreakerThreshold: env.BRIDGE_CIRCUIT_BREAKER_THRESHOLD,
-      fallbackBackend: env.QUEUE_FALLBACK_BACKEND,
+      backend: 'bullmq' as const,
     },
 
     opencode: {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
+      direct: {
+        apiKey: env.OPENCODE_API_KEY,
+      },
     },
 
     gitlab: {
@@ -335,6 +341,7 @@ function buildConfig(env: ParsedEnv) {
       critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
     },
     stas: {
+      mode: env.STAS_MODE,
       label: env.STAS_LABEL,
       botName: env.BOT_NAME,
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
@@ -361,6 +368,7 @@ function buildConfig(env: ParsedEnv) {
       defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
       ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
       adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
+      max: env.STAS_RATE_LIMIT_MAX,
     },
 
     stripe: {

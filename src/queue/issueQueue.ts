@@ -8,14 +8,6 @@
  * re-enqueue in the worker, since BullMQ OSS only supports fixed/exponential
  * backoff. After max retries the job is copied to a dead-letter queue.
  *
- * ── Dual-write Mode ─────────────────────────────────────────────────
- * QUEUE_BACKEND env var controls whether jobs go to:
- *   bullmq   — BullMQ only (Redis, existing behavior)
- *   rabbitmq — RabbitMQ only (via producers.ts)
- *   both     — Both backends, with comparison metrics logged
- * When RabbitMQ is unavailable in "rabbitmq" mode, falls back to BullMQ.
- * ────────────────────────────────────────────────────────────────────
- *
  * ── Error Handling Audit ────────────────────────────────────────────
  * ✅ Redis retry strategy with exponential backoff and logging
  * ✅ Worker 'failed' event logs context (jobId, repo, issueNumber, error)
@@ -24,7 +16,6 @@
  * ✅ enqueueIssue() catches queue.add failures and returns undefined
  * ✅ Retry count and lastError persisted in job data
  * ✅ Dead-letter queue captures jobs after max retries
- * ✅ RabbitMQ publish failures logged with fallback to BullMQ
  * ────────────────────────────────────────────────────────────────────
  */
 
@@ -377,107 +368,48 @@ export function createQueueEvents(): QueueEvents {
 }
 
 /**
- * Enqueue an issue for processing with support for dual-write mode.
+ * Enqueue an issue for processing via BullMQ.
  *
- * Behavior depends on QUEUE_BACKEND config:
- *   bullmq   — Publishes via BullMQ only (existing behavior, requires queue)
- *   rabbitmq — Publishes via RabbitMQ only, falls back to BullMQ on failure
- *   both     — Publishes to both backends, logs comparison metrics
- *
- * @param queue - The BullMQ queue instance (required when backend is bullmq or both)
+ * @param queue - The BullMQ queue instance
  * @param data  - The issue job data to enqueue
- * @returns BullMQ job ID on success via BullMQ, or "rabbitmq" on RabbitMQ-only,
- *          or undefined if all backends fail.
+ * @returns BullMQ job ID on success, or undefined if all backends fail.
  */
 export async function enqueueIssue(
-  queue: Queue<IssueJobData> | undefined,
+  queue: Queue<IssueJobData>,
   data: IssueJobData,
 ): Promise<string | undefined> {
   const repo = `${data.repoOwner}/${data.repoName}`;
   const dedupKey = `issue:${data.installationId}:${repo}#${data.issueNumber}`;
-  const backend = config.queue.backend;
 
-  let rabbitmqResult: boolean | undefined;
-  let bullmqResult: string | undefined;
+  try {
+    const job = await queue.add('process-issue', data, {
+      deduplication: {
+        id: dedupKey,
+        ttl: config.queue.dedupTtl * 1000,
+      },
+    });
 
-  // ── RabbitMQ path ──────────────────────────────────────────────
-  if (backend === 'rabbitmq' || backend === 'both') {
-    try {
-      const { publishFixJob } = await import('./producers.js');
-      rabbitmqResult = await publishFixJob(data);
-    } catch (err) {
-      log.warn({ err: String(err), repo, issueNumber: data.issueNumber }, 'RabbitMQ publish failed');
-
-      // In rabbitmq mode, fall back to BullMQ
-      if (backend === 'rabbitmq') {
-        log.info({ repo, issueNumber: data.issueNumber }, 'Falling back to BullMQ');
-        // Fall through to BullMQ path below
-      }
-    }
-
-    if (backend === 'rabbitmq' && rabbitmqResult === undefined) {
-      // RabbitMQ failed and we're in rabbitmq-only mode — try BullMQ fallback
-      // (fall through to BullMQ path)
-    } else if (backend === 'rabbitmq') {
-      if (rabbitmqResult) {
-        log.info({ repo, issueNumber: data.issueNumber, dedupKey }, 'Issue published to RabbitMQ');
-      }
-      return rabbitmqResult ? 'rabbitmq' : undefined;
-    }
-  }
-
-  // ── BullMQ path ────────────────────────────────────────────────
-  if (backend === 'bullmq' || backend === 'both' || (backend === 'rabbitmq' && rabbitmqResult === undefined)) {
-    if (!queue) {
-      log.error({ repo, issueNumber: data.issueNumber }, 'BullMQ queue not available');
-      return undefined;
-    }
-
-    try {
-      const job = await queue.add('process-issue', data, {
-        deduplication: {
-          id: dedupKey,
-          ttl: config.queue.dedupTtl * 1000,
-        },
-      });
-
-      bullmqResult = job.id;
-
-      log.info(
-        {
-          jobId: job.id,
-          repo,
-          issueNumber: data.issueNumber,
-          dedupKey,
-        },
-        'Issue enqueued via BullMQ',
-      );
-    } catch (err) {
-      log.error(
-        {
-          err: String(err),
-          repo,
-          issueNumber: data.issueNumber,
-          dedupKey,
-        },
-        'Failed to enqueue issue via BullMQ — Redis may be unreachable',
-      );
-      return undefined;
-    }
-  }
-
-  // ── Comparison metrics for 'both' mode ─────────────────────────
-  if (backend === 'both' && rabbitmqResult !== undefined && bullmqResult !== undefined) {
     log.info(
       {
+        jobId: job.id,
         repo,
         issueNumber: data.issueNumber,
-        rabbitmqPublished: rabbitmqResult,
-        bullmqJobId: bullmqResult,
+        dedupKey,
       },
-      'Dual-write comparison — RabbitMQ and BullMQ results',
+      'Issue enqueued via BullMQ',
     );
-  }
 
-  return bullmqResult ?? undefined;
+    return job.id;
+  } catch (err) {
+    log.error(
+      {
+        err: String(err),
+        repo,
+        issueNumber: data.issueNumber,
+        dedupKey,
+      },
+      'Failed to enqueue issue via BullMQ — Redis may be unreachable',
+    );
+    return undefined;
+  }
 }

@@ -20,57 +20,51 @@
  * ✅ readFile/writeFile/removeFile catch with descriptive messages
  * ✅ destroy() catches kill failures (non-fatal, logs warning)
  * ✅ pushBranch() wraps all git operations with context
- * installDeps() failure is non-fatal (logs warning, continues)
+ * ✅ installDeps() failure is non-fatal (logs warning, continues)
  * ────────────────────────────────────────────────────────────────────
  */
 
 import { Sandbox } from 'e2b';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import type { ProgressCallback, SandboxExecutor as SandboxExecutorInterface, ExecResult, TestRunResult, RuntimeInfo } from './types.js';
 
 const log = rootLogger.child({ module: 'sandbox' });
 
-export interface ExecResult {
-  stdout: string;
-  stderr: string;
-  exitCode: number;
-}
+export type { ExecResult, TestRunResult, RuntimeInfo };
 
-export interface TestRunResult {
-  passed: boolean;
-  output: string;
-  command: string;
-  durationMs: number;
-}
-
-export interface RuntimeInfo {
-  language: string;
-  version: string;
-  testCommand: string;
-  installCommand: string;
-  formatCommand: string;
-  lintCommand: string;
-}
-
-export class SandboxExecutor {
+export class E2BSandboxExecutor implements SandboxExecutorInterface {
   private sandbox: Sandbox | null = null;
   private repoDir: string = '';
   private runtimeInfo: RuntimeInfo | null = null;
   private installationToken: string = '';
+  private progressCallback: ProgressCallback | null = null;
 
   constructor(
     private repoUrl: string,
-    _repoOwner: string,
+    private repoOwner: string,
     private repoName: string,
     private installationId: number,
     private getToken: (installationId: number) => Promise<string>,
   ) {}
 
+  private reportProgress(phase: string, progress: number, message?: string): void {
+    if (this.progressCallback) {
+      try {
+        this.progressCallback(phase, progress, message);
+      } catch {
+        /* ignore heartbeat failures — non-fatal */
+      }
+    }
+  }
+
   /**
    * Boot the sandbox: create instance, clone repo, detect runtime, install deps.
    */
-  async boot(): Promise<void> {
+  async boot(onProgress?: ProgressCallback): Promise<void> {
+    this.progressCallback = onProgress ?? null;
     log.info('Booting E2B sandbox');
+    this.reportProgress('boot', 0, 'Creating sandbox instance');
 
     // Create the sandbox
     try {
@@ -84,6 +78,7 @@ export class SandboxExecutor {
     }
 
     log.info({ sandboxId: this.sandbox.sandboxId }, 'Sandbox created');
+    this.reportProgress('boot', 15, 'Sandbox created, fetching installation token');
 
     // Get installation token for auth
     try {
@@ -91,6 +86,8 @@ export class SandboxExecutor {
     } catch (err) {
       throw new Error(`Failed to get installation token for sandbox ${this.sandbox.sandboxId}: ${String(err)}`);
     }
+
+    this.reportProgress('boot', 25, 'Installation token obtained, cloning repository');
 
     // Clone the repo with auth
     const authUrl = this.repoUrl.replace('https://', `https://x-access-token:${this.installationToken}@`);
@@ -101,13 +98,16 @@ export class SandboxExecutor {
       throw new Error(`Failed to clone repo: ${cloneResult.stderr}`);
     }
     log.info('Repo cloned successfully');
+    this.reportProgress('boot', 50, 'Repository cloned, detecting runtime');
 
     // Detect runtime
     this.runtimeInfo = await this.detectRuntime();
     log.info({ runtime: this.runtimeInfo }, 'Runtime detected');
+    this.reportProgress('boot', 70, `Runtime detected: ${this.runtimeInfo.language}`);
 
     // Install dependencies
     await this.installDeps();
+    this.reportProgress('boot', 100, 'Sandbox ready');
   }
 
   /**
@@ -589,3 +589,13 @@ export class SandboxExecutor {
     }
   }
 }
+
+// ── Backward compatibility alias ────────────────────────────────────
+// Old code used `SandboxExecutor` (the class name). We keep the name
+// as a type alias so existing imports continue to work.
+/**
+ * @deprecated Use `E2BSandboxExecutor` instead. The `SandboxExecutor` name
+ * is now the shared interface from `./types.js`. This alias is maintained
+ * for backward compatibility only.
+ */
+export const SandboxExecutor = E2BSandboxExecutor;
