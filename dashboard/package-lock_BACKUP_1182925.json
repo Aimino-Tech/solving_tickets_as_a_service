@@ -8,7 +8,11 @@
       "name": "stas-dashboard",
       "version": "0.1.0",
       "dependencies": {
+<<<<<<< HEAD
+        "lucide-react": "^1.17.0",
+=======
         "playwright": "^1.60.0",
+>>>>>>> 357aa9a (feat: add 6-gate quality pipeline with OSS anti-fake tools)
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
         "react-router-dom": "^7.5.0",
@@ -2876,6 +2880,15 @@
       "license": "ISC",
       "dependencies": {
         "yallist": "^3.0.2"
+      }
+    },
+    "node_modules/lucide-react": {
+      "version": "1.17.0",
+      "resolved": "https://registry.npmjs.org/lucide-react/-/lucide-react-1.17.0.tgz",
+      "integrity": "sha512-9FA9evdox/JQL5PT57fdA1x/yg8T7knJ98+zjTL3UfKza6pflQUUh3XtaQIHKvnsJw1lmsEyHVlt5jchYxOQ5w==",
+      "license": "ISC",
+      "peerDependencies": {
+        "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0"
       }
     },
     "node_modules/lz-string": {

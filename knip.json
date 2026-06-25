@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/server.ts", "src/agent/**/*.ts", "src/webhooks/**/*.ts"],
+  "project": ["src/**/*.ts"],
+  "ignore": [
+    "src/__tests__/**",
+    "src/db/**",
+    "src/audit/**",
+    "src/bridge/**",
+    "src/monitoring/**",
+    "src/notifications/**",
+    "src/metering/**",
+    "src/ratelimit/**",
+    "src/pricing/**"
+  ]
+}

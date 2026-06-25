@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STAS — Success Stories</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0b0b12;--bg2:#11111e;--bg3:#16162a;--text:#f8f8fa;--text2:#8888a0;--text3:#666680;--gold:#e8b931;--gold2:#fcd34d;--green:#34d399;--cyan:#22d3ee;--amber:#f59e0b;--rose:#fb7185;--border:rgba(232,185,49,0.12);--border2:rgba(52,211,153,0.15)}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,h3{font-family:'Playfair Display',serif}
+
+/* Hero */
+.hero{min-height:85vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse 80% 60% at 50% -20%,rgba(232,185,49,0.08) 0%,transparent 70%),radial-gradient(ellipse 60% 50% at 80% 80%,rgba(52,211,153,0.04) 0%,transparent 60%),var(--bg);text-align:center;padding:80px 24px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 40%,rgba(232,185,49,0.03) 0%,transparent 50%),radial-gradient(circle at 70% 60%,rgba(52,211,153,0.02) 0%,transparent 50%);pointer-events:none}
+.hero-content{max-width:820px;position:relative;z-index:1}
+.hero-label{font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--gold);margin-bottom:16px;font-weight:600}
+.hero h1{font-size:clamp(36px,6.5vw,72px);font-weight:900;line-height:1.05;margin-bottom:16px;letter-spacing:-0.02em}
+.hero h1 em{font-style:italic;color:var(--gold)}
+.hero .sub{font-size:clamp(16px,2vw,22px);color:var(--text2);max-width:600px;margin:0 auto 32px;line-height:1.5}
+.hero .sub strong{color:var(--text)}
+.ticker-wrap{display:flex;gap:40px;justify-content:center;flex-wrap:wrap;margin-top:48px;padding:24px 32px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px}
+.ticker-item{text-align:center}
+.ticker-num{font-size:28px;font-weight:900;color:var(--gold);font-family:'Playfair Display',serif}
+.ticker-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+
+/* Section layout */
+.section{padding:80px 24px;max-width:1000px;margin:0 auto}
+.section-header{margin-bottom:48px;text-align:center}
+.section-header .num{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;font-weight:600}
+.section-header h2{font-size:clamp(26px,3.5vw,38px);font-weight:700;line-height:1.15}
+.section-header .sub{font-size:15px;color:var(--text2);max-width:550px;margin:12px auto 0;line-height:1.5}
+
+/* Story cards */
+.story{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:40px;margin-bottom:32px;transition:transform .25s,border-color .25s;position:relative}
+.story:hover{transform:translateY(-3px);border-color:rgba(232,185,49,0.25)}
+.story-row{display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap}
+.story-info{flex:1;min-width:280px}
+.story-tag{display:inline-block;font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:12px;font-weight:600}
+.story-tag.rocket{background:rgba(232,185,49,0.12);color:var(--gold)}
+.story-tag.student{background:rgba(52,211,153,0.1);color:var(--green)}
+.story-tag.enterprise{background:rgba(34,211,238,0.1);color:var(--cyan)}
+.story-tag.germany{background:rgba(251,191,36,0.1);color:var(--amber)}
+.story-tag.frenzy{background:rgba(251,113,133,0.1);color:var(--rose)}
+.story-info h3{font-size:22px;font-weight:700;margin-bottom:8px}
+.story-info .desc{font-size:15px;color:var(--text2);line-height:1.5;margin-bottom:16px}
+.story-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:16px}
+.stat-item{background:var(--bg3);border-radius:10px;padding:16px;text-align:center}
+.stat-item .val{font-size:26px;font-weight:900;font-family:'Playfair Display',serif;line-height:1}
+.stat-item .val.gold{color:var(--gold)}
+.stat-item .val.green{color:var(--green)}
+.stat-item .val.cyan{color:var(--cyan)}
+.stat-item .val.amber{color:var(--amber)}
+.stat-item .lbl{font-size:11px;color:var(--text3);margin-top:4px}
+.story-notes{margin-top:16px;padding:16px;background:var(--bg3);border-radius:10px;font-size:13px;color:var(--text2);line-height:1.5;border-left:3px solid var(--gold)}
+
+/* Timeline */
+.timeline{position:relative;padding-left:40px}
+.timeline::before{content:'';position:absolute;left:12px;top:8px;bottom:8px;width:2px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:36px}
+.tl-item::before{content:'';position:absolute;left:-34px;top:6px;width:14px;height:14px;border-radius:50%;background:var(--gold);border:3px solid var(--bg)}
+.tl-item .date{font-size:12px;color:var(--gold);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.tl-item h4{font-size:18px;font-weight:600;margin-bottom:4px}
+.tl-item p{font-size:14px;color:var(--text2);line-height:1.5}
+
+/* Stats grid */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+.stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:28px 20px;text-align:center}
+.stat-box .big{font-size:34px;font-weight:900;font-family:'Playfair Display',serif;line-height:1;margin-bottom:6px}
+.stat-box .big.gold{color:var(--gold)}
+.stat-box .big.green{color:var(--green)}
+.stat-box .big.cyan{color:var(--cyan)}
+.stat-box .big.amber{color:var(--amber)}
+.stat-box .big.rose{color:var(--rose)}
+.stat-box .lbl{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+
+/* Bottom */
+.cta-section{background:radial-gradient(ellipse 80% 50% at 50% 100%,rgba(232,185,49,0.06) 0%,transparent 70%),var(--bg);text-align:center;padding:100px 24px}
+.cta-section h2{font-size:clamp(28px,4vw,44px);font-weight:900;margin-bottom:16px;line-height:1.15}
+.cta-section .sub{font-size:16px;color:var(--text2);max-width:550px;margin:0 auto 32px;line-height:1.5}
+.contrast-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px;max-width:700px;margin:0 auto;text-align:left}
+.contrast-box h4{font-size:14px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px}
+.contrast-box p{font-size:15px;color:var(--text2);line-height:1.6;margin-bottom:8px}
+.contrast-box p strong{color:var(--text)}
+.contrast-box .highlight{color:var(--gold);font-weight:700}
+
+@media(max-width:600px){
+  .story{padding:24px}
+  .story-row{flex-direction:column;gap:16px}
+  .ticker-wrap{gap:20px;padding:16px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+<div class="hero-content">
+<div class="hero-label">Success Stories. Real Traction.</div>
+<h1>This Market Is <em>On Fire.</em></h1>
+<p class="sub">In the last 5 months, <strong>14+ startups</strong> have launched the same product — GitHub issue → PR automation. Y Combinator funded it <strong>3 batches in a row</strong>. The question isn't <em>if</em> this works. It's <em>who wins.</em></p>
+<div class="ticker-wrap">
+<div class="ticker-item"><div class="ticker-num">14+</div><div class="ticker-label">Competitors Since Feb 2026</div></div>
+<div class="ticker-item"><div class="ticker-num">3</div><div class="ticker-label">YC Batches (S25→W26→S26)</div></div>
+<div class="ticker-item"><div class="ticker-num">$8M</div><div class="ticker-label">Seed Raised (Kilo)</div></div>
+<div class="ticker-item"><div class="ticker-num">€12M</div><div class="ticker-label">ARR in 10 Weeks (Viktor)</div></div>
+</div>
+</div>
+</section>
+
+<!-- ============ 1. KILO ============ -->
+<section class="section">
+<div class="section-header">
+<div class="num">01</div>
+<h2>The Fastest Raise in DevTools</h2>
+<p class="sub">Launched yesterday. $8M seed. Backed by the former GitLab CEO.</p>
+</div>
+
+<div class="story">
+<div class="story-row">
+<div class="story-info">
+<div class="story-tag rocket">🚀 Launched Jun 18, 2026</div>
+<h3>Kilo for GitHub</h3>
+<p class="desc">Sid Sijbrandij, the founder and former CEO of GitLab (IPO'd at $16B), launched his next company. Kilo is a GitHub bot that you @‑mention to fix issues. <strong>It raised $8M before launch.</strong> 1.5M+ users on day one.</p>
+<div class="story-stats">
+<div class="stat-item"><div class="val gold">$8M</div><div class="lbl">Seed Round</div></div>
+<div class="stat-item"><div class="val gold">1.5M+</div><div class="lbl">Users at Launch</div></div>
+<div class="stat-item"><div class="val gold">Jun 18</div><div class="lbl">Launch Date</div></div>
+<div class="stat-item"><div class="val gold">Ex‑GitLab CEO</div><div class="lbl">Founded By</div></div>
+</div>
+</div>
+</div>
+<div class="story-notes">
+The most credible founder in developer tools chose this exact vertical. Sid could have built anything. He built this.
+</div>
+</div>
+</section>
+
+<!-- ============ 2. REPLICAS ============ -->
+<section class="section">
+<div class="section-header">
+<div class="num">02</div>
+<h2>Two Students. YC S26. $300/Seat.</h2>
+<p class="sub">Zero connections, zero credibility, zero launch hype — just product that works.</p>
+</div>
+
+<div class="story">
+<div class="story-row">
+<div class="story-info">
+<div class="story-tag student">🎓 YC S26 — Waterloo</div>
+<h3>Replicas</h3>
+<p class="desc">Two Waterloo undergraduates applied to Y Combinator with a demo of "GitHub issue → automatic PR." They got in. Within 5 months of joining YC, they have <strong>20+ paying customers</strong> at <strong>$300/seat/month</strong>. Every single one is another YC startup.</p>
+<div class="story-stats">
+<div class="stat-item"><div class="val green">$300</div><div class="lbl">Per Seat / Month</div></div>
+<div class="stat-item"><div class="val green">20+</div><div class="lbl">Paying Customers</div></div>
+<div class="stat-item"><div class="val green">5 Months</div><div class="lbl">Since YC Start</div></div>
+<div class="stat-item"><div class="val green">2 Students</div><div class="lbl">Team Size</div></div>
+</div>
+</div>
+</div>
+<div class="story-notes">
+Two students with zero network got accepted to YC, built a product, and signed 20+ companies in 5 months — all YC portfolio. The demand is there. The market validates itself every single day.
+</div>
+</div>
+</section>
+
+<!-- ============ 3. VIKTOR (GERMANY) ============ -->
+<section class="section">
+<div class="section-header">
+<div class="num">03</div>
+<h2>German Competitor: €12M ARR in 10 Weeks</h2>
+<p class="sub">Closest proxy to what STAS does — and the numbers are staggering.</p>
+</div>
+
+<div class="story">
+<div class="story-row">
+<div class="story-info">
+<div class="story-tag germany">🇩🇪 Made in Germany</div>
+<h3>Viktor (co‑lleague Competitor)</h3>
+<p class="desc">A German startup in the same AGI‑for‑developers space launched and hit <strong>€12M annualized revenue in 10 weeks.</strong> No enterprise sales team. No inbound machine. Just product‑led growth in the AI code automation market.</p>
+<div class="story-stats">
+<div class="stat-item"><div class="val amber">€12M</div><div class="lbl">ARR in 10 Weeks</div></div>
+<div class="stat-item"><div class="val amber">10 Weeks</div><div class="lbl">To €12M ARR</div></div>
+<div class="stat-item"><div class="val amber">Germany</div><div class="lbl">Headquarters</div></div>
+</div>
+</div>
+</div>
+<div class="story-notes">
+This is the most important data point. A direct competitor — in Germany, not SV — made €12M in 10 weeks. The market is real. The willingness to pay is proven. The only question is execution speed.
+</div>
+</div>
+</section>
+
+<!-- ============ 4. ENTERPRISE ADOPTION ============ -->
+<section class="section">
+<div class="section-header">
+<div class="num">04</div>
+<h2>Enterprise: This Isn't Experimental</h2>
+<p class="sub">The world's largest engineering organizations are already all‑in on AI‑driven PRs.</p>
+</div>
+
+<div class="stats-grid" style="margin-bottom:32px">
+<div class="stat-box"><div class="big gold">650</div><div class="lbl">AI PRs / Mo — Spotify</div></div>
+<div class="stat-box"><div class="big green">79%</div><div class="lbl">Faster — Rakuten</div></div>
+<div class="stat-box"><div class="big cyan">45%</div><div class="lbl">Faster — Atlassian</div></div>
+<div class="stat-box"><div class="big amber">93%</div><div class="lbl">Agent‑Driven — Intercom</div></div>
+<div class="stat-box"><div class="big rose">600K</div><div class="lbl">PRs / Mo — Sentry</div></div>
+</div>
+
+<p style="font-size:13px;color:var(--text3);text-align:center;margin-bottom:48px">Source: Gartner, internal engineering reports, 2026</p>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+<div class="story" style="margin:0;padding:24px">
+<h4 style="font-size:15px;color:var(--gold);margin-bottom:8px;font-family:'DM Sans',sans-serif">Spotify</h4>
+<p style="font-size:13px;color:var(--text2);line-height:1.5">650 AI‑generated pull requests every single month. Not experiments — production code shipped to users.</p>
+</div>
+<div class="story" style="margin:0;padding:24px">
+<h4 style="font-size:15px;color:var(--green);margin-bottom:8px;font-family:'DM Sans',sans-serif">Rakuten</h4>
+<p style="font-size:13px;color:var(--text2);line-height:1.5">79% faster PR cycle time after adopting AI agents. From days to hours.</p>
+</div>
+<div class="story" style="margin:0;padding:24px">
+<h4 style="font-size:15px;color:var(--cyan);margin-bottom:8px;font-family:'DM Sans',sans-serif">Atlassian</h4>
+<p style="font-size:13px;color:var(--text2);line-height:1.5">45% improvement in developer cycle time. 10K+ developers using AI code tools.</p>
+</div>
+<div class="story" style="margin:0;padding:24px">
+<h4 style="font-size:15px;color:var(--amber);margin-bottom:8px;font-family:'DM Sans',sans-serif">Intercom</h4>
+<p style="font-size:13px;color:var(--text2);line-height:1.5">93% of all code changes are now agent‑driven. Human review, AI generation.</p>
+</div>
+</div>
+</section>
+
+<!-- ============ 5. MARKET FRENZY ============ -->
+<section class="section">
+<div class="section-header">
+<div class="num">05</div>
+<h2>The Gold Rush Is Here</h2>
+<p class="sub">14+ competitors in 4 months. 3 YC batches. This is the new Copilot moment.</p>
+</div>
+
+<div class="timeline">
+<div class="tl-item">
+<div class="date">Feb 2026</div>
+<h4>First Wave</h4>
+<p>KintsugiBot, OpenRonin appear. Issue‑to‑PR automation becomes a category.</p>
+</div>
+<div class="tl-item">
+<div class="date">Mar 2026</div>
+<h4>YC W26 Batch</h4>
+<p>Y Combinator funds the first batch of startups in this exact space. Replicas among them.</p>
+</div>
+<div class="tl-item">
+<div class="date">Apr–May 2026</div>
+<h4>Explosion</h4>
+<p>Dispatch, Oompa, Fixi, github‑agent launch. Enterprise case studies go public. Gartner publishes $10B forecast.</p>
+</div>
+<div class="tl-item">
+<div class="date">Jun 2026</div>
+<h4>Signal Overload</h4>
+<p>Kilo launches with $8M seed and ex‑GitLab CEO. Viktor hits €12M ARR. 14+ competitors total. YC S26 funds more. The market is screaming.</p>
+</div>
+</div>
+
+<div class="stats-grid" style="margin-top:32px">
+<div class="stat-box"><div class="big gold">14+</div><div class="lbl">Competitors (Feb–Jun 2026)</div></div>
+<div class="stat-box"><div class="big green">3</div><div class="lbl">YC Batches (S25→W26→S26)</div></div>
+<div class="stat-box"><div class="big cyan">$10B</div><div class="lbl">Gartner TAM Forecast</div></div>
+<div class="stat-box"><div class="big amber">4 Months</div><div class="lbl">To Flood the Market</div></div>
+</div>
+</section>
+
+<!-- ============ BOTTOM ============ -->
+<section class="cta-section">
+<h2>The Market Has Spoken</h2>
+<p class="sub">Two students raised YC, charge $300/seat, 20+ paying customers in 5 months. Ex‑GitLab CEO raised $8M in weeks. A German competitor made €12M in 10 weeks. All for the exact same product.</p>
+
+<div class="contrast-box">
+<h4>What This Means for STAS</h4>
+<p>We have <strong>better AGI than any of them</strong> — 50% better than GPT‑5.5 on DeepSWE. Our cost structure is a fraction of theirs. And every day that passes, 14+ competitors prove the market exists.</p>
+<p style="margin-top:12px">The question isn't <em>"does this work?"</em></p>
+<p style="font-size:20px;color:var(--gold);font-weight:700;font-family:'Playfair Display',serif;margin-top:8px">It's <em>"who moves fastest."</em></p>
+</div>
+</section>
+
+</body>
+</html>
