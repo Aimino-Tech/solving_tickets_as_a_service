@@ -143,17 +143,6 @@ try:
 except Exception as exc:
     logger.warning("Failed to connect compliance audit middleware -- %s", exc)
 
-# ── Evidence Receipt Middleware ─────────────────────────────────────
-# Captures cryptographically chained evidence receipts for every agent
-# lifecycle transition (Celery task lifecycle events).
-try:
-    from workers.audit.evidence_middleware import connect_evidence_middleware
-
-    connect_evidence_middleware()
-    logger.info("Evidence receipt middleware connected")
-except Exception as exc:
-    logger.warning("Failed to connect evidence receipt middleware -- %s", exc)
-
 # ── Runaway Agent Protection ───────────────────────────────────────
 # Self-registers via @signals.task_prerun.connect at import time.
 # Enforces per-agent timeout, token/cost limits, and max retries.
@@ -166,16 +155,16 @@ except Exception as exc:
     logger.warning("Failed to connect runaway middleware -- %s", exc)
 
 
-# ── Claim Middleware (Duplicate Job Prevention) ────────────────────────
-# Self-registers via @signals.task_prerun.connect at import time.
-# Prevents parallel workers from processing the same issue simultaneously.
+# ── Dedup Middleware (Duplicate Job Prevention) ─────────────────────
+# Self-registers Celery signal handlers at import time to prevent
+# duplicate task execution for the same issue across workers.
 try:
-    from workers.dispatch import claim  # noqa: F401
+    from workers.dispatch import dedup_middleware  # noqa: F401
 
-    claim.connect_claim_middleware()
-    logger.info("Claim middleware connected")
+    dedup_middleware.connect_dedup_middleware()
+    logger.info("Dedup middleware connected")
 except Exception as exc:
-    logger.warning("Failed to connect claim middleware -- %s", exc)
+    logger.warning("Failed to connect dedup middleware -- %s", exc)
 
 
 # ── Worker Scaling (KEDA / Celery autoscale) ───────────────────────
