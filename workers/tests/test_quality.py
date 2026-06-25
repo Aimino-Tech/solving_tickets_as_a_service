@@ -361,8 +361,8 @@ def test_orchestrate_pipeline():
     assert result["pipeline_steps"] == [
         "quality_analyze",
         "agent_dispatch",
-        "build_verify",
         "verification",
+        "visual_verification",
         "self_audit",
         "anti_mockup_scan",
         "pr_creation",
