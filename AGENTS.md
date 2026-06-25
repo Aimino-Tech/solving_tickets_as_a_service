@@ -40,18 +40,24 @@ GitHub Issue (labeled "stas:fix")
        └── Post result comment
 ```
 
-## Business model (open-core)
+## Business model (open-core with dual-path)
 
-| OSS (free) | Paid SaaS ($49/mo) |
-|---|---|
-| Self-host the bot | We host it |
-| Uses your API key + your model | Uses our AGI (50% better) |
-| Single repo, manual setup | One-click install, all repos |
-| No dashboard | Dashboard, analytics, audit log |
-| You manage infra | Zero ops |
-| Community support | SLA, SSO, priority |
+STAS has **three paths**, all pointing to paid plans for full features:
 
-**Funnel**: Self-host (free) → hit limits/discover quality → upgrade to hosted ($49/mo)
+| | Self-Hosted (OSS) | Cloud Free | Cloud Paid |
+|---|---|---|---|
+| **Fixes/mo** | Unlimited (your API key) | 10 fixes/mo | 100–500+/mo |
+| **AI model** | Your API key, your model | Our AGI (50% better than GPT-5.5) | Our AGI |
+| **Setup** | Manual — you run it | One-click install | One-click install |
+| **Infrastructure** | You manage | We manage | We manage |
+| **Dashboard** | — | Limited analytics | Full analytics, audit log |
+| **Support** | GitHub issues (community) | Community | Slack, email, SLA |
+| **Cost** | Your API usage | Free | $49–$149/mo |
+
+**Conversion funnel**:
+- **Self-host** → Cloud Paid (when infra ops hurt, dashboard needed)
+- **Cloud Free** → Cloud Paid (when 10 fixes/mo isn't enough)
+- **Cloud Paid** → Enterprise (when team needs SSO, VPC, SLAs)
 
 ## Competitive landscape
 
