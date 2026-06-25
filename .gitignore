@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
 <<<<<<< HEAD
@@ -11,6 +12,9 @@
 >>>>>>> origin/main
 >>>>>>> origin/main
 >>>>>>> origin/main
+=======
+
+>>>>>>> origin/master
 *~
 # Build output
 *.cert
@@ -42,6 +46,7 @@ stas-private-key.pem
 Thumbs.db
 .vscode/
 eval/results/
+<<<<<<< HEAD
 # Python
 __pycache__/
 *.pyc
@@ -58,3 +63,5 @@ __pycache__/
 >>>>>>> origin/main
 >>>>>>> origin/main
 >>>>>>> origin/main
+=======
+>>>>>>> origin/master
