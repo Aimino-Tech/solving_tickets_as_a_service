@@ -3,6 +3,7 @@ import logging
 from celery import shared_task
 
 from workers.quality.models import AntiMockupFinding, SelfAuditChecklistItem, SelfAuditResult
+from workers.tasks.grounding import evidence_gate, decision_gate
 
 logger = logging.getLogger(__name__)
 

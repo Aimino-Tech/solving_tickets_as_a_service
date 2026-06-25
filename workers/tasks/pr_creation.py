@@ -1,234 +1,192 @@
-"""
-Create GitHub Pull Requests using GitHub App installation tokens.
-
-Reads GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY_PATH from the environment,
-generates a JWT, exchanges it for an installation token, and creates a PR.
-"""
-
-import json
 import logging
 import os
-import time
+import subprocess
+from string import Template
 from typing import Any
 
-import httpx
-import jwt
 from celery import shared_task
+
+from workers.github.client import GitHubClient
+from workers.linear_client import LinearClient
+
+from workers.github.client import get_installation_token as _get_installation_token
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# GitHub App JWT helpers
-# ---------------------------------------------------------------------------
+_TEMPLATE_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..",
+    "pr_creation",
+    "template.md",
+)
 
 
-def _load_private_key() -> str:
-    path = os.getenv("GITHUB_APP_PRIVATE_KEY_PATH", "")
-    if not path:
-        raise ValueError("GITHUB_APP_PRIVATE_KEY_PATH is not set")
-    with open(path, "r") as f:
+def _load_template() -> str:
+    with open(_TEMPLATE_PATH) as f:
         return f.read()
 
 
-def _create_jwt(app_id: str, private_key: str) -> str:
-    now = int(time.time())
-    payload = {
-        "iat": now - 60,       # issued 60s ago to avoid clock skew
-        "exp": now + 600,      # expires in 10 minutes (max allowed)
-        "iss": app_id,
-    }
-    return jwt.encode(payload, private_key, algorithm="RS256")
+def _extract_issue_number(issue_id: str) -> str:
+    parts = issue_id.split("-", 1)
+    return parts[-1] if len(parts) > 1 else issue_id
 
 
-def _get_installation_token(installation_id: int) -> str:
-    """Exchange JWT for an installation access token via GitHub API."""
-    app_id = os.getenv("GITHUB_APP_ID", "")
-    if not app_id:
-        raise ValueError("GITHUB_APP_ID is not set")
-
-    private_key = _load_private_key()
-    jwt_token = _create_jwt(app_id, private_key)
-
-    url = f"https://api.github.com/app/installations/{installation_id}/access_tokens"
-    headers = {
-        "Authorization": f"Bearer {jwt_token}",
-        "Accept": "application/vnd.github.v3+json",
-    }
-
-    with httpx.Client() as client:
-        resp = client.post(url, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["token"]
+def _get_changed_files_summary(
+    workspace_path: str,
+    base_branch: str = "main",
+) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--stat", f"origin/{base_branch}..."],
+            cwd=workspace_path,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+        output = result.stdout.strip()
+        return output if output else "No file changes detected."
+    except (subprocess.CalledProcessError, FileNotFoundError, TimeoutError) as e:
+        logger.warning("Failed to get changed files summary: %s", e)
+        return "Could not generate file change summary."
 
 
-def _parse_repo_info(repo_full_name: str) -> tuple[str, str]:
-    """Parse 'owner/repo' into (owner, repo)."""
-    parts = repo_full_name.split("/", 1)
-    if len(parts) != 2:
-        raise ValueError(f"Invalid repo_full_name: {repo_full_name!r}")
-    return parts[0], parts[1]
-
-
-def _call_github(
-    method: str,
-    path: str,
-    token: str,
-    json_body: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Make a GitHub API call with the given token."""
-    url = f"https://api.github.com{path}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "STAS-Bot",
-    }
-    with httpx.Client() as client:
-        resp = client.request(method, url, headers=headers, json=json_body)
-        if resp.status_code >= 400:
-            logger.error(
-                "GitHub API error %s %s: %d %s",
-                method, path, resp.status_code, resp.text[:500],
-            )
-        resp.raise_for_status()
-        return resp.json()
-
-
-# ---------------------------------------------------------------------------
-# Celery task
-# ---------------------------------------------------------------------------
+def _build_pr_body(
+    issue_body: str,
+    issue_id: str,
+    workspace_path: str,
+    verification_result: dict[str, Any] | None,
+    base_branch: str,
+) -> str:
+    template_str = _load_template()
+    issue_number = _extract_issue_number(issue_id)
+    changed_files = _get_changed_files_summary(workspace_path, base_branch)
+    test_rate = "N/A"
+    if verification_result:
+        score = verification_result.get("score", 0) or 0
+        test_rate = str(int(score * 100))
+    template = Template(template_str)
+    return template.safe_substitute(
+        issue_description=issue_body or "No description provided.",
+        issue_number=issue_number,
+        changed_files_summary=changed_files,
+        test_pass_rate=test_rate,
+    )
 
 
 @shared_task(
     bind=True,
-    max_retries=2,
-    default_retry_delay=30,
+    max_retries=3,
+    default_retry_delay=60,
     name="workers.tasks.pr_creation.create_pull_request",
     autoretry_for=(Exception,),
 )
 def create_pull_request(
     self,
-    fix_result: dict,
-    repo_info: dict,
-    correlation_id: str = "",
-) -> dict:
-    """
-    Create a Pull Request on GitHub using the installation token flow.
-
-    ``fix_result`` is expected to contain:
-        - branch (str) — head branch name
-        - base_branch (str, default "main") — target branch
-        - summary (str, optional) — PR body
-    ``repo_info`` is expected to contain:
-        - owner (str)
-        - repo (str)
-        - installation_id (int)
-
-    Returns the GitHub API response for the created PR.
-    """
-    owner = repo_info.get("owner", "?")
-    repo = repo_info.get("repo", "?")
-    branch = fix_result.get("branch", "")
-    base_branch = fix_result.get("base_branch", "main")
-    summary = fix_result.get("summary", "STAS automated fix")
-    installation_id = repo_info.get("installation_id")
-
+    issue_id: str,
+    workspace_path: str,
+    issue_title: str,
+    issue_body: str,
+    repo_owner: str,
+    repo_name: str,
+    branch_name: str,
+    base_branch: str = "main",
+    verification_result: dict[str, Any] | None = None,
+    audit_result: dict[str, Any] | None = None,
+    labels: list[str] | None = None,
+    installation_id: int | None = None,
+) -> dict[str, Any]:
     logger.info(
-        json.dumps({
-            "event": "pr_creation.start",
-            "owner": owner,
-            "repo": repo,
-            "branch": branch,
-            "base_branch": base_branch,
-            "correlation_id": correlation_id,
-        })
+        "Creating PR — %s/%s %s->%s for issue %s",
+        repo_owner,
+        repo_name,
+        branch_name,
+        base_branch,
+        issue_id,
     )
 
-    if not branch:
-        logger.warning(
-            json.dumps({
-                "event": "pr_creation.skipped",
-                "reason": "no branch provided",
-                "correlation_id": correlation_id,
-            })
-        )
-        return {
-            "repo_info": repo_info,
-            "fix_result": fix_result,
-            "html_url": None,
-            "status": "skipped_no_branch",
-        }
-
     try:
-        token = _get_installation_token(installation_id)
+        gh = GitHubClient(installation_id=installation_id)
 
-        pr_data = {
-            "title": f"fix: {branch.replace('-', ' ').title()}",
-            "head": branch,
-            "base": base_branch,
-            "body": summary,
-            "maintainer_can_modify": True,
-        }
+        try:
+            gh.push_branch(workspace_path, branch_name)
+        except subprocess.CalledProcessError as exc:
+            logger.warning("Branch push failed (may already exist): %s", exc)
 
-        result = _call_github(
-            "POST",
-            f"/repos/{owner}/{repo}/pulls",
-            token,
-            json_body=pr_data,
-        )
+        repo_full = f"{repo_owner}/{repo_name}"
+        existing_pr = gh.find_existing_pr(repo_full, branch_name)
 
-        html_url = result.get("html_url", "")
-        pr_number = result.get("number")
-
-        logger.info(
-            json.dumps({
-                "event": "pr_creation.complete",
-                "html_url": html_url,
-                "pr_number": pr_number,
-                "correlation_id": correlation_id,
-            })
-        )
-        return {
-            "repo_info": repo_info,
-            "fix_result": fix_result,
-            "html_url": html_url,
-            "number": pr_number,
-            "status": "created",
-        }
-
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 422:
-            body = exc.response.json()
-            logger.warning(
-                json.dumps({
-                    "event": "pr_creation.already_exists",
-                    "message": body.get("message", ""),
-                    "correlation_id": correlation_id,
-                })
+        if existing_pr:
+            logger.info(
+                "PR already exists for branch %s — #%s, updating",
+                branch_name,
+                existing_pr["pr_number"],
             )
-            return {
-                "repo_info": repo_info,
-                "fix_result": fix_result,
-                "html_url": None,
-                "status": "already_exists",
-                "error": body.get("errors", body.get("message", "")),
-            }
-        logger.error(
-            json.dumps({
-                "event": "pr_creation.error",
-                "error": str(exc),
-                "correlation_id": correlation_id,
-            })
-        )
-        raise self.retry(exc=exc)
+            pr_body = _build_pr_body(
+                issue_body,
+                issue_id,
+                workspace_path,
+                verification_result,
+                base_branch,
+            )
+            result = gh.update_pr(
+                repo_full,
+                existing_pr["pr_number"],
+                title=f"[STAS] {issue_title}",
+                body=pr_body,
+            )
+            mergeable_info = gh.check_mergeable(
+                repo_full,
+                existing_pr["pr_number"],
+            )
+            result.update(mergeable_info)
+            result["branch"] = branch_name
+            result["base_branch"] = base_branch
+        else:
+            pr_body = _build_pr_body(
+                issue_body,
+                issue_id,
+                workspace_path,
+                verification_result,
+                base_branch,
+            )
+            result = gh.create_pr(
+                repo_full,
+                branch_name,
+                base_branch,
+                f"[STAS] {issue_title}",
+                pr_body,
+                labels=labels,
+            )
+            mergeable_info = gh.check_mergeable(
+                repo_full,
+                result["pr_number"],
+            )
+            result.update(mergeable_info)
+            result["branch"] = branch_name
+            result["base_branch"] = base_branch
+
+        try:
+            linear = LinearClient()
+            score_str = ""
+            if verification_result:
+                score = verification_result.get("score", 0) or 0
+                score_str = f"Test score: {score * 100:.0f}%"
+            parts = [f"PR created: {result['pr_url']}", f"Branch: `{branch_name}`"]
+            if score_str:
+                parts.append(score_str)
+            comment_text = "\n\n".join(parts)
+            comment = linear.post_comment(issue_id, comment_text)
+            result["linear_comment_id"] = comment["id"]
+        except ValueError as e:
+            logger.warning("Linear integration skipped (no API key): %s", e)
+            result["linear_comment_id"] = None
+        except Exception as e:
+            logger.warning("Failed to post Linear comment: %s", e)
+            result["linear_comment_id"] = None
+
+        return result
 
     except Exception as exc:
-        logger.error(
-            json.dumps({
-                "event": "pr_creation.error",
-                "error": str(exc),
-                "correlation_id": correlation_id,
-            }),
-            exc_info=True,
-        )
+        logger.error("PR creation failed — %s", exc, exc_info=True)
         raise self.retry(exc=exc)

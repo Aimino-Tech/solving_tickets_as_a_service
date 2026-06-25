@@ -203,6 +203,10 @@ export function createApp(): express.Application {
   // ── Initialize metering ───────────────────────────────────────────
   initMetering();
 
+  // ── Start self-healing manager ────────────────────────────────────
+  const selfHealing = new SelfHealingManager();
+  selfHealing.start();
+
   // ── Start webhook retry worker ────────────────────────────────────
   // Only start if we're running as API or both
   if (config.runMode === 'api' || config.runMode === 'both') {
@@ -266,7 +270,7 @@ export function createApp(): express.Application {
       try {
         await githubWebhooks.verifyAndReceive({
           id: deliveryId,
-          name: event as any,
+          name: event as EmitterWebhookEventName,
           payload: rawBody.toString(),
           signature,
         });
@@ -281,7 +285,7 @@ export function createApp(): express.Application {
       try {
         await githubWebhooks.receive({
           id: deliveryId || crypto.randomUUID(),
-          name: event as any,
+          name: event as EmitterWebhookEventName,
           payload: JSON.parse((rawBody || Buffer.from(JSON.stringify(req.body))).toString()),
         });
       } catch (err) {
@@ -426,7 +430,7 @@ export function createApp(): express.Application {
     // Log the webhook event
     const eventId = await logWebhookReceived({
       source,
-      eventType: (payload as any)?.type || 'unknown',
+      eventType: (payload as Record<string, string>)?.type || 'unknown',
       deliveryId: undefined,
       payload,
     });
@@ -508,7 +512,7 @@ export function createApp(): express.Application {
     // Log the webhook event
     const eventId = await logWebhookReceived({
       source,
-      eventType: (payload as any)?.webhookEvent || 'unknown',
+      eventType: (payload as Record<string, string>)?.webhookEvent || 'unknown',
       deliveryId: undefined,
       payload,
     });

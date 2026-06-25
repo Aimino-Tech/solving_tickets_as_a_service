@@ -72,9 +72,24 @@ export function signJwt(payload: Omit<JwtPayload, 'iat' | 'exp' | 'iss'>): strin
   return `${headerB64}.${payloadB64}.${signature}`;
 }
 
+const invalidatedTokens = new Set<string>();
+
+export function invalidateToken(token: string): void {
+  const signature = token.split('.').pop();
+  if (signature) {
+    invalidatedTokens.add(signature);
+    log.debug({ signature: signature.slice(0, 8) }, 'Token invalidated');
+  }
+}
+
 export function verifyJwt(token: string): JwtPayload | null {
   const parts = token.split('.');
   if (parts.length !== 3) return null;
+
+  const signature = parts[2];
+  if (invalidatedTokens.has(signature)) {
+    return null;
+  }
 
   const [headerB64, payloadB64, signatureB64] = parts;
 
