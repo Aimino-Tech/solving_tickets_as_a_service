@@ -90,10 +90,53 @@ Our AGI outperforms GPT-5.5 by 50%. At $5.80/fix for 70% pass, we project ~$3-4/
 4. **Sandbox isolation** — Docker (local) → E2B (production)
 5. **Real-time status** — agent posts progress as issue comments
 
+## Quality Gates (AIM-1848/AIM-1895)
+
+Before any PR or state transition to Human Review, run **6 deterministic gates**:
+
+```bash
+npm run quality-gates              # full repo scan (all 6 gates)
+npm run quality-gates:changed      # only changed files vs origin/main
+```
+
+| Gate | Check | OSS Tool | Kills? |
+|------|-------|----------|--------|
+| 1 — Reality Check | Every referenced file actually exists | `git ls-files`, `fs.stat` | Yes |
+| 2 — Compile Check | `tsc --noEmit` passes | TypeScript compiler | Yes |
+| 3 — Test Integrity | Tests have real assertions (no vacuous) | vitest + pattern grep | Yes |
+| 4 — Hallucination/Stub | No TODO stubs, placeholders, fake imports | grep, npm registry scan | Yes |
+| 5 — Dead Code Check | No orphaned files, no unused exports | knip + ts-prune | Yes |
+| 6 — External AI Tool Scan | Hallucinated packages, phantom APIs, AI code security, code quality | ghostcheck + trace-core + anti-hallucination-mcp + vibecop | Warn |
+
+### Individual tool scripts
+
+```bash
+npm run knip                  # dead code detection (unused files/exports)
+npm run ts-prune              # unused TypeScript exports
+npm run ghostcheck            # hallucinated packages + phantom APIs
+npm run trace-check           # AI-generated code security scan
+npm run anti-hallucination    # symbol registry + hallucination report
+npm run vibecop               # AI code quality linter
+```
+
+### Installed OSS anti-fake/shortcut tools
+
+| Tool | Version | Detects | Install |
+|------|---------|---------|---------|
+| [ghostcheck](https://github.com/sagarmk/ghostcheck) | 0.1.0 | Hallucinated packages, phantom APIs, insecure patterns | `pnpm add -D ghostcheck` |
+| [trace-core](https://tracecheck.dev) | 0.7.0 | AI-generated code security issues | `pnpm add -D trace-core` |
+| [anti-hallucination-mcp](https://github.com/Akunimal/Anti-Hallucination-MCP) | 0.14.0 | Hallucinated symbols, import typos, API routes | `pnpm add -D anti-hallucination-mcp` |
+| [vibecop](https://github.com/bhvbhushan/vibecop) | 0.4.3 | AI code quality (ast-grep based linter) | `pnpm add -D vibecop` |
+| [knip](https://knip.dev) | 6.20.0 | Unused files, dead exports, orphaned code | `pnpm add -D knip` |
+| [ts-prune](https://github.com/nadeesha/ts-prune) | 0.10.3 | Unused TypeScript exports | `pnpm add -D ts-prune` |
+| gitleaks (binary) | latest | Secrets/credentials in code | `brew install gitleaks` |
+
+**Zero tolerance**: Any gate failure (1-5) blocks PR creation. Gate 6 is advisory/warning. Max 3 fix attempts before human escalation. The gate evidence artifact is attached to every PR.
+
 ## Status
 
 **Phase 1 (core loop)**: ✅ Done — webhook receiver, OpenCode dispatch, PR creation
-**Phase 2 (hardening)**: 🔜 Next — triage, sandbox, verification, error handling
+**Phase 2 (hardening)**: 🔜 Next — triage, sandbox, verification, error handling, quality gates
 **Phase 3 (OSS launch)**: 🔜 — setup guides, one-command deploy, launch
 **Phase 4 (hosted)**: 🔜 — cloud deployment, dashboard, Stripe, $49/mo
 

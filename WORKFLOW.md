@@ -11,34 +11,14 @@ hooks:
     fi
   after_run: |
     set -eu
-    echo "--- Anti-Mockup Scan ---"
-    has_violations=0
-    scan_file() {
-      local f="$1"
-      local violations=""
-      while IFS= read -r line; do
-        v=$(printf '%s' "$line" | grep -inE '(TODO: implement|FIXME: (add|implement)|@ts-(ignore|expect-error)|as any|throw new Error\("Not implemented|Not implemented yet|// placeholder|// stub|// TODO|\.then\(\(\) => \{\}\)|catch\s*\([^)]*\)\s*\{\s*\}|function\s+\w+\s*\([^)]*\)\s*\{\s*\}[\s\S]*?$)')
-        if [ -n "$v" ]; then
-          violations="$violations$v"$'\n'
-        fi
-      done
-      if [ -n "$violations" ]; then
-        echo "[MOCKUP] $f"
-        echo "$violations" | head -20
-        return 1
-      fi
-      return 0
-    }
-    export -f scan_file
-    find "$(pwd -P)" -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.jsx' -o -name '*.py' -o -name '*.go' -o -name '*.rs' -o -name '*.ex' -o -name '*.exs' \) \
-      -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/_build/*' -not -path '*/deps/*' -not -path '*/dist/*' \
-      -exec bash -c 'scan_file "$0"' {} \; || has_violations=1
-    if [ "$has_violations" -eq 1 ]; then
-      echo "!!! WARNING: Mockups/stubs detected in workspace. Review required before Human Review !!!"
+    echo "--- Quality Gates Scan ---"
+    if bash "$(dirname "$0")/../scripts/quality-gates.sh" --changed-only 2>&1; then
+      echo "Quality Gates: ALL PASSED"
     else
-      echo "Anti-Mockup Scan: PASSED (no violations found)"
+      echo "!!! Quality Gates BLOCKED — fix failures before Human Review !!!"
+      echo "Run: npm run quality-gates:changed"
     fi
-    echo "--- End Anti-Mockup Scan ---"
+    echo "--- End Quality Gates Scan ---"
   before_remove: |
     if [ -f elixir/mix.exs ]; then
       cd elixir && mise exec -- mix workspace.before_remove
@@ -105,8 +85,18 @@ This is a **hard rule**, not a guideline. Violations block the move to `Human Re
   and propagates errors appropriately.
 - Every data structure you create must use real field names, real types, and real relationships
   matching the problem domain — no `MockUser`, `TestData`, or generic `Item` types.
-- Before considering any code complete, scan every changed file for these patterns and
-  replace any found with real implementation.
+
+Before any PR creation or state transition, run the **4 deterministic quality gates**
+(see AGENTS.md §Quality Gates):
+
+```bash
+npm run quality-gates:changed
+```
+
+This verifies: (1) every referenced file exists, (2) code compiles with tsc --noEmit,
+(3) tests have real assertions (no vacuous patterns), (4) no TODO stubs, placeholders,
+or fake imports. **Any gate failure blocks PR creation.** Max 3 fix attempts before
+human escalation.
 
 If you catch yourself reaching for a stub, a mock, a `TODO`, or a placeholder — **stop**.
 Implement the real thing. The ticket is not done until every line is real.
@@ -327,7 +317,7 @@ Use this only when completion is blocked by missing required tools or missing au
 - Step 1/2 checklist is fully complete and accurately reflected in the single workpad comment.
 - Acceptance criteria and required ticket-provided validation items are complete.
 - Validation/tests are green for the latest commit.
-- **Anti-Mockup Verification: zero mockups, stubs, placeholder code, or fake data remain in changed files (scan results documented in workpad).**
+- **Quality Gates: run `npm run quality-gates:changed` — all 4 gates must PASS (reality, compile, test integrity, hallucination/stub).**
 - `/review-work` sub-agents pass (goal, quality, security, QA, context).
 - PR checks are green, branch is pushed, and PR is linked on the issue.
 - Required PR metadata is present (`symphony` label).
