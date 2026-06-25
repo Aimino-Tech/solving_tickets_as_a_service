@@ -27,6 +27,8 @@ import { getOctokit } from './auth.js';
 import * as messages from '../platforms/messages.js';
 import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
 import { config } from '../config.js';
+import { runDetectionGate } from '../security/detection-gate.js';
+import { trackGateRun } from '../security/tracking.js';
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
 
@@ -131,6 +133,48 @@ export class ActionDispatcher {
           return { action: 'comment_posted', commentBody: body };
         }
         log.info({ issueNumber }, 'All quality gates passed');
+      }
+
+      // 4.5. Malicious code detection gate — scan diff before PR creation
+      const gateDiff = agentResult.diff;
+      if (gateDiff && gateDiff.trim().length > 0) {
+        log.info({ issueNumber }, 'Running malicious code detection gate...');
+        const gateResult = await runDetectionGate(
+          (sandbox as { repoDir?: string }).repoDir || '',
+          gateDiff,
+        );
+        await trackGateRun(gateResult.passed, gateResult.findings.length, gateResult.blockedBy.length);
+
+        if (!gateResult.passed) {
+          log.warn(
+            { issueNumber, blockedBy: gateResult.blockedBy, findingCount: gateResult.findings.length },
+            'Detection gate blocked PR creation',
+          );
+
+          const gateBlockBody = [
+            '### 🛡️ Malicious Code Detection — Blocked',
+            '',
+            'The security detection gate found potentially dangerous patterns in the generated diff:',
+            '',
+            ...gateResult.blockedBy.map((b) => `- 🔴 ${b}`),
+            '',
+            '**Summary**:',
+            `- ${gateResult.findings.length} total finding(s)`,
+            `- ${gateResult.blockedBy.length} blocking finding(s)`,
+            '',
+            'The PR has been **blocked** to prevent potentially malicious code from being merged.',
+            'Please review the findings above and fix them before re-running.',
+          ].join('\n');
+
+          const prBlockComment = messages.errorComment(gateBlockBody);
+          await this.postComment(octokit, repoOwner, repoName, issueNumber, prBlockComment);
+          return { action: 'comment_posted', commentBody: prBlockComment };
+        }
+
+        log.info(
+          { findingCount: gateResult.findings.length },
+          'Detection gate passed — no blocking findings',
+        );
       }
 
       // 5. Push branch and gather changed files

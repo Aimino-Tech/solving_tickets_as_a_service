@@ -191,7 +191,25 @@ const envSchema = z.object({
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
 
-  // Sentry
+  
+  // ── Malicious Code Detection Gate ──
+  SECURITY_DETECTION_GATE_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(true),
+  SECURITY_DETECTION_GATE_BLOCK_ON_HIGH: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(true),
+  SECURITY_DETECTION_GATE_SCANNER: z.enum(['trufflehog', 'gitleaks', 'both']).default('both'),
+
+// Sentry
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENVIRONMENT: z.string().default('development'),
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
@@ -442,6 +460,11 @@ function buildConfig(env: ParsedEnv) {
         pidsLimit: env.SANDBOX_PIDS_LIMIT,
         diskLimit: env.SANDBOX_DISK_LIMIT,
         networkEnabled: env.SANDBOX_NETWORK_ENABLED,
+      },
+      detectionGate: {
+        enabled: env.SECURITY_DETECTION_GATE_ENABLED,
+        blockOnHigh: env.SECURITY_DETECTION_GATE_BLOCK_ON_HIGH,
+        scanner: env.SECURITY_DETECTION_GATE_SCANNER,
       },
     },
 

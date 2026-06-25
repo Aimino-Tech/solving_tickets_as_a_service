@@ -1,0 +1,82 @@
+# .trufflehogignore — False positive suppression patterns
+#
+# Each line is a regex pattern. Lines matching any pattern are excluded
+# from scan results. Lines starting with # are comments.
+#
+# These suppress common false positives that appear in test fixtures,
+# example code, documentation, and generated files.
+
+# Test fixtures containing fake secrets
+fixtures/
+__fixtures__/
+test.*fixture
+mock.*data
+fake.*key
+fake.*secret
+example.*key
+sample.*key
+
+# Documentation examples with placeholder tokens
+your-api-key
+your-secret
+your-token
+your-password
+example\.com
+example\.org
+example\.net
+test\.com
+localhost
+0\.0\.0\.0
+127\.0\.0\.1
+
+# Common placeholder/hash patterns
+REPLACE_ME
+TODO
+XXXXXX
+deadbeef
+abcdef
+000000
+1234567890
+qwertyuiop
+
+# Package manager lockfiles and generated files
+package-lock\.json
+yarn\.lock
+pnpm-lock\.yaml
+composer\.lock
+Gemfile\.lock
+*.min\.js
+*.bundle\.js
+
+# Test runner output
+coverage/
+lcov\.info
+*.xml
+*.html
+
+# Node_modules and dependencies
+node_modules/
+bower_components/
+vendor/
+
+# Built artifacts
+dist/
+build/
+out/
+*.map
+
+# Specific known test tokens (used in tests)
+test-api-key-[a-z0-9]+
+test-token-[a-z0-9]+
+xoxb-fake-token
+ghp_fake_test_token
+
+# SHA hashes in lockfiles (long hex strings)
+\b[0-9a-f]{40}\b
+\b[0-9a-f]{64}\b
+
+# Common dependency URLs (npm, pypi, etc)
+registry\.npmjs\.org
+pypi\.org
+rubygems\.org
+crates\.io
