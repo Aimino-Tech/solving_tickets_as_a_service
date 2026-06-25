@@ -1,0 +1,86 @@
+name: Docker CIS Benchmark
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - 'docker-compose*.yml'
+      - '.github/workflows/docker-bench.yml'
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - 'docker-compose*.yml'
+      - '.github/workflows/docker-bench.yml'
+  schedule:
+    - cron: '0 4 * * 1'
+
+jobs:
+  docker-bench-security:
+    name: docker-bench-security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run docker-bench-security
+        run: |
+          docker run --rm \
+            --network host \
+            --pid host \
+            --userns host \
+            --cap-add audit_control \
+            -e DOCKER_CONTENT_TRUST=$DOCKER_CONTENT_TRUST \
+            -v /var/lib:/var/lib:ro \
+            -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            -v /usr/lib/systemd:/usr/lib/systemd:ro \
+            -v /etc:/etc:ro \
+            docker/docker-bench-security:latest \
+            > bench-output.txt 2>&1 || true
+
+      - name: Parse and summarize results
+        run: |
+          echo "## Docker CIS Benchmark Results" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -E '\[(WARN|PASS|INFO|NOTE)\]' bench-output.txt | head -100 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+          WARN_COUNT=$(grep -c '\[WARN\]' bench-output.txt || true)
+          PASS_COUNT=$(grep -c '\[PASS\]' bench-output.txt || true)
+          INFO_COUNT=$(grep -c '\[INFO\]' bench-output.txt || true)
+          NOTE_COUNT=$(grep -c '\[NOTE\]' bench-output.txt || true)
+          TOTAL=$((WARN_COUNT + PASS_COUNT + INFO_COUNT + NOTE_COUNT))
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Category | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ✅ PASS | $PASS_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⚠️ WARN | $WARN_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| ℹ️ INFO | $INFO_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📝 NOTE | $NOTE_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| **TOTAL** | **$TOTAL** |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$WARN_COUNT" -gt 0 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ⚠️ Warnings (${WARN_COUNT})" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            grep '\[WARN\]' bench-output.txt | head -50 >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check critical failures
+        run: |
+          CRITICAL_FAILURES=$(grep -c '\[WARN\]' bench-output.txt || true)
+          echo "WARN count: $CRITICAL_FAILURES"
+          if [ "$CRITICAL_FAILURES" -gt 20 ]; then
+            echo "::warning title=docker-bench-security::${CRITICAL_FAILURES} CIS warnings detected — review bench output"
+          fi
+
+      - name: Upload benchmark output
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-bench-results
+          path: bench-output.txt
+          retention-days: 30

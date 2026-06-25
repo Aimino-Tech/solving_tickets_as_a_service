@@ -196,6 +196,16 @@ const envSchema = z.object({
   IP_ALLOWLIST: z.string().default(''),
   // Comma-separated list of IPs or CIDR ranges allowed to access webhooks
 
+  // ── Docker Sandbox ──
+  DOCKER_IMAGE: z.string().default('ubuntu:24.04'),
+  DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(true),
+  DOCKER_ALLOWED_HOSTS: z.string().default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io'),
+  DOCKER_CONTAINER_MEMORY: z.string().default('4g'),
+  DOCKER_CONTAINER_CPU: z.coerce.number().positive().default(2),
+  DOCKER_SECCOMP_PROFILE: z.string().default('./docker/seccomp/sandbox.json'),
+  DOCKER_APPARMOR_PROFILE: z.string().default('stas-sandbox'),
+  DOCKER_GVISOR_ENABLED: z.coerce.boolean().default(false),
+
   // ── Sandbox Security ──
   SANDBOX_PRIVILEGED: z.coerce.boolean().default(false),
   SANDBOX_READONLY_ROOT: z.coerce.boolean().default(true),
@@ -459,6 +469,18 @@ function buildConfig(env: ParsedEnv) {
       defaultRepoOwner: env.TRACKER_DEFAULT_REPO_OWNER,
       defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME,
       installationId: env.TRACKER_INSTALLATION_ID || 0,
+    },
+
+    // ── Docker ─────────────────────────────────────────────────────────────
+    docker: {
+      image: env.DOCKER_IMAGE,
+      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
+      allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
+      containerMemory: env.DOCKER_CONTAINER_MEMORY,
+      containerCpu: env.DOCKER_CONTAINER_CPU,
+      seccompProfile: env.DOCKER_SECCOMP_PROFILE,
+      apparmorProfile: env.DOCKER_APPARMOR_PROFILE,
+      gvisorEnabled: env.DOCKER_GVISOR_ENABLED,
     },
 
     // ── Security ────────────────────────────────────────────────────────────
