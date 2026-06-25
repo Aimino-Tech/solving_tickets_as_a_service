@@ -68,6 +68,7 @@ task_queues = [
     Queue("stas.agents.pr_creation", Exchange("stas"), routing_key="stas.agents.pr_creation"),
     Queue("stas.agents.notifications", Exchange("stas"), routing_key="stas.agents.notifications"),
     Queue("stas.agents.default", Exchange("stas"), routing_key="stas.agents.default"),
+    Queue("stas.quality", Exchange("stas"), routing_key="stas.quality"),
 ]
 
 task_routes = {
@@ -77,4 +78,6 @@ task_routes = {
     "workers.tasks.verification.*": {"queue": "stas.agents.verification"},
     "workers.tasks.pr_creation.*": {"queue": "stas.agents.pr_creation"},
     "workers.tasks.notifications.*": {"queue": "stas.agents.notifications"},
+    "workers.quality.*": {"queue": "stas.quality"},
+    "workers.tasks.self_audit.*": {"queue": "stas.quality"},
 }
