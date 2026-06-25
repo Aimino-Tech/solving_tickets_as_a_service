@@ -173,6 +173,13 @@ const envSchema = z.object({
 
   // ── Security ──────────────────────────────────────────────────────────────
   ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  // Onboarding
+  GITHUB_APP_URL: z.string().default('https://github.com/apps/stas-bot/installations/new'),
+  LINEAR_CLIENT_ID: z.string().optional(),
+  LINEAR_CLIENT_SECRET: z.string().optional(),
+  ONBOARDING_DEFAULT_LABEL: z.string().default('stas:fix'),
+  ONBOARDING_TEST_ISSUE_TITLE: z.string().default('STAS Onboarding Test Issue'),
+
   CORS_ORIGIN: z.string().default('*'),
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
@@ -426,6 +433,14 @@ function buildConfig(env: ParsedEnv) {
     // ── Security ────────────────────────────────────────────────────────────
     security: {
       adminApiKey: env.ADMIN_API_KEY,
+      onboarding: {
+        defaultLabel: env.ONBOARDING_DEFAULT_LABEL,
+        linearClientId: env.LINEAR_CLIENT_ID,
+        linearClientSecret: env.LINEAR_CLIENT_SECRET,
+        githubAppUrl: env.GITHUB_APP_URL,
+        testIssueTitle: env.ONBOARDING_TEST_ISSUE_TITLE,
+      },
+
       corsOrigin: env.CORS_ORIGIN,
       requestBodyLimit: env.REQUEST_BODY_LIMIT,
       webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,

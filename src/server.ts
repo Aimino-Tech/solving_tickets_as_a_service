@@ -55,6 +55,8 @@ import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { dashboardRouter } from './routes/dashboard.js';
+import { onboardingRouter } from './onboarding/routes.js';
+import { linearAuthRouter } from './routes/auth/linear.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -615,6 +617,11 @@ export function createApp(): express.Application {
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
+n  // ── Onboarding API ────────────────────────────────────────────
+  app.use('/api/onboarding', onboardingRouter);
+
+  // ── Linear OAuth ───────────────────────────────────────────────
+  app.use('/auth/linear', linearAuthRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────
   // GET /admin/webhooks (paginated, filterable)
