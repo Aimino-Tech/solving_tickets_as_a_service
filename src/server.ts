@@ -624,6 +624,25 @@ export function createApp(): express.Application {
   // GET /admin/webhooks/stats
   app.use('/admin/webhooks', adminWebhooksRouter);
 
+  // ── Swagger UI / OpenAPI documentation ──────────────────────────────
+  const thisFilename = fileURLToPath(import.meta.url);
+  const thisDirname = dirname(thisFilename);
+  const specPath = resolve(thisDirname, '../openapi.yaml');
+  const openApiSpec = yaml.load(fs.readFileSync(specPath, 'utf8')) as Record<string, unknown>;
+  app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+
+  // Serve dashboard static build (production only)
+  const dashboardDistPath = resolve(thisDirname, '../dashboard/dist');
+  if (fs.existsSync(dashboardDistPath)) {
+    app.use(express.static(dashboardDistPath));
+    // SPA fallback - all non-API routes serve index.html
+    app.get('*', (req, res) => {
+      if (!req.path.startsWith('/api') && !req.path.startsWith('/health') && !req.path.startsWith('/webhook') && !req.path.startsWith('/docs') && !req.path.startsWith('/metrics') && !req.path.startsWith('/slack') && !req.path.startsWith('/admin') && !req.path.startsWith('/flower')) {
+        res.sendFile(resolve(dashboardDistPath, 'index.html'));
+      }
+    });
+  }
+
   // -- 404 handler ----------------------------------------------------------
 
   app.use((_req: Request, res: Response) => {
