@@ -1,4 +1,12 @@
+<<<<<<< HEAD
 
+=======
+<<<<<<< HEAD
+
+=======
+.venv
+>>>>>>> origin/main
+>>>>>>> origin/main
 *~
 # Build output
 *.cert
@@ -36,3 +44,10 @@ __pycache__/
 *.pyo
 .pytest_cache/
 *.egg-info/
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+.worktrees/
+>>>>>>> origin/main
+>>>>>>> origin/main

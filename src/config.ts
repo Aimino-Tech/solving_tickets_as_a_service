@@ -218,6 +218,7 @@ const envSchema = z.object({
   METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
+<<<<<<< HEAD
 
   // Pipeline Orchestration
   PIPELINE_MAX_CONCURRENT: z.coerce.number().int().positive().default(3),
@@ -226,6 +227,8 @@ const envSchema = z.object({
   PIPELINE_WORKSPACE_BASE_DIR: z.string().default('/tmp/stas-workspaces'),
   PIPELINE_CLONE_TIMEOUT_S: z.coerce.number().int().positive().default(120),
   PIPELINE_CONCURRENCY_TIMEOUT_S: z.coerce.number().int().positive().default(600),
+=======
+>>>>>>> origin/main
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -470,6 +473,7 @@ function buildConfig(env: ParsedEnv) {
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
     },
+<<<<<<< HEAD
 
     pipeline: {
       maxConcurrent: env.PIPELINE_MAX_CONCURRENT,
@@ -479,6 +483,8 @@ function buildConfig(env: ParsedEnv) {
       cloneTimeoutS: env.PIPELINE_CLONE_TIMEOUT_S,
       concurrencyTimeoutS: env.PIPELINE_CONCURRENCY_TIMEOUT_S,
     },
+=======
+>>>>>>> origin/main
   } as const;
 }
 
