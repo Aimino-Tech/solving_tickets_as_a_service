@@ -381,6 +381,9 @@ def _file_to_route(file_path: str) -> Optional[str]:
                 route_parts.append(seg)
         # The filename stem itself may also be part of the route
         if not _is_page_file(stem):
+            # Transform dynamic segments: [slug] -> :slug
+            if stem.startswith("[") and stem.endswith("]"):
+                stem = f":{stem[1:-1]}"
             route_parts.append(stem)
         if not route_parts:
             return "/"
