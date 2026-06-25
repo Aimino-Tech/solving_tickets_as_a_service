@@ -40,6 +40,8 @@ interface PublicRunResponse {
   summary: string | null;
   prUrl: string | null;
   branchName: string | null;
+  diff: string | null;
+  testOutput: string | null;
   error: string | null;
   durationMs: number | null;
   modelUsed: string | null;
@@ -87,6 +89,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       summary: raw.summary ? String(raw.summary) : null,
       prUrl: raw.prUrl ?? raw.pr_url ? String(raw.prUrl ?? raw.pr_url) : null,
       branchName: raw.branchName ?? raw.branch_name ? String(raw.branchName ?? raw.branch_name) : null,
+      diff: raw.diff ? String(raw.diff) : null,
+      testOutput: raw.testOutput ?? raw.test_output ? String(raw.testOutput ?? raw.test_output) : null,
       error: raw.error ? String(raw.error) : null,
       durationMs: raw.durationMs ?? raw.duration_ms ? Number(raw.durationMs ?? raw.duration_ms) : null,
       modelUsed: raw.modelUsed ?? raw.model_used ? String(raw.modelUsed ?? raw.model_used) : null,
@@ -213,6 +217,8 @@ function renderRunPage(run: PublicRunResponse): string {
       </div>
     </div>
     ${run.summary ? `<div class="card"><div class="label">Summary</div><p style="margin-top:0.3rem">${escapeHtml(run.summary)}</p></div>` : ''}
+    ${run.diff ? `<div class="card"><div class="label">Diff</div><pre style="margin-top:0.3rem;font-family:'SF Mono','Fira Code',monospace;font-size:0.8rem;background:oklch(0.15 0.02 260);color:oklch(0.85 0.02 260);padding:1rem;border-radius:8px;overflow-x:auto;white-space:pre-wrap;word-break:break-word">${escapeHtml(run.diff.slice(0, 5000))}</pre></div>` : ''}
+    ${run.testOutput ? `<div class="card"><div class="label">Test Output</div><pre style="margin-top:0.3rem;font-family:'SF Mono','Fira Code',monospace;font-size:0.8rem;background:oklch(0.15 0.02 260);color:oklch(0.85 0.02 260);padding:1rem;border-radius:8px;overflow-x:auto;white-space:pre-wrap;word-break:break-word">${escapeHtml(run.testOutput.slice(0, 5000))}</pre></div>` : ''}
     ${run.error ? `<div class="card"><div class="label">Error</div><div class="error-box">${escapeHtml(run.error)}</div></div>` : ''}
     ${run.prUrl ? `<div class="card"><div class="label">Pull Request</div><a href="${escapeHtml(run.prUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="margin-top:0.5rem">View Pull Request \u2197</a></div>` : ''}
     <div class="card cta-section">

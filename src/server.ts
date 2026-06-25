@@ -63,6 +63,8 @@ import { pricingRouter } from './routes/pricing.js';
 import { plgRouter } from './routes/plg.js';
 import { authRouter } from './routes/auth.js';
 import { reposRouter } from './routes/repos.js';
+import { runsRouter } from './routes/runs.js';
+import { badgeRouter } from './routes/badge.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -693,6 +695,14 @@ export function createApp(): express.Application {
 
   // Repos API (repo picker with webhook status)
   app.use('/api/repos', reposRouter);
+
+  // ── Shareable run page API (public, no auth) ───────────────────────
+  // GET /api/runs/:id — Public run detail JSON/HTML
+  app.use('/api/runs', runsRouter);
+
+  // ── Badge endpoint (public, no auth) ──────────────────────────────
+  // GET /badge/:id.svg — shields.io-compatible status badge
+  app.use('/badge', badgeRouter);
 
   // ── Benchmarks API (public) ──────────────────────────────────────
   app.use('/api/benchmarks', benchmarksRouter);
