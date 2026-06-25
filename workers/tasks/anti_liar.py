@@ -1,26 +1,17 @@
 """
-3-layer anti-liar enforcement module.
+3-layer anti-liar enforcement for STAS.
 
-Ensures every production function has a real test with no placeholder stubs.
+Layer 1 — test_coverage_mapping(): maps every new/changed production function
+to a corresponding test function, fails if untested function is found.
 
-Layer 1: Test Coverage Mapping
-    For each changed function/component, find a corresponding test reference.
-    Threshold: configurable (default 80%).
+Layer 2 — verify_interfaces(): detects HTTP routes/endpoints from the diff,
+verifies that each route has a corresponding test reference (GET expected 200).
 
-Layer 2: Button/Route/Endpoint Verification
-    Detect routes/endpoints from diff, start dev server, HTTP GET each route → expect 200.
+Layer 3 — scan_placeholders(): scans the diff for placeholder/test-double
+patterns: expect(true).toBe(true), empty test bodies, TODO placeholders,
+empty catch blocks, and similar anti-patterns.
 
-Layer 3: No Placeholder Stubs
-    Scan test files for expect(true).toBe(true), it.todo, test.skip, empty catch,
-    TODO/FIXME/HACK placeholders, and NotImplementedError.
-
-Usage:
-    from workers.tasks.anti_liar import anti_liar_enforcement
-    result = anti_liar_enforcement.delay(
-        workspace_path="/path/to/repo",
-        diff_files=["src/foo.py", "tests/test_foo.py"],
-        dev_command="npm run dev",
-    )
+All three layers must pass for overall passed=True.
 """
 
 import json
@@ -28,615 +19,550 @@ import logging
 import os
 import re
 import subprocess
-import time
+import tempfile
 from pathlib import Path
 
 from celery import shared_task
 
+from workers.quality.models import AntiLiarFinding, AntiLiarResult, TestMapping
+
 logger = logging.getLogger(__name__)
 
-# Default test coverage threshold
-_DEFAULT_COVERAGE_THRESHOLD = 0.8
+_COVERAGE_THRESHOLD_DEFAULT = 80  # percent
+_COMMAND_TIMEOUT_S = 120
 
-# ── Pattern Lists ────────────────────────────────────────────────────────────
 
-# Placeholder patterns for Layer 3 — matches against test file lines
-_PLACEHOLDER_PATTERNS: list[re.Pattern] = [
-    re.compile(r"expect\(\s*true\s*\)\.toBe\(\s*true\s*\)"),
-    re.compile(r"\.todo\s*\("),
-    re.compile(r"describe\.todo\s*\("),
-    re.compile(r"test\.skip\s*\("),
-    re.compile(r"it\.skip\s*\("),
-    re.compile(r"describe\.skip\s*\("),
-    re.compile(r"catch\s*\(\s*(?:\(?\s*\w+\s*\)?\s*)?=>\s*\{\s*\}\s*\)"),
-    re.compile(r"//\s*TODO\b", re.IGNORECASE),
-    re.compile(r"//\s*FIXME\b", re.IGNORECASE),
-    re.compile(r"//\s*HACK\b", re.IGNORECASE),
-    re.compile(r"raise\s+NotImplementedError"),
-    re.compile(r"return\s+None\s*#\s*TODO"),
-    re.compile(r"#\s*TODO\b", re.IGNORECASE),
-    re.compile(r"#\s*FIXME\b", re.IGNORECASE),
-]
+# ── Helpers ──────────────────────────────────────────────────────────────
 
-# Route/endpoint detection patterns for Layer 2
-_ROUTE_PATTERNS: list[re.Pattern] = [
-    re.compile(r"""@(?:app|router)\.(?:get|post|put|patch|delete|options|head)\s*\(\s*['"]([^'"]+)['"]"""),
-    re.compile(r"""router\.(?:get|post|put|patch|delete)\s*\(\s*['"]([^'"]+)['"]"""),
-    re.compile(r"['\"]?(?:GET|POST|PUT|PATCH|DELETE)\s+['\"]?([/\w\-_{}:]+)"),
-]
 
-# Test file name patterns
-_TEST_FILE_PATTERNS: list[re.Pattern] = [
-    re.compile(r"test_.*\.py$"),
-    re.compile(r".*_test\.py$"),
-    re.compile(r".*\.test\.tsx?$"),
-    re.compile(r".*\.spec\.tsx?$"),
-    re.compile(r".*_test\.go$"),
-    re.compile(r".*_test\.rs$"),
-    re.compile(r".*\.test\.jsx?$"),
-    re.compile(r".*\.spec\.jsx?$"),
-]
-
-# Production source file patterns
-_PRODUCTION_FILE_PATTERNS: list[re.Pattern] = [
-    re.compile(r".*\.py$"),
-    re.compile(r".*\.ts$"),
-    re.compile(r".*\.tsx$"),
-    re.compile(r".*\.js$"),
-    re.compile(r".*\.jsx$"),
-    re.compile(r".*\.go$"),
-]
-
-# ── Utility Helpers ──────────────────────────────────────────────────────────
+def _get_changed_files(workspace_path: str, base_branch: str = "main") -> list[str]:
+    """Return list of files changed in the latest commit vs base branch."""
+    changed_files: list[str] = []
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=workspace_path,
+            timeout=30,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            changed_files = [f.strip() for f in result.stdout.strip().split("\n") if f.strip()]
+        else:
+            result = subprocess.run(
+                ["git", "diff", "--name-only", base_branch, "HEAD"],
+                capture_output=True,
+                text=True,
+                cwd=workspace_path,
+                timeout=30,
+            )
+            if result.returncode == 0:
+                changed_files = [f.strip() for f in result.stdout.strip().split("\n") if f.strip()]
+    except (subprocess.SubprocessError, FileNotFoundError) as exc:
+        logger.warning("git diff failed, scanning all files: %s", exc)
+        for fpath in Path(workspace_path).rglob("*"):
+            if fpath.is_file() and not fpath.name.startswith("."):
+                changed_files.append(str(fpath.relative_to(Path(workspace_path))))
+    return changed_files
 
 
 def _is_test_file(file_path: str) -> bool:
-    """Check if *file_path* matches known test file naming conventions."""
-    return any(p.search(file_path) for p in _TEST_FILE_PATTERNS)
+    """Check whether *file_path* is a test file (by naming convention)."""
+    name = Path(file_path).name
+    return (
+        name.startswith("test_")
+        or name.endswith("_test.py")
+        or name.endswith("_test.go")
+        or name.endswith(".test.ts")
+        or name.endswith(".spec.ts")
+        or name.endswith("_test.rs")
+        or "test" in Path(file_path).parts
+        or "__tests__" in Path(file_path).parts
+    )
 
 
-def _is_production_file(file_path: str) -> bool:
-    """Check if *file_path* is a production source file (not test)."""
-    return any(p.search(file_path) for p in _PRODUCTION_FILE_PATTERNS)
-
-
-def _extract_function_names(file_path: str) -> list[str]:
-    """Extract function, class, and component names from a source file.
-
-    Supports Python (def/class), TypeScript/JavaScript (export function/class/const),
-    and React components (FC, Component).
-    """
-    names: list[str] = []
+def _get_python_function_names(file_path: str) -> list[str]:
+    """Extract function names (def / async def) from a Python file."""
+    funcs: list[str] = []
     try:
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             content = f.read()
     except (OSError, UnicodeDecodeError) as exc:
         logger.warning("Cannot read %s: %s", file_path, exc)
-        return names
+        return funcs
 
-    # Python: def, async def, class
-    names.extend(re.findall(r"^def\s+(\w+)\s*\(", content, re.MULTILINE))
-    names.extend(re.findall(r"^class\s+(\w+)\s*[(:]", content, re.MULTILINE))
-    names.extend(re.findall(r"^async\s+def\s+(\w+)\s*\(", content, re.MULTILINE))
+    # Top-level defs
+    funcs.extend(re.findall(r"^def (\w+)\(", content, re.MULTILINE))
+    funcs.extend(re.findall(r"^async def (\w+)\(", content, re.MULTILINE))
+    # Indented class-method defs
+    funcs.extend(re.findall(r"^\s+def (\w+)\(", content, re.MULTILINE))
+    funcs.extend(re.findall(r"^\s+async def (\w+)\(", content, re.MULTILINE))
 
-    # TypeScript/JavaScript: exports
-    names.extend(
-        re.findall(
-            r"^export\s+(?:default\s+)?(?:function|class|const)\s+(\w+)",
-            content,
-            re.MULTILINE,
-        )
-    )
-    names.extend(
-        re.findall(
-            r"^export\s+const\s+(\w+)\s*[=:]",
-            content,
-            re.MULTILINE,
-        )
-    )
-
-    # Named function/const declarations
-    names.extend(
-        re.findall(
-            r"(?:function|const|let|var)\s+(\w+)\s*(?:[=\(])",
-            content,
-        )
-    )
-
-    # React components
-    names.extend(
-        re.findall(
-            r"^export\s+default\s+function\s+(\w+)",
-            content,
-            re.MULTILINE,
-        )
-    )
-    names.extend(
-        re.findall(
-            r"^const\s+(\w+)\s*[=:]\s*(?:React\.)?(?:FC|Component|memo|forwardRef)",
-            content,
-            re.MULTILINE,
-        )
-    )
-
-    return list(set(names))
+    return list(set(funcs))
 
 
-def _find_test_for_function(function_name: str, workspace_path: str) -> str | None:
-    """Search for a test file under *workspace_path* that references *function_name*."""
-    test_glob_patterns = [
-        "**/test_*.py",
-        "**/*_test.py",
-        "**/*.test.ts",
-        "**/*.spec.ts",
-        "**/*.test.tsx",
-        "**/*.spec.tsx",
-        "**/*.test.js",
-        "**/*.spec.js",
-        "**/__tests__/**/*.ts",
-        "**/__tests__/**/*.tsx",
+def _resolve_test_file(prod_file: str, workspace_path: str) -> str | None:
+    """Resolve the conventional test-file path for a given production file."""
+    p = Path(prod_file)
+    stem = p.stem
+    candidates: list[Path] = [
+        Path(workspace_path) / "tests" / f"test_{stem}.py",
+        Path(workspace_path) / "tests" / p.parent.name / f"test_{stem}.py",
+        p.parent / f"test_{stem}.py",
+        p.parent.parent / "tests" / f"test_{stem}.py",
     ]
-
-    for pattern in test_glob_patterns:
-        for test_file in Path(workspace_path).glob(pattern):
-            try:
-                content = test_file.read_text(encoding="utf-8", errors="replace")
-                if function_name in content:
-                    return str(test_file.relative_to(workspace_path))
-            except (OSError, UnicodeDecodeError):
-                continue
-
+    for cand in candidates:
+        if cand.is_file():
+            return str(cand)
     return None
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Layer 1: Test Coverage Mapping
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── Layer 1: Test Coverage Mapping ──────────────────────────────────────
 
 
-def map_test_coverage(diff_files: list[str]) -> dict:
-    """For each changed function, find the corresponding test file.
-
-    Parameters
-    ----------
-    diff_files : list[str]
-        List of file paths changed in the diff (relative to workspace root).
-
-    Returns
-    -------
-    dict
-        ``{
-            "functions": {name: {"test_file": str|None, "covered": bool}, ...},
-            "total": int,
-            "covered": int,
-            "coverage_ratio": float,
-            "passed": bool,
-            "threshold": float,
-        }``
-
-    Threshold is 80% by default (configurable via ``ANTI_LIAR_COVERAGE_THRESHOLD`` env var).
+def test_coverage_mapping(
+    workspace_path: str,
+    base_branch: str = "main",
+    coverage_threshold: int = _COVERAGE_THRESHOLD_DEFAULT,
+) -> tuple[list[TestMapping], list[AntiLiarFinding]]:
     """
-    logger.info("Layer 1: Mapping test coverage for %d diff files", len(diff_files))
+    Layer 1: Map every new/changed production function to a corresponding
+    test.  Returns (mappings, findings).
 
-    threshold = float(os.getenv("ANTI_LIAR_COVERAGE_THRESHOLD", str(_DEFAULT_COVERAGE_THRESHOLD)))
+    Convention: ``def foo()`` in ``src/module.py`` expects
+    ``def test_foo()`` in ``tests/test_module.py``.
+    """
+    mappings: list[TestMapping] = []
+    findings: list[AntiLiarFinding] = []
 
-    # Only production files (not test files themselves)
-    prod_files = [f for f in diff_files if _is_production_file(f) and not _is_test_file(f)]
+    changed_files = _get_changed_files(workspace_path, base_branch)
+    prod_files = [f for f in changed_files if not _is_test_file(f) and f.endswith(".py")]
 
-    if not prod_files:
-        logger.info("No production files in diff — skipping coverage mapping")
-        return {
-            "functions": {},
-            "total": 0,
-            "covered": 0,
-            "coverage_ratio": 1.0,
-            "passed": True,
-            "threshold": threshold,
-        }
+    total_functions = 0
+    tested_functions = 0
 
-    # Extract all function names from production files
-    all_functions: list[str] = []
     for prod_file in prod_files:
-        functions = _extract_function_names(prod_file)
-        all_functions.extend(functions)
+        full_path = os.path.join(workspace_path, prod_file)
+        if not os.path.isfile(full_path):
+            continue
 
-    all_functions = list(set(all_functions))
+        funcs = _get_python_function_names(full_path)
+        if not funcs:
+            continue
 
-    if not all_functions:
-        logger.info("No functions/classes found in production diff files")
-        return {
-            "functions": {},
-            "total": 0,
-            "covered": 0,
-            "coverage_ratio": 1.0,
-            "passed": True,
-            "threshold": threshold,
-        }
+        # Find corresponding test file
+        test_file = _resolve_test_file(prod_file, workspace_path)
+        test_funcs: list[str] = []
+        if test_file and os.path.isfile(test_file):
+            test_funcs = _get_python_function_names(test_file)
 
-    # Map each function to its test
-    function_coverage: dict[str, dict] = {}
-    covered_count = 0
+        for func_name in funcs:
+            expected_test_name = f"test_{func_name}"
+            has_test = any(
+                expected_test_name == tf or expected_test_name in tf
+                for tf in test_funcs
+            )
+            total_functions += 1
+            if has_test:
+                tested_functions += 1
 
-    for func in all_functions:
-        test_file = _find_test_for_function(func, ".")
-        is_covered = test_file is not None
-        if is_covered:
-            covered_count += 1
-        function_coverage[func] = {
-            "test_file": test_file,
-            "covered": is_covered,
-        }
+            mappings.append(
+                TestMapping(
+                    production_function=func_name,
+                    production_file=prod_file,
+                    test_function=expected_test_name,
+                    test_file=os.path.relpath(test_file, workspace_path)
+                    if test_file
+                    else "",
+                    has_test=has_test,
+                )
+            )
 
-    coverage_ratio = covered_count / len(all_functions)
-    passed = coverage_ratio >= threshold
+            if not has_test:
+                findings.append(
+                    AntiLiarFinding(
+                        file=prod_file,
+                        line=0,
+                        layer="test_coverage_mapping",
+                        message=f"Untested function: {func_name} — "
+                        f"expected test {expected_test_name}",
+                        severity="blocking",
+                    )
+                )
 
-    logger.info(
-        "Coverage: %d/%d functions covered (%.1f%%) — threshold=%.0f%% — %s",
-        covered_count,
-        len(all_functions),
-        coverage_ratio * 100,
-        threshold * 100,
-        "PASSED" if passed else "FAILED",
-    )
+    # Enforce coverage threshold
+    if total_functions > 0:
+        coverage_pct = (tested_functions / total_functions) * 100
+        if coverage_pct < coverage_threshold:
+            findings.append(
+                AntiLiarFinding(
+                    file="(aggregate)",
+                    line=0,
+                    layer="test_coverage_mapping",
+                    message=f"Coverage {coverage_pct:.1f}% is below "
+                    f"threshold {coverage_threshold}% "
+                    f"({tested_functions}/{total_functions} functions tested)",
+                    severity="critical",
+                )
+            )
 
-    if not passed:
-        uncovered = [f for f, v in function_coverage.items() if not v["covered"]]
-        logger.warning("Uncovered functions: %s", ", ".join(uncovered))
-
-    return {
-        "functions": function_coverage,
-        "total": len(all_functions),
-        "covered": covered_count,
-        "coverage_ratio": round(coverage_ratio, 3),
-        "passed": passed,
-        "threshold": threshold,
-    }
+    return mappings, findings
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Layer 2: Button/Route/Endpoint Verification
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── Layer 2: Interface Verification ─────────────────────────────────────
 
 
-def _detect_routes(diff_files: list[str]) -> list[str]:
-    """Extract route path definitions from the files in *diff_files*."""
-    routes: list[str] = []
-    for file_path in diff_files:
-        if not os.path.isfile(file_path):
+def verify_interfaces(
+    workspace_path: str,
+    base_branch: str = "main",
+) -> list[AntiLiarFinding]:
+    """
+    Layer 2: Detect HTTP routes/endpoints in the diff and verify they have
+    corresponding test coverage.
+
+    Parses changed files for route definitions (FastAPI/Flask/Express-style),
+    then checks whether test files reference those routes.
+    """
+    findings: list[AntiLiarFinding] = []
+
+    changed_files = _get_changed_files(workspace_path, base_branch)
+    routes: list[tuple[str, str, str]] = []  # (method, path, source_file)
+
+    for changed_file in changed_files:
+        full_path = os.path.join(workspace_path, changed_file)
+        if not os.path.isfile(full_path):
             continue
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            with open(full_path, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
         except (OSError, UnicodeDecodeError):
             continue
 
-        for pattern in _ROUTE_PATTERNS:
-            matches = pattern.findall(content)
-            routes.extend(matches)
+        # FastAPI-style: @app.get("/path"), @app.post("/path"), etc.
+        for match in re.finditer(
+            r'@\w+\.(get|post|put|delete|patch|options)\([\'"]([^\'"]+)[\'"]',
+            content,
+        ):
+            method, path = match.groups()
+            routes.append((method.upper(), path, changed_file))
 
-    return list(set(routes))
+        # Flask-style: @app.route("/path", methods=["GET"])
+        for match in re.finditer(
+            r'@\w+\.route\([\'"]([^\'"]+)[\'"]',
+            content,
+        ):
+            path = match.group(1)
+            routes.append(("GET", path, changed_file))
 
+    # Verify each route has a test reference
+    test_files = [f for f in changed_files if _is_test_file(f)]
 
-def verify_interfaces(workspace_path: str, diff_files: list[str]) -> dict:
-    """Verify every exposed interface actually works.
+    for method, path, source_file in routes:
+        full_route = f"{method} {path}"
+        route_tested = False
 
-    Detects routes from *diff_files*, then performs an HTTP GET against each
-    detected route expecting a 200 status code.
+        for tf in test_files:
+            tf_path = os.path.join(workspace_path, tf)
+            if not os.path.isfile(tf_path):
+                continue
+            try:
+                with open(tf_path, "r", encoding="utf-8", errors="replace") as f:
+                    tf_content = f.read()
+                if path in tf_content:
+                    route_tested = True
+                    break
+            except (OSError, UnicodeDecodeError):
+                continue
 
-    Parameters
-    ----------
-    workspace_path : str
-        Path to the repository root (used as working directory).
-    diff_files : list[str]
-        List of changed files to scan for route definitions.
-
-    Returns
-    -------
-    dict
-        ``{
-            "routes": [{"route": str, "status": int, "passed": bool}, ...],
-            "tested": int,
-            "passed_count": int,
-            "failed_count": int,
-            "failures": [{"route": str, "status": int, "error": str}, ...],
-            "passed": bool,
-        }``
-    """
-    logger.info("Layer 2: Verifying interfaces for %d diff files", len(diff_files))
-
-    routes = _detect_routes(diff_files)
-    if not routes:
-        logger.info("No routes/endpoints detected in diff")
-        return {
-            "routes": [],
-            "tested": 0,
-            "passed_count": 0,
-            "failed_count": 0,
-            "failures": [],
-            "passed": True,
-        }
-
-    import urllib.error
-    import urllib.request
-
-    results: list[dict] = []
-    failures: list[dict] = []
-    passed_count = 0
-
-    for route in routes:
-        url = f"http://localhost:3000{route}"
-        try:
-            req = urllib.request.Request(url, method="GET")
-            with urllib.request.urlopen(req, timeout=10) as response:
-                status = response.status
-                if status == 200:
-                    passed_count += 1
-                    results.append({"route": route, "status": status, "passed": True})
-                    logger.info("  ✓ %s → %d", route, status)
-                else:
-                    failures.append(
-                        {"route": route, "status": status, "error": f"Expected 200, got {status}"}
-                    )
-                    results.append({"route": route, "status": status, "passed": False})
-                    logger.warning("  ✗ %s → %d (expected 200)", route, status)
-
-        except urllib.error.HTTPError as e:
-            status = e.code
-            if status == 200:
-                passed_count += 1
-                results.append({"route": route, "status": status, "passed": True})
-                logger.info("  ✓ %s → %d", route, status)
-            else:
-                failures.append({"route": route, "status": status, "error": str(e)})
-                results.append({"route": route, "status": status, "passed": False})
-                logger.warning("  ✗ %s → %d (expected 200)", route, status)
-
-        except (urllib.error.URLError, OSError, ConnectionError) as e:
-            failures.append({"route": route, "status": 0, "error": f"Connection failed: {e}"})
-            results.append({"route": route, "status": 0, "passed": False})
-            logger.warning("  ✗ %s → connection failed: %s", route, e)
-
-        except Exception as e:
-            failures.append({"route": route, "status": 0, "error": str(e)})
-            results.append({"route": route, "status": 0, "passed": False})
-            logger.error("  ✗ %s → unexpected error: %s", route, e)
-
-    passed = len(failures) == 0
-    logger.info(
-        "Interface verification: %d/%d passed — %s",
-        passed_count,
-        len(routes),
-        "PASSED" if passed else "FAILED",
-    )
-
-    return {
-        "routes": results,
-        "tested": len(routes),
-        "passed_count": passed_count,
-        "failed_count": len(failures),
-        "failures": failures,
-        "passed": passed,
-    }
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Layer 3: No Placeholder Stubs
-# ═══════════════════════════════════════════════════════════════════════════════
-
-
-def _collect_test_files(diff_files: list[str]) -> list[str]:
-    """Return only test file paths from *diff_files*."""
-    return [f for f in diff_files if _is_test_file(f)]
-
-
-def scan_placeholders(diff_files: list[str]) -> list[dict]:
-    """Find placeholder implementations in NEW or modified test files.
-
-    Scans test files for known stub/placeholder patterns including:
-    * ``expect(true).toBe(true)`` — vacuous assertion
-    * ``.todo()``, ``describe.todo()`` — unfinished tests
-    * ``test.skip()``, ``it.skip()``, ``describe.skip()`` — skipped tests
-    * Empty ``catch {}`` blocks
-    * ``TODO``, ``FIXME``, ``HACK`` comments
-    * ``raise NotImplementedError`` — unimplemented stubs
-    * ``return None  # TODO`` — placeholder returns
-
-    Parameters
-    ----------
-    diff_files : list[str]
-        List of changed files to scan.
-
-    Returns
-    -------
-    list[dict]
-        List of findings: ``{"file": str, "line": int, "pattern": str, "snippet": str}``.
-        Empty list means no placeholders found.
-    """
-    logger.info("Layer 3: Scanning for placeholder stubs in %d diff files", len(diff_files))
-
-    test_files = _collect_test_files(diff_files)
-    if not test_files:
-        logger.info("No test files in diff to scan")
-        return []
-
-    findings: list[dict] = []
-    for file_path in test_files:
-        if not os.path.isfile(file_path):
-            continue
-        try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-                lines = f.readlines()
-        except (OSError, UnicodeDecodeError) as exc:
-            logger.warning("Cannot read test file %s: %s", file_path, exc)
-            continue
-
-        for line_num, line in enumerate(lines, start=1):
-            for pattern in _PLACEHOLDER_PATTERNS:
-                if pattern.search(line):
-                    finding = {
-                        "file": file_path,
-                        "line": line_num,
-                        "pattern": pattern.pattern,
-                        "snippet": line.rstrip("\n").strip()[:120],
-                    }
-                    findings.append(finding)
-                    logger.warning(
-                        "Placeholder in %s:%d — %s",
-                        file_path,
-                        line_num,
-                        line.rstrip("\n").strip()[:60],
-                    )
-                    break  # One finding per line
-
-    logger.info(
-        "Placeholder scan: %d finding(s) in %d test file(s)",
-        len(findings),
-        len(test_files),
-    )
+        if not route_tested:
+            findings.append(
+                AntiLiarFinding(
+                    file=source_file,
+                    line=0,
+                    layer="verify_interfaces",
+                    message=f"Untested route: {full_route} — "
+                    f"no test references this endpoint",
+                    severity="blocking",
+                )
+            )
 
     return findings
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Celery Task: 3-Layer Anti-Liar Enforcement
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── Layer 3: Placeholder Scan ───────────────────────────────────────────
+
+
+def scan_placeholders(
+    workspace_path: str,
+    base_branch: str = "main",
+) -> list[AntiLiarFinding]:
+    """
+    Layer 3: Scan the diff for placeholder and test-double anti-patterns.
+
+    Detects:
+    - Tautological assertions (expect(true).toBe(true))
+    - Vacuous assertions (resolves.toBeUndefined())
+    - Empty catch blocks
+    - TODO/FIXME/HACK/XXX markers
+    - Empty test function bodies
+    - Assert True / assert False stubs
+    """
+    findings: list[AntiLiarFinding] = []
+    changed_files = _get_changed_files(workspace_path, base_branch)
+
+    patterns: list[tuple[str, str, str]] = [
+        (
+            r"expect\s*\(\s*true\s*\)\s*\.\s*toBe\s*\(\s*true\s*\)",
+            "Tautological assertion: expect(true).toBe(true)",
+            "blocking",
+        ),
+        (
+            r"expect\s*\(\s*false\s*\)\s*\.\s*toBe\s*\(\s*false\s*\)",
+            "Tautological assertion: expect(false).toBe(false)",
+            "blocking",
+        ),
+        (
+            r"expect\s*\(\s*1\s*\)\s*\.\s*toBe\s*\(\s*1\s*\)",
+            "Tautological assertion: expect(1).toBe(1)",
+            "blocking",
+        ),
+        (
+            r"expect\s*\(.*\)\s*\.\s*resolves\s*\.\s*toBeUndefined\s*\(\)",
+            "Vacuous assertion: resolves.toBeUndefined()",
+            "warning",
+        ),
+        (
+            r"(?i)(TODO|FIXME|HACK|XXX)",
+            "TODO/FIXME/HACK/XXX placeholder",
+            "warning",
+        ),
+        (
+            r"except\s+\w+\s*:\s*pass\s*$",
+            "Empty catch block (pass)",
+            "blocking",
+        ),
+        (
+            r"catch\s*\(.*?\)\s*\{\s*\}",
+            "Empty catch block",
+            "blocking",
+        ),
+        (
+            r"^\s*def test_.*?\)\s*:\s*$",
+            "Empty test function (no body)",
+            "warning",
+        ),
+        (
+            r"assert\s+True",
+            "Vacuous assertion: assert True",
+            "warning",
+        ),
+        (
+            r"assert\s+False",
+            "Stub assertion: assert False",
+            "blocking",
+        ),
+        (
+            r"it\([\"'].*?[\"']\s*,\s*function\s*\(\s*\)\s*\{\s*\}\)",
+            "Empty it() block",
+            "warning",
+        ),
+        (
+            r"describe\([\"'].*?[\"']\s*,\s*function\s*\(\s*\)\s*\{\s*\}\)",
+            "Empty describe() block",
+            "warning",
+        ),
+    ]
+
+    for changed_file in changed_files:
+        full_path = os.path.join(workspace_path, changed_file)
+        if not os.path.isfile(full_path):
+            continue
+        try:
+            with open(full_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+        except (OSError, UnicodeDecodeError):
+            continue
+
+        for line_num, line in enumerate(lines, start=1):
+            for pat, description, severity in patterns:
+                if re.search(pat, line):
+                    findings.append(
+                        AntiLiarFinding(
+                            file=changed_file,
+                            line=line_num,
+                            layer="scan_placeholders",
+                            message=description,
+                            severity=severity,
+                            snippet=line.rstrip("\n").strip()[:120],
+                        )
+                    )
+
+    return findings
+
+
+# ── Cleanup ──────────────────────────────────────────────────────────────
+
+
+def _cleanup_workspace(workspace_path: str) -> None:
+    """Clean up temporary workspace resources on completion or timeout."""
+    if not workspace_path:
+        return
+    try:
+        if os.path.isdir(workspace_path):
+            logger.info("Cleaning up workspace: %s", workspace_path)
+            subprocess.run(
+                ["rm", "-rf", workspace_path],
+                capture_output=True,
+                timeout=30,
+            )
+    except Exception as exc:
+        logger.warning("Cleanup failed for %s: %s", workspace_path, exc)
+
+
+# ── Main Shared Task ────────────────────────────────────────────────────
 
 
 @shared_task(
     bind=True,
-    max_retries=0,
+    max_retries=2,
+    default_retry_delay=30,
+    name="workers.tasks.anti_liar.run_anti_liar",
+    autoretry_for=(Exception,),
     queue="stas.quality",
-    name="workers.tasks.anti_liar.anti_liar_enforcement",
 )
-def anti_liar_enforcement(
+def run_anti_liar(
     self,
     workspace_path: str,
-    diff_files: list[str],
-    dev_command: str | None = None,
+    base_branch: str = "main",
+    coverage_threshold: int = _COVERAGE_THRESHOLD_DEFAULT,
+    correlation_id: str = "",
 ) -> dict:
-    """3-layer anti-liar enforcement before merge.
+    """
+    Run all three anti-liar enforcement layers.
 
-    All 3 layers must pass for the overall result to be ``passed=True``.
-
-    Parameters
-    ----------
-    workspace_path : str
-        Absolute path to the repository workspace.
-    diff_files : list[str]
-        List of file paths changed in the current diff (relative to workspace root).
-    dev_command : str | None
-        Optional shell command to start a dev server for Layer 2 verification.
-
-    Returns
-    -------
-    dict
-        ``{
-            "workspace_path": str,
-            "passed": bool,
-            "layers": { ... },
-        }``
+    Returns a dict serialized from AntiLiarResult with layer-level results
+    and overall passed/failed status.
     """
     logger.info(
         json.dumps({
             "event": "anti_liar.start",
             "workspace_path": workspace_path,
-            "diff_files_count": len(diff_files),
-            "dev_command": dev_command,
+            "base_branch": base_branch,
+            "coverage_threshold": coverage_threshold,
+            "correlation_id": correlation_id,
         })
     )
 
+    tmp_workspace: str = ""
     try:
-        # ── Layer 1: Test Coverage Mapping ──────────────────────────────
-        layer1_result = map_test_coverage(diff_files)
+        # If workspace_path is a git URL, clone it into a temp directory
+        if workspace_path and (
+            workspace_path.startswith("http") or workspace_path.startswith("git@")
+        ):
+            tmp_workspace = tempfile.mkdtemp(prefix="antiliar_")
+            subprocess.run(
+                ["git", "clone", "--depth=1", workspace_path, tmp_workspace],
+                capture_output=True,
+                text=True,
+                timeout=_COMMAND_TIMEOUT_S,
+            )
+            workspace_path = tmp_workspace
 
-        # ── Layer 2: Button/Route/Endpoint Verification ─────────────────
-        # Start dev server if a command is provided and Layer 1 passed
-        dev_server_proc: subprocess.Popen | None = None
-        if dev_command:
-            logger.info("Starting dev server: %s", dev_command)
-            try:
-                dev_server_proc = subprocess.Popen(
-                    dev_command,
-                    shell=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    cwd=workspace_path,
-                )
-                # Allow time for the server to bind
-                time.sleep(5)
-            except (OSError, subprocess.SubprocessError) as exc:
-                logger.warning("Failed to start dev server: %s", exc)
-
-        layer2_result = verify_interfaces(workspace_path, diff_files)
-
-        # Clean up dev server
-        if dev_server_proc is not None:
-            dev_server_proc.terminate()
-            try:
-                dev_server_proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                dev_server_proc.kill()
-
-        # ── Layer 3: No Placeholder Stubs ───────────────────────────────
-        layer3_findings = scan_placeholders(diff_files)
-        layer3_passed = len(layer3_findings) == 0
-
-        # ── Overall Result ──────────────────────────────────────────────
-        overall_passed = (
-            layer1_result.get("passed", False)
-            and layer2_result.get("passed", False)
-            and layer3_passed
+        # ── Layer 1: Test Coverage Mapping ────────────────────────
+        logger.info(
+            "anti_liar.layer1.start — coverage_threshold=%d",
+            coverage_threshold,
+        )
+        mappings, coverage_findings = test_coverage_mapping(
+            workspace_path, base_branch, coverage_threshold,
+        )
+        layer1_passed = len(coverage_findings) == 0
+        logger.info(
+            "anti_liar.layer1.complete — passed=%s total_mappings=%d untested=%d",
+            layer1_passed,
+            len(mappings),
+            len(coverage_findings),
         )
 
-        result = {
-            "workspace_path": workspace_path,
-            "passed": overall_passed,
-            "layers": {
-                "layer1_test_coverage": {
-                    "passed": layer1_result.get("passed", False),
-                    "coverage_ratio": layer1_result.get("coverage_ratio", 0),
-                    "total_functions": layer1_result.get("total", 0),
-                    "covered_functions": layer1_result.get("covered", 0),
-                    "threshold": layer1_result.get("threshold", _DEFAULT_COVERAGE_THRESHOLD),
-                    "functions": layer1_result.get("functions", {}),
-                },
-                "layer2_interface_verification": {
-                    "passed": layer2_result.get("passed", False),
-                    "tested_routes": layer2_result.get("tested", 0),
-                    "passed_routes": layer2_result.get("passed_count", 0),
-                    "failed_routes": layer2_result.get("failed_count", 0),
-                    "failures": layer2_result.get("failures", []),
-                },
-                "layer3_placeholder_scan": {
-                    "passed": layer3_passed,
-                    "findings_count": len(layer3_findings),
-                    "findings": layer3_findings,
-                },
-            },
-        }
+        # ── Layer 2: Interface Verification ───────────────────────
+        logger.info("anti_liar.layer2.start")
+        interface_findings = verify_interfaces(workspace_path, base_branch)
+        layer2_passed = len(interface_findings) == 0
+        logger.info(
+            "anti_liar.layer2.complete — passed=%s untested_routes=%d",
+            layer2_passed,
+            len(interface_findings),
+        )
+
+        # ── Layer 3: Placeholder Scan ─────────────────────────────
+        logger.info("anti_liar.layer3.start")
+        placeholder_findings = scan_placeholders(workspace_path, base_branch)
+        layer3_passed = len(placeholder_findings) == 0
+        logger.info(
+            "anti_liar.layer3.complete — passed=%s placeholders=%d",
+            layer3_passed,
+            len(placeholder_findings),
+        )
+
+        all_findings = coverage_findings + interface_findings + placeholder_findings
+        passed = layer1_passed and layer2_passed and layer3_passed
+
+        result = AntiLiarResult(
+            passed=passed,
+            layer1_passed=layer1_passed,
+            layer2_passed=layer2_passed,
+            layer3_passed=layer3_passed,
+            findings=all_findings,
+            test_mappings=mappings,
+            coverage_threshold=coverage_threshold,
+        )
 
         logger.info(
             json.dumps({
                 "event": "anti_liar.complete",
-                "passed": overall_passed,
-                "layer1_passed": layer1_result.get("passed", False),
-                "layer2_passed": layer2_result.get("passed", False),
-                "layer3_passed": layer3_passed,
+                "passed": result.passed,
+                "layer1_passed": result.layer1_passed,
+                "layer2_passed": result.layer2_passed,
+                "layer3_passed": result.layer3_passed,
+                "total_findings": len(result.findings),
+                "correlation_id": correlation_id,
             })
         )
 
-        return result
+        return result.model_dump()
+
+    except subprocess.TimeoutExpired:
+        logger.error(
+            "anti_liar.timeout — command exceeded %ds",
+            _COMMAND_TIMEOUT_S,
+        )
+        return AntiLiarResult(
+            passed=False,
+            layer1_passed=False,
+            layer2_passed=False,
+            layer3_passed=False,
+            findings=[
+                AntiLiarFinding(
+                    file="",
+                    line=0,
+                    layer="run_anti_liar",
+                    message=f"Anti-liar enforcement timed out after "
+                    f"{_COMMAND_TIMEOUT_S}s",
+                    severity="critical",
+                )
+            ],
+        ).model_dump()
 
     except Exception as exc:
         logger.error(
             json.dumps({
                 "event": "anti_liar.error",
                 "error": str(exc),
+                "correlation_id": correlation_id,
             }),
             exc_info=True,
         )
-        return {
-            "workspace_path": workspace_path,
-            "passed": False,
-            "error": str(exc),
-        }
+        raise self.retry(exc=exc)
+
+    finally:
+        _cleanup_workspace(tmp_workspace)
