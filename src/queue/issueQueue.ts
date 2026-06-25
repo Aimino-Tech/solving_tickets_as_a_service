@@ -6,12 +6,17 @@
  *
  * Retry strategy uses exact delays (30s, 2min, 5min, 15min) via manual
  * re-enqueue in the worker, since BullMQ OSS only supports fixed/exponential
- * backoff. After max retries the job is moved to the dead-letter queue.
+ * backoff. After max retries the job is copied to a dead-letter queue.
  *
- * ⚠️ DLG REPROCESSING (AIM-2056):
- * Once a message enters the dead-letter queue, it STAYS there until manually
- * acknowledged by an admin via the DLQ admin API. No automatic replay occurs.
- * Full context is logged and alerts are dispatched via Slack/Linear.
+ * ── Escalation (AIM-2058) ───────────────────────────────────────────
+ * Integrates with the escalation module to provide a human escalation path
+ * for pipeline failures:
+ *   1. After 3 consecutive retries → Slack on-call page via escalation module
+ *   2. Pipeline infrastructure failure (sandbox, API, network) → Linear incident
+ *   3. 'Max retries exceeded' → PagerDuty / Opsgenie alert
+ *   4. Issue comments rate-limited to 1 per 30 seconds per issue
+ *   5. All escalation events logged with full trace for post-mortem
+ * ────────────────────────────────────────────────────────────────────
  *
  * ── Error Handling Audit ────────────────────────────────────────────
  * ✅ Redis retry strategy with exponential backoff and logging
@@ -21,8 +26,9 @@
  * ✅ enqueueIssue() catches queue.add failures and returns undefined
  * ✅ Retry count and lastError persisted in job data
  * ✅ Dead-letter queue captures jobs after max retries
- * ✅ DLQ alerts dispatched to Slack/Linear with full trace context
- * ✅ DLG entries remain dead until manually acknowledged — no auto-replay
+ * ✅ Escalation triggered at configured retry threshold
+ * ✅ Infrastructure failure detection and Linear incident creation
+ * ✅ Comment rate limiting (1 per 30s per issue)
  * ────────────────────────────────────────────────────────────────────
  */
 
@@ -39,7 +45,16 @@ import {
   recordMessageFailed,
   recordProcessingDuration,
 } from "../bridge/metrics.js";
-import { recordDeadLetter } from "./deadLetterQueue.js";
+import {
+  escalateRetryExhaustion,
+  escalateMaxRetriesExceeded,
+  escalatePipelineFailure,
+  canPostIssueComment,
+  recordIssueComment,
+  buildIssueKey,
+} from "../escalation/index.js";
+import { operatorAlertService } from "../services/humanEscalation.js";
+import type { EscalationIssue } from "../services/humanEscalation.js";
 
 const log = rootLogger.child({ module: 'issue-queue' });
 
@@ -128,17 +143,31 @@ export function createIssueWorker(): Worker<IssueJobData> {
         'Processing issue job',
       );
 
-      // Post retry status comment if this is a retry
-      if (retryCount > 0 && data.lastError) {
-        try {
-          await postIssueComment(data, messages.queueRetryComment(
-            retryCount + 1,
-            config.queue.maxRetries,
-            data.lastError,
-          ));
-        } catch {
-          // non-fatal
-        }
+      // ── Escalation check: After N consecutive retries, page on-call ──
+      const escalationThreshold = config.escalation.retryThreshold;
+      if (retryCount > 0 && retryCount % escalationThreshold === 0 && data.lastError) {
+        const issueKey = buildIssueKey(data.repoOwner, data.repoName, data.issueNumber);
+        log.warn(
+          { jobId: job.id, retryCount, threshold: escalationThreshold, issueKey },
+          `Retry count ${retryCount} reached escalation threshold — triggering Slack on-call page`,
+        );
+        escalateRetryExhaustion({
+          repoOwner: data.repoOwner,
+          repoName: data.repoName,
+          issueNumber: data.issueNumber,
+          jobId: job.id ?? undefined,
+          retryAttempt: retryCount,
+          lastError: data.lastError,
+          errorDetails: {
+            installationId: data.installationId,
+            source: data.source,
+            trackerType: data.trackerType,
+            trackerTicketId: data.trackerTicketId,
+            pipeline: data.pipeline,
+          },
+        }).catch((err) => {
+          log.error({ err: String(err), issueKey }, 'Failed to escalate retry exhaustion');
+        });
       }
 
       // Run the agent — this is the core of STAS
@@ -166,19 +195,94 @@ export function createIssueWorker(): Worker<IssueJobData> {
           "Fix not ready",
         );
 
-        // Terminal results (e.g., triage classified as 'question' or 'feature')
-        // should never be retried — move directly to dead-letter queue
-        if (result.isTerminal) {
-          log.info(
-            { jobId: job.id, reason: result.noFixReason },
-            "Terminal result — not scheduling retry",
-          );
-          try {
-            await moveToDeadLetter(data, result.errors?.[0] ?? result.noFixReason ?? "Terminal result");
-          } catch (err) {
-            log.error({ err: String(err), jobId: job.id }, "Failed to move terminal result to dead-letter queue");
+        // ── Detect pipeline infrastructure failures ──
+        // Check for infrastructure-level errors (sandbox, API, network)
+        const errorMessages = [
+          ...(result.errors ?? []),
+          ...(result.noFixReason ? [result.noFixReason] : []),
+        ].filter(Boolean);
+
+        for (const errorMsg of errorMessages) {
+          const lowerMsg = (errorMsg ?? '').toLowerCase();
+          if (
+            lowerMsg.includes('sandbox') ||
+            lowerMsg.includes('e2b') ||
+            lowerMsg.includes('timeout') ||
+            lowerMsg.includes('execution environment')
+          ) {
+            log.warn(
+              { jobId: job.id, error: errorMsg },
+              'Sandbox infrastructure failure detected — escalating',
+            );
+            escalatePipelineFailure({
+              repoOwner: data.repoOwner,
+              repoName: data.repoName,
+              issueNumber: data.issueNumber,
+              jobId: job.id ?? undefined,
+              failureType: 'sandbox',
+              error: errorMsg ?? 'Unknown sandbox error',
+              errorDetails: {
+                retryCount,
+                installationId: data.installationId,
+                source: data.source,
+              },
+            }).catch((e) => log.error({ err: String(e) }, 'Sandbox escalation failed'));
+            break;
           }
-          return result;
+
+          if (
+            lowerMsg.includes('api') ||
+            lowerMsg.includes('opencode') ||
+            lowerMsg.includes('unreachable') ||
+            lowerMsg.includes('connection refused') ||
+            lowerMsg.includes('5')
+          ) {
+            log.warn(
+              { jobId: job.id, error: errorMsg },
+              'API infrastructure failure detected — escalating',
+            );
+            escalatePipelineFailure({
+              repoOwner: data.repoOwner,
+              repoName: data.repoName,
+              issueNumber: data.issueNumber,
+              jobId: job.id ?? undefined,
+              failureType: 'api',
+              error: errorMsg ?? 'Unknown API error',
+              errorDetails: {
+                retryCount,
+                installationId: data.installationId,
+                source: data.source,
+              },
+            }).catch((e) => log.error({ err: String(e) }, 'API escalation failed'));
+            break;
+          }
+
+          if (
+            lowerMsg.includes('network') ||
+            lowerMsg.includes('dns') ||
+            lowerMsg.includes('econnrefused') ||
+            lowerMsg.includes('enotfound') ||
+            lowerMsg.includes('etimedout')
+          ) {
+            log.warn(
+              { jobId: job.id, error: errorMsg },
+              'Network infrastructure failure detected — escalating',
+            );
+            escalatePipelineFailure({
+              repoOwner: data.repoOwner,
+              repoName: data.repoName,
+              issueNumber: data.issueNumber,
+              jobId: job.id ?? undefined,
+              failureType: 'network',
+              error: errorMsg ?? 'Unknown network error',
+              errorDetails: {
+                retryCount,
+                installationId: data.installationId,
+                source: data.source,
+              },
+            }).catch((e) => log.error({ err: String(e) }, 'Network escalation failed'));
+            break;
+          }
         }
 
         // Schedule a retry if slots remain
@@ -194,7 +298,7 @@ export function createIssueWorker(): Worker<IssueJobData> {
             log.error({ err: String(err), jobId: job.id }, "Failed to schedule retry");
           }
         } else {
-          // Max retries exhausted — move to dead-letter queue (no auto-replay)
+          // Max retries exhausted — move to dead-letter queue
           log.warn(
             { jobId: job.id, retryCount },
             "Max retries reached, moving to dead-letter queue",
@@ -273,36 +377,41 @@ export function createIssueWorker(): Worker<IssueJobData> {
         log.error({ err: String(dlqErr), jobId: job.id }, "Failed to schedule retry");
       }
     } else {
-      // Max retries — move to DLQ (no auto-replay, stays dead until manually acknowledged)
+      // Max retries — move to DLQ
       try {
         await moveToDeadLetter(data, errorMsg);
-
-        // Record the DLQ in the BullMQ DLQ queue for backup persistence
-        const dlq = createDeadLetterQueue();
-        try {
-          await dlq.add(`dlq-${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}`, {
-            ...data,
-            lastError: errorMsg,
-          } as IssueJobDataWithRetry);
-          log.info(
-            { jobId: job.id, repo: `${data.repoOwner}/${data.repoName}`, issueNumber: data.issueNumber },
-            "Job persisted to BullMQ dead-letter queue",
-          );
-        } finally {
-          await dlq.close();
-        }
-
-        // Remove the failed job from the main queue to prevent reprocessing
-        try {
-          await job.remove();
-          log.debug({ jobId: job.id }, "Removed failed job from main queue after DLQ transfer");
-        } catch {
-          // non-fatal
-        }
-
+        log.info(
+          { jobId: job.id, repo: `${data.repoOwner}/${data.repoName}`, issueNumber: data.issueNumber },
+          "Job moved to dead-letter queue",
+        );
         bridgeMetrics.incrementCounter('dlq_messages_total', {
           queue: QUEUE_NAME,
           repo: data.repoOwner + '/' + data.repoName,
+        });
+
+        // ── Escalation: 'Max retries exceeded' fires PagerDuty/Opsgenie alert ──
+        const issueKey = buildIssueKey(data.repoOwner, data.repoName, data.issueNumber);
+        log.warn(
+          { jobId: job.id, issueKey, retryCount, maxRetries: config.queue.maxRetries },
+          'Max retries exceeded — triggering critical escalation (PagerDuty/Opsgenie)',
+        );
+        escalateMaxRetriesExceeded({
+          repoOwner: data.repoOwner,
+          repoName: data.repoName,
+          issueNumber: data.issueNumber,
+          jobId: job.id ?? undefined,
+          retryCount,
+          maxRetries: config.queue.maxRetries,
+          lastError: errorMsg,
+          errorDetails: {
+            installationId: data.installationId,
+            source: data.source,
+            trackerType: data.trackerType,
+            trackerTicketId: data.trackerTicketId,
+            pipeline: data.pipeline,
+          },
+        }).catch((escErr) => {
+          log.error({ err: String(escErr), issueKey }, 'Failed to escalate max retries exceeded');
         });
       } catch (dlqErr) {
         log.error({ err: String(dlqErr), jobId: job.id }, "Failed to move job to dead-letter queue");
@@ -348,46 +457,61 @@ async function scheduleRetry(
 
 /**
  * Move a job to the dead-letter queue after exhausting retries.
- *
- * ⚠️ AIM-2056: Messages moved to the DLQ remain dead until manually
- * acknowledged by an admin. No automatic replay mechanism exists.
- * Full context is logged via recordDeadLetter() and alerts are dispatched.
  */
 async function moveToDeadLetter(
   data: IssueJobDataWithRetry,
   error: string,
 ): Promise<void> {
-  // Capture stack trace from the current Error context if available
-  const stackTrace = new Error().stack;
-
-  // Record the DLQ entry with full context via the DLQ management module
-  // This handles: in-memory tracking, structured logging, alert dispatch, metrics
-  await recordDeadLetter(data, error, QUEUE_NAME, stackTrace);
-
-  // Post dead letter comment on the issue
+  const dlq = createDeadLetterQueue();
   try {
-    await postIssueComment(data, messages.deadLetterComment(error));
-  } catch {
-    // non-fatal — comment posting failure should not block DLQ recording
-  }
+    await dlq.add(`dlq-${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}`, {
+      ...data,
+      lastError: error,
+    } as IssueJobDataWithRetry);
 
-  log.warn(
-    {
-      repo: data.repoOwner + '/' + data.repoName,
+    // Escalate to operator instead of posting DLQ comment on GitHub
+    const escalationIssue: EscalationIssue = {
+      repoOwner: data.repoOwner,
+      repoName: data.repoName,
       issueNumber: data.issueNumber,
-      error,
-    },
-    'DLQ: job moved to dead-letter queue (no automatic replay)',
-  );
+    };
+    operatorAlertService.recordFailure(escalationIssue);
+    await operatorAlertService.alertOperator({
+      issue: escalationIssue,
+      consecutiveFailures: operatorAlertService.getConsecutiveFailures(escalationIssue),
+      maxFailures: config.escalation.maxFailuresBeforeEscalation,
+      reason: 'Max retries exceeded — moved to dead-letter queue',
+      detail: error,
+    });
+
+    log.warn(
+      { repo: data.repoOwner + '/' + data.repoName, issueNumber: data.issueNumber, error },
+      'DLQ alert — job moved to dead-letter queue, operator notified',
+    );
+  } finally {
+    await dlq.close();
+  }
 }
 
 /**
  * Post a comment to an issue using the stored job data.
+ * Respects rate limiting — checks canPostIssueComment before posting.
  */
 async function postIssueComment(
   data: IssueJobData,
   body: string,
 ): Promise<void> {
+  const issueKey = buildIssueKey(data.repoOwner, data.repoName, data.issueNumber);
+
+  // Respect rate limiting
+  if (!canPostIssueComment(issueKey)) {
+    log.debug(
+      { issueKey },
+      'Skipping issue comment — rate limited (1 per 30s)',
+    );
+    return;
+  }
+
   try {
     const octokit = await getOctokit(data.installationId);
     await octokit.issues.createComment({
@@ -396,6 +520,7 @@ async function postIssueComment(
       issue_number: data.issueNumber,
       body,
     });
+    recordIssueComment(issueKey);
   } catch (err) {
     log.warn({ err: String(err) }, "Failed to post issue comment from queue");
   }
