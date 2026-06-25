@@ -7,6 +7,9 @@
  *   POST /mcp/label        -- Label a GitHub issue (REST shortcut)
  *   POST /mcp/run          -- Trigger a fix run (REST shortcut)
  *   GET  /mcp/runs/:runId  -- Run status (matches stas://runs/{run_id} resource)
+ *   GET  /mcp/issues       -- List issues (bridge to list_issues tool)
+ *   POST /mcp/search       -- Search codebase (bridge to search_codebase tool)
+ *   GET  /mcp/issues/:id   -- Issue resource (matches stas://issues/{issue_id} resource)
  *
  * The full MCP protocol (tools/call, resources/read) is handled by the
  * standalone FastMCP Python server (stas_mcp/server.py) in SSE or stdio mode.
@@ -102,12 +105,43 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
           required: ['run_id'],
         },
       },
+      {
+        name: 'list_issues',
+        description: 'List tracked issues and their STAS fix status, with optional filters.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            status: { type: 'string' },
+            repo: { type: 'string' },
+            limit: { type: 'integer' },
+          },
+        },
+      },
+      {
+        name: 'search_codebase',
+        description: 'Search the STAS codebase for symbols, files, or patterns.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: { type: 'string' },
+            repo: { type: 'string' },
+            max_results: { type: 'integer' },
+          },
+          required: ['query'],
+        },
+      },
     ],
     resources: [
       {
         uri: 'stas://runs/{run_id}',
         name: 'Fix Run Status',
         description: 'Real-time status and PR link for a STAS fix run.',
+        mimeType: 'application/json',
+      },
+      {
+        uri: 'stas://issues/{issue_id}',
+        name: 'Issue Fix Status',
+        description: 'Issue details including current fix status, run history, and linked PRs.',
         mimeType: 'application/json',
       },
     ],
@@ -117,7 +151,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
           name: 'stas-agent-discovery',
           transport: 'stdio',
           command: 'python',
-          args: ['-m', 'stas_mcp.server', 'stdio'],
+          args: ['-m', 'mcp.stas_mcp', 'stdio'],
         },
       },
       claudeDesktop: {
@@ -125,7 +159,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
           mcpServers: {
             stas: {
               command: 'python',
-              args: ['-m', 'stas_mcp.server', 'stdio'],
+              args: ['-m', 'mcp.stas_mcp', 'stdio'],
             },
           },
         },

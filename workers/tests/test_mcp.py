@@ -245,11 +245,13 @@ class TestFastMCPServer:
 
         tools = await mcp.list_tools()
         names = [t.name for t in tools]
-        assert len(names) == 4
+        assert len(names) == 6
         assert "stas_label_issue" in names
         assert "stas_run_fix" in names
         assert "stas_check_status" in names
         assert "stas_get_pr" in names
+        assert "list_issues" in names
+        assert "search_codebase" in names
 
     @pytest.mark.asyncio
     async def test_resource_template_listing(self):
