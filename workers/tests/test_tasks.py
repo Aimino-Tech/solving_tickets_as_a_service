@@ -68,36 +68,42 @@ def test_run_verification():
     assert result["test_command"] == "pytest"
 
 
-@patch("workers.tasks.pr_creation._get_installation_token")
-def test_create_pull_request(mock_get_token):
+@patch("workers.tasks.pr_creation.GitHubClient")
+@patch("workers.tasks.pr_creation.LinearClient")
+def test_create_pull_request(mock_linear_cls, mock_gh_cls):
+    from unittest.mock import MagicMock
     from workers.tasks.pr_creation import create_pull_request
-    from workers.tasks.pr_creation import _call_github
 
-    mock_get_token.return_value = "ghs_test_token"
-
-    fix_result = {
-        "branch": "fix/test-branch",
-        "summary": "Fix the login bug",
+    mock_gh = MagicMock()
+    mock_gh_cls.return_value = mock_gh
+    mock_gh.find_existing_pr.return_value = None
+    mock_gh.create_pr.return_value = {
+        "pr_url": "https://github.com/test-owner/test-repo/pull/1",
+        "pr_number": 1,
+        "status": "opened",
     }
-    repo_info = {
-        "owner": "test-owner",
-        "repo": "test-repo",
-        "installation_id": 123456,
+    mock_gh.check_mergeable.return_value = {
+        "mergeable": True,
+        "mergeable_state": "clean",
     }
 
-    with patch("workers.tasks.pr_creation._call_github") as mock_gh:
-        mock_gh.return_value = {
-            "html_url": "https://github.com/test-owner/test-repo/pull/1",
-            "number": 1,
-        }
+    mock_linear = MagicMock()
+    mock_linear.post_comment.return_value = {"id": "lin_123"}
+    mock_linear_cls.return_value = mock_linear
 
-        result = create_pull_request.run(fix_result, repo_info)
-        assert "repo_info" in result
-        assert "fix_result" in result
-        assert result["repo_info"]["repo"] == "test-repo"
-        assert result["fix_result"]["branch"] == "fix/test-branch"
-        assert result["html_url"] == "https://github.com/test-owner/test-repo/pull/1"
-        assert result["status"] == "created"
+    result = create_pull_request.run(
+        issue_id="AIM-1",
+        workspace_path="/ws",
+        issue_title="Fix the login bug",
+        issue_body="The login endpoint fails",
+        repo_owner="test-owner",
+        repo_name="test-repo",
+        branch_name="stas/fix/test-branch",
+        installation_id=123456,
+    )
+    assert result["pr_url"] == "https://github.com/test-owner/test-repo/pull/1"
+    assert result["pr_number"] == 1
+    assert result["status"] == "opened"
 
 
 def test_send_notification():
