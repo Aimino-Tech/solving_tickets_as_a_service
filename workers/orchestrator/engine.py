@@ -40,6 +40,7 @@ from workers.billing.unit_economics import (
     get_max_output_tokens,
     is_within_cost_cap,
 )
+from workers.plan import save_plan, read_plan
 
 logger = logging.getLogger(__name__)
 
@@ -216,6 +217,19 @@ class PipelineEngine:
             pipeline_cfg = get_pipeline(pipeline_name)
             if pipeline_cfg is None:
                 raise ValueError(f"Unknown pipeline: {pipeline_name}")
+
+            # ── Load externally edited plan.md if it exists ────────────
+            existing_workspace = ctx.get("workspace_path", "")
+            if existing_workspace:
+                plan_steps = read_plan(existing_workspace)
+                if plan_steps:
+                    ctx["plan_steps"] = plan_steps
+                    logger.info(
+                        "Loaded %d steps from plan.md for issue=%s",
+                        len(plan_steps),
+                        issue_id,
+                    )
+
             canvas = build_canvas(pipeline_cfg, ctx)
 
             if tenant_id:
@@ -225,6 +239,21 @@ class PipelineEngine:
             else:
                 workspace_result = self._create_workspace_for_issue(issue_id, ctx)
                 ctx["workspace_path"] = workspace_result.get("workspace_path", "")
+
+            # ── Persist pipeline steps as editable plan.md ────────────
+            pipeline_steps = pipeline_cfg.get("steps", [])
+            plan_step_dicts = [
+                {"task": _step_label(s), "done": False}
+                for s in pipeline_steps
+            ]
+            try:
+                save_plan(issue_id, plan_step_dicts, ctx)
+            except OSError:
+                logger.warning(
+                    "Failed to save plan.md for issue=%s workspace=%s",
+                    issue_id,
+                    ctx.get("workspace_path", "(unknown)"),
+                )
 
             state = {
                 "pipeline_id": pipeline_id,
@@ -614,6 +643,20 @@ class PipelineEngine:
         except Exception as exc:
             logger.warning("Workspace creation failed (non-fatal): %s", exc)
             return {"workspace_path": "", "branch": ""}
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _step_label(step_cfg: dict[str, Any]) -> str:
+    """Derive a human-readable label from a pipeline step config."""
+    label = step_cfg.get("label", "")
+    if label:
+        return label
+    task = step_cfg.get("task", "unknown")
+    return task.rsplit(".", 1)[-1].replace("_", " ").title()
 
 
 # ---------------------------------------------------------------------------
