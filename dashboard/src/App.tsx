@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import Layout from '@/components/Layout';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import PublicLayout from '@/components/PublicLayout';
 import Login from '@/pages/Login';
 import DashboardHome from '@/pages/DashboardHome';
 import RunsHistory from '@/pages/RunsHistory';
@@ -11,6 +12,10 @@ import Repos from '@/pages/Repos';
 import Settings from '@/pages/Settings';
 import Analytics from '@/pages/Analytics';
 import AuditLog from '@/pages/AuditLog';
+import Security from '@/pages/Security';
+import Privacy from '@/pages/Privacy';
+import Status from '@/pages/Status';
+import DPAPage from '@/pages/DPAPage';
 
 export default function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -30,6 +35,12 @@ export default function App() {
           path="/login"
           element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
         />
+        <Route element={<PublicLayout />}>
+          <Route path="/security" element={<Security />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/status" element={<Status />} />
+          <Route path="/dpa" element={<DPAPage />} />
+        </Route>
         <Route
           path="/"
           element={
