@@ -54,6 +54,7 @@ import { renderMetrics } from './webhooks/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
+import { adminAuditRouter } from './routes/admin_audit.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
 import { slaRouter } from './routes/sla.js';
@@ -669,6 +670,8 @@ export function createApp(): express.Application {
 
   // ── Admin API ────────────────────────────────────────
   app.use('/admin', adminRouter);
+
+  app.use('/api/admin/audit', adminAuditRouter);
 
   // ── Dashboard API ──────────────────────────────────────
   app.use('/api/v1/me', dashboardRouter);
