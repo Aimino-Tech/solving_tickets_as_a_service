@@ -2,7 +2,7 @@
 Pipeline definitions for Celery canvas workflows.
 
 Provides ``build_canvas``, ``get_pipeline``, and ``get_task_name``
-functions used by the orchestrator dispatch engine (``orchestrate.py``).
+functions used by the orchestrator dispatch engine.
 
 Pipeline configs are dicts defining step sequences. Each step becomes
 a Celery signature. The ``build_canvas`` function assembles them into
@@ -24,57 +24,29 @@ from workers.billing.tenant_isolation import TenantIsolationManager
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Task name helper
-# ---------------------------------------------------------------------------
-
 
 def get_task_name(task_cfg: dict) -> str:
-    """Extract task name from a step config dict."""
     return task_cfg.get("task", "")
 
 
-# ---------------------------------------------------------------------------
-# Signature builder
-# ---------------------------------------------------------------------------
-
-
 def _build_sig(task_cfg: dict, ctx: dict) -> Any:
-    """Build a Celery signature from a step config, merging in context kwargs."""
     task_name = get_task_name(task_cfg)
     merged_kwargs = dict(ctx)
     merged_kwargs.update(task_cfg.get("kwargs", {}))
     opts = {
         "immutable": task_cfg.get("immutable", True),
     }
-    # Respect explicit queue override in step config
     if task_cfg.get("queue"):
         opts["queue"] = task_cfg["queue"]
     elif ctx.get("tenant_id"):
-        # Route to per-tenant queue when tenant context is present
         opts["queue"] = TenantIsolationManager.queue_name(ctx["tenant_id"])
     if task_cfg.get("countdown"):
         opts["countdown"] = task_cfg["countdown"]
-    # Pass args if specified
     args = task_cfg.get("args", [])
     return celery_sig(task_name, args=args, kwargs=merged_kwargs, **opts)
 
 
-# ---------------------------------------------------------------------------
-# Canvas builder
-# ---------------------------------------------------------------------------
-
-
 def build_canvas(pipeline_cfg: dict, ctx: dict) -> chain:
-    """Build a Celery chain from a pipeline config dict.
-
-    Args:
-        pipeline_cfg: Pipeline definition dict with a ``steps`` list.
-        ctx: Context dict merged into every step's kwargs.
-
-    Returns:
-        A ``celery.chain`` that can be called with ``.delay()``.
-    """
     steps: list[dict] = pipeline_cfg.get("steps", [])
     if not steps:
         raise ValueError(f"Pipeline '{pipeline_cfg.get('name', '?')}' has no steps")
@@ -82,10 +54,6 @@ def build_canvas(pipeline_cfg: dict, ctx: dict) -> chain:
     sigs = [_build_sig(s, ctx) for s in steps]
     return chain(*sigs)
 
-
-# ---------------------------------------------------------------------------
-# Pipeline registry
-# ---------------------------------------------------------------------------
 
 _PIPELINES: dict[str, dict] = {
     "stas:fix": {
@@ -101,7 +69,6 @@ _PIPELINES: dict[str, dict] = {
             {"task": "workers.tasks.verification.run_verification"},
             {"task": "workers.tasks.self_audit.run_self_audit"},
             {"task": "workers.quality.anti_mockup_scan.anti_mockup_scan"},
-            {"task": "workers.gates.malicious_code_gate.malicious_code_gate"},
             {"task": "workers.tasks.pr_creation.create_pull_request"},
             {"task": "workers.tasks.notifications.dispatch_webhook_event",
              "kwargs": {"event_type": "fix_completed"}},
@@ -124,7 +91,6 @@ _PIPELINES: dict[str, dict] = {
             {"task": "workers.tasks.verification.run_verification"},
             {"task": "workers.tasks.self_audit.run_self_audit"},
             {"task": "workers.quality.anti_mockup_scan.anti_mockup_scan"},
-            {"task": "workers.gates.malicious_code_gate.malicious_code_gate"},
             {"task": "workers.tasks.pr_creation.create_pull_request"},
             {"task": "workers.tasks.notifications.dispatch_webhook_event",
              "kwargs": {"event_type": "fix_completed"}},
@@ -154,17 +120,7 @@ _PIPELINES: dict[str, dict] = {
 
 
 def get_pipeline(name: str) -> dict | None:
-    """Return the pipeline config dict for *name*, or ``None``."""
     return _PIPELINES.get(name)
-
-
-# Uppercase alias expected by orchestrator.__init__
-PIPELINES = _PIPELINES
-
-
-# ---------------------------------------------------------------------------
-# Stage → Task mapping for the orchestrator engine
-# ---------------------------------------------------------------------------
 
 STAGE_TASKS: dict[str, str] = {
     "triage": "workers.tasks.triage.triage_issue",
@@ -182,9 +138,6 @@ STAGE_TASKS: dict[str, str] = {
 
 
 def get_stage_task(stage: str) -> str:
-    """Return the Celery task name for a given stage name.
-
-    Falls back to returning *stage* unchanged if not found in
-    ``STAGE_TASKS`` (allows direct task paths to be used).
-    """
     return STAGE_TASKS.get(stage, stage)
+
+PIPELINES = _PIPELINES

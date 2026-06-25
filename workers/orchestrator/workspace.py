@@ -3,6 +3,10 @@ Workspace lifecycle --- clone, branch, and cleanup.
 
 Provides ``create_workspace`` and ``cleanup_workspace`` as Celery shared tasks
 so they can be composed into pipelines.
+
+Multi-tenant (AIM-2017):
+    When ``tenant_id`` is passed, the workspace is created under
+    ``/workspaces/{tenant_id}/{issue_key}/`` for tenant isolation.
 """
 
 import logging
@@ -14,13 +18,14 @@ from typing import Any
 
 from celery import shared_task
 
+from workers.billing.tenant_isolation import get_tenant_manager
+
 logger = logging.getLogger(__name__)
 
 WORKSPACE_ROOT = os.getenv("WORKSPACE_ROOT", "/workspaces")
 
 
 def sanitize(name: str) -> str:
-    """Replace non-alphanumeric characters with underscores, max 64 chars."""
     return re.sub(r"[^a-zA-Z0-9_-]", "_", name)[:64]
 
 
@@ -36,33 +41,24 @@ def create_workspace(
     issue_id: str,
     issue_identifier: str,
     repo_url: str,
+    tenant_id: str | None = None,
 ) -> dict[str, Any]:
-    """Clone *repo_url* into a workspace directory and create a branch.
-
-    Args:
-        issue_id: The issue identifier (e.g. ``"42"``).
-        issue_identifier: Human-readable identifier for the workspace path
-            (e.g. ``"gh-42"``).
-        repo_url: Git remote URL to clone.
-
-    Returns:
-        A dict with ``workspace_path``, ``branch``, and ``status`` keys.
-
-    Raises:
-        ValueError: if *repo_url* is empty.
-    """
     logger.info(
-        "Creating workspace -- issue=%s identifier=%s repo=%s",
+        "Creating workspace -- issue=%s identifier=%s repo=%s tenant=%s",
         issue_id,
         issue_identifier,
         repo_url,
+        tenant_id or "(none)",
     )
 
     if not repo_url:
         msg = "No repo_url provided"
         raise ValueError(msg)
 
-    workspace_path = os.path.join(WORKSPACE_ROOT, sanitize(issue_identifier))
+    if tenant_id:
+        workspace_path = get_tenant_manager().workspace_root(tenant_id, issue_identifier)
+    else:
+        workspace_path = os.path.join(WORKSPACE_ROOT, sanitize(issue_identifier))
     os.makedirs(workspace_path, exist_ok=True)
 
     branch = f"stas/bot/{sanitize(issue_identifier)}"
@@ -105,11 +101,6 @@ def cleanup_workspace(
     self: Any,
     workspace_path: str,
 ) -> dict[str, Any]:
-    """Remove *workspace_path* from disk.
-
-    Returns a status dict (``"cleaned"``, ``"not_found"``, ``"skipped"``,
-    or ``"error"``).
-    """
     logger.info("Cleaning up workspace at %s", workspace_path)
 
     if not workspace_path:
