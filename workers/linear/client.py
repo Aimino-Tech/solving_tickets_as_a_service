@@ -402,10 +402,57 @@ class LinearAPIError(Exception):
 # Utility
 # ---------------------------------------------------------------------------
 
+
+
 async def _async_sleep(seconds: float) -> None:
-    """Async-compatible sleep."""
     try:
         import asyncio
         await asyncio.sleep(seconds)
     except RuntimeError:
         time.sleep(seconds)
+
+
+def _run_async(coro):
+    try:
+        import asyncio
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            return coro
+        return loop.run_until_complete(coro)
+    except RuntimeError:
+        return asyncio.run(coro)
+
+
+def get_issues_by_state(states=None, api_key=None):
+    if states is None:
+        from workers.tracker.state_machine import get_active_states
+        states = get_active_states()
+    client = LinearClient(api_key=api_key)
+    issues = _run_async(client.get_issues_by_state(states))
+    return [
+        {
+            "id": iss.id,
+            "identifier": iss.url.rstrip("/").split("/")[-1] if iss.url else "",
+            "title": iss.title,
+            "description": iss.description,
+            "priority": iss.priority,
+            "state": {"name": iss.state_name, "type": iss.state_type},
+            "team": {"key": iss.team_key},
+            "labels": {"nodes": [{"name": lbl} for lbl in iss.labels]},
+            "url": iss.url,
+            "created_at": iss.created_at,
+            "updated_at": iss.updated_at,
+        }
+        for iss in issues
+    ]
+
+
+def post_comment(issue_id: str, body: str, api_key: str | None = None) -> dict[str, Any]:
+    client = LinearClient(api_key=api_key)
+    return _run_async(client.post_comment(issue_id, body))
+
+
+def transition_issue(issue_id: str, state_name: str, api_key: str | None = None) -> bool:
+    from workers.linear_client import LinearClient as SyncLC
+    client = SyncLC(api_key=api_key)
+    return client.transition_issue(issue_id, state_name)
