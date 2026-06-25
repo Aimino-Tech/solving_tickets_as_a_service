@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { to: '/runs', label: 'Runs', icon: '↻' },
   { to: '/repos', label: 'Repos', icon: '⊞' },
   { to: '/analytics', label: 'Analytics', icon: '▦' },
+  { to: '/kpi', label: 'KPIs', icon: '📊' },
   { to: '/audit', label: 'Audit Log', icon: '☰' },
   { to: '/settings', label: 'Settings', icon: '⚙' },
 ] as const;

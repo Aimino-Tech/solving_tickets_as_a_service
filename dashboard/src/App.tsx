@@ -18,6 +18,7 @@ import Status from '@/pages/Status';
 import DPAPage from '@/pages/DPAPage';
 import Benchmarks from '@/pages/Benchmarks';
 import Pricing from '@/pages/Pricing';
+import KpiDashboard from '@/pages/KpiDashboard';
 
 export default function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="audit" element={<AuditLog />} />
+          <Route path="kpi" element={<KpiDashboard />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

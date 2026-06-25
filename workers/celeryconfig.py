@@ -46,6 +46,11 @@ beat_schedule = {
         "schedule": crontab(hour=1, minute=0),
         "args": (),
     },
+    "kpi-daily-etl": {
+        "task": "workers.tasks.kpi_etl.compute_daily_kpi",
+        "schedule": crontab(hour=0, minute=5),
+        "args": (),
+    },
     "sla-compliance-check": {
         "task": "workers.tasks.periodic.sla_compliance_check",
         "schedule": 300.0,
