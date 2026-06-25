@@ -7,6 +7,11 @@ functions used by the orchestrator dispatch engine (``orchestrate.py``).
 Pipeline configs are dicts defining step sequences. Each step becomes
 a Celery signature. The ``build_canvas`` function assembles them into
 a ``chain`` ready for ``.delay()``.
+
+Multi-tenant (AIM-2017):
+    When ``ctx`` contains ``tenant_id``, all steps are routed to the per-tenant
+    queue (``stas.agents.tenant.{tenant_id}``) by default.  Steps that explicitly
+    set a ``queue`` in their config are left unchanged.
 """
 
 import logging
@@ -14,6 +19,8 @@ from typing import Any
 
 from celery import chain
 from celery import signature as celery_sig
+
+from workers.billing.tenant_isolation import TenantIsolationManager
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +47,12 @@ def _build_sig(task_cfg: dict, ctx: dict) -> Any:
     opts = {
         "immutable": task_cfg.get("immutable", True),
     }
+    # Respect explicit queue override in step config
     if task_cfg.get("queue"):
         opts["queue"] = task_cfg["queue"]
+    elif ctx.get("tenant_id"):
+        # Route to per-tenant queue when tenant context is present
+        opts["queue"] = TenantIsolationManager.queue_name(ctx["tenant_id"])
     if task_cfg.get("countdown"):
         opts["countdown"] = task_cfg["countdown"]
     # Pass args if specified
@@ -90,6 +101,7 @@ _PIPELINES: dict[str, dict] = {
             {"task": "workers.tasks.verification.run_verification"},
             {"task": "workers.tasks.self_audit.run_self_audit"},
             {"task": "workers.quality.anti_mockup_scan.anti_mockup_scan"},
+            {"task": "workers.gates.malicious_code_gate.malicious_code_gate"},
             {"task": "workers.tasks.pr_creation.create_pull_request"},
             {"task": "workers.tasks.notifications.dispatch_webhook_event",
              "kwargs": {"event_type": "fix_completed"}},
@@ -112,6 +124,7 @@ _PIPELINES: dict[str, dict] = {
             {"task": "workers.tasks.verification.run_verification"},
             {"task": "workers.tasks.self_audit.run_self_audit"},
             {"task": "workers.quality.anti_mockup_scan.anti_mockup_scan"},
+            {"task": "workers.gates.malicious_code_gate.malicious_code_gate"},
             {"task": "workers.tasks.pr_creation.create_pull_request"},
             {"task": "workers.tasks.notifications.dispatch_webhook_event",
              "kwargs": {"event_type": "fix_completed"}},
@@ -143,3 +156,35 @@ _PIPELINES: dict[str, dict] = {
 def get_pipeline(name: str) -> dict | None:
     """Return the pipeline config dict for *name*, or ``None``."""
     return _PIPELINES.get(name)
+
+
+# Uppercase alias expected by orchestrator.__init__
+PIPELINES = _PIPELINES
+
+
+# ---------------------------------------------------------------------------
+# Stage → Task mapping for the orchestrator engine
+# ---------------------------------------------------------------------------
+
+STAGE_TASKS: dict[str, str] = {
+    "triage": "workers.tasks.triage.triage_issue",
+    "workspace": "workers.orchestrator.workspace.create_workspace",
+    "agent": "workers.tasks.agent.dispatch_opencode",
+    "verification": "workers.tasks.verification.run_verification",
+    "self_audit": "workers.tasks.self_audit.run_self_audit",
+    "anti_mockup": "workers.quality.anti_mockup_scan.anti_mockup_scan",
+    "malicious_code_gate": "workers.gates.malicious_code_gate.malicious_code_gate",
+    "pr_creation": "workers.tasks.pr_creation.create_pull_request",
+    "notification": "workers.tasks.notifications.dispatch_webhook_event",
+    "review": "workers.tasks.self_audit.review_decision",
+    "cleanup": "workers.orchestrator.workspace.cleanup_workspace",
+}
+
+
+def get_stage_task(stage: str) -> str:
+    """Return the Celery task name for a given stage name.
+
+    Falls back to returning *stage* unchanged if not found in
+    ``STAGE_TASKS`` (allows direct task paths to be used).
+    """
+    return STAGE_TASKS.get(stage, stage)
