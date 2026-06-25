@@ -77,14 +77,55 @@ export class SandboxPool {
     if (cpu) args.push('--cpus', String(cpu));
 
     args.push('--label', 'stas-sandbox=true');
+
+    // ── Security hardening ────────────────────────────────────────────
+
+    // Seccomp profile (if configured)
+    if (config.docker.seccompProfile) {
+      args.push('--security-opt', `seccomp=${config.docker.seccompProfile}`);
+    }
+
+    // AppArmor profile (if configured)
+    if (config.docker.apparmorProfile) {
+      args.push('--security-opt', `apparmor=${config.docker.apparmorProfile}`);
+    }
+
+    // No new privileges
     args.push('--security-opt', 'no-new-privileges:true');
-    args.push('--cap-drop', 'ALL');
-    args.push('--cap-add', 'NET_ADMIN');
-    args.push('--cap-add', 'NET_RAW');
-    args.push('--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=2g');
-    args.push('--network', 'bridge');
+
+    // Drop all capabilities (only add NET_ADMIN/NET_RAW if needed)
+    if (config.docker.dropAllCapabilities) {
+      args.push('--cap-drop', 'ALL');
+      // Only add network capabilities if network is enabled
+      if (!config.docker.networkDisabled) {
+        args.push('--cap-add', 'NET_ADMIN');
+        args.push('--cap-add', 'NET_RAW');
+      }
+    }
+
+    // Read-only root filesystem with writable /tmp
+    if (config.docker.readonlyRootfs) {
+      args.push('--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=2g');
+    }
+
+    // Runtime (runc or runsc/gVisor)
+    const runtime = config.docker.runtime;
+    if (runtime && runtime !== 'runc') {
+      args.push('--runtime', runtime);
+    } else {
+      // Explicitly set runc for consistency
+      args.push('--runtime', 'runc');
+    }
+
+    // Network
+    if (config.docker.networkRestrict) {
+      args.push('--network', 'stas_agent-net');
+    } else {
+      args.push('--network', 'none');
+    }
+
     args.push('-e', `HOME=${CONTAINER_WORKDIR}`);
-    args.push('-e', 'USER=user');
+    args.push('-e', 'USER=node');
     args.push(image);
     args.push('tail', '-f', '/dev/null');
 

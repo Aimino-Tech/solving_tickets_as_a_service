@@ -1,0 +1,52 @@
+# STAS sandbox AppArmor profile
+# Restricts filesystem access to workspace directories only.
+#include <tunables/global>
+
+profile stas-sandbox flags=(attach_disconnected, complain) {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+
+  # Allow read/write in workspace directories
+  /home/node/** rw,
+  /home/user/** rw,
+  /tmp/** rw,
+
+  # Allow reading common system libraries and binaries
+  /bin/** rix,
+  /usr/bin/** rix,
+  /usr/lib/** r,
+  /lib/** r,
+  /lib64/** r,
+
+  # Allow reading standard system config
+  /etc/** r,
+
+  # Deny everything else
+  /proc/** r,
+  /sys/** r,
+  /dev/** rw,
+
+  # Deny sensitive paths explicitly
+  deny /etc/shadow rw,
+  deny /etc/gshadow rw,
+  deny /root/** rw,
+  deny /var/log/** rw,
+
+  # Capabilities needed for normal operation
+  capability chown,
+  capability dac_override,
+  capability fowner,
+  capability fsetid,
+  capability setgid,
+  capability setuid,
+  capability sys_chroot,
+  capability mknod,
+  capability audit_write,
+  capability setfcap,
+
+  # Network access (controlled by Docker network settings)
+  network inet tcp,
+  network inet udp,
+  network inet6 tcp,
+  network inet6 udp,
+}

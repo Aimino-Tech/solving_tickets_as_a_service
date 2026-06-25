@@ -12,19 +12,23 @@ import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { E2BSandboxExecutor } from './executor.js';
 import { DockerSandbox } from './docker.js';
+import { scanImage, assertImageSafe, clearScanCache } from './scan.js';
 import type {
   SandboxExecutor,
   ExecResult,
   TestRunResult,
   RuntimeInfo,
 } from './types.js';
+import type { ScanResult, ScanOptions } from './scan.js';
 
 const log = rootLogger.child({ module: 'sandbox-factory' });
 
 export type { SandboxExecutor, ExecResult, TestRunResult, RuntimeInfo };
 export type { PoolConfig } from './pool.js';
+export type { ScanResult, ScanOptions } from './scan.js';
 export { SandboxPool } from './pool.js';
 export { SandboxGC } from './gc.js';
+export { scanImage, assertImageSafe, clearScanCache } from './scan.js';
 
 function isDockerAvailable(): boolean {
   try {
