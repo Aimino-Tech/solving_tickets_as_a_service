@@ -360,7 +360,7 @@ class TestFlushCoalescedEvents:
         _flush_coalesced_events(events)
         mock_post.assert_called_once()
         body = mock_post.call_args[0][1]
-        assert "STAS Pipeline Progress" in body
+        assert "Pipeline Progress" in body
         assert "Triage OK" in body
         assert "Agent done" in body
 

@@ -28,10 +28,8 @@ Automatic via Celery signals (connected on import)::
 
 Stage identifiers and their emoji prefixes:
 
-    =============  =====  ====================
-    Stage          Emoji  Label
-    =============  =====  ====================
-    triage         📋     Triage
+    =============  =====  =============    Stage          Emoji  Label
+    =============  =====  =============    triage         📋     Triage
     research       🔍     Research
     agent          🤖     Agent
     verify         🧪     Verify
@@ -39,8 +37,7 @@ Stage identifiers and their emoji prefixes:
     review         👁️     Review
     pr             🔄     PR
     failed         ❌     Failed
-    =============  =====  ====================
-"""
+    =============  =====  ============="""
 
 from __future__ import annotations
 
@@ -49,6 +46,11 @@ import os
 from typing import Any
 
 from workers.notifications.coalescer import StageCoalescer
+from workers.notifications.snippets import (
+    get_evidence,
+    format_evidence_section,
+)
+from workers.notifications.progressive import STAGE_ORDER, build_progressive_comment
 
 logger = logging.getLogger(__name__)
 
@@ -100,10 +102,18 @@ STATUS_COMMENTS_ENABLED = os.getenv(
 ).lower() in ("true", "1", "yes")
 
 # ---------------------------------------------------------------------------
+# Progressive-comment state (per-issue)
+# ---------------------------------------------------------------------------
+
+_issue_states: dict[str, dict[str, dict[str, Any]]] = {}
+_issue_comment_ids: dict[str, str] = {}
+
+# ---------------------------------------------------------------------------
 # Coalescer singleton
 # ---------------------------------------------------------------------------
 
 _coalescer: StageCoalescer | None = None
+_spam_filter: CommentSpamFilter | None = None
 
 
 def _get_coalescer() -> StageCoalescer:
@@ -117,16 +127,40 @@ def _get_coalescer() -> StageCoalescer:
     return _coalescer
 
 
+def _get_spam_filter() -> CommentSpamFilter:
+    """Return the shared ``CommentSpamFilter`` singleton."""
+    global _spam_filter
+    if _spam_filter is None:
+        _spam_filter = CommentSpamFilter(
+            coalesce_window_seconds=10.0,
+            dedup_window_seconds=30.0,
+            flush_callback=_flush_coalesced_events,
+        )
+    return _spam_filter
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _format_message(stage: str, status: str, message: str) -> str:
+def _format_message(
+    stage: str,
+    status: str,
+    message: str,
+    issue_id: str | None = None,
+) -> str:
     """Format a single stage status update as a comment body."""
     emoji = STAGE_EMOJI.get(stage, "\u2022")  # bullet fallback
     label = STAGE_LABELS.get(stage, stage.title())
-    return f"{emoji} **{label}**: {message}"
+    body = f"{emoji} **{label}**: {message}"
+
+    if issue_id:
+        evidence = get_evidence(issue_id, stage)
+        if evidence:
+            body += format_evidence_section(evidence)
+
+    return body
 
 
 def _sanitize_error(error: str, max_length: int = 500) -> str:
@@ -146,57 +180,78 @@ def _sanitize_error(error: str, max_length: int = 500) -> str:
 
 
 def _flush_coalesced_events(events: list[dict[str, Any]]) -> None:
-    """Post a combined comment for all coalesced events.
+    """Rebuild and update the progressive comment with coalesced events.
 
     Called from the ``StageCoalescer`` timer thread when the idle window
-    expires.
+    expires.  Builds a full progressive comment from the current in-memory
+    stage state and updates the single evolving comment in place.
+
+    The *events* argument determines which issue IDs need an update; the
+    actual comment content is derived from :data:`_issue_states`.
     """
     if not events:
         return
 
-    # Group by issue_id
-    by_issue: dict[str, list[dict[str, Any]]] = {}
-    for e in events:
-        by_issue.setdefault(e["issue_id"], []).append(e)
+    issue_ids = {e["issue_id"] for e in events}
+    for issue_id in issue_ids:
+        if issue_id not in _issue_states:
+            _issue_states[issue_id] = {}
+        for e in events:
+            if e["issue_id"] == issue_id:
+                _issue_states[issue_id][e["stage"]] = {
+                    "stage": e["stage"],
+                    "status": e["status"],
+                    "message": e["message"],
+                }
 
-    for issue_id, issue_events in by_issue.items():
-        if len(issue_events) == 1:
-            # Single event — post as a simple comment
-            e = issue_events[0]
-            body = _format_message(e["stage"], e["status"], e["message"])
-            _post_to_linear(issue_id, body)
-            logger.info(
-                "Posted status comment issue=%s stage=%s status=%s",
-                issue_id, e["stage"], e["status"],
-            )
-        else:
-            # Multiple events — coalesce into one combined comment
-            lines: list[str] = ["**STAS Pipeline Progress**\n"]
-            for e in issue_events:
-                emoji = STAGE_EMOJI.get(e["stage"], "\u2022")
-                label = STAGE_LABELS.get(e["stage"], e["stage"].title())
-                status_icon = "\u2705" if e["status"] == "completed" else "\u274c"
-                lines.append(f"{emoji} **{label}** {status_icon} \u2014 {e['message']}")
-
-            body = "\n".join(lines)
-            _post_to_linear(issue_id, body)
-            logger.info(
-                "Posted coalesced comment issue=%s events=%d",
-                issue_id, len(issue_events),
-            )
+        body = build_progressive_comment(issue_id, _issue_states[issue_id])
+        _post_to_linear(issue_id, body)
+        logger.info(
+            "Updated progressive comment issue=%s (from %d coalesced event(s))",
+            issue_id, sum(1 for e in events if e["issue_id"] == issue_id),
+        )
 
 
 def _post_to_linear(issue_id: str, body: str) -> None:
-    """Post a comment to a Linear issue via the shared Linear client.
+    """Post or update a progressive comment for *issue_id*.
+
+    If a comment ID has already been recorded for this issue the existing
+    comment is updated in place.  Otherwise a new comment is created and
+    its ID is cached for future updates.
 
     Silently catches errors to avoid breaking the pipeline.
     """
     try:
-        from workers.linear.client import post_comment as _linear_post
-        _linear_post(issue_id, body)
+        from workers.linear.client import post_comment, update_comment
+
+        comment_id = _issue_comment_ids.get(issue_id)
+        if comment_id:
+            update_comment(comment_id, body)
+            logger.debug(
+                "Updated progressive comment issue=%s comment=%s",
+                issue_id, comment_id,
+            )
+        else:
+            result = post_comment(issue_id, body)
+            new_id = (
+                result.get("commentCreate", {})
+                .get("comment", {})
+                .get("id")
+            )
+            if new_id:
+                _issue_comment_ids[issue_id] = new_id
+                logger.info(
+                    "Created progressive comment issue=%s comment=%s",
+                    issue_id, new_id,
+                )
+            else:
+                logger.warning(
+                    "Could not extract comment ID from response issue=%s",
+                    issue_id,
+                )
     except Exception as exc:
         logger.warning(
-            "Failed to post Linear comment issue=%s: %s",
+            "Failed to post/update Linear comment issue=%s: %s",
             issue_id, exc,
         )
 
@@ -212,7 +267,11 @@ def post_stage_comment(
     status: str,
     message: str,
 ) -> dict[str, Any]:
-    """Post a status comment for a pipeline stage transition.
+    """Post a progressive status comment for a pipeline stage transition.
+
+    Uses a single evolving comment that shows the full pipeline state:
+    completed stages are collapsed, the current stage is expanded with a
+    progress bar, and pending stages are grayed out.
 
     Parameters
     ----------
@@ -234,11 +293,22 @@ def post_stage_comment(
     -----
     - Completed stages are coalesced (batched in a 5 s window).  Start and
       failure statuses are posted immediately.
+    - A single comment per issue is updated in place every time a status
+      changes, so the issue thread always contains exactly one pipeline
+      progress comment.
     - When ``STATUS_COMMENTS_ENABLED`` is ``False``, all calls are no-ops.
     """
     if not STATUS_COMMENTS_ENABLED:
-        logger.debug("Status comments disabled \u2014 skipping stage=%s issue=%s", stage, issue_id)
+        logger.debug("Status comments disabled - skipping stage=%s issue=%s", stage, issue_id)
         return {"status": "disabled"}
+
+    if issue_id not in _issue_states:
+        _issue_states[issue_id] = {}
+    _issue_states[issue_id][stage] = {
+        "stage": stage,
+        "status": status,
+        "message": message,
+    }
 
     if status == "completed":
         coalescer = _get_coalescer()
@@ -247,16 +317,16 @@ def post_stage_comment(
 
     if status == "failed":
         message = _sanitize_error(message)
+        _issue_states[issue_id][stage]["message"] = message
 
-    body = _format_message(stage, status, message)
+    body = build_progressive_comment(issue_id, _issue_states[issue_id])
     try:
         _post_to_linear(issue_id, body)
-        logger.info("Posted %s comment issue=%s stage=%s", status, issue_id, stage)
+        logger.info("Posted progressive %s comment issue=%s stage=%s", status, issue_id, stage)
         return {"status": "posted"}
     except Exception as exc:
-        logger.warning("Failed to post %s comment issue=%s: %s", status, issue_id, exc)
+        logger.warning("Failed to post progressive %s comment issue=%s: %s", status, issue_id, exc)
         return {"status": "error", "error": str(exc)}
-
 
 def set_enabled(enabled: bool) -> None:
     """Enable or disable status comments at runtime (test helper)."""
@@ -264,13 +334,11 @@ def set_enabled(enabled: bool) -> None:
     STATUS_COMMENTS_ENABLED = enabled
 
 
-# ===========================================================================
-# Celery signal handlers
+# ====================================================================# Celery signal handlers
 #
 # These connect at import time and automatically post status comments when
 # known pipeline-stage tasks start, complete, or fail.
-# ===========================================================================
-
+# ====================================================================
 
 def _extract_issue_id(args: tuple, kwargs: dict) -> str | None:
     """Try to extract ``issue_id`` from a task's args or kwargs.
@@ -374,8 +442,7 @@ def _summarize_result(result: dict[str, Any]) -> str:
     return "Stage completed"
 
 
-# ===========================================================================
-# Connect Celery signals
+# ====================================================================# Connect Celery signals
 #
 # We connect to the low-level ``before_task_publish`` and
 # ``after_task_publish`` signals to capture args/kwargs, and to
@@ -384,8 +451,7 @@ def _summarize_result(result: dict[str, Any]) -> str:
 #   - ``task_prerun``   → posts "started" comment
 #   - ``task_success``   → coalesces "completed" comment
 #   - ``task_failure``   → posts immediate "failed" comment
-# ===========================================================================
-
+# ====================================================================
 try:
     from celery.signals import task_failure, task_prerun, task_success
 

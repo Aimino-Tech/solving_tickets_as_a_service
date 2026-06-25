@@ -242,6 +242,28 @@ class LinearClient:
             {"input": {"issueId": issue_id, "body": body}},
         )
 
+    async def update_comment(
+        self,
+        comment_id: str,
+        body: str,
+    ) -> dict[str, Any]:
+        """Update an existing comment's body.
+
+        Returns the raw mutation response data.
+        """
+        mutation = """
+        mutation UpdateComment($id: String!, $input: CommentUpdateInput!) {
+          commentUpdate(id: $id, input: $input) {
+            success
+            comment { id body }
+          }
+        }
+        """
+        return await self._request(
+            mutation,
+            {"id": comment_id, "input": {"body": body}},
+        )
+
     async def get_project_by_slug(
         self,
         slug: str,
@@ -450,6 +472,11 @@ def get_issues_by_state(states=None, api_key=None):
 def post_comment(issue_id: str, body: str, api_key: str | None = None) -> dict[str, Any]:
     client = LinearClient(api_key=api_key)
     return _run_async(client.post_comment(issue_id, body))
+
+
+def update_comment(comment_id: str, body: str, api_key: str | None = None) -> dict[str, Any]:
+    client = LinearClient(api_key=api_key)
+    return _run_async(client.update_comment(comment_id, body))
 
 
 def transition_issue(issue_id: str, state_name: str, api_key: str | None = None) -> bool:
