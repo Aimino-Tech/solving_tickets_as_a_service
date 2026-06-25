@@ -9,6 +9,7 @@ from .sandbox_gc import sandbox_gc
 from .self_audit import run_self_audit, orchestrate_pipeline, review_decision
 from .ticket_expander import expand_ticket
 from .anti_liar import anti_liar_enforcement
+from .malicious_code_detection import scan_for_malicious_code
 
 # Register pipeline orchestrator tasks with Celery app
 from . import pipeline_orchestrator  # noqa: F401
@@ -35,6 +36,7 @@ __all__ = [
     "review_decision",
     "expand_ticket",
     "anti_liar_enforcement",
+    "scan_for_malicious_code",
     "layer1_per_file_analysis",
     "layer2_holistic_review",
     "layer3_oracle_synthesis",
