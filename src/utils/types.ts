@@ -83,22 +83,7 @@ export interface BillingPlan {
   effectiveAt: string;
 }
 
-export interface AgentResult {
-  summary: string;
-  confidence: 'high' | 'medium' | 'low';
-  fixReady: boolean;
-  prUrl?: string;
-  branchName?: string;
-  diff?: string;
-  testOutput?: string;
-  errors?: string[];
-  relevantPRs?: Array<{ url: string; title: string; state: string }>;
-  noFixReason?: string;
-  alreadyFixed?: boolean;
-  investigationOnly?: boolean;
-  /** Agent produced a fix but it failed verification (tests didn't pass). */
-  verificationFailed?: boolean;
-}
+export type { AgentResult } from '../agent/types.js';
 
 /**
  * Verification job data sent to the stas.agents.verification queue.
