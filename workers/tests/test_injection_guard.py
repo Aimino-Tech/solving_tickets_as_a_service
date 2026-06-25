@@ -281,7 +281,7 @@ class TestInjectionMiddleware:
 
         with (
             patch("workers.gates.injection_middleware._get_config") as mock_config,
-            patch("workers.gates.injection_middleware.post_comment") as mock_post_comment,
+            patch("workers.linear.client.post_comment") as mock_post_comment,
         ):
             config = MagicMock()
             config.mode.value = "strict"
@@ -309,7 +309,7 @@ class TestInjectionMiddleware:
 
         with (
             patch("workers.gates.injection_middleware._get_config") as mock_config,
-            patch("workers.gates.injection_middleware.post_comment") as mock_post_comment,
+            patch("workers.linear.client.post_comment") as mock_post_comment,
         ):
             config = MagicMock()
             config.mode.value = "moderate"
