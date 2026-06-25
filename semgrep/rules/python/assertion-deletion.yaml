@@ -1,0 +1,46 @@
+rules:
+  - id: py-assert-false-always-passes
+    patterns:
+      - pattern: assert False
+      - pattern: self.assertTrue(False)
+    paths: { include: ["**/test_*.py", "**/*_test.py"] }
+    languages: [python]
+    message: Assertion always False found in test.
+    severity: ERROR
+    metadata: { category: correctness, technology: [unittest, pytest], cwe: "CWE-1167" }
+  - id: py-test-empty-body
+    patterns:
+      - pattern-either:
+          - pattern: "def test_$NAME():\n    pass"
+          - pattern: "def test_$NAME(self):\n    pass"
+    languages: [python]
+    message: Empty test function always passes.
+    severity: ERROR
+    metadata: { category: correctness, technology: [unittest, pytest], cwe: "CWE-1167" }
+  - id: py-commented-assert
+    patterns:
+      - pattern-regex: '#\s*assert\s+'
+      - pattern-regex: '#\s*self\.assert'
+    paths: { include: ["**/test_*.py", "**/*_test.py"] }
+    languages: [python]
+    message: Commented-out assertion detected.
+    severity: WARNING
+    metadata: { category: best-practice, technology: [unittest, pytest] }
+  - id: py-pytest-skip-without-reason
+    patterns:
+      - pattern: '@pytest.mark.skip'
+      - pattern-not: '@pytest.mark.skip(reason=$REASON)'
+    languages: [python]
+    message: Skipped test without reason.
+    severity: WARNING
+    metadata: { category: best-practice, technology: [pytest] }
+  - id: py-try-pass-in-test
+    patterns:
+      - pattern-either:
+          - pattern: "try:\n    $BODY\nexcept $E:\n    pass"
+      - pattern-inside: "def $FUNC(...):\n    ..."
+    paths: { include: ["**/test_*.py", "**/*_test.py"] }
+    languages: [python]
+    message: Bare except pass silently swallows exceptions.
+    severity: WARNING
+    metadata: { category: correctness, technology: [pytest, unittest] }

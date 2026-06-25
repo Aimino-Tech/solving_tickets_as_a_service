@@ -1,0 +1,23 @@
+version: "v1"
+rules:
+  - semgrep/rules/typescript/mock-injection.yaml
+  - semgrep/rules/typescript/assertion-deletion.yaml
+  - semgrep/rules/typescript/sandbox-mocking.yaml
+  - semgrep/rules/python/mock-injection.yaml
+  - semgrep/rules/python/assertion-deletion.yaml
+  - semgrep/rules/python/sandbox-mocking.yaml
+  - semgrep/rules/docker/security-misconfig.yaml
+paths:
+  include:
+    - "src/**/*.ts"
+    - "workers/**/*.py"
+    - "tests/**/*.ts"
+    - "Dockerfile"
+    - "workers/Dockerfile"
+    - "docker-compose*.yml"
+  exclude:
+    - "node_modules"
+    - "dist"
+    - ".git"
+    - "*.min.js"
+    - "sbom"

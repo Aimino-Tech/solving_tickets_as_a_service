@@ -1,0 +1,32 @@
+rules:
+  - id: ts-sandbox-executor-mock
+    patterns:
+      - pattern-either:
+          - pattern: vi.mock($PATH)
+          - pattern: jest.mock($PATH)
+      - metavariable-pattern: { metavariable: $PATH, pattern-regex: .*(sandbox|Sandbox|Executor).* }
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: Sandbox executor mocked. Use real sandbox implementation.
+    severity: ERROR
+    metadata: { category: security, technology: [vitest, jest], cwe: "CWE-358" }
+  - id: ts-sandbox-validation-bypass
+    patterns:
+      - pattern-either:
+          - pattern: $OBJ.validateSandboxConfig = $VALUE
+          - pattern: vi.spyOn($OBJ, 'validateSandboxConfig').mockReturnValue($VALUE)
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: Sandbox validation bypassed in test.
+    severity: ERROR
+    metadata: { category: security, technology: [vitest, jest], cwe: "CWE-358" }
+  - id: ts-path-validation-mock
+    patterns:
+      - pattern-either:
+          - pattern: vi.spyOn($OBJ, 'validatePath').mockReturnValue(true)
+          - pattern: $OBJ.validatePath = () => true
+    paths: { include: ["**/*.test.ts", "**/*.spec.ts"] }
+    languages: [typescript]
+    message: Path validation mocked to always return true.
+    severity: ERROR
+    metadata: { category: security, technology: [vitest, jest], cwe: "CWE-22" }
