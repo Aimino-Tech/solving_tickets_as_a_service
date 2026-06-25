@@ -67,6 +67,17 @@ app.conf.update(
 # Disable pidbox remote control (RabbitMQ 4.x removed transient_nonexcl_queues)
 app.conf.worker_enable_remote_control = False
 
+# ── Graceful Shutdown / Task Resilience ─────────────────────────
+# Acknowledge tasks _after_ completion so in-flight tasks survive
+# worker loss and are re-queued (enables zero-downtime task drain).
+app.conf.task_acks_late = True
+# Re-queue a task when its worker process is lost unexpectedly
+# (e.g. OOM-kill during a rolling pod termination).
+app.conf.task_reject_on_worker_lost = True
+# Cancel long-running tasks when broker connection drops so they
+# don't hang forever during a rolling restart.
+app.conf.worker_cancel_long_running_tasks_on_connection_loss = True
+
 app.autodiscover_tasks(["workers.tasks", "workers.consumers"])
 
 # ── Initialize Metrics (Prometheus) ────────────────────────────────
@@ -88,6 +99,18 @@ if ENABLE_METRICS:
 def ping():
     """Simple liveness check."""
     return {"status": "pong"}
+
+
+# ── Graceful Shutdown Handler ──────────────────────────────────────
+# Installs SIGTERM handling and task drain via Celery signals.
+# Must be installed after the app is fully configured.
+try:
+    from workers.shutdown import GracefulShutdownHandler
+
+    GracefulShutdownHandler().install(app)
+    logger.info("GracefulShutdownHandler installed — task drain active on SIGTERM")
+except Exception as exc:
+    logger.warning("Failed to install GracefulShutdownHandler — %s", exc)
 
 
 @app.on_after_configure.connect
