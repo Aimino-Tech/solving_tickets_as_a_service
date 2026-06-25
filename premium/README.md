@@ -5,20 +5,22 @@
 
 The OSS repo (`src/`, `plugin/`) is the self-hostable GitHub bot. This directory documents everything that makes the paid version worth paying for.
 
+> **Note**: STAS has three tiers — Self-Host (OSS, unlimited, DIY), Cloud Free (10 fixes/mo, our AGI, hosted), and Cloud Paid ($49–$149/mo, full features). This file covers the Cloud Paid tier.
+
 ## What Premium Adds
 
-| Feature | OSS (MIT) | Premium ($49/mo) |
-|---|---|---|
-| **Agent model** | Your API key, any model | Our AGI (50% better than GPT-5.5) |
-| **Hosting** | You run it | We run it |
-| **Install** | Manual setup | One-click GitHub App |
-| **Dashboard** | — | Run history, analytics, audit log |
-| **Repos** | Single repo | Unlimited repos |
-| **Concurrent fixes** | 1-3 (configurable) | 10+ |
-| **Sandbox** | Local Docker | Cloud E2B, auto-scaling |
-| **Billing** | — | Stripe $49/mo |
-| **SSO/SAML** | — | Team/Enterprise |
-| **Support** | GitHub issues | Slack, email, SLA |
+| Feature | OSS Self-Host (MIT) | Cloud Free (10/mo) | Cloud Paid ($49–$149/mo) |
+|---|---|---|---|
+| **Agent model** | Your API key, any model | Our AGI (50% better than GPT-5.5) | Our AGI |
+| **Hosting** | You run it | We run it | We run it |
+| **Install** | Manual setup | One-click GitHub App | One-click GitHub App |
+| **Dashboard** | — | Limited analytics | Full analytics, audit log |
+| **Repos** | Single repo | Single repo | Unlimited repos |
+| **Concurrent fixes** | 1-3 (configurable) | 1 | 10+ |
+| **Sandbox** | Local Docker | Cloud E2B | Cloud E2B, auto-scaling |
+| **Billing** | — | Free | Stripe $49–$149/mo |
+| **SSO/SAML** | — | — | Team/Enterprise |
+| **Support** | GitHub issues | GitHub issues | Slack, email, SLA |
 
 ## Premium Architecture
 

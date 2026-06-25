@@ -633,6 +633,18 @@ Additional service directories:
 
 ## Design Decisions
 
+### 0. Business Model Gating (Open-Core with Dual Path)
+
+**Decision**: Offer both an unlimited self-hosted OSS version (with caveats) and a cloud SaaS with a free tier (10 fixes/mo) — both pointing to paid plans.
+
+**Rationale**: A single "self-host is capped" model alienates power users who want full control. A single "cloud is the only paid option" misses developers who prefer to BYO infra. Option 1 resolves this:
+
+1. **Self-host** — unlimited but no dashboard, manual setup, community support only. Ideal for devs who want control.
+2. **Cloud Free** (10 fixes/mo) — hosted trial with our AGI. No infra, no API key setup.
+3. **Cloud Paid** ($49–$149/mo) — full dashboard, analytics, audit log, support.
+
+The metering layer (`src/metering/`) enforces per-account fix limits on the cloud path. Self-hosted instances bypass metering entirely — the feature flag `STAS_CLOUD_MODE=false` (default) disables all billing gates. See [docs/FAQ.md](../docs/FAQ.md) and [STRATEGY.md](../STRATEGY.md) for details.
+
 ### 1. Two-Phase Triage (Cost Optimization)
 
 **Decision**: Use a cheap model (gpt-4o-mini) for issue classification before the expensive agent run.
