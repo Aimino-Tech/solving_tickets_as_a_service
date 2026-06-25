@@ -5,6 +5,12 @@ from .verification import run_verification
 from .pr_creation import create_pull_request
 from .notifications import send_notification, process_webhook
 from .periodic import queue_health_check, dlq_cleanup, push_metrics, report_liveness
+from .periodic import (
+    self_healing_heartbeat_check,
+    self_healing_queue_drain_check,
+    self_healing_circuit_check,
+    self_healing_dlq_replay,
+)
 from .sandbox_gc import sandbox_gc
 from .self_audit import run_self_audit, orchestrate_pipeline, review_decision
 from .ticket_expander import expand_ticket
@@ -41,4 +47,9 @@ __all__ = [
     "poll_active_issues",
     "poll_ci_checks",
     "auto_qa_sample",
+    # AIM-2022: Self-healing periodic tasks
+    "self_healing_heartbeat_check",
+    "self_healing_queue_drain_check",
+    "self_healing_circuit_check",
+    "self_healing_dlq_replay",
 ]
