@@ -7,6 +7,10 @@ from .notifications import send_notification, process_webhook
 from .periodic import queue_health_check, dlq_cleanup, push_metrics, report_liveness
 from .sandbox_gc import sandbox_gc
 from .self_audit import run_self_audit, orchestrate_pipeline, review_decision
+from .anti_liar import anti_liar_enforcement
+
+# Register pipeline orchestrator tasks with Celery app
+from . import pipeline_orchestrator  # noqa: F401
 
 __all__ = [
     "triage_issue",
@@ -24,4 +28,5 @@ __all__ = [
     "run_self_audit",
     "orchestrate_pipeline",
     "review_decision",
+    "anti_liar_enforcement",
 ]
