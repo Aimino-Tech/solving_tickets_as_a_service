@@ -9,6 +9,10 @@ from . import linear_poll
 from .sandbox_gc import sandbox_gc
 from .multi_verification import multi_round_verify
 
+# Import status-comment signal handlers so they connect at worker start.
+# (Import for side effect — the module registers Celery signal handlers.)
+from workers.notifications import status_comments  # noqa: F401
+
 __all__ = [
     "triage_issue",
     "dispatch_opencode",
