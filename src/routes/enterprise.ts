@@ -1,136 +1,42 @@
-/**
- * Enterprise API routes — plan info, feature flags, contact form,
- * compliance artifacts, and SLA tiers.
- *
- * Mounted at /api/v1/enterprise.
- *
- * Routes:
- *   GET    /api/v1/enterprise/plan       — Enterprise plan definition
- *   GET    /api/v1/enterprise/features   — Enterprise feature flags
- *   GET    /api/v1/enterprise/compliance — Compliance artifacts list
- *   GET    /api/v1/enterprise/sla        — SLA tier definitions
- *   POST   /api/v1/enterprise/contact    — Contact sales form
- *   GET    /api/v1/enterprise/status     — Enterprise status for tenant
- */
-
 import { Router, type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { rootLogger } from '../utils/logger.js';
-
 const log = rootLogger.child({ module: 'enterprise-api' });
 const router = Router();
-
-const enterpriseLimiter = rateLimit({
-  windowMs: 60_000, limit: 30, standardHeaders: true, legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-router.use(enterpriseLimiter);
-
-const ENTERPRISE_FEATURES = [
-  { key: 'sso_saml', label: 'SSO / SAML', description: 'Single sign-on via SAML 2.0 with any identity provider', category: 'security' },
-  { key: 'dedicated_support', label: 'Dedicated Support', description: 'Slack and email with 15-minute response SLA', category: 'support' },
-  { key: 'compliance_artifacts', label: 'Compliance Artifacts', description: 'SOC 2, HIPAA BAA, PCI DSS, ISO 27001, DPA', category: 'compliance' },
-  { key: 'custom_sla', label: 'Custom SLA', description: 'Custom SLAs with uptime guarantees up to 99.99%', category: 'support' },
-  { key: 'audit_log_export', label: 'Audit Log Export', description: 'Export audit logs to SIEM via webhook or S3', category: 'security' },
-  { key: 'priority_queue', label: 'Priority Queue', description: 'Fixes dispatched ahead of all lower-tier tenants', category: 'performance' },
-  { key: 'private_sandbox', label: 'Private Sandbox', description: 'Dedicated sandbox with no colocation', category: 'security' },
-  { key: 'unlimited_fixes', label: 'Unlimited Fixes', description: 'No per-month fix limits', category: 'billing' },
-  { key: 'custom_webhooks', label: 'Custom Webhooks', description: 'Custom webhook endpoints with retry and auth', category: 'integration' },
-  { key: 'dedicated_model', label: 'Dedicated AI Model', description: 'Dedicated AGI instance with custom fine-tuning', category: 'ai' },
+router.use(rateLimit({ windowMs: 60000, limit: 30, message: { error: 'Too many requests' } }));
+const F = [
+  { k: 'sso_saml', l: 'SSO / SAML', d: 'SSO via SAML 2.0 with any identity provider', c: 'security' },
+  { k: 'dedicated_support', l: 'Dedicated Support', d: 'Slack and email with 15-min response SLA', c: 'support' },
+  { k: 'compliance', l: 'Compliance Artifacts', d: 'SOC 2, HIPAA BAA, PCI DSS, ISO 27001, DPA', c: 'compliance' },
+  { k: 'custom_sla', l: 'Custom SLA', d: 'Custom SLAs with up to 99.99% uptime', c: 'support' },
+  { k: 'audit_log', l: 'Audit Log Export', d: 'Export logs to SIEM via webhook or S3', c: 'security' },
+  { k: 'priority', l: 'Priority Queue', d: 'Fixes dispatched ahead of lower tiers', c: 'perf' },
+  { k: 'sandbox', l: 'Private Sandbox', d: 'Dedicated sandbox, no colocation', c: 'security' },
+  { k: 'unlimited', l: 'Unlimited Fixes', d: 'No per-month fix limits', c: 'billing' },
+  { k: 'webhooks', l: 'Custom Webhooks', d: 'Custom endpoints with retry and auth', c: 'integ' },
+  { k: 'model', l: 'Dedicated AI Model', d: 'Dedicated AGI instance', c: 'ai' },
 ];
-
-const SLA_TIERS = [
-  { level: 'Platinum', responseTimeMinutes: 15, resolutionTimeHours: 2, supportHours: '24/7' },
-  { level: 'Gold', responseTimeMinutes: 30, resolutionTimeHours: 4, supportHours: '24/7' },
-  { level: 'Silver', responseTimeMinutes: 60, resolutionTimeHours: 8, supportHours: 'Business hours' },
-];
-
-const ENTERPRISE_PLAN = {
-  id: 'enterprise', name: 'Enterprise',
-  description: 'For organizations at scale — unlimited fixes, SSO/SAML, dedicated support',
-  basePriceCents: 250_000,
-  stripePriceId: process.env.STRIPE_ENTERPRISE_PRICE_ID || 'price_enterprise',
-  monthlyFixLimit: -1, concurrentFixes: 50,
-  features: ENTERPRISE_FEATURES, slaTiers: SLA_TIERS,
-  complianceArtifacts: [
-    'SOC 2 Type II Report', 'HIPAA Business Associate Agreement',
-    'PCI DSS Attestation of Compliance', 'ISO 27001 Certificate', 'Data Processing Agreement',
-  ],
-};
-
-// GET /enterprise/plan
-router.get('/plan', (_req: Request, res: Response) => { res.json({ plan: ENTERPRISE_PLAN }); });
-
-// GET /enterprise/features
-router.get('/features', (_req: Request, res: Response) => { res.json({ features: ENTERPRISE_FEATURES }); });
-
-// GET /enterprise/sla
-router.get('/sla', (_req: Request, res: Response) => { res.json({ slaTiers: SLA_TIERS }); });
-
-// GET /enterprise/compliance — requires auth
-router.get('/compliance', (req: Request, res: Response) => {
-  if (!req.headers['x-account-id'] && !req.headers.authorization) {
-    res.status(401).json({ error: 'Authentication required' }); return;
-  }
-  res.json({
-    artifacts: [
-      { id: 'soc2-2026', name: 'SOC 2 Type II Report', type: 'soc2', version: '2026-06', available: true, validUntil: '2027-06-30' },
-      { id: 'hipaa-baa-2026', name: 'HIPAA Business Associate Agreement', type: 'hipaa', version: '2026-06', available: true, validUntil: '2027-06-30' },
-      { id: 'pci-dss-2026', name: 'PCI DSS Attestation', type: 'pci', version: '2026-06', available: true, validUntil: '2027-06-30' },
-      { id: 'iso27001-2026', name: 'ISO 27001 Certificate', type: 'iso27001', version: '2026-06', available: true, validUntil: '2027-06-30' },
-      { id: 'dpa-2026', name: 'Data Processing Agreement', type: 'dpa', version: '2026-06', available: true, validUntil: null },
-    ],
-  });
+router.get('/plan', (_, r) => r.json({ plan: { id: 'enterprise', name: 'Enterprise', basePriceCents: 250000, stripePriceId: process.env.STRIPE_ENTERPRISE_PRICE_ID || 'price_enterprise', monthlyFixLimit: -1, concurrentFixes: 50, features: F, complianceArtifacts: ['SOC 2','HIPAA BAA','PCI DSS','ISO 27001','DPA'], slaTiers: [{ level: 'Platinum', responseMin: 15, resolutionH: 2 }, { level: 'Gold', responseMin: 30, resolutionH: 4 }, { level: 'Silver', responseMin: 60, resolutionH: 8 }] } }));
+router.get('/features', (_, r) => r.json({ features: F }));
+router.get('/sla', (_, r) => r.json({ slaTiers: [{ level: 'Platinum', responseMin: 15, resolutionH: 2 }, { level: 'Gold', responseMin: 30, resolutionH: 4 }, { level: 'Silver', responseMin: 60, resolutionH: 8 }] }));
+router.get('/compliance', (req, res) => {
+  if (!req.headers['x-account-id'] && !req.headers.authorization) { res.status(401).json({ error: 'Auth required' }); return; }
+  res.json({ artifacts: [{ id: 'soc2', name: 'SOC 2 Type II', type: 'soc2', available: true }, { id: 'hipaa', name: 'HIPAA BAA', type: 'hipaa', available: true }, { id: 'pci', name: 'PCI DSS', type: 'pci', available: true }, { id: 'iso', name: 'ISO 27001', type: 'iso27001', available: true }, { id: 'dpa', name: 'DPA', type: 'dpa', available: true }] });
 });
-
-// POST /enterprise/contact
-router.post('/contact', async (req: Request, res: Response) => {
+router.post('/contact', async (req, res) => {
   try {
-    const { name, email, company, teamSize, message } = req.body as {
-      name: string; email: string; company: string; teamSize?: string; message: string;
-    };
-
-    if (!name || !email || !company || !message) {
-      res.status(400).json({ error: 'Missing required fields: name, email, company, message' });
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      res.status(400).json({ error: 'Invalid email' }); return;
-    }
-
-    log.info({ name, email, company, teamSize }, 'Enterprise contact form submission');
-
-    if (process.env.ENTERPRISE_SLACK_WEBHOOK) {
-      fetch(process.env.ENTERPRISE_SLACK_WEBHOOK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: `*Enterprise Lead*\nName: ${name}\nEmail: ${email}\nCompany: ${company}\nTeam: ${teamSize || 'N/A'}\nMessage: ${message}`,
-        }),
-      }).catch(() => {});
-    }
-
-    res.status(201).json({
-      success: true,
-      message: 'Thank you. Our enterprise team will reach out within 24 hours.',
-    });
-  } catch (err) {
-    log.error({ err: String(err) }, 'Failed to process enterprise contact');
-    res.status(500).json({ error: 'Failed to process contact form' });
-  }
+    const { name, email, company, message } = req.body as any;
+    if (!name || !email || !company || !message) { res.status(400).json({ error: 'Missing fields' }); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { res.status(400).json({ error: 'Invalid email' }); return; }
+    log.info({ name, email, company }, 'Enterprise contact');
+    if (process.env.ENTERPRISE_SLACK_WEBHOOK) { fetch(process.env.ENTERPRISE_SLACK_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: `Lead: ${name} (${email}) - ${company}` }) }).catch(() => {}); }
+    res.status(201).json({ success: true, message: 'Thank you. We will reach out within 24 hours.' });
+  } catch (err) { log.error({ err: String(err) }, 'Contact error'); res.status(500).json({ error: 'Failed' }); }
 });
-
-// GET /enterprise/status
-router.get('/status', (req: Request, res: Response) => {
-  const tenantId = req.query.tenant as string || req.headers['x-saml-tenant'] as string;
-  if (!tenantId) { res.json({ enterprise: false, saml: false, features: [] }); return; }
-
-  const isEnterprise = process.env[`TENANT_${tenantId.toUpperCase().replace(/-/g, '_')}_TIER`] === 'enterprise';
-  res.json({
-    tenantId, enterprise: isEnterprise, saml: isEnterprise,
-    features: isEnterprise ? ENTERPRISE_FEATURES.map((f) => f.key) : [],
-  });
+router.get('/status', (req, res) => {
+  const tid = req.query.tenant as string || req.headers['x-saml-tenant'] as string;
+  if (!tid) { res.json({ enterprise: false, saml: false, features: [] }); return; }
+  const isE = process.env[`TENANT_${tid.toUpperCase().replace(/-/g, '_')}_TIER`] === 'enterprise';
+  res.json({ tenantId: tid, enterprise: isE, saml: isE, features: isE ? F.map(f => f.k) : [] });
 });
-
 export { router as enterpriseRouter };
