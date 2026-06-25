@@ -1,0 +1,164 @@
+# ---------------------------------------------------------------------------
+# Per-tenant KEDA ScaledObject for STAS workers
+#
+# Scales worker pods based on per-tenant RabbitMQ queue length, ensuring
+# that tenants with high demand get appropriately scaled workers while
+# idle tenants consume no resources.
+#
+# Each tenant queue is named `stas.tenant.{tenantId}` and is monitored by
+# KEDA's RabbitMQ queue length scaler. The ScaledObject references a
+# ScaledJob or ScaledDeployment depending on the worker model.
+#
+# Usage:
+#   kubectl apply -f k8s/keda/scaledobject-tenant.yaml
+#
+# Prerequisites:
+#   - KEDA 2.10+ installed in the cluster
+#   - RabbitMQ with management plugin enabled
+#   - A Secret `stas-rabbitmq` with key `host` containing the RabbitMQ
+#     management API URL (e.g. http://guest:guest@stas-rabbitmq:15672)
+#
+# ── Host-based authentication ────────────────────────────────────────────────
+# KEDA's RabbitMQ scaler supports host-based authentication via the `host` value
+# in the trigger metadata. The host format is:
+#   amqp://guest:guest@stas-rabbitmq:5672
+# or for the management API:
+#   http://guest:guest@stas-rabbitmq:15672
+#
+# For production, use a ScaledObject per tenant or use a single ScaledObject
+# with multiple triggers (commented out below).
+# ---------------------------------------------------------------------------
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: stas-worker-tenant
+  labels:
+    app: stas-worker
+    tier: worker
+    component: tenant-scaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: stas-worker
+  # -----------------------------------------------------------------------
+  # Min/Max replicas are per-tenant defaults. Override these per tenant
+  # using KEDA's `ScaledObject` per-tenant annotations or create separate
+  # ScaledObjects for high-volume tenants.
+  # -----------------------------------------------------------------------
+  minReplicaCount: 1
+  maxReplicaCount: 20
+  # -----------------------------------------------------------------------
+  # Cooldown period: wait 120s after queue is empty before scaling down
+  # to avoid thundering-herd effects.
+  # -----------------------------------------------------------------------
+  cooldownPeriod: 120
+  # -----------------------------------------------------------------------
+  # Polling interval: check queue length every 15 seconds
+  # -----------------------------------------------------------------------
+  pollingInterval: 15
+  # -----------------------------------------------------------------------
+  # Advanced configuration for per-tenant scaling behavior
+  # -----------------------------------------------------------------------
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 60
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 60
+        scaleDown:
+          stabilizationWindowSeconds: 180
+          policies:
+            - type: Percent
+              value: 25
+              periodSeconds: 60
+  triggers:
+    # -------------------------------------------------------------------
+    # RabbitMQ queue length trigger
+    #
+    # This trigger monitors all tenant queues matching the pattern
+    # `stas.tenant.*`. KEDA will scale workers based on the total
+    # messages across all tenant queues.
+    #
+    # For strictly per-tenant scaling, create one ScaledObject per
+    # tenant with the specific queue name `stas.tenant.{tenantId}`.
+    # -------------------------------------------------------------------
+    - type: rabbitmq
+      metadata:
+        # Queue name pattern — use a specific tenant queue or wildcard
+        queueName: stas.tenant.*
+        # Queue length threshold: scale up when any tenant queue has more
+        # than 1 message waiting (0 = scale to min when queues are empty)
+        queueLength: "1"
+        # Protocol: "http" for management API, "amqp" for direct AMQP
+        protocol: http
+        # Use host-based authentication from a Kubernetes Secret
+        host: stas-rabbitmq:15672
+        # TLS mode
+        tls: "disable"
+        # Mode: "QueueLength" or "MessagesReady"
+        mode: QueueLength
+        # Value when no messages are found (scale to minReplicaCount)
+        value: "0"
+      authenticationRef:
+        name: stas-rabbitmq-trigger-auth
+---
+# ---------------------------------------------------------------------------
+# TriggerAuthentication for RabbitMQ
+#
+# References the Secret `stas-rabbitmq` that contains the RabbitMQ
+# management API credentials.
+# ---------------------------------------------------------------------------
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: stas-rabbitmq-trigger-auth
+  labels:
+    app: stas
+spec:
+  secretTargetRef:
+    - parameter: host
+      name: stas-rabbitmq
+      key: host
+---
+# ---------------------------------------------------------------------------
+# Example: Per-tenant ScaledObject (one per tenant)
+#
+# For strict per-tenant scaling where each tenant's queue drives its own
+# scaling decisions, create a ScaledObject per tenant:
+#
+# apiVersion: keda.sh/v1alpha1
+# kind: ScaledObject
+# metadata:
+#   name: stas-worker-tenant-{tenantId}
+#   labels:
+#     app: stas-worker
+#     tenant: "{tenantId}"
+# spec:
+#   scaleTargetRef:
+#     apiVersion: apps/v1
+#     kind: Deployment
+#     name: stas-worker
+#   minReplicaCount: 1
+#   maxReplicaCount: 5
+#   pollingInterval: 15
+#   cooldownPeriod: 120
+#   triggers:
+#     - type: rabbitmq
+#       metadata:
+#         queueName: "stas.tenant.{tenantId}"
+#         queueLength: "1"
+#         protocol: http
+#         host: stas-rabbitmq:15672
+#         mode: QueueLength
+#       authenticationRef:
+#         name: stas-rabbitmq-trigger-auth
+#
+# This can be templated and applied per tenant using:
+#   for tenantId in $(kubectl get tenants -o jsonpath='{.items[*].metadata.name}'); do
+#     sed "s/{tenantId}/$tenantId/g" scaledobject-tenant.yaml | kubectl apply -f -
+#   done
+# ---------------------------------------------------------------------------

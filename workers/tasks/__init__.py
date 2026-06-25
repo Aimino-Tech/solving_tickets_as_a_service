@@ -6,6 +6,7 @@ from .pr_creation import create_pull_request
 from .notifications import send_notification, process_webhook
 from .periodic import queue_health_check, dlq_cleanup, push_metrics, report_liveness
 from .sandbox_gc import sandbox_gc
+from .self_audit import run_self_audit, orchestrate_pipeline, review_decision
 
 __all__ = [
     "triage_issue",
@@ -20,4 +21,7 @@ __all__ = [
     "push_metrics",
     "report_liveness",
     "sandbox_gc",
+    "run_self_audit",
+    "orchestrate_pipeline",
+    "review_decision",
 ]
