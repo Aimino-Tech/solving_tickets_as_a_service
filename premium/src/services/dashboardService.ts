@@ -151,7 +151,8 @@ export async function listRuns(
 
   params.push(perPage, offset);
   const dataResult = await queryWithRetry<DbRun>(
-    `SELECT r.*, rp.owner AS repo_owner, rp.name AS repo_name
+    `SELECT r.*, rp.owner AS repo_owner, rp.name AS repo_name,
+            (SELECT SUM(amount) FROM credit_transactions ct WHERE ct.account_id = r.account_id AND ct.created_at <= r.created_at) AS cost_cents
      FROM runs r
      LEFT JOIN repos rp ON r.repo_id = rp.id
      WHERE ${where}
@@ -166,7 +167,8 @@ export async function listRuns(
 
 export async function getRun(accountId: number, runId: number): Promise<RunRow | undefined> {
   const result = await queryWithRetry<DbRun>(
-    `SELECT r.*, rp.owner AS repo_owner, rp.name AS repo_name
+    `SELECT r.*, rp.owner AS repo_owner, rp.name AS repo_name,
+            (SELECT SUM(amount) FROM credit_transactions ct WHERE ct.account_id = r.account_id AND ct.created_at <= r.created_at) AS cost_cents
      FROM runs r
      LEFT JOIN repos rp ON r.repo_id = rp.id
      WHERE r.id = $1 AND r.account_id = $2`,
@@ -175,7 +177,7 @@ export async function getRun(accountId: number, runId: number): Promise<RunRow |
   return result.rows[0] ? mapRun(result.rows[0]) : undefined;
 }
 
-function mapRun(row: DbRun): RunRow {
+function mapRun(row: DbRun & { cost_cents?: number | null }): RunRow {
   return {
     id: row.id,
     repoOwner: row.repo_owner ?? '',
@@ -184,7 +186,7 @@ function mapRun(row: DbRun): RunRow {
     issueTitle: row.summary,
     status: row.status,
     modelUsed: row.model_used,
-    costCents: null,
+    costCents: row.cost_cents ?? null,
     durationSeconds: row.duration_ms != null ? Math.round(row.duration_ms / 1000) : null,
     prUrl: row.pr_url,
     errorMessage: row.error,
