@@ -55,6 +55,7 @@ import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { dashboardRouter } from './routes/dashboard.js';
+import { pipelineRouter } from './routes/pipeline.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -615,6 +616,9 @@ export function createApp(): express.Application {
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
+
+  // -- Pipeline Status API -------------------------------------------------
+  app.use('/api', pipelineRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────
   // GET /admin/webhooks (paginated, filterable)
