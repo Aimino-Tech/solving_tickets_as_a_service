@@ -85,29 +85,24 @@ def resolve_state(
     """
     normalized = _normalize(current_state)
 
-    if _is_terminal_key(normalized):
-        logger.info(
-            "Issue is in terminal state %s -- not transitioning",
-            current_state,
-        )
-        return None
-
     if task_outcome == "failure":
+        # If already in a terminal / unknown state, stay put
+        if normalized in ("done", "canceled"):
+            logger.info(
+                "Issue is in terminal state %s -- not transitioning on failure",
+                current_state,
+            )
+            return None
         return FAILURE_STATE
 
     # Success path
+    if normalized in ("done", "canceled"):
+        return None
+
     next_state = STATUS_MAP.get(normalized)
     if next_state is None:
         logger.warning(
             "Unknown current state %r -- no transition defined",
-            current_state,
-        )
-        return None
-
-    # If the resolved state is the same as current (e.g. Done->Done), no-op
-    if next_state == normalized:
-        logger.debug(
-            "State %r is terminal -- no transition needed",
             current_state,
         )
         return None
@@ -124,11 +119,6 @@ def resolve_state(
 def _normalize(state: str) -> str:
     """Remove leading/trailing whitespace for map lookup."""
     return state.strip()
-
-
-def _is_terminal_key(state: str) -> bool:
-    """Return ``True`` if *state* is one of the known terminal state keys."""
-    return state.lower() in ("done", "canceled")
 
 
 def get_active_states() -> list[str]:

@@ -108,6 +108,12 @@ def orchestrate_pipeline(self, issue_data: dict) -> dict:
             "task": "workers.tasks.agent.dispatch_opencode",
         }
 
+        steps.append("build_verify")
+        results["build_verify"] = {
+            "status": "queued",
+            "task": "workers.tasks.build_verify.build_and_test",
+        }
+
         steps.append("verification")
         results["verification"] = {
             "status": "queued",
