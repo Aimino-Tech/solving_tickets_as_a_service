@@ -2,7 +2,8 @@
 # =============================================================================
 # STAS CI Gates — "Leave It Cleaner Than You Found It"
 #
-# Three gates that run on every PR:
+# Five gates that run on every PR:
+#   Gate 0 — "Leave It Cleaner" (lsp_diagnostics + test suite on touched files)
 #   Gate 1 — LSP/TypeScript diagnostics on changed files (zero-tolerance)
 #   Gate 2 — Test regression check (compare base vs head test results)
 #   Gate 3 — Lint diff enforcement (biome check)
@@ -261,6 +262,8 @@ run_gate() {
 # ---------------------------------------------------------------------------
 case "$GATE" in
   all)
+    run_gate 0
+    echo ""
     run_gate 1
     echo ""
     run_gate 2
