@@ -82,6 +82,21 @@ export class SandboxPool {
     args.push('--cap-add', 'NET_ADMIN');
     args.push('--cap-add', 'NET_RAW');
     args.push('--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=2g');
+
+    const seccompProfile = config.docker.seccompProfile;
+    if (seccompProfile) {
+      args.push('--security-opt', `seccomp=${seccompProfile}`);
+    }
+
+    const apparmorProfile = config.docker.apparmorProfile;
+    if (apparmorProfile) {
+      args.push('--security-opt', `apparmor=${apparmorProfile}`);
+    }
+
+    if (config.docker.gvisorEnabled) {
+      args.push('--runtime', 'runsc');
+    }
+
     args.push('--network', 'bridge');
     args.push('-e', `HOME=${CONTAINER_WORKDIR}`);
     args.push('-e', 'USER=user');

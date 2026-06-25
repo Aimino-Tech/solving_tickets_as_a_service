@@ -1,0 +1,112 @@
+name: Container Vulnerability Scan
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - 'workers/Dockerfile'
+      - 'package-lock.json'
+      - 'workers/requirements.txt'
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - 'workers/Dockerfile'
+      - 'package-lock.json'
+      - 'workers/requirements.txt'
+  schedule:
+    - cron: '0 6 * * *'
+
+jobs:
+  grype-scan:
+    name: Grype
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t stas-bot:scan --target build .
+
+      - name: Scan image with Grype
+        uses: anchore/scan-action@v6
+        id: grype
+        with:
+          image: stas-bot:scan
+          fail-build: true
+          severity-cutoff: high
+          output-format: sarif
+
+      - name: Upload Grype SARIF report
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: ${{ steps.grype.outputs.sarif }}
+          category: grype
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Grype Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo '| Severity | Count |' >> $GITHUB_STEP_SUMMARY
+          echo '|----------|-------|' >> $GITHUB_STEP_SUMMARY
+          grype stas-bot:scan --scope all-layers -o json 2>/dev/null | \
+            jq -r '.matches | group_by(.vulnerability.severity) | .[] | "| \(.[0].vulnerability.severity) | \(length) |"' \
+            >> $GITHUB_STEP_SUMMARY || true
+
+  trivy-scan:
+    name: Trivy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t stas-bot:trivy --target build .
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: stas-bot:trivy
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: 1
+          hide-progress: true
+
+      - name: Upload Trivy SARIF report
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Trivy Scan Results" >> $GITHUB_STEP_SUMMARY
+          trivy image --severity CRITICAL,HIGH --no-progress --format table stas-bot:trivy 2>/dev/null \
+            >> $GITHUB_STEP_SUMMARY || true
+
+  sbom:
+    name: SBOM Generation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t stas-bot:sbom --target build .
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: stas-bot:sbom
+          format: cyclonedx
+          output-file: sbom.cdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.cdx.json
+          retention-days: 90

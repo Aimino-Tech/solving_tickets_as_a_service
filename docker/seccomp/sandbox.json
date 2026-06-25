@@ -1,0 +1,78 @@
+{
+  "defaultAction": "SCMP_ACT_ALLOW",
+  "architectures": ["SCMP_ARCH_X86_64", "SCMP_ARCH_X86", "SCMP_ARCH_AARCH64"],
+  "syscalls": [
+    {
+      "names": [
+        "acct",
+        "add_key",
+        "arch_prctl",
+        "bpf",
+        "clock_adjtime",
+        "clock_settime",
+        "create_module",
+        "delete_module",
+        "finit_module",
+        "get_kernel_syms",
+        "get_mempolicy",
+        "init_module",
+        "ioperm",
+        "iopl",
+        "kcmp",
+        "kexec_file_load",
+        "kexec_load",
+        "keyctl",
+        "lookup_dcookie",
+        "mbind",
+        "migrate_pages",
+        "modify_ldt",
+        "mount",
+        "move_pages",
+        "name_to_handle_at",
+        "nfsservctl",
+        "open_by_handle_at",
+        "perf_event_open",
+        "personality",
+        "pivot_root",
+        "process_vm_readv",
+        "process_vm_writev",
+        "ptrace",
+        "query_module",
+        "quotactl",
+        "reboot",
+        "request_key",
+        "set_mempolicy",
+        "setns",
+        "sethostname",
+        "setdomainname",
+        "settimeroff",
+        "stime",
+        "swapoff",
+        "swapon",
+        "sysfs",
+        "syslog",
+        "umount",
+        "umount2",
+        "unshare",
+        "uselib",
+        "userfaultfd",
+        "ustat",
+        "vm86",
+        "vm86old",
+        "vmsplice"
+      ],
+      "action": "SCMP_ACT_ERRNO",
+      "comment": "Block dangerous syscalls: mount operations, kernel module loading, ptrace, perf events, BPF, key management, process memory access, system clock manipulation, namespace operations, and obsolete syscalls"
+    },
+    {
+      "names": [
+        "clone"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "comment": "Allow clone with specific flags for thread creation, block new namespaces",
+      "excludes": {
+        "flags": ["CLONE_NEWNS", "CLONE_NEWUTS", "CLONE_NEWIPC", "CLONE_NEWNET", "CLONE_NEWPID", "CLONE_NEWUSER", "CLONE_NEWCGROUP", "CLONE_NEWTIME"]
+      }
+    }
+  ]
+}
