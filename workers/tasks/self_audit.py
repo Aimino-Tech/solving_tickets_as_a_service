@@ -132,6 +132,12 @@ def orchestrate_pipeline(self, issue_data: dict) -> dict:
             "task": "workers.tasks.pr_creation.create_pull_request",
         }
 
+        steps.append("anti_liar_enforcement")
+        results["anti_liar_enforcement"] = {
+            "status": "queued",
+            "task": "workers.tasks.anti_liar.anti_liar_enforcement",
+        }
+
         steps.append("review")
         results["review"] = {
             "status": "queued",
@@ -177,6 +183,11 @@ def review_decision(self, pipeline_results: dict) -> dict:
         if anti_mockup.get("passed") is False:
             all_passed = False
             failures.append("anti_mockup_scan: failed — critical or blocking findings present")
+
+        anti_liar = pipeline_results.get("anti_liar_enforcement", {})
+        if anti_liar.get("passed") is False:
+            all_passed = False
+            failures.append("anti_liar_enforcement: failed — test coverage, interface verification, or placeholder scan failure")
 
         decision = "pass" if all_passed else "rework"
         logger.info("Review decision: %s — failures=%s", decision, failures)
