@@ -208,6 +208,12 @@ const envSchema = z.object({
   ALERT_CRIT_QUEUE_DEPTH: z.coerce.number().int().positive().default(200),
   ALERT_WARN_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(10),
   ALERT_CRIT_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(30),
+  // ── Emergency Kill Switch ────────────────────────────────────────────
+  EMERGENCY_REDIS_KEY: z.string().default('stas:emergency_stop'),
+  EMERGENCY_LOCK_FILE: z.string().default('/tmp/stas-emergency-stop.lock'),
+  EMERGENCY_HOLD_QUEUE: z.string().default('stas.emergency.hold'),
+  EMERGENCY_REVOKE_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+
   // Metering / Usage Tracking
   METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
   METERING_COST_OPENCODE_PRIMARY: z.coerce.number().int().positive().default(10),
@@ -443,6 +449,13 @@ function buildConfig(env: ParsedEnv) {
         diskLimit: env.SANDBOX_DISK_LIMIT,
         networkEnabled: env.SANDBOX_NETWORK_ENABLED,
       },
+    },
+
+    emergency: {
+      redisKey: env.EMERGENCY_REDIS_KEY,
+      lockFile: env.EMERGENCY_LOCK_FILE,
+      holdQueue: env.EMERGENCY_HOLD_QUEUE,
+      revokeTimeout: env.EMERGENCY_REVOKE_TIMEOUT_MS,
     },
 
     metering: {

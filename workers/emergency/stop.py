@@ -1,90 +1,159 @@
+"""
+Python Emergency Stop — mirrors the TypeScript EmergencyStop class.
+
+Provides a shared Redis + filesystem mechanism for the kill switch that
+works across both the TypeScript webhook server and the Python Celery
+workers. Both sides read the same Redis key and lock file.
+
+Usage:
+    from workers.emergency.stop import EmergencyStop
+
+    if EmergencyStop.check():
+        print("Emergency stop active — refusing task")
+        return
+
+    # Also check within async contexts
+    status = EmergencyStop.get_status()
+    print(f"Active: {status['active']}, Reason: {status.get('reason')}")
+"""
+
+import json
 import logging
 import os
 import time
-from typing import Any
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-EMERGENCY_STOP_KEY = "stas:emergency_stop"
-EMERGENCY_REASON_KEY = "stas:emergency_stop:reason"
-EMERGENCY_TIMESTAMP_KEY = "stas:emergency_stop:timestamp"
-EMERGENCY_LOCK_FILE = "/tmp/stas-emergency-stop.lock"
+# ---------------------------------------------------------------------------
+# Configuration (mirrors src/config.ts emergency section defaults)
+# ---------------------------------------------------------------------------
 
+_REDIS_KEY = os.getenv("STAS_EMERGENCY_REDIS_KEY", "stas:emergency_stop")
+_LOCK_FILE = os.getenv("STAS_EMERGENCY_LOCK_FILE", "/tmp/stas-emergency-stop.lock")
+_HOLD_QUEUE = os.getenv("STAS_EMERGENCY_HOLD_QUEUE", "stas.emergency.hold")
+_REVOKE_TIMEOUT = int(os.getenv("STAS_EMERGENCY_REVOKE_TIMEOUT_MS", "5000"))
+
+# ---------------------------------------------------------------------------
+# Cached state (avoids hitting Redis / filesystem on every task dispatch)
+# ---------------------------------------------------------------------------
+
+_cached_active: bool = False
+_cached_reason: Optional[str] = None
+_cached_activated_at: Optional[str] = None
+_cache_expiry: float = 0
+_CACHE_TTL: float = 5.0  # Re-check every 5 seconds
+
+
+# ---------------------------------------------------------------------------
+# EmergencyStop
+# ---------------------------------------------------------------------------
 
 class EmergencyStop:
-    def __init__(self, redis_client: Any | None = None):
-        self._redis = redis_client
+    """Global kill switch for all running agents (Python mirror)."""
 
-    def is_active(self) -> bool:
-        if self._redis:
+    _redis = None  # Lazy-imported redis client
+
+    @classmethod
+    def _get_redis(cls):
+        """Get or create a Redis client (lazy import)."""
+        if cls._redis is None:
             try:
-                return bool(self._redis.get(EMERGENCY_STOP_KEY))
+                import redis as redis_module
+                redis_url = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+                cls._redis = redis_module.from_url(redis_url, decode_responses=True)
+            except ImportError:
+                logger.warning("redis-py not available — emergency stop will use file-based check only")
+                cls._redis = False  # Sentinel
             except Exception as exc:
-                logger.warning("Redis check failed: %s", exc)
-        return os.path.isfile(EMERGENCY_LOCK_FILE)
+                logger.warning("Failed to connect to Redis for emergency stop: %s", exc)
+                cls._redis = False
+        return cls._redis if cls._redis is not False else None
 
-    def activate(self, reason: str = "Manual emergency stop") -> dict[str, Any]:
-        timestamp = time.time()
-        if self._redis:
+    @classmethod
+    def check(cls) -> bool:
+        """
+        Quick synchronous check — returns True if the kill switch is active.
+
+        Uses a 5-second cache to avoid hammering Redis/filesystem on every
+        task dispatch. Checks Redis first, then the lock file.
+        """
+        global _cached_active, _cache_expiry, _cached_reason, _cached_activated_at
+
+        # Return cached result if still fresh
+        now = time.time()
+        if now < _cache_expiry:
+            return _cached_active
+
+        # 1. Check Redis
+        redis_client = cls._get_redis()
+        if redis_client is not None:
             try:
-                self._redis.set(EMERGENCY_STOP_KEY, "1")
-                self._redis.set(EMERGENCY_REASON_KEY, reason)
-                self._redis.set(EMERGENCY_TIMESTAMP_KEY, str(timestamp))
+                value = redis_client.get(_REDIS_KEY)
+                if value:
+                    _cached_active = True
+                    _cache_expiry = now + _CACHE_TTL
+                    try:
+                        data = json.loads(value)
+                        _cached_reason = data.get("reason")
+                        _cached_activated_at = data.get("activatedAt")
+                    except (json.JSONDecodeError, TypeError):
+                        _cached_reason = str(value)
+                    return True
             except Exception as exc:
-                logger.error("Failed to set Redis emergency stop: %s", exc)
+                logger.debug("Redis check failed: %s", exc)
 
-        with open(EMERGENCY_LOCK_FILE, "w") as f:
-            f.write(f"{reason}\n{timestamp}\n")
+        # 2. Check lock file
+        try:
+            if os.path.exists(_LOCK_FILE):
+                with open(_LOCK_FILE, "r") as f:
+                    content = f.read().strip()
+                _cached_active = True
+                _cache_expiry = now + _CACHE_TTL
+                try:
+                    data = json.loads(content)
+                    _cached_reason = data.get("reason")
+                    _cached_activated_at = data.get("activatedAt")
+                except (json.JSONDecodeError, TypeError):
+                    _cached_reason = content
+                return True
+        except Exception as exc:
+            logger.debug("Lock file check failed: %s", exc)
 
-        logger.warning("EMERGENCY STOP ACTIVATED — reason=%s", reason)
-        return {"active": True, "reason": reason, "timestamp": timestamp}
+        # 3. Not active
+        _cached_active = False
+        _cached_reason = None
+        _cached_activated_at = None
+        _cache_expiry = now + _CACHE_TTL
+        return False
 
-    def deactivate(self) -> dict[str, Any]:
-        if self._redis:
-            try:
-                self._redis.delete(EMERGENCY_STOP_KEY)
-                self._redis.delete(EMERGENCY_REASON_KEY)
-                self._redis.delete(EMERGENCY_TIMESTAMP_KEY)
-            except Exception as exc:
-                logger.error("Failed to clear Redis emergency stop: %s", exc)
-
-        if os.path.isfile(EMERGENCY_LOCK_FILE):
-            os.remove(EMERGENCY_LOCK_FILE)
-
-        logger.warning("EMERGENCY STOP DEACTIVATED")
-        return {"active": False}
-
-    def get_status(self) -> dict[str, Any]:
-        active = self.is_active()
-        reason = "N/A"
-        timestamp: float | None = None
-
-        if self._redis:
-            try:
-                reason = self._redis.get(EMERGENCY_REASON_KEY) or "N/A"
-                ts = self._redis.get(EMERGENCY_TIMESTAMP_KEY)
-                if ts:
-                    timestamp = float(ts)
-            except Exception:
-                pass
-
-        if not active and os.path.isfile(EMERGENCY_LOCK_FILE):
-            try:
-                with open(EMERGENCY_LOCK_FILE) as f:
-                    lines = f.read().strip().split("\n")
-                    if len(lines) >= 1:
-                        reason = lines[0]
-                    if len(lines) >= 2:
-                        try:
-                            timestamp = float(lines[1])
-                        except ValueError:
-                            pass
-            except OSError:
-                pass
+    @classmethod
+    def get_status(cls) -> dict:
+        """
+        Get the full status of the kill switch.
+        Returns a dict with keys: active, reason, activatedAt.
+        """
+        # Ensure cache is fresh
+        cls.check()
 
         return {
-            "active": active,
-            "reason": reason,
-            "timestamp": timestamp,
-            "since": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(timestamp)) if timestamp else None,
+            "active": _cached_active,
+            "reason": _cached_reason,
+            "activatedAt": _cached_activated_at,
+        }
+
+    @classmethod
+    def invalidate_cache(cls) -> None:
+        """Force re-check on next access (useful after external activation)."""
+        global _cache_expiry
+        _cache_expiry = 0
+
+    @classmethod
+    def get_config(cls) -> dict:
+        """Return the current configuration values (for diagnostics)."""
+        return {
+            "redisKey": _REDIS_KEY,
+            "lockFile": _LOCK_FILE,
+            "holdQueue": _HOLD_QUEUE,
+            "revokeTimeoutMs": _REVOKE_TIMEOUT,
         }
