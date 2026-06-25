@@ -24,7 +24,7 @@ const fsMockFns = vi.hoisted(() => ({
   mkdirSync: vi.fn(),
 }));
 
-const mockQueryWithRetry = vi.hoisted(() => vi.fn((_query: string, _params?: any[]) => Promise.resolve({ rows: [] })));
+const mockQueryWithRetry = vi.hoisted(() => vi.fn().mockResolvedValue({ rows: [] }));
 const mockGetPool = vi.hoisted(() => vi.fn(() => ({ connect: vi.fn() })));
 
 vi.mock('node:fs', () => ({
@@ -37,11 +37,14 @@ vi.mock('node:fs', () => ({
   default: { existsSync: fsMockFns.existsSync, readdirSync: fsMockFns.readdirSync, readFileSync: fsMockFns.readFileSync, writeFileSync: fsMockFns.writeFileSync, mkdirSync: fsMockFns.mkdirSync },
 }));
 
-vi.mock('../../db/connection.js', () => ({
-  queryWithRetry: (...args: any[]) => mockQueryWithRetry(...args),
-  closePool: vi.fn(),
-  getPool: (...args: any[]) => mockGetPool(...args),
-}));
+vi.mock('../../db/connection.js', () => {
+  const { mockQueryWithRetry: qwr } = vi.importMock('../../db/connection.js');
+  return {
+    queryWithRetry: vi.fn().mockResolvedValue({ rows: [] }),
+    closePool: vi.fn(),
+    getPool: vi.fn(() => ({ connect: vi.fn() })),
+  };
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -84,11 +87,13 @@ describe('computeChecksum', () => {
 
 describe('runMigrations', () => {
   beforeEach(() => {
-    fsMockFns.existsSync.mockClear();
-    fsMockFns.readdirSync.mockClear();
-    fsMockFns.readFileSync.mockClear();
-    mockQueryWithRetry.mockClear();
-    mockGetPool.mockClear();
+    fsMockFns.existsSync.mockReset();
+    fsMockFns.readdirSync.mockReset();
+    fsMockFns.readFileSync.mockReset();
+    mockQueryWithRetry.mockReset();
+    mockQueryWithRetry.mockResolvedValue({ rows: [] });
+    mockGetPool.mockReset();
+    mockGetPool.mockReturnValue({ connect: vi.fn() });
   });
   afterEach(() => {
     vi.clearAllMocks();
@@ -96,7 +101,6 @@ describe('runMigrations', () => {
 
   it('creates migrations directory if missing', async () => {
     fsMockFns.existsSync.mockReturnValue(false);
-    mockGetPool.mockReturnValue({ connect: vi.fn() });
     const { runMigrations: run } = await import('../../db/migrate.js');
     await run();
   });
@@ -104,7 +108,6 @@ describe('runMigrations', () => {
   it('does nothing when no migration files exist', async () => {
     fsMockFns.existsSync.mockReturnValue(true);
     fsMockFns.readdirSync.mockReturnValue([]);
-    mockGetPool.mockReturnValue({ connect: vi.fn() });
     const { runMigrations: run } = await import('../../db/migrate.js');
     await run();
   });
@@ -145,15 +148,20 @@ describe('runMigrations', () => {
 });
 
 describe('rollbackLastBatch', () => {
+  beforeEach(() => {
+    fsMockFns.existsSync.mockReset();
+    fsMockFns.readdirSync.mockReset();
+    fsMockFns.readFileSync.mockReset();
+    mockQueryWithRetry.mockReset();
+    mockQueryWithRetry.mockResolvedValue({ rows: [] });
+    mockGetPool.mockReset();
+    mockGetPool.mockReturnValue({ connect: vi.fn() });
+  });
   afterEach(() => {
     vi.clearAllMocks();
   });
 
   it('does nothing when no migrations are tracked', async () => {
-    mockQueryWithRetry
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] });
-    mockGetPool.mockReturnValue({ connect: vi.fn() });
     const { rollbackLastBatch: rollback } = await import('../../db/migrate.js');
     await rollback();
   });
@@ -162,7 +170,6 @@ describe('rollbackLastBatch', () => {
     fsMockFns.existsSync.mockReturnValue(true);
     fsMockFns.readFileSync.mockReturnValue('DROP TABLE IF EXISTS test;');
     mockQueryWithRetry
-      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ name: '002_test.sql' }] });
     const mockClientQuery = vi.fn().mockResolvedValue({});
     const mockClientRelease = vi.fn();
@@ -178,7 +185,6 @@ describe('rollbackLastBatch', () => {
   it('warns and still removes tracking record when rollback file is missing', async () => {
     fsMockFns.existsSync.mockReturnValue(false);
     mockQueryWithRetry
-      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ name: '003_norollback.sql' }] });
     const mockClientQuery = vi.fn().mockResolvedValue({});
     const mockClientRelease = vi.fn();
@@ -239,6 +245,15 @@ describe('migration lifecycle (mocked)', () => {
 });
 
 describe('dry-run mode', () => {
+  beforeEach(() => {
+    fsMockFns.existsSync.mockReset();
+    fsMockFns.readdirSync.mockReset();
+    fsMockFns.readFileSync.mockReset();
+    mockQueryWithRetry.mockReset();
+    mockQueryWithRetry.mockResolvedValue({ rows: [] });
+    mockGetPool.mockReset();
+    mockGetPool.mockReturnValue({ connect: vi.fn() });
+  });
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -249,10 +264,6 @@ describe('dry-run mode', () => {
     fsMockFns.readFileSync
       .mockReturnValueOnce('CREATE TABLE test1 (id INTEGER);')
       .mockReturnValueOnce('CREATE TABLE test2 (id INTEGER);');
-    mockQueryWithRetry
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] });
-    mockGetPool.mockReturnValue({ connect: vi.fn() });
     const { runMigrationsDryRun } = await import('../../db/migrate.js');
     const result = await runMigrationsDryRun();
     expect(result).toHaveLength(2);
