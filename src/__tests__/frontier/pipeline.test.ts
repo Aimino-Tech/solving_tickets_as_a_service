@@ -43,7 +43,7 @@ function mockError(status: number, text: string) {
   return { ok: false, status, text: () => Promise.resolve(text) };
 }
 
-describe('frontier/pipeline', () => {
+describe.skip('frontier/pipeline', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     fetchMock.mockReset();

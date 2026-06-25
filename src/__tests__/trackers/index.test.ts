@@ -27,6 +27,8 @@ describe('trackers/index', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    // Force fresh module to avoid stale Map state
+    vi.resetModules();
     trackers = await import('../../trackers/index.js');
   });
 

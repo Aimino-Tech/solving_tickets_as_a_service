@@ -3,6 +3,14 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
+vi.mock('../../config.js', () => ({
+  config: {
+    trackers: {
+      jira: { url: 'https://jira.example.com', email: 'test@test.com', apiToken: 'token' },
+    },
+  },
+}));
+
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
