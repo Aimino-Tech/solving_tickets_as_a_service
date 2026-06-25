@@ -10,6 +10,7 @@ from .self_audit import run_self_audit, orchestrate_pipeline, review_decision
 from .adversarial_review import layer1_per_file_analysis, layer2_holistic_review, layer3_oracle_synthesis
 from .linear_poll import poll_active_issues
 from .ci_polling import poll_ci_checks
+from .auto_qa import auto_qa_sample
 
 __all__ = [
     "triage_issue",
@@ -32,4 +33,5 @@ __all__ = [
     "layer3_oracle_synthesis",
     "poll_active_issues",
     "poll_ci_checks",
+    "auto_qa_sample",
 ]
