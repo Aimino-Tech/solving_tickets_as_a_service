@@ -158,6 +158,21 @@ export function createIssueWorker(): Worker<IssueJobData> {
           "Fix not ready",
         );
 
+        // Terminal results (e.g., triage classified as 'question' or 'feature')
+        // should never be retried — move directly to dead-letter queue
+        if (result.isTerminal) {
+          log.info(
+            { jobId: job.id, reason: result.noFixReason },
+            "Terminal result — not scheduling retry",
+          );
+          try {
+            await moveToDeadLetter(data, result.errors?.[0] ?? result.noFixReason ?? "Terminal result");
+          } catch (err) {
+            log.error({ err: String(err), jobId: job.id }, "Failed to move terminal result to dead-letter queue");
+          }
+          return result;
+        }
+
         // Schedule a retry if slots remain
         if (retryCount < config.queue.maxRetries) {
           const delay = config.queue.retryDelays[retryCount] ?? 900000;

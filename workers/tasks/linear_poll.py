@@ -123,7 +123,7 @@ def poll_active_issues(self: Task) -> dict[str, Any]:
 def triage(self: Task, issue_id: str, identifier: str, pipeline: str, title: str) -> dict[str, Any]:
     """Process a dispatched issue -- comment on the Linear issue and mark triage complete."""
     client = get_client()
-    client.post_comment(issue_id, f"**STAS**: Working on it -- pipeline ")
+    client.post_comment(issue_id, f"**STAS**: Working on it -- pipeline {pipeline}")
     return {
         "issue_id": issue_id,
         "identifier": identifier,
