@@ -32,6 +32,12 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 REDIS_KEY = "stas:emergency_stop"
+
+
+def _get_lock_file() -> str:
+    return os.getenv("EMERGENCY_STOP_LOCK_FILE", "/tmp/stas-emergency-stop.lock")
+
+
 FILE_LOCK = "/tmp/stas-emergency-stop.lock"
 
 # Queues whose tasks should be stopped / moved to hold during emergency
@@ -120,7 +126,7 @@ class EmergencyStop:
             except Exception:
                 pass
         # Fallback: file lock
-        return os.path.isfile(FILE_LOCK)
+        return os.path.isfile(_get_lock_file())
 
     def read_state(self) -> dict[str, Any]:
         """Return full state dict, or a default inactive dict."""
@@ -132,9 +138,9 @@ class EmergencyStop:
                     return json.loads(val)
             except Exception:
                 pass
-        # File fallback
+        lock = _get_lock_file()
         try:
-            with open(FILE_LOCK) as f:
+            with open(lock) as f:
                 return json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
             pass
@@ -160,8 +166,8 @@ class EmergencyStop:
             except Exception as exc:
                 logger.warning("Failed to write Redis emergency stop: %s", exc)
 
-        # Always write file fallback
-        with open(FILE_LOCK, "w") as f:
+        lock = _get_lock_file()
+        with open(lock, "w") as f:
             f.write(payload)
 
         logger.warning("EMERGENCY STOP ACTIVATED — reason=%s", reason or "unspecified")
@@ -179,7 +185,7 @@ class EmergencyStop:
                 logger.warning("Failed to delete Redis emergency stop: %s", exc)
 
         try:
-            os.unlink(FILE_LOCK)
+            os.unlink(_get_lock_file())
         except FileNotFoundError:
             pass
 
