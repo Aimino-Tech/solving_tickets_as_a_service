@@ -1,4 +1,3 @@
-from .kpi_etl import compute_daily_kpi
 from .triage import triage_issue
 from .agent import dispatch_opencode
 from .sandbox import boot_sandbox
@@ -16,7 +15,6 @@ from .merge_queue import process_merge_queue, resolve_conflicts, label_conflict_
 from workers.notifications import status_comments  # noqa: F401
 
 __all__ = [
-    "compute_daily_kpi",
     "triage_issue",
     "dispatch_opencode",
     "boot_sandbox",

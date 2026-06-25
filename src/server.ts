@@ -59,6 +59,7 @@ import { dpaRouter } from './routes/dpa.js';
 import { slaRouter } from './routes/sla.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
+import { pricingRouter } from './routes/pricing.js';
 import { plgRouter } from './routes/plg.js';
 import { samlRouter } from './routes/saml.js';
 import { enterpriseRouter } from './routes/enterprise.js';
@@ -713,9 +714,17 @@ export function createApp(): express.Application {
   // ── PLG self-serve onboarding API ─────────────────────────────────
   app.use('/plg', plgRouter);
 
+  // ── Pricing API (public) ─────────────────────────────────────────
+  app.use('/api/pricing', pricingRouter);
+
   // KPI Dashboard API
   app.use('/api/kpi', kpiRouter);
 
+  // SAML 2.0 SSO routes
+  app.use('/api/v1/saml', samlRouter);
+
+  // Enterprise API routes
+  app.use('/api/v1/enterprise', enterpriseRouter);
   // -- 404 handler ----------------------------------------------------------
 
   app.use((_req: Request, res: Response) => {

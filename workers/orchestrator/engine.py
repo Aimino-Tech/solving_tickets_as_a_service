@@ -30,6 +30,16 @@ from workers.orchestrator.tenant_limiter import (
     get_tenant_token_bucket,
 )
 from workers.billing.tenant_isolation import get_tenant_manager
+from workers.billing.cost_analyzer import (
+    analyze_complexity,
+    recommend_model,
+)
+from workers.billing.unit_economics import (
+    get_cost_cap_cents,
+    get_max_input_tokens,
+    get_max_output_tokens,
+    is_within_cost_cap,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +124,9 @@ class PipelineEngine:
 
         tenant_id = ctx.get("tenant_id")
         tenant_tier = ctx.get("tenant_tier")
+
+        # ── Model selection and cost budget (AIM-2083) ─────────────────────
+        self._inject_cost_aware_config(ctx, issue_id)
 
         logger.info(
             "Starting pipeline pipeline_id=%s issue=%s name=%s tenant=%s",
@@ -223,6 +236,11 @@ class PipelineEngine:
                 "attempt": 1,
                 "created_at": time.time(),
                 "updated_at": time.time(),
+                "selected_model": ctx.get("selected_model", "unknown"),
+                "fix_complexity": ctx.get("fix_complexity", "unknown"),
+                "cost_budget_cents": ctx.get("cost_budget_cents", 0),
+                "estimated_cost_cents": ctx.get("estimated_cost_cents", 0),
+                "within_cost_budget": ctx.get("within_cost_budget", True),
             }
             if tenant_id:
                 state["tenant_id"] = tenant_id
@@ -516,6 +534,66 @@ class PipelineEngine:
             return count
         except Exception:
             return 1
+
+    # ------------------------------------------------------------------
+    # Cost-aware model routing (AIM-2083)
+    # ------------------------------------------------------------------
+
+    def _inject_cost_aware_config(self, ctx: dict[str, Any], issue_id: str) -> None:
+        """Select model and set cost budget based on tier and fix complexity."""
+        tenant_tier = ctx.get("tenant_tier", "free")
+        issue_data = ctx.get("issue_data", {})
+        triage_result = ctx.get("triage_result", {})
+
+        # Analyse complexity
+        complexity = analyze_complexity(
+            issue_title=issue_data.get("title", ""),
+            issue_body=issue_data.get("body", ""),
+            file_count=ctx.get("estimated_file_count", 0),
+            estimated_lines=ctx.get("estimated_lines", 0),
+            triage_category=triage_result.get("category", "unknown"),
+            triage_scope=triage_result.get("scope", "small"),
+        )
+
+        complexity_label = complexity.complexity
+
+        # Select model
+        recommendation = recommend_model(
+            tier=tenant_tier,
+            complexity=complexity_label,
+            estimated_input_tokens=get_max_input_tokens(tenant_tier),
+            estimated_output_tokens=get_max_output_tokens(tenant_tier),
+        )
+
+        model_name = recommendation.model_name
+        cost_cap = get_cost_cap_cents(tenant_tier)
+        within_budget = is_within_cost_cap(tenant_tier, recommendation.estimated_cost_cents)
+
+        ctx["selected_model"] = model_name
+        ctx["cost_budget_cents"] = cost_cap
+        ctx["fix_complexity"] = complexity_label
+        ctx["complexity_score"] = complexity.score
+        ctx["within_cost_budget"] = within_budget
+        ctx["estimated_cost_cents"] = recommendation.estimated_cost_cents
+        ctx["model_recommendation"] = recommendation.to_dict()
+
+        if not within_budget:
+            logger.warning(
+                "Fix cost exceeds cap for issue=%s tier=%s est_cost=%.2f cap=%.2f",
+                issue_id,
+                tenant_tier,
+                recommendation.estimated_cost_cents,
+                cost_cap,
+            )
+
+        logger.info(
+            "Cost-aware routing issue=%s tier=%s complexity=%s model=%s est_cost=%.4f",
+            issue_id,
+            tenant_tier,
+            complexity_label,
+            model_name,
+            recommendation.estimated_cost_cents,
+        )
 
     @staticmethod
     def _create_workspace_for_issue(
