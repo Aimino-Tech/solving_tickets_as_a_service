@@ -132,6 +132,17 @@ try:
 except Exception as exc:
     logger.warning("Failed to connect merge queue middleware -- %s", exc)
 
+# ── Compliance Audit Middleware ────────────────────────────────────
+# Self-registers Celery signal handlers at import time to append
+# audit events (task.start / task.success / task.failure) to the
+# SHA-256 chained compliance trail.
+try:
+    from workers.audit import middleware  # noqa: F401
+
+    logger.info("Compliance audit middleware connected")
+except Exception as exc:
+    logger.warning("Failed to connect compliance audit middleware -- %s", exc)
+
 # ── Runaway Agent Protection ───────────────────────────────────────
 # Self-registers via @signals.task_prerun.connect at import time.
 # Enforces per-agent timeout, token/cost limits, and max retries.
