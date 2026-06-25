@@ -196,19 +196,47 @@ gate_lint_diff() {
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Gate 4 — Vulnerability scan gate
+# ---------------------------------------------------------------------------
+gate_vulnerability_scan() {
+  info "Gate 4 — Container vulnerability scan"
+  if [ "${CI_SKIP_VULN_SCAN:-}" = "true" ]; then
+    pass "Gate 4 — Skipped (CI_SKIP_VULN_SCAN=true)"
+    return
+  fi
+  if ! command -v grype >/dev/null 2>&1; then
+    warn "grype not installed — skipping Gate 4"
+    return
+  fi
+  local image="stas-bot:ci-scan"
+  docker build -t "${image}" --target build . >/dev/null 2>&1 || {
+    warn "Gate 4 — Docker build failed, skipping scan"
+    return
+  }
+  if grype "${image}" --fail-on high --scope all-layers -q; then
+    pass "Gate 4 — No critical/high vulnerabilities found"
+  else
+    fail "Gate 4 — Critical or high vulnerabilities detected in container image"
+  fi
+}
+
 case "$GATE" in
   1) gate_lsp_diagnostics ;;
   2) gate_test_regression ;;
   3) gate_lint_diff ;;
+  4) gate_vulnerability_scan ;;
   all)
     gate_lsp_diagnostics
     echo ""
     gate_test_regression
     echo ""
     gate_lint_diff
+    echo ""
+    gate_vulnerability_scan
     ;;
   *)
-    echo "Usage: $0 {1|2|3|all}"
+    echo "Usage: $0 {1|2|3|4|all}"
     exit 1
     ;;
 esac

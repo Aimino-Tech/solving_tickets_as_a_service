@@ -135,6 +135,17 @@ const envSchema = z.object({
   IP_ALLOWLIST_ENABLED: z.coerce.boolean().default(false),
   IP_ALLOWLIST: z.string().default(''),
 
+  // ── Docker Sandbox ──
+  DOCKER_IMAGE: z.string().default('ubuntu:24.04'),
+  DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(true),
+  DOCKER_ALLOWED_HOSTS: z.string().default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io'),
+  DOCKER_CONTAINER_MEMORY: z.string().default('4g'),
+  DOCKER_CONTAINER_CPU: z.coerce.number().positive().default(2),
+  DOCKER_SECCOMP_PROFILE: z.string().default('./docker/seccomp/sandbox.json'),
+  DOCKER_APPARMOR_PROFILE: z.string().default('stas-sandbox'),
+  DOCKER_GVISOR_ENABLED: z.coerce.boolean().default(false),
+
+  // ── Sandbox Security ──
   SANDBOX_PRIVILEGED: z.coerce.boolean().default(false),
   SANDBOX_READONLY_ROOT: z.coerce.boolean().default(true),
   SANDBOX_MEMORY_LIMIT: z.string().default('512m'),
@@ -355,12 +366,92 @@ function buildConfig(env: ParsedEnv) {
     },
 
     fixTimeoutMs: env.FIX_TIMEOUT_MS,
-    phaseTimeouts: { triage: env.PHASE_TIMEOUT_TRIAGE_MS, sandboxBoot: env.PHASE_TIMEOUT_SANDBOX_MS, openCodeAgent: env.FIX_TIMEOUT_MS, prCreation: env.PHASE_TIMEOUT_PRCREATION_MS },
-    featureFlags: { defaultTtlSeconds: env.FEATURE_FLAGS_DEFAULT_TTL_SECONDS, autoDisableThreshold: env.FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD },
-    trackers: { linear: env.LINEAR_API_KEY ? { apiKey: env.LINEAR_API_KEY, webhookSecret: env.LINEAR_WEBHOOK_SECRET } : undefined, jira: env.JIRA_URL && env.JIRA_EMAIL && env.JIRA_API_TOKEN ? { url: env.JIRA_URL, email: env.JIRA_EMAIL, apiToken: env.JIRA_API_TOKEN, webhookSecret: env.JIRA_WEBHOOK_SECRET, projectKey: env.JIRA_PROJECT_KEY } : undefined, defaultRepoOwner: env.TRACKER_DEFAULT_REPO_OWNER, defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME, installationId: env.TRACKER_INSTALLATION_ID || 0 },
-    security: { adminApiKey: env.ADMIN_API_KEY, corsOrigin: env.CORS_ORIGIN, requestBodyLimit: env.REQUEST_BODY_LIMIT, webhookBodyLimit: env.WEBHOOK_BODY_LIMIT, ipAllowlist: { enabled: env.IP_ALLOWLIST_ENABLED, ips: env.IP_ALLOWLIST.split(',').map((s) => s.trim()).filter(Boolean) }, sandbox: { privileged: env.SANDBOX_PRIVILEGED, readOnlyRoot: env.SANDBOX_READONLY_ROOT, memoryLimit: env.SANDBOX_MEMORY_LIMIT, cpuLimit: env.SANDBOX_CPU_LIMIT, pidsLimit: env.SANDBOX_PIDS_LIMIT, diskLimit: env.SANDBOX_DISK_LIMIT, networkEnabled: env.SANDBOX_NETWORK_ENABLED } },
-    metering: { costTriage: env.METERING_COST_TRIAGE, costOpencodePrimary: env.METERING_COST_OPENCODE_PRIMARY, costOpencodeFallback: env.METERING_COST_OPENCODE_FALLBACK, costPrCreation: env.METERING_COST_PR_CREATION, costRetryPenalty: env.METERING_COST_RETRY_PENALTY, baselineSandboxMs: env.METERING_BASELINE_SANDBOX_MS, freeMonthlyCredits: env.METERING_FREE_MONTHLY_CREDITS, sandboxMultiplierMin: env.METERING_SANDBOX_MULTIPLIER_MIN, sandboxMultiplierMax: env.METERING_SANDBOX_MULTIPLIER_MAX },
-    usageCredits: { fixRun: env.USAGE_CREDITS_FIX_RUN, triage: env.USAGE_CREDITS_TRIAGE, sandbox: env.USAGE_CREDITS_SANDBOX },
+
+    phaseTimeouts: {
+      triage: env.PHASE_TIMEOUT_TRIAGE_MS,
+      sandboxBoot: env.PHASE_TIMEOUT_SANDBOX_MS,
+      openCodeAgent: env.FIX_TIMEOUT_MS,
+      prCreation: env.PHASE_TIMEOUT_PRCREATION_MS,
+    },
+
+    featureFlags: {
+      defaultTtlSeconds: env.FEATURE_FLAGS_DEFAULT_TTL_SECONDS,
+      autoDisableThreshold: env.FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD,
+    },
+
+    trackers: {
+      linear: env.LINEAR_API_KEY
+        ? {
+            apiKey: env.LINEAR_API_KEY,
+            webhookSecret: env.LINEAR_WEBHOOK_SECRET,
+          }
+        : undefined,
+      jira:
+        env.JIRA_URL && env.JIRA_EMAIL && env.JIRA_API_TOKEN
+          ? {
+              url: env.JIRA_URL,
+              email: env.JIRA_EMAIL,
+              apiToken: env.JIRA_API_TOKEN,
+              webhookSecret: env.JIRA_WEBHOOK_SECRET,
+              projectKey: env.JIRA_PROJECT_KEY,
+            }
+          : undefined,
+      defaultRepoOwner: env.TRACKER_DEFAULT_REPO_OWNER,
+      defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME,
+      installationId: env.TRACKER_INSTALLATION_ID || 0,
+    },
+
+    // ── Docker ─────────────────────────────────────────────────────────────
+    docker: {
+      image: env.DOCKER_IMAGE,
+      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
+      allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
+      containerMemory: env.DOCKER_CONTAINER_MEMORY,
+      containerCpu: env.DOCKER_CONTAINER_CPU,
+      seccompProfile: env.DOCKER_SECCOMP_PROFILE,
+      apparmorProfile: env.DOCKER_APPARMOR_PROFILE,
+      gvisorEnabled: env.DOCKER_GVISOR_ENABLED,
+    },
+
+    // ── Security ────────────────────────────────────────────────────────────
+    security: {
+      adminApiKey: env.ADMIN_API_KEY,
+      corsOrigin: env.CORS_ORIGIN,
+      requestBodyLimit: env.REQUEST_BODY_LIMIT,
+      webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
+
+      ipAllowlist: {
+        enabled: env.IP_ALLOWLIST_ENABLED,
+        ips: env.IP_ALLOWLIST.split(',').map((s) => s.trim()).filter(Boolean),
+      },
+      sandbox: {
+        privileged: env.SANDBOX_PRIVILEGED,
+        readOnlyRoot: env.SANDBOX_READONLY_ROOT,
+        memoryLimit: env.SANDBOX_MEMORY_LIMIT,
+        cpuLimit: env.SANDBOX_CPU_LIMIT,
+        pidsLimit: env.SANDBOX_PIDS_LIMIT,
+        diskLimit: env.SANDBOX_DISK_LIMIT,
+        networkEnabled: env.SANDBOX_NETWORK_ENABLED,
+      },
+    },
+
+    metering: {
+      costTriage: env.METERING_COST_TRIAGE,
+      costOpencodePrimary: env.METERING_COST_OPENCODE_PRIMARY,
+      costOpencodeFallback: env.METERING_COST_OPENCODE_FALLBACK,
+      costPrCreation: env.METERING_COST_PR_CREATION,
+      costRetryPenalty: env.METERING_COST_RETRY_PENALTY,
+      baselineSandboxMs: env.METERING_BASELINE_SANDBOX_MS,
+      freeMonthlyCredits: env.METERING_FREE_MONTHLY_CREDITS,
+      sandboxMultiplierMin: env.METERING_SANDBOX_MULTIPLIER_MIN,
+      sandboxMultiplierMax: env.METERING_SANDBOX_MULTIPLIER_MAX,
+    },
+
+    usageCredits: {
+      fixRun: env.USAGE_CREDITS_FIX_RUN,
+      triage: env.USAGE_CREDITS_TRIAGE,
+      sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
   } as const;
 }
 

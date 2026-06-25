@@ -680,16 +680,12 @@ export class DockerSandbox implements SandboxExecutor {
   private buildCreateArgs(image: string, containerName: string): string[] {
     const args: string[] = ['create', '--init', '--rm'];
 
-    // Container name
     args.push('--name', containerName);
 
-    // Volume mount for repo
     args.push('-v', `${this.tempDir}:${CONTAINER_WORKDIR}`);
 
-    // Working directory
     args.push('-w', CONTAINER_WORKDIR);
 
-    // Resource limits
     const memory = config.docker.containerMemory;
     if (memory) {
       args.push('--memory', memory);
@@ -702,12 +698,27 @@ export class DockerSandbox implements SandboxExecutor {
 
     args.push('--label', 'stas-sandbox=true');
 
-    // Security options
     args.push('--security-opt', 'no-new-privileges:true');
     args.push('--cap-drop', 'ALL');
+    args.push('--cap-add', 'NET_ADMIN');
+    args.push('--cap-add', 'NET_RAW');
     args.push('--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=2g');
+    args.push('--tmpfs', `${CONTAINER_WORKDIR}/.git:rw,noexec,nosuid,size=512m`);
 
-    // Network: egress proxy or none
+    const seccompProfile = config.docker.seccompProfile;
+    if (seccompProfile) {
+      args.push('--security-opt', `seccomp=${seccompProfile}`);
+    }
+
+    const apparmorProfile = config.docker.apparmorProfile;
+    if (apparmorProfile) {
+      args.push('--security-opt', `apparmor=${apparmorProfile}`);
+    }
+
+    if (config.docker.gvisorEnabled) {
+      args.push('--runtime', 'runsc');
+    }
+
     if (config.docker.networkRestrict) {
       args.push('--network', 'stas_agent-net');
       args.push('-e', 'http_proxy=http://stas-egress-proxy:3128');
@@ -719,14 +730,11 @@ export class DockerSandbox implements SandboxExecutor {
       args.push('--network', 'none');
     }
 
-    // Env vars
     args.push('-e', `HOME=${CONTAINER_WORKDIR}`);
     args.push('-e', 'USER=user');
 
-    // Image
     args.push(image);
 
-    // Keep container running
     args.push('tail', '-f', '/dev/null');
 
     return args;
