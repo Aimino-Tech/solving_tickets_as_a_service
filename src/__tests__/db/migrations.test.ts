@@ -23,6 +23,12 @@ import { existsSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+vi.mock('../../db/connection.js', () => ({
+  queryWithRetry: vi.fn().mockResolvedValue({ rows: [] }),
+  closePool: vi.fn(),
+  getPool: vi.fn(() => ({ connect: vi.fn().mockResolvedValue({ query: vi.fn(), release: vi.fn() }) })),
+}));
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 

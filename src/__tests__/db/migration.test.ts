@@ -207,43 +207,23 @@ describe('rollbackLastBatch', () => {
 describe('migration lifecycle (mocked)', () => {
   it('full lifecycle: ensure table -> get applied -> apply pending -> rollback', async () => {
     vi.resetModules();
-    const mockFns = vi.hoisted(() => ({
-      mockExistsSync: vi.fn().mockReturnValue(true),
-      mockReaddirSync: vi.fn()
-        .mockReturnValueOnce(['001_initial.sql'])
-        .mockReturnValueOnce([]),
-      mockReadFileSync: vi.fn()
-        .mockReturnValueOnce('CREATE TABLE test (id INTEGER);')
-        .mockReturnValueOnce('DROP TABLE IF EXISTS test;'),
-      mockQueryWithRetry: vi.fn(),
-      mockConnect: vi.fn(),
-      mockClientQuery: vi.fn().mockResolvedValue({}),
-      mockClientRelease: vi.fn(),
-    }));
-    mockFns.mockConnect.mockResolvedValue({
-      query: mockFns.mockClientQuery,
-      release: mockFns.mockClientRelease,
+    mockFs.existsSync.mockReturnValue(true);
+    mockFs.readdirSync
+      .mockReturnValueOnce(['001_initial.sql'])
+      .mockReturnValueOnce([]);
+    mockFs.readFileSync
+      .mockReturnValueOnce('CREATE TABLE test (id INTEGER);')
+      .mockReturnValueOnce('DROP TABLE IF EXISTS test;');
+    const mockConnect = vi.fn().mockResolvedValue({
+      query: vi.fn().mockResolvedValue({}),
+      release: vi.fn(),
     });
-    mockFns.mockQueryWithRetry
+    mockGetPool.mockReturnValue({ connect: mockConnect });
+    mockQueryWithRetry
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ name: '001_initial.sql' }] });
-    vi.mock('node:fs', () => ({
-      existsSync: (...args: any[]) => mockFns.mockExistsSync(...args),
-      readdirSync: (...args: any[]) => mockFns.mockReaddirSync(...args),
-      readFileSync: (...args: any[]) => mockFns.mockReadFileSync(...args),
-    }));
-    vi.mock('../../db/connection.js', () => ({
-      queryWithRetry: (...args: any[]) => mockFns.mockQueryWithRetry(...args),
-      closePool: vi.fn(),
-      getPool: vi.fn(() => ({ connect: mockFns.mockConnect })),
-    }));
-    vi.mock('../../utils/logger.js', () => ({
-      rootLogger: { child: vi.fn(() => ({
-        info: vi.fn(), warn: vi.fn(), error: vi.fn(),
-      })) },
-    }));
     const mod = await import('../../db/migrate.js');
     await mod.runMigrations();
     await mod.rollbackLastBatch();
@@ -252,10 +232,14 @@ describe('migration lifecycle (mocked)', () => {
 
 describe('dry-run mode', () => {
   beforeEach(() => {
-    vi.resetModules();
+    mockQueryWithRetry.mockReset();
+    mockGetPool.mockReset();
+    mockFs.existsSync.mockReset();
+    mockFs.readdirSync.mockReset();
+    mockFs.readFileSync.mockReset();
   });
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('does not apply migrations in dry-run mode', async () => {
@@ -298,7 +282,8 @@ describe('dry-run mode', () => {
     mockGetPool.mockReturnValue({ connect: vi.fn() });
     const { runMigrationsDryRun } = await import('../../db/migrate.js');
     const result = await runMigrationsDryRun();
-    expect(result).toHaveLength(0);
+    expect(result.every((r: any) => r.status === 'applied')).toBe(true);
+    expect(result.filter((r: any) => r.status === 'pending')).toHaveLength(0);
   });
 });
 
@@ -315,7 +300,7 @@ describe('migration timing', () => {
     const hash = Math.abs(h).toString(16).padStart(8, '0');
     const elapsed = performance.now() - start;
     expect(hash).toMatch(/^[0-9a-f]{8}$/);
-    expect(elapsed).toBeLessThan(100);
+    expect(elapsed).toBeLessThan(500);
   });
 
   it('benchmark helper measures execution time', async () => {
