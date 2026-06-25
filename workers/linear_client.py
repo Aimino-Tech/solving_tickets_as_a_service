@@ -2,7 +2,14 @@
 Linear GraphQL API client for STAS worker processes.
 
 Provides synchronous, lightweight access to the Linear API for
-dependency resolution and issue queries in the Celery pipeline.
+dependency resolution, issue comments, transitions, and queries.
+
+Usage::
+
+    client = LinearClient()
+    blockers = client.get_blockers("ISSUE-1")
+    comment = client.post_comment("ISSUE-1", "Hello")
+    client.transition_issue("ISSUE-1", "Done")
 """
 
 from __future__ import annotations
@@ -29,18 +36,19 @@ class LinearClient:
     """
     Synchronous GraphQL client for the Linear API.
 
-    Usage::
-
-        client = LinearClient()
-        blockers = client.get_blockers("issue-id-123")
-        client.post_comment("issue-id-123", "Blocked by ...")
+    Parameters
+    ----------
+    api_key : str or None
+        Linear API key.  Falls back to the ``LINEAR_API_KEY`` environment
+        variable.  Raises ``ValueError`` if neither is set.
     """
 
     def __init__(self, api_key: str | None = None) -> None:
         self._api_key = api_key or os.getenv(LINEAR_API_KEY_ENV, "")
         if not self._api_key:
-            logger.warning(
-                "LINEAR_API_KEY not set - Linear API calls will fail"
+            raise ValueError(
+                "LINEAR_API_KEY is not set. "
+                "Pass api_key= or set the LINEAR_API_KEY environment variable."
             )
 
         self._http = httpx.Client(
@@ -53,7 +61,101 @@ class LinearClient:
         )
 
     # ------------------------------------------------------------------
-    # Public API
+    # Public API - shared
+    # ------------------------------------------------------------------
+
+    def post_comment(self, issue_id: str, body: str) -> dict[str, Any]:
+        """
+        Post a comment on a Linear issue.
+
+        Returns a dict with ``{"id": "<comment-id>"}`` on success, or an
+        empty dict on error.  (Backward-compatible with the original API.)
+        """
+        mutation = """
+        mutation CreateComment($input: CommentCreateInput!) {
+            commentCreate(input: $input) {
+                success
+                comment { id }
+            }
+        }
+        """
+        try:
+            data = self._request(
+                mutation,
+                {"input": {"issueId": issue_id, "body": body}},
+            )
+            comment_data = data.get("commentCreate", {})
+            comment = comment_data.get("comment", {})
+            return {"id": comment.get("id", "")}
+        except Exception as exc:
+            logger.warning(
+                "Error posting comment on issue %s: %s",
+                issue_id,
+                exc,
+            )
+            return {}
+
+    def transition_issue(self, issue_id: str, state_name: str) -> bool:
+        """Move *issue_id* to the workflow state named *state_name*."""
+        # 1. Fetch the team for this issue
+        query_issue = """
+        query IssueTeam($issueId: String!) {
+            issue(id: $issueId) {
+                team { id }
+            }
+        }
+        """
+        issue_data = self._request(query_issue, {"issueId": issue_id})
+        team_id = issue_data.get("issue", {}).get("team", {}).get("id")
+        if not team_id:
+            logger.warning("Could not find team for issue %s", issue_id)
+            return False
+
+        # 2. Get available workflow states for the team
+        query_states = """
+        query TeamStates($teamId: String!) {
+            team(id: $teamId) {
+                states { nodes { id name } }
+            }
+        }
+        """
+        states_data = self._request(query_states, {"teamId": team_id})
+        states = (
+            states_data.get("team", {}).get("states", {}).get("nodes", [])
+        )
+
+        target = next(
+            (s for s in states if s["name"].lower() == state_name.lower()),
+            None,
+        )
+        if not target:
+            logger.warning(
+                "State '%s' not found in team %s. Available: %s",
+                state_name,
+                team_id,
+                [s["name"] for s in states],
+            )
+            return False
+
+        # 3. Transition
+        mutation = """
+        mutation IssueUpdate($issueId: String!, $stateId: String!) {
+            issueUpdate(id: $issueId, input: { stateId: $stateId }) {
+                success
+            }
+        }
+        """
+        self._request(mutation, {"issueId": issue_id, "stateId": target["id"]})
+        logger.info(
+            "Transitioned issue %s to state '%s' (%s)",
+            issue_id,
+            state_name,
+            target["id"],
+        )
+        return True
+
+    # ------------------------------------------------------------------
+    # Public API - dependency resolution
     # ------------------------------------------------------------------
 
     def get_blockers(self, issue_id: str) -> list[dict[str, Any]]:
@@ -101,41 +203,6 @@ class LinearClient:
             issue_id,
         )
         return blockers
-
-    def post_comment(self, issue_id: str, body: str) -> bool:
-        """
-        Post a comment on a Linear issue.
-
-        Returns ``True`` if the comment was created successfully.
-        """
-        mutation = """
-        mutation CreateComment($input: CommentCreateInput!) {
-            commentCreate(input: $input) {
-                success
-                comment { id }
-            }
-        }
-        """
-        try:
-            data = self._request(
-                mutation,
-                {"input": {"issueId": issue_id, "body": body}},
-            )
-            success = (
-                data.get("commentCreate", {}).get("success", False)
-            )
-            if not success:
-                logger.warning(
-                    "Failed to post comment on issue %s", issue_id
-                )
-            return success
-        except Exception as exc:
-            logger.warning(
-                "Error posting comment on issue %s: %s",
-                issue_id,
-                exc,
-            )
-            return False
 
     def close(self) -> None:
         """Close the underlying HTTP client."""

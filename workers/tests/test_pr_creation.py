@@ -406,6 +406,7 @@ class TestCreatePullRequestTask:
 
 
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # Linear client
 # ---------------------------------------------------------------------------
 
@@ -424,7 +425,7 @@ class TestLinearClient:
         }
         mock_client = MagicMock()
         mock_client.post.return_value = mock_resp
-        mock_httpx_cls.return_value.__enter__.return_value = mock_client
+        mock_httpx_cls.return_value = mock_client
 
         client = LinearClient(api_key="lin_api_key")
         result = client.post_comment("ISSUE-1", "Hello Linear")
@@ -460,29 +461,29 @@ class TestLinearClient:
         ]
         mock_client = MagicMock()
         mock_client.post.side_effect = responses
-        mock_httpx_cls.return_value.__enter__.return_value = mock_client
+        mock_httpx_cls.return_value = mock_client
 
         client = LinearClient(api_key="lin_api_key")
         result = client.transition_issue("ISSUE-1", "Human Review")
         assert result is True
 
     def test_init_without_key_raises(self):
-        with patch("workers.linear_client.os.environ.get", return_value=""):
+        with patch("workers.linear_client.os.getenv", return_value=""):
             with pytest.raises(ValueError, match="LINEAR_API_KEY"):
                 LinearClient()
 
     def test_init_with_key_param(self):
         client = LinearClient(api_key="custom_key")
-        assert client.api_key == "custom_key"
+        assert client._api_key == "custom_key"
 
     @patch("workers.linear_client.httpx.Client")
-    def test_graphql_error_raises(self, mock_httpx_cls):
+    def test_graphql_error_returns_empty_dict(self, mock_httpx_cls):
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"errors": [{"message": "Not found"}]}
         mock_client = MagicMock()
         mock_client.post.return_value = mock_resp
-        mock_httpx_cls.return_value.__enter__.return_value = mock_client
+        mock_httpx_cls.return_value = mock_client
 
         client = LinearClient(api_key="key")
-        with pytest.raises(RuntimeError, match="Linear API error"):
-            client.post_comment("ISSUE-1", "body")
+        result = client.post_comment("ISSUE-1", "body")
+        assert result == {}

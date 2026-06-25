@@ -70,6 +70,23 @@ def resolve_dependencies(
 
     try:
         client = LinearClient()
+    except ValueError as exc:
+        logger.warning(
+            json.dumps({
+                "event": "dependency_resolve.no_api_key",
+                "issue_id": issue_id,
+                "error": str(exc),
+                "decision": "dispatch",
+            })
+        )
+        return {
+            "issue_id": issue_id,
+            "blocked": False,
+            "blockers": [],
+            "decision": "dispatch",
+        }
+
+    try:
         blockers = client.get_blockers(issue_id)
 
         if not blockers:
