@@ -105,6 +105,35 @@ export const benchmarks = {
     request<{ generatedAt: string; currency: string; prices: import('./types').BenchmarkPrice[] }>('/benchmarks/price'),
 };
 
+// KPI Dashboard (admin key required)
+export const kpi = {
+  get: (params?: { days?: number; from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.days) qs.set('days', String(params.days));
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const query = qs.toString();
+    return request<import('./types').KpiResponse>('/kpi' + (query ? '?' + query : ''));
+  },
+  exportUrl: (days?: number) => {
+    const qs = days ? '?days=' + days : '';
+    return API_BASE + '/kpi/export' + qs;
+  },
+};
+
+// Pricing
+export const pricing = {
+  get: () =>
+    request<import('./types').PricingData>('/pricing'),
+  calculate: (fixes: number, tier?: string) => {
+    const qs = new URLSearchParams({ fixes: String(fixes) });
+    if (tier) qs.set('tier', tier);
+    return request<import('./types').CostCalculation>(`/pricing/calculate?${qs.toString()}`);
+  },
+  vs: (competitor: string) =>
+    request<import('./types').VsComparisonData & { competitor: string }>(`/pricing/vs/${competitor}`),
+};
+
 // Settings
 export const settings = {
   get: () => request<{
