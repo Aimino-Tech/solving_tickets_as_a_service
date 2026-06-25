@@ -53,10 +53,7 @@ def es_with_mock_redis():
 class TestEmergencyStopCore:
 
     def test_check_returns_false_by_default(self, es_no_redis):
-        from workers.emergency.stop import EmergencyStop
-
-        es = EmergencyStop(redis_client=None)
-        assert es.check() is False
+        assert es_no_redis.check() is False
 
     def test_activate_sets_check_true(self, es_no_redis):
         es_no_redis.activate(reason="test")
@@ -90,8 +87,13 @@ class TestEmergencyStopCore:
         assert state["active"] is True
         assert state["reason"] == "testing read_state"
 
-    def test_read_state_when_inactive(self, es_no_redis):
-        state = es_no_redis.read_state()
+    def test_read_state_when_inactive(self, es_no_redis, monkeypatch, tmp_path):
+        lock_path = str(tmp_path / "check.lock")
+        monkeypatch.setenv("EMERGENCY_STOP_LOCK_FILE", lock_path)
+        from workers.emergency.stop import EmergencyStop, _DISABLE_REDIS
+
+        es = EmergencyStop(redis_client=_DISABLE_REDIS)
+        state = es.read_state()
         assert state["active"] is False
 
     def test_activate_writes_file_lock(self, es_no_redis):
@@ -292,15 +294,12 @@ class TestEmergencyMiddlewareSignal:
 
 class TestEmergencyActivateRevoke:
 
-    @patch("workers.emergency.server.app.control.inspect")
-    @patch("workers.emergency.server.app.control.revoke")
-    def test_revoke_active_tasks(self, mock_revoke, mock_inspect):
+    def test_revoke_active_tasks(self):
         from workers.emergency.server import _revoke_active_tasks
         from workers.celery_app import app as celery_app
 
-        mock_inspect_instance = MagicMock()
-        mock_inspect.return_value = mock_inspect_instance
-        mock_inspect_instance.active.return_value = {
+        mock_inspect = MagicMock()
+        mock_inspect.active.return_value = {
             "worker1@host": [
                 {"name": "workers.tasks.agent.dispatch_opencode", "id": "task-1"},
                 {"name": "workers.tasks.notifications.send_notification", "id": "task-2"},
@@ -311,50 +310,51 @@ class TestEmergencyActivateRevoke:
             ],
         }
 
-        result = _revoke_active_tasks(celery_app)
+        mock_revoke = MagicMock()
+        mock_control = MagicMock()
+        mock_control.inspect.return_value = mock_inspect
+        mock_control.revoke = mock_revoke
 
-        # agent + notifications + verification should be revoked (3)
+        original = celery_app.control
+        celery_app.control = mock_control
+        try:
+            result = _revoke_active_tasks(celery_app)
+        finally:
+            celery_app.control = original
+
         assert len(result) == 3
         revoked_ids = [r["task_id"] for r in result]
         assert "task-1" in revoked_ids
         assert "task-2" in revoked_ids
         assert "task-4" in revoked_ids
-        # ping should NOT be revoked
         assert "task-3" not in revoked_ids
 
-        # revoke called with terminate=True
         assert mock_revoke.call_count == 3
         for call_args in mock_revoke.call_args_list:
             assert call_args[1].get("terminate") is True
 
-    @patch("workers.emergency.server._revoke_active_tasks")
-    @patch("workers.emergency.server._move_pending_to_hold")
-    @patch("workers.emergency.server.get_emergency_stop")
-    def test_activate_emergency_kills_and_moves(
-        self, mock_get_es, mock_move, mock_revoke
-    ):
+    def test_activate_emergency_kills_and_moves(self):
         from workers.emergency.server import _activate_emergency
         from workers.celery_app import app as celery_app
+        from workers.emergency.stop import get_emergency_stop
 
-        mock_es = MagicMock()
-        mock_es.activate.return_value = {
-            "active": True,
-            "reason": "test",
-            "activated_at": "2025-01-01T00:00:00.000Z",
-        }
-        mock_get_es.return_value = mock_es
-        mock_revoke.return_value = [{"task_id": "t1", "task_name": "agent.dispatch", "worker": "w1"}]
-        mock_move.return_value = {"stas.agents.dispatch": 3}
+        def fake_activate(reason=""):
+            return {"active": True, "reason": reason, "activated_at": "2025-01-01T00:00:00.000Z"}
 
-        state = _activate_emergency(celery_app, reason="integration test")
+        original = get_emergency_stop().activate
+        try:
+            with patch.object(get_emergency_stop(), "activate", side_effect=fake_activate), \
+                 patch("workers.emergency.server._revoke_active_tasks", return_value=[{"task_id": "t1", "task_name": "agent.dispatch", "worker": "w1"}]), \
+                 patch("workers.emergency.server._move_pending_to_hold", return_value={"stas.agents.dispatch": 3}):
 
-        assert state["active"] is True
-        assert state["reason"] == "integration test"
-        assert len(state["revoked_tasks"]) == 1
-        assert state["moved_to_hold"]["stas.agents.dispatch"] == 3
-        mock_es.activate.assert_called_once_with(reason="integration test")
-        mock_revoke.assert_called_once()
-        mock_move.assert_called_once()
+                state = _activate_emergency(celery_app, reason="integration test")
+
+            assert state["active"] is True
+            assert state["reason"] == "integration test"
+            assert len(state["revoked_tasks"]) == 1
+            assert state["moved_to_hold"]["stas.agents.dispatch"] == 3
+        finally:
+            get_emergency_stop().activate = original
 
 
 # ---------------------------------------------------------------------------
