@@ -30,3 +30,9 @@ stas-private-key.pem
 Thumbs.db
 .vscode/
 eval/results/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
