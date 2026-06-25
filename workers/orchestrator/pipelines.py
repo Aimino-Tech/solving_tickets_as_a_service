@@ -59,7 +59,7 @@ _PIPELINES: dict[str, dict] = {
     "stas:fix": {
         "name": "stas:fix",
         "label": "Fix Issue",
-        "description": "Triage, workspace, agent, verify, audit, anti-mockup, PR, notifications, review, cleanup",
+        "description": "Triage, workspace, agent, verify, audit, anti-mockup, sanitize, PR, notifications, review, cleanup",
         "max_attempts": 3,
         "concurrency_limit": 3,
         "steps": [
@@ -69,6 +69,7 @@ _PIPELINES: dict[str, dict] = {
             {"task": "workers.tasks.verification.run_verification"},
             {"task": "workers.tasks.self_audit.run_self_audit"},
             {"task": "workers.quality.anti_mockup_scan.anti_mockup_scan"},
+            {"task": "workers.gates.sanitizer.sanitize_agent_output"},
             {"task": "workers.tasks.pr_creation.create_pull_request"},
             {"task": "workers.tasks.notifications.dispatch_webhook_event",
              "kwargs": {"event_type": "fix_completed"}},
@@ -91,6 +92,7 @@ _PIPELINES: dict[str, dict] = {
             {"task": "workers.tasks.verification.run_verification"},
             {"task": "workers.tasks.self_audit.run_self_audit"},
             {"task": "workers.quality.anti_mockup_scan.anti_mockup_scan"},
+            {"task": "workers.gates.sanitizer.sanitize_agent_output"},
             {"task": "workers.tasks.pr_creation.create_pull_request"},
             {"task": "workers.tasks.notifications.dispatch_webhook_event",
              "kwargs": {"event_type": "fix_completed"}},
@@ -130,6 +132,7 @@ STAGE_TASKS: dict[str, str] = {
     "self_audit": "workers.tasks.self_audit.run_self_audit",
     "anti_mockup": "workers.quality.anti_mockup_scan.anti_mockup_scan",
     "malicious_code_gate": "workers.gates.malicious_code_gate.malicious_code_gate",
+    "sanitize": "workers.gates.sanitizer.sanitize_agent_output",
     "pr_creation": "workers.tasks.pr_creation.create_pull_request",
     "notification": "workers.tasks.notifications.dispatch_webhook_event",
     "review": "workers.tasks.self_audit.review_decision",

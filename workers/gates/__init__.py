@@ -9,6 +9,13 @@ from workers.gates.oss_integration import (
     OssGuardResult,
     RebuffScanner,
 )
+from workers.gates.sanitizer import (
+    Sanitizer,
+    SanitizerConfig,
+    SanitizerResult,
+    get_sanitizer,
+    sanitize_agent_output,
+)
 
 __all__ = [
     "InjectionGuard",
@@ -21,4 +28,9 @@ __all__ = [
     "LLMGuardScanner",
     "RebuffScanner",
     "GarakScanner",
+    "Sanitizer",
+    "SanitizerConfig",
+    "SanitizerResult",
+    "get_sanitizer",
+    "sanitize_agent_output",
 ]
