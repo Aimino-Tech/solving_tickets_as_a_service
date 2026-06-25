@@ -27,6 +27,11 @@ vi.mock('../../health/opencodeHealth.js', () => ({
     checkNow: vi.fn(),
   },
 }));
+vi.mock('../../health/workers.js', () => ({ getWorkersHealth: vi.fn() }));
+vi.mock('../../health/dependencies.js', () => ({ getDependenciesHealth: vi.fn() }));
+vi.mock('../../utils/logger.js', () => ({
+  rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
+}));
 
 describe('health/index', () => {
   it('exports queue health functions', async () => {
