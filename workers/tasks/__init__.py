@@ -8,7 +8,7 @@ from .periodic import queue_health_check, dlq_cleanup, push_metrics, report_live
 from .sandbox_gc import sandbox_gc
 from .self_audit import run_self_audit, orchestrate_pipeline, review_decision
 from .adversarial_review import layer1_per_file_analysis, layer2_holistic_review, layer3_oracle_synthesis
-from .linear_poll import poll_active_issues
+from .linear_poll import poll_active_issues, triage, notify_progress, transition_state
 from .auto_qa import auto_qa_sample
 
 __all__ = [
@@ -32,4 +32,7 @@ __all__ = [
     "layer3_oracle_synthesis",
     "poll_active_issues",
     "auto_qa_sample",
+    "triage",
+    "notify_progress",
+    "transition_state",
 ]
