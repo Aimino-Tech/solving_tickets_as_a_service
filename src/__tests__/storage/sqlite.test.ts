@@ -14,35 +14,57 @@ function makeMockDb() {
   return {
     exec: vi.fn(),
     pragma: vi.fn(),
-    prepare: vi.fn(() => ({
+    prepare: vi.fn((sql: string) => ({
       run: vi.fn(),
       get: vi.fn((params?: any) => {
-        if (typeof params === 'number') {
-          const row = savedRows.find((r) => r.id === params);
-          return row ?? undefined;
+        // For INSERT ... RETURNING * statements, create and return a new row
+        if (sql.includes('INSERT') && sql.includes('RETURNING')) {
+          const rowId = savedRows.length + 1;
+          const row = {
+            id: rowId,
+            installation_id: params?.installationId ?? 0,
+            repo_owner: params?.repoOwner ?? '',
+            repo_name: params?.repoName ?? '',
+            issue_number: params?.issueNumber ?? 0,
+            status: params?.status ?? 'pending',
+            confidence: params?.confidence ?? null,
+            summary: params?.summary ?? null,
+            pr_url: params?.prUrl ?? null,
+            branch_name: params?.branchName ?? null,
+            error: params?.error ?? null,
+            created_at: new Date().toISOString().replace('Z', ''),
+            updated_at: new Date().toISOString().replace('Z', ''),
+            duration_ms: params?.durationMs ?? null,
+            model_used: params?.modelUsed ?? null,
+          };
+          savedRows.push(row);
+          return row;
         }
-        const rowId = savedRows.length + 1;
-        const row = {
-          id: rowId,
-          installation_id: params?.installationId ?? 0,
-          repo_owner: params?.repoOwner ?? '',
-          repo_name: params?.repoName ?? '',
-          issue_number: params?.issueNumber ?? 0,
-          status: params?.status ?? 'pending',
-          confidence: null,
-          summary: null,
-          pr_url: null,
-          branch_name: null,
-          error: null,
-          created_at: new Date().toISOString().replace('Z', ''),
-          updated_at: new Date().toISOString().replace('Z', ''),
-          duration_ms: params?.durationMs ?? null,
-          model_used: null,
+        // For SELECT by id, look up the row
+        if (sql.startsWith('SELECT * FROM run_history WHERE id = ?')) {
+          const id = params as number;
+          return savedRows.find((r: any) => r.id === id) ?? undefined;
+        }
+        // For aggregate SELECT (stats queries)
+        const allRows = savedRows;
+        const total = allRows.length;
+        const completed = allRows.filter((r: any) => r.status === 'completed').length;
+        return {
+          total: total,
+          pass_rate: total > 0 ? completed / total : 0,
+          avg_duration_ms: 0,
         };
-        savedRows.push(row);
-        return row;
       }),
-      all: vi.fn(() => savedRows),
+      all: vi.fn((...params: any[]) => {
+        if (sql.includes('ORDER BY created_at DESC')) {
+          return savedRows;
+        }
+        if (sql.includes('WHERE status = ?')) {
+          const status = params[0];
+          return savedRows.filter((r: any) => r.status === status);
+        }
+        return savedRows;
+      }),
       finalize: vi.fn(),
     })),
     close: vi.fn(),
@@ -53,7 +75,7 @@ vi.mock('better-sqlite3', () => ({
   default: vi.fn(function () { return makeMockDb(); }),
 }));
 
-describe.skip('storage/sqlite', () => {
+describe('storage/sqlite', () => {
   let SQLiteStorage: any;
 
   beforeEach(async () => {
@@ -106,8 +128,8 @@ describe.skip('storage/sqlite', () => {
     await storage.saveRun({ installationId: 1, repoOwner: 'owner', repoName: 'repo', issueNumber: 2, status: 'failed', durationMs: 200 });
 
     const stats = await storage.getRunStats({});
-    expect(stats).toHaveProperty('total');
-    expect(stats).toHaveProperty('passRate');
+    expect(stats.total).toBe(2);
+    expect(stats.passRate).toBe(0.5);
     storage.close();
   });
 

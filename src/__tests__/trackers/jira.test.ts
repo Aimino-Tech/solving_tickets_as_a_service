@@ -15,6 +15,18 @@ vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
 
+vi.mock('../../config.js', () => ({
+  config: {
+    trackers: {
+      jira: {
+        url: 'https://jira.example.com',
+        email: 'test@test.com',
+        apiToken: 'test-token',
+      },
+    },
+  },
+}));
+
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 

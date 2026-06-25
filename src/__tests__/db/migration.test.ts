@@ -16,29 +16,20 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const mockFs = vi.hoisted(() => ({
+const fsMockFns = vi.hoisted(() => ({
   existsSync: vi.fn(),
   readdirSync: vi.fn(),
   readFileSync: vi.fn(),
+  writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
 }));
 
-const mockQueryWithRetry = vi.hoisted(() => vi.fn(() => Promise.resolve({ rows: [] })));
+const mockQueryWithRetry = vi.hoisted(() => vi.fn());
 const mockGetPool = vi.hoisted(() => vi.fn(() => ({ connect: vi.fn() })));
 
-vi.mock('node:fs', () => ({
-  existsSync: mockFs.existsSync,
-  readdirSync: mockFs.readdirSync,
-  readFileSync: mockFs.readFileSync,
-  mkdirSync: mockFs.mkdirSync,
-  default: { existsSync: mockFs.existsSync, readdirSync: mockFs.readdirSync, readFileSync: mockFs.readFileSync, mkdirSync: mockFs.mkdirSync },
-}));
-vi.mock('fs', () => ({
-  existsSync: mockFs.existsSync,
-  readdirSync: mockFs.readdirSync,
-  readFileSync: mockFs.readFileSync,
-  mkdirSync: mockFs.mkdirSync,
-  default: { existsSync: mockFs.existsSync, readdirSync: mockFs.readdirSync, readFileSync: mockFs.readFileSync, mkdirSync: mockFs.mkdirSync },
+vi.mock('node:fs', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('node:fs')>()),
+  ...fsMockFns,
 }));
 
 vi.mock('../../db/connection.js', () => ({
@@ -88,26 +79,26 @@ describe('computeChecksum', () => {
 
 describe('runMigrations', () => {
   beforeEach(() => {
-    mockFs.existsSync.mockReset();
-    mockFs.readdirSync.mockReset();
-    mockFs.readFileSync.mockReset();
+    fsMockFns.existsSync.mockReset();
+    fsMockFns.readdirSync.mockReset();
+    fsMockFns.readFileSync.mockReset();
     mockQueryWithRetry.mockReset();
     mockGetPool.mockReset();
   });
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('creates migrations directory if missing', async () => {
-    mockFs.existsSync.mockReturnValue(false);
+    fsMockFns.existsSync.mockReturnValue(false);
     mockGetPool.mockReturnValue({ connect: vi.fn() });
     const { runMigrations: run } = await import('../../db/migrate.js');
     await run();
   });
 
   it('does nothing when no migration files exist', async () => {
-    mockFs.existsSync.mockReturnValue(true);
-    mockFs.readdirSync.mockReturnValue([]);
+    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.readdirSync.mockReturnValue([]);
     mockQueryWithRetry.mockResolvedValue({ rows: [] });
     mockGetPool.mockReturnValue({ connect: vi.fn() });
     const { runMigrations: run } = await import('../../db/migrate.js');
@@ -115,9 +106,9 @@ describe('runMigrations', () => {
   });
 
   it('applies pending migrations not in the tracking table', async () => {
-    mockFs.existsSync.mockReturnValue(true);
-    mockFs.readdirSync.mockReturnValue(['001_test.sql', '002_test.sql']);
-    mockFs.readFileSync
+    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.readdirSync.mockReturnValue(['001_test.sql', '002_test.sql']);
+    fsMockFns.readFileSync
       .mockReturnValueOnce('CREATE TABLE test1 (id INTEGER);')
       .mockReturnValueOnce('CREATE TABLE test2 (id INTEGER);');
     mockQueryWithRetry
@@ -135,9 +126,9 @@ describe('runMigrations', () => {
   });
 
   it('skips already-applied migrations', async () => {
-    mockFs.existsSync.mockReturnValue(true);
-    mockFs.readdirSync.mockReturnValue(['001_applied.sql', '002_pending.sql']);
-    mockFs.readFileSync.mockReturnValue('SELECT 1;');
+    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.readdirSync.mockReturnValue(['001_applied.sql', '002_pending.sql']);
+    fsMockFns.readFileSync.mockReturnValue('SELECT 1;');
     mockQueryWithRetry
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ name: '001_applied.sql' }] });
@@ -154,11 +145,8 @@ describe('runMigrations', () => {
 });
 
 describe('rollbackLastBatch', () => {
-  beforeEach(() => {
-    vi.resetModules();
-  });
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('does nothing when no migrations are tracked', async () => {
@@ -171,8 +159,8 @@ describe('rollbackLastBatch', () => {
   });
 
   it('rolls back using the .rollback.sql file when available', async () => {
-    mockFs.existsSync.mockReturnValue(true);
-    mockFs.readFileSync.mockReturnValue('DROP TABLE IF EXISTS test;');
+    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.readFileSync.mockReturnValue('DROP TABLE IF EXISTS test;');
     mockQueryWithRetry
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ name: '002_test.sql' }] });
@@ -188,7 +176,7 @@ describe('rollbackLastBatch', () => {
   });
 
   it('warns and still removes tracking record when rollback file is missing', async () => {
-    mockFs.existsSync.mockReturnValue(false);
+    fsMockFns.existsSync.mockReturnValue(false);
     mockQueryWithRetry
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ name: '003_norollback.sql' }] });
@@ -207,11 +195,11 @@ describe('rollbackLastBatch', () => {
 describe('migration lifecycle (mocked)', () => {
   it('full lifecycle: ensure table -> get applied -> apply pending -> rollback', async () => {
     vi.resetModules();
-    mockFs.existsSync.mockReturnValue(true);
-    mockFs.readdirSync
+    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.readdirSync
       .mockReturnValueOnce(['001_initial.sql'])
       .mockReturnValueOnce([]);
-    mockFs.readFileSync
+    fsMockFns.readFileSync
       .mockReturnValueOnce('CREATE TABLE test (id INTEGER);')
       .mockReturnValueOnce('DROP TABLE IF EXISTS test;');
     const mockConnect = vi.fn().mockResolvedValue({
@@ -234,18 +222,18 @@ describe('dry-run mode', () => {
   beforeEach(() => {
     mockQueryWithRetry.mockReset();
     mockGetPool.mockReset();
-    mockFs.existsSync.mockReset();
-    mockFs.readdirSync.mockReset();
-    mockFs.readFileSync.mockReset();
+    fsMockFns.existsSync.mockReset();
+    fsMockFns.readdirSync.mockReset();
+    fsMockFns.readFileSync.mockReset();
   });
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   it('does not apply migrations in dry-run mode', async () => {
-    mockFs.existsSync.mockReturnValue(true);
-    mockFs.readdirSync.mockReturnValue(['001_test.sql', '002_test.sql']);
-    mockFs.readFileSync
+    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.readdirSync.mockReturnValue(['001_test.sql', '002_test.sql']);
+    fsMockFns.readFileSync
       .mockReturnValueOnce('CREATE TABLE test1 (id INTEGER);')
       .mockReturnValueOnce('CREATE TABLE test2 (id INTEGER);');
     mockQueryWithRetry
@@ -260,8 +248,8 @@ describe('dry-run mode', () => {
   });
 
   it('does not attempt rollback in dry-run mode', async () => {
-    mockFs.existsSync.mockReturnValue(true);
-    mockFs.readFileSync.mockReturnValue('DROP TABLE IF EXISTS test;');
+    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.readFileSync.mockReturnValue('DROP TABLE IF EXISTS test;');
     mockQueryWithRetry
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ name: '001_applied.sql' }] });
@@ -273,17 +261,19 @@ describe('dry-run mode', () => {
   });
 
   it('returns empty array when no migrations are pending (dry-run)', async () => {
-    mockFs.existsSync.mockReturnValue(true);
-    mockFs.readdirSync.mockReturnValue(['001_test.sql']);
-    mockFs.readFileSync.mockReturnValue('SELECT 1;');
+    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.readdirSync.mockReturnValue(['001_test.sql']);
+    fsMockFns.readFileSync.mockReturnValue('SELECT 1;');
     mockQueryWithRetry
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ name: '001_test.sql' }] });
     mockGetPool.mockReturnValue({ connect: vi.fn() });
     const { runMigrationsDryRun } = await import('../../db/migrate.js');
     const result = await runMigrationsDryRun();
-    expect(result.every((r: any) => r.status === 'applied')).toBe(true);
-    expect(result.filter((r: any) => r.status === 'pending')).toHaveLength(0);
+    // All migrations are already applied, so no pending migrations
+    expect(result.filter(r => r.status === 'pending')).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].status).toBe('applied');
   });
 });
 
@@ -300,7 +290,7 @@ describe('migration timing', () => {
     const hash = Math.abs(h).toString(16).padStart(8, '0');
     const elapsed = performance.now() - start;
     expect(hash).toMatch(/^[0-9a-f]{8}$/);
-    expect(elapsed).toBeLessThan(500);
+    expect(elapsed).toBeLessThan(100);
   });
 
   it('benchmark helper measures execution time', async () => {

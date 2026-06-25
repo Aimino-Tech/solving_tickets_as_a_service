@@ -41,29 +41,32 @@ const mockRedisForHealth = {
   status: 'close',
 };
 vi.mock('ioredis', () => ({
-  default: vi.fn(function() { return mockRedisForHealth; }),
   Redis: vi.fn(function() { return mockRedisForHealth; }),
 }));
 
-describe.skip('health/queueHealth', () => {
+describe('health/queueHealth', () => {
   let qh: typeof import('../../health/queueHealth.js');
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockRedisForHealth.llen = vi.fn().mockResolvedValue(0);
-    mockRedisForHealth.zcount = vi.fn().mockResolvedValue(0);
     qh = await import('../../health/queueHealth.js');
   });
 
   describe('getQueueHealth', () => {
-    it('returns a healthy report when queue depth is zero', async () => {
+    it('returns a healthy report when RabbitMQ is disconnected', async () => {
+      mockIsConnected.mockReturnValue(false);
+
       const report = await qh.getQueueHealth();
       expect(report.status).toBe('healthy');
       expect(report.summary.totalMessages).toBe(0);
+      expect(report.queues).toBeDefined();
+      expect(report.queues.length).toBeGreaterThanOrEqual(0);
       expect(report.timestamp).toBeDefined();
     });
 
     it('returns healthy when connected and queues are empty', async () => {
+      mockIsConnected.mockReturnValue(true);
+      // Mock fetch to return empty queues
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: vi.fn().mockResolvedValue([]),
@@ -71,16 +74,27 @@ describe.skip('health/queueHealth', () => {
 
       const report = await qh.getQueueHealth();
       expect(report.status).toBe('healthy');
+      expect(report.queues).toBeDefined();
+      expect(report.queues.length).toBeGreaterThanOrEqual(0);
     });
 
     it('returns degraded when a main queue exceeds warn threshold', async () => {
-      const { closeHealthRedis } = await import('../../health/queueHealth.js');
-      await closeHealthRedis();
+      mockIsConnected.mockReturnValue(true);
+      // Verify getRedis returns our mock object
+      mockRedisForHealth.llen.mockReset();
+      mockRedisForHealth.llen.mockResolvedValue(60);
+      const firstCall = await mockRedisForHealth.llen('test');
+      expect(firstCall).toBe(60);
 
-      mockRedisForHealth.llen = vi.fn().mockImplementation((key: string) => {
-        if (key.includes('stas-issues:wait')) return Promise.resolve(60);
+      mockRedisForHealth.llen.mockReset();
+      mockRedisForHealth.llen.mockImplementation(function(key: string) {
+        if (key && key.startsWith('bull:stas-issues:') && !key.startsWith('bull:stas-issues-dlq:')) {
+          return Promise.resolve(60);
+        }
         return Promise.resolve(0);
       });
+      mockRedisForHealth.zcount.mockReset();
+      mockRedisForHealth.zcount.mockResolvedValue(0);
 
       const report = await qh.getQueueHealth();
       expect(report.status).toBe('degraded');
@@ -91,6 +105,11 @@ describe.skip('health/queueHealth', () => {
   describe('hasCriticalQueues', () => {
     it('returns empty arrays when healthy', async () => {
       mockIsConnected.mockReturnValue(false);
+      // Reset llen to return 0 (previous test may have set it to 60)
+      mockRedisForHealth.llen.mockReset();
+      mockRedisForHealth.llen.mockResolvedValue(0);
+      mockRedisForHealth.zcount.mockReset();
+      mockRedisForHealth.zcount.mockResolvedValue(0);
 
       const result = await qh.hasCriticalQueues();
       expect(result.critical).toEqual([]);
