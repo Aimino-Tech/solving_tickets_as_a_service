@@ -218,6 +218,14 @@ const envSchema = z.object({
   METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
+
+  // Pipeline Orchestration
+  PIPELINE_MAX_CONCURRENT: z.coerce.number().int().positive().default(3),
+  PIPELINE_MAX_REWORK_ATTEMPTS: z.coerce.number().int().positive().max(10).default(3),
+  PIPELINE_DEFAULT_TEST_COMMAND: z.string().default('pytest'),
+  PIPELINE_WORKSPACE_BASE_DIR: z.string().default('/tmp/stas-workspaces'),
+  PIPELINE_CLONE_TIMEOUT_S: z.coerce.number().int().positive().default(120),
+  PIPELINE_CONCURRENCY_TIMEOUT_S: z.coerce.number().int().positive().default(600),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -461,6 +469,15 @@ function buildConfig(env: ParsedEnv) {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    pipeline: {
+      maxConcurrent: env.PIPELINE_MAX_CONCURRENT,
+      maxReworkAttempts: env.PIPELINE_MAX_REWORK_ATTEMPTS,
+      defaultTestCommand: env.PIPELINE_DEFAULT_TEST_COMMAND,
+      workspaceBaseDir: env.PIPELINE_WORKSPACE_BASE_DIR,
+      cloneTimeoutS: env.PIPELINE_CLONE_TIMEOUT_S,
+      concurrencyTimeoutS: env.PIPELINE_CONCURRENCY_TIMEOUT_S,
     },
   } as const;
 }
