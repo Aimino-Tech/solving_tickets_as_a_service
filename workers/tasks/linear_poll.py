@@ -7,7 +7,7 @@ from workers.celery_app import app
 from workers.dispatch.pause import get_pause_manager
 from workers.linear.client import get_issues_by_state, post_comment
 from workers.tracker.routing import classify_pipeline, PipelineType
-from workers.tracker.state_machine import next_state
+from workers.tracker.state_machine import resolve_state as next_state
 
 logger = logging.getLogger(__name__)
 
