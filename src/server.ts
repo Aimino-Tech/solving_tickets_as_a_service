@@ -58,6 +58,7 @@ import { dashboardRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
 import { slaRouter } from './routes/sla.js';
 import { onboardingRouter } from './routes/onboarding.js';
+import { benchmarksRouter } from './routes/benchmarks.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -651,6 +652,10 @@ export function createApp(): express.Application {
   const { default: mcpRouter } = await import('./routes/mcp.js');
   app.use(mcpRouter);
 
+  // -- MCP agent discovery routes (FastMCP integration)
+  const { default: mcpDiscoveryRouter } = await import('./mcp.js');
+  app.use(mcpDiscoveryRouter);
+
   // -- Feature flags admin API ------------------------------------------------
   app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
 
@@ -678,6 +683,9 @@ export function createApp(): express.Application {
 
   // ── Onboarding API ──────────────────────────────────────────────
   app.use('/onboarding', onboardingRouter);
+
+  // ── Benchmarks API (public) ──────────────────────────────────────
+  app.use('/api/benchmarks', benchmarksRouter);
 
   // -- 404 handler ----------------------------------------------------------
 
