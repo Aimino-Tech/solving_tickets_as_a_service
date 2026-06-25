@@ -11,6 +11,7 @@ from .review_orchestrator import run_review_pipeline
 from .merge_queue import process_merge_queue
 from .conflict_resolver import resolve_conflicts
 from .human_escalation import escalate_to_human
+from .review_queue import submit_for_review, run_adversarial_review, auto_merge, orchestrate_review_merge
 
 __all__ = [
     "triage_issue",
@@ -32,4 +33,8 @@ __all__ = [
     "process_merge_queue",
     "resolve_conflicts",
     "escalate_to_human",
+    "submit_for_review",
+    "run_adversarial_review",
+    "auto_merge",
+    "orchestrate_review_merge",
 ]
