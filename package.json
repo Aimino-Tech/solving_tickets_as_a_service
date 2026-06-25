@@ -72,6 +72,15 @@
     "db:migrate:bench": "tsx scripts/bench-migrations.ts",
     "db:migrate:bench:ci": "tsx scripts/bench-migrations.ts --ci --json",
     "test:db-migrations": "vitest run src/__tests__/db/",
+    "knip": "knip --no-progress",
+    "ts-prune": "ts-prune",
+    "ghostcheck": "acv check src/",
+    "trace-check": "npx trace-check",
+    "anti-hallucination": "anti-hallucination index src/ && anti-hallucination report src/",
+    "vibecop": "npx vibecop scan src/",
+    "gitleaks": "gitleaks detect --source . -v 2>/dev/null || echo 'gitleaks not installed - install via: brew install gitleaks'",
+    "quality-gates": "bash scripts/quality-gates.sh",
+    "quality-gates:changed": "bash scripts/quality-gates.sh --changed-only",
     "release:dry-run": "bash scripts/release-dry-run.sh"
   },
   "dependencies": {
@@ -110,12 +119,18 @@
     "@types/pg": "^8.20.0",
     "@types/swagger-ui-express": "^4.1.8",
     "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.6",
+    "anti-hallucination-mcp": "^0.14.0",
     "drizzle-kit": "^0.31.10",
+    "ghostcheck": "^0.1.0",
+    "knip": "^6.20.0",
     "pino-pretty": "^13.1.3",
     "smee-client": "^5.0.0",
+    "trace-core": "^0.7.0",
+    "ts-prune": "^0.10.3",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.2.4",
-    "@vitest/ui": "^3.2.6"
+    "vibecop": "^0.4.3",
+    "vitest": "^3.2.4"
   }
 }
