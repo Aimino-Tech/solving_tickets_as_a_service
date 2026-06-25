@@ -11,6 +11,12 @@ Onboarding automation:
     - OnboardingStateMachine — per-tenant onboarding state machine.
     - onboarding_middleware — Celery signal gating for incomplete onboarding.
 
+Free tier & PQL conversion (AIM-2077):
+    - Tier definitions: free=10/mo, solo=50/mo, team=unlimited, enterprise=unlimited
+    - PQL scoring with nudge at fix #8, upgrade wall at fix #10
+    - 14-day inactivity detection and re-engagement alerts
+    - Celery pre-dispatch middleware for tier enforcement
+
 Modules
 -------
     tenant_isolation
@@ -21,6 +27,12 @@ Modules
     onboarding_middleware
         connect_onboarding_middleware — Celery signal hook that gates task
         dispatch until onboarding is complete.
+    tiers
+        Tier definitions, usage counter, and PQL scoring.
+    pql
+        PQL conversion nudges, upgrade wall, and inactivity alerts.
+    middleware
+        Celery pre-dispatch gate for plan limits.
 """
 
 from workers.billing.tenant_isolation import (
@@ -42,6 +54,32 @@ from workers.billing.sla import (
     EscalationLevel,
     SLA_GOALS,
 )
+from workers.billing.tiers import (
+    TIER_DEFINITIONS,
+    PqlScore,
+    compute_pql_score,
+    get_pql_score,
+    get_tier_usage,
+    increment_tier_usage,
+    increment_tier_verified,
+    is_inactive,
+    resolve_tier,
+    tier_display_name,
+    tier_max_fixes,
+)
+from workers.billing.pql import (
+    InactivityResult,
+    NudgeResult,
+    WallResult,
+    check_inactivity,
+    check_nudge,
+    check_wall,
+)
+from workers.billing.middleware import (
+    TierLimitExceeded,
+    connect_tier_middleware,
+    check_and_block,
+)
 
 __all__ = [
     "TenantIsolationManager",
@@ -55,4 +93,24 @@ __all__ = [
     "get_sla_tracker",
     "EscalationLevel",
     "SLA_GOALS",
+    "TIER_DEFINITIONS",
+    "PqlScore",
+    "compute_pql_score",
+    "get_pql_score",
+    "get_tier_usage",
+    "increment_tier_usage",
+    "increment_tier_verified",
+    "is_inactive",
+    "resolve_tier",
+    "tier_display_name",
+    "tier_max_fixes",
+    "InactivityResult",
+    "NudgeResult",
+    "WallResult",
+    "check_inactivity",
+    "check_nudge",
+    "check_wall",
+    "TierLimitExceeded",
+    "connect_tier_middleware",
+    "check_and_block",
 ]

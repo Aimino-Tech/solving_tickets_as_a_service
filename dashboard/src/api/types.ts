@@ -73,3 +73,29 @@ export interface BenchmarkPrice {
   monthlyMinCents: number;
   monthlyMaxFixes: number;
 }
+
+export interface KpiMetric {
+  id: number;
+  snapshotDate: string;
+  activeReposMa: number;
+  fixCompletionRate: number;
+  totalRuns: number;
+  successfulRuns: number;
+  failedRuns: number;
+  freeAccounts: number;
+  paidAccounts: number;
+  freeToPaidConversion: number;
+  netRevenueCents: number;
+  churnRate: number;
+  churnedAccounts: number;
+  viralCoefficient: number;
+  referredAccounts: number;
+  totalNewAccounts: number;
+  createdAt: string;
+}
+
+export interface KpiResponse {
+  metrics: KpiMetric[];
+  count: number;
+  generatedAt: string;
+}
