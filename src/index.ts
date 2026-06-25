@@ -187,7 +187,7 @@ async function main(): Promise<void> {
     log.info('Starting API server...');
     try {
       const { startServer } = await import('./server.js');
-      server = startServer() as Server;
+      server = (await startServer()) as Server;
       log.info('API server started');
       addBreadcrumb('system', 'API server started');
     } catch (err) {

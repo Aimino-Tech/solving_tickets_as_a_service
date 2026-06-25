@@ -69,6 +69,7 @@ import { badgeRouter } from './routes/badge.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { viralRouter } from './routes/viral.js';
 import { qualityRouter } from './routes/quality.js';
+import { kpiRouter } from './routes/kpi.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -94,7 +95,7 @@ function parseSize(size: string): number {
 }
 
 
-export function createApp(): express.Application {
+export async function createApp(): Promise<express.Application> {
   const app = express();
 
   // -- Request ID middleware ------------------------------------------------
@@ -734,11 +735,21 @@ export function createApp(): express.Application {
   app.use('/api/analytics', analyticsRouter);
 
 
-  // SAML 2.0 SSO routes
-  app.use('/api/v1/saml', samlRouter);
+  // SAML 2.0 SSO routes (optional)
+  try {
+    const { default: samlRouter } = await import('./routes/saml.js');
+    app.use('/api/v1/saml', samlRouter);
+  } catch {
+    log.warn('SAML routes not available');
+  }
 
-  // Enterprise API routes
-  app.use('/api/v1/enterprise', enterpriseRouter);
+  // Enterprise routes (optional)
+  try {
+    const { default: enterpriseRouter } = await import('./routes/enterprise.js');
+    app.use('/api/v1/enterprise', enterpriseRouter);
+  } catch {
+    log.warn('Enterprise routes not available');
+  }
   // -- 404 handler ----------------------------------------------------------
 
   app.use((_req: Request, res: Response) => {
@@ -758,8 +769,8 @@ export function createApp(): express.Application {
  * Start the Express server on the configured port.
  * Returns the server instance so callers can close it during graceful shutdown.
  */
-export function startServer(): import('http').Server {
-  const app = createApp();
+export async function startServer(): Promise<import('http').Server> {
+  const app = await createApp();
 
   const server = app.listen(config.port, '0.0.0.0', () => {
     log.info(

@@ -88,7 +88,7 @@ router.get("/audit/export", async (req: Request, res: Response) => {
     filtered.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
     if (format === "csv") {
-      const esc = (v: string) => '"'"' + v.replace(/"/g, '""') + '"'"';
+      const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
       const header = "id,timestamp,actor,action,resource,details\n";
       const rows = filtered.map((e) => [esc(e.id), esc(e.timestamp), esc(e.actor), esc(e.action), esc(e.resource), esc(JSON.stringify(e.details ?? {}))].join(",")).join("\n");
       res.setHeader("Content-Type", "text/csv");
