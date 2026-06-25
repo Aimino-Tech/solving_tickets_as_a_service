@@ -9,6 +9,8 @@ from celery import shared_task
 from workers.github.client import GitHubClient
 from workers.linear_client import LinearClient
 
+from workers.github.client import get_installation_token as _get_installation_token
+
 logger = logging.getLogger(__name__)
 
 _TEMPLATE_PATH = os.path.join(
