@@ -651,6 +651,10 @@ export function createApp(): express.Application {
   const { default: mcpRouter } = await import('./routes/mcp.js');
   app.use(mcpRouter);
 
+  // -- MCP agent discovery endpoint (AIM-2072)
+  const { default: mcpDiscoveryRouter } = await import('./mcp.js');
+  app.use(mcpDiscoveryRouter);
+
   // -- Feature flags admin API ------------------------------------------------
   app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
 
@@ -678,6 +682,12 @@ export function createApp(): express.Application {
 
   // ── Onboarding API ──────────────────────────────────────────────
   app.use('/onboarding', onboardingRouter);
+
+  // Auth routes (OAuth login, callback, session)
+  app.use('/api/auth', authRouter);
+
+  // Repos API (repo picker with webhook status)
+  app.use('/api/repos', reposRouter);
 
   // -- 404 handler ----------------------------------------------------------
 
