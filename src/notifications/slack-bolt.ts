@@ -39,8 +39,6 @@ function buildBlocks(event: NotificationEvent, data: NotificationData): any[] {
         return `Payment Failed — ${data.issueTitle}`;
       case 'payment_recovered':
         return `Payment Recovered — ${data.issueTitle}`;
-      case 'dlq_alert':
-        return `${bot} — Message dead-lettered`;
     }
   })();
 
@@ -60,8 +58,6 @@ function buildBlocks(event: NotificationEvent, data: NotificationData): any[] {
         return 'credit_card';
       case 'payment_recovered':
         return 'white_check_mark';
-      case 'dlq_alert':
-        return 'skull';
     }
   })();
 
@@ -75,83 +71,6 @@ function buildBlocks(event: NotificationEvent, data: NotificationData): any[] {
       },
     },
   ];
-
-  // Handle DLQ alerts with their own block structure
-  if (event === 'dlq_alert') {
-    const meta = data.metadata ?? {};
-    const retryCount = meta.retryCount ?? '?';
-    const sourceQueue = meta.sourceQueue ?? 'unknown';
-    const fields: any[] = [
-      { type: 'mrkdwn', text: `*Queue:*\n\`${sourceQueue}\`` },
-      { type: 'mrkdwn', text: `*Retries:*\n${retryCount}` },
-    ];
-
-    if (data.errorMessage) {
-      fields.push({ type: 'mrkdwn', text: `*Error:*\n${data.errorMessage.slice(0, 300)}` });
-    }
-
-    if (data.reason) {
-      fields.push({ type: 'mrkdwn', text: `*Reason:*\n${data.reason.slice(0, 300)}` });
-    }
-
-    blocks.push({
-      type: 'section',
-      fields,
-    });
-
-    // Show issue/repo info if available
-    if (issueUrl || repoUrl) {
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*<${issueUrl}|#${data.issueNumber}: ${data.issueTitle}>*\n<${repoUrl}|${data.repoOwner}/${data.repoName}>`,
-        },
-      });
-    }
-
-    // Show stack trace if available (in a context block)
-    const trace = meta.stackTrace ? String(meta.stackTrace).slice(0, 500) : '';
-    if (trace) {
-      blocks.push({
-        type: 'context',
-        elements: [
-          {
-            type: 'mrkdwn',
-            text: `*Trace:*\`\`\`${trace}\`\`\``,
-          },
-        ],
-      });
-    }
-
-    // Add a divider and action buttons
-    blocks.push({ type: 'divider' });
-
-    const actionElements: any[] = [];
-    if (issueUrl) {
-      actionElements.push({
-        type: 'button',
-        text: { type: 'plain_text', text: 'View Issue', emoji: true },
-        url: issueUrl,
-        action_id: 'view_issue',
-      });
-    }
-
-    // DLQ ID metadata for admin lookup
-    if (meta.dlqId) {
-      blocks.push({
-        type: 'context',
-        elements: [
-          {
-            type: 'mrkdwn',
-            text: `DLQ ID: \`${meta.dlqId}\``,
-          },
-        ],
-      });
-    }
-
-    return blocks;
-  }
 
   if (event === 'payment_failed' || event === 'payment_recovered') {
     const meta = data.metadata ?? {};

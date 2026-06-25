@@ -45,36 +45,6 @@ beat_schedule = {
         "schedule": 30.0,
         "options": {"queue": "stas.issues.triage"},
     },
-    "pipeline-cleanup-every-30-minutes": {
-        "task": "workers.tasks.pipeline_orchestrator.orchestrate_pipeline",
-        "schedule": 1800.0,
-        "args": ("", "stas:fix"),
-    },
-    # ── AIM-2022: Self-Healing Infrastructure ─────────────────────
-    "self-healing-heartbeat-check": {
-        "task": "workers.tasks.periodic.self_healing_heartbeat_check",
-        "schedule": 15.0,  # every 15 seconds
-        "args": (),
-        "options": {"queue": "stas.issues.health"},
-    },
-    "self-healing-queue-drain-check": {
-        "task": "workers.tasks.periodic.self_healing_queue_drain_check",
-        "schedule": 60.0,  # every 60 seconds
-        "args": (),
-        "options": {"queue": "stas.issues.health"},
-    },
-    "self-healing-circuit-breaker-check": {
-        "task": "workers.tasks.periodic.self_healing_circuit_check",
-        "schedule": 30.0,  # every 30 seconds
-        "args": (),
-        "options": {"queue": "stas.issues.health"},
-    },
-    "self-healing-dlq-replay": {
-        "task": "workers.tasks.periodic.self_healing_dlq_replay",
-        "schedule": 120.0,  # every 2 minutes
-        "args": (),
-        "options": {"queue": "stas.issues.health"},
-    },
 }
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")
@@ -92,62 +62,6 @@ worker_prefetch_multiplier = 1
 worker_enable_remote_control = False
 broker_connection_retry_on_startup = True
 
-# ── AIM-2022: Per-task-type timeout annotations ──────────────────
-task_annotations = {
-    "workers.tasks.triage.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_TRIAGE_SOFT", "120")),
-        "time_limit": int(os.getenv("TIMEOUT_TRIAGE_HARD", "150")),
-    },
-    "workers.tasks.agent.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_AGENT_SOFT", "580")),
-        "time_limit": int(os.getenv("TIMEOUT_AGENT_HARD", "600")),
-    },
-    "workers.tasks.sandbox.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_SANDBOX_SOFT", "300")),
-        "time_limit": int(os.getenv("TIMEOUT_SANDBOX_HARD", "330")),
-    },
-    "workers.tasks.verification.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_VERIFY_SOFT", "300")),
-        "time_limit": int(os.getenv("TIMEOUT_VERIFY_HARD", "330")),
-    },
-    "workers.tasks.pr_creation.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_PR_SOFT", "120")),
-        "time_limit": int(os.getenv("TIMEOUT_PR_HARD", "150")),
-    },
-    "workers.tasks.notifications.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_NOTIFY_SOFT", "60")),
-        "time_limit": int(os.getenv("TIMEOUT_NOTIFY_HARD", "90")),
-    },
-    "workers.tasks.periodic.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_PERIODIC_SOFT", "120")),
-        "time_limit": int(os.getenv("TIMEOUT_PERIODIC_HARD", "150")),
-    },
-    "workers.tasks.self_audit.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_SELF_AUDIT_SOFT", "300")),
-        "time_limit": int(os.getenv("TIMEOUT_SELF_AUDIT_HARD", "330")),
-    },
-    "workers.tasks.linear_poll.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_LINEAR_POLL_SOFT", "60")),
-        "time_limit": int(os.getenv("TIMEOUT_LINEAR_POLL_HARD", "90")),
-    },
-    "workers.tasks.ci_polling.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_CI_POLL_SOFT", "120")),
-        "time_limit": int(os.getenv("TIMEOUT_CI_POLL_HARD", "150")),
-    },
-    "workers.tasks.sandbox_gc.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_SANDBOX_GC_SOFT", "120")),
-        "time_limit": int(os.getenv("TIMEOUT_SANDBOX_GC_HARD", "150")),
-    },
-    "workers.orchestrator.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_ORCHESTRATOR_SOFT", "120")),
-        "time_limit": int(os.getenv("TIMEOUT_ORCHESTRATOR_HARD", "150")),
-    },
-    "workers.quality.": {
-        "soft_time_limit": int(os.getenv("TIMEOUT_QUALITY_SOFT", "120")),
-        "time_limit": int(os.getenv("TIMEOUT_QUALITY_HARD", "150")),
-    },
-}
-
 # ── Unified Exchange Topology ───────────────────────────────────
 # All layers (TypeScript + Celery) use the same exchange names,
 # queue names, and routing keys.
@@ -157,7 +71,6 @@ stas_issues = Exchange("stas.issues", type="topic", durable=True)
 stas_queue = Exchange("stas.queue", type="topic", durable=True)
 stas_events = Exchange("stas.events", type="fanout", durable=True)
 stas_dlx = Exchange("stas.dlx", type="direct", durable=True)
-stas_quality = Exchange("stas.quality", type="topic", durable=True)
 
 task_default_queue = "stas.agents.dispatch"
 task_default_exchange = "stas.agents"
@@ -180,8 +93,6 @@ task_queues = [
     # ── stas.dlx exchange ─────────────────────────────────────
     Queue("stas.dlx.retry", stas_dlx, routing_key="dlq.retry"),
     Queue("stas.dlx.failed", stas_dlx, routing_key="dlq.failed"),
-    Queue("stas.queue.orchestrator", stas_queue, routing_key="orchestrator.#"),
-    Queue("stas.quality.enforce", stas_quality, routing_key="quality.enforce"),
 ]
 
 task_routes = {
@@ -193,9 +104,4 @@ task_routes = {
     "workers.tasks.notifications.*": {"queue": "stas.queue.notifications"},
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
     "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
-    "workers.tasks.pipeline_orchestrator.*": {"queue": "stas.queue.orchestrator"},
-    "workers.tasks.anti_liar.*": {"queue": "stas.quality.enforce"},
-    "workers.orchestrator.*": {"queue": "stas.queue.orchestrator"},
-    # ── AIM-2022: Self-healing tasks ──────────────────────────
-    "workers.tasks.periodic.self_healing_*": {"queue": "stas.issues.health"},
 }

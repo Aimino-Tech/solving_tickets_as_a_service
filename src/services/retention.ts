@@ -420,7 +420,7 @@ async function main(): Promise<void> {
     report.results.push(payloadResult);
   }
 
-  log.info({ report }, 'Retention cleanup report');
+  console.log(JSON.stringify(report, null, 2));
 
   if (report.totalErrors > 0) {
     process.exit(1);
