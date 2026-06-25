@@ -30,6 +30,7 @@ const envSchema = z.object({
 
   // Queue
   REDIS_URL: z.string().default('redis://localhost:6379'),
+  RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672/stas'),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
   QUEUE_DEDUP_TTL_SECONDS: z.coerce.number().int().positive().default(120),
   QUEUE_KEEP_COMPLETED: z.coerce.number().int().positive().default(200),
@@ -264,6 +265,7 @@ function buildConfig(env: ParsedEnv) {
 
     queue: {
       redisUrl: env.REDIS_URL,
+      rabbitmqUrl: env.RABBITMQ_URL,
       workerConcurrency: env.WORKER_CONCURRENCY,
       dedupTtl: env.QUEUE_DEDUP_TTL_SECONDS,
       keepCompleted: env.QUEUE_KEEP_COMPLETED,
@@ -360,10 +362,6 @@ function buildConfig(env: ParsedEnv) {
       creditsFixRun: env.USAGE_CREDITS_FIX_RUN,
       creditsTriage: env.USAGE_CREDITS_TRIAGE,
       creditsSandbox: env.USAGE_CREDITS_SANDBOX,
-    },
-
-    ci: {
-      monitorEnabled: env.CI_MONITOR_ENABLED,
     },
 
     rateLimit: {
