@@ -9,77 +9,64 @@ vi.mock('../../utils/logger.js', () => ({
 }));
 
 let savedRows: any[] = [];
-let rowIdCounter = 0;
 
 function makeMockDb() {
   return {
     exec: vi.fn(),
     pragma: vi.fn(),
-    prepare: vi.fn((sql: string) => {
-      const trimmed = sql.trim();
-      const isInsert = trimmed.startsWith('INSERT');
-      const isSelectById = trimmed.includes('WHERE id =');
-      const isAggregate = trimmed.includes('COUNT(*)');
-      return {
-        run: vi.fn((params?: any) => {
-          if (isInsert) {
-            rowIdCounter++;
-            const row: Record<string, any> = { id: rowIdCounter };
-            if (params?.installationId) row.installation_id = params.installationId;
-            if (params?.repoOwner) row.repo_owner = params.repoOwner;
-            if (params?.repoName) row.repo_name = params.repoName;
-            if (params?.issueNumber) row.issue_number = params.issueNumber;
-            if (params?.status) row.status = params.status;
-            if (params?.durationMs) row.duration_ms = params.durationMs;
-            savedRows.push(row);
-            return { lastInsertRowid: rowIdCounter, changes: 1 };
-          }
-          return { changes: 0 };
-        }),
-        get: vi.fn((params?: any) => {
-          if (isAggregate) {
-            const totalRows = savedRows.length;
-            const completedRows = savedRows.filter((r: any) => r.status === 'completed').length;
-            return {
-              total: totalRows,
-              pass_rate: totalRows > 0 ? completedRows / totalRows : 0,
-              avg_duration_ms: 0,
-            };
-          }
-          if (isSelectById && params) {
-            const id = params;
-            return savedRows.find((r: any) => r.id === id) ?? undefined;
-          }
-          if (isInsert && params) {
-            rowIdCounter++;
-            const row: Record<string, any> = { id: rowIdCounter };
-            if (params.installationId) row.installation_id = params.installationId;
-            if (params.repoOwner) row.repo_owner = params.repoOwner;
-            if (params.repoName) row.repo_name = params.repoName;
-            if (params.issueNumber) row.issue_number = params.issueNumber;
-            if (params.status) row.status = params.status;
-            if (params.durationMs) row.duration_ms = params.durationMs;
-            savedRows.push(row);
-            return row;
-          }
-          if (params?.installationId) {
-            return {
-              id: 1,
-              installation_id: params.installationId,
-              repo_owner: params.repoOwner ?? '',
-              repo_name: params.repoName ?? '',
-              issue_number: params.issueNumber ?? 0,
-              status: params.status ?? 'pending',
-              created_at: new Date().toISOString().replace('Z', ''),
-              updated_at: new Date().toISOString().replace('Z', ''),
-            };
-          }
-          return undefined;
-        }),
-        all: vi.fn(() => savedRows),
-        finalize: vi.fn(),
-      };
-    }),
+    prepare: vi.fn((sql: string) => ({
+      run: vi.fn(),
+      get: vi.fn((params?: any) => {
+        // For INSERT ... RETURNING * statements, create and return a new row
+        if (sql.includes('INSERT') && sql.includes('RETURNING')) {
+          const rowId = savedRows.length + 1;
+          const row = {
+            id: rowId,
+            installation_id: params?.installationId ?? 0,
+            repo_owner: params?.repoOwner ?? '',
+            repo_name: params?.repoName ?? '',
+            issue_number: params?.issueNumber ?? 0,
+            status: params?.status ?? 'pending',
+            confidence: params?.confidence ?? null,
+            summary: params?.summary ?? null,
+            pr_url: params?.prUrl ?? null,
+            branch_name: params?.branchName ?? null,
+            error: params?.error ?? null,
+            created_at: new Date().toISOString().replace('Z', ''),
+            updated_at: new Date().toISOString().replace('Z', ''),
+            duration_ms: params?.durationMs ?? null,
+            model_used: params?.modelUsed ?? null,
+          };
+          savedRows.push(row);
+          return row;
+        }
+        // For SELECT by id, look up the row
+        if (sql.startsWith('SELECT * FROM run_history WHERE id = ?')) {
+          const id = params as number;
+          return savedRows.find((r: any) => r.id === id) ?? undefined;
+        }
+        // For aggregate SELECT (stats queries)
+        const allRows = savedRows;
+        const total = allRows.length;
+        const completed = allRows.filter((r: any) => r.status === 'completed').length;
+        return {
+          total: total,
+          pass_rate: total > 0 ? completed / total : 0,
+          avg_duration_ms: 0,
+        };
+      }),
+      all: vi.fn((...params: any[]) => {
+        if (sql.includes('ORDER BY created_at DESC')) {
+          return savedRows;
+        }
+        if (sql.includes('WHERE status = ?')) {
+          const status = params[0];
+          return savedRows.filter((r: any) => r.status === status);
+        }
+        return savedRows;
+      }),
+      finalize: vi.fn(),
+    })),
     close: vi.fn(),
   };
 }

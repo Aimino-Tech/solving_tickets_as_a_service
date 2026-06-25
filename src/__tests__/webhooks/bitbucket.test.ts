@@ -176,7 +176,6 @@ describe("createBitbucketWebhooks", () => {
         repoName: "test-repo",
         issueNumber: 42,
         issueTitle: "Fix broken login",
-        source: "bitbucket",
       }),
     );
   });

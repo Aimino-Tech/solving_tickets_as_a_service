@@ -384,13 +384,13 @@ describe('server', () => {
       expect(typeof app.use).toBe('function');
       expect(typeof app.get).toBe('function');
       expect(typeof app.post).toBe('function');
-    }, 15000);
+    });
 
     it('returns an app that can listen on a port', async () => {
       const { createApp } = await import('../server.js');
       app = createApp();
       expect(typeof app.listen).toBe('function');
-    }, 15000);
+    });
   });
 
   describe('GET /health', () => {

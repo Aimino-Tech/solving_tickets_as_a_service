@@ -27,7 +27,15 @@ describe('trackers/index', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    // Force fresh module to avoid stale Map state
+    vi.resetModules();
     trackers = await import('../../trackers/index.js');
+  });
+
+  describe('getTracker', () => {
+    it('returns undefined for uninitialized tracker', () => {
+      expect(trackers.getTracker('linear')).toBeUndefined();
+    });
   });
 
   describe('initTrackers', () => {
@@ -47,14 +55,6 @@ describe('trackers/index', () => {
       trackers.initTrackers();
       expect(trackers.hasTracker('linear')).toBe(true);
       expect(trackers.hasTracker('jira')).toBe(true);
-    });
-  });
-
-  describe('getTracker', () => {
-    it('returns undefined for uninitialized tracker', async () => {
-      vi.resetModules();
-      const mod = await import('../../trackers/index.js');
-      expect(mod.getTracker('linear')).toBeUndefined();
     });
   });
 });

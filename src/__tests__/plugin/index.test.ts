@@ -26,6 +26,27 @@ vi.mock('node:fs', () => ({
   existsSync: mockExistsSync,
 }));
 
+const chainable = () => {
+  const c: any = () => c;
+  c.default = () => c;
+  c.describe = () => c;
+  c.string = () => c;
+  c.optional = () => c;
+  c.nullable = () => c;
+  c.array = () => c;
+  c.object = () => c;
+  return c;
+};
+
+const mockTool = Object.assign(
+  vi.fn((def: any) => def),
+  { schema: chainable() },
+);
+
+vi.mock('@opencode-ai/plugin', () => ({
+  tool: mockTool,
+}));
+
 // ── Suite ───────────────────────────────────────────────────────────────────
 
 describe('STAS Plugin', () => {
@@ -76,6 +97,8 @@ describe('STAS Plugin', () => {
       );
 
       expect(result).toBeDefined();
+      expect(result.output).toBe('mock output');
+      expect(result.metadata?.tool).toBe('stas_webhook_test');
     });
 
     it('returns error output when script does not exist', async () => {
@@ -89,7 +112,7 @@ describe('STAS Plugin', () => {
         { directory: '/test/project' },
       );
 
-      expect(result).toBeDefined();
+      expect(result.output).toContain('not found');
     });
   });
 
@@ -105,7 +128,8 @@ describe('STAS Plugin', () => {
         { directory: '/test/project' },
       );
 
-      expect(result).toBeDefined();
+      expect(result.output).toBe('mock output');
+      expect(result.metadata?.mode).toBe('check');
     });
 
     it('executes config check with init mode', async () => {
@@ -117,7 +141,8 @@ describe('STAS Plugin', () => {
         { directory: '/test/project' },
       );
 
-      expect(result).toBeDefined();
+      expect(result.output).toBe('mock output');
+      expect(result.metadata?.mode).toBe('init');
     });
   });
 
@@ -133,7 +158,8 @@ describe('STAS Plugin', () => {
         { directory: '/test/project' },
       );
 
-      expect(result).toBeDefined();
+      expect(result.output).toBe('mock output');
+      expect(result.metadata?.tool).toBe('stas_status');
     });
 
     it('executes status check with custom URLs', async () => {
@@ -145,7 +171,7 @@ describe('STAS Plugin', () => {
         { directory: '/test/project' },
       );
 
-      expect(result).toBeDefined();
+      expect(result.output).toBe('mock output');
     });
   });
 
@@ -161,7 +187,8 @@ describe('STAS Plugin', () => {
         { directory: '/test/project' },
       );
 
-      expect(result).toBeDefined();
+      expect(result.output).toBe('mock output');
+      expect(result.metadata?.mode).toBe('full');
     });
 
     it('executes dev start with bot-only mode', async () => {
@@ -173,7 +200,7 @@ describe('STAS Plugin', () => {
         { directory: '/test/project' },
       );
 
-      expect(result).toBeDefined();
+      expect(result.output).toBe('mock output');
     });
 
     it('executes dev start with opencode-only mode', async () => {
@@ -185,7 +212,7 @@ describe('STAS Plugin', () => {
         { directory: '/test/project' },
       );
 
-      expect(result).toBeDefined();
+      expect(result.output).toBe('mock output');
     });
   });
 
@@ -203,7 +230,8 @@ describe('STAS Plugin', () => {
         { directory: '/test/project' },
       );
 
-      expect(result).toBeDefined();
+      expect(result.output).toContain('failed');
+      expect(result.metadata?.error).toBe(true);
     });
 
     it('handles execSync with minimal error info', async () => {
@@ -217,7 +245,8 @@ describe('STAS Plugin', () => {
         { directory: '/test/project' },
       );
 
-      expect(result).toBeDefined();
+      expect(result.output).toContain('Command failed');
+      expect(result.metadata?.error).toBe(true);
     });
   });
 });

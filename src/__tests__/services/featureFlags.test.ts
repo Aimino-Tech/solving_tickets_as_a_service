@@ -45,6 +45,19 @@ describe('services/featureFlags', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    // Re-apply default mock return values after clearAllMocks
+    // mockReset clears mockResolvedValueOnce queues that persist across clearAllMocks
+    mockQuery.mockReset();
+    mockRedis.get.mockReset();
+    mockRedis.setex.mockReset();
+    mockRedis.del.mockReset();
+    mockRedis.zadd.mockReset();
+    mockRedis.zremrangebyscore.mockReset();
+    mockRedis.zcard.mockReset();
+    mockRedis.expire.mockReset();
+    mockRedis.quit.mockReset();
+    // Now set default return values
+    mockQuery.mockResolvedValue({ rows: [] });
     mockRedis.get.mockResolvedValue(null);
     mockRedis.setex.mockResolvedValue('OK');
     mockRedis.del.mockResolvedValue(1);
@@ -313,18 +326,21 @@ describe('services/featureFlags', () => {
     });
   });
 
-  describe.skip('enabledFor', () => {
+  describe('enabledFor', () => {
     it('returns true from account-level DB flag', async () => {
-      mockRedis.get.mockResolvedValue(null);
       mockQuery.mockResolvedValue({ rows: [{ enabled: true, percentage_rollout: 0 }] });
-      vi.resetModules();
-      ff = await import('../../services/featureFlags.js');
+      mockRedis.get.mockResolvedValue(null);
+      mockRedis.zcard.mockResolvedValue(0);
+      // Verify mockQuery works correctly
+      const mockResult = await mockQuery();
+      expect(mockResult).toEqual({ rows: [{ enabled: true, percentage_rollout: 0 }] });
       const result = await ff.enabledFor('test_flag', 42);
       expect(result).toBe(true);
-    }, 10000);
+    });
 
     it('returns false from account-level DB flag', async () => {
       mockRedis.get.mockResolvedValue(null);
+      mockRedis.zcard.mockResolvedValue(0);
       mockQuery.mockResolvedValue({ rows: [{ enabled: false, percentage_rollout: 0 }] });
       const result = await ff.enabledFor('test_flag', 42);
       expect(result).toBe(false);
