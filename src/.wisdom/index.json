@@ -1,0 +1,1440 @@
+{
+  "files": [
+    {
+      "path": "__tests__/agent/issueAgent.test.ts",
+      "lang": "typescript",
+      "lines": 350,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "__tests__/agent/tools.test.ts",
+      "lang": "typescript",
+      "lines": 1258,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/agent/types.test.ts",
+      "lang": "typescript",
+      "lines": 643,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/billing/plans.test.ts",
+      "lang": "typescript",
+      "lines": 117,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/billing/routes.test.ts",
+      "lang": "typescript",
+      "lines": 22,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/billing/stripe.test.ts",
+      "lang": "typescript",
+      "lines": 228,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/billing/trial.test.ts",
+      "lang": "typescript",
+      "lines": 110,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/billing/usage.test.ts",
+      "lang": "typescript",
+      "lines": 104,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/billing/webhook.test.ts",
+      "lang": "typescript",
+      "lines": 113,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/bridge/bridge.test.ts",
+      "lang": "typescript",
+      "lines": 391,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "__tests__/bridge/errors.test.ts",
+      "lang": "typescript",
+      "lines": 182,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/bridge/metrics.test.ts",
+      "lang": "typescript",
+      "lines": 184,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/bridge/types.test.ts",
+      "lang": "typescript",
+      "lines": 101,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/config.test.ts",
+      "lang": "typescript",
+      "lines": 378,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "__tests__/coverage.test.ts",
+      "lang": "typescript",
+      "lines": 22,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "__tests__/credits/index.test.ts",
+      "lang": "typescript",
+      "lines": 17,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/credits/middleware.test.ts",
+      "lang": "typescript",
+      "lines": 110,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "__tests__/credits/routes.test.ts",
+      "lang": "typescript",
+      "lines": 30,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "__tests__/dashboard/client.test.ts",
+      "lang": "typescript",
+      "lines": 332,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/dashboard/types.test.ts",
+      "lang": "typescript",
+      "lines": 346,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/dashboard/utils.test.ts",
+      "lang": "typescript",
+      "lines": 61,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/db/migration.test.ts",
+      "lang": "typescript",
+      "lines": 671,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/db/migrations.test.ts",
+      "lang": "typescript",
+      "lines": 388,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/fixtures.ts",
+      "lang": "typescript",
+      "lines": 260,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/github/actionDispatcher.test.ts",
+      "lang": "typescript",
+      "lines": 544,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "__tests__/github/auth.test.ts",
+      "lang": "typescript",
+      "lines": 250,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/github/messages.test.ts",
+      "lang": "typescript",
+      "lines": 786,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/health/opencodeHealth.test.ts",
+      "lang": "typescript",
+      "lines": 166,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/health/queueHealth.test.ts",
+      "lang": "typescript",
+      "lines": 97,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/health/scheduled.test.ts",
+      "lang": "typescript",
+      "lines": 53,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/metering/costs.test.ts",
+      "lang": "typescript",
+      "lines": 150,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/metering/tracker.test.ts",
+      "lang": "typescript",
+      "lines": 162,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/mocks.ts",
+      "lang": "typescript",
+      "lines": 183,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/monitoring/alerting.test.ts",
+      "lang": "typescript",
+      "lines": 120,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/monitoring/sentry-init.test.ts",
+      "lang": "typescript",
+      "lines": 25,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/monitoring/sentry.test.ts",
+      "lang": "typescript",
+      "lines": 122,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/notifications/base.test.ts",
+      "lang": "typescript",
+      "lines": 12,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/notifications/index.test.ts",
+      "lang": "typescript",
+      "lines": 19,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/notifications/slack-bolt.test.ts",
+      "lang": "typescript",
+      "lines": 78,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/notifications/slack.test.ts",
+      "lang": "typescript",
+      "lines": 71,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/plugin/index.test.ts",
+      "lang": "typescript",
+      "lines": 232,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/premium/auth-middleware.test.ts",
+      "lang": "typescript",
+      "lines": 286,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/premium/routes/auth.test.ts",
+      "lang": "typescript",
+      "lines": 251,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/premium/routes/dashboard.test.ts",
+      "lang": "typescript",
+      "lines": 387,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/pricing/admin.test.ts",
+      "lang": "typescript",
+      "lines": 132,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/pricing/audit.test.ts",
+      "lang": "typescript",
+      "lines": 167,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/pricing/cron.test.ts",
+      "lang": "typescript",
+      "lines": 101,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/pricing/middleware.test.ts",
+      "lang": "typescript",
+      "lines": 235,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/pricing/quota.test.ts",
+      "lang": "typescript",
+      "lines": 236,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/pricing/tiers.test.ts",
+      "lang": "typescript",
+      "lines": 272,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/queue/issueQueue.test.ts",
+      "lang": "typescript",
+      "lines": 120,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/queue/producers.test.ts",
+      "lang": "typescript",
+      "lines": 298,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/queue/rabbitmq.test.ts",
+      "lang": "typescript",
+      "lines": 62,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/ratelimit/concurrency.test.ts",
+      "lang": "typescript",
+      "lines": 316,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/ratelimit/limiter.test.ts",
+      "lang": "typescript",
+      "lines": 267,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/routes/admin.test.ts",
+      "lang": "typescript",
+      "lines": 22,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/routes/adminDashboard.test.ts",
+      "lang": "typescript",
+      "lines": 18,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/routes/adminWebhooks.test.ts",
+      "lang": "typescript",
+      "lines": 17,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/routes/api.test.ts",
+      "lang": "typescript",
+      "lines": 17,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/routes/auth.test.ts",
+      "lang": "typescript",
+      "lines": 16,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/routes/dashboard.test.ts",
+      "lang": "typescript",
+      "lines": 17,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/routes/featureFlags.test.ts",
+      "lang": "typescript",
+      "lines": 16,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "__tests__/sandbox/docker.test.ts",
+      "lang": "typescript",
+      "lines": 133,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "__tests__/sandbox/executor.test.ts",
+      "lang": "typescript",
+      "lines": 957,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/security/adminAuth.test.ts",
+      "lang": "typescript",
+      "lines": 73,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/security/audit.test.ts",
+      "lang": "typescript",
+      "lines": 64,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/security/authMiddleware.test.ts",
+      "lang": "typescript",
+      "lines": 60,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/security/ipAllowlist.test.ts",
+      "lang": "typescript",
+      "lines": 82,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/security/sandboxSecurity.test.ts",
+      "lang": "typescript",
+      "lines": 74,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/server.test.ts",
+      "lang": "typescript",
+      "lines": 842,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "__tests__/services/featureFlags.test.ts",
+      "lang": "typescript",
+      "lines": 137,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "__tests__/services/retention.test.ts",
+      "lang": "typescript",
+      "lines": 72,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/setup.ts",
+      "lang": "typescript",
+      "lines": 26,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "__tests__/smoke.test.ts",
+      "lang": "typescript",
+      "lines": 21,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/storage/index.test.ts",
+      "lang": "typescript",
+      "lines": 50,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/storage/postgres.test.ts",
+      "lang": "typescript",
+      "lines": 97,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/storage/sqlite.test.ts",
+      "lang": "typescript",
+      "lines": 75,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/stripe/checkout.test.ts",
+      "lang": "typescript",
+      "lines": 239,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "__tests__/trackers/base.test.ts",
+      "lang": "typescript",
+      "lines": 45,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/trackers/index.test.ts",
+      "lang": "typescript",
+      "lines": 59,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/trackers/jira.test.ts",
+      "lang": "typescript",
+      "lines": 178,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/trackers/linear.test.ts",
+      "lang": "typescript",
+      "lines": 169,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/utils/logger.test.ts",
+      "lang": "typescript",
+      "lines": 205,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/utils/types.test.ts",
+      "lang": "typescript",
+      "lines": 283,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/validation.test.ts",
+      "lang": "typescript",
+      "lines": 410,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "__tests__/webhooks/bitbucket.test.ts",
+      "lang": "typescript",
+      "lines": 244,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/webhooks/github.test.ts",
+      "lang": "typescript",
+      "lines": 703,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "__tests__/webhooks/gitlab.test.ts",
+      "lang": "typescript",
+      "lines": 262,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "agent/issueAgent.ts",
+      "lang": "typescript",
+      "lines": 1179,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "agent/tools.ts",
+      "lang": "typescript",
+      "lines": 731,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "agent/types.ts",
+      "lang": "typescript",
+      "lines": 69,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "audit/middleware.ts",
+      "lang": "typescript",
+      "lines": 139,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "audit/repository.ts",
+      "lang": "typescript",
+      "lines": 169,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "audit/service.ts",
+      "lang": "typescript",
+      "lines": 229,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "billing/index.ts",
+      "lang": "typescript",
+      "lines": 78,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "billing/plans.ts",
+      "lang": "typescript",
+      "lines": 195,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "billing/routes.ts",
+      "lang": "typescript",
+      "lines": 300,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "billing/stripe.ts",
+      "lang": "typescript",
+      "lines": 418,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "billing/trial.ts",
+      "lang": "typescript",
+      "lines": 288,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "billing/usage.ts",
+      "lang": "typescript",
+      "lines": 324,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "billing/webhook.ts",
+      "lang": "typescript",
+      "lines": 321,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "bridge/bridge.ts",
+      "lang": "typescript",
+      "lines": 850,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "bridge/errors.ts",
+      "lang": "typescript",
+      "lines": 171,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "bridge/metrics.ts",
+      "lang": "typescript",
+      "lines": 355,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "bridge/types.ts",
+      "lang": "typescript",
+      "lines": 107,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "ci/analyzer.ts",
+      "lang": "typescript",
+      "lines": 421,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "ci/monitor.ts",
+      "lang": "typescript",
+      "lines": 444,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "ci/prMonitor.ts",
+      "lang": "typescript",
+      "lines": 477,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "config.ts",
+      "lang": "typescript",
+      "lines": 591,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "credits/index.ts",
+      "lang": "typescript",
+      "lines": 24,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "credits/middleware.ts",
+      "lang": "typescript",
+      "lines": 210,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "credits/routes.ts",
+      "lang": "typescript",
+      "lines": 449,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "db/connection.ts",
+      "lang": "typescript",
+      "lines": 182,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/index.ts",
+      "lang": "typescript",
+      "lines": 12,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrate.ts",
+      "lang": "typescript",
+      "lines": 421,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "db/migrations/001_initial.rollback.sql",
+      "lang": "sql",
+      "lines": 12,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/001_initial.sql",
+      "lang": "sql",
+      "lines": 101,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/002_audit_logs_enrich.rollback.sql",
+      "lang": "sql",
+      "lines": 41,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/002_audit_logs_enrich.sql",
+      "lang": "sql",
+      "lines": 51,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/002_webhook_events_reliability.rollback.sql",
+      "lang": "sql",
+      "lines": 15,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/002_webhook_events_reliability.sql",
+      "lang": "sql",
+      "lines": 70,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/003_webhook_events_enrich.rollback.sql",
+      "lang": "sql",
+      "lines": 13,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/003_webhook_events_enrich.sql",
+      "lang": "sql",
+      "lines": 20,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/003_webhook_events_retry.rollback.sql",
+      "lang": "sql",
+      "lines": 12,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/003_webhook_events_retry.sql",
+      "lang": "sql",
+      "lines": 34,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/004_run_history_v2.rollback.sql",
+      "lang": "sql",
+      "lines": 20,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/004_run_history_v2.sql",
+      "lang": "sql",
+      "lines": 75,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/004_webhook_events_extended_fields.rollback.sql",
+      "lang": "sql",
+      "lines": 10,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/004_webhook_events_extended_fields.sql",
+      "lang": "sql",
+      "lines": 55,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/005_multi_tenant.rollback.sql",
+      "lang": "sql",
+      "lines": 37,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/005_multi_tenant.sql",
+      "lang": "sql",
+      "lines": 101,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/005_teams_repos_billing.rollback.sql",
+      "lang": "sql",
+      "lines": 23,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/migrations/005_teams_repos_billing.sql",
+      "lang": "sql",
+      "lines": 59,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/repositories/AccountsRepository.ts",
+      "lang": "typescript",
+      "lines": 92,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/repositories/AuditLogRepository.ts",
+      "lang": "typescript",
+      "lines": 151,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/repositories/BillingRepository.ts",
+      "lang": "typescript",
+      "lines": 166,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/repositories/CreditsRepository.ts",
+      "lang": "typescript",
+      "lines": 171,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/repositories/index.ts",
+      "lang": "typescript",
+      "lines": 15,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/repositories/ReposRepository.ts",
+      "lang": "typescript",
+      "lines": 98,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/repositories/RunHistoryRepository.ts",
+      "lang": "typescript",
+      "lines": 118,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/repositories/RunsRepository.ts",
+      "lang": "typescript",
+      "lines": 163,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/repositories/TeamsRepository.ts",
+      "lang": "typescript",
+      "lines": 112,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/repositories/UsageRepository.ts",
+      "lang": "typescript",
+      "lines": 86,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/repositories/WebhookEventsRepository.ts",
+      "lang": "typescript",
+      "lines": 334,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "db/schema/accounts.ts",
+      "lang": "typescript",
+      "lines": 34,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/schema/auditLogs.ts",
+      "lang": "typescript",
+      "lines": 39,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/schema/billing.ts",
+      "lang": "typescript",
+      "lines": 28,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/schema/creditBalances.ts",
+      "lang": "typescript",
+      "lines": 24,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/schema/creditTransactions.ts",
+      "lang": "typescript",
+      "lines": 25,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/schema/featureFlags.ts",
+      "lang": "typescript",
+      "lines": 23,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/schema/index.ts",
+      "lang": "typescript",
+      "lines": 34,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/schema/repos.ts",
+      "lang": "typescript",
+      "lines": 21,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/schema/runHistory.ts",
+      "lang": "typescript",
+      "lines": 25,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/schema/runs.ts",
+      "lang": "typescript",
+      "lines": 46,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/schema/teams.ts",
+      "lang": "typescript",
+      "lines": 45,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/schema/usageRecords.ts",
+      "lang": "typescript",
+      "lines": 24,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/schema/webhookEvents.ts",
+      "lang": "typescript",
+      "lines": 32,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "db/seed.ts",
+      "lang": "typescript",
+      "lines": 93,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "github/actionDispatcher.ts",
+      "lang": "typescript",
+      "lines": 240,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "github/auth.ts",
+      "lang": "typescript",
+      "lines": 135,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "github/messages.ts",
+      "lang": "typescript",
+      "lines": 454,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "health/opencodeHealth.ts",
+      "lang": "typescript",
+      "lines": 344,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "health/queueHealth.ts",
+      "lang": "typescript",
+      "lines": 188,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "health/scheduled.ts",
+      "lang": "typescript",
+      "lines": 187,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "index.ts",
+      "lang": "typescript",
+      "lines": 228,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "metering/costs.ts",
+      "lang": "typescript",
+      "lines": 212,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "metering/events.ts",
+      "lang": "typescript",
+      "lines": 88,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "metering/index.ts",
+      "lang": "typescript",
+      "lines": 46,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "metering/routes.ts",
+      "lang": "typescript",
+      "lines": 183,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "metering/tracker.ts",
+      "lang": "typescript",
+      "lines": 313,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "monitoring/alerting.ts",
+      "lang": "typescript",
+      "lines": 552,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "monitoring/sentry-init.ts",
+      "lang": "typescript",
+      "lines": 52,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "monitoring/sentry.ts",
+      "lang": "typescript",
+      "lines": 192,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "monitoring/slos.ts",
+      "lang": "typescript",
+      "lines": 212,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "notifications/base.ts",
+      "lang": "typescript",
+      "lines": 40,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "notifications/index.ts",
+      "lang": "typescript",
+      "lines": 4,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "notifications/slack-bolt.ts",
+      "lang": "typescript",
+      "lines": 274,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "notifications/slack.ts",
+      "lang": "typescript",
+      "lines": 167,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "pricing/admin.ts",
+      "lang": "typescript",
+      "lines": 231,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "pricing/audit.ts",
+      "lang": "typescript",
+      "lines": 202,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "pricing/cron.ts",
+      "lang": "typescript",
+      "lines": 136,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "pricing/index.ts",
+      "lang": "typescript",
+      "lines": 64,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "pricing/middleware.ts",
+      "lang": "typescript",
+      "lines": 155,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "pricing/quota.ts",
+      "lang": "typescript",
+      "lines": 257,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "pricing/tiers.ts",
+      "lang": "typescript",
+      "lines": 133,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "queue/issueQueue.ts",
+      "lang": "typescript",
+      "lines": 69,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "queue/producers.ts",
+      "lang": "typescript",
+      "lines": 368,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "queue/rabbitmq.ts",
+      "lang": "typescript",
+      "lines": 346,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "ratelimit/concurrency.ts",
+      "lang": "typescript",
+      "lines": 325,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "ratelimit/config.ts",
+      "lang": "typescript",
+      "lines": 179,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "ratelimit/index.ts",
+      "lang": "typescript",
+      "lines": 68,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "ratelimit/limiter.ts",
+      "lang": "typescript",
+      "lines": 284,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "ratelimit/metrics.ts",
+      "lang": "typescript",
+      "lines": 109,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "ratelimit/middleware.ts",
+      "lang": "typescript",
+      "lines": 346,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "ratelimit/tiers.ts",
+      "lang": "typescript",
+      "lines": 186,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "routes/admin.ts",
+      "lang": "typescript",
+      "lines": 551,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "routes/adminDashboard.ts",
+      "lang": "typescript",
+      "lines": 295,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "routes/adminWebhooks.ts",
+      "lang": "typescript",
+      "lines": 175,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "routes/api.ts",
+      "lang": "typescript",
+      "lines": 105,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "routes/auth.ts",
+      "lang": "typescript",
+      "lines": 81,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "routes/dashboard.ts",
+      "lang": "typescript",
+      "lines": 404,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "routes/featureFlags.ts",
+      "lang": "typescript",
+      "lines": 80,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "sandbox/docker.ts",
+      "lang": "typescript",
+      "lines": 821,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "sandbox/executor.ts",
+      "lang": "typescript",
+      "lines": 583,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "sandbox/index.ts",
+      "lang": "typescript",
+      "lines": 74,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "sandbox/types.ts",
+      "lang": "typescript",
+      "lines": 83,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "security/adminAuth.ts",
+      "lang": "typescript",
+      "lines": 68,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "security/audit.ts",
+      "lang": "typescript",
+      "lines": 72,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "security/authMiddleware.ts",
+      "lang": "typescript",
+      "lines": 37,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "security/ipAllowlist.ts",
+      "lang": "typescript",
+      "lines": 115,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "security/sandboxSecurity.ts",
+      "lang": "typescript",
+      "lines": 136,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "security/securityHeaders.ts",
+      "lang": "typescript",
+      "lines": 258,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "server.ts",
+      "lang": "typescript",
+      "lines": 956,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "services/featureFlags.ts",
+      "lang": "typescript",
+      "lines": 153,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "services/retention.ts",
+      "lang": "typescript",
+      "lines": 441,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "storage/index.ts",
+      "lang": "typescript",
+      "lines": 77,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "storage/postgres/index.ts",
+      "lang": "typescript",
+      "lines": 264,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "storage/sqlite.ts",
+      "lang": "typescript",
+      "lines": 255,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "storage/types.ts",
+      "lang": "typescript",
+      "lines": 149,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "stripe/checkout.ts",
+      "lang": "typescript",
+      "lines": 112,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "stripe/credit-packs.ts",
+      "lang": "typescript",
+      "lines": 55,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "stripe/index.ts",
+      "lang": "typescript",
+      "lines": 22,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "stripe/webhook.ts",
+      "lang": "typescript",
+      "lines": 488,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "trackers/base.ts",
+      "lang": "typescript",
+      "lines": 33,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "trackers/index.ts",
+      "lang": "typescript",
+      "lines": 44,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "trackers/jira.ts",
+      "lang": "typescript",
+      "lines": 277,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "trackers/linear.ts",
+      "lang": "typescript",
+      "lines": 300,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "types/express.d.ts",
+      "lang": "typescript",
+      "lines": 19,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "utils/logger.ts",
+      "lang": "typescript",
+      "lines": 40,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "utils/types.ts",
+      "lang": "typescript",
+      "lines": 138,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "validation.ts",
+      "lang": "typescript",
+      "lines": 150,
+      "modified": "2026-06-09"
+    },
+    {
+      "path": "webhooks/base.ts",
+      "lang": "typescript",
+      "lines": 63,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "webhooks/bitbucket.ts",
+      "lang": "typescript",
+      "lines": 236,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "webhooks/eventLogger.ts",
+      "lang": "typescript",
+      "lines": 130,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "webhooks/github.ts",
+      "lang": "typescript",
+      "lines": 348,
+      "modified": "2026-06-19"
+    },
+    {
+      "path": "webhooks/gitlab.ts",
+      "lang": "typescript",
+      "lines": 244,
+      "modified": "2026-06-25"
+    },
+    {
+      "path": "webhooks/healthMonitor.ts",
+      "lang": "typescript",
+      "lines": 173,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "webhooks/metrics.ts",
+      "lang": "typescript",
+      "lines": 118,
+      "modified": "2026-06-08"
+    },
+    {
+      "path": "webhooks/retryWorker.ts",
+      "lang": "typescript",
+      "lines": 206,
+      "modified": "2026-06-08"
+    }
+  ],
+  "keywords": {},
+  "lastIndexed": "2026-06-25T14:01:13.061Z"
+}
