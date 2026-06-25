@@ -65,6 +65,68 @@ class TestExpansionResult:
         assert result.confidence == 0.0
         assert result.estimated_effort == "medium"
 
+    def test_validate_empty_returns_issues(self):
+        """validate() returns issues for empty result."""
+        result = ExpansionResult.fallback()
+        issues = result.validate()
+        assert len(issues) >= 4  # multiple issues
+        assert any("summary" in i for i in issues)
+        assert any("acceptance_criteria" in i for i in issues)
+
+    def test_validate_full_passes(self):
+        """validate() returns empty list for complete result."""
+        result = ExpansionResult(
+            summary="Fix login bug",
+            context="Users cannot login with special chars",
+            acceptance_criteria=["AC1", "AC2", "AC3"],
+            implementation_plan=["Step 1", "Step 2"],
+            test_spec=["Test 1"],
+            confidence=0.85,
+            estimated_effort="small",
+        )
+        assert result.validate() == []
+
+    def test_validate_few_acs_warns(self):
+        """validate() warns when fewer than 3 acceptance criteria."""
+        result = ExpansionResult(
+            summary="Fix",
+            context="Context",
+            acceptance_criteria=["Only AC"],
+            implementation_plan=["Step 1"],
+            test_spec=["Test 1"],
+            confidence=0.5,
+            estimated_effort="small",
+        )
+        issues = result.validate()
+        assert any("acceptance_criteria has only 1" in i for i in issues)
+
+    def test_is_actionable_true(self):
+        """is_actionable is True for well-formed result with confidence >= 0.3."""
+        result = ExpansionResult(
+            summary="Fix",
+            context="Context",
+            acceptance_criteria=["AC1"],
+            implementation_plan=["Step 1"],
+            test_spec=["Test 1"],
+            confidence=0.5,
+        )
+        assert result.is_actionable
+
+    def test_is_actionable_false_empty_summary(self):
+        """is_actionable is False when summary is empty."""
+        result = ExpansionResult(confidence=0.5)
+        assert not result.is_actionable
+
+    def test_is_actionable_false_low_confidence(self):
+        """is_actionable is False when confidence < 0.3."""
+        result = ExpansionResult(summary="Fix", confidence=0.1)
+        assert not result.is_actionable
+
+    def test_is_actionable_false_no_acs(self):
+        """is_actionable is False when acceptance_criteria is empty."""
+        result = ExpansionResult(summary="Fix", confidence=0.5)
+        assert not result.is_actionable
+
 
 class TestBuildPrompt:
     """Tests for _build_prompt."""
