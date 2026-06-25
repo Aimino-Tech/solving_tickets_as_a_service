@@ -40,6 +40,16 @@ beat_schedule = {
         "schedule": 600.0,
         "args": (),
     },
+    "monitor-heartbeats-every-minute": {
+        "task": "workers.tasks.healing.monitor_heartbeats",
+        "schedule": 60.0,
+        "args": (),
+    },
+    "check-queue-depth-every-5-minutes": {
+        "task": "workers.tasks.healing.check_queue_depth",
+        "schedule": 300.0,
+        "args": (),
+    },
 }
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")

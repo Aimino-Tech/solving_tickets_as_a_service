@@ -7,6 +7,7 @@ from .notifications import send_notification, process_webhook
 from .periodic import queue_health_check, dlq_cleanup, push_metrics, report_liveness
 from .sandbox_gc import sandbox_gc
 from .self_audit import run_self_audit, orchestrate_pipeline, review_decision
+from .healing import monitor_heartbeats, retry_with_backoff, dlq_handler, check_queue_depth, record_task_failure, record_task_success
 
 __all__ = [
     "triage_issue",
@@ -24,4 +25,10 @@ __all__ = [
     "run_self_audit",
     "orchestrate_pipeline",
     "review_decision",
+    "monitor_heartbeats",
+    "retry_with_backoff",
+    "dlq_handler",
+    "check_queue_depth",
+    "record_task_failure",
+    "record_task_success",
 ]
