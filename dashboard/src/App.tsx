@@ -16,6 +16,8 @@ import Security from '@/pages/Security';
 import Privacy from '@/pages/Privacy';
 import Status from '@/pages/Status';
 import DPAPage from '@/pages/DPAPage';
+import Benchmarks from '@/pages/Benchmarks';
+import Pricing from '@/pages/Pricing';
 
 export default function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -40,6 +42,8 @@ export default function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/status" element={<Status />} />
           <Route path="/dpa" element={<DPAPage />} />
+          <Route path="/benchmarks" element={<Benchmarks />} />
+          <Route path="/pricing" element={<Pricing />} />
         </Route>
         <Route
           path="/"

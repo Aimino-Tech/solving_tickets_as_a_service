@@ -97,6 +97,14 @@ export const audit = {
   },
 };
 
+// Benchmarks
+export const benchmarks = {
+  get: () =>
+    request<{ generatedAt: string; source: string; disclaimer: string; competitors: import('./types').BenchmarkEntry[] }>('/benchmarks'),
+  getPrices: () =>
+    request<{ generatedAt: string; currency: string; prices: import('./types').BenchmarkPrice[] }>('/benchmarks/price'),
+};
+
 // Settings
 export const settings = {
   get: () => request<{
