@@ -114,5 +114,6 @@ task_routes = {
     "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
     "workers.tasks.pipeline_orchestrator.*": {"queue": "stas.queue.orchestrator"},
     "workers.tasks.anti_liar.*": {"queue": "stas.quality.enforce"},
+    "workers.tasks.escalation.*": {"queue": "stas.agents.dispatch"},
     "workers.orchestrator.*": {"queue": "stas.queue.orchestrator"},
 }

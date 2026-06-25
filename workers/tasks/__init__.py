@@ -11,6 +11,7 @@ from .adversarial_review import layer1_per_file_analysis, layer2_holistic_review
 from .linear_poll import poll_active_issues
 from .ci_polling import poll_ci_checks
 from .auto_qa import auto_qa_sample
+from .escalation import handle_retry_exceeded, handle_infrastructure_failure, handle_pipeline_failure
 
 __all__ = [
     "triage_issue",
@@ -34,4 +35,7 @@ __all__ = [
     "poll_active_issues",
     "poll_ci_checks",
     "auto_qa_sample",
+    "handle_retry_exceeded",
+    "handle_infrastructure_failure",
+    "handle_pipeline_failure",
 ]
