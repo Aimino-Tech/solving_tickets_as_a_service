@@ -4,6 +4,7 @@ Boot an E2B sandbox for code execution.
 Uses the ``e2b`` SDK. Falls back to a placeholder when E2B_API_KEY is not set.
 """
 
+import json
 import logging
 import os
 
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
     default_retry_delay=30,
     name="workers.tasks.sandbox.boot_sandbox",
 )
-def boot_sandbox(self, repo_url: str, branch: str) -> dict:
+def boot_sandbox(self, repo_url: str, branch: str, correlation_id: str = "") -> dict:
     """
     Provision an E2B sandbox for the given repo.
 
@@ -28,17 +29,27 @@ def boot_sandbox(self, repo_url: str, branch: str) -> dict:
     When E2B_API_KEY is unset, returns a placeholder sandbox_id and logs
     a warning — useful for development where the sandbox step can be skipped.
     """
-    logger.info("Booting sandbox — repo=%s branch=%s", repo_url, branch)
+    logger.info(
+        json.dumps({
+            "event": "sandbox.boot.start",
+            "repo_url": repo_url,
+            "branch": branch,
+            "correlation_id": correlation_id,
+        })
+    )
 
     try:
         api_key = os.getenv("E2B_API_KEY", "")
         template_id = os.getenv("E2B_TEMPLATE_ID", "default")
-        timeout_ms = int(os.getenv("E2B_SANDBOX_TIMEOUT_MS", "300000"))
+        timeout_s = int(os.getenv("E2B_SANDBOX_TIMEOUT_MS", "300000")) // 1000
 
         if not api_key:
             logger.warning(
-                "E2B_API_KEY is not set — returning placeholder sandbox. "
-                "Set E2B_API_KEY in .env to use real sandboxes."
+                json.dumps({
+                    "event": "sandbox.boot.skipped",
+                    "reason": "E2B_API_KEY not set",
+                    "correlation_id": correlation_id,
+                })
             )
             return {
                 "sandbox_id": "placeholder",
@@ -50,21 +61,24 @@ def boot_sandbox(self, repo_url: str, branch: str) -> dict:
 
         from e2b import Sandbox
 
-        sandbox = Sandbox(
+        sandbox = Sandbox.create(
             template=template_id,
+            timeout=timeout_s,
             api_key=api_key,
-            timeout_ms=timeout_ms,
         )
 
         logger.info(
-            "Sandbox booted — id=%s template=%s timeout=%dms",
-            sandbox.id,
-            template_id,
-            timeout_ms,
+            json.dumps({
+                "event": "sandbox.boot.complete",
+                "sandbox_id": sandbox.sandbox_id,
+                "template_id": template_id,
+                "timeout_s": timeout_s,
+                "correlation_id": correlation_id,
+            })
         )
 
         return {
-            "sandbox_id": sandbox.id,
+            "sandbox_id": sandbox.sandbox_id,
             "template_id": template_id,
             "repo_url": repo_url,
             "branch": branch,
@@ -73,30 +87,47 @@ def boot_sandbox(self, repo_url: str, branch: str) -> dict:
 
     except ImportError:
         logger.error(
-            "e2b package not installed. Install it with: pip install e2b"
+            json.dumps({
+                "event": "sandbox.boot.error",
+                "error": "e2b package not installed",
+                "correlation_id": correlation_id,
+            })
         )
         raise self.retry(exc=ImportError("e2b package not installed"))
 
     except Exception as exc:
-        logger.error("Sandbox boot failed — %s", exc, exc_info=True)
+        logger.error(
+            json.dumps({
+                "event": "sandbox.boot.error",
+                "error": str(exc),
+                "correlation_id": correlation_id,
+            }),
+            exc_info=True,
+        )
 
-        # Check for common E2B errors and give helpful messages
         err_str = str(exc)
         if "template" in err_str.lower() and "not found" in err_str.lower():
             logger.error(
-                "E2B template '%s' not found. "
-                "Create it at https://e2b.dev/dashboard or set E2B_TEMPLATE_ID.",
-                os.getenv("E2B_TEMPLATE_ID", "default"),
+                json.dumps({
+                    "event": "sandbox.boot.template_not_found",
+                    "template_id": os.getenv("E2B_TEMPLATE_ID", "default"),
+                    "correlation_id": correlation_id,
+                })
             )
         elif "api_key" in err_str.lower() or "unauthorized" in err_str.lower():
             logger.error(
-                "E2B authentication failed. Check your E2B_API_KEY."
+                json.dumps({
+                    "event": "sandbox.boot.auth_failed",
+                    "correlation_id": correlation_id,
+                })
             )
         elif "timeout" in err_str.lower():
             logger.error(
-                "E2B sandbox provisioning timed out. Try increasing "
-                "E2B_SANDBOX_TIMEOUT_MS (currently %s).",
-                os.getenv("E2B_SANDBOX_TIMEOUT_MS", "300000"),
+                json.dumps({
+                    "event": "sandbox.boot.timeout",
+                    "timeout_s": timeout_s,
+                    "correlation_id": correlation_id,
+                })
             )
 
         raise self.retry(exc=exc)
