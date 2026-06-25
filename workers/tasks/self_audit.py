@@ -108,10 +108,11 @@ def orchestrate_pipeline(self, issue_data: dict) -> dict:
             "task": "workers.tasks.agent.dispatch_opencode",
         }
 
-        steps.append("verification")
-        results["verification"] = {
+        # Multi-round verification replaces single verification
+        steps.append("multi_verification")
+        results["multi_verification"] = {
             "status": "queued",
-            "task": "workers.tasks.verification.run_verification",
+            "task": "workers.tasks.multi_verification.multi_round_verify",
         }
 
         steps.append("self_audit")
@@ -171,15 +172,27 @@ def review_decision(self, pipeline_results: dict) -> dict:
         self_audit = pipeline_results.get("self_audit", {})
         if self_audit.get("passed") is False:
             all_passed = False
-            failures.append("self_audit: failed — missing items or anti-mockup findings present")
+            failures.append("self_audit: failed -- missing items or anti-mockup findings present")
 
         anti_mockup = pipeline_results.get("anti_mockup_scan", {})
         if anti_mockup.get("passed") is False:
             all_passed = False
-            failures.append("anti_mockup_scan: failed — critical or blocking findings present")
+            failures.append("anti_mockup_scan: failed -- critical or blocking findings present")
+
+        multi_verification = pipeline_results.get("multi_verification", {})
+        if multi_verification.get("passed") is False:
+            all_passed = False
+            failed_rounds = [
+                r for r in multi_verification.get("rounds", [])
+                if r.get("verdict") == "failed"
+            ]
+            failures.append(
+                f"multi_verification: failed -- score={multi_verification.get('score', 'unknown')} "
+                f"({len(failed_rounds)}/3 rounds failed)"
+            )
 
         decision = "pass" if all_passed else "rework"
-        logger.info("Review decision: %s — failures=%s", decision, failures)
+        logger.info("Review decision: %s -- failures=%s", decision, failures)
 
         return {
             "decision": decision,
@@ -188,5 +201,5 @@ def review_decision(self, pipeline_results: dict) -> dict:
             "pipeline_results": pipeline_results,
         }
     except Exception as exc:
-        logger.error("Review decision failed — %s", exc, exc_info=True)
+        logger.error("Review decision failed -- %s", exc, exc_info=True)
         raise self.retry(exc=exc)
