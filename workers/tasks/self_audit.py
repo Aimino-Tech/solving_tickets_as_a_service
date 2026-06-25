@@ -114,6 +114,12 @@ def orchestrate_pipeline(self, issue_data: dict) -> dict:
             "task": "workers.tasks.verification.run_verification",
         }
 
+        steps.append("visual_verification")
+        results["visual_verification"] = {
+            "status": "queued",
+            "task": "workers.tasks.visual_verification.visual_verify",
+        }
+
         steps.append("self_audit")
         results["self_audit"] = {
             "status": "queued",
@@ -177,6 +183,11 @@ def review_decision(self, pipeline_results: dict) -> dict:
         if anti_mockup.get("passed") is False:
             all_passed = False
             failures.append("anti_mockup_scan: failed — critical or blocking findings present")
+
+        visual_verification = pipeline_results.get("visual_verification", {})
+        if visual_verification.get("status") == "blocked":
+            all_passed = False
+            failures.append("visual_verification: blocked — pixel diff exceeds threshold")
 
         decision = "pass" if all_passed else "rework"
         logger.info("Review decision: %s — failures=%s", decision, failures)

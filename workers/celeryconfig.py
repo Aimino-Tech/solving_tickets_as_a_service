@@ -10,6 +10,7 @@ TASK_SANDBOX_RETRY_DELAY = int(os.getenv("CELERY_SANDBOX_RETRY_DELAY_SECONDS", "
 TASK_PR_RETRY_DELAY = int(os.getenv("CELERY_PR_RETRY_DELAY_SECONDS", "30"))
 TASK_NOTIFICATION_RETRY_DELAY = int(os.getenv("CELERY_NOTIFICATION_RETRY_DELAY_SECONDS", "10"))
 TASK_VERIFICATION_RETRY_DELAY = int(os.getenv("CELERY_VERIFICATION_RETRY_DELAY_SECONDS", "30"))
+TASK_VISUAL_VERIFICATION_RETRY_DELAY = int(os.getenv("CELERY_VISUAL_VERIFICATION_RETRY_DELAY_SECONDS", "60"))
 
 # ── Beat Schedule (Periodic Tasks) ───────────────────────────────
 from celery.schedules import crontab
@@ -40,11 +41,6 @@ beat_schedule = {
         "schedule": 600.0,
         "args": (),
     },
-    "poll-linear-active-issues": {
-        "task": "workers.tasks.linear_poll.poll_active_issues",
-        "schedule": 30.0,
-        "options": {"queue": "stas.issues.triage"},
-    },
 }
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")
@@ -71,6 +67,7 @@ stas_issues = Exchange("stas.issues", type="topic", durable=True)
 stas_queue = Exchange("stas.queue", type="topic", durable=True)
 stas_events = Exchange("stas.events", type="fanout", durable=True)
 stas_dlx = Exchange("stas.dlx", type="direct", durable=True)
+stas_verification = Exchange("stas.verification", type="direct", durable=True)
 
 task_default_queue = "stas.agents.dispatch"
 task_default_exchange = "stas.agents"
@@ -88,6 +85,8 @@ task_queues = [
     # ── stas.queue exchange ───────────────────────────────────
     Queue("stas.queue.pr", stas_queue, routing_key="pr.create"),
     Queue("stas.queue.notifications", stas_queue, routing_key="queue.notify"),
+    # ── stas.verification exchange ────────────────────────────
+    Queue("stas.verification", stas_verification, routing_key="visual.verify"),
     # ── stas.events exchange (fanout) ─────────────────────────
     Queue("stas.events.event_bus", stas_events),
     # ── stas.dlx exchange ─────────────────────────────────────
@@ -103,5 +102,5 @@ task_routes = {
     "workers.tasks.pr_creation.*": {"queue": "stas.queue.pr"},
     "workers.tasks.notifications.*": {"queue": "stas.queue.notifications"},
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
-    "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
+    "workers.tasks.visual_verification.*": {"queue": "stas.verification"},
 }

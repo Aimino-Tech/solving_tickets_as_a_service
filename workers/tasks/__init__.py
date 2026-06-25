@@ -7,6 +7,7 @@ from .notifications import send_notification, process_webhook
 from .periodic import queue_health_check, dlq_cleanup, push_metrics, report_liveness
 from .sandbox_gc import sandbox_gc
 from .self_audit import run_self_audit, orchestrate_pipeline, review_decision
+from .visual_verification import visual_verify
 
 __all__ = [
     "triage_issue",
@@ -24,4 +25,5 @@ __all__ = [
     "run_self_audit",
     "orchestrate_pipeline",
     "review_decision",
+    "visual_verify",
 ]
