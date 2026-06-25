@@ -114,10 +114,7 @@ task_routes = {
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
     "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
     "workers.tasks.pipeline_orchestrator.*": {"queue": "stas.queue.orchestrator"},
-<<<<<<< HEAD
     "workers.tasks.anti_liar.*": {"queue": "stas.queue.quality"},
-=======
     "workers.tasks.anti_liar.*": {"queue": "stas.quality.enforce"},
     "workers.orchestrator.*": {"queue": "stas.queue.orchestrator"},
->>>>>>> origin/main
 }
