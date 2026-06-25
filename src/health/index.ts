@@ -1,5 +1,5 @@
 /**
- * Health module — re-exports all health, monitoring, and scheduled maintenance APIs.
+ * Health module - re-exports all health, monitoring, and scheduled maintenance APIs.
  */
 
 export {
@@ -29,3 +29,28 @@ export type { WorkersHealthReport } from './workers.js';
 
 export { getDependenciesHealth } from './dependencies.js';
 export type { DependenciesHealthReport, DependencyCheckResult } from './dependencies.js';
+
+// AIM-2022: Self-Healing Infrastructure
+export {
+  checkCircuit,
+  recordFailure,
+  recordSuccess,
+  getState,
+  getAllCircuits,
+  resetCircuit,
+} from '../monitoring/circuitBreaker.js';
+
+export type {
+  CircuitState,
+  CircuitInfo,
+} from '../monitoring/circuitBreaker.js';
+
+export {
+  checkQueueDrain,
+  startQueueDrainMonitor,
+  stopQueueDrainMonitor,
+} from '../queue/queueMonitor.js';
+
+export type {
+  QueueDrainResult,
+} from '../queue/queueMonitor.js';

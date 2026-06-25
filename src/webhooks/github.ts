@@ -24,6 +24,7 @@ import { rateLimiter } from '../ratelimit/limiter.js';
 import { getRateLimitForAccount } from '../ratelimit/tiers.js';
 import { getTierForAccount } from '../ratelimit/tiers.js';
 import { accountsRepository } from '../db/repositories/index.js';
+import { handleInstallationCreated } from '../routes/onboarding.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
 
@@ -33,6 +34,33 @@ const log = rootLogger.child({ module: 'webhooks-github' });
 export function createGithubWebhooks(): Webhooks {
   const webhooks = new Webhooks({
     secret: config.github.webhookSecret,
+  });
+
+  // ── installation.created ─────────────────────────────────────────
+  webhooks.on('installation.created', async ({ payload }) => {
+    log.info(
+      {
+        installationId: payload.installation.id,
+        accountLogin: payload.installation.account?.login,
+        repoCount: payload.repositories.length,
+      },
+      'GitHub App installed',
+    );
+
+    try {
+      await handleInstallationCreated({
+        installation: {
+          id: payload.installation.id,
+          account: {
+            login: payload.installation.account?.login ?? 'unknown',
+            type: payload.installation.account?.type ?? 'unknown',
+          },
+        },
+        repositories: payload.repositories.map((r) => ({ full_name: r.full_name })),
+      });
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to handle installation.created');
+    }
   });
 
   // ── issues.opened ───────────────────────────────────────────────
