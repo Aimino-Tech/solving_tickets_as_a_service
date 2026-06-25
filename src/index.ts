@@ -35,6 +35,7 @@ import type { Server } from 'node:http';
 import { config } from './config.js';
 import { startScheduledTasks, stopScheduledTasks } from './health/scheduled.js';
 import { opencodeHealth } from './health/opencodeHealth.js';
+import { closeHealthRedis } from './health/queueHealth.js';
 import { rootLogger } from './utils/logger.js';
 import { addBreadcrumb } from './monitoring/sentry.js';
 
@@ -178,6 +179,13 @@ async function main(): Promise<void> {
 
     // Stop OpenCode health client polling
     opencodeHealth.stop();
+
+    // Close health Redis connection
+    try {
+      await closeHealthRedis();
+    } catch (err) {
+      log.warn({ err: String(err) }, 'Error closing health Redis (non-fatal)');
+    }
 
     process.exit(0);
   };

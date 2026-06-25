@@ -45,6 +45,11 @@ beat_schedule = {
         "schedule": 30.0,
         "options": {"queue": "stas.issues.triage"},
     },
+    "pipeline-cleanup-every-30-minutes": {
+        "task": "workers.tasks.pipeline_orchestrator.orchestrate_pipeline",
+        "schedule": 1800.0,
+        "args": ("", "stas:fix"),
+    },
 }
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")
@@ -71,6 +76,7 @@ stas_issues = Exchange("stas.issues", type="topic", durable=True)
 stas_queue = Exchange("stas.queue", type="topic", durable=True)
 stas_events = Exchange("stas.events", type="fanout", durable=True)
 stas_dlx = Exchange("stas.dlx", type="direct", durable=True)
+stas_quality = Exchange("stas.quality", type="topic", durable=True)
 
 task_default_queue = "stas.agents.dispatch"
 task_default_exchange = "stas.agents"
@@ -88,11 +94,14 @@ task_queues = [
     # ── stas.queue exchange ───────────────────────────────────
     Queue("stas.queue.pr", stas_queue, routing_key="pr.create"),
     Queue("stas.queue.notifications", stas_queue, routing_key="queue.notify"),
+    Queue("stas.queue.quality", stas_queue, routing_key="quality.anti_liar"),
     # ── stas.events exchange (fanout) ─────────────────────────
     Queue("stas.events.event_bus", stas_events),
     # ── stas.dlx exchange ─────────────────────────────────────
     Queue("stas.dlx.retry", stas_dlx, routing_key="dlq.retry"),
     Queue("stas.dlx.failed", stas_dlx, routing_key="dlq.failed"),
+    Queue("stas.queue.orchestrator", stas_queue, routing_key="orchestrator.#"),
+    Queue("stas.quality.enforce", stas_quality, routing_key="quality.enforce"),
 ]
 
 task_routes = {
@@ -104,4 +113,11 @@ task_routes = {
     "workers.tasks.notifications.*": {"queue": "stas.queue.notifications"},
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
     "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
+    "workers.tasks.pipeline_orchestrator.*": {"queue": "stas.queue.orchestrator"},
+<<<<<<< HEAD
+    "workers.tasks.anti_liar.*": {"queue": "stas.queue.quality"},
+=======
+    "workers.tasks.anti_liar.*": {"queue": "stas.quality.enforce"},
+    "workers.orchestrator.*": {"queue": "stas.queue.orchestrator"},
+>>>>>>> origin/main
 }
