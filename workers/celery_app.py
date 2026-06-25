@@ -78,7 +78,7 @@ app.conf.task_reject_on_worker_lost = True
 # don't hang forever during a rolling restart.
 app.conf.worker_cancel_long_running_tasks_on_connection_loss = True
 
-app.autodiscover_tasks(["workers.tasks", "workers.consumers"])
+app.autodiscover_tasks(["workers.tasks", "workers.consumers", "workers.gates", "workers.quality"])
 
 # ── Initialize Metrics (Prometheus) ────────────────────────────────
 METRICS_PORT = int(os.getenv("CELERY_METRICS_PORT", "9090"))
@@ -100,6 +100,27 @@ def ping():
     """Simple liveness check."""
     return {"status": "pong"}
 
+
+# ── Emergency Stop Middleware ───────────────────────────────────────
+# Connects Celery signal handlers for the global kill switch.
+# Agent tasks are rejected when emergency_stop is active.
+try:
+    from workers.emergency.middleware import connect_emergency_middleware
+
+    connect_emergency_middleware()
+    logger.info("Emergency stop middleware connected")
+except Exception as exc:
+    logger.warning("Failed to connect emergency stop middleware — %s", exc)
+
+
+# ── Injection Guard ────────────────────────────────────────────────
+# Self-registers via @signals.task_prerun.connect at import time.
+try:
+    from workers.gates import injection_middleware  # noqa: F401
+
+    injection_middleware.connect_injection_middleware()
+except Exception as exc:
+    logger.warning("Failed to connect injection middleware — %s", exc)
 
 # ── Graceful Shutdown Handler ──────────────────────────────────────
 # Installs SIGTERM handling and task drain via Celery signals.
