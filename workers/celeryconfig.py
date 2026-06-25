@@ -66,6 +66,7 @@ stas_issues = Exchange("stas.issues", type="topic", durable=True)
 stas_queue = Exchange("stas.queue", type="topic", durable=True)
 stas_events = Exchange("stas.events", type="fanout", durable=True)
 stas_dlx = Exchange("stas.dlx", type="direct", durable=True)
+stas_emergency = Exchange("stas.emergency", type="topic", durable=True)
 
 task_default_queue = "stas.agents.dispatch"
 task_default_exchange = "stas.agents"
@@ -88,6 +89,9 @@ task_queues = [
     # ── stas.dlx exchange ─────────────────────────────────────
     Queue("stas.dlx.retry", stas_dlx, routing_key="dlq.retry"),
     Queue("stas.dlx.failed", stas_dlx, routing_key="dlq.failed"),
+    # ── stas.emergency exchange ───────────────────────────────
+    Queue("stas.emergency.hold", stas_emergency, routing_key="emergency.hold"),
+    Queue("stas.emergency.control", stas_emergency, routing_key="emergency.control"),
 ]
 
 task_routes = {
@@ -98,4 +102,5 @@ task_routes = {
     "workers.tasks.pr_creation.*": {"queue": "stas.queue.pr"},
     "workers.tasks.notifications.*": {"queue": "stas.queue.notifications"},
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
+    "workers.tasks.emergency.*": {"queue": "stas.emergency.control"},
 }
