@@ -26,6 +26,10 @@ from typing import Any
 from workers.notifications.notifiers.slack import notify_slack
 from workers.notifications.notifiers.teams import notify_teams
 from workers.notifications.notifiers.email import notify_email
+from workers.notifications.rate_limiter import (
+    COMMENT_RATE_LIMIT_ENABLED,
+    get_comment_rate_limiter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +197,15 @@ def dispatch_to_webhooks(
     if not notifiers_list:
         logger.debug("No webhooks configured for event %r", event_type)
         return []
+
+    if COMMENT_RATE_LIMIT_ENABLED:
+        issue_id = normalised_payload.get("issue_id", "unknown")
+        tier = os.getenv(f"ISSUE_{issue_id.upper()}_TIER", os.getenv("STAS_DEFAULT_TIER", "free"))
+        limiter = get_comment_rate_limiter()
+        rate_result = limiter.check_and_increment(issue_id, tier=tier)
+        if not rate_result.allowed:
+            logger.info("Webhook rate limit exceeded issue=%s tier=%s current=%d limit=%d reset_in=%.0fs — skipping dispatch", issue_id, tier, rate_result.current, rate_result.limit, rate_result.reset_after_seconds)
+            return [{"notifier": "rate_limiter", "status": "rate_limited", "current": rate_result.current, "limit": rate_result.limit, "reset_after_seconds": rate_result.reset_after_seconds}]
 
     results: list[dict[str, Any]] = []
 

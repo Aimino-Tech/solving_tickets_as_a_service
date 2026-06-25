@@ -28,10 +28,8 @@ Automatic via Celery signals (connected on import)::
 
 Stage identifiers and their emoji prefixes:
 
-    =============  =====  ====================
-    Stage          Emoji  Label
-    =============  =====  ====================
-    triage         📋     Triage
+    =============  =====  =============    Stage          Emoji  Label
+    =============  =====  =============    triage         📋     Triage
     research       🔍     Research
     agent          🤖     Agent
     verify         🧪     Verify
@@ -39,8 +37,7 @@ Stage identifiers and their emoji prefixes:
     review         👁️     Review
     pr             🔄     PR
     failed         ❌     Failed
-    =============  =====  ====================
-"""
+    =============  =====  ============="""
 
 from __future__ import annotations
 
@@ -122,11 +119,6 @@ def _get_coalescer() -> StageCoalescer:
     return _coalescer
 
 
-def _get_spam_filter() -> CommentSpamFilter:
-    """Return the shared ``CommentSpamFilter`` singleton."""
-    global _spam_filter
-    if _spam_filter is None:
-        _spam_filter = CommentSpamFilter(
             coalesce_window_seconds=10.0,
             dedup_window_seconds=30.0,
             flush_callback=_flush_coalesced_events,
@@ -331,13 +323,11 @@ def set_enabled(enabled: bool) -> None:
     STATUS_COMMENTS_ENABLED = enabled
 
 
-# ===========================================================================
-# Celery signal handlers
+# ====================================================================# Celery signal handlers
 #
 # These connect at import time and automatically post status comments when
 # known pipeline-stage tasks start, complete, or fail.
-# ===========================================================================
-
+# ====================================================================
 
 def _extract_issue_id(args: tuple, kwargs: dict) -> str | None:
     """Try to extract ``issue_id`` from a task's args or kwargs.
@@ -441,8 +431,7 @@ def _summarize_result(result: dict[str, Any]) -> str:
     return "Stage completed"
 
 
-# ===========================================================================
-# Connect Celery signals
+# ====================================================================# Connect Celery signals
 #
 # We connect to the low-level ``before_task_publish`` and
 # ``after_task_publish`` signals to capture args/kwargs, and to
@@ -451,8 +440,7 @@ def _summarize_result(result: dict[str, Any]) -> str:
 #   - ``task_prerun``   → posts "started" comment
 #   - ``task_success``   → coalesces "completed" comment
 #   - ``task_failure``   → posts immediate "failed" comment
-# ===========================================================================
-
+# ====================================================================
 try:
     from celery.signals import task_failure, task_prerun, task_success
 
