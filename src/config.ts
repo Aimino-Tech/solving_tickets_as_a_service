@@ -164,6 +164,23 @@ const envSchema = z.object({
   STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
   STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
 
+  MCP_API_KEY: z.string().optional(),
+  MCP_AUTH_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(true),
+
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_WEBHOOK_PATH: z.string().default('/webhook/telegram'),
+
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_WEBHOOK_PATH: z.string().default('/webhook/whatsapp'),
+  WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -314,6 +331,23 @@ function buildConfig(env: ParsedEnv) {
       botToken: env.SLACK_BOT_TOKEN,
       signingSecret: env.SLACK_SIGNING_SECRET,
       interactionsPath: env.SLACK_INTERACTIONS_PATH,
+    },
+
+    mcp: {
+      apiKey: env.MCP_API_KEY ?? '',
+      authEnabled: env.MCP_AUTH_ENABLED,
+    },
+
+    telegram: {
+      botToken: env.TELEGRAM_BOT_TOKEN ?? '',
+      webhookPath: env.TELEGRAM_WEBHOOK_PATH,
+    },
+
+    whatsapp: {
+      phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID ?? '',
+      accessToken: env.WHATSAPP_ACCESS_TOKEN ?? '',
+      webhookPath: env.WHATSAPP_WEBHOOK_PATH,
+      verifyToken: env.WHATSAPP_VERIFY_TOKEN ?? '',
     },
 
     admin: {

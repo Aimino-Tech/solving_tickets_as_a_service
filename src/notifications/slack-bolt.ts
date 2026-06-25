@@ -215,6 +215,74 @@ export class SlackBoltApp {
     this.app.action('view_pr', async ({ ack }) => {
       await ack();
     });
+
+    this.app.command('/stas', async ({ command, ack, respond, client }) => {
+      await ack();
+
+      const text = (command.text || '').trim();
+      const channelId = command.channel_id;
+      const userId = command.user_id;
+
+      log.info({ text, channelId, userId }, 'Received /stas command');
+
+      if (!text) {
+        await respond({
+          response_type: 'ephemeral',
+          text: 'Usage: `/stas fix <description>`\nExample: `/stas fix login button not working`',
+        });
+        return;
+      }
+
+      if (text.startsWith('fix ')) {
+        const issueTitle = text.slice(4).trim() || 'Fix requested via Slack';
+        const repoOwner = config.trackers.defaultRepoOwner;
+        const repoName = config.trackers.defaultRepoName;
+
+        if (!repoOwner || !repoName) {
+          await respond({
+            response_type: 'ephemeral',
+            text: 'Error: No default repository configured.',
+          });
+          return;
+        }
+
+        try {
+          const { enqueueIssue } = await import('../queue/issueQueue.js');
+          await enqueueIssue(undefined, {
+            installationId: config.trackers.installationId || 0,
+            repoOwner, repoName, repoPrivate: false, issueNumber: 0,
+            issueTitle,
+            issueBody: `Submitted via Slack by <@${userId}>\n\nDescription: ${issueTitle}`,
+            source: 'slack',
+          });
+
+          await respond({
+            response_type: 'in_channel',
+            text: `STAS is investigating: "${issueTitle}"\nI'll post progress updates in this thread.`,
+          });
+
+          const threadTs = command.ts;
+          if (threadTs) {
+            await client.chat.postMessage({
+              channel: channelId,
+              thread_ts: threadTs,
+              text: `:mag: *Phase: Queued* — Run has been queued for "${issueTitle}"`,
+            });
+          }
+        } catch (err) {
+          log.error({ err: String(err) }, 'Failed to enqueue Slack fix request');
+          await respond({
+            response_type: 'ephemeral',
+            text: 'Error: Failed to submit fix request.',
+          });
+        }
+      } else {
+        await respond({
+          response_type: 'ephemeral',
+          text: 'Unknown command. Usage: `/stas fix <description>`',
+        });
+      }
+    });
   }
 
   mountOn(app: Express): void {
