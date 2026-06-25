@@ -51,14 +51,29 @@ const envSchema = z.object({
   PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(300_000),
   PHASE_TIMEOUT_PRCREATION_MS: z.coerce.number().int().positive().default(30_000),
 
-  // OpenAI / triage
-  OPENAI_API_KEY: z.string().optional(),
-  OPENAI_CHEAP_MODEL: z.string().default('gpt-4o-mini'),
+  // OpenCode Go — direct LLM (OpenAI-compatible endpoint)
+  OPENCODE_DIRECT_API_KEY: z.string().optional(),
+  OPENCODE_DIRECT_MODEL: z.string().default('deepseek-v4-flash'),
+  OPENCODE_FALLBACK_MODEL: z.string().default('deepseek-v4-pro'),
+
+  // OpenCode Health Client
+  OPENCODE_HEALTH_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
+  OPENCODE_HEALTH_CACHE_TTL_MS: z.coerce.number().int().positive().default(30000),
+  OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(3),
+  OPENCODE_HEALTH_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+  OPENCODE_HEALTH_STARTUP_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
 
   // Sandbox
   E2B_API_KEY: z.string().optional(),
-  E2B_TEMPLATE_ID: z.string().default('default'),
+  E2B_TEMPLATE_ID: z.string().default('stas-default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+  E2B_FALLBACK_TO_DOCKER: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(true),
 
   // STAS
   CI_MONITOR_ENABLED: z.preprocess(
@@ -294,8 +309,19 @@ function buildConfig(env: ParsedEnv) {
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
       direct: {
-        apiKey: env.OPENCODE_API_KEY,
+        apiKey: env.OPENCODE_DIRECT_API_KEY || env.OPENCODE_API_KEY,
+        baseUrl: 'https://opencode.ai/zen/go/v1',
+        model: env.OPENCODE_DIRECT_MODEL,
+        fallbackModel: env.OPENCODE_FALLBACK_MODEL,
       },
+    },
+
+    opencodeHealth: {
+      pollIntervalMs: env.OPENCODE_HEALTH_POLL_INTERVAL_MS,
+      cacheTtlMs: env.OPENCODE_HEALTH_CACHE_TTL_MS,
+      circuitBreakerThreshold: env.OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD,
+      requestTimeoutMs: env.OPENCODE_HEALTH_REQUEST_TIMEOUT_MS,
+      startupTimeoutMs: env.OPENCODE_HEALTH_STARTUP_TIMEOUT_MS,
     },
 
     gitlab: {
@@ -319,6 +345,7 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
+      fallbackToDocker: env.E2B_FALLBACK_TO_DOCKER,
     },
 
     slack: {

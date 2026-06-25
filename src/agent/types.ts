@@ -104,5 +104,6 @@ export interface AgentResult {
   noFixReason?: string;
   alreadyFixed?: boolean;
   investigationOnly?: boolean;
+  isTerminal?: boolean;
   verification?: VerificationResult;
 }
