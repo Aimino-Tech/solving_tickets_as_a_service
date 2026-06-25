@@ -40,6 +40,11 @@ beat_schedule = {
         "schedule": 600.0,
         "args": (),
     },
+    "pipeline-cleanup-every-30-minutes": {
+        "task": "workers.tasks.pipeline_orchestrator.orchestrate_pipeline",
+        "schedule": 1800.0,
+        "args": ("", "stas:fix"),
+    },
 }
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")
@@ -98,4 +103,5 @@ task_routes = {
     "workers.tasks.pr_creation.*": {"queue": "stas.queue.pr"},
     "workers.tasks.notifications.*": {"queue": "stas.queue.notifications"},
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
+    "workers.tasks.pipeline_orchestrator.*": {"queue": "stas.queue.orchestrator"},
 }
