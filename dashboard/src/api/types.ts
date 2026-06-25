@@ -18,6 +18,9 @@ export interface Run {
   errorMessage?: string;
   createdAt: string;
   updatedAt: string;
+  confidence?: 'high' | 'medium' | 'low';
+  diff?: string;
+  testOutput?: string;
 }
 
 export interface Repo {
@@ -98,4 +101,81 @@ export interface KpiResponse {
   metrics: KpiMetric[];
   count: number;
   generatedAt: string;
+}
+
+export interface PricingPlan {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  period: string;
+  fixes: string;
+  monthlyFixLimit: number;
+  concurrentFixes: number;
+  premiumModels: boolean;
+  prioritySupport: boolean;
+  customWebhooks: boolean;
+  sla: boolean;
+  features: string[];
+  cta: string;
+  highlighted: boolean;
+}
+
+export interface CompetitorPrice {
+  competitor: string;
+  monthlyCostCents: number;
+  costPerFixCents: number;
+  fixesPerMonth: number;
+  passRate: number;
+  selfHosted: boolean;
+  openSource: boolean;
+  ourAgi: boolean;
+}
+
+export interface CostCalculation {
+  fixesPerMonth: number;
+  monthlyCostCents: number;
+  costPerFixCents: number;
+  annualSavingsCents: number;
+  vsCompetitors: Array<{
+    name: string;
+    monthlyCostCents: number;
+    savingsCents: number;
+    savingsPercent: number;
+  }>;
+}
+
+export interface PricingData {
+  generatedAt: string;
+  plans: PricingPlan[];
+  competitors: CompetitorPrice[];
+}
+
+export interface VsComparisonData {
+  competitor: string;
+  competitorName: string;
+  tagline: string;
+  ourAdvantage: string;
+  categories: Array<{
+    name: string;
+    items: Array<{
+      feature: string;
+      us: string;
+      them: string;
+      advantage: 'us' | 'them' | 'tie';
+    }>;
+  }>;
+  priceComparison: {
+    ourMonthlyCents: number;
+    theirMonthlyCents: number;
+    ourPerFixCents: number;
+    theirPerFixCents: number;
+    annualSavingsCents: number;
+  };
+  benchmarkComparison: {
+    ourPassRate: number;
+    theirPassRate: number;
+    ourCostPerFixCents: number;
+    theirCostPerFixCents: number;
+  };
 }
