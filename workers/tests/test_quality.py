@@ -357,11 +357,12 @@ def test_orchestrate_pipeline():
     issue_data = {"issue_id": "test-001"}
     result = orchestrate_pipeline.run(issue_data=issue_data)
     assert result["pipeline_status"] == "completed"
-    assert len(result["pipeline_steps"]) == 7
+    assert len(result["pipeline_steps"]) == 8
     assert result["pipeline_steps"] == [
         "quality_analyze",
         "agent_dispatch",
         "verification",
+        "visual_verification",
         "self_audit",
         "anti_mockup_scan",
         "pr_creation",
@@ -374,7 +375,7 @@ def test_orchestrate_pipeline_skip_quality():
 
     issue_data = {"issue_id": "test-002", "skip_quality_analyze": True}
     result = orchestrate_pipeline.run(issue_data=issue_data)
-    assert len(result["pipeline_steps"]) == 6
+    assert len(result["pipeline_steps"]) == 7
     assert "quality_analyze" not in result["pipeline_steps"]
 
 
