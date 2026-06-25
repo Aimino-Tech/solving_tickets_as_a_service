@@ -42,6 +42,7 @@ import { addReceipt, createManifest, createReceipt, serializeReceiptsJson } from
 import { buildTools, type SandboxTools } from './tools.js';
 import type { AgentResult, TestBaseline, TriageResult, VerificationResult } from './types.js';
 
+import { sanitizeEnv, redactSecrets, validateRequiredEnv } from '../security/env-sanitizer.js';
 const log = rootLogger.child({ module: 'issue-agent' });
 
 // ---------------------------------------------------------------------------
@@ -96,6 +97,23 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     ? `https://github.com/${repoOwner}/${repoName}`
     : `https://github.com/${repoOwner}/${repoName}`;
 
+
+  // ── Environment sanitization ──────────────────────────────────────
+  // Validate required env vars before proceeding
+  const { missing: missingVars } = validateRequiredEnv([
+    'GITHUB_APP_ID',
+    'GITHUB_WEBHOOK_SECRET',
+  ]);
+  if (missingVars.length > 0) {
+    throw new Error(`Required environment variables missing: ${missingVars.join(', ')}`);
+  }
+
+  // Sanitize env for agent visibility (log safe vars for debugging)
+  const safeEnv = sanitizeEnv(process.env);
+  logger.debug(
+    { allowedEnvVars: Object.keys(safeEnv) },
+    'Sanitized agent environment',
+  );
   let sandbox: SandboxExecutor | null = null;
   let currentPhase = '';
   let receiptManifest = createManifest();
@@ -776,7 +794,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'unknown error');
-        lastError = errorText;
+        lastError = redactSecrets(errorText);
 
         // Post status about the failure
         try {
@@ -815,7 +833,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
         metadata: result.metadata as Record<string, unknown> | undefined,
       };
     } catch (err) {
-      const errorMsg = String(err);
+      const errorMsg = redactSecrets(String(err));
       lastError = errorMsg;
 
       // Check if this was a timeout error

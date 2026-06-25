@@ -177,6 +177,11 @@ const envSchema = z.object({
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
 
+  // ── Env Allowlist ──
+  STAS_ENV_ALLOWLIST_EXTRA: z.string().default(""),
+  // Comma-separated list of additional allowed env vars for agents
+
+
   // ── IP Allowlist ──
   IP_ALLOWLIST_ENABLED: z.coerce.boolean().default(false),
   IP_ALLOWLIST: z.string().default(''),
@@ -429,6 +434,7 @@ function buildConfig(env: ParsedEnv) {
       corsOrigin: env.CORS_ORIGIN,
       requestBodyLimit: env.REQUEST_BODY_LIMIT,
       webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
+      envAllowlistExtra: env.STAS_ENV_ALLOWLIST_EXTRA,
 
       ipAllowlist: {
         enabled: env.IP_ALLOWLIST_ENABLED,

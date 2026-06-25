@@ -1,6 +1,6 @@
 /**
  * Security module — admin auth, audit trail, IP allowlisting,
- * sandbox security, and security utilities.
+ * sandbox security, environment sanitization, and security utilities.
  */
 
 export { adminAuthMiddleware } from './adminAuth.js';
@@ -13,3 +13,13 @@ export {
   SANDBOX_DOCKER_OPTS,
   getDockerSecurityOpts,
 } from './sandboxSecurity.js';
+
+// ── Environment sanitization ──────────────────────────────────────────
+export { ALLOWED_VARS, isAllowed, allowedPresent } from './env-allowlist.js';
+export {
+  sanitizeEnv,
+  redactSecrets,
+  redactObject,
+  validateRequiredEnv,
+} from './env-sanitizer.js';
+export { validateRequiredEnvOnStartup, getCriticalVars } from './env-validate.js';
