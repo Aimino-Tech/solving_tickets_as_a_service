@@ -59,6 +59,8 @@ import { dpaRouter } from './routes/dpa.js';
 import { slaRouter } from './routes/sla.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
+import { authRouter } from './routes/auth.js';
+import { reposRouter } from './routes/repos.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -686,6 +688,9 @@ export function createApp(): express.Application {
 
   // ── Benchmarks API (public) ──────────────────────────────────────
   app.use('/api/benchmarks', benchmarksRouter);
+
+  // ── PLG self-serve onboarding API ─────────────────────────────────
+  app.use('/plg', plgRouter);
 
   // -- 404 handler ----------------------------------------------------------
 
