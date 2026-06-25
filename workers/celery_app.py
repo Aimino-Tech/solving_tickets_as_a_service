@@ -68,9 +68,13 @@ app.conf.update(
 app.conf.worker_enable_remote_control = False
 
 <<<<<<< HEAD
+app.autodiscover_tasks(["workers.tasks", "workers.consumers", "workers.quality"])
+=======
+<<<<<<< HEAD
 app.autodiscover_tasks(["workers.tasks", "workers.consumers", "workers.quality", "workers.orchestrator"])
 =======
 app.autodiscover_tasks(["workers.tasks", "workers.consumers", "workers.quality"])
+>>>>>>> origin/main
 >>>>>>> origin/main
 
 # ── Initialize Metrics (Prometheus) ────────────────────────────────

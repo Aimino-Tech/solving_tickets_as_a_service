@@ -88,7 +88,12 @@ task_queues = [
     # ── stas.queue exchange ───────────────────────────────────
     Queue("stas.queue.pr", stas_queue, routing_key="pr.create"),
     Queue("stas.queue.notifications", stas_queue, routing_key="queue.notify"),
+<<<<<<< HEAD
+    Queue("stas.queue.review", stas_queue, routing_key="review.#"),
+    Queue("stas.queue.merge", stas_queue, routing_key="merge.#"),
+=======
     Queue("stas.queue.orchestrator", stas_queue, routing_key="orchestrator.#"),
+>>>>>>> origin/main
     # ── stas.events exchange (fanout) ─────────────────────────
     Queue("stas.events.event_bus", stas_events),
     # ── stas.dlx exchange ─────────────────────────────────────
@@ -105,5 +110,11 @@ task_routes = {
     "workers.tasks.notifications.*": {"queue": "stas.queue.notifications"},
     "workers.tasks.self_audit.*": {"queue": "stas.agents.self_audit"},
     "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
+<<<<<<< HEAD
+    "workers.tasks.review_orchestrator.*": {"queue": "stas.queue.review"},
+    "workers.tasks.merge_queue.*": {"queue": "stas.queue.merge"},
+    "workers.tasks.human_escalation.*": {"queue": "stas.queue.merge"},
+=======
     "workers.orchestrator.*": {"queue": "stas.queue.orchestrator"},
+>>>>>>> origin/main
 }

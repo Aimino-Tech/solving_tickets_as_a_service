@@ -219,6 +219,8 @@ const envSchema = z.object({
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
 
   // Pipeline Orchestration
   PIPELINE_MAX_CONCURRENT: z.coerce.number().int().positive().default(3),
@@ -228,6 +230,7 @@ const envSchema = z.object({
   PIPELINE_CLONE_TIMEOUT_S: z.coerce.number().int().positive().default(120),
   PIPELINE_CONCURRENCY_TIMEOUT_S: z.coerce.number().int().positive().default(600),
 =======
+>>>>>>> origin/main
 >>>>>>> origin/main
 });
 
@@ -474,6 +477,8 @@ function buildConfig(env: ParsedEnv) {
       sandbox: env.USAGE_CREDITS_SANDBOX,
     },
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
 
     pipeline: {
       maxConcurrent: env.PIPELINE_MAX_CONCURRENT,
@@ -484,6 +489,7 @@ function buildConfig(env: ParsedEnv) {
       concurrencyTimeoutS: env.PIPELINE_CONCURRENCY_TIMEOUT_S,
     },
 =======
+>>>>>>> origin/main
 >>>>>>> origin/main
   } as const;
 }

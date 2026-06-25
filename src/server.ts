@@ -56,8 +56,11 @@ import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { dashboardRouter } from './routes/dashboard.js';
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
 import { pipelineRouter } from './routes/pipeline.js';
 =======
+>>>>>>> origin/main
 >>>>>>> origin/main
 
 const log = rootLogger.child({ module: 'server' });
@@ -621,10 +624,13 @@ export function createApp(): express.Application {
   app.use('/api/v1/credits/usage', usageRouter);
 
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
   // -- Pipeline Status API -------------------------------------------------
   app.use('/api', pipelineRouter);
 
 =======
+>>>>>>> origin/main
 >>>>>>> origin/main
   // ── Admin webhooks API ──────────────────────────────────────────
   // GET /admin/webhooks (paginated, filterable)
