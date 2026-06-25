@@ -50,6 +50,11 @@ beat_schedule = {
         "schedule": 1800.0,
         "args": ("", "stas:fix"),
     },
+    "e2b-health-check-every-5-minutes": {
+        "task": "workers.tasks.periodic.e2b_health_check",
+        "schedule": 300.0,
+        "args": (),
+    },
 }
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")

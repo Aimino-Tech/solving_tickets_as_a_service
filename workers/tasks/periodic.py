@@ -191,3 +191,99 @@ def report_liveness(self) -> dict:
         "timestamp": time.time(),
         "alive": True,
     }
+
+
+@shared_task(
+    bind=True,
+    max_retries=2,
+    default_retry_delay=60,
+    autoretry_for=(Exception,),
+    name="workers.tasks.periodic.e2b_health_check",
+)
+def e2b_health_check(self) -> dict:
+    """
+    Periodic task (every 5 min) to verify the configured E2B template exists
+    and is usable. Creates a lightweight sandbox instance, validates the
+    template ID, and immediately destroys it.
+
+    Records Prometheus metrics:
+      - e2b_health_check (gauge): 1 if healthy, 0 if failed
+      - e2b_health_checks_total (counter): total checks by status
+      - e2b_health_check_failures_total (counter): failures by error type
+
+    Logs warnings if the template is not found, so operators can detect
+    misconfiguration before a fix run fails.
+    """
+    api_key = os.getenv("E2B_API_KEY", "")
+    template_id = os.getenv("E2B_TEMPLATE_ID", "stas-default")
+
+    if not api_key:
+        logger.info("E2B_API_KEY not configured -- skipping E2B health check")
+        return {"status": "skipped", "reason": "E2B_API_KEY not set"}
+
+    logger.info("Running E2B health check -- template=%s", template_id)
+
+    try:
+        from e2b import Sandbox
+
+        start = time.time()
+        sandbox = Sandbox.create(
+            template=template_id,
+            timeout=15,
+            api_key=api_key,
+        )
+        sandbox_id = sandbox.sandbox_id
+        sandbox.kill()
+        duration = time.time() - start
+
+        logger.info(
+            "E2B health check passed -- template=%s sandbox_id=%s duration=%.2fs",
+            template_id,
+            sandbox_id,
+            duration,
+        )
+
+        record_gauge("e2b_health_check", 1)
+        record_counter("e2b_health_checks_total", 1, status="ok")
+
+        return {
+            "status": "ok",
+            "template_id": template_id,
+            "sandbox_id": sandbox_id,
+            "duration_s": round(duration, 2),
+            "timestamp": time.time(),
+        }
+    except ImportError:
+        logger.warning("e2b package not installed -- skipping E2B health check")
+        return {"status": "skipped", "reason": "e2b package not installed"}
+    except Exception as exc:
+        err_str = str(exc).lower()
+        duration = time.time() - start
+
+        # Classify the error for metrics
+        if "template" in err_str and "not found" in err_str:
+            error_type = "template_not_found"
+            logger.error(
+                "E2B HEALTH CRITICAL -- template '%s' not found! "
+                "Fix: Update E2B_TEMPLATE_ID in your environment or "
+                "create the template in the E2B dashboard.",
+                template_id,
+            )
+        elif "api_key" in err_str or "unauthorized" in err_str or "forbidden" in err_str:
+            error_type = "auth_error"
+            logger.error("E2B health check FAILED -- authentication error: %s", exc)
+        elif "timeout" in err_str:
+            error_type = "timeout"
+            logger.error("E2B health check FAILED -- timeout: %s", exc)
+        elif "quota" in err_str or "rate limit" in err_str or "too many" in err_str:
+            error_type = "rate_limited"
+            logger.warning("E2B health check -- rate limited: %s", exc)
+        else:
+            error_type = "unknown"
+            logger.error("E2B health check FAILED -- %s", exc, exc_info=True)
+
+        record_gauge("e2b_health_check", 0)
+        record_counter("e2b_health_checks_total", 1, status="fail")
+        record_counter("e2b_health_check_failures_total", 1, error=error_type)
+
+        raise self.retry(exc=exc)
