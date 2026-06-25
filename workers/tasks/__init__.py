@@ -5,6 +5,7 @@ from .verification import run_verification, verify_agent_output
 from .pr_creation import create_pull_request
 from .notifications import send_notification, process_webhook
 from .periodic import queue_health_check, dlq_cleanup, push_metrics, report_liveness
+from . import linear_poll
 from .sandbox_gc import sandbox_gc
 
 __all__ = [

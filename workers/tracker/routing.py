@@ -49,6 +49,13 @@ PIPELINE_META: dict[str, dict[str, str]] = {
 # ---- Resolver -----------------------------------------------------------
 
 
+PipelineType = str
+
+
+def classify_pipeline(labels: list[str]) -> PipelineType:
+    return resolve_pipeline(labels)
+
+
 def resolve_pipeline(labels: list[str]) -> str:
     """
     Return the pipeline name for the first matching label in *labels*.
