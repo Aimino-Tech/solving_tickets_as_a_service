@@ -12,6 +12,7 @@ pydantic==2.10.3
 pydantic-settings==2.7.0
 python-dotenv==1.0.1
 e2b==2.19.0
+pybreaker==1.4.1
 
 # Sentry SDK for error monitoring and performance tracing
 sentry-sdk==2.18.0
