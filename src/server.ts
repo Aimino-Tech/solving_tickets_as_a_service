@@ -65,6 +65,7 @@ import { authRouter } from './routes/auth.js';
 import { reposRouter } from './routes/repos.js';
 import { runsRouter } from './routes/runs.js';
 import { badgeRouter } from './routes/badge.js';
+import { viralRouter } from './routes/viral.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -703,6 +704,11 @@ export function createApp(): express.Application {
   // ── Badge endpoint (public, no auth) ──────────────────────────────
   // GET /badge/:id.svg — shields.io-compatible status badge
   app.use('/badge', badgeRouter);
+
+  // ── Viral discovery endpoints (public, no auth) ───────────────────
+  // GET /discovery/mcp.json — MCP manifest for agent-to-agent discovery
+  // GET /discovery          — Human-readable discovery landing page
+  app.use(viralRouter);
 
   // ── Benchmarks API (public) ──────────────────────────────────────
   app.use('/api/benchmarks', benchmarksRouter);
