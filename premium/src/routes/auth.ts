@@ -10,7 +10,7 @@
 import { Router, type Request, type Response } from 'express';
 import crypto from 'node:crypto';
 import { rootLogger } from '../../../src/utils/logger.js';
-import { jwtAuth, signJwt, invalidateToken, type JwtPayload } from '../middleware/auth.js';
+import { jwtAuth, signJwt, type JwtPayload } from '../middleware/auth.js';
 
 const log = rootLogger.child({ module: 'premium-auth-routes' });
 
@@ -127,21 +127,8 @@ router.get('/me', jwtAuth, (req: Request, res: Response) => {
   res.json({ user: req.user });
 });
 
-router.post('/logout', jwtAuth, (req: Request, res: Response) => {
-  const authHeader = req.headers.authorization;
-  if (authHeader) {
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-    invalidateToken(token);
-  }
-
-  res.clearCookie('session', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-  });
-
-  log.info({ username: req.user?.username }, 'User logged out');
-  res.json({ success: true, message: 'Session terminated' });
+router.post('/logout', jwtAuth, (_req: Request, res: Response) => {
+  res.json({ success: true, message: 'Logged out. Remove the token on the client.' });
 });
 
 export { router as authRouter };

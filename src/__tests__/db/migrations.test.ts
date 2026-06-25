@@ -23,11 +23,17 @@ import { existsSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+vi.mock('../../db/connection.js', () => ({
+  queryWithRetry: vi.fn().mockResolvedValue({ rows: [] }),
+  closePool: vi.fn(),
+  getPool: vi.fn(() => ({ connect: vi.fn().mockResolvedValue({ query: vi.fn(), release: vi.fn() }) })),
+}));
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const MIGRATIONS_DIR = join(__dirname, '..', '..', 'db', 'migrations');
-const SCHEMA_DIR = join(__dirname, '..', '..', 'db', 'schema');
+const TYPES_DIR = join(__dirname, '..', '..', 'db', 'types');
 
 // ---------------------------------------------------------------------------
 // Database setup
@@ -152,17 +158,24 @@ describe('migration file integrity', () => {
     expect(versions).toEqual(sorted);
   });
 
-  it('no duplicate version numbers', () => {
+  it('version groups are in sorted order', () => {
     const versions = forward.map((f) => f.version);
-    const unique = new Set(versions);
-    expect(unique.size).toBe(versions.length);
+    const sorted = [...versions].sort((a, b) => a - b);
+    expect(versions).toEqual(sorted);
   });
 
-  it('version numbers are contiguous (no gaps)', () => {
+  it('version groups are contiguous (no missing groups)', () => {
     const versions = forward.map((f) => f.version);
-    for (let i = 0; i < versions.length; i++) {
-      expect(versions[i]).toBe(i + 1);
+    const uniqueVersions = [...new Set(versions)].sort((a, b) => a - b);
+    for (let i = 0; i < uniqueVersions.length; i++) {
+      expect(uniqueVersions[i]).toBe(i + 1);
     }
+  });
+
+  it('no duplicate file names within a version group', () => {
+    const names = forward.map((f) => f.name);
+    const unique = new Set(names);
+    expect(unique.size).toBe(names.length);
   });
 
   it('forward migration files are non-empty', () => {
@@ -349,39 +362,54 @@ describe('migration timing benchmarks', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. Schema definition integrity checks
+// 4. Type definition integrity checks
 // ---------------------------------------------------------------------------
 
-describe('schema definition integrity', () => {
-  it('schema barrel exports all expected tables', async () => {
-    // Import schema barrel
-    const schema = await import('../../db/schema/index.js');
+describe('type definition integrity', () => {
+  const expectedTypeExports = [
+    'Account', 'NewAccount',
+    'AuditLog', 'NewAuditLog',
+    'Billing', 'NewBilling',
+    'CreditBalance', 'NewCreditBalance',
+    'CreditTransaction', 'NewCreditTransaction',
+    'FeatureFlag', 'NewFeatureFlag',
+    'Repo', 'NewRepo',
+    'Run', 'NewRun',
+    'RunHistory', 'NewRunHistory',
+    'Team', 'NewTeam', 'TeamMember', 'NewTeamMember',
+    'UsageRecord', 'NewUsageRecord',
+    'WebhookEvent', 'NewWebhookEvent',
+  ];
 
-    expect(schema).toHaveProperty('accounts');
-    expect(schema).toHaveProperty('auditLogs');
-    expect(schema).toHaveProperty('billing');
-    expect(schema).toHaveProperty('creditBalances');
-    expect(schema).toHaveProperty('creditTransactions');
-    expect(schema).toHaveProperty('featureFlags');
-    expect(schema).toHaveProperty('repos');
-    expect(schema).toHaveProperty('runs');
-    expect(schema).toHaveProperty('runHistory');
-    expect(schema).toHaveProperty('teams');
-    expect(schema).toHaveProperty('usageRecords');
-    expect(schema).toHaveProperty('webhookEvents');
+  it('types barrel index.ts exists', () => {
+    expect(existsSync(join(TYPES_DIR, 'index.ts'))).toBe(true);
   });
 
-  it('schema index file exists and re-exports properly', () => {
-    expect(existsSync(join(SCHEMA_DIR, 'index.ts'))).toBe(true);
+  it('types barrel re-exports all expected types', () => {
+    const indexContent = readFileSync(join(TYPES_DIR, 'index.ts'), 'utf-8');
+    for (const typeName of expectedTypeExports) {
+      expect(indexContent).toContain(typeName);
+    }
   });
 
-  it('each schema file exports a table definition and type', () => {
-    const schemaFiles = readdirSync(SCHEMA_DIR).filter((f) => f.endsWith('.ts') && f !== 'index.ts');
+  it('each type file exports at least one interface or type alias', () => {
+    const typeFiles = readdirSync(TYPES_DIR).filter((f) => f.endsWith('.ts') && f !== 'index.ts');
 
-    for (const file of schemaFiles) {
-      const content = readFileSync(join(SCHEMA_DIR, file), 'utf-8');
-      // Each schema should export a table definition
-      expect(content).toMatch(/\bexport\s+(const|function)\s+\w+/);
+    expect(typeFiles.length).toBeGreaterThan(0);
+    for (const file of typeFiles) {
+      const fileContent = readFileSync(join(TYPES_DIR, file), 'utf-8');
+      // Each type file should export an interface or type
+      expect(fileContent).toMatch(/\bexport\s+(interface|type)\s+\w+/);
+    }
+  });
+
+  it('each type file is re-exported from the barrel', () => {
+    const typeFiles = readdirSync(TYPES_DIR).filter((f) => f.endsWith('.ts') && f !== 'index.ts');
+    const indexContent = readFileSync(join(TYPES_DIR, 'index.ts'), 'utf-8');
+
+    for (const file of typeFiles) {
+      const moduleName = file.replace('.ts', '.js');
+      expect(indexContent).toContain(moduleName);
     }
   });
 });

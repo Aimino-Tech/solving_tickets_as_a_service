@@ -1,16 +1,24 @@
 /**
- * Scheduled Maintenance - periodic tasks for queue health, DLQ cleanup,
- * alerting rules, worker heartbeat checks, SLO compliance, and AIM-2022
- * self-healing infrastructure (circuit breaker, queue drain).
+ * Scheduled Maintenance — periodic tasks for queue health, DLQ cleanup,
+ * alerting rules, worker heartbeat checks, and SLO compliance.
  *
  * Tasks (runs on configurable intervals):
- *   1. Queue depth check - fires alerting rules when queues exceed thresholds
- *   2. Worker heartbeat check - alerts on workers with no heartbeat >2min
- *   3. SLO compliance check - evaluates SLIs against SLO targets, records metrics
- *   4. DLQ cleanup - purges expired DLQ messages based on DLQ_RETENTION_DAYS
- *   5. Prometheus metrics update - refreshes queue depth gauges
- *   6. (AIM-2022) Circuit breaker state check - transitions OPEN -> HALF_OPEN
- *   7. (AIM-2022) Queue drain check - alerts when queue depth > 100 and no workers
+ *   1. Queue depth check — fires alerting rules when queues exceed thresholds
+ *   2. Worker heartbeat check — alerts on workers with no heartbeat >2min
+ *   3. SLO compliance check — evaluates SLIs against SLO targets, records metrics
+ *   4. DLQ cleanup — purges expired DLQ messages based on DLQ_RETENTION_DAYS
+ *   5. Prometheus metrics update — refreshes queue depth gauges
+ *
+ * All tasks are started/stopped via `startScheduledTasks()` / `stopScheduledTasks()`.
+ *
+ * ── AIM-1272 Integration ────────────────────────────────────────────
+ * The scheduled loop now wires concrete alerting rules from
+ * src/monitoring/alerting.ts into the periodic health checks:
+ *   - Queue depth exceeding thresholds → checkQueueDepth()
+ *   - Worker heartbeat missing >2min   → checkWorkerHeartbeats()
+ *   - SLO breach detection             → checkSLOCompliance()
+ *   - Error rate spikes                → (handled per-message in bridge)
+ * ────────────────────────────────────────────────────────────────────
  */
 
 import { config } from '../config.js';
@@ -21,8 +29,6 @@ import {
   checkWorkerHeartbeats,
   checkSLOCompliance,
 } from '../monitoring/alerting.js';
-import { checkQueueDrain } from '../queue/queueMonitor.js';
-import { getAllCircuits } from '../monitoring/circuitBreaker.js';
 
 const log = rootLogger.child({ module: 'scheduled' });
 
@@ -34,10 +40,6 @@ const SLO_COMPLIANCE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // every 5min
 const DLQ_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
 const METRICS_REFRESH_INTERVAL_MS = 60_000; // every 60s
 
-// AIM-2022 intervals
-const CIRCUIT_BREAKER_CHECK_INTERVAL_MS = 30_000; // every 30s
-const QUEUE_DRAIN_CHECK_INTERVAL_MS = 60_000; // every 60s
-
 // ── Task state ─────────────────────────────────────────────────────
 
 const timers: NodeJS.Timeout[] = [];
@@ -48,26 +50,28 @@ async function checkQueueDepths(): Promise<void> {
   try {
     const health = await getQueueHealth();
 
+    // Fire alerting rules based on actual queue depths
     for (const queue of health.queues) {
       if (queue.type === 'main') {
         checkQueueDepth(queue.depth, config.monitoring.queueDepthAlertMinutes);
       }
     }
 
+    // Legacy logging (kept for backward compatibility)
     const { critical, warning } = await hasCriticalQueues();
 
     if (critical.length > 0) {
       log.error(
         { critical, warning },
-        'CRITICAL queue depth alert - ' + critical.join(', '),
+        'CRITICAL queue depth alert — ' + critical.join(', '),
       );
     } else if (warning.length > 0) {
       log.warn(
         { warning },
-        'Queue depth warning - ' + warning.join(', '),
+        'Queue depth warning — ' + warning.join(', '),
       );
     } else {
-      log.debug('Queue depth check passed - all queues healthy');
+      log.debug('Queue depth check passed — all queues healthy');
     }
   } catch (err) {
     log.error({ err: String(err) }, 'Queue depth check failed');
@@ -89,7 +93,7 @@ async function checkWorkerHealth(): Promise<void> {
 
 async function runSloCheck(): Promise<void> {
   try {
-    await checkSLOCompliance();
+    checkSLOCompliance();
   } catch (err) {
     log.error({ err: String(err) }, 'SLO compliance check failed');
   }
@@ -126,47 +130,6 @@ async function refreshMetrics(): Promise<void> {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// AIM-2022: Self-Healing Infrastructure Checks
-// ═══════════════════════════════════════════════════════════════════════
-
-/**
- * Check circuit breaker states - auto-transitions OPEN -> HALF_OPEN.
- */
-async function checkCircuitBreakerStates(): Promise<void> {
-  try {
-    const circuits = await getAllCircuits();
-    const openCount = Object.values(circuits).filter((c) => c.state === 'OPEN').length;
-    const halfOpenCount = Object.values(circuits).filter((c) => c.state === 'HALF_OPEN').length;
-
-    if (openCount > 0 || halfOpenCount > 0) {
-      log.info(
-        { openCount, halfOpenCount, total: Object.keys(circuits).length },
-        'Circuit breaker state check complete',
-      );
-    }
-  } catch (err) {
-    log.error({ err: String(err) }, 'Circuit breaker state check failed');
-  }
-}
-
-/**
- * Check queue drain conditions.
- */
-async function runQueueDrainCheck(): Promise<void> {
-  try {
-    const result = await checkQueueDrain();
-    if (result.alerts.length > 0) {
-      log.warn(
-        { alertCount: result.alerts.length, scaleUps: result.scaleUps },
-        'Queue drain check found issues',
-      );
-    }
-  } catch (err) {
-    log.error({ err: String(err) }, 'Queue drain check failed');
-  }
-}
-
 // ── Lifecycle ───────────────────────────────────────────────────────
 
 /**
@@ -181,10 +144,8 @@ export function startScheduledTasks(): void {
       sloComplianceCheckMs: SLO_COMPLIANCE_CHECK_INTERVAL_MS,
       dlqCleanupMs: DLQ_CLEANUP_INTERVAL_MS,
       metricsRefreshMs: METRICS_REFRESH_INTERVAL_MS,
-      circuitBreakerCheckMs: CIRCUIT_BREAKER_CHECK_INTERVAL_MS,
-      queueDrainCheckMs: QUEUE_DRAIN_CHECK_INTERVAL_MS,
     },
-    'Starting scheduled maintenance tasks (including AIM-2022 self-healing)',
+    'Starting scheduled maintenance tasks',
   );
 
   // Queue depth check (on interval matching queueDepthAlertMinutes)
@@ -202,20 +163,12 @@ export function startScheduledTasks(): void {
   // Metrics refresh (every 60s)
   timers.push(setInterval(refreshMetrics, METRICS_REFRESH_INTERVAL_MS));
 
-  // AIM-2022: Circuit breaker state check (every 30s)
-  timers.push(setInterval(checkCircuitBreakerStates, CIRCUIT_BREAKER_CHECK_INTERVAL_MS));
-
-  // AIM-2022: Queue drain check (every 60s)
-  timers.push(setInterval(runQueueDrainCheck, QUEUE_DRAIN_CHECK_INTERVAL_MS));
-
   // Run initial checks immediately
   checkQueueDepths().catch(() => {});
   checkWorkerHealth().catch(() => {});
   runSloCheck().catch(() => {});
   cleanupDLQ().catch(() => {});
   refreshMetrics().catch(() => {});
-  checkCircuitBreakerStates().catch(() => {});
-  runQueueDrainCheck().catch(() => {});
 
   log.info('Scheduled maintenance tasks started');
 }

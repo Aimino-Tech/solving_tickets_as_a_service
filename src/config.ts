@@ -30,7 +30,6 @@ const envSchema = z.object({
 
   // Queue
   REDIS_URL: z.string().default('redis://localhost:6379'),
-  RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672/stas'),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
   QUEUE_DEDUP_TTL_SECONDS: z.coerce.number().int().positive().default(120),
   QUEUE_KEEP_COMPLETED: z.coerce.number().int().positive().default(200),
@@ -42,7 +41,6 @@ const envSchema = z.object({
   // OpenCode
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
-  OPENCODE_API_KEY: z.string().optional(),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
   // Timeouts
@@ -51,42 +49,26 @@ const envSchema = z.object({
   PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(300_000),
   PHASE_TIMEOUT_PRCREATION_MS: z.coerce.number().int().positive().default(30_000),
 
-  // OpenCode Go — direct LLM (OpenAI-compatible endpoint)
-  OPENCODE_DIRECT_API_KEY: z.string().optional(),
-  OPENCODE_DIRECT_MODEL: z.string().default('deepseek-v4-flash'),
-  OPENCODE_FALLBACK_MODEL: z.string().default('deepseek-v4-pro'),
-
-  // OpenCode Health Client
-  OPENCODE_HEALTH_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
-  OPENCODE_HEALTH_CACHE_TTL_MS: z.coerce.number().int().positive().default(30000),
-  OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(3),
-  OPENCODE_HEALTH_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
-  OPENCODE_HEALTH_STARTUP_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  // OpenAI / triage
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_CHEAP_MODEL: z.string().default('gpt-4o-mini'),
 
   // Sandbox
   E2B_API_KEY: z.string().optional(),
-  E2B_TEMPLATE_ID: z.string().default('stas-default'),
+  E2B_TEMPLATE_ID: z.string().default('default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
-  E2B_FALLBACK_TO_DOCKER: z.preprocess(
+
+  // STAS
+
+  // Pricing
+  STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
+  STAS_MONTHLY_QUOTA_ENABLED: z.preprocess(
     (v) => {
       if (typeof v === 'string') return v === 'true' || v === '1';
       return v;
     },
     z.boolean(),
   ).default(true),
-
-  // STAS
-  CI_MONITOR_ENABLED: z.preprocess(
-    (v) => {
-      if (typeof v === 'string') return v === 'true' || v === '1';
-      return v;
-    },
-    z.boolean(),
-  ).default(false),
-
-  // Pricing
-  STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
-  STAS_MONTHLY_QUOTA_ENABLED: z.coerce.boolean().default(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
   STAS_LABEL: z.string().default('stas:fix'),
@@ -206,14 +188,15 @@ const envSchema = z.object({
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
 
-  // Escalation / Human-on-call
-  PAGERDUTY_ROUTING_KEY: z.string().optional(),
-  OPSGENIE_API_KEY: z.string().optional(),
-  ESCALATION_RETRY_THRESHOLD: z.coerce.number().int().positive().default(3),
-  ESCALATION_COMMENT_RATE_LIMIT_MS: z.coerce.number().int().positive().default(30_000),
-  ESCALATION_ACK_TTL_MS: z.coerce.number().int().positive().default(14_400_000),
-  LINEAR_PROJECT_ID: z.string().optional(),
-  LINEAR_INCIDENT_TEAM_ID: z.string().optional(),
+  // Config CI Monitor
+  CI_MONITOR_ENABLED: z.preprocess(
+    (v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    },
+    z.boolean(),
+  ).default(false),
+
   // Sentry
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENVIRONMENT: z.string().default('development'),
@@ -231,12 +214,6 @@ const envSchema = z.object({
   ALERT_CRIT_QUEUE_DEPTH: z.coerce.number().int().positive().default(200),
   ALERT_WARN_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(10),
   ALERT_CRIT_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(30),
-  ALERT_EMAIL_WEBHOOK_URL: z.string().optional(),
-
-  // Human Escalation (AIM-2058)
-  MAX_FAILURES_BEFORE_ESCALATION: z.coerce.number().int().positive().default(3),
-  OPERATOR_WEBHOOK_URL: z.string().optional(),
-  ESCALATION_DEDUP_TTL_HOURS: z.coerce.number().int().positive().default(24),
   // Metering / Usage Tracking
   METERING_COST_TRIAGE: z.coerce.number().int().positive().default(1),
   METERING_COST_OPENCODE_PRIMARY: z.coerce.number().int().positive().default(10),
@@ -280,10 +257,6 @@ function buildConfig(env: ParsedEnv) {
     logLevel: env.LOG_LEVEL,
     nodeEnv: env.NODE_ENV,
 
-    ci: {
-      monitorEnabled: env.CI_MONITOR_ENABLED,
-    },
-
     github: {
       appId: env.GITHUB_APP_ID,
       privateKeyPath: env.GITHUB_APP_PRIVATE_KEY_PATH,
@@ -294,7 +267,6 @@ function buildConfig(env: ParsedEnv) {
 
     queue: {
       redisUrl: env.REDIS_URL,
-      rabbitmqUrl: env.RABBITMQ_URL,
       workerConcurrency: env.WORKER_CONCURRENCY,
       dedupTtl: env.QUEUE_DEDUP_TTL_SECONDS,
       keepCompleted: env.QUEUE_KEEP_COMPLETED,
@@ -309,19 +281,8 @@ function buildConfig(env: ParsedEnv) {
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
       direct: {
-        apiKey: env.OPENCODE_DIRECT_API_KEY || env.OPENCODE_API_KEY,
-        baseUrl: 'https://opencode.ai/zen/go/v1',
-        model: env.OPENCODE_DIRECT_MODEL,
-        fallbackModel: env.OPENCODE_FALLBACK_MODEL,
+        apiKey: env.OPENCODE_API_KEY ?? '',
       },
-    },
-
-    opencodeHealth: {
-      pollIntervalMs: env.OPENCODE_HEALTH_POLL_INTERVAL_MS,
-      cacheTtlMs: env.OPENCODE_HEALTH_CACHE_TTL_MS,
-      circuitBreakerThreshold: env.OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD,
-      requestTimeoutMs: env.OPENCODE_HEALTH_REQUEST_TIMEOUT_MS,
-      startupTimeoutMs: env.OPENCODE_HEALTH_STARTUP_TIMEOUT_MS,
     },
 
     gitlab: {
@@ -345,7 +306,6 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
-      fallbackToDocker: env.E2B_FALLBACK_TO_DOCKER,
     },
 
     slack: {
@@ -359,6 +319,10 @@ function buildConfig(env: ParsedEnv) {
     admin: {
       apiKey: env.ADMIN_API_KEY ?? '',
       rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
+    },
+
+    ci: {
+      monitorEnabled: env.CI_MONITOR_ENABLED,
     },
 
     sentry: {
@@ -380,13 +344,6 @@ function buildConfig(env: ParsedEnv) {
       critQueueDepth: env.ALERT_CRIT_QUEUE_DEPTH,
       warnErrorRatePercent: env.ALERT_WARN_ERROR_RATE_PERCENT,
       critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
-      emailWebhookUrl: env.ALERT_EMAIL_WEBHOOK_URL,
-    },
-
-    escalation: {
-      maxFailuresBeforeEscalation: env.MAX_FAILURES_BEFORE_ESCALATION,
-      operatorWebhookUrl: env.OPERATOR_WEBHOOK_URL,
-      dedupTtlHours: env.ESCALATION_DEDUP_TTL_HOURS,
     },
     stas: {
       mode: env.STAS_MODE,
@@ -416,7 +373,6 @@ function buildConfig(env: ParsedEnv) {
       defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
       ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
       adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
-      max: env.STAS_RATE_LIMIT_MAX,
     },
 
     stripe: {
@@ -505,15 +461,6 @@ function buildConfig(env: ParsedEnv) {
       sandboxMultiplierMax: env.METERING_SANDBOX_MULTIPLIER_MAX,
     },
 
-    escalation: {
-      pagerdutyRoutingKey: env.PAGERDUTY_ROUTING_KEY,
-      opsgenieApiKey: env.OPSGENIE_API_KEY,
-      retryThreshold: env.ESCALATION_RETRY_THRESHOLD,
-      commentRateLimitMs: env.ESCALATION_COMMENT_RATE_LIMIT_MS,
-      ackTtlMs: env.ESCALATION_ACK_TTL_MS,
-      linearProjectId: env.LINEAR_PROJECT_ID,
-      linearIncidentTeamId: env.LINEAR_INCIDENT_TEAM_ID,
-    },
     usageCredits: {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,

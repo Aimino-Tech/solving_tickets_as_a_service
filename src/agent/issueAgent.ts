@@ -123,7 +123,6 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
         confidence: 'low',
         fixReady: false,
         noFixReason: 'Feature requests are not handled by the bot.',
-        isTerminal: true,
       };
     }
 
@@ -135,7 +134,6 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
         confidence: 'low',
         fixReady: false,
         noFixReason: 'Questions and support requests are not handled by the bot.',
-        isTerminal: true,
       };
     }
 
@@ -1205,4 +1203,70 @@ function dispatchNamedTool(
   const tool = tools.find((t) => t.name === name);
   if (!tool) return Promise.resolve(`Unknown tool: ${name}`);
   return tool.handler(args);
+}
+
+export interface GroundingResult {
+  passed: boolean;
+  ungrounded: string[];
+  details: string[];
+}
+
+const STOP_WORDS = new Set([
+  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+  'should', 'may', 'might', 'shall', 'can', 'need', 'dare', 'ought',
+  'used', 'this', 'that', 'these', 'those', 'i', 'me', 'my', 'we',
+  'our', 'you', 'your', 'he', 'him', 'his', 'she', 'her', 'it', 'its',
+  'they', 'them', 'their', 'what', 'which', 'who', 'whom', 'when',
+  'where', 'why', 'how', 'all', 'each', 'every', 'both', 'few', 'some',
+  'any', 'no', 'none', 'not', 'only', 'own', 'same', 'so', 'than',
+  'too', 'very', 'just', 'because', 'as', 'until', 'while', 'about',
+  'between', 'through', 'during', 'before', 'after', 'above', 'below',
+  'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under',
+  'again', 'further', 'then', 'once', 'here', 'there', 'with', 'without',
+  'and', 'but', 'or', 'yet', 'nor', 'for', 'to', 'at', 'by',
+]);
+
+export function verifyIssueGrounding(
+  issueBody: string,
+  comments: string[],
+  triage: { summary: string },
+): GroundingResult {
+  const allText = [issueBody, ...comments].filter(Boolean).join(' ').toLowerCase();
+
+  if (!allText.trim()) {
+    return {
+      passed: true,
+      ungrounded: [],
+      details: ['No issue body or comments to verify against'],
+    };
+  }
+
+  const summary = (triage.summary || '').toLowerCase();
+  if (!summary.trim()) {
+    return { passed: true, ungrounded: [], details: [] };
+  }
+
+  const keywords = summary.split(/\W+/).filter((w) => w.length > 3 && !STOP_WORDS.has(w));
+  const ungrounded: string[] = [];
+
+  for (const word of keywords) {
+    const wordsInText = allText.split(/\W+/).filter(Boolean);
+    const wordInText = wordsInText.some((t) => t.includes(word) || word.includes(t));
+    if (!wordInText) {
+      ungrounded.push(word);
+    }
+  }
+
+  if (keywords.length === 0) {
+    return { passed: true, ungrounded: [], details: ['No significant keywords in triage summary'] };
+  }
+
+  return {
+    passed: ungrounded.length === 0,
+    ungrounded,
+    details: ungrounded.length > 0
+      ? [`Ungrounded keywords: ${ungrounded.join(', ')}`]
+      : ['Triage summary is grounded in issue body/comments'],
+  };
 }

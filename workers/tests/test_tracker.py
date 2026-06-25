@@ -2,267 +2,552 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 
-# ── State Machine ──────────────────────────────────────────────────────────
+# ===========================================================================
+# Linear Client
+# ===========================================================================
+
+
+class TestLinearClient:
+    """Tests for ``workers.linear.client.LinearClient``."""
+
+    # ── get_issues_by_state ──────────────────────────────────────────────
+
+    @pytest.mark.asyncio
+    async def test_get_issues_by_state_returns_linear_issues(self):
+        from workers.linear.client import LinearClient
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "issues": {
+                    "nodes": [
+                        {
+                            "id": "lin_issue_1",
+                            "title": "Fix login bug",
+                            "description": "Users cannot log in",
+                            "priority": 2.0,
+                            "state": {"name": "Todo", "type": "unstarted"},
+                            "team": {"key": "PROJ"},
+                            "labels": {"nodes": [{"name": "stas:fix"}]},
+                            "url": "https://linear.app/proj/PROJ-1",
+                            "createdAt": "2025-01-01T00:00:00Z",
+                            "updatedAt": "2025-01-02T00:00:00Z",
+                        },
+                        {
+                            "id": "lin_issue_2",
+                            "title": "Add feature",
+                            "description": None,
+                            "priority": 1.0,
+                            "state": {"name": "In Progress", "type": "started"},
+                            "team": {"key": "PROJ"},
+                            "labels": {"nodes": [{"name": "stas:feature"}]},
+                            "url": "https://linear.app/proj/PROJ-2",
+                            "createdAt": "2025-01-01T00:00:00Z",
+                            "updatedAt": "2025-01-03T00:00:00Z",
+                        },
+                    ],
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                },
+            },
+        }
+
+        with patch.object(LinearClient, "_request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = mock_response.json.return_value["data"]
+            client = LinearClient(api_key="lin_test_key")
+            issues = await client.get_issues_by_state(["Todo", "In Progress"])
+
+            assert len(issues) == 2
+
+            assert issues[0].id == "lin_issue_1"
+            assert issues[0].title == "Fix login bug"
+            assert issues[0].description == "Users cannot log in"
+            assert issues[0].priority == 2.0
+            assert issues[0].state_name == "Todo"
+            assert issues[0].state_type == "unstarted"
+            assert issues[0].team_key == "PROJ"
+            assert issues[0].labels == ["stas:fix"]
+            assert issues[0].url == "https://linear.app/proj/PROJ-1"
+
+            assert issues[1].id == "lin_issue_2"
+            assert issues[1].title == "Add feature"
+            assert issues[1].description is None
+            assert issues[1].state_name == "In Progress"
+            assert issues[1].labels == ["stas:feature"]
+
+            # Verify the filter was built correctly
+            call_kwargs = mock_request.call_args_list[0]
+            # _paginate_issues passes query + variables internally
+            assert mock_request.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_get_issues_by_state_pagination(self):
+        """Verify pagination follows ``hasNextPage``."""
+        from workers.linear.client import LinearClient
+
+        page_1 = {
+            "issues": {
+                "nodes": [
+                    {
+                        "id": "p1_1",
+                        "title": "Issue 1",
+                        "description": None,
+                        "priority": 0.0,
+                        "state": {"name": "Todo", "type": "unstarted"},
+                        "team": {"key": "T"},
+                        "labels": {"nodes": []},
+                        "url": "",
+                        "createdAt": "",
+                        "updatedAt": "",
+                    },
+                ],
+                "pageInfo": {"hasNextPage": True, "endCursor": "cursor_1"},
+            },
+        }
+        page_2 = {
+            "issues": {
+                "nodes": [
+                    {
+                        "id": "p2_1",
+                        "title": "Issue 2",
+                        "description": None,
+                        "priority": 0.0,
+                        "state": {"name": "Todo", "type": "unstarted"},
+                        "team": {"key": "T"},
+                        "labels": {"nodes": []},
+                        "url": "",
+                        "createdAt": "",
+                        "updatedAt": "",
+                    },
+                ],
+                "pageInfo": {"hasNextPage": False, "endCursor": None},
+            },
+        }
+
+        with patch.object(LinearClient, "_request", new_callable=AsyncMock) as mock_request:
+            mock_request.side_effect = [page_1, page_2]
+            client = LinearClient(api_key="lin_test_key")
+            issues = await client.get_issues_by_state(["Todo"])
+
+            assert len(issues) == 2
+            assert issues[0].id == "p1_1"
+            assert issues[1].id == "p2_1"
+            # Two calls = two pages
+            assert mock_request.call_count == 2
+
+    # ── transition_issue ─────────────────────────────────────────────────
+
+    @pytest.mark.asyncio
+    async def test_transition_issue_sends_mutation(self):
+        from workers.linear.client import LinearClient
+
+        expected_response = {
+            "issueUpdate": {
+                "success": True,
+                "issue": {"id": "lin_issue_1", "state": {"id": "s2", "name": "In Progress", "type": "started"}},
+            },
+        }
+
+        with patch.object(LinearClient, "_request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = expected_response
+            client = LinearClient(api_key="lin_test_key")
+            result = await client.transition_issue("lin_issue_1", "state_2")
+
+            assert result == expected_response
+            mock_request.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_transition_issue_raises_on_api_error(self):
+        from workers.linear.client import LinearClient, LinearAPIError
+
+        with patch.object(LinearClient, "_request", new_callable=AsyncMock) as mock_request:
+            mock_request.side_effect = LinearAPIError("GraphQL error(s): Not found")
+            client = LinearClient(api_key="lin_test_key")
+            with pytest.raises(LinearAPIError, match="Not found"):
+                await client.transition_issue("bad_id", "state_2")
+
+    # ── post_comment ─────────────────────────────────────────────────────
+
+    @pytest.mark.asyncio
+    async def test_post_comment_sends_mutation(self):
+        from workers.linear.client import LinearClient
+
+        expected_response = {
+            "commentCreate": {
+                "success": True,
+                "comment": {"id": "lin_comment_1", "body": "Working on it"},
+            },
+        }
+
+        with patch.object(LinearClient, "_request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = expected_response
+            client = LinearClient(api_key="lin_test_key")
+            result = await client.post_comment("lin_issue_1", "Working on it")
+
+            assert result == expected_response
+            mock_request.assert_called_once()
+
+    # ── initialization (LINEAR_API_KEY) ──────────────────────────────────
+
+    def test_client_requires_api_key(self):
+        from workers.linear.client import LinearClient
+
+        with patch.dict("os.environ", {}, clear=True):
+            with pytest.raises(ValueError, match="LINEAR_API_KEY"):
+                LinearClient()
+
+    def test_client_accepts_explicit_key(self):
+        from workers.linear.client import LinearClient
+
+        client = LinearClient(api_key="lin_explicit_key")
+        assert client._api_key == "lin_explicit_key"
+
+    def test_client_reads_env_var(self):
+        from workers.linear.client import LinearClient
+
+        with patch.dict("os.environ", {"LINEAR_API_KEY": "lin_env_key"}):
+            client = LinearClient()
+            assert client._api_key == "lin_env_key"
+
+
+# ===========================================================================
+# State Machine
+# ===========================================================================
 
 
 class TestStateMachine:
-    def test_next_state_advances_through_pipeline(self):
-        from workers.tracker.state_machine import next_state
+    """Tests for ``workers.tracker.state_machine``."""
 
-        assert next_state("Backlog") == "Todo"
-        assert next_state("Todo") == "In Progress"
-        assert next_state("In Progress") == "Human Review"
-        assert next_state("Human Review") == "In Review"
-        assert next_state("In Review") == "Merge Queue"
-        assert next_state("Merge Queue") == "Merging"
-        assert next_state("Merging") == "Verified"
+    def test_resolve_state_success_path(self):
+        from workers.tracker.state_machine import resolve_state
 
-    def test_next_state_rework(self):
-        from workers.tracker.state_machine import next_state
+        # Forward transitions
+        assert resolve_state("Backlog", "success") == "Todo"
+        assert resolve_state("Todo", "success") == "In Progress"
+        assert resolve_state("In Progress", "success") == "Agent Working"
+        assert resolve_state("Agent Working", "success") == "Human Review"
+        assert resolve_state("Human Review", "success") == "Done"
+        assert resolve_state("  Backlog  ", "success") == "Todo"  # whitespace normalization
 
-        assert next_state("In Progress", pipeline_result="rework") == "Rework"
+    def test_resolve_state_failure_path(self):
+        from workers.tracker.state_machine import resolve_state
 
-    def test_next_state_fail_returns_none(self):
-        from workers.tracker.state_machine import next_state
+        # Most states go to "Rework" on failure
+        assert resolve_state("In Progress", "failure") == "Rework"
+        assert resolve_state("Agent Working", "failure") == "Rework"
+        assert resolve_state("Human Review", "failure") == "Rework"
+        assert resolve_state("Todo", "failure") == "Rework"
 
-        assert next_state("In Progress", pipeline_result="fail") is None
+    def test_resolve_state_terminal_states_return_none(self):
+        from workers.tracker.state_machine import resolve_state
 
-    def test_next_state_unknown_returns_none(self):
-        from workers.tracker.state_machine import next_state
+        # Terminal states: stay put regardless of outcome
+        assert resolve_state("Done", "success") is None
+        assert resolve_state("Done", "failure") is None
+        assert resolve_state("Canceled", "success") is None
+        assert resolve_state("Canceled", "failure") is None
 
-        assert next_state("UnknownState") is None
+    def test_resolve_state_unknown_state_returns_none(self):
+        from workers.tracker.state_machine import resolve_state
+
+        # Unknown state
+        assert resolve_state("UnknownState", "success") is None
+        assert resolve_state("NonExistent", "failure") == "Rework"  # unknown + failure -> Rework
+
+    def test_get_active_states(self):
+        from workers.tracker.state_machine import get_active_states
+
+        states = get_active_states()
+        assert "Todo" in states
+        assert "In Progress" in states
+        assert "Agent Working" in states
+        assert "Human Review" in states
+        assert "Rework" in states
+        assert "Done" not in states
+        assert "Canceled" not in states
+        assert "Backlog" not in states
 
     def test_is_terminal(self):
         from workers.tracker.state_machine import is_terminal
 
         assert is_terminal("Done") is True
-        assert is_terminal("Cancelled") is True
-        assert is_terminal("Verified") is True
+        assert is_terminal("Canceled") is True
+        assert is_terminal("Todo") is False
         assert is_terminal("In Progress") is False
-
-    def test_is_active(self):
-        from workers.tracker.state_machine import is_active
-
-        assert is_active("Todo") is True
-        assert is_active("In Progress") is True
-        assert is_active("Human Review") is True
-        assert is_active("Done") is False
-        assert is_active("Backlog") is False
-
-    def test_previous_state(self):
-        from workers.tracker.state_machine import previous_state
-
-        assert previous_state("Todo") == "Backlog"
-        assert previous_state("In Progress") == "Todo"
-        assert previous_state("Done") is None
+        assert is_terminal("Rework") is False
+        assert is_terminal("Unknown") is False
 
 
-# ── Routing ────────────────────────────────────────────────────────────────
+# ===========================================================================
+# Routing
+# ===========================================================================
 
 
 class TestRouting:
-    def test_classify_pipeline_default(self):
-        from workers.tracker.routing import classify_pipeline
+    """Tests for ``workers.tracker.routing``."""
 
-        assert classify_pipeline([]) == "default_pipeline"
-        assert classify_pipeline(None) == "default_pipeline"
+    def test_resolve_pipeline_stas_fix(self):
+        from workers.tracker.routing import resolve_pipeline
 
-    def test_classify_pipeline_fix(self):
-        from workers.tracker.routing import classify_pipeline
+        assert resolve_pipeline(["stas:fix"]) == "default"
+        assert resolve_pipeline(["stas:fix", "bug"]) == "default"
 
-        labels = [{"name": "stas:fix"}]
-        assert classify_pipeline(labels) == "default_pipeline"
+    def test_resolve_pipeline_stas_feature(self):
+        from workers.tracker.routing import resolve_pipeline
 
-    def test_classify_pipeline_feature(self):
-        from workers.tracker.routing import classify_pipeline
+        assert resolve_pipeline(["stas:feature"]) == "feature"
+        assert resolve_pipeline(["bug", "stas:feature"]) == "feature"
 
-        labels = [{"name": "bug"}, {"name": "stas:feature"}]
-        assert classify_pipeline(labels) == "feature_pipeline"
+    def test_resolve_pipeline_stas_research(self):
+        from workers.tracker.routing import resolve_pipeline
 
-    def test_classify_pipeline_research(self):
-        from workers.tracker.routing import classify_pipeline
+        assert resolve_pipeline(["stas:research"]) == "research"
 
-        labels = [{"name": "stas:research"}]
-        assert classify_pipeline(labels) == "research_pipeline"
+    def test_resolve_pipeline_case_insensitive(self):
+        from workers.tracker.routing import resolve_pipeline
 
-    def test_get_pipeline_stages(self):
-        from workers.tracker.routing import get_pipeline_stages
+        assert resolve_pipeline(["STAS:FIX"]) == "default"
+        assert resolve_pipeline(["  StAs:FeAtUrE  "]) == "feature"
 
-        assert get_pipeline_stages("default_pipeline") == ["triage", "agent", "verify", "self_audit", "review", "pr"]
-        assert get_pipeline_stages("research_pipeline") == ["agent", "report"]
+    def test_resolve_pipeline_default_when_no_match(self):
+        from workers.tracker.routing import resolve_pipeline
 
-    def test_should_skip_stage(self):
-        from workers.tracker.routing import should_skip_stage
+        assert resolve_pipeline([]) == "default"
+        assert resolve_pipeline(["bug", "enhancement"]) == "default"
 
-        assert should_skip_stage("verify", "research_pipeline") is True
-        assert should_skip_stage("agent", "research_pipeline") is False
-        assert should_skip_stage("verify", "default_pipeline") is False
+    def test_get_pipeline_meta(self):
+        from workers.tracker.routing import get_pipeline_meta
 
-    def test_extract_label_names_graphql(self):
-        from workers.tracker.routing import extract_label_names
+        meta = get_pipeline_meta("default")
+        assert meta is not None
+        assert meta["display_name"] == "Bug Fix"
+        assert "description" in meta
 
-        issue = {"labels": {"nodes": [{"name": "stas:fix"}, {"name": "bug"}]}}
-        assert extract_label_names(issue) == ["stas:fix", "bug"]
+        meta_feature = get_pipeline_meta("feature")
+        assert meta_feature is not None
+        assert meta_feature["display_name"] == "Feature"
 
-    def test_extract_label_names_flat(self):
-        from workers.tracker.routing import extract_label_names
+        meta_research = get_pipeline_meta("research")
+        assert meta_research is not None
+        assert meta_research["display_name"] == "Research"
 
-        issue = {"labels": ["stas:fix", "bug"]}
-        assert extract_label_names(issue) == ["stas:fix", "bug"]
+        assert get_pipeline_meta("nonexistent") is None
 
+    def test_register_route_adds_new_pipeline(self):
+        from workers.tracker.routing import register_route, resolve_pipeline, get_pipeline_meta
 
-# ── Linear Client ─────────────────────────────────────────────────────────
+        register_route("stas:refactor", "refactor")
+        assert resolve_pipeline(["stas:refactor"]) == "refactor"
+        meta = get_pipeline_meta("refactor")
+        assert meta is not None
+        assert meta["display_name"] == "Refactor"
 
+    def test_register_route_updates_metadata_for_existing_pipeline(self):
+        from workers.tracker.routing import register_route, PIPELINE_META, resolve_pipeline
 
-class TestLinearClient:
-    @patch("workers.linear.client.httpx.Client")
-    def test_client_initialization(self, mock_client_class):
-        from workers.linear.client import LinearClient
-
-        client = LinearClient(api_key="lin_test_key")
-        assert client.api_key == "lin_test_key"
-        mock_client_class.assert_called_once()
-
-    @patch("workers.linear.client.httpx.Client")
-    def test_get_issues_by_state(self, mock_client_class):
-        from workers.linear.client import LinearClient
-
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "data": {
-                "issues": {
-                    "nodes": [
-                        {"id": "1", "identifier": "PROJ-1", "title": "Test", "state": {"id": "s1", "name": "Todo"}},
-                    ]
-                }
-            }
-        }
-        mock_response.headers = {"x-ratelimit-remaining": "199", "x-ratelimit-reset": "0"}
-        mock_client_instance = MagicMock()
-        mock_client_instance.post.return_value = mock_response
-        mock_client_class.return_value = mock_client_instance
-
-        client = LinearClient(api_key="lin_test_key")
-        issues = client.get_issues_by_state(["Todo"], limit=10)
-
-        assert len(issues) == 1
-        assert issues[0]["identifier"] == "PROJ-1"
-        mock_client_instance.post.assert_called_once()
-
-    @patch("workers.linear.client.httpx.Client")
-    def test_transition_issue(self, mock_client_class):
-        from workers.linear.client import LinearClient
-
-        mock_state_response = MagicMock()
-        mock_state_response.json.return_value = {
-            "data": {"workflowStates": {"nodes": [{"id": "state_123"}]}}
-        }
-        mock_state_response.headers = {"x-ratelimit-remaining": "199", "x-ratelimit-reset": "0"}
-
-        mock_transition_response = MagicMock()
-        mock_transition_response.json.return_value = {
-            "data": {"issueUpdate": {"success": True, "issue": {"id": "issue_1", "identifier": "PROJ-1"}}}
-        }
-        mock_transition_response.headers = {"x-ratelimit-remaining": "198", "x-ratelimit-reset": "0"}
-
-        mock_client_instance = MagicMock()
-        mock_client_instance.post.side_effect = [mock_state_response, mock_transition_response]
-        mock_client_class.return_value = mock_client_instance
-
-        client = LinearClient(api_key="lin_test_key")
-        result = client.transition_issue("issue_1", "In Progress")
-
-        assert result["success"] is True
-        assert mock_client_instance.post.call_count == 2
-
-    @patch("workers.linear.client.httpx.Client")
-    def test_post_comment(self, mock_client_class):
-        from workers.linear.client import LinearClient
-
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "data": {"commentCreate": {"success": True, "comment": {"id": "comment_1"}}}
-        }
-        mock_response.headers = {"x-ratelimit-remaining": "199", "x-ratelimit-reset": "0"}
-        mock_client_instance = MagicMock()
-        mock_client_instance.post.return_value = mock_response
-        mock_client_class.return_value = mock_client_instance
-
-        client = LinearClient(api_key="lin_test_key")
-        result = client.post_comment("issue_1", "Working on it")
-
-        assert result["success"] is True
-        assert result["comment"]["id"] == "comment_1"
-
-    def test_get_client_singleton(self):
-        from workers.linear.client import get_client, _client_instance
-
-        _client_instance = None
-        with patch("workers.linear.client.LinearClient") as mock_linear:
-            client = get_client()
-            mock_linear.assert_called_once()
+        # Re-register with an existing pipeline; metadata already exists
+        # so it should not be overwritten
+        original_meta = dict(PIPELINE_META["default"])
+        register_route("stas:hotfix", "default")
+        assert resolve_pipeline(["stas:hotfix"]) == "default"
+        assert PIPELINE_META["default"] == original_meta
 
 
-# ── Poll Task ──────────────────────────────────────────────────────────────
+# ===========================================================================
+# Poll Task
+# ===========================================================================
 
 
 class TestPollTask:
-    @patch("workers.tasks.linear_poll._get_redis")
-    @patch("workers.tasks.linear_poll.get_client")
-    def test_poll_active_issues(self, mock_get_client, mock_redis):
-        from workers.tasks.linear_poll import poll_active_issues
+    """Tests for ``workers.tasks.linear_poll`` tasks."""
 
-        mock_linear = MagicMock()
-        mock_linear.get_issues_by_state.return_value = [
-            {
-                "id": "issue_1",
-                "identifier": "PROJ-1",
-                "title": "Test issue",
-                "description": "A test issue",
-                "labels": {"nodes": [{"name": "stas:fix"}]},
-                "url": "https://linear.app/project/PROJ-1",
-            },
-        ]
-        mock_get_client.return_value = mock_linear
+    @patch("workers.tasks.linear_poll._get_client")
+    @patch("workers.tasks.linear_poll.triage")
+    def test_poll_active_issues_dispatch(self, mock_triage, mock_get_client):
+        from workers.tasks.linear_poll import poll_active_issues, _is_tracked
 
-        mock_redis_instance = MagicMock()
-        mock_redis_instance.sismember.return_value = False
-        mock_redis.return_value = mock_redis_instance
+        # Reset tracked set
+        _is_tracked.clear()
 
-        result = poll_active_issues.run()
+        # Mock LinearClient
+        mock_client = MagicMock()
+        mock_issue_1 = MagicMock()
+        mock_issue_1.id = "lin_1"
+        mock_issue_1.title = "Fix login"
+        mock_issue_1.labels = ["stas:fix"]
 
-        assert result["status"] == "completed"
-        assert result["dispatched"] == 1
-        assert result["skipped"] == 0
-        mock_linear.get_issues_by_state.assert_called_once()
+        mock_issue_2 = MagicMock()
+        mock_issue_2.id = "lin_2"
+        mock_issue_2.title = "New feature"
+        mock_issue_2.labels = ["stas:feature"]
 
-    @patch("workers.tasks.linear_poll._get_redis")
-    @patch("workers.tasks.linear_poll.get_client")
-    def test_poll_skips_tracked(self, mock_get_client, mock_redis):
-        from workers.tasks.linear_poll import poll_active_issues
+        mock_client.get_issues_by_state.return_value = [mock_issue_1, mock_issue_2]
+        mock_get_client.return_value = mock_client
 
-        mock_linear = MagicMock()
-        mock_linear.get_issues_by_state.return_value = [
-            {"id": "issue_1", "identifier": "PROJ-1", "title": "Test", "labels": {"nodes": []}},
-        ]
-        mock_get_client.return_value = mock_linear
+        # For the _run_async call, return the issues directly
+        with patch("workers.tasks.linear_poll._run_async", side_effect=lambda coro: coro):
+            result = poll_active_issues.run()
 
-        mock_redis_instance = MagicMock()
-        mock_redis_instance.sismember.return_value = True
-        mock_redis.return_value = mock_redis_instance
+        assert result["dispatched"] == 2
+        assert result["total_found"] == 2
+        assert mock_triage.delay.call_count == 2
 
-        result = poll_active_issues.run()
+        # First call should be for lin_1
+        call_1 = mock_triage.delay.call_args_list[0]
+        assert call_1[1]["issue_id"] == "lin_1"
+        assert call_1[1]["pipeline"] == "default"
 
-        assert result["dispatched"] == 0
-        assert result["skipped"] == 1
+        # Second call for lin_2
+        call_2 = mock_triage.delay.call_args_list[1]
+        assert call_2[1]["issue_id"] == "lin_2"
+        assert call_2[1]["pipeline"] == "feature"
 
-    def test_is_already_tracked_no_redis(self):
-        from workers.tasks.linear_poll import is_already_tracked
+    @patch("workers.tasks.linear_poll._get_client")
+    @patch("workers.tasks.linear_poll.triage")
+    def test_poll_skips_already_tracked(self, mock_triage, mock_get_client):
+        from workers.tasks.linear_poll import poll_active_issues, _is_tracked
 
-        with patch("workers.tasks.linear_poll._get_redis", return_value=None):
-            assert is_already_tracked("issue_1") is False
+        _is_tracked.clear()
+        _is_tracked.add("lin_1")  # Already tracked
+
+        mock_client = MagicMock()
+        mock_issue = MagicMock()
+        mock_issue.id = "lin_1"
+        mock_issue.title = "Fix login"
+        mock_issue.labels = ["stas:fix"]
+
+        mock_client.get_issues_by_state.return_value = [mock_issue]
+        mock_get_client.return_value = mock_client
+
+        with patch("workers.tasks.linear_poll._run_async", side_effect=lambda coro: coro):
+            result = poll_active_issues.run()
+
+        assert result["dispatched"] == 0  # Skipped because already tracked
+        assert result["total_found"] == 1
+        mock_triage.delay.assert_not_called()
+
+    @patch("workers.tasks.linear_poll._get_client")
+    def test_triage_task_posts_comment(self, mock_get_client):
+        from workers.tasks.linear_poll import triage
+
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        with patch("workers.tasks.linear_poll._run_async", side_effect=lambda coro: coro):
+            result = triage.run(
+                issue_id="lin_1",
+                identifier="PROJ-1",
+                pipeline="default",
+                title="Fix login",
+            )
+
+        assert result["status"] == "triage_complete"
+        assert result["issue_id"] == "lin_1"
+        assert result["pipeline"] == "default"
+
+        # Verify post_comment was called
+        mock_client.post_comment.assert_called_once()
+        call_args = mock_client.post_comment.call_args[0]
+        assert call_args[0] == "lin_1"
+        assert "Working on it" in call_args[1]
+
+    @patch("workers.tasks.linear_poll._get_client")
+    def test_notify_progress(self, mock_get_client):
+        from workers.tasks.linear_poll import notify_progress
+
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        with patch("workers.tasks.linear_poll._run_async", side_effect=lambda coro: coro):
+            result = notify_progress.run(
+                issue_id="lin_1",
+                stage="testing",
+                message="Tests are running",
+            )
+
+        assert result["sent"] is True
+        assert result["stage"] == "testing"
+        mock_client.post_comment.assert_called_once_with("lin_1", "**STAS**: Tests are running")
+
+    @patch("workers.tasks.linear_poll._get_client")
+    def test_transition_state(self, mock_get_client):
+        from workers.tasks.linear_poll import transition_state
+
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        with patch("workers.tasks.linear_poll._run_async", side_effect=lambda coro: coro):
+            result = transition_state.run(
+                issue_id="lin_1",
+                current_state="Agent Working",
+            )
+
+        assert result["to"] == "Human Review"
+        assert result["from"] == "Agent Working"
+        mock_client.transition_issue.assert_called_once_with("lin_1", "Human Review")
+
+    @patch("workers.tasks.linear_poll._get_client")
+    def test_transition_state_terminal_noop(self, mock_get_client):
+        from workers.tasks.linear_poll import transition_state
+
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        with patch("workers.tasks.linear_poll._run_async", side_effect=lambda coro: coro):
+            result = transition_state.run(
+                issue_id="lin_1",
+                current_state="Done",
+            )
+
+        assert result["to"] is None
+        assert result["from"] == "Done"
+        mock_client.transition_issue.assert_not_called()
+
+
+# ===========================================================================
+# Beat Schedule Configuration
+# ===========================================================================
+
+
+class TestBeatSchedule:
+    """Verify that ``poll-linear-active-issues`` is configured in the beat schedule."""
+
+    def test_poll_beat_schedule_exists(self):
+        from workers.celeryconfig import beat_schedule
+
+        assert "poll-linear-active-issues" in beat_schedule
+
+    def test_poll_beat_schedule_config(self):
+        from workers.celeryconfig import beat_schedule
+
+        entry = beat_schedule["poll-linear-active-issues"]
+        assert entry["task"] == "workers.tasks.linear_poll.poll_active_issues"
+        assert entry["schedule"] == 30.0
+
+    def test_poll_beat_schedule_queue(self):
+        from workers.celeryconfig import beat_schedule
+
+        entry = beat_schedule["poll-linear-active-issues"]
+        options = entry.get("options", {})
+        assert options.get("queue") == "stas.issues.triage"
+
+    def test_task_routes_include_linear_poll(self):
+        from workers.celeryconfig import task_routes
+
+        assert "workers.tasks.linear_poll.*" in task_routes
+        assert task_routes["workers.tasks.linear_poll.*"]["queue"] == "stas.issues.triage"
+
+    def test_task_registered_in_celery_app(self):
+        """Verify the task can be discovered by the Celery app."""
+        from workers.celery_app import app
+
+        task_name = "workers.tasks.linear_poll.poll_active_issues"
+        # Force discovery by importing the module
+        import workers.tasks.linear_poll  # noqa: F401
+
+        assert task_name in app.tasks

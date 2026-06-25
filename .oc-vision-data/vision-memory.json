@@ -41,125 +41,13 @@
           "url": "http://localhost:3000/health"
         }
       }
-    },
-    {
-      "id": "18117d49-9442-4cb2-b26c-eac70d33005d",
-      "sessionId": "global",
-      "role": "system",
-      "content": "Tool navigate on http://localhost:3000/docs: {\"result\":{\"title\":\"Swagger UI\",\"url\":\"http://localhost:3000/docs/\",\"analysis\":\"## Swagger UI\\nURL: http://localhost:3000/docs/\\nViewport: 1280×720\\nConsole errors: 0 | Network errors: 0\\n\\n(no structured content found)\",\"consoleLogs\":[],\"failedRequests\":[]}}",
-      "timestamp": "2026-06-10T18:15:40.658Z",
-      "metadata": {
-        "tool": "navigate",
-        "url": "http://localhost:3000/docs",
-        "args": {
-          "url": "http://localhost:3000/docs"
-        }
-      }
-    },
-    {
-      "id": "5e99486c-9267-437c-8593-639f916d2caa",
-      "sessionId": "global",
-      "role": "system",
-      "content": "Tool navigate on http://127.0.0.1:3000: {\"result\":{\"title\":\"STAS Dashboard — Solving Tickets As A Service\",\"url\":\"http://127.0.0.1:3000/\",\"analysis\":\"## STAS Dashboard — Solving Tickets As A Service\\nURL: http://127.0.0.1:3000/login\\nViewport: 1280×720\\nConsole errors: 0 | Network errors: 0\\n\\n### Headings\\n# Solving Tickets As A Service\\n## Welcome back\\n\\n### Buttons\\n- Sign in with GitHub\\n\",\"consoleLogs\":[{\"level\":\"error\",\"message\":\"Request failed: http://localhost:3000/\",\"timestamp\":\"2026-06-10T18:48:01.625Z\",\"source\":\"network\"}]",
-      "timestamp": "2026-06-10T18:48:59.060Z",
-      "metadata": {
-        "tool": "navigate",
-        "url": "http://127.0.0.1:3000",
-        "args": {
-          "url": "http://127.0.0.1:3000"
-        }
-      }
-    },
-    {
-      "id": "687e166b-fa87-40a5-af72-84a308a3e155",
-      "sessionId": "global",
-      "role": "system",
-      "content": "Tool navigate on http://127.0.0.1:3000/docs: {\"result\":{\"title\":\"Swagger UI\",\"url\":\"http://127.0.0.1:3000/docs/\",\"analysis\":\"## Swagger UI\\nURL: http://127.0.0.1:3000/docs/\\nViewport: 1280×720\\nConsole errors: 0 | Network errors: 0\\n\\n### Headings\\n# STAS API — Solving Tickets As A Service 0.1.0 OAS 3.1\\n## Authentication\\n### Webhook Signatures\\n### Admin API\\n### User API\\n## Rate Limiting\\n### Health Health check endpoints Collapse operation\\n### Webhooks Webhook receivers for various platforms Collapse operation\\n### Credits Credit bal",
-      "timestamp": "2026-06-10T18:49:10.377Z",
-      "metadata": {
-        "tool": "navigate",
-        "url": "http://127.0.0.1:3000/docs",
-        "args": {
-          "url": "http://127.0.0.1:3000/docs"
-        }
-      }
-    },
-    {
-      "id": "fc30be49-bf80-46b1-94d5-0489143305b4",
-      "sessionId": "global",
-      "role": "system",
-      "content": "Tool navigate on http://127.0.0.1:3000/login: {\"result\":{\"title\":\"STAS Dashboard — Solving Tickets As A Service\",\"url\":\"http://127.0.0.1:3000/login\",\"analysis\":\"## STAS Dashboard — Solving Tickets As A Service\\nURL: http://127.0.0.1:3000/login\\nViewport: 1280×720\\nConsole errors: 0 | Network errors: 0\\n\\n### Headings\\n# Solving Tickets As A Service\\n## Welcome back\\n\\n### Buttons\\n- Sign in with GitHub\\n\",\"consoleLogs\":[{\"level\":\"error\",\"message\":\"Request failed: http://localhost:3000/\",\"timestamp\":\"2026-06-10T18:48:01.625Z\",\"source\":\"netwo",
-      "timestamp": "2026-06-10T18:50:13.676Z",
-      "metadata": {
-        "tool": "navigate",
-        "url": "http://127.0.0.1:3000/login",
-        "args": {
-          "url": "http://127.0.0.1:3000/login"
-        }
-      }
-    },
-    {
-      "id": "b89737ef-8f6a-46e9-9aef-0d7dec73df51",
-      "sessionId": "global",
-      "role": "system",
-      "content": "Tool navigate on http://127.0.0.1:3000/health: {\"result\":{\"title\":\"\",\"url\":\"http://127.0.0.1:3000/health\",\"analysis\":\"## Untitled Page\\nURL: http://127.0.0.1:3000/health\\nViewport: 1280×720\\nConsole errors: 0 | Network errors: 0\\n\\n(no structured content found)\",\"consoleLogs\":[{\"level\":\"error\",\"message\":\"Request failed: http://localhost:3000/\",\"timestamp\":\"2026-06-10T18:48:01.625Z\",\"source\":\"network\"}],\"failedRequests\":[]}}",
-      "timestamp": "2026-06-10T18:50:18.380Z",
-      "metadata": {
-        "tool": "navigate",
-        "url": "http://127.0.0.1:3000/health",
-        "args": {
-          "url": "http://127.0.0.1:3000/health"
-        }
-      }
-    },
-    {
-      "id": "a7e7114b-e870-4e67-9e8d-0d2b35c8fd1d",
-      "sessionId": "global",
-      "role": "system",
-      "content": "Tool navigate on http://127.0.0.1:3000/login: {\"result\":{\"title\":\"STAS Dashboard — Solving Tickets As A Service\",\"url\":\"http://127.0.0.1:3000/login\",\"analysis\":\"## STAS Dashboard — Solving Tickets As A Service\\nURL: http://127.0.0.1:3000/login\\nViewport: 1280×720\\nConsole errors: 0 | Network errors: 0\\n\\n### Headings\\n# Solving Tickets As A Service\\n## Welcome back\\n\\n### Buttons\\n- Sign in with GitHub\\n\",\"consoleLogs\":[{\"level\":\"error\",\"message\":\"Request failed: http://localhost:3000/\",\"timestamp\":\"2026-06-10T18:48:01.625Z\",\"source\":\"netwo",
-      "timestamp": "2026-06-10T18:50:35.890Z",
-      "metadata": {
-        "tool": "navigate",
-        "url": "http://127.0.0.1:3000/login",
-        "args": {
-          "url": "http://127.0.0.1:3000/login"
-        }
-      }
-    },
-    {
-      "id": "92d19993-4c86-432c-b118-abc8ba95c93a",
-      "sessionId": "global",
-      "role": "system",
-      "content": "Tool navigate on http://127.0.0.1:3000/login: {\"result\":{\"title\":\"STAS Dashboard — Solving Tickets As A Service\",\"url\":\"http://127.0.0.1:3000/login\",\"analysis\":\"## STAS Dashboard — Solving Tickets As A Service\\nURL: http://127.0.0.1:3000/login\\nViewport: 1280×720\\nConsole errors: 0 | Network errors: 0\\n\\n### Headings\\n# Solving Tickets As A Service\\n## Welcome back\\n\\n### Buttons\\n- Sign in with GitHub\\n\",\"consoleLogs\":[{\"level\":\"error\",\"message\":\"Request failed: http://localhost:3000/\",\"timestamp\":\"2026-06-10T18:48:01.625Z\",\"source\":\"netwo",
-      "timestamp": "2026-06-10T18:51:52.312Z",
-      "metadata": {
-        "tool": "navigate",
-        "url": "http://127.0.0.1:3000/login",
-        "args": {
-          "url": "http://127.0.0.1:3000/login"
-        }
-      }
-    },
-    {
-      "id": "d6a19e9c-5705-49ee-b7a3-2543bba363f5",
-      "sessionId": "global",
-      "role": "system",
-      "content": "Tool navigate on http://127.0.0.1:3000/docs: {\"result\":{\"title\":\"Swagger UI\",\"url\":\"http://127.0.0.1:3000/docs/\",\"analysis\":\"## Swagger UI\\nURL: http://127.0.0.1:3000/docs/\\nViewport: 1280×720\\nConsole errors: 0 | Network errors: 0\\n\\n### Headings\\n# STAS API — Solving Tickets As A Service 0.1.0 OAS 3.1\\n## Authentication\\n### Webhook Signatures\\n### Admin API\\n### User API\\n## Rate Limiting\\n### Health Health check endpoints Collapse operation\\n### Webhooks Webhook receivers for various platforms Collapse operation\\n### Credits Credit bal",
-      "timestamp": "2026-06-10T18:52:08.083Z",
-      "metadata": {
-        "tool": "navigate",
-        "url": "http://127.0.0.1:3000/docs",
-        "args": {
-          "url": "http://127.0.0.1:3000/docs"
-        }
-      }
     }
   ],
   "facts": [
     {
       "id": "db6ba86f-9565-43da-99ac-5cae39c2e7b0",
       "key": "domain_localhost",
-      "content": "Domain pattern: navigate on http://localhost:3000/docs completed successfully",
+      "content": "Domain pattern: navigate on http://localhost:3000/health completed successfully",
       "domain": "localhost",
       "tags": [
         "auto-learned",
@@ -169,24 +57,8 @@
       "source": "auto",
       "confidence": 0.5,
       "createdAt": "2026-06-08T09:14:28.741Z",
-      "lastAccessedAt": "2026-06-10T18:15:40.658Z",
-      "accessCount": 4
-    },
-    {
-      "id": "be234310-104f-41b7-888e-e7faf16a0c1a",
-      "key": "domain_127_0_0_1",
-      "content": "Domain pattern: navigate on http://127.0.0.1:3000/docs completed successfully",
-      "domain": "127.0.0.1",
-      "tags": [
-        "auto-learned",
-        "domain:127.0.0.1",
-        "action:navigate"
-      ],
-      "source": "auto",
-      "confidence": 0.5,
-      "createdAt": "2026-06-10T18:48:59.061Z",
-      "lastAccessedAt": "2026-06-10T18:52:08.083Z",
-      "accessCount": 7
+      "lastAccessedAt": "2026-06-08T09:14:54.925Z",
+      "accessCount": 3
     }
   ]
 }
