@@ -359,10 +359,10 @@ def test_orchestrate_pipeline():
     assert result["pipeline_status"] == "completed"
     assert len(result["pipeline_steps"]) == 8
     assert result["pipeline_steps"] == [
+        "dependency_resolution",
         "quality_analyze",
         "agent_dispatch",
         "verification",
-        "visual_verification",
         "self_audit",
         "anti_mockup_scan",
         "pr_creation",
