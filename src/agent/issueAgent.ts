@@ -123,6 +123,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
         confidence: 'low',
         fixReady: false,
         noFixReason: 'Feature requests are not handled by the bot.',
+        isTerminal: true,
       };
     }
 
@@ -134,6 +135,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
         confidence: 'low',
         fixReady: false,
         noFixReason: 'Questions and support requests are not handled by the bot.',
+        isTerminal: true,
       };
     }
 
