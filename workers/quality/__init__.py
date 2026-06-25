@@ -17,6 +17,8 @@ from workers.quality.models import (
 from workers.quality.analyzer import quality_analyze, get_e2e_spec_template
 from workers.quality.anti_mockup_scan import anti_mockup_scan
 from workers.quality.prompt_template import inject_anti_stub_prompt
+from workers.quality.scorer import ScorerResult, score_fix
+from workers.quality.scorer_config import ScorerConfig, get_config as get_scorer_config
 
 __all__ = [
     "QualityScore",
@@ -35,8 +37,13 @@ __all__ = [
     "run_cleaner_gate",
     "run_lsp_diagnostics",
     "run_tests_for_files",
+    "ScorerResult",
+    "score_fix",
+    "ScorerConfig",
+    "get_scorer_config",
 ]
 
 
 from workers.quality import analyzer as _analyzer  # noqa: F401 — Celery autodiscovery
 from workers.quality import anti_mockup_scan as _mockup_scan  # noqa: F401 — Celery autodiscovery
+from workers.quality import scorer as _scorer  # noqa: F401 — Celery autodiscovery
