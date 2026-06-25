@@ -2,6 +2,24 @@ import 'dotenv/config';
 import { z } from 'zod';
 import { rootLogger } from './utils/logger.js';
 
+// ---------------------------------------------------------------------------
+// Schema
+// ---------------------------------------------------------------------------
+
+/**
+ * Safe boolean coercion that properly handles string "false" and "0".
+ * Zod's z.coerce.boolean() treats any non-empty string as true,
+ * which breaks env vars like CI_MONITOR_ENABLED=false.
+ */
+const boolSchema = (defaultVal: boolean) =>
+  z.preprocess(
+    (val) => {
+      if (val === 'true' || val === '1') return true;
+      if (val === 'false' || val === '0') return false;
+      return val;
+    },
+    z.boolean().default(defaultVal),
+  );
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().max(65535).default(3000),
   RUN_MODE: z.enum(['api', 'worker', 'both']).default('both'),
@@ -39,12 +57,12 @@ const envSchema = z.object({
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
-  STAS_MONTHLY_QUOTA_ENABLED: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(true),
+  STAS_MONTHLY_QUOTA_ENABLED: boolSchema(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
   STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
-  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(false),
+  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
@@ -104,7 +122,7 @@ const envSchema = z.object({
   STORAGE_SQLITE_PATH: z.string().default('./data/stas.db'),
 
   // CI monitoring
-  CI_MONITOR_ENABLED: z.coerce.boolean().default(false),
+  CI_MONITOR_ENABLED: boolSchema(false),
   CI_REPOS: z.string().default(''),
   CI_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
   CI_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(3),
@@ -134,7 +152,7 @@ const envSchema = z.object({
   DOCKER_IMAGE: z.string().default('node:20-slim'),
   DOCKER_CONTAINER_MEMORY: z.string().default('512m'),
   DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(0.5),
-  DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(true),
+  DOCKER_NETWORK_RESTRICT: boolSchema(true),
   DOCKER_ALLOWED_HOSTS: z.string().default(''),
 
   // Database
@@ -174,7 +192,8 @@ const envSchema = z.object({
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
 
-  IP_ALLOWLIST_ENABLED: z.coerce.boolean().default(false),
+  // ── IP Allowlist ──
+  IP_ALLOWLIST_ENABLED: boolSchema(false),
   IP_ALLOWLIST: z.string().default(''),
 
   // ── Docker Sandbox ──
@@ -188,13 +207,13 @@ const envSchema = z.object({
   DOCKER_GVISOR_ENABLED: z.coerce.boolean().default(false),
 
   // ── Sandbox Security ──
-  SANDBOX_PRIVILEGED: z.coerce.boolean().default(false),
-  SANDBOX_READONLY_ROOT: z.coerce.boolean().default(true),
+  SANDBOX_PRIVILEGED: boolSchema(false),
+  SANDBOX_READONLY_ROOT: boolSchema(true),
   SANDBOX_MEMORY_LIMIT: z.string().default('512m'),
   SANDBOX_CPU_LIMIT: z.string().default('0.5'),
   SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
-  SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
+  SANDBOX_NETWORK_ENABLED: boolSchema(false),
 
   CI_MONITOR_ENABLED: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(false),
 
