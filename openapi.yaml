@@ -102,6 +102,8 @@ tags:
     description: Admin-only endpoints for system management
   - name: Feature Flags
     description: Feature flag management
+  - name: Agent API
+    description: Machine-consumable REST endpoints for agent consumption
 
 paths:
   # ──────────────────────────────────────────────────────────────────────────
@@ -1406,6 +1408,244 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Agent API — MCP-compatible REST endpoints for machine consumption
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/v1/pipeline/trigger:
+    post:
+      tags:
+        - Agent API
+      summary: Trigger a pipeline
+      description: Start a named pipeline for an issue. Returns a pipeline_id for status polling.
+      operationId: triggerPipeline
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                issue_id:
+                  type: string
+                pipeline_name:
+                  type: string
+              required:
+                - issue_id
+      responses:
+        "201":
+          description: Pipeline started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pipeline_id:
+                    type: string
+                  issue_id:
+                    type: string
+                  status:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/pipeline/{issue_id}:
+    get:
+      tags:
+        - Agent API
+      summary: Get pipeline status
+      description: Returns the current status and stage of a pipeline for an issue.
+      operationId: getPipelineStatus
+      security:
+        - BearerToken: []
+      parameters:
+        - name: issue_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pipeline status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issue_id:
+                    type: string
+                  status:
+                    type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/pipeline/{issue_id}/cancel:
+    post:
+      tags:
+        - Agent API
+      summary: Cancel pipeline
+      description: Cancel all running tasks for an issue pipeline.
+      operationId: cancelPipeline
+      security:
+        - BearerToken: []
+      parameters:
+        - name: issue_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pipeline cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issue_id:
+                    type: string
+                  status:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/sandbox/status:
+    get:
+      tags:
+        - Agent API
+      summary: Sandbox health
+      description: Check sandbox provider health and availability.
+      operationId: getSandboxStatus
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: Sandbox status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  provider:
+                    type: string
+                  available:
+                    type: boolean
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/audit:
+    get:
+      tags:
+        - Agent API
+      summary: Query audit trail
+      description: Query fix run history and audit trail.
+      operationId: queryAudit
+      security:
+        - BearerToken: []
+      parameters:
+        - name: issue
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Audit trail results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  runs:
+                    type: array
+                  total:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/queue/status:
+    get:
+      tags:
+        - Agent API
+      summary: Queue status
+      description: Get current queue depth and health.
+      operationId: getQueueStatus
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: Queue status
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/verify/{run_id}:
+    get:
+      tags:
+        - Agent API
+      summary: Verification results
+      description: Get verification results for a specific run.
+      operationId: getVerifyResults
+      security:
+        - BearerToken: []
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification results
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/review/{run_id}/approve:
+    post:
+      tags:
+        - Agent API
+      summary: Approve review
+      description: Mark a review as approved for a given run.
+      operationId: approveReview
+      security:
+        - BearerToken: []
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Review approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_id:
+                    type: string
+                  status:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   # ──────────────────────────────────────────────────────────────────────────
   # RapidAPI — Fix Submission

@@ -55,6 +55,7 @@ import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { dashboardRouter } from './routes/dashboard.js';
+import { agentApiRouter } from './routes/agentApi.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -612,6 +613,9 @@ export function createApp(): express.Application {
 
   // ── Dashboard API ──────────────────────────────────────
   app.use('/api/v1/me', dashboardRouter);
+
+  // ── Agent API (machine-consumable REST endpoints) ──────────────
+  app.use('/api/v1', agentApiRouter);
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);

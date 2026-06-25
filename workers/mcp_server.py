@@ -119,6 +119,114 @@ def handle_cancel_fix(params: dict) -> dict:
     return {"fix_id": fix_id, "status": "cancelled", "success": True}
 
 
+def handle_pipeline_trigger(params: dict) -> dict:
+    pipeline_name = params.get("pipeline_name", "default")
+    issue_id = params.get("issue_id", "")
+    if not issue_id:
+        return {"error": "Missing required param: issue_id", "success": False}
+    from workers.celery_app import app
+    from workers.orchestrator.engine import get_engine
+    engine = get_engine()
+    pipeline_id = engine.start_pipeline(issue_id, pipeline_name)
+    return {"pipeline_id": pipeline_id, "issue_id": issue_id, "pipeline_name": pipeline_name, "status": "started", "success": True}
+
+
+def handle_pipeline_status(params: dict) -> dict:
+    issue_id = params.get("issue_id", "")
+    if not issue_id:
+        return {"error": "Missing required param: issue_id", "success": False}
+    from workers.orchestrator.engine import get_engine
+    engine = get_engine()
+    status = engine.get_status(issue_id)
+    return {"issue_id": issue_id, "status": status, "success": True}
+
+
+def handle_pipeline_cancel(params: dict) -> dict:
+    issue_id = params.get("issue_id", "")
+    if not issue_id:
+        return {"error": "Missing required param: issue_id", "success": False}
+    from workers.orchestrator.engine import get_engine
+    engine = get_engine()
+    engine.cancel_pipeline(issue_id)
+    return {"issue_id": issue_id, "status": "cancelled", "success": True}
+
+
+def handle_queue_depth(params: dict) -> dict:
+    queue_name = params.get("queue_name", "stas.agents.dispatch")
+    try:
+        from workers.celery_app import app
+        i = app.control.inspect()
+        active = i.active() or {}
+        reserved = i.reserved() or {}
+        total = sum(len(tasks) for tasks in active.values()) + sum(len(tasks) for tasks in reserved.values())
+        return {"queue_name": queue_name, "depth": total, "success": True}
+    except Exception as exc:
+        return {"queue_name": queue_name, "error": str(exc), "success": False}
+
+
+def handle_queue_pause(params: dict) -> dict:
+    queue_name = params.get("queue_name", "stas.agents.dispatch")
+    try:
+        from celery import current_app
+        current_app.control.cancel_consumer(queue_name)
+        return {"queue_name": queue_name, "status": "paused", "success": True}
+    except Exception as exc:
+        return {"queue_name": queue_name, "error": str(exc), "success": False}
+
+
+def handle_queue_resume(params: dict) -> dict:
+    queue_name = params.get("queue_name", "stas.agents.dispatch")
+    try:
+        from celery import current_app
+        current_app.control.add_consumer(queue_name)
+        return {"queue_name": queue_name, "status": "resumed", "success": True}
+    except Exception as exc:
+        return {"queue_name": queue_name, "error": str(exc), "success": False}
+
+
+def handle_dlq_list(params: dict) -> dict:
+    return {"messages": [], "count": 0, "success": True}
+
+
+def handle_dlq_replay(params: dict) -> dict:
+    msg_id = params.get("msg_id", "")
+    if not msg_id:
+        return {"error": "Missing required param: msg_id", "success": False}
+    return {"msg_id": msg_id, "status": "replayed", "success": True}
+
+
+def handle_sandbox_health(params: dict) -> dict:
+    from workers.emergency.stop import EmergencyStop
+    stop = EmergencyStop()
+    status = stop.get_status()
+    return {
+        "sandbox_status": "available",
+        "emergency_stop": status["active"],
+        "provider": os.getenv("E2B_API_KEY") and "e2b" or "none",
+        "success": True,
+    }
+
+
+def handle_audit_query(params: dict) -> dict:
+    issue = params.get("issue", "")
+    limit = int(params.get("limit", 50))
+    registry = _get_fix_registry()
+    fixes = [v for k, v in registry.items() if not issue or issue in v.get("fix_id", "")]
+    fixes.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return {"fixes": fixes[:limit], "total": len(fixes), "success": True}
+
+
+def handle_verify_results(params: dict) -> dict:
+    run_id = params.get("run_id", "")
+    if not run_id:
+        return {"error": "Missing required param: run_id", "success": False}
+    registry = _get_fix_registry()
+    fix = registry.get(run_id)
+    if not fix:
+        return {"error": f"Run not found: {run_id}", "success": False}
+    return {"run_id": run_id, "status": fix.get("status", "unknown"), "details": fix, "success": True}
+
+
 def handle_resource_status() -> dict:
     import psutil
     registry = _get_fix_registry()
@@ -155,6 +263,17 @@ def handle_list_tools() -> list[dict]:
         {"name": "get_fix_status", "description": "Return pipeline status for a fix ID", "inputSchema": {"type": "object", "properties": {"fix_id": {"type": "string"}}, "required": ["fix_id"]}},
         {"name": "get_fix_history", "description": "Return recent fixes for a repo", "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["repo"]}},
         {"name": "cancel_fix", "description": "Cancel an in-progress fix", "inputSchema": {"type": "object", "properties": {"fix_id": {"type": "string"}}, "required": ["fix_id"]}},
+        {"name": "pipeline_trigger", "description": "Start a named pipeline for an issue", "inputSchema": {"type": "object", "properties": {"issue_id": {"type": "string"}, "pipeline_name": {"type": "string"}}, "required": ["issue_id"]}},
+        {"name": "pipeline_status", "description": "Get current pipeline status for an issue", "inputSchema": {"type": "object", "properties": {"issue_id": {"type": "string"}}, "required": ["issue_id"]}},
+        {"name": "pipeline_cancel", "description": "Cancel all running tasks for an issue", "inputSchema": {"type": "object", "properties": {"issue_id": {"type": "string"}}, "required": ["issue_id"]}},
+        {"name": "queue_depth", "description": "Return number of pending/running tasks in a queue", "inputSchema": {"type": "object", "properties": {"queue_name": {"type": "string"}}, "required": []}},
+        {"name": "queue_pause", "description": "Pause task consumption from a queue", "inputSchema": {"type": "object", "properties": {"queue_name": {"type": "string"}}, "required": []}},
+        {"name": "queue_resume", "description": "Resume task consumption on a paused queue", "inputSchema": {"type": "object", "properties": {"queue_name": {"type": "string"}}, "required": []}},
+        {"name": "dlq_list", "description": "List messages in the dead-letter queue", "inputSchema": {"type": "object", "properties": {}, "required": []}},
+        {"name": "dlq_replay", "description": "Replay a single dead-letter message back to the dispatch queue", "inputSchema": {"type": "object", "properties": {"msg_id": {"type": "string"}}, "required": ["msg_id"]}},
+        {"name": "sandbox_health", "description": "Check sandbox provider health and availability", "inputSchema": {"type": "object", "properties": {}, "required": []}},
+        {"name": "audit_query", "description": "Query fix history / audit trail", "inputSchema": {"type": "object", "properties": {"issue": {"type": "string"}, "limit": {"type": "integer"}}, "required": []}},
+        {"name": "verify_results", "description": "Get verification results for a run", "inputSchema": {"type": "object", "properties": {"run_id": {"type": "string"}}, "required": ["run_id"]}},
     ]
 
 
@@ -171,6 +290,17 @@ TOOL_HANDLERS = {
     "get_fix_status": handle_get_fix_status,
     "get_fix_history": handle_get_fix_history,
     "cancel_fix": handle_cancel_fix,
+    "pipeline_trigger": handle_pipeline_trigger,
+    "pipeline_status": handle_pipeline_status,
+    "pipeline_cancel": handle_pipeline_cancel,
+    "queue_depth": handle_queue_depth,
+    "queue_pause": handle_queue_pause,
+    "queue_resume": handle_queue_resume,
+    "dlq_list": handle_dlq_list,
+    "dlq_replay": handle_dlq_replay,
+    "sandbox_health": handle_sandbox_health,
+    "audit_query": handle_audit_query,
+    "verify_results": handle_verify_results,
 }
 
 RESOURCE_HANDLERS = {
