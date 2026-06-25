@@ -56,6 +56,7 @@ import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
+import { onboardingRouter } from './routes/onboarding.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -671,6 +672,9 @@ export function createApp(): express.Application {
   // GET /admin/webhooks/sources
   // GET /admin/webhooks/stats
   app.use('/admin/webhooks', adminWebhooksRouter);
+
+  // ── Onboarding API ──────────────────────────────────────────────
+  app.use('/onboarding', onboardingRouter);
 
   // -- 404 handler ----------------------------------------------------------
 
