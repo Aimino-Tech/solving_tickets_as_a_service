@@ -104,25 +104,6 @@ export function buildTextMessage(
         .filter(Boolean)
         .join('\n');
     }
-
-    case 'dlq_alert': {
-      const meta = data.metadata ?? {};
-      const retryCount = meta.retryCount ?? '?';
-      const sourceQueue = meta.sourceQueue ?? 'unknown';
-      const trace = meta.stackTrace ? `\n> \`\`\`${String(meta.stackTrace).slice(0, 500)}\`\`\`` : '';
-      return [
-        `:skull: *DLQ Alert* — Message dead-lettered after ${retryCount} retries`,
-        `> *Issue:* ${issueLink || data.issueTitle}`,
-        `> *Repo:* ${repoLink}`,
-        `> *Queue:* \`${sourceQueue}\``,
-        data.errorMessage ? `> *Error:* ${data.errorMessage.slice(0, 500)}` : '',
-        data.reason ? `> *Reason:* ${data.reason}` : '',
-        trace,
-        `> *Retry Count:* ${retryCount}`,
-      ]
-        .filter(Boolean)
-        .join('\n');
-    }
   }
 }
 

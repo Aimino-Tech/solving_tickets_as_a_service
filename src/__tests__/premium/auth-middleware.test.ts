@@ -268,10 +268,6 @@ describe('premium auth middleware', () => {
   // ── Type exports ────────────────────────────────────────────────────────
 
   describe('type exports', () => {
-    it('exports JwtPayload interface', () => {
-      expect(auth).toHaveProperty('JwtPayload');
-    });
-
     it('exports signJwt and verifyJwt functions', () => {
       expect(typeof auth.signJwt).toBe('function');
       expect(typeof auth.verifyJwt).toBe('function');

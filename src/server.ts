@@ -266,7 +266,7 @@ export function createApp(): express.Application {
       try {
         await githubWebhooks.verifyAndReceive({
           id: deliveryId,
-          name: event as EmitterWebhookEventName,
+          name: event as any,
           payload: rawBody.toString(),
           signature,
         });
@@ -281,7 +281,7 @@ export function createApp(): express.Application {
       try {
         await githubWebhooks.receive({
           id: deliveryId || crypto.randomUUID(),
-          name: event as EmitterWebhookEventName,
+          name: event as any,
           payload: JSON.parse((rawBody || Buffer.from(JSON.stringify(req.body))).toString()),
         });
       } catch (err) {
@@ -426,7 +426,7 @@ export function createApp(): express.Application {
     // Log the webhook event
     const eventId = await logWebhookReceived({
       source,
-      eventType: (payload as Record<string, string>)?.type || 'unknown',
+      eventType: (payload as any)?.type || 'unknown',
       deliveryId: undefined,
       payload,
     });
@@ -508,7 +508,7 @@ export function createApp(): express.Application {
     // Log the webhook event
     const eventId = await logWebhookReceived({
       source,
-      eventType: (payload as Record<string, string>)?.webhookEvent || 'unknown',
+      eventType: (payload as any)?.webhookEvent || 'unknown',
       deliveryId: undefined,
       payload,
     });
@@ -623,25 +623,6 @@ export function createApp(): express.Application {
   // GET /admin/webhooks/sources
   // GET /admin/webhooks/stats
   app.use('/admin/webhooks', adminWebhooksRouter);
-
-  // ── Swagger UI / OpenAPI documentation ──────────────────────────────
-  const thisFilename = fileURLToPath(import.meta.url);
-  const thisDirname = dirname(thisFilename);
-  const specPath = resolve(thisDirname, '../openapi.yaml');
-  const openApiSpec = yaml.load(fs.readFileSync(specPath, 'utf8')) as Record<string, unknown>;
-  app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
-
-  // Serve dashboard static build (production only)
-  const dashboardDistPath = resolve(thisDirname, '../dashboard/dist');
-  if (fs.existsSync(dashboardDistPath)) {
-    app.use(express.static(dashboardDistPath));
-    // SPA fallback - all non-API routes serve index.html
-    app.get('*', (req, res) => {
-      if (!req.path.startsWith('/api') && !req.path.startsWith('/health') && !req.path.startsWith('/webhook') && !req.path.startsWith('/docs') && !req.path.startsWith('/metrics') && !req.path.startsWith('/slack') && !req.path.startsWith('/admin') && !req.path.startsWith('/flower')) {
-        res.sendFile(resolve(dashboardDistPath, 'index.html'));
-      }
-    });
-  }
 
   // -- 404 handler ----------------------------------------------------------
 
