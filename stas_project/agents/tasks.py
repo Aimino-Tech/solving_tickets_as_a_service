@@ -222,6 +222,7 @@ def create_pr(self, previous_result: dict):
     issue_number = previous_result.get("issue_number")
     repo_full_name = previous_result.get("repo_full_name", "")
     installation_id = previous_result.get("installation_id")
+    workspace_path = previous_result.get("workspace_path", "/tmp/stas-workspace")
 
     from agents.models import AgentRun
 
@@ -231,31 +232,34 @@ def create_pr(self, previous_result: dict):
 
     parsed = _parse_issue_url(issue_url)
 
-    # Build the fix_result and repo_info for the PR creation task
-    fix_result = {
-        "branch": branch or f"stas/fix-issue-{issue_number or 'unknown'}",
-        "base_branch": "main",
-        "summary": f"Automated fix for {issue_url}",
-    }
-    repo_info = {
-        "owner": parsed["owner"] if parsed else repo_full_name.split("/")[0],
-        "repo": parsed["repo"] if parsed else repo_full_name.split("/")[-1],
-        "installation_id": installation_id,
-    }
-
     if not branch:
+        branch = f"stas/fix/issue-{issue_number or 'unknown'}"
         logger.warning(
             "No branch from OpenCode — creating PR with default branch name %s",
-            fix_result["branch"],
+            branch,
         )
+
+    owner = parsed["owner"] if parsed else repo_full_name.split("/")[0]
+    repo = parsed["repo"] if parsed else repo_full_name.split("/")[-1]
 
     try:
         from workers.tasks.pr_creation import create_pull_request
 
-        pr_result = create_pull_request(fix_result, repo_info)
+        pr_result = create_pull_request(
+            issue_id=run_id,
+            workspace_path=workspace_path,
+            issue_title=f"Automated fix for issue #{issue_number or 'unknown'}",
+            issue_body=f"Automated fix for {issue_url}",
+            repo_owner=owner,
+            repo_name=repo,
+            branch_name=branch,
+            base_branch="main",
+            verification_result=previous_result.get("verification_result"),
+            installation_id=installation_id,
+        )
 
-        pr_url = pr_result.get("html_url", "")
-        pr_number = pr_result.get("number")
+        pr_url = pr_result.get("pr_url", "")
+        pr_number = pr_result.get("pr_number")
 
         try:
             run = AgentRun.objects.get(id=run_id)
@@ -293,20 +297,21 @@ def send_notifications(previous_result: dict):
     issue_url = previous_result.get("issue_url", "")
     installation_id = previous_result.get("installation_id")
 
-    pr_url = pr_result.get("html_url", "") or "No PR created"
+    pr_url = pr_result.get("pr_url", "") or pr_result.get("html_url", "") or "No PR created"
 
     try:
         from workers.tasks.notifications import send_notification
 
         # Post a comment on the GitHub issue
+        pr_status = pr_result.get("status", "")
         message = (
             f"🤖 **STAS** completed its analysis.\n\n"
             f"**Result**: {pr_url}\n"
         )
-        if pr_result.get("status") == "created":
+        if pr_status in ("opened", "created"):
             message += f"**PR**: {pr_url}\n"
-        elif pr_result.get("status") == "already_exists":
-            message += "A PR for this branch already exists.\n"
+        elif pr_status in ("updated", "already_exists"):
+            message += "PR updated for this branch.\n"
         else:
             message += "No changes were needed or possible.\n"
 
