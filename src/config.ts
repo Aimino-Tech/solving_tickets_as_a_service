@@ -191,6 +191,21 @@ const envSchema = z.object({
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
 
+  // ── Docker Sandbox ──
+  DOCKER_IMAGE: z.string().default('node:22-alpine'),
+  DOCKER_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
+  DOCKER_CONTAINER_MEMORY: z.string().default('2g'),
+  DOCKER_CONTAINER_CPU: z.coerce.number().positive().default(1),
+  DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(false),
+  DOCKER_ALLOWED_HOSTS: z.string().default(''),
+  DOCKER_SECCOMP_PROFILE: z.string().default('src/sandbox/profiles/seccomp.json'),
+  DOCKER_APPARMOR_PROFILE: z.string().default('stas-sandbox'),
+  DOCKER_RUNTIME: z.enum(['runc', 'runsc']).default('runc'),
+  DOCKER_DROP_ALL_CAPABILITIES: z.coerce.boolean().default(true),
+  DOCKER_NETWORK_DISABLED: z.coerce.boolean().default(true),
+  DOCKER_READONLY_ROOTFS: z.coerce.boolean().default(true),
+  DOCKER_IMAGE_SCAN_ENABLED: z.coerce.boolean().default(true),
+
   // Sentry
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENVIRONMENT: z.string().default('development'),
@@ -461,6 +476,22 @@ function buildConfig(env: ParsedEnv) {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    docker: {
+      image: env.DOCKER_IMAGE,
+      sandboxTimeoutMs: env.DOCKER_SANDBOX_TIMEOUT_MS,
+      containerMemory: env.DOCKER_CONTAINER_MEMORY,
+      containerCpu: env.DOCKER_CONTAINER_CPU,
+      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
+      allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
+      seccompProfile: env.DOCKER_SECCOMP_PROFILE,
+      apparmorProfile: env.DOCKER_APPARMOR_PROFILE,
+      runtime: env.DOCKER_RUNTIME,
+      dropAllCapabilities: env.DOCKER_DROP_ALL_CAPABILITIES,
+      networkDisabled: env.DOCKER_NETWORK_DISABLED,
+      readonlyRootfs: env.DOCKER_READONLY_ROOTFS,
+      imageScanEnabled: env.DOCKER_IMAGE_SCAN_ENABLED,
     },
   } as const;
 }

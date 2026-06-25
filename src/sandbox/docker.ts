@@ -702,10 +702,39 @@ export class DockerSandbox implements SandboxExecutor {
 
     args.push('--label', 'stas-sandbox=true');
 
-    // Security options
+    // ── Security hardening ────────────────────────────────────────────
+
+    // Seccomp profile (if configured)
+    if (config.docker.seccompProfile) {
+      args.push('--security-opt', `seccomp=${config.docker.seccompProfile}`);
+    }
+
+    // AppArmor profile (if configured)
+    if (config.docker.apparmorProfile) {
+      args.push('--security-opt', `apparmor=${config.docker.apparmorProfile}`);
+    }
+
+    // No new privileges
     args.push('--security-opt', 'no-new-privileges:true');
-    args.push('--cap-drop', 'ALL');
-    args.push('--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=2g');
+
+    // Drop all capabilities
+    if (config.docker.dropAllCapabilities) {
+      args.push('--cap-drop', 'ALL');
+    }
+
+    // Read-only root filesystem with writable /tmp
+    if (config.docker.readonlyRootfs) {
+      args.push('--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=2g');
+    }
+
+    // Runtime (runc or runsc/gVisor)
+    const runtime = config.docker.runtime;
+    if (runtime && runtime !== 'runc') {
+      args.push('--runtime', runtime);
+    } else if (runtime === 'runc') {
+      // Explicitly set runc for consistency
+      args.push('--runtime', 'runc');
+    }
 
     // Network: egress proxy or none
     if (config.docker.networkRestrict) {
@@ -721,7 +750,7 @@ export class DockerSandbox implements SandboxExecutor {
 
     // Env vars
     args.push('-e', `HOME=${CONTAINER_WORKDIR}`);
-    args.push('-e', 'USER=user');
+    args.push('-e', 'USER=node');
 
     // Image
     args.push(image);
