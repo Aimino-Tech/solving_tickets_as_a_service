@@ -21,6 +21,17 @@ const mocks = vi.hoisted(() => {
   const mockWorkerInstance = { on: mockWorkerOn, close: vi.fn() };
   const mockQueueEventsOn = vi.fn<(event: string, handler: unknown) => void>();
   const mockQueueEventsInstance = { on: mockQueueEventsOn, close: vi.fn() };
+  const mockRecordDeadLetter = vi.fn<(...args: unknown[]) => Promise<{ id: string }>>();
+  const mockDlqStore = {
+    add: vi.fn(),
+    get: vi.fn(),
+    list: vi.fn(() => []),
+    acknowledge: vi.fn(() => true),
+    replay: vi.fn(),
+    remove: vi.fn(() => true),
+    stats: vi.fn(() => ({ total: 0, unacknowledged: 0, acknowledged: 0 })),
+    clear: vi.fn(),
+  };
 
   /**
    * Mutable ref that captures the worker processor so tests
@@ -38,6 +49,8 @@ const mocks = vi.hoisted(() => {
     mockWorkerInstance,
     mockQueueEventsOn,
     mockQueueEventsInstance,
+    mockRecordDeadLetter,
+    mockDlqStore,
     workerProcessorRef,
   };
 });
@@ -81,6 +94,16 @@ vi.mock("../../config.js", () => ({
       retryDelays: [30000, 120000, 300000, 900000],
       backend: 'bullmq',
     },
+    monitoring: {
+      dlqRetentionDays: 7,
+    },
+    alerting: {
+      slackChannel: '#stas-alerts',
+      warnQueueDepth: 50,
+      critQueueDepth: 200,
+      warnErrorRatePercent: 10,
+      critErrorRatePercent: 30,
+    },
   },
 }));
 
@@ -99,6 +122,25 @@ vi.mock('../../utils/logger.js', () => ({
     debug: vi.fn(),
     fatal: vi.fn(),
   },
+}));
+
+vi.mock('../../bridge/metrics.js', () => ({
+  bridgeMetrics: {
+    incrementCounter: vi.fn(),
+    setGauge: vi.fn(),
+    events: { on: vi.fn() },
+  },
+  recordMessagePublished: vi.fn(),
+  recordMessageFailed: vi.fn(),
+  recordProcessingDuration: vi.fn(),
+}));
+
+// Mock the deadLetterQueue module
+vi.mock('../../queue/deadLetterQueue.js', () => ({
+  recordDeadLetter: mocks.mockRecordDeadLetter,
+  dlqStore: mocks.mockDlqStore,
+  dispatchDlqAlert: vi.fn(),
+  formatDeadLetterEntry: vi.fn((e: any) => ({ id: e.id, error: e.error })),
 }));
 
 vi.mock('bullmq', () => ({

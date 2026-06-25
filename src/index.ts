@@ -49,7 +49,7 @@ let shutdownInProgress = false;
  * Fails fast with clear error message if any required service is unreachable.
  */
 async function validateStartupHealth(): Promise<void> {
-  const checks: { name: string; ok: boolean; error?: string }[] = [];
+  const checks: { name: string; ok: boolean; error?: string; detail?: string }[] = [];
 
   // Check Redis
   try {
@@ -95,16 +95,23 @@ async function validateStartupHealth(): Promise<void> {
     checks.push({ name: 'opencode', ok: false, error: opencodeError ?? 'timeout' });
   }
 
-  // Check E2B if configured
+  // Check E2B if configured — verify the configured template exists
   if (config.e2b.apiKey) {
     try {
-      const { Sandbox } = await import('e2b');
-      const sandbox = await Sandbox.create({
-        apiKey: config.e2b.apiKey,
-        timeoutMs: 5000,
-      });
-      await sandbox.kill();
-      checks.push({ name: 'e2b', ok: true });
+      const { validateE2bTemplate } = await import('./sandbox/validate.js');
+      const result = await validateE2bTemplate();
+      if (result.ok) {
+        checks.push({ name: 'e2b', ok: true, detail: `template=${result.templateId}` });
+      } else {
+        const fallbackNote = config.e2b.fallbackToDocker
+          ? ' (Docker fallback enabled)'
+          : '';
+        checks.push({
+          name: 'e2b',
+          ok: false,
+          error: result.error + fallbackNote,
+        });
+      }
     } catch (err) {
       checks.push({ name: 'e2b', ok: false, error: String(err) });
     }
