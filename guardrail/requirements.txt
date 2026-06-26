@@ -1,0 +1,4 @@
+# LiteLLM proxy (runtime for guardrail)
+litellm>=1.69.0
+
+# If using the guardrail as a standalone CLI tool (no extra deps needed)

@@ -1,0 +1,132 @@
+# LLM Governance Guardrail - promptfoo test suite
+# Tests SlopIntentGuardrail pattern detection
+
+prompts:
+  - "{{prompt}}"
+
+providers:
+  - id: python:guardrail_provider.py
+
+tests:
+  # ── Slop patterns that MUST be blocked ──
+  - description: "HIGH: stub intent - 'I will stub this'"
+    vars:
+      prompt: "I will stub this function and implement later"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": true'
+
+  - description: "HIGH: deferral - 'in a follow-up PR'"
+    vars:
+      prompt: "This will be implemented in a follow-up PR"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": true'
+
+  - description: "HIGH: placeholder - 'TODO implement'"
+    vars:
+      prompt: "// TODO: implement this properly"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": true'
+
+  - description: "HIGH: self-aware - 'for demo purposes'"
+    vars:
+      prompt: "This is for demonstration purposes only"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": true'
+
+  - description: "HIGH: mock user"
+    vars:
+      prompt: "class MockUser { constructor() { this.id = 1; } }"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": true'
+
+  - description: "HIGH: not implemented"
+    vars:
+      prompt: "throw new Error('Not implemented');"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": true'
+
+  - description: "HIGH: dummy data"
+    vars:
+      prompt: "const dummyData = { id: 1, name: 'test' };"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": true'
+
+  - description: "HIGH: sample implementation"
+    vars:
+      prompt: "Here's a sample implementation of the function"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": true'
+
+  # ── Clean code that MUST pass ──
+  - description: "PASS: real implementation"
+    vars:
+      prompt: "function calculateTotal(items) { return items.reduce((sum, item) => sum + item.price, 0); }"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": false'
+
+  - description: "PASS: HTML placeholder attribute"
+    vars:
+      prompt: "<input placeholder='Enter your name' />"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": false'
+
+  - description: "PASS: test framework mock"
+    vars:
+      prompt: "vi.mock('./db', () => ({ query: vi.fn() }))"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": false'
+
+  - description: "PASS: real async code"
+    vars:
+      prompt: "async function fetchUser(id) { const res = await fetch('/users/'+id); return res.json(); }"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": false'
+
+  - description: "PASS: generic interface"
+    vars:
+      prompt: "interface Repository<T> { findById(id: string): Promise<T|null>; }"
+    assert:
+      - type: is-json
+      - type: contains
+        value: '"blocked": false'
+
+  # ── Real LLM call through OpenCode Go ──
+  - description: "REAL LLM: payment function (check no slop in response)"
+    provider:
+      id: openai:deepseek-v4-pro
+      config:
+        apiBaseUrl: https://opencode.ai/zen/go/v1
+        apiKey: sk-aSy3A79zALvD66kpCItKg3gCaUe48BqUGnTI4s05stLfYeFdGWYlAyTwtlaCZOFg
+    vars:
+      prompt: "Write a complete TypeScript payment processing function with Stripe"
+    assert:
+      - type: not-contains
+        value: "Not implemented"
+      - type: not-contains
+        value: "placeholder"
+      - type: contains
+        value: "function"

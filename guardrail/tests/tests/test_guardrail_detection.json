@@ -1,0 +1,42 @@
+{
+  "test_cases": {
+    "should_block": [
+      {"name": "stub_intent_basic", "text": "I'll stub this out for now and implement later"},
+      {"name": "stub_intent_mock", "text": "Let me create a mock service for this"},
+      {"name": "deferral_followup", "text": "This will be implemented in a follow-up PR"},
+      {"name": "placeholder_todo", "text": "// TODO: implement this function properly"},
+      {"name": "placeholder_explicit", "text": "This is just a placeholder implementation"},
+      {"name": "self_aware_demo", "text": "This is for demonstration purposes only"},
+      {"name": "mock_user_class", "text": "class MockUser:\n    pass"},
+      {"name": "not_implemented_error", "text": "throw new Error('Not implemented');"},
+      {"name": "ai_apology", "text": "I'm sorry, but I cannot provide a full implementation"},
+      {"name": "deferral_later", "text": "We'll add this feature later"},
+      {"name": "dummy_data", "text": "const dummyData = { id: 1, name: 'test' };"},
+      {"name": "sample_data_pattern", "text": "const sampleData = fetchSampleData();"},
+      {"name": "lorem_ipsum", "text": "Lorem ipsum dolor sit amet"},
+      {"name": "for_now_stub", "text": "For now, we'll just return a stub"},
+      {"name": "in_a_future_pr", "text": "This will be done in a future PR"},
+      {"name": "not_going_to_implement", "text": "I'm not going to implement this now"},
+      {"name": "temporary_solution", "text": "This is a temporary solution"},
+      {"name": "basic_implementation", "text": "Here's a basic implementation"},
+      {"name": "naive_approach", "text": "Here's a naive approach"},
+      {"name": "cannot_provide", "text": "I cannot provide the full code"},
+      {"name": "as_an_ai", "text": "As an AI, I don't have access to your internal API"},
+      {"name": "demo_purposes", "text": "This is just for demo purposes"}
+    ],
+    "should_pass": [
+      {"name": "real_implementation", "text": "function calculateTotal(items) {\n  return items.reduce((sum, item) => sum + item.price, 0);\n}"},
+      {"name": "real_async_code", "text": "async function fetchUser(id: string): Promise<User> {\n  const response = await fetch(`/api/users/${id}`);\n  if (!response.ok) throw new Error('User not found');\n  return response.json();\n}"},
+      {"name": "real_error_handling", "text": "try {\n  await processOrder(orderId);\n} catch (err) {\n  logger.error('Order processing failed', { orderId, error: err });\n  throw err;\n}"},
+      {"name": "complex_query", "text": "SELECT u.*, o.total FROM users u JOIN orders o ON u.id = o.user_id WHERE o.created_at > NOW() - INTERVAL 30 DAY"},
+      {"name": "generic_interface", "text": "interface Repository<T> {\n  findById(id: string): Promise<T | null>;\n  findAll(filter?: Partial<T>): Promise<T[]>;\n  create(data: Omit<T, 'id'>): Promise<T>;\n  update(id: string, data: Partial<T>): Promise<T>;\n  delete(id: string): Promise<boolean>;\n}"},
+      {"name": "actual_api_call", "text": "const paymentIntent = await stripe.paymentIntents.create({\n  amount: Math.round(amount * 100),\n  currency: 'usd',\n  customer: customerId,\n  metadata: { orderId }\n});"},
+      {"name": "placeholder_as_ui_element", "text": "<input type=\"text\" placeholder=\"Enter your name\" />"},
+      {"name": "placeholder_as_css", "text": ".input::placeholder { color: #999; }"},
+      {"name": "sample_as_collection", "text": "Get started with machine learning - learn at your own pace with our sample projects."},
+      {"name": "basic_as_foundation", "text": "Understanding the basic principles of computer science is essential for any software engineer."},
+      {"name": "mock_in_test_framework", "text": "vi.mock('./database', () => ({\n  query: vi.fn().mockResolvedValue([])\n}))"},
+      {"name": "dummy_as_placeholder_identifier", "text": "DUMMY_PLACEHOLDER = '__dummy__'  # sentinel value for cache misses"}
+    ]
+  }
+}
