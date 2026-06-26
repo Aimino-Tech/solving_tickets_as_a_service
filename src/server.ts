@@ -681,6 +681,7 @@ export async function createApp(): Promise<express.Application> {
     });
   });
 
+  // -- Global error handler -------------------------------------------------
   app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
     log.error({ err: String(err), requestId: req.requestId }, 'Unhandled error');
     res.status(500).json({
