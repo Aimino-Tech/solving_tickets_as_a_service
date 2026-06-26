@@ -306,9 +306,6 @@ vi.mock('helmet', () => ({
 vi.mock('cors', () => ({
   default: vi.fn(() => (req, res, next) => next()),
 }));
-vi.mock('express-rate-limit', () => ({
-  default: vi.fn(() => (req, res, next) => next()),
-}));
 vi.mock('swagger-ui-express', () => ({
   default: {
     serve: (req, res, next) => next(),

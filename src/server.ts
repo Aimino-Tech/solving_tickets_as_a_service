@@ -25,7 +25,7 @@ import crypto from 'node:crypto';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
-import rateLimit from 'express-rate-limit';
+
 import cors from 'cors';
 import helmet from 'helmet';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
@@ -58,7 +58,6 @@ import { onboardingRouter } from './routes/onboarding.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
 import { pricingRouter } from './routes/pricing.js';
 import { plgRouter } from './routes/plg.js';
-import { authRouter } from './routes/auth.js';
 import { reposRouter } from './routes/repos.js';
 import { runsRouter } from './routes/runs.js';
 import { badgeRouter } from './routes/badge.js';
@@ -66,6 +65,7 @@ import { analyticsRouter } from './routes/analytics.js';
 import { viralRouter } from './routes/viral.js';
 import { qualityRouter } from './routes/quality.js';
 import { kpiRouter } from './routes/kpi.js';
+import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -165,17 +165,7 @@ export async function createApp(): Promise<express.Application> {
   // -- URL-encoded body parsing (with size limit) ---------------------------
   app.use(express.urlencoded({ extended: true, limit: config.security.requestBodyLimit }));
 
-  // -- Rate limiter for webhook routes ---------------------------------------
-  const limiter = rateLimit({
-    windowMs: config.stas.rateLimitWindowMs,
-    limit: config.stas.rateLimitMax,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-  });
-  app.use('/webhook', limiter);
-
-  // -- Credit-based rate limiter (per-account, per-repo, per-IP) ----------
+  // -- Governance Proxy rate limiting (per-account, per-repo, per-IP) ----------
   app.use('/webhook', rateLimitMiddleware());
 
   // -- Slack Bolt receiver (interactive messages) ---------------------------
@@ -665,9 +655,6 @@ export async function createApp(): Promise<express.Application> {
   // ── Onboarding API ──────────────────────────────────────────────
   app.use('/onboarding', onboardingRouter);
 
-  // Auth routes (OAuth login, callback, session)
-  app.use('/api/auth', authRouter);
-
   // Repos API (repo picker with webhook status)
   app.use('/api/repos', reposRouter);
 
@@ -702,6 +689,8 @@ export async function createApp(): Promise<express.Application> {
   // Agent Performance Analytics API
   app.use('/api/analytics', analyticsRouter);
 
+  // Pipeline Run History API
+  app.use('/api/history', pipelineHistoryRouter);
 
   // SAML 2.0 SSO routes (optional)
   try {
@@ -720,14 +709,18 @@ export async function createApp(): Promise<express.Application> {
   }
   // -- 404 handler ----------------------------------------------------------
 
-  app.use((_req: Request, res: Response) => {
-    res.status(404).json({ error: 'Not found' });
+  app.use((req: Request, res: Response) => {
+    res.status(404).json({
+      error: { code: 'NOT_FOUND', message: 'Not found', correlation_id: req.requestId },
+    });
   });
 
   // -- Global error handler -------------------------------------------------
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    log.error({ err: String(err) }, 'Unhandled error');
-    res.status(500).json({ error: 'Internal server error' });
+  app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+    log.error({ err: String(err), requestId: req.requestId }, 'Unhandled error');
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Internal server error', correlation_id: req.requestId },
+    });
   });
 
   return app;

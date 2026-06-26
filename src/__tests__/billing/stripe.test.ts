@@ -69,25 +69,8 @@ describe('billing/stripe', () => {
     vi.clearAllMocks();
   });
 
-  describe('BillingError', () => {
-    it('creates an error with message, code, and statusCode', () => {
-      const err = new stripe.BillingError('Test error', 'TEST_CODE', 400);
-      expect(err).toBeInstanceOf(Error);
-      expect(err.message).toBe('Test error');
-      expect(err.code).toBe('TEST_CODE');
-      expect(err.statusCode).toBe(400);
-      expect(err.name).toBe('BillingError');
-    });
-
-    it('defaults to BILLING_ERROR and 500', () => {
-      const err = new stripe.BillingError('Oops');
-      expect(err.code).toBe('BILLING_ERROR');
-      expect(err.statusCode).toBe(500);
-    });
-  });
-
   describe('getStripeClient', () => {
-    it('throws BillingError when secret key is missing', async () => {
+    it('throws when secret key is missing', async () => {
       mockConfig.config.stripe.secretKey = '';
       // Need a fresh import without our spy for this test
       vi.restoreAllMocks();
@@ -152,14 +135,14 @@ describe('billing/stripe', () => {
       expect(result.sessionId).toBe('cs_mock');
     });
 
-    it('throws BillingError for unknown plan', async () => {
+    it('throws for unknown plan', async () => {
       await expect(stripe.createSubscriptionCheckoutSession({
         accountId: 42, planId: 'unknown' as any,
         successUrl: 'https://example.com/success', cancelUrl: 'https://example.com/cancel',
-      })).rejects.toThrow(stripe.BillingError);
+      })).rejects.toThrow('Unknown plan');
     });
 
-    it('throws BillingError when session has no url', async () => {
+    it('throws when session has no url', async () => {
       mockStripeClient.checkout.sessions.create.mockResolvedValue({ id: 'cs_mock', url: null });
       await expect(stripe.createSubscriptionCheckoutSession({
         accountId: 42, planId: 'solo',
@@ -209,9 +192,9 @@ describe('billing/stripe', () => {
       expect(result.id).toBe('sub_mock');
     });
 
-    it('throws BillingError when subscription has no items', async () => {
+    it('throws when subscription has no items', async () => {
       mockStripeClient.subscriptions.retrieve.mockResolvedValue({ id: 'sub_mock', items: { data: [] } });
-      await expect(stripe.updateSubscriptionPlan('sub_mock', 'price_new')).rejects.toThrow(stripe.BillingError);
+      await expect(stripe.updateSubscriptionPlan('sub_mock', 'price_new')).rejects.toThrow('Subscription has no items to update');
     });
   });
 
