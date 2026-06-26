@@ -16,10 +16,12 @@
 
 import { type EmitterWebhookEventName, Webhooks } from '@octokit/webhooks';
 
+import type { Queue } from 'bullmq';
 import { config } from '../config.js';
 import { enqueueIssue } from '../queue/issueQueue.js';
+import type { IssueJobData } from '../utils/types.js';
 import { rootLogger } from '../utils/logger.js';
-import type { BillingPlan, IssueJobData } from '../utils/types.js';
+import type { BillingPlan } from '../utils/types.js';
 import { rateLimiter } from '../ratelimit/limiter.js';
 import { getRateLimitForAccount } from '../ratelimit/tiers.js';
 import { getTierForAccount } from '../ratelimit/tiers.js';
@@ -30,7 +32,7 @@ const log = rootLogger.child({ module: 'webhooks-github' });
 /**
  * Create the GitHub webhooks handler with all event listeners registered.
  */
-export function createGithubWebhooks(): Webhooks {
+export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
   const webhooks = new Webhooks({
     secret: config.github.webhookSecret,
   });
@@ -131,19 +133,19 @@ export function createGithubWebhooks(): Webhooks {
     // Record the rate limit hit
     await rateLimiter.increment('account', String(jobData.installationId));
     await rateLimiter.increment('repo', repo);
-    try {
-      await enqueueIssue(undefined, jobData);
-    } catch (err) {
-      log.error(
-        {
-          err: String(err),
-          repo: `${jobData.repoOwner}/${jobData.repoName}`,
-          issueNumber: jobData.issueNumber,
-        },
-        'Failed to enqueue labeled issue',
-      );
-    }
-  });
+	    try {
+	      await enqueueIssue(queue, jobData);
+	    } catch (err) {
+	      log.error(
+	        {
+	          err: String(err),
+	          repo: `${jobData.repoOwner}/${jobData.repoName}`,
+	          issueNumber: jobData.issueNumber,
+	        },
+	        'Failed to enqueue labeled issue',
+	      );
+	    }
+	  });
 
   // ── issues.edited ────────────────────────────────────────────────
   webhooks.on('issues.edited', async ({ payload }) => {
@@ -204,7 +206,7 @@ export function createGithubWebhooks(): Webhooks {
         await rateLimiter.increment('repo', repo);
 
         try {
-          await enqueueIssue(undefined, jobData);
+          await enqueueIssue(queue, jobData);
         } catch (err) {
           log.error(
             {

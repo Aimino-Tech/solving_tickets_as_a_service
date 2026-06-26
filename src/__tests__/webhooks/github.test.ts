@@ -1,7 +1,7 @@
 /**
  * Unit tests for GitHub webhook event handlers.
  *
- * Tests the createGithubWebhooks() function and suggestLabels() helper,
+ * Tests the createGithubWebhooks(mockQueue) function and suggestLabels() helper,
  * covering all event types, label matching, dedup, marketplace events,
  * and keyword-based label suggestion.
  *
@@ -101,6 +101,7 @@ function createMockQueue() {
 // ---------------------------------------------------------------------------
 
 describe('createGithubWebhooks', () => {
+  const mockQueue = {} as any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -110,7 +111,7 @@ describe('createGithubWebhooks', () => {
 
   describe('issues.labeled' as any, () => {
     it('enqueues a job when label is the target label (stas:fix)', async () => {
-      const webhooks = createGithubWebhooks();
+      const webhooks = createGithubWebhooks(mockQueue);
       const payload = sampleIssueLabeledPayload();
 
       await webhooks.receive({
@@ -121,7 +122,7 @@ describe('createGithubWebhooks', () => {
 
       expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
       expect(mockEnqueueIssue).toHaveBeenCalledWith(
-        undefined,
+        mockQueue,
         expect.objectContaining({
           installationId: 555,
           repoOwner: 'owner',
@@ -135,7 +136,7 @@ describe('createGithubWebhooks', () => {
     });
 
     it('does NOT enqueue when label is NOT the target label', async () => {
-      const webhooks = createGithubWebhooks();
+      const webhooks = createGithubWebhooks(mockQueue);
       const payload = sampleIssueLabeledPayload();
       payload.label = { name: 'other-label', color: 'ffffff', default: false, description: 'Some other label' };
 
@@ -149,7 +150,7 @@ describe('createGithubWebhooks', () => {
     });
 
     it('does NOT enqueue when installation ID is missing', async () => {
-      const webhooks = createGithubWebhooks();
+      const webhooks = createGithubWebhooks(mockQueue);
       const payload = sampleIssueLabeledPayload();
       // Remove installation to simulate missing ID
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -174,7 +175,7 @@ describe('createGithubWebhooks', () => {
 
   describe('issues.opened' as any, () => {
     it('does NOT enqueue a job (we wait for label event)', async () => {
-      const webhooks = createGithubWebhooks();
+      const webhooks = createGithubWebhooks(mockQueue);
       const payload = sampleIssueOpenedPayload();
 
       await webhooks.receive({
@@ -189,7 +190,7 @@ describe('createGithubWebhooks', () => {
 
   describe('issues.edited' as any, () => {
     it('enqueues a job when the issue already has the target label', async () => {
-      const webhooks = createGithubWebhooks();
+      const webhooks = createGithubWebhooks(mockQueue);
       const payload: any = {
         action: 'edited',
         issue: {
@@ -263,7 +264,7 @@ describe('createGithubWebhooks', () => {
 
       expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
       expect(mockEnqueueIssue).toHaveBeenCalledWith(
-        undefined,
+        mockQueue,
         expect.objectContaining({
           installationId: 555,
           repoOwner: 'owner',
@@ -276,7 +277,7 @@ describe('createGithubWebhooks', () => {
     });
 
     it('does NOT enqueue when the issue does NOT have the target label', async () => {
-      const webhooks = createGithubWebhooks();
+      const webhooks = createGithubWebhooks(mockQueue);
       const payload = sampleIssueOpenedPayload();
 
       await webhooks.receive({
@@ -289,7 +290,7 @@ describe('createGithubWebhooks', () => {
     });
 
     it('does NOT enqueue when the issue has target label but no installation ID', async () => {
-      const webhooks = createGithubWebhooks();
+      const webhooks = createGithubWebhooks(mockQueue);
       const payload: any = {
         action: 'edited',
         issue: {
@@ -360,7 +361,7 @@ describe('createGithubWebhooks', () => {
 
   describe('marketplace_purchase', () => {
     it('maps "purchased" with "Pro Plan" to plan "pro"', async () => {
-      const webhooks = createGithubWebhooks();
+      const webhooks = createGithubWebhooks(mockQueue);
       const payload = sampleMarketplacePayload();
 
       await webhooks.receive({
@@ -380,7 +381,7 @@ describe('createGithubWebhooks', () => {
     });
 
     it('maps "purchased" with "Enterprise Plan" to plan "enterprise"', async () => {
-      const webhooks = createGithubWebhooks();
+      const webhooks = createGithubWebhooks(mockQueue);
       const payload = {
         ...sampleMarketplacePayload(),
         marketplace_purchase: {
@@ -409,7 +410,7 @@ describe('createGithubWebhooks', () => {
     });
 
     it('maps "cancelled" with non-pro/non-enterprise plan to plan "free"', async () => {
-      const webhooks = createGithubWebhooks();
+      const webhooks = createGithubWebhooks(mockQueue);
       const payload = {
         ...sampleMarketplacePayload(),
         action: 'cancelled',
@@ -439,7 +440,7 @@ describe('createGithubWebhooks', () => {
     });
 
     it('handles unexpected plan names gracefully (falls back to free)', async () => {
-      const webhooks = createGithubWebhooks();
+      const webhooks = createGithubWebhooks(mockQueue);
       const payload = {
         ...sampleMarketplacePayload(),
         marketplace_purchase: {
@@ -468,7 +469,7 @@ describe('createGithubWebhooks', () => {
 
   describe('dedup consistency', () => {
     it('produces the same enqueue call for the same issue received twice', async () => {
-      const webhooks = createGithubWebhooks();
+      const webhooks = createGithubWebhooks(mockQueue);
       const payload = sampleIssueLabeledPayload();
 
       // First trigger
@@ -489,10 +490,12 @@ describe('createGithubWebhooks', () => {
       expect(mockEnqueueIssue).toHaveBeenCalledTimes(2);
       expect(mockEnqueueIssue).toHaveBeenNthCalledWith(
         1,
+        mockQueue,
         expect.objectContaining({ installationId: 555, repoOwner: 'owner', repoName: 'test-repo', issueNumber: 42 }),
       );
       expect(mockEnqueueIssue).toHaveBeenNthCalledWith(
         2,
+        mockQueue,
         expect.objectContaining({ installationId: 555, repoOwner: 'owner', repoName: 'test-repo', issueNumber: 42 }),
       );
     });
