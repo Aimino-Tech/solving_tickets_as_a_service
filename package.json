@@ -65,6 +65,7 @@
     "release:dry-run": "bash scripts/release-dry-run.sh"
   },
   "dependencies": {
+    "@linear/sdk": "^87.0.0",
     "@octokit/auth-app": "^7.1.0",
     "@octokit/rest": "^21.0.0",
     "@octokit/webhooks": "^13.4.0",
