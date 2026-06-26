@@ -20,7 +20,7 @@
  *
  * ── Error Handling ────────────────────────────────────────────────────────────
  * ✅ Missing STRIPE_SECRET_KEY throws a descriptive error
- * ✅ All Stripe API errors are caught, logged, and re-thrown as BillingError
+ * ✅ All Stripe API errors are caught, logged, and re-thrown
  * ✅ Session creation validates plan existence before calling Stripe
  * ──────────────────────────────────────────────────────────────────────────────
  */
@@ -32,21 +32,6 @@ import { PLANS } from './plans.js';
 import type { PlanId } from './plans.js';
 
 const log = rootLogger.child({ module: 'billing-stripe' });
-
-// ---------------------------------------------------------------------------
-// Billing-specific error type
-// ---------------------------------------------------------------------------
-
-export class BillingError extends Error {
-  constructor(
-    message: string,
-    public readonly code: string = 'BILLING_ERROR',
-    public readonly statusCode: number = 500,
-  ) {
-    super(message);
-    this.name = 'BillingError';
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Stripe client
@@ -62,10 +47,8 @@ export function getStripeClient(): Stripe {
   if (!_stripe) {
     const secretKey = config.stripe.secretKey;
     if (!secretKey) {
-      throw new BillingError(
+      throw new Error(
         'STRIPE_SECRET_KEY is not configured. Set it in your environment to enable billing.',
-        'STRIPE_NOT_CONFIGURED',
-        503,
       );
     }
     _stripe = new (Stripe as unknown as { new(key: string, config?: Record<string, unknown>): Stripe })(secretKey, {
@@ -154,18 +137,14 @@ export async function createSubscriptionCheckoutSession(opts: {
 
   const plan = PLANS[planId];
   if (!plan) {
-    throw new BillingError(
+    throw new Error(
       `Unknown plan "${planId}". Valid plans: ${Object.keys(PLANS).join(', ')}`,
-      'INVALID_PLAN',
-      400,
     );
   }
 
   if (!plan.priceId) {
-    throw new BillingError(
+    throw new Error(
       `Plan "${planId}" has no Stripe Price ID configured. Contact support.`,
-      'NO_PRICE_ID',
-      500,
     );
   }
 
@@ -219,9 +198,8 @@ export async function createSubscriptionCheckoutSession(opts: {
   const session = await stripe.checkout.sessions.create(sessionParams);
 
   if (!session.url || !session.id) {
-    throw new BillingError(
+    throw new Error(
       'Stripe Checkout session creation returned no URL or session ID',
-      'SESSION_CREATION_FAILED',
     );
   }
 
@@ -335,9 +313,8 @@ export async function updateSubscriptionPlan(
   const itemId = subscription.items.data[0]?.id;
 
   if (!itemId) {
-    throw new BillingError(
+    throw new Error(
       'Subscription has no items to update',
-      'NO_SUBSCRIPTION_ITEMS',
     );
   }
 
