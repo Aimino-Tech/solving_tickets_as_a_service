@@ -6,6 +6,15 @@
  * Runs after @octokit/webhooks signature verification but before any
  * business logic — defense-in-depth against malformed payloads.
  *
+ * ── Governance Proxy Migration ──────────────────────────────────────
+ * Per-route schema validation is being centralized in the governance proxy.
+ * Webhook-specific Zod schemas remain here for now (domain-specific business
+ * logic validation). Remove general-purpose validation helpers once proxy
+ * handles all request schemas centrally.
+ *
+ * See: src/governance/validation.ts for proxy delegation helpers.
+ * ────────────────────────────────────────────────────────────────────
+ *
  * ── Error Handling Audit ────────────────────────────────────────────
  * ✅ Uses Zod safeParse — never throws, always returns ValidationResult
  * ✅ Unknown event types are handled gracefully (return success: true)
