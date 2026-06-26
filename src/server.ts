@@ -40,7 +40,6 @@ import { createStripeWebhookHandler } from './stripe/index.js';
 import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
-import { validateWebhookPayload } from './validation.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
@@ -195,17 +194,6 @@ export async function createApp(): Promise<express.Application> {
       deliveryId,
       payload: parsedPayload,
     });
-
-    const validation = validateWebhookPayload(event, parsedPayload);
-    if (!validation.success) {
-      log.warn(
-        { event, errors: validation.errors, requestId: req.requestId },
-        'Webhook payload validation failed',
-      );
-      if (eventId) await logWebhookFailed(eventId, `Validation failed: ${validation.errors?.join(', ')}`);
-      res.status(400).json({ error: 'Invalid payload', details: validation.errors });
-      return;
-    }
 
     if (signature) {
       // Signature present — verify it
