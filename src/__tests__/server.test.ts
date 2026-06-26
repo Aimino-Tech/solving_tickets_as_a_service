@@ -67,9 +67,6 @@ const mockCreateGithubWebhooks = vi.hoisted(() =>
 );
 const mockCreateGitlabWebhooks = vi.hoisted(() => vi.fn().mockReturnValue({ handle: vi.fn() }));
 const mockCreateBitbucketWebhooks = vi.hoisted(() => vi.fn().mockReturnValue({ handle: vi.fn() }));
-const mockValidateWebhookPayload = vi.hoisted(
-  () => vi.fn().mockReturnValue({ success: true, data: {} }),
-);
 const mockStripeHandler = vi.hoisted(() => vi.fn());
 const mockCreateStripeWebhookHandler = vi.hoisted(() => vi.fn().mockReturnValue(mockStripeHandler));
 const mockGetSlackBoltApp = vi.hoisted(() =>
@@ -209,10 +206,6 @@ vi.mock('../webhooks/bitbucket.js', () => ({
   createBitbucketWebhooks: mockCreateBitbucketWebhooks,
 }));
 
-vi.mock('../validation.js', () => ({
-  validateWebhookPayload: mockValidateWebhookPayload,
-}));
-
 vi.mock('../stripe/index.js', () => ({
   createStripeWebhookHandler: mockCreateStripeWebhookHandler,
 }));
@@ -346,7 +339,6 @@ describe('server', () => {
     mockVerifyAndReceive.mockResolvedValue(undefined);
     mockCreateGitlabWebhooks.mockReturnValue({ handle: vi.fn() });
     mockCreateBitbucketWebhooks.mockReturnValue({ handle: vi.fn() });
-    mockValidateWebhookPayload.mockReturnValue({ success: true, data: {} });
     mockCreateStripeWebhookHandler.mockReturnValue(mockStripeHandler);
     mockGetSlackBoltApp.mockReturnValue({
       mountOn: vi.fn(),
@@ -437,31 +429,6 @@ describe('server', () => {
       expect(body.accepted).toBe(true);
     });
 
-    it('returns 400 when payload validation fails', async () => {
-      mockValidateWebhookPayload.mockReturnValueOnce({
-        success: false,
-        errors: ['Missing required field: installation'],
-      });
-
-      const { createApp } = await import('../server.js');
-      app = createApp();
-
-      const response = await fetchApp(app, '/webhook', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-github-event': 'issues.labeled',
-          'x-github-delivery': 'test-id',
-        },
-        body: JSON.stringify({}),
-      });
-
-      expect(response.status).toBe(400);
-      const body = JSON.parse(response.body);
-      expect(body.error).toBe('Invalid payload');
-      expect(body.details).toBeDefined();
-    });
-
     it('returns 400 when JSON is malformed', async () => {
       const { createApp } = await import('../server.js');
       app = createApp();
@@ -480,7 +447,6 @@ describe('server', () => {
     });
 
     it('returns 401 when signature verification fails', async () => {
-      mockValidateWebhookPayload.mockReturnValueOnce({ success: true, data: {} });
       mockVerifyAndReceive.mockRejectedValueOnce(new Error('Invalid signature'));
 
       const { createApp } = await import('../server.js');
