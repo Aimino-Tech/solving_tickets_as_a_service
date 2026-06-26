@@ -7,6 +7,17 @@
  * Also provides a factory for creating route-level rate limiters with
  * config-driven tiers, auth differentiation, and Prometheus metrics.
  *
+ * ── Governance Proxy Migration ──────────────────────────────────────────────
+ * This module is DEPRECATED. Rate limiting is being migrated to the governance
+ * proxy which handles per-user, per-org, per-endpoint rate limiting centrally.
+ *
+ * When the governance proxy is active (x-governance-proxy header present), this
+ * middleware delegates to proxy headers. Remove this file once proxy is fully
+ * deployed and verified.
+ *
+ * See: src/governance/rateLimit.ts for proxy delegation helpers.
+ * ────────────────────────────────────────────────────────────────────────────
+ *
  * ── Headers added ───────────────────────────────────────────────────────────
  *   X-RateLimit-Limit       - Max requests in the current window
  *   X-RateLimit-Remaining   - Remaining requests in the current window
@@ -27,6 +38,14 @@ import { rootLogger } from '../utils/logger.js';
 import { logRateLimitHit } from '../audit/service.js';
 import { recordRateLimitDecision, recordRateLimitBlock, recordRateLimitAllow } from './metrics.js';
 import type { RateLimitTierConfig } from './config.js';
+
+import {
+  isBehindGovernanceProxy,
+  extractRateLimitFromProxy,
+  applyGovernanceRateLimitHeaders,
+  sendGovernanceRateLimited,
+  logGovernanceRateLimit,
+} from '../governance/rateLimit.js';
 
 const log = rootLogger.child({ module: 'rate-middleware' });
 
@@ -206,6 +225,20 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
     if (skip) {
       next();
       return;
+    }
+
+    if (isBehindGovernanceProxy(req)) {
+      const proxyInfo = extractRateLimitFromProxy(req);
+      if (proxyInfo) {
+        applyGovernanceRateLimitHeaders(res, proxyInfo);
+        if (!proxyInfo.allowed) {
+          logGovernanceRateLimit(req, proxyInfo);
+          sendGovernanceRateLimited(res, proxyInfo);
+          return;
+        }
+        next();
+        return;
+      }
     }
 
     try {

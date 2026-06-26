@@ -51,6 +51,7 @@ import { featureFlagsRouter } from './routes/featureFlags.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
 import { recordWebhookDuration } from './webhooks/metrics.js';
 import { renderMetrics } from './webhooks/metrics.js';
+import { isBehindGovernanceProxy } from './governance/rateLimit.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
@@ -170,11 +171,15 @@ export async function createApp(): Promise<express.Application> {
   app.use(express.urlencoded({ extended: true, limit: config.security.requestBodyLimit }));
 
   // -- Rate limiter for webhook routes ---------------------------------------
+  // DEPRECATED: Governance proxy handles rate limiting centrally.
+  // When x-governance-proxy header is present, this middleware is skipped.
+  // Remove this after proxy is fully deployed and verified.
   const limiter = rateLimit({
     windowMs: config.stas.rateLimitWindowMs,
     limit: config.stas.rateLimitMax,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => isBehindGovernanceProxy(req),
     message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
   });
   app.use('/webhook', limiter);

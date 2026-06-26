@@ -8,6 +8,13 @@
  *   - scope: "account" | "repo" | "ip"
  *   - key:   unique identifier within that scope (e.g. installation ID, repo name, IP)
  *
+ * ── Governance Proxy Migration ──────────────────────────────────────────────
+ * DEPRECATED: This standalone rate limiter will be replaced by the governance
+ * proxy. The proxy handles per-user, per-org, and per-endpoint rate limiting
+ * with Redis-backed sliding window counters and tier-based config.
+ * Remove this file once proxy is fully deployed and verified.
+ * ────────────────────────────────────────────────────────────────────────────
+ *
  * ── Error Handling ──────────────────────────────────────────────────────────
  * ✅ Redis failures are caught and logged — request is allowed through (fail-open)
  * ✅ All public methods return a RateLimitResult, never throw
