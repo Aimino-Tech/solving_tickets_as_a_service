@@ -9,7 +9,7 @@
  *   Redis, E2B, or Slack connections.
  *
  *   We then test:
- *   - GET /health returns 200 with status ok
+ *   - Health check delegated to governance proxy
  *   - POST /webhook returns 202 for valid payloads
  *   - POST /webhook returns 400 for invalid payloads
  *   - POST /webhook returns 401 for bad signatures
@@ -235,9 +235,6 @@ vi.mock('../monitoring/sentry.js', () => ({
 vi.mock('../db/connection.js', () => ({
   queryWithRetry: vi.fn().mockResolvedValue({ rows: [{ ok: 1 }] }),
 }));
-vi.mock('../health/queueHealth.js', () => ({
-  getQueueHealth: vi.fn().mockResolvedValue({ status: 'healthy' }),
-}));
 vi.mock('../bridge/metrics.js', () => ({
   bridgeMetrics: { render: vi.fn().mockReturnValue('') },
 }));
@@ -254,7 +251,6 @@ vi.mock('../webhooks/eventLogger.js', () => ({
 }));
 vi.mock('../webhooks/metrics.js', () => ({
   recordWebhookDuration: vi.fn(),
-  renderMetrics: vi.fn().mockReturnValue(''),
 }));
 vi.mock('../webhooks/retryWorker.js', () => ({
   startWebhookRetryWorker: vi.fn(),
@@ -366,39 +362,6 @@ describe('server', () => {
       const { createApp } = await import('../server.js');
       app = createApp();
       expect(typeof app.listen).toBe('function');
-    });
-  });
-
-  describe('GET /health', () => {
-    it('returns 200 with status ok', async () => {
-      const { createApp } = await import('../server.js');
-      app = createApp();
-
-      const response = await fetchApp(app, '/health');
-      expect(response.status).toBe(200);
-      const body = JSON.parse(response.body);
-      expect(body.status).toBe('ok');
-    });
-
-    it('returns JSON with uptime and timestamp fields', async () => {
-      const { createApp } = await import('../server.js');
-      app = createApp();
-
-      const response = await fetchApp(app, '/health');
-      const body = JSON.parse(response.body);
-      expect(body).toHaveProperty('uptime');
-      expect(body).toHaveProperty('timestamp');
-      expect(typeof body.uptime).toBe('number');
-      expect(typeof body.timestamp).toBe('string');
-    });
-
-    it('includes the STAS label in health response', async () => {
-      const { createApp } = await import('../server.js');
-      app = createApp();
-
-      const response = await fetchApp(app, '/health');
-      const body = JSON.parse(response.body);
-      expect(body).toHaveProperty('label');
     });
   });
 
