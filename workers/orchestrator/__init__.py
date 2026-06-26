@@ -94,6 +94,20 @@ from workers.orchestrator.tenant_limiter import (
     get_tenant_concurrency_limiter,
 )
 
+# SLA Priority Queues (AIM-2019)
+from workers.orchestrator.sla_priority import (
+    SLA_TIER_PRIORITY_MAP,
+    SLA_TIER_QUEUE_MAP,
+    TIER_QUEUES,
+    TIER_ROUTES,
+    SlaPriorityRouter,
+    apply_sla_priority,
+    priority_for_tier,
+    queue_for_tier,
+    resolve_queue,
+    tier_for_queue,
+)
+
 # Workspace quota & isolation (AIM-2013)
 from workers.orchestrator.quota import (
     DiskQuota,
@@ -172,6 +186,17 @@ __all__ = [
     "WorkspaceIsolation",
     "resolve_tier",
     "quota_for_tier",
+    # SLA Priority Queues (AIM-2019)
+    "SLA_TIER_QUEUE_MAP",
+    "SLA_TIER_PRIORITY_MAP",
+    "TIER_QUEUES",
+    "TIER_ROUTES",
+    "SlaPriorityRouter",
+    "apply_sla_priority",
+    "priority_for_tier",
+    "queue_for_tier",
+    "resolve_queue",
+    "tier_for_queue",
     "get_disk_quota",
     "get_workspace_isolation",
     "QuotaManager",
