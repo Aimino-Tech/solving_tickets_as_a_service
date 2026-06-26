@@ -2,7 +2,6 @@ import { Router, type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import { requireAuth } from '../security/authMiddleware.js';
 
 const log = rootLogger.child({ module: 'api-routes' });
 
@@ -21,7 +20,6 @@ const apiLimiter = rateLimit({
 const router = Router();
 
 router.use(apiLimiter);
-router.use(requireAuth);
 
 router.get('/runs', async (req: Request, res: Response) => {
   try {

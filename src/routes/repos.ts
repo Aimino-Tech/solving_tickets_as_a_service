@@ -1,19 +1,18 @@
 /**
- * Repository picker API — lists the authenticated user's GitHub repos and
- * their STAS webhook / installation status.
+ * Repository picker API — lists repos and their STAS webhook / installation status.
+ *
+ * Auth is handled by the governance proxy — routes trust X-User-Id and X-Org-Id
+ * headers forwarded by the proxy after credential validation.
  *
  * Routes (mounted at /api/repos):
- *   GET  /          — List user's repos with webhook status
+ *   GET  /          — List repos with webhook status
  *   GET  /:owner/:repo — Get a single repo's status
- *
- * All endpoints require a valid session token (requireSession middleware).
  */
 
 import { Router, type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import { requireSession } from '../middleware/auth.js';
 
 const log = rootLogger.child({ module: 'repos-routes' });
 
@@ -32,7 +31,6 @@ const reposLimiter = rateLimit({
 const router = Router();
 
 router.use(reposLimiter);
-router.use(requireSession);
 
 // ---------------------------------------------------------------------------
 // Types
