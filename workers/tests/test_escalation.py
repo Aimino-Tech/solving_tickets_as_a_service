@@ -23,6 +23,7 @@ from workers.support.escalation import (
     check_tenant_health,
     escalate_tenant,
     run_escalation_checks,
+    validate_config,
     _clear_in_memory_state,
     _evaluate_metrics,
     _is_on_cooldown,
@@ -644,3 +645,49 @@ class TestModuleExports:
         )
         assert callable(check_tenant_health)
         assert callable(escalate_tenant)
+
+
+# ===================================================================
+# validate_config
+# ===================================================================
+
+
+class TestValidateConfig:
+    def test_default_config_is_valid(self):
+        issues = validate_config()
+        assert issues == []
+
+    def test_bad_error_rate_threshold(self):
+        with patch("workers.support.escalation.ESCALATION_ERROR_RATE_THRESHOLD", -0.1):
+            issues = validate_config()
+        assert any("ESCALATION_ERROR_RATE_THRESHOLD" in i for i in issues)
+
+    def test_critical_not_gt_threshold(self):
+        with patch("workers.support.escalation.ESCALATION_CRITICAL_ERROR_RATE", 0.01):
+            issues = validate_config()
+        assert any("ESCALATION_CRITICAL_ERROR_RATE" in i and "ESCALATION_ERROR_RATE_THRESHOLD" in i for i in issues)
+
+    def test_zero_latency_threshold(self):
+        with patch("workers.support.escalation.ESCALATION_LATENCY_THRESHOLD_MS", 0):
+            issues = validate_config()
+        assert any("ESCALATION_LATENCY_THRESHOLD_MS" in i for i in issues)
+
+    def test_negative_critical_latency(self):
+        with patch("workers.support.escalation.ESCALATION_CRITICAL_LATENCY_MS", -1):
+            issues = validate_config()
+        assert any("ESCALATION_CRITICAL_LATENCY_MS" in i for i in issues)
+
+    def test_zero_queue_depth(self):
+        with patch("workers.support.escalation.ESCALATION_QUEUE_DEPTH_THRESHOLD", 0):
+            issues = validate_config()
+        assert any("ESCALATION_QUEUE_DEPTH_THRESHOLD" in i for i in issues)
+
+    def test_zero_consecutive_failures(self):
+        with patch("workers.support.escalation.ESCALATION_CONSECUTIVE_FAILURES_THRESHOLD", 0):
+            issues = validate_config()
+        assert any("ESCALATION_CONSECUTIVE_FAILURES_THRESHOLD" in i for i in issues)
+
+    def test_negative_cooldown(self):
+        with patch("workers.support.escalation.ESCALATION_COOLDOWN_SECONDS", -1):
+            issues = validate_config()
+        assert any("ESCALATION_COOLDOWN_SECONDS" in i for i in issues)

@@ -781,6 +781,29 @@ def acknowledge_escalation(tenant_id: str) -> EscalationAction:
 # ---------------------------------------------------------------------------
 
 
+def validate_config() -> list[str]:
+    issues: list[str] = []
+    if not (0.0 < ESCALATION_ERROR_RATE_THRESHOLD < 1.0):
+        issues.append(f'ESCALATION_ERROR_RATE_THRESHOLD={ESCALATION_ERROR_RATE_THRESHOLD} must be in (0.0, 1.0)')
+    if not (0.0 < ESCALATION_CRITICAL_ERROR_RATE < 1.0):
+        issues.append(f'ESCALATION_CRITICAL_ERROR_RATE={ESCALATION_CRITICAL_ERROR_RATE} must be in (0.0, 1.0)')
+    if ESCALATION_CRITICAL_ERROR_RATE <= ESCALATION_ERROR_RATE_THRESHOLD:
+        issues.append(f'ESCALATION_CRITICAL_ERROR_RATE={ESCALATION_CRITICAL_ERROR_RATE} must exceed ESCALATION_ERROR_RATE_THRESHOLD={ESCALATION_ERROR_RATE_THRESHOLD}')
+    if ESCALATION_LATENCY_THRESHOLD_MS <= 0:
+        issues.append(f'ESCALATION_LATENCY_THRESHOLD_MS={ESCALATION_LATENCY_THRESHOLD_MS} must be positive')
+    if ESCALATION_CRITICAL_LATENCY_MS <= 0:
+        issues.append(f'ESCALATION_CRITICAL_LATENCY_MS={ESCALATION_CRITICAL_LATENCY_MS} must be positive')
+    if ESCALATION_CRITICAL_LATENCY_MS <= ESCALATION_LATENCY_THRESHOLD_MS:
+        issues.append(f'ESCALATION_CRITICAL_LATENCY_MS={ESCALATION_CRITICAL_LATENCY_MS} must exceed ESCALATION_LATENCY_THRESHOLD_MS={ESCALATION_LATENCY_THRESHOLD_MS}')
+    if ESCALATION_QUEUE_DEPTH_THRESHOLD <= 0:
+        issues.append(f'ESCALATION_QUEUE_DEPTH_THRESHOLD={ESCALATION_QUEUE_DEPTH_THRESHOLD} must be positive')
+    if ESCALATION_CONSECUTIVE_FAILURES_THRESHOLD <= 0:
+        issues.append(f'ESCALATION_CONSECUTIVE_FAILURES_THRESHOLD={ESCALATION_CONSECUTIVE_FAILURES_THRESHOLD} must be positive')
+    if ESCALATION_COOLDOWN_SECONDS < 0:
+        issues.append(f'ESCALATION_COOLDOWN_SECONDS={ESCALATION_COOLDOWN_SECONDS} must be non-negative')
+    return issues
+
+
 def _clear_in_memory_state() -> None:
     """Clear in-memory escalation history and reset Redis client.
 
@@ -802,6 +825,7 @@ __all__ = [
     "check_tenant_health",
     "escalate_tenant",
     "run_escalation_checks",
+    "validate_config",
     # Config constants
     "ESCALATION_ERROR_RATE_THRESHOLD",
     "ESCALATION_LATENCY_THRESHOLD_MS",
