@@ -1,5 +1,4 @@
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import {
   isFeatureEnabled,
   enabledFor,
@@ -17,17 +16,8 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'feature-flags-admin' });
 
-const featureFlagsLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
 const router = Router();
 
-router.use(featureFlagsLimiter);
 
 router.get('/', async (req: Request, res: Response) => {
   try {

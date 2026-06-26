@@ -19,14 +19,12 @@
  */
 
 import type { NextFunction, Request, Response } from 'express';
-import expressRateLimit from 'express-rate-limit';
 import { rateLimiter } from './limiter.js';
 import { getRateLimitForAccount } from './tiers.js';
 import { rootLogger } from '../utils/logger.js';
 
 import { logRateLimitHit } from '../audit/service.js';
 import { recordRateLimitDecision, recordRateLimitBlock, recordRateLimitAllow } from './metrics.js';
-import type { RateLimitTierConfig } from './config.js';
 
 const log = rootLogger.child({ module: 'rate-middleware' });
 
@@ -111,76 +109,6 @@ function isAuthenticated(req: Request): boolean {
     return true;
   }
   return false;
-}
-
-// ---------------------------------------------------------------------------
-// Factory: create centralized route-level rate limiter
-// ---------------------------------------------------------------------------
-
-/**
- * Create an express-rate-limit instance from a tier config.
- *
- * This factory:
- *   - Creates a rate limiter using the tier's windowMs and max values
- *   - Differentiates limits by auth status if tier is authAware
- *   - Records Prometheus metrics for every decision
- *   - Adds Retry-After and X-RateLimit-* headers
- *
- * @param tier - Rate limit tier configuration
- * @returns An express-rate-limit middleware instance
- */
-export function createRateLimiter(tier: RateLimitTierConfig) {
-  const routeLabel = tier.route;
-
-  return expressRateLimit({
-    windowMs: tier.windowMs,
-    limit: (req: Request) => {
-      // If auth-aware, check if the request is authenticated
-      if (tier.authAware && tier.maxUnauthenticated !== undefined) {
-        if (!isAuthenticated(req)) {
-          return tier.maxUnauthenticated;
-        }
-      }
-      return tier.max;
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      error: 'Too many requests',
-      retryAfter: 'see Retry-After header',
-    },
-    handler: (req: Request, res: Response) => {
-      // Record rate limit block metric
-      recordRateLimitBlock(routeLabel);
-
-      // Log the rate limit hit
-      log.warn(
-        { path: req.path, ip: req.ip, limit: tier.max, windowMs: tier.windowMs },
-        `Rate limit exceeded for ${routeLabel}`,
-      );
-
-      // Audit log
-      logRateLimitHit({
-        ipAddress: req.ip,
-        route: req.path,
-        limit: tier.max,
-        windowMs: tier.windowMs,
-        details: { tier: routeLabel },
-        correlationId: req.requestId,
-      }).catch(() => {});
-
-      res.setHeader('Retry-After', Math.ceil(tier.windowMs / 1000));
-      res.status(429).json({
-        error: 'Too many requests',
-        retryAfter: Math.ceil(tier.windowMs / 1000),
-        tier: routeLabel,
-      });
-    },
-    skip: (_req: Request) => {
-      // Skip in dev mode if configured
-      return false;
-    },
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -302,7 +230,7 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
 
 /**
  * Per-IP rate limit check for unauthenticated endpoints.
- * Uses the existing express-rate-limit setup — this middleware just adds
+ * Uses the governance proxy rate limiting — this middleware just adds
  * the consistent header format.
  */
 export function addRateLimitHeaders(options?: RateLimitMiddlewareOptions) {

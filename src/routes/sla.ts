@@ -1,5 +1,4 @@
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -21,15 +20,6 @@ function resolveTier(tier: string): string {
 
 const router = Router();
 
-const slaLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
-router.use(slaLimiter);
 
 async function redisGet(key: string): Promise<string | undefined> {
   try {

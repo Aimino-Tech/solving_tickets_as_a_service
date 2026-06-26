@@ -14,17 +14,11 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'enterprise-api' });
 const router = Router();
 
-const enterpriseLimiter = rateLimit({
-  windowMs: 60_000, limit: 30, standardHeaders: true, legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-router.use(enterpriseLimiter);
 
 const ENTERPRISE_FEATURES = [
   { key: 'sso_saml', label: 'SSO / SAML', description: 'Single sign-on via SAML 2.0 with any identity provider', category: 'security' },

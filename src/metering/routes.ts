@@ -8,7 +8,6 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { getUsageStore } from './tracker.js';
 import { getCostConfig, isWithinFreeTier } from './costs.js';
 
@@ -16,17 +15,8 @@ import { getCostConfig, isWithinFreeTier } from './costs.js';
 // Rate Limiting: 60 requests per minute on usage statistics endpoints
 // ---------------------------------------------------------------------------
 
-const usageLimiter = rateLimit({
-  windowMs: 60_000, // 1 minute
-  limit: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
 const router = Router();
 
-router.use(usageLimiter);
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/credits/usage/stats

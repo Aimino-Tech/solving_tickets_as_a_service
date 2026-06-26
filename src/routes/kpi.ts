@@ -1,5 +1,4 @@
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { queryWithRetry } from '../db/connection.js';
 import { rootLogger } from '../utils/logger.js';
 import type { KpiMetrics } from '../db/types/kpiMetrics.js';
@@ -8,15 +7,6 @@ const log = rootLogger.child({ module: 'kpi-api' });
 
 const router = Router();
 
-const kpiLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
-router.use(kpiLimiter);
 
 async function checkAdmin(req: Request, res: Response): Promise<boolean> {
   const { config } = await import('../config.js');

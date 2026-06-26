@@ -9,7 +9,6 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { queryWithRetry } from '../db/connection.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -21,15 +20,6 @@ const router: Router = Router();
 // Rate Limiting: 60 requests per minute per IP on dashboard endpoints
 // ---------------------------------------------------------------------------
 
-const dashboardLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
-router.use(dashboardLimiter);
 
 // ---------------------------------------------------------------------------
 // Helper: extract account ID from request

@@ -1,5 +1,4 @@
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { requireAuth } from '../security/authMiddleware.js';
@@ -10,17 +9,8 @@ const log = rootLogger.child({ module: 'api-routes' });
 // Rate Limiting: 60 requests per minute per IP on API endpoints
 // ---------------------------------------------------------------------------
 
-const apiLimiter = rateLimit({
-  windowMs: 60_000, // 1 minute
-  limit: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
 const router = Router();
 
-router.use(apiLimiter);
 router.use(requireAuth);
 
 router.get('/runs', async (req: Request, res: Response) => {
