@@ -51,6 +51,11 @@ beat_schedule = {
         "schedule": crontab(hour=0, minute=5),
         "args": (),
     },
+    "e2e-health-check": {
+        "task": "workers.health.e2e_check.run_e2e_health_check",
+        "schedule": 300.0,
+        "args": (),
+    },
     "sla-compliance-check": {
         "task": "workers.tasks.periodic.sla_compliance_check",
         "schedule": 300.0,
