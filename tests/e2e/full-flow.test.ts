@@ -93,13 +93,7 @@ const { mockConfig } = vi.hoisted(() => {
         keepFailed: 100,
         maxRetries: 4,
         retryDelays: [30000, 120000, 300000, 900000] as number[],
-        backend: "rabbitmq" as const,
-      },
-      rabbitmq: {
-        url: "amqp://localhost:5672/stas",
-        prefetchCount: 10,
-        reconnectDelayMs: 5000,
-        maxReconnectAttempts: 10,
+        backend: "bullmq" as const,
       },
       bridge: {
         rpcTimeoutMs: 30000,

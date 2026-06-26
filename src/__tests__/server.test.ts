@@ -109,23 +109,10 @@ vi.mock('../config.js', () => ({
 
       maxIssueComments: 15,
     },
-    rabbitmq: {
-      url: 'amqp://localhost:5672/stas',
-      prefetchCount: 10,
-      reconnectDelayMs: 5000,
-      maxReconnectAttempts: 10,
-      tls: {
-        certPath: undefined,
-        keyPath: undefined,
-        caPath: undefined,
-        servername: undefined,
-        rejectUnauthorized: true,
-      },
-    },
     queue: {
       redisUrl: 'redis://localhost:6379',
       workerConcurrency: 2,
-      backend: 'rabbitmq',
+      backend: 'bullmq',
       dedupTtl: 120,
       keepCompleted: 200,
       keepFailed: 100,

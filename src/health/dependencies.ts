@@ -2,7 +2,6 @@ import { config } from '../config.js';
 import { queryWithRetry } from '../db/connection.js';
 import { checkRedisHealth } from './redisHealth.js';
 import { opencodeHealth } from './opencodeHealth.js';
-import * as rabbitmq from '../queue/rabbitmq.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'dependency-health' });
@@ -47,24 +46,6 @@ export async function getDependenciesHealth(): Promise<DependenciesHealthReport>
     error: redisResult.error ?? undefined,
     latencyMs: redisResult.latencyMs,
   });
-
-  const rmqStart = Date.now();
-  try {
-    const connected = rabbitmq.isConnected();
-    checks.push({
-      name: 'rabbitmq',
-      status: connected ? 'ok' : 'error',
-      error: connected ? undefined : 'Not connected',
-      latencyMs: Date.now() - rmqStart,
-    });
-  } catch (err) {
-    checks.push({
-      name: 'rabbitmq',
-      status: 'error',
-      error: String(err),
-      latencyMs: Date.now() - rmqStart,
-    });
-  }
 
   const ocStatus = opencodeHealth.getStatus();
   checks.push({
