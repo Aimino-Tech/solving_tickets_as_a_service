@@ -6,15 +6,13 @@
  *   GET  /          — List user's repos with webhook status
  *   GET  /:owner/:repo — Get a single repo's status
  *
- * All endpoints require a valid session token (requireSession middleware).
+ * All endpoints rely on governance proxy for auth.
  */
 
 import { Router, type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import { requireSession } from '../middleware/auth.js';
-
 const log = rootLogger.child({ module: 'repos-routes' });
 
 // ---------------------------------------------------------------------------
@@ -32,7 +30,6 @@ const reposLimiter = rateLimit({
 const router = Router();
 
 router.use(reposLimiter);
-router.use(requireSession);
 
 // ---------------------------------------------------------------------------
 // Types

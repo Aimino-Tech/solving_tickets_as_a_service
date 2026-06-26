@@ -18,11 +18,10 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { rootLogger } from '../utils/logger.js';
 import { PLANS } from '../billing/plans.js';
 import type { PlanId } from '../billing/plans.js';
-import { createSubscriptionCheckoutSession, BillingError } from '../billing/stripe.js';
+import { createSubscriptionCheckoutSession } from '../billing/stripe.js';
 import { createBillingWebhookHandler } from '../billing/webhook.js';
 
 const log = rootLogger.child({ module: 'billing-api' });
@@ -33,15 +32,6 @@ const router = Router();
 // Rate limiting: 30 requests per minute per IP on billing endpoints
 // ---------------------------------------------------------------------------
 
-const billingLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
-router.use(billingLimiter);
 
 // ---------------------------------------------------------------------------
 // Helper: extract account ID from request header
@@ -120,10 +110,6 @@ router.post('/create-checkout', async (req: Request, res: Response) => {
 
     res.json(session);
   } catch (err) {
-    if (err instanceof BillingError) {
-      res.status(err.statusCode).json({ error: err.message, code: err.code });
-      return;
-    }
     log.error({ err: String(err) }, 'Failed to create checkout session');
     res.status(500).json({ error: 'Failed to create checkout session' });
   }

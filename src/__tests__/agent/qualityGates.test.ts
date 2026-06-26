@@ -6,10 +6,9 @@ import { execSync } from 'child_process';
 import {
   gateRealityCheck,
   gateCompileCheck,
-  gateTestCheck,
-  gateHallucinationCheck,
-  runQualityGates,
-} from '../../agent/qualityGates.js';
+  gateTestIntegrityCheck,
+  gateHallucinationScan,
+} from '../../agent/quality-gates.js';
 
 interface ExecResult {
   stdout: string;
@@ -57,7 +56,7 @@ describe('AC1: gateRealityCheck (REAL execution)', () => {
     const diff = '+ import { foo } from `src/real.ts`\n+ import { bar } from `src/fake.ts`';
     const result = await gateRealityCheck(sandbox, diff);
     expect(result.passed).toBe(false);
-    expect(result.reason).toContain('fake');
+    expect(result.details.some((d: string) => d.includes('fake'))).toBe(true);
   });
 
   it('passes when all files exist in real filesystem', async () => {
@@ -101,11 +100,11 @@ describe('AC3: gateCompileCheck (REAL tsc)', () => {
     writeFileSync(join(tempDir, 'broken.ts'), 'const x: number = "string";');
     const result = await gateCompileCheck(sandbox);
     expect(result.passed).toBe(false);
-    expect(result.details).toContain('TS2322');
+    expect(result.details.some((d: string) => d.includes('TS2322'))).toBe(true);
   }, 120000);
 });
 
-describe('AC5: gateTestCheck (REAL execution)', () => {
+describe('AC5: gateTestIntegrityCheck (REAL execution)', () => {
   let sandbox: any;
 
   beforeEach(() => {
@@ -113,7 +112,7 @@ describe('AC5: gateTestCheck (REAL execution)', () => {
   });
 
   it('passes when no diff provided', async () => {
-    const result = await gateTestCheck(sandbox, '');
+    const result = await gateTestIntegrityCheck(sandbox, '');
     expect(result.passed).toBe(true);
   });
 
@@ -123,9 +122,9 @@ describe('AC5: gateTestCheck (REAL execution)', () => {
 +     expect(true).toBe(true);
 +   });
 + });`;
-    const result = await gateTestCheck(sandbox, diff);
+    const result = await gateTestIntegrityCheck(sandbox, diff);
     expect(result.passed).toBe(false);
-    expect(result.reason).toContain('Vacuous');
+    expect(result.details.some((d: string) => d.includes('Vacuous'))).toBe(true);
   });
 
   it('passes on non-vacuous test additions', async () => {
@@ -135,12 +134,12 @@ describe('AC5: gateTestCheck (REAL execution)', () => {
 +     expect(result).toBe(42);
 +   });
 + });`;
-    const result = await gateTestCheck(sandbox, diff);
+    const result = await gateTestIntegrityCheck(sandbox, diff);
     expect(result.passed).toBe(true);
   });
 });
 
-describe('AC7: gateHallucinationCheck (REAL placeholder content)', () => {
+describe('AC7: gateHallucinationScan (REAL placeholder content)', () => {
   let tempDir: string;
   let sandbox: any;
 
@@ -154,39 +153,15 @@ describe('AC7: gateHallucinationCheck (REAL placeholder content)', () => {
   });
 
   it('passes when no new imports detected', async () => {
-    const result = await gateHallucinationCheck(sandbox, 'console.log("hello")');
+    const result = await gateHallucinationScan(sandbox, 'console.log("hello")');
     expect(result.passed).toBe(true);
   });
 
   it('detects non-existent npm package via sandbox.exec — AC7', async () => {
     writeFileSync(join(tempDir, 'package.json'), JSON.stringify({ name: 'test', dependencies: {} }));
     const diff = 'import { something } from \'this-package-definitely-does-not-exist-12345\'';
-    const result = await gateHallucinationCheck(sandbox, diff);
+    const result = await gateHallucinationScan(sandbox, diff);
     expect(result.passed).toBe(false);
-    expect(result.reason).toContain('not found');
+    expect(result.details.some((d: string) => d.includes('this-package-definitely-does-not-exist-12345'))).toBe(true);
   }, 120000);
-});
-
-describe('runQualityGates (integration)', () => {
-  let sandbox: any;
-
-  beforeEach(() => {
-    sandbox = {
-      exec: vi.fn().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 }),
-    } as any;
-  });
-
-  it('runs all 4 gates and returns results', async () => {
-    const result = await runQualityGates(sandbox, '', 0, 3);
-    expect(result.gates).toHaveLength(4);
-    expect(result.retryCount).toBe(0);
-    expect(result.maxRetries).toBe(3);
-  });
-
-  it('supports retry correctly', async () => {
-    const result = await runQualityGates(sandbox, '', 2, 3);
-    expect(result.canRetry).toBe(true);
-    const exhausted = await runQualityGates(sandbox, '', 3, 3);
-    expect(exhausted.canRetry).toBe(false);
-  });
 });

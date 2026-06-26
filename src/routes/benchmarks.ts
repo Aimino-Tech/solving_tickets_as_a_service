@@ -1,17 +1,7 @@
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 
 const router = Router();
 
-const benchmarksLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
-router.use(benchmarksLimiter);
 
 export interface BenchmarkEntry {
   agent: string;

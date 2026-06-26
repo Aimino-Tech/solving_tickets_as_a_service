@@ -4,7 +4,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('express', () => ({ Router: vi.fn(() => ({ use: vi.fn().mockReturnThis(), get: vi.fn().mockReturnThis() })) }));
-vi.mock('express-rate-limit', () => ({ default: vi.fn(() => (req: any, res: any, next: any) => next()) }));
 vi.mock('../../db/repositories/index.js', () => ({ accountsRepository: {}, auditLogRepository: {}, billingRepository: {}, reposRepository: {}, runsRepository: {}, teamsRepository: {}, usageRepository: {} }));
 vi.mock('../../config.js', () => ({ config: { stas: { adminApiKey: 'admin-key' } } }));
 vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) } }));

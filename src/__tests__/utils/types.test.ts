@@ -5,8 +5,8 @@
  * objects matching the interface shapes can be constructed correctly.
  *
  * Covers:
- *   - src/utils/types.ts  → IssueJobData, BillingPlan, AgentResult
- *   - src/agent/types.ts  → TestResult (referenced in the task requirements)
+ *   - src/utils/types.ts  → IssueJobData, BillingPlan
+ *   - src/agent/types.ts  → AgentResult, TestResult (referenced in the task requirements)
  */
 
 import { describe, expect, it } from 'vitest';
