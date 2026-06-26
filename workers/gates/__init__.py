@@ -1,5 +1,10 @@
 """Gates package — quality and security gates before PR creation."""
 
+from workers.gates.rate_limiter import (
+    RateLimitResult,
+    TenantRateLimiter,
+    get_rate_limiter,
+)
 from workers.gates.injection_guard import InjectionGuard, InjectionGuardConfig, InjectionGuardResult, GuardMode
 from workers.gates.malicious_code_gate import malicious_code_gate
 from workers.gates.oss_integration import (
@@ -40,6 +45,9 @@ __all__ = [
     "InjectionGuardResult",
     "GuardMode",
     "malicious_code_gate",
+    "RateLimitResult",
+    "TenantRateLimiter",
+    "get_rate_limiter",
     "OssGuardManager",
     "OssGuardResult",
     "LLMGuardScanner",
