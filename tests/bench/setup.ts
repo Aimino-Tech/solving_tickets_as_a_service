@@ -162,7 +162,6 @@ export function createMockCodeIntelInput(): MockCodeIntelInput {
       'src/sandbox/executor.ts',
       'src/queue/issueQueue.ts',
       'src/queue/producers.ts',
-      'src/queue/rabbitmq.ts',
       'src/github/auth.ts',
       'src/github/messages.ts',
       'src/github/actionDispatcher.ts',

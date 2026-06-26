@@ -38,17 +38,6 @@ export function createMockConfig() {
       retryDelays: [30000, 120000, 300000, 900000] as number[],
       backend: 'bullmq' as const,
     },
-    rabbitmq: {
-      url: 'amqp://localhost:5672/stas',
-      prefetchCount: 10,
-      reconnectDelayMs: 5000,
-      maxReconnectAttempts: 10,
-      tlsRejectUnauthorized: true,
-      tlsCertPath: undefined as string | undefined,
-      tlsKeyPath: undefined as string | undefined,
-      tlsCaPath: undefined as string | undefined,
-      tlsServerName: undefined as string | undefined,
-    },
     bridge: {
       rpcTimeoutMs: 30000,
       maxRetries: 3,
