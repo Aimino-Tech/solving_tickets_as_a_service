@@ -1,0 +1,288 @@
+# =============================================================================
+# Coverage Enforcement (AIM-2033 — Anti-Liar Gate)
+#
+# This workflow enforces that every production function has a corresponding
+# test and that coverage thresholds are met:
+#   - Lines:    >= 90%
+#   - Branches: >= 80%
+#   - Functions:>= 85%
+#   - Statements:>= 90%
+#
+# It runs:
+#   1. vitest --coverage to measure line/branch/function/statement coverage
+#   2. Threshold enforcement via scripts/coverage-enforce.sh
+#   3. Stryker mutation testing (optional, on schedule or dispatch)
+#   4. Anti-Liar Gate module check (production functions ↔ test mapping)
+#
+# Dependencies: actions/setup-node (npm ci), vitest with @vitest/coverage-v8
+# =============================================================================
+
+name: Anti-Liar Coverage Enforcement
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly full mutation run on Sunday midnight
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    inputs:
+      run_mutation:
+        description: 'Run Stryker mutation testing (takes ~5 min)'
+        required: false
+        default: 'false'
+      verbose:
+        description: 'Verbose output'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  CI: true
+
+jobs:
+  ##############################################################################
+  # COVERAGE ENFORCEMENT
+  ##############################################################################
+  coverage-enforce:
+    name: Coverage Enforcement (Lines >= 90%, Branches >= 80%)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run coverage enforcement (vitest --coverage)
+        id: coverage
+        run: |
+          echo "::group::Coverage Measurement"
+          npx vitest run --coverage --reporter=verbose 2>&1 | tee coverage-output.txt
+          echo "::endgroup::"
+          # Parse coverage from output
+          LINES=$(grep -oP 'lines\s*:\s*\K\d+\.?\d*(?=%)' coverage-output.txt | head -1 || echo "0")
+          BRANCHES=$(grep -oP 'branches\s*:\s*\K\d+\.?\d*(?=%)' coverage-output.txt | head -1 || echo "0")
+          FUNCTIONS=$(grep -oP 'functions\s*:\s*\K\d+\.?\d*(?=%)' coverage-output.txt | head -1 || echo "0")
+          STATEMENTS=$(grep -oP 'statements\s*:\s*\K\d+\.?\d*(?=%)' coverage-output.txt | head -1 || echo "0")
+
+          echo "lines=$LINES" >> "$GITHUB_OUTPUT"
+          echo "branches=$BRANCHES" >> "$GITHUB_OUTPUT"
+          echo "functions=$FUNCTIONS" >> "$GITHUB_OUTPUT"
+          echo "statements=$STATEMENTS" >> "$GITHUB_OUTPUT"
+
+      - name: Validate coverage thresholds
+        id: validate
+        env:
+          LINES: ${{ steps.coverage.outputs.lines }}
+          BRANCHES: ${{ steps.coverage.outputs.branches }}
+          FUNCTIONS: ${{ steps.coverage.outputs.functions }}
+          STATEMENTS: ${{ steps.coverage.outputs.statements }}
+        run: |
+          FAILED=false
+          [ -z "$LINES" ] && LINES=0
+          [ -z "$BRANCHES" ] && BRANCHES=0
+          [ -z "$FUNCTIONS" ] && FUNCTIONS=0
+          [ -z "$STATEMENTS" ] && STATEMENTS=0
+
+          echo "Coverage results:"
+          echo "  Lines:      ${LINES}%"
+          echo "  Branches:   ${BRANCHES}%"
+          echo "  Functions:  ${FUNCTIONS}%"
+          echo "  Statements: ${STATEMENTS}%"
+
+          if awk "BEGIN {exit !($LINES >= 90)}"; then
+            echo "✓ Lines coverage ${LINES}% meets threshold 90%"
+          else
+            echo "✗ Lines coverage ${LINES}% BELOW threshold 90%"
+            FAILED=true
+          fi
+
+          if awk "BEGIN {exit !($BRANCHES >= 80)}"; then
+            echo "✓ Branch coverage ${BRANCHES}% meets threshold 80%"
+          else
+            echo "✗ Branch coverage ${BRANCHES}% BELOW threshold 80%"
+            FAILED=true
+          fi
+
+          if awk "BEGIN {exit !($FUNCTIONS >= 85)}"; then
+            echo "✓ Function coverage ${FUNCTIONS}% meets threshold 85%"
+          else
+            echo "✗ Function coverage ${FUNCTIONS}% BELOW threshold 85%"
+            FAILED=true
+          fi
+
+          if awk "BEGIN {exit !($STATEMENTS >= 90)}"; then
+            echo "✓ Statement coverage ${STATEMENTS}% meets threshold 90%"
+          else
+            echo "✗ Statement coverage ${STATEMENTS}% BELOW threshold 90%"
+            FAILED=true
+          fi
+
+          if [ "$FAILED" = "true" ]; then
+            echo "❌ COVERAGE ENFORCEMENT FAILED"
+            exit 1
+          fi
+          echo "✅ All coverage thresholds met"
+
+  ##############################################################################
+  # MUTATION TESTING (on schedule, dispatch, or explicit trigger)
+  ##############################################################################
+  mutation-testing:
+    name: Mutation Testing (Stryker)
+    if: >
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'stryker'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Stryker mutation testing
+        id: stryker
+        run: |
+          echo "::group::Stryker Mutation Testing"
+          npx stryker run 2>&1 | tee stryker-output.txt
+          echo "::endgroup::"
+          # Extract mutation score
+          SCORE=$(grep -oP '\d+\.?\d*(?=% mutation)' stryker-output.txt | head -1 || echo "0")
+          echo "mutation_score=$SCORE" >> "$GITHUB_OUTPUT"
+
+      - name: Check mutation score
+        env:
+          SCORE: ${{ steps.stryker.outputs.mutation_score }}
+        run: |
+          if [ -z "$SCORE" ] || [ "$SCORE" = "0" ]; then
+            echo "⚠ Could not determine mutation score (stryker may have no mutants)"
+            exit 0
+          fi
+          echo "Mutation score: ${SCORE}%"
+          if awk "BEGIN {exit !($SCORE >= 60)}"; then
+            echo "✓ Mutation score ${SCORE}% meets break threshold 60%"
+          else
+            echo "⚠ Mutation score ${SCORE}% is below 60% — review test quality"
+          fi
+
+  ##############################################################################
+  # ANTI-LIAR GATE — production function ↔ test mapping check
+  ##############################################################################
+  anti-liar-gate:
+    name: Anti-Liar Gate (Function-Test Mapping)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check production function ↔ test mapping
+        id: function-check
+        run: |
+          echo "::group::Function-Test Mapping Check"
+          # List all exported functions in src/ (excluding __tests__)
+          echo "Scanning production functions..."
+
+          UNCOVERED=0
+          # Find all .ts source files
+          while IFS= read -r src_file; do
+            # Skip test files and type definition files
+            [[ "$src_file" == *__tests__* ]] && continue
+            [[ "$src_file" == *.d.ts ]] && continue
+
+            # Extract exported function/const names
+            FUNCTIONS=$(grep -oP 'export\s+(?:async\s+)?function\s+\K\w+' "$src_file" 2>/dev/null || true)
+            FUNCTIONS="$FUNCTIONS $(grep -oP 'export\s+(?:const|let|var)\s+\K\w+(?=\s*[:=])' "$src_file" 2>/dev/null || true)"
+
+            for fn in $FUNCTIONS; do
+              # Skip test helpers and common false positives
+              [[ "$fn" =~ ^(describe|it|test|beforeEach|afterEach|beforeAll|afterAll|expect|vi|jest|suite|setup|teardown)$ ]] && continue
+
+              # Derive expected test file paths
+              basename=$(basename "$src_file" .ts)
+              dirname=$(dirname "$src_file")
+              test_candidates=""
+
+              # Convention 1: co-located __tests__
+              test_candidates="$test_candidates ${dirname}/__tests__/${basename}.test.ts"
+              test_candidates="$test_candidates ${dirname}/__tests__/${basename}.spec.ts"
+
+              # Convention 2: src/__tests__ mirror
+              if [[ "$src_file" == src/* ]]; then
+                rest="${src_file#src/}"
+                rest_dir=$(dirname "$rest")
+                rest_base=$(basename "$rest" .ts)
+                test_candidates="$test_candidates src/__tests__/${rest_dir}/${rest_base}.test.ts"
+                test_candidates="$test_candidates src/__tests__/${rest_dir}/${rest_base}.spec.ts"
+              fi
+
+              FOUND=false
+              for tc in $test_candidates; do
+                if [ -f "$tc" ]; then
+                  # Check if test file references this function
+                  if grep -q "$fn" "$tc" 2>/dev/null; then
+                    FOUND=true
+                    echo "  ✓ $fn → $tc"
+                    break
+                  fi
+                fi
+              done
+
+              if [ "$FOUND" = false ]; then
+                echo "  ✗ $fn ($src_file) — no matching test found"
+                UNCOVERED=$((UNCOVERED + 1))
+              fi
+            done
+          done < <(find src/ -name '*.ts' -not -path '*/node_modules/*' -not -path '*/__tests__/*' -not -name '*.d.ts' 2>/dev/null | sort)
+
+          echo ""
+          if [ "$UNCOVERED" -gt 0 ]; then
+            echo "❌ $UNCOVERED function(s) without corresponding tests"
+            echo "function_uncovered=$UNCOVERED" >> "$GITHUB_OUTPUT"
+            exit 1
+          else
+            echo "✅ All production functions have corresponding tests"
+            echo "function_uncovered=0" >> "$GITHUB_OUTPUT"
+          fi
+          echo "::endgroup::"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Coverage Enforcement Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lines >= 90% | ${{ steps.coverage.outputs.lines }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branches >= 80% | ${{ steps.coverage.outputs.branches }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Functions >= 85% | ${{ steps.coverage.outputs.functions }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Statements >= 90% | ${{ steps.coverage.outputs.statements }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Function-Test Mapping | ${{ steps.function-check.outputs.function_uncovered }} uncovered |" >> $GITHUB_STEP_SUMMARY
