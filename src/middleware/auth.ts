@@ -1,37 +1,41 @@
 /**
- * Session + OAuth middleware for the dashboard API.
+ * Auth middleware — API key + JWT authentication.
  *
- * Reads the bearer token (JWT issued after OAuth), resolves the GitHub user,
- * and attaches an `AuthUser` to the request.  Used by all /api/* routes that
- * need to know which GitHub user is making the request.
+ * Provides three tiers of auth:
+ *   1. **API key** (`requireApiKey`) — checks `X-API-Key` header against
+ *      configured admin/MCP API keys.
+ *   2. **JWT session** (`requireSession`) — validates a JWT from the
+ *      `stas_token` cookie or `Authorization: Bearer` header (existing
+ *      dashboard OAuth flow).
+ *   3. **Combined** (`requireAuth`) — tries API key first, falls back to JWT.
+ *      Use this for routes that accept either auth method.
  *
- * Two modes:
- *   1. **session** (default) — validates a JWT stored in the `stas_token`
- *      cookie or `Authorization` header.
- *   2. **optional** — attaches user info if present, but does not reject
- *      unauthenticated requests (useful for public-but-personalised pages).
+ * Also exports `optionalSession` and `optionalAuth` variants that attach the
+ * user if valid but do NOT reject unauthenticated requests.
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { createAppOctokit } from '@stas/github-client';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 
-const log = rootLogger.child({ module: 'session-middleware' });
+const log = rootLogger.child({ module: 'auth-middleware' });
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface AuthUser {
-  /** GitHub user database ID. */
+  /** GitHub user database ID (JWT) or 0 for API-key-authed requests. */
   id: number;
 
-  /** GitHub login (username). */
+  /** GitHub login (username) or 'api-key' for API-key-authed requests. */
   login: string;
 
-  /** Avatar URL from GitHub. */
+  /** Avatar URL from GitHub (null for API key). */
   avatarUrl: string | null;
+
+  /** Auth method used. */
+  method: 'api-key' | 'session';
 }
 
 export interface SessionPayload {
@@ -46,14 +50,68 @@ export interface SessionPayload {
 declare global {
   namespace Express {
     interface Request {
-      /** Populated by `requireSession` or `optionalSession`. */
+      /** Populated by `requireSession`, `optionalSession`, `requireAuth`,
+       *  or `optionalAuth`. */
       sessionUser?: AuthUser;
     }
   }
 }
 
 // ---------------------------------------------------------------------------
-// Token helpers
+// API key auth
+// ---------------------------------------------------------------------------
+
+/** Well-known header for API key authentication. */
+export const API_KEY_HEADER = 'x-api-key';
+
+/**
+ * Collect all configured API keys that should be accepted.
+ * Checks ADMIN_API_KEY and MCP_API_KEY config values.
+ */
+function getValidApiKeys(): string[] {
+  const keys: string[] = [];
+  if (config.admin.apiKey) keys.push(config.admin.apiKey);
+  if (config.mcp.apiKey) keys.push(config.mcp.apiKey);
+  return keys;
+}
+
+/**
+ * Express middleware — requires a valid API key via the `X-API-Key` header.
+ *
+ * Matches against configured `ADMIN_API_KEY` and `MCP_API_KEY` env vars.
+ * Returns 401 if the key is missing or invalid.
+ */
+export function requireApiKey(req: Request, res: Response, next: NextFunction): void {
+  const apiKey = req.headers[API_KEY_HEADER];
+
+  if (!apiKey || typeof apiKey !== 'string') {
+    res.status(401).json({ error: 'API key required via X-API-Key header' });
+    return;
+  }
+
+  const validKeys = getValidApiKeys();
+  if (validKeys.length === 0) {
+    log.warn('No API keys configured — requireApiKey will reject all requests');
+    res.status(401).json({ error: 'API key authentication is not configured' });
+    return;
+  }
+
+  if (!validKeys.includes(apiKey)) {
+    res.status(401).json({ error: 'Invalid API key' });
+    return;
+  }
+
+  req.sessionUser = {
+    id: 0,
+    login: 'api-key',
+    avatarUrl: null,
+    method: 'api-key',
+  };
+  next();
+}
+
+// ---------------------------------------------------------------------------
+// JWT session helpers
 // ---------------------------------------------------------------------------
 
 const JWT_SECRET = config.github.oauthClientSecret || 'stas-dev-jwt-secret-do-not-use-in-prod';
@@ -109,7 +167,7 @@ export function verifySessionToken(token: string): SessionPayload | null {
 }
 
 // ---------------------------------------------------------------------------
-// Middleware
+// JWT session middleware
 // ---------------------------------------------------------------------------
 
 /**
@@ -117,7 +175,7 @@ export function verifySessionToken(token: string): SessionPayload | null {
  * Attaches `req.sessionUser` on success or returns 401.
  */
 export function requireSession(req: Request, res: Response, next: NextFunction): void {
-  const user = resolveUser(req);
+  const user = resolveSessionUser(req);
   if (!user) {
     res.status(401).json({ error: 'Authentication required' });
     return;
@@ -131,7 +189,77 @@ export function requireSession(req: Request, res: Response, next: NextFunction):
  * present, but does not reject unauthenticated requests.
  */
 export function optionalSession(req: Request, _res: Response, next: NextFunction): void {
-  const user = resolveUser(req);
+  const user = resolveSessionUser(req);
+  if (user) {
+    req.sessionUser = user;
+  }
+  next();
+}
+
+// ---------------------------------------------------------------------------
+// Combined auth middleware (API key + JWT)
+// ---------------------------------------------------------------------------
+
+/**
+ * Express middleware — requires authentication via API key or JWT session.
+ *
+ * Tries API key first (fast, no crypto), then falls back to JWT session.
+ * Returns 401 if neither method yields a valid identity.
+ */
+export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  // 1. Try API key
+  const apiKey = req.headers[API_KEY_HEADER];
+  if (apiKey && typeof apiKey === 'string') {
+    const validKeys = getValidApiKeys();
+    if (validKeys.length > 0 && validKeys.includes(apiKey)) {
+      req.sessionUser = {
+        id: 0,
+        login: 'api-key',
+        avatarUrl: null,
+        method: 'api-key',
+      };
+      next();
+      return;
+    }
+    // Invalid API key — return 401 immediately (don't fall through to JWT)
+    res.status(401).json({ error: 'Invalid API key' });
+    return;
+  }
+
+  // 2. Try JWT session
+  const user = resolveSessionUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+  req.sessionUser = user;
+  next();
+}
+
+/**
+ * Express middleware — attaches user if authenticated via API key or JWT,
+ * but does not reject unauthenticated requests.
+ */
+export function optionalAuth(req: Request, _res: Response, next: NextFunction): void {
+  // 1. Try API key
+  const apiKey = req.headers[API_KEY_HEADER];
+  if (apiKey && typeof apiKey === 'string') {
+    const validKeys = getValidApiKeys();
+    if (validKeys.length > 0 && validKeys.includes(apiKey)) {
+      req.sessionUser = {
+        id: 0,
+        login: 'api-key',
+        avatarUrl: null,
+        method: 'api-key',
+      };
+      next();
+      return;
+    }
+    // Invalid key — silently ignore, don't block
+  }
+
+  // 2. Try JWT session
+  const user = resolveSessionUser(req);
   if (user) {
     req.sessionUser = user;
   }
@@ -146,7 +274,7 @@ export function optionalSession(req: Request, _res: Response, next: NextFunction
  * Resolve the AuthUser from the request — checks Cookie first, then
  * Authorization header.
  */
-function resolveUser(req: Request): AuthUser | null {
+function resolveSessionUser(req: Request): AuthUser | null {
   // 1. Try cookie (browser-based dashboard)
   const cookieToken = parseCookies(req)?.['stas_token'];
   if (cookieToken) {
@@ -169,6 +297,7 @@ function payloadToUser(payload: SessionPayload): AuthUser {
     id: payload.sub,
     login: payload.login,
     avatarUrl: payload.avatarUrl,
+    method: 'session',
   };
 }
 
