@@ -4,6 +4,7 @@
   "private": true,
   "description": "Label a GitHub issue. Our bot investigates, fixes, and opens a PR. Backed by OpenCode.",
   "type": "module",
+  "workspaces": ["packages/github-client"],
   "engines": {
     "node": ">=20"
   },
