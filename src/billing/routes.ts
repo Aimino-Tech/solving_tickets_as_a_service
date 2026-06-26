@@ -24,7 +24,6 @@ import {
   createBillingPortalSession,
   cancelSubscriptionAtPeriodEnd,
   reactivateSubscription,
-  BillingError,
 } from './stripe.js';
 import { getTrialStatus, startTrial } from './trial.js';
 import { createBillingWebhookHandler } from './webhook.js';
@@ -183,10 +182,6 @@ router.post('/subscription/create-checkout', async (req: Request, res: Response)
 
     res.json(session);
   } catch (err) {
-    if (err instanceof BillingError) {
-      res.status(err.statusCode).json({ error: err.message, code: err.code });
-      return;
-    }
     log.error({ err: String(err) }, 'Failed to create checkout session');
     res.status(500).json({ error: 'Failed to create checkout session' });
   }
@@ -222,10 +217,6 @@ router.post('/subscription/portal', async (req: Request, res: Response) => {
     const session = await createBillingPortalSession(customerId, returnUrl || defaultReturnUrl);
     res.json(session);
   } catch (err) {
-    if (err instanceof BillingError) {
-      res.status(err.statusCode).json({ error: err.message, code: err.code });
-      return;
-    }
     log.error({ err: String(err) }, 'Failed to create billing portal session');
     res.status(500).json({ error: 'Failed to create billing portal session' });
   }
@@ -258,10 +249,6 @@ router.post('/subscription/cancel', async (req: Request, res: Response) => {
     await cancelSubscriptionAtPeriodEnd(subscriptionId);
     res.json({ success: true, message: 'Subscription will be canceled at the end of the current billing period.' });
   } catch (err) {
-    if (err instanceof BillingError) {
-      res.status(err.statusCode).json({ error: err.message, code: err.code });
-      return;
-    }
     log.error({ err: String(err) }, 'Failed to cancel subscription');
     res.status(500).json({ error: 'Failed to cancel subscription' });
   }
@@ -294,10 +281,6 @@ router.post('/subscription/reactivate', async (req: Request, res: Response) => {
     await reactivateSubscription(subscriptionId);
     res.json({ success: true, message: 'Subscription reactivated.' });
   } catch (err) {
-    if (err instanceof BillingError) {
-      res.status(err.statusCode).json({ error: err.message, code: err.code });
-      return;
-    }
     log.error({ err: String(err) }, 'Failed to reactivate subscription');
     res.status(500).json({ error: 'Failed to reactivate subscription' });
   }

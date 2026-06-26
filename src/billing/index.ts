@@ -27,7 +27,6 @@ export {
   reactivateSubscription,
   updateSubscriptionPlan,
   createStripeProductsAndPrices,
-  BillingError,
 } from './stripe.js';
 
 export {
