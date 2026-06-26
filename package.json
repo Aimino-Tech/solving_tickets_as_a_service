@@ -62,7 +62,11 @@
     "leave-it-cleaner:lsp": "bash scripts/leave-it-cleaner.sh --skip-tests",
     "leave-it-cleaner:tests": "bash scripts/leave-it-cleaner.sh --skip-lsp",
     "leave-it-cleaner:json": "bash scripts/leave-it-cleaner.sh --json",
-    "release:dry-run": "bash scripts/release-dry-run.sh"
+    "release:dry-run": "bash scripts/release-dry-run.sh",
+    "coverage-enforce": "bash scripts/coverage-enforce.sh",
+    "coverage-enforce:mutation": "bash scripts/coverage-enforce.sh --mutation",
+    "coverage-enforce:changed": "bash scripts/coverage-enforce.sh --changed",
+    "anti-liar-gate": "tsx src/agent/antiLiarGate.ts"
   },
   "dependencies": {
     "@octokit/auth-app": "^7.1.0",
