@@ -10,9 +10,8 @@ from . import linear_poll
 from .sandbox_gc import sandbox_gc
 from .multi_verification import multi_round_verify
 from .merge_queue import process_merge_queue, resolve_conflicts, label_conflict_pr
+from .background import data_backup, prune_sessions, heartbeat_check, sync_resources
 
-# Import status-comment signal handlers so they connect at worker start.
-# (Import for side effect — the module registers Celery signal handlers.)
 # Import the E2E health check task so it is discoverable.
 from workers.health import e2e_check  # noqa: F401
 
@@ -39,4 +38,8 @@ __all__ = [
     "process_merge_queue",
     "resolve_conflicts",
     "label_conflict_pr",
+    "data_backup",
+    "prune_sessions",
+    "heartbeat_check",
+    "sync_resources",
 ]

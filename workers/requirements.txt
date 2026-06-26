@@ -16,5 +16,11 @@ mcp>=1.0.0,<2.0.0
 pytest-asyncio>=0.24.0,<1.0.0
 pybreaker==1.4.1
 
+# Database-backed Celery Beat scheduler for dynamic schedule management
+django-celery-beat>=2.6,<3.0
+
+# Timezone support for Celery Beat schedules
+tzdata>=2024.1
+
 # Sentry SDK for error monitoring and performance tracing
 sentry-sdk==2.18.0
