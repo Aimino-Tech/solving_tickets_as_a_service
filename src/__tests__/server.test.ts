@@ -182,6 +182,7 @@ vi.mock('../config.js', () => ({
     webhookRetry: { pollIntervalMs: 15000, batchSize: 10 },
     metering: { freeMonthlyCredits: 100 },
     usageCredits: { fixRun: 50, triage: 10, sandbox: 5 },
+    dataPrivacy: { dpaVersion: '1.0' },
   },
 }));
 
@@ -619,13 +620,19 @@ describe('server', () => {
     });
   });
 
-  describe('404 handler', () => {
-    it('returns 404 for unknown routes', async () => {
+  describe('404 handler (governance error schema)', () => {
+    it('returns 404 with standard error schema for unknown routes', async () => {
       const { createApp } = await import('../server.js');
       app = createApp();
 
       const response = await fetchApp(app, '/unknown-route');
       expect(response.status).toBe(404);
+      const body = JSON.parse(response.body);
+      expect(body).toHaveProperty('error');
+      expect(body.error).toHaveProperty('code', 'NOT_FOUND');
+      expect(body.error).toHaveProperty('message', 'Not found');
+      expect(body.error).toHaveProperty('details');
+      expect(body.error).toHaveProperty('correlation_id');
     });
 
     it('returns 404 for POST to unknown path', async () => {
@@ -634,6 +641,9 @@ describe('server', () => {
 
       const response = await fetchApp(app, '/api/unknown', { method: 'POST' });
       expect(response.status).toBe(404);
+      const body = JSON.parse(response.body);
+      expect(body).toHaveProperty('error');
+      expect(body.error).toHaveProperty('code', 'NOT_FOUND');
     });
   });
 
