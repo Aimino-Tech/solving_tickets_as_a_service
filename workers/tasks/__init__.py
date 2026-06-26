@@ -13,6 +13,10 @@ from .merge_queue import process_merge_queue, resolve_conflicts, label_conflict_
 
 # Import status-comment signal handlers so they connect at worker start.
 # (Import for side effect — the module registers Celery signal handlers.)
+# Import the E2E health check task so it is discoverable.
+from workers.health import e2e_check  # noqa: F401
+
+# Import status-comment signal handlers so they connect at worker start.
 from workers.notifications import status_comments  # noqa: F401
 
 __all__ = [
