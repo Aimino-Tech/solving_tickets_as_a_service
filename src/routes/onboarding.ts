@@ -14,7 +14,6 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -24,17 +23,8 @@ const log = rootLogger.child({ module: 'onboarding' });
 // Rate Limiting: 10 requests per minute for onboarding endpoints
 // ---------------------------------------------------------------------------
 
-const onboardingLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
 const router = Router();
 
-router.use(onboardingLimiter);
 
 // ---------------------------------------------------------------------------
 // Helper: extract tenant / account identifier

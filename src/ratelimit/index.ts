@@ -51,7 +51,6 @@ export type { ConcurrencyResult, ConcurrencyManagerOptions } from './concurrency
 export {
   rateLimitMiddleware,
   addRateLimitHeaders,
-  createRateLimiter,
 } from './middleware.js';
 export type { RateLimitMiddlewareOptions } from './middleware.js';
 

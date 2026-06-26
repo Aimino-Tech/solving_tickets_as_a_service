@@ -4,7 +4,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 vi.mock('express', () => ({ Router: vi.fn(() => ({ use: vi.fn().mockReturnThis(), get: vi.fn().mockReturnThis(), post: vi.fn().mockReturnThis() })) }));
-vi.mock('express-rate-limit', () => ({ default: vi.fn(() => (req: any, res: any, next: any) => next()) }));
 vi.mock('../../audit/repository.js', () => ({ auditRepository: { query: vi.fn() } }));
 vi.mock('../../audit/service.js', () => ({ logAdminAction: vi.fn() }));
 vi.mock('../../db/repositories/index.js', () => ({ accountsRepository: { list: vi.fn(), findById: vi.fn(), update: vi.fn() }, creditsRepository: { getBalance: vi.fn(), credit: vi.fn(), deduct: vi.fn() } }));

@@ -1,0 +1,75 @@
+# =============================================================================
+# .trufflehogignore — trufflehog false positive suppression
+#
+# trufflehog scans git history for secrets. Entries here suppress verified
+# or unverified matches that are KNOWN SAFE (test fixtures, example data,
+# documentation, infrastructure configs with known non-secret values).
+#
+# Format:
+#   - Lines starting with # are comments
+#   - Blank lines are ignored
+#   - Each non-comment line is a regex pattern matched against the
+#     trufflehog JSON result path + secret fields
+#   - Patterns use Go-style regex syntax
+#
+# See: https://github.com/trufflesecurity/trufflehog
+# =============================================================================
+
+# --- Test fixtures & example data --------------------------------------------
+# Test files that contain dummy API keys/credentials for unit testing
+.*/tests/.*\.(test|spec)\.[jt]sx?$
+.*/__tests__/.*$
+.*/__fixtures__/.*$
+.*/test-data/.*$
+
+# Example .env files (documentation-only, never loaded in production)
+\.env\.example$
+\.env\.sample$
+\.env\.template$
+
+# Documentation containing fake credentials for illustrative purposes
+.*/docs/.*\.md$
+README\.md$
+CONTRIBUTING\.md$
+DEVELOPMENT\.md$
+ARCHITECTURE\.md$
+
+# --- Known false positive patterns ------------------------------------------
+# High-entropy strings in non-sensitive contexts
+# Docker Compose files with dev-only credentials
+docker-compose\.yml$
+docker-compose\.dev\.yml$
+docker-compose\.e2e\.yml$
+
+# Lockfiles (package manager artifacts, not credentials)
+package-lock\.json$
+pnpm-lock\.yaml$
+yarn\.lock$
+
+# Go sum files
+go\.sum$
+
+# JSON Web Key sets and OpenAPI specs (example keys)
+openapi\.yaml$
+openapi\.json$
+
+# Base64-encoded non-secret data (e.g., CSS sprites, fonts)
+.*\.(png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf)$
+
+# --- Benchmark/eval fixture data ---------------------------------------------
+# Eval benchmark datasets may contain synthetic credential strings
+eval/.*
+evaluation/.*
+benchmark/.*
+
+# --- Stripe test keys (well-known test-mode keys are safe) -------------------
+# pk_test_*, sk_test_*, etc. — these appear in test configs
+# Note: trufflehog may flag these as unverified; suppress if intentional
+
+# --- NPM/GitHub tokens in CI configs (managed by GitHub Secrets) -------------
+\.github/workflows/.*\.yml$
+
+# --- Code generation artifacts -----------------------------------------------
+# Generated code that may contain placeholder tokens
+.*/generated/.*
+.*/gen/.*
