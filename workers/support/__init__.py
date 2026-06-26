@@ -11,6 +11,7 @@ from workers.support.escalation import (
     check_tenant_health,
     escalate_tenant,
     run_escalation_checks,
+    validate_config,
 )
 from workers.support.ticketing import (
     CommentResult,
@@ -35,6 +36,7 @@ __all__ = [
     "check_tenant_health",
     "escalate_tenant",
     "run_escalation_checks",
+    "validate_config",
     "create_ticket",
     "get_ticket",
     "add_comment",
