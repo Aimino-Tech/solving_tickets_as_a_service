@@ -1,12 +1,9 @@
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { rootLogger } from '../utils/logger.js';
 import { getDpaStatus, acceptDpa, DPA_CURRENT_VERSION } from '../billing/dpa.js';
 
 const log = rootLogger.child({ module: 'dpa-api' });
 const router = Router();
-const dpaLimiter = rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } });
-router.use(dpaLimiter);
 
 function getAccountId(req: Request): number | undefined {
   const headerId = req.headers['x-account-id'] as string | undefined;
