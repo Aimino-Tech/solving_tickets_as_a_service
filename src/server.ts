@@ -1,12 +1,10 @@
 /**
- * Express API server -- webhook receiver and health endpoint.
+ * Express API server -- webhook receiver.
  *
  * Features:
  * - Raw body middleware for webhook signature verification
  * - Request ID middleware for log correlation
  * - Structured access logging with pino
- * - GET /health endpoint
- * - GET /metrics endpoint (Prometheus-style webhook metrics)
  * - POST /webhook -- GitHub webhook receiver via @octokit/webhooks
  * - POST /webhook/stripe -- Stripe webhook for credit purchase events
  * - Admin webhook management API at /admin/webhooks
@@ -33,7 +31,6 @@ import helmet from 'helmet';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
-import { getQueueHealth } from './health/queueHealth.js';
 import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { getTracker, initTrackers } from './trackers/index.js';
@@ -50,7 +47,6 @@ import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
 import { recordWebhookDuration } from './webhooks/metrics.js';
-import { renderMetrics } from './webhooks/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
@@ -185,34 +181,6 @@ export async function createApp(): Promise<express.Application> {
   // -- Slack Bolt receiver (interactive messages) ---------------------------
   const bolt = getSlackBoltApp();
   bolt.mountOn(app);
-
-  // -- Health check ---------------------------------------------------------
-  app.get('/health', (_req: Request, res: Response) => {
-    res.json({
-      status: 'ok',
-      label: config.stas.label,
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-    });
-  });
-
-  // -- Queue health endpoint ------------------------------------------------
-  app.get('/health/queue', async (_req: Request, res: Response) => {
-    try {
-      const report = await getQueueHealth();
-      const httpStatus = report.status === 'critical' ? 503 : report.status === 'degraded' ? 200 : 200;
-      res.status(httpStatus).json(report);
-    } catch (err) {
-      res.status(500).json({ error: 'Failed to get queue health', details: String(err) });
-    }
-  });
-
-  // -- Prometheus metrics endpoint ------------------------------------------
-  app.get('/metrics', (_req: Request, res: Response) => {
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.send(renderMetrics());
-
-  });
 
   // -- Initialize trackers --------------------------------------------------
   initTrackers();
