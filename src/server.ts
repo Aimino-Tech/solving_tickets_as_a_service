@@ -741,14 +741,18 @@ export async function createApp(): Promise<express.Application> {
   }
   // -- 404 handler ----------------------------------------------------------
 
-  app.use((_req: Request, res: Response) => {
-    res.status(404).json({ error: 'Not found' });
+  app.use((req: Request, res: Response) => {
+    res.status(404).json({
+      error: { code: 'NOT_FOUND', message: 'Not found', correlation_id: req.requestId },
+    });
   });
 
   // -- Global error handler -------------------------------------------------
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    log.error({ err: String(err) }, 'Unhandled error');
-    res.status(500).json({ error: 'Internal server error' });
+  app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+    log.error({ err: String(err), requestId: req.requestId }, 'Unhandled error');
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Internal server error', correlation_id: req.requestId },
+    });
   });
 
   return app;

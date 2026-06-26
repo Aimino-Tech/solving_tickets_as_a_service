@@ -21,7 +21,7 @@ import { Router, type Request, type Response } from 'express';
 import { rootLogger } from '../utils/logger.js';
 import { PLANS } from '../billing/plans.js';
 import type { PlanId } from '../billing/plans.js';
-import { createSubscriptionCheckoutSession, BillingError } from '../billing/stripe.js';
+import { createSubscriptionCheckoutSession } from '../billing/stripe.js';
 import { createBillingWebhookHandler } from '../billing/webhook.js';
 
 const log = rootLogger.child({ module: 'billing-api' });
@@ -110,10 +110,6 @@ router.post('/create-checkout', async (req: Request, res: Response) => {
 
     res.json(session);
   } catch (err) {
-    if (err instanceof BillingError) {
-      res.status(err.statusCode).json({ error: err.message, code: err.code });
-      return;
-    }
     log.error({ err: String(err) }, 'Failed to create checkout session');
     res.status(500).json({ error: 'Failed to create checkout session' });
   }
