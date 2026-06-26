@@ -429,8 +429,9 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
     // Re-enqueue based on source
     if (webhookEvent.source === 'github') {
       const { createGithubWebhooks } = await import('../webhooks/github.js');
-      const { enqueueIssue } = await import('../queue/issueQueue.js');
-      const githubWebhooks = createGithubWebhooks();
+      const { createIssueQueue } = await import('../queue/issueQueue.js');
+      const queue = createIssueQueue();
+      const githubWebhooks = createGithubWebhooks(queue);
 
       const payload = typeof webhookEvent.payload === 'string'
         ? webhookEvent.payload

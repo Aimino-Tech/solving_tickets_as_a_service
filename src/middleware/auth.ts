@@ -14,6 +14,7 @@
  * user if valid but do NOT reject unauthenticated requests.
  */
 
+import { createHmac } from 'node:crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
@@ -134,7 +135,7 @@ export function createSessionToken(payload: Omit<SessionPayload, 'iat' | 'exp'>)
     JSON.stringify({ ...payload, iat: now, exp }),
   );
 
-  const signature = createHmac(encodedHeader, encodedPayload);
+  const signature = createHmacToken(encodedHeader, encodedPayload);
   return `${encodedHeader}.${encodedPayload}.${signature}`;
 }
 
@@ -149,7 +150,7 @@ export function verifySessionToken(token: string): SessionPayload | null {
   const [encodedHeader, encodedPayload, signature] = parts;
 
   // Verify signature
-  const expectedSig = createHmac(encodedHeader, encodedPayload);
+  const expectedSig = createHmacToken(encodedHeader, encodedPayload);
   if (!constantTimeEqual(signature, expectedSig)) return null;
 
   // Decode payload
@@ -321,9 +322,8 @@ function base64url(data: string): string {
     .replace(/\//g, '_');
 }
 
-function createHmac(header: string, payload: string): string {
-  const { createHmac: hm } = require('node:crypto') as typeof import('node:crypto');
-  return hm('sha256', JWT_SECRET)
+function createHmacToken(header: string, payload: string): string {
+  return createHmac('sha256', JWT_SECRET)
     .update(`${header}.${payload}`)
     .digest('base64url')
     .replace(/=+$/, '');

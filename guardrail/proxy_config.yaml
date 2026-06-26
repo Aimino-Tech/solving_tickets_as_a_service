@@ -1,0 +1,111 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# LiteLLM Proxy Configuration — Slop-Intent Guardrail
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Place this file next to your LiteLLM proxy binary / Docker entrypoint.
+# Run: litellm --config proxy_config.yaml
+#
+# How it works:
+#   1. OpenCode/STAS agent sends a request to LiteLLM proxy
+#   2. LiteLLM forwards to the LLM (deepseek, anthropic, openai)
+#   3. LLM responds with content + reasoning/thinking traces
+#   4. SlopIntentGuardrail inspects ALL of the above for slop patterns
+#   5. If slop detected → LiteLLM returns HTTP 400 with detection details
+#   6. OpenCode receives the error → agent retries with corrected behavior
+#
+# Model setup:
+#   - Point each model at the correct API endpoint
+#   - The guardrail works on any model that exposes reasoning_content
+#     (deepseek-reasoner, openai o-series, anthropic claude sonnet)
+#
+# Required environment variables:
+#   DEEPSEEK_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY
+#
+# References:
+#   - https://docs.litellm.ai/docs/proxy/guardrails/custom_guardrail
+#   - https://docs.litellm.ai/docs/reasoning_content
+
+model_list:
+  # ── DeepSeek (strong thinking traces) ──────────────────────────────────
+  - model_name: deepseek-reasoner
+    litellm_params:
+      model: deepseek/deepseek-reasoner
+      api_key: os.environ/DEEPSEEK_API_KEY
+      rpm: 30
+
+  - model_name: deepseek-chat
+    litellm_params:
+      model: deepseek/deepseek-chat
+      api_key: os.environ/DEEPSEEK_API_KEY
+      rpm: 60
+
+  # ── Anthropic (thinking blocks via extended thinking) ──────────────────
+  - model_name: claude-sonnet
+    litellm_params:
+      model: anthropic/claude-sonnet-4-20250514
+      api_key: os.environ/ANTHROPIC_API_KEY
+      rpm: 50
+
+  - model_name: claude-haiku
+    litellm_params:
+      model: anthropic/claude-3-haiku-20240307
+      api_key: os.environ/ANTHROPIC_API_KEY
+      rpm: 100
+
+  # ── OpenAI (o-series reasoning) ────────────────────────────────────────
+  - model_name: o3-mini
+    litellm_params:
+      model: openai/o3-mini
+      api_key: os.environ/OPENAI_API_KEY
+      rpm: 100
+
+# ── Logger for slop detection auditing ──────────────────────────────────────
+litellm_settings:
+  success_callback: ["langfuse"]  # Optional: audit all LLM calls
+  failure_callback: ["sentry"]    # Optional: alert on slop detections
+
+# ── Guardrails ───────────────────────────────────────────────────────────────
+guardrails:
+  # ═══════════════════════════════════════════════════════════════════════
+  # Level 1: Slop-intent detection in thinking traces
+  # ═══════════════════════════════════════════════════════════════════════
+  # Intercepts at the LLM response level. Scans reasoning_content
+  # (deepseek, openai) and thinking_blocks (anthropic) for slop patterns.
+  #
+  # Mode: post_call — runs after model responds, before response is
+  #   returned to OpenCode. Can fully block non-streaming responses.
+  # ─────────────────────────────────────────────────────────────────────
+  - guardrail_name: slop-detector-thinking
+    litellm_params:
+      guardrail: guardrail.slop_guardrail.SlopIntentGuardrail
+      mode: post_call
+      default_on: true                    # Auto-enable on ALL requests
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Level 2: Audit-only for streaming responses
+  # ═══════════════════════════════════════════════════════════════════════
+  # For streaming requests, LiteLLM delivers chunks before guardrail
+  # evaluates. This hook logs violations for downstream enforcement.
+  # ─────────────────────────────────────────────────────────────────────
+  - guardrail_name: slop-detector-streaming
+    litellm_params:
+      guardrail: guardrail.slop_guardrail.SlopIntentGuardrail
+      mode: post_call
+      default_on: true
+
+# ── Router settings ─────────────────────────────────────────────────────────
+router_settings:
+  routing_strategy: "latency-based-routing"
+  allowed_fails: 3
+  num_retries: 1
+  fallbacks:
+    - deepseek-reasoner: deepseek-chat
+    - claude-sonnet: claude-haiku
+    - o3-mini: deepseek-chat
+
+# ── General settings ─────────────────────────────────────────────────────────
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/LITELLM_DATABASE_URL
+  proxy_batch_write_interval: 60
+  alerting: ["slack"]

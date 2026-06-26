@@ -7,7 +7,7 @@ import {
   gateGhostcheck,
   gateVerdictTestIntegrity,
   gateTraceCorePatterns,
-} from '../../agent/qualityGates.js';
+} from '../../agent/quality-gates.js';
 
 function createSandbox(mockImpl?: any) {
   return {

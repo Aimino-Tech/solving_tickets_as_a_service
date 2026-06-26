@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { gateSyntheticDataCheck } from '../../agent/qualityGates.js';
+import { gateSyntheticDataCheck } from '../../agent/quality-gates.js';
 
 function createSandbox() {
   return { exec: vi.fn().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 }) } as any;
