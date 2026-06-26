@@ -27,7 +27,7 @@ import crypto from 'node:crypto';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
-import rateLimit from 'express-rate-limit';
+
 import cors from 'cors';
 import helmet from 'helmet';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
@@ -170,17 +170,7 @@ export async function createApp(): Promise<express.Application> {
   // -- URL-encoded body parsing (with size limit) ---------------------------
   app.use(express.urlencoded({ extended: true, limit: config.security.requestBodyLimit }));
 
-  // -- Rate limiter for webhook routes ---------------------------------------
-  const limiter = rateLimit({
-    windowMs: config.stas.rateLimitWindowMs,
-    limit: config.stas.rateLimitMax,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-  });
-  app.use('/webhook', limiter);
-
-  // -- Credit-based rate limiter (per-account, per-repo, per-IP) ----------
+  // -- Governance Proxy rate limiting (per-account, per-repo, per-IP) ----------
   app.use('/webhook', rateLimitMiddleware());
 
   // -- Slack Bolt receiver (interactive messages) ---------------------------

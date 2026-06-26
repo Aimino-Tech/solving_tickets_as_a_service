@@ -14,7 +14,6 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { webhookEventsRepository } from '../db/repositories/WebhookEventsRepository.js';
 import { adminAuthMiddleware } from '../security/adminAuth.js';
 import { rootLogger } from '../utils/logger.js';
@@ -26,19 +25,10 @@ const log = rootLogger.child({ module: 'admin-webhooks' });
 // Rate Limiting: 30 requests per minute on admin webhook endpoints
 // ---------------------------------------------------------------------------
 
-const adminWebhooksLimiter = rateLimit({
-  windowMs: 60_000, // 1 minute
-  limit: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
 const router = Router();
 
 // All admin webhook routes require authentication and rate limiting
 router.use(adminAuthMiddleware);
-router.use(adminWebhooksLimiter);
 
 /**
  * GET /admin/webhooks — List webhook events (paginated, filterable by source/status).

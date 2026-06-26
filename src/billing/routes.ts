@@ -15,7 +15,6 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { rootLogger } from '../utils/logger.js';
 import { PLANS } from './plans.js';
 import type { PlanId } from './plans.js';
@@ -40,15 +39,6 @@ const router = Router();
 // Rate limiting: 30 requests per minute per IP on billing endpoints
 // ---------------------------------------------------------------------------
 
-const billingLimiter = rateLimit({
-  windowMs: 60_000, // 1 minute
-  limit: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
-router.use(billingLimiter);
 
 // ---------------------------------------------------------------------------
 // Helper: extract account ID from request

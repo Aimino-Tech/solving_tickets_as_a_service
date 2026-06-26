@@ -13,21 +13,11 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'runs-public' });
 
-const runsLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: 120,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
 const router: Router = Router();
-router.use(runsLimiter);
 
 interface PublicRunResponse {
   id: string | number;

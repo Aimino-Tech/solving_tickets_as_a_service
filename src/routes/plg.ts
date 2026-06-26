@@ -22,7 +22,6 @@
 
 import crypto from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -32,17 +31,8 @@ const log = rootLogger.child({ module: 'plg-onboarding' });
 // Rate Limiting: 20 requests per minute for PLG onboarding endpoints
 // ---------------------------------------------------------------------------
 
-const plgLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
 const router = Router();
 
-router.use(plgLimiter);
 
 // ---------------------------------------------------------------------------
 // Helpers
