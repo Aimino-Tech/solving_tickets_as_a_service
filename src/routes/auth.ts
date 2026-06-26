@@ -14,23 +14,13 @@
 
 import crypto from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { requireSession, createSessionToken } from '../middleware/auth.js';
 
 const log = rootLogger.child({ module: 'auth-routes' });
 
-const authLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-});
-
 const router = Router();
-router.use(authLimiter);
 
 const STATE_COOKIE_OPTS = {
   httpOnly: true,
@@ -163,6 +153,31 @@ router.get('/me', requireSession, (req: Request, res: Response) => {
       avatarUrl: req.sessionUser!.avatarUrl,
     },
   });
+});
+
+router.get('/dev-login', (_req: Request, res: Response) => {
+  if (config.nodeEnv !== 'development') {
+    res.status(403).json({ error: 'Dev login only available in development mode' });
+    return;
+  }
+
+  const sessionToken = createSessionToken({
+    sub: 12345678,
+    login: 'dev-user',
+    avatarUrl: null,
+  });
+
+  const accept = _req.headers.accept ?? '';
+  if (accept.includes('application/json')) {
+    res.json({
+      token: sessionToken,
+      user: { githubId: '12345678', username: 'dev-user', avatarUrl: null },
+    });
+  } else {
+    res.cookie('stas_token', sessionToken, TOKEN_COOKIE_OPTS);
+    const dashboardUrl = process.env.DASHBOARD_URL || 'http://localhost:5173';
+    res.redirect(`${dashboardUrl}/login?token=${sessionToken}`);
+  }
 });
 
 router.post('/logout', (_req: Request, res: Response) => {

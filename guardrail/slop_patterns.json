@@ -1,0 +1,183 @@
+{
+  "$schema": "https://raw.githubusercontent.com/BerriAI/litellm/main/schemas/guardrail_patterns.json",
+  "version": "1.0.0",
+  "description": "Canonical slop-intent patterns for LiteLLM guardrail interception. Ordered by signal strength (highest first).",
+  "categories": {
+    "stub_intent": {
+      "description": "AI explicitly says it will stub/mock/placeholder something",
+      "severity": "high",
+      "patterns": [
+        "i'll stub",
+        "i'll just stub",
+        "let me mock",
+        "let me create a mock",
+        "let me create a stub",
+        "let me placeholder",
+        "stub this out",
+        "stub it out",
+        "just a stub",
+        "just a mock",
+        "just a placeholder",
+        "create a mock",
+        "create a placeholder",
+        "using a mock",
+        "use a mock",
+        "mock out",
+        "mock this up",
+        "stub out",
+        "stub this function",
+        "stub the function",
+        "stub the method"
+      ]
+    },
+    "deferral_intent": {
+      "description": "AI defers implementation to later/follow-up",
+      "severity": "high",
+      "patterns": [
+        "implement later",
+        "for now, we'll",
+        "for now, let's",
+        "for the moment",
+        "in a follow.up",
+        "in a future pr",
+        "in a future commit",
+        "in the future",
+        "not implemented yet",
+        "not going to implement",
+        "we can implement later",
+        "can be implemented later",
+        "will be implemented",
+        "we'll implement",
+        "we'll add",
+        "we'll come back",
+        "we'll handle later",
+        "leave for later",
+        "save for later",
+        "TODO.*implement",
+        "FIXME.*implement",
+        "HACK.*implement"
+      ]
+    },
+    "placeholder_intent": {
+      "description": "AI marks code as placeholder/temporary/dummy",
+      "severity": "high",
+      "patterns": [
+        "// TODO",
+        "# TODO",
+        "<!-- TODO",
+        "/* TODO",
+        "TODO(:| )",
+        "FIXME(:| )",
+        "this is a placeholder",
+        "this is just a placeholder",
+        "placeholder for now",
+        "placeholder text",
+        "placeholder function",
+        "placeholder value",
+        "dummy data",
+        "dummy function",
+        "dummy value",
+        "dummy implementation",
+        "temporary implementation",
+        "temporary workaround",
+        "temporary solution",
+        "sample data",
+        "sample implementation",
+        "demo data",
+        "demo implementation",
+        "example data",
+        "Lorem ipsum",
+        "lorem ipsum"
+      ]
+    },
+    "mock_data_patterns": {
+      "description": "AI creates fake/mock data objects instead of real ones",
+      "severity": "medium",
+      "patterns": [
+        "MockUser",
+        "MockData",
+        "MockService",
+        "MockRepository",
+        "TestData",
+        "FakeData",
+        "DummyData",
+        "SampleData",
+        "DemoData",
+        "mock_user",
+        "mock_data",
+        "mock_service",
+        "test_data",
+        "dummy_data",
+        "fake_data",
+        "sample_data"
+      ]
+    },
+    "empty_implementation": {
+      "description": "AI leaves empty function bodies or catch blocks",
+      "severity": "medium",
+      "patterns": [
+        "throw new Error\\(.Not implemented",
+        "throw new Error\\(.not implemented",
+        "NotImplementedError",
+        "NotImplementedException",
+        "return null;.*// TODO",
+        "return {};.*// TODO",
+        "return null.*placeholder",
+        "return null.*stub"
+      ]
+    },
+    "self_aware_slop": {
+      "description": "AI explicitly acknowledges it's writing incomplete code",
+      "severity": "high",
+      "patterns": [
+        "this is a simplified version",
+        "for demonstration purposes",
+        "for demo purposes",
+        "in a real application",
+        "in a production environment",
+        "in production, you would",
+        "this is not production ready",
+        "not production ready",
+        "this is just an example",
+        "this is an example of how",
+        "this example shows",
+        "example implementation",
+        "basic implementation",
+        "simple implementation",
+        "naive implementation",
+        "minimal implementation",
+        "naive approach"
+      ]
+    },
+    "ai_apology_patterns": {
+      "description": "AI apologizes for incomplete code (strong signal of slop)",
+      "severity": "high",
+      "patterns": [
+        "i'm sorry, but i cannot",
+        "i cannot provide",
+        "i cannot generate",
+        "i'm not able to",
+        "i'm unable to",
+        "i apologize, but",
+        "sorry, i cannot",
+        "as an ai",
+        "as a language model",
+        "i don't have access to",
+        "i don't have the ability",
+        "i don't have enough",
+        "i don't have the context"
+      ]
+    }
+  },
+  "metadata": {
+    "source": "STAS WORKFLOW.md zero-tolerance policy + quality-gates.sh patterns + empirical analysis",
+    "target_model_types": [
+      "deepseek-reasoner",
+      "claude-sonnet",
+      "gpt-5",
+      "o-series"
+    ],
+    "interception_layer": "thinking_trace + response_content",
+    "last_updated": "2026-06-26"
+  }
+}

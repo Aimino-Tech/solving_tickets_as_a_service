@@ -1,19 +1,9 @@
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'pricing-api' });
 
-const pricingLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests' },
-});
-
 const router = Router();
-router.use(pricingLimiter);
 
 export interface PricingPlan {
   id: string; name: string; description: string; price: string; period: string;

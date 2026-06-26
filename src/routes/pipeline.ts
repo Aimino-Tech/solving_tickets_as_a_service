@@ -9,12 +9,8 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
-<<<<<<< HEAD
-=======
 import { queryWithRetry } from '../db/connection.js';
->>>>>>> origin/main
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'pipeline-api' });
@@ -22,21 +18,6 @@ const log = rootLogger.child({ module: 'pipeline-api' });
 // ---------------------------------------------------------------------------
 // Rate Limiting
 // ---------------------------------------------------------------------------
-
-const pipelineLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: 120,
-  standardHeaders: true,
-  legacyHeaders: false,
-<<<<<<< HEAD
-  message: {
-    error: 'Too many pipeline status requests',
-    retryAfter: 'see Retry-After header',
-  },
-=======
-  message: { error: 'Too many pipeline status requests', retryAfter: 'see Retry-After header' },
->>>>>>> origin/main
-});
 
 // ---------------------------------------------------------------------------
 // Redis helpers
@@ -64,18 +45,7 @@ async function redisGet(key: string): Promise<string | undefined> {
 }
 
 // ---------------------------------------------------------------------------
-<<<<<<< HEAD
 // Types
-=======
-// Router
-// ---------------------------------------------------------------------------
-
-const router: Router = Router();
-router.use(pipelineLimiter);
-
-// ---------------------------------------------------------------------------
-// GET /api/pipeline/:issueId --- pipeline status
->>>>>>> origin/main
 // ---------------------------------------------------------------------------
 
 interface PipelineState {
@@ -90,20 +60,15 @@ interface PipelineState {
   error?: string;
 }
 
-<<<<<<< HEAD
 // ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
 const router: Router = Router();
-router.use(pipelineLimiter);
-
 // ---------------------------------------------------------------------------
 // GET /api/pipeline/:issueId --- pipeline status
 // ---------------------------------------------------------------------------
 
-=======
->>>>>>> origin/main
 router.get('/pipeline/:issueId', async (req: Request, res: Response) => {
   try {
     const { issueId } = req.params;
@@ -197,14 +162,7 @@ router.get('/pipeline/:issueId', async (req: Request, res: Response) => {
       recent_events: recentEvents,
     });
   } catch (err) {
-<<<<<<< HEAD
-    log.error(
-      { err: String(err), issueId: req.params.issueId },
-      'Failed to get pipeline status',
-    );
-=======
     log.error({ err: String(err), issueId: req.params.issueId }, 'Failed to get pipeline status');
->>>>>>> origin/main
     res.status(500).json({ error: 'Failed to get pipeline status' });
   }
 });

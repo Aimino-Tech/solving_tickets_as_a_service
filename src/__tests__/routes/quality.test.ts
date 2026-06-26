@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('express-rate-limit', () => ({
-  default: vi.fn(() => (_req: unknown, _res: unknown, next: () => void) => next()),
-}));
-
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));

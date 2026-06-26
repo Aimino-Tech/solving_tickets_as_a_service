@@ -1,0 +1,92 @@
+# =============================================================================
+# CI Checks — biome, tsc --noEmit, ruff
+#
+# Standalone pre-PR gate that runs three code quality checks:
+#   - biome   — TypeScript/JS lint + formatting (via biome.json)
+#   - tsc     — TypeScript type checking (--noEmit)
+#   - ruff    — Python linting
+#
+# Runs on every push and pull_request to main. All checks must pass
+# before a PR can be merged (required status check in branch protection).
+# =============================================================================
+
+name: CI Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  ##############################################################################
+  # BIOME — TypeScript/JS lint & format check
+  ##############################################################################
+  biome:
+    name: Biome (JS/TS lint & format)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Biome check
+        run: npx biome check .
+
+  ##############################################################################
+  # TSC — TypeScript type checking
+  ##############################################################################
+  tsc:
+    name: Type Check (tsc --noEmit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [biome]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+  ##############################################################################
+  # RUFF — Python linting
+  ##############################################################################
+  ruff:
+    name: Ruff (Python lint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff check
+        run: ruff check .

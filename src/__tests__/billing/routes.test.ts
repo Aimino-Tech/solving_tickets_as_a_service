@@ -4,7 +4,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('express', () => ({ Router: vi.fn(() => ({ use: vi.fn().mockReturnThis(), get: vi.fn().mockReturnThis(), post: vi.fn().mockReturnThis() })) }));
-vi.mock('express-rate-limit', () => ({ default: vi.fn(() => (req: any, res: any, next: any) => next()) }));
 vi.mock('../../config.js', () => ({
   config: { stripe: { soloPriceId: 'price_solo', teamPriceId: 'price_team' } },
 }));

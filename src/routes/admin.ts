@@ -9,7 +9,6 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { auditRepository } from '../audit/repository.js';
 import { logAdminAction } from '../audit/service.js';
 import { accountsRepository } from '../db/repositories/index.js';
@@ -39,17 +38,8 @@ const router: Router = Router();
 // Rate Limiting: 10 requests per minute on admin endpoints
 // ---------------------------------------------------------------------------
 
-const adminLimiter = rateLimit({
-  windowMs: 60_000, // 1 minute
-  limit: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many admin requests', retryAfter: 'see Retry-After header' },
-});
-
 // Apply auth + rate limit to all admin routes
 router.use(adminAuthMiddleware);
-router.use(adminLimiter);
 
 // ---------------------------------------------------------------------------
 // GET /admin/health — full system health
@@ -429,8 +419,9 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
     // Re-enqueue based on source
     if (webhookEvent.source === 'github') {
       const { createGithubWebhooks } = await import('../webhooks/github.js');
-      const { enqueueIssue } = await import('../queue/issueQueue.js');
-      const githubWebhooks = createGithubWebhooks();
+      const { createIssueQueue } = await import('../queue/issueQueue.js');
+      const queue = createIssueQueue();
+      const githubWebhooks = createGithubWebhooks(queue);
 
       const payload = typeof webhookEvent.payload === 'string'
         ? webhookEvent.payload
