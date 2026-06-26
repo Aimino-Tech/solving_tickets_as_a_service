@@ -45,6 +45,7 @@ import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
 import { validateWebhookPayload } from './validation.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
+import { formatError, isBehindGovernanceProxy } from './governance/errorSchema.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
@@ -751,15 +752,18 @@ export async function createApp(): Promise<express.Application> {
     log.warn('Enterprise routes not available');
   }
   // -- 404 handler ----------------------------------------------------------
-
-  app.use((_req: Request, res: Response) => {
-    res.status(404).json({ error: 'Not found' });
+  // Governance proxy standardizes all error responses to:
+  // { error: { code, message, details, correlation_id } }
+  app.use((req: Request, res: Response) => {
+    const error = formatError('NOT_FOUND', 'Not found', null, req.requestId);
+    res.status(404).json({ error });
   });
 
   // -- Global error handler -------------------------------------------------
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
     log.error({ err: String(err) }, 'Unhandled error');
-    res.status(500).json({ error: 'Internal server error' });
+    const error = formatError('INTERNAL_ERROR', 'Internal server error', String(err), req.requestId);
+    res.status(500).json({ error });
   });
 
   return app;
