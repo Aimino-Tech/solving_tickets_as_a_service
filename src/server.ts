@@ -62,7 +62,6 @@ import { onboardingRouter } from './routes/onboarding.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
 import { pricingRouter } from './routes/pricing.js';
 import { plgRouter } from './routes/plg.js';
-import { authRouter } from './routes/auth.js';
 import { reposRouter } from './routes/repos.js';
 import { runsRouter } from './routes/runs.js';
 import { badgeRouter } from './routes/badge.js';
@@ -687,9 +686,6 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Onboarding API ──────────────────────────────────────────────
   app.use('/onboarding', onboardingRouter);
-
-  // Auth routes (OAuth login, callback, session)
-  app.use('/api/auth', authRouter);
 
   // Repos API (repo picker with webhook status)
   app.use('/api/repos', reposRouter);
