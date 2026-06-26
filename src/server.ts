@@ -71,6 +71,7 @@ import { analyticsRouter } from './routes/analytics.js';
 import { viralRouter } from './routes/viral.js';
 import { qualityRouter } from './routes/quality.js';
 import { kpiRouter } from './routes/kpi.js';
+import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -739,6 +740,8 @@ export async function createApp(): Promise<express.Application> {
   // Agent Performance Analytics API
   app.use('/api/analytics', analyticsRouter);
 
+  // Pipeline Run History API
+  app.use('/api/history', pipelineHistoryRouter);
 
   // SAML 2.0 SSO routes (optional)
   try {

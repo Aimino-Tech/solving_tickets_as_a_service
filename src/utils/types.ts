@@ -83,8 +83,6 @@ export interface BillingPlan {
   effectiveAt: string;
 }
 
-export type { AgentResult } from '../agent/types.js';
-
 /**
  * Verification job data sent to the stas.agents.verification queue.
  */

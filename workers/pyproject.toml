@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stas-workers"
+version = "0.1.0"
+description = "STAS Celery Worker Service"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+asyncio_mode = "auto"
+addopts = [
+    "--cov=workers",
+    "--cov-report=term-missing",
+    "--cov-fail-under=100",
+    "--no-header",
+    "-v",
+]

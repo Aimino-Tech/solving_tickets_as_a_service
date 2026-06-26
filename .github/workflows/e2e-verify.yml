@@ -1,0 +1,218 @@
+# =============================================================================
+# e2e-verify.yml — E2E Build/Test Verification (AIM-2038)
+#
+# Runs the full verification pipeline on every PR:
+#   1. Build (tsc)
+#   2. Unit tests with coverage (vitest --coverage, >=90% threshold)
+#   3. Integration tests (testcontainers-based: Redis + Postgres)
+#   4. E2E tests (vitest + playwright against mock servers)
+#
+# Gating:
+#   - Stages 1-2 are CRITICAL — failure blocks the PR
+#   - Stages 3-4 are REQUIRED — failure blocks the PR in CI
+#   - Coverage thresholds are enforced by vitest.config.ts (lines >= 90%)
+#
+# This workflow runs concurrently with the main CI workflow and provides
+# the e2e-verify status check required for PR merging.
+# =============================================================================
+
+name: E2E Verify
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  ##############################################################################
+  # BUILD + UNIT TESTS + COVERAGE
+  # Runs first as a fast-fail gate. If this fails, integration/E2E are skipped.
+  ##############################################################################
+  build-and-unit:
+    name: Build + Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      build_status: ${{ steps.build.outcome }}
+      test_status: ${{ steps.unit-tests.outcome }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (tsc)
+        id: build
+        run: npm run build
+        continue-on-error: false
+
+      - name: Unit tests with coverage
+        id: unit-tests
+        run: npm run test:coverage
+        continue-on-error: false
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  ##############################################################################
+  # INTEGRATION TESTS (testcontainers: Redis + Postgres)
+  # Depends on build + unit tests passing first (fast-fail chain).
+  ##############################################################################
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [build-and-unit]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run integration tests (testcontainers)
+        run: npx vitest run --config vitest.integration.config.ts
+        env:
+          CI: "true"
+          # testcontainers will auto-discover Docker via DOCKER_HOST or /var/run/docker.sock
+
+  ##############################################################################
+  # E2E TESTS (playwright + vitest)
+  # Requires Docker for Redis (used by E2E test harness).
+  ##############################################################################
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [build-and-unit]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Start Docker services (Redis for E2E harness)
+        run: docker compose -f docker-compose.e2e.yml up -d redis
+
+      - name: Wait for Redis
+        run: |
+          for i in $(seq 1 30); do
+            docker exec stas-e2e-redis redis-cli ping && break
+            sleep 1
+          done
+
+      - name: Run E2E tests
+        run: npx vitest run --config vitest.e2e.config.ts
+        env:
+          CI: "true"
+
+      - name: Stop Docker services
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml down --remove-orphans
+
+  ##############################################################################
+  # VERIFICATION REPORT
+  # Aggregates results from all stages into a single pass/fail status check.
+  ##############################################################################
+  verification-report:
+    name: Verification Report
+    runs-on: ubuntu-latest
+    needs: [build-and-unit, integration, e2e]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate verification report
+        run: |
+          BUILD_STATUS="${{ needs.build-and-unit.outputs.build_status }}"
+          UNIT_STATUS="${{ needs.build-and-unit.outputs.test_status }}"
+          INT_STATUS="${{ needs.build-and-unit.result == 'success' && 'success' || 'failure' }}"
+
+          echo "## E2E Verification Report" > verification-report.md
+          echo "" >> verification-report.md
+          echo "| Stage | Status |" >> verification-report.md
+          echo "|-------|--------|" >> verification-report.md
+
+          if [ "$BUILD_STATUS" = "success" ]; then
+            echo "| Build | ✅ Passed |" >> verification-report.md
+          else
+            echo "| Build | ❌ Failed |" >> verification-report.md
+          fi
+
+          if [ "$UNIT_STATUS" = "success" ]; then
+            echo "| Unit Tests (coverage) | ✅ Passed |" >> verification-report.md
+          else
+            echo "| Unit Tests (coverage) | ❌ Failed |" >> verification-report.md
+          fi
+
+          if [ "${{ needs.integration.result }}" = "success" ]; then
+            echo "| Integration Tests | ✅ Passed |" >> verification-report.md
+          else
+            echo "| Integration Tests | ❌ Failed |" >> verification-report.md
+          fi
+
+          if [ "${{ needs.e2e.result }}" = "success" ]; then
+            echo "| E2E Tests | ✅ Passed |" >> verification-report.md
+          else
+            echo "| E2E Tests | ❌ Failed |" >> verification-report.md
+          fi
+
+          echo "" >> verification-report.md
+
+          # Overall verdict
+          if [ "$BUILD_STATUS" = "success" ] && [ "$UNIT_STATUS" = "success" ] && \
+             [ "${{ needs.integration.result }}" = "success" ] && \
+             [ "${{ needs.e2e.result }}" = "success" ]; then
+            echo "**✅ VERDICT: ALL STAGES PASSED**" >> verification-report.md
+          else
+            echo "**❌ VERDICT: ONE OR MORE STAGES FAILED**" >> verification-report.md
+          fi
+
+      - name: Upload verification report
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-report
+          path: verification-report.md
+          retention-days: 30
+
+      # Fail the job if any critical stage failed
+      - name: Check critical stages
+        if: |
+          needs.build-and-unit.outputs.build_status != 'success' ||
+          needs.build-and-unit.outputs.test_status != 'success'
+        run: |
+          echo "❌ CRITICAL FAILURE: Build or unit tests failed."
+          echo "Fix the issues before merging."
+          exit 1
