@@ -69,28 +69,6 @@ import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 
 const log = rootLogger.child({ module: 'server' });
 
-// Request body size limit from config
-const REQUEST_SIZE_LIMIT = parseSize(config.security.requestBodyLimit);
-const WEBHOOK_SIZE_LIMIT = parseSize(config.security.webhookBodyLimit);
-
-/**
- * Create and configure the Express application.
- */
-
-/**
- * Parse a size string (e.g. '1mb', '5mb', '100kb') to bytes.
- * Returns 0 if the string cannot be parsed.
- */
-function parseSize(size: string): number {
-  const match = size.match(/^(d+)s*(b|kb|mb|gb)$/i);
-  if (!match) return 0;
-  const num = parseInt(match[1], 10);
-  const unit = match[2].toLowerCase();
-  const multipliers: Record<string, number> = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 * 1024 * 1024 };
-  return num * (multipliers[unit] || 1);
-}
-
-
 export async function createApp(): Promise<express.Application> {
   const app = express();
 
@@ -156,14 +134,14 @@ export async function createApp(): Promise<express.Application> {
       '/webhook/telegram',
       '/webhook/whatsapp',
     ],
-    express.raw({ type: 'application/json', limit: config.security.webhookBodyLimit, verify: addRawBody }),
+    express.raw({ type: 'application/json', verify: addRawBody }),
   );
 
-  // -- JSON parsing for all other routes (with size limit) --------------------
-  app.use(express.json({ limit: config.security.requestBodyLimit }));
+  // -- JSON parsing for all other routes -------------------------------------
+  app.use(express.json());
 
-  // -- URL-encoded body parsing (with size limit) ---------------------------
-  app.use(express.urlencoded({ extended: true, limit: config.security.requestBodyLimit }));
+  // -- URL-encoded body parsing ---------------------------------------------
+  app.use(express.urlencoded({ extended: true }));
 
   // -- Governance Proxy rate limiting (per-account, per-repo, per-IP) ----------
   app.use('/webhook', rateLimitMiddleware());
