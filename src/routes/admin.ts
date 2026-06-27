@@ -17,6 +17,7 @@ import { adminAuthMiddleware } from '../security/adminAuth.js';
 import { queryWithRetry } from '../db/connection.js';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { dlqStore, type DeadLetterEntry, formatDeadLetterEntry } from '../queue/deadLetterQueue.js';
 
 const log = rootLogger.child({ module: 'admin-api' });
 
@@ -485,6 +486,217 @@ router.post('/gc/sweep', async (_req: Request, res: Response) => {
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to run sandbox GC sweep');
     res.status(500).json({ error: 'GC sweep failed' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /admin/dlq — list dead-letter queue messages
+// ---------------------------------------------------------------------------
+
+router.get('/dlq', async (req: Request, res: Response) => {
+  try {
+    const acknowledged = req.query.acknowledged !== undefined
+      ? req.query.acknowledged === 'true'
+      : undefined;
+    const limit = Math.min(Math.abs(Number(req.query.limit) || 50), 200);
+    const offset = Math.abs(Number(req.query.offset) || 0);
+
+    const all = dlqStore.list(acknowledged);
+    const total = all.length;
+    const entries = all.slice(offset, offset + limit).map(formatDeadLetterEntry);
+
+    res.json({ entries, total, limit, offset, stats: dlqStore.stats() });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to list DLQ messages');
+    res.status(500).json({ error: 'Failed to list DLQ messages' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /admin/dlq/:id — get single DLQ message details
+// ---------------------------------------------------------------------------
+
+router.get('/dlq/:id', async (req: Request, res: Response) => {
+  try {
+    const entry = dlqStore.get(req.params.id);
+    if (!entry) {
+      res.status(404).json({ error: 'DLQ message not found' });
+      return;
+    }
+    res.json(formatDeadLetterEntry(entry));
+  } catch (err) {
+    log.error({ err: String(err), id: req.params.id }, 'Failed to get DLQ message');
+    res.status(500).json({ error: 'Failed to get DLQ message' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /admin/dlq/:id/replay — replay a single DLQ message
+// ---------------------------------------------------------------------------
+
+router.post('/dlq/:id/replay', async (req: Request, res: Response) => {
+  try {
+    const entry = dlqStore.get(req.params.id);
+    if (!entry) {
+      res.status(404).json({ error: 'DLQ message not found' });
+      return;
+    }
+
+    const { enqueueIssue } = await import('../queue/issueQueue.js');
+    const { createIssueQueue } = await import('../queue/issueQueue.js');
+    const queue = createIssueQueue();
+
+    try {
+      const jobId = await enqueueIssue(queue, entry.jobData);
+      if (jobId) {
+        dlqStore.acknowledge(req.params.id, 'admin:api-key');
+        dlqStore.remove(req.params.id);
+
+        await logAdminAction({
+          adminId: 'admin:api-key',
+          action: 'admin.dlq.replay',
+          resourceType: 'dlq',
+          resourceId: req.params.id,
+          details: {
+            repo: `${entry.jobData.repoOwner}/${entry.jobData.repoName}`,
+            issueNumber: entry.jobData.issueNumber,
+            jobId,
+          },
+          ipAddress: req.ip,
+          correlationId: req.requestId,
+        });
+
+        log.info({ dlqId: req.params.id, jobId }, 'DLQ message replayed');
+        res.json({ replayed: true, dlqId: req.params.id, jobId });
+      } else {
+        res.status(500).json({ error: 'Failed to enqueue replayed message' });
+      }
+    } finally {
+      await queue.close();
+    }
+  } catch (err) {
+    log.error({ err: String(err), id: req.params.id }, 'Failed to replay DLQ message');
+    res.status(500).json({ error: 'Failed to replay DLQ message' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /admin/dlq/replay-all — replay all unacknowledged DLQ messages
+// ---------------------------------------------------------------------------
+
+router.post('/dlq/replay-all', async (req: Request, res: Response) => {
+  try {
+    const entries = dlqStore.list(false);
+    if (entries.length === 0) {
+      res.json({ replayed: 0, total: 0 });
+      return;
+    }
+
+    const { enqueueIssue } = await import('../queue/issueQueue.js');
+    const { createIssueQueue } = await import('../queue/issueQueue.js');
+    const queue = createIssueQueue();
+
+    const results: Array<{ id: string; jobId?: string; error?: string }> = [];
+
+    try {
+      for (const entry of entries) {
+        try {
+          const jobId = await enqueueIssue(queue, entry.jobData);
+          if (jobId) {
+            dlqStore.acknowledge(entry.id, 'admin:api-key');
+            dlqStore.remove(entry.id);
+            results.push({ id: entry.id, jobId });
+          } else {
+            results.push({ id: entry.id, error: 'Failed to enqueue' });
+          }
+        } catch (err) {
+          results.push({ id: entry.id, error: String(err) });
+        }
+      }
+    } finally {
+      await queue.close();
+    }
+
+    const replayed = results.filter((r) => r.jobId).length;
+
+    await logAdminAction({
+      adminId: 'admin:api-key',
+      action: 'admin.dlq.replay_all',
+      resourceType: 'dlq',
+      resourceId: 'all',
+      details: { total: entries.length, replayed, failed: entries.length - replayed },
+      ipAddress: req.ip,
+      correlationId: req.requestId,
+    });
+
+    log.info({ replayed, total: entries.length }, 'Bulk DLQ replay completed');
+    res.json({ replayed, total: entries.length, results });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to replay all DLQ messages');
+    res.status(500).json({ error: 'Failed to replay all DLQ messages' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /admin/dlq/:id — remove a message from DLQ (ack + delete)
+// ---------------------------------------------------------------------------
+
+router.delete('/dlq/:id', async (req: Request, res: Response) => {
+  try {
+    const entry = dlqStore.get(req.params.id);
+    if (!entry) {
+      res.status(404).json({ error: 'DLQ message not found' });
+      return;
+    }
+
+    dlqStore.acknowledge(req.params.id, 'admin:api-key');
+    dlqStore.remove(req.params.id);
+
+    await logAdminAction({
+      adminId: 'admin:api-key',
+      action: 'admin.dlq.delete',
+      resourceType: 'dlq',
+      resourceId: req.params.id,
+      details: {
+        repo: `${entry.jobData.repoOwner}/${entry.jobData.repoName}`,
+        issueNumber: entry.jobData.issueNumber,
+      },
+      ipAddress: req.ip,
+      correlationId: req.requestId,
+    });
+
+    log.info({ dlqId: req.params.id }, 'DLQ message removed');
+    res.json({ removed: true, dlqId: req.params.id });
+  } catch (err) {
+    log.error({ err: String(err), id: req.params.id }, 'Failed to remove DLQ message');
+    res.status(500).json({ error: 'Failed to remove DLQ message' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /admin/dlq/purge — auto-purge expired DLQ entries
+// ---------------------------------------------------------------------------
+
+router.post('/dlq/purge', async (_req: Request, res: Response) => {
+  try {
+    const retentionHours = Number(process.env.DLQ_RETENTION_HOURS) || 168;
+    const cutoff = new Date(Date.now() - retentionHours * 60 * 60 * 1000).toISOString();
+
+    const all = dlqStore.list();
+    let purged = 0;
+
+    for (const entry of all) {
+      if (entry.timestamp < cutoff) {
+        dlqStore.remove(entry.id);
+        purged++;
+      }
+    }
+
+    log.info({ purged, retentionHours }, 'DLQ auto-purge completed');
+    res.json({ purged, retentionHours, remaining: dlqStore.list().length });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to purge DLQ');
+    res.status(500).json({ error: 'Failed to purge DLQ' });
   }
 });
 
