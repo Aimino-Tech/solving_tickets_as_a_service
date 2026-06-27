@@ -61,6 +61,26 @@ beat_schedule = {
         "schedule": 300.0,
         "args": (),
     },
+    # ── Analytics Rollups ────────────────────────────────────────────
+    "analytics-rollup-hourly": {
+        "task": "workers.analytics.rollups.rollup_hourly",
+        "schedule": crontab(minute="5"),
+        "args": (),
+        "options": {"expires": 300, "queue": "stas.agents.default"},
+    },
+    "analytics-rollup-daily": {
+        "task": "workers.analytics.rollups.rollup_daily",
+        "schedule": crontab(hour=2, minute=0),
+        "args": (),
+        "options": {"expires": 1800, "queue": "stas.agents.default"},
+    },
+    "analytics-rollup-monthly": {
+        "task": "workers.analytics.rollups.rollup_monthly",
+        "schedule": crontab(day_of_month=1, hour=3, minute=0),
+        "args": (),
+        "options": {"expires": 3600, "queue": "stas.agents.default"},
+    },
+    },
 }
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")
@@ -88,6 +108,7 @@ task_queues = [
     Queue("stas.agents.pr_creation", Exchange("stas"), routing_key="stas.agents.pr_creation"),
     Queue("stas.agents.notifications", Exchange("stas"), routing_key="stas.agents.notifications"),
     Queue("stas.agents.default", Exchange("stas"), routing_key="stas.agents.default"),
+    Queue("stas.analytics.ingestion", Exchange("stas"), routing_key="stas.analytics.ingestion"),
 ]
 
 task_routes = {
