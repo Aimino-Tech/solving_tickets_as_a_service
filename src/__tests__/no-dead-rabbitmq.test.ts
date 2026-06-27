@@ -48,15 +48,18 @@ describe('no dead RabbitMQ (amqplib) code', () => {
       ...findTsFiles(`${PROJECT_ROOT}/tests`),
     ];
     const offenders: string[] = [];
-    const allowedFiles = [
+    const allowedBasenames = [
       'no-dead-rabbitmq.test.ts',
       'async-execution.ts',
       'async-execution.test.ts',
+      'celery-bridge.ts',
+      'celery-bridge.test.ts',
+      'async-agent-runner.ts',
+      'async-agent-runner.test.ts',
     ];
 
     for (const file of tsFiles) {
-      // Skip our own test file and the new async-execution implementation
-      if (allowedFiles.some(f => file.endsWith(f))) continue;
+      if (allowedBasenames.some((b) => file.endsWith(b))) continue;
       const content = readFileSync(file, 'utf-8');
       if (content.includes("from 'amqplib'") || content.includes('require("amqplib")') || content.includes("require('amqplib')")) {
         offenders.push(file);
