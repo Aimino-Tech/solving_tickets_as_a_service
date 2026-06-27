@@ -139,14 +139,21 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
       };
     }
 
-    // Post "working on it" comment
-    await postComment(
-      installationId,
-      repoOwner,
-      repoName,
-      issueNumber,
-      `### 🔍 STAS Investigating\n\nIssue classified as **${triage.type}** (difficulty: ${triage.difficulty}).\n\nI'll investigate and work on a fix.\n\n`,
+    // Post "working on it" comment — skip if STAS already posted one
+    // (prevents duplicate flood on retries)
+    const existingComments = await fetchIssueComments(installationId, repoOwner, repoName, issueNumber);
+    const hasExistingInvestigation = existingComments.some(
+      (c) => c.includes('STAS Investigating'),
     );
+    if (!hasExistingInvestigation) {
+      await postComment(
+        installationId,
+        repoOwner,
+        repoName,
+        issueNumber,
+        `### 🔍 STAS Investigating\n\nIssue classified as **${triage.type}** (difficulty: ${triage.difficulty}).\n\nI'll investigate and work on a fix.\n\n`,
+      );
+    }
 
     // Post "working on it" to tracker if applicable
     if (data.trackerType && data.trackerTicketId) {

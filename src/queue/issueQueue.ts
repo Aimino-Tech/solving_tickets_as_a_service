@@ -237,6 +237,26 @@ export function createIssueWorker(): Worker<IssueJobData> {
     );
     recordMessageFailed('bullmq:' + QUEUE_NAME, 'WORKER_FAILED');
 
+    // ── Non-retryable errors ───────────────────────────────────────────
+    // Sandbox boot timeouts are infrastructure-level failures — retrying
+    // won't help because cloning + deps install takes >5 min on large repos.
+    // Skip retries and go directly to dead-letter queue.
+    const isSandboxTimeout =
+      errorMsg.includes('PhaseTimeoutError') && errorMsg.includes('3-boot-sandbox');
+
+    if (isSandboxTimeout) {
+      log.warn(
+        { jobId: job.id, repo: `${data.repoOwner}/${data.repoName}`, issueNumber: data.issueNumber },
+        'Sandbox timeout — not retrying, moving to dead-letter queue',
+      );
+      try {
+        await moveToDeadLetter(data, errorMsg);
+      } catch (dlqErr) {
+        log.error({ err: String(dlqErr), jobId: job.id }, 'Failed to move sandbox-timeout job to DLQ');
+      }
+      return;
+    }
+
     // Schedule retry if slots remain
     if (retryCount < config.queue.maxRetries) {
       const delay = config.queue.retryDelays[retryCount] ?? 900000;
