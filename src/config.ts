@@ -34,6 +34,7 @@ const envSchema = z.object({
   GITHUB_WEBHOOK_PATH: z.string().default('/webhook'),
 
   REDIS_URL: z.string().default('redis://localhost:6379'),
+  RABBITMQ_URL: z.string().default('amqp://localhost:5672'),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
   QUEUE_DEDUP_TTL_SECONDS: z.coerce.number().int().positive().default(120),
   QUEUE_KEEP_COMPLETED: z.coerce.number().int().positive().default(200),
