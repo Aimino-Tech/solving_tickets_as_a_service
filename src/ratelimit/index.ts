@@ -65,3 +65,11 @@ export {
   renderRateLimitMetrics,
   resetRateLimitMetrics,
 } from './metrics.js';
+
+export {
+  checkDailyBudget,
+  recordDailyCost,
+  resetDailyBudget,
+  closeBudgetClient,
+} from './budget.js';
+export type { BudgetResult } from './budget.js';

@@ -26,6 +26,7 @@ import { rootLogger } from '../utils/logger.js';
 
 import { logRateLimitHit } from '../audit/service.js';
 import { recordRateLimitDecision, recordRateLimitBlock, recordRateLimitAllow } from './metrics.js';
+import { checkDailyBudget } from './budget.js';
 import type { RateLimitTierConfig } from './config.js';
 
 const log = rootLogger.child({ module: 'rate-middleware' });
@@ -59,9 +60,6 @@ function defaultGetRepo(_req: Request, res: Response): string | undefined {
 // Rate limit response helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Apply rate limit headers to the response.
- */
 function applyHeaders(
   res: Response,
   headers: {
@@ -69,12 +67,16 @@ function applyHeaders(
     remaining: number;
     reset: number;
     strategy: string;
+    usagePercent?: number;
   },
 ): void {
   res.setHeader('X-RateLimit-Limit', String(headers.limit));
   res.setHeader('X-RateLimit-Remaining', String(headers.remaining));
   res.setHeader('X-RateLimit-Reset', String(headers.reset));
   res.setHeader('X-RateLimit-Strategy', headers.strategy);
+  if (headers.usagePercent !== undefined && headers.usagePercent >= 0.8) {
+    res.setHeader('X-RateLimit-Warning', `approaching_limit:${Math.round(headers.usagePercent * 100)}%`);
+  }
 }
 
 /**
@@ -251,6 +253,41 @@ export function rateLimitMiddleware(options?: RateLimitMiddlewareOptions) {
         }
 
         recordRateLimitAllow('/webhook');
+      }
+
+      // ── Daily budget check ──────────────────────────────────────────
+      if (installationId !== undefined && installationId > 0) {
+        const budget = await checkDailyBudget(installationId, String(installationId));
+        res.setHeader('X-RateLimit-Budget-Limit', String(budget.dailyBudgetUsd));
+        res.setHeader('X-RateLimit-Budget-Remaining', String(budget.remainingUsd.toFixed(4)));
+        res.setHeader('X-RateLimit-Budget-Reset', budget.windowReset);
+
+        if (!budget.allowed) {
+          const retryAfterSeconds = 86400;
+          log.warn(
+            { installationId, currentSpend: budget.currentSpendUsd, limit: budget.dailyBudgetUsd },
+            'Daily budget exhausted',
+          );
+
+          recordRateLimitBlock('/webhook', 'budget', String(installationId));
+
+          logRateLimitHit({
+            accountId: String(installationId),
+            ipAddress: req.ip,
+            route: req.path,
+            limit: budget.dailyBudgetUsd,
+            windowMs: 86400_000,
+            details: { type: 'budget', currentSpend: budget.currentSpendUsd },
+            correlationId: req.requestId,
+          }).catch(() => {});
+
+          sendRateLimited(res, retryAfterSeconds, `budget:${installationId}`);
+          return;
+        }
+
+        if (budget.atWarning) {
+          res.setHeader('X-RateLimit-Budget-Warning', 'approaching_limit');
+        }
       }
 
       // ── Repo-level rate limit ───────────────────────────────────────
