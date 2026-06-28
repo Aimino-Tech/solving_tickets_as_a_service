@@ -193,6 +193,10 @@ const envSchema = z.object({
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
 
+  LOOPS_API_KEY: z.string().optional(),
+  LOOPS_WEBHOOK_SECRET: z.string().optional(),
+  CRM_SYNC_INTERVAL_MINUTES: z.coerce.number().int().positive().default(15),
+
   // ── IP Allowlist ──
   IP_ALLOWLIST_ENABLED: boolSchema(false),
   IP_ALLOWLIST: z.string().default(''),
@@ -552,6 +556,12 @@ function buildConfig(env: ParsedEnv) {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    crm: {
+      loopsApiKey: env.LOOPS_API_KEY ?? '',
+      webhookSecret: env.LOOPS_WEBHOOK_SECRET ?? '',
+      syncIntervalMinutes: env.CRM_SYNC_INTERVAL_MINUTES,
     },
   } as const;
 }

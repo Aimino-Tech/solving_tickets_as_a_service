@@ -77,6 +77,9 @@ const mockGetSlackBoltApp = vi.hoisted(() =>
 const mockGetTracker = vi.hoisted(() => vi.fn().mockReturnValue(null));
 const mockInitTrackers = vi.hoisted(() => vi.fn());
 const mockInitMetering = vi.hoisted(() => vi.fn());
+const mockCreateCrmSyncQueue = vi.hoisted(() => vi.fn().mockReturnValue({ add: vi.fn(), close: vi.fn() }));
+const mockCreateCrmSyncWorker = vi.hoisted(() => vi.fn().mockReturnValue({ on: vi.fn(), close: vi.fn() }));
+const mockCreateCrmRouter = vi.hoisted(() => vi.fn().mockReturnValue(vi.fn()));
 
 // ---------------------------------------------------------------------------
 // Module-level mocks (paths relative to test file location)
@@ -150,6 +153,11 @@ vi.mock('../config.js', () => ({
       signingSecret: undefined,
       interactionsPath: '/slack/events',
     },
+    crm: {
+      loopsApiKey: '',
+      webhookSecret: '',
+      syncIntervalMinutes: 15,
+    },
     trackers: {
       linear: undefined,
       jira: undefined,
@@ -208,6 +216,24 @@ vi.mock('../webhooks/bitbucket.js', () => ({
 
 vi.mock('../stripe/index.js', () => ({
   createStripeWebhookHandler: mockCreateStripeWebhookHandler,
+}));
+
+vi.mock('../crm/crmSyncService.js', () => ({
+  createCrmSyncQueue: mockCreateCrmSyncQueue,
+  createCrmSyncWorker: mockCreateCrmSyncWorker,
+  enqueueWebhookEvent: vi.fn().mockResolvedValue('mock-job-id'),
+  enqueueCrmSync: vi.fn().mockResolvedValue('mock-job-id'),
+}));
+
+vi.mock('../crm/loopsApi.js', () => ({
+  createOrUpdateContact: vi.fn().mockResolvedValue({ success: true, id: 'mock-id' }),
+  sendEvent: vi.fn().mockResolvedValue({ success: true }),
+  deleteContact: vi.fn().mockResolvedValue({ success: true }),
+  findContact: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('../routes/crm.js', () => ({
+  createCrmRouter: mockCreateCrmRouter,
 }));
 
 vi.mock('../notifications/slack-bolt.js', () => ({

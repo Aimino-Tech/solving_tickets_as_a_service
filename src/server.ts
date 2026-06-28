@@ -65,6 +65,8 @@ import { viralRouter } from './routes/viral.js';
 import { qualityRouter } from './routes/quality.js';
 import { kpiRouter } from './routes/kpi.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
+import { createCrmSyncQueue, createCrmSyncWorker } from './crm/crmSyncService.js';
+import { createCrmRouter } from './routes/crm.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -132,6 +134,7 @@ export async function createApp(): Promise<express.Application> {
       '/webhook/stripe',
       '/webhook/telegram',
       '/webhook/whatsapp',
+      '/webhook/loops',
     ],
     express.raw({ type: 'application/json', verify: addRawBody }),
   );
@@ -166,6 +169,17 @@ export async function createApp(): Promise<express.Application> {
   const githubWebhooks = createGithubWebhooks(queue);
   const gitlabHandler = createGitlabWebhooks(queue);
   const bitbucketHandler = createBitbucketWebhooks(queue);
+
+  // ── CRM Sync ─────────────────────────────────────────────────────
+  const crmQueue = createCrmSyncQueue();
+  if (config.crm.loopsApiKey) {
+    const crmWorker = createCrmSyncWorker();
+    log.info('CRM sync worker started');
+    crmWorker.on('error', (err) => {
+      log.error({ err: String(err) }, 'CRM sync worker error');
+    });
+  }
+  const crmRouter = createCrmRouter(crmQueue);
 
   // -- GitHub webhook handler (shared between /webhook and /webhook/github) --
   async function handleGithubWebhook(req: Request, res: Response): Promise<void> {
@@ -611,11 +625,6 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/v1/credits/usage', usageRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────
-  // GET /admin/webhooks (paginated, filterable)
-  // POST /admin/webhooks/:id/replay
-  // POST /admin/webhooks/replay-range
-  // GET /admin/webhooks/sources
-  // GET /admin/webhooks/stats
   app.use('/admin/webhooks', adminWebhooksRouter);
 
   // ── Onboarding API ──────────────────────────────────────────────
@@ -625,16 +634,12 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/repos', reposRouter);
 
   // ── Shareable run page API (public, no auth) ───────────────────────
-  // GET /api/runs/:id — Public run detail JSON/HTML
   app.use('/api/runs', runsRouter);
 
   // ── Badge endpoint (public, no auth) ──────────────────────────────
-  // GET /badge/:id.svg — shields.io-compatible status badge
   app.use('/badge', badgeRouter);
 
   // ── Viral discovery endpoints (public, no auth) ───────────────────
-  // GET /discovery/mcp.json — MCP manifest for agent-to-agent discovery
-  // GET /discovery          — Human-readable discovery landing page
   app.use(viralRouter);
 
   // ── Quality Score Card API ───────────────────────────────────────
@@ -673,6 +678,9 @@ export async function createApp(): Promise<express.Application> {
   } catch {
     log.warn('Enterprise routes not available');
   }
+
+  // ── CRM API ─────────────────────────────────────────────────────
+  app.use(crmRouter);
   // -- 404 handler ----------------------------------------------------------
 
   app.use((req: Request, res: Response) => {
