@@ -31,7 +31,7 @@ import helmet from 'helmet';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
-import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
+import { createIssueQueue, createIssueWorker, enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
@@ -704,6 +704,17 @@ export async function startServer(): Promise<import('http').Server> {
       { port: config.port, label: config.stas.label, env: config.nodeEnv },
       `STAS server listening on :${config.port}`,
     );
+
+    // Start the issue queue worker (Worker auto-starts in BullMQ 5.x)
+    try {
+      const worker = createIssueWorker();
+      worker.on('error', (err: Error) => {
+        log.error({ err: String(err) }, 'Issue worker error');
+      });
+      log.info('Issue queue worker started');
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to start issue queue worker');
+    }
   });
 
   server.on('error', (err: NodeJS.ErrnoException) => {
