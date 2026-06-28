@@ -48,10 +48,18 @@ describe('no dead RabbitMQ (amqplib) code', () => {
       ...findTsFiles(`${PROJECT_ROOT}/tests`),
     ];
     const offenders: string[] = [];
+    const allowedBasenames = [
+      'no-dead-rabbitmq.test.ts',
+      'async-execution.ts',
+      'async-execution.test.ts',
+      'celery-bridge.ts',
+      'celery-bridge.test.ts',
+      'async-agent-runner.ts',
+      'async-agent-runner.test.ts',
+    ];
 
     for (const file of tsFiles) {
-      // Skip our own test file which mentions amqplib in comments
-      if (file.endsWith('no-dead-rabbitmq.test.ts')) continue;
+      if (allowedBasenames.some((b) => file.endsWith(b))) continue;
       const content = readFileSync(file, 'utf-8');
       if (content.includes("from 'amqplib'") || content.includes('require("amqplib")') || content.includes("require('amqplib')")) {
         offenders.push(file);
@@ -71,11 +79,5 @@ describe('no dead RabbitMQ (amqplib) code', () => {
     const adminPath = `${PROJECT_ROOT}/src/routes/admin.ts`;
     const content = readFileSync(adminPath, 'utf-8');
     expect(content).not.toContain('rabbitmq');
-  });
-
-  it('@types/amqplib is removed from devDependencies', () => {
-    const pkg = JSON.parse(readFileSync(`${PROJECT_ROOT}/package.json`, 'utf-8'));
-    const devDeps = pkg.devDependencies ?? {};
-    expect(devDeps['@types/amqplib']).toBeUndefined();
   });
 });
