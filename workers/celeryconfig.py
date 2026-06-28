@@ -13,55 +13,10 @@ TASK_NOTIFICATION_RETRY_DELAY = int(os.getenv("CELERY_NOTIFICATION_RETRY_DELAY_S
 TASK_VERIFICATION_RETRY_DELAY = int(os.getenv("CELERY_VERIFICATION_RETRY_DELAY_SECONDS", "30"))
 
 # ── Beat Schedule (Periodic Tasks) ───────────────────────────────
-from celery.schedules import crontab
-
-beat_schedule = {
-    "queue-health-check": {
-        "task": "workers.tasks.periodic.queue_health_check",
-        "schedule": crontab(minute="*/5"),
-        "args": (),
-    },
-    "dlq-cleanup": {
-        "task": "workers.tasks.periodic.dlq_cleanup",
-        "schedule": crontab(hour=2, minute=0),
-        "args": (),
-    },
-    "metrics-push": {
-        "task": "workers.tasks.periodic.push_metrics",
-        "schedule": crontab(minute="*"),
-        "args": (),
-    },
-    "worker-liveness-report": {
-        "task": "workers.tasks.periodic.report_liveness",
-        "schedule": crontab(minute="*/1"),
-        "args": (),
-    },
-    "sandbox-gc-every-10-minutes": {
-        "task": "workers.tasks.sandbox_gc.sandbox_gc",
-        "schedule": 600.0,
-        "args": (),
-    },
-    "billing-usage-sync-to-stripe": {
-        "task": "workers.billing.usage.sync_usage_to_stripe",
-        "schedule": crontab(hour=1, minute=0),
-        "args": (),
-    },
-    "kpi-daily-etl": {
-        "task": "workers.tasks.kpi_etl.compute_daily_kpi",
-        "schedule": crontab(hour=0, minute=5),
-        "args": (),
-    },
-    "e2e-health-check": {
-        "task": "workers.health.e2e_check.run_e2e_health_check",
-        "schedule": 300.0,
-        "args": (),
-    },
-    "sla-compliance-check": {
-        "task": "workers.tasks.periodic.sla_compliance_check",
-        "schedule": 300.0,
-        "args": (),
-    },
-}
+# Sourced from workers.beat_schedule for centralized management.
+# For database-backed dynamic schedules, use DatabaseScheduler:
+#   celery -A workers.celery_app beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+from workers.beat_schedule import beat_schedule
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")
 result_backend = "redis://localhost:6379/0"
@@ -98,4 +53,7 @@ task_routes = {
     "workers.tasks.pr_creation.*": {"queue": "stas.agents.pr_creation"},
     "workers.tasks.notifications.*": {"queue": "stas.agents.notifications"},
     "workers.billing.*": {"queue": "stas.agents.default"},
+    "workers.tasks.periodic.*": {"queue": "stas.agents.default"},
+    "workers.tasks.background.*": {"queue": "stas.agents.default"},
+    "workers.tasks.sandbox_gc.*": {"queue": "stas.agents.default"},
 }
