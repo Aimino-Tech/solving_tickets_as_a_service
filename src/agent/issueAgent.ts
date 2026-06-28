@@ -189,13 +189,18 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     currentPhase = '3-boot-sandbox';
     logger.info('Phase 3: Booting sandbox');
 
-    // Try E2B sandbox first, fall back to Docker on failure
-    const e2bSandbox = new SandboxExecutor(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
-    try {
-      await withTimeout(e2bSandbox.boot(), config.phaseTimeouts.sandboxBoot, '3-boot-sandbox');
-      sandbox = e2bSandbox;
-    } catch (e2bErr) {
-      logger.warn({ err: String(e2bErr) }, 'E2B sandbox failed — trying Docker fallback');
+    // Try E2B sandbox first (if configured), fall back to Docker on failure
+    if (config.e2b.apiKey) {
+      const e2bSandbox = new SandboxExecutor(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
+      try {
+        await withTimeout(e2bSandbox.boot(), config.phaseTimeouts.sandboxBoot, '3-boot-sandbox');
+        sandbox = e2bSandbox;
+      } catch (e2bErr) {
+        logger.warn({ err: String(e2bErr) }, 'E2B sandbox failed — trying Docker fallback');
+      }
+    }
+
+    if (!sandbox) {
       const dockerSandbox = new DockerSandbox(repoUrl, repoOwner, repoName, installationId, getInstallationToken);
       await withTimeout(dockerSandbox.boot(), config.phaseTimeouts.sandboxBoot, '3-boot-sandbox');
       sandbox = dockerSandbox;

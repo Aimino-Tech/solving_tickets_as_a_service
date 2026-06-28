@@ -27,6 +27,7 @@ const envSchema = z.object({
   GITHUB_APP_ID: z.string().min(1, 'GITHUB_APP_ID is required'),
   GITHUB_APP_PRIVATE_KEY: z.string().min(1, 'GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_PATH is required').optional(),
   GITHUB_APP_PRIVATE_KEY_PATH: z.string().optional(),
+  GITHUB_TOKEN: z.string().optional(),
   GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
   GITHUB_OAUTH_CLIENT_SECRET: z.string().optional(),
   GITHUB_WEBHOOK_SECRET: z.string().min(1, 'GITHUB_WEBHOOK_SECRET is required'),
@@ -46,7 +47,7 @@ const envSchema = z.object({
 
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
   PHASE_TIMEOUT_TRIAGE_MS: z.coerce.number().int().positive().default(30_000),
-  PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(300_000),
+  PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(600_000),
   PHASE_TIMEOUT_PRCREATION_MS: z.coerce.number().int().positive().default(30_000),
 
   OPENAI_API_KEY: z.string().optional(),
@@ -197,7 +198,7 @@ const envSchema = z.object({
   IP_ALLOWLIST: z.string().default(''),
 
   // ── Docker Sandbox ──
-  DOCKER_IMAGE: z.string().default('ubuntu:24.04'),
+  DOCKER_IMAGE: z.string().default('node:20-slim'),
   DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(true),
   DOCKER_ALLOWED_HOSTS: z.string().default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io'),
   DOCKER_CONTAINER_MEMORY: z.string().default('4g'),
@@ -272,6 +273,7 @@ function buildConfig(env: ParsedEnv) {
       appId: env.GITHUB_APP_ID,
       privateKeyPath: env.GITHUB_APP_PRIVATE_KEY_PATH,
       privateKeyEnv: env.GITHUB_APP_PRIVATE_KEY,
+      token: env.GITHUB_TOKEN,
       webhookSecret: env.GITHUB_WEBHOOK_SECRET,
       webhookPath: env.GITHUB_WEBHOOK_PATH,
       oauthClientId: env.GITHUB_OAUTH_CLIENT_ID ?? '',

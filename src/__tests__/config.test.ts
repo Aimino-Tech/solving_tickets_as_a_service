@@ -112,7 +112,7 @@ describe('config', () => {
 
     it("defaults phase timeouts correctly", () => {
       expect(configModule.config.phaseTimeouts.triage).toBe(30_000);
-      expect(configModule.config.phaseTimeouts.sandboxBoot).toBe(300_000);
+      expect(configModule.config.phaseTimeouts.sandboxBoot).toBe(600_000);
       expect(configModule.config.phaseTimeouts.openCodeAgent).toBe(600_000);
       expect(configModule.config.phaseTimeouts.prCreation).toBe(30_000);
     });
