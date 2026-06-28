@@ -1,4 +1,6 @@
 
+import type { Queue } from 'bullmq';
+
 import { config } from '../config.js';
 import { enqueueIssue } from '../queue/issueQueue.js';
 import { rootLogger } from '../utils/logger.js';
@@ -198,7 +200,7 @@ export const gitlabClient: PlatformClient = {
   },
 };
 
-export function createGitlabWebhooks() {
+export function createGitlabWebhooks(queue: Queue<IssueJobData>) {
   const handler = {
     platform: 'gitlab' as const,
 
@@ -228,7 +230,7 @@ export function createGitlabWebhooks() {
         const jobData = gitlabClient.toIssueJobData(parsed);
 
         try {
-          await enqueueIssue(undefined, jobData);
+          await enqueueIssue(queue, jobData);
         } catch (err) {
           log.error(
             { err: String(err), repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },

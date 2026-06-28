@@ -167,6 +167,23 @@ export async function closePool(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// SQL identifier validation — prevents injection via dynamic table/column names
+// ---------------------------------------------------------------------------
+
+const SQL_IDENTIFIER_RE = /^[a-z][a-z0-9_]*$/;
+
+/**
+ * Validate that a string is a safe SQL identifier (column name, table name, etc.).
+ * Throws if the identifier contains unsafe characters.
+ */
+export function validateSqlIdentifier(name: string): string {
+  if (!SQL_IDENTIFIER_RE.test(name)) {
+    throw new Error(`Invalid SQL identifier: "${name}"`);
+  }
+  return name;
+}
+
+// ---------------------------------------------------------------------------
 // Auto-register shutdown handler
 // ---------------------------------------------------------------------------
 

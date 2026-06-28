@@ -25,6 +25,9 @@ export interface IssueJobData {
 
   /** Job priority (lower = higher priority). Free=30, Pro=20, Enterprise=10. */
   priority?: number;
+
+  /** GitHub/Linear issue labels (e.g. ['bug', 'stas:fix']). Used for triage classification. */
+  labels?: string[];
 }
 
 /**
@@ -53,6 +56,9 @@ export interface TriageData {
 
   /** Job priority (lower = higher priority). Free=30, Pro=20, Enterprise=10. */
   priority?: number;
+
+  /** GitHub/Linear issue labels (e.g. ['bug', 'stas:fix']). Used for triage classification. */
+  labels?: string[];
 }
 
 /**
@@ -81,23 +87,6 @@ export interface BillingPlan {
   plan: 'free' | 'pro' | 'team' | 'enterprise';
   accountId: number;
   effectiveAt: string;
-}
-
-export interface AgentResult {
-  summary: string;
-  confidence: 'high' | 'medium' | 'low';
-  fixReady: boolean;
-  prUrl?: string;
-  branchName?: string;
-  diff?: string;
-  testOutput?: string;
-  errors?: string[];
-  relevantPRs?: Array<{ url: string; title: string; state: string }>;
-  noFixReason?: string;
-  alreadyFixed?: boolean;
-  investigationOnly?: boolean;
-  /** Agent produced a fix but it failed verification (tests didn't pass). */
-  verificationFailed?: boolean;
 }
 
 /**

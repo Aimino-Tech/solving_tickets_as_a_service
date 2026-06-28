@@ -128,8 +128,8 @@ export function createIssueWorker(): Worker<IssueJobData> {
             config.queue.maxRetries,
             data.lastError,
           ));
-        } catch {
-          // non-fatal
+        } catch (err) {
+          log.warn({ err: String(err), jobId: job.id }, 'Failed to post retry comment — non-fatal');
         }
       }
 
@@ -144,8 +144,8 @@ export function createIssueWorker(): Worker<IssueJobData> {
           const delay = config.queue.retryDelays[retryCount] ?? 900000;
           try {
             await job.updateData({ ...data, retryCount: retryCount + 1, lastError: errorMsg } as IssueJobDataWithRetry);
-          } catch {
-            // non-fatal
+          } catch (updateErr) {
+            log.warn({ err: String(updateErr), jobId: job.id }, 'Failed to update job data for retry — non-fatal');
           }
           throw err; // BullMQ will retry (attempts=1 means job fails; we handle in 'failed' event)
         }
@@ -220,8 +220,8 @@ export function createIssueWorker(): Worker<IssueJobData> {
         retryCount,
         lastError: errorMsg,
       } as IssueJobDataWithRetry);
-    } catch {
-      // non-fatal
+    } catch (updateErr) {
+      log.warn({ err: String(updateErr), jobId: job?.id }, 'Failed to update job data on failure — non-fatal');
     }
 
     log.error(
@@ -236,6 +236,26 @@ export function createIssueWorker(): Worker<IssueJobData> {
       'Job failed',
     );
     recordMessageFailed('bullmq:' + QUEUE_NAME, 'WORKER_FAILED');
+
+    // ── Non-retryable errors ───────────────────────────────────────────
+    // Sandbox boot timeouts are infrastructure-level failures — retrying
+    // won't help because cloning + deps install takes >5 min on large repos.
+    // Skip retries and go directly to dead-letter queue.
+    const isSandboxTimeout =
+      errorMsg.includes('PhaseTimeoutError') && errorMsg.includes('3-boot-sandbox');
+
+    if (isSandboxTimeout) {
+      log.warn(
+        { jobId: job.id, repo: `${data.repoOwner}/${data.repoName}`, issueNumber: data.issueNumber },
+        'Sandbox timeout — not retrying, moving to dead-letter queue',
+      );
+      try {
+        await moveToDeadLetter(data, errorMsg);
+      } catch (dlqErr) {
+        log.error({ err: String(dlqErr), jobId: job.id }, 'Failed to move sandbox-timeout job to DLQ');
+      }
+      return;
+    }
 
     // Schedule retry if slots remain
     if (retryCount < config.queue.maxRetries) {

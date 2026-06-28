@@ -52,8 +52,8 @@ export class E2BSandboxExecutor implements SandboxExecutorInterface {
     if (this.progressCallback) {
       try {
         this.progressCallback(phase, progress, message);
-      } catch {
-        /* ignore heartbeat failures — non-fatal */
+      } catch (err) {
+        log.warn({ err: String(err), phase, progress }, 'Progress callback failed — non-fatal');
       }
     }
   }

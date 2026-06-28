@@ -112,7 +112,7 @@ describe('config', () => {
 
     it("defaults phase timeouts correctly", () => {
       expect(configModule.config.phaseTimeouts.triage).toBe(30_000);
-      expect(configModule.config.phaseTimeouts.sandboxBoot).toBe(300_000);
+      expect(configModule.config.phaseTimeouts.sandboxBoot).toBe(600_000);
       expect(configModule.config.phaseTimeouts.openCodeAgent).toBe(600_000);
       expect(configModule.config.phaseTimeouts.prCreation).toBe(30_000);
     });
@@ -367,9 +367,9 @@ describe('config', () => {
       expect(cfg.opencode).toHaveProperty("url");
       expect(cfg.opencode).toHaveProperty("model");
       expect(cfg.opencode).toHaveProperty("fallbackModels");
-      expect(cfg.opencode.direct).toHaveProperty("apiKey");
       expect(cfg.e2b).toHaveProperty("sandboxTimeoutMs");
       expect(cfg.stas).toHaveProperty("rateLimitMax");
+      expect(cfg.stas).toHaveProperty("rateLimitWindowMs");
       expect(cfg.phaseTimeouts).toHaveProperty("triage");
       expect(cfg.phaseTimeouts).toHaveProperty("sandboxBoot");
       expect(cfg.phaseTimeouts).toHaveProperty("openCodeAgent");

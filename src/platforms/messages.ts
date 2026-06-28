@@ -12,7 +12,7 @@ import type { AgentResult, QualityGateResult } from '../agent/types.js';
 import { config } from '../config.js';
 
 const BOT_NAME = config.stas.botName;
-const BOT_SIGNATURE = `> — ${BOT_NAME} 🤖`;
+export const BOT_SIGNATURE = `> — ${BOT_NAME} 🤖`;
 
 /**
  * High-confidence fix — PR is ready for review (non-draft).
@@ -462,8 +462,9 @@ export function buildPRBody(params: {
   fileLinks: string[];
   isDraft: boolean;
   branchName: string;
+  runId?: string | number;
 }): string {
-  const { issueNumber, result, fileLinks, branchName } = params;
+  const { issueNumber, result, fileLinks, branchName, runId } = params;
 
   const ver = result.verification;
   const verSection: string[] = [];
@@ -520,6 +521,13 @@ export function buildPRBody(params: {
     '',
     '---',
     '',
+    ...(runId
+      ? [
+          `**Run page**: [STAS run #${runId}](/runs/${runId})`,
+          `**Badge**: ![](/badge/${runId}.svg)`,
+          '',
+        ]
+      : []),
     `_🤖 Automated fix by ${BOT_NAME}_`,
   ].join('\n');
 }

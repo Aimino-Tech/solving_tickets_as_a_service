@@ -50,7 +50,7 @@ if $CHANGED_ONLY; then
     CHANGED_ONLY=false
   else
     BASE="${BASE_BRANCH:-origin/main}"
-    CHANGED_FILES=$(git diff --name-only "$BASE" 2>/dev/null || git diff --name-only HEAD 2>/dev/null || echo "")
+    CHANGED_FILES=$(git diff --name-only "$BASE"...HEAD --diff-filter=AM 2>/dev/null || git diff --name-only HEAD 2>/dev/null || echo "")
     if [ -z "$CHANGED_FILES" ]; then
       echo -e "${YELLOW}No changed files vs $BASE — scanning all files${NC}"
       CHANGED_ONLY=false
@@ -165,9 +165,23 @@ else
               fi
             fi
           fi
+          # Self-referencing import detection
+          # Pattern: ./<parent-dir>/<basename> from <parent-dir>/<basename>.ts
+          # Common in JSDoc examples where a usage import resolves to the file itself
+          if ! $found && [[ "$file" == *.ts || "$file" == *.tsx ]]; then
+            file_base_noext="$(basename "${file%.*}")"
+            file_dir_base="$(basename "$(dirname "$file")")"
+            imp_base="$(basename "$imp_stripped")"
+            imp_dir="$(dirname "$imp_stripped")"
+            imp_dir_base="$(basename "$imp_dir")"
+            if [ "$imp_base" = "$file_base_noext" ] && [ "$imp_dir_base" = "$file_dir_base" ] && [ "$imp_dir" != "." ]; then
+              found=true
+            fi
+          fi
           if ! $found && [[ "$imp" != .* ]]; then
             : # skip non-relative imports (npm packages)
           elif ! $found; then
+            PHANTOM_COUNT=$((PHANTOM_COUNT + 1))
             echo -e "    ${YELLOW}[PHANTOM]${NC} $file imports '$imp_stripped' — file not found"
           fi
         done
@@ -440,24 +454,27 @@ if command -v npx >/dev/null 2>&1; then
   fi
 fi
 
-# ── trace-core — AI code security checker ──
+# ── trace-core — AI code security checker (single-file scan, no directory support) ──
 if command -v npx >/dev/null 2>&1; then
   echo ""
-  echo -e "  ${CYAN}[trace-core] Scanning for AI-generated code security issues...${NC}"
-  TRACE_FILES=$(find src/ -name '*.ts' -not -path '*/node_modules/*' | head -50 2>/dev/null || true)
+  echo -e "  ${CYAN}[trace-core] Scanning source files for AI-generated code security issues...${NC}"
+  if $CHANGED_ONLY; then
+    TRACE_FILES=$(echo "$TS_CHANGED" | head -20 2>/dev/null || true)
+  else
+    TRACE_FILES=$(find src/ -name '*.ts' -not -path '*/node_modules/*' | head -20 2>/dev/null || true)
+  fi
   TRACE_ISSUES=0
   for tf in $TRACE_FILES; do
     TR_RESULT=$(npx trace-check "$tf" 2>&1 || true)
-    if echo "$TR_RESULT" | grep -qP '(error|warning|Issue)'; then
+    if echo "$TR_RESULT" | grep -qiP '(error|warning|issue|vulnerability|security)'; then
       TRACE_ISSUES=$((TRACE_ISSUES + 1))
       echo -e "           $tf"
-      echo "$TR_RESULT" | grep -P '(critical|medium|info)' | head -5 | sed 's/^/             /'
     fi
   done
   if [ "$TRACE_ISSUES" -gt 0 ]; then
     echo -e "    ${YELLOW}[TRACE]${NC} trace-core flagged $TRACE_ISSUES file(s) with issues"
   else
-    echo -e "    ${GREEN}✓${NC} No AI code security issues detected"
+    echo -e "    ${GREEN}✓${NC} No AI code security issues detected across ${TRACE_FILES} file(s)"
   fi
 fi
 

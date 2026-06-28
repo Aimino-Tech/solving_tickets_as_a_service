@@ -9,7 +9,6 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { auditRepository } from '../audit/repository.js';
 import { logAdminAction } from '../audit/service.js';
 import { accountsRepository } from '../db/repositories/index.js';
@@ -39,17 +38,8 @@ const router: Router = Router();
 // Rate Limiting: 10 requests per minute on admin endpoints
 // ---------------------------------------------------------------------------
 
-const adminLimiter = rateLimit({
-  windowMs: 60_000, // 1 minute
-  limit: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many admin requests', retryAfter: 'see Retry-After header' },
-});
-
 // Apply auth + rate limit to all admin routes
 router.use(adminAuthMiddleware);
-router.use(adminLimiter);
 
 // ---------------------------------------------------------------------------
 // GET /admin/health — full system health
@@ -429,8 +419,9 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
     // Re-enqueue based on source
     if (webhookEvent.source === 'github') {
       const { createGithubWebhooks } = await import('../webhooks/github.js');
-      const { enqueueIssue } = await import('../queue/issueQueue.js');
-      const githubWebhooks = createGithubWebhooks();
+      const { createIssueQueue } = await import('../queue/issueQueue.js');
+      const queue = createIssueQueue();
+      const githubWebhooks = createGithubWebhooks(queue);
 
       const payload = typeof webhookEvent.payload === 'string'
         ? webhookEvent.payload
@@ -471,82 +462,6 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /admin/queue — queue status (RabbitMQ)
-// ---------------------------------------------------------------------------
-
-router.get('/queue', async (_req: Request, res: Response) => {
-  try {
-    const { isConnected, getPublishChannel, QUEUES } = await import('../queue/rabbitmq.js');
-
-    if (!isConnected()) {
-      res.json({ status: 'not_connected', queues: {} });
-      return;
-    }
-
-    const channel = getPublishChannel();
-    const queueStatuses: Record<string, { name: string; messageCount: number; consumerCount: number }> = {};
-
-    for (const [key, q] of Object.entries(QUEUES)) {
-      try {
-        const info = await channel.checkQueue(q.name);
-        queueStatuses[key] = {
-          name: q.name,
-          messageCount: info.messageCount,
-          consumerCount: info.consumerCount,
-        };
-      } catch {
-        queueStatuses[key] = { name: q.name, messageCount: -1, consumerCount: 0 };
-      }
-    }
-
-    res.json({
-      status: 'connected',
-      rabbitmq: true,
-      queues: queueStatuses,
-    });
-  } catch (err) {
-    log.error({ err: String(err) }, 'Failed to get queue status');
-    res.status(500).json({ error: 'Failed to get queue status' });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// POST /admin/queue/clear-dlq — purge dead letter queues (RabbitMQ)
-// ---------------------------------------------------------------------------
-
-router.post('/queue/clear-dlq', async (_req: Request, res: Response) => {
-  try {
-    const { isConnected, getPublishChannel, QUEUES } = await import('../queue/rabbitmq.js');
-
-    if (!isConnected()) {
-      res.status(503).json({ error: 'RabbitMQ not connected' });
-      return;
-    }
-
-    const channel = getPublishChannel();
-    const purged: string[] = [];
-
-    for (const [, q] of Object.entries(QUEUES)) {
-      const dlqName = `${q.name}.dlq`;
-      try {
-        const result = await channel.purgeQueue(dlqName);
-        if (result.messageCount > 0) {
-          purged.push(dlqName);
-        }
-      } catch {
-        // Queue might not exist
-      }
-    }
-
-    log.info({ purgedCount: purged.length, queues: purged }, 'Admin purged dead-letter queues');
-    res.json({ cleared: true, purgedQueues: purged });
-  } catch (err) {
-    log.error({ err: String(err) }, 'Failed to clear dead-letter queues');
-    res.status(500).json({ error: 'Failed to clear dead-letter queues' });
-  }
-});
-
-// ---------------------------------------------------------------------------
 // POST /admin/gc/sweep — trigger sandbox container GC sweep
 // ---------------------------------------------------------------------------
 
@@ -555,6 +470,16 @@ router.post('/gc/sweep', async (_req: Request, res: Response) => {
     const { SandboxGC } = await import('../sandbox/gc.js');
     const gc = new SandboxGC();
     const cleaned = await gc.sweep();
+    await logAdminAction({
+      adminId: 'admin:api-key',
+      action: 'admin.gc.sweep',
+      resourceType: 'sandbox',
+      resourceId: 'gc',
+      details: { containersCleaned: cleaned },
+      ipAddress: req.ip,
+      correlationId: req.requestId,
+    });
+
     log.info({ cleaned }, 'Admin triggered sandbox GC sweep');
     res.json({ cleaned, timestamp: new Date().toISOString() });
   } catch (err) {

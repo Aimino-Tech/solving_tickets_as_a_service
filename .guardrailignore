@@ -1,0 +1,47 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# .guardrailignore — Pattern exclusions for the slop-intent guardrail scanner
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Format: file glob pattern (matched against relative paths)
+# Lines starting with # are comments
+# Empty lines are ignored
+# Entries are .gitignore-style glob patterns
+#
+# Usage:
+#   bash scripts/guardrail.sh --changed   # skips all entries below
+#   bash scripts/guardrail.sh             # skips all entries below
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── Test files ────────────────────────────────────────────────────────────────
+# Test files legitimately use test doubles, mocks, and fake data. These are
+# excluded because the test framework governs their use, not the guardrail.
+__tests__/**
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+*.test.js
+*.test.jsx
+*.e2e.ts
+*.integration.ts
+
+# ── Legacy/vendor code ────────────────────────────────────────────────────────
+# Code that is not actively being developed — guardrail would create noise.
+dist/**
+node_modules/**
+vendor/**
+build/**
+
+# ── Generated code ────────────────────────────────────────────────────────────
+# Auto-generated files may contain stubs that mirror their generator's patterns.
+*.generated.ts
+*.gen.ts
+
+# ── Configuration and documentation ───────────────────────────────────────────
+# These files may reference demo/placeholder terms as *topics*, not code.
+*.md
+*.yaml
+*.yml
+*.json
+*.json5
+*.jsonc

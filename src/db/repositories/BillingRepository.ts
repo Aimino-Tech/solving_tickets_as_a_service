@@ -2,7 +2,7 @@
  * Billing repository — data access for the billing table.
  */
 
-import { queryWithRetry } from '../connection.js';
+import { queryWithRetry, validateSqlIdentifier } from '../connection.js';
 import type { Billing, NewBilling } from '../schema/index.js';
 
 export class BillingRepository {
@@ -108,6 +108,12 @@ export class BillingRepository {
     }
 
     if (sets.length === 0) return this.getOrCreate(accountId);
+
+    // Validate each column name in the dynamic SET clause
+    for (const clause of sets) {
+      const colName = clause.split('=')[0].trim();
+      validateSqlIdentifier(colName);
+    }
 
     values.push(accountId);
     const result = await queryWithRetry<Billing>(

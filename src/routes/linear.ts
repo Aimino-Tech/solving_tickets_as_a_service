@@ -15,7 +15,6 @@
 
 import crypto from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { getTracker } from '../trackers/index.js';
 import { rootLogger } from '../utils/logger.js';
@@ -33,20 +32,8 @@ const log = rootLogger.child({ module: 'linear-webhook' });
 // Rate Limiting: 30 requests per minute on Linear webhook endpoint
 // ---------------------------------------------------------------------------
 
-const linearWebhookLimiter = rateLimit({
-  windowMs: 60_000, // 1 minute
-  limit: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: 'Too many requests',
-    retryAfter: 'see Retry-After header',
-  },
-});
-
 const router = Router();
 
-router.use(linearWebhookLimiter);
 
 // ---------------------------------------------------------------------------
 // POST /api/webhooks/linear

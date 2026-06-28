@@ -5,13 +5,13 @@
  * objects matching the interface shapes can be constructed correctly.
  *
  * Covers:
- *   - src/utils/types.ts  → IssueJobData, BillingPlan, AgentResult
- *   - src/agent/types.ts  → TestResult (referenced in the task requirements)
+ *   - src/utils/types.ts  → IssueJobData, BillingPlan
+ *   - src/agent/types.ts  → AgentResult, TestResult (referenced in the task requirements)
  */
 
 import { describe, expect, it } from 'vitest';
-import type { AgentResult as AgentAgentResult, TestResult } from '../../agent/types.js';
-import type { BillingPlan, IssueJobData, AgentResult as UtilsAgentResult } from '../../utils/types.js';
+import type { AgentResult, TestResult } from '../../agent/types.js';
+import type { BillingPlan, IssueJobData } from '../../utils/types.js';
 
 // ── IssueJobData ────────────────────────────────────────────────────────────
 
@@ -141,11 +141,11 @@ describe('BillingPlan', () => {
   });
 });
 
-// ── AgentResult (utils/types.ts) ────────────────────────────────────────────
+// ── AgentResult ─────────────────────────────────────────────────────────────
 
-describe('AgentResult (utils/types.ts)', () => {
+describe('AgentResult', () => {
   it('can be constructed with only required fields', () => {
-    const result: UtilsAgentResult = {
+    const result: AgentResult = {
       summary: 'Fixed the login handler.',
       confidence: 'high',
       fixReady: true,
@@ -157,17 +157,17 @@ describe('AgentResult (utils/types.ts)', () => {
   });
 
   it('accepts all confidence levels', () => {
-    const high: UtilsAgentResult = {
+    const high: AgentResult = {
       summary: 's',
       confidence: 'high',
       fixReady: true,
     };
-    const medium: UtilsAgentResult = {
+    const medium: AgentResult = {
       summary: 's',
       confidence: 'medium',
       fixReady: true,
     };
-    const low: UtilsAgentResult = {
+    const low: AgentResult = {
       summary: 's',
       confidence: 'low',
       fixReady: false,
@@ -179,7 +179,7 @@ describe('AgentResult (utils/types.ts)', () => {
   });
 
   it('accepts optional fields', () => {
-    const result: UtilsAgentResult = {
+    const result: AgentResult = {
       summary: 'Investigation complete.',
       confidence: 'low',
       fixReady: false,
@@ -206,38 +206,13 @@ describe('AgentResult (utils/types.ts)', () => {
   });
 
   it('accepts empty errors array', () => {
-    const result: UtilsAgentResult = {
+    const result: AgentResult = {
       summary: 's',
       confidence: 'medium',
       fixReady: true,
       errors: [],
     };
 
-    expect(result.errors).toEqual([]);
-  });
-});
-
-// ── AgentResult (agent/types.ts) ───────────────────────────────────────────
-
-describe('AgentResult (agent/types.ts)', () => {
-  // This mirrors the utils/types.ts AgentResult (same shape at runtime).
-  it('has the same shape as utils/types.ts AgentResult', () => {
-    const result: AgentAgentResult = {
-      summary: 'Fixed bug',
-      confidence: 'high',
-      fixReady: true,
-      prUrl: 'https://github.com/o/r/p/1',
-      diff: 'diff --git a/src/index.ts b/src/index.ts',
-      testOutput: 'PASS',
-      errors: [],
-      alreadyFixed: false,
-    };
-
-    // Both AgentResult types share the same fields
-    expect(result.summary).toBe('Fixed bug');
-    expect(result.confidence).toBe('high');
-    expect(result.fixReady).toBe(true);
-    expect(result.prUrl).toContain('github.com');
     expect(result.errors).toEqual([]);
   });
 });

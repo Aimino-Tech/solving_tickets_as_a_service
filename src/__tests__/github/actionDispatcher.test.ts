@@ -130,6 +130,7 @@ function createDispatchParams(overrides?: Partial<AgentResult>) {
         preExistingTestsRegressed: false,
         unverified: false,
         details: ['All checks passed'],
+        qualityGates: [],
       },
       ...overrides,
     },
@@ -375,6 +376,7 @@ describe('ActionDispatcher', () => {
           preExistingTestsRegressed: true,
           unverified: false,
           details: ['REGRESSION: tests that were passing now fail'],
+          qualityGates: [],
         },
       });
       const result = await dispatcher.dispatch(params);
@@ -394,6 +396,7 @@ describe('ActionDispatcher', () => {
           preExistingTestsRegressed: true,
           unverified: false,
           details: ['REGRESSION'],
+          qualityGates: [],
         },
       });
       await dispatcher.dispatch(params);

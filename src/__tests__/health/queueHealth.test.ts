@@ -1,5 +1,5 @@
 /**
- * Unit tests for src/health/queueHealth.ts — Queue health monitoring (RabbitMQ).
+ * Unit tests for src/health/queueHealth.ts — Queue health monitoring (BullMQ).
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
@@ -7,22 +7,11 @@ vi.mock('../../config.js', () => ({
   config: {
     queue: { redisUrl: 'redis://localhost:6379' },
     monitoring: { queueDepthWarnThreshold: 50, queueDepthCritThreshold: 200, dlqRetentionDays: 7, queueDepthAlertMinutes: 5 },
-    rabbitmq: { url: 'amqp://guest:guest@localhost:5672/stas' },
   },
 }));
 
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
-}));
-
-// Mock RabbitMQ connection — disconnected by default
-const mockIsConnected = vi.fn(() => false);
-vi.mock('../../queue/rabbitmq.js', () => ({
-  isConnected: mockIsConnected,
-  QUEUES: {
-    issuesFix: { name: 'stas.issues.fix', exchange: 'stas.issues', routingKey: 'fix' },
-    triage: { name: 'stas.agents.triage', exchange: 'stas.agents', routingKey: 'triage' },
-  },
 }));
 
 vi.mock('../../bridge/metrics.js', () => ({
@@ -53,9 +42,7 @@ describe('health/queueHealth', () => {
   });
 
   describe('getQueueHealth', () => {
-    it('returns a healthy report when RabbitMQ is disconnected', async () => {
-      mockIsConnected.mockReturnValue(false);
-
+    it('returns a healthy report when queues are empty', async () => {
       const report = await qh.getQueueHealth();
       expect(report.status).toBe('healthy');
       expect(report.summary.totalMessages).toBe(0);
@@ -64,23 +51,7 @@ describe('health/queueHealth', () => {
       expect(report.timestamp).toBeDefined();
     });
 
-    it('returns healthy when connected and queues are empty', async () => {
-      mockIsConnected.mockReturnValue(true);
-      // Mock fetch to return empty queues
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue([]),
-      });
-
-      const report = await qh.getQueueHealth();
-      expect(report.status).toBe('healthy');
-      expect(report.queues).toBeDefined();
-      expect(report.queues.length).toBeGreaterThanOrEqual(0);
-    });
-
     it('returns degraded when a main queue exceeds warn threshold', async () => {
-      mockIsConnected.mockReturnValue(true);
-      // Verify getRedis returns our mock object
       mockRedisForHealth.llen.mockReset();
       mockRedisForHealth.llen.mockResolvedValue(60);
       const firstCall = await mockRedisForHealth.llen('test');
@@ -104,7 +75,6 @@ describe('health/queueHealth', () => {
 
   describe('hasCriticalQueues', () => {
     it('returns empty arrays when healthy', async () => {
-      mockIsConnected.mockReturnValue(false);
       // Reset llen to return 0 (previous test may have set it to 60)
       mockRedisForHealth.llen.mockReset();
       mockRedisForHealth.llen.mockResolvedValue(0);

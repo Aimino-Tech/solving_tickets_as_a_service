@@ -11,9 +11,11 @@ import { randomUUID } from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { Redis } from 'ioredis';
+import type { Queue } from 'bullmq';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import type { FixResponse, JobStatus, JobStatusResponse } from './types.js';
+import type { IssueJobData } from '../utils/types.js';
 
 const log = rootLogger.child({ module: 'rapidapi-fix' });
 
@@ -143,7 +145,8 @@ router.post('/', async (req: Request, res: Response) => {
 
     // Enqueue the task for processing
     try {
-      const { enqueueIssue } = await import('../queue/issueQueue.js');
+      const { enqueueIssue, createIssueQueue } = await import('../queue/issueQueue.js');
+      const queue = createIssueQueue();
 
       // Parse repo owner and name from the URL
       // URL format: https://github.com/owner/repo
@@ -151,7 +154,7 @@ router.post('/', async (req: Request, res: Response) => {
       const repoOwner = urlParts[urlParts.length - 2];
       const repoName = urlParts[urlParts.length - 1];
 
-      await enqueueIssue(undefined, {
+      await enqueueIssue(queue, {
         installationId: 0,
         repoOwner,
         repoName,

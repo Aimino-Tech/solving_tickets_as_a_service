@@ -24,6 +24,8 @@ Modules
         Dead worker cleanup — revokes tasks for dead workers.
     circuit_breaker
         Circuit breaker — pauses task types after N consecutive failures.
+    tenant_limiter
+        Per-tenant token bucket rate limiter and concurrency limiter (AIM-2017).
     queue_drain
         Queue drain monitor — alerts on backed-up queues.
 """
@@ -84,6 +86,45 @@ from workers.orchestrator.queue_drain import (
     get_queue_depth,
 )
 
+# Multi-tenant isolation (AIM-2017)
+from workers.orchestrator.tenant_limiter import (
+    TenantTokenBucket,
+    TenantConcurrencyLimiter,
+    get_tenant_token_bucket,
+    get_tenant_concurrency_limiter,
+)
+
+# SLA Priority Queues (AIM-2019)
+from workers.orchestrator.sla_priority import (
+    SLA_TIER_PRIORITY_MAP,
+    SLA_TIER_QUEUE_MAP,
+    TIER_QUEUES,
+    TIER_ROUTES,
+    SlaPriorityRouter,
+    apply_sla_priority,
+    priority_for_tier,
+    queue_for_tier,
+    resolve_queue,
+    tier_for_queue,
+)
+
+# Workspace quota & isolation (AIM-2013)
+from workers.orchestrator.quota import (
+    DiskQuota,
+    WorkspaceIsolation,
+    resolve_tier,
+    quota_for_tier,
+    get_disk_quota,
+    get_workspace_isolation,
+)
+
+from workers.orchestrator.workspace_quota import (
+    QuotaManager,
+    PeriodicCleanupTask,
+    get_quota_manager,
+    get_periodic_cleanup,
+)
+
 __all__ = [
     # Core orchestration
     "PipelineEngine",
@@ -135,4 +176,31 @@ __all__ = [
     "check_queue_drain",
     "check_queue_drain_task",
     "get_queue_depth",
+    # Multi-tenant isolation (AIM-2017)
+    "TenantTokenBucket",
+    "TenantConcurrencyLimiter",
+    "get_tenant_token_bucket",
+    "get_tenant_concurrency_limiter",
+    # Workspace quota & isolation (AIM-2013)
+    "DiskQuota",
+    "WorkspaceIsolation",
+    "resolve_tier",
+    "quota_for_tier",
+    # SLA Priority Queues (AIM-2019)
+    "SLA_TIER_QUEUE_MAP",
+    "SLA_TIER_PRIORITY_MAP",
+    "TIER_QUEUES",
+    "TIER_ROUTES",
+    "SlaPriorityRouter",
+    "apply_sla_priority",
+    "priority_for_tier",
+    "queue_for_tier",
+    "resolve_queue",
+    "tier_for_queue",
+    "get_disk_quota",
+    "get_workspace_isolation",
+    "QuotaManager",
+    "PeriodicCleanupTask",
+    "get_quota_manager",
+    "get_periodic_cleanup",
 ]

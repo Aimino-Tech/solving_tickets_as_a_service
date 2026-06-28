@@ -20,7 +20,27 @@ from celery import chain, chord
 from celery.result import AsyncResult
 
 from workers.orchestrator.concurrency import AgentConcurrencyLimiter
-from workers.orchestrator.pipelines import get_pipeline, get_stage_task
+from workers.orchestrator.pipelines import (
+    get_pipeline,
+    get_stage_task,
+    build_canvas,
+)
+from workers.orchestrator.tenant_limiter import (
+    get_tenant_concurrency_limiter,
+    get_tenant_token_bucket,
+)
+from workers.billing.tenant_isolation import get_tenant_manager
+from workers.billing.cost_analyzer import (
+    analyze_complexity,
+    recommend_model,
+)
+from workers.billing.unit_economics import (
+    get_cost_cap_cents,
+    get_max_input_tokens,
+    get_max_output_tokens,
+    is_within_cost_cap,
+)
+from workers.plan import save_plan, read_plan
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +54,6 @@ MAX_REWORK_ATTEMPTS = int(os.getenv("PIPELINE_MAX_REWORK_ATTEMPTS", "3"))
 
 
 def _get_redis() -> Optional[Any]:
-    """Lazy-init Redis client for pipeline state storage."""
     global _REDIS_CLIENT
     if _REDIS_CLIENT is not None:
         return _REDIS_CLIENT
@@ -55,17 +74,14 @@ def _get_redis() -> Optional[Any]:
 
 
 def _pipeline_id_key(issue_id: str) -> str:
-    """Redis key mapping *issue_id* to its active pipeline ID."""
     return f"pipeline:{issue_id}:id"
 
 
 def _pipeline_state_key(pipeline_id: str) -> str:
-    """Redis key holding the JSON state blob for *pipeline_id*."""
     return f"pipeline:{pipeline_id}:state"
 
 
 def _pipeline_events_key(pipeline_id: str) -> str:
-    """Redis list key holding recent pipeline events."""
     return f"pipeline:{pipeline_id}:events"
 
 
@@ -79,10 +95,17 @@ class PipelineEngine:
 
     State is persisted in Redis so it survives worker restarts and is
     accessible from the status API.
+
+    Multi-tenant (AIM-2017):
+        When ``ctx`` contains ``tenant_id``, the engine applies per-tenant
+        concurrency limits and propagates tenant context to all pipeline steps.
     """
 
     def __init__(self) -> None:
         self.concurrency = AgentConcurrencyLimiter()
+        self._tenant_concurrency = get_tenant_concurrency_limiter()
+        self._tenant_bucket = get_tenant_token_bucket()
+        self._tenant_manager = get_tenant_manager()
         self._max_rework = MAX_REWORK_ATTEMPTS
 
     # ------------------------------------------------------------------
@@ -95,39 +118,84 @@ class PipelineEngine:
         pipeline_name: str,
         ctx: dict[str, Any] | None = None,
     ) -> str:
-        """Build and dispatch a pipeline canvas for *issue_id*.
-
-        Args:
-            issue_id: Issue identifier (e.g. ``"AIM-42"`` or ``"42"``).
-            pipeline_name: One of ``"stas:fix"``, ``"stas:feature"``,
-                ``"stas:research"``.
-            ctx: Context dict passed to the pipeline builder.  Must contain
-                at minimum ``"repo_url"`` and ``"issue_identifier"``.
-
-        Returns:
-            The generated ``pipeline_id`` (UUID string).
-
-        Raises:
-            ValueError: if *pipeline_name* is not registered.
-        """
         pipeline_id = str(uuid.uuid4())
         ctx = dict(ctx or {})
         ctx.setdefault("pipeline_id", pipeline_id)
         ctx.setdefault("issue_id", issue_id)
 
+        tenant_id = ctx.get("tenant_id")
+        tenant_tier = ctx.get("tenant_tier")
+
+        # ── Model selection and cost budget (AIM-2083) ─────────────────────
+        self._inject_cost_aware_config(ctx, issue_id)
+
         logger.info(
-            "Starting pipeline pipeline_id=%s issue=%s name=%s",
+            "Starting pipeline pipeline_id=%s issue=%s name=%s tenant=%s",
             pipeline_id,
             issue_id,
             pipeline_name,
+            tenant_id or "(none)",
         )
 
-        # --- Concurrency check ---
+        if tenant_id:
+            if not self._tenant_concurrency.acquire(tenant_id, issue_id, tier=tenant_tier):
+                logger.warning(
+                    "Tenant concurrency limit reached for %s tenant=%s -- pipeline queued",
+                    issue_id,
+                    tenant_id,
+                )
+                self._persist_state(
+                    pipeline_id,
+                    {
+                        "pipeline_id": pipeline_id,
+                        "pipeline_name": pipeline_name,
+                        "issue_id": issue_id,
+                        "tenant_id": tenant_id,
+                        "tenant_tier": tenant_tier or "free",
+                        "status": "queued",
+                        "current_stage": "awaiting_tenant_slot",
+                        "progress": 0.0,
+                        "attempt": 0,
+                        "created_at": time.time(),
+                        "updated_at": time.time(),
+                    },
+                )
+                self._map_issue_to_pipeline(issue_id, pipeline_id)
+                return pipeline_id
+
+            if not self._tenant_bucket.consume(tenant_id, tokens=1, tier=tenant_tier):
+                logger.warning(
+                    "Tenant rate limited for %s tenant=%s -- pipeline queued",
+                    issue_id,
+                    tenant_id,
+                )
+                self._tenant_concurrency.release(tenant_id, issue_id)
+                self._persist_state(
+                    pipeline_id,
+                    {
+                        "pipeline_id": pipeline_id,
+                        "pipeline_name": pipeline_name,
+                        "issue_id": issue_id,
+                        "tenant_id": tenant_id,
+                        "tenant_tier": tenant_tier or "free",
+                        "status": "queued",
+                        "current_stage": "rate_limited",
+                        "progress": 0.0,
+                        "attempt": 0,
+                        "created_at": time.time(),
+                        "updated_at": time.time(),
+                    },
+                )
+                self._map_issue_to_pipeline(issue_id, pipeline_id)
+                return pipeline_id
+
         if not self.concurrency.acquire(issue_id):
             logger.warning(
                 "Concurrency limit reached for %s -- pipeline queued",
                 issue_id,
             )
+            if tenant_id:
+                self._tenant_concurrency.release(tenant_id, issue_id)
             self._persist_state(
                 pipeline_id,
                 {
@@ -146,41 +214,81 @@ class PipelineEngine:
             return pipeline_id
 
         try:
-            # --- Build pipeline canvas ---
-            builder = get_pipeline(pipeline_name)
-            issue_data = ctx.get("issue_data", {})
-            canvas = builder(issue_data, ctx)
+            pipeline_cfg = get_pipeline(pipeline_name)
+            if pipeline_cfg is None:
+                raise ValueError(f"Unknown pipeline: {pipeline_name}")
 
-            # --- Create workspace ---
-            workspace_result = self._create_workspace_for_issue(issue_id, ctx)
-            ctx["workspace_path"] = workspace_result.get("workspace_path", "")
+            # ── Load externally edited plan.md if it exists ────────────
+            existing_workspace = ctx.get("workspace_path", "")
+            if existing_workspace:
+                plan_steps = read_plan(existing_workspace)
+                if plan_steps:
+                    ctx["plan_steps"] = plan_steps
+                    logger.info(
+                        "Loaded %d steps from plan.md for issue=%s",
+                        len(plan_steps),
+                        issue_id,
+                    )
 
-            # --- Persist initial state ---
-            self._persist_state(
-                pipeline_id,
-                {
-                    "pipeline_id": pipeline_id,
-                    "pipeline_name": pipeline_name,
-                    "issue_id": issue_id,
-                    "status": "running",
-                    "current_stage": "starting",
-                    "progress": 0.0,
-                    "attempt": 1,
-                    "created_at": time.time(),
-                    "updated_at": time.time(),
-                },
-            )
+            canvas = build_canvas(pipeline_cfg, ctx)
+
+            if tenant_id:
+                issue_key = ctx.get("issue_identifier", issue_id)
+                workspace_path = self._tenant_manager.workspace_root(tenant_id, issue_key)
+                ctx["workspace_path"] = workspace_path
+            else:
+                workspace_result = self._create_workspace_for_issue(issue_id, ctx)
+                ctx["workspace_path"] = workspace_result.get("workspace_path", "")
+
+            # ── Persist pipeline steps as editable plan.md ────────────
+            pipeline_steps = pipeline_cfg.get("steps", [])
+            plan_step_dicts = [
+                {"task": _step_label(s), "done": False}
+                for s in pipeline_steps
+            ]
+            try:
+                save_plan(issue_id, plan_step_dicts, ctx)
+            except OSError:
+                logger.warning(
+                    "Failed to save plan.md for issue=%s workspace=%s",
+                    issue_id,
+                    ctx.get("workspace_path", "(unknown)"),
+                )
+
+            state = {
+                "pipeline_id": pipeline_id,
+                "pipeline_name": pipeline_name,
+                "issue_id": issue_id,
+                "status": "running",
+                "current_stage": "starting",
+                "progress": 0.0,
+                "attempt": 1,
+                "created_at": time.time(),
+                "updated_at": time.time(),
+                "selected_model": ctx.get("selected_model", "unknown"),
+                "fix_complexity": ctx.get("fix_complexity", "unknown"),
+                "cost_budget_cents": ctx.get("cost_budget_cents", 0),
+                "estimated_cost_cents": ctx.get("estimated_cost_cents", 0),
+                "within_cost_budget": ctx.get("within_cost_budget", True),
+            }
+            if tenant_id:
+                state["tenant_id"] = tenant_id
+                state["tenant_tier"] = tenant_tier or "free"
+            self._persist_state(pipeline_id, state)
             self._map_issue_to_pipeline(issue_id, pipeline_id)
-            self._emit_event(pipeline_id, "pipeline.started", {"pipeline_name": pipeline_name})
+            self._emit_event(pipeline_id, "pipeline.started", {
+                "pipeline_name": pipeline_name,
+                "tenant_id": tenant_id,
+            })
 
-            # --- Dispatch the canvas ---
             async_result = canvas.delay()
             self._update_state(pipeline_id, async_result_id=async_result.id)
 
             logger.info(
-                "Pipeline dispatched pipeline_id=%s async_result=%s",
+                "Pipeline dispatched pipeline_id=%s async_result=%s tenant=%s",
                 pipeline_id,
                 async_result.id,
+                tenant_id or "(none)",
             )
 
         except Exception:
@@ -193,6 +301,8 @@ class PipelineEngine:
             raise
         finally:
             self.concurrency.release(issue_id)
+            if tenant_id:
+                self._tenant_concurrency.release(tenant_id, issue_id)
 
         return pipeline_id
 
@@ -201,11 +311,6 @@ class PipelineEngine:
     # ------------------------------------------------------------------
 
     def cancel_pipeline(self, issue_id: str) -> bool:
-        """Revoke all tasks for *issue_id* and mark the pipeline cancelled.
-
-        Returns:
-            True if a pipeline was found and revoked, False otherwise.
-        """
         pipeline_id = self._resolve_pipeline_id(issue_id)
         if not pipeline_id:
             logger.warning("No pipeline found for issue %s", issue_id)
@@ -242,12 +347,6 @@ class PipelineEngine:
     # ------------------------------------------------------------------
 
     def get_status(self, issue_id: str) -> dict[str, Any]:
-        """Return the current pipeline state for *issue_id*.
-
-        Returns a dict with ``status``, ``current_stage``, ``progress``,
-        ``attempt``, ``pipeline_name``, and other metadata.  Returns a
-        ``not_found`` status when no pipeline exists.
-        """
         client = _get_redis()
         if not client:
             return {"issue_id": issue_id, "status": "unknown"}
@@ -288,7 +387,6 @@ class PipelineEngine:
     # ------------------------------------------------------------------
 
     def get_events(self, issue_id: str, limit: int = 20) -> list[dict[str, Any]]:
-        """Return recent pipeline events for *issue_id*."""
         client = _get_redis()
         if not client:
             return []
@@ -315,7 +413,6 @@ class PipelineEngine:
     # ------------------------------------------------------------------
 
     def should_rework(self, step_result: dict[str, Any]) -> bool:
-        """Determine if *step_result* indicates a failure worth reworking."""
         if step_result.get("status") in ("failed", "error"):
             return True
         if step_result.get("passed") is False:
@@ -333,12 +430,6 @@ class PipelineEngine:
         ctx: dict[str, Any],
         feedback: dict[str, Any],
     ) -> Optional[str]:
-        """Re-dispatch the pipeline with accumulated *feedback*.
-
-        Increments the rework counter in Redis.  When ``MAX_REWORK_ATTEMPTS``
-        is exceeded the pipeline is marked as ``failed`` and ``None`` is
-        returned.
-        """
         pipeline_id = self._resolve_pipeline_id(issue_id)
         if not pipeline_id:
             logger.warning("Cannot rework -- no pipeline for issue %s", issue_id)
@@ -367,7 +458,6 @@ class PipelineEngine:
             )
             return None
 
-        # Build rework context
         rework_ctx = dict(ctx)
         rework_ctx["_rework_attempt"] = attempt
         rework_ctx["_rework_feedback"] = feedback
@@ -386,11 +476,11 @@ class PipelineEngine:
             {"attempt": attempt, "failures": feedback.get("failures", [])},
         )
 
-        # Re-dispatch
         try:
-            builder = get_pipeline(pipeline_name)
-            issue_data = ctx.get("issue_data", {})
-            canvas = builder(issue_data, rework_ctx)
+            pipeline_cfg = get_pipeline(pipeline_name)
+            if pipeline_cfg is None:
+                raise ValueError(f"Unknown pipeline: {pipeline_name}")
+            canvas = build_canvas(pipeline_cfg, rework_ctx)
             async_result = canvas.delay()
             self._update_state(pipeline_id, async_result_id=async_result.id)
             return pipeline_id
@@ -404,7 +494,6 @@ class PipelineEngine:
     # ------------------------------------------------------------------
 
     def _persist_state(self, pipeline_id: str, state: dict[str, Any]) -> None:
-        """Write *state* to Redis."""
         client = _get_redis()
         if not client:
             return
@@ -414,7 +503,6 @@ class PipelineEngine:
             logger.warning("Failed to persist state for %s: %s", pipeline_id, exc)
 
     def _update_state(self, pipeline_id: str, **updates: Any) -> None:
-        """Merge keyword arguments into the existing Redis state."""
         client = _get_redis()
         if not client:
             return
@@ -429,7 +517,6 @@ class PipelineEngine:
             logger.warning("Failed to update state for %s: %s", pipeline_id, exc)
 
     def _map_issue_to_pipeline(self, issue_id: str, pipeline_id: str) -> None:
-        """Write the issue -> pipeline mapping to Redis."""
         client = _get_redis()
         if not client:
             return
@@ -444,7 +531,6 @@ class PipelineEngine:
             )
 
     def _resolve_pipeline_id(self, issue_id: str) -> Optional[str]:
-        """Look up the pipeline ID for *issue_id* from Redis."""
         client = _get_redis()
         if not client:
             return None
@@ -454,7 +540,6 @@ class PipelineEngine:
             return None
 
     def _emit_event(self, pipeline_id: str, event: str, data: dict[str, Any]) -> None:
-        """Push an event to the pipeline's event list in Redis."""
         client = _get_redis()
         if not client:
             return
@@ -462,13 +547,12 @@ class PipelineEngine:
             payload = json.dumps({"event": event, "timestamp": time.time(), **data})
             key = _pipeline_events_key(pipeline_id)
             client.lpush(key, payload)
-            client.ltrim(key, 0, 99)  # keep last 100 events
-            client.expire(key, 86400)  # 24h TTL
+            client.ltrim(key, 0, 99)
+            client.expire(key, 86400)
         except Exception as exc:
             logger.debug("Failed to emit event %s: %s", event, exc)
 
     def _increment_rework_count(self, pipeline_id: str) -> int:
-        """Increment and return the rework attempt counter in Redis."""
         client = _get_redis()
         if not client:
             return 1
@@ -480,12 +564,71 @@ class PipelineEngine:
         except Exception:
             return 1
 
+    # ------------------------------------------------------------------
+    # Cost-aware model routing (AIM-2083)
+    # ------------------------------------------------------------------
+
+    def _inject_cost_aware_config(self, ctx: dict[str, Any], issue_id: str) -> None:
+        """Select model and set cost budget based on tier and fix complexity."""
+        tenant_tier = ctx.get("tenant_tier", "free")
+        issue_data = ctx.get("issue_data", {})
+        triage_result = ctx.get("triage_result", {})
+
+        # Analyse complexity
+        complexity = analyze_complexity(
+            issue_title=issue_data.get("title", ""),
+            issue_body=issue_data.get("body", ""),
+            file_count=ctx.get("estimated_file_count", 0),
+            estimated_lines=ctx.get("estimated_lines", 0),
+            triage_category=triage_result.get("category", "unknown"),
+            triage_scope=triage_result.get("scope", "small"),
+        )
+
+        complexity_label = complexity.complexity
+
+        # Select model
+        recommendation = recommend_model(
+            tier=tenant_tier,
+            complexity=complexity_label,
+            estimated_input_tokens=get_max_input_tokens(tenant_tier),
+            estimated_output_tokens=get_max_output_tokens(tenant_tier),
+        )
+
+        model_name = recommendation.model_name
+        cost_cap = get_cost_cap_cents(tenant_tier)
+        within_budget = is_within_cost_cap(tenant_tier, recommendation.estimated_cost_cents)
+
+        ctx["selected_model"] = model_name
+        ctx["cost_budget_cents"] = cost_cap
+        ctx["fix_complexity"] = complexity_label
+        ctx["complexity_score"] = complexity.score
+        ctx["within_cost_budget"] = within_budget
+        ctx["estimated_cost_cents"] = recommendation.estimated_cost_cents
+        ctx["model_recommendation"] = recommendation.to_dict()
+
+        if not within_budget:
+            logger.warning(
+                "Fix cost exceeds cap for issue=%s tier=%s est_cost=%.2f cap=%.2f",
+                issue_id,
+                tenant_tier,
+                recommendation.estimated_cost_cents,
+                cost_cap,
+            )
+
+        logger.info(
+            "Cost-aware routing issue=%s tier=%s complexity=%s model=%s est_cost=%.4f",
+            issue_id,
+            tenant_tier,
+            complexity_label,
+            model_name,
+            recommendation.estimated_cost_cents,
+        )
+
     @staticmethod
     def _create_workspace_for_issue(
         issue_id: str,
         ctx: dict[str, Any],
     ) -> dict[str, str]:
-        """Synchronously create a workspace (or skip if already present)."""
         from workers.orchestrator.workspace import create_workspace as _create_ws
 
         try:
@@ -503,6 +646,20 @@ class PipelineEngine:
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _step_label(step_cfg: dict[str, Any]) -> str:
+    """Derive a human-readable label from a pipeline step config."""
+    label = step_cfg.get("label", "")
+    if label:
+        return label
+    task = step_cfg.get("task", "unknown")
+    return task.rsplit(".", 1)[-1].replace("_", " ").title()
+
+
+# ---------------------------------------------------------------------------
 # Singleton
 # ---------------------------------------------------------------------------
 
@@ -510,7 +667,6 @@ _engine: Optional[PipelineEngine] = None
 
 
 def get_engine() -> PipelineEngine:
-    """Return the shared ``PipelineEngine`` singleton."""
     global _engine
     if _engine is None:
         _engine = PipelineEngine()

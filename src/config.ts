@@ -2,6 +2,24 @@ import 'dotenv/config';
 import { z } from 'zod';
 import { rootLogger } from './utils/logger.js';
 
+// ---------------------------------------------------------------------------
+// Schema
+// ---------------------------------------------------------------------------
+
+/**
+ * Safe boolean coercion that properly handles string "false" and "0".
+ * Zod's z.coerce.boolean() treats any non-empty string as true,
+ * which breaks env vars like CI_MONITOR_ENABLED=false.
+ */
+const boolSchema = (defaultVal: boolean) =>
+  z.preprocess(
+    (val) => {
+      if (val === 'true' || val === '1') return true;
+      if (val === 'false' || val === '0') return false;
+      return val;
+    },
+    z.boolean().default(defaultVal),
+  );
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().max(65535).default(3000),
   RUN_MODE: z.enum(['api', 'worker', 'both']).default('both'),
@@ -9,6 +27,9 @@ const envSchema = z.object({
   GITHUB_APP_ID: z.string().min(1, 'GITHUB_APP_ID is required'),
   GITHUB_APP_PRIVATE_KEY: z.string().min(1, 'GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_PATH is required').optional(),
   GITHUB_APP_PRIVATE_KEY_PATH: z.string().optional(),
+  GITHUB_TOKEN: z.string().optional(),
+  GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
+  GITHUB_OAUTH_CLIENT_SECRET: z.string().optional(),
   GITHUB_WEBHOOK_SECRET: z.string().min(1, 'GITHUB_WEBHOOK_SECRET is required'),
   GITHUB_WEBHOOK_PATH: z.string().default('/webhook'),
 
@@ -26,7 +47,7 @@ const envSchema = z.object({
 
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
   PHASE_TIMEOUT_TRIAGE_MS: z.coerce.number().int().positive().default(30_000),
-  PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(300_000),
+  PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(600_000),
   PHASE_TIMEOUT_PRCREATION_MS: z.coerce.number().int().positive().default(30_000),
 
   OPENAI_API_KEY: z.string().optional(),
@@ -37,12 +58,12 @@ const envSchema = z.object({
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
-  STAS_MONTHLY_QUOTA_ENABLED: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(true),
+  STAS_MONTHLY_QUOTA_ENABLED: boolSchema(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
   STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
-  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(false),
+  DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
@@ -59,6 +80,7 @@ const envSchema = z.object({
   BITBUCKET_USERNAME: z.string().optional(),
   BITBUCKET_APP_PASSWORD: z.string().optional(),
   BITBUCKET_WEBHOOK_SECRET: z.string().optional(),
+  BITBUCKET_BASE_URL: z.string().default('https://api.bitbucket.org'),
 
   SLACK_WEBHOOK_URL: z.string().optional(),
   SLACK_CHANNEL: z.string().optional(),
@@ -96,6 +118,45 @@ const envSchema = z.object({
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
   FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
+  // Storage
+  STORAGE_TYPE: z.enum(['sqlite', 'postgres']).default('sqlite'),
+  STORAGE_SQLITE_PATH: z.string().default('./data/stas.db'),
+
+  // CI monitoring
+  CI_MONITOR_ENABLED: boolSchema(false),
+  CI_REPOS: z.string().default(''),
+  CI_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
+  CI_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(3),
+
+  // OpenCode Health
+  OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD: z.coerce.number().int().positive().default(3),
+  OPENCODE_HEALTH_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(30000),
+  OPENCODE_HEALTH_CACHE_TTL_MS: z.coerce.number().int().positive().default(30000),
+  OPENCODE_HEALTH_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
+  OPENCODE_HEALTH_STARTUP_TIMEOUT_MS: z.coerce.number().int().positive().default(120000),
+
+  // RapidAPI
+  RAPIDAPI_PROXY_SECRET: z.string().optional(),
+
+  // GitHub OAuth
+  GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
+  GITHUB_OAUTH_CLIENT_SECRET: z.string().optional(),
+
+  // Stripe pricing plans
+  STRIPE_SOLO_PRICE_ID: z.string().default('price_solo'),
+  STRIPE_TEAM_PRICE_ID: z.string().default('price_team'),
+
+  // Security CSP
+  CSP_REPORT_URI: z.string().optional(),
+
+  // Docker
+  DOCKER_IMAGE: z.string().default('node:20-slim'),
+  DOCKER_CONTAINER_MEMORY: z.string().default('512m'),
+  DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(0.5),
+  DOCKER_NETWORK_RESTRICT: boolSchema(true),
+  DOCKER_ALLOWED_HOSTS: z.string().default(''),
+
+  // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
@@ -136,11 +197,12 @@ const envSchema = z.object({
   LOOPS_WEBHOOK_SECRET: z.string().optional(),
   CRM_SYNC_INTERVAL_MINUTES: z.coerce.number().int().positive().default(15),
 
-  IP_ALLOWLIST_ENABLED: z.coerce.boolean().default(false),
+  // ── IP Allowlist ──
+  IP_ALLOWLIST_ENABLED: boolSchema(false),
   IP_ALLOWLIST: z.string().default(''),
 
   // ── Docker Sandbox ──
-  DOCKER_IMAGE: z.string().default('ubuntu:24.04'),
+  DOCKER_IMAGE: z.string().default('node:20-slim'),
   DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(true),
   DOCKER_ALLOWED_HOSTS: z.string().default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io'),
   DOCKER_CONTAINER_MEMORY: z.string().default('4g'),
@@ -150,13 +212,13 @@ const envSchema = z.object({
   DOCKER_GVISOR_ENABLED: z.coerce.boolean().default(false),
 
   // ── Sandbox Security ──
-  SANDBOX_PRIVILEGED: z.coerce.boolean().default(false),
-  SANDBOX_READONLY_ROOT: z.coerce.boolean().default(true),
+  SANDBOX_PRIVILEGED: boolSchema(false),
+  SANDBOX_READONLY_ROOT: boolSchema(true),
   SANDBOX_MEMORY_LIMIT: z.string().default('512m'),
   SANDBOX_CPU_LIMIT: z.string().default('0.5'),
   SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
-  SANDBOX_NETWORK_ENABLED: z.coerce.boolean().default(false),
+  SANDBOX_NETWORK_ENABLED: boolSchema(false),
 
   CI_MONITOR_ENABLED: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(false),
 
@@ -215,8 +277,11 @@ function buildConfig(env: ParsedEnv) {
       appId: env.GITHUB_APP_ID,
       privateKeyPath: env.GITHUB_APP_PRIVATE_KEY_PATH,
       privateKeyEnv: env.GITHUB_APP_PRIVATE_KEY,
+      token: env.GITHUB_TOKEN,
       webhookSecret: env.GITHUB_WEBHOOK_SECRET,
       webhookPath: env.GITHUB_WEBHOOK_PATH,
+      oauthClientId: env.GITHUB_OAUTH_CLIENT_ID ?? '',
+      oauthClientSecret: env.GITHUB_OAUTH_CLIENT_SECRET ?? '',
     },
 
     queue: {
@@ -249,6 +314,39 @@ function buildConfig(env: ParsedEnv) {
       username: env.BITBUCKET_USERNAME ?? '',
       appPassword: env.BITBUCKET_APP_PASSWORD ?? '',
       webhookSecret: env.BITBUCKET_WEBHOOK_SECRET ?? '',
+      baseUrl: env.BITBUCKET_BASE_URL,
+    },
+
+    storage: {
+      type: env.STORAGE_TYPE,
+      sqlitePath: env.STORAGE_SQLITE_PATH,
+    },
+
+    ci: {
+      monitorEnabled: env.CI_MONITOR_ENABLED,
+      repos: env.CI_REPOS.split(',').map((s) => s.trim()).filter(Boolean),
+      pollIntervalMs: env.CI_POLL_INTERVAL_MS,
+      failureThreshold: env.CI_FAILURE_THRESHOLD,
+    },
+
+    opencodeHealth: {
+      circuitBreakerThreshold: env.OPENCODE_HEALTH_CIRCUIT_BREAKER_THRESHOLD,
+      pollIntervalMs: env.OPENCODE_HEALTH_POLL_INTERVAL_MS,
+      cacheTtlMs: env.OPENCODE_HEALTH_CACHE_TTL_MS,
+      requestTimeoutMs: env.OPENCODE_HEALTH_REQUEST_TIMEOUT_MS,
+      startupTimeoutMs: env.OPENCODE_HEALTH_STARTUP_TIMEOUT_MS,
+    },
+
+    rapidapi: {
+      proxySecret: env.RAPIDAPI_PROXY_SECRET,
+    },
+
+    docker: {
+      image: env.DOCKER_IMAGE,
+      containerMemory: env.DOCKER_CONTAINER_MEMORY,
+      containerCpu: env.DOCKER_CONTAINER_CPU,
+      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
+      allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
     },
 
     openai: {
@@ -353,6 +451,8 @@ function buildConfig(env: ParsedEnv) {
       price100Credits: env.STRIPE_PRICE_100_CREDITS,
       price500Credits: env.STRIPE_PRICE_500_CREDITS,
       price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
+      soloPriceId: env.STRIPE_SOLO_PRICE_ID,
+      teamPriceId: env.STRIPE_TEAM_PRICE_ID,
     },
 
     dataPrivacy: {
@@ -423,6 +523,7 @@ function buildConfig(env: ParsedEnv) {
       corsOrigin: env.CORS_ORIGIN,
       requestBodyLimit: env.REQUEST_BODY_LIMIT,
       webhookBodyLimit: env.WEBHOOK_BODY_LIMIT,
+      cspReportUri: env.CSP_REPORT_URI,
 
       ipAllowlist: {
         enabled: env.IP_ALLOWLIST_ENABLED,

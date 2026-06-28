@@ -67,7 +67,18 @@ app.conf.update(
 # Disable pidbox remote control (RabbitMQ 4.x removed transient_nonexcl_queues)
 app.conf.worker_enable_remote_control = False
 
-app.autodiscover_tasks(["workers.tasks", "workers.consumers"])
+# ── Graceful Shutdown / Task Resilience ─────────────────────────
+# Acknowledge tasks _after_ completion so in-flight tasks survive
+# worker loss and are re-queued (enables zero-downtime task drain).
+app.conf.task_acks_late = True
+# Re-queue a task when its worker process is lost unexpectedly
+# (e.g. OOM-kill during a rolling pod termination).
+app.conf.task_reject_on_worker_lost = True
+# Cancel long-running tasks when broker connection drops so they
+# don't hang forever during a rolling restart.
+app.conf.worker_cancel_long_running_tasks_on_connection_loss = True
+
+app.autodiscover_tasks(["workers.tasks", "workers.consumers", "workers.gates", "workers.quality"])
 
 # ── Initialize Metrics (Prometheus) ────────────────────────────────
 METRICS_PORT = int(os.getenv("CELERY_METRICS_PORT", "9090"))
@@ -88,6 +99,96 @@ if ENABLE_METRICS:
 def ping():
     """Simple liveness check."""
     return {"status": "pong"}
+
+
+# ── Emergency Stop Middleware ───────────────────────────────────────
+# Connects Celery signal handlers for the global kill switch.
+# Agent tasks are rejected when emergency_stop is active.
+try:
+    from workers.emergency.middleware import connect_emergency_middleware
+
+    connect_emergency_middleware()
+    logger.info("Emergency stop middleware connected")
+except Exception as exc:
+    logger.warning("Failed to connect emergency stop middleware — %s", exc)
+
+
+# ── Injection Guard ────────────────────────────────────────────────
+# Self-registers via @signals.task_prerun.connect at import time.
+try:
+    from workers.gates import injection_middleware  # noqa: F401
+
+    injection_middleware.connect_injection_middleware()
+except Exception as exc:
+    logger.warning("Failed to connect injection middleware — %s", exc)
+
+# ── Merge Queue Middleware ──────────────────────────────────────────
+# Auto-enqueues PRs into the merge queue after successful creation.
+try:
+    from workers.merge_queue.middleware import connect_merge_queue_middleware
+
+    connect_merge_queue_middleware()
+    logger.info("Merge queue middleware connected")
+except Exception as exc:
+    logger.warning("Failed to connect merge queue middleware -- %s", exc)
+
+# ── Compliance Audit Middleware ────────────────────────────────────
+# Self-registers Celery signal handlers at import time to append
+# audit events (task.start / task.success / task.failure) to the
+# SHA-256 chained compliance trail.
+try:
+    from workers.audit import middleware  # noqa: F401
+
+    logger.info("Compliance audit middleware connected")
+except Exception as exc:
+    logger.warning("Failed to connect compliance audit middleware -- %s", exc)
+
+# ── Runaway Agent Protection ───────────────────────────────────────
+# Self-registers via @signals.task_prerun.connect at import time.
+# Enforces per-agent timeout, token/cost limits, and max retries.
+try:
+    from workers.runaway import middleware  # noqa: F401
+
+    middleware.connect_runaway_middleware()
+    logger.info("Runaway agent middleware connected")
+except Exception as exc:
+    logger.warning("Failed to connect runaway middleware -- %s", exc)
+
+
+# ── Dedup Middleware (Duplicate Job Prevention) ─────────────────────
+# Self-registers Celery signal handlers at import time to prevent
+# duplicate task execution for the same issue across workers.
+try:
+    from workers.dispatch import dedup_middleware  # noqa: F401
+
+    dedup_middleware.connect_dedup_middleware()
+    logger.info("Dedup middleware connected")
+except Exception as exc:
+    logger.warning("Failed to connect dedup middleware -- %s", exc)
+
+
+# ── Worker Scaling (KEDA / Celery autoscale) ───────────────────────
+# Configures pod-level scaling via KEDA ScaledObject (in k8s/) or falls
+# back to Celery's native --autoscale when KEDA is not deployed.
+try:
+    from workers.scaling import configure_scaling
+
+    configure_scaling(app)
+    logger.info("Worker scaling configured")
+except Exception as exc:
+    logger.warning("Failed to configure worker scaling -- %s", exc)
+
+
+# ── Graceful Shutdown Handler ──────────────────────────────────────
+# Installs SIGTERM handling and task drain via Celery signals.
+# Must be installed after the app is fully configured.
+try:
+    from workers.shutdown import GracefulShutdownHandler
+
+    GracefulShutdownHandler().install(app)
+    logger.info("GracefulShutdownHandler installed — task drain active on SIGTERM")
+except Exception as exc:
+    logger.warning("Failed to install GracefulShutdownHandler — %s", exc)
 
 
 @app.on_after_configure.connect

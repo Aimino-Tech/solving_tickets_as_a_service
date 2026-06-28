@@ -1,0 +1,291 @@
+/**
+ * Agent-to-agent discovery endpoint — MCP manifest for STAS.
+ *
+ * Serves the MCP discovery manifest at a standardised path so that
+ * other agents (OpenCode, Claude Desktop, Cursor, etc.) can discover
+ * STAS's capabilities and connect programmatically.
+ *
+ * Endpoints:
+ *   GET /discovery/mcp.json  — MCP server manifest (JSON)
+ *   GET /discovery           — Human-readable discovery landing page (HTML)
+ *
+ * @module routes/viral
+ */
+
+import { Router, type Request, type Response } from 'express';
+import { rootLogger } from '../utils/logger.js';
+
+const log = rootLogger.child({ module: 'viral-discovery' });
+
+const router = Router();
+
+interface McpDiscoveryManifest {
+  schemaVersion: '2024-11-05';
+  server: {
+    name: string;
+    version: string;
+    description: string;
+    homepage: string;
+    documentation: string;
+  };
+  transports: Array<{
+    type: 'sse' | 'streamable-http' | 'stdio';
+    url?: string;
+    command?: string;
+    args?: string[];
+    description: string;
+  }>;
+  tools: Array<{
+    name: string;
+    description: string;
+    inputSchema: Record<string, unknown>;
+  }>;
+  resources: Array<{
+    uri: string;
+    name: string;
+    description: string;
+    mimeType: string;
+  }>;
+  install: Record<string, unknown>;
+}
+
+export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
+  return {
+    schemaVersion: '2024-11-05',
+    server: {
+      name: 'stas-agent-discovery',
+      version: '1.0.0',
+      description:
+        'STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source bot backed by OpenCode.',
+      homepage: 'https://github.com/tamnguyen08/solving_tickets_as_a_service',
+      documentation: 'https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md',
+    },
+    transports: [
+      {
+        type: 'sse',
+        url: `${baseUrl}/sse`,
+        description: 'Server-Sent Events transport for real-time MCP communication',
+      },
+      {
+        type: 'streamable-http',
+        url: `${baseUrl}/mcp`,
+        description: 'Streamable HTTP transport (MCP POST endpoint)',
+      },
+      {
+        type: 'stdio',
+        command: 'python',
+        args: ['-m', 'stas_mcp.server', 'stdio'],
+        description: 'Stdio transport for tools like OpenCode and Claude Desktop',
+      },
+    ],
+    tools: [
+      {
+        name: 'stas_label_issue',
+        description: 'Label a GitHub issue with the STAS fix label (or custom label). Triggers the fix pipeline.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            owner: { type: 'string', description: 'Repository owner (user or org)' },
+            repo: { type: 'string', description: 'Repository name' },
+            issue_number: { type: 'integer', description: 'Issue number' },
+            label: { type: 'string', description: 'Label to apply (default: stas:fix)' },
+          },
+          required: ['owner', 'repo', 'issue_number'],
+        },
+      },
+      {
+        name: 'stas_run_fix',
+        description:
+          'Trigger the STAS fix pipeline for a GitHub issue URL. Returns a run_id for polling.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            issue_url: { type: 'string', description: 'Full GitHub issue URL (https://github.com/owner/repo/issues/N)' },
+          },
+          required: ['issue_url'],
+        },
+      },
+      {
+        name: 'stas_check_status',
+        description: 'Check the current status of a STAS fix run by run_id.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            run_id: { type: 'string', description: 'Run ID from stas_run_fix (e.g. stas-abc123)' },
+          },
+          required: ['run_id'],
+        },
+      },
+      {
+        name: 'stas_get_pr',
+        description: 'Get the pull request URL and details for a completed STAS fix run.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            run_id: { type: 'string', description: 'Run ID from stas_run_fix' },
+          },
+          required: ['run_id'],
+        },
+      },
+    ],
+    resources: [
+      {
+        uri: 'stas://runs/{run_id}',
+        name: 'Fix Run Status',
+        description: 'Real-time status and PR link for a STAS fix run.',
+        mimeType: 'application/json',
+      },
+      {
+        uri: 'stas://status',
+        name: 'Server Health',
+        description: 'STAS server health and capability overview.',
+        mimeType: 'application/json',
+      },
+      {
+        uri: 'stas://queue',
+        name: 'Fix Queue',
+        description: 'Current fix queue depth and status.',
+        mimeType: 'application/json',
+      },
+    ],
+    install: {
+      opencode: {
+        config: {
+          name: 'stas-agent-discovery',
+          transport: 'stdio',
+          command: 'python',
+          args: ['-m', 'stas_mcp.server', 'stdio'],
+        },
+      },
+      claudeDesktop: {
+        config: {
+          mcpServers: {
+            stas: {
+              command: 'python',
+              args: ['-m', 'stas_mcp.server', 'stdio'],
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
+router.get('/discovery/mcp.json', (req: Request, res: Response) => {
+  const baseUrl = process.env.STAS_PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
+  const manifest = buildDiscoveryManifest(baseUrl);
+
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.json(manifest);
+});
+
+export function renderDiscoveryPage(baseUrl: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STAS — Agent Discovery</title>
+  <meta name="description" content="STAS MCP agent discovery endpoint — connect your agent to automated bug fixing." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    .container { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem; }
+    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
+    h1 span { color: #58a6ff; }
+    .subtitle { font-size: 1.1rem; color: #8b949e; margin-bottom: 2rem; }
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+    .card h2 { font-size: 1.1rem; margin-bottom: 0.75rem; color: #f0f6fc; }
+    .card p, .card li { font-size: 0.9rem; color: #8b949e; }
+    .card ul { list-style: none; padding: 0; }
+    .card li { padding: 0.35rem 0; }
+    .card li::before { content: "\\25B8 "; color: #58a6ff; }
+    code { background: #0d1117; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85rem; color: #f0f6fc; }
+    .endpoint { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; }
+    .method { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 600; font-size: 0.75rem; }
+    .method.get { background: #1f6feb33; color: #58a6ff; }
+    .badge-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0; }
+    .badge-link { display: inline-block; }
+    hr { border: none; border-top: 1px solid #30363d; margin: 1.5rem 0; }
+    .footer { text-align: center; font-size: 0.8rem; color: #484f58; }
+    .footer a { color: #58a6ff; text-decoration: none; }
+    .btn { display: inline-block; padding: 0.6rem 1.25rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; text-decoration: none; background: #238636; color: #fff; margin-top: 0.5rem; }
+    .btn:hover { background: #2ea043; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1><span>STAS</span> Agent Discovery</h1>
+    <p class="subtitle">Solving Tickets As A Service — automated bug fixing for your GitHub issues.</p>
+
+    <div class="badge-row">
+      <a href="https://img.shields.io/badge/STAS-MCP-8250DF" class="badge-link"><img src="https://img.shields.io/badge/STAS-MCP-8250DF" alt="STAS MCP" /></a>
+      <a href="${baseUrl}/discovery/mcp.json" class="badge-link"><img src="https://img.shields.io/badge/Agent-Discovery-0969da" alt="Agent Discovery" /></a>
+    </div>
+
+    <div class="card">
+      <h2>MCP Discovery Manifest</h2>
+      <p>The <code>/discovery/mcp.json</code> endpoint lets any MCP-compatible agent discover STAS's capabilities.</p>
+      <div class="endpoint"><span class="method get">GET</span> <code>${baseUrl}/discovery/mcp.json</code></div>
+      <p style="margin-top:0.75rem">Connect via <code>stas://discovery/mcp.json</code> from any MCP client.</p>
+      <a href="${baseUrl}/discovery/mcp.json" class="btn">View Manifest</a>
+    </div>
+
+    <div class="card">
+      <h2>Available Tools</h2>
+      <ul>
+        <li><code>stas_label_issue</code> — Label a GitHub issue to trigger the fix pipeline</li>
+        <li><code>stas_run_fix</code> — Submit a GitHub issue URL for automated fixing</li>
+        <li><code>stas_check_status</code> — Poll fix run status by run_id</li>
+        <li><code>stas_get_pr</code> — Retrieve PR details for a completed fix</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>MCP Resources</h2>
+      <ul>
+        <li><code>stas://runs/{run_id}</code> — Fix run status and PR link</li>
+        <li><code>stas://status</code> — Server health and capability overview</li>
+        <li><code>stas://queue</code> — Current fix queue depth</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Installation</h2>
+      <p><strong>OpenCode</strong> — Add to <code>opencode.json</code>:</p>
+      <pre style="background:#0d1117;padding:0.75rem;border-radius:6px;margin-top:0.5rem;font-size:0.8rem;overflow-x:auto"><code>{
+  "name": "stas-agent-discovery",
+  "transport": "stdio",
+  "command": "python",
+  "args": ["-m", "stas_mcp.server", "stdio"]
+}</code></pre>
+      <p style="margin-top:1rem"><strong>Claude Desktop</strong> — Add to <code>claude_desktop_config.json</code>:</p>
+      <pre style="background:#0d1117;padding:0.75rem;border-radius:6px;margin-top:0.5rem;font-size:0.8rem;overflow-x:auto"><code>{
+  "mcpServers": {
+    "stas": {
+      "command": "python",
+      "args": ["-m", "stas_mcp.server", "stdio"]
+    }
+  }
+}</code></pre>
+    </div>
+
+    <hr />
+    <div class="footer">
+      <p><a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">STAS</a> — Solving Tickets As A Service &mdash; MIT License</p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+router.get('/discovery', (_req: Request, res: Response) => {
+  const baseUrl = process.env.STAS_PUBLIC_URL || 'http://localhost:3000';
+  const html = renderDiscoveryPage(baseUrl);
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+});
+
+export { router as viralRouter };

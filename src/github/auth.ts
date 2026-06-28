@@ -3,6 +3,7 @@
  * This file re-exports from the standalone package for backward compatibility.
  */
 import { readFileSync } from 'node:fs';
+import { Octokit } from '@octokit/rest';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import {
@@ -12,9 +13,18 @@ import {
   createInstallationOctokit,
   getInstallationToken as getInstallationTokenFromPackage,
   type GitHubAppConfig,
-} from '@stas/github-client';
+} from '../../packages/github-client/src/index.js';
 
 const log = rootLogger.child({ module: 'github-auth' });
+
+let _patOctokit: Octokit | undefined;
+
+function getPatOctokit(): Octokit {
+  if (!_patOctokit) {
+    _patOctokit = new Octokit({ auth: config.github.token });
+  }
+  return _patOctokit;
+}
 
 function buildConfig(): GitHubAppConfig {
   let privateKey: string;
@@ -58,7 +68,11 @@ function getAppOctokit() {
   return _appOctokit;
 }
 
-export async function getOctokit(installationId: number): Promise<ReturnType<typeof createInstallationOctokit>> {
+export async function getOctokit(installationId: number): Promise<Octokit> {
+  if (!installationId && config.github.token) {
+    log.warn('No installation ID — falling back to GITHUB_TOKEN (PAT)');
+    return getPatOctokit();
+  }
   try {
     return await createInstallationOctokit(getAuth(), installationId);
   } catch (err) {
@@ -67,6 +81,10 @@ export async function getOctokit(installationId: number): Promise<ReturnType<typ
 }
 
 export async function getInstallationToken(installationId: number): Promise<string> {
+  if (!installationId && config.github.token) {
+    log.warn('No installation ID — falling back to GITHUB_TOKEN (PAT)');
+    return config.github.token;
+  }
   try {
     return await getInstallationTokenFromPackage(getAuth(), installationId);
   } catch (err) {

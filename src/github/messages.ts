@@ -25,7 +25,8 @@ import {
   buildPRBody as bpBody,
   type AgentResult,
   type VerificationResult,
-} from '@stas/github-client';
+} from '../../packages/github-client/src/index.js';
+import { BOT_SIGNATURE } from '../platforms/messages.js';
 
 export type { AgentResult, VerificationResult };
 

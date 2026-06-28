@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import type { Request, Response } from 'express';
 import {
   accountsRepository,
@@ -15,17 +14,8 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'routes:admin-dashboard' });
 
-const dashboardLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests — rate limit exceeded (60 req/min)' },
-});
-
 export const adminDashboardRouter = Router();
 
-adminDashboardRouter.use(dashboardLimiter);
 
 function requireAdmin(req: Request, res: Response): boolean {
   const adminKey = req.headers['x-admin-key'] as string;

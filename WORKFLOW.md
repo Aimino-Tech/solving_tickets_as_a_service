@@ -12,11 +12,15 @@ hooks:
   after_run: |
     set -eu
     echo "--- Quality Gates Scan ---"
-    if bash "$(dirname "$0")/../scripts/quality-gates.sh" --changed-only 2>&1; then
-      echo "Quality Gates: ALL PASSED"
+    if [ -f scripts/quality-gates.sh ]; then
+      if bash scripts/quality-gates.sh --changed-only 2>&1; then
+        echo "Quality Gates: ALL PASSED"
+      else
+        echo "!!! Quality Gates BLOCKED — fix failures before Human Review !!!"
+        echo "Run: npm run quality-gates:changed"
+      fi
     else
-      echo "!!! Quality Gates BLOCKED — fix failures before Human Review !!!"
-      echo "Run: npm run quality-gates:changed"
+      echo "Quality Gates: scripts/quality-gates.sh not found — skipping"
     fi
     echo "--- End Quality Gates Scan ---"
   before_remove: |

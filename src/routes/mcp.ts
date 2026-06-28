@@ -171,4 +171,50 @@ router.get('/mcp/repos', (_req: Request, res: Response) => {
   }
 });
 
+// MCP Bridge: list_issues proxy
+router.get('/mcp/issues', async (req: Request, res: Response) => {
+  try {
+    const mcpUrl = process.env.STAS_MCP_SERVER_URL || 'http://localhost:4095';
+    const resp = await fetch(`${mcpUrl}/mcp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: randomUUID(), method: 'tools/call',
+        params: { name: 'list_issues', arguments: { status: req.query.status, repo: req.query.repo, limit: Math.min(Math.abs(Number(req.query.limit) || 20), 100) } },
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      const text = data?.result?.content?.[0]?.text;
+      if (text) { try { return res.json(JSON.parse(text)); } catch { return res.json({ result: text }); } }
+      return res.json(data.result);
+    }
+  } catch { log.debug('MCP server not reachable for list_issues'); }
+  res.json({ error: 'MCP server not reachable' });
+});
+
+// MCP Bridge: search_codebase proxy
+router.post('/mcp/search', async (req: Request, res: Response) => {
+  try {
+    const mcpUrl = process.env.STAS_MCP_SERVER_URL || 'http://localhost:4095';
+    const resp = await fetch(`${mcpUrl}/mcp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: randomUUID(), method: 'tools/call',
+        params: { name: 'search_codebase', arguments: { query: req.body.query, repo: req.body.repo, max_results: Math.min(Math.abs(Number(req.body.max_results) || 10), 50) } },
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      const text = data?.result?.content?.[0]?.text;
+      if (text) { try { return res.json(JSON.parse(text)); } catch { return res.json({ result: text }); } }
+      return res.json(data.result);
+    }
+  } catch { log.debug('MCP server not reachable for search'); }
+  res.json({ error: 'MCP server not reachable' });
+});
+
 export default router;

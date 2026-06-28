@@ -182,3 +182,84 @@ def process_webhook(self, event_type: str, payload: dict) -> dict:
     except Exception as exc:
         logger.error("Webhook processing failed — %s", exc, exc_info=True)
         raise self.retry(exc=exc)
+
+
+# ---------------------------------------------------------------------------
+# Webhook notification dispatch (used by pipeline steps)
+# ---------------------------------------------------------------------------
+
+
+def _build_event_payload(
+    event_type: str,
+    pipeline_context: dict[str, Any],
+    step_results: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a normalised event payload from pipeline context and step results."""
+    issue_data = pipeline_context.get("issue_data", {})
+    pr_result = (step_results or {}).get("pr_creation", {}) if step_results else {}
+
+    return {
+        "event_type": event_type,
+        "issue_id": issue_data.get("issue_id", pipeline_context.get("issue_id", "?")),
+        "issue_title": issue_data.get("title", pipeline_context.get("issue_title", "")),
+        "issue_url": issue_data.get("issue_url", pipeline_context.get("issue_url", "")),
+        "pr_url": pr_result.get("html_url", pipeline_context.get("pr_url", "")),
+        "status": event_type,
+        "summary": pipeline_context.get("summary", issue_data.get("summary", "")),
+        "timestamp": pipeline_context.get("timestamp", ""),
+    }
+
+
+@shared_task(
+    bind=True,
+    max_retries=2,
+    default_retry_delay=10,
+    name="workers.tasks.notifications.dispatch_webhook_event",
+    autoretry_for=(Exception,),
+)
+def dispatch_webhook_event(
+    self,
+    event_type: str,
+    pipeline_context: dict[str, Any],
+    step_results: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Dispatch a webhook notification event.
+
+    Called as a pipeline step after PR creation, review decision, or
+    pipeline failure. Builds an event payload from context and delegates
+    to ``dispatch_to_webhooks``.
+
+    Returns the dispatch results. Notification failures are logged as
+    warnings but never raise — the pipeline continues.
+    """
+    from workers.notifications import dispatch_to_webhooks
+
+    logger.info(
+        "Dispatching webhook event — type=%s issue=%s",
+        event_type,
+        pipeline_context.get("issue_id", "?"),
+    )
+
+    payload = _build_event_payload(event_type, pipeline_context, step_results)
+
+    try:
+        results = dispatch_to_webhooks(event_type, payload)
+        logger.info(
+            "Webhook dispatch complete — event=%s results=%d",
+            event_type, len(results),
+        )
+        return {
+            "event_type": event_type,
+            "status": "dispatched",
+            "results": results,
+        }
+    except Exception as exc:
+        logger.warning(
+            "Webhook dispatch failed for event %s — %s (pipeline continues)",
+            event_type, exc,
+        )
+        return {
+            "event_type": event_type,
+            "status": "error",
+            "error": str(exc),
+        }

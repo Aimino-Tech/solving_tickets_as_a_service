@@ -1,12 +1,10 @@
 /**
- * Express API server -- webhook receiver and health endpoint.
+ * Express API server -- webhook receiver.
  *
  * Features:
  * - Raw body middleware for webhook signature verification
  * - Request ID middleware for log correlation
  * - Structured access logging with pino
- * - GET /health endpoint
- * - GET /metrics endpoint (Prometheus-style webhook metrics)
  * - POST /webhook -- GitHub webhook receiver via @octokit/webhooks
  * - POST /webhook/stripe -- Stripe webhook for credit purchase events
  * - Admin webhook management API at /admin/webhooks
@@ -27,14 +25,13 @@ import crypto from 'node:crypto';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
-import rateLimit from 'express-rate-limit';
+
 import cors from 'cors';
 import helmet from 'helmet';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
-import { getQueueHealth } from './health/queueHealth.js';
-import { createIssueQueue, enqueueIssue } from './queue/issueQueue.js';
+import { createIssueQueue, createIssueWorker, enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
@@ -43,47 +40,37 @@ import { createStripeWebhookHandler } from './stripe/index.js';
 import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import type { IssueJobData } from './utils/types.js';
-import { validateWebhookPayload } from './validation.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
 import { recordWebhookDuration } from './webhooks/metrics.js';
-import { renderMetrics } from './webhooks/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
+import { adminAuditRouter } from './routes/admin_audit.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
+import { slaRouter } from './routes/sla.js';
+import { onboardingRouter } from './routes/onboarding.js';
+import { benchmarksRouter } from './routes/benchmarks.js';
+import { pricingRouter } from './routes/pricing.js';
+import { plgRouter } from './routes/plg.js';
+import { reposRouter } from './routes/repos.js';
+import { runsRouter } from './routes/runs.js';
+import { badgeRouter } from './routes/badge.js';
+import { analyticsRouter } from './routes/analytics.js';
+import { viralRouter } from './routes/viral.js';
+import { qualityRouter } from './routes/quality.js';
+import { kpiRouter } from './routes/kpi.js';
+import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import { createCrmSyncQueue, createCrmSyncWorker } from './crm/crmSyncService.js';
 import { createCrmRouter } from './routes/crm.js';
 
 const log = rootLogger.child({ module: 'server' });
 
-// Request body size limit from config
-const REQUEST_SIZE_LIMIT = parseSize(config.security.requestBodyLimit);
-const WEBHOOK_SIZE_LIMIT = parseSize(config.security.webhookBodyLimit);
-
-/**
- * Create and configure the Express application.
- */
-
-/**
- * Parse a size string (e.g. '1mb', '5mb', '100kb') to bytes.
- * Returns 0 if the string cannot be parsed.
- */
-function parseSize(size: string): number {
-  const match = size.match(/^(d+)s*(b|kb|mb|gb)$/i);
-  if (!match) return 0;
-  const num = parseInt(match[1], 10);
-  const unit = match[2].toLowerCase();
-  const multipliers: Record<string, number> = { b: 1, kb: 1024, mb: 1024 * 1024, gb: 1024 * 1024 * 1024 };
-  return num * (multipliers[unit] || 1);
-}
-
-
-export function createApp(): express.Application {
+export async function createApp(): Promise<express.Application> {
   const app = express();
 
   // -- Request ID middleware ------------------------------------------------
@@ -149,59 +136,21 @@ export function createApp(): express.Application {
       '/webhook/whatsapp',
       '/webhook/loops',
     ],
-    express.raw({ type: 'application/json', limit: config.security.webhookBodyLimit, verify: addRawBody }),
+    express.raw({ type: 'application/json', verify: addRawBody }),
   );
 
-  // -- JSON parsing for all other routes (with size limit) --------------------
-  app.use(express.json({ limit: config.security.requestBodyLimit }));
+  // -- JSON parsing for all other routes -------------------------------------
+  app.use(express.json());
 
-  // -- URL-encoded body parsing (with size limit) ---------------------------
-  app.use(express.urlencoded({ extended: true, limit: config.security.requestBodyLimit }));
+  // -- URL-encoded body parsing ---------------------------------------------
+  app.use(express.urlencoded({ extended: true }));
 
-  // -- Rate limiter for webhook routes ---------------------------------------
-  const limiter = rateLimit({
-    windowMs: config.stas.rateLimitWindowMs,
-    limit: config.stas.rateLimitMax,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
-  });
-  app.use('/webhook', limiter);
-
-  // -- Credit-based rate limiter (per-account, per-repo, per-IP) ----------
+  // -- Governance Proxy rate limiting (per-account, per-repo, per-IP) ----------
   app.use('/webhook', rateLimitMiddleware());
 
   // -- Slack Bolt receiver (interactive messages) ---------------------------
   const bolt = getSlackBoltApp();
   bolt.mountOn(app);
-
-  // -- Health check ---------------------------------------------------------
-  app.get('/health', (_req: Request, res: Response) => {
-    res.json({
-      status: 'ok',
-      label: config.stas.label,
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-    });
-  });
-
-  // -- Queue health endpoint ------------------------------------------------
-  app.get('/health/queue', async (_req: Request, res: Response) => {
-    try {
-      const report = await getQueueHealth();
-      const httpStatus = report.status === 'critical' ? 503 : report.status === 'degraded' ? 200 : 200;
-      res.status(httpStatus).json(report);
-    } catch (err) {
-      res.status(500).json({ error: 'Failed to get queue health', details: String(err) });
-    }
-  });
-
-  // -- Prometheus metrics endpoint ------------------------------------------
-  app.get('/metrics', (_req: Request, res: Response) => {
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.send(renderMetrics());
-
-  });
 
   // -- Initialize trackers --------------------------------------------------
   initTrackers();
@@ -259,17 +208,6 @@ export function createApp(): express.Application {
       deliveryId,
       payload: parsedPayload,
     });
-
-    const validation = validateWebhookPayload(event, parsedPayload);
-    if (!validation.success) {
-      log.warn(
-        { event, errors: validation.errors, requestId: req.requestId },
-        'Webhook payload validation failed',
-      );
-      if (eventId) await logWebhookFailed(eventId, `Validation failed: ${validation.errors?.join(', ')}`);
-      res.status(400).json({ error: 'Invalid payload', details: validation.errors });
-      return;
-    }
 
     if (signature) {
       // Signature present — verify it
@@ -663,11 +601,17 @@ export function createApp(): express.Application {
   const { default: mcpRouter } = await import('./routes/mcp.js');
   app.use(mcpRouter);
 
+  // -- MCP agent discovery routes (FastMCP integration)
+  const { default: mcpDiscoveryRouter } = await import('./mcp.js');
+  app.use(mcpDiscoveryRouter);
+
   // -- Feature flags admin API ------------------------------------------------
   app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
 
   // ── Admin API ────────────────────────────────────────
   app.use('/admin', adminRouter);
+
+  app.use('/api/admin/audit', adminAuditRouter);
 
   // ── Dashboard API ──────────────────────────────────────
   app.use('/api/v1/me', dashboardRouter);
@@ -675,25 +619,82 @@ export function createApp(): express.Application {
   // ── DPA API ──────────────────────────────────────────────
   app.use('/api/v1/billing', dpaRouter);
 
+  app.use('/api/v1', slaRouter);
+
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────
   app.use('/admin/webhooks', adminWebhooksRouter);
 
+  // ── Onboarding API ──────────────────────────────────────────────
+  app.use('/onboarding', onboardingRouter);
+
+  // Repos API (repo picker with webhook status)
+  app.use('/api/repos', reposRouter);
+
+  // ── Shareable run page API (public, no auth) ───────────────────────
+  app.use('/api/runs', runsRouter);
+
+  // ── Badge endpoint (public, no auth) ──────────────────────────────
+  app.use('/badge', badgeRouter);
+
+  // ── Viral discovery endpoints (public, no auth) ───────────────────
+  app.use(viralRouter);
+
+  // ── Quality Score Card API ───────────────────────────────────────
+  app.use('/api/quality', qualityRouter);
+
+  // ── Benchmarks API (public) ──────────────────────────────────────
+  app.use('/api/benchmarks', benchmarksRouter);
+
+  // ── PLG self-serve onboarding API ─────────────────────────────────
+  app.use('/plg', plgRouter);
+
+  // ── Pricing API (public) ─────────────────────────────────────────
+  app.use('/api/pricing', pricingRouter);
+
+  // KPI Dashboard API
+  app.use('/api/kpi', kpiRouter);
+
+  // Agent Performance Analytics API
+  app.use('/api/analytics', analyticsRouter);
+
+  // Pipeline Run History API
+  app.use('/api/history', pipelineHistoryRouter);
+
+  // SAML 2.0 SSO routes (optional)
+  try {
+    const { default: samlRouter } = await import('./routes/saml.js');
+    app.use('/api/v1/saml', samlRouter);
+  } catch {
+    log.warn('SAML routes not available');
+  }
+
+  // Enterprise routes (optional)
+  try {
+    const { default: enterpriseRouter } = await import('./routes/enterprise.js');
+    app.use('/api/v1/enterprise', enterpriseRouter);
+  } catch {
+    log.warn('Enterprise routes not available');
+  }
+
   // ── CRM API ─────────────────────────────────────────────────────
   app.use(crmRouter);
-
   // -- 404 handler ----------------------------------------------------------
 
-  app.use((_req: Request, res: Response) => {
-    res.status(404).json({ error: 'Not found' });
+  app.use((req: Request, res: Response) => {
+    res.status(404).json({
+      error: { code: 'NOT_FOUND', message: 'Not found', correlation_id: req.requestId },
+    });
   });
 
   // -- Global error handler -------------------------------------------------
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    log.error({ err: String(err) }, 'Unhandled error');
-    res.status(500).json({ error: 'Internal server error' });
+  app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+    log.error({ err: String(err), requestId: req.requestId }, 'Unhandled error');
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Internal server error', correlation_id: req.requestId },
+    });
   });
 
   return app;
@@ -703,14 +704,25 @@ export function createApp(): express.Application {
  * Start the Express server on the configured port.
  * Returns the server instance so callers can close it during graceful shutdown.
  */
-export function startServer(): import('http').Server {
-  const app = createApp();
+export async function startServer(): Promise<import('http').Server> {
+  const app = await createApp();
 
   const server = app.listen(config.port, '0.0.0.0', () => {
     log.info(
       { port: config.port, label: config.stas.label, env: config.nodeEnv },
       `STAS server listening on :${config.port}`,
     );
+
+    // Start the issue queue worker (Worker auto-starts in BullMQ 5.x)
+    try {
+      const worker = createIssueWorker();
+      worker.on('error', (err: Error) => {
+        log.error({ err: String(err) }, 'Issue worker error');
+      });
+      log.info('Issue queue worker started');
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to start issue queue worker');
+    }
   });
 
   server.on('error', (err: NodeJS.ErrnoException) => {

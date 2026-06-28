@@ -212,7 +212,7 @@ export class OpenCodeHealthClient {
     const signal = this.abortController?.signal;
     if (signal?.aborted) return;
 
-    const url = `${config.opencode.url}/health`;
+    const url = `${config.opencode.url}/api/health`;
 
     try {
       const response = await fetch(url, {

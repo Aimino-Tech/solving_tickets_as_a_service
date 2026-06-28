@@ -41,6 +41,26 @@ beat_schedule = {
         "schedule": 600.0,
         "args": (),
     },
+    "billing-usage-sync-to-stripe": {
+        "task": "workers.billing.usage.sync_usage_to_stripe",
+        "schedule": crontab(hour=1, minute=0),
+        "args": (),
+    },
+    "kpi-daily-etl": {
+        "task": "workers.tasks.kpi_etl.compute_daily_kpi",
+        "schedule": crontab(hour=0, minute=5),
+        "args": (),
+    },
+    "e2e-health-check": {
+        "task": "workers.health.e2e_check.run_e2e_health_check",
+        "schedule": 300.0,
+        "args": (),
+    },
+    "sla-compliance-check": {
+        "task": "workers.tasks.periodic.sla_compliance_check",
+        "schedule": 300.0,
+        "args": (),
+    },
 }
 
 broker_url = os.getenv("CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//")
@@ -77,4 +97,5 @@ task_routes = {
     "workers.tasks.verification.*": {"queue": "stas.agents.verification"},
     "workers.tasks.pr_creation.*": {"queue": "stas.agents.pr_creation"},
     "workers.tasks.notifications.*": {"queue": "stas.agents.notifications"},
+    "workers.billing.*": {"queue": "stas.agents.default"},
 }
