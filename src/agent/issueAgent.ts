@@ -92,7 +92,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     issueNumber: data.issueNumber,
   });
 
-  const { installationId, repoOwner, repoName, repoPrivate, issueNumber, issueTitle, issueBody } = data;
+  const { installationId, repoOwner, repoName, repoPrivate, issueNumber, issueTitle, issueBody, labels } = data;
 
   const repoUrl = repoPrivate
     ? `https://github.com/${repoOwner}/${repoName}`
@@ -107,7 +107,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
     currentPhase = '1-triage';
     logger.info('Phase 1: Classifying issue');
     const triage = await withTimeout(
-      classifyIssue(issueTitle, issueBody ?? ''),
+      classifyIssue(issueTitle, issueBody ?? '', labels),
       config.phaseTimeouts.triage,
       '1-triage',
     );
@@ -515,7 +515,7 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
 /**
  * Classify the issue — tries OpenCode serve first, then keyword-based fallback.
  */
-async function classifyIssue(title: string, body: string): Promise<TriageResult> {
+async function classifyIssue(title: string, body: string, labels?: string[]): Promise<TriageResult> {
   // Try OpenCode serve for AI-powered classification
   try {
     const result = await classifyViaOpenCodeServe(title, body);
@@ -525,7 +525,7 @@ async function classifyIssue(title: string, body: string): Promise<TriageResult>
   }
 
   // Keyword-based fallback
-  return classifyViaKeywords(title, body);
+  return classifyViaKeywords(title, body, labels);
 }
 
 /**
@@ -593,8 +593,21 @@ Only respond with the JSON object, no other text.`;
 /**
  * Keyword-based fallback classification (no AI required).
  */
-function classifyViaKeywords(title: string, body: string): TriageResult {
+function classifyViaKeywords(title: string, body: string, labels?: string[]): TriageResult {
   const text = `${title}\n${body || ''}`.toLowerCase();
+
+  // Labels override keyword scoring — they are authoritative signals
+  // from the user/issue creator.
+  const labelNames = (labels ?? []).map((l) => l.toLowerCase());
+  if (labelNames.includes('bug') || labelNames.includes('type: bug')) {
+    return { type: 'bug', difficulty: 'unknown', summary: title.slice(0, 200) };
+  }
+  if (labelNames.includes('enhancement') || labelNames.includes('feature') || labelNames.includes('type: feature')) {
+    return { type: 'feature', difficulty: 'unknown', summary: title.slice(0, 200) };
+  }
+  if (labelNames.includes('question') || labelNames.includes('type: question')) {
+    return { type: 'question', difficulty: 'unknown', summary: title.slice(0, 200) };
+  }
 
   const bugKeywords = [
     'bug', 'error', 'crash', 'fix', 'broken', 'fail', 'wrong', 'incorrect',

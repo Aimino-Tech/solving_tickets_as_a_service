@@ -68,6 +68,9 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
 
     const tier = getTierForAccount(payload.installation?.id ?? 0);
     const priorityMap: Record<string, number> = { enterprise: 10, team: 15, pro: 20, free: 30 };
+    const issueLabels: string[] = (payload.issue.labels ?? [])
+      .map((l: { name?: string } | string) => (typeof l === 'string' ? l : l.name))
+      .filter(Boolean) as string[];
     const jobData: IssueJobData = {
       installationId: payload.installation?.id ?? 0,
       repoOwner: payload.repository.owner.login,
@@ -76,16 +79,24 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
       issueNumber: payload.issue.number,
       issueTitle: payload.issue.title,
       issueBody: payload.issue.body,
+      labels: issueLabels,
       billingPlan: tier,
       priority: priorityMap[tier] ?? 30,
     };
 
     if (!jobData.installationId) {
-      log.error(
-        { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-        'No installation ID in payload — cannot process',
-      );
-      return;
+      if (config.github.token) {
+        log.warn(
+          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+          'No installation ID — falling back to GITHUB_TOKEN',
+        );
+      } else {
+        log.error(
+          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+          'No installation ID and no GITHUB_TOKEN — cannot process',
+        );
+        return;
+      }
     }
 
     // Save a 'pending' RunRecord before enqueueing, so every labeled issue
@@ -166,6 +177,9 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
 
       const tier = getTierForAccount(payload.installation?.id ?? 0);
       const priorityMap: Record<string, number> = { enterprise: 10, team: 15, pro: 20, free: 30 };
+      const editIssueLabels: string[] = (payload.issue.labels ?? [])
+        .map((l: { name?: string } | string) => (typeof l === 'string' ? l : l.name))
+        .filter(Boolean) as string[];
       const jobData: IssueJobData = {
         installationId: payload.installation?.id ?? 0,
         repoOwner: payload.repository.owner.login,
@@ -174,14 +188,29 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
         issueNumber: payload.issue.number,
         issueTitle: payload.issue.title,
         issueBody: payload.issue.body,
+        labels: editIssueLabels,
         billingPlan: tier,
         priority: priorityMap[tier] ?? 30,
       };
 
+      if (!jobData.installationId && !config.github.token) {
+        log.warn(
+          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+          'No installation ID and no GITHUB_TOKEN — cannot process edited issue',
+        );
+        return;
+      }
+
+      if (!jobData.installationId) {
+        log.warn(
+          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+          'No installation ID — falling back to GITHUB_TOKEN for edited issue',
+        );
+      }
+
+      // ── Rate limit check (skip when using PAT fallback) ────────
       if (jobData.installationId) {
-        // ── Rate limit check ─────────────────────────────────────
         const repo = `${jobData.repoOwner}/${jobData.repoName}`;
-        const accountLimits = getRateLimitForAccount(jobData.installationId);
         const accountLimitResult = await rateLimiter.checkLimit('account', String(jobData.installationId));
         const repoLimitResult = await rateLimiter.checkLimit('repo', repo);
 
@@ -204,23 +233,18 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
         // Record the rate limit hit
         await rateLimiter.increment('account', String(jobData.installationId));
         await rateLimiter.increment('repo', repo);
+      }
 
-        try {
-          await enqueueIssue(queue, jobData);
-        } catch (err) {
-          log.error(
-            {
-              err: String(err),
-              repo: `${jobData.repoOwner}/${jobData.repoName}`,
-              issueNumber: jobData.issueNumber,
-            },
-            'Failed to enqueue edited issue',
-          );
-        }
-      } else {
-        log.warn(
-          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-          'No installation ID in edited issue payload — skipped',
+      try {
+        await enqueueIssue(queue, jobData);
+      } catch (err) {
+        log.error(
+          {
+            err: String(err),
+            repo: `${jobData.repoOwner}/${jobData.repoName}`,
+            issueNumber: jobData.issueNumber,
+          },
+          'Failed to enqueue edited issue',
         );
       }
     }
