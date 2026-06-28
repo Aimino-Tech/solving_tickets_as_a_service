@@ -68,17 +68,11 @@ app.conf.update(
 app.conf.worker_enable_remote_control = False
 
 # ── Graceful Shutdown / Task Resilience ─────────────────────────
-# Acknowledge tasks _after_ completion so in-flight tasks survive
-# worker loss and are re-queued (enables zero-downtime task drain).
 app.conf.task_acks_late = True
-# Re-queue a task when its worker process is lost unexpectedly
-# (e.g. OOM-kill during a rolling pod termination).
 app.conf.task_reject_on_worker_lost = True
-# Cancel long-running tasks when broker connection drops so they
-# don't hang forever during a rolling restart.
 app.conf.worker_cancel_long_running_tasks_on_connection_loss = True
 
-app.autodiscover_tasks(["workers.tasks", "workers.consumers", "workers.gates", "workers.quality"])
+app.autodiscover_tasks(["workers.tasks", "workers.consumers", "workers.gates", "workers.quality", "workers.analytics.ingestion", "workers.analytics.rollups"])
 
 # ── Initialize Metrics (Prometheus) ────────────────────────────────
 METRICS_PORT = int(os.getenv("CELERY_METRICS_PORT", "9090"))
