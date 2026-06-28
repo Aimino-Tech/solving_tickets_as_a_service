@@ -62,34 +62,6 @@ export interface TriageData {
 }
 
 /**
- * Triage job data sent to the stas.agents.triage queue.
- */
-export interface TriageData {
-  installationId: number;
-  repoOwner: string;
-  repoName: string;
-  repoPrivate: boolean;
-  issueNumber: number;
-  issueTitle: string;
-  issueBody: string | null;
-
-  /** Source platform that originated this job. Defaults to "github". */
-  source?: 'github' | 'gitlab' | 'bitbucket' | 'linear' | 'jira' | 'rapidapi';
-
-  /** Tracker ticket ID (Linear issue ID or Jira issue key) for cross-platform sync. */
-  trackerTicketId?: string;
-
-  /** Tracker platform type for posting results back to the source. */
-  trackerType?: 'linear' | 'jira';
-
-  /** Billing tier for this account — determines priority and rate limits. */
-  billingPlan?: 'free' | 'pro' | 'enterprise';
-
-  /** Job priority (lower = higher priority). Free=30, Pro=20, Enterprise=10. */
-  priority?: number;
-}
-
-/**
  * Standard message envelope for RabbitMQ messages (AIM-1232 format).
  */
 export interface MessageEnvelope {
