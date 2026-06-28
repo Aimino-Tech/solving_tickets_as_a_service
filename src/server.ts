@@ -56,6 +56,8 @@ import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
+import { createCrmSyncQueue, createCrmSyncWorker } from './crm/crmSyncService.js';
+import { createCrmRouter } from './routes/crm.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -145,6 +147,7 @@ export function createApp(): express.Application {
       '/webhook/stripe',
       '/webhook/telegram',
       '/webhook/whatsapp',
+      '/webhook/loops',
     ],
     express.raw({ type: 'application/json', limit: config.security.webhookBodyLimit, verify: addRawBody }),
   );
@@ -217,6 +220,17 @@ export function createApp(): express.Application {
   const githubWebhooks = createGithubWebhooks(queue);
   const gitlabHandler = createGitlabWebhooks(queue);
   const bitbucketHandler = createBitbucketWebhooks(queue);
+
+  // ── CRM Sync ─────────────────────────────────────────────────────
+  const crmQueue = createCrmSyncQueue();
+  if (config.crm.loopsApiKey) {
+    const crmWorker = createCrmSyncWorker();
+    log.info('CRM sync worker started');
+    crmWorker.on('error', (err) => {
+      log.error({ err: String(err) }, 'CRM sync worker error');
+    });
+  }
+  const crmRouter = createCrmRouter(crmQueue);
 
   // -- GitHub webhook handler (shared between /webhook and /webhook/github) --
   async function handleGithubWebhook(req: Request, res: Response): Promise<void> {
@@ -665,12 +679,10 @@ export function createApp(): express.Application {
   app.use('/api/v1/credits/usage', usageRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────
-  // GET /admin/webhooks (paginated, filterable)
-  // POST /admin/webhooks/:id/replay
-  // POST /admin/webhooks/replay-range
-  // GET /admin/webhooks/sources
-  // GET /admin/webhooks/stats
   app.use('/admin/webhooks', adminWebhooksRouter);
+
+  // ── CRM API ─────────────────────────────────────────────────────
+  app.use(crmRouter);
 
   // -- 404 handler ----------------------------------------------------------
 
