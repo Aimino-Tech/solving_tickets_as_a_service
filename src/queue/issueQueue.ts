@@ -1,24 +1,3 @@
-/**
- * BullMQ job queue for issue processing.
- *
- * Manages the lifecycle of fix jobs — queueing, processing, retries, and cleanup.
- * Jobs are deduplicated by issue identity with a configurable TTL.
- *
- * Retry strategy uses exact delays (30s, 2min, 5min, 15min) via manual
- * re-enqueue in the worker, since BullMQ OSS only supports fixed/exponential
- * backoff. After max retries the job is copied to a dead-letter queue.
- *
- * ── Error Handling Audit ────────────────────────────────────────────
- * ✅ Redis retry strategy with exponential backoff and logging
- * ✅ Worker 'failed' event logs context (jobId, repo, issueNumber, error)
- * ✅ Worker 'error' event logged for connection issues
- * ✅ Queue 'completed'/'failed' events logged
- * ✅ enqueueIssue() catches queue.add failures and returns undefined
- * ✅ Retry count and lastError persisted in job data
- * ✅ Dead-letter queue captures jobs after max retries
- * ────────────────────────────────────────────────────────────────────
- */
-
 import { Queue, Worker, QueueEvents } from "bullmq";
 import { config } from "../config.js";
 import { runIssueAgent } from "../agent/issueAgent.js";
@@ -82,6 +61,11 @@ export function createDeadLetterQueue(): Queue<IssueJobDataWithRetry, any, strin
  * Create the BullMQ issue queue.
  */
 export function createIssueQueue(): Queue<IssueJobData, unknown, string, IssueJobData> {
+  if (config.queue.backend === 'rabbitmq') {
+    log.info('RabbitMQ backend configured — queue creation deferred to connection');
+    return { add: async () => ({ id: '' }), close: async () => {} } as unknown as Queue<IssueJobData, unknown, string, IssueJobData>;
+  }
+
   const queue = new Queue<IssueJobData, unknown, string, IssueJobData>(QUEUE_NAME, {
     connection: redisConnectionOptions(),
     defaultJobOptions: {
@@ -103,6 +87,13 @@ export function createIssueQueue(): Queue<IssueJobData, unknown, string, IssueJo
  * Create the BullMQ worker that processes issue jobs.
  */
 export function createIssueWorker(): Worker<IssueJobData> {
+  if (config.queue.backend === 'rabbitmq') {
+    import('./rabbitmqIssueQueue.js').then((m) => m.createIssueWorker()).catch((err) => {
+      log.error({ err: String(err) }, 'Failed to start RabbitMQ issue worker');
+    });
+    return { on: () => {}, close: async () => {} } as unknown as Worker<IssueJobData>;
+  }
+
   const worker = new Worker<IssueJobData>(
     QUEUE_NAME,
     async (job) => {
@@ -387,22 +378,20 @@ export function createQueueEvents(): QueueEvents {
   return events;
 }
 
-/**
- * Enqueue an issue for processing via BullMQ.
- *
- * @param queue - The BullMQ queue instance
- * @param data  - The issue job data to enqueue
- * @returns BullMQ job ID on success, or undefined if all backends fail.
- */
 export async function enqueueIssue(
-  queue: Queue<IssueJobData>,
+  queue: Queue<IssueJobData> | undefined,
   data: IssueJobData,
 ): Promise<string | undefined> {
+  if (config.queue.backend === 'rabbitmq') {
+    const { enqueueIssue: rabbitmqEnqueue } = await import('./rabbitmqIssueQueue.js');
+    return rabbitmqEnqueue(data);
+  }
+
   const repo = `${data.repoOwner}/${data.repoName}`;
   const dedupKey = `issue:${data.installationId}:${repo}#${data.issueNumber}`;
 
   try {
-    const job = await queue.add('process-issue', data, {
+    const job = await queue!.add('process-issue', data, {
       deduplication: {
         id: dedupKey,
         ttl: config.queue.dedupTtl * 1000,
