@@ -16,8 +16,7 @@
       "preset": "recommended",
       "style": {
         "noNonNullAssertion": "off",
-        "useConst": "error",
-        }
+        "useConst": "error"
       },
       "complexity": {
         "noBannedTypes": "off",

@@ -1,23 +1,17 @@
-/**
- * Pipeline Status API --- endpoints for querying pipeline state.
- *
- * GET /api/pipeline/:issueId
- *   Returns the current status, stage, progress, and attempt count
- *   for the pipeline associated with the given issue ID.
- *
- * @module routes/pipeline
- */
-
 import { Router, type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import {
+  createSession, getSession, advanceSession,
+  failSession, cancelSession, retrySession,
+  listSessions, getSessionEvents,
+  registerWebhook, unregisterWebhook, listWebhooks,
+  dispatchPipelineEvent, getDeliveries,
+} from '../pipeline/index.js';
+import type { PipelineStage } from '../pipeline/types.js';
 
 const log = rootLogger.child({ module: 'pipeline-api' });
-
-// ---------------------------------------------------------------------------
-// Rate Limiting
-// ---------------------------------------------------------------------------
 
 const pipelineLimiter = rateLimit({
   windowMs: 60_000,
@@ -27,14 +21,6 @@ const pipelineLimiter = rateLimit({
   message: { error: 'Too many pipeline status requests', retryAfter: 'see Retry-After header' },
 });
 
-// ---------------------------------------------------------------------------
-// Redis helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Read a value from Redis with a fallback.
- * Returns `undefined` when Redis is unavailable or the key does not exist.
- */
 async function redisGet(key: string): Promise<string | undefined> {
   try {
     const { Redis } = await import('ioredis');
@@ -80,7 +66,6 @@ router.get('/pipeline/:issueId', async (req: Request, res: Response) => {
       return;
     }
 
-    // Look up pipeline_id via the issue -> pipeline_id mapping
     const pipelineIdKey = `pipeline:${issueId}:id`;
     const pipelineId = await redisGet(pipelineIdKey);
 
@@ -95,7 +80,6 @@ router.get('/pipeline/:issueId', async (req: Request, res: Response) => {
       return;
     }
 
-    // Read pipeline state from Redis
     const stateKey = `pipeline:${pipelineId}:state`;
     const rawState = await redisGet(stateKey);
 
@@ -124,7 +108,6 @@ router.get('/pipeline/:issueId', async (req: Request, res: Response) => {
       return;
     }
 
-    // Also query recent events from the events list
     const eventsKey = `pipeline:${pipelineId}:events`;
     let recentEvents: unknown[] = [];
     try {
@@ -138,11 +121,7 @@ router.get('/pipeline/:issueId', async (req: Request, res: Response) => {
       const rawEvents = await redis.lrange(eventsKey, 0, 9);
       recentEvents = rawEvents
         .map((e: string) => {
-          try {
-            return JSON.parse(e) as unknown;
-          } catch {
-            return null;
-          }
+          try { return JSON.parse(e) as unknown; } catch { return null; }
         })
         .filter(Boolean);
       await redis.quit().catch(() => {});
@@ -169,10 +148,6 @@ router.get('/pipeline/:issueId', async (req: Request, res: Response) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/pipeline --- list all known pipeline IDs (limited)
-// ---------------------------------------------------------------------------
-
 router.get('/pipeline', async (_req: Request, res: Response) => {
   try {
     const { Redis } = await import('ioredis');
@@ -183,7 +158,6 @@ router.get('/pipeline', async (_req: Request, res: Response) => {
     });
     await redis.connect();
 
-    // Scan for pipeline:*:id keys
     const stream = redis.scanStream({
       match: 'pipeline:*:id',
       count: 100,
@@ -200,7 +174,6 @@ router.get('/pipeline', async (_req: Request, res: Response) => {
       stream.on('error', reject);
     });
 
-    // Fetch pipeline IDs
     const pipelines: { issue_id: string; pipeline_id: string | null }[] = [];
     for (const key of pipelineKeys) {
       const issueId = key.replace(/^pipeline:/, '').replace(/:id$/, '');
@@ -218,6 +191,110 @@ router.get('/pipeline', async (_req: Request, res: Response) => {
     log.error({ err: String(err) }, 'Failed to list pipelines');
     res.status(500).json({ error: 'Failed to list pipelines' });
   }
+});
+
+router.post('/session', (req: Request, res: Response) => {
+  const { issueId, pipelineName, maxAttempts } = req.body;
+  if (!issueId || !pipelineName) {
+    res.status(400).json({ error: 'issueId and pipelineName are required' });
+    return;
+  }
+  const session = createSession(issueId, pipelineName, maxAttempts);
+  dispatchPipelineEvent('session.created', session).catch(() => {});
+  res.status(201).json(session);
+});
+
+router.get('/session/:sessionId', (req: Request, res: Response) => {
+  const session = getSession(req.params.sessionId);
+  if (!session) {
+    res.status(404).json({ error: 'Session not found' });
+    return;
+  }
+  res.json(session);
+});
+
+router.post('/session/:sessionId/advance', (req: Request, res: Response) => {
+  const { stage } = req.body as { stage: PipelineStage };
+  if (!stage) {
+    res.status(400).json({ error: 'stage is required' });
+    return;
+  }
+  const session = advanceSession(req.params.sessionId, stage);
+  if (!session) {
+    res.status(404).json({ error: 'Session not found' });
+    return;
+  }
+  dispatchPipelineEvent('stage.advanced', session, { toStage: stage }).catch(() => {});
+  res.json(session);
+});
+
+router.post('/session/:sessionId/fail', (req: Request, res: Response) => {
+  const { error } = req.body as { error: string };
+  const session = failSession(req.params.sessionId, error ?? 'Unknown error');
+  if (!session) {
+    res.status(404).json({ error: 'Session not found' });
+    return;
+  }
+  dispatchPipelineEvent('session.failed', session).catch(() => {});
+  res.json(session);
+});
+
+router.post('/session/:sessionId/cancel', (req: Request, res: Response) => {
+  const session = cancelSession(req.params.sessionId);
+  if (!session) {
+    res.status(404).json({ error: 'Session not found' });
+    return;
+  }
+  dispatchPipelineEvent('session.cancelled', session).catch(() => {});
+  res.json(session);
+});
+
+router.post('/session/:sessionId/retry', (req: Request, res: Response) => {
+  const session = retrySession(req.params.sessionId);
+  if (!session) {
+    res.status(404).json({ error: 'Session not found or max retries exceeded' });
+    return;
+  }
+  dispatchPipelineEvent('session.retrying', session).catch(() => {});
+  res.json(session);
+});
+
+router.get('/session/:sessionId/events', (req: Request, res: Response) => {
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+  const events = getSessionEvents(req.params.sessionId, limit);
+  res.json(events);
+});
+
+router.get('/sessions', (req: Request, res: Response) => {
+  const filter: { status?: string; issueId?: string } = {};
+  if (req.query.status) filter.status = req.query.status as string;
+  if (req.query.issueId) filter.issueId = req.query.issueId as string;
+  const sessions = listSessions(filter);
+  res.json({ sessions, total: sessions.length });
+});
+
+router.post('/webhooks', (req: Request, res: Response) => {
+  const { id, url, events, secret, headers, retryCount, retryDelayMs } = req.body;
+  if (!id || !url || !events) {
+    res.status(400).json({ error: 'id, url, and events are required' });
+    return;
+  }
+  registerWebhook(id, { url, events, secret, headers, retryCount, retryDelayMs });
+  res.status(201).json({ registered: id });
+});
+
+router.delete('/webhooks/:id', (req: Request, res: Response) => {
+  const removed = unregisterWebhook(req.params.id);
+  res.json({ removed });
+});
+
+router.get('/webhooks', (_req: Request, res: Response) => {
+  res.json(listWebhooks());
+});
+
+router.get('/webhooks/deliveries', (req: Request, res: Response) => {
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+  res.json(getDeliveries(limit));
 });
 
 export { router as pipelineRouter };

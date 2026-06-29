@@ -47,6 +47,7 @@ import { featureFlagsRouter } from './routes/featureFlags.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
 import { recordWebhookDuration } from './webhooks/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
+import { pipelineRouter } from './routes/pipeline.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { adminAuditRouter } from './routes/admin_audit.js';
@@ -673,6 +674,8 @@ export async function createApp(): Promise<express.Application> {
   } catch {
     log.warn('Enterprise routes not available');
   }
+
+  app.use('/api', pipelineRouter);
   // -- 404 handler ----------------------------------------------------------
 
   app.use((req: Request, res: Response) => {
