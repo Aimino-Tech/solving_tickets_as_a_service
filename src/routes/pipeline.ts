@@ -9,8 +9,8 @@
  */
 
 import { Router, type Request, type Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
-import { queryWithRetry } from '../db/connection.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'pipeline-api' });
@@ -18,6 +18,14 @@ const log = rootLogger.child({ module: 'pipeline-api' });
 // ---------------------------------------------------------------------------
 // Rate Limiting
 // ---------------------------------------------------------------------------
+
+const pipelineLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many pipeline status requests', retryAfter: 'see Retry-After header' },
+});
 
 // ---------------------------------------------------------------------------
 // Redis helpers
@@ -60,14 +68,8 @@ interface PipelineState {
   error?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Router
-// ---------------------------------------------------------------------------
-
 const router: Router = Router();
-// ---------------------------------------------------------------------------
-// GET /api/pipeline/:issueId --- pipeline status
-// ---------------------------------------------------------------------------
+router.use(pipelineLimiter);
 
 router.get('/pipeline/:issueId', async (req: Request, res: Response) => {
   try {
