@@ -41,6 +41,16 @@ const envSchema = z.object({
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
 
+  QUEUE_BACKEND: z.enum(['bullmq', 'amqp']).default('bullmq'),
+  AMQP_URL: z.string().default('amqp://guest:guest@localhost:5672'),
+  AMQP_EXCHANGE: z.string().default('stas.direct'),
+  AMQP_RETRY_EXCHANGE: z.string().default('stas.retry'),
+  AMQP_DLQ_EXCHANGE: z.string().default('stas.dlq'),
+  AMQP_PREFETCH: z.coerce.number().int().positive().default(10),
+  AMQP_HEARTBEAT: z.coerce.number().int().positive().default(60),
+  AMQP_RECONNECT_DELAY_MS: z.coerce.number().int().positive().default(1000),
+  AMQP_MAX_RECONNECT_ATTEMPTS: z.coerce.number().int().positive().default(10),
+
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
@@ -288,7 +298,18 @@ function buildConfig(env: ParsedEnv) {
       keepFailed: env.QUEUE_KEEP_FAILED,
       maxRetries: env.QUEUE_MAX_RETRIES,
       retryDelays: env.QUEUE_RETRY_DELAYS.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n)),
-      backend: 'bullmq' as const,
+      backend: env.QUEUE_BACKEND,
+    },
+
+    amqp: {
+      url: env.AMQP_URL,
+      exchange: env.AMQP_EXCHANGE,
+      retryExchange: env.AMQP_RETRY_EXCHANGE,
+      dlqExchange: env.AMQP_DLQ_EXCHANGE,
+      prefetch: env.AMQP_PREFETCH,
+      heartbeat: env.AMQP_HEARTBEAT,
+      reconnectDelayMs: env.AMQP_RECONNECT_DELAY_MS,
+      maxReconnectAttempts: env.AMQP_MAX_RECONNECT_ATTEMPTS,
     },
 
     opencode: {

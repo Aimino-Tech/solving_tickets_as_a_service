@@ -1,0 +1,30 @@
+name: default
+labels:
+  - stas:fix
+  - stas:bugfix
+phases:
+  pre:
+    - name: grep-memory
+      session: reuse
+      command: "opencode grep-memory --query {issue.title}"
+    - name: plan
+      session: new
+      command: "opencode plan --issue {issue.number}"
+  main:
+    - name: investigate-and-fix
+      session: new
+      command: "opencode agent --full-cycle --issue {issue.number}"
+  post:
+    - name: anti-slop
+      session: new
+      command: "opencode remove-anti-slop --since origin/main"
+    - name: ci-fix
+      session: new
+      command: "opencode run-ci --fix-failures"
+  final:
+    - name: create-pr
+      session: new
+      command: "opencode agent --mode create-pr"
+    - name: update-memory
+      session: new
+      command: "opencode agent --tool write-memory --key fix:{issue.number}"
