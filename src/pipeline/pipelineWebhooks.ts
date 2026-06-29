@@ -1,7 +1,6 @@
-import { randomUUID } from 'node:crypto';
-import { createHmac } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { rootLogger } from '../utils/logger.js';
-import type { WebhookConfig, WebhookDelivery, SessionState, SessionEvent } from './types.js';
+import type { WebhookConfig, WebhookDelivery } from './types.js';
 
 const log = rootLogger.child({ module: 'pipeline-webhooks' });
 
@@ -44,11 +43,7 @@ export function getDeliveries(limit: number = 50): WebhookDelivery[] {
   return deliveryStore.slice(-limit).reverse();
 }
 
-async function deliverWebhook(
-  config: WebhookConfig,
-  event: string,
-  payload: unknown,
-): Promise<WebhookDelivery> {
+async function deliverWebhook(config: WebhookConfig, event: string, payload: unknown): Promise<WebhookDelivery> {
   const id = randomUUID();
   const delivery: WebhookDelivery = {
     id,
@@ -107,10 +102,7 @@ async function deliverWebhook(
       );
     } catch (err) {
       lastError = String(err);
-      log.warn(
-        { webhookUrl: config.url, event, attempt, error: lastError },
-        'Webhook delivery error, will retry',
-      );
+      log.warn({ webhookUrl: config.url, event, attempt, error: lastError }, 'Webhook delivery error, will retry');
     }
 
     if (attempt < maxRetries) {
@@ -142,8 +134,9 @@ export async function dispatchPipelineEvent(
     ...extraData,
   };
 
-  const matchedWebhooks = [...registeredWebhooks.values()]
-    .filter((w) => w.events.includes('*') || w.events.includes(event));
+  const matchedWebhooks = [...registeredWebhooks.values()].filter(
+    (w) => w.events.includes('*') || w.events.includes(event),
+  );
 
   if (matchedWebhooks.length === 0) return;
 

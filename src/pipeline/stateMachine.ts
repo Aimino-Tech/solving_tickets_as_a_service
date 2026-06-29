@@ -20,8 +20,16 @@ const VALID_TRANSITIONS: Record<PipelineStage, PipelineStage[]> = {
 };
 
 const STAGE_ORDER: PipelineStage[] = [
-  'queued', 'triage', 'workspace', 'agent', 'verification',
-  'self_audit', 'anti_mockup', 'pr_creation', 'review', 'cleanup',
+  'queued',
+  'triage',
+  'workspace',
+  'agent',
+  'verification',
+  'self_audit',
+  'anti_mockup',
+  'pr_creation',
+  'review',
+  'cleanup',
   'completed',
 ];
 
@@ -70,15 +78,9 @@ export function createSessionState(
   };
 }
 
-export function transitionState(
-  state: SessionState,
-  toStage: PipelineStage,
-): SessionState {
+export function transitionState(state: SessionState, toStage: PipelineStage): SessionState {
   if (!isValidTransition(state.currentStage, toStage)) {
-    log.warn(
-      { from: state.currentStage, to: toStage, sessionId: state.sessionId },
-      'Invalid state transition',
-    );
+    log.warn({ from: state.currentStage, to: toStage, sessionId: state.sessionId }, 'Invalid state transition');
     return state;
   }
 

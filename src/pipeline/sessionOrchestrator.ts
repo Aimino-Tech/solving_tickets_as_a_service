@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { rootLogger } from '../utils/logger.js';
-import type { SessionState, SessionEvent } from './types.js';
-import { createSessionState, transitionState, failState, cancelState, retryState } from './stateMachine.js';
+import { cancelState, createSessionState, failState, retryState, transitionState } from './stateMachine.js';
+import type { SessionEvent, SessionState } from './types.js';
 
 const log = rootLogger.child({ module: 'session-orchestrator' });
 
@@ -84,7 +84,10 @@ export function getSession(sessionId: string): SessionState | undefined {
   return sessionStore.get(sessionId);
 }
 
-export function advanceSession(sessionId: string, toStage: import('./types.js').PipelineStage): SessionState | undefined {
+export function advanceSession(
+  sessionId: string,
+  toStage: import('./types.js').PipelineStage,
+): SessionState | undefined {
   const state = sessionStore.get(sessionId);
   if (!state) {
     log.warn({ sessionId }, 'Session not found for advance');

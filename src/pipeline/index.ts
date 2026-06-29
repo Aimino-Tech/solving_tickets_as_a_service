@@ -1,18 +1,39 @@
 export {
-  isValidTransition, getNextStage, getStageIndex,
-  calculateProgress, createSessionState, transitionState,
-  failState, cancelState, retryState, STAGE_ORDER,
-} from './stateMachine.js';
+  clearDeliveries,
+  dispatchPipelineEvent,
+  getDeliveries,
+  listWebhooks,
+  registerWebhook,
+  unregisterWebhook,
+} from './pipelineWebhooks.js';
 export {
-  createSession, getSession, advanceSession,
-  failSession, cancelSession, retrySession,
-  listSessions, getSessionEvents, sessionStore,
+  advanceSession,
+  cancelSession,
+  createSession,
+  failSession,
+  getSession,
+  getSessionEvents,
+  listSessions,
+  retrySession,
+  sessionStore,
 } from './sessionOrchestrator.js';
 export {
-  registerWebhook, unregisterWebhook, listWebhooks,
-  dispatchPipelineEvent, getDeliveries, clearDeliveries,
-} from './pipelineWebhooks.js';
+  calculateProgress,
+  cancelState,
+  createSessionState,
+  failState,
+  getNextStage,
+  getStageIndex,
+  isValidTransition,
+  retryState,
+  STAGE_ORDER,
+  transitionState,
+} from './stateMachine.js';
 export type {
-  PipelineStage, PipelineStatus, SessionState,
-  SessionEvent, WebhookConfig, WebhookDelivery,
+  PipelineStage,
+  PipelineStatus,
+  SessionEvent,
+  SessionState,
+  WebhookConfig,
+  WebhookDelivery,
 } from './types.js';
