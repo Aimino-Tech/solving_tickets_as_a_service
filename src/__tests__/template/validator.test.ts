@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { validateTemplateYaml, dryRunResolve, preflightValidate } from '../../template/validator.js';
-import { validatePlaceholders, suggestPlaceholder } from '../../template/placeholderRegistry.js';
+import { suggestPlaceholder, validatePlaceholders } from '../../template/placeholderRegistry.js';
+import { dryRunResolve, preflightValidate, validateTemplateYaml } from '../../template/validator.js';
 
 describe('validateTemplateYaml', () => {
   it('passes a valid template with all required phases', () => {

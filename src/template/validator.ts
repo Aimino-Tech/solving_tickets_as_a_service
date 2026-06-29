@@ -1,4 +1,4 @@
-import { extractPlaceholders, validatePlaceholders, suggestPlaceholder } from './placeholderRegistry.js';
+import { extractPlaceholders, suggestPlaceholder, validatePlaceholders } from './placeholderRegistry.js';
 
 export interface ValidationError {
   type: 'yaml_parse' | 'schema' | 'placeholder' | 'command' | 'dry_run';
@@ -31,10 +31,7 @@ const ALLOWED_SESSION_MODES = ['reuse', 'new'];
 const REQUIRED_PHASES = ['pre', 'main', 'post', 'final'];
 const MAX_COMMAND_LENGTH = 2000;
 
-export function validateTemplateYaml(
-  parsed: unknown,
-  sourceName?: string,
-): ValidationResult {
+export function validateTemplateYaml(parsed: unknown, sourceName?: string): ValidationResult {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
 
@@ -159,9 +156,7 @@ export function dryRunResolve(
   return result;
 }
 
-export function preflightValidate(
-  resolvedCommands: string[],
-): ValidationResult {
+export function preflightValidate(resolvedCommands: string[]): ValidationResult {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
 
