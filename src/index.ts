@@ -141,6 +141,21 @@ async function main(): Promise<void> {
     log.warn({ err: String(storageErr) }, 'Failed to initialize storage backend (non-fatal)');
   }
 
+  try {
+    const { registerDefaultTemplates } = await import('./template/index.js');
+    registerDefaultTemplates();
+    log.info('Default templates registered');
+
+    if (config.queue.backend === 'rabbitmq') {
+      const { connect, declareTopology } = await import('./queue/rabbitmq.js');
+      await connect();
+      await declareTopology();
+      log.info('RabbitMQ initialized with topology');
+    }
+  } catch (rmqErr) {
+    log.warn({ err: String(rmqErr) }, 'Failed to initialize RabbitMQ/templates (non-fatal in OSS mode)');
+  }
+
 
   addBreadcrumb('system', 'STAS starting', { runMode: config.runMode, nodeEnv: config.nodeEnv });
 
@@ -178,6 +193,17 @@ async function main(): Promise<void> {
 
     // Stop OpenCode health client polling
     opencodeHealth.stop();
+
+    // Disconnect RabbitMQ if connected
+    try {
+      const { disconnect: disconnectRabbitMq, isConnected } = await import('./queue/rabbitmq.js');
+      if (isConnected()) {
+        await disconnectRabbitMq();
+        log.info('RabbitMQ disconnected');
+      }
+    } catch {
+      // non-fatal
+    }
 
     process.exit(0);
   };
