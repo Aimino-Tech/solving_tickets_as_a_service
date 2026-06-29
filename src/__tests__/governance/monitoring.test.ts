@@ -9,18 +9,17 @@
  *   - Express integration: mount handlers on a real app, verify HTTP responses
  */
 
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import express from 'express';
-import http from 'node:http';
+import type http from 'node:http';
 import type { Request, Response } from 'express';
-
-import {
-  isBehindGovernanceProxy,
-  healthHandler,
-  readinessHandler,
-  formatGovernanceHealth,
-} from '../../governance/monitoring.js';
+import express from 'express';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GovernanceHealthInfo } from '../../governance/monitoring.js';
+import {
+  formatGovernanceHealth,
+  healthHandler,
+  isBehindGovernanceProxy,
+  readinessHandler,
+} from '../../governance/monitoring.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -90,7 +89,7 @@ describe('isBehindGovernanceProxy()', () => {
     const req = mockReq({
       'x-forwarded-for': '10.0.0.1',
       'x-real-ip': '10.0.0.1',
-      'via': 'nginx',
+      via: 'nginx',
     });
     expect(isBehindGovernanceProxy(req)).toBe(false);
   });
@@ -154,15 +153,11 @@ describe('healthHandler()', () => {
     const res = mockRes();
 
     healthHandler(withProxy, res);
-    expect(mockJson).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'ok', proxy: 'governance' }),
-    );
+    expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({ status: 'ok', proxy: 'governance' }));
 
     mockJson.mockClear();
     healthHandler(withoutProxy, res);
-    expect(mockJson).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'ok', proxy: 'governance' }),
-    );
+    expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({ status: 'ok', proxy: 'governance' }));
   });
 });
 
@@ -272,7 +267,7 @@ describe('formatGovernanceHealth()', () => {
 
     const result = formatGovernanceHealth(info);
     const ts = new Date(result.timestamp as string);
-    expect(ts instanceof Date && !isNaN(ts.getTime())).toBe(true);
+    expect(ts instanceof Date && !Number.isNaN(ts.getTime())).toBe(true);
   });
 
   it('timestamp is within 5 seconds of now', () => {
@@ -354,7 +349,7 @@ describe('Express integration', () => {
     const res = await fetch(`http://127.0.0.1:${port}/governance/health`);
     expect(res.status).toBe(200);
 
-    const body = await res.json() as Record<string, unknown>;
+    const body = (await res.json()) as Record<string, unknown>;
     expect(body.status).toBe('ok');
     expect(body.proxy).toBe('governance');
     expect(body).toHaveProperty('timestamp');
@@ -369,7 +364,7 @@ describe('Express integration', () => {
     const res = await fetch(`http://127.0.0.1:${port}/governance/readiness`);
     expect(res.status).toBe(200);
 
-    const body = await res.json() as Record<string, unknown>;
+    const body = (await res.json()) as Record<string, unknown>;
     expect(body.status).toBe('ready');
     expect(Object.keys(body)).toEqual(['status']);
   });
@@ -380,7 +375,7 @@ describe('Express integration', () => {
     });
     expect(res.status).toBe(200);
 
-    const body = await res.json() as Record<string, unknown>;
+    const body = (await res.json()) as Record<string, unknown>;
     expect(body.status).toBe('ok');
   });
 

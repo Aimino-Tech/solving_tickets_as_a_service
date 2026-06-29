@@ -5,7 +5,7 @@ const GOVERNANCE_PROXY_HEADER = 'x-governance-proxy';
 export function isBehindGovernanceProxy(req: Request): boolean {
   const headerValue = req.headers?.[GOVERNANCE_PROXY_HEADER];
   if (headerValue === undefined || headerValue === null) return false;
-  if (Array.isArray(headerValue)) return headerValue.some(v => v !== undefined && v !== null);
+  if (Array.isArray(headerValue)) return headerValue.some((v) => v !== undefined && v !== null);
   return true;
 }
 
