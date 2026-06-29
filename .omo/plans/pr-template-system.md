@@ -189,6 +189,30 @@ RabbitMQ is a thin pipe — it routes opaque messages. No routing per request ty
 9. **Failure mitigations** — dedup, retry, DLQ, heartbeat, repo lock
 10. **E2E tests** — full flow integration tests
 
+### Wave 4: Validation
+11. **Template validation CLI** — `stas template validate` with placeholder registry, dry-run, git hook
+12. **Placeholder registry** — known placeholder audit, typo detection ("Did you mean?")
+13. **Worker pre-flight guard** — validate resolved commands before execution
+
+---
+
+## Template Validation Safety Net
+
+Every `.stas/templates/*.yaml` must pass validation before acceptance.
+
+**Validation points:**
+- **Loader-time** — rejects invalid templates before caching
+- **CLI** — `stas template validate` for manual/CI validation
+- **Worker pre-flight** — validates resolved command before executing
+- **Git pre-commit hook** — catches errors before commit
+
+**Validations:**
+- YAML parse — well-formed check with line number
+- Schema — required fields, valid session modes
+- Placeholder registry — every `{placeholder}` checked against known list, typos flagged with "Did you mean?"
+- Command completeness — non-empty commands
+- Dry-run — `stas template validate --dry-run --input payload.json` shows resolved commands
+
 ---
 
 ## Key Decisions
@@ -199,3 +223,4 @@ RabbitMQ is a thin pipe — it routes opaque messages. No routing per request ty
 | Variable injection | Pure `{placeholder}` substitution | No expressions, no conditionals, no branching |
 | Session model | One session per phase by default | Isolation, no state collision |
 | Template storage | `.stas/templates/` in repo | Contributed like code, versioned with repo |
+| Validation safety net | `stas template validate` | Catches errors at edit time, not execution |
