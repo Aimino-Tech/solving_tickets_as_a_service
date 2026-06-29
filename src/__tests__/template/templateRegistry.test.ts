@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { templateRegistry } from '../../template/templateRegistry.js';
 import { registerDefaultTemplates } from '../../template/defaultTemplates.js';
+import { templateRegistry } from '../../template/templateRegistry.js';
 import type { TemplateDefinition } from '../../template/types.js';
 
 describe('templateRegistry', () => {
@@ -14,9 +14,7 @@ describe('templateRegistry', () => {
       name: 'Test Template',
       description: 'A test template',
       version: '1.0.0',
-      variables: [
-        { name: 'repo', description: 'Repository name', required: true },
-      ],
+      variables: [{ name: 'repo', description: 'Repository name', required: true }],
       render: async (data) => `Processing ${data.repo}`,
     };
 
@@ -27,12 +25,20 @@ describe('templateRegistry', () => {
 
   it('lists all registered templates', () => {
     const def1: TemplateDefinition = {
-      id: 't1', name: 'T1', description: '', version: '1.0.0',
-      variables: [], render: async () => '',
+      id: 't1',
+      name: 'T1',
+      description: '',
+      version: '1.0.0',
+      variables: [],
+      render: async () => '',
     };
     const def2: TemplateDefinition = {
-      id: 't2', name: 'T2', description: '', version: '1.0.0',
-      variables: [], render: async () => '',
+      id: 't2',
+      name: 'T2',
+      description: '',
+      version: '1.0.0',
+      variables: [],
+      render: async () => '',
     };
     templateRegistry.register(def1);
     templateRegistry.register(def2);
@@ -47,9 +53,7 @@ describe('templateRegistry', () => {
       name: 'Render Test',
       description: '',
       version: '1.0.0',
-      variables: [
-        { name: 'repo', description: '', required: true },
-      ],
+      variables: [{ name: 'repo', description: '', required: true }],
       render: async (data) => `Repo: ${data.repo}`,
     };
 
@@ -60,8 +64,12 @@ describe('templateRegistry', () => {
 
   it('unregisters a template', () => {
     const def: TemplateDefinition = {
-      id: 'remove-me', name: 'Remove', description: '', version: '1.0.0',
-      variables: [], render: async () => '',
+      id: 'remove-me',
+      name: 'Remove',
+      description: '',
+      version: '1.0.0',
+      variables: [],
+      render: async () => '',
     };
     templateRegistry.register(def);
     expect(templateRegistry.get('remove-me')).toBeDefined();
@@ -71,9 +79,9 @@ describe('templateRegistry', () => {
   });
 
   it('throws on rendering unknown template', async () => {
-    await expect(
-      templateRegistry.render('nonexistent', {}, {} as any),
-    ).rejects.toThrow('Template not found: nonexistent');
+    await expect(templateRegistry.render('nonexistent', {}, {} as any)).rejects.toThrow(
+      'Template not found: nonexistent',
+    );
   });
 });
 

@@ -1,5 +1,5 @@
 import { rootLogger } from '../utils/logger.js';
-import type { TemplateDefinition, TemplateRegistryEntry, JobTemplate } from './types.js';
+import type { JobTemplate, TemplateDefinition, TemplateRegistryEntry } from './types.js';
 
 const log = rootLogger.child({ module: 'template-registry' });
 
@@ -35,10 +35,7 @@ class TemplateRegistry {
 
   registerJobTemplate(jobTemplate: JobTemplate): void {
     this.jobTemplates.set(jobTemplate.templateId, jobTemplate);
-    log.info(
-      { templateId: jobTemplate.templateId, queueName: jobTemplate.queueName },
-      'Job template registered',
-    );
+    log.info({ templateId: jobTemplate.templateId, queueName: jobTemplate.queueName }, 'Job template registered');
   }
 
   getJobTemplate(id: string): JobTemplate | undefined {
@@ -49,7 +46,11 @@ class TemplateRegistry {
     return [...this.jobTemplates.values()];
   }
 
-  async render(templateId: string, data: Record<string, unknown>, context: Parameters<TemplateDefinition['render']>[1]): Promise<string> {
+  async render(
+    templateId: string,
+    data: Record<string, unknown>,
+    context: Parameters<TemplateDefinition['render']>[1],
+  ): Promise<string> {
     const def = this.get(templateId);
     if (!def) throw new Error(`Template not found: ${templateId}`);
     return def.render(data, context);
