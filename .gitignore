@@ -31,7 +31,7 @@ Thumbs.db
 .vscode/
 eval/results/
 # Python
-__pycache__/
+# __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
