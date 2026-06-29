@@ -90,13 +90,21 @@ export async function handleTelegramWebhook(payload: Record<string, unknown>): P
     }
 
     try {
-      const { enqueueIssue } = await import('../queue/issueQueue.js');
-      await enqueueIssue(undefined, {
+      const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
+      if (!isConnected()) {
+        await rmqConnect();
+      }
+      const jobData = {
         installationId: config.trackers.installationId || 0,
         repoOwner, repoName, repoPrivate: false, issueNumber: 0,
         issueTitle,
         issueBody: `Submitted via Telegram by user ${message.from?.id || 'unknown'}\n\nDescription: ${issueTitle}`,
         source: 'telegram',
+      };
+      const messageId = `${jobData.installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
+      await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+        ...jobData,
+        _meta: { messageId, enqueuedAt: new Date().toISOString() },
       });
       await callTelegram('sendMessage', {
         chat_id: chatId, text: `STAS is investigating: "${issueTitle}"\n\nI'll post progress updates here.`,

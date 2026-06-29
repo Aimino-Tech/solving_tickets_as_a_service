@@ -2,14 +2,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 vi.mock('../../config.js', () => ({
   config: {
-    rabbitmq: {
-      url: 'amqp://guest:guest@localhost:5672/stas',
-      prefetchCount: 10,
-      reconnectDelayMs: 5000,
-      maxReconnectAttempts: 3,
-    },
     queue: {
-      backend: 'rabbitmq',
+      rabbitmqUrl: 'amqp://guest:guest@localhost:5672/stas',
     },
   },
 }));

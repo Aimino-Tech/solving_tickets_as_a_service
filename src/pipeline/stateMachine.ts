@@ -1,10 +1,10 @@
 import { rootLogger } from '../utils/logger.js';
-import type { PipelineStage, PipelineStatus, SessionState } from './types.js';
+import type { PipelinePhase, PipelineStage, PipelineStatus, SessionState } from './types.js';
 
 const log = rootLogger.child({ module: 'pipeline-state-machine' });
 
 const VALID_TRANSITIONS: Record<PipelineStage, PipelineStage[]> = {
-  queued: ['triage'],
+  queued: ['triage', 'phase_pre'],
   triage: ['workspace', 'failed'],
   workspace: ['agent', 'failed'],
   agent: ['verification', 'failed'],
@@ -14,6 +14,10 @@ const VALID_TRANSITIONS: Record<PipelineStage, PipelineStage[]> = {
   pr_creation: ['review', 'failed'],
   review: ['cleanup', 'failed'],
   cleanup: ['completed', 'failed'],
+  phase_pre: ['phase_main', 'failed'],
+  phase_main: ['phase_post', 'failed'],
+  phase_post: ['phase_final', 'failed'],
+  phase_final: ['completed', 'failed'],
   completed: [],
   failed: [],
   cancelled: [],
@@ -32,6 +36,14 @@ const STAGE_ORDER: PipelineStage[] = [
   'cleanup',
   'completed',
 ];
+
+/** Maps PipelinePhase names to their corresponding PipelineStage values. */
+const PHASE_STAGE_MAP: Record<PipelinePhase, PipelineStage> = {
+  pre: 'phase_pre',
+  main: 'phase_main',
+  post: 'phase_post',
+  final: 'phase_final',
+};
 
 export function isValidTransition(from: PipelineStage, to: PipelineStage): boolean {
   return VALID_TRANSITIONS[from]?.includes(to) ?? false;
@@ -148,4 +160,21 @@ export function retryState(state: SessionState): SessionState | null {
   return updated;
 }
 
-export { STAGE_ORDER, VALID_TRANSITIONS };
+/**
+ * Convert a PipelinePhase name ('pre', 'main', 'post', 'final') to its
+ * corresponding PipelineStage ('phase_pre', 'phase_main', etc.).
+ * Returns null for unknown phase names.
+ */
+export function getPhaseStage(phase: string): PipelineStage | null {
+  return PHASE_STAGE_MAP[phase as PipelinePhase] ?? null;
+}
+
+/**
+ * Return the ordered list of phase stages that exist between queued and completed.
+ * Useful for progress calculation in template-driven pipelines.
+ */
+export function getPhaseStagesInOrder(): PipelineStage[] {
+  return ['phase_pre', 'phase_main', 'phase_post', 'phase_final'];
+}
+
+export { STAGE_ORDER, VALID_TRANSITIONS, PHASE_STAGE_MAP };

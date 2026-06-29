@@ -747,8 +747,8 @@ describe('github/messages', () => {
     });
 
     it("includes the error message", () => {
-      const msg = queueRetryComment(1, 3, "BullMQ job timeout");
-      expect(msg).toContain("BullMQ job timeout");
+const msg = queueRetryComment(1, 3, "Job timeout");
+  expect(msg).toContain("Job timeout");
     });
 
     it("includes bot signature", () => {

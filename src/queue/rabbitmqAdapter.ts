@@ -114,7 +114,7 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
 		}
 	}
 
-	getBackend(): "bullmq" | "rabbitmq" {
+	getBackend(): "rabbitmq" {
 		return "rabbitmq";
 	}
 

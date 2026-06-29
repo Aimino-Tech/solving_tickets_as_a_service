@@ -23,17 +23,24 @@ export {
   createSessionState,
   failState,
   getNextStage,
+  getPhaseStage,
+  getPhaseStagesInOrder,
   getStageIndex,
   isValidTransition,
+  PHASE_STAGE_MAP,
   retryState,
   STAGE_ORDER,
   transitionState,
 } from './stateMachine.js';
+export { ALL_PHASES, PipelineExecutor } from './pipelineExecutor.js';
 export type {
+  PipelinePhase,
   PipelineStage,
   PipelineStatus,
   SessionEvent,
   SessionState,
   WebhookConfig,
   WebhookDelivery,
+  PhaseStepInfo,
+  PhaseStepResult,
 } from './types.js';

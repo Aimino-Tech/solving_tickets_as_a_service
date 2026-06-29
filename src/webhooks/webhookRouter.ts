@@ -7,12 +7,13 @@
  * know which platform API to call.
  */
 
-import type { Queue } from 'bullmq';
 import type { IssueJobData } from '../utils/types.js';
 import type { Platform } from '../platforms/interface.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'webhook-router' });
+
+type EnqueueHandler = (data: IssueJobData) => Promise<string | undefined>;
 
 /**
  * Normalised webhook event after platform-specific parsing.
@@ -51,10 +52,10 @@ export type PlatformHandler = (event: WebhookRouterEvent) => Promise<void>;
  */
 export class WebhookRouter {
   private readonly handlers = new Map<string, PlatformHandler[]>();
-  private readonly queue: Queue<IssueJobData>;
+  private readonly enqueue: EnqueueHandler;
 
-  constructor(queue: Queue<IssueJobData>) {
-    this.queue = queue;
+  constructor(enqueue: EnqueueHandler) {
+    this.enqueue = enqueue;
   }
 
   /**
@@ -128,8 +129,7 @@ export class WebhookRouter {
     const jobData = this.buildJobData(event);
 
     try {
-      const { enqueueIssue } = await import('../queue/issueQueue.js');
-      await enqueueIssue(this.queue, jobData);
+      await this.enqueue(jobData);
       log.info(
         {
           platform: event.platform,

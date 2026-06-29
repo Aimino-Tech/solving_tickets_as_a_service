@@ -31,15 +31,15 @@ import helmet from 'helmet';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
-import { createIssueQueue, createIssueWorker, enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
+import type { IssueJobData } from './utils/types.js';
+import { QUEUES, publishMessage, connect as rmqConnect, isConnected } from './queue/rabbitmq.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
 import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
-import type { IssueJobData } from './utils/types.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
@@ -163,10 +163,27 @@ export async function createApp(): Promise<express.Application> {
   }
 
   // ── Webhook receiver ─────────────────────────────────────────────
-  const queue = createIssueQueue();
-  const githubWebhooks = createGithubWebhooks(queue);
-  const gitlabHandler = createGitlabWebhooks(queue);
-  const bitbucketHandler = createBitbucketWebhooks(queue);
+  // RabbitMQ enqueue function for webhook handlers
+  async function enqueueIssue(data: IssueJobData): Promise<string | undefined> {
+    if (!isConnected()) {
+      await rmqConnect();
+    }
+    const messageId = `${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}-${Date.now()}`;
+    try {
+      await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+        ...data,
+        _meta: { messageId, enqueuedAt: new Date().toISOString() },
+      });
+      return messageId;
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to enqueue issue via RabbitMQ');
+      return undefined;
+    }
+  }
+
+  const githubWebhooks = createGithubWebhooks(enqueueIssue);
+  const gitlabHandler = createGitlabWebhooks(enqueueIssue);
+  const bitbucketHandler = createBitbucketWebhooks(enqueueIssue);
 
   // -- GitHub webhook handler (shared between /webhook and /webhook/github) --
   async function handleGithubWebhook(req: Request, res: Response): Promise<void> {
@@ -410,7 +427,7 @@ export async function createApp(): Promise<express.Application> {
             trackerTicketId: ticket.id,
           };
 
-          await enqueueIssue(queue, jobData);
+          await enqueueIssue(jobData);
         } else {
           log.warn(
             'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Linear ticket not enqueued',
@@ -492,7 +509,7 @@ export async function createApp(): Promise<express.Application> {
             trackerTicketId: ticket.id,
           };
 
-          await enqueueIssue(queue, jobData);
+          await enqueueIssue(jobData);
         } else {
           log.warn(
             'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Jira ticket not enqueued',
@@ -708,15 +725,29 @@ export async function startServer(): Promise<import('http').Server> {
       `STAS server listening on :${config.port}`,
     );
 
-    // Start the issue queue worker (Worker auto-starts in BullMQ 5.x)
+    // Start the RabbitMQ issue consumer
     try {
-      const worker = createIssueWorker();
-      worker.on('error', (err: Error) => {
-        log.error({ err: String(err) }, 'Issue worker error');
+      const { consumeQueue } = await import('./queue/rabbitmq.js');
+      const { runIssueAgent } = await import('./agent/issueAgent.js');
+      await consumeQueue(QUEUES.issuesFix.name, async (msg) => {
+        if (!msg) return;
+        const content = msg.content.toString();
+        let data: IssueJobData;
+        try {
+          data = JSON.parse(content) as IssueJobData;
+        } catch {
+          log.error({ content }, 'Failed to parse RabbitMQ message');
+          return;
+        }
+        try {
+          await runIssueAgent(data);
+        } catch (err) {
+          log.error({ err: String(err) }, 'Issue agent run failed');
+        }
       });
-      log.info('Issue queue worker started');
+      log.info('RabbitMQ issue consumer started');
     } catch (err) {
-      log.error({ err: String(err) }, 'Failed to start issue queue worker');
+      log.error({ err: String(err) }, 'Failed to start RabbitMQ issue consumer');
     }
   });
 
