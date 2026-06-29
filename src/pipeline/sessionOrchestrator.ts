@@ -5,12 +5,14 @@ import type { SessionEvent, SessionState } from './types.js';
 
 const log = rootLogger.child({ module: 'session-orchestrator' });
 
-interface SessionStore {
-  get(id: string): SessionState | undefined;
-  set(id: string, state: SessionState): void;
-  delete(id: string): boolean;
-  list(filter?: { status?: string; issueId?: string }): SessionState[];
-  clear(): void;
+export interface SessionStore {
+  get(id: string): SessionState | undefined | Promise<SessionState | undefined>;
+  set(id: string, state: SessionState): void | Promise<void>;
+  delete(id: string): boolean | Promise<boolean>;
+  list(filter?: { status?: string; issueId?: string }): SessionState[] | Promise<SessionState[]>;
+  clear(): void | Promise<void>;
+  getEvents?(sessionId: string, limit?: number): SessionEvent[] | Promise<SessionEvent[]>;
+  addEvent?(sessionId: string, event: SessionEvent): void | Promise<void>;
 }
 
 class InMemorySessionStore implements SessionStore {
@@ -71,6 +73,24 @@ class InMemorySessionStore implements SessionStore {
 }
 
 export const sessionStore = new InMemorySessionStore();
+
+/**
+ * Replace the default InMemorySessionStore with a custom store (e.g. RedisSessionStore).
+ * Call this during application startup before any pipeline operations.
+ */
+export function setSessionStore(store: SessionStore): void {
+  sessionStore.get = store.get.bind(store) as typeof sessionStore.get;
+  sessionStore.set = store.set.bind(store) as typeof sessionStore.set;
+  sessionStore.delete = store.delete.bind(store) as typeof sessionStore.delete;
+  sessionStore.list = store.list.bind(store) as typeof sessionStore.list;
+  sessionStore.clear = store.clear.bind(store) as typeof sessionStore.clear;
+  if (store.getEvents) {
+    sessionStore.getEvents = store.getEvents.bind(store) as typeof sessionStore.getEvents;
+  }
+  if (store.addEvent) {
+    sessionStore.addEvent = store.addEvent.bind(store) as typeof sessionStore.addEvent;
+  }
+}
 
 export function createSession(issueId: string, pipelineName: string, maxAttempts?: number): SessionState {
   const sessionId = randomUUID();

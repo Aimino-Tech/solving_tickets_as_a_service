@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockEnqueueIssue } = vi.hoisted(() => ({
   mockEnqueueIssue: vi
-    .fn<(queue: unknown, data: unknown) => Promise<string | undefined>>()
+    .fn<(data: unknown) => Promise<string | undefined>>()
     .mockResolvedValue("job-mock-id"),
 }));
 
@@ -38,23 +38,12 @@ vi.mock("../../config.js", () => ({
   },
 }));
 
-vi.mock("../../queue/issueQueue.js", () => ({
-  enqueueIssue: mockEnqueueIssue,
-}));
+
 
 import { bitbucketWebhook, createBitbucketWebhooks } from "../../webhooks/bitbucket.js";
 import type { PlatformWebhookEvent } from "../../webhooks/base.js";
 
-function createMockQueue() {
-  return {
-    add: vi.fn().mockResolvedValue({ id: "job-1" }),
-    close: vi.fn().mockResolvedValue(undefined),
-    on: vi.fn().mockReturnThis(),
-    getJob: vi.fn().mockResolvedValue(null),
-    getJobs: vi.fn().mockResolvedValue([]),
-    obliterate: vi.fn().mockResolvedValue(undefined),
-  } as any;
-}
+const mockEnqueue = vi.fn<(...args: unknown[]) => Promise<string | undefined>>().mockResolvedValue("job-mock-id");
 
 function sampleBitbucketIssueCreatedPayload() {
   return {
@@ -151,16 +140,14 @@ describe("bitbucketWebhook", () => {
 });
 
 describe("createBitbucketWebhooks", () => {
-  let mockQueue: ReturnType<typeof createMockQueue>;
-
   beforeEach(() => {
     vi.clearAllMocks();
     mockEnqueueIssue.mockResolvedValue("job-mock-id");
-    mockQueue = createMockQueue();
+    mockEnqueue.mockClear();
   });
 
   it("enqueues a job for issue created event", async () => {
-    const handler = createBitbucketWebhooks(mockQueue);
+    const handler = createBitbucketWebhooks(mockEnqueue);
 
     const rawPayload = JSON.stringify(sampleBitbucketIssueCreatedPayload());
     const expected = crypto.createHmac("sha256", "test-secret").update(rawPayload, "utf8").digest("hex");
@@ -170,7 +157,6 @@ describe("createBitbucketWebhooks", () => {
 
     expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
     expect(mockEnqueueIssue).toHaveBeenCalledWith(
-      undefined,
       expect.objectContaining({
         repoOwner: "owner",
         repoName: "test-repo",
@@ -181,7 +167,7 @@ describe("createBitbucketWebhooks", () => {
   });
 
   it("does NOT enqueue for pull request created events", async () => {
-    const handler = createBitbucketWebhooks(mockQueue);
+    const handler = createBitbucketWebhooks(mockEnqueue);
 
     const rawPayload = JSON.stringify(sampleBitbucketPullRequestCreatedPayload());
     const expected = crypto.createHmac("sha256", "test-secret").update(rawPayload, "utf8").digest("hex");
@@ -193,14 +179,14 @@ describe("createBitbucketWebhooks", () => {
   });
 
   it("does NOT enqueue when signature verification fails", async () => {
-    const handler = createBitbucketWebhooks(mockQueue);
+    const handler = createBitbucketWebhooks(mockEnqueue);
     await handler.handle(JSON.stringify({ event: "issue:created" }), "sha256=invalid");
 
     expect(mockEnqueueIssue).not.toHaveBeenCalled();
   });
 
   it("does NOT enqueue for non-matching events", async () => {
-    const handler = createBitbucketWebhooks(mockQueue);
+    const handler = createBitbucketWebhooks(mockEnqueue);
 
     const rawPayload = JSON.stringify({ event: "repo:push" });
     const expected = crypto.createHmac("sha256", "test-secret").update(rawPayload, "utf8").digest("hex");

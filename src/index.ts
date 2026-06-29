@@ -146,12 +146,10 @@ async function main(): Promise<void> {
     registerDefaultTemplates();
     log.info('Default templates registered');
 
-    if (config.queue.backend === 'rabbitmq') {
-      const { connect, declareTopology } = await import('./queue/rabbitmq.js');
-      await connect();
-      await declareTopology();
-      log.info('RabbitMQ initialized with topology');
-    }
+    const { connect, declareTopology } = await import('./queue/rabbitmq.js');
+    await connect();
+    await declareTopology();
+    log.info('RabbitMQ initialized with topology');
   } catch (rmqErr) {
     log.warn({ err: String(rmqErr) }, 'Failed to initialize RabbitMQ/templates (non-fatal in OSS mode)');
   }

@@ -31,17 +31,13 @@ export interface QueueAdapter {
 	startConsumer(handler: (data: IssueJobData) => Promise<void>): Promise<void>;
 	stopConsumer(): Promise<void>;
 	getDepth(): Promise<number>;
-	getBackend(): "bullmq" | "rabbitmq";
+	getBackend(): "rabbitmq";
 	isHealthy(): Promise<boolean>;
 }
 
 export async function createQueueAdapter(
 	cfg: QueueConfig,
 ): Promise<QueueAdapter> {
-	if (config.queue.backend === "rabbitmq") {
-		const { RabbitMQQueueAdapter } = await import("./rabbitmqAdapter.js");
-		return new RabbitMQQueueAdapter(cfg);
-	}
-	const { BullMQQueueAdapter } = await import("./bullmqAdapter.js");
-	return new BullMQQueueAdapter(cfg);
+	const { RabbitMQQueueAdapter } = await import("./rabbitmqAdapter.js");
+	return new RabbitMQQueueAdapter(cfg);
 }

@@ -19,7 +19,7 @@ const state: AmqpState = {
 };
 
 function getUrl(): string {
-  return config.rabbitmq.url;
+  return config.queue.rabbitmqUrl;
 }
 
 export async function connect(options?: { url?: string }): Promise<Channel> {
@@ -47,7 +47,7 @@ export async function connect(options?: { url?: string }): Promise<Channel> {
     });
 
     const channel = await connection.createChannel();
-    await channel.prefetch(config.rabbitmq.prefetchCount);
+    await channel.prefetch(10);
     state.channel = channel;
 
     state.reconnectAttempts = 0;
@@ -64,9 +64,9 @@ export async function connect(options?: { url?: string }): Promise<Channel> {
 
 function scheduleReconnect(): void {
   if (state.shutdownInitiated) return;
-  if (state.reconnectAttempts >= config.rabbitmq.maxReconnectAttempts) {
+  if (state.reconnectAttempts >= 10) {
     log.error(
-      { attempts: state.reconnectAttempts, max: config.rabbitmq.maxReconnectAttempts },
+      { attempts: state.reconnectAttempts, max: 10 },
       'AMQP max reconnection attempts reached',
     );
     return;
@@ -74,7 +74,7 @@ function scheduleReconnect(): void {
 
   state.reconnectAttempts++;
   const delay = Math.min(
-    config.rabbitmq.reconnectDelayMs * Math.pow(2, state.reconnectAttempts - 1),
+    1000 * Math.pow(2, state.reconnectAttempts - 1),
     60000,
   );
 

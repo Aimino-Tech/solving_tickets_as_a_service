@@ -13,7 +13,7 @@
  *
  * ── Data Flow ────────────────────────────────────────────────────────
  * 1. Worker exhausts retries → calls recordDeadLetter()
- * 2. recordDeadLetter() stores entry in in-memory map + pushes to BullMQ DLQ
+ * 2. recordDeadLetter() stores entry in in-memory map
  * 3. dispatchDlqAlert() posts to Slack via notification service
  * 4. Admin API reads from in-memory store for dashboard display
  * 5. Manual ack via admin API removes entry from tracking
@@ -24,7 +24,6 @@ import { config } from "../config.js";
 import { rootLogger } from "../utils/logger.js";
 import { bridgeMetrics } from "../bridge/metrics.js";
 import type { IssueJobData } from "../utils/types.js";
-import type { IssueJobDataWithRetry } from "./issueQueue.js";
 
 const log = rootLogger.child({ module: 'dlq-manager' });
 
@@ -39,7 +38,7 @@ export interface DeadLetterEntry {
   /** When the message entered the DLQ */
   timestamp: string;
   /** Original job data */
-  jobData: IssueJobDataWithRetry;
+  jobData: IssueJobData & { retryCount?: number; lastError?: string };
   /** The error that caused the final failure */
   error: string;
   /** Stack trace if available */
@@ -121,7 +120,7 @@ class DeadLetterStore {
    * Returns null if the entry does not exist or is not acknowledged.
    * After replay, the entry is removed from the store.
    */
-  replay(id: string): IssueJobDataWithRetry | null {
+  replay(id: string): (IssueJobData & { retryCount?: number; lastError?: string }) | null {
     const entry = this.entries.get(id);
     if (!entry || !entry.acknowledged) return null;
     this.entries.delete(id);
@@ -256,7 +255,7 @@ export async function dispatchDlqAlert(entry: DeadLetterEntry): Promise<void> {
  * @returns The created DeadLetterEntry
  */
 export async function recordDeadLetter(
-  jobData: IssueJobDataWithRetry,
+  jobData: IssueJobData & { retryCount?: number; lastError?: string },
   error: string,
   sourceQueue: string,
   stackTrace?: string,

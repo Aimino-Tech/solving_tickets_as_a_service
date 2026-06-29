@@ -419,9 +419,17 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
     // Re-enqueue based on source
     if (webhookEvent.source === 'github') {
       const { createGithubWebhooks } = await import('../webhooks/github.js');
-      const { createIssueQueue } = await import('../queue/issueQueue.js');
-      const queue = createIssueQueue();
-      const githubWebhooks = createGithubWebhooks(queue);
+      const enqueueFn = async (data: import('../utils/types.js').IssueJobData) => {
+        const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
+        if (!isConnected()) await rmqConnect();
+        const messageId = `${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}-${Date.now()}`;
+        await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+          ...data,
+          _meta: { messageId, enqueuedAt: new Date().toISOString() },
+        });
+        return messageId;
+      };
+      const githubWebhooks = createGithubWebhooks(enqueueFn);
 
       const payload = typeof webhookEvent.payload === 'string'
         ? webhookEvent.payload

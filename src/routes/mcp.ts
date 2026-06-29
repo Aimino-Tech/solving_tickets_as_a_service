@@ -111,10 +111,13 @@ router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
     await addToHistory(client, historyEntry);
 
     try {
-      const { enqueueIssue } = await import('../queue/issueQueue.js');
-      await enqueueIssue(undefined, {
+      const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
+      if (!isConnected()) await rmqConnect();
+      const messageId = `0:${repoOwner}/${repoName}#0-${Date.now()}`;
+      await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
         installationId: 0, repoOwner, repoName, repoPrivate: false, issueNumber: 0,
         issueTitle, issueBody, source: channel || 'mcp', labels: labels || [],
+        _meta: { messageId, enqueuedAt: new Date().toISOString() },
       });
     } catch (queueErr) {
       log.error({ err: String(queueErr), runId }, 'Failed to enqueue MCP issue');

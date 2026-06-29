@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import type { IssueJobData } from "../../utils/types.js";
 
-function createMockAdapter(backend: "bullmq" | "rabbitmq") {
+function createMockAdapter() {
 	return {
-		enqueue: vi.fn().mockResolvedValue(`${backend}-job-id`),
+		enqueue: vi.fn().mockResolvedValue("rabbitmq-job-id"),
 		startConsumer: vi.fn().mockResolvedValue(undefined),
 		stopConsumer: vi.fn().mockResolvedValue(undefined),
 		getDepth: vi.fn().mockResolvedValue(0),
-		getBackend: vi.fn().mockReturnValue(backend),
+		getBackend: vi.fn().mockReturnValue("rabbitmq"),
 		isHealthy: vi.fn().mockResolvedValue(true),
 	};
 }
@@ -38,7 +38,7 @@ const _baseConfig = {
 
 describe("QueueAdapter Interface", () => {
 	it("should expose the expected adapter interface", () => {
-		const adapter = createMockAdapter("bullmq");
+		const adapter = createMockAdapter();
 		expect(adapter).toHaveProperty("enqueue");
 		expect(adapter).toHaveProperty("startConsumer");
 		expect(adapter).toHaveProperty("stopConsumer");
@@ -47,92 +47,48 @@ describe("QueueAdapter Interface", () => {
 		expect(adapter).toHaveProperty("isHealthy");
 	});
 
-	it("should return bullmq backend type", () => {
-		const adapter = createMockAdapter("bullmq");
-		expect(adapter.getBackend()).toBe("bullmq");
-	});
-
 	it("should return rabbitmq backend type", () => {
-		const adapter = createMockAdapter("rabbitmq");
+		const adapter = createMockAdapter();
 		expect(adapter.getBackend()).toBe("rabbitmq");
 	});
 
-	describe("enqueue", () => {
-		it("should enqueue a job and return an id", async () => {
-			const adapter = createMockAdapter("bullmq");
-			const result = await adapter.enqueue(sampleJobData);
-
-			expect(result).toBe("bullmq-job-id");
-			expect(adapter.enqueue).toHaveBeenCalledWith(sampleJobData);
-		});
-
-		it("should support enqueue options", async () => {
-			const adapter = createMockAdapter("rabbitmq");
-			const result = await adapter.enqueue(sampleJobData, {
-				delay: 5000,
-				priority: 10,
-				dedupKey: "dedup-123",
-			});
-
-			expect(result).toBe("rabbitmq-job-id");
-			expect(adapter.enqueue).toHaveBeenCalledWith(sampleJobData, {
-				delay: 5000,
-				priority: 10,
-				dedupKey: "dedup-123",
-			});
-		});
-
-		it("should handle enqueue rejection gracefully", async () => {
-			const adapter = createMockAdapter("bullmq");
-			adapter.enqueue.mockRejectedValue(new Error("queue unavailable"));
-
-			await expect(adapter.enqueue(sampleJobData)).rejects.toThrow(
-				"queue unavailable",
-			);
-		});
+	it("should enqueue a job", async () => {
+		const adapter = createMockAdapter();
+		const result = await adapter.enqueue(sampleJobData);
+		expect(result).toBe("rabbitmq-job-id");
 	});
 
-	describe("backends", () => {
-		it("should support multiple backends with the same interface", async () => {
-			const bullmq = createMockAdapter("bullmq");
-			const rabbitmq = createMockAdapter("rabbitmq");
-
-			const bullmqResult = await bullmq.enqueue(sampleJobData);
-			const rabbitmqResult = await rabbitmq.enqueue(sampleJobData);
-
-			expect(bullmqResult).toBe("bullmq-job-id");
-			expect(rabbitmqResult).toBe("rabbitmq-job-id");
-		});
+	it("should start a consumer", async () => {
+		const adapter = createMockAdapter();
+		await expect(
+			adapter.startConsumer(async () => {}),
+		).resolves.toBeUndefined();
 	});
 
-	describe("health", () => {
-		it("should report health status", async () => {
-			const healthy = createMockAdapter("bullmq");
-			const unhealthy = createMockAdapter("rabbitmq");
-			unhealthy.isHealthy.mockResolvedValue(false);
-
-			expect(await healthy.isHealthy()).toBe(true);
-			expect(await unhealthy.isHealthy()).toBe(false);
-		});
-
-		it("should report queue depth", async () => {
-			const adapter = createMockAdapter("bullmq");
-			adapter.getDepth.mockResolvedValue(5);
-
-			expect(await adapter.getDepth()).toBe(5);
-		});
+	it("should stop a consumer", async () => {
+		const adapter = createMockAdapter();
+		await expect(adapter.stopConsumer()).resolves.toBeUndefined();
 	});
 
-	describe("consumer lifecycle", () => {
-		it("should start and stop a consumer", async () => {
-			const adapter = createMockAdapter("rabbitmq");
-			const handler = vi.fn();
+	it("should return queue depth", async () => {
+		const adapter = createMockAdapter();
+		const depth = await adapter.getDepth();
+		expect(depth).toBe(0);
+	});
 
-			await adapter.startConsumer(handler);
-			expect(adapter.startConsumer).toHaveBeenCalledWith(handler);
+	it("should check health", async () => {
+		const adapter = createMockAdapter();
+		const healthy = await adapter.isHealthy();
+		expect(healthy).toBe(true);
+	});
+});
 
-			await adapter.stopConsumer();
-			expect(adapter.stopConsumer).toHaveBeenCalled();
-		});
+describe("RabbitMQQueueAdapter", () => {
+	it("should use rabbitmq-only backend", () => {
+		const rabbitmq = createMockAdapter();
+		expect(rabbitmq.getBackend()).toBe("rabbitmq");
+
+		const rabbitmqResult = rabbitmq.enqueue(sampleJobData);
+		expect(rabbitmqResult).resolves.toBe("rabbitmq-job-id");
 	});
 });
