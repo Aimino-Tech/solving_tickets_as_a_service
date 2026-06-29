@@ -86,13 +86,31 @@ GitHub Issue labeled "stas:fix"
 }
 ```
 
+### Placeholder-Only Variable Injection
+
+**Commands use `{placeholders}` — no expressions, no conditionals, no branching, no magic.**
+
+The worker does simple string replacement:
+- `{issue.number}` → 42
+- `{issue.title}` → "Fix login race condition"
+- `{issue.body}` → "When user logs in..."
+- `{repo.owner}` → "tamnguyen08"
+- `{repo.name}` → "solving_tickets_as_a_service"
+- `{issue.labels}` → "stas:fix,bug"
+- `{template.name}` → "stas:fix"
+- `{phase.name}` → "pre"
+
+**Users manually customize commands** by editing `.stas/templates/*.yaml`. The template is just a YAML file with command strings and placeholder slots. No expression evaluation. No conditional logic. No branching. The worker finds `{...}` tokens and replaces them with context values — nothing more sophisticated.
+
+This keeps the system predictable, debuggable, and safe from injection-like complexity.
+
 ### Worker Dynamic Resolution
 
 At execution time, the worker:
 1. Reads `template.name` from payload
 2. Fetches latest template from `.stas/templates/{name}.yaml` / Redis / DB
 3. Resolves CI commands for current phase
-4. Injects issue context variables into commands
+4. Replaces `{placeholders}` with context values
 5. Executes each step
 
 Commands are defined per phase in the template YAML:
@@ -101,12 +119,12 @@ Commands are defined per phase in the template YAML:
 # .stas/templates/fix.yaml
 phases:
   pre:
-    - command: "opencode grep-memory --query '{issue.summary}'"
+    - command: "opencode grep-memory --query {issue.title}"
       session: reuse
-    - command: "opencode plan --issue '{issue.number}'"
+    - command: "opencode plan --issue {issue.number}"
       session: new
   main:
-    - command: "opencode agent --full-cycle --issue '{issue.number}'"
+    - command: "opencode agent --full-cycle --issue {issue.number}"
       session: new
   post:
     - command: "opencode remove-anti-slop --since origin/main"
@@ -114,7 +132,7 @@ phases:
     - command: "opencode release-preview --diff-only"
       session: new
   final:
-    - command: "opencode agent --tool write-memory --key 'fix:{issue.number}'"
+    - command: "opencode agent --tool write-memory --key fix:{issue.number}"
       session: new
     - command: "opencode agent --mode create-pr"
       session: new
@@ -178,6 +196,6 @@ RabbitMQ is a thin pipe — it routes opaque messages. No routing per request ty
 | Decision | Choice | Rationale |
 |---|---|---|
 | Queue intelligence | RabbitMQ routes opaque messages | Simpler topology, decoupled from ticket types |
-| Command resolution | Dynamic at execution time | Template updates affect in-flight jobs |
+| Variable injection | Pure `{placeholder}` substitution | No expressions, no conditionals, no branching |
 | Session model | One session per phase by default | Isolation, no state collision |
 | Template storage | `.stas/templates/` in repo | Contributed like code, versioned with repo |
