@@ -16,6 +16,11 @@ TASK_VERIFICATION_RETRY_DELAY = int(os.getenv("CELERY_VERIFICATION_RETRY_DELAY_S
 from celery.schedules import crontab
 
 beat_schedule = {
+    "linear-poll-active-issues": {
+        "task": "workers.tasks.linear_poll.poll_active_issues",
+        "schedule": 120.0,  # every 2 minutes
+        "args": (),
+    },
     "queue-health-check": {
         "task": "workers.tasks.periodic.queue_health_check",
         "schedule": crontab(minute="*/5"),
@@ -88,6 +93,9 @@ task_queues = [
     Queue("stas.agents.pr_creation", Exchange("stas"), routing_key="stas.agents.pr_creation"),
     Queue("stas.agents.notifications", Exchange("stas"), routing_key="stas.agents.notifications"),
     Queue("stas.agents.default", Exchange("stas"), routing_key="stas.agents.default"),
+    Queue("stas.issues.triage", Exchange("stas"), routing_key="stas.issues.triage"),
+    Queue("stas.issues.fix", Exchange("stas"), routing_key="stas.issues.fix"),
+    Queue("stas.agents.self_audit", Exchange("stas"), routing_key="stas.agents.self_audit"),
 ]
 
 task_routes = {
@@ -98,4 +106,8 @@ task_routes = {
     "workers.tasks.pr_creation.*": {"queue": "stas.agents.pr_creation"},
     "workers.tasks.notifications.*": {"queue": "stas.agents.notifications"},
     "workers.billing.*": {"queue": "stas.agents.default"},
+    "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
+    "workers.gates.*": {"queue": "stas.agents.default"},
+    "workers.quality.*": {"queue": "stas.agents.default"},
+    "workers.health.*": {"queue": "stas.agents.default"},
 }
