@@ -1,17 +1,27 @@
 # ──────────────────────────────────────────────────────────────────────────────
-# LiteLLM Proxy Configuration — Slop-Intent Guardrail
+# LiteLLM Proxy Configuration — Slop-Intent Guardrail (Non-Blocking)
 # ──────────────────────────────────────────────────────────────────────────────
+#
+# This guardrail NEVER blocks requests or responses. It only:
+#   1. Injects system message nudges (pre_call) — adds CAUTION/instructions
+#      to the system prompt when slop intent is detected in user messages
+#   2. Annotates responses (post_call, mode: annotate) — appends quality
+#      warnings to response content
+#   3. Applies corrections (post_call, mode: correct) — replaces slop content
+#      with [SANITIZED:category] markers
 #
 # Place this file next to your LiteLLM proxy binary / Docker entrypoint.
 # Run: litellm --config proxy_config.yaml
 #
 # How it works:
 #   1. OpenCode/STAS agent sends a request to LiteLLM proxy
-#   2. LiteLLM forwards to the LLM (deepseek, anthropic, openai)
-#   3. LLM responds with content + reasoning/thinking traces
-#   4. SlopIntentGuardrail inspects ALL of the above for slop patterns
-#   5. If slop detected → LiteLLM returns HTTP 400 with detection details
-#   6. OpenCode receives the error → agent retries with corrected behavior
+#   2. SlopIntentGuardrail checks user input for slop patterns (pre_call)
+#      → If slop detected: injects system nudge (never blocks)
+#   3. LiteLLM forwards to the LLM (deepseek, anthropic, openai)
+#   4. LLM responds with content + reasoning/thinking traces
+#   5. SlopIntentGuardrail inspects ALL of the above for slop patterns
+#      → If slop detected: annotates or corrects the response (never blocks)
+#   6. Response is returned to OpenCode with any annotations/corrections
 #
 # Model setup:
 #   - Point each model at the correct API endpoint
@@ -67,13 +77,16 @@ litellm_settings:
 # ── Guardrails ───────────────────────────────────────────────────────────────
 guardrails:
   # ═══════════════════════════════════════════════════════════════════════
-  # Level 1: Slop-intent detection in thinking traces
+  # Level 1: Slop-intent detection in user input + thinking traces
   # ═══════════════════════════════════════════════════════════════════════
-  # Intercepts at the LLM response level. Scans reasoning_content
-  # (deepseek, openai) and thinking_blocks (anthropic) for slop patterns.
+  # Intercepts at both pre-call (user input) and post-call (model output).
+  # Scans reasoning_content (deepseek, openai) and thinking_blocks
+  # (anthropic) for slop patterns.
   #
   # Mode: post_call — runs after model responds, before response is
-  #   returned to OpenCode. Can fully block non-streaming responses.
+  #   returned to OpenCode. Annotates responses (never blocks).
+  # on_detect: annotate — append quality warnings to response content.
+  #   Use 'correct' to replace slop patterns with [SANITIZED] markers.
   # ─────────────────────────────────────────────────────────────────────
   - guardrail_name: slop-detector-thinking
     litellm_params:
