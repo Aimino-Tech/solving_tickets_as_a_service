@@ -33,6 +33,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run src/__tests__/template/",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "smee": "tsx scripts/smee.ts",
     "docker:build": "docker build -t stas-bot .",
     "docker:run": "docker run -p 3000:3000 stas-bot",
