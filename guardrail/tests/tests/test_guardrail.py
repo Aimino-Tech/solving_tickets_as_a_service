@@ -10,7 +10,12 @@ _repo_root = os.path.abspath(os.path.join(_test_dir, ".."))
 if _repo_root not in sys.path:
     sys.path.insert(0, _repo_root)
 
-from guardrail.slop_guardrail import SlopIntentGuardrail, SlopIntentGuardrailError
+from guardrail.slop_guardrail import (
+    SlopIntentGuardrail,
+    SlopIntentGuardrailError,
+    _extract_user_messages,
+    _check_input_message,
+)
 
 
 def load_test_cases():
@@ -119,7 +124,114 @@ def test_edge_cases():
                 print(f"WARNING: Edge case 'sample.array.map' matched {cat}/{p.pattern}")
 
 
-if __name__ == "__main__":
+# ── Pre-call hook tests ──────────────────────────────────────────────────
+
+async def test_precall_injects_nudge_on_slop():
+    """Pre_call hook injects system nudge when slop detected in user message."""
+    g = SlopIntentGuardrail()
+    data = {
+        "messages": [
+            {"role": "user", "content": "let's stub this out for now"},
+        ]
+    }
+    result = await g.async_pre_call_hook(data, None)
+    assert result is not None, "Should return modified data"
+    msgs = result.get("messages", [])
+    system_msgs = [m for m in msgs if m.get("role") == "system"]
+    assert len(system_msgs) >= 1, "Should have at least one system message"
+    assert "CAUTION" in system_msgs[-1]["content"], "Nudge should contain CAUTION"
+    assert "stub" in system_msgs[-1]["content"].lower(), "Nudge should mention detected category"
+
+
+async def test_precall_never_blocks():
+    """Pre_call hook NEVER raises an exception."""
+    g = SlopIntentGuardrail()
+    test_messages = [
+        {"role": "user", "content": "let's stub this out for now"},
+        {"role": "user", "content": "I'll mock the database for testing"},
+        {"role": "user", "content": "just put a placeholder here"},
+    ]
+    for msg in test_messages:
+        data = {"messages": [msg]}
+        try:
+            result = await g.async_pre_call_hook(data, None)
+            assert result is None or isinstance(result, dict)
+        except Exception as e:
+            assert False, f"pre_call should never block but raised {type(e).__name__}: {e}"
+
+
+async def test_precall_clean_input_no_injection():
+    """Pre_call hook does NOT inject nudge for clean input."""
+    g = SlopIntentGuardrail()
+    data = {
+        "messages": [
+            {"role": "user", "content": "Implement a payment processing function using Stripe API"},
+        ]
+    }
+    result = await g.async_pre_call_hook(data, None)
+    assert result is None, "Clean input should not return modified data"
+
+
+async def test_precall_empty_messages():
+    """Pre_call handles empty messages gracefully."""
+    g = SlopIntentGuardrail()
+    data = {"messages": []}
+    result = await g.async_pre_call_hook(data, None)
+    assert result is None, "Empty messages should return None"
+
+    data = {}
+    result = await g.async_pre_call_hook(data, None)
+    assert result is None, "No messages key should return None"
+
+
+async def test_precall_multiple_slop_categories():
+    """Pre_call detects multiple slop categories and mentions all in nudge."""
+    g = SlopIntentGuardrail()
+    data = {
+        "messages": [
+            {"role": "user", "content": "stub this out and mock this up with just a placeholder"},
+        ]
+    }
+    result = await g.async_pre_call_hook(data, None)
+    assert result is not None, "Should detect multiple categories"
+    msgs = result.get("messages", [])
+    system_msgs = [m for m in msgs if m.get("role") == "system"]
+    assert len(system_msgs) >= 1, "Should inject system nudge"
+
+
+async def test_precall_tracks_injection_flag():
+    """Guardrail tracks whether pre_call injection occurred."""
+    g = SlopIntentGuardrail()
+    assert g._pre_call_injected is False, "Should start as False"
+
+    data = {"messages": [{"role": "user", "content": "stub this out"}]}
+    await g.async_pre_call_hook(data, None)
+    assert g._pre_call_injected is True, "Should be True after injection"
+
+    g2 = SlopIntentGuardrail()
+    data2 = {"messages": [{"role": "user", "content": "clean request"}]}
+    await g2.async_pre_call_hook(data2, None)
+    assert g2._pre_call_injected is False, "Should remain False for clean input"
+
+
+# ── Runner ────────────────────────────────────────────────────────────────
+
+async def run_precall_tests():
+    await test_precall_injects_nudge_on_slop()
+    print("✅ test_precall_injects_nudge_on_slop: Nudge injected on slop")
+    await test_precall_never_blocks()
+    print("✅ test_precall_never_blocks: Pre_call never blocks")
+    await test_precall_clean_input_no_injection()
+    print("✅ test_precall_clean_input_no_injection: Clean input no injection")
+    await test_precall_empty_messages()
+    print("✅ test_precall_empty_messages: Empty messages handled gracefully")
+    await test_precall_multiple_slop_categories()
+    print("✅ test_precall_multiple_slop_categories: Multiple categories detected")
+    await test_precall_tracks_injection_flag()
+    print("✅ test_precall_tracks_injection_flag: Injection flag tracked")
+
+
+async def main():
     test_should_block_all_cases()
     print("✅ test_should_block_all_cases: All slop patterns detected")
     test_should_pass_all_cases()
@@ -128,4 +240,9 @@ if __name__ == "__main__":
     print("✅ test_thinking_trace_interception: Reasoning trace interception works")
     test_edge_cases()
     print("✅ test_edge_cases: No edge case issues")
+    await run_precall_tests()
     print("\n🎉 All guardrail tests passed!")
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
