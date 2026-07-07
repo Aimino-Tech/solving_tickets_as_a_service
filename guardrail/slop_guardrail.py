@@ -1,23 +1,8 @@
 """
 Slop-intent detection guardrail for LiteLLM proxy.
 
-Intercepts LLM responses (including thinking/reasoning traces) and blocks
-code that contains slop patterns: stubs, placeholders, mocks, deferrals,
-and self-aware "this is just a demo" patterns.
-
-Architecture:
-  LiteLLM CustomGuardrail → async_post_call_success_hook
-    → scans reasoning_content (deepseek) + thinking_blocks (anthropic) + content
-    → raises ValueError to block the response
-    → fallback: async_post_call_streaming_iterator_hook for streaming audit
-
-Usage in proxy_config.yaml:
-  guardrails:
-    - guardrail_name: slop-detector
-      litellm_params:
-        guardrail: guardrail.slop_guardrail.SlopIntentGuardrail
-        mode: post_call
-        default_on: true
+POLICY: This guardrail NEVER blocks requests or responses.
+It only injects system message nudges and annotates/corrects responses.
 """
 
 from __future__ import annotations
@@ -39,49 +24,40 @@ logger = logging.getLogger(__name__)
 # ── Pattern loading ──────────────────────────────────────────────────────────
 
 def _load_patterns() -> dict[str, list[re.Pattern]]:
-    """Load slop patterns from slop_patterns.json, compile regexes."""
     patterns_file = Path(__file__).parent / "slop_patterns.json"
     if not patterns_file.exists():
         logger.warning("slop_patterns.json not found at %s", patterns_file)
         return {}
-
     raw = json.loads(patterns_file.read_text())
     compiled: dict[str, list[re.Pattern]] = {}
     for category, config in raw.get("categories", {}).items():
         for p in config.get("patterns", []):
-            compiled.setdefault(category, []).append(
-                re.compile(p, re.IGNORECASE)
-            )
+            compiled.setdefault(category, []).append(re.compile(p, re.IGNORECASE))
     return compiled
 
 
 def _flatten_patterns(categorized: dict[str, list[re.Pattern]]) -> list[re.Pattern]:
-    """Flatten categorized patterns into a single list."""
     return [p for patterns in categorized.values() for p in patterns]
 
 
 # ── Guardrail implementation ─────────────────────────────────────────────────
 
 class SlopIntentGuardrailError(ValueError):
-    """Raised when slop intent is detected. LiteLLM maps this to a 400 response."""
+    """Kept for backwards compatibility — never raised by the guardrail."""
 
-    def __init__(self, source: str, pattern: str, snippet: str) -> None:
-        self.source = source
-        self.pattern = pattern
-        self.snippet = snippet[:200]
-        super().__init__(f"Slop pattern detected in {source}: '{pattern}'")
+
+SLOP_ANNOTATION = (
+    "\n\n---\n*⚠️ The response contains patterns consistent with placeholder or "
+    "simulated content. Review the output and request a revised response if needed.*"
+)
 
 
 class SlopIntentGuardrail(CustomGuardrail):
     """
-    LiteLLM guardrail that detects slop-intent patterns in model responses.
+    LiteLLM guardrail that detects slop-intent patterns.
 
-    Checks three sources:
-    1. response.choices[].message.reasoning_content (deepseek, openai o-series)
-    2. response.choices[].message.thinking_blocks (anthropic)
-    3. response.choices[].message.content (all models)
-
-    On detection, raises ValueError → LiteLLM returns 400 with slop message.
+    POLICY: Never blocks — only injects system nudges (pre_call) and
+    annotates responses (post_call).
     """
 
     def __init__(self, **kwargs: Any) -> None:
@@ -89,6 +65,15 @@ class SlopIntentGuardrail(CustomGuardrail):
         self._categorized = _load_patterns()
         self._all_patterns = _flatten_patterns(self._categorized)
         self._match_log: list[dict[str, str]] = []
+        self._on_detect = kwargs.get("on_detect", "annotate")
+
+        if self._on_detect not in ("annotate", "correct"):
+            logger.warning(
+                "on_detect='%s' is not a supported mode — guardrail never blocks. "
+                "Falling back to 'annotate'. Supported modes: 'annotate', 'correct'.",
+                self._on_detect,
+            )
+            self._on_detect = "annotate"
 
         if not self._all_patterns:
             logger.warning(
@@ -96,12 +81,56 @@ class SlopIntentGuardrail(CustomGuardrail):
             )
 
         logger.info(
-            "SlopIntentGuardrail initialized: %d patterns across %d categories",
+            "SlopIntentGuardrail initialized: %d patterns across %d categories, on_detect=%s",
             len(self._all_patterns),
             len(self._categorized),
+            self._on_detect,
         )
 
     # ── Public hooks ─────────────────────────────────────────────────────
+
+    async def async_pre_call_hook(
+        self,
+        data: dict,
+        user_api_key_dict: Any,
+    ) -> Optional[dict]:
+        """
+        Pre-call hook. Never blocks — only injects system message nudges.
+        """
+        messages = data.get("messages", [])
+        if not isinstance(messages, list):
+            return None
+
+        had_input_slop = False
+        input_slop_categories: set[str] = set()
+
+        for msg in messages:
+            if isinstance(msg, dict) and msg.get("role") == "user":
+                text = msg.get("content", "")
+                if isinstance(text, str):
+                    for category, patterns in self._categorized.items():
+                        for pattern in patterns:
+                            match = pattern.search(text)
+                            if match:
+                                had_input_slop = True
+                                input_slop_categories.add(category)
+                                break
+                        if had_input_slop and category in input_slop_categories:
+                            continue
+
+        if had_input_slop:
+            cats = ", ".join(sorted(input_slop_categories))
+            nudge = (
+                "CAUTION: The user's request contains patterns consistent with "
+                f"requesting placeholder or simulated content ({cats}).  "
+                "Provide real, complete implementations — do not use mocks, "
+                "stubs, fake data, or demo content."
+            )
+            messages.append({"role": "system", "content": nudge})
+            logger.warning("Injected slop caution nudge for categories: %s", cats)
+            return {"messages": messages}
+
+        return None
 
     async def async_post_call_success_hook(
         self,
@@ -110,8 +139,7 @@ class SlopIntentGuardrail(CustomGuardrail):
         response: Any,
     ) -> None:
         """
-        Post-call hook. Runs after LLM responds but before response is returned
-        to the client. Raises ValueError to block the response.
+        Post-call hook. Never blocks — only annotates or corrects responses.
         """
         if not isinstance(response, litellm.ModelResponse):
             return
@@ -120,26 +148,55 @@ class SlopIntentGuardrail(CustomGuardrail):
 
         for idx, choice in enumerate(response.choices):
             msg = choice.message
-            self._check_content(msg.content, f"choice[{idx}].content")
-            self._check_reasoning(msg, idx)
-            self._check_thinking_blocks(msg, idx)
+            content = getattr(msg, "content", None)
+            if content and isinstance(content, str):
+                for category, patterns in self._categorized.items():
+                    for pattern in patterns:
+                        match = pattern.search(content)
+                        if match:
+                            self._match_log.append({
+                                "category": category,
+                                "pattern": match.group(0),
+                                "source": f"choice[{idx}].content",
+                                "snippet": self._extract_snippet(content, match.start()),
+                            })
+                            break
 
-        if self._match_log:
-            # Log all detections, raise on the first one
-            for m in self._match_log:
-                logger.warning(
-                    "SLOP DETECTED [%s]: '%s' in %s — snippet: %s",
-                    m["category"],
-                    m["pattern"],
-                    m["source"],
-                    m["snippet"],
-                )
-            first = self._match_log[0]
-            raise SlopIntentGuardrailError(
-                source=first["source"],
-                pattern=first["pattern"],
-                snippet=first["snippet"],
+            reasoning = getattr(msg, "reasoning_content", None)
+            if reasoning and isinstance(reasoning, str):
+                for category, patterns in self._categorized.items():
+                    for pattern in patterns:
+                        match = pattern.search(reasoning)
+                        if match:
+                            self._match_log.append({
+                                "category": category,
+                                "pattern": match.group(0),
+                                "source": f"choice[{idx}].reasoning_content",
+                                "snippet": self._extract_snippet(reasoning, match.start()),
+                            })
+                            break
+
+        if not self._match_log:
+            return
+
+        for m in self._match_log:
+            logger.warning(
+                "SLOP DETECTED [%s]: '%s' in %s — snippet: %s",
+                m["category"],
+                m["pattern"],
+                m["source"],
+                m["snippet"],
             )
+
+        first = response.choices[0]
+        msg = first.message
+        if self._on_detect == "correct":
+            content = msg.content or ""
+            for m in self._match_log:
+                content = content.replace(m["pattern"], f"[SANITIZED:{m['category']}]")
+            msg.content = content
+        else:
+            msg.content = (msg.content or "") + SLOP_ANNOTATION
 
     async def async_post_call_streaming_iterator_hook(
         self,
@@ -147,18 +204,10 @@ class SlopIntentGuardrail(CustomGuardrail):
         response: Any,
         request_data: dict,
     ) -> AsyncGenerator[ModelResponseStream, None]:
-        """
-        For streaming requests: re-assemble chunks, check at end.
-
-        NOTE: For streaming, LiteLLM has already delivered chunks to the client
-        by the time this hook runs. This is an AUDIT-ONLY fallback for streaming.
-        For real-time blocking, use during_call mode instead.
-        """
         accumulated: list[ModelResponseStream] = []
         async for chunk in response:
             accumulated.append(chunk)
             yield chunk
-
         assembled = "".join(
             c.choices[0].delta.content or ""
             for c in accumulated
@@ -166,7 +215,6 @@ class SlopIntentGuardrail(CustomGuardrail):
         )
         if not assembled:
             return
-
         for pattern in self._all_patterns:
             match = pattern.search(assembled)
             if match:
@@ -175,49 +223,8 @@ class SlopIntentGuardrail(CustomGuardrail):
                 )
                 break
 
-    # ── Internal checks ──────────────────────────────────────────────────
-
-    def _check_content(self, content: Optional[str], source: str) -> None:
-        """Check visible response content."""
-        if not content or not isinstance(content, str):
-            return
-        for category, patterns in self._categorized.items():
-            for pattern in patterns:
-                match = pattern.search(content)
-                if match:
-                    self._match_log.append({
-                        "category": category,
-                        "pattern": match.group(0),
-                        "source": source,
-                        "snippet": self._extract_snippet(content, match.start()),
-                    })
-                    return  # one match per source suffices
-
-    def _check_reasoning(self, msg: Any, choice_idx: int) -> None:
-        """Check reasoning/thinking content (deepseek, openai o-series)."""
-        reasoning = getattr(msg, "reasoning_content", None)
-        if reasoning and isinstance(reasoning, str):
-            self._check_content(
-                reasoning,
-                f"choice[{choice_idx}].reasoning_content",
-            )
-
-    def _check_thinking_blocks(self, msg: Any, choice_idx: int) -> None:
-        """Check Anthropic thinking blocks."""
-        thinking_blocks = getattr(msg, "thinking_blocks", None)
-        if not thinking_blocks or not isinstance(thinking_blocks, list):
-            return
-        for tb_idx, tb in enumerate(thinking_blocks):
-            if isinstance(tb, dict) and tb.get("type") == "thinking":
-                thinking = tb.get("thinking", "")
-                self._check_content(
-                    thinking,
-                    f"choice[{choice_idx}].thinking_blocks[{tb_idx}]",
-                )
-
     @staticmethod
     def _extract_snippet(text: str, start: int, width: int = 80) -> str:
-        """Extract a readable snippet around a match position."""
         left = max(0, start - width)
         right = min(len(text), start + width)
         snippet = text[left:right]
@@ -228,53 +235,26 @@ class SlopIntentGuardrail(CustomGuardrail):
         return snippet
 
 
-# ── CLI entrypoint (for offline scanning) ────────────────────────────────────
+# ── CLI entrypoint ───────────────────────────────────────────────────────────
 
 def cli() -> None:
-    """
-    CLI entrypoint: reads text from stdin, scans for slop patterns, exits with
-    non-zero if any match.
-
-    Usage:
-      echo "let me stub this out" | python guardrail/slop_guardrail.py
-      cat response.json | python guardrail/slop_guardrail.py
-    """
     import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Scan text for slop-intent patterns"
-    )
-    parser.add_argument(
-        "--patterns",
-        default=None,
-        help="Path to slop_patterns.json (default: next to this script)",
-    )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Input is JSON with 'choices' array (model response format)",
-    )
+    parser = argparse.ArgumentParser(description="Scan text for slop-intent patterns")
+    parser.add_argument("--patterns", default=None)
+    parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-
     text = sys.stdin.read()
     if not text.strip():
         sys.exit(0)
-
-    # Load patterns
-    patterns_file = args.patterns or (
-        Path(__file__).parent / "slop_patterns.json"
-    )
+    patterns_file = args.patterns or (Path(__file__).parent / "slop_patterns.json")
     raw = json.loads(Path(patterns_file).read_text())
     all_patterns: list[re.Pattern] = []
     for config in raw.get("categories", {}).values():
         for p in config.get("patterns", []):
             all_patterns.append(re.compile(p, re.IGNORECASE))
-
     if not all_patterns:
         print("No patterns loaded.")
         sys.exit(0)
-
-    # Parse input
     if args.json:
         data = json.loads(text)
         texts_to_check: list[str] = []
@@ -286,7 +266,6 @@ def cli() -> None:
                 texts_to_check.append(msg["reasoning_content"])
     else:
         texts_to_check = [text]
-
     found_any = False
     for text_to_check in texts_to_check:
         for pattern in all_patterns:
@@ -294,7 +273,6 @@ def cli() -> None:
             if match:
                 print(f"DETECTED: '{match.group(0)}'")
                 found_any = True
-
     sys.exit(1 if found_any else 0)
 
 
