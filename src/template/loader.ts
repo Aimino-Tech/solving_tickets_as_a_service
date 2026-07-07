@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { rootLogger } from '../utils/logger.js';
 import { validateTemplateYaml } from './validator.js';
 import { templateRegistry } from './templateRegistry.js';
