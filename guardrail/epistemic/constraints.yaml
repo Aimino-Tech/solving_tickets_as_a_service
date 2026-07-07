@@ -1,0 +1,30 @@
+# Default epistemic constraint set for the LLM Governance Proxy.
+# Each constraint defines a known-factual statement and what severity
+# to assign when a response contradicts it.
+
+constraints:
+  # ── Python language beliefs ──────────────────────────────────────────
+  - id: python-no-true-private
+    description: Python uses name mangling, not access modifiers
+    statement: Python does not have true private members
+    severity: warn
+    attacked_by:
+      - python-gil
+
+  - id: python-gil
+    description: CPython has a GIL — threads don't give CPU parallelism
+    statement: CPython's Global Interpreter Lock (GIL) prevents true CPU-parallel execution of Python threads
+    severity: warn
+    supported_by:
+      - python-no-true-private
+
+  # ── General programming beliefs ──────────────────────────────────────
+  - id: no-silver-bullet
+    description: No programming language or framework solves all problems
+    statement: No single programming language or framework is the optimal choice for every problem domain
+    severity: warn
+
+  - id: null-is-not-nil
+    description: null/None/nullptr are not the same across languages
+    statement: null (JavaScript), None (Python), nullptr (C++), nil (Go) have different semantics and are not interchangeable
+    severity: warn
