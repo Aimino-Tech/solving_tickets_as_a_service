@@ -60,6 +60,42 @@ def _flatten_patterns(categorized: dict[str, list[re.Pattern]]) -> list[re.Patte
     return [p for patterns in categorized.values() for p in patterns]
 
 
+def _extract_user_messages(messages: list[dict]) -> list[str]:
+    """Extract all user message text from a messages list."""
+    texts: list[str] = []
+    for msg in messages:
+        if isinstance(msg, dict):
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            if role == "user" and isinstance(content, str):
+                texts.append(content)
+    return texts
+
+
+def _check_input_message(text: str, categorized: dict[str, list[re.Pattern]]) -> list[dict[str, str]]:
+    """Check a single text against categorized patterns. Returns match log entries."""
+    matches: list[dict[str, str]] = []
+    for category, patterns in categorized.items():
+        for pattern in patterns:
+            match = pattern.search(text)
+            if match:
+                matches.append({
+                    "category": category,
+                    "pattern": match.group(0),
+                    "snippet": text[max(0, match.start() - 40):match.end() + 40],
+                })
+                break
+    return matches
+
+
+SLOP_CAUTION_NUDGE = (
+    "CAUTION: The user's request contains patterns consistent with "
+    "requesting placeholder or simulated content ({categories}).  "
+    "Provide real, complete implementations — do not use mocks, "
+    "stubs, fake data, or demo content."
+)
+
+
 # ── Guardrail implementation ─────────────────────────────────────────────────
 
 class SlopIntentGuardrailError(ValueError):
@@ -89,6 +125,7 @@ class SlopIntentGuardrail(CustomGuardrail):
         self._categorized = _load_patterns()
         self._all_patterns = _flatten_patterns(self._categorized)
         self._match_log: list[dict[str, str]] = []
+        self._pre_call_injected: bool = False
 
         if not self._all_patterns:
             logger.warning(
@@ -102,6 +139,48 @@ class SlopIntentGuardrail(CustomGuardrail):
         )
 
     # ── Public hooks ─────────────────────────────────────────────────────
+
+    async def async_pre_call_hook(
+        self,
+        data: dict,
+        user_api_key_dict: Any,
+    ) -> Optional[dict]:
+        """
+        Pre-call hook. Inspects user messages for slop-intent patterns and
+        injects a system nudge when detected.
+
+        This hook NEVER blocks — it only injects system message nudges.
+        """
+        messages = data.get("messages", [])
+        if not isinstance(messages, list):
+            return None
+
+        had_input_slop = False
+        input_slop_categories: set[str] = set()
+
+        for text in _extract_user_messages(messages):
+            matches = _check_input_message(text, self._categorized)
+            for m in matches:
+                had_input_slop = True
+                input_slop_categories.add(m["category"])
+                logger.info(
+                    "PRE_CALL slop pattern detected [%s]: '%s' — injecting nudge",
+                    m["category"],
+                    m["pattern"],
+                )
+
+        if had_input_slop:
+            categories_str = ", ".join(sorted(input_slop_categories))
+            nudge = SLOP_CAUTION_NUDGE.format(categories=categories_str)
+            messages.append({"role": "system", "content": nudge})
+            self._pre_call_injected = True
+            logger.warning(
+                "Injected slop caution nudge for categories: %s",
+                categories_str,
+            )
+            return {"messages": messages}
+
+        return None
 
     async def async_post_call_success_hook(
         self,
@@ -125,7 +204,6 @@ class SlopIntentGuardrail(CustomGuardrail):
             self._check_thinking_blocks(msg, idx)
 
         if self._match_log:
-            # Log all detections, raise on the first one
             for m in self._match_log:
                 logger.warning(
                     "SLOP DETECTED [%s]: '%s' in %s — snippet: %s",
