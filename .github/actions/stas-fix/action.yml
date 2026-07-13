@@ -1,0 +1,44 @@
+name: 'STAS Fix'
+description: 'Label a GitHub issue with "stas:fix" and get an automated fix pull request'
+author: 'Aimino'
+branding:
+  icon: 'check-circle'
+  color: 'green'
+
+inputs:
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+    default: ${{ github.token }}
+  model:
+    description: 'AI model to use for fixes'
+    required: false
+    default: 'default'
+  opencode-endpoint:
+    description: 'OpenCode server endpoint URL'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Run STAS fix
+      shell: bash
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_MODEL: ${{ inputs.model }}
+        INPUT_OPENCODE_ENDPOINT: ${{ inputs.opencode-endpoint }}
+        GITHUB_EVENT_NAME: ${{ github.event_name }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
+      run: |
+        node "${{ github.action_path }}/dist/stas-fix-action.js"
