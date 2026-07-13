@@ -44,7 +44,7 @@ export interface PhaseStepInfo {
   phase: PipelinePhase;
   stepIndex: number;
   command: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'budget_exhausted' | 'stuck';
   startedAt?: number;
   completedAt?: number;
   error?: string;
@@ -131,4 +131,40 @@ export interface PipelineConfigRun {
   ticketId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Hard cost/token cap per pipeline run.
+ */
+export interface CostBudget {
+  maxTokens: number;
+  maxCostUsd: number;
+}
+
+/**
+ * Per-pipeline-template tool restrictions passed to OpenCode.
+ */
+export interface ToolAllowlist {
+  allowedTools?: readonly string[];
+  deniedTools?: readonly string[];
+}
+
+/**
+ * Agent confinement configuration for a pipeline.
+ */
+export interface ConfinementConfig {
+  costBudget?: CostBudget;
+  toolAllowlist?: ToolAllowlist;
+  loopDetectionEnabled: boolean;
+  deadEndDetectionEnabled: boolean;
+}
+
+/**
+ * Record of a phase's output for loop/dead-end detection.
+ */
+export interface PhaseOutputRecord {
+  phase: PipelinePhase;
+  output: string;
+  error?: string;
+  tokenCost?: number;
 }
