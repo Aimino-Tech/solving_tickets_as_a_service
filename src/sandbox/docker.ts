@@ -36,6 +36,7 @@ import { Writable } from 'node:stream';
 
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { validateAndSanitize } from './gitGuard.js';
 import type { ProgressCallback, SandboxExecutor, ExecResult, TestRunResult, RuntimeInfo } from './types.js';
 
 const log = rootLogger.child({ module: 'docker-sandbox' });
@@ -90,6 +91,8 @@ function dockerExecCmd(
   timeoutMs = DOCKER_TIMEOUT_MS,
   workdir?: string,
 ): ExecResult {
+  // Validate git commands before execution
+  validateAndSanitize(command);
   const args = ['exec'];
   if (workdir) {
     args.push('-w', workdir);
@@ -211,6 +214,9 @@ export class DockerSandbox implements SandboxExecutor {
 
   async exec(command: string, timeoutMs: number = 60_000): Promise<ExecResult> {
     this.ensureBooted();
+
+    // Validate git commands before execution
+    validateAndSanitize(command);
 
     if (!this.dockerContainer) {
       return dockerExecCmd(this.container!.id, command, timeoutMs, this.repoDir);
