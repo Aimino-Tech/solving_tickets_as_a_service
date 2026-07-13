@@ -1,0 +1,39 @@
+# STAS pre-commit configuration
+# Install: pre-commit install
+# Run all hooks: pre-commit run --all-files
+# Run specific: pre-commit run gitleaks
+
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.2
+    hooks:
+      - id: gitleaks
+        name: Gitleaks Secret Detection
+        description: Detect hardcoded secrets (API keys, tokens, passwords) using gitleaks
+        entry: gitleaks git --pre-commit --source . --config .gitleaks.toml --verbose
+        language: golang
+        stages: [pre-commit, pre-push, manual]
+        pass_filenames: false
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim Trailing Whitespace
+        description: Trims trailing whitespace in all files
+      - id: end-of-file-fixer
+        name: Fix EOF Newlines
+        description: Ensures files end with a single newline
+      - id: check-yaml
+        name: Check YAML Syntax
+        description: Validates YAML file syntax
+      - id: check-added-large-files
+        name: Check Large Files
+        description: Prevents committing files larger than 5MB
+        args: [--maxkb=5120]
+      - id: check-merge-conflict
+        name: Check Merge Conflicts
+        description: Detects unresolved merge conflict markers
+      - id: detect-private-key
+        name: Detect Private Keys
+        description: Detects SSH private keys in the repository

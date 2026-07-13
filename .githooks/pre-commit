@@ -1,9 +1,25 @@
 #!/bin/sh
-# STAS pre-commit hook — validates .stas/templates/*.yaml files before commit
+# STAS pre-commit hook — validates .stas/templates/*.yaml files AND runs gitleaks secret scan
 # Installed via: npm run stas:install-hook  or  ln -sf ../../.githooks/pre-commit .git/hooks/pre-commit
 
 set -e
 
+# ── Gitleaks Secret Scan ──────────────────────────────────────────────────
+echo "STAS: Running gitleaks secret scan..."
+if command -v gitleaks > /dev/null 2>&1; then
+  if ! gitleaks git --pre-commit --source . --config .gitleaks.toml --verbose 2>&1; then
+    echo ""
+    echo "STAS: ✗ Gitleaks detected potential secrets. Commit blocked."
+    echo "STAS: Review the findings above. If false positive, update .gitleaks.toml allowlist."
+    exit 1
+  fi
+  echo "STAS: ✓ Gitleaks scan passed"
+else
+  echo "STAS: ⚠ gitleaks not installed — skipping secret scan"
+  echo "STAS:   Install: brew install gitleaks  or  go install github.com/gitleaks/gitleaks/v8@latest"
+fi
+
+# ── Template Validation ──────────────────────────────────────────────────
 CHANGED_TEMPLATES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^\.stas/templates/.+\.(yaml|yml)$' || true)
 
 if [ -z "$CHANGED_TEMPLATES" ]; then

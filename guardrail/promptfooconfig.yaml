@@ -120,7 +120,7 @@ tests:
       id: openai:deepseek-v4-pro
       config:
         apiBaseUrl: https://opencode.ai/zen/go/v1
-        apiKey: sk-aSy3A79zALvD66kpCItKg3gCaUe48BqUGnTI4s05stLfYeFdGWYlAyTwtlaCZOFg
+        apiKey: "{{env.OPENCODE_API_KEY}}"
     vars:
       prompt: "Write a complete TypeScript payment processing function with Stripe"
     assert:
