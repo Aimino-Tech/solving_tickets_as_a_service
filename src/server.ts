@@ -64,6 +64,7 @@ import { badgeRouter } from './routes/badge.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { viralRouter } from './routes/viral.js';
 import { qualityRouter } from './routes/quality.js';
+import previewRoutes from './api/routes/preview.js';
 import { kpiRouter } from './routes/kpi.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 
@@ -691,6 +692,10 @@ export async function createApp(): Promise<express.Application> {
   } catch {
     log.warn('Enterprise routes not available');
   }
+
+  // ── Preview API (public, rate-limited per IP) ──────────────────────────
+  // POST /api/v1/preview — Demo preview of fixable issues
+  app.use('/api/v1/preview', previewRoutes);
 
   app.use('/api', pipelineRouter);
   // -- 404 handler ----------------------------------------------------------

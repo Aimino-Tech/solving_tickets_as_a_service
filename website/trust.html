@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trust Dashboard — STAS</title>
+  <meta name="description" content="Per-repo trust metrics for STAS fix agents." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #0a0a0a;
+      color: #f5f5f5;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    /* Header */
+    header {
+      border-bottom: 1px solid #1a1a1a; padding: 24px 0; margin-bottom: 40px;
+    }
+    header .container { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header h1 span { color: #10b981; }
+    .last-updated { font-size: 0.85rem; color: #666; }
+    .refresh-btn {
+      background: #1a1a1a; color: #f5f5f5; border: 1px solid #333;
+      padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .refresh-btn:hover { border-color: #10b981; color: #10b981; }
+    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Stats bar */
+    .stats-bar {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px; margin-bottom: 40px;
+    }
+    .stat-card {
+      background: #111; border: 1px solid #1a1a1a; border-radius: 10px;
+      padding: 20px; text-align: center;
+    }
+    .stat-card .value { font-size: 2rem; font-weight: 800; color: #10b981; }
+    .stat-card .label { font-size: 0.85rem; color: #666; margin-top: 4px; }
+
+    /* Controls */
+    .controls {
+      display: flex; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
+    }
+    .controls label { font-size: 0.9rem; color: #888; }
+    .controls select {
+      background: #111; color: #f5f5f5; border: 1px solid #333;
+      padding: 8px 16px; border-radius: 6px; font-size: 0.9rem; cursor: pointer;
+    }
+    .controls select:hover { border-color: #10b981; }
+
+    /* Repo table */
+    .repo-table { width: 100%; border-collapse: collapse; }
+    .repo-table th {
+      text-align: left; padding: 12px 16px; font-size: 0.8rem; color: #666;
+      text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #1a1a1a;
+      cursor: pointer; user-select: none;
+    }
+    .repo-table th:hover { color: #f5f5f5; }
+    .repo-table th .sort-arrow { margin-left: 4px; color: #10b981; }
+    .repo-table td {
+      padding: 14px 16px; font-size: 0.9rem; border-bottom: 1px solid #141414;
+    }
+    .repo-table tr:hover td { background: #111; }
+
+    .repo-name { font-weight: 600; color: #f5f5f5; }
+    .badge {
+      display: inline-block; padding: 2px 10px; border-radius: 100px;
+      font-size: 0.8rem; font-weight: 600;
+    }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .badge-yellow { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+    .failure-list { list-style: none; display: flex; flex-wrap: wrap; gap: 4px; }
+    .failure-list li {
+      background: #1a1a1a; padding: 2px 8px; border-radius: 4px;
+      font-size: 0.75rem; color: #888;
+    }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 80px 0; color: #666; }
+    .empty-state h2 { font-size: 1.3rem; margin-bottom: 12px; color: #888; }
+    .empty-state p { font-size: 0.95rem; max-width: 480px; margin: 0 auto 24px; }
+    .empty-state .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 28px; border-radius: 8px; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.2s;
+      background: #10b981; color: #0a0a0a; text-decoration: none;
+    }
+    .empty-state .btn:hover { background: #059669; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 80px 0; color: #666; }
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid #1a1a1a;
+      border-top-color: #10b981; border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .error-banner {
+      background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;
+      color: #ef4444; font-size: 0.9rem;
+    }
+
+    /* Footer */
+    footer { border-top: 1px solid #1a1a1a; padding: 32px 0; margin-top: 60px; }
+    footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    footer p { font-size: 0.85rem; color: #555; }
+    footer a { font-size: 0.85rem; color: #666; text-decoration: none; transition: color 0.2s; }
+    footer a:hover { color: #f5f5f5; }
+
+    @media (max-width: 768px) {
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+      .repo-table { font-size: 0.8rem; }
+      .repo-table th, .repo-table td { padding: 10px 12px; }
+    }
+    @media (max-width: 480px) {
+      .stats-bar { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container">
+      <h1>ST<span>AS</span> Trust Dashboard</h1>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <span class="last-updated" id="lastUpdated">—</span>
+        <button class="refresh-btn" id="refreshBtn" onclick="loadData()">Refresh</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Global Stats -->
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-card">
+        <div class="value" id="globalTotalFixes">—</div>
+        <div class="label">Total Fixes</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="globalAcceptanceRate">—</div>
+        <div class="label">Acceptance Rate</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="globalRegressionRate">—</div>
+        <div class="label">Regression Rate</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="globalRepoCount">—</div>
+        <div class="label">Repos Tracked</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <label for="sortSelect">Sort by</label>
+      <select id="sortSelect" onchange="applySort()">
+        <option value="fixes">Fix Count</option>
+        <option value="acceptance">Acceptance Rate</option>
+        <option value="regressions">Regression Rate</option>
+      </select>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading" id="loadingState">
+      <div class="spinner"></div>
+      <p>Loading trust metrics…</p>
+    </div>
+
+    <!-- Error -->
+    <div class="error-banner" id="errorBanner" style="display:none;"></div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <h2>No fix data yet</h2>
+      <p>Trust metrics appear here after STAS processes fixes on your repos. Label an issue with <code>stas:fix</code> to get started.</p>
+      <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" class="btn" target="_blank" rel="noopener">Install STAS</a>
+    </div>
+
+    <!-- Repo Table -->
+    <div id="tableContainer" style="display:none;overflow-x:auto;">
+      <table class="repo-table">
+        <thead>
+          <tr>
+            <th onclick="applySort('fixes')">Repo <span class="sort-arrow">↓</span></th>
+            <th onclick="applySort('fixes')">Fixes <span class="sort-arrow">↓</span></th>
+            <th onclick="applySort('acceptance')">Accepted <span class="sort-arrow"></span></th>
+            <th onclick="applySort('acceptance')">Accept Rate <span class="sort-arrow"></span></th>
+            <th>Rejected</th>
+            <th onclick="applySort('regressions')">Regr. (7d) <span class="sort-arrow"></span></th>
+            <th>Tests Pass</th>
+            <th>Tests Fail</th>
+            <th>Gates ✓</th>
+            <th>Gates ✗</th>
+            <th>Avg Time</th>
+          </tr>
+        </thead>
+        <tbody id="repoTableBody"></tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 STAS &mdash; Solving Tickets As A Service</p>
+      <a href="/">Back to Home</a>
+    </div>
+  </footer>
+
+  <script>
+    // ── State ──────────────────────────────────────────────────────────────
+    let repos = [];
+    let globalStats = { acceptanceRate: 0, avgRegressionRate: 0, totalFixes: 0, totalRepos: 0 };
+    let currentSort = 'fixes';
+
+    // ── Load ───────────────────────────────────────────────────────────────
+    async function loadData() {
+      const btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      btn.textContent = 'Loading…';
+
+      showLoading();
+
+      try {
+        const res = await fetch('/api/v1/trust');
+        if (!res.ok) throw new Error('Server returned ' + res.status);
+        const data = await res.json();
+
+        repos = data.repos || [];
+        globalStats = data.global || globalStats;
+
+        if (repos.length === 0) {
+          showEmpty();
+        } else {
+          render();
+        }
+      } catch (err) {
+        showError('Failed to load trust data: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Refresh';
+      }
+    }
+
+    // ── Render ─────────────────────────────────────────────────────────────
+    function render() {
+      document.getElementById('lastUpdated').textContent =
+        'Updated ' + new Date().toLocaleTimeString();
+
+      // Global stats
+      document.getElementById('globalTotalFixes').textContent = globalStats.totalFixes;
+      document.getElementById('globalAcceptanceRate').textContent =
+        (globalStats.acceptanceRate * 100).toFixed(1) + '%';
+      document.getElementById('globalRegressionRate').textContent =
+        (globalStats.avgRegressionRate * 100).toFixed(1) + '%';
+      document.getElementById('globalRepoCount').textContent = globalStats.totalRepos;
+
+      // Sort
+      const sorted = applySortToData(repos.slice(), currentSort);
+
+      // Table rows
+      const tbody = document.getElementById('repoTableBody');
+      tbody.innerHTML = sorted.map(function(r) {
+        const rate = r.totalFixes > 0 ? (r.acceptedFixes / r.totalFixes * 100).toFixed(1) : '—';
+        const regRate = r.totalFixes > 0 ? (r.regressions7d / r.totalFixes * 100).toFixed(1) : '—';
+        const avgTime = formatMs(r.averageFixTimeMs);
+        const rateBadge = r.totalFixes === 0 ? 'badge-yellow' : (r.acceptedFixes / r.totalFixes) >= 0.8 ? 'badge-green' : 'badge-red';
+
+        return '<tr>' +
+          '<td class="repo-name">' + escapeHtml(r.repoName) + '</td>' +
+          '<td>' + r.totalFixes + '</td>' +
+          '<td>' + r.acceptedFixes + '</td>' +
+          '<td><span class="badge ' + rateBadge + '">' + rate + '%</span></td>' +
+          '<td>' + r.rejectedFixes + '</td>' +
+          '<td>' + regRate + '%</td>' +
+          '<td>' + r.totalTestPassCount.toLocaleString() + '</td>' +
+          '<td>' + r.totalTestFailCount.toLocaleString() + '</td>' +
+          '<td>' + r.totalGatesPassed + '</td>' +
+          '<td>' + r.totalGatesFailed + '</td>' +
+          '<td>' + avgTime + '</td>' +
+          '</tr>';
+      }).join('');
+
+      hideAll();
+      document.getElementById('tableContainer').style.display = 'block';
+    }
+
+    function applySort() {
+      const select = document.getElementById('sortSelect');
+      currentSort = select.value;
+      render();
+    }
+
+    function applySortToData(data, sortKey) {
+      const sorted = […data];
+      switch (sortKey) {
+        case 'fixes':
+          sorted.sort(function(a, b) { return b.totalFixes - a.totalFixes; });
+          break;
+        case 'acceptance':
+          sorted.sort(function(a, b) {
+            const aRate = a.totalFixes > 0 ? a.acceptedFixes / a.totalFixes : 0;
+            const bRate = b.totalFixes > 0 ? b.acceptedFixes / b.totalFixes : 0;
+            return bRate - aRate;
+          });
+          break;
+        case 'regressions':
+          sorted.sort(function(a, b) {
+            const aRate = a.totalFixes > 0 ? a.regressions7d / a.totalFixes : 0;
+            const bRate = b.totalFixes > 0 ? b.regressions7d / b.totalFixes : 0;
+            return aRate - bRate;
+          });
+          break;
+      }
+      return sorted;
+    }
+
+    // ── UI helpers ─────────────────────────────────────────────────────────
+    function showLoading() {
+      hideAll();
+      document.getElementById('loadingState').style.display = 'block';
+    }
+    function showEmpty() {
+      hideAll();
+      document.getElementById('emptyState').style.display = 'block';
+    }
+    function showError(msg) {
+      hideAll();
+      var banner = document.getElementById('errorBanner');
+      banner.textContent = msg;
+      banner.style.display = 'block';
+    }
+    function hideAll() {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('errorBanner').style.display = 'none';
+      document.getElementById('tableContainer').style.display = 'none';
+    }
+
+    function formatMs(ms) {
+      if (!ms) return '—';
+      if (ms < 1000) return ms + 'ms';
+      if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+      return Math.floor(ms / 60000) + 'm ' + Math.floor((ms % 60000) / 1000) + 's';
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // ── Auto-refresh ───────────────────────────────────────────────────────
+    loadData();
+    setInterval(loadData, 30000); // every 30 seconds
+  </script>
+
+</body>
+</html>
