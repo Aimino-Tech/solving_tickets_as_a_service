@@ -18,13 +18,10 @@ import Status from '@/pages/Status';
 import DPAPage from '@/pages/DPAPage';
 import Benchmarks from '@/pages/Benchmarks';
 import Pricing from '@/pages/Pricing';
-<<<<<<< Updated upstream
-=======
 import EnterprisePage from '@/pages/EnterprisePage';
 import KpiDashboard from '@/pages/KpiDashboard';
 import PricingPage from '@/pages/PricingPage';
 import VsPage from '@/pages/VsPage';
->>>>>>> Stashed changes
 
 export default function App() {
   const { isAuthenticated, isLoading } = useAuth();
