@@ -1,0 +1,73 @@
+name: ❓ Support Request
+description: Get help with STAS — before opening, check the FAQ and Discord
+title: "[Support]: "
+labels: ["support"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🚀 Looking for help?
+
+        Thanks for reaching out! Before we proceed, here are faster ways to get help:
+
+        ### 📖 [Check the FAQ](https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/FAQ.md)
+        Most common questions about setup, configuration, troubleshooting, and pricing are answered there.
+
+        ### 💬 [Join our Discord](https://discord.gg/aimino)
+        Our community Discord is the fastest place to get help:
+        - **#help** — Get assistance from the community and maintainers
+        - **#self-host** — Self-hosting setup and configuration help
+        - **#general** — General discussion and questions
+
+        ### 📚 [Documentation](https://github.com/tamnguyen08/solving_tickets_as_a_service/tree/main/docs)
+        - [Self-Hosting Guide](https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/SELF_HOSTING.md)
+        - [Architecture Overview](https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md)
+        - [Customization Guide](https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/CUSTOMIZATION.md)
+
+        ---
+
+        **Support SLAs apply to Cloud Paid subscribers only (Pro $49/mo, Business $199/mo).**
+        Self-hosted and Cloud Free users receive community-based support via Discord and GitHub Issues.
+
+        If you've already checked those resources and still need help, fill out the form below and we'll get back to you.
+
+  - type: input
+    id: stas_tier
+    attributes:
+      label: STAS Tier
+      description: Which STAS tier are you using?
+      placeholder: "Self-hosted / Cloud Free / Cloud Pro / Cloud Business"
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue_description
+    attributes:
+      label: What do you need help with?
+      description: Describe your issue in detail.
+      placeholder: "I'm trying to set up STAS and running into..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: troubleshooting_done
+    attributes:
+      label: What have you tried already?
+      description: List the troubleshooting steps you've already taken.
+      placeholder: "Checked the FAQ, searched Discord, tried restarting..."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Urgency
+      description: How urgent is this request?
+      options:
+        - Low — Not blocking, general question
+        - Medium — Affecting workflow but have workaround
+        - High — Blocking use of STAS
+        - Critical — Production system is down
+    validations:
+      required: true
