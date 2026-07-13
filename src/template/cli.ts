@@ -16,7 +16,7 @@ import { readFileSync, existsSync, readdirSync, writeFileSync, chmodSync } from 
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import { validateTemplateYaml, dryRunResolve, preflightValidate } from "./validator.js";
 import type { ValidationResult, ValidationError, TemplateYaml } from "./validator.js";
 
