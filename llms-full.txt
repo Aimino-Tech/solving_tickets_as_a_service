@@ -1,0 +1,144 @@
+# STAS — Solving Tickets As A Service — Full Documentation
+
+## Overview
+
+STAS is an open-source GitHub bot that automatically fixes labeled issues. Label an issue with `stas:fix`, and STAS investigates your codebase, writes a fix, runs your tests, and opens a draft PR. Backed by OpenCode (162K ★ open-source coding agent).
+
+Repository: https://github.com/Aimino-Tech/solving_tickets_as_a_service
+License: MIT
+Language: TypeScript
+
+## How It Works
+
+1. Install the GitHub App on your repository
+2. Label any issue with `stas:fix`
+3. STAS webhook receives the event and posts a "working on it" comment
+4. STAS clones your repo into an isolated Docker sandbox
+5. Agent investigates root cause using code analysis and file search
+6. Agent implements the fix and writes a regression test
+7. Agent runs the existing test suite to verify no regressions
+8. Agent commits changes to a branch and pushes
+9. STAS creates a draft PR with the fix
+10. Quality gates run and results are appended to the PR body
+
+## Installation Paths
+
+### GitHub Action (30 seconds)
+```yaml
+# .github/workflows/stas-fix.yml
+name: STAS Fix
+on:
+  issues:
+    types: [labeled]
+jobs:
+  fix:
+    if: github.event.label.name == 'stas:fix'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aimino/stas-fix-action@v1
+        with:
+          opencode-endpoint: ${{ secrets.OPENCODE_ENDPOINT }}
+```
+
+### Self-Hosted (5 minutes)
+```bash
+git clone https://github.com/Aimino-Tech/solving_tickets_as_a_service
+cd solving_tickets_as_a_service
+npm install
+opencode serve --port 4096
+cp .env.example .env  # fill in GITHUB_APP_ID, GITHUB_PRIVATE_KEY, GITHUB_WEBHOOK_SECRET
+npm run dev
+```
+
+### Docker
+```bash
+git clone https://github.com/Aimino-Tech/solving_tickets_as_a_service
+cd solving_tickets_as_a_service
+cp .env.example .env  # fill in env vars
+docker compose up -d
+```
+
+## Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GITHUB_APP_ID` | — | GitHub App ID |
+| `GITHUB_PRIVATE_KEY` | — | App private key (PEM) |
+| `GITHUB_WEBHOOK_SECRET` | — | Webhook secret |
+| `OPENCODE_URL` | `http://localhost:4096` | OpenCode serve endpoint |
+| `OPENCODE_MODEL` | `anthropic/claude-sonnet-4-20250514` | Model to use |
+| `STAS_LABEL` | `stas:fix` | Issue label to trigger on |
+| `STAS_MAX_CONCURRENT` | `3` | Max concurrent fix runs |
+| `STAS_PORT` | `3000` | Webhook server port |
+
+## Security
+
+### PromptSanitizer
+All user-controlled content (issue body, comments) is sanitized for injection patterns before being passed to the agent. Strips: instruction overrides, role hijacking, system prompt manipulation, data exfiltration attempts, and more.
+
+### GitGuard
+Blocks destructive git operations in agent sandboxes:
+- Blocked: `push --force`, `branch -D`, `reset --hard`, `rebase --force`, `gc --prune`, `clean -fd`, `checkout -- .`, `filter-branch`
+- Allowed: `add`, `commit`, `push` (safe), `checkout -b`, `log`, `diff`, `status`, `config`, `clone`
+
+### Sandbox Isolation
+- Docker containers with resource limits (memory, CPU)
+- Network restrictions via egress proxy (Squid)
+- Ephemeral — destroyed after fix generation
+- No persistent storage
+
+### GitHub Permissions (Minimum Required)
+- `contents: write` — create PRs and branches
+- `issues: read` — read labeled issues
+- `pull_requests: write` — create PRs
+
+## Quality Gates
+
+Every fix passes through 6 quality gates before PR creation:
+
+1. **Reality Check** — Every referenced file actually exists
+2. **Compile Check** — TypeScript compiler passes (tsc --noEmit)
+3. **Test Integrity** — Tests have real assertions (no vacuous tests)
+4. **Hallucination/Stub** — No TODO stubs, placeholders, or fake imports
+5. **Dead Code Check** — No orphaned files or unused exports (knip/ts-prune)
+6. **External AI Tool Scan** — No hallucinated packages or phantom APIs (ghostcheck/trace-core)
+
+Results are surfaced in a collapsible quality report in every PR body.
+
+## Supported Languages
+
+Python, TypeScript/JavaScript, Go, Rust, Ruby, Java, PHP, Swift, Dart, Elixir, C++, .NET — with automatic runtime detection.
+
+## What STAS Can Fix
+
+✅ Single-file bugs, typing errors, logic errors, test failures, linter issues, simple refactors, README/docs fixes
+
+## What STAS Cannot Fix
+
+❌ Multi-file refactors, database migrations, dependency upgrades, configuration changes, feature requests, cross-cutting concerns, security vulnerabilities
+
+## Business Model
+
+Open-core with three tiers:
+- **OSS Self-Hosted**: Unlimited fixes, your API key, your infrastructure — $0
+- **Cloud Free**: 10 fixes/month — $0
+- **Cloud Pro**: 100 fixes/month, SLA — $49/mo
+
+## Support
+
+- FAQ: docs/faq.md
+- Troubleshooting: docs/troubleshooting.md
+- Discord: https://discord.gg/aimino
+- GitHub Issues: https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues
+
+## Competitive Comparison
+
+| Feature | STAS | Plip | KintsugiBot | Open SWE |
+|---------|------|------|-------------|----------|
+| Open Source | ✅ MIT | ❌ | ✅ MIT | ✅ Apache |
+| Self-Host | ✅ | ❌ | ✅ | ✅ |
+| Quality Gates | ✅ 6 gates | ❌ | ❌ | ❌ |
+| Anti-Injection | ✅ | ❌ | ❌ | ❌ |
+| GitGuard | ✅ | ❌ | ❌ | ❌ |
+| Cost/Fix | BYO API | $2-5+ | BYO API | BYO API |
+| Multi-Language | ✅ | ❌ | ✅ | ✅ |
