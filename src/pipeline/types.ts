@@ -106,3 +106,29 @@ export interface WebhookDelivery {
   deliveredAt?: string;
   retryCount: number;
 }
+
+export const DEFAULT_PIPELINE_CONFIG: PipelineParams = {
+  learning_rate: 0.001,
+  batch_size: 64,
+  feature_set: 'default',
+};
+
+export interface PipelineParams {
+  learning_rate: number;
+  batch_size: number;
+  feature_set: string;
+  [key: string]: unknown;
+}
+
+export interface PipelineConfigRun {
+  id: string;
+  pipelineId: string;
+  version: number;
+  parentVersion?: number;
+  configBlob: PipelineParams;
+  metrics?: Record<string, number>;
+  datasetHash?: string;
+  ticketId?: string;
+  createdAt: string;
+  updatedAt: string;
+}

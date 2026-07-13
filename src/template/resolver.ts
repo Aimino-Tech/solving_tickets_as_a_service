@@ -22,6 +22,7 @@ const REQUEST_TYPE_LABELS: Record<string, string[]> = {
   planning: ['stas:plan', 'stas:planning', 'plan', 'design'],
   research: ['stas:research', 'stas:explore', 'research', 'question'],
   documentation: ['stas:docs', 'documentation', 'docs'],
+  pipeline: ['stas:pipeline', 'stas:train', 'pipeline', 'train'],
 };
 
 export function classifyByLabel(labels: string[]): ClassificationResult {
@@ -44,6 +45,9 @@ export function classifyByLabel(labels: string[]): ClassificationResult {
       }
       if (typePart.startsWith('doc')) {
         return { type: 'documentation', label, confidence: 0.95 };
+      }
+      if (typePart.startsWith('pipeline') || typePart.startsWith('train')) {
+        return { type: 'pipeline', label, confidence: 0.95 };
       }
     }
 
