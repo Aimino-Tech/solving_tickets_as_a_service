@@ -65,6 +65,7 @@ import { badgeRouter } from './routes/badge.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { viralRouter } from './routes/viral.js';
 import { qualityRouter } from './routes/quality.js';
+import previewRoutes from './api/routes/preview.js';
 import { kpiRouter } from './routes/kpi.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import previewRoutes from './api/routes/preview.js';
@@ -698,7 +699,6 @@ export async function createApp(): Promise<express.Application> {
   // GET /api/v1/trust       — Leaderboard + global stats
   // GET /api/v1/trust/:repo — Single-repo metrics
   app.use('/api/v1/trust', trustRouter);
-
   // ── Preview API (public, rate-limited per IP) ──────────────────────────
   // POST /api/v1/preview — Demo preview of fixable issues
   app.use('/api/v1/preview', previewRoutes);

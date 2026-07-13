@@ -84,7 +84,7 @@
     "@sentry/node": "^8.0.0",
     "@slack/bolt": "^4.7.3",
     "amqplib": "^2.0.1",
-
+    "better-sqlite3": "11.10.0",
     "cors": "^2.8.6",
     "dotenv": "^16.4.0",
     "e2b": "^2.19.0",
@@ -93,6 +93,7 @@
     "graphlib": "^2.1.8",
     "helmet": "^8.2.0",
     "ioredis": "^5.11.1",
+    "js-yaml": "5.2.1",
     "node-fetch": "^3.3.2",
     "pg": "^8.21.0",
     "pino": "^9.6.0",
@@ -139,5 +140,10 @@
   },
   "overrides": {
     "esbuild": ">=0.25.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }

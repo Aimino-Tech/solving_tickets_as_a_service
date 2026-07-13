@@ -79,6 +79,13 @@ export class PipelineExecutor {
       return { success: false, completed: false, error: msg };
     }
 
+    // If this is a pipeline template, resolve config from the issue body
+    // and create a versioned PipelineConfigRun (AIM-2537).
+    if (this.templateName === 'stas:pipeline' || this.job.labels?.some((l) => l.startsWith('pipeline:') || l.startsWith('stas:pipeline'))) {
+      this.pipelineRun = this.resolvePipelineConfig();
+      Object.assign(this.context, buildPipelineContext(this.pipelineRun));
+    }
+
     this.phaseOrder = ALL_PHASES.filter(
       (p) => this.template!.phases[p] && this.template!.phases[p].length > 0,
     );
@@ -520,4 +527,27 @@ function buildContext(job: IssueJobData): Record<string, string> {
     'issue.labels': job.labels?.join(',') ?? '',
     'repo.full': `${job.repoOwner}/${job.repoName}`,
   };
+}
+
+function buildPipelineContext(run: PipelineConfigRun): Record<string, string> {
+  const cfg = run.configBlob;
+  return {
+    'pipeline.id': run.pipelineId,
+    'pipeline.version': String(run.version),
+    'config.version': String(run.version),
+    'config.batch_size': String(cfg.batch_size),
+    'config.learning_rate': String(cfg.learning_rate),
+    'config.feature_set': cfg.feature_set,
+    'config.dataset_hash': run.datasetHash ?? '',
+  };
+}
+
+function simpleHash(input: string): string {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const chr = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0');
 }
