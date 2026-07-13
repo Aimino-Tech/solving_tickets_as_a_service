@@ -40,6 +40,7 @@ import { DockerSandbox } from '../sandbox/docker.js';
 import { getTracker } from '../trackers/index.js';
 import { jobLogger, rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
+import { PromptSanitizer } from '../core/prompt-sanitizer.js';
 import { addReceipt, createManifest, createReceipt, serializeReceiptsJson } from './receipts.js';
 import { buildTools, type SandboxTools } from './tools.js';
 import type { AgentResult, TestBaseline, TriageResult, VerificationResult } from './types.js';
@@ -999,19 +1000,19 @@ function buildOpenCodePrompt(params: {
 
 /**
  * Sanitize user-provided content to prevent prompt injection.
+ * Uses PromptSanitizer class for comprehensive pattern detection.
  */
 function sanitizeUserContent(prompt: string): string {
-  // Remove any content that looks like it's trying to override instructions
-  return prompt
-    .replace(/ignore all previous instructions/gi, '[REDACTED]')
-    .replace(/ignore all prior instructions/gi, '[REDACTED]')
-    .replace(/you are not/gi, '[REDACTED]')
-    .replace(/forget everything/gi, '[REDACTED]')
-    .replace(/your new role/gi, '[REDACTED]')
-    .replace(/disregard/gi, '[REDACTED]')
-    .replace(/system override/gi, '[REDACTED]')
-    .replace(/you must now/gi, '[REDACTED]')
-    .replace(/you are now/gi, '[REDACTED]');
+  const sanitizer = new PromptSanitizer();
+  const result = sanitizer.sanitizeIssueBody(prompt);
+  if (result.strippedPatterns.length > 0) {
+    log.warn({ stripped: result.strippedPatterns }, 'Stripped injection patterns from agent prompt');
+  }
+  if (result.warnings.length > 0) {
+    log.warn({ warnings: result.warnings }, 'Prompt sanitization warnings');
+  }
+  // Wrap user content in delimiters so the agent can distinguish its instructions
+  return sanitizer.wrapUserContent(result.safePrompt);
 }
 
 /**
