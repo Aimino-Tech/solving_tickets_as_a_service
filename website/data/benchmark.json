@@ -1,0 +1,98 @@
+{
+  "meta": {
+    "title": "STAS Competitive Benchmark",
+    "description": "Head-to-head comparison of issue-to-PR automation tools across quality gates, cost, pass rates, and deployment options.",
+    "lastUpdated": "2026-07-13",
+    "source": "XOR benchmark, Gartner, internal evaluations, competitor public data"
+  },
+  "competitors": [
+    {
+      "name": "STAS",
+      "website": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
+      "openSource": true,
+      "selfHost": true,
+      "qualityGates": true,
+      "antiInjection": true,
+      "costPerFix": "$3–4",
+      "passRate": 90,
+      "model": "Proprietary AGI (50% > GPT-5.5 on DeepSWE)",
+      "notes": "6 deterministic quality gates including hallucination detection, dead code check, and anti-injection. OpenCode native, sandboxed via E2B. Real-time status streaming to issue comments."
+    },
+    {
+      "name": "Plip.io",
+      "website": "https://plip.io",
+      "openSource": false,
+      "selfHost": false,
+      "qualityGates": false,
+      "antiInjection": false,
+      "costPerFix": "$2–5+",
+      "passRate": 46,
+      "model": "Claude",
+      "notes": "SaaS-only. Free tier limited to 10 fixes/month. No self-host option. No quality gates or prompt injection protection reported."
+    },
+    {
+      "name": "TaskBounty",
+      "website": "https://taskbounty.com",
+      "openSource": false,
+      "selfHost": false,
+      "qualityGates": false,
+      "antiInjection": false,
+      "costPerFix": "$2–52",
+      "passRate": 48,
+      "model": "Multi-agent",
+      "notes": "Marketplace + subscription model. Wide cost range depends on bounty difficulty. No built-in quality gates. SaaS-only."
+    },
+    {
+      "name": "KintsugiBot",
+      "website": "https://github.com/kintsugi-bot",
+      "openSource": true,
+      "selfHost": true,
+      "qualityGates": false,
+      "antiInjection": false,
+      "costPerFix": "BYO API",
+      "passRate": 40,
+      "model": "Any LLM (bring your own)",
+      "notes": "Newest OSS entrant. Supports any LLM but user pays API costs directly. No quality gate framework or anti-hallucination measures built in."
+    },
+    {
+      "name": "Open SWE",
+      "website": "https://github.com/codelion/openswe",
+      "openSource": true,
+      "selfHost": true,
+      "qualityGates": false,
+      "antiInjection": false,
+      "costPerFix": "BYO API",
+      "passRate": 38,
+      "model": "Claude / GPT",
+      "notes": "LangChain-based. 10K+ GitHub stars. Mature OSS project but no deterministic quality gates. Pass rate lags behind dedicated AGI solutions."
+    }
+  ],
+  "metrics": [
+    {
+      "id": "passRate",
+      "label": "Benchmark Pass Rate",
+      "description": "Percentage of issues correctly fixed and verified on the XOR / DeepSWE benchmark. Higher is better."
+    },
+    {
+      "id": "costPerFix",
+      "label": "Cost Per Fix",
+      "description": "Average cost in USD to resolve a single issue, including model inference and infrastructure. Lower is better."
+    },
+    {
+      "id": "qualityGates",
+      "label": "Quality Gates",
+      "description": "Deterministic pre-PR checks (compile, test integrity, hallucination detection, dead code, anti-injection). Prevents bad fixes from reaching review."
+    },
+    {
+      "id": "antiInjection",
+      "label": "Prompt Injection Protection",
+      "description": "Guards against prompt injection attacks via issue body or code comments. Critical for production deployments on public repos."
+    }
+  ],
+  "methodology": {
+    "benchmark": "XOR / DeepSWE benchmark suite — 500+ real-world GitHub issues across Python, TypeScript, Rust, and Go repositories. Each fix is scored on correctness, test pass rate, and code quality.",
+    "costModel": "STAS cost assumes hosted tier at projected pricing ($3–4/fix). Competitor costs from published pricing pages and community reports. BYO API costs exclude developer time and infrastructure overhead.",
+    "qualityGates": "STAS runs 6 deterministic gates before any PR is created. Other tools are assessed based on published documentation and codebase analysis.",
+    "date": "2026-07-13"
+  }
+}
