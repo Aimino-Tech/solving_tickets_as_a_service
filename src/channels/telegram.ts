@@ -56,7 +56,7 @@ export class TelegramProgressSender implements ProgressSender {
 export async function handleTelegramWebhook(payload: Record<string, unknown>): Promise<{ ok: boolean }> {
   if (!isConfigured()) return { ok: false };
 
-  const message = (payload as any).message;
+  const message = (payload as { message?: Record<string, unknown> })?.message;
   if (!message || !message.text) return { ok: true };
 
   const chatId = String(message.chat.id);
