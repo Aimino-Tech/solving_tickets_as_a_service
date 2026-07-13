@@ -4,11 +4,28 @@ import { getLoadedTemplate, getResolvedCommand } from '../template/loader.js';
 import type { LoadedTemplate } from '../template/loader.js';
 import { advanceSession, createSession, failSession, getSession, retrySession } from './sessionOrchestrator.js';
 import { getPhaseStage } from './stateMachine.js';
-import type { PhaseStepResult, PipelinePhase, PhaseStepInfo, SessionState } from './types.js';
+import type { ConfinementConfig, PhaseStepResult, PipelinePhase, PhaseStepInfo, SessionState } from './types.js';
 
 const log = rootLogger.child({ module: 'pipeline-executor' });
 
 export const ALL_PHASES: PipelinePhase[] = ['pre', 'main', 'post', 'final'];
+
+interface AdvanceResult {
+  success: boolean;
+  error?: string;
+  output?: string;
+  tokenCost?: number;
+}
+
+type ExtendedSession = SessionState & {
+  templateName: string;
+  phaseOrder: PipelinePhase[];
+  currentPhaseIndex: number;
+  currentStepIndex: number;
+  phaseHistory: PhaseStepInfo[];
+  lastPhaseOutput?: string;
+  cumulativeTokens?: number;
+};
 
 /**
  * Template-driven pipeline executor.
@@ -30,11 +47,24 @@ export class PipelineExecutor {
   private template: LoadedTemplate | null = null;
   private readonly context: Record<string, string>;
   private phaseOrder: PipelinePhase[] = [];
+  private readonly confinement: ConfinementConfig;
 
-  constructor(job: IssueJobData, templateName: string) {
+  /** Per-issue error signature history for dead-end detection. Key = owner/repo#number. */
+  private static readonly errorSignatures: Map<string, Set<string>> = new Map();
+
+  constructor(job: IssueJobData, templateName: string, confinement?: ConfinementConfig) {
     this.job = job;
     this.templateName = templateName;
     this.context = buildContext(job);
+    this.confinement = confinement ?? {
+      loopDetectionEnabled: false,
+      deadEndDetectionEnabled: false,
+    };
+  }
+
+  /** Clear all tracked error signatures (for testing / reset). */
+  static clearErrorHistory(): void {
+    PipelineExecutor.errorSignatures.clear();
   }
 
   /**
@@ -47,6 +77,13 @@ export class PipelineExecutor {
       const msg = `Template "${this.templateName}" not found`;
       log.warn({ templateName: this.templateName }, msg);
       return { success: false, completed: false, error: msg };
+    }
+
+    // If this is a pipeline template, resolve config from the issue body
+    // and create a versioned PipelineConfigRun (AIM-2537).
+    if (this.templateName === 'stas:pipeline' || this.job.labels?.some((l) => l.startsWith('pipeline:') || l.startsWith('stas:pipeline'))) {
+      this.pipelineRun = this.resolvePipelineConfig();
+      Object.assign(this.context, buildPipelineContext(this.pipelineRun));
     }
 
     this.phaseOrder = ALL_PHASES.filter(
@@ -331,4 +368,27 @@ function buildContext(job: IssueJobData): Record<string, string> {
     'issue.labels': job.labels?.join(',') ?? '',
     'repo.full': `${job.repoOwner}/${job.repoName}`,
   };
+}
+
+function buildPipelineContext(run: PipelineConfigRun): Record<string, string> {
+  const cfg = run.configBlob;
+  return {
+    'pipeline.id': run.pipelineId,
+    'pipeline.version': String(run.version),
+    'config.version': String(run.version),
+    'config.batch_size': String(cfg.batch_size),
+    'config.learning_rate': String(cfg.learning_rate),
+    'config.feature_set': cfg.feature_set,
+    'config.dataset_hash': run.datasetHash ?? '',
+  };
+}
+
+function simpleHash(input: string): string {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const chr = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0');
 }
