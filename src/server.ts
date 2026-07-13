@@ -225,7 +225,7 @@ export async function createApp(): Promise<express.Application> {
       try {
         await githubWebhooks.verifyAndReceive({
           id: deliveryId,
-          name: event as any,
+          name: event as EmitterWebhookEventName,
           payload: rawBody.toString(),
           signature,
         });
@@ -240,7 +240,7 @@ export async function createApp(): Promise<express.Application> {
       try {
         await githubWebhooks.receive({
           id: deliveryId || crypto.randomUUID(),
-          name: event as any,
+          name: event as EmitterWebhookEventName,
           payload: JSON.parse((rawBody || Buffer.from(JSON.stringify(req.body))).toString()),
         });
       } catch (err) {
@@ -385,7 +385,7 @@ export async function createApp(): Promise<express.Application> {
     // Log the webhook event
     const eventId = await logWebhookReceived({
       source,
-      eventType: (payload as any)?.type || 'unknown',
+      eventType: (payload as { type?: string })?.type ?? 'unknown',
       deliveryId: undefined,
       payload,
     });
@@ -467,7 +467,7 @@ export async function createApp(): Promise<express.Application> {
     // Log the webhook event
     const eventId = await logWebhookReceived({
       source,
-      eventType: (payload as any)?.webhookEvent || 'unknown',
+      eventType: (payload as { webhookEvent?: string })?.webhookEvent ?? 'unknown',
       deliveryId: undefined,
       payload,
     });

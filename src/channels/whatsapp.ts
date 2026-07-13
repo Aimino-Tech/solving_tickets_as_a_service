@@ -78,7 +78,7 @@ export function verifyWhatsAppWebhook(req: { query: Record<string, string | stri
 export async function handleWhatsAppWebhook(payload: Record<string, unknown>): Promise<{ ok: boolean }> {
   if (!isConfigured()) return { ok: false };
 
-  const entry = (payload as any).entry?.[0];
+  const entry = (payload as { entry?: Array<Record<string, unknown>> })?.entry?.[0];
   const change = entry?.changes?.[0];
   const value = change?.value;
   const messages = value?.messages;
