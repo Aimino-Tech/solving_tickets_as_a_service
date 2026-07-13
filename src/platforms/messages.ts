@@ -497,6 +497,14 @@ export function buildPRBody(params: {
     }
   }
 
+  // Quality gate report section
+  const qualityGates = ver?.qualityGates;
+  const qualitySection: string[] = [];
+  if (qualityGates && qualityGates.length > 0) {
+    const qr = new QualityGateReporter();
+    qualitySection.push('', '## Quality Gates', '', qr.formatMarkdown(qualityGates), '');
+  }
+
   return [
     `## Summary`,
     '',
@@ -514,6 +522,7 @@ export function buildPRBody(params: {
     result.testOutput
       ? `<details><summary>Test Output</summary>\n\n\`\`\`\n${result.testOutput.slice(0, 5000)}\n\`\`\`\n</details>`
       : 'Tests were run as part of the fix process.',
+    ...qualitySection,
     '',
     `## Branch`,
     '',
