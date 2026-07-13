@@ -97,18 +97,14 @@ export class PipelineExecutor {
 
     const issueId = `${this.job.repoOwner}/${this.job.repoName}#${this.job.issueNumber}`;
 
-    const session = createSession(issueId, this.templateName) as SessionState & {
-      templateName: string;
-      phaseOrder: PipelinePhase[];
-      currentPhaseIndex: number;
-      currentStepIndex: number;
-      phaseHistory: PhaseStepInfo[];
-    };
+    const session = createSession(issueId, this.templateName) as ExtendedSession;
     session.templateName = this.template.name;
     session.phaseOrder = [...this.phaseOrder];
     session.currentPhaseIndex = 0;
     session.currentStepIndex = 0;
     session.phaseHistory = [];
+    session.lastPhaseOutput = undefined;
+    session.cumulativeTokens = 0;
 
     log.info(
       { sessionId: session.sessionId, templateName: this.template.name, phases: this.phaseOrder },
@@ -127,11 +123,44 @@ export class PipelineExecutor {
    */
   async advance(
     sessionId: string,
-    result: { success: boolean; error?: string },
+    result: AdvanceResult,
   ): Promise<PhaseStepResult> {
     if (result.success) {
-      return this.advanceStep(sessionId);
+      // Accumulate token cost for budget tracking
+      if (result.tokenCost && result.tokenCost > 0) {
+        const session = getSession(sessionId) as ExtendedSession | undefined;
+        if (session) {
+          session.cumulativeTokens = (session.cumulativeTokens ?? 0) + result.tokenCost;
+        }
+      }
+
+      // Check cost budget before advancing
+      if (this.confinement.costBudget) {
+        const budgetHit = this.checkBudget(sessionId, result.tokenCost);
+        if (budgetHit) {
+          return this.markBudgetExhausted(sessionId);
+        }
+      }
+
+      // Loop detection: check if this phase's output matches the previous
+      if (this.confinement.loopDetectionEnabled && result.output !== undefined) {
+        const loopHit = this.checkLoop(sessionId, result.output);
+        if (loopHit) {
+          return this.markPhaseStuck(sessionId);
+        }
+      }
+
+      return this.advanceStep(sessionId, result.output);
     }
+
+    // Dead-end detection: record error and check for recurring signature
+    if (this.confinement.deadEndDetectionEnabled && result.error) {
+      const deadEnd = this.recordAndCheckDeadEnd(sessionId, result.error);
+      if (deadEnd) {
+        return this.handleDeadEnd(sessionId, result.error);
+      }
+    }
+
     return this.handleFailure(sessionId, result.error);
   }
 
@@ -179,12 +208,7 @@ export class PipelineExecutor {
   // ── Private helpers ──────────────────────────────────────────────────
 
   private resolveStep(session: SessionState): PhaseStepResult {
-    const extended = session as SessionState & {
-      phaseOrder: PipelinePhase[];
-      currentPhaseIndex: number;
-      currentStepIndex: number;
-      phaseHistory: PhaseStepInfo[];
-    };
+    const extended = session as ExtendedSession;
 
     if ((extended.currentPhaseIndex ?? 0) >= (extended.phaseOrder?.length ?? 0)) {
       const finalSession = advanceSession(session.sessionId, 'completed');
@@ -194,6 +218,20 @@ export class PipelineExecutor {
         completed: true,
         session: finalSession,
       };
+    }
+
+    // Check cost budget before entering a NEW phase (stepIndex === 0)
+    if (
+      this.confinement.costBudget &&
+      extended.currentStepIndex === 0 &&
+      extended.cumulativeTokens !== undefined &&
+      extended.cumulativeTokens >= this.confinement.costBudget.maxTokens
+    ) {
+      log.warn(
+        { sessionId: session.sessionId, cumulativeTokens: extended.cumulativeTokens, maxTokens: this.confinement.costBudget.maxTokens },
+        'Budget exhausted — cumulative tokens exceed maxTokens',
+      );
+      return this.markBudgetExhausted(session.sessionId);
     }
 
     const phase = extended.phaseOrder[extended.currentPhaseIndex];
@@ -250,11 +288,7 @@ export class PipelineExecutor {
   }
 
   private moveToNextPhase(session: SessionState): PhaseStepResult {
-    const extended = session as SessionState & {
-      phaseOrder: PipelinePhase[];
-      currentPhaseIndex: number;
-      currentStepIndex: number;
-    };
+    const extended = session as ExtendedSession;
 
     extended.currentPhaseIndex = (extended.currentPhaseIndex ?? 0) + 1;
     extended.currentStepIndex = 0;
@@ -262,7 +296,7 @@ export class PipelineExecutor {
     if (session.sessionId) {
       // persist via the store (in-memory set via getSession returns a reference)
       // re-read from store to get fresh ref
-      const refreshed = getSession(session.sessionId);
+      const refreshed = getSession(session.sessionId) as ExtendedSession | undefined;
       if (refreshed) {
         Object.assign(refreshed, {
           currentPhaseIndex: extended.currentPhaseIndex,
@@ -274,13 +308,8 @@ export class PipelineExecutor {
     return this.resolveStep(session);
   }
 
-  private advanceStep(sessionId: string): PhaseStepResult {
-    const session = getSession(sessionId) as SessionState & {
-      phaseOrder: PipelinePhase[];
-      currentPhaseIndex: number;
-      currentStepIndex: number;
-      phaseHistory: PhaseStepInfo[];
-    };
+  private advanceStep(sessionId: string, _output?: string): PhaseStepResult {
+    const session = getSession(sessionId) as ExtendedSession;
 
     if (!session) {
       return { success: false, completed: false, error: 'Session not found' };
@@ -308,12 +337,7 @@ export class PipelineExecutor {
   }
 
   private handleFailure(sessionId: string, error?: string): PhaseStepResult {
-    const session = getSession(sessionId) as SessionState & {
-      phaseOrder: PipelinePhase[];
-      currentPhaseIndex: number;
-      currentStepIndex: number;
-      phaseHistory: PhaseStepInfo[];
-    };
+    const session = getSession(sessionId) as ExtendedSession;
 
     if (!session) {
       return { success: false, completed: false, error: 'Session not found' };
@@ -355,6 +379,141 @@ export class PipelineExecutor {
       error: error ?? 'Phase step failed',
       session: failed,
     };
+  }
+
+  // ── Agent Confinement Enforcement ───────────────────────────────────────
+
+  private checkBudget(sessionId: string, _stepCost?: number): boolean {
+    const session = getSession(sessionId) as ExtendedSession | undefined;
+    if (!session || !this.confinement.costBudget) return false;
+
+    const maxTokens = this.confinement.costBudget.maxTokens;
+    const currentTokens = session.cumulativeTokens ?? 0;
+
+    return currentTokens >= maxTokens;
+  }
+
+  private checkLoop(sessionId: string, output: string): boolean {
+    const session = getSession(sessionId) as ExtendedSession | undefined;
+    if (!session) return false;
+
+    const prevOutput = session.lastPhaseOutput;
+    session.lastPhaseOutput = output;
+
+    // No previous output means this is the first phase
+    if (prevOutput === undefined) return false;
+
+    return (
+      this.confinement.loopDetectionEnabled &&
+      output !== undefined &&
+      output === prevOutput
+    );
+  }
+
+  private recordAndCheckDeadEnd(sessionId: string, error: string): boolean {
+    const session = getSession(sessionId) as ExtendedSession | undefined;
+    if (!session) return false;
+
+    const issueId = `${this.job.repoOwner}/${this.job.repoName}#${this.job.issueNumber}`;
+    const signature = this.normalizeErrorSignature(error);
+
+    let signatures = PipelineExecutor.errorSignatures.get(issueId);
+    if (!signatures) {
+      signatures = new Set();
+      PipelineExecutor.errorSignatures.set(issueId, signatures);
+    }
+
+    if (signatures.has(signature)) {
+      return true;
+    }
+
+    signatures.add(signature);
+    return false;
+  }
+
+  private normalizeErrorSignature(error: string): string {
+    return error
+      .replace(/\d+/g, '0')
+      .replace(/at \S+ \(\S+:\d+:\d+\)/g, 'at <location>')
+      .replace(/node_modules\/\S+/g, 'node_modules/<pkg>')
+      .trim();
+  }
+
+  private markBudgetExhausted(sessionId: string): PhaseStepResult {
+    const session = getSession(sessionId) as ExtendedSession | undefined;
+    if (session && session.phaseHistory && session.phaseHistory.length > 0) {
+      const lastStep = session.phaseHistory[session.phaseHistory.length - 1];
+      lastStep.status = 'budget_exhausted';
+      lastStep.completedAt = Date.now();
+    }
+
+    log.warn({ sessionId, cumulativeTokens: session?.cumulativeTokens }, 'Phase skipped: BUDGET_EXHAUSTED');
+    const failed = failSession(sessionId, 'BUDGET_EXHAUSTED: Token/cost budget exceeded');
+    return {
+      success: false,
+      completed: false,
+      error: 'BUDGET_EXHAUSTED: Token/cost budget exceeded',
+      session: failed,
+    };
+  }
+
+  private markPhaseStuck(sessionId: string): PhaseStepResult {
+    const session = getSession(sessionId) as ExtendedSession | undefined;
+    if (session && session.phaseHistory && session.phaseHistory.length > 0) {
+      const lastStep = session.phaseHistory[session.phaseHistory.length - 1];
+      lastStep.status = 'stuck';
+      lastStep.completedAt = Date.now();
+    }
+
+    log.warn({ sessionId }, 'Phase detected as STUCK — output unchanged from previous phase');
+    const failed = failSession(sessionId, 'STUCK: Phase output identical to previous phase — no progress');
+    return {
+      success: false,
+      completed: false,
+      error: 'STUCK: Phase output identical to previous phase — no progress',
+      session: failed,
+    };
+  }
+
+  private handleDeadEnd(sessionId: string, error: string): PhaseStepResult {
+    const session = getSession(sessionId) as ExtendedSession | undefined;
+    if (session && session.phaseHistory && session.phaseHistory.length > 0) {
+      const lastStep = session.phaseHistory[session.phaseHistory.length - 1];
+      lastStep.status = 'failed';
+      lastStep.completedAt = Date.now();
+      lastStep.error = error;
+    }
+
+    log.warn(
+      { sessionId, error, issueId: `${this.job.repoOwner}/${this.job.repoName}#${this.job.issueNumber}` },
+      'Dead-end detected — recurring error signature across pipeline runs',
+    );
+    const failed = failSession(
+      sessionId,
+      `DEAD_END: Recurring error signature detected: ${error}`,
+    );
+    return {
+      success: false,
+      completed: false,
+      error: `DEAD_END: Recurring error signature detected: ${error}`,
+      session: failed,
+    };
+  }
+
+  private resolvePipelineConfig(): PipelineConfigRun {
+    const pipelineId = `pipeline-${this.job.repoOwner}-${this.job.repoName}-${this.job.issueNumber}`;
+    const config = resolveConfig(this.job.issueBody);
+    const ticketId = String(this.job.issueNumber);
+    const datasetHash = this.job.issueBody
+      ? `sha256:${simpleHash(this.job.issueBody)}`
+      : undefined;
+
+    const run = createPipelineRun(pipelineId, config, ticketId, datasetHash);
+    log.info(
+      { pipelineId, version: run.version, config },
+      'Pipeline config resolved and versioned',
+    );
+    return run;
   }
 }
 

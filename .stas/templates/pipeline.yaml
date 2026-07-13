@@ -1,0 +1,21 @@
+name: stas:pipeline
+labels: [stas:pipeline, stas:train, pipeline]
+phases:
+  pre:
+    - command: "opencode resolve-config --issue {issue.number} --params {issue.body}"
+      session: new
+    - command: "opencode validate-dataset --hash {issue.title}"
+      session: new
+  main:
+    - command: "opencode train --config pipeline:v{config.version} --params batch_size={config.batch_size},learning_rate={config.learning_rate},feature_set={config.feature_set}"
+      session: new
+  post:
+    - command: "opencode evaluate --metrics accuracy,f1,latency"
+      session: new
+    - command: "opencode register-model --pipeline {pipeline.id} --version {config.version}"
+      session: new
+  final:
+    - command: "opencode agent --tool write-memory --key pipeline:{issue.number}:v{config.version}"
+      session: new
+    - command: "opencode agent --mode create-pr --title 'Pipeline v{config.version}: {issue.title}'"
+      session: new

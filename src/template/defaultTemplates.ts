@@ -92,6 +92,21 @@ function registerDefaultTemplates(): void {
     dedupTtl: 10,
   };
 
+  const pipelineJobTemplate: JobTemplate = {
+    templateId: 'pipeline',
+    queueName: 'stas.pipeline.train',
+    exchangeName: 'stas.direct',
+    routingKey: 'pipeline.train',
+    priority: 5,
+    retryConfig: {
+      maxRetries: 3,
+      retryDelaysMs: [30_000, 120_000, 300_000],
+      deadLetterExchange: 'stas.dlx',
+    },
+    ttl: 600_000,
+    dedupTtl: 120,
+  };
+
   const templates = [
     issueFixTemplate,
     issueFeatureTemplate,
@@ -99,6 +114,7 @@ function registerDefaultTemplates(): void {
     webhookNotificationTemplate,
     analyticsIngestionTemplate,
     pipelineEventTemplate,
+    pipelineJobTemplate,
   ];
 
   for (const tpl of templates) {

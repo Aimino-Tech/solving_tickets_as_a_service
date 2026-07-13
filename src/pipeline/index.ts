@@ -33,6 +33,17 @@ export {
   transitionState,
 } from './stateMachine.js';
 export { ALL_PHASES, PipelineExecutor } from './pipelineExecutor.js';
+export {
+  clearPipelineStore,
+  createPipelineRun,
+  getLatestPipelineRun,
+  getPipelineRun,
+  getPipelineVersionChain,
+  listPipelineIds,
+  parseParamsFromBody,
+  resolveConfig,
+  updatePipelineRunMetrics,
+} from './pipelineConfigResolver.js';
 export type {
   PipelinePhase,
   PipelineStage,
@@ -43,4 +54,6 @@ export type {
   WebhookDelivery,
   PhaseStepInfo,
   PhaseStepResult,
+  PipelineConfigRun,
+  PipelineParams,
 } from './types.js';

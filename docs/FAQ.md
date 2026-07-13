@@ -258,6 +258,58 @@ Please open a GitHub issue with the `security` label or email the maintainers di
 
 ---
 
+## Support & Community
+
+### How do I get help with STAS?
+
+STAS has a three-tier support model:
+
+| Tier | Audience | Response | Channels |
+|---|---|---|---|
+| **Self-Service** | Everyone | Immediate | [FAQ](./FAQ.md), [Docs](./) |
+| **Community** | All users | Best-effort | [Discord](https://discord.gg/aimino), GitHub Issues |
+| **Paid Support** | Cloud Pro ($49/mo) | 24h (business) | Email |
+| **Paid Support** | Cloud Business ($199/mo) | 4h | Email, Slack |
+
+See the [Support Model](./support-model.md) document for full details.
+
+### Is there a Discord server?
+
+**Yes.** Join us at [https://discord.gg/aimino](https://discord.gg/aimino).
+
+The server includes channels for:
+- **#general** — General discussion
+- **#help** — Get help from the community
+- **#self-host** — Self-hosting discussions
+- **#showcase** — Share your STAS setups
+- **#contributing** — Development discussions
+- **#feedback** — Feature ideas and feedback
+
+### How fast will I get a response?
+
+Response time depends on your tier:
+- **Community (free)**: Best-effort, no SLA. Typically within a few hours during business hours.
+- **Pro ($49/mo)**: 24-hour response during business hours (Mon–Fri, 9am–5pm ET).
+- **Business ($199/mo)**: 4-hour response, 24/7, with a dedicated Slack channel.
+
+### Do paid subscribers get priority?
+
+**Yes.** Cloud Pro and Business subscribers get:
+- Guaranteed response times (24h / 4h)
+- Email support (Pro) or Slack + Email (Business)
+- Escalation to engineering team if unresolved
+- Named account manager (Business tier)
+
+### Can I get SLA without a cloud subscription?
+
+**Enterprise plans** include custom SLAs with dedicated support, SSO, and VPC deployment. Contact the team for pricing.
+
+### Where can I report a security vulnerability?
+
+Open a GitHub issue with the `security` label or email the maintainers directly. Do **not** post security vulnerabilities in public Discord channels or issues.
+
+---
+
 ## Operations
 
 ### How do I monitor STAS?

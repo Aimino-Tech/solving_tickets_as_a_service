@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discord Community
+    url: https://discord.gg/aimino
+    about: Get help from the community on Discord — faster responses for setup questions, troubleshooting, and general help.
+  - name: 📖 Documentation & FAQ
+    url: https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/FAQ.md
+    about: Check the FAQ and documentation before opening an issue.
+  - name: 📚 Self-Hosting Guide
+    url: https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/SELF_HOSTING.md
+    about: Self-hosting setup instructions and configuration reference.
