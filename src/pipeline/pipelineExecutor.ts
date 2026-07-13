@@ -4,11 +4,28 @@ import { getLoadedTemplate, getResolvedCommand } from '../template/loader.js';
 import type { LoadedTemplate } from '../template/loader.js';
 import { advanceSession, createSession, failSession, getSession, retrySession } from './sessionOrchestrator.js';
 import { getPhaseStage } from './stateMachine.js';
-import type { PhaseStepResult, PipelinePhase, PhaseStepInfo, SessionState } from './types.js';
+import type { ConfinementConfig, PhaseStepResult, PipelinePhase, PhaseStepInfo, SessionState } from './types.js';
 
 const log = rootLogger.child({ module: 'pipeline-executor' });
 
 export const ALL_PHASES: PipelinePhase[] = ['pre', 'main', 'post', 'final'];
+
+interface AdvanceResult {
+  success: boolean;
+  error?: string;
+  output?: string;
+  tokenCost?: number;
+}
+
+type ExtendedSession = SessionState & {
+  templateName: string;
+  phaseOrder: PipelinePhase[];
+  currentPhaseIndex: number;
+  currentStepIndex: number;
+  phaseHistory: PhaseStepInfo[];
+  lastPhaseOutput?: string;
+  cumulativeTokens?: number;
+};
 
 /**
  * Template-driven pipeline executor.
@@ -30,11 +47,24 @@ export class PipelineExecutor {
   private template: LoadedTemplate | null = null;
   private readonly context: Record<string, string>;
   private phaseOrder: PipelinePhase[] = [];
+  private readonly confinement: ConfinementConfig;
 
-  constructor(job: IssueJobData, templateName: string) {
+  /** Per-issue error signature history for dead-end detection. Key = owner/repo#number. */
+  private static readonly errorSignatures: Map<string, Set<string>> = new Map();
+
+  constructor(job: IssueJobData, templateName: string, confinement?: ConfinementConfig) {
     this.job = job;
     this.templateName = templateName;
     this.context = buildContext(job);
+    this.confinement = confinement ?? {
+      loopDetectionEnabled: false,
+      deadEndDetectionEnabled: false,
+    };
+  }
+
+  /** Clear all tracked error signatures (for testing / reset). */
+  static clearErrorHistory(): void {
+    PipelineExecutor.errorSignatures.clear();
   }
 
   /**
