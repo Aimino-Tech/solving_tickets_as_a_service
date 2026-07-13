@@ -695,10 +695,6 @@ export async function createApp(): Promise<express.Application> {
     log.warn('Enterprise routes not available');
   }
 
-  // ── Trust Dashboard API (public, no auth) ───────────────────────────────
-  // GET /api/v1/trust       — Leaderboard + global stats
-  // GET /api/v1/trust/:repo — Single-repo metrics
-  app.use('/api/v1/trust', trustRouter);
   // ── Preview API (public, rate-limited per IP) ──────────────────────────
   // POST /api/v1/preview — Demo preview of fixable issues
   app.use('/api/v1/preview', previewRoutes);
