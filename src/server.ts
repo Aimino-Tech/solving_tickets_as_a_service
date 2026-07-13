@@ -57,6 +57,7 @@ import { slaRouter } from './routes/sla.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
 import { pricingRouter } from './routes/pricing.js';
+import { trustRouter } from './api/routes/trust.js';
 import { plgRouter } from './routes/plg.js';
 import { reposRouter } from './routes/repos.js';
 import { runsRouter } from './routes/runs.js';
@@ -66,6 +67,7 @@ import { viralRouter } from './routes/viral.js';
 import { qualityRouter } from './routes/quality.js';
 import { kpiRouter } from './routes/kpi.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
+import previewRoutes from './api/routes/preview.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -691,6 +693,15 @@ export async function createApp(): Promise<express.Application> {
   } catch {
     log.warn('Enterprise routes not available');
   }
+
+  // ── Trust Dashboard API (public, no auth) ───────────────────────────────
+  // GET /api/v1/trust       — Leaderboard + global stats
+  // GET /api/v1/trust/:repo — Single-repo metrics
+  app.use('/api/v1/trust', trustRouter);
+
+  // ── Preview API (public, rate-limited per IP) ──────────────────────────
+  // POST /api/v1/preview — Demo preview of fixable issues
+  app.use('/api/v1/preview', previewRoutes);
 
   app.use('/api', pipelineRouter);
   // -- 404 handler ----------------------------------------------------------
