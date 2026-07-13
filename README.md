@@ -123,21 +123,21 @@ For OpenCode users: add `@tarquinen/stas-plugin` to your opencode.json `plugin` 
 
 ## Business Model
 
-STAS follows an **open-core model** with two paths to paid plans:
+STAS follows an **open-core model** with three paths, all pointing to paid plans for full features:
 
 | | Self-Hosted (OSS) | Cloud Free | Cloud Paid |
 |---|---|---|---|
-| **Fixes/mo** | Unlimited | 10 fixes/mo | 100–500+/mo |
-| **AI model** | Your API key, your choice | Our AGI (50% better than GPT-5.5) | Our AGI |
+| **Fixes/mo** | Unlimited (your API key) | 10 fixes/mo | 100–500+/mo |
+| **AI model** | Your API key, your model | Our AGI | Our AGI |
 | **Setup** | Manual — you run it | One-click install | One-click install |
 | **Infrastructure** | You manage | We manage | We manage |
 | **Dashboard** | — | Limited analytics | Full analytics, audit log |
 | **Support** | GitHub issues (community) | Community | Slack, email, SLA |
-| **Cost** | Your API usage | Free | $49–$149/mo |
+| **Cost** | Your API usage | Free | $49–$199/mo |
 
-**Self-host** is unlimited but has caveats: no dashboard, manual setup, community support only. It's ideal for developers who want full control and have their own model API keys.
+**Conversion funnel**: Self-Hosted → Cloud Paid (when infra ops hurt), Cloud Free → Cloud Paid (when 10 fixes/mo isn't enough), Cloud Paid → Enterprise (when team needs SSO, VPC, SLAs).
 
-**Cloud Free** (10 fixes/mo) lets hosted users try STAS risk-free. Both paths point to paid plans ($49/mo Solo, $149/mo Team, custom Enterprise) for full features, higher limits, and support.
+See [Pricing Model](docs/pricing-model.md) for detailed plan breakdown and economics.
 
 ## Architecture
 
