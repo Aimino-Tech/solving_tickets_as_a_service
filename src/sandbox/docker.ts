@@ -323,7 +323,7 @@ export class DockerSandbox implements SandboxExecutor {
         return;
       }
 
-      const commitResult = await this.exec(`git commit -m "fix: automated fix by STAS"`);
+      const commitResult = await this.exec(`git commit -m "fix: automated fix by STAS" -m "Signed-off-by: STAS Bot <stas-bot@users.noreply.github.com>"`);
       if (commitResult.exitCode !== 0 && !commitResult.stderr.includes('nothing to commit')) {
         throw new Error(`Failed to commit: ${commitResult.stderr}`);
       }
