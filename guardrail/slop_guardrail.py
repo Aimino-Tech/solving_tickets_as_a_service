@@ -36,6 +36,40 @@ from litellm.types.utils import ModelResponseStream
 
 logger = logging.getLogger(__name__)
 
+# ── Input guardrail patterns (injection, prompt leak, system prompt extraction) ─
+
+INPUT_INJECTION_PATTERNS: list[re.Pattern] = [
+    re.compile(r"ignore\s+(all\s+)?(previous|above|below)\s+instructions", re.IGNORECASE),
+    re.compile(r"forget\s+(all\s+)?(previous|above|below)", re.IGNORECASE),
+    re.compile(r"you\s+(are\s+)?(now|will\s+act\s+as)\s+dAN|do\s+anything\s+now", re.IGNORECASE),
+    re.compile(r"system\s+prompt\s*[=:].*", re.IGNORECASE),
+    re.compile(r"output\s+your\s+(system\s+)?(prompt|instructions)", re.IGNORECASE),
+    re.compile(r"reveal\s+(your\s+)?(system\s+)?(prompt|instructions)", re.IGNORECASE),
+    re.compile(r"role\s*[=:]\s*(system|assistant)", re.IGNORECASE),
+    re.compile(r"you\s+must\s+(ignore|disregard|skip)", re.IGNORECASE),
+    re.compile(r"\[internal\]", re.IGNORECASE),
+]
+
+INPUT_INJECTION_LABELS: dict[str, str] = {
+    "ignore_instructions": "Prompt injection — instruction override attempt",
+    "forget_instructions": "Prompt injection — memory reset attempt",
+    "jailbreak_roleplay": "Jailbreak — DAN / roleplay override",
+    "system_prompt_extraction": "System prompt extraction attempt",
+    "leak_system_prompt": "System prompt leak request",
+    "reveal_prompt": "Prompt reveal attempt",
+    "role_override": "Role override attempt",
+    "ignore_command": "Disregard instruction attempt",
+    "internal_tag": "Internal tag detected in user input",
+}
+
+INPUT_CAUTION_PREFIX = "\n\n---\n*CAUTION — Input guardrail flagged content:*"
+
+INPUT_CAUTION_ANNOTATION = (
+    "\n\nYour prompt contained patterns that may indicate prompt injection "
+    "or system prompt extraction. The flagged content has been noted."
+)
+
+
 # ── Pattern loading ──────────────────────────────────────────────────────────
 
 def _load_patterns() -> dict[str, list[re.Pattern]]:
@@ -89,6 +123,16 @@ class SlopIntentGuardrail(CustomGuardrail):
         self._categorized = _load_patterns()
         self._all_patterns = _flatten_patterns(self._categorized)
         self._match_log: list[dict[str, str]] = []
+        self._input_match_log: list[dict[str, str]] = []
+
+        self._silent_annotate = (
+            os.environ.get("SLOP_SILENT_ANNOTATE", "false").lower() == "true"
+            or str(kwargs.get("silent_annotate", "false")).lower() == "true"
+        )
+
+        self._guardrail_level = int(
+            os.environ.get("SLOP_GUARDRAIL_LEVEL", kwargs.get("guardrail_level", "2"))
+        )
 
         if not self._all_patterns:
             logger.warning(
@@ -96,12 +140,75 @@ class SlopIntentGuardrail(CustomGuardrail):
             )
 
         logger.info(
-            "SlopIntentGuardrail initialized: %d patterns across %d categories",
+            "SlopIntentGuardrail initialized: %d patterns across %d categories, "
+            "silent_annotate=%s, guardrail_level=%d",
             len(self._all_patterns),
             len(self._categorized),
+            self._silent_annotate,
+            self._guardrail_level,
         )
 
     # ── Public hooks ─────────────────────────────────────────────────────
+
+    async def async_pre_call_hook(
+        self,
+        data: dict,
+        user_api_key_dict: Any,
+    ) -> Optional[dict]:
+        """
+        Pre-call hook. Scans user input for injection/security patterns.
+        When guardrail_level >= 2 and patterns are detected, injects a
+        CAUTION system message into the request data.
+        """
+        self._input_match_log = []
+        messages = data.get("messages", [])
+        for msg in messages:
+            content = msg.get("content", "")
+            if isinstance(content, str):
+                self._check_input_content(content)
+            elif isinstance(content, list):
+                for part in content:
+                    if isinstance(part, dict) and "text" in part:
+                        self._check_input_content(part["text"])
+
+        if not self._input_match_log:
+            return None
+
+        for m in self._input_match_log:
+            logger.warning(
+                "INPUT GUARDRAIL [%s]: '%s' — %s",
+                m["category"],
+                m["pattern"],
+                m["label"],
+            )
+
+        if self._silent_annotate:
+            return None
+
+        if self._guardrail_level >= 2:
+            annotation_lines = [
+                f"{INPUT_CAUTION_PREFIX}",
+            ]
+            for m in self._input_match_log[:5]:
+                annotation_lines.append(f"* {m['label']}: matched '{m['pattern']}'")
+            annotation_lines.append(INPUT_CAUTION_ANNOTATION)
+            annotation = "\n".join(annotation_lines)
+
+            modified = dict(data)
+            messages = list(modified.get("messages", []))
+            messages.append({
+                "role": "system",
+                "content": annotation.strip(),
+            })
+            modified["messages"] = messages
+            logger.info(
+                "INPUT GUARDRAIL ANNOTATED: %d patterns, level=%d",
+                len(self._input_match_log),
+                self._guardrail_level,
+            )
+            return modified
+
+        return None
 
     async def async_post_call_success_hook(
         self,
@@ -174,6 +281,24 @@ class SlopIntentGuardrail(CustomGuardrail):
                     "SLOP DETECTED (streaming, post-delivery): '%s'", match.group(0)
                 )
                 break
+
+    # ── Input checks ───────────────────────────────────────────────────────
+
+    def _check_input_content(self, content: str) -> None:
+        """Check user input for injection/security patterns."""
+        if not content or not isinstance(content, str):
+            return
+
+        for label_key, pattern in zip(INPUT_INJECTION_LABELS.keys(), INPUT_INJECTION_PATTERNS):
+            match = pattern.search(content)
+            if match:
+                self._input_match_log.append({
+                    "category": label_key,
+                    "pattern": match.group(0)[:100],
+                    "source": "user_input",
+                    "snippet": self._extract_snippet(content, match.start()),
+                    "label": INPUT_INJECTION_LABELS[label_key],
+                })
 
     # ── Internal checks ──────────────────────────────────────────────────
 
