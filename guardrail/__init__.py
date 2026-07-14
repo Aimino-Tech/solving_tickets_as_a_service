@@ -13,6 +13,16 @@ Submodules:
 Usage:
     from guardrail.slop_guardrail import SlopIntentGuardrail, cli
     from guardrail import audit_log, memory_service, dashboard
+
+Components:
+    - SlopIntentGuardrail: LiteLLM CustomGuardrail subclass
+    - EpistemicGuardrail: Constraint-based factual accuracy checker
+    - cli(): CLI entrypoint for offline text scanning
+    - proxy_config.yaml: LiteLLM proxy configuration with guardrails
+    - slop_patterns.json: Canonical pattern definitions
+
+Subpackages:
+    - epistemic/: DF-QuAD argumentation-based epistemic constraint evaluation
 """
 
 from guardrail.slop_guardrail import SlopIntentGuardrail, SlopIntentGuardrailError, cli
