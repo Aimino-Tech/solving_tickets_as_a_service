@@ -612,6 +612,9 @@ function classifyViaKeywords(title: string, body: string, labels?: string[]): Tr
   // Labels override keyword scoring — they are authoritative signals
   // from the user/issue creator.
   const labelNames = (labels ?? []).map((l) => l.toLowerCase());
+  if (labelNames.includes('pipeline') || labelNames.includes('type: pipeline') || labelNames.some((l) => l.startsWith('pipeline:'))) {
+    return { type: 'pipeline', difficulty: 'hard', summary: title.slice(0, 200) };
+  }
   if (labelNames.includes('bug') || labelNames.includes('type: bug')) {
     return { type: 'bug', difficulty: 'unknown', summary: title.slice(0, 200) };
   }
@@ -629,13 +632,17 @@ function classifyViaKeywords(title: string, body: string, labels?: string[]): Tr
   ];
   const featureKeywords = ['feature', 'request', 'add', 'suggestion', 'improve', 'new:', 'would like'];
   const questionKeywords = ['how', 'why', 'question', 'help', 'guide', 'tutorial'];
+  const pipelineKeywords = ['pipeline', 'etl', 'data processing', 'batch', 'csv output', 'transform', 'extract', 'load'];
 
   let type: TriageResult['type'] = 'unknown';
   const bugScore = bugKeywords.filter((k) => text.includes(k)).length;
   const featureScore = featureKeywords.filter((k) => text.includes(k)).length;
   const questionScore = questionKeywords.filter((k) => text.includes(k)).length;
+  const pipelineScore = pipelineKeywords.filter((k) => text.includes(k)).length;
 
-  if (bugScore > featureScore && bugScore >= questionScore && bugScore > 0) type = 'bug';
+  if (pipelineScore > 0 && pipelineScore >= bugScore && pipelineScore >= featureScore && pipelineScore >= questionScore) {
+    type = 'pipeline';
+  } else if (bugScore > featureScore && bugScore >= questionScore && bugScore > 0) type = 'bug';
   else if (featureScore >= questionScore && featureScore > 0) type = 'feature';
   else if (questionScore > bugScore && questionScore > 0) type = 'question';
 
