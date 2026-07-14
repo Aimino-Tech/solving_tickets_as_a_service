@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 
 OPENCODE_BIN = os.getenv("OPENCODE_BIN", "/snap/bin/opencode")
 OPENCODE_MODEL = os.getenv("OPENCODE_MODEL", "opencode-go/deepseek-v4-flash")
+LITELLM_PROXY_URL = os.getenv("LITELLM_PROXY_URL", "")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", LITELLM_PROXY_URL or "")
 
 
 @shared_task(
@@ -76,6 +78,10 @@ def dispatch_opencode(self, ctx: dict) -> dict:
         ]
         logger.info("Running OpenCode: %s", " ".join(cmd))
 
+        env = os.environ.copy()
+        if OPENAI_BASE_URL:
+            env["OPENAI_BASE_URL"] = OPENAI_BASE_URL
+
         try:
             result = subprocess.run(
                 cmd,
@@ -83,6 +89,7 @@ def dispatch_opencode(self, ctx: dict) -> dict:
                 text=True,
                 timeout=int(os.getenv("OPENCODE_TIMEOUT", "600")),
                 cwd=tmpdir,
+                env=env,
             )
         except subprocess.TimeoutExpired:
             logger.error("OpenCode timed out after %ss", os.getenv("OPENCODE_TIMEOUT", "600"))
