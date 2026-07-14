@@ -670,6 +670,10 @@ export async function createApp(): Promise<express.Application> {
   // ── Pricing API (public) ─────────────────────────────────────────
   app.use('/api/pricing', pricingRouter);
 
+  // ── Preview API (public, no auth) ────────────────────────────────
+  const { previewRouter } = await import('./routes/preview.js');
+  app.use('/api/v1', previewRouter);
+
   // KPI Dashboard API
   app.use('/api/kpi', kpiRouter);
 

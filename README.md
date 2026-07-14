@@ -26,61 +26,72 @@ flowchart LR
 
 ![STAS Demo](dashboard/public/assets/launch/stas-demo.gif)
 
-## How It Works
+## Quick Start — First Fix in <15 Minutes
 
-1. Install the GitHub App on your repo
-2. Label any issue with `stas:fix`
-3. STAS acknowledges, investigates, fixes, verifies
-4. A draft PR appears with the fix and regression tests
-5. You review and merge
+Choose your install path:
 
-Every fix runs in an isolated sandbox. Your code is never stored. Full audit trail in every PR.
+### GitHub Action (zero config, ~3 minutes)
 
-## Quick Start
+Add this workflow file to your repo at `.github/workflows/stas.yml`:
 
-### One-command setup (recommended)
-
-```bash
-# Clone and set up everything automatically
-git clone https://github.com/tamnguyen08/solving_tickets_as_a_service
-cd solving_tickets_as_a_service
-npm run setup
+```yaml
+name: STAS Auto-Fix
+on:
+  issues:
+    types: [labeled]
+jobs:
+  fix:
+    if: github.event.label.name == 'stas:fix'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.STAS_BOT_APP_ID }}
+          private-key: ${{ secrets.STAS_BOT_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+      - name: Run STAS fix agent
+        run: npx -y @aimino/stas-fix-action
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
 ```
 
-Then start the bot:
+**3 steps**: Add workflow file → Set 2 secrets (`STAS_BOT_APP_ID`, `STAS_BOT_PRIVATE_KEY`) → Label an issue. Done.
+
+### Cloud (one-click, ~2 minutes)
+
+Visit [stas.aimino.io](https://stas.aimino.io), install the GitHub App, label an issue. No servers to manage.
+
+### Self-hosted (Docker, ~10 minutes)
 
 ```bash
-# Start OpenCode (agent backend, in another terminal)
-opencode serve --port 4096
-
-# Start the bot
-npm run dev
-
-# Verify it's running
-curl http://localhost:3000/health
-```
-
-### Manual setup
-
-```bash
-# 1. Clone and install
-git clone https://github.com/tamnguyen08/solving_tickets_as_a_service
+git clone https://github.com/Aimino-Tech/solving_tickets_as_a_service
 cd solving_tickets_as_a_service
-npm install
-
-# 2. Start OpenCode (in another terminal)
-opencode serve --port 4096
-
-# 3. Configure
 cp .env.example .env
-# Fill in GITHUB_APP_ID, GITHUB_PRIVATE_KEY, GITHUB_WEBHOOK_SECRET
-
-# 4. Seed the database with a demo user (optional, for dashboard testing)
-npx tsx src/db/seed.ts
-
-# 5. Run
-npm run dev
+docker compose up -d
 ```
+
+### Try it without installing anything
+
+```bash
+curl -X POST https://api.stas.aimino.io/api/v1/preview \
+  -H "Content-Type: application/json" \
+  -d '{"repoUrl": "https://github.com/owner/repo"}'
+```
+
+Returns the top 5 fixable issues in any public repo — no auth required.
 
 ## OpenCode Plugin
 
