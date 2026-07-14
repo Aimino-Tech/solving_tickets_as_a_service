@@ -1,0 +1,9 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.3
+pydantic-settings==2.7.0
+python-multipart==0.0.19
+numpy==1.26.4
+scikit-learn==1.6.0
+joblib==1.4.2
+httpx==0.28.1
