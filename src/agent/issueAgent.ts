@@ -43,8 +43,10 @@ import type { IssueJobData } from '../utils/types.js';
 import { PromptSanitizer } from '../core/prompt-sanitizer.js';
 import { addReceipt, createManifest, createReceipt, serializeReceiptsJson } from './receipts.js';
 import { buildTools, type SandboxTools } from './tools.js';
-import type { AgentResult, TestBaseline, TriageResult, VerificationResult } from './types.js';
+import type { AgentResult, QualityGateResult, TestBaseline, TriageResult, VerificationResult } from './types.js';
 import { mockResponses } from './mockResponses.js';
+import { runAllQualityGates } from './quality-gates.js';
+import { QualityGateReporter } from '../core/quality-gate-reporter.js';
 
 const log = rootLogger.child({ module: 'issue-agent' });
 
@@ -1059,6 +1061,22 @@ async function runVerification(
   let preExistingTestsRegressed = false;
   const unverified = false;
   let postFix: TestBaseline | null = null;
+  let qualityGates: QualityGateResult[] = [];
+
+  // Run OSS quality gates
+  try {
+    const diffResult = await sandbox.exec('git diff HEAD~1 -- . 2>/dev/null || git diff -- . 2>/dev/null || true');
+    const diff = diffResult.stdout.slice(0, 100000);
+    qualityGates = await runAllQualityGates(sandbox, diff);
+    const reporter = new QualityGateReporter();
+    const fixId = `fix-${Date.now()}`;
+    await reporter.writeAllGateResults(fixId, qualityGates);
+    const passed = qualityGates.filter((g) => g.passed).length;
+    details.push(`Quality gates: ${passed}/${qualityGates.length} passed`);
+  } catch (err) {
+    details.push(`Quality gates error: ${String(err)}`);
+    qualityGates = [];
+  }
 
   if (!sandbox.hasTestSuite()) {
     return {
@@ -1070,7 +1088,7 @@ async function runVerification(
       preExistingTestsRegressed: false,
       unverified: true,
       details: ['No test suite configured'],
-      qualityGates: [],
+      qualityGates,
     };
   }
 
@@ -1154,7 +1172,7 @@ async function runVerification(
     preExistingTestsRegressed,
     unverified,
     details,
-    qualityGates: [],
+    qualityGates,
   };
 }
 

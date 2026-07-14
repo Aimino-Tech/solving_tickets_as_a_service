@@ -9,6 +9,7 @@
  */
 
 import type { AgentResult, QualityGateResult } from '../agent/types.js';
+import { QualityGateReporter } from '../core/quality-gate-reporter.js';
 import { config } from '../config.js';
 
 const BOT_NAME = config.stas.botName;
