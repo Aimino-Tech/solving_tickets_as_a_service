@@ -46,6 +46,7 @@ const envSchema = z.object({
 
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
+  OPENAI_BASE_URL: z.string().optional(),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
