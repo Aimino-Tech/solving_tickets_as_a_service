@@ -8,8 +8,15 @@ and self-aware "this is just a demo" patterns.
 Architecture:
   LiteLLM CustomGuardrail → async_post_call_success_hook
     → scans reasoning_content (deepseek) + thinking_blocks (anthropic) + content
-    → raises ValueError to block the response
+    → raises ValueError to block the response (block mode)
+    → injects CAUTION annotation into response (annotate mode)
+    → logs detection only (warn mode)
     → fallback: async_post_call_streaming_iterator_hook for streaming audit
+
+Gating modes (set via guardrail params):
+  - warn:      Log detection, pass response through unchanged
+  - annotate:  Inject CAUTION text into response content
+  - block:     Raise ValueError → LiteLLM returns HTTP 400
 
 Usage in proxy_config.yaml:
   guardrails:
@@ -18,6 +25,9 @@ Usage in proxy_config.yaml:
         guardrail: guardrail.slop_guardrail.SlopIntentGuardrail
         mode: post_call
         default_on: true
+        guardrail_params:
+          gate_mode: block          # warn | annotate | block
+          block_threshold: 1.0      # 0.0-1.0, fraction of categories that must match
 """
 
 from __future__ import annotations
@@ -63,7 +73,7 @@ def _flatten_patterns(categorized: dict[str, list[re.Pattern]]) -> list[re.Patte
 # ── Guardrail implementation ─────────────────────────────────────────────────
 
 class SlopIntentGuardrailError(ValueError):
-    """Raised when slop intent is detected. LiteLLM maps this to a 400 response."""
+    """Raised when slop intent is detected (block mode). LiteLLM maps this to a 400 response."""
 
     def __init__(self, source: str, pattern: str, snippet: str) -> None:
         self.source = source
@@ -72,21 +82,7 @@ class SlopIntentGuardrailError(ValueError):
         super().__init__(f"Slop pattern detected in {source}: '{pattern}'")
 
 
-GUARDRAIL_BLOCKED_RESPONSE = {
-    "error": {
-        "code": "GUARDRAIL_BLOCKED",
-        "message": "Response blocked by slop intent guardrail",
-        "details": {},
-    }
-}
-
-CAUTION_PREFIX = "\n\n---\n*CAUTION — Slop pattern detected:*"
-
-CAUTION_ANNOTATION = (
-    "\n\nThe response contained patterns associated with AI-generated code slop "
-    "(stubs, placeholders, mocks, or deferrals). Please review the flagged "
-    "content before using."
-)
+GUARDRAIL_BLOCKED_CODE = "GUARDRAIL_BLOCKED"
 
 
 class SlopIntentGuardrail(CustomGuardrail):
@@ -98,7 +94,15 @@ class SlopIntentGuardrail(CustomGuardrail):
     2. response.choices[].message.thinking_blocks (anthropic)
     3. response.choices[].message.content (all models)
 
-    On detection, raises ValueError → LiteLLM returns 400 with slop message.
+    Gating modes (set via guardrail_params in proxy_config.yaml):
+      - warn:      Log detection, pass response through
+      - annotate:  Inject CAUTION text into response content
+      - block:     Raise ValueError → LiteLLM returns HTTP 400
+
+    Configurable params:
+      gate_mode: str        — "warn" | "annotate" | "block" (default: "block")
+      block_threshold: float — 0.0-1.0, fraction of categories that must
+                               match to trigger a block (default: 0.5)
     """
 
     def __init__(self, **kwargs: Any) -> None:
@@ -107,18 +111,16 @@ class SlopIntentGuardrail(CustomGuardrail):
         self._all_patterns = _flatten_patterns(self._categorized)
         self._match_log: list[dict[str, str]] = []
 
-        self._gate_mode = os.environ.get(
-            "SLOP_GATE_MODE", kwargs.get("gate_mode", "block")
-        ).lower()
-        if self._gate_mode not in ("warn", "annotate", "block"):
+        self.gate_mode = (kwargs.get("gate_mode") or "block").lower()
+        if self.gate_mode not in ("warn", "annotate", "block"):
             logger.warning(
-                "Unknown gate_mode '%s', defaulting to 'block'", self._gate_mode
+                "Unknown gate_mode '%s', falling back to 'block'",
+                self.gate_mode,
             )
-            self._gate_mode = "block"
+            self.gate_mode = "block"
 
-        self._block_threshold = float(
-            os.environ.get("SLOP_BLOCK_THRESHOLD", kwargs.get("block_threshold", "0.5"))
-        )
+        self.block_threshold = float(kwargs.get("block_threshold") or 0.5)
+        self.block_threshold = max(0.0, min(1.0, self.block_threshold))
 
         if not self._all_patterns:
             logger.warning(
@@ -130,8 +132,8 @@ class SlopIntentGuardrail(CustomGuardrail):
             "gate_mode=%s, block_threshold=%.2f",
             len(self._all_patterns),
             len(self._categorized),
-            self._gate_mode,
-            self._block_threshold,
+            self.gate_mode,
+            self.block_threshold,
         )
 
     # ── Public hooks ─────────────────────────────────────────────────────
@@ -144,12 +146,10 @@ class SlopIntentGuardrail(CustomGuardrail):
     ) -> None:
         """
         Post-call hook. Runs after LLM responds but before response is returned
-        to the client.
-
-        Gate modes:
-            block   — raise ValueError → LiteLLM returns HTTP 400/422
-            annotate — inject CAUTION annotation into response content
-            warn    — log at warning level, let response through
+        to the client. Behavior depends on gate_mode:
+          - block:    Raise ValueError → LiteLLM returns HTTP 400
+          - annotate: Inject CAUTION prefix into response content
+          - warn:     Log detection only
         """
         if not isinstance(response, litellm.ModelResponse):
             return
@@ -165,46 +165,43 @@ class SlopIntentGuardrail(CustomGuardrail):
         if not self._match_log:
             return
 
-        score = self._compute_slop_score()
-
+        matched_categories: set[str] = set()
         for m in self._match_log:
+            matched_categories.add(m["category"])
             logger.warning(
-                "SLOP DETECTED [%s]: '%s' in %s — snippet: %s (score=%.2f, mode=%s)",
+                "SLOP DETECTED [%s]: '%s' in %s — snippet: %s",
                 m["category"],
                 m["pattern"],
                 m["source"],
                 m["snippet"],
-                score,
-                self._gate_mode,
             )
 
-        if self._gate_mode == "block" or (
-            self._gate_mode == "annotate" and score >= self._block_threshold
-        ):
-            first = self._match_log[0]
-            raise SlopIntentGuardrailError(
-                source=first["source"],
-                pattern=first["pattern"],
-                snippet=first["snippet"],
-            )
+        category_ratio = len(matched_categories) / max(len(self._categorized), 1)
+        first = self._match_log[0]
 
-        if self._gate_mode == "annotate":
-            annotation = (
-                f"{CAUTION_PREFIX}\n"
-                f"* Patterns matched: {len(self._match_log)}\n"
-                f"* Top category: {self._match_log[0]['category']}\n"
-                f"* Score: {score:.2f}\n"
-                f"{CAUTION_ANNOTATION}"
-            )
-            if response.choices and response.choices[0].message:
-                existing = response.choices[0].message.content or ""
-                response.choices[0].message.content = existing + annotation
+        if self.gate_mode == "block":
+            if category_ratio >= self.block_threshold:
+                raise SlopIntentGuardrailError(
+                    source=first["source"],
+                    pattern=first["pattern"],
+                    snippet=first["snippet"],
+                )
             logger.info(
-                "SLOP ANNOTATED: score=%.2f, patterns=%d, category=%s",
-                score,
-                len(self._match_log),
-                self._match_log[0]["category"],
+                "Block threshold not met: %.2f < %.2f — falling back to warn",
+                category_ratio, self.block_threshold,
             )
+
+        elif self.gate_mode == "annotate":
+            annotation = (
+                f"\n\n[CAUTION: Slop pattern detected — '{first['pattern']}' "
+                f"in {first['source']} — response may contain placeholder content.]\n"
+            )
+            for choice in response.choices:
+                msg = choice.message
+                if msg.content:
+                    msg.content = annotation + msg.content
+
+        # warn mode: just log (already done above)
 
     async def async_post_call_streaming_iterator_hook(
         self,
@@ -273,20 +270,17 @@ class SlopIntentGuardrail(CustomGuardrail):
                 snippet=slop_snippet,
             )
 
-    # ── Scoring ──────────────────────────────────────────────────────────
+        matched_patterns: list[str] = []
+        for pattern in self._all_patterns:
+            match = pattern.search(assembled)
+            if match:
+                matched_patterns.append(match.group(0))
 
-    def _compute_slop_score(self) -> float:
-        """Compute a 0-1 slop score from the current match log."""
-        if not self._match_log:
-            return 0.0
-
-        categories_matched = len({m["category"] for m in self._match_log})
-        total_matches = len(self._match_log)
-
-        base = min(total_matches / 5.0, 1.0)
-        category_bonus = min(categories_matched / 3.0, 0.3)
-
-        return min(base + category_bonus, 1.0)
+        if matched_patterns:
+            logger.warning(
+                "SLOP DETECTED (streaming, post-delivery): '%s'",
+                "', '".join(matched_patterns[:5]),
+            )
 
     # ── Internal checks ──────────────────────────────────────────────────
 
