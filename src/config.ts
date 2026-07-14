@@ -65,7 +65,8 @@ const envSchema = z.object({
   STAS_MONTHLY_QUOTA_ENABLED: boolSchema(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
-  STAS_LABEL: z.string().default('stas:fix'),
+	  STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
+	  STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
@@ -142,10 +143,6 @@ const envSchema = z.object({
   // RapidAPI
   RAPIDAPI_PROXY_SECRET: z.string().optional(),
 
-  // GitHub OAuth
-  GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
-  GITHUB_OAUTH_CLIENT_SECRET: z.string().optional(),
-
   // Stripe pricing plans
   STRIPE_SOLO_PRICE_ID: z.string().default('price_solo'),
   STRIPE_TEAM_PRICE_ID: z.string().default('price_team'),
@@ -201,16 +198,6 @@ const envSchema = z.object({
   IP_ALLOWLIST_ENABLED: boolSchema(false),
   IP_ALLOWLIST: z.string().default(''),
 
-  // ── Docker Sandbox ──
-  DOCKER_IMAGE: z.string().default('node:20-slim'),
-  DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(true),
-  DOCKER_ALLOWED_HOSTS: z.string().default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io'),
-  DOCKER_CONTAINER_MEMORY: z.string().default('4g'),
-  DOCKER_CONTAINER_CPU: z.coerce.number().positive().default(2),
-  DOCKER_SECCOMP_PROFILE: z.string().default('./docker/seccomp/sandbox.json'),
-  DOCKER_APPARMOR_PROFILE: z.string().default('stas-sandbox'),
-  DOCKER_GVISOR_ENABLED: z.coerce.boolean().default(false),
-
   // ── Sandbox Security ──
   SANDBOX_PRIVILEGED: boolSchema(false),
   SANDBOX_READONLY_ROOT: boolSchema(true),
@@ -219,8 +206,6 @@ const envSchema = z.object({
   SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: boolSchema(false),
-
-  CI_MONITOR_ENABLED: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(false),
 
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENVIRONMENT: z.string().default('development'),
@@ -302,7 +287,7 @@ function buildConfig(env: ParsedEnv) {
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
       direct: {
-        apiKey: env.OPENCODE_API_KEY ?? '',
+        apiKey: env.OPENAI_API_KEY ?? '',
       },
     },
 
@@ -392,10 +377,6 @@ function buildConfig(env: ParsedEnv) {
       rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
     },
 
-    ci: {
-      monitorEnabled: env.CI_MONITOR_ENABLED,
-    },
-
     sentry: {
       dsn: env.SENTRY_DSN,
       environment: env.SENTRY_ENVIRONMENT,
@@ -418,8 +399,9 @@ function buildConfig(env: ParsedEnv) {
     },
 
     stas: {
-      mode: env.STAS_MODE,
-      label: env.STAS_LABEL,
+	      mode: env.STAS_MODE,
+	      aiMode: env.STAS_AI_MODE,
+	      label: env.STAS_LABEL,
       botName: env.BOT_NAME,
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
       maxAgentIterations: env.MAX_AGENT_ITERATIONS,
@@ -505,18 +487,6 @@ function buildConfig(env: ParsedEnv) {
       defaultRepoOwner: env.TRACKER_DEFAULT_REPO_OWNER,
       defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME,
       installationId: env.TRACKER_INSTALLATION_ID || 0,
-    },
-
-    // ── Docker ─────────────────────────────────────────────────────────────
-    docker: {
-      image: env.DOCKER_IMAGE,
-      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
-      allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
-      containerMemory: env.DOCKER_CONTAINER_MEMORY,
-      containerCpu: env.DOCKER_CONTAINER_CPU,
-      seccompProfile: env.DOCKER_SECCOMP_PROFILE,
-      apparmorProfile: env.DOCKER_APPARMOR_PROFILE,
-      gvisorEnabled: env.DOCKER_GVISOR_ENABLED,
     },
 
     // ── Security ────────────────────────────────────────────────────────────

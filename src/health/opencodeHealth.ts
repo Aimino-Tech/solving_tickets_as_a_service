@@ -24,6 +24,7 @@
  */
 
 import { config } from '../config.js';
+import { mockResponses } from '../agent/mockResponses.js';
 import { bridgeMetrics } from '../bridge/metrics.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -211,6 +212,24 @@ export class OpenCodeHealthClient {
   private async poll(): Promise<void> {
     const signal = this.abortController?.signal;
     if (signal?.aborted) return;
+
+    // Static mode: skip real health checks, return mock status
+    if (mockResponses.isStaticMode()) {
+      const mock = mockResponses.healthStatus();
+      this.status = {
+        status: mock.status === 'static_mode' ? 'healthy' : 'unknown',
+        reachable: true,
+        httpStatus: 200,
+        details: { status: 'static_mode', message: 'AI agent is disabled — static placeholder mode' },
+        cachedAt: new Date().toISOString(),
+        circuit: 'closed',
+        consecutiveFailures: 0,
+        modelInfo: 'static-mode (no model)',
+        queueDepth: 0,
+        activeSessions: 0,
+      };
+      return;
+    }
 
     const url = `${config.opencode.url}/api/health`;
 

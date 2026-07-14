@@ -44,6 +44,7 @@ import { PromptSanitizer } from '../core/prompt-sanitizer.js';
 import { addReceipt, createManifest, createReceipt, serializeReceiptsJson } from './receipts.js';
 import { buildTools, type SandboxTools } from './tools.js';
 import type { AgentResult, TestBaseline, TriageResult, VerificationResult } from './types.js';
+import { mockResponses } from './mockResponses.js';
 
 const log = rootLogger.child({ module: 'issue-agent' });
 
@@ -522,6 +523,12 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
  * Classify the issue — tries OpenCode serve first, then keyword-based fallback.
  */
 async function classifyIssue(title: string, body: string, labels?: string[]): Promise<TriageResult> {
+  // Static mode: return mock triage result immediately
+  if (mockResponses.isStaticMode()) {
+    log.info('[STATIC MODE] Returning mock triage classification');
+    return mockResponses.triageResult();
+  }
+
   // Try OpenCode serve for AI-powered classification
   try {
     const result = await classifyViaOpenCodeServe(title, body);
@@ -739,6 +746,13 @@ interface OpenCodeDispatchResult {
  * the OpenAI SDK for the main agent loop, we call opencode serve.
  */
 async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenCodeDispatchResult> {
+  // Static mode: return mock response immediately (supports runtime override)
+  if (mockResponses.isStaticMode()) {
+    const mock = mockResponses.dispatchToOpenCode();
+    log.info({ issueNumber: params.issueNumber }, '[STATIC MODE] Returning mock OpenCode dispatch response');
+    return mock;
+  }
+
   const {
     repoOwner,
     repoName,

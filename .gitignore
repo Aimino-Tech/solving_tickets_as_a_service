@@ -1,4 +1,6 @@
 .venv
+.omo
+.stas
 *~
 # Build output
 *.cert
