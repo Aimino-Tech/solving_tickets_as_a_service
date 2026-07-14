@@ -5,6 +5,9 @@ import type { LoadedTemplate } from '../template/loader.js';
 import { advanceSession, createSession, failSession, getSession, retrySession } from './sessionOrchestrator.js';
 import { getPhaseStage } from './stateMachine.js';
 import type { ConfinementConfig, PhaseStepResult, PipelinePhase, PhaseStepInfo, SessionState } from './types.js';
+import { GateRunner } from './gates/gateRunner.js';
+import { updatePipelineRunMetrics, getPipelineVersionChain } from './pipelineConfigResolver.js';
+import type { GateCheckInput, GatesConfig, GateRunnerResult } from './gates/types.js';
 
 const log = rootLogger.child({ module: 'pipeline-executor' });
 
@@ -322,6 +325,11 @@ export class PipelineExecutor {
       lastStep.completedAt = Date.now();
     }
 
+    // Run pipeline quality gates on step output if CSV artifacts exist
+    this.runPipelineGates(session).catch((err) => {
+      log.warn({ err: String(err), sessionId }, 'Pipeline quality gates error (non-fatal)');
+    });
+
     // Move to next step
     const phase = session.phaseOrder?.[session.currentPhaseIndex ?? 0];
     const phaseSteps = phase ? (this.template?.phases[phase] ?? []) : [];
@@ -498,6 +506,90 @@ export class PipelineExecutor {
       error: `DEAD_END: Recurring error signature detected: ${error}`,
       session: failed,
     };
+  }
+
+  private async runPipelineGates(session: ExtendedSession): Promise<void> {
+    const pipelineRun = this.pipelineRun;
+    if (!pipelineRun) return;
+
+    const template = this.template;
+    if (!template) return;
+
+    const gatesConfig: GatesConfig = template.gates ?? {};
+    const hasAnyGate = gatesConfig.schema || gatesConfig.rowCount || gatesConfig.nullRate || gatesConfig.metric;
+    if (!hasAnyGate) return;
+
+    const lastPhase = session.phaseHistory?.[session.phaseHistory.length - 1];
+    if (!lastPhase) return;
+
+    const stepMeta = lastPhase as unknown as Record<string, unknown>;
+
+    const gateRunner = new GateRunner();
+    const allResults: GateRunnerResult[] = [];
+
+    const csvCandidates = [
+      ...(template.phases?.main ?? []).map((s) => s.output),
+      ...(template.phases?.post ?? []).map((s) => s.output),
+      ...(template.phases?.final ?? []).map((s) => s.output),
+    ].filter(Boolean);
+
+    const csvPaths = [...new Set(csvCandidates)];
+
+    for (const csvPath of csvPaths) {
+      const input: GateCheckInput = {
+        csvPath,
+        gates: gatesConfig,
+        stepMeta,
+      };
+      try {
+        const result = await gateRunner.checkAll(input);
+        allResults.push(result);
+
+        const metrics: Record<string, number> = {};
+        for (const gateResult of result.results) {
+          if (gateResult.verdict === 'pass' && gateResult.details) {
+            for (const [key, value] of Object.entries(gateResult.details)) {
+              if (typeof value === 'number') {
+                metrics[`${gateResult.gate}.${key}`] = value;
+              }
+            }
+          }
+        }
+
+        if (Object.keys(metrics).length > 0) {
+          const chain = getPipelineVersionChain(pipelineRun.pipelineId);
+          const prevMetrics = chain.length >= 2
+            ? chain[chain.length - 2]?.metrics
+            : undefined;
+
+          if (prevMetrics) {
+            for (const [key, val] of Object.entries(metrics)) {
+              const prev = prevMetrics[key];
+              if (prev !== undefined && prev !== 0) {
+                const delta = ((val - prev) / prev) * 100;
+                metrics[`${key}.vs_previous`] = val;
+                metrics[`${key}.delta_pct`] = Math.round(delta * 100) / 100;
+              }
+            }
+          }
+
+          updatePipelineRunMetrics(pipelineRun.pipelineId, pipelineRun.version, metrics);
+          session.metadata = {
+            ...session.metadata,
+            pipelineMetrics: metrics,
+            pipelineVersion: pipelineRun.version,
+          };
+        }
+      } catch (err) {
+        log.warn({ err: String(err), csvPath }, 'Gate check failed for CSV output');
+      }
+    }
+
+    const passedCount = allResults.filter((r) => r.passed).length;
+    log.info(
+      { passed: passedCount, total: allResults.length, pipelineId: pipelineRun.pipelineId },
+      'Pipeline quality gates completed',
+    );
   }
 
   private resolvePipelineConfig(): PipelineConfigRun {
