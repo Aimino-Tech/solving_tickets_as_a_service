@@ -220,4 +220,15 @@ router.post('/mcp/search', async (req: Request, res: Response) => {
   res.json({ error: 'MCP server not reachable' });
 });
 
+router.post('/mcp/load_data', async (req: Request, res: Response) => {
+  try {
+    const { loadData } = await import('../loader/index.js');
+    const result = await loadData(req.body);
+    res.json(result);
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to load data');
+    res.status(400).json({ error: 'Failed to load data', details: String(err) });
+  }
+});
+
 export default router;
