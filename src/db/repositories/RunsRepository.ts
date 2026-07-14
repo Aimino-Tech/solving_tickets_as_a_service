@@ -7,7 +7,7 @@
  */
 
 import { queryWithRetry, validateSqlIdentifier } from '../connection.js';
-import type { Run, NewRun } from '../schema/index.js';
+import type { Run, NewRun } from '../types/index.js';
 
 export interface RunFilter {
   accountId?: number;

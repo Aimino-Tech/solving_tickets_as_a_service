@@ -3,7 +3,7 @@
  */
 
 import { queryWithRetry } from '../connection.js';
-import type { Repo, NewRepo } from '../schema/index.js';
+import type { Repo, NewRepo } from '../types/index.js';
 
 export class ReposRepository {
   async findById(id: number): Promise<Repo | undefined> {

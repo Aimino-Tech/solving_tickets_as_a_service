@@ -3,52 +3,78 @@
  *
  * Each pack maps a Stripe Price ID to a credit amount, bonus credits,
  * a display label, and an amount in cents for the Checkout session.
+ * Price IDs are read from config on first access so they can be
+ * configured via environment variables (STRIPE_PRICE_100_CREDITS, etc.).
  */
 
-export const CREDIT_PACKS = Object.freeze({
+import { config } from '../config.js';
+
+const CREDIT_PACK_DEFS = {
   small: {
-    priceId: 'price_100credits',
     credits: 100,
     bonus: 0,
     label: '100 Credits',
-    amount: 1000, // $10.00 in cents
+    amount: 1000,
   },
   medium: {
-    priceId: 'price_500credits',
     credits: 500,
     bonus: 50,
     label: '500 + 50 Bonus',
-    amount: 4500, // $45.00 in cents
+    amount: 4500,
   },
   large: {
-    priceId: 'price_2000credits',
     credits: 2000,
     bonus: 200,
     label: '2000 + 200 Bonus',
-    amount: 15000, // $150.00 in cents
+    amount: 15000,
   },
-} as const);
+} as const;
 
-export type CreditPackKey = keyof typeof CREDIT_PACKS;
+export type CreditPackKey = keyof typeof CREDIT_PACK_DEFS;
 
-export type CreditPack = (typeof CREDIT_PACKS)[CreditPackKey];
+export interface CreditPack {
+  priceId: string;
+  credits: number;
+  bonus: number;
+  label: string;
+  amount: number;
+}
 
 /**
  * Look up a credit pack by its Stripe Price ID.
- * Returns undefined if no pack matches.
  */
 export function getCreditPackByPriceId(priceId: string): CreditPack | undefined {
-  for (const pack of Object.values(CREDIT_PACKS)) {
-    if (pack.priceId === priceId) {
-      return pack;
-    }
-  }
-  return undefined;
+  return getCreditPacks().find((p) => p.priceId === priceId);
 }
 
 /**
  * Look up a credit pack by its key name.
  */
 export function getCreditPack(key: CreditPackKey): CreditPack {
-  return CREDIT_PACKS[key];
+  const packs = getCreditPacks();
+  const idx = Object.keys(CREDIT_PACK_DEFS).indexOf(key);
+  return packs[idx];
 }
+
+/**
+ * Get all credit packs with config-resolved price IDs.
+ * Reads from config on every call so runtime env changes are reflected.
+ */
+export function getCreditPacks(): CreditPack[] {
+  return [
+    { ...CREDIT_PACK_DEFS.small, priceId: config.stripe.price100Credits },
+    { ...CREDIT_PACK_DEFS.medium, priceId: config.stripe.price500Credits },
+    { ...CREDIT_PACK_DEFS.large, priceId: config.stripe.price2000Credits },
+  ];
+}
+
+/**
+ * Legacy static constant for backward compatibility.
+ * Prefer getCreditPacks() for config-aware price IDs.
+ * @deprecated Use getCreditPacks() which reads price IDs from config
+ */
+export const CREDIT_PACKS = Object.freeze({
+  small: { ...CREDIT_PACK_DEFS.small, priceId: '' },
+  medium: { ...CREDIT_PACK_DEFS.medium, priceId: '' },
+  large: { ...CREDIT_PACK_DEFS.large, priceId: '' },
+} as const);

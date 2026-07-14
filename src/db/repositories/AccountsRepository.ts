@@ -1,5 +1,5 @@
 import { queryWithRetry, validateSqlIdentifier } from '../connection.js';
-import type { Account, NewAccount } from '../schema/index.js';
+import type { Account, NewAccount } from '../types/index.js';
 
 export class AccountsRepository {
   /**

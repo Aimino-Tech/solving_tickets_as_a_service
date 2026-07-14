@@ -7,7 +7,7 @@
  */
 
 import { queryWithRetry } from '../connection.js';
-import type { WebhookEvent } from '../schema/index.js';
+import type { WebhookEvent } from '../types/index.js';
 
 export interface WebhookEventsFilter {
   source?: string;
