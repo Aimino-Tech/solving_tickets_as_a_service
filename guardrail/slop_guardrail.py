@@ -213,34 +213,65 @@ class SlopIntentGuardrail(CustomGuardrail):
         request_data: dict,
     ) -> AsyncGenerator[ModelResponseStream, None]:
         """
-        For streaming requests: re-assemble chunks, check at end.
+        For streaming requests: buffer chunks, scan progressively, and
+        inject CAUTION annotation at chunk boundary when slop is detected.
 
-        NOTE: For streaming, LiteLLM has already delivered chunks to the client
-        by the time this hook runs. This is an AUDIT-ONLY fallback for streaming.
-        For real-time blocking, use during_call mode instead.
+        Gate modes:
+            block   — deliver chunks, then raise ValueError (client gets
+                      partial content + error — best-effort)
+            annotate — inject CAUTION comment in the next chunk after detection
+            warn    — log at warning level, let all chunks through
         """
-        accumulated: list[ModelResponseStream] = []
+        buffer = ""
+        slop_detected = False
+        slop_category = ""
+        slop_pattern = ""
+        slop_snippet = ""
+
         async for chunk in response:
-            accumulated.append(chunk)
+            if chunk.choices and chunk.choices[0].delta:
+                delta = chunk.choices[0].delta.content or ""
+                buffer += delta
+
+            if not slop_detected:
+                for category, patterns in self._categorized.items():
+                    for pattern in patterns:
+                        match = pattern.search(buffer)
+                        if match:
+                            slop_detected = True
+                            slop_category = category
+                            slop_pattern = match.group(0)
+                            slop_snippet = self._extract_snippet(buffer, match.start())
+                            logger.warning(
+                                "SLOP DETECTED (streaming): category=%s, pattern='%s', mode=%s",
+                                category,
+                                slop_pattern,
+                                self._gate_mode,
+                            )
+
+                            if self._gate_mode == "annotate":
+                                annotation = (
+                                    f"\n\n---\n*CAUTION — Slop pattern detected in stream:*\n"
+                                    f"* Category: {category}\n"
+                                    f"* Pattern: '{slop_pattern}'"
+                                    f"\n\n[Stream annotation — slop detected and flagged]"
+                                )
+                                if chunk.choices and chunk.choices[0].delta:
+                                    chunk.choices[0].delta.content = (
+                                        (chunk.choices[0].delta.content or "") + annotation
+                                    )
+                            break
+                    if slop_detected:
+                        break
+
             yield chunk
 
-        assembled = "".join(
-            c.choices[0].delta.content or ""
-            for c in accumulated
-            if c.choices and c.choices[0].delta
-        )
-        if not assembled:
-            return
-
-        for pattern in self._all_patterns:
-            match = pattern.search(assembled)
-            if match:
-                logger.warning(
-                    "SLOP DETECTED (streaming, post-delivery): '%s' (mode=%s)",
-                    match.group(0),
-                    self._gate_mode,
-                )
-                break
+        if slop_detected and self._gate_mode == "block":
+            raise SlopIntentGuardrailError(
+                source="streaming",
+                pattern=slop_pattern,
+                snippet=slop_snippet,
+            )
 
     # ── Scoring ──────────────────────────────────────────────────────────
 
