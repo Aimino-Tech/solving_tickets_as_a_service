@@ -36,11 +36,17 @@ def dispatch_opencode(self, issue_context: dict) -> dict:
         cmd = [OPENCODE_BIN, "run", prompt, "--model", model, "--print-logs"]
         logger.info("Running: %s", " ".join(cmd))
 
+        env = os.environ.copy()
+        openai_base_url = os.getenv("OPENAI_BASE_URL")
+        if openai_base_url:
+            env["OPENAI_BASE_URL"] = openai_base_url
+
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             timeout=int(os.getenv("OPENCODE_TIMEOUT", "600")),
+            env=env,
         )
 
         stdout = result.stdout or ""

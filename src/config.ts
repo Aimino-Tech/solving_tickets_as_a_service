@@ -54,6 +54,8 @@ const envSchema = z.object({
 
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_CHEAP_MODEL: z.string().default('gpt-4o-mini'),
+  OPENAI_BASE_URL: z.string().optional(),
+  ANTHROPIC_BASE_URL: z.string().optional(),
 
   E2B_API_KEY: z.string().optional(),
   E2B_TEMPLATE_ID: z.string().default('default'),
@@ -351,6 +353,10 @@ function buildConfig(env: ParsedEnv) {
     openai: {
       apiKey: env.OPENAI_API_KEY,
       cheapModel: env.OPENAI_CHEAP_MODEL,
+      baseUrl: env.OPENAI_BASE_URL,
+    },
+    anthropic: {
+      baseUrl: env.ANTHROPIC_BASE_URL,
     },
 
     e2b: {
