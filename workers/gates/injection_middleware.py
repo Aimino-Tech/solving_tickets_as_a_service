@@ -60,14 +60,24 @@ def _get_config() -> InjectionGuardConfig:
 _comment_cache: set[str] = set()
 
 
-def _post_injection_comment(issue_id: str, result: InjectionGuardResult) -> None:
+def _post_injection_comment(issue_id: str, result: InjectionGuardResult, config: InjectionGuardConfig) -> None:
     """Post a comment to Linear notifying about detected injection.
 
     Deduplicates by issue_id so the same issue only gets one comment.
+    In silent_annotate mode, only logs — no comment posted.
     """
     if issue_id in _comment_cache:
         return
     _comment_cache.add(issue_id)
+
+    if config.silent_annotate:
+        logger.info(
+            "Injection detected for %s (silent annotate) — severity=%s score=%.2f",
+            issue_id,
+            result.severity,
+            result.score,
+        )
+        return
 
     try:
         from workers.linear.client import post_comment
@@ -75,6 +85,7 @@ def _post_injection_comment(issue_id: str, result: InjectionGuardResult) -> None
         patterns_str = ", ".join(result.patterns_matched)
         severity = result.severity
         score = result.score
+        annotation = result.caution_annotation()
 
         if severity in ("critical", "high"):
             body = (
@@ -84,6 +95,7 @@ def _post_injection_comment(issue_id: str, result: InjectionGuardResult) -> None
                 f"- **Severity**: {severity}\n"
                 f"- **Score**: {score:.2f}\n"
                 f"- **Patterns**: `{patterns_str}`\n\n"
+                f"**{annotation}**\n\n"
                 f"This issue requires **human intervention**."
             )
         else:
@@ -93,6 +105,7 @@ def _post_injection_comment(issue_id: str, result: InjectionGuardResult) -> None
                 f"- **Severity**: {severity}\n"
                 f"- **Score**: {score:.2f}\n"
                 f"- **Patterns**: `{patterns_str}`\n\n"
+                f"**{annotation}**\n\n"
                 f"Pipeline will continue with caution."
             )
 
@@ -201,9 +214,15 @@ def _check_injection_before_task(
     severity_label = result.severity
 
     if config.mode.value == "strict":
+        annotation = result.caution_annotation()
+
+        if annotation:
+            annotations = kwargs.setdefault("_guardrail_annotations", [])
+            annotations.append(annotation)
+
         # Strict mode: block on critical/high severity
         if severity_label in ("critical", "high", "medium"):
-            _post_injection_comment(issue_id, result)
+            _post_injection_comment(issue_id, result, config)
             logger.warning(
                 "Injection guard blocked task=%s issue=%s severity=%s score=%.2f patterns=%s",
                 task_name,
@@ -215,24 +234,34 @@ def _check_injection_before_task(
             raise Ignore()
 
         # Medium/low in strict mode: just flag
-        logger.info(
-            "Injection guard flagged (strict) task=%s issue=%s severity=%s score=%.2f",
-            task_name,
-            issue_id,
-            severity_label,
-            result.score,
-        )
+        if config.guardrail_level >= 2 and annotation and not config.silent_annotate:
+            _post_injection_comment(issue_id, result, config)
+        else:
+            logger.info(
+                "Injection guard flagged (strict) task=%s issue=%s severity=%s score=%.2f",
+                task_name,
+                issue_id,
+                severity_label,
+                result.score,
+            )
 
     elif config.mode.value == "moderate":
-        # Moderate mode: always flag, never block
-        logger.info(
-            "Injection guard flagged (moderate) task=%s issue=%s severity=%s score=%.2f patterns=%s",
-            task_name,
-            issue_id,
-            severity_label,
-            result.score,
-            result.patterns_matched,
-        )
+        annotation = result.caution_annotation()
+        if annotation:
+            annotations = kwargs.setdefault("_guardrail_annotations", [])
+            annotations.append(annotation)
+
+        if config.guardrail_level >= 2 and annotation and not config.silent_annotate:
+            _post_injection_comment(issue_id, result, config)
+        else:
+            logger.info(
+                "Injection guard flagged (moderate) task=%s issue=%s severity=%s score=%.2f patterns=%s",
+                task_name,
+                issue_id,
+                severity_label,
+                result.score,
+                result.patterns_matched,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -244,7 +273,10 @@ def connect_injection_middleware() -> None:
     """Acknowledge injection middleware connection (call at startup)."""
     config = _get_config()
     logger.info(
-        "Injection middleware connected — mode=%s threshold=%.2f",
+        "Injection middleware connected — mode=%s threshold=%.2f "
+        "silent_annotate=%s guardrail_level=%d",
         config.mode.value,
         config.strict_threshold,
+        config.silent_annotate,
+        config.guardrail_level,
     )
