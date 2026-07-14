@@ -10,8 +10,9 @@ ALTER TABLE webhook_events ADD COLUMN IF NOT EXISTS last_error TEXT;
 ALTER TABLE webhook_events ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE webhook_events ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ;
 
--- Migrate existing data: set status based on processed flag
-UPDATE webhook_events SET status = 'processed' WHERE processed = true AND status = 'received';
+-- Migrate existing data: set status based on processed_at presence
+-- (processed boolean was already dropped by 002_webhook_events_reliability)
+UPDATE webhook_events SET status = 'processed' WHERE processed_at IS NOT NULL AND status = 'received';
 
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_webhook_events_delivery ON webhook_events(delivery_id);

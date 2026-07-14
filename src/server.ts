@@ -100,6 +100,29 @@ export async function createApp(): Promise<express.Application> {
     maxAge: 86400, // 24 hours
   }));
 
+  // -- Health check endpoint ------------------------------------------------
+  app.get('/health', (_req: Request, res: Response) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
+  });
+  app.get('/health/ready', async (_req: Request, res: Response) => {
+    const checks: Record<string, string> = {};
+    try {
+      const { queryWithRetry } = await import('./db/connection.js');
+      await queryWithRetry('SELECT 1');
+      checks.database = 'ok';
+    } catch { checks.database = 'down'; }
+    try {
+      const { Redis } = await import('ioredis');
+      const redis = new Redis(config.queue.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1, connectTimeout: 3000 });
+      await redis.connect();
+      await redis.ping();
+      checks.redis = 'ok';
+      await redis.quit().catch(() => {});
+    } catch { checks.redis = 'down'; }
+    const allOk = Object.values(checks).every(v => v === 'ok');
+    res.status(allOk ? 200 : 503).json({ status: allOk ? 'ok' : 'degraded', checks, timestamp: new Date().toISOString() });
+  });
+
   // -- IP Allowlist for webhook endpoints -----------------------------------
   app.use('/webhook', ipAllowlistMiddleware);
 
@@ -730,7 +753,7 @@ export async function createApp(): Promise<express.Application> {
 export async function startServer(): Promise<import('http').Server> {
   const app = await createApp();
 
-  const server = app.listen(config.port, '0.0.0.0', () => {
+  const server = app.listen(config.port, '0.0.0.0', async () => {
     log.info(
       { port: config.port, label: config.stas.label, env: config.nodeEnv },
       `STAS server listening on :${config.port}`,

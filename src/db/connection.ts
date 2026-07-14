@@ -38,7 +38,8 @@ let pool: pg.Pool | null = null;
 export function getPool(): pg.Pool {
   if (pool) return pool;
 
-  const sslConfig = config.database.ssl ? { ssl: { rejectUnauthorized: true } } : {};
+  const rejectUnauthorized = process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0' ? false : true;
+  const sslConfig = config.database.ssl ? { ssl: { rejectUnauthorized } } : {};
 
   pool = new Pool({
     connectionString: config.database.url,
