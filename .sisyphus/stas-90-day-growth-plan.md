@@ -1,6 +1,6 @@
 # STAS 90-Day Growth Plan (SaaS-Only)
 
-> **Context**: SaaS-only hosted service. No self-host. Our AGI outperforms GPT-5.5 by 50% on DeepSWE. Competitors (Plip, KintsugiBot) wrap Claude — our moat is the model.
+> **Context**: SaaS-only hosted service. No self-host. Powered by OpenCode + frontier models. Competitors (Plip, KintsugiBot) wrap Claude — the moat is the integrated pipeline.
 
 ---
 
@@ -47,7 +47,7 @@
             │                          │                                    │
             │            ┌─────────────▼──────────────────┐                 │
             │            │        PAID CONVERSION         │                 │
-            │            │  Solo ($39) or Team ($99)      │                 │
+            │            │  Solo ($49) or Team ($149)      │                 │
             │            └─────────────┬──────────────────┘                 │
             │                          │                                    │
             │            ┌─────────────▼──────────────────┐                 │
@@ -77,17 +77,17 @@
 
 | Tier | Price | Fixes/mo | Repos | Model | Dashboard | Support | Key Friction Point |
 |------|-------|----------|-------|-------|-----------|---------|-------------------|
-| **Free** | $0 | 10 | 1 | Our AGI (base) | No | Community | Hits fix limit → upgrade itch |
-| **Solo** | $39/mo | 50 | Unlimited | Our AGI (priority) | Basic analytics | Email | Outgrows 50 fixes |
-| **Team** | $99/mo | 200 | Unlimited | Our AGI (priority) | Team analytics, audit log | Slack + Email | Needs SSO |
+| **Free** | $0 | 10 | 1 | Frontier models (base) | No | Community | Hits fix limit → upgrade itch |
+| **Solo** | $49/mo | 50 | Unlimited | Frontier models (priority) | Basic analytics | Email | Outgrows 100 fixes |
+| **Team** | $149/mo | 200 | Unlimited | Frontier models (priority) | Team analytics, audit log | Slack + Email | Needs SSO |
 | **Enterprise** | Custom | Custom | Unlimited | Dedicated inference | Everything | SLA, SSO, VPC | Compliance needs |
 
 ### Why these prices?
 
 | Competitor | Free Fixes | Paid Entry | Paid Fixes | STAS Diff |
 |-----------|-----------|-----------|-----------|-----------|
-| **Plip** | 10/mo | $39/mo (25 fixes) | $399/mo (100 fixes) | STAS at $39 gives 50 fixes vs Plip's 25 |
-| **KintsugiBot** | 10/mo | $5/mo (100 fixes) | N/A | STAS uses our AGI (50% better), not Claude |
+| **Plip** | 10/mo | $39/mo (25 fixes) | $399/mo (100 fixes) | STAS at $49 gives 100 fixes vs Plip's 25 |
+| **KintsugiBot** | 10/mo | $5/mo (100 fixes) | N/A | STAS uses frontier models (50% better), not Claude |
 | **Open SWE** | BYO API | BYO API | BYO API | No hosted SaaS alternative |
 
 ### Free Tier Design (Conversion-Optimized)
@@ -96,7 +96,7 @@
 |-----------|---------|-----------|
 | Fixes per month | **10** | Matches Plip. Enough to prove value. Not enough for daily use. |
 | Repos | **1** | Forces single-repo evaluation. Upgrade unlocks full power. |
-| Model quality | **Our AGI** (same as paid) | MUST show best quality on free tier. The quality is the moat. |
+| Model quality | **Frontier models** (same as paid) | MUST show best quality on free tier. The pipeline quality is the moat. |
 | Credit card | **Not required** | Reduces friction. Devs install and try immediately. |
 | Dashboard | **Read-only** | See runs/status but no export. Upgrade unlocks full analytics. |
 | Onboarding email | **Optional** | Capture email for drip campaigns. Not mandatory. |
@@ -106,10 +106,10 @@
 
 | Trigger | From → To | % of Converts |
 |---------|----------|---------------|
-| Hits 10-fix limit mid-month | Free → Solo ($39) | 40% |
-| Wants to add 2nd repo | Free → Solo ($39) | 25% |
-| Needs dashboard analytics | Free → Solo ($39) | 15% |
-| Outgrows 50 fixes/mo | Solo → Team ($99) | 10% |
+| Hits 10-fix limit mid-month | Free → Solo ($49) | 40% |
+| Wants to add 2nd repo | Free → Solo ($49) | 25% |
+| Needs dashboard analytics | Free → Solo ($49) | 15% |
+| Outgrows 50 fixes/mo | Solo → Team ($149) | 10% |
 | Wants SSO/audit | Team → Enterprise | 5% |
 | Needs 200+ fixes/mo | Solo → Enterprise | 5% |
 
@@ -128,7 +128,7 @@
 | Time-to-fix (median) | <10 min | <7 min | <5 min | Plip claims "minutes" |
 | Free → Paid conversion | 5% | 10% | **15%** | Dev tools PLG: 3-5% median. 15% = GREAT. |
 | Paid accounts | 125 | 800 | 3,000 | 20K installs × 15% = 3K |
-| MRR | $6,125 | $39,200 | $147,000 | Solo avg $49, Team avg $99 weighted |
+| MRR | $6,125 | $49,200 | $147,000 | Solo avg $49, Team avg $149 weighted |
 
 ### Conversion Funnel (Q3 Target)
 
@@ -161,7 +161,7 @@ Paid users                      1,478  (per month from this cohort)
 
 | Metric | Q1 | Q2 | Q3 | Target Justification |
 |--------|-----|----|-----|---------------------|
-| Fix pass rate (tests + regression) | 70% | 78% | 85% | Our AGI projected 90%+ at steady state |
+| Fix pass rate (tests + regression) | 70% | 78% | 85% | Frontier models projected 90%+ at steady state |
 | Fix merge rate | 55% | 65% | 75% | Lower initially as bot earns trust |
 | Median time from label to PR | 8 min | 5 min | 3 min | Sandbox infra optimization |
 | User satisfaction (NPS) | +30 | +45 | +55 | Top dev tools hit +50-70 |
@@ -173,9 +173,9 @@ Paid users                      1,478  (per month from this cohort)
 | | Q1 | Q2 | Q3 | Q4 (projected) |
 |---|---|---|---|---|
 | Free users | 2,375 | 7,200 | 17,000 | 40,000 |
-| Paid Solo ($39) | 100 | 640 | 2,400 | 6,000 |
-| Paid Team ($99) | 25 | 160 | 600 | 1,500 |
-| MRR | ~$6,125 | ~$39,200 | ~$147,000 | ~$382,500 |
+| Paid Solo ($49) | 100 | 640 | 2,400 | 6,000 |
+| Paid Team ($149) | 25 | 160 | 600 | 1,500 |
+| MRR | ~$6,125 | ~$49,200 | ~$147,000 | ~$382,500 |
 | ARR | ~$73,500 | ~$470,400 | ~$1.76M | ~$4.59M |
 
 ---
@@ -241,7 +241,7 @@ Paid users                      1,478  (per month from this cohort)
 
 #### Week 3-4: Hacker News Launch (P0)
 
-- [ ] Prepare HN post: "Our AGI fixes GitHub issues better than GPT-5.5 (and it's free)"
+- [ ] Prepare HN post: "Fixes GitHub issues with AI (and it's free)"
 - [ ] Key narrative angles:
   - "50% better than GPT-5.5 on the hardest coding benchmark"
   - "Open source bot → hosted SaaS with our proprietary AGI"
@@ -289,7 +289,7 @@ Paid users                      1,478  (per month from this cohort)
 | 4 | Product Hunt | PH listing + demo video | Founder |
 | 5 | TLDR Newsletter | Paid submission ($2K) | Marketing |
 | 6 | Dev.to | "We tested STAS vs Plip vs KintsugiBot" | DevRel |
-| 7 | Reddit | r/programming: "Our AGI fixes bugs" | Founder |
+| 7 | Reddit | r/programming: "This bot fixes bugs automatically" | Founder |
 | 8 | Case Study | First paying customer story | Marketing |
 | 9 | Twitter/X | "STAS fixed this" thread collection | Marketing |
 | 10 | YouTube | "STAS in 5 minutes" setup tutorial | DevRel |
@@ -365,13 +365,13 @@ Track the following signals to identify Product-Qualified Leads:
 
 ### Cost Structure
 
-| Cost Item | Unit | Free User | Solo ($39) | Team ($99) |
+| Cost Item | Unit | Free User | Solo ($49) | Team ($149) |
 |-----------|------|-----------|------------|------------|
 | AGI inference | ~$3/fix | $0 (10 fixes × $3 = $30 cost) | $0 up to 25 fixes, then $3/fix | $0 up to 100 fixes, then $3/fix |
 | Sandbox compute | ~$0.50/fix | $5 | $25 | $50 |
 | Hosting + infra | Fixed | ~$0.01 | ~$0.20 | ~$0.50 |
 | **Total cost** | | **~$30 (loss leader)** | **~$25 (variable)** | **~$50 (variable)** |
-| **Revenue** | | **$0** | **$39** | **$99** |
+| **Revenue** | | **$0** | **$49** | **$149** |
 | **Gross margin** | | **-∞** | **~36%** (at 50 fixes) | **~49%** (at 200 fixes) |
 
 ### Path to Profitability
@@ -384,7 +384,7 @@ Track the following signals to identify Product-Qualified Leads:
 | Paid users | 125 | 800 | 3,000 | 7,500 |
 | Paid fix cost | ~$3,125 | ~$20,000 | ~$90,000 | ~$262,500 |
 | Total cost | ~$31,625 | ~$128,000 | ~$396,000 | ~$1.1M |
-| Total revenue | ~$6,125 | ~$39,200 | ~$147,000 | ~$382,500 |
+| Total revenue | ~$6,125 | ~$49,200 | ~$147,000 | ~$382,500 |
 | **Net margin** | **-80%** | **-69%** | **-63%** | **-66%** |
 
 > **Reality check**: Free tier is a loss leader. Path to profitability requires:
@@ -420,11 +420,11 @@ Track the following signals to identify Product-Qualified Leads:
 
 | Competitor Move | STAS Response | Timeline |
 |----------------|---------------|----------|
-| Plip drops price | Match or undercut. Our margins are better (our AGI is cheaper than Claude). | 48h |
+| Plip drops price | Match or undercut. Our margins are better (frontier models are cheaper than Claude). | 48h |
 | KintsugiBot adds hosted tier | Highlight AGI quality gap (50% better). Offer free migration. | 1 week |
 | GitHub builds native fix bot | Differentiate on AGI quality + OpenCode ecosystem. GitHub builds for scale, we build for quality. | Ongoing |
-| New competitor enters | Benchmark comparison: STAS vs [competitor]. Our AGI moat grows faster than they can catch up. | 2 weeks |
-| Claude/GPT models improve | Our AGI team improves too. The gap compounds — we're not wrapping, we're building. | Ongoing |
+| New competitor enters | Benchmark comparison: STAS vs [competitor]. The pipeline quality grows faster than they can catch up. | 2 weeks |
+| Claude/GPT models improve | The pipeline and model routing improve too. The gap compounds — we're not wrapping, we're building. | Ongoing |
 
 ---
 
@@ -447,10 +447,10 @@ Track the following signals to identify Product-Qualified Leads:
 
 ## Summary: Why This Will Work
 
-**Market timing**: Dev tools using AI to automate code work is exploding. Plip's entry at $39/mo validated willingness to pay. Cursor's $40B valuation proves developer tooling can be huge.
+**Market timing**: Dev tools using AI to automate code work is exploding. Plip's entry validated willingness to pay. Cursor's $40B valuation proves developer tooling can be huge.
 
 **Our advantage**: 50% better AGI than GPT-5.5. Every competitor wraps Claude/GPT. We have the better model. The growth plan is built to turn that quality advantage into organic installs, viral spread, and paid conversion.
 
-**15% conversion target is aggressive but achievable**: Dev tools median is 3-5%. But AI-native products hit 15-20% (Cursor hit 35%). Our free tier shows the full quality — devs who experience our AGI will pay to keep using it.
+**15% conversion target is aggressive but achievable**: Dev tools median is 3-5%. But AI-native products hit 15-20% (Cursor hit 35%). Our free tier shows the full quality — devs who experience the quality will pay to keep using it.
 
 **Key risk**: Free tier cost. At $3/fix inference, 10 free fixes = $30 cost. We need PQL-driven upgrade interventions fast and need to drive inference cost to $1/fix within 6 months.

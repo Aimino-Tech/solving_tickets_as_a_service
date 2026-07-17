@@ -5,13 +5,13 @@
 
 The OSS repo (`src/`, `plugin/`) is the self-hostable GitHub bot. This directory documents everything that makes the paid version worth paying for.
 
-> **Note**: STAS has three tiers — Self-Host (OSS, unlimited, DIY), Cloud Free (10 fixes/mo, our AGI, hosted), and Cloud Paid ($49–$149/mo, full features). This file covers the Cloud Paid tier.
+> **Note**: STAS has three tiers — Self-Host (OSS, unlimited, DIY), Cloud Free (10 fixes/mo, frontier models, hosted), and Cloud Paid ($49–$149/mo, full features). This file covers the Cloud Paid tier.
 
 ## What Premium Adds
 
 | Feature | OSS Self-Host (MIT) | Cloud Free (10/mo) | Cloud Paid ($49–$149/mo) |
 |---|---|---|---|
-| **Agent model** | Your API key, any model | Our AGI (50% better than GPT-5.5) | Our AGI |
+| **Agent model** | Your API key, any model | Frontier models (claude-sonnet-4) | Frontier models (claude-sonnet-4) |
 | **Hosting** | You run it | We run it | We run it |
 | **Install** | Manual setup | One-click GitHub App | One-click GitHub App |
 | **Dashboard** | — | Limited analytics | Full analytics, audit log |
@@ -24,7 +24,7 @@ The OSS repo (`src/`, `plugin/`) is the self-hostable GitHub bot. This directory
 
 ## Premium Architecture
 
-The OSS codebase is built on a KintsugiBot-inspired stack: **Express** webhooks → **BullMQ/Redis** queue → **E2B** sandbox → **@octokit** GitHub API → **pino** logging. The premium hosted service runs the same core stack but replaces the user's model with our AGI and adds a dashboard, multi-tenant database, and billing.
+The OSS codebase is built on a KintsugiBot-inspired stack: **Express** webhooks → **BullMQ/Redis** queue → **E2B** sandbox → **@octokit** GitHub API → **pino** logging. The premium hosted service runs the same core stack but replaces the user's model with frontier models (claude-sonnet-4) and adds a dashboard, multi-tenant database, and billing.
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -44,7 +44,7 @@ The OSS codebase is built on a KintsugiBot-inspired stack: **Express** webhooks 
 │  └────────────────────────────┬────────────┘ │
 │                               │             │
 │  ┌────────────────────────────▼────────────┐ │
-│  │         Our AGI Router                 │ │
+│  │         Frontier Model Router                 │ │
 │  │  (proprietary model, 50% better than   │ │
 │  │   GPT-5.5 on DeepSWE, OpenAI-compat)   │ │
 │  └────────────────────────────┬────────────┘ │
@@ -81,7 +81,7 @@ The premium code lives in a **private repository**. This directory contains:
 | `README.md` | This file |
 
 The OSS repo communicates with premium services via:
-- **Environment variables** — swap `OPENCODE_URL` for our AGI endpoint
+- **Environment variables** — swap `OPENCODE_URL` for the hosted model endpoint
 - **Feature flags** — `STAS_PREMIUM=true` enables premium features
 - **API contract** — premium services implement the same OpenCode-compatible API
 
@@ -89,7 +89,7 @@ The OSS repo communicates with premium services via:
 
 ```bash
 # In your .env, change:
-OPENCODE_URL=https://api.stas.dev/agi  # Our AGI endpoint
+OPENCODE_URL=https://api.stas.dev/v1  # Hosted model endpoint
 STAS_PREMIUM=true                       # Enable premium features
 ```
 

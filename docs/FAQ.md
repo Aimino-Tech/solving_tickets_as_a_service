@@ -137,7 +137,7 @@ Without either, STAS cannot run fix attempts because the code execution needs is
 
 Example monthly cost for 100 fixes with Claude Sonnet + Docker sandbox: **~$250-400**.
 
-**Cloud Free**: 10 fixes/mo using our AGI model — no API keys, no infra to manage.
+**Cloud Free**: 10 fixes/mo using frontier models (claude-sonnet-4) — no API keys, no infra to manage.
 **Cloud Paid** ($49/mo): 100 fixes/mo with full dashboard, analytics, audit log, and support.
 
 **Self-host is unlimited but bare-bones; the cloud free tier gives you a taste of the hosted experience; both point to paid plans for the full feature set.**
@@ -150,7 +150,7 @@ See [STRATEGY.md](../STRATEGY.md) for detailed economics:
 |---|---|---|
 | Claude Opus 4.5 (direct) | $2.64 | 45.7% |
 | GPT-5.5 (DeepSWE) | $5.80 | 70.0% |
-| STAS (our AGI, projected) | ~$3.00 | 90%+ |
+| STAS (claude-sonnet-4, projected) | ~$3.00 | 90%+ |
 
 ### Can I use my own API key?
 
@@ -158,7 +158,7 @@ See [STRATEGY.md](../STRATEGY.md) for detailed economics:
 - Triage LLM / fallback fix: `OPENCODE_API_KEY` (OpenCode Go direct LLM endpoint)
 - Fix agent: Configured in OpenCode's environment (OpenCode uses the model's native API key)
 
-The cloud version routes through our AGI, which you don't need to configure.
+The cloud version routes through frontier models, which you don't need to configure.
 
 ---
 

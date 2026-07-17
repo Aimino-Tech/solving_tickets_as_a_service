@@ -23,13 +23,12 @@ export interface PriceEntry {
 
 const BENCHMARK_DATA: BenchmarkEntry[] = [
   {
-    agent: 'STAS (Our AGI)',
+    agent: 'STAS (claude-sonnet-4)',
     passRate: 0.92,
     costPerFixCents: 380,
     agentNative: true,
     oss: true,
     selfHostable: true,
-    note: '50% better than GPT-5.5 on DeepSWE',
   },
   {
     agent: 'Claude Opus 4.5 (direct)',
@@ -90,24 +89,24 @@ const BENCHMARK_DATA: BenchmarkEntry[] = [
 const PRICE_DATA: PriceEntry[] = [
   {
     agent: 'STAS (Cloud Free)',
-    model: 'Our AGI',
+    model: 'claude-sonnet-4',
     costPerFixCents: 0,
     monthlyMinCents: 0,
     monthlyMaxFixes: 10,
   },
   {
     agent: 'STAS (Cloud Solo)',
-    model: 'Our AGI',
-    costPerFixCents: 78,
-    monthlyMinCents: 3900,
-    monthlyMaxFixes: 50,
+    model: 'claude-sonnet-4',
+    costPerFixCents: 49,
+    monthlyMinCents: 4900,
+    monthlyMaxFixes: 100,
   },
   {
     agent: 'STAS (Cloud Team)',
-    model: 'Our AGI',
-    costPerFixCents: 99,
-    monthlyMinCents: 9900,
-    monthlyMaxFixes: 100,
+    model: 'claude-sonnet-4',
+    costPerFixCents: 30,
+    monthlyMinCents: 14900,
+    monthlyMaxFixes: 500,
   },
   {
     agent: 'Plip.io',

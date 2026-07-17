@@ -2,8 +2,8 @@
  * Subscription plan definitions for STAS billing tiers.
  *
  * ── Plans ─────────────────────────────────────────────────────────────────────
- *   Solo     – $49/mo  – 100 fixes/mo, premium models, 3 concurrent fixes
- *   Team     – $149/mo – 500 fixes/mo, premium models, 10 concurrent fixes
+ *   Solo     – $49/mo  – 100 fixes/mo, frontier models, 3 concurrent fixes
+ *   Team     – $149/mo – 500 fixes/mo, frontier models, 10 concurrent fixes
  *   Enterprise – Custom – unlimited fixes, all features
  *   Free     – $0/mo   – 10 fixes/mo, basic model, 1 concurrent fix (default)
  * ──────────────────────────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ export interface Plan {
   priceId: string;
   /** Maximum fixes per billing month. */
   monthlyFixLimit: number;
-  /** Whether premium models (Sonnet, GPT-4 class) are available. */
+  /** Whether premium models (claude-sonnet-4, GPT-4o) are available. */
   premiumModels: boolean;
   /** Maximum concurrent fix runs. */
   concurrentFixes: number;
@@ -116,7 +116,7 @@ export const PLANS: Record<PlanId, Plan> = {
   solo: {
     id: 'solo',
     name: 'Solo',
-    description: 'For individual developers — premium models, 100 fixes/mo',
+    description: 'For individual developers — frontier models, 100 fixes/mo',
     amountCents: 4900,
     priceId: getPlanPriceId('solo'),
     monthlyFixLimit: 100,

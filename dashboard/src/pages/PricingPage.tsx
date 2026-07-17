@@ -33,7 +33,7 @@ export default function PricingPage() {
     <div className="space-y-16">
       <div className="text-center">
         <h2 className="text-4xl font-bold tracking-tight text-gray-900">Simple, Transparent Pricing</h2>
-        <p className="mt-4 text-lg text-gray-600">Start free. Scale as you grow. Our AGI delivers 92% pass rate.</p>
+        <p className="mt-4 text-lg text-gray-600">Start free. Scale as you grow. Powered by OpenCode + frontier models.</p>
       </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Failed to load pricing data: {error}</div>}
@@ -135,7 +135,7 @@ export default function PricingPage() {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {competitors.map((c) => {
-                  const isStas = c.ourAgi;
+                  const isStas = c.competitor.startsWith('STAS');
                   return (
                     <tr key={c.competitor} className={isStas ? 'bg-brand-50' : 'hover:bg-gray-50'}>
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">

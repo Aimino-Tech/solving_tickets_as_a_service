@@ -23,36 +23,36 @@ const PLANS: PricingPlan[] = [
     price: '$49', period: '/month', fixes: '100 fixes/mo', monthlyFixLimit: 100,
     concurrentFixes: 3, premiumModels: true, prioritySupport: true,
     customWebhooks: false, sla: false,
-    features: ['100 fixes per month', 'Premium AGI model', '3 concurrent fixes', 'Priority support', 'Dashboard & analytics', 'Audit log'],
+    features: ['100 fixes per month', 'Frontier models (claude-sonnet-4)', '3 concurrent fixes', 'Priority support', 'Dashboard & analytics', 'Audit log'],
     cta: 'Subscribe', highlighted: true },
   { id: 'team', name: 'Team', description: 'For teams that ship fast.',
     price: '$149', period: '/month', fixes: '500 fixes/mo', monthlyFixLimit: 500,
     concurrentFixes: 10, premiumModels: true, prioritySupport: true,
     customWebhooks: true, sla: true,
-    features: ['500 fixes per month', 'Premium AGI model', '10 concurrent fixes', 'Priority support', 'Dashboard & analytics', 'Audit log', 'Custom webhooks', 'SLA guarantee'],
+    features: ['500 fixes per month', 'Frontier models (claude-sonnet-4)', '10 concurrent fixes', 'Priority support', 'Dashboard & analytics', 'Audit log', 'Custom webhooks', 'SLA guarantee'],
     cta: 'Subscribe', highlighted: false },
   { id: 'enterprise', name: 'Enterprise', description: 'For organizations at scale.',
     price: 'Custom', period: '', fixes: 'Unlimited', monthlyFixLimit: 999_999,
     concurrentFixes: 50, premiumModels: true, prioritySupport: true,
     customWebhooks: true, sla: true,
-    features: ['Unlimited fixes', 'Premium AGI model', '50 concurrent fixes', 'Dedicated support', 'Full analytics', 'Custom webhooks', 'SSO / SAML / SCIM'],
+    features: ['Unlimited fixes', 'Frontier models (claude-sonnet-4)', '50 concurrent fixes', 'Dedicated support', 'Full analytics', 'Custom webhooks', 'SSO / SAML / SCIM'],
     cta: 'Contact Sales', highlighted: false },
 ];
 
 export interface CompetitorPrice {
   competitor: string; monthlyCostCents: number; costPerFixCents: number;
   fixesPerMonth: number; passRate: number; selfHosted: boolean;
-  openSource: boolean; ourAgi: boolean;
+  openSource: boolean;
 }
 
 const COMPETITOR_PRICES: CompetitorPrice[] = [
-  { competitor: 'STAS (Cloud Solo)', monthlyCostCents: 4900, costPerFixCents: 49, fixesPerMonth: 100, passRate: 0.92, selfHosted: true, openSource: true, ourAgi: true },
-  { competitor: 'STAS (Cloud Team)', monthlyCostCents: 14900, costPerFixCents: 30, fixesPerMonth: 500, passRate: 0.92, selfHosted: true, openSource: true, ourAgi: true },
-  { competitor: 'Plip.io', monthlyCostCents: 10000, costPerFixCents: 350, fixesPerMonth: 10, passRate: 0.42, selfHosted: false, openSource: false, ourAgi: false },
-  { competitor: 'Devin', monthlyCostCents: 50000, costPerFixCents: 800, fixesPerMonth: 50, passRate: 0.38, selfHosted: false, openSource: false, ourAgi: false },
-  { competitor: 'GitHub Copilot', monthlyCostCents: 1900, costPerFixCents: 200, fixesPerMonth: 10, passRate: 0.35, selfHosted: false, openSource: false, ourAgi: false },
-  { competitor: 'Cursor Agent', monthlyCostCents: 2000, costPerFixCents: 200, fixesPerMonth: 10, passRate: 0.35, selfHosted: false, openSource: false, ourAgi: false },
-  { competitor: 'Open SWE', monthlyCostCents: 0, costPerFixCents: 264, fixesPerMonth: 100, passRate: 0.457, selfHosted: true, openSource: true, ourAgi: false },
+  { competitor: 'STAS (Cloud Solo)', monthlyCostCents: 4900, costPerFixCents: 49, fixesPerMonth: 100, passRate: 0.92, selfHosted: true, openSource: true },
+  { competitor: 'STAS (Cloud Team)', monthlyCostCents: 14900, costPerFixCents: 30, fixesPerMonth: 500, passRate: 0.92, selfHosted: true, openSource: true },
+  { competitor: 'Plip.io', monthlyCostCents: 10000, costPerFixCents: 350, fixesPerMonth: 10, passRate: 0.42, selfHosted: false, openSource: false },
+  { competitor: 'Devin', monthlyCostCents: 50000, costPerFixCents: 800, fixesPerMonth: 50, passRate: 0.38, selfHosted: false, openSource: false },
+  { competitor: 'GitHub Copilot', monthlyCostCents: 1900, costPerFixCents: 200, fixesPerMonth: 10, passRate: 0.35, selfHosted: false, openSource: false },
+  { competitor: 'Cursor Agent', monthlyCostCents: 2000, costPerFixCents: 200, fixesPerMonth: 10, passRate: 0.35, selfHosted: false, openSource: false },
+  { competitor: 'Open SWE', monthlyCostCents: 0, costPerFixCents: 264, fixesPerMonth: 100, passRate: 0.457, selfHosted: true, openSource: true },
 ];
 
 interface VsCategoryItem { feature: string; us: string; them: string; advantage: 'us' | 'them' | 'tie'; }
@@ -141,7 +141,7 @@ router.get('/calculate', (req: Request, res: Response) => {
   const plan = PLANS.find((p) => p.id === tierId) || PLANS[1];
   const monthlyCostCents = plan.id === 'free' ? 0 : plan.id === 'enterprise' ? 149000 : parseInt(plan.price.replace(/[$,]/g, '')) * 100;
   const costPerFixCents = plan.monthlyFixLimit > 0 ? Math.round(monthlyCostCents / Math.min(fixesPerMonth, plan.monthlyFixLimit)) : 0;
-  const vsCompetitors = COMPETITOR_PRICES.filter((c) => !c.ourAgi).map((c) => {
+  const vsCompetitors = COMPETITOR_PRICES.filter((c) => !c.competitor.startsWith('STAS')).map((c) => {
     const theirMonthly = c.monthlyCostCents > 0 ? c.monthlyCostCents : fixesPerMonth * c.costPerFixCents;
     return { name: c.competitor, monthlyCostCents: theirMonthly, savingsCents: Math.max(0, theirMonthly - monthlyCostCents), savingsPercent: theirMonthly > 0 ? Math.round((Math.max(0, theirMonthly - monthlyCostCents) / theirMonthly) * 100) : 0 };
   });
