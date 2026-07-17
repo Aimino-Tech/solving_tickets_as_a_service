@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { repos } from '@/api/client';
 import type { Repo } from '@/api/types';
+import { formatRelativeTime } from '@/utils/format';
 
 export default function Repos() {
   const [repoList, setRepoList] = useState<Repo[]>([]);
@@ -58,7 +59,7 @@ export default function Repos() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-gray-500">
           {repoList.length} connected {repoList.length === 1 ? 'repository' : 'repositories'}
         </p>
@@ -127,7 +128,7 @@ export default function Repos() {
       ) : error ? (
         <div className="card">
           <p className="text-red-600">{error}</p>
-          <button onClick={loadRepos} className="mt-2 text-sm font-medium text-brand-600">
+          <button onClick={loadRepos} className="mt-2 text-sm font-medium text-brand-600 min-h-[44px] min-w-[44px]">
             Retry
           </button>
         </div>
@@ -142,9 +143,9 @@ export default function Repos() {
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {repoList.map((repo) => (
-            <div key={repo.id} className="card flex items-center justify-between">
+            <div key={repo.id} className="card flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2">
                   <span className={`inline-block h-2.5 w-2.5 rounded-full ${repo.active ? 'bg-green-500' : 'bg-gray-300'}`} />
@@ -153,13 +154,13 @@ export default function Repos() {
                   </h3>
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
-                  Connected {new Date(repo.createdAt).toLocaleDateString()}
+                  Connected {formatRelativeTime(repo.createdAt)}
                   {repo.installationId && ` · Installation #${repo.installationId}`}
                 </p>
               </div>
               <button
                 onClick={() => handleDisconnect(repo.id)}
-                className="btn-danger text-xs"
+                className="btn-danger text-xs mt-3 self-start"
               >
                 Disconnect
               </button>

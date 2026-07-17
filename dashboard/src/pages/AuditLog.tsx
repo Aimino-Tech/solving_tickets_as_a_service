@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { audit } from '@/api/client';
 import type { AuditEntry } from '@/api/types';
+import { formatRelativeTime } from '@/utils/format';
 
 const ACTION_ICONS: Record<string, string> = {
   run_started: '▶',
@@ -80,7 +81,7 @@ export default function AuditLog() {
       ) : error ? (
         <div className="card">
           <p className="text-red-600">{error}</p>
-          <button onClick={() => loadPage(page)} className="mt-2 text-sm font-medium text-brand-600">
+          <button onClick={() => loadPage(page)} className="mt-2 text-sm font-medium text-brand-600 min-h-[44px] min-w-[44px]">
             Retry
           </button>
         </div>
@@ -131,7 +132,7 @@ export default function AuditLog() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-gray-500">
             Page {page} of {totalPages}
           </p>

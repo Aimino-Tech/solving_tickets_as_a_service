@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { runs } from '@/api/client';
 import type { Run } from '@/api/types';
 import { useParams, Link } from 'react-router-dom';
+import { formatDateTime, formatDurationSeconds } from '@/utils/format';
 
 export default function RunDetail() {
   const { id } = useParams<{ id: string }>();
