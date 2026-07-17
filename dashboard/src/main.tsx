@@ -4,8 +4,21 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { I18nProvider } from '@/i18n/I18nProvider';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { useOffline } from '@/hooks/useOffline';
 import App from '@/App';
 import '@/styles/index.css';
+
+function OfflineWrapper() {
+  const { isOffline } = useOffline();
+
+  return (
+    <>
+      <OfflineBanner isOffline={isOffline} />
+      <App />
+    </>
+  );
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -13,7 +26,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <I18nProvider>
           <AuthProvider>
-            <App />
+            <OfflineWrapper />
           </AuthProvider>
         </I18nProvider>
       </BrowserRouter>
