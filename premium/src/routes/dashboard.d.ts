@@ -14,5 +14,5 @@
  * GET    /api/settings   — Current bot settings
  * PUT    /api/settings   — Update bot settings
  */
-declare const router: import("express-serve-static-core").Router;
+declare const router: any;
 export { router as dashboardRouter };
