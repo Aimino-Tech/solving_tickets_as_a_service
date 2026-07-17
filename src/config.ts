@@ -204,6 +204,12 @@ const envSchema = z.object({
   MCP_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   MCP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
 
+  // ── Proxy Configuration ──
+  PROXY_MODEL_ROUTER_ENABLED: boolSchema(true),
+  PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED: boolSchema(false),
+  PROXY_GITHUB_PAT: z.string().optional(),
+
+
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_PATH: z.string().default('/webhook/telegram'),
 
@@ -409,6 +415,12 @@ function buildConfig(env: ParsedEnv) {
         windowMs: env.MCP_RATE_LIMIT_WINDOW_MS,
         maxRequests: env.MCP_RATE_LIMIT_MAX,
       },
+    },
+
+    proxy: {
+      modelRouterEnabled: env.PROXY_MODEL_ROUTER_ENABLED,
+      githubActionsDispatchEnabled: env.PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED,
+      githubPat: env.PROXY_GITHUB_PAT ?? '',
     },
 
     telegram: {

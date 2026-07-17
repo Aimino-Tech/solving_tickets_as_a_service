@@ -75,6 +75,8 @@ import { adminRunsRouter } from './routes/adminRuns.js';
 import { kpiRouter } from './routes/kpi.js';
 import healthRouter from './routes/health.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
+import { proxyRouter } from './routes/proxy.js';
+import previewRoutes from './api/routes/preview.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -937,6 +939,9 @@ export async function createApp(): Promise<express.Application> {
   });
 
   app.use('/api/v1/preview', previewRoutes);
+  // ── Proxy API ──────────────────────────────────────────────
+  app.use('/api/v1/proxy', proxyRouter);
+
   app.use('/api', pipelineRouter);
   // -- 404 handler ----------------------------------------------------------
 
