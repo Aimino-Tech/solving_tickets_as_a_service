@@ -29,7 +29,7 @@ export default function Analytics() {
   if (error) {
     return (
       <div className="card">
-        <p className="text-red-600">Failed to load analytics: {error}</p>
+        <p className="text-red-600 dark:text-red-400">Failed to load analytics: {error}</p>
       </div>
     );
   }
@@ -39,8 +39,8 @@ export default function Analytics() {
       <div className="space-y-6">
         {[...Array(3)].map((_, i) => (
           <div key={i} className="card animate-pulse">
-            <div className="h-5 w-48 rounded bg-gray-200" />
-            <div className="mt-4 h-48 rounded bg-gray-200" />
+            <div className="h-5 w-48 rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="mt-4 h-48 rounded bg-gray-200 dark:bg-gray-700" />
           </div>
         ))}
       </div>
@@ -88,7 +88,7 @@ export default function Analytics() {
 
       {/* Fix Rate Over Time */}
       <div className="card">
-        <h3 className="text-base font-semibold text-gray-900">Fix Rate Over Time</h3>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Fix Rate Over Time</h3>
         {fixRateData.length > 0 ? (
           <div className="mt-4 overflow-x-auto">
             <div className="min-w-[400px]" style={{ height: 300 }}>
@@ -113,13 +113,13 @@ export default function Analytics() {
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-gray-400">Not enough data yet.</p>
+          <p className="mt-4 text-sm text-gray-400 dark:text-gray-500">Not enough data yet.</p>
         )}
       </div>
 
       {/* Runs per day */}
       <div className="card">
-        <h3 className="text-base font-semibold text-gray-900">Runs Per Day</h3>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Runs Per Day</h3>
         {runsByDayData.length > 0 ? (
           <div className="mt-4 overflow-x-auto">
             <div className="min-w-[400px]" style={{ height: 300 }}>
@@ -137,13 +137,13 @@ export default function Analytics() {
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-gray-400">No run data available yet.</p>
+          <p className="mt-4 text-sm text-gray-400 dark:text-gray-500">No run data available yet.</p>
         )}
       </div>
 
       {/* Cost per fix */}
       <div className="card">
-        <h3 className="text-base font-semibold text-gray-900">Cost Per Fix</h3>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Cost Per Fix</h3>
         {costData.length > 0 ? (
           <div className="mt-4 overflow-x-auto">
             <div className="min-w-[400px]" style={{ height: 300 }}>
@@ -168,7 +168,7 @@ export default function Analytics() {
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-gray-400">No cost data available yet.</p>
+          <p className="mt-4 text-sm text-gray-400 dark:text-gray-500">No cost data available yet.</p>
         )}
       </div>
     </div>
@@ -185,14 +185,14 @@ function MetricCard({
   trend: 'up' | 'down' | 'neutral';
 }) {
   const trendColors = {
-    up: 'text-green-600',
-    down: 'text-red-600',
-    neutral: 'text-brand-600',
+    up: 'text-green-600 dark:text-green-400',
+    down: 'text-red-600 dark:text-red-400',
+    neutral: 'text-brand-600 dark:text-brand-400',
   };
 
   return (
     <div className="card">
-      <p className="text-sm text-gray-500">{label}</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
       <p className={`mt-1 text-2xl font-bold ${trendColors[trend]}`}>{value}</p>
     </div>
   );

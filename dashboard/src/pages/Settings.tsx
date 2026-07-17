@@ -119,8 +119,8 @@ export default function Settings() {
       <div className="card animate-pulse space-y-4">
         {[...Array(5)].map((_, i) => (
           <div key={i}>
-            <div className="h-4 w-32 rounded bg-gray-200" />
-            <div className="mt-1 h-10 w-full rounded bg-gray-200" />
+            <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="mt-1 h-10 w-full rounded bg-gray-200 dark:bg-gray-700" />
           </div>
         ))}
       </div>
@@ -136,8 +136,8 @@ export default function Settings() {
           className="flex w-full items-center justify-between lg:cursor-default"
         >
           <div>
-            <h3 className="text-base font-semibold text-gray-900">Bot Configuration</h3>
-            <p className="mt-1 text-sm text-gray-500 hidden lg:block">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Bot Configuration</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 hidden lg:block">
               Configure how the STAS bot behaves for your repositories.
             </p>
           </div>
@@ -150,14 +150,14 @@ export default function Settings() {
         </button>
         {openSections.config && (
           <>
-            <p className="mt-1 text-sm text-gray-500 lg:hidden">
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 lg:hidden">
               Configure how the STAS bot behaves for your repositories.
             </p>
             <form onSubmit={handleSave} className="mt-6 space-y-5">
               {/* Trigger label */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">Trigger Label</label>
-                <p className="text-xs text-gray-500">Issue label that triggers the bot.</p>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Trigger Label</label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Issue label that triggers the bot.</p>
                 <input
                   type="text"
                   value={form.label}
@@ -168,8 +168,8 @@ export default function Settings() {
 
               {/* Model */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">Model</label>
-                <p className="text-xs text-gray-500">AI model used for fix runs.</p>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Model</label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">AI model used for fix runs.</p>
                 <input
                   type="text"
                   value={form.model}
@@ -181,8 +181,8 @@ export default function Settings() {
 
               {/* Max concurrent */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">Max Concurrent Fixes</label>
-                <p className="text-xs text-gray-500">Maximum number of fixes running simultaneously.</p>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Max Concurrent Fixes</label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Maximum number of fixes running simultaneously.</p>
                 <input
                   type="number"
                   min={1}
@@ -195,8 +195,8 @@ export default function Settings() {
 
               {/* Sandbox pool */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">Sandbox Pool Size</label>
-                <p className="text-xs text-gray-500">Number of pre-warmed sandbox environments.</p>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Sandbox Pool Size</label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Number of pre-warmed sandbox environments.</p>
                 <input
                   type="number"
                   min={0}
@@ -216,13 +216,13 @@ export default function Settings() {
                   onChange={(e) => setForm({ ...form, auditLogEnabled: e.target.checked })}
                   className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                 />
-                <label htmlFor="auditLog" className="text-sm font-medium text-gray-700">
+                <label htmlFor="auditLog" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Enable audit logging
                 </label>
               </div>
 
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              {success && <p className="text-sm text-green-600">{success}</p>}
+              {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+              {success && <p className="text-sm text-green-600 dark:text-green-400">{success}</p>}
 
               <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                 <button type="submit" disabled={saving} className="btn-primary">
@@ -244,14 +244,14 @@ export default function Settings() {
       </div>
 
       {/* Data Privacy */}
-      <div className="rounded-xl border border-red-200 bg-red-50 p-4 lg:p-6">
+      <div className="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30 p-4 lg:p-6">
         <button
           onClick={() => toggleSection('privacy')}
           className="flex w-full items-center justify-between lg:cursor-default"
         >
           <div>
-            <h3 className="text-base font-semibold text-red-800">Data Privacy</h3>
-            <p className="mt-1 text-sm text-red-600 hidden lg:block">
+            <h3 className="text-base font-semibold text-red-800 dark:text-red-200">Data Privacy</h3>
+            <p className="mt-1 text-sm text-red-600 dark:text-red-300 hidden lg:block">
               Manage your data retention and deletion preferences.
             </p>
           </div>
@@ -264,12 +264,12 @@ export default function Settings() {
         </button>
         {openSections.privacy && (
           <>
-            <p className="mt-1 text-sm text-red-600 lg:hidden">
+            <p className="mt-1 text-sm text-red-600 dark:text-red-300 lg:hidden">
               Manage your data retention and deletion preferences.
             </p>
             {deletionStatus && (
-              <div className="mt-4 rounded-lg border border-red-200 bg-white p-4">
-                <p className="text-sm font-medium text-gray-900">
+              <div className="mt-4 rounded-lg border border-red-200 bg-white dark:bg-gray-800 p-4">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {deletionStatus.activeRequest?.status === 'completed'
                     ? 'Data deletion completed'
                     : deletionStatus.activeRequest?.status === 'pending'
@@ -277,7 +277,7 @@ export default function Settings() {
                       : 'No active deletion request'}
                 </p>
                 {deletionStatus.activeRequest?.status === 'pending' && (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     Scheduled for{' '}
                     {new Date(deletionStatus.activeRequest.scheduled_deletion_at).toLocaleDateString()}
                     {' '}({deletionStatus.retentionDays}-day retention policy)
@@ -296,7 +296,7 @@ export default function Settings() {
                 </div>
               </div>
             )}
-            <p className="mt-3 text-xs text-gray-500">
+            <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
               Data is retained for {deletionStatus?.retentionDays ?? 30} days after cancellation,
               then permanently purged. You can cancel a deletion request at any time before the
               scheduled date.
@@ -306,14 +306,14 @@ export default function Settings() {
       </div>
 
       {/* Danger zone */}
-      <div className="rounded-xl border border-red-200 bg-red-50 p-4 lg:p-6">
+      <div className="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30 p-4 lg:p-6">
         <button
           onClick={() => toggleSection('danger')}
           className="flex w-full items-center justify-between lg:cursor-default"
         >
           <div>
-            <h3 className="text-base font-semibold text-red-800">Danger Zone</h3>
-            <p className="mt-1 text-sm text-red-600 hidden lg:block">
+            <h3 className="text-base font-semibold text-red-800 dark:text-red-200">Danger Zone</h3>
+            <p className="mt-1 text-sm text-red-600 dark:text-red-300 hidden lg:block">
               These actions are irreversible. Proceed with caution.
             </p>
           </div>
