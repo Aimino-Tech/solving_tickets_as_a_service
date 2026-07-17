@@ -15,7 +15,7 @@ import {
   getInstallationToken as getInstallationTokenFromPackage,
   type GitHubAppConfig,
 // @ts-expect-error - File outside rootDir, handled at runtime
-} from '../../packages/github-client/src/index.js';
+} from '@stas/github-client';
 
 const log = rootLogger.child({ module: 'github-auth' });
 

@@ -21,7 +21,7 @@
 import { execSync, type ExecSyncOptions } from 'node:child_process';
 // @ts-ignore
 import { rootLogger } from '../utils/logger.js';
-import type { GateResult } from './qualityGates.js' // Fixed import;
+import type { GateResult } from './quality-gates.js' // Fixed import;
 
 const log = rootLogger.child({ module: 'build-test-gate' });
 
