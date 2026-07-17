@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { formatNumber, formatDate } from '@/utils/format';
 
 export default function Analytics() {
   const [data, setData] = useState<DashboardStats | null>(null);
@@ -89,25 +90,27 @@ export default function Analytics() {
       <div className="card">
         <h3 className="text-base font-semibold text-gray-900">Fix Rate Over Time</h3>
         {fixRateData.length > 0 ? (
-          <div className="mt-4" style={{ height: 300 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={fixRateData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="week" tick={{ fontSize: 12 }} stroke="#9ca3af" />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9ca3af" unit="%" />
-                <Tooltip
-                  formatter={(value: number) => [`${value}%`, 'Fix Rate']}
-                  contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="rate"
-                  stroke="#6366f1"
-                  strokeWidth={2}
-                  dot={{ r: 3, fill: '#6366f1' }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="mt-4 overflow-x-auto">
+            <div className="min-w-[400px]" style={{ height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={fixRateData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="week" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9ca3af" unit="%" />
+                  <Tooltip
+                    formatter={(value: number) => [`${value}%`, 'Fix Rate']}
+                    contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="rate"
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: '#6366f1' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         ) : (
           <p className="mt-4 text-sm text-gray-400">Not enough data yet.</p>
@@ -118,18 +121,20 @@ export default function Analytics() {
       <div className="card">
         <h3 className="text-base font-semibold text-gray-900">Runs Per Day</h3>
         {runsByDayData.length > 0 ? (
-          <div className="mt-4" style={{ height: 300 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={runsByDayData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9ca3af" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
-                <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                <Legend />
-                <Bar dataKey="Total" fill="#a5b4fc" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Passed" fill="#4ade80" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="mt-4 overflow-x-auto">
+            <div className="min-w-[400px]" style={{ height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={runsByDayData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                  <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  <Legend />
+                  <Bar dataKey="Total" fill="#a5b4fc" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Passed" fill="#4ade80" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         ) : (
           <p className="mt-4 text-sm text-gray-400">No run data available yet.</p>
@@ -140,25 +145,27 @@ export default function Analytics() {
       <div className="card">
         <h3 className="text-base font-semibold text-gray-900">Cost Per Fix</h3>
         {costData.length > 0 ? (
-          <div className="mt-4" style={{ height: 300 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={costData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9ca3af" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" unit="$" />
-                <Tooltip
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Cost']}
-                  contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="cost"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  dot={{ r: 3, fill: '#f59e0b' }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="mt-4 overflow-x-auto">
+            <div className="min-w-[400px]" style={{ height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={costData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" unit="$" />
+                  <Tooltip
+                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'Cost']}
+                    contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="cost"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: '#f59e0b' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         ) : (
           <p className="mt-4 text-sm text-gray-400">No cost data available yet.</p>

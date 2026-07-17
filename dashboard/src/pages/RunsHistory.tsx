@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { runs } from '@/api/client';
 import type { Run } from '@/api/types';
 import { Link, useSearchParams } from 'react-router-dom';
+import { formatDateTime, formatDurationSeconds } from '@/utils/format';
 
 const STATUS_FILTERS = ['all', 'running', 'success', 'failed', 'queued', 'cancelled'] as const;
 
@@ -50,13 +51,13 @@ export default function RunsHistory() {
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500">Status:</label>
+          <label className="text-sm text-gray-500 dark:text-gray-400">Status:</label>
           <select
             value={statusFilter || 'all'}
             onChange={(e) => updateFilter('status', e.target.value === 'all' ? '' : e.target.value)}
-            className="input-field w-32"
+            className="input-field min-h-[44px] w-full sm:w-32"
           >
             {STATUS_FILTERS.map((s) => (
               <option key={s} value={s}>
@@ -66,24 +67,24 @@ export default function RunsHistory() {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500">Repo:</label>
+          <label className="text-sm text-gray-500 dark:text-gray-400">Repo:</label>
           <input
             type="text"
             placeholder="owner/repo"
             value={repoFilter}
             onChange={(e) => updateFilter('repo', e.target.value)}
-            className="input-field w-48"
+            className="input-field min-h-[44px] w-full sm:w-48"
           />
         </div>
         {(statusFilter || repoFilter) && (
-          <button onClick={() => setSearchParams({})} className="text-sm text-gray-500 hover:text-gray-700">
+          <button onClick={() => setSearchParams({})} className="min-h-[44px] min-w-[44px] text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
             Clear filters
           </button>
         )}
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -150,9 +151,54 @@ export default function RunsHistory() {
         </table>
       </div>
 
+      {/* Mobile Card List */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          [...Array(3)].map((_, i) => (
+            <div key={i} className="card animate-pulse">
+              <div className="h-4 w-24 rounded bg-gray-200" />
+              <div className="mt-2 h-3 w-40 rounded bg-gray-200" />
+              <div className="mt-2 h-3 w-20 rounded bg-gray-200" />
+            </div>
+          ))
+        ) : error ? (
+          <div className="card">
+            <p className="text-sm text-red-500">{error}</p>
+          </div>
+        ) : data?.data.length === 0 ? (
+          <div className="card text-center py-8">
+            <p className="text-sm text-gray-400">No runs found.</p>
+          </div>
+        ) : (
+          data?.data.map((run) => (
+            <Link
+              key={run.id}
+              to={`/runs/${run.id}`}
+              className="card block hover:border-brand-200 hover:shadow-md transition-all"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs text-brand-600">{run.id.slice(0, 8)}</span>
+                  <StatusBadge status={run.status} />
+                </div>
+                <span className="text-xs text-gray-400">{formatDuration(run.durationSeconds)}</span>
+              </div>
+              <p className="mt-2 text-sm font-medium text-gray-900 truncate">
+                {run.repoOwner}/{run.repoName}#{run.issueNumber}
+              </p>
+              <p className="mt-1 text-xs text-gray-500 truncate">{run.issueTitle}</p>
+              <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
+                <span>{formatCost(run.costCents)}</span>
+                <span>{new Date(run.createdAt).toLocaleDateString()}</span>
+              </div>
+            </Link>
+          ))
+        )}
+      </div>
+
       {/* Pagination */}
       {data && data.totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-gray-500">
             Page {data.page} of {data.totalPages} ({data.total} total)
           </p>

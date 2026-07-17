@@ -4,6 +4,7 @@ import type { DashboardStats } from '@/api/types';
 import { Link } from 'react-router-dom';
 import { Activity, CheckCircle, Clock, FolderGit } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
+import { formatNumber, formatPercentage, formatDurationSeconds } from '@/utils/format';
 
 export default function DashboardHome() {
   const { t } = useI18n();
@@ -20,7 +21,7 @@ export default function DashboardHome() {
   if (error) {
     return (
       <div className="card">
-        <p className="text-red-600">{t('dashboard.failedToLoad', { error })}</p>
+        <p className="text-red-600 dark:text-red-400">{t('dashboard.failedToLoad', { error })}</p>
       </div>
     );
   }
@@ -30,8 +31,8 @@ export default function DashboardHome() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="card animate-pulse">
-            <div className="h-4 w-24 rounded bg-gray-200" />
-            <div className="mt-3 h-8 w-16 rounded bg-gray-200" />
+            <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="mt-3 h-8 w-16 rounded bg-gray-200 dark:bg-gray-700" />
           </div>
         ))}
       </div>
@@ -42,29 +43,29 @@ export default function DashboardHome() {
     {
       label: 'Total Runs',
       value: formatNumber(data.totalRuns),
-      color: 'text-brand-600',
-      bg: 'bg-brand-50',
+      color: 'text-brand-600 dark:text-brand-400',
+      bg: 'bg-brand-50 dark:bg-brand-900/50',
       Icon: Activity,
     },
     {
       label: 'Pass Rate',
       value: formatPercentage(data.passRate),
-      color: 'text-green-600',
-      bg: 'bg-green-50',
+      color: 'text-green-600 dark:text-green-400',
+      bg: 'bg-green-50 dark:bg-green-900/50',
       Icon: CheckCircle,
     },
     {
       label: 'Avg Duration',
       value: formatDurationSeconds(data.avgDurationSeconds),
-      color: 'text-blue-600',
-      bg: 'bg-blue-50',
+      color: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-blue-50 dark:bg-blue-900/50',
       Icon: Clock,
     },
     {
       label: 'Active Repos',
       value: formatNumber(data.activeRepos),
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-50 dark:bg-amber-900/50',
       Icon: FolderGit,
     },
   ];
@@ -78,7 +79,7 @@ export default function DashboardHome() {
             <div className={`inline-flex rounded-lg ${card.bg} p-2`}>
               <card.Icon className={card.color} size={24} />
             </div>
-            <p className="mt-3 text-sm font-medium text-gray-500">{card.label}</p>
+            <p className="mt-3 text-sm font-medium text-gray-500 dark:text-gray-400">{card.label}</p>
             <p className={`mt-1 text-3xl font-bold ${card.color}`}>{card.value}</p>
           </div>
         ))}
@@ -87,7 +88,7 @@ export default function DashboardHome() {
       {/* Recent runs chart */}
       <div className="card">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-gray-900">{t('dashboard.recentRuns')}</h3>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.recentRuns')}</h3>
           <Link to="/runs" className="text-sm font-medium text-brand-600 hover:text-brand-700">
             {t('dashboard.viewAll')} &rarr;
           </Link>
@@ -113,7 +114,7 @@ export default function DashboardHome() {
                       className="w-full max-w-[32px] rounded-t bg-brand-300 transition-all"
                       style={{ height: `${Math.max(height - passHeight, 0)}%` }}
                     />
-                    <span className="mt-1 text-[10px] text-gray-400">
+                    <span className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
                       {new Date(day.date).getDate()}
                     </span>
                   </div>
@@ -136,25 +137,25 @@ export default function DashboardHome() {
 
       {/* Quick links */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <Link to="/repos" className="card group hover:border-brand-200 hover:shadow-md transition-all">
-          <h3 className="text-base font-semibold text-gray-900 group-hover:text-brand-600">
+        <Link to="/repos" className="card group hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-md transition-all">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-brand-600 dark:group-hover:text-brand-400">
             {t('dashboard.connectedRepos')}
           </h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {t('dashboard.manageReposDesc')}
           </p>
-          <span className="mt-3 inline-block text-sm font-medium text-brand-600">
+          <span className="mt-3 inline-block text-sm font-medium text-brand-600 dark:text-brand-400">
             {t('dashboard.manageRepos')} &rarr;
           </span>
         </Link>
-        <Link to="/analytics" className="card group hover:border-brand-200 hover:shadow-md transition-all">
-          <h3 className="text-base font-semibold text-gray-900 group-hover:text-brand-600">
+        <Link to="/analytics" className="card group hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-md transition-all">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-brand-600 dark:group-hover:text-brand-400">
             {t('dashboard.analyticsTitle')}
           </h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {t('dashboard.analyticsDesc')}
           </p>
-          <span className="mt-3 inline-block text-sm font-medium text-brand-600">
+          <span className="mt-3 inline-block text-sm font-medium text-brand-600 dark:text-brand-400">
             {t('dashboard.viewAnalytics')} &rarr;
           </span>
         </Link>

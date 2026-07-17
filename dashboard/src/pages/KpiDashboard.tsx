@@ -14,6 +14,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
+import { formatNumber, formatPercentage, formatDate } from '@/utils/format';
 
 export default function KpiDashboard() {
   const [metrics, setMetrics] = useState<KpiMetric[]>([]);
