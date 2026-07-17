@@ -1,0 +1,43 @@
+{
+  "nav.dashboard": "Dashboard",
+  "nav.runs": "Runs",
+  "nav.repos": "Repos",
+  "nav.analytics": "Analytics",
+  "nav.kpis": "KPIs",
+  "nav.audit": "Audit Log",
+  "nav.settings": "Settings",
+  "nav.admin": "Admin",
+
+  "dashboard.totalRuns": "Total Runs",
+  "dashboard.passRate": "Pass Rate",
+  "dashboard.avgDuration": "Avg Duration",
+  "dashboard.activeRepos": "Active Repos",
+  "dashboard.recentRuns": "Runs (last 14 days)",
+  "dashboard.viewAll": "View all",
+  "dashboard.noRuns": "No runs yet. Label an issue with {{label}} to get started.",
+  "dashboard.connectedRepos": "Connected Repositories",
+  "dashboard.manageReposDesc": "Manage your GitHub repository connections.",
+  "dashboard.manageRepos": "Manage repos",
+  "dashboard.analyticsTitle": "Analytics",
+  "dashboard.analyticsDesc": "View fix rates, costs, and trends over time.",
+  "dashboard.viewAnalytics": "View analytics",
+  "dashboard.total": "Total",
+  "dashboard.passed": "Passed",
+  "dashboard.failedToLoad": "Failed to load dashboard data: {{error}}",
+
+  "runs.title": "Runs",
+  "runs.status": "Status",
+  "runs.duration": "Duration",
+  "runs.createdAt": "Created at",
+
+  "common.loading": "Loading...",
+  "common.error": "Error",
+  "common.retry": "Retry",
+  "common.save": "Save",
+  "common.cancel": "Cancel",
+
+  "auth.login": "Log in",
+  "auth.logout": "Log out",
+  "auth.profile": "Profile",
+  "auth.user": "User"
+}

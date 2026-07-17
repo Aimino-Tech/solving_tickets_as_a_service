@@ -3,8 +3,10 @@ import { stats } from '@/api/client';
 import type { DashboardStats } from '@/api/types';
 import { Link } from 'react-router-dom';
 import { Activity, CheckCircle, Clock, FolderGit } from 'lucide-react';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export default function DashboardHome() {
+  const { t } = useI18n();
   const [data, setData] = useState<DashboardStats | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +20,7 @@ export default function DashboardHome() {
   if (error) {
     return (
       <div className="card">
-        <p className="text-red-600">Failed to load dashboard data: {error}</p>
+        <p className="text-red-600">{t('dashboard.failedToLoad', { error })}</p>
       </div>
     );
   }
@@ -39,28 +41,28 @@ export default function DashboardHome() {
   const cards = [
     {
       label: 'Total Runs',
-      value: data.totalRuns.toLocaleString(),
+      value: formatNumber(data.totalRuns),
       color: 'text-brand-600',
       bg: 'bg-brand-50',
       Icon: Activity,
     },
     {
       label: 'Pass Rate',
-      value: `${(data.passRate * 100).toFixed(1)}%`,
+      value: formatPercentage(data.passRate),
       color: 'text-green-600',
       bg: 'bg-green-50',
       Icon: CheckCircle,
     },
     {
       label: 'Avg Duration',
-      value: formatDuration(data.avgDurationSeconds),
+      value: formatDurationSeconds(data.avgDurationSeconds),
       color: 'text-blue-600',
       bg: 'bg-blue-50',
       Icon: Clock,
     },
     {
       label: 'Active Repos',
-      value: String(data.activeRepos),
+      value: formatNumber(data.activeRepos),
       color: 'text-amber-600',
       bg: 'bg-amber-50',
       Icon: FolderGit,
@@ -85,9 +87,9 @@ export default function DashboardHome() {
       {/* Recent runs chart */}
       <div className="card">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-gray-900">Runs (last 14 days)</h3>
+          <h3 className="text-base font-semibold text-gray-900">{t('dashboard.recentRuns')}</h3>
           <Link to="/runs" className="text-sm font-medium text-brand-600 hover:text-brand-700">
-            View all &rarr;
+            {t('dashboard.viewAll')} &rarr;
           </Link>
         </div>
         {data.runsByDay.length > 0 ? (
@@ -120,15 +122,15 @@ export default function DashboardHome() {
             </div>
             <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2.5 w-2.5 rounded bg-brand-300" /> Total
+                <span className="inline-block h-2.5 w-2.5 rounded bg-brand-300" /> {t('dashboard.total')}
               </span>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2.5 w-2.5 rounded bg-green-400" /> Passed
+                <span className="inline-block h-2.5 w-2.5 rounded bg-green-400" /> {t('dashboard.passed')}
               </span>
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-gray-400">No runs yet. Label an issue with <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs">stas:fix</code> to get started.</p>
+          <p className="mt-4 text-sm text-gray-400">{t('dashboard.noRuns', { label: 'stas:fix' })}</p>
         )}
       </div>
 
@@ -136,35 +138,27 @@ export default function DashboardHome() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <Link to="/repos" className="card group hover:border-brand-200 hover:shadow-md transition-all">
           <h3 className="text-base font-semibold text-gray-900 group-hover:text-brand-600">
-            Connected Repositories
+            {t('dashboard.connectedRepos')}
           </h3>
           <p className="mt-1 text-sm text-gray-500">
-            Manage your GitHub repository connections.
+            {t('dashboard.manageReposDesc')}
           </p>
           <span className="mt-3 inline-block text-sm font-medium text-brand-600">
-            Manage repos &rarr;
+            {t('dashboard.manageRepos')} &rarr;
           </span>
         </Link>
         <Link to="/analytics" className="card group hover:border-brand-200 hover:shadow-md transition-all">
           <h3 className="text-base font-semibold text-gray-900 group-hover:text-brand-600">
-            Analytics
+            {t('dashboard.analyticsTitle')}
           </h3>
           <p className="mt-1 text-sm text-gray-500">
-            View fix rates, costs, and trends over time.
+            {t('dashboard.analyticsDesc')}
           </p>
           <span className="mt-3 inline-block text-sm font-medium text-brand-600">
-            View analytics &rarr;
+            {t('dashboard.viewAnalytics')} &rarr;
           </span>
         </Link>
       </div>
     </div>
   );
-}
-
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return `${h}h ${m}m`;
 }
