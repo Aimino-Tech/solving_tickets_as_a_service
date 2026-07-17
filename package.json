@@ -79,7 +79,16 @@
     "stas": "tsx src/template/cli.ts",
     "stas:validate": "tsx src/template/cli.ts template validate",
     "stas:dry-run": "tsx src/template/cli.ts template dry-run",
-    "stas:install-hook": "tsx src/template/cli.ts install-hook"
+    "stas:install-hook": "tsx src/template/cli.ts install-hook",
+    "test:e2e:smoke": "bash scripts/run-e2e-smoke-tests.sh",
+    "test:e2e:smoke:verbose": "bash scripts/run-e2e-smoke-tests.sh --verbose",
+    "test:e2e:smoke:list": "bash scripts/run-e2e-smoke-tests.sh --list",
+    "test:launch-readiness": "vitest run tests/launch-readiness.test.ts --config vitest.config.ts",
+    "test:smoke:happy": "vitest run tests/e2e/happy-path.test.ts --config vitest.e2e.config.ts",
+    "test:smoke:error": "vitest run tests/e2e/error-handling-path.test.ts --config vitest.e2e.config.ts",
+    "test:smoke:auth": "vitest run tests/e2e/auth-path.test.ts --config vitest.e2e.config.ts",
+    "test:smoke:dlq": "vitest run tests/e2e/dlq-path.test.ts --config vitest.e2e.config.ts",
+    "test:smoke:health": "vitest run tests/e2e/health-check-path.test.ts --config vitest.e2e.config.ts"
   },
   "dependencies": {
     "@linear/sdk": "^87.0.0",
