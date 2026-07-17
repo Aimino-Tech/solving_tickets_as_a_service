@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getQueueHealth } from '../health/queueHealth.js';
+import { getDependenciesHealth } from '../health/dependencies.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'health-routes' });
