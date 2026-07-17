@@ -65,9 +65,9 @@ const envSchema = z.object({
   STAS_MONTHLY_QUOTA_ENABLED: boolSchema(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
-	  STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
+  STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
   STAS_AI_DISABLED: boolSchema(false),
-	  STAS_LABEL: z.string().default('stas:fix'),
+  STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
@@ -263,6 +263,13 @@ const envSchema = z.object({
   PIPELINE_QUALITY_GATE_TIMEOUT_MS: z.coerce.number().int().positive().default(300000),
   PIPELINE_COMPLIANCE_CHECK_ENABLED: boolSchema(true),
 
+  // ── Team Management ──
+  TEAMS_ENABLED: boolSchema(true),
+  TEAMS_MAX_MEMBERS_FREE_TIER: z.coerce.number().int().positive().default(3),
+  TEAMS_MAX_MEMBERS_PRO_TIER: z.coerce.number().int().positive().default(20),
+
+  // ── Onboarding Wizard ──
+  ONBOARDING_WIZARD_ENABLED: boolSchema(true),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -443,10 +450,10 @@ function buildConfig(env: ParsedEnv) {
     },
 
     stas: {
-	      mode: env.STAS_MODE,
-	      aiMode: env.STAS_AI_MODE,
-	      aiDisabled: env.STAS_AI_DISABLED,
-	      label: env.STAS_LABEL,
+      mode: env.STAS_MODE,
+      aiMode: env.STAS_AI_MODE,
+      aiDisabled: env.STAS_AI_DISABLED,
+      label: env.STAS_LABEL,
       botName: env.BOT_NAME,
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
       maxAgentIterations: env.MAX_AGENT_ITERATIONS,
@@ -595,6 +602,18 @@ function buildConfig(env: ParsedEnv) {
       sandboxEnabled: env.PIPELINE_SANDBOX_ENABLED,
       qualityGateTimeoutMs: env.PIPELINE_QUALITY_GATE_TIMEOUT_MS,
       complianceCheckEnabled: env.PIPELINE_COMPLIANCE_CHECK_ENABLED,
+    },
+
+    // ── Team Management ─────────────────────────────────────────────────────
+    teams: {
+      enabled: env.TEAMS_ENABLED,
+      maxMembersFreeTier: env.TEAMS_MAX_MEMBERS_FREE_TIER,
+      maxMembersProTier: env.TEAMS_MAX_MEMBERS_PRO_TIER,
+    },
+
+    // ── Onboarding Wizard ───────────────────────────────────────────────────
+    onboarding: {
+      wizardEnabled: env.ONBOARDING_WIZARD_ENABLED,
     },
   } as const;
 }
