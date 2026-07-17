@@ -110,6 +110,8 @@ export async function createApp(): Promise<express.Application> {
       aiMode: aiDisabled ? 'ai-disabled' : 'enabled',
       description: aiDisabled ? 'AI-disabled mode — manual infrastructure operation' : 'AI agent active — automated fix pipeline',
     });
+  });
+
   app.get('/health/ready', async (_req: Request, res: Response) => {
     const checks: Record<string, string> = {};
     try {
