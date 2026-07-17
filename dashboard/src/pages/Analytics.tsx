@@ -14,6 +14,7 @@ import {
   Legend,
 } from 'recharts';
 import { formatNumber, formatDate } from '@/utils/format';
+import { SkeletonCard, SkeletonChart } from '@/components/LoadingSkeleton';
 
 export default function Analytics() {
   const [data, setData] = useState<DashboardStats | null>(null);
@@ -37,12 +38,12 @@ export default function Analytics() {
   if (!data) {
     return (
       <div className="space-y-6">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="card animate-pulse">
-            <div className="h-5 w-48 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="mt-4 h-48 rounded bg-gray-200 dark:bg-gray-700" />
-          </div>
-        ))}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+        <SkeletonChart />
+        <SkeletonChart />
+        <SkeletonChart />
       </div>
     );
   }

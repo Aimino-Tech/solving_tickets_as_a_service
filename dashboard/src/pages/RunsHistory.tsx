@@ -3,6 +3,7 @@ import { runs } from '@/api/client';
 import type { Run } from '@/api/types';
 import { Link, useSearchParams } from 'react-router-dom';
 import { formatDateTime, formatDurationSeconds } from '@/utils/format';
+import { SkeletonTable, SkeletonCard } from '@/components/LoadingSkeleton';
 
 const STATUS_FILTERS = ['all', 'running', 'success', 'failed', 'queued', 'cancelled'] as const;
 
@@ -98,11 +99,7 @@ export default function RunsHistory() {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {loading ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
-                  Loading...
-                </td>
-              </tr>
+              <SkeletonTable rows={5} columns={6} />
             ) : error ? (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center text-sm text-red-500 dark:text-red-400">
@@ -154,13 +151,7 @@ export default function RunsHistory() {
       {/* Mobile Card List */}
       <div className="md:hidden space-y-3">
         {loading ? (
-          [...Array(3)].map((_, i) => (
-            <div key={i} className="card animate-pulse">
-              <div className="h-4 w-24 rounded bg-gray-200" />
-              <div className="mt-2 h-3 w-40 rounded bg-gray-200" />
-              <div className="mt-2 h-3 w-20 rounded bg-gray-200" />
-            </div>
-          ))
+          [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
         ) : error ? (
           <div className="card">
             <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
