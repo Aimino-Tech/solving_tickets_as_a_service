@@ -1,0 +1,35 @@
+{
+  "name": "STAS - Solving Tickets As A Service",
+  "url": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
+  "description": "STAS is a GitHub bot that automatically investigates, fixes, and opens pull requests for labeled issues. Label an issue with 'stas:fix' and our AI agent analyzes the codebase, implements a fix, runs tests, and opens a PR — all autonomously.",
+  "hook_attributes": {
+    "url": "https://YOUR_DOMAIN.com/webhook",
+    "active": true
+  },
+  "public": true,
+  "default_events": [
+    "issues",
+    "issue_comment",
+    "pull_request",
+    "pull_request_review",
+    "push",
+    "check_run",
+    "check_suite",
+    "marketplace_purchase"
+  ],
+  "default_permissions": {
+    "actions": "read",
+    "checks": "write",
+    "contents": "write",
+    "deployments": "read",
+    "issues": "write",
+    "metadata": "read",
+    "pull_requests": "write",
+    "statuses": "read"
+  },
+  "request_oauth_on_install": true,
+  "redirect_url": "https://YOUR_DOMAIN.com/plg/github/callback",
+  "setup_url": "https://YOUR_DOMAIN.com/plg/onboarding",
+  "setup_on_update": true,
+  "pem": ""
+}

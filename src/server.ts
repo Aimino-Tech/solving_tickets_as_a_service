@@ -22,6 +22,8 @@
  */
 
 import crypto from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
@@ -31,15 +33,15 @@ import helmet from 'helmet';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
-import { createIssueQueue, createIssueWorker, enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
+import type { IssueJobData } from './utils/types.js';
+import { QUEUES, publishMessage, connect as rmqConnect, isConnected } from './queue/rabbitmq.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
 import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
-import type { IssueJobData } from './utils/types.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
@@ -47,6 +49,7 @@ import { featureFlagsRouter } from './routes/featureFlags.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
 import { recordWebhookDuration } from './webhooks/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
+import { pipelineRouter } from './routes/pipeline.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { adminAuditRouter } from './routes/admin_audit.js';
@@ -56,6 +59,7 @@ import { slaRouter } from './routes/sla.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
 import { pricingRouter } from './routes/pricing.js';
+import { trustRouter } from './api/routes/trust.js';
 import { plgRouter } from './routes/plg.js';
 import { reposRouter } from './routes/repos.js';
 import { runsRouter } from './routes/runs.js';
@@ -63,8 +67,10 @@ import { badgeRouter } from './routes/badge.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { viralRouter } from './routes/viral.js';
 import { qualityRouter } from './routes/quality.js';
+import previewRoutes from './api/routes/preview.js';
 import { kpiRouter } from './routes/kpi.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
+import previewRoutes from './api/routes/preview.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -95,6 +101,29 @@ export async function createApp(): Promise<express.Application> {
     credentials: true,
     maxAge: 86400, // 24 hours
   }));
+
+  // -- Health check endpoint ------------------------------------------------
+  app.get('/health', (_req: Request, res: Response) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
+  });
+  app.get('/health/ready', async (_req: Request, res: Response) => {
+    const checks: Record<string, string> = {};
+    try {
+      const { queryWithRetry } = await import('./db/connection.js');
+      await queryWithRetry('SELECT 1');
+      checks.database = 'ok';
+    } catch { checks.database = 'down'; }
+    try {
+      const { Redis } = await import('ioredis');
+      const redis = new Redis(config.queue.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1, connectTimeout: 3000 });
+      await redis.connect();
+      await redis.ping();
+      checks.redis = 'ok';
+      await redis.quit().catch(() => {});
+    } catch { checks.redis = 'down'; }
+    const allOk = Object.values(checks).every(v => v === 'ok');
+    res.status(allOk ? 200 : 503).json({ status: allOk ? 'ok' : 'degraded', checks, timestamp: new Date().toISOString() });
+  });
 
   // -- IP Allowlist for webhook endpoints -----------------------------------
   app.use('/webhook', ipAllowlistMiddleware);
@@ -162,10 +191,27 @@ export async function createApp(): Promise<express.Application> {
   }
 
   // ── Webhook receiver ─────────────────────────────────────────────
-  const queue = createIssueQueue();
-  const githubWebhooks = createGithubWebhooks(queue);
-  const gitlabHandler = createGitlabWebhooks(queue);
-  const bitbucketHandler = createBitbucketWebhooks(queue);
+  // RabbitMQ enqueue function for webhook handlers
+  async function enqueueIssue(data: IssueJobData): Promise<string | undefined> {
+    if (!isConnected()) {
+      await rmqConnect();
+    }
+    const messageId = `${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}-${Date.now()}`;
+    try {
+      await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+        ...data,
+        _meta: { messageId, enqueuedAt: new Date().toISOString() },
+      });
+      return messageId;
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to enqueue issue via RabbitMQ');
+      return undefined;
+    }
+  }
+
+  const githubWebhooks = createGithubWebhooks(enqueueIssue);
+  const gitlabHandler = createGitlabWebhooks(enqueueIssue);
+  const bitbucketHandler = createBitbucketWebhooks(enqueueIssue);
 
   // -- GitHub webhook handler (shared between /webhook and /webhook/github) --
   async function handleGithubWebhook(req: Request, res: Response): Promise<void> {
@@ -207,7 +253,7 @@ export async function createApp(): Promise<express.Application> {
       try {
         await githubWebhooks.verifyAndReceive({
           id: deliveryId,
-          name: event as any,
+          name: event as EmitterWebhookEventName,
           payload: rawBody.toString(),
           signature,
         });
@@ -222,7 +268,7 @@ export async function createApp(): Promise<express.Application> {
       try {
         await githubWebhooks.receive({
           id: deliveryId || crypto.randomUUID(),
-          name: event as any,
+          name: event as EmitterWebhookEventName,
           payload: JSON.parse((rawBody || Buffer.from(JSON.stringify(req.body))).toString()),
         });
       } catch (err) {
@@ -367,7 +413,7 @@ export async function createApp(): Promise<express.Application> {
     // Log the webhook event
     const eventId = await logWebhookReceived({
       source,
-      eventType: (payload as any)?.type || 'unknown',
+      eventType: (payload as { type?: string })?.type ?? 'unknown',
       deliveryId: undefined,
       payload,
     });
@@ -409,7 +455,7 @@ export async function createApp(): Promise<express.Application> {
             trackerTicketId: ticket.id,
           };
 
-          await enqueueIssue(queue, jobData);
+          await enqueueIssue(jobData);
         } else {
           log.warn(
             'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Linear ticket not enqueued',
@@ -449,7 +495,7 @@ export async function createApp(): Promise<express.Application> {
     // Log the webhook event
     const eventId = await logWebhookReceived({
       source,
-      eventType: (payload as any)?.webhookEvent || 'unknown',
+      eventType: (payload as { webhookEvent?: string })?.webhookEvent ?? 'unknown',
       deliveryId: undefined,
       payload,
     });
@@ -491,7 +537,7 @@ export async function createApp(): Promise<express.Application> {
             trackerTicketId: ticket.id,
           };
 
-          await enqueueIssue(queue, jobData);
+          await enqueueIssue(jobData);
         } else {
           log.warn(
             'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Jira ticket not enqueued',
@@ -637,6 +683,144 @@ export async function createApp(): Promise<express.Application> {
   // GET /discovery          — Human-readable discovery landing page
   app.use(viralRouter);
 
+  // ── MCP Well-Known Discovery (agent detection) ────────────────────
+  // GET /.well-known/mcp-server-card.json — AI agent auto-discovery card
+  // GET /.well-known/mcp/server-card.json — Alternative path
+  // Serves the MCP server card so AI agents can discover STAS autonomously.
+  app.get('/.well-known/mcp-server-card.json', (_req: Request, res: Response) => {
+    const baseUrl = process.env.STAS_PUBLIC_URL || `${_req.protocol}://${_req.get('host')}`;
+    const sseUrl = process.env.STAS_MCP_SERVER_URL
+      ? `${process.env.STAS_MCP_SERVER_URL}/sse`
+      : `${baseUrl}/sse`;
+    const mcpUrl = process.env.STAS_MCP_SERVER_URL
+      ? `${process.env.STAS_MCP_SERVER_URL}/mcp`
+      : `${baseUrl}/mcp`;
+
+    const card = {
+      schemaVersion: '2024-11-05',
+      server: {
+        name: '@aimino/stas-mcp',
+        version: '1.0.0',
+        description:
+          'STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot backed by OpenCode.',
+        homepage: 'https://github.com/tamnguyen08/solving_tickets_as_a_service',
+        documentation: 'https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md',
+        license: 'MIT',
+        author: { name: 'Aimino Tech', email: 'team@aimino.io', url: 'https://stas.aimino.io' },
+      },
+      capabilities: {
+        tools: {
+          stas_label_issue: {
+            description: 'Label a GitHub issue with the STAS fix label. Triggers the fix pipeline.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                owner: { type: 'string', description: 'Repository owner' },
+                repo: { type: 'string', description: 'Repository name' },
+                issue_number: { type: 'integer', description: 'Issue number' },
+                label: { type: 'string', description: 'Label to apply (default: stas:fix)' },
+              },
+              required: ['owner', 'repo', 'issue_number'],
+            },
+          },
+          stas_run_fix: {
+            description: 'Trigger the STAS fix pipeline for a GitHub issue URL.',
+            inputSchema: {
+              type: 'object',
+              properties: { issue_url: { type: 'string', description: 'Full GitHub issue URL' } },
+              required: ['issue_url'],
+            },
+          },
+          stas_check_status: {
+            description: 'Check status of a STAS fix run by run_id.',
+            inputSchema: {
+              type: 'object',
+              properties: { run_id: { type: 'string', description: 'Run ID from stas_run_fix' } },
+              required: ['run_id'],
+            },
+          },
+          stas_get_pr: {
+            description: 'Get PR URL and details for a completed fix run.',
+            inputSchema: {
+              type: 'object',
+              properties: { run_id: { type: 'string', description: 'Run ID from stas_run_fix' } },
+              required: ['run_id'],
+            },
+          },
+        },
+        resources: {
+          'stas://runs/{run_id}': { description: 'Full run details with status, PR link, and test results.' },
+          'stas://issues/{issue_id}': { description: 'Issue details with fix status, run history, and linked PRs.' },
+          'stas://status': { description: 'Server health and capability overview.' },
+          'stas://queue': { description: 'Current fix queue depth and status.' },
+        },
+      },
+      transports: [
+        { type: 'sse', url: sseUrl, description: 'Server-Sent Events transport' },
+        { type: 'streamable-http', url: mcpUrl, description: 'Streamable HTTP transport' },
+        {
+          type: 'stdio',
+          command: 'npx',
+          args: ['-y', '@aimino/stas-mcp'],
+          description: 'Stdio transport via npx',
+        },
+      ],
+      install: {
+        opencode: {
+          config: { name: 'stas-agent', transport: 'stdio', command: 'npx', args: ['-y', '@aimino/stas-mcp'] },
+        },
+        claudeDesktop: {
+          config: { mcpServers: { stas: { command: 'npx', args: ['-y', '@aimino/stas-mcp'] } } },
+        },
+        cursor: {
+          config: { mcpServers: { stas: { command: 'npx', args: ['-y', '@aimino/stas-mcp'] } } },
+        },
+      },
+      keywords: [
+        'stas', 'github-bot', 'issue-fixer', 'automated-fix',
+        'opencode', 'mcp', 'smithery', 'aimino', 'agent-discovery', 'agent-to-agent',
+      ],
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.json(card);
+  });
+
+  // GET /.well-known/mcp/server-card.json — Alternative MCP discovery path
+  app.get('/.well-known/mcp/server-card.json', (_req: Request, res: Response) => {
+    res.redirect(301, '/.well-known/mcp-server-card.json');
+  });
+
+  // GET /badge/agent-found.svg — "Agent Found STAS" badge for repo READMEs
+  app.get('/badge/agent-found.svg', (_req: Request, res: Response) => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="138" height="20" role="img" aria-label="Agent Found: STAS">
+  <title>Agent Found: STAS</title>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="138" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="90" height="20" fill="#555"/>
+    <rect x="90" width="48" height="20" fill="#8250DF"/>
+    <rect width="138" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="45" y="15" fill="#010101" fill-opacity=".3">Agent Found</text>
+    <text x="45" y="14">Agent Found</text>
+    <text x="114" y="15" fill="#010101" fill-opacity=".3">STAS</text>
+    <text x="114" y="14">STAS</text>
+  </g>
+</svg>`;
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(svg);
+  });
+
   // ── Quality Score Card API ───────────────────────────────────────
   app.use('/api/quality', qualityRouter);
 
@@ -648,6 +832,10 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Pricing API (public) ─────────────────────────────────────────
   app.use('/api/pricing', pricingRouter);
+
+  // ── Preview API (public, no auth) ────────────────────────────────
+  const { previewRouter } = await import('./routes/preview.js');
+  app.use('/api/v1', previewRouter);
 
   // KPI Dashboard API
   app.use('/api/kpi', kpiRouter);
@@ -673,6 +861,53 @@ export async function createApp(): Promise<express.Application> {
   } catch {
     log.warn('Enterprise routes not available');
   }
+
+  app.get('/health', (_req: Request, res: Response) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      version: process.env.npm_package_version ?? '0.1.0',
+    });
+  });
+
+  app.get('/health/ready', async (_req: Request, res: Response) => {
+    try {
+      const { getDependenciesHealth } = await import('./health/dependencies.js');
+      const health = await getDependenciesHealth();
+      res.status(health.status === 'ok' ? 200 : 503).json(health);
+    } catch (err) {
+      res.status(503).json({ status: 'error', error: String(err), timestamp: new Date().toISOString() });
+    }
+  });
+
+  app.get('/health/queue', async (_req: Request, res: Response) => {
+    try {
+      const { getQueueHealth } = await import('./health/queueHealth.js');
+      const health = await getQueueHealth();
+      const httpStatus = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
+      res.status(httpStatus).json(health);
+    } catch (err) {
+      res.status(503).json({ status: 'error', error: String(err), timestamp: new Date().toISOString() });
+    }
+  });
+
+  app.get('/metrics', async (_req: Request, res: Response) => {
+    const { bridgeMetrics } = await import('./bridge/metrics.js');
+    const metrics = bridgeMetrics.render();
+    res.type('text/plain; version=0.0.4').send(metrics);
+  });
+
+  app.get('/github-app-manifest.json', (_req: Request, res: Response) => {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    res.sendFile(path.join(__dirname, '..', 'public', 'github-app-manifest.json'), (err) => {
+      if (err) res.status(404).json({ error: 'Manifest not found' });
+    });
+  });
+
+  app.use('/api/v1/preview', previewRoutes);
+  app.use('/api', pipelineRouter);
   // -- 404 handler ----------------------------------------------------------
 
   app.use((req: Request, res: Response) => {
@@ -699,21 +934,35 @@ export async function createApp(): Promise<express.Application> {
 export async function startServer(): Promise<import('http').Server> {
   const app = await createApp();
 
-  const server = app.listen(config.port, '0.0.0.0', () => {
+  const server = app.listen(config.port, '0.0.0.0', async () => {
     log.info(
       { port: config.port, label: config.stas.label, env: config.nodeEnv },
       `STAS server listening on :${config.port}`,
     );
 
-    // Start the issue queue worker (Worker auto-starts in BullMQ 5.x)
+    // Start the RabbitMQ issue consumer
     try {
-      const worker = createIssueWorker();
-      worker.on('error', (err: Error) => {
-        log.error({ err: String(err) }, 'Issue worker error');
+      const { consumeQueue } = await import('./queue/rabbitmq.js');
+      const { runIssueAgent } = await import('./agent/issueAgent.js');
+      await consumeQueue(QUEUES.issuesFix.name, async (msg) => {
+        if (!msg) return;
+        const content = msg.content.toString();
+        let data: IssueJobData;
+        try {
+          data = JSON.parse(content) as IssueJobData;
+        } catch {
+          log.error({ content }, 'Failed to parse RabbitMQ message');
+          return;
+        }
+        try {
+          await runIssueAgent(data);
+        } catch (err) {
+          log.error({ err: String(err) }, 'Issue agent run failed');
+        }
       });
-      log.info('Issue queue worker started');
+      log.info('RabbitMQ issue consumer started');
     } catch (err) {
-      log.error({ err: String(err) }, 'Failed to start issue queue worker');
+      log.error({ err: String(err) }, 'Failed to start RabbitMQ issue consumer');
     }
   });
 

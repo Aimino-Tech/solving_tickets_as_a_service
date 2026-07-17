@@ -1,8 +1,6 @@
 import crypto from 'node:crypto';
-import type { Queue } from 'bullmq';
 
 import { config } from '../config.js';
-import { enqueueIssue } from '../queue/issueQueue.js';
 import { rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
 import type { CreatePullRequestParams, PlatformClient, PlatformWebhook, PlatformWebhookEvent } from './base.js';
@@ -14,6 +12,8 @@ const bbToken = `${bbConfig.username}:${bbConfig.appPassword}`;
 export const bitbucketPlatformClient = new BitbucketPlatformClient(bbToken, bbConfig.baseUrl);
 
 const log = rootLogger.child({ module: 'webhooks-bitbucket' });
+
+type EnqueueHandler = (data: IssueJobData) => Promise<string | undefined>;
 
 interface BitbucketIssuePayload {
   event: 'issue:created' | 'issue:updated';
@@ -158,7 +158,7 @@ export const bitbucketClient: PlatformClient = {
   },
 };
 
-export function createBitbucketWebhooks(queue: Queue<IssueJobData>) {
+export function createBitbucketWebhooks(enqueue: EnqueueHandler) {
   const handler = {
     platform: 'bitbucket' as const,
 
@@ -196,6 +196,7 @@ export function createBitbucketWebhooks(queue: Queue<IssueJobData>) {
         const jobData: IssueJobData = {
           repoOwner: parsed.issue.repoOwner,
           repoName: parsed.issue.repoName,
+          repoPrivate: parsed.issue.repoPrivate,
           issueNumber: parsed.issue.number,
           issueTitle: parsed.issue.title,
           issueBody: parsed.issue.body ?? '',
@@ -204,7 +205,7 @@ export function createBitbucketWebhooks(queue: Queue<IssueJobData>) {
         };
 
         try {
-          await enqueueIssue(queue, jobData);
+          await enqueue(jobData);
         } catch (err) {
           log.error(
             { err: String(err), repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },

@@ -5,7 +5,7 @@
  */
 
 import { getPool, queryWithRetry } from '../connection.js';
-import type { CreditBalance } from '../schema/index.js';
+import type { CreditBalance } from '../types/index.js';
 
 export class CreditsRepository {
   // -----------------------------------------------------------------------

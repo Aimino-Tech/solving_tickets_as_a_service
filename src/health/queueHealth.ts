@@ -1,8 +1,8 @@
 /**
- * Queue Health — monitoring for BullMQ queue health.
+ * Queue Health — monitoring for RabbitMQ queue health.
  *
  * Provides:
- *   - Queue depth checks (BullMQ via Redis)
+ *   - Queue depth checks (via RabbitMQ management API / channel check)
  *   - DLQ message count monitoring
  *   - Worker liveness checks
  *   - Structured health report for /health/queue endpoint
@@ -14,7 +14,6 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
-import { Redis } from 'ioredis';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { bridgeMetrics } from '../bridge/metrics.js';
@@ -23,8 +22,8 @@ const log = rootLogger.child({ module: 'queue-health' });
 
 // ── Constants ───────────────────────────────────────────────────────
 
-const QUEUE_NAME = 'stas-issues';
-const DLQ_NAME = 'stas-issues-dlq';
+const QUEUE_NAME = 'stas.issues.fix';
+const DLQ_NAME = 'stas.dlq';
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -49,56 +48,27 @@ export interface QueueHealthEntry {
   consumers?: number;
 }
 
-// ── Redis-based queue depth (for BullMQ queues) ────────────────────
+// ── RabbitMQ queue depth via amqp channel ──────────────────────────
 
-let redis: Redis | null = null;
+let cachedDepth: { [queue: string]: number } = {};
 
-function getRedis(): Redis {
-  if (!redis) {
-    redis = new Redis(config.queue.redisUrl, {
-      maxRetriesPerRequest: null,
-      enableReadyCheck: true,
-      retryStrategy: (times: number) => {
-        const delay = Math.min(times * 100, 3000);
-        log.warn({ attempt: times }, 'Redis health connection retry in ${delay}ms');
-        return delay;
-      },
-      lazyConnect: true,
-    });
-  }
-  return redis;
-}
-
-async function getBullMQQueueDepth(queueName: string): Promise<number> {
+/**
+ * Get queue depth using RabbitMQ channel checkQueue.
+ * Falls back to cached value if channel is unavailable.
+ */
+async function getRabbitMQQueueDepth(queueName: string): Promise<number> {
   try {
-    const r = getRedis();
-    if (!r.status || r.status === 'end' || r.status === 'close') {
-      await r.connect().catch(() => {});
+    const { getChannel, isConnected } = await import('../queue/rabbitmq.js');
+    if (!isConnected()) {
+      return cachedDepth[queueName] ?? 0;
     }
-
-    const [wait, active, delayed, paused] = await Promise.all([
-      r.llen('bull:' + queueName + ':wait').catch(() => 0),
-      r.llen('bull:' + queueName + ':active').catch(() => 0),
-      r.zcount('bull:' + queueName + ':delayed', '-inf', '+inf').catch(() => 0),
-      r.llen('bull:' + queueName + ':paused').catch(() => 0),
-    ]);
-
-    return (wait ?? 0) + (active ?? 0) + (delayed ?? 0) + (paused ?? 0);
+    const ch = getChannel();
+    const info = await ch.checkQueue(queueName);
+    cachedDepth[queueName] = info.messageCount;
+    return info.messageCount;
   } catch (err) {
-    log.warn({ err: String(err), queueName }, 'Failed to get BullMQ queue depth');
-    return -1;
-  }
-}
-
-async function getBullMQFailedCount(queueName: string): Promise<number> {
-  try {
-    const r = getRedis();
-    if (!r.status || r.status === 'end' || r.status === 'close') {
-      await r.connect().catch(() => {});
-    }
-    return (await r.zcount('bull:' + queueName + ':failed', '-inf', '+inf').catch(() => 0)) ?? 0;
-  } catch {
-    return -1;
+    log.warn({ err: String(err), queueName }, 'Failed to get RabbitMQ queue depth');
+    return cachedDepth[queueName] ?? 0;
   }
 }
 
@@ -118,10 +88,9 @@ function queueStatus(depth: number, isDlq: boolean): 'ok' | 'warn' | 'critical' 
 export async function getQueueHealth(): Promise<QueueHealthReport> {
   const timestamp = new Date().toISOString();
 
-  const [mainDepth, dlqDepth, failedCount] = await Promise.all([
-    getBullMQQueueDepth(QUEUE_NAME),
-    getBullMQQueueDepth(DLQ_NAME),
-    getBullMQFailedCount(QUEUE_NAME),
+  const [mainDepth, dlqDepth] = await Promise.all([
+    getRabbitMQQueueDepth(QUEUE_NAME),
+    getRabbitMQQueueDepth(DLQ_NAME),
   ]);
 
   const queueEntries: QueueHealthEntry[] = [];
@@ -130,13 +99,12 @@ export async function getQueueHealth(): Promise<QueueHealthReport> {
   let queuesWithWarnings = 0;
   let queuesWithCritical = 0;
 
-  // BullMQ queues
-  const bullQueues = [
+  const rabbitQueues = [
     { name: QUEUE_NAME, type: 'main' as const, depth: mainDepth },
     { name: DLQ_NAME, type: 'dlq' as const, depth: dlqDepth },
   ];
 
-  for (const q of bullQueues) {
+  for (const q of rabbitQueues) {
     const s = queueStatus(q.depth, q.type === 'dlq');
     queueEntries.push({ name: q.name, type: q.type, depth: Math.max(0, q.depth), status: s });
     totalMessages += Math.max(0, q.depth);
@@ -145,10 +113,8 @@ export async function getQueueHealth(): Promise<QueueHealthReport> {
     if (s === 'critical') queuesWithCritical++;
   }
 
-  // Prometheus gauges
-  bridgeMetrics.setGauge('queue_depth', { queue: QUEUE_NAME, type: 'bullmq' }, Math.max(0, mainDepth));
-  bridgeMetrics.setGauge('queue_depth', { queue: DLQ_NAME, type: 'bullmq' }, Math.max(0, dlqDepth));
-  bridgeMetrics.setGauge('queue_depth', { queue: 'failed', type: 'bullmq' }, Math.max(0, failedCount));
+  bridgeMetrics.setGauge('queue_depth', { queue: QUEUE_NAME, type: 'rabbitmq' }, Math.max(0, mainDepth));
+  bridgeMetrics.setGauge('queue_depth', { queue: DLQ_NAME, type: 'rabbitmq' }, Math.max(0, dlqDepth));
 
   let overallStatus: QueueHealthReport['status'] = 'healthy';
   if (queuesWithCritical > 0) overallStatus = 'critical';
@@ -182,11 +148,4 @@ export async function getDLQSummary(): Promise<{ totalDlqMessages: number; queue
     totalDlqMessages: report.summary.dlqMessages,
     queuesWithMessages: dlqEntries.map((q) => q.name + ' (' + q.depth + ')'),
   };
-}
-
-export async function closeHealthRedis(): Promise<void> {
-  if (redis) {
-    try { await redis.quit(); } catch { /* non-fatal */ }
-    redis = null;
-  }
 }

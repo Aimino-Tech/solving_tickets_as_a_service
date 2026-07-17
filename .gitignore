@@ -1,4 +1,6 @@
 .venv
+.omo
+.stas
 *~
 # Build output
 *.cert
@@ -31,9 +33,10 @@ Thumbs.db
 .vscode/
 eval/results/
 # Python
-__pycache__/
+# __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
 *.egg-info/
 .worktrees/
+coverage/

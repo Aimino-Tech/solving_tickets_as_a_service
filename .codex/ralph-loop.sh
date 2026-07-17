@@ -20,7 +20,8 @@ fi
 
 echo "Creating worktree..."
 mkdir -p "$(dirname "$WORKTREE_ROOT")"
-git worktree add -b "$BRANCH_NAME" "$WORKTREE_ROOT" master
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|^refs/remotes/origin/||' || echo "main")
+git worktree add -b "$BRANCH_NAME" "$WORKTREE_ROOT" "$DEFAULT_BRANCH"
 
 cp "$REPO_ROOT/opencode.json" "$WORKTREE_ROOT/" 2>/dev/null || true
 cp -r "$REPO_ROOT/.opencode" "$WORKTREE_ROOT/" 2>/dev/null || true

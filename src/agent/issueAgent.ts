@@ -40,9 +40,13 @@ import { DockerSandbox } from '../sandbox/docker.js';
 import { getTracker } from '../trackers/index.js';
 import { jobLogger, rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
+import { PromptSanitizer } from '../core/prompt-sanitizer.js';
 import { addReceipt, createManifest, createReceipt, serializeReceiptsJson } from './receipts.js';
 import { buildTools, type SandboxTools } from './tools.js';
-import type { AgentResult, TestBaseline, TriageResult, VerificationResult } from './types.js';
+import type { AgentResult, QualityGateResult, TestBaseline, TriageResult, VerificationResult } from './types.js';
+import { mockResponses } from './mockResponses.js';
+import { runAllQualityGates } from './quality-gates.js';
+import { QualityGateReporter } from '../core/quality-gate-reporter.js';
 
 const log = rootLogger.child({ module: 'issue-agent' });
 
@@ -521,6 +525,12 @@ export async function runIssueAgent(data: IssueJobData, jobId?: string): Promise
  * Classify the issue — tries OpenCode serve first, then keyword-based fallback.
  */
 async function classifyIssue(title: string, body: string, labels?: string[]): Promise<TriageResult> {
+  // Static mode: return mock triage result immediately
+  if (mockResponses.isStaticMode()) {
+    log.info('[STATIC MODE] Returning mock triage classification');
+    return mockResponses.triageResult();
+  }
+
   // Try OpenCode serve for AI-powered classification
   try {
     const result = await classifyViaOpenCodeServe(title, body);
@@ -604,6 +614,9 @@ function classifyViaKeywords(title: string, body: string, labels?: string[]): Tr
   // Labels override keyword scoring — they are authoritative signals
   // from the user/issue creator.
   const labelNames = (labels ?? []).map((l) => l.toLowerCase());
+  if (labelNames.includes('pipeline') || labelNames.includes('type: pipeline') || labelNames.some((l) => l.startsWith('pipeline:'))) {
+    return { type: 'pipeline', difficulty: 'hard', summary: title.slice(0, 200) };
+  }
   if (labelNames.includes('bug') || labelNames.includes('type: bug')) {
     return { type: 'bug', difficulty: 'unknown', summary: title.slice(0, 200) };
   }
@@ -621,13 +634,17 @@ function classifyViaKeywords(title: string, body: string, labels?: string[]): Tr
   ];
   const featureKeywords = ['feature', 'request', 'add', 'suggestion', 'improve', 'new:', 'would like'];
   const questionKeywords = ['how', 'why', 'question', 'help', 'guide', 'tutorial'];
+  const pipelineKeywords = ['pipeline', 'etl', 'data processing', 'batch', 'csv output', 'transform', 'extract', 'load'];
 
   let type: TriageResult['type'] = 'unknown';
   const bugScore = bugKeywords.filter((k) => text.includes(k)).length;
   const featureScore = featureKeywords.filter((k) => text.includes(k)).length;
   const questionScore = questionKeywords.filter((k) => text.includes(k)).length;
+  const pipelineScore = pipelineKeywords.filter((k) => text.includes(k)).length;
 
-  if (bugScore > featureScore && bugScore >= questionScore && bugScore > 0) type = 'bug';
+  if (pipelineScore > 0 && pipelineScore >= bugScore && pipelineScore >= featureScore && pipelineScore >= questionScore) {
+    type = 'pipeline';
+  } else if (bugScore > featureScore && bugScore >= questionScore && bugScore > 0) type = 'bug';
   else if (featureScore >= questionScore && featureScore > 0) type = 'feature';
   else if (questionScore > bugScore && questionScore > 0) type = 'question';
 
@@ -738,6 +755,13 @@ interface OpenCodeDispatchResult {
  * the OpenAI SDK for the main agent loop, we call opencode serve.
  */
 async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenCodeDispatchResult> {
+  // Static mode: return mock response immediately (supports runtime override)
+  if (mockResponses.isStaticMode()) {
+    const mock = mockResponses.dispatchToOpenCode();
+    log.info({ issueNumber: params.issueNumber }, '[STATIC MODE] Returning mock OpenCode dispatch response');
+    return mock;
+  }
+
   const {
     repoOwner,
     repoName,
@@ -999,19 +1023,19 @@ function buildOpenCodePrompt(params: {
 
 /**
  * Sanitize user-provided content to prevent prompt injection.
+ * Uses PromptSanitizer class for comprehensive pattern detection.
  */
 function sanitizeUserContent(prompt: string): string {
-  // Remove any content that looks like it's trying to override instructions
-  return prompt
-    .replace(/ignore all previous instructions/gi, '[REDACTED]')
-    .replace(/ignore all prior instructions/gi, '[REDACTED]')
-    .replace(/you are not/gi, '[REDACTED]')
-    .replace(/forget everything/gi, '[REDACTED]')
-    .replace(/your new role/gi, '[REDACTED]')
-    .replace(/disregard/gi, '[REDACTED]')
-    .replace(/system override/gi, '[REDACTED]')
-    .replace(/you must now/gi, '[REDACTED]')
-    .replace(/you are now/gi, '[REDACTED]');
+  const sanitizer = new PromptSanitizer();
+  const result = sanitizer.sanitizeIssueBody(prompt);
+  if (result.strippedPatterns.length > 0) {
+    log.warn({ stripped: result.strippedPatterns }, 'Stripped injection patterns from agent prompt');
+  }
+  if (result.warnings.length > 0) {
+    log.warn({ warnings: result.warnings }, 'Prompt sanitization warnings');
+  }
+  // Wrap user content in delimiters so the agent can distinguish its instructions
+  return sanitizer.wrapUserContent(result.safePrompt);
 }
 
 /**
@@ -1044,6 +1068,22 @@ async function runVerification(
   let preExistingTestsRegressed = false;
   const unverified = false;
   let postFix: TestBaseline | null = null;
+  let qualityGates: QualityGateResult[] = [];
+
+  // Run OSS quality gates
+  try {
+    const diffResult = await sandbox.exec('git diff HEAD~1 -- . 2>/dev/null || git diff -- . 2>/dev/null || true');
+    const diff = diffResult.stdout.slice(0, 100000);
+    qualityGates = await runAllQualityGates(sandbox, diff);
+    const reporter = new QualityGateReporter();
+    const fixId = `fix-${Date.now()}`;
+    await reporter.writeAllGateResults(fixId, qualityGates);
+    const passed = qualityGates.filter((g) => g.passed).length;
+    details.push(`Quality gates: ${passed}/${qualityGates.length} passed`);
+  } catch (err) {
+    details.push(`Quality gates error: ${String(err)}`);
+    qualityGates = [];
+  }
 
   if (!sandbox.hasTestSuite()) {
     return {
@@ -1055,7 +1095,7 @@ async function runVerification(
       preExistingTestsRegressed: false,
       unverified: true,
       details: ['No test suite configured'],
-      qualityGates: [],
+      qualityGates,
     };
   }
 
@@ -1139,7 +1179,7 @@ async function runVerification(
     preExistingTestsRegressed,
     unverified,
     details,
-    qualityGates: [],
+    qualityGates,
   };
 }
 

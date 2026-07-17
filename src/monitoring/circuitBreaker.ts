@@ -152,7 +152,9 @@ export async function checkCircuit(taskType: string): Promise<{ allowed: boolean
     let openedAt: string | null = null;
     try {
       openedAt = await redis.get(openedAtKey(taskType));
-    } catch { /* ignore */ }
+    } catch (err) {
+      log.warn({ err: String(err), taskType }, 'Failed to read circuit breaker opened timestamp');
+    }
     const reason = `Circuit OPEN for '${taskType}' - paused for ${OPEN_SECONDS}s (opened at ${openedAt ?? 'unknown'})`;
     log.warn({ taskType, state, openedAt }, 'Circuit breaker blocked task');
     return { allowed: false, reason };
@@ -169,7 +171,9 @@ export async function checkCircuit(taskType: string): Promise<{ allowed: boolean
       }
       await redis.incr(halfOpenTestKey(taskType));
       await redis.expire(halfOpenTestKey(taskType), OPEN_SECONDS + 10);
-    } catch { /* ignore */ }
+    } catch (err) {
+      log.warn({ err: String(err), taskType }, 'Failed to update half-open test count');
+    }
     return { allowed: true, reason: 'half_open_test' };
   }
 
