@@ -1,30 +1,34 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import { useI18n } from '@/i18n/I18nProvider';
 import { useState } from 'react';
-
-const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: '◉' },
-  { to: '/runs', label: 'Runs', icon: '↻' },
-  { to: '/repos', label: 'Repos', icon: '⊞' },
-  { to: '/analytics', label: 'Analytics', icon: '▦' },
-  { to: '/kpi', label: 'KPIs', icon: '📊' },
-  { to: '/audit', label: 'Audit Log', icon: '☰' },
-  { to: '/settings', label: 'Settings', icon: '⚙' },
-  { to: '/admin/runs', label: 'Admin Runs', icon: '⚡' },
-] as const;
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
+  const { t, locale, setLocale } = useI18n();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const NAV_ITEMS = [
+    { to: '/', label: t('nav.dashboard'), icon: '◉' },
+    { to: '/runs', label: t('nav.runs'), icon: '↻' },
+    { to: '/repos', label: t('nav.repos'), icon: '⊞' },
+    { to: '/analytics', label: t('nav.analytics'), icon: '▦' },
+    { to: '/kpi', label: t('nav.kpis'), icon: '📊' },
+    { to: '/audit', label: t('nav.audit'), icon: '☰' },
+    { to: '/settings', label: t('nav.settings'), icon: '⚙' },
+    { to: '/admin/runs', label: t('nav.admin') + ' Runs', icon: '⚡' },
+  ] as const;
 
   const pageTitle =
     NAV_ITEMS.find((item) =>
       item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to),
-    )?.label ?? 'Dashboard';
+    )?.label ?? t('nav.dashboard');
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -89,17 +93,40 @@ export default function Layout() {
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.username ?? 'User'}
+                {user?.username ?? t('auth.user')}
               </p>
             </div>
             <button
               onClick={logout}
               className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-              title="Log out"
+              title={t('auth.logout')}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
               </svg>
+            </button>
+          </div>
+          {/* Locale switcher */}
+          <div className="mt-3 flex gap-1">
+            <button
+              onClick={() => setLocale('en')}
+              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                locale === 'en'
+                  ? 'bg-brand-100 text-brand-700'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              EN
+            </button>
+            <button
+              onClick={() => setLocale('de')}
+              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                locale === 'de'
+                  ? 'bg-brand-100 text-brand-700'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              DE
             </button>
           </div>
         </div>

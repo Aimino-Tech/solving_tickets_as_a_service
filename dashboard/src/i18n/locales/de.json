@@ -1,0 +1,43 @@
+{
+  "nav.dashboard": "Dashboard",
+  "nav.runs": "Läufe",
+  "nav.repos": "Repositories",
+  "nav.analytics": "Analytik",
+  "nav.kpis": "KPIs",
+  "nav.audit": "Audit-Log",
+  "nav.settings": "Einstellungen",
+  "nav.admin": "Administration",
+
+  "dashboard.totalRuns": "Gesamte Läufe",
+  "dashboard.passRate": "Bestehensquote",
+  "dashboard.avgDuration": "Durchschn. Dauer",
+  "dashboard.activeRepos": "Aktive Repos",
+  "dashboard.recentRuns": "Läufe (letzte 14 Tage)",
+  "dashboard.viewAll": "Alle anzeigen",
+  "dashboard.noRuns": "Noch keine Läufe. Markieren Sie ein Issue mit {{label}} um loszulegen.",
+  "dashboard.connectedRepos": "Verbundene Repositories",
+  "dashboard.manageReposDesc": "Verwalten Sie Ihre GitHub-Repository-Verbindungen.",
+  "dashboard.manageRepos": "Repos verwalten",
+  "dashboard.analyticsTitle": "Analytik",
+  "dashboard.analyticsDesc": "Reparaturquoten, Kosten und Trends im Zeitverlauf anzeigen.",
+  "dashboard.viewAnalytics": "Analytik anzeigen",
+  "dashboard.total": "Gesamt",
+  "dashboard.passed": "Bestanden",
+  "dashboard.failedToLoad": "Dashboard-Daten konnten nicht geladen werden: {{error}}",
+
+  "runs.title": "Läufe",
+  "runs.status": "Status",
+  "runs.duration": "Dauer",
+  "runs.createdAt": "Erstellt am",
+
+  "common.loading": "Laden...",
+  "common.error": "Fehler",
+  "common.retry": "Erneut versuchen",
+  "common.save": "Speichern",
+  "common.cancel": "Abbrechen",
+
+  "auth.login": "Anmelden",
+  "auth.logout": "Abmelden",
+  "auth.profile": "Profil",
+  "auth.user": "Benutzer"
+}
