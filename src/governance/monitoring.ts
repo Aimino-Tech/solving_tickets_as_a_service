@@ -3,7 +3,10 @@ import type { Request, Response } from 'express';
 const GOVERNANCE_PROXY_HEADER = 'x-governance-proxy';
 
 export function isBehindGovernanceProxy(req: Request): boolean {
-  return !!req.headers[GOVERNANCE_PROXY_HEADER];
+  const headerValue = req.headers?.[GOVERNANCE_PROXY_HEADER];
+  if (headerValue === undefined || headerValue === null) return false;
+  if (Array.isArray(headerValue)) return headerValue.some((v) => v !== undefined && v !== null);
+  return true;
 }
 
 export function healthHandler(_req: Request, res: Response): void {
