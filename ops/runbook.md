@@ -85,11 +85,28 @@ docker compose -f docker-compose.prod.yml logs -f stas-worker
 
 ## 2. Scaling
 
+### 500-User Reference Architecture
+
+For 500 concurrent users, the recommended production layout is:
+
+| Service | Replicas | vCPU | Memory | Storage |
+|---------|----------|------|--------|---------|
+| Webhook (Express) | 3 | 0.5 each | 512MB each | — |
+| Worker (Celery) | 8 | 1 each | 1GB each | — |
+| PostgreSQL | 1 | 4 | 8GB | 100GB SSD |
+| Redis | 1 | 2 | 4GB | 50GB SSD |
+| RabbitMQ | 1 | 2 | 2GB | 10GB |
+| Nginx | 1 | 0.5 | 256MB | — |
+| Monitoring | 1 | 1 | 1GB | 50GB |
+
 ### Webhook Instances
 
 ```bash
-# Scale horizontally
+# Scale horizontally (minimum 3 for 500 users, up to 6 for peak)
 docker compose -f docker-compose.prod.yml up -d --scale stas-webhook=3 stas-webhook
+
+# For peak load (burst)
+docker compose -f docker-compose.prod.yml up -d --scale stas-webhook=6 stas-webhook
 
 # Verify distribution
 docker compose -f docker-compose.prod.yml ps stas-webhook
@@ -101,6 +118,9 @@ docker compose -f docker-compose.prod.yml ps stas-webhook
 # Increase concurrency (stateless — safe to scale)
 docker compose -f docker-compose.prod.yml up -d --scale stas-worker=8 stas-worker
 
+# For sustained high load
+docker compose -f docker-compose.prod.yml up -d --scale stas-worker=12 stas-worker
+
 # Check worker health
 docker compose -f docker-compose.prod.yml logs --tail=20 stas-worker
 ```
@@ -111,18 +131,64 @@ Adjust `PGPOOL_SIZE` in `.env` or `docker-compose.prod.yml`:
 
 ```yaml
 environment:
-  - PGPoolSize=20  # Increase from default 10
+  - PGPoolSize=50    # 500 users: min 20, recommended 50
+  - PGMAXClientConnections=75  # headroom for monitoring
+```
+
+Check connection pool health:
+
+```bash
+docker compose exec postgres psql -U stas -c "
+  SELECT count(*) AS active_connections
+  FROM pg_stat_activity
+  WHERE state = 'active';
+"
+```
+
+### Redis Memory
+
+For 500 users, Redis must be configured with adequate memory:
+
+```yaml
+command: >
+  redis-server --appendonly yes
+  --maxmemory 4gb
+  --maxmemory-policy allkeys-lru
+  --maxmemory-samples 10
 ```
 
 ### Rate Limits
 
-Rate limit configuration is in `src/ratelimit/`. Adjust per-tier limits:
+Rate limit configuration is in `nginx/nginx.conf` (Nginx level) and `src/ratelimit/` (app level). Adjust per-tier limits:
 
-| Tier | Requests/min | Concurrent Jobs |
-|------|-------------|-----------------|
-| Free | 10 | 1 |
-| Pro | 60 | 5 |
-| Enterprise | 300 | 20 |
+| Tier | Requests/min | Concurrent Jobs | Webhooks/min | Burst |
+|------|-------------|-----------------|-------------|-------|
+| Free | 10 | 1 | 10 | 5 |
+| Pro | 60 | 5 | 60 | 10 |
+| Enterprise | 300 | 20 | 300 | 30 |
+
+### Queue Depth Limits
+
+| Limit | Value | Action |
+|-------|-------|--------|
+| Max pending per repo | 3 | Reject new webhooks for repo |
+| Max global queue depth | 200 | Alert at 100, critical at 200 |
+| DLQ max before notify | 10 | Auto-notify operator |
+| Job TTL | 30 min | Auto-fail long-running jobs |
+
+### Load Testing
+
+```bash
+# Run full 500-user load test suite
+./scripts/run-load-test.sh http://stas.example.com
+
+# Run individual scenarios
+k6 run load-tests/scenarios/full-suite.js
+k6 run load-tests/scenarios/database-benchmark.js
+k6 run load-tests/scenarios/redis-benchmark.js
+```
+
+See `SCALING_500_USERS.md` for the complete scaling guide and cost projections.
 
 ---
 
