@@ -128,7 +128,7 @@ export async function createApp(): Promise<express.Application> {
       await redis.quit().catch(() => {});
     } catch { checks.redis = 'down'; }
     const allOk = Object.values(checks).every(v => v === 'ok');
-    res.status(allOk ? 200 : 503).json({ status: allOk ? 'ok' : 'degraded', checks, timestamp: new Date().toISOString() });
+    res.status(allOk ? 200 : 503).json({ status: allOk ? 'ok' : 'degraded', checks, timestamp: new Date().toISOString(), aiMode: config.stas.aiDisabled ? 'ai-disabled' : 'enabled' });
   });
 
   // -- IP Allowlist for webhook endpoints -----------------------------------

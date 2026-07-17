@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/kpi', label: 'KPIs', icon: '📊' },
   { to: '/audit', label: 'Audit Log', icon: '☰' },
   { to: '/settings', label: 'Settings', icon: '⚙' },
+  { to: '/admin/runs', label: 'Admin Runs', icon: '⚡' },
 ] as const;
 
 export default function Layout() {
