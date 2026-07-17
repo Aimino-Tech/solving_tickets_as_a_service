@@ -18,7 +18,7 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'analytics-api' });
 
-const router = Router();
+const router: Router = Router();
 
 
 // ---------------------------------------------------------------------------

@@ -16,10 +16,7 @@
 
 import { type EmitterWebhookEventName, Webhooks } from '@octokit/webhooks';
 
-import { Queue } from 'bullmq';
-
 import { config } from '../config.js';
-import { enqueueIssue } from '../queue/issueQueue.js';
 import { rootLogger } from '../utils/logger.js';
 import type { BillingPlan, IssueJobData } from '../utils/types.js';
 import { rateLimiter } from '../ratelimit/limiter.js';
@@ -29,10 +26,43 @@ import { accountsRepository } from '../db/repositories/index.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
 
+type EnqueueHandler = (data: IssueJobData) => Promise<string | undefined>;
+
+/**
+ * Post a simple "issue received" comment in AI-disabled mode.
+ * Uses the GitHub App installation token to authenticate.
+ */
+async function postIssueReceivedComment(
+  installationId: number,
+  repoOwner: string,
+  repoName: string,
+  issueNumber: number,
+): Promise<void> {
+  try {
+    const { getOctokit } = await import('../github/auth.js');
+    const octokit = await getOctokit(installationId);
+    await octokit.issues.createComment({
+      owner: repoOwner,
+      repo: repoName,
+      issue_number: issueNumber,
+      body: `### 📥 Issue Received\n\nThis issue has been received and queued for processing.\n\n> STAS is running in **AI-disabled mode**. No automated fix will be attempted.\n> An operator needs to claim and process this issue manually.\n\nIssue ID: #${issueNumber}`,
+    });
+    log.info(
+      { repo: `${repoOwner}/${repoName}`, issueNumber },
+      'Posted "issue received" comment (AI-disabled mode)',
+    );
+  } catch (err) {
+    log.warn(
+      { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
+      'Failed to post "issue received" comment',
+    );
+  }
+}
+
 /**
  * Create the GitHub webhooks handler with all event listeners registered.
  */
-export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
+export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
   const webhooks = new Webhooks({
     secret: config.github.webhookSecret,
   });
@@ -66,13 +96,14 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
       'Received issues.labeled with target label',
     );
 
-    const tier = getTierForAccount(payload.installation?.id ?? 0);
+    const installationId = payload.installation?.id ?? 0;
+    const tier = getTierForAccount(installationId);
     const priorityMap: Record<string, number> = { enterprise: 10, team: 15, pro: 20, free: 30 };
     const issueLabels: string[] = (payload.issue.labels ?? [])
       .map((l: { name?: string } | string) => (typeof l === 'string' ? l : l.name))
       .filter(Boolean) as string[];
     const jobData: IssueJobData = {
-      installationId: payload.installation?.id ?? 0,
+      installationId,
       repoOwner: payload.repository.owner.login,
       repoName: payload.repository.name,
       repoPrivate: payload.repository.private,
@@ -99,6 +130,48 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
       }
     }
 
+    // ── AI-Disabled Mode ────────────────────────────────────────
+    // When STAS_AI_DISABLED=true, the issue is stored as pending without
+    // dispatching to OpenCode. An operator must claim and complete it manually.
+    if (config.stas.aiDisabled) {
+      log.info(
+        {
+          repo: `${jobData.repoOwner}/${jobData.repoName}`,
+          issueNumber: jobData.issueNumber,
+        },
+        'AI-disabled mode — storing issue as pending without dispatch',
+      );
+
+      // Save a pending RunRecord
+      try {
+        const { createStorage } = await import('../storage/index.js');
+        const storage = await createStorage();
+        if (storage) {
+          await storage.saveRun({
+            installationId: jobData.installationId,
+            repoOwner: jobData.repoOwner,
+            repoName: jobData.repoName,
+            issueNumber: jobData.issueNumber,
+            status: 'pending',
+          });
+        }
+      } catch (storageErr) {
+        log.warn({ err: String(storageErr) }, 'Failed to save pending RunRecord');
+      }
+
+      // Post "issue received" comment
+      await postIssueReceivedComment(
+        installationId || 0,
+        jobData.repoOwner,
+        jobData.repoName,
+        jobData.issueNumber,
+      );
+
+      return; // Do not enqueue — skip OpenCode dispatch
+    }
+
+    // ── Normal Mode: Save pending record, check rate limits, enqueue ──
+
     // Save a 'pending' RunRecord before enqueueing, so every labeled issue
     // is recorded. The worker will update the record to 'running' / 'completed' / 'failed'.
     try {
@@ -121,7 +194,6 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
 
     // ── Rate limit check ─────────────────────────────────────────
     const repo = `${jobData.repoOwner}/${jobData.repoName}`;
-    const accountLimits = getRateLimitForAccount(jobData.installationId);
     const accountLimitResult = await rateLimiter.checkLimit('account', String(jobData.installationId));
     const repoLimitResult = await rateLimiter.checkLimit('repo', repo);
 
@@ -145,7 +217,7 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
     await rateLimiter.increment('account', String(jobData.installationId));
     await rateLimiter.increment('repo', repo);
     try {
-      await enqueueIssue(queue, jobData);
+      await enqueue(jobData);
     } catch (err) {
       log.error(
         {
@@ -175,13 +247,14 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
         'Target issue edited — re-enqueuing',
       );
 
-      const tier = getTierForAccount(payload.installation?.id ?? 0);
+      const installationId = payload.installation?.id ?? 0;
+      const tier = getTierForAccount(installationId);
       const priorityMap: Record<string, number> = { enterprise: 10, team: 15, pro: 20, free: 30 };
       const editIssueLabels: string[] = (payload.issue.labels ?? [])
         .map((l: { name?: string } | string) => (typeof l === 'string' ? l : l.name))
         .filter(Boolean) as string[];
       const jobData: IssueJobData = {
-        installationId: payload.installation?.id ?? 0,
+        installationId,
         repoOwner: payload.repository.owner.login,
         repoName: payload.repository.name,
         repoPrivate: payload.repository.private,
@@ -192,6 +265,33 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
         billingPlan: tier as 'free' | 'pro' | 'enterprise' | undefined,
         priority: priorityMap[tier] ?? 30,
       };
+
+      // ── AI-Disabled Mode (also for edits) ─────────────────────
+      if (config.stas.aiDisabled) {
+        log.info(
+          {
+            repo: `${jobData.repoOwner}/${jobData.repoName}`,
+            issueNumber: jobData.issueNumber,
+          },
+          'AI-disabled mode — edit received, storing as pending',
+        );
+        try {
+          const { createStorage } = await import('../storage/index.js');
+          const storage = await createStorage();
+          if (storage) {
+            await storage.saveRun({
+              installationId: jobData.installationId,
+              repoOwner: jobData.repoOwner,
+              repoName: jobData.repoName,
+              issueNumber: jobData.issueNumber,
+              status: 'pending',
+            });
+          }
+        } catch (storageErr) {
+          log.warn({ err: String(storageErr) }, 'Failed to save pending RunRecord on edit');
+        }
+        return;
+      }
 
       if (!jobData.installationId && !config.github.token) {
         log.warn(
@@ -236,7 +336,7 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
       }
 
       try {
-        await enqueueIssue(queue, jobData);
+        await enqueue(jobData);
       } catch (err) {
         log.error(
           {

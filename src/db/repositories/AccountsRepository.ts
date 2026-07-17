@@ -1,4 +1,4 @@
-import { queryWithRetry } from '../connection.js';
+import { queryWithRetry, validateSqlIdentifier } from '../connection.js';
 import type { Account, NewAccount } from '../types/index.js';
 
 export class AccountsRepository {
@@ -56,6 +56,12 @@ export class AccountsRepository {
 
     if (sets.length === 0) {
       return this.findById(id);
+    }
+
+    // Validate each column name in the dynamic SET clause
+    for (const clause of sets) {
+      const colName = clause.split('=')[0].trim();
+      validateSqlIdentifier(colName);
     }
 
     sets.push(`updated_at = NOW()`);

@@ -80,6 +80,9 @@ guardrails:
       guardrail: guardrail.slop_guardrail.SlopIntentGuardrail
       mode: post_call
       default_on: true                    # Auto-enable on ALL requests
+      guardrail_params:
+        gate_mode: block                  # warn | annotate | block
+        block_threshold: 0.5             # 0.0-1.0
 
   # ═══════════════════════════════════════════════════════════════════════
   # Level 2: Audit-only for streaming responses
@@ -92,6 +95,9 @@ guardrails:
       guardrail: guardrail.slop_guardrail.SlopIntentGuardrail
       mode: post_call
       default_on: true
+      guardrail_params:
+        gate_mode: warn                   # Streaming only supports warn mode
+        block_threshold: 0.5
 
 # ── Router settings ─────────────────────────────────────────────────────────
 router_settings:

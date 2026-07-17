@@ -4,19 +4,27 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "dist",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": true,
-    "sourceMap": true,
-    "noImplicitAny": false
+    "sourceMap": true
   },
   "include": ["src"],
   "exclude": [
-    "src/__tests__",
-    "src/**/*.test.ts",
-    "src/**/*.spec.ts"
+    "**/node_modules/**",
+    "**/dist/**",
+    "src/__tests__/**",
+    "dashboard/**",
+    "plugin/**",
+    "premium/**",
+    "website/**",
+    "eval/**",
+    "tests/**",
+    "public/**",
+    "data/**"
   ]
 }

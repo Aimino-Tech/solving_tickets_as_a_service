@@ -18,7 +18,6 @@
  * background interval loop.
  */
 
-import { Redis } from 'ioredis';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { getQueueHealth } from '../health/queueHealth.js';
@@ -38,54 +37,24 @@ const AUTO_SCALE = (process.env.QUEUE_DRAIN_AUTO_SCALE || 'false').toLowerCase()
 const SCALE_UP_URL = process.env.QUEUE_DRAIN_SCALE_UP_URL || '';
 
 // ---------------------------------------------------------------------------
-// BullMQ queue names to monitor
+// RabbitMQ queue names to monitor
 // ---------------------------------------------------------------------------
 
-const BULLMQ_QUEUES = ['stas-issues', 'stas-issues-dlq'];
+const RABBITMQ_QUEUES = ['stas.issues.fix', 'stas.dlq'];
 
 // ---------------------------------------------------------------------------
-// Redis client (lazy singleton)
+// Queue Depth via RabbitMQ channel check
 // ---------------------------------------------------------------------------
 
-let _redis: Redis | null = null;
-
-function getRedis(): Redis {
-  if (!_redis) {
-    _redis = new Redis(config.queue.redisUrl, {
-      maxRetriesPerRequest: null,
-      enableReadyCheck: true,
-      retryStrategy: (times: number) => {
-        const delay = Math.min(times * 100, 3000);
-        log.warn({ attempt: times }, `Redis connection retry in ${delay}ms`);
-        return delay;
-      },
-      lazyConnect: true,
-    });
-    _redis.on('error', (err) => {
-      log.error({ err: String(err) }, 'Queue monitor Redis error');
-    });
-  }
-  return _redis;
-}
-
-// ---------------------------------------------------------------------------
-// Queue Depth via Redis (BullMQ)
-// ---------------------------------------------------------------------------
-
-async function getBullMQDepth(queueName: string): Promise<number> {
-  const redis = getRedis();
-
+async function getRabbitMQDepth(queueName: string): Promise<number> {
   try {
-    const prefix = `bull:${queueName}:`;
-    const [wait, active, delayed, paused] = await Promise.all([
-      redis.llen(`${prefix}wait`).catch(() => 0),
-      redis.llen(`${prefix}active`).catch(() => 0),
-      redis.zcount(`${prefix}delayed`, '-inf', '+inf').catch(() => 0),
-      redis.llen(`${prefix}paused`).catch(() => 0),
-    ]);
-    return (wait ?? 0) + (active ?? 0) + (delayed ?? 0) + (paused ?? 0);
+    const { getChannel, isConnected } = await import('./rabbitmq.js');
+    if (!isConnected()) return -1;
+    const ch = getChannel();
+    const info = await ch.checkQueue(queueName);
+    return info.messageCount;
   } catch (err) {
-    log.warn({ err: String(err), queueName }, 'Failed to get BullMQ queue depth');
+    log.warn({ err: String(err), queueName }, 'Failed to get queue depth');
     return -1;
   }
 }
@@ -167,16 +136,16 @@ export async function checkQueueDrain(): Promise<QueueDrainResult> {
 
   const activeWorkers = await getActiveWorkerCount();
 
-  for (const queueName of BULLMQ_QUEUES) {
-    const depth = await getBullMQDepth(queueName);
+  for (const queueName of RABBITMQ_QUEUES) {
+    const depth = await getRabbitMQDepth(queueName);
     if (depth < 0) continue;
 
     const hasWorkers = activeWorkers > 0;
 
-    const entry = {
+    const entry: { name: string; depth: number; drainStatus: 'ok' | 'warning' | 'critical'; hasWorkers: boolean } = {
       name: queueName,
       depth,
-      drainStatus: 'ok' as const,
+      drainStatus: 'ok',
       hasWorkers,
     };
 
@@ -205,7 +174,7 @@ export async function checkQueueDrain(): Promise<QueueDrainResult> {
 
     result.queues.push(entry);
 
-    bridgeMetrics.setGauge('queue_depth', { queue: queueName, type: 'bullmq' }, depth);
+    bridgeMetrics.setGauge('queue_depth', { queue: queueName, type: 'rabbitmq' }, depth);
   }
 
   bridgeMetrics.setGauge('queue_drain_alerts', {}, result.alerts.length);

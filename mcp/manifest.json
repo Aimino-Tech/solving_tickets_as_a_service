@@ -1,5 +1,6 @@
 {
   "name": "@aimino/stas-mcp",
+  "mcpName": "stas-agent-discovery",
   "description": "MCP server for STAS — Solving Tickets As A Service. Submit GitHub issues, list runs, search codebase, and get automated fix PRs via OpenCode agents.",
   "version": "1.0.0",
   "agent": {
@@ -8,23 +9,24 @@
     "protocolVersion": "2024-11-05",
     "capabilities": {
       "tools": {
-        "list_issues": {"description": "List tracked issues and their STAS fix status", "inputSchema": {"type": "object", "properties": {"status": {"type": "string"}, "repo": {"type": "string"}, "limit": {"type": "integer"}}}},
-        "run_fix": {"description": "Trigger the STAS fix pipeline for a GitHub issue URL.", "inputSchema": {"type": "object", "properties": {"issue_url": {"type": "string"}}, "required": ["issue_url"]}},
-        "check_status": {"description": "Check the current status of a STAS fix run by run_id.", "inputSchema": {"type": "object", "properties": {"run_id": {"type": "string"}}, "required": ["run_id"]}},
-        "get_pr": {"description": "Get the PR URL and details for a completed STAS fix run.", "inputSchema": {"type": "object", "properties": {"run_id": {"type": "string"}}, "required": ["run_id"]}},
-        "search_codebase": {"description": "Search STAS codebase for symbols, files, or patterns.", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}, "repo": {"type": "string"}, "max_results": {"type": "integer"}}, "required": ["query"]}}
+        "stas_label_issue": {"description": "Label a GitHub issue with the STAS fix label (or custom label).", "inputSchema": {"type": "object", "properties": {"owner": {"type": "string"}, "repo": {"type": "string"}, "issue_number": {"type": "integer"}, "label": {"type": "string"}}, "required": ["owner", "repo", "issue_number"]}},
+        "stas_run_fix": {"description": "Trigger the STAS fix pipeline for a GitHub issue URL.", "inputSchema": {"type": "object", "properties": {"issue_url": {"type": "string"}}, "required": ["issue_url"]}},
+        "stas_check_status": {"description": "Check the current status of a STAS fix run by run_id.", "inputSchema": {"type": "object", "properties": {"run_id": {"type": "string"}}, "required": ["run_id"]}},
+        "stas_get_pr": {"description": "Get the PR URL and details for a completed STAS fix run.", "inputSchema": {"type": "object", "properties": {"run_id": {"type": "string"}}, "required": ["run_id"]}},
+        "list_issues": {"description": "List tracked issues with their STAS fix status, with optional filters.", "inputSchema": {"type": "object", "properties": {"status": {"type": "string"}, "repo": {"type": "string"}, "limit": {"type": "integer"}}}},
+        "search_codebase": {"description": "Search the STAS codebase for symbols, files, or patterns.", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}, "repo": {"type": "string"}, "max_results": {"type": "integer"}}, "required": ["query"]}}
       },
       "resources": {
-        "stas://runs/{run_id}": {"description": "Full run details."},
-        "stas://issues/{issue_id}": {"description": "Issue details with fix status and PRs."}
+        "stas://runs/{run_id}": {"description": "Full run details including status, timestamps, issue info, and PR link."},
+        "stas://issues/{issue_id}": {"description": "Issue details with fix status, run history, and linked PRs."}
       }
     }
   },
   "command": "python",
-  "args": ["-m", "mcp.stas_mcp", "stdio"],
+  "args": ["-m", "stas_mcp.server", "stdio"],
   "transport": {
-    "stdio": {"command": "python", "args": ["-m", "mcp.stas_mcp", "stdio"]},
-    "sse": {"url": "http://localhost:4095/sse"},
-    "streamable-http": {"url": "http://localhost:4095/mcp"}
+    "stdio": {"command": "python", "args": ["-m", "stas_mcp.server", "stdio"], "description": "Stdio transport for local tools like OpenCode and Claude Desktop"},
+    "sse": {"url": "http://localhost:4095/sse", "description": "Server-Sent Events transport for remote MCP communication"},
+    "streamable-http": {"url": "http://localhost:4095/mcp", "description": "Streamable HTTP transport for JSON-RPC over HTTP"}
   }
 }

@@ -504,7 +504,7 @@ Latest full evaluation run.
   "date": "2026-06-25",
   "passRate": 0.70,
   "avgCostPerFix": 5.80,
-  "model": "Our AGI"
+  "model": "claude-sonnet-4"
 }
 ```
 

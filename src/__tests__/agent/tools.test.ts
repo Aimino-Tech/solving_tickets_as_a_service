@@ -827,7 +827,7 @@ describe('get_diff tool', () => {
 
     const result = await dispatchNamedTool(tools, 'get_diff', {});
 
-    expect(sandbox.exec).toHaveBeenCalledWith('git diff .');
+    expect(sandbox.exec).toHaveBeenCalledWith("git diff '.'");
     expect(result).toContain('diff --git');
   });
 
@@ -838,7 +838,7 @@ describe('get_diff tool', () => {
 
     await dispatchNamedTool(tools, 'get_diff', { path: 'src/' });
 
-    expect(sandbox.exec).toHaveBeenCalledWith('git diff src/');
+    expect(sandbox.exec).toHaveBeenCalledWith("git diff 'src/'");
   });
 
   it('returns "No uncommitted changes" for empty diff', async () => {
@@ -907,7 +907,7 @@ describe('list_directory tool', () => {
       path: 'src',
     });
 
-    expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining('find src'));
+    expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining("find 'src'"));
     expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining('-maxdepth 1'));
     expect(result).toContain('src/test.ts');
   });

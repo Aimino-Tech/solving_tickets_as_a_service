@@ -5,7 +5,7 @@ import type { KpiMetrics } from '../db/types/kpiMetrics.js';
 
 const log = rootLogger.child({ module: 'kpi-api' });
 
-const router = Router();
+const router: Router = Router();
 
 
 async function checkAdmin(req: Request, res: Response): Promise<boolean> {

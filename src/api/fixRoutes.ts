@@ -11,7 +11,6 @@ import { randomUUID } from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { Redis } from 'ioredis';
-import type { Queue } from 'bullmq';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import type { FixResponse, JobStatus, JobStatusResponse } from './types.js';
@@ -105,7 +104,7 @@ async function getJob(
 // Router
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * POST /api/fix
@@ -143,10 +142,13 @@ router.post('/', async (req: Request, res: Response) => {
 
     await saveJob(client, jobId, jobData);
 
-    // Enqueue the task for processing
+    // Enqueue the task for processing via RabbitMQ
     try {
-      const { enqueueIssue, createIssueQueue } = await import('../queue/issueQueue.js');
-      const queue = createIssueQueue();
+      const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
+
+      if (!isConnected()) {
+        await rmqConnect();
+      }
 
       // Parse repo owner and name from the URL
       // URL format: https://github.com/owner/repo
@@ -154,7 +156,7 @@ router.post('/', async (req: Request, res: Response) => {
       const repoOwner = urlParts[urlParts.length - 2];
       const repoName = urlParts[urlParts.length - 1];
 
-      await enqueueIssue(queue, {
+      const jobData2: IssueJobData = {
         installationId: 0,
         repoOwner,
         repoName,
@@ -164,6 +166,12 @@ router.post('/', async (req: Request, res: Response) => {
         issueBody,
         source: 'rapidapi',
         billingPlan: req.plan ?? 'free',
+      };
+
+      const messageId = `${jobData2.installationId}:${jobData2.repoOwner}/${jobData2.repoName}#${jobData2.issueNumber}-${Date.now()}`;
+      await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+        ...jobData2,
+        _meta: { messageId, enqueuedAt: new Date().toISOString() },
       });
 
       // Update job status to show it's been dispatched

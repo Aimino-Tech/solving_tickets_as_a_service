@@ -10,6 +10,9 @@ from . import linear_poll
 from .sandbox_gc import sandbox_gc
 from .multi_verification import multi_round_verify
 from .merge_queue import process_merge_queue, resolve_conflicts, label_conflict_pr
+from .pipeline_orchestrator import run_full_pipeline
+from . import direct_fix
+from . import merge_pr
 
 # Import status-comment signal handlers so they connect at worker start.
 # (Import for side effect — the module registers Celery signal handlers.)
@@ -39,4 +42,5 @@ __all__ = [
     "process_merge_queue",
     "resolve_conflicts",
     "label_conflict_pr",
+    "run_full_pipeline",
 ]

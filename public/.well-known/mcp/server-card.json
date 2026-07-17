@@ -1,0 +1,145 @@
+{
+  "schemaVersion": "2024-11-05",
+  "server": {
+    "name": "@aimino/stas-mcp",
+    "version": "1.0.0",
+    "description": "STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot backed by OpenCode.",
+    "homepage": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
+    "documentation": "https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md",
+    "license": "MIT",
+    "author": {
+      "name": "Aimino Tech",
+      "email": "team@aimino.io",
+      "url": "https://stas.aimino.io"
+    }
+  },
+  "capabilities": {
+    "tools": {
+      "stas_label_issue": {
+        "description": "Label a GitHub issue with the STAS fix label (or custom label). Triggers the fix pipeline.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "owner": { "type": "string", "description": "Repository owner (user or org)" },
+            "repo": { "type": "string", "description": "Repository name" },
+            "issue_number": { "type": "integer", "description": "Issue number" },
+            "label": { "type": "string", "description": "Label to apply (default: stas:fix)" }
+          },
+          "required": ["owner", "repo", "issue_number"]
+        }
+      },
+      "stas_run_fix": {
+        "description": "Trigger the STAS fix pipeline for a GitHub issue URL.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "issue_url": { "type": "string", "description": "Full GitHub issue URL" }
+          },
+          "required": ["issue_url"]
+        }
+      },
+      "stas_check_status": {
+        "description": "Check status of a STAS fix run by run_id.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "run_id": { "type": "string", "description": "Run ID from stas_run_fix" }
+          },
+          "required": ["run_id"]
+        }
+      },
+      "stas_get_pr": {
+        "description": "Get PR URL and details for a completed fix run.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "run_id": { "type": "string", "description": "Run ID from stas_run_fix" }
+          },
+          "required": ["run_id"]
+        }
+      },
+      "list_issues": {
+        "description": "List tracked issues and their STAS fix status.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": { "type": "string" },
+            "repo": { "type": "string" },
+            "limit": { "type": "integer" }
+          }
+        }
+      },
+      "search_codebase": {
+        "description": "Search the STAS codebase for symbols, files, or patterns.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string" },
+            "repo": { "type": "string" },
+            "max_results": { "type": "integer" }
+          },
+          "required": ["query"]
+        }
+      }
+    },
+    "resources": {
+      "stas://runs/{run_id}": { "description": "Full run details with status, PR link, and test results." },
+      "stas://issues/{issue_id}": { "description": "Issue details with fix status, run history, and linked PRs." },
+      "stas://status": { "description": "Server health and capability overview." },
+      "stas://queue": { "description": "Current fix queue depth and status." }
+    }
+  },
+  "transports": [
+    {
+      "type": "sse",
+      "url": "{baseUrl}/sse",
+      "description": "Server-Sent Events transport"
+    },
+    {
+      "type": "streamable-http",
+      "url": "{baseUrl}/mcp",
+      "description": "Streamable HTTP transport"
+    },
+    {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@aimino/stas-mcp"],
+      "description": "Stdio transport via npx"
+    }
+  ],
+  "install": {
+    "opencode": {
+      "config": {
+        "name": "stas-agent",
+        "transport": "stdio",
+        "command": "npx",
+        "args": ["-y", "@aimino/stas-mcp"]
+      }
+    },
+    "claudeDesktop": {
+      "config": {
+        "mcpServers": {
+          "stas": {
+            "command": "npx",
+            "args": ["-y", "@aimino/stas-mcp"]
+          }
+        }
+      }
+    },
+    "cursor": {
+      "config": {
+        "mcpServers": {
+          "stas": {
+            "command": "npx",
+            "args": ["-y", "@aimino/stas-mcp"]
+          }
+        }
+      }
+    }
+  },
+  "keywords": [
+    "stas", "github-bot", "issue-fixer", "automated-fix",
+    "opencode", "mcp", "smithery", "aimino",
+    "agent-discovery", "agent-to-agent"
+  ]
+}

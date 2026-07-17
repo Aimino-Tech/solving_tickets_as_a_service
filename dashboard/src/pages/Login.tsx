@@ -26,7 +26,7 @@ export default function Login() {
             Solving Tickets As A Service
           </h1>
           <p className="mt-4 text-lg text-brand-100">
-            Label a GitHub issue. Get a pull request. Our AGI does the work.
+            Label a GitHub issue. Get a pull request. Powered by OpenCode + frontier models.
           </p>
 
           <div className="mt-6 rounded-lg border border-brand-400/30 bg-brand-500/20 p-4">

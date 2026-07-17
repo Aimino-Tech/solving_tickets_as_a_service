@@ -79,7 +79,11 @@ def classify_via_keywords(issue_data: dict) -> dict:
     else:
         scope = "small"
 
-    return {"category": best, "scope": scope, "confidence": round(scores[best] / max(sum(scores.values()), 1), 2)}
+    if best == "unknown":
+        confidence = 0.0
+    else:
+        confidence = round(scores[best] / max(sum(scores.values()), 1), 2)
+    return {"category": best, "scope": scope, "confidence": confidence}
 
 
 @shared_task(

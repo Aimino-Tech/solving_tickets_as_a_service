@@ -19,7 +19,7 @@ function resolveTier(tier: string): string {
   return lower in SLA_GOALS ? lower : 'free';
 }
 
-const router = Router();
+const router: Router = Router();
 
 
 async function redisGet(key: string): Promise<string | undefined> {

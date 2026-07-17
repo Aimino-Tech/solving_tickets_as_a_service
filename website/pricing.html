@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing — STAS | Solving Tickets As A Service</title>
+  <meta name="description" content="STAS pricing: Free for open-source. Solo, Team, and Enterprise plans for every scale." />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stas.aimino.io/pricing" />
+  <meta property="og:title" content="Pricing — STAS" />
+  <meta property="og:description" content="STAS pricing: Free for open-source. Solo, Team, and Enterprise plans for every scale." />
+  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Pricing — STAS" />
+  <meta name="twitter:description" content="STAS pricing: Free for open-source. Solo, Team, and Enterprise plans for every scale." />
+  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+
+  <!-- JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "STAS",
+    "description": "Solving Tickets As A Service — AI-powered GitHub automation",
+    "offers": [
+      { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "Free for open-source" },
+      { "@type": "Offer", "name": "Solo", "price": "19", "priceCurrency": "USD", "priceValidUntil": "2027-12-31", "description": "For individual developers" },
+      { "@type": "Offer", "name": "Team", "price": "99", "priceCurrency": "USD", "priceValidUntil": "2027-12-31", "description": "For small teams" },
+      { "@type": "Offer", "name": "Enterprise", "price": "Custom", "priceCurrency": "USD", "description": "For organizations" }
+    ]
+  }
+  </script>
+
+  <!-- Plausible -->
+  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo"><span class="logo-icon">S</span> STAS</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/">Home</a></li>
+        <li><a href="/pricing" class="active">Pricing</a></li>
+        <li><a href="/trust">Trust</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/status">Status</a></li>
+        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta">Install App →</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <section class="page-header">
+    <h1>Simple, Transparent Pricing</h1>
+    <p class="sub">Free for open-source. Affordable for teams. Enterprise-grade for everyone.</p>
+  </section>
+
+  <!-- PRICING CARDS -->
+  <section class="section" style="padding-top:0">
+    <div class="pricing-grid">
+      <!-- Free -->
+      <div class="pricing-card animate-on-scroll">
+        <div class="pricing-name">Free</div>
+        <div class="pricing-desc">For open-source and public repos</div>
+        <div class="pricing-price">$0 <span>/ month</span></div>
+        <div class="pricing-period">No credit card required</div>
+        <ul class="pricing-features">
+          <li>Unlimited public repos</li>
+          <li>500 fixes / month</li>
+          <li>Community support</li>
+          <li>Basic sandbox</li>
+          <li class="missing">Priority queue</li>
+          <li class="missing">Private repo support</li>
+          <li class="missing">Team analytics</li>
+        </ul>
+        <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" style="width:100%;justify-content:center" data-track="pricing-free">Get Started</a>
+      </div>
+
+      <!-- Solo -->
+      <div class="pricing-card animate-on-scroll">
+        <div class="pricing-name">Solo</div>
+        <div class="pricing-desc">For individual developers</div>
+        <div class="pricing-price">$19 <span>/ month</span></div>
+        <div class="pricing-period">Or $190 yearly (save 16%)</div>
+        <ul class="pricing-features">
+          <li>Up to 5 private repos</li>
+          <li>2,000 fixes / month</li>
+          <li>Priority support</li>
+          <li>Standard sandbox</li>
+          <li>Priority queue</li>
+          <li class="missing">Team analytics</li>
+          <li class="missing">SSO / SAML</li>
+        </ul>
+        <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" style="width:100%;justify-content:center" data-track="pricing-solo">Subscribe →</a>
+      </div>
+
+      <!-- Team (Featured) -->
+      <div class="pricing-card featured animate-on-scroll">
+        <div class="pricing-badge">Most Popular</div>
+        <div class="pricing-name">Team</div>
+        <div class="pricing-desc">For small teams and startups</div>
+        <div class="pricing-price">$99 <span>/ month</span></div>
+        <div class="pricing-period">Or $990 yearly (save 16%)</div>
+        <ul class="pricing-features">
+          <li>Unlimited private repos</li>
+          <li>10,000 fixes / month</li>
+          <li>Priority support</li>
+          <li>Premium sandbox (8GB RAM)</li>
+          <li>Priority queue</li>
+          <li>Team analytics dashboard</li>
+          <li class="missing">SSO / SAML</li>
+          <li class="missing">Dedicated infrastructure</li>
+        </ul>
+        <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" style="width:100%;justify-content:center" data-track="pricing-team">Subscribe →</a>
+      </div>
+
+      <!-- Enterprise -->
+      <div class="pricing-card animate-on-scroll">
+        <div class="pricing-name">Enterprise</div>
+        <div class="pricing-desc">For organizations at scale</div>
+        <div class="pricing-price">Custom</div>
+        <div class="pricing-period">Tailored to your needs</div>
+        <ul class="pricing-features">
+          <li>Unlimited repos & fixes</li>
+          <li>Unlimited fixes / month</li>
+          <li>Dedicated support & SLA</li>
+          <li>Dedicated sandbox infrastructure</li>
+          <li>Priority queue</li>
+          <li>Advanced analytics & reporting</li>
+          <li>SSO / SAML / SCIM</li>
+          <li>On-premise deployment option</li>
+        </ul>
+        <a href="mailto:sales@aimino.io" class="btn btn-secondary" style="width:100%;justify-content:center" data-track="pricing-enterprise">Contact Sales</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURE COMPARISON -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Feature Comparison</h2>
+      <p class="sub">Every plan includes our core fix engine. Upgrade for scale, speed, and control.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Free</th>
+            <th>Solo</th>
+            <th>Team</th>
+            <th>Enterprise</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Fixes per month</td><td>500</td><td>2,000</td><td>10,000</td><td>Unlimited</td></tr>
+          <tr><td>Private repositories</td><td>—</td><td>Up to 5</td><td>Unlimited</td><td>Unlimited</td></tr>
+          <tr><td>Sandbox memory</td><td>2 GB</td><td>4 GB</td><td>8 GB</td><td>Custom</td></tr>
+          <tr><td>Sandbox timeout</td><td>5 min</td><td>10 min</td><td>20 min</td><td>Custom</td></tr>
+          <tr><td>Support</td><td>Community</td><td>Priority</td><td>Priority</td><td>Dedicated + SLA</td></tr>
+          <tr><td>Analytics dashboard</td><td>—</td><td>—</td><td>✓</td><td>✓ Advanced</td></tr>
+          <tr><td>SSO / SAML</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+          <tr><td>On-premise deployment</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+          <tr><td>Audit logs</td><td>Basic</td><td>Basic</td><td>Extended</td><td>Full + Export</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Ready to Ship Faster?</h2>
+    <p class="sub">Install the STAS GitHub App in under 30 seconds. No config. No credit card required.</p>
+    <div class="btn-group">
+      <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" data-track="pricing-cta">Install the GitHub App →</a>
+      <a href="/docs" class="btn btn-secondary" data-track="pricing-docs">Read the Docs</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/docs">Documentation</a></li>
+          <li><a href="/trust">Trust & Security</a></li>
+          <li><a href="/status">Status</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
+          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="https://aimino.io">AImino</a></li>
+          <li><a href="https://opencode.ai">OpenCode</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/LICENSE">License</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 AImino. All rights reserved.</span>
+      <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">Open Source (MIT)</a>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

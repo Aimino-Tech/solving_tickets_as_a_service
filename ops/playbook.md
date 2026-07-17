@@ -490,3 +490,181 @@ pgbouncer:
 - Add PgBouncer connection pooling
 - Set up connection pool monitoring
 - Implement connection leak detection
+
+---
+
+## 8. DLQ Depth Critical
+
+### Alert Condition
+
+`DLQDepthCritical` — `bullmq_queue_depth{queue=~".*dlq"} > 10` for 1 minute
+
+### Severity
+
+**Critical** — P1, respond within 5 minutes
+
+### Triage (2 min)
+
+```bash
+# Check DLQ contents
+docker compose exec redis redis-cli LRANGE "bullq:stas-issues-dlq" 0 -1 | head -20
+
+# Check recent failed jobs
+docker compose exec postgres psql -U stas -c "
+  SELECT id, type, error_message, created_at
+  FROM run_history
+  WHERE status = 'failed'
+    AND created_at > NOW() - INTERVAL '1 hour'
+  ORDER BY created_at DESC
+  LIMIT 10;
+"
+```
+
+### Remediation
+
+#### Step 1: Identify Failure Pattern (2 min)
+
+```bash
+# Check if failures are from same queue
+docker compose logs stas-worker --tail 100 | grep "DLQ\|DeadLetter\|dead_letter"
+
+# Check for recurring errors
+docker compose logs stas-worker --tail 200 | grep -oP "Error:.*" | sort | uniq -c | sort -rn
+```
+
+#### Step 2: Drain DLQ (2 min)
+
+```bash
+# Re-queue DLQ messages
+docker compose exec redis redis-cli LMOVE "bullq:stas-issues-dlq" "bullq:stas-issues" LEFT RIGHT
+```
+
+#### Step 3: Monitor Re-processing (1 min)
+
+```bash
+# Check if re-queued jobs are being processed
+watch -n 5 'curl -s http://localhost:15672/api/queues | jq ".[] | {name: .name, depth: .messages_ready}"'
+```
+
+### Prevention
+
+- Set up DLQ monitoring alerts (warning at 5, critical at 10)
+- Auto-notify operator via Slack/email when DLQ exceeds threshold
+- Implement automatic DLQ retry with exponential backoff
+
+---
+
+## 9. Cost Alert — Inference Cost High
+
+### Alert Condition
+
+`DailyInferenceCostHigh` — `sum(increase(inference_cost_total[24h])) > 100` for 5 minutes
+
+### Severity
+
+**Warning** — P3, respond within 1 hour
+
+### Triage (3 min)
+
+```bash
+# Check cost breakdown by model
+curl -s http://localhost:9464/metrics | grep "inference_cost_total" | head -10
+
+# Check fix rate vs cost
+curl -s http://localhost:9464/metrics | grep "fixes_completed_total"
+
+# Check per-tenant usage
+curl -s http://localhost:9464/metrics | grep "api_requests_total" | sort -t} -k2 -rn | head -10
+```
+
+### Remediation
+
+#### Step 1: Identify Cost Driver (2 min)
+
+```bash
+# Check if cost spike correlates with fix rate
+docker compose logs stas-webhook --tail 50 | grep "fix\|opencode\|inference"
+
+# Check if specific model is more expensive
+docker compose exec postgres psql -U stas -c "
+  SELECT model, count(*) as fixes, round(avg(cost)::numeric, 4) as avg_cost
+  FROM run_history
+  WHERE created_at > NOW() - INTERVAL '24 hours'
+  GROUP BY model
+  ORDER BY avg_cost DESC;
+"
+```
+
+#### Step 2: Reduce Cost (5 min)
+
+- Switch to cheaper model for simple fixes
+- Enable two-phase triage (classify with cheap model, fix with expensive)
+- Increase caching for frequently requested data
+- Review and optimize prompt templates
+
+### Prevention
+
+- Monitor cost/fix ratio weekly
+- Set budget alerts at 50%, 80%, 100% of daily budget
+- Implement per-tenant cost tracking
+- Review model selection periodically
+
+---
+
+## 10. Redis Memory Pressure
+
+### Alert Condition
+
+`RedisMemoryPressure` — `redis_memory_used_bytes / redis_memory_max_bytes > 0.8` for 5 minutes
+
+### Severity
+
+**Warning** — P2, respond within 15 minutes
+
+### Triage (2 min)
+
+```bash
+# Check Redis memory info
+docker compose exec redis redis-cli INFO memory | grep -E "used_memory_human|maxmemory_human|used_memory_peak_human"
+
+# Check largest keys
+docker compose exec redis redis-cli --bigkeys
+
+# Check TTL distribution
+docker compose exec redis redis-cli INFO stats | grep expired_keys
+```
+
+### Remediation
+
+#### Step 1: Free Memory (2 min)
+
+```bash
+# Force expire TTL keys
+docker compose exec redis redis-cli CONFIG SET maxmemory-policy allkeys-lru
+
+# Delete stale session keys
+docker compose exec redis redis-cli EVAL "return redis.call('DEL', unpack(redis.call('KEYS', 'session:*')))" 0
+
+# Flush infrequently accessed cache
+docker compose exec redis redis-cli EVAL "return redis.call('DEL', unpack(redis.call('KEYS', 'cache:*')))" 0
+```
+
+#### Step 2: Reduce TTLs (2 min)
+
+```yaml
+# docker-compose.prod.yml
+command: >
+  redis-server --appendonly yes
+  --maxmemory 4gb
+  --maxmemory-policy allkeys-lru
+  --maxmemory-samples 10
+```
+
+Reduce TTLs for non-critical data in application config.
+
+### Prevention
+
+- Set maxmemory with headroom (4GB for 500 users)
+- Monitor memory fragmentation
+- Set TTLs on all cache entries
+- Add memwatch monitoring

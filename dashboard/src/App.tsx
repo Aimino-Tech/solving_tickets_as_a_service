@@ -18,13 +18,11 @@ import Status from '@/pages/Status';
 import DPAPage from '@/pages/DPAPage';
 import Benchmarks from '@/pages/Benchmarks';
 import Pricing from '@/pages/Pricing';
-<<<<<<< Updated upstream
-=======
 import EnterprisePage from '@/pages/EnterprisePage';
 import KpiDashboard from '@/pages/KpiDashboard';
 import PricingPage from '@/pages/PricingPage';
 import VsPage from '@/pages/VsPage';
->>>>>>> Stashed changes
+import AdminRuns from '@/pages/AdminRuns';
 
 export default function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -70,6 +68,7 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="audit" element={<AuditLog />} />
+          <Route path="admin/runs" element={<AdminRuns />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

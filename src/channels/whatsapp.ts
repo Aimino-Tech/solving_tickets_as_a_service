@@ -79,7 +79,7 @@ export function verifyWhatsAppWebhook(req: { query: Record<string, string | stri
 export async function handleWhatsAppWebhook(payload: Record<string, unknown>): Promise<{ ok: boolean }> {
   if (!isConfigured()) return { ok: false };
 
-  const entry = (payload as any).entry?.[0];
+  const entry = (payload as { entry?: Array<Record<string, unknown>> })?.entry?.[0];
   const change = entry?.changes?.[0];
   const value = change?.value;
   const messages = value?.messages;
@@ -105,13 +105,21 @@ export async function handleWhatsAppWebhook(payload: Record<string, unknown>): P
         }
 
         try {
-          const { enqueueIssue } = await import('../queue/issueQueue.js');
-          await enqueueIssue(undefined, {
+          const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
+          if (!isConnected()) {
+            await rmqConnect();
+          }
+          const jobData = {
             installationId: config.trackers.installationId || 0,
             repoOwner, repoName, repoPrivate: false, issueNumber: 0,
             issueTitle,
             issueBody: `Submitted via WhatsApp from ${from}\n\nDescription: ${issueTitle}`,
             source: 'whatsapp',
+          };
+          const messageId = `${jobData.installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
+          await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+            ...jobData,
+            _meta: { messageId, enqueuedAt: new Date().toISOString() },
           });
           await callWhatsApp({
             messaging_product: 'whatsapp', to: from, type: 'text',

@@ -34,6 +34,9 @@ const envSchema = z.object({
   GITHUB_WEBHOOK_PATH: z.string().default('/webhook'),
 
   REDIS_URL: z.string().default('redis://localhost:6379'),
+  RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672/stas'),
+  QUEUE_BACKEND: z.enum(['amqp']).default('amqp'),
+
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
   QUEUE_DEDUP_TTL_SECONDS: z.coerce.number().int().positive().default(120),
   QUEUE_KEEP_COMPLETED: z.coerce.number().int().positive().default(200),
@@ -43,6 +46,7 @@ const envSchema = z.object({
 
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
+  OPENAI_BASE_URL: z.string().default("http://litellm-proxy:4002/v1"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
@@ -61,13 +65,32 @@ const envSchema = z.object({
   STAS_MONTHLY_QUOTA_ENABLED: boolSchema(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
+  STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
+  STAS_AI_DISABLED: boolSchema(false),
   STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
+  // Rate limiting — calibrated for 500-user scale
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
-  STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(150),
+  STAS_RATE_LIMIT_PER_REPO_MAX: z.coerce.number().int().positive().default(20),
+  STAS_RATE_LIMIT_PER_IP_MAX: z.coerce.number().int().positive().default(60),
+  STAS_RATE_LIMIT_PER_USER_MAX: z.coerce.number().int().positive().default(100),
+
+  // Queue depth limits
+  QUEUE_MAX_PENDING_PER_REPO: z.coerce.number().int().positive().default(10),
+  QUEUE_DLQ_MAX_SIZE: z.coerce.number().int().positive().default(50),
+  QUEUE_DLQ_NOTIFY_AT: z.coerce.number().int().positive().default(25),
+
+  // PostgreSQL connection pool — tuned for 500-user load
+  POSTGRES_POOL_MAX: z.coerce.number().int().positive().default(25),
+  POSTGRES_POOL_MIN: z.coerce.number().int().positive().default(5),
+
+  // Redis TTL — optimized for hot data at 500-user scale
+  REDIS_TTL_DEFAULT: z.coerce.number().int().positive().default(300),
+  REDIS_TTL_FREQUENT_ACCESS: z.coerce.number().int().positive().default(60),
   ADMIN_API_KEY: z.string().optional(),
 
   WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
@@ -123,6 +146,7 @@ const envSchema = z.object({
   STORAGE_SQLITE_PATH: z.string().default('./data/stas.db'),
 
   // CI monitoring
+  CI_MONITOR_ENABLED: boolSchema(false),
   CI_REPOS: z.string().default(''),
   CI_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
   CI_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(3),
@@ -137,7 +161,6 @@ const envSchema = z.object({
   // RapidAPI
   RAPIDAPI_PROXY_SECRET: z.string().optional(),
 
-
   // Stripe pricing plans
   STRIPE_SOLO_PRICE_ID: z.string().default('price_solo'),
   STRIPE_TEAM_PRICE_ID: z.string().default('price_team'),
@@ -145,6 +168,12 @@ const envSchema = z.object({
   // Security CSP
   CSP_REPORT_URI: z.string().optional(),
 
+  // Docker
+  DOCKER_IMAGE: z.string().default('node:20-slim'),
+  DOCKER_CONTAINER_MEMORY: z.string().default('512m'),
+  DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(0.5),
+  DOCKER_NETWORK_RESTRICT: boolSchema(true),
+  DOCKER_ALLOWED_HOSTS: z.string().default(''),
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
@@ -157,6 +186,7 @@ const envSchema = z.object({
   STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
   STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
 
+  // MCP Server Configuration
   MCP_API_KEY: z.string().optional(),
   MCP_AUTH_ENABLED: z.preprocess(
     (v) => {
@@ -165,6 +195,14 @@ const envSchema = z.object({
     },
     z.boolean(),
   ).default(true),
+  STAS_MCP_SERVER_URL: z.string().default('http://localhost:4095'),
+  STAS_MCP_PORT: z.coerce.number().int().positive().max(65535).default(4095),
+  STAS_MCP_AUTO_START: boolSchema(true),
+  STAS_MCP_SSL_ENABLED: boolSchema(false),
+  STAS_MCP_SSL_KEY_PATH: z.string().optional(),
+  STAS_MCP_SSL_CERT_PATH: z.string().optional(),
+  MCP_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  MCP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
 
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_PATH: z.string().default('/webhook/telegram'),
@@ -187,16 +225,6 @@ const envSchema = z.object({
   IP_ALLOWLIST_ENABLED: boolSchema(false),
   IP_ALLOWLIST: z.string().default(''),
 
-  // ── Docker Sandbox ──
-  DOCKER_IMAGE: z.string().default('node:20-slim'),
-  DOCKER_NETWORK_RESTRICT: z.coerce.boolean().default(true),
-  DOCKER_ALLOWED_HOSTS: z.string().default('api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io'),
-  DOCKER_CONTAINER_MEMORY: z.string().default('4g'),
-  DOCKER_CONTAINER_CPU: z.coerce.number().positive().default(2),
-  DOCKER_SECCOMP_PROFILE: z.string().default('./docker/seccomp/sandbox.json'),
-  DOCKER_APPARMOR_PROFILE: z.string().default('stas-sandbox'),
-  DOCKER_GVISOR_ENABLED: z.coerce.boolean().default(false),
-
   // ── Sandbox Security ──
   SANDBOX_PRIVILEGED: boolSchema(false),
   SANDBOX_READONLY_ROOT: boolSchema(true),
@@ -205,8 +233,6 @@ const envSchema = z.object({
   SANDBOX_PIDS_LIMIT: z.coerce.number().int().positive().default(256),
   SANDBOX_DISK_LIMIT: z.string().default('2gb'),
   SANDBOX_NETWORK_ENABLED: boolSchema(false),
-
-  CI_MONITOR_ENABLED: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(false),
 
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENVIRONMENT: z.string().default('development'),
@@ -232,6 +258,18 @@ const envSchema = z.object({
   METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
+  // ── Pipeline ──
+  PIPELINE_SANDBOX_ENABLED: boolSchema(true),
+  PIPELINE_QUALITY_GATE_TIMEOUT_MS: z.coerce.number().int().positive().default(300000),
+  PIPELINE_COMPLIANCE_CHECK_ENABLED: boolSchema(true),
+
+  // ── Team Management ──
+  TEAMS_ENABLED: boolSchema(true),
+  TEAMS_MAX_MEMBERS_FREE_TIER: z.coerce.number().int().positive().default(3),
+  TEAMS_MAX_MEMBERS_PRO_TIER: z.coerce.number().int().positive().default(20),
+
+  // ── Onboarding Wizard ──
+  ONBOARDING_WIZARD_ENABLED: boolSchema(true),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -272,13 +310,15 @@ function buildConfig(env: ParsedEnv) {
 
     queue: {
       redisUrl: env.REDIS_URL,
+      rabbitmqUrl: env.RABBITMQ_URL,
+      backend: env.QUEUE_BACKEND,
       workerConcurrency: env.WORKER_CONCURRENCY,
       dedupTtl: env.QUEUE_DEDUP_TTL_SECONDS,
       keepCompleted: env.QUEUE_KEEP_COMPLETED,
       keepFailed: env.QUEUE_KEEP_FAILED,
       maxRetries: env.QUEUE_MAX_RETRIES,
       retryDelays: env.QUEUE_RETRY_DELAYS.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n)),
-      backend: 'bullmq' as const,
+
     },
 
     opencode: {
@@ -327,6 +367,13 @@ function buildConfig(env: ParsedEnv) {
       proxySecret: env.RAPIDAPI_PROXY_SECRET,
     },
 
+    docker: {
+      image: env.DOCKER_IMAGE,
+      containerMemory: env.DOCKER_CONTAINER_MEMORY,
+      containerCpu: env.DOCKER_CONTAINER_CPU,
+      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
+      allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
+    },
 
     openai: {
       apiKey: env.OPENAI_API_KEY,
@@ -350,6 +397,18 @@ function buildConfig(env: ParsedEnv) {
     mcp: {
       apiKey: env.MCP_API_KEY ?? '',
       authEnabled: env.MCP_AUTH_ENABLED,
+      serverUrl: env.STAS_MCP_SERVER_URL,
+      port: env.STAS_MCP_PORT,
+      autoStart: env.STAS_MCP_AUTO_START,
+      ssl: {
+        enabled: env.STAS_MCP_SSL_ENABLED,
+        keyPath: env.STAS_MCP_SSL_KEY_PATH ?? '',
+        certPath: env.STAS_MCP_SSL_CERT_PATH ?? '',
+      },
+      rateLimit: {
+        windowMs: env.MCP_RATE_LIMIT_WINDOW_MS,
+        maxRequests: env.MCP_RATE_LIMIT_MAX,
+      },
     },
 
     telegram: {
@@ -368,7 +427,6 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.ADMIN_API_KEY ?? '',
       rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
     },
-
 
     sentry: {
       dsn: env.SENTRY_DSN,
@@ -393,6 +451,8 @@ function buildConfig(env: ParsedEnv) {
 
     stas: {
       mode: env.STAS_MODE,
+      aiMode: env.STAS_AI_MODE,
+      aiDisabled: env.STAS_AI_DISABLED,
       label: env.STAS_LABEL,
       botName: env.BOT_NAME,
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
@@ -400,8 +460,24 @@ function buildConfig(env: ParsedEnv) {
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
       rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
       rateLimitMax: env.STAS_RATE_LIMIT_MAX,
+      rateLimitPerRepoMax: env.STAS_RATE_LIMIT_PER_REPO_MAX,
+      rateLimitPerIpMax: env.STAS_RATE_LIMIT_PER_IP_MAX,
+      rateLimitPerUserMax: env.STAS_RATE_LIMIT_PER_USER_MAX,
+      queueMaxPendingPerRepo: env.QUEUE_MAX_PENDING_PER_REPO,
+      queueDlqMaxSize: env.QUEUE_DLQ_MAX_SIZE,
+      queueDlqNotifyAt: env.QUEUE_DLQ_NOTIFY_AT,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    },
+
+    postgres: {
+      poolMax: env.POSTGRES_POOL_MAX,
+      poolMin: env.POSTGRES_POOL_MIN,
+    },
+
+    redis: {
+      ttlDefault: env.REDIS_TTL_DEFAULT,
+      ttlFrequentAccess: env.REDIS_TTL_FREQUENT_ACCESS,
     },
 
     webhookRetry: {
@@ -481,18 +557,6 @@ function buildConfig(env: ParsedEnv) {
       installationId: env.TRACKER_INSTALLATION_ID || 0,
     },
 
-    // ── Docker ─────────────────────────────────────────────────────────────
-    docker: {
-      image: env.DOCKER_IMAGE,
-      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
-      allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
-      containerMemory: env.DOCKER_CONTAINER_MEMORY,
-      containerCpu: env.DOCKER_CONTAINER_CPU,
-      seccompProfile: env.DOCKER_SECCOMP_PROFILE,
-      apparmorProfile: env.DOCKER_APPARMOR_PROFILE,
-      gvisorEnabled: env.DOCKER_GVISOR_ENABLED,
-    },
-
     // ── Security ────────────────────────────────────────────────────────────
     security: {
       adminApiKey: env.ADMIN_API_KEY,
@@ -532,6 +596,24 @@ function buildConfig(env: ParsedEnv) {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    pipeline: {
+      sandboxEnabled: env.PIPELINE_SANDBOX_ENABLED,
+      qualityGateTimeoutMs: env.PIPELINE_QUALITY_GATE_TIMEOUT_MS,
+      complianceCheckEnabled: env.PIPELINE_COMPLIANCE_CHECK_ENABLED,
+    },
+
+    // ── Team Management ─────────────────────────────────────────────────────
+    teams: {
+      enabled: env.TEAMS_ENABLED,
+      maxMembersFreeTier: env.TEAMS_MAX_MEMBERS_FREE_TIER,
+      maxMembersProTier: env.TEAMS_MAX_MEMBERS_PRO_TIER,
+    },
+
+    // ── Onboarding Wizard ───────────────────────────────────────────────────
+    onboarding: {
+      wizardEnabled: env.ONBOARDING_WIZARD_ENABLED,
     },
   } as const;
 }

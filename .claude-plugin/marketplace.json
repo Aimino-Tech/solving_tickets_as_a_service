@@ -1,0 +1,94 @@
+{
+  "$schema": "https://claude.ai/plugins/schema/marketplace.json",
+  "name": "stas",
+  "title": "STAS — Solving Tickets As A Service",
+  "description": "Submit GitHub issue descriptions and get automated fix PRs. STAS investigates your codebase, writes fixes, runs tests, and opens pull requests — all through natural language.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Aimino Tech",
+    "url": "https://github.com/Aimino-Tech"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aimino-Tech/solving_tickets_as_a_service"
+  },
+  "bugs": {
+    "url": "https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues"
+  },
+  "categories": [
+    "developer-tools",
+    "automation",
+    "github",
+    "code-review",
+    "productivity"
+  ],
+  "tags": [
+    "github",
+    "automation",
+    "fix",
+    "pr",
+    "code-review",
+    "testing",
+    "mcp",
+    "opencode",
+    "claude"
+  ],
+  "skills": [
+    "skills/stas/SKILL.md"
+  ],
+  "mcpServers": {
+    "stas": {
+      "description": "STAS MCP server — submit fix requests, check status, list repos",
+      "command": "python3",
+      "args": ["-m", "stas_mcp.server", "stdio"]
+    }
+  },
+  "resources": {
+    "stas://runs/{run_id}": {
+      "name": "Fix Run Status",
+      "description": "Full run details including status, timestamps, issue info, and PR link",
+      "mimeType": "application/json"
+    },
+    "stas://issues/{issue_id}": {
+      "name": "Issue Fix Status",
+      "description": "Issue details with current fix status, run history, and linked PRs",
+      "mimeType": "application/json"
+    }
+  },
+  "config": {
+    "env": {
+      "MCP_API_KEY": {
+        "description": "API key for MCP authentication",
+        "required": false,
+        "default": ""
+      },
+      "STAS_MCP_PORT": {
+        "description": "MCP server port (SSE mode)",
+        "default": "4095"
+      },
+      "STAS_MCP_TRANSPORT": {
+        "description": "Transport mode: stdio or sse",
+        "default": "stdio"
+      }
+    }
+  },
+  "installation": {
+    "opencode": {
+      "configPath": "opencode.json",
+      "section": "mcpServers"
+    },
+    "claudeDesktop": {
+      "configPath": "claude_desktop_config.json",
+      "section": "mcpServers"
+    },
+    "cursor": {
+      "type": "command",
+      "config": {
+        "name": "stas",
+        "command": "python3 -m stas_mcp.server stdio"
+      }
+    }
+  }
+}

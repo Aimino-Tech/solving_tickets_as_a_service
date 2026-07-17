@@ -3,12 +3,12 @@
 ## Overview
 
 The premium hosted service is a separate deployment that shares the same OSS bot stack but adds:
-1. Our AGI model as the backing agent (replaces user's OpenCode server)
+1. Frontier models as the backing agent (replaces user's OpenCode server, claude-sonnet-4 default)
 2. A web dashboard for monitoring and analytics
 3. Multi-tenant database for teams and audit
 4. Stripe billing integration
 
-The underlying OSS stack follows the KintsugiBot-inspired architecture: **Express** webhooks → **BullMQ/Redis** queue → **E2B** sandbox → **@octokit** GitHub API → **pino** logging. Premium wraps this with our AGI, dashboard, and enterprise features.
+The underlying OSS stack follows the KintsugiBot-inspired architecture: **Express** webhooks → **BullMQ/Redis** queue → **E2B** sandbox → **@octokit** GitHub API → **pino** logging. Premium wraps this with frontier model routing, dashboard, and enterprise features.
 
 ## Deployment
 
@@ -34,7 +34,7 @@ The underlying OSS stack follows the KintsugiBot-inspired architecture: **Expres
 └─────────┬────────────┘
           │
 ┌─────────▼────────────┐
-│   Our AGI            │  Proprietary model, OpenAI-compatible API
+│   claude-sonnet-4     │  Frontier model, OpenAI-compatible API
 │   (agi.stas.dev)     │  50% better than GPT-5.5 on DeepSWE
 └─────────┬────────────┘
           │

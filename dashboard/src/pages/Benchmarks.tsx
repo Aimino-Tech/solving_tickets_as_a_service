@@ -64,59 +64,62 @@ export default function Benchmarks() {
               </tr>
             </thead>
             <tbody>
-              {data.map((entry) => (
-                <tr
-                  key={entry.agent}
-                  className={`border-b border-gray-100 transition-colors hover:bg-gray-50 ${
-                    entry.agent === 'STAS (Our AGI)' ? 'bg-brand-50/50' : ''
-                  }`}
-                >
-                  <td className="py-3 pr-4">
-                    <span className={`font-medium ${entry.agent === 'STAS (Our AGI)' ? 'text-brand-700' : 'text-gray-900'}`}>
-                      {entry.agent}
-                      {entry.agent === 'STAS (Our AGI)' && (
-                        <span className="ml-2 inline-flex items-center rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
-                          Best
-                        </span>
+              {data.map((entry) => {
+                const isStas = entry.agent.startsWith('STAS');
+                return (
+                  <tr
+                    key={entry.agent}
+                    className={`border-b border-gray-100 transition-colors hover:bg-gray-50 ${
+                      isStas ? 'bg-brand-50/50' : ''
+                    }`}
+                  >
+                    <td className="py-3 pr-4">
+                      <span className={`font-medium ${isStas ? 'text-brand-700' : 'text-gray-900'}`}>
+                        {entry.agent}
+                        {isStas && (
+                          <span className="ml-2 inline-flex items-center rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
+                            Best
+                          </span>
+                        )}
+                      </span>
+                      {entry.note && (
+                        <p className="mt-0.5 text-xs text-gray-400">{entry.note}</p>
                       )}
-                    </span>
-                    {entry.note && (
-                      <p className="mt-0.5 text-xs text-gray-400">{entry.note}</p>
-                    )}
-                  </td>
-                  <td className="py-3 pr-4">
-                    <span className={`font-mono font-semibold ${
-                      entry.passRate >= 0.7 ? 'text-green-600' : entry.passRate >= 0.4 ? 'text-amber-600' : 'text-red-600'
-                    }`}>
-                      {(entry.passRate * 100).toFixed(1)}%
-                    </span>
-                  </td>
-                  <td className="py-3 pr-4 font-mono text-gray-700">
-                    ${(entry.costPerFixCents / 100).toFixed(2)}
-                  </td>
-                  <td className="py-3 pr-4">
-                    {entry.agentNative ? (
-                      <span className="text-green-600">✓</span>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
-                  </td>
-                  <td className="py-3 pr-4">
-                    {entry.oss ? (
-                      <span className="text-green-600">✓</span>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
-                  </td>
-                  <td className="py-3">
-                    {entry.selfHostable ? (
-                      <span className="text-green-600">✓</span>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="py-3 pr-4">
+                      <span className={`font-mono font-semibold ${
+                        entry.passRate >= 0.7 ? 'text-green-600' : entry.passRate >= 0.4 ? 'text-amber-600' : 'text-red-600'
+                      }`}>
+                        {(entry.passRate * 100).toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4 font-mono text-gray-700">
+                      ${(entry.costPerFixCents / 100).toFixed(2)}
+                    </td>
+                    <td className="py-3 pr-4">
+                      {entry.agentNative ? (
+                        <span className="text-green-600">✓</span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 pr-4">
+                      {entry.oss ? (
+                        <span className="text-green-600">✓</span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="py-3">
+                      {entry.selfHostable ? (
+                        <span className="text-green-600">✓</span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -138,32 +141,35 @@ export default function Benchmarks() {
                 </tr>
               </thead>
               <tbody>
-                {prices.map((p) => (
-                  <tr
-                    key={p.agent}
-                    className={`border-b border-gray-100 transition-colors hover:bg-gray-50 ${
-                      p.agent.startsWith('STAS') ? 'bg-brand-50/50' : ''
-                    }`}
-                  >
-                    <td className="py-3 pr-4 font-medium text-gray-900">{p.agent}</td>
-                    <td className="py-3 pr-4 text-gray-600">{p.model}</td>
-                    <td className="py-3 pr-4 font-mono text-gray-700">
-                      {p.costPerFixCents === 0 ? (
-                        <span className="text-green-600">Free</span>
-                      ) : (
-                        `$${(p.costPerFixCents / 100).toFixed(2)}`
-                      )}
-                    </td>
-                    <td className="py-3 pr-4 font-mono text-gray-700">
-                      {p.monthlyMinCents === 0 ? (
-                        <span className="text-green-600">Free</span>
-                      ) : (
-                        `$${(p.monthlyMinCents / 100).toFixed(0)}`
-                      )}
-                    </td>
-                    <td className="py-3 font-mono text-gray-700">{p.monthlyMaxFixes}/mo</td>
-                  </tr>
-                ))}
+                {prices.map((p) => {
+                  const isStas = p.agent.startsWith('STAS');
+                  return (
+                    <tr
+                      key={p.agent}
+                      className={`border-b border-gray-100 transition-colors hover:bg-gray-50 ${
+                        isStas ? 'bg-brand-50/50' : ''
+                      }`}
+                    >
+                      <td className="py-3 pr-4 font-medium text-gray-900">{p.agent}</td>
+                      <td className="py-3 pr-4 text-gray-600">{p.model}</td>
+                      <td className="py-3 pr-4 font-mono text-gray-700">
+                        {p.costPerFixCents === 0 ? (
+                          <span className="text-green-600">Free</span>
+                        ) : (
+                          `$${(p.costPerFixCents / 100).toFixed(2)}`
+                        )}
+                      </td>
+                      <td className="py-3 pr-4 font-mono text-gray-700">
+                        {p.monthlyMinCents === 0 ? (
+                          <span className="text-green-600">Free</span>
+                        ) : (
+                          `$${(p.monthlyMinCents / 100).toFixed(0)}`
+                        )}
+                      </td>
+                      <td className="py-3 font-mono text-gray-700">{p.monthlyMaxFixes}/mo</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

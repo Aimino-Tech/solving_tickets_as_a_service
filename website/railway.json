@@ -1,0 +1,23 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "website/Dockerfile"
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 5,
+    "restartPolicyType": "always",
+    "restartPolicyMaxRetries": 10
+  },
+  "services": [
+    {
+      "name": "stas-website",
+      "build": {
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "website/Dockerfile"
+      }
+    }
+  ]
+}

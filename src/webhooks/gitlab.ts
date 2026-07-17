@@ -1,14 +1,12 @@
-
-import type { Queue } from 'bullmq';
-
 import { config } from '../config.js';
-import { enqueueIssue } from '../queue/issueQueue.js';
 import { rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
 import type { CreatePullRequestParams, PlatformClient, PlatformWebhook, PlatformWebhookEvent } from './base.js';
 import { verifyToken } from './base.js';
 
 const log = rootLogger.child({ module: 'webhooks-gitlab' });
+
+type EnqueueHandler = (data: IssueJobData) => Promise<string | undefined>;
 
 interface GitLabIssuePayload {
   object_kind: 'issue';
@@ -200,7 +198,7 @@ export const gitlabClient: PlatformClient = {
   },
 };
 
-export function createGitlabWebhooks(queue: Queue<IssueJobData>) {
+export function createGitlabWebhooks(enqueue: EnqueueHandler) {
   const handler = {
     platform: 'gitlab' as const,
 
@@ -230,7 +228,7 @@ export function createGitlabWebhooks(queue: Queue<IssueJobData>) {
         const jobData = gitlabClient.toIssueJobData(parsed);
 
         try {
-          await enqueueIssue(queue, jobData);
+          await enqueue(jobData);
         } catch (err) {
           log.error(
             { err: String(err), repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },

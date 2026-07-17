@@ -56,6 +56,32 @@ export declare const audit: {
         totalPages: number;
     }>;
 };
+export declare const benchmarks: {
+    get: () => Promise<{
+        generatedAt: string;
+        source: string;
+        disclaimer: string;
+        competitors: import("./types").BenchmarkEntry[];
+    }>;
+    getPrices: () => Promise<{
+        generatedAt: string;
+        currency: string;
+        prices: import("./types").BenchmarkPrice[];
+    }>;
+};
+export declare const kpi: {
+    get: (params?: {
+        days?: number;
+        from?: string;
+        to?: string;
+    }) => Promise<any>;
+    exportUrl: (days?: number) => string;
+};
+export declare const pricing: {
+    get: () => Promise<any>;
+    calculate: (fixes: number, tier?: string) => Promise<any>;
+    vs: (competitor: string) => Promise<any>;
+};
 export declare const settings: {
     get: () => Promise<{
         label: string;

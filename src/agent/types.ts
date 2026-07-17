@@ -17,7 +17,7 @@ export interface AgentTool {
 }
 
 export interface TriageResult {
-  type: 'bug' | 'feature' | 'question' | 'unknown';
+  type: 'bug' | 'feature' | 'question' | 'pipeline' | 'unknown';
   difficulty: 'easy' | 'medium' | 'hard' | 'unknown';
   relevantFiles?: string[];
   summary: string;

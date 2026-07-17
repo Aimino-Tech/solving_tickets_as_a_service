@@ -28,7 +28,7 @@ import { pipelineRunStore } from './pipelineRunStore.js';
 
 const log = rootLogger.child({ module: 'pipeline-history-api' });
 
-const router = Router();
+const router: Router = Router();
 
 const historyLimiter = (rateLimit as any)({
   windowMs: 60_000,

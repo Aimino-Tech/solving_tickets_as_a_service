@@ -1,0 +1,36 @@
+# =============================================================================
+# STAS Website — Fly.io Deployment Config
+# Domain: stas.aimino.io
+# =============================================================================
+
+app = "stas-website"
+primary_region = "iad"
+
+[build]
+  dockerfile = "website/Dockerfile"
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 100
+    soft_limit = 50
+
+[[http_service.checks]]
+  path = "/"
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "10s"
+  method = "GET"
+
+[env]
+  NODE_ENV = "production"
+
+[experimental]
+  allowed_public_ports = []
+  auto_rollback = true

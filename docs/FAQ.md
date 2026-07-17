@@ -137,7 +137,7 @@ Without either, STAS cannot run fix attempts because the code execution needs is
 
 Example monthly cost for 100 fixes with Claude Sonnet + Docker sandbox: **~$250-400**.
 
-**Cloud Free**: 10 fixes/mo using our AGI model — no API keys, no infra to manage.
+**Cloud Free**: 10 fixes/mo using frontier models (claude-sonnet-4) — no API keys, no infra to manage.
 **Cloud Paid** ($49/mo): 100 fixes/mo with full dashboard, analytics, audit log, and support.
 
 **Self-host is unlimited but bare-bones; the cloud free tier gives you a taste of the hosted experience; both point to paid plans for the full feature set.**
@@ -150,7 +150,7 @@ See [STRATEGY.md](../STRATEGY.md) for detailed economics:
 |---|---|---|
 | Claude Opus 4.5 (direct) | $2.64 | 45.7% |
 | GPT-5.5 (DeepSWE) | $5.80 | 70.0% |
-| STAS (our AGI, projected) | ~$3.00 | 90%+ |
+| STAS (claude-sonnet-4, projected) | ~$3.00 | 90%+ |
 
 ### Can I use my own API key?
 
@@ -158,7 +158,7 @@ See [STRATEGY.md](../STRATEGY.md) for detailed economics:
 - Triage LLM / fallback fix: `OPENCODE_API_KEY` (OpenCode Go direct LLM endpoint)
 - Fix agent: Configured in OpenCode's environment (OpenCode uses the model's native API key)
 
-The cloud version routes through our AGI, which you don't need to configure.
+The cloud version routes through frontier models, which you don't need to configure.
 
 ---
 
@@ -255,6 +255,58 @@ Each platform normalizes the incoming webhook to STAS's internal `IssueJobData` 
 ### How do I report a security vulnerability?
 
 Please open a GitHub issue with the `security` label or email the maintainers directly. Do not post security vulnerabilities in public issues.
+
+---
+
+## Support & Community
+
+### How do I get help with STAS?
+
+STAS has a three-tier support model:
+
+| Tier | Audience | Response | Channels |
+|---|---|---|---|
+| **Self-Service** | Everyone | Immediate | [FAQ](./FAQ.md), [Docs](./) |
+| **Community** | All users | Best-effort | [Discord](https://discord.gg/aimino), GitHub Issues |
+| **Paid Support** | Cloud Pro ($49/mo) | 24h (business) | Email |
+| **Paid Support** | Cloud Business ($199/mo) | 4h | Email, Slack |
+
+See the [Support Model](./support-model.md) document for full details.
+
+### Is there a Discord server?
+
+**Yes.** Join us at [https://discord.gg/aimino](https://discord.gg/aimino).
+
+The server includes channels for:
+- **#general** — General discussion
+- **#help** — Get help from the community
+- **#self-host** — Self-hosting discussions
+- **#showcase** — Share your STAS setups
+- **#contributing** — Development discussions
+- **#feedback** — Feature ideas and feedback
+
+### How fast will I get a response?
+
+Response time depends on your tier:
+- **Community (free)**: Best-effort, no SLA. Typically within a few hours during business hours.
+- **Pro ($49/mo)**: 24-hour response during business hours (Mon–Fri, 9am–5pm ET).
+- **Business ($199/mo)**: 4-hour response, 24/7, with a dedicated Slack channel.
+
+### Do paid subscribers get priority?
+
+**Yes.** Cloud Pro and Business subscribers get:
+- Guaranteed response times (24h / 4h)
+- Email support (Pro) or Slack + Email (Business)
+- Escalation to engineering team if unresolved
+- Named account manager (Business tier)
+
+### Can I get SLA without a cloud subscription?
+
+**Enterprise plans** include custom SLAs with dedicated support, SSO, and VPC deployment. Contact the team for pricing.
+
+### Where can I report a security vulnerability?
+
+Open a GitHub issue with the `security` label or email the maintainers directly. Do **not** post security vulnerabilities in public Discord channels or issues.
 
 ---
 

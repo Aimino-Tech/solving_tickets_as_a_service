@@ -1,0 +1,78 @@
+# Smithery configuration for STAS MCP server
+# https://smithery.ai/docs/deploy
+name: "@aimino/stas-mcp"
+description: "STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source bot backed by OpenCode."
+version: "1.0.0"
+author: "Aimino"
+homepage: "https://github.com/Aimino-Tech/solving_tickets_as_a_service"
+license: "MIT"
+
+# Docker-based deployment config
+build:
+  dockerfile: Dockerfile.smithery
+  context: .
+
+# Environment variables required for deployment
+env:
+  STAS_MCP_PORT:
+    description: "Port for the MCP SSE server"
+    default: "4095"
+    required: false
+  STAS_MCP_SERVER_URL:
+    description: "Public URL of the STAS MCP server"
+    default: ""
+    required: false
+  MCP_API_KEY:
+    description: "API key for authenticating MCP requests"
+    secret: true
+    required: false
+  GITHUB_TOKEN:
+    description: "GitHub personal access token for API calls"
+    secret: true
+    required: false
+  GITHUB_API_BASE:
+    description: "GitHub API base URL"
+    default: "https://api.github.com"
+    required: false
+
+# MCP server definition
+mcpServers:
+  stas-agent-discovery:
+    command: python
+    args:
+      - "-m"
+      - "stas_mcp.server"
+      - "sse"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "${STAS_MCP_PORT:-4095}"
+    env:
+      STAS_MCP_PORT: "${STAS_MCP_PORT:-4095}"
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      GITHUB_API_BASE: "${GITHUB_API_BASE:-https://api.github.com}"
+      MCP_API_KEY: "${MCP_API_KEY}"
+
+# Health check endpoint
+healthCheck:
+  path: "/health"
+  port: "${STAS_MCP_PORT:-4095}"
+  interval: 30
+  timeout: 10
+  retries: 3
+
+# Deployment schema for Smithery UI
+deployment:
+  type: docker
+  baseImage: "python:3.12-slim"
+  install:
+    - "pip install --no-cache-dir mcp>=1.0.0 httpx"
+  run:
+    - "python"
+    - "-m"
+    - "stas_mcp.server"
+    - "sse"
+    - "--host"
+    - "0.0.0.0"
+    - "--port"
+    - "${PORT:-4095}"

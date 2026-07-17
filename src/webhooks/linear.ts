@@ -7,7 +7,7 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'linear-webhook' });
 
-const router = Router();
+const router: Router = Router();
 
 router.post('/webhooks/linear', async (req: Request, res: Response) => {
   const startTime = Date.now();

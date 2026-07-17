@@ -23,19 +23,20 @@ import { rootLogger } from './utils/logger.js';
 
 const log = rootLogger.child({ module: 'mcp-discovery' });
 
-const router = Router();
+const router: Router = Router();
 
 // ---------------------------------------------------------------------------
 // MCP agent discovery endpoint
 // ---------------------------------------------------------------------------
 
 router.get('/mcp/discovery', (_req: Request, res: Response) => {
-  const mcpServerUrl = process.env.STAS_MCP_SERVER_URL || `http://localhost:4095`;
+  const mcpServerUrl = config.mcp.serverUrl || `http://localhost:${config.mcp.port}`;
+  const protocol = config.mcp.ssl.enabled ? 'https' : 'http';
 
   res.json({
     server: {
       name: 'stas-agent-discovery',
-      version: '0.1.0',
+      version: '1.0.0',
       protocolVersion: '2024-11-05',
       description: 'STAS (Solving Tickets As A Service) -- label a GitHub issue and get a PR.',
     },
@@ -107,13 +108,13 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
       },
       {
         name: 'list_issues',
-        description: 'List tracked issues and their STAS fix status, with optional filters.',
+        description: 'List tracked issues with their STAS fix status, with optional filters.',
         inputSchema: {
           type: 'object',
           properties: {
-            status: { type: 'string' },
-            repo: { type: 'string' },
-            limit: { type: 'integer' },
+            status: { type: 'string', description: 'Filter by status (queued, running, completed, failed)' },
+            repo: { type: 'string', description: 'Filter by repo (format: owner/repo)' },
+            limit: { type: 'integer', description: 'Max results (default: 20, max: 100)' },
           },
         },
       },
@@ -123,9 +124,9 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
         inputSchema: {
           type: 'object',
           properties: {
-            query: { type: 'string' },
-            repo: { type: 'string' },
-            max_results: { type: 'integer' },
+            query: { type: 'string', description: 'Search query' },
+            repo: { type: 'string', description: 'Optional repo filter' },
+            max_results: { type: 'integer', description: 'Max results (default: 10, max: 50)' },
           },
           required: ['query'],
         },
@@ -237,7 +238,7 @@ router.get('/mcp/runs/:runId', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 
 async function forwardToMCP(toolName: string, args: Record<string, unknown>): Promise<unknown> {
-  const mcpServerUrl = process.env.STAS_MCP_SERVER_URL || 'http://localhost:4095';
+  const mcpServerUrl = config.mcp.serverUrl || `http://localhost:${config.mcp.port}`;
 
   try {
     const response = await fetch(`${mcpServerUrl}/mcp`, {

@@ -31,7 +31,16 @@ function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
 }
 
+function validateRepoUrl(url: string): void {
+  // Only allow git over HTTPS or SSH (git@)
+  const allowedPattern = /^(https:\/\/|git@)[a-zA-Z0-9._-]+(\/[a-zA-Z0-9._-]+)+\.git$/;
+  if (!allowedPattern.test(url)) {
+    throw new Error(`Invalid repository URL: "${url.slice(0, 80)}..." - must be a valid git HTTPS or SSH URL ending with .git`);
+  }
+}
+
 function cloneRepoSync(repoUrl: string, targetDir: string, branch?: string): void {
+  validateRepoUrl(repoUrl);
   const branchFlag = branch ? `--branch ${branch}` : '';
   execSync(`git clone ${branchFlag} --depth 1 ${repoUrl} ${targetDir}`, { stdio: 'pipe', timeout: 120_000 });
 }

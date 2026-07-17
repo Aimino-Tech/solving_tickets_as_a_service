@@ -143,7 +143,17 @@ def create_pull_request(self, fix_result: dict, repo_info: dict) -> dict:
         }
 
     try:
-        token = _get_installation_token(installation_id)
+        gh_token = os.getenv("GITHUB_TOKEN", "")
+        token = None
+        if installation_id and os.getenv("GITHUB_APP_ID"):
+            try:
+                token = _get_installation_token(installation_id)
+            except Exception as exc:
+                logger.warning("Installation token failed, falling back to GH_TOKEN: %s", exc)
+        if token is None and gh_token:
+            token = gh_token
+        if token is None:
+            raise ValueError("No GitHub token available. Set GITHUB_TOKEN or configure GitHub App.")
 
         pr_data = {
             "title": f"fix: {branch.replace('-', ' ').title()}",

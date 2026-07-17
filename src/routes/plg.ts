@@ -31,7 +31,7 @@ const log = rootLogger.child({ module: 'plg-onboarding' });
 // Rate Limiting: 20 requests per minute for PLG onboarding endpoints
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 
 // ---------------------------------------------------------------------------

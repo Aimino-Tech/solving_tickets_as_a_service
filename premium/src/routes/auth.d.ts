@@ -6,5 +6,5 @@
  * GET  /api/auth/me          - Return current user info (requires JWT)
  * POST /api/auth/logout      - Invalidate session (placeholder)
  */
-declare const router: import("express-serve-static-core").Router;
+declare const router: any;
 export { router as authRouter };

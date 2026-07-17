@@ -24,7 +24,7 @@ import {
   logWebhookProcessed,
   logWebhookFailed,
 } from '../webhooks/eventLogger.js';
-import { createIssueQueue, enqueueIssue } from '../queue/issueQueue.js';
+import { QUEUES, publishMessage, connect as rmqConnect, isConnected } from '../queue/rabbitmq.js';
 import type { IssueJobData } from '../utils/types.js';
 
 const log = rootLogger.child({ module: 'linear-webhook' });
@@ -33,7 +33,7 @@ const log = rootLogger.child({ module: 'linear-webhook' });
 // Rate Limiting: 30 requests per minute on Linear webhook endpoint
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 
 // ---------------------------------------------------------------------------
@@ -164,10 +164,16 @@ router.post('/', async (req: Request, res: Response) => {
         pipeline,
       };
 
-      const queue = createIssueQueue();
-      await enqueueIssue(queue, jobData);
+      if (!isConnected()) {
+        await rmqConnect();
+      }
+      const messageId = `${installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
+      await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+        ...jobData,
+        _meta: { messageId, enqueuedAt: new Date().toISOString() },
+      });
 
-      log.info({ ticketId, pipeline }, 'Linear ticket enqueued for triage');
+      log.info({ ticketId, pipeline, messageId }, 'Linear ticket enqueued for triage via RabbitMQ');
     } else {
       log.warn(
         'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Linear ticket not enqueued',

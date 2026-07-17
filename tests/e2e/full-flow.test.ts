@@ -87,13 +87,14 @@ const { mockConfig } = vi.hoisted(() => {
       },
       queue: {
         redisUrl: "redis://localhost:6379",
+        rabbitmqUrl: "amqp://guest:guest@localhost:5672/stas",
         workerConcurrency: 2,
         dedupTtl: 120,
         keepCompleted: 200,
         keepFailed: 100,
         maxRetries: 4,
         retryDelays: [30000, 120000, 300000, 900000] as number[],
-        backend: "bullmq" as const,
+        backend: "rabbitmq" as const,
       },
       bridge: {
         rpcTimeoutMs: 30000,

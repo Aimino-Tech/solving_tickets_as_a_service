@@ -80,7 +80,7 @@ const SEED_LATEST_RUN: LatestEvalRun = {
 // Router
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * GET /api/eval/results

@@ -5,7 +5,7 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'frontier-routes' });
 
-const router = Router();
+const router: Router = Router();
 
 router.get('/status', (_req: Request, res: Response) => {
   try {
