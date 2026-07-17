@@ -85,6 +85,21 @@ guardrails:
         block_threshold: 0.5             # 0.0-1.0
 
   # ═══════════════════════════════════════════════════════════════════════
+  # Level 1b: Epistemic constraint checking (post-call only, opt-in)
+  # ═══════════════════════════════════════════════════════════════════════
+  # Evaluates LLM responses against epistemic constraints to detect
+  # factual inaccuracies. Runs alongside the slop detector.
+  #
+  # Mode: post_call — runs after model responds.
+  # default_on: false — opt-in per request via metadata.
+  # ─────────────────────────────────────────────────────────────────────
+  - guardrail_name: epistemic-detector
+    litellm_params:
+      guardrail: guardrail.epistemic.guardrail.EpistemicGuardrail
+      mode: post_call
+      default_on: false
+
+  # ═══════════════════════════════════════════════════════════════════════
   # Level 2: Audit-only for streaming responses
   # ═══════════════════════════════════════════════════════════════════════
   # For streaming requests, LiteLLM delivers chunks before guardrail
