@@ -24,7 +24,6 @@ import PricingPage from '@/pages/PricingPage';
 import VsPage from '@/pages/VsPage';
 import AdminRuns from '@/pages/AdminRuns';
 import NotFound from '@/pages/NotFound';
-import Custom404 from '@/pages/Custom404';
 import Error500 from '@/pages/Error500';
 
 export default function App() {
@@ -74,7 +73,7 @@ export default function App() {
           <Route path="admin/runs" element={<AdminRuns />} />
         </Route>
         <Route path="/500" element={<Error500 />} />
-        <Route path="*" element={<Custom404 />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </ErrorBoundary>
   );
