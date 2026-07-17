@@ -12,7 +12,8 @@
   },
   "bin": {
     "stas-init": "./scripts/init.ts",
-    "stas": "./src/template/cli.ts"
+    "stas": "./src/template/cli.ts",
+    "stas-install-mcp": "./scripts/stas-install-mcp.js"
   },
   "scripts": {
     "init": "tsx scripts/init.ts",
@@ -73,6 +74,8 @@
     "coverage-enforce:mutation": "bash scripts/coverage-enforce.sh --mutation",
     "coverage-enforce:changed": "bash scripts/coverage-enforce.sh --changed",
     "anti-liar-gate": "tsx src/agent/antiLiarGate.ts",
+    "install-mcp": "bash scripts/install-mcp.sh",
+    "install-mcp:node": "node scripts/stas-install-mcp.js",
     "stas": "tsx src/template/cli.ts",
     "stas:validate": "tsx src/template/cli.ts template validate",
     "stas:dry-run": "tsx src/template/cli.ts template dry-run",
@@ -145,6 +148,15 @@
   "overrides": {
     "esbuild": ">=0.25.0"
   },
+  "keywords": [
+    "agentskills",
+    "claude-plugin",
+    "codex",
+    "cursor",
+    "mcp",
+    "opencode-skill",
+    "skill"
+  ],
   "pnpm": {
     "onlyBuiltDependencies": [
       "better-sqlite3"
