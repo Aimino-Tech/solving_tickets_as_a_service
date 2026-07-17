@@ -105,6 +105,9 @@ const envSchema = z.object({
   BITBUCKET_WEBHOOK_SECRET: z.string().optional(),
   BITBUCKET_BASE_URL: z.string().default('https://api.bitbucket.org'),
 
+  PD_INTEGRATION_KEY: z.string().optional(),
+  PD_ESCALATION_POLICY_ID: z.string().optional(),
+
   SLACK_WEBHOOK_URL: z.string().optional(),
   SLACK_CHANNEL: z.string().optional(),
   SLACK_BOT_TOKEN: z.string().optional(),
@@ -390,6 +393,11 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
+    },
+
+    pagerduty: {
+      integrationKey: env.PD_INTEGRATION_KEY ?? '',
+      escalationPolicyId: env.PD_ESCALATION_POLICY_ID ?? '',
     },
 
     slack: {

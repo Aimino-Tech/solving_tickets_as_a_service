@@ -238,17 +238,49 @@ Error tracking configured in `src/monitoring/sentry.ts`. Check Sentry dashboard 
 - Performance traces
 - Crash-free session rate target: > 99.5%
 
+### PagerDuty On-Call Escalation
+
+STAS integrates with PagerDuty via the Events API v2 for on-call alerting. Alerts are routed based on severity:
+
+| Dispatch Condition | PD Severity | Dedup Key |
+|---|---|---|
+| All `critical` severity alerts | `critical` | `stas-{rule}-{YYYY-MM-DDTHH}` |
+| `warning` alerts with `escalated: true` flag | `warning` | `stas-{rule}-{YYYY-MM-DDTHH}` |
+| `info` or `warning` (non-escalated) | Not dispatched | — |
+
+**Setup:**
+1. Create a PagerDuty service with "Events API v2" integration
+2. Set `PD_INTEGRATION_KEY` in `.env`
+3. (Optional) Set `PD_ESCALATION_POLICY_ID` for context
+
+**Verify PD is working:**
+```bash
+# Trigger a test alert via the API (requires admin API key)
+curl -X POST http://localhost:3000/admin/test-alert \
+  -H "Authorization: Bearer $ADMIN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"severity":"critical","rule":"test_pd_integration","message":"PD integration test"}'
+
+# Check logs for PD delivery
+docker compose -f docker-compose.prod.yml logs stas-webhook | grep -i "pagerduty"
+```
+
+**Troubleshooting:**
+- `PD_INTEGRATION_KEY not configured` → Set `PD_INTEGRATION_KEY` in `.env`
+- `PagerDuty alert delivery failed` → Verify the integration key is valid and the PD service is active
+- PD API rate limit: 1 request/second per integration key — alerts are batched via dedup_key
+
 ### Alerting Rules
 
-| Alert | Condition | Severity | Response |
-|-------|-----------|----------|----------|
-| Queue Depth Critical | `stas_queue_depth > 100` | Critical | See playbook |
-| Worker Down | `stas_worker_count == 0` | Critical | Restart worker pool |
-| Agent Success Rate Low | `agent_success_rate < 0.8` | Warning | Investigate agent logs |
-| Webhook Failure Rate High | `failure_rate > 0.05` | Warning | Check GitHub App webhook |
-| Backup Stale | `last_backup_age > 4h` | Warning | Check backup scripts |
-| Rate Limit Exhausted | `rate_limit_remaining == 0` | Warning | Check tier limits |
-| SSL Certificate Expiring | `cert_expiry_days < 14` | Warning | Renew certificate |
+| Alert | Condition | Severity | Channel | Response |
+|-------|-----------|----------|---------|----------|
+| Queue Depth Critical | `stas_queue_depth > 100` | Critical | Slack + PagerDuty | See playbook |
+| Worker Down | `stas_worker_count == 0` | Critical | Slack + PagerDuty | Restart worker pool |
+| Agent Success Rate Low | `agent_success_rate < 0.8` | Warning | Slack | Investigate agent logs |
+| Webhook Failure Rate High | `failure_rate > 0.05` | Warning | Slack | Check GitHub App webhook |
+| Backup Stale | `last_backup_age > 4h` | Warning | Slack | Check backup scripts |
+| Rate Limit Exhausted | `rate_limit_remaining == 0` | Warning | Slack | Check tier limits |
+| SSL Certificate Expiring | `cert_expiry_days < 14` | Warning | Slack | Renew certificate |
 
 ---
 

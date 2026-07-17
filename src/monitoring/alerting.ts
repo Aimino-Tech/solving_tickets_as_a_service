@@ -54,6 +54,7 @@ export interface AlertEvent {
   context?: Record<string, unknown>;
   timestamp: string;
   channel?: AlertChannel;
+  escalated?: boolean;
 }
 
 // ── Alert Dispatch ──────────────────────────────────────────────────
@@ -120,6 +121,62 @@ async function sendEmailAlert(subject: string, body: string): Promise<void> {
 }
 
 /**
+ * Send a PagerDuty alert via Events API v2.
+ */
+async function sendPagerDutyAlert(alert: AlertEvent): Promise<void> {
+  const integrationKey = config.pagerduty.integrationKey;
+  if (!integrationKey) {
+    log.warn('PD_INTEGRATION_KEY not configured — skipping PagerDuty alert');
+    return;
+  }
+
+  const pdSeverity = alert.severity === 'critical' ? 'critical'
+    : alert.severity === 'warning' ? 'warning'
+    : 'info';
+
+  const dedupKey = `stas-${alert.rule}-${alert.timestamp.slice(0, 13)}`;
+
+  try {
+    const response = await fetch(
+      'https://events.pagerduty.com/v2/enqueue',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          routing_key: integrationKey,
+          event_action: 'trigger',
+          dedup_key: dedupKey,
+          payload: {
+            summary: `[${alert.severity.toUpperCase()}] ${alert.rule}: ${alert.message}`,
+            severity: pdSeverity,
+            source: 'stas',
+            component: 'stas-bot',
+            group: 'alerting',
+            class: 'monitoring',
+            timestamp: alert.timestamp,
+            custom_details: {
+              ...(alert.context ?? {}),
+              rule: alert.rule,
+              channel: alert.channel,
+            },
+          },
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => 'unknown');
+      log.error(
+        { status: response.status, body },
+        'PagerDuty alert delivery failed',
+      );
+    }
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to send PagerDuty alert');
+  }
+}
+
+/**
  * Dispatch an alert to all configured channels based on severity and rule.
  */
 export async function dispatchAlert(alert: AlertEvent): Promise<void> {
@@ -154,6 +211,13 @@ export async function dispatchAlert(alert: AlertEvent): Promise<void> {
     const slackMsg = `[${severity.toUpperCase()}] *${rule}*: ${message}`;
     await sendSlackAlert(slackMsg).catch((err) =>
       log.error({ err: String(err) }, 'Slack dispatch failed'),
+    );
+  }
+
+  // Route to PagerDuty for critical alerts or escalated warnings
+  if (severity === 'critical' || (severity === 'warning' && alert.escalated)) {
+    await sendPagerDutyAlert(alert).catch((err) =>
+      log.error({ err: String(err) }, 'PagerDuty dispatch failed'),
     );
   }
 
