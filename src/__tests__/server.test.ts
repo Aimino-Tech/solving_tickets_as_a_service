@@ -56,7 +56,7 @@ const { mockLoggerChild } = vi.hoisted(() => {
 
 const mockCreateIssueQueue = vi.hoisted(() => vi.fn().mockReturnValueOnce({ add: vi.fn(), close: vi.fn() }));
 const mockEnqueueIssue = vi.hoisted(() => vi.fn().mockResolvedValueOnce('job-mock-id'));
-const mockVerifyAndReceive = vi.hoisted(() => vi.fn().mockResolvedValueOnce(undefined));
+const mockVerifyAndReceive = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockCreateGithubWebhooks = vi.hoisted(() =>
   vi.fn().mockReturnValueOnce({
     verifyAndReceive: mockVerifyAndReceive,
@@ -94,6 +94,7 @@ vi.mock('../config.js', () => ({
       webhookPath: '/webhook',
       privateKeyPath: undefined,
       privateKeyEnv: '-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----',
+      token: '',
     },
     gitlab: { url: 'https://gitlab.com', token: '', webhookSecret: '' },
     bitbucket: { username: '', appPassword: '', webhookSecret: '' },
@@ -332,7 +333,8 @@ describe('server', () => {
       on: vi.fn(),
       receive: vi.fn(),
     });
-    mockVerifyAndReceive.mockResolvedValueOnce(undefined);
+    // Use mockResolvedValue (not Once) so tests can override with RejectedValueOnce
+    mockVerifyAndReceive.mockResolvedValue(undefined);
     mockCreateGitlabWebhooks.mockReturnValueOnce({ handle: vi.fn() });
     mockCreateBitbucketWebhooks.mockReturnValueOnce({ handle: vi.fn() });
     mockCreateStripeWebhookHandler.mockReturnValueOnce(mockStripeHandler);
@@ -410,7 +412,9 @@ describe('server', () => {
     });
 
     it('returns 401 when signature verification fails', async () => {
-      mockVerifyAndReceive.mockRejectedValueOnce(new Error('Invalid signature'));
+      // Clear the default mock and set rejection
+      mockVerifyAndReceive.mockReset();
+      mockVerifyAndReceive.mockRejectedValue(new Error('Invalid signature'));
 
       const { createApp } = await import('../server.js');
       app = await createApp();

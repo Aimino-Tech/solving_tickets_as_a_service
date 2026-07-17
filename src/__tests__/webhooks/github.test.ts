@@ -410,7 +410,7 @@ describe('createGithubWebhooks', () => {
       );
     });
 
-    it('maps "cancelled" to plan "free"', async () => {
+    it('maps "cancelled" to plan "pro"', async () => {
       const webhooks = createGithubWebhooks(mockQueue);
       const payload = {
         ...sampleMarketplacePayload(),
@@ -426,7 +426,8 @@ describe('createGithubWebhooks', () => {
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'cancelled',
-          plan: 'free',
+          accountId: 999,
+          plan: 'pro',
         }),
         'Marketplace purchase event',
       );

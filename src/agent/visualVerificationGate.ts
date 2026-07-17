@@ -175,7 +175,6 @@ async function diffImages(
 
   await ensureDir(dirname(diffOutputPath));
   const diffPng = PNG.sync.read(diffImg);
-  const diffPng = PNG.sync.read(diffImg);
   const diffBuffer = PNG.sync.write(diffPng as any);
   await writeFile(diffOutputPath, diffBuffer as any);
 

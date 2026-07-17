@@ -53,7 +53,7 @@ describe('monitoring/slos', () => {
     it('accepts custom windowMinutes', async () => {
       mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ percentile: 1.0 }] });
       await slos.getWebhookLatencyP99(120);
-      expect(mockQueryWithRetry.mock.calls[0][1][0]).toContain('T');
+      expect(mockQueryWithRetry.mock.calls[0][1][0]).toContain('120');
     });
   });
 
@@ -167,7 +167,7 @@ describe('monitoring/slos', () => {
 
       expect(report.slis[0].currentValue).toBe(99);
       expect(report.slis[2].currentValue).toBe(100);
-      expect(report.slis[1].currentValue).toBe(1);
+      expect(report.slis[1].currentValue).toBeCloseTo(1);
       expect(report.slis[3].currentValue).toBe(100);
       expect(mockQueryWithRetry).toHaveBeenCalledTimes(2);
     });

@@ -25,7 +25,7 @@ healthRouter.get('/health', async (_req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
       version: process.env.npm_package_version || '0.1.0',
       queue: queueHealth
-        ? { depth: queueHealth.totalPending, status: queueHealth.status }
+        ? { depth: queueHealth.summary.totalMessages, status: queueHealth.status }
         : { status: 'unknown' },
       dependencies: depsHealth?.dependencies?.map((d) => ({
         name: d.name,

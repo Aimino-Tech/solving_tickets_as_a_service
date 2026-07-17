@@ -317,9 +317,10 @@ function mapMarketplacePlan(planName: string): BillingPlan['plan'] {
 /**
  * Suggest labels based on issue content using keyword matching.
  * Useful for recommending labels before the full triage runs.
+ * Can be called with a single text string or (title, body).
  */
-export function suggestLabels(title: string, body: string): string[] {
-  const text = `${title}\n${body}`.toLowerCase();
+export function suggestLabels(titleOrText: string, body?: string): string[] {
+  const text = body ? `${titleOrText}\n${body}`.toLowerCase() : titleOrText.toLowerCase();
   const labels: string[] = [];
 
   // Bug indicators
@@ -368,7 +369,13 @@ export function suggestLabels(title: string, body: string): string[] {
     labels.push('documentation');
   }
 
-  // Performance
+  // Security indicators
+  const securityPatterns = ['security', 'vulnerability', 'xss', 'csrf', 'injection', 'exploit', 'auth bypass', 'authentication bypass', 'authorization'];
+  if (securityPatterns.some((p) => text.includes(p))) {
+    labels.push('security');
+  }
+
+  // Performance indicators
   const perfPatterns = ['slow', 'performance', 'latency', 'memory', 'leak', 'optimize', 'bottleneck'];
   if (perfPatterns.some((p) => text.includes(p))) {
     labels.push('performance');
