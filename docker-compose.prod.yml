@@ -178,6 +178,8 @@ services:
       - REDIS_URL=redis://stas-redis:6379
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
       - DATABASE_URL=postgres://${POSTGRES_USER:-stas}:${POSTGRES_PASSWORD:-stas-password}@stas-postgres:5432/${POSTGRES_DB:-stas}
+      - PGPoolSize=50
+      - PGMAXClientConnections=75
       - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
       - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
     depends_on:

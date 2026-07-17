@@ -1,0 +1,53 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stas-nginx
+  labels: { app: stas-nginx }
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: stas-nginx
+  template:
+    metadata:
+      labels: { app: stas-nginx }
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports: [{ containerPort: 80 }]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+          resources:
+            limits: { memory: "256Mi", cpu: "500m" }
+            requests: { memory: "128Mi", cpu: "200m" }
+      volumes:
+        - name: config
+          configMap:
+            name: stas-nginx-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stas-nginx
+spec:
+  selector:
+    app: stas-nginx
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stas-nginx-config
+data:
+  nginx.conf: |
+    events { worker_connections 4096; }
+    http {
+      upstream stas_backend { server stas-bot:3000; }
+      server { listen 80; location / { proxy_pass http://stas_backend; } }
+    }

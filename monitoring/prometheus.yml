@@ -1,0 +1,18 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alerts.yml"
+
+scrape_configs:
+  - job_name: "stas-bot"
+    static_configs: [{ targets: ["stas-bot:3000"], labels: { service: "stas-bot" } }]
+    metrics_path: /metrics
+  - job_name: "stas-worker"
+    static_configs: [{ targets: ["stas-worker:3000"], labels: { service: "stas-worker" } }]
+    metrics_path: /metrics
+  - job_name: "redis"
+    static_configs: [{ targets: ["stas-redis:6379"] }]
+  - job_name: "nginx"
+    static_configs: [{ targets: ["stas-nginx:80"] }]

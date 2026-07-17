@@ -431,8 +431,24 @@ function buildConfig(env: ParsedEnv) {
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
       rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
       rateLimitMax: env.STAS_RATE_LIMIT_MAX,
+      rateLimitPerRepoMax: env.STAS_RATE_LIMIT_PER_REPO_MAX,
+      rateLimitPerIpMax: env.STAS_RATE_LIMIT_PER_IP_MAX,
+      rateLimitPerUserMax: env.STAS_RATE_LIMIT_PER_USER_MAX,
+      queueMaxPendingPerRepo: env.QUEUE_MAX_PENDING_PER_REPO,
+      queueDlqMaxSize: env.QUEUE_DLQ_MAX_SIZE,
+      queueDlqNotifyAt: env.QUEUE_DLQ_NOTIFY_AT,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    },
+
+    postgres: {
+      poolMax: env.POSTGRES_POOL_MAX,
+      poolMin: env.POSTGRES_POOL_MIN,
+    },
+
+    redis: {
+      ttlDefault: env.REDIS_TTL_DEFAULT,
+      ttlFrequentAccess: env.REDIS_TTL_FREQUENT_ACCESS,
     },
 
     webhookRetry: {
