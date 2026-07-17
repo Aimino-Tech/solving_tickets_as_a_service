@@ -170,5 +170,6 @@
     "onlyBuiltDependencies": [
       "better-sqlite3"
     ]
-  }
+  },
+  "mcpName": "stas-agent-discovery"
 }

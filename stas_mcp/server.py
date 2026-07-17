@@ -16,6 +16,9 @@ Resources:
 Run modes:
   - python -m stas_mcp.server         (SSE mode, default port 4095)
   - python -m stas_mcp.server stdio   (stdio mode for OpenCode integration)
+
+SSL/TLS:
+  - python -m stas_mcp.server sse --ssl-keyfile key.pem --ssl-certfile cert.pem
 """
 
 from __future__ import annotations
@@ -136,15 +139,41 @@ async def issue_status(issue_id):
     return json.dumps(await _get_issue_resource_handler(issue_id), indent=2, default=str)
 
 def run_stdio(): mcp.run(transport="stdio")
-def run_sse(host="0.0.0.0", port=4095): mcp.run(transport="sse", host=host, port=port)
+
+def run_sse(host="0.0.0.0", port=4095, ssl_keyfile=None, ssl_certfile=None):
+    """Run MCP server in SSE mode with optional SSL/TLS support."""
+    import uvicorn
+    from mcp.server.fastmcp import FastMCP as FastMCPType
+
+    app = mcp._app  # Access the underlying ASGI app
+
+    ssl_kwargs = {}
+    if ssl_keyfile and ssl_certfile:
+        ssl_kwargs["ssl_keyfile"] = ssl_keyfile
+        ssl_kwargs["ssl_certfile"] = ssl_certfile
+        logger.info("SSL/TLS enabled for MCP SSE endpoint")
+
+    uvicorn.run(
+        app,
+        host=host,
+        port=port,
+        log_level="info",
+        **ssl_kwargs,
+    )
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", nargs="?", default="sse", choices=["sse", "stdio"], help="Transport mode")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=int(os.getenv("STAS_MCP_PORT", "4095")))
+    parser.add_argument("--ssl-keyfile", default=os.getenv("STAS_MCP_SSL_KEY_PATH"), help="SSL key file path")
+    parser.add_argument("--ssl-certfile", default=os.getenv("STAS_MCP_SSL_CERT_PATH"), help="SSL cert file path")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
-    run_stdio() if args.mode == "stdio" else run_sse(host=args.host, port=args.port)
+
+    if args.mode == "stdio":
+        run_stdio()
+    else:
+        run_sse(host=args.host, port=args.port, ssl_keyfile=args.ssl_keyfile, ssl_certfile=args.ssl_certfile)
 
 if __name__ == "__main__": main()

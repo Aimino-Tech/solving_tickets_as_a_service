@@ -3,6 +3,7 @@
  *
  * Entry point — starts the API server, or both API and worker based on RUN_MODE.
  * Also starts the CI monitor if CI_MONITOR_ENABLED is true.
+ * Also auto-starts the MCP server if STAS_MCP_AUTO_START is true (default).
  *
  * ══════════════════════════════════════════════════════════════════════
  * IMPORTANT: Sentry must be initialized BEFORE any other imports to
@@ -21,6 +22,7 @@
  * ✅ Sentry initialized before all other code (top of import chain)
  * ✅ CI monitor failure logs warning (non-fatal)
  * ✅ CI monitor stopped on graceful shutdown
+ * ✅ MCP server auto-starts and stops on graceful shutdown
  * ────────────────────────────────────────────────────────────────────
  */
 
@@ -37,6 +39,7 @@ import { startScheduledTasks, stopScheduledTasks } from './health/scheduled.js';
 import { opencodeHealth } from './health/opencodeHealth.js';
 import { rootLogger } from './utils/logger.js';
 import { addBreadcrumb } from './monitoring/sentry.js';
+import { startMcpServer, stopMcpServer } from './mcpAutoStart.js';
 
 const log = rootLogger.child({ module: 'entry' });
 
@@ -159,7 +162,7 @@ async function main(): Promise<void> {
 
   const mode = config.runMode;
 
-  // Graceful shutdown — closes server, CI monitor, and exits
+  // Graceful shutdown — closes server, CI monitor, MCP server, and exits
   const shutdown = async (signal: string) => {
     if (shutdownInProgress) return;
     shutdownInProgress = true;
@@ -191,6 +194,9 @@ async function main(): Promise<void> {
 
     // Stop OpenCode health client polling
     opencodeHealth.stop();
+
+    // Stop MCP server if it was auto-started
+    stopMcpServer();
 
     // Disconnect RabbitMQ if connected
     try {
@@ -237,6 +243,9 @@ async function main(): Promise<void> {
 
   // Start scheduled maintenance tasks (queue depth check, DLQ cleanup, metrics refresh)
   startScheduledTasks();
+
+  // Auto-start MCP server in SSE mode (for agent discovery and MCP protocol)
+  startMcpServer();
 
   // Register signal handlers for graceful shutdown
   process.on('SIGTERM', () => shutdown('SIGTERM'));
