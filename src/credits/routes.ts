@@ -40,7 +40,7 @@ const log = rootLogger.child({ module: 'credits-routes' });
 // Router
 // ---------------------------------------------------------------------------
 
-export const creditRouter = Router();
+export const creditRouter: Router = Router();
 
 // ---------------------------------------------------------------------------
 // Auth helpers

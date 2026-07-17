@@ -296,7 +296,7 @@ function previewRateLimit(req: Request, res: Response, next: () => void) {
 // Router
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * POST /api/v1/preview

@@ -104,7 +104,7 @@ async function getJob(
 // Router
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * POST /api/fix

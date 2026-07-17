@@ -17,7 +17,7 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'viral-discovery' });
 
-const router = Router();
+const router: Router = Router();
 
 interface McpDiscoveryManifest {
   schemaVersion: '2024-11-05';

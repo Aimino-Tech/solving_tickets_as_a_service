@@ -16,7 +16,7 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'feature-flags-admin' });
 
-const router = Router();
+const router: Router = Router();
 
 
 router.get('/', async (req: Request, res: Response) => {

@@ -3,7 +3,7 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'pricing-api' });
 
-const router = Router();
+const router: Router = Router();
 
 export interface PricingPlan {
   id: string; name: string; description: string; price: string; period: string;

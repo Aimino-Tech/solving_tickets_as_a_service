@@ -15,7 +15,7 @@ import { rateLimit } from './middleware/rateLimit.js';
 import fixRoutes from './fixRoutes.js';
 import evalRoutes from './evalRoutes.js';
 
-const router = Router();
+const router: Router = Router();
 
 // ── Eval endpoints (public, no auth required) ──────────────────────────
 // These show benchmark results so potential customers can evaluate STAS

@@ -30,7 +30,7 @@ function getStore(): TrustStore {
 // Router
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * GET /api/v1/trust/:repo

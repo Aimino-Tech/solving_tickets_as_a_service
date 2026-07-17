@@ -23,7 +23,7 @@ import { rootLogger } from './utils/logger.js';
 
 const log = rootLogger.child({ module: 'mcp-discovery' });
 
-const router = Router();
+const router: Router = Router();
 
 // ---------------------------------------------------------------------------
 // MCP agent discovery endpoint

@@ -81,7 +81,7 @@ async function getHistory(client: Redis, limit: number): Promise<McpRunHistoryEn
   return raw.map((r) => JSON.parse(r));
 }
 
-const router = Router();
+const router: Router = Router();
 
 router.use('/mcp', mcpAuth);
 

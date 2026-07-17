@@ -4,7 +4,7 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'linear-webhook' });
 
-const router = Router();
+const router: Router = Router();
 
 const LINEAR_WEBHOOK_SECRET = process.env.LINEAR_WEBHOOK_SECRET || '';
 

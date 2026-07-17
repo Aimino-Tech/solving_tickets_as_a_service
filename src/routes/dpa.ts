@@ -3,7 +3,7 @@ import { rootLogger } from '../utils/logger.js';
 import { getDpaStatus, acceptDpa, DPA_CURRENT_VERSION } from '../billing/dpa.js';
 
 const log = rootLogger.child({ module: 'dpa-api' });
-const router = Router();
+const router: Router = Router();
 
 function getAccountId(req: Request): number | undefined {
   const headerId = req.headers['x-account-id'] as string | undefined;
