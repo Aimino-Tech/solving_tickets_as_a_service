@@ -89,7 +89,7 @@ export default function DashboardHome() {
       <div className="card">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.recentRuns')}</h3>
-          <Link to="/runs" className="text-sm font-medium text-brand-600 hover:text-brand-700">
+          <Link to="/runs" className="text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">
             {t('dashboard.viewAll')} &rarr;
           </Link>
         </div>
@@ -131,7 +131,7 @@ export default function DashboardHome() {
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-gray-400">{t('dashboard.noRuns', { label: 'stas:fix' })}</p>
+          <p className="mt-4 text-sm text-gray-400 dark:text-gray-500">{t('dashboard.noRuns', { label: 'stas:fix' })}</p>
         )}
       </div>
 

@@ -60,7 +60,7 @@ export default function Repos() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           {repoList.length} connected {repoList.length === 1 ? 'repository' : 'repositories'}
         </p>
         <button onClick={() => setShowConnect(!showConnect)} className="btn-primary">
@@ -71,11 +71,11 @@ export default function Repos() {
       {/* Connect form */}
       {showConnect && (
         <div className="card">
-          <h3 className="text-base font-semibold text-gray-900">Connect a Repository</h3>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Connect a Repository</h3>
           <form onSubmit={handleConnect} className="mt-4 space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Owner</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Owner</label>
                 <input
                   type="text"
                   required
@@ -86,7 +86,7 @@ export default function Repos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Repo</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Repo</label>
                 <input
                   type="text"
                   required
@@ -97,7 +97,7 @@ export default function Repos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Installation ID</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Installation ID</label>
                 <input
                   type="number"
                   placeholder="Optional"
@@ -107,7 +107,7 @@ export default function Repos() {
                 />
               </div>
             </div>
-            {connectError && <p className="text-sm text-red-600">{connectError}</p>}
+            {connectError && <p className="text-sm text-red-600 dark:text-red-400">{connectError}</p>}
             <button type="submit" disabled={connecting} className="btn-primary">
               {connecting ? 'Connecting...' : 'Connect'}
             </button>
@@ -120,22 +120,22 @@ export default function Repos() {
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="card animate-pulse">
-              <div className="h-5 w-48 rounded bg-gray-200" />
-              <div className="mt-2 h-4 w-32 rounded bg-gray-200" />
+              <div className="h-5 w-48 rounded bg-gray-200 dark:bg-gray-700" />
+              <div className="mt-2 h-4 w-32 rounded bg-gray-200 dark:bg-gray-700" />
             </div>
           ))}
         </div>
       ) : error ? (
         <div className="card">
-          <p className="text-red-600">{error}</p>
-          <button onClick={loadRepos} className="mt-2 text-sm font-medium text-brand-600 min-h-[44px] min-w-[44px]">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <button onClick={loadRepos} className="mt-2 text-sm font-medium text-brand-600 dark:text-brand-400 min-h-[44px] min-w-[44px]">
             Retry
           </button>
         </div>
       ) : repoList.length === 0 ? (
         <div className="card text-center py-12">
-          <p className="text-gray-500">No repositories connected yet.</p>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="text-gray-500 dark:text-gray-400">No repositories connected yet.</p>
+          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
             Connect a repository to start receiving automated fixes.
           </p>
           <button onClick={() => setShowConnect(true)} className="btn-primary mt-4">
@@ -148,12 +148,12 @@ export default function Repos() {
             <div key={repo.id} className="card flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${repo.active ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  <h3 className="text-sm font-semibold text-gray-900">
+                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${repo.active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                     {repo.owner}/{repo.repo}
                   </h3>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Connected {formatRelativeTime(repo.createdAt)}
                   {repo.installationId && ` · Installation #${repo.installationId}`}
                 </p>

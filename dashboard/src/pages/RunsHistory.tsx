@@ -84,9 +84,9 @@ export default function RunsHistory() {
       </div>
 
       {/* Desktop Table */}
-      <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700/50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">ID</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Issue</th>
@@ -96,52 +96,52 @@ export default function RunsHistory() {
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Date</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-400">
+                <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
                   Loading...
                 </td>
               </tr>
             ) : error ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-red-500">
+                <td colSpan={6} className="px-4 py-12 text-center text-sm text-red-500 dark:text-red-400">
                   {error}
                 </td>
               </tr>
             ) : data?.data.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-400">
+                <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
                   No runs found.
                 </td>
               </tr>
             ) : (
               data?.data.map((run) => (
-                <tr key={run.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={run.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                   <td className="px-4 py-3">
                     <Link
                       to={`/runs/${run.id}`}
-                      className="font-mono text-xs text-brand-600 hover:text-brand-700"
+                      className="font-mono text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
                     >
                       {run.id.slice(0, 8)}
                     </Link>
                   </td>
                   <td className="px-4 py-3">
-                    <Link to={`/runs/${run.id}`} className="text-sm font-medium text-gray-900 hover:text-brand-600">
+                    <Link to={`/runs/${run.id}`} className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-brand-600">
                       {run.repoOwner}/{run.repoName}#{run.issueNumber}
                     </Link>
-                    <p className="truncate max-w-xs text-xs text-gray-500">{run.issueTitle}</p>
+                    <p className="truncate max-w-xs text-xs text-gray-500 dark:text-gray-400">{run.issueTitle}</p>
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={run.status} />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                     {formatDuration(run.durationSeconds)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                     {formatCost(run.costCents)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
+                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                     {new Date(run.createdAt).toLocaleDateString()}
                   </td>
                 </tr>
@@ -163,11 +163,11 @@ export default function RunsHistory() {
           ))
         ) : error ? (
           <div className="card">
-            <p className="text-sm text-red-500">{error}</p>
+            <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
           </div>
         ) : data?.data.length === 0 ? (
           <div className="card text-center py-8">
-            <p className="text-sm text-gray-400">No runs found.</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">No runs found.</p>
           </div>
         ) : (
           data?.data.map((run) => (
@@ -181,13 +181,13 @@ export default function RunsHistory() {
                   <span className="font-mono text-xs text-brand-600">{run.id.slice(0, 8)}</span>
                   <StatusBadge status={run.status} />
                 </div>
-                <span className="text-xs text-gray-400">{formatDuration(run.durationSeconds)}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">{formatDuration(run.durationSeconds)}</span>
               </div>
-              <p className="mt-2 text-sm font-medium text-gray-900 truncate">
+              <p className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                 {run.repoOwner}/{run.repoName}#{run.issueNumber}
               </p>
-              <p className="mt-1 text-xs text-gray-500 truncate">{run.issueTitle}</p>
-              <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">{run.issueTitle}</p>
+              <div className="mt-2 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                 <span>{formatCost(run.costCents)}</span>
                 <span>{new Date(run.createdAt).toLocaleDateString()}</span>
               </div>
@@ -199,7 +199,7 @@ export default function RunsHistory() {
       {/* Pagination */}
       {data && data.totalPages > 1 && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Page {data.page} of {data.totalPages} ({data.total} total)
           </p>
           <div className="flex gap-2">
