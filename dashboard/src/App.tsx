@@ -23,6 +23,7 @@ import KpiDashboard from '@/pages/KpiDashboard';
 import PricingPage from '@/pages/PricingPage';
 import VsPage from '@/pages/VsPage';
 import AdminRuns from '@/pages/AdminRuns';
+import LiveView from '@/pages/LiveView';
 import NotFound from '@/pages/NotFound';
 import Error500 from '@/pages/Error500';
 
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="analytics" element={<Analytics />} />
           <Route path="audit" element={<AuditLog />} />
           <Route path="admin/runs" element={<AdminRuns />} />
+          <Route path="liveview" element={<LiveView />} />
         </Route>
         <Route path="/500" element={<Error500 />} />
         <Route path="*" element={<NotFound />} />
