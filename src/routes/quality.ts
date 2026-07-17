@@ -1,10 +1,43 @@
+/**
+ * Quality gate and compliance API routes.
+ *
+ * Endpoints:
+ *   POST /api/quality/gates/run       — Trigger quality gates
+ *   GET  /api/quality/gates/status/:id — Check gate run status
+ *   GET  /api/quality/compliance      — Compliance report
+ *   GET  /api/quality/score-card      — Compute quality score card (existing)
+ *   POST /api/quality/score-card      — Store quality score card (existing)
+ *   GET  /api/quality/score-card/:id  — Fetch stored score card (existing)
+ */
+
 import crypto from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import { rootLogger } from '../utils/logger.js';
+import { runAllGates, runQuickGates } from '../pipeline/quality-gates.js';
+import { runComplianceChecks } from '../pipeline/compliance.js';
 
 const log = rootLogger.child({ module: 'quality-api' });
 
 const router: Router = Router();
+
+// ---------------------------------------------------------------------------
+// In-memory stores
+// ---------------------------------------------------------------------------
+
+interface GateRunRecord {
+  id: string;
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  report?: unknown;
+  error?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+const gateRuns = new Map<string, GateRunRecord>();
+
+// ---------------------------------------------------------------------------
+// Existing score card types and store
+// ---------------------------------------------------------------------------
 
 interface StoredScoreCard {
   id: string;
@@ -20,6 +53,189 @@ interface StoredScoreCard {
 }
 
 const scoreCards = new Map<string, StoredScoreCard>();
+
+// ---------------------------------------------------------------------------
+// POST /gates/run — Trigger quality gates
+// ---------------------------------------------------------------------------
+
+router.post('/gates/run', async (req: Request, res: Response) => {
+  try {
+    const { repoDir, runLint, runSecurity, quick } = req.body as {
+      repoDir?: string;
+      runLint?: boolean;
+      runSecurity?: boolean;
+      quick?: boolean;
+    };
+
+    const runId = crypto.randomUUID();
+    const record: GateRunRecord = {
+      id: runId,
+      status: 'running',
+      createdAt: new Date().toISOString(),
+    };
+    gateRuns.set(runId, record);
+
+    // Respond immediately with the run ID, then execute asynchronously
+    res.status(202).json({
+      id: runId,
+      status: 'running',
+      message: 'Quality gate run started',
+    });
+
+    // Run gates asynchronously
+    try {
+      // Create an execFn that uses the sandbox if available, or falls back to local exec
+      const execFn = async (
+        cmd: string,
+        timeout?: number,
+      ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
+        const { execSync } = await import('node:child_process');
+        try {
+          const result = execSync(cmd, {
+            cwd: repoDir || process.cwd(),
+            timeout: timeout ?? 300_000,
+            encoding: 'utf-8',
+            maxBuffer: 10 * 1024 * 1024,
+            stdio: ['ignore', 'pipe', 'pipe'],
+          } as import('node:child_process').ExecSyncOptions);
+          return { stdout: result?.toString() || '', stderr: '', exitCode: 0 };
+        } catch (err: unknown) {
+          const execError = err as {
+            stdout?: string | Buffer;
+            stderr?: string | Buffer;
+            status?: number;
+            message?: string;
+          };
+          return {
+            stdout: execError.stdout?.toString() || '',
+            stderr: execError.stderr?.toString() || execError.message || String(err),
+            exitCode: execError.status ?? 1,
+          };
+        }
+      };
+
+      let report;
+      if (quick) {
+        report = await runQuickGates(execFn);
+      } else {
+        report = await runAllGates({
+          sandbox: null, // No sandbox for API-triggered runs (uses local exec)
+          diff: '',
+          execFn,
+          config: {
+            skipLint: !runLint,
+            skipSecurity: !runSecurity,
+          },
+        });
+      }
+
+      record.status = 'completed';
+      record.report = report;
+      record.completedAt = new Date().toISOString();
+
+      log.info(
+        { runId, passed: report.passed, gates: report.gates.length },
+        'Quality gate run completed',
+      );
+    } catch (err) {
+      record.status = 'failed';
+      record.error = String(err);
+      record.completedAt = new Date().toISOString();
+      log.error({ err: String(err), runId }, 'Quality gate run failed');
+    }
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to trigger quality gates');
+    res.status(500).json({ error: 'Failed to trigger quality gates' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /gates/status/:id — Check gate run status
+// ---------------------------------------------------------------------------
+
+router.get('/gates/status/:id', (req: Request, res: Response) => {
+  try {
+    const record = gateRuns.get(req.params.id);
+    if (!record) {
+      res.status(404).json({ error: 'Gate run not found' });
+      return;
+    }
+
+    res.json({
+      id: record.id,
+      status: record.status,
+      report: record.report,
+      error: record.error,
+      createdAt: record.createdAt,
+      completedAt: record.completedAt,
+    });
+  } catch (err) {
+    log.error({ err: String(err), id: req.params.id }, 'Failed to get gate run status');
+    res.status(500).json({ error: 'Failed to get gate run status' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /compliance — Compliance report
+// ---------------------------------------------------------------------------
+
+router.get('/compliance', async (req: Request, res: Response) => {
+  try {
+    const repoDir = req.query.repoDir as string | undefined;
+
+    const execFn = async (
+      cmd: string,
+      timeout?: number,
+    ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
+      const { execSync } = await import('node:child_process');
+      try {
+        const result = execSync(cmd, {
+          cwd: repoDir || process.cwd(),
+          timeout: timeout ?? 300_000,
+          encoding: 'utf-8',
+          maxBuffer: 10 * 1024 * 1024,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        } as import('node:child_process').ExecSyncOptions);
+        return { stdout: result?.toString() || '', stderr: '', exitCode: 0 };
+      } catch (err: unknown) {
+        const execError = err as {
+          stdout?: string | Buffer;
+          stderr?: string | Buffer;
+          status?: number;
+          message?: string;
+        };
+        return {
+          stdout: execError.stdout?.toString() || '',
+          stderr: execError.stderr?.toString() || execError.message || String(err),
+          exitCode: execError.status ?? 1,
+        };
+      }
+    };
+
+    const report = await runComplianceChecks({ execFn });
+
+    res.json({
+      passed: report.passed,
+      summary: report.summary,
+      checks: report.checks.map((c) => ({
+        check: c.check,
+        passed: c.passed,
+        durationMs: c.durationMs,
+        details: c.details,
+        findings: c.findings,
+      })),
+      findings: report.findings,
+      totalDurationMs: report.totalDurationMs,
+    });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to generate compliance report');
+    res.status(500).json({ error: 'Failed to generate compliance report' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /score-card — Compute quality score card (existing)
+// ---------------------------------------------------------------------------
 
 router.get('/score-card', (req: Request, res: Response) => {
   try {
@@ -96,6 +312,10 @@ router.get('/score-card', (req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// POST /score-card — Store quality score card (existing)
+// ---------------------------------------------------------------------------
+
 router.post('/score-card', (req: Request, res: Response) => {
   try {
     const { runId, overall, dimensions, weights } = req.body;
@@ -125,6 +345,10 @@ router.post('/score-card', (req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /score-card/:id — Fetch stored score card (existing)
+// ---------------------------------------------------------------------------
+
 router.get('/score-card/:id', (req: Request, res: Response) => {
   try {
     const entry = scoreCards.get(req.params.id);
@@ -138,6 +362,10 @@ router.get('/score-card/:id', (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch score card' });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Helper functions
+// ---------------------------------------------------------------------------
 
 function computeTestPassRate(
   passed: number,
