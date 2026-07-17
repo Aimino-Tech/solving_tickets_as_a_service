@@ -68,6 +68,7 @@ const envSchema = z.object({
   STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
   STAS_AI_DISABLED: boolSchema(false),
   STAS_LABEL: z.string().default('stas:fix'),
+  DISABLE_AUTO_REMEDIATION: boolSchema(false),
   BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
@@ -488,6 +489,9 @@ function buildConfig(env: ParsedEnv) {
       queueDlqNotifyAt: env.QUEUE_DLQ_NOTIFY_AT,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+    remediation: {
+      disabled: env.DISABLE_AUTO_REMEDIATION,
+    },
     },
 
     postgres: {
