@@ -139,3 +139,62 @@ export async function processRetryQueue(): Promise<void> {
     removeFromRetryQueue(id);
   }
 }
+
+export interface CachedFetchOptions extends RequestInit {
+  readonly cacheKey?: string;
+  readonly cacheTtlMs?: number;
+  readonly offlineBehavior?: 'cache-first' | 'network-first';
+}
+
+export async function cachedFetch<T = unknown>(
+  url: string,
+  options: CachedFetchOptions = {},
+): Promise<{ data: T; fromCache: boolean }> {
+  const {
+    cacheKey = url,
+    cacheTtlMs = DEFAULT_TTL_MS,
+    offlineBehavior = 'cache-first',
+    ...fetchOptions
+  } = options;
+
+  if (offlineBehavior === 'network-first') {
+    try {
+      const response = await fetch(url, fetchOptions);
+      if (response.ok) {
+        const data = (await response.json()) as T;
+        setCache(cacheKey, data, cacheTtlMs);
+        return { data, fromCache: false };
+      }
+    } catch {
+      // Network failed — fall through to cache
+    }
+
+    const cached = getCache<T>(cacheKey);
+    if (cached !== null) {
+      return { data: cached, fromCache: true };
+    }
+    throw new Error(`Network unavailable and no cache for ${cacheKey}`);
+  }
+
+  const cached = getCache<T>(cacheKey);
+  if (cached !== null && !isCacheStale(cacheKey)) {
+    return { data: cached, fromCache: true };
+  }
+
+  try {
+    const response = await fetch(url, fetchOptions);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const data = (await response.json()) as T;
+    setCache(cacheKey, data, cacheTtlMs);
+    return { data, fromCache: false };
+  } catch {
+    // Network failed — try stale cache as fallback
+    const stale = getCache<T>(cacheKey);
+    if (stale !== null) {
+      return { data: stale, fromCache: true };
+    }
+    throw new Error(`Network unavailable and no cache for ${cacheKey}`);
+  }
+}
