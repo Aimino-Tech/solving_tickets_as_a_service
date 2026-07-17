@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Activity, CheckCircle, Clock, FolderGit } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { formatNumber, formatPercentage, formatDurationSeconds } from '@/utils/format';
+import { SkeletonCardGrid, SkeletonChart } from '@/components/LoadingSkeleton';
 
 export default function DashboardHome() {
   const { t } = useI18n();
@@ -28,13 +29,9 @@ export default function DashboardHome() {
 
   if (!data) {
     return (
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="card animate-pulse">
-            <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="mt-3 h-8 w-16 rounded bg-gray-200 dark:bg-gray-700" />
-          </div>
-        ))}
+      <div className="space-y-8">
+        <SkeletonCardGrid count={4} />
+        <SkeletonChart />
       </div>
     );
   }

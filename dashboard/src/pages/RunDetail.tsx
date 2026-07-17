@@ -3,6 +3,7 @@ import { runs } from '@/api/client';
 import type { Run } from '@/api/types';
 import { useParams, Link } from 'react-router-dom';
 import { formatDateTime, formatDurationSeconds } from '@/utils/format';
+import { SkeletonRunDetail } from '@/components/LoadingSkeleton';
 
 export default function RunDetail() {
   const { id } = useParams<{ id: string }>();
@@ -30,16 +31,7 @@ export default function RunDetail() {
   }
 
   if (!run) {
-    return (
-      <div className="card animate-pulse">
-        <div className="h-6 w-48 rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="mt-4 space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-4 rounded bg-gray-200" style={{ width: `${60 + i * 10}%` }} />
-          ))}
-        </div>
-      </div>
-    );
+    return <SkeletonRunDetail />;
   }
 
   const statusStyles: Record<string, string> = {
