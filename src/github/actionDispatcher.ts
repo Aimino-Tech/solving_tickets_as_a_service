@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ActionDispatcher — decides what action to take based on agent results.
  *
@@ -168,8 +167,8 @@ export class ActionDispatcher {
           fileLinks: changedFiles,
           isDraft: false,
           branchName,
-          receiptManifest: params.receiptManifest,
-        });
+          ...(params.receiptManifest ? { receiptManifest: params.receiptManifest } : {}),
+        } as any);
 
         const pr = await octokit.pulls.create({
           owner: repoOwner,
@@ -208,8 +207,8 @@ export class ActionDispatcher {
           fileLinks: changedFiles,
           isDraft: true,
           branchName,
-          receiptManifest: params.receiptManifest,
-        });
+          ...(params.receiptManifest ? { receiptManifest: params.receiptManifest } : {}),
+        } as any);
 
         const pr = await octokit.pulls.create({
           owner: repoOwner,

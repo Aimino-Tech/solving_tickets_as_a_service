@@ -123,6 +123,10 @@ export async function createApp(): Promise<express.Application> {
       checks.redis = 'ok';
       await redis.quit().catch(() => {});
     } catch { checks.redis = 'down'; }
+    try {
+      const { isConnected } = await import('./queue/rabbitmq.js');
+      checks.rabbitmq = isConnected() ? 'ok' : 'down';
+    } catch { checks.rabbitmq = 'down'; }
     const allOk = Object.values(checks).every(v => v === 'ok');
     res.status(allOk ? 200 : 503).json({ status: allOk ? 'ok' : 'degraded', checks, timestamp: new Date().toISOString(), aiMode: config.stas.aiDisabled ? 'ai-disabled' : 'enabled' });
   });
@@ -700,9 +704,6 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/runs', runsRouter);
 
   // ── Dashboard SPA (served from built dist/) ───────────────────────
-  if (config.nodeEnv !== 'production') {
-    log.info('Dashboard SPA not served in non-production mode — run `cd dashboard && npm run dev`');
-  }
   app.use('/dashboard', express.static(path.join(__dirname, '../../dashboard/dist')));
   app.get('/dashboard/*', (_req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, '../../dashboard/dist/index.html'));
@@ -896,36 +897,6 @@ export async function createApp(): Promise<express.Application> {
   } catch {
     log.warn('Enterprise routes not available');
   }
-
-  app.get('/health', (_req: Request, res: Response) => {
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      version: process.env.npm_package_version ?? '0.1.0',
-    });
-  });
-
-  app.get('/health/ready', async (_req: Request, res: Response) => {
-    try {
-      const { getDependenciesHealth } = await import('./health/dependencies.js');
-      const health = await getDependenciesHealth();
-      res.status(health.status === 'ok' ? 200 : 503).json(health);
-    } catch (err) {
-      res.status(503).json({ status: 'error', error: String(err), timestamp: new Date().toISOString() });
-    }
-  });
-
-  app.get('/health/queue', async (_req: Request, res: Response) => {
-    try {
-      const { getQueueHealth } = await import('./health/queueHealth.js');
-      const health = await getQueueHealth();
-      const httpStatus = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
-      res.status(httpStatus).json(health);
-    } catch (err) {
-      res.status(503).json({ status: 'error', error: String(err), timestamp: new Date().toISOString() });
-    }
-  });
 
   app.get('/metrics', async (_req: Request, res: Response) => {
     const { bridgeMetrics } = await import('./bridge/metrics.js');

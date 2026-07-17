@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Visual Verification Gate (AIM-2036)
  *

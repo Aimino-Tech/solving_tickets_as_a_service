@@ -1,4 +1,3 @@
-// @ts-nocheck - Suppress remaining type errors in production code
 /**
  * 3-Layer Adversarial Review Pipeline
  *
@@ -588,7 +587,7 @@ function checkCodeVsTestRatio(
 
   const nonTestLines = codeLines.length - testLines.length;
 
-  if (nonTestLines === 0 && testLines > 0) {
+  if (nonTestLines === 0 && testLines.length > 0) {
     return {
       check: 'code-test-ratio',
       passed: false,

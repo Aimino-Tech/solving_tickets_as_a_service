@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * @deprecated Use `@stas/github-client` instead.
  * This file re-exports from the standalone package for backward compatibility.
@@ -52,7 +51,7 @@ function getAuth() {
     const loadOpts = config.github.privateKeyPath
       ? { readFileSync: readFileSync as (path: string) => string }
       : undefined;
-    _auth = createAuth(cfg, loadOpts ? (c) => loadKey(c, loadOpts) : undefined);
+    _auth = createAuth(cfg, loadOpts ? (c: any) => loadKey(c, loadOpts) : undefined);
   }
   return _auth;
 }
@@ -65,7 +64,7 @@ function getAppOctokit() {
     const loadOpts = config.github.privateKeyPath
       ? { readFileSync: readFileSync as (path: string) => string }
       : undefined;
-    _appOctokit = createAppOctokit(cfg, loadOpts ? (c) => loadKey(c, loadOpts) : undefined);
+    _appOctokit = createAppOctokit(cfg, loadOpts ? (c: any) => loadKey(c, loadOpts) : undefined);
   }
   return _appOctokit;
 }

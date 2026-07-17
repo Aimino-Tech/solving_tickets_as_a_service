@@ -302,6 +302,15 @@ function parseConcurrencyOverrides(raw: string): Record<string, number> {
 }
 
 function buildConfig(env: ParsedEnv) {
+  // Cross-validate AI mode flags: static mode requires AI disabled
+  if (env.STAS_AI_MODE === 'static' && !env.STAS_AI_DISABLED) {
+    console.warn('STAS_AI_MODE=static requires STAS_AI_DISABLED=true — forcing AI disabled');
+    env.STAS_AI_DISABLED = true as unknown as false;
+  }
+  if (env.STAS_AI_DISABLED && env.STAS_AI_MODE !== 'static') {
+    console.warn('STAS_AI_DISABLED=true — forcing STAS_AI_MODE=static');
+    env.STAS_AI_MODE = 'static' as unknown as 'ai';
+  }
   return {
     port: env.PORT,
     runMode: env.RUN_MODE,

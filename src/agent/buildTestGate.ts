@@ -1,4 +1,3 @@
-// @ts-nocheck - Suppress remaining type errors in production code
 /**
  * buildTestGate.ts — Programmatic Build + Test Verification Gate
  *
@@ -73,7 +72,7 @@ function runCommand(
     const stdout = execSync(command, EXEC_OPTIONS);
     const durationMs = Date.now() - start;
     log.info({ command: label, durationMs }, 'Command succeeded');
-    return { stdout, stderr: '', exitCode: 0, durationMs };
+    return { stdout: String(stdout), stderr: '', exitCode: 0, durationMs };
   } catch (err: unknown) {
     const durationMs = Date.now() - start;
     const error = err as {

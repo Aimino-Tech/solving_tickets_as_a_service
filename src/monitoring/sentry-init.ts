@@ -44,8 +44,6 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason) => {
   rootLogger.error(
     { err: String(reason), stack: (reason as Error)?.stack },
-    'Unhandled promise rejection — shutting down',
+    'Unhandled promise rejection',
   );
-  // Give Sentry a moment to flush before exiting
-  setTimeout(() => process.exit(1), 2000);
 });

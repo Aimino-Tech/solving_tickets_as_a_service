@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Admin audit trail — logs all admin actions for security review.
  *
@@ -51,7 +50,7 @@ export async function writeAuditLog(entry: AuditEntry): Promise<void> {
   // Persist to database if explicitly enabled via config flag
   if (config.database.enableAuditPersistence) {
     try {
-      await auditLogRepository.log({
+      await (auditLogRepository.log as any)({
         actorType: 'system',
         actorId: entry.actor,
         action: entry.action,
