@@ -1,10 +1,6 @@
 # =============================================================================
 # Promtail Configuration — STAS Log Aggregation
 # =============================================================================
-# Scrapes Docker container logs, attaches container-name and compose-service
-# labels, and ships them to Loki.
-# =============================================================================
-
 server:
   http_listen_port: 9080
   grpc_listen_port: 0
@@ -41,20 +37,6 @@ scrape_configs:
         target_label: "log_stream"
       - action: labelmap
         regex: "__meta_docker_container_label_(.+)"
-
-  - job_name: docker-logs
-    static_configs:
-      - targets: ["localhost"]
-        labels:
-          job: docker-logs
-          __path__: /var/log/docker/*.log
-
-  - job_name: system-logs
-    static_configs:
-      - targets: ["localhost"]
-        labels:
-          job: system
-          __path__: /var/log/syslog
 
 pipeline_stages:
   - timestamp:
