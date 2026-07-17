@@ -33,25 +33,37 @@
       "id": "stat",
       "name": "Stat",
       "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "bargauge",
+      "name": "Bar gauge",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": "1.0.0"
     }
   ],
-  "title": "STAS — Celery & Queue Monitoring",
-  "description": "Dashboard for monitoring STAS task queues, Celery workers, and DLQ health",
-  "tags": ["stas", "celery", "rabbitmq", "dlq"],
+  "title": "STAS — Scaling & Capacity Dashboard",
+  "description": "Dashboard for monitoring STAS scaling metrics: queue depth, fix rate, error rate, latency, worker pool, and cost per fix",
+  "tags": ["stas", "scaling", "capacity", "500-users"],
   "timezone": "browser",
   "schemaVersion": 38,
   "version": 1,
   "panels": [
     {
       "id": 1,
-      "title": "Queue Depth — Main Queues",
+      "title": "Queue Depth — Main Issue Queue",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "queue_depth{queue=~\"stas\\\\.(issues|agents|events)\\\\.*\"}",
-          "legendFormat": "{{queue}} ({{type}})",
+          "expr": "queue_depth{queue=~\"stas\\\\.(issues|agents|dispatch)\\\\.*\",type=\"main\"}",
+          "legendFormat": "{{queue}}",
           "interval": "15s"
         }
       ],
@@ -69,17 +81,197 @@
           "min": 0
         },
         "overrides": []
-      }
+      },
+      "description": "Depth of the main issue processing queue. Green: <50, Orange: 50-200, Red: >200 (critical). Thresholds correspond to ALERT_WARN_QUEUE_DEPTH and ALERT_CRIT_QUEUE_DEPTH."
     },
     {
       "id": 2,
-      "title": "DLQ Depth",
+      "title": "Fix Rate (Success / Total)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "queue_depth{queue=~\".*\\\\.dlq\"}",
+          "expr": "rate(fix_run_total{status=\"success\"}[30m]) / (rate(fix_run_total{status=\"success\"}[30m]) + rate(fix_run_total{status=\"failed\"}[30m])) * 100",
+          "legendFormat": "Fix Rate (%)",
+          "interval": "30s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 50 },
+              { "color": "green", "value": 80 }
+            ]
+          }
+        }
+      },
+      "description": "Percentage of fix runs that completed successfully over a 30-minute rolling window. Target: >80%."
+    },
+    {
+      "id": 3,
+      "title": "Error Rate (%)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "rate(tasks_failed_total[5m]) / (rate(tasks_succeeded_total[5m]) + rate(tasks_failed_total[5m])) * 100",
+          "legendFormat": "Error Rate",
+          "interval": "15s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 2 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      },
+      "description": "Error rate as percentage of total tasks. Green: <2%, Orange: 2-5%, Red: >5% (triggers ErrorRateSpike alert)."
+    },
+    {
+      "id": 4,
+      "title": "Processing Latency — P95",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(processing_duration_seconds_bucket[5m])) by (le, queue))",
+          "legendFormat": "P95 — {{queue}}",
+          "interval": "15s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 120 },
+              { "color": "red", "value": 300 }
+            ]
+          },
+          "min": 0
+        }
+      },
+      "description": "P95 processing latency by queue. Green: <2min, Orange: 2-5min, Red: >5min."
+    },
+    {
+      "id": 5,
+      "title": "Worker Pool Size",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "count(worker_liveness == 1)",
+          "legendFormat": "Active Workers",
+          "interval": "15s"
+        },
+        {
+          "expr": "sum(worker_total_slots)",
+          "legendFormat": "Total Slots",
+          "interval": "15s"
+        },
+        {
+          "expr": "sum(worker_busy_slots)",
+          "legendFormat": "Busy Slots",
+          "interval": "15s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        }
+      },
+      "description": "Active worker count and slot utilization. When busy slots approach total slots, scale up workers."
+    },
+    {
+      "id": 6,
+      "title": "Worker Utilization %",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(worker_busy_slots) / sum(worker_total_slots) * 100",
+          "legendFormat": "Utilization %",
+          "interval": "15s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 60 },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        }
+      },
+      "description": "Overall worker pool utilization. Target: <60% for headroom. >80% triggers WorkerPoolHighUtilization warning."
+    },
+    {
+      "id": 7,
+      "title": "Cost Per Fix",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "rate(metering_cost_total[1h]) / rate(fix_run_total{status=\"success\"}[1h])",
+          "legendFormat": "Avg Cost/Fix",
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.5 },
+              { "color": "red", "value": 1.0 }
+            ]
+          }
+        }
+      },
+      "description": "Average cost per successful fix run over the last hour. Green: <$0.50, Orange: $0.50-$1.00, Red: >$1.00."
+    },
+    {
+      "id": 8,
+      "title": "DLQ Depth",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "queue_depth{queue=~\"stas\\\\.dlq|.*\\\\.dlq\",type=\"dlq\"}",
           "legendFormat": "{{queue}}",
           "interval": "15s"
         }
@@ -87,6 +279,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -94,17 +287,207 @@
               { "color": "orange", "value": 1 },
               { "color": "red", "value": 10 }
             ]
-          },
-          "min": 0
-        },
-        "overrides": []
-      }
+          }
+        }
+      },
+      "description": "Dead-letter queue depth. Any non-zero value indicates processing failures that need investigation."
     },
     {
-      "id": 3,
+      "id": 9,
+      "title": "Rate Limit Blocks",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "rate(rate_limit_blocks_total[5m])",
+          "legendFormat": "Blocks/s",
+          "interval": "15s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0
+        }
+      },
+      "description": "Rate at which requests are being rate-limited. Spikes indicate users hitting limits."
+    },
+    {
+      "id": 10,
+      "title": "Scaling Status",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "scaling_current_workers",
+          "legendFormat": "Current Workers"
+        },
+        {
+          "expr": "scaling_max_workers",
+          "legendFormat": "Max Workers"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "description": "Current vs max worker count from the scaling API."
+    },
+    {
+      "id": 11,
+      "title": "Webhook Throughput",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "rate(webhooks_received_total[5m])",
+          "legendFormat": "Received",
+          "interval": "15s"
+        },
+        {
+          "expr": "rate(webhooks_processed_total[5m])",
+          "legendFormat": "Processed",
+          "interval": "15s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0
+        }
+      },
+      "description": "Webhook receive and processing rates. Gap between received and processed indicates queue backlog."
+    },
+    {
+      "id": 12,
+      "title": "Database Pool Utilization",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "pg_pool_active_connections",
+          "legendFormat": "Active Connections",
+          "interval": "15s"
+        },
+        {
+          "expr": "pg_pool_idle_connections",
+          "legendFormat": "Idle Connections",
+          "interval": "15s"
+        },
+        {
+          "expr": "pg_pool_total_connections",
+          "legendFormat": "Max Connections",
+          "interval": "15s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0 },
+              { "color": "red", "value": 0 }
+            ]
+          }
+        }
+      },
+      "description": "PostgreSQL connection pool utilization. Max connections is set by DATABASE_POOL_MAX / SCALING_PG_POOL_MAX."
+    },
+    {
+      "id": 13,
+      "title": "Scaling Recommendations",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "scaling_recommendation",
+          "legendFormat": "",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "metric": "Metric",
+              "value": "Value",
+              "recommendation": "Recommendation",
+              "priority": "Priority"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          }
+        }
+      },
+      "description": "Real-time scaling recommendations from the scaling management API."
+    },
+    {
+      "id": 14,
+      "title": "Processing Duration Distribution",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 38 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(processing_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(processing_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(processing_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        }
+      },
+      "description": "Processing duration percentiles (p50, p95, p99). P95 > 300s triggers HighProcessingLatency alert."
+    },
+    {
+      "id": 15,
       "title": "Message Processing Rate",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 38 },
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
@@ -125,351 +508,67 @@
           "unit": "ops",
           "min": 0
         }
-      }
-    },
-    {
-      "id": 4,
-      "title": "Error Rate (%)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "rate(messages_failed_total[5m]) / (rate(messages_consumed_total[5m]) + rate(messages_published_total[5m])) * 100",
-          "legendFormat": "Error rate"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "orange", "value": 10 },
-              { "color": "red", "value": 30 }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": 5,
-      "title": "Processing Duration (p50/p95/p99)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.50, sum(rate(processing_duration_seconds_bucket[5m])) by (le, queue))",
-          "legendFormat": "p50 — {{queue}}"
-        },
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(processing_duration_seconds_bucket[5m])) by (le, queue))",
-          "legendFormat": "p95 — {{queue}}"
-        },
-        {
-          "expr": "histogram_quantile(0.99, sum(rate(processing_duration_seconds_bucket[5m])) by (le, queue))",
-          "legendFormat": "p99 — {{queue}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
-      }
-    },
-    {
-      "id": 6,
-      "title": "Consumer Lag",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "consumer_lag",
-          "legendFormat": "{{queue}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0
-        }
-      }
-    },
-    {
-      "id": 7,
-      "title": "Worker Liveness",
-      "type": "stat",
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 24 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "count(worker_liveness == 1)",
-          "legendFormat": "Alive Workers"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "orange", "value": 1 },
-              { "color": "green", "value": 2 }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": 8,
-      "title": "Active Tasks",
-      "type": "timeseries",
-      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 24 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "tasks_running",
-          "legendFormat": "{{worker}} — {{queue}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0
-        }
-      }
-    },
-    {
-      "id": 9,
-      "title": "Task Success/Failure (5m rate)",
-      "type": "timeseries",
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 24 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "rate(tasks_succeeded_total[5m])",
-          "legendFormat": "Success — {{worker}}/{{queue}}"
-        },
-        {
-          "expr": "rate(tasks_failed_total[5m])",
-          "legendFormat": "Failed — {{worker}}/{{queue}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
-        }
-      }
-    },
-    {
-      "id": 10,
-      "title": "RabbitMQ Connection Status",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 30 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "rabbitmq_up",
-          "legendFormat": "RabbitMQ"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
-            ]
-          }
-        }
       },
-      "description": "RabbitMQ connection status (1=connected, 0=disconnected)"
-    },
-    {
-      "id": 11,
-      "title": "Publish Errors",
-      "type": "timeseries",
-      "gridPos": { "h": 4, "w": 8, "x": 4, "y": 30 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "rate(publish_errors_total[5m])",
-          "legendFormat": "{{queue}} — {{error}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "min": 0
-        }
-      }
-    },
-    {
-      "id": 12,
-      "title": "Queue Health Status",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 30 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "queue_health_status",
-          "legendFormat": "Health"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "orange", "value": 1 },
-              { "color": "red", "value": 2 }
-            ]
-          }
-        }
-      },
-      "description": "Overall queue health (0=healthy, 1=degraded, 2=critical)"
-    },
-    {
-      "id": 13,
-      "title": "DLQ Messages (Last 24h)",
-      "type": "bargauge",
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 30 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "sum by(queue) (increase(dlq_messages_total[24h]))",
-          "legendFormat": "{{queue}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "orange", "value": 5 },
-              { "color": "red", "value": 20 }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": 14,
-      "title": "Feature Flag Evaluations",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 38 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "sum by(flag, result) (rate(feature_flag_evaluations_total[5m]))",
-          "legendFormat": "{{flag}} ({{result}})"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "cps",
-          "min": 0,
-          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
-        }
-      },
-      "description": "Rate of feature flag evaluations per second, broken down by flag name and result (enabled/disabled)"
-    },
-    {
-      "id": 15,
-      "title": "Feature Flag Overrides",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 38 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "sum by(flag, account) (rate(feature_flag_overrides_total[5m]))",
-          "legendFormat": "{{flag}} (account {{account}})"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "cps",
-          "min": 0,
-          "custom": { "drawStyle": "bars", "fillOpacity": 50 }
-        }
-      },
-      "description": "Rate of feature flag override/set operations per second, by flag and account"
-    },
-    {
-      "id": 16,
-      "title": "Feature Flag Rollout %",
-      "type": "stat",
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 46 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "targets": [
-        {
-          "expr": "sum(feature_flag_evaluations_total{result=\"enabled\"}) / (sum(feature_flag_evaluations_total{result=\"enabled\"}) + sum(feature_flag_evaluations_total{result=\"disabled\"})) * 100",
-          "legendFormat": "Rollout %"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "orange", "value": 10 },
-              { "color": "green", "value": 50 }
-            ]
-          }
-        }
-      },
-      "description": "Percentage of feature flag evaluations that returned enabled (rollout adoption)"
+      "description": "Message processing rates by queue. Consumed should roughly match published in steady state."
     }
   ],
   "rows": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "queue_filter",
+        "type": "query",
+        "query": "label_values(queue_depth, queue)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "allFormat": "regex wildcard",
+        "current": { "text": "All", "value": "$__all" },
+        "label": "Queue Filter"
+      }
+    ]
   },
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "name": "Scale Event",
+        "type": "events",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "expr": "scaling_events_total",
+        "iconColor": "blue",
+        "enable": true,
+        "titleFormat": "Scale Event",
+        "textFormat": "{{type}}: {{from}} -> {{to}} workers"
+      },
+      {
+        "name": "Alert Firing",
+        "type": "dashboard",
+        "enable": true,
+        "iconColor": "red",
+        "expr": "ALERTS{severity=~\"warning|critical\"}"
+      }
+    ]
   },
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
   "links": [
     {
-      "title": "Flower Dashboard",
+      "title": "Celery & Queue Dashboard",
       "type": "link",
-      "url": "http://localhost:5555",
+      "url": "/d/queue-monitoring",
       "targetBlank": true
     },
     {
-      "title": "RabbitMQ Management",
+      "title": "Scaling Documentation",
       "type": "link",
-      "url": "http://localhost:15672",
+      "url": "https://github.com/tamnguyen08/solving_tickets_as_a_service/docs/SCALING.md",
+      "targetBlank": true
+    },
+    {
+      "title": "Prometheus Alerts",
+      "type": "link",
+      "url": "/alerts",
       "targetBlank": true
     }
   ],

@@ -240,6 +240,16 @@ const envSchema = z.object({
   METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
+  // ── Scaling & Capacity (AIM-3208) ─────────────────────────────────────────
+  SCALING_MAX_WORKERS: z.coerce.number().int().positive().default(10),
+  SCALING_PG_POOL_MAX: z.coerce.number().int().positive().default(20),
+  SCALING_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
+  SCALING_RATE_LIMIT_MAX_PER_REPO: z.coerce.number().int().positive().default(100),
+  SCALING_RATE_LIMIT_MAX_PER_IP: z.coerce.number().int().positive().default(500),
+  SCALING_RATE_LIMIT_MAX_PER_USER: z.coerce.number().int().positive().default(1000),
+  SCALING_DLQ_MAX_SIZE: z.coerce.number().int().positive().default(1000),
+  SCALING_DLQ_NOTIFY_AT: z.coerce.number().int().positive().default(100),
+
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -543,6 +553,18 @@ function buildConfig(env: ParsedEnv) {
       freeMonthlyCredits: env.METERING_FREE_MONTHLY_CREDITS,
       sandboxMultiplierMin: env.METERING_SANDBOX_MULTIPLIER_MIN,
       sandboxMultiplierMax: env.METERING_SANDBOX_MULTIPLIER_MAX,
+    },
+
+
+    scaling: {
+      maxWorkers: env.SCALING_MAX_WORKERS,
+      pgPoolMax: env.SCALING_PG_POOL_MAX,
+      rateLimitWindowMs: env.SCALING_RATE_LIMIT_WINDOW_MS,
+      rateLimitMaxPerRepo: env.SCALING_RATE_LIMIT_MAX_PER_REPO,
+      rateLimitMaxPerIp: env.SCALING_RATE_LIMIT_MAX_PER_IP,
+      rateLimitMaxPerUser: env.SCALING_RATE_LIMIT_MAX_PER_USER,
+      dlqMaxSize: env.SCALING_DLQ_MAX_SIZE,
+      dlqNotifyAt: env.SCALING_DLQ_NOTIFY_AT,
     },
 
     usageCredits: {

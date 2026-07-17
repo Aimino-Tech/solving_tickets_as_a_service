@@ -52,6 +52,7 @@ import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { pipelineRouter } from './routes/pipeline.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
+import { scalingRouter } from './routes/scaling.js';
 import { adminAuditRouter } from './routes/admin_audit.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
@@ -642,6 +643,9 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Admin API ────────────────────────────────────────
   app.use('/admin', adminRouter);
+
+  // ── Scaling Management API ──────────────────────────────────
+  app.use('/api/scaling', scalingRouter);
 
   app.use('/api/admin/audit', adminAuditRouter);
 

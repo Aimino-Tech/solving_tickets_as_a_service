@@ -1,0 +1,285 @@
+# =============================================================================
+# STAS Prometheus Alert Rules
+#
+# Alerts for monitoring STAS scaling and capacity health.
+# Deploy to Prometheus by adding this file to the rules directory:
+#   /etc/prometheus/rules/stas-alerts.yml
+#
+# Required metrics (exposed by STAS /metrics endpoint):
+#   - queue_depth{queue, type}
+#   - tasks_failed_total{worker, queue}
+#   - tasks_succeeded_total{worker, queue}
+#   - worker_busy_slots{worker}
+#   - worker_total_slots{worker}
+#   - fix_run_total{status}
+#   - processing_duration_seconds_bucket{queue}
+#
+# Alert notification routing:
+#   All alerts route to 'stas-critical' and 'stas-warning' receivers.
+#   Configure receiver endpoints in alertmanager.yml.
+# =============================================================================
+
+groups:
+  - name: stas-scaling-alerts
+    interval: 30s
+    rules:
+
+      # ── Queue Depth Alerts ──────────────────────────────────────────────────
+      # Alert when the main issue queue grows beyond configured thresholds.
+      # Indicates workers can't keep up with webhook ingestion.
+
+      - alert: QueueTooDeep
+        expr: |
+          queue_depth{queue=~"stas\\\\.(issues|agents|events)\\\\.*", type="main"}
+          > 200
+        for: 5m
+        labels:
+          severity: critical
+          team: stas
+          slo: throughput
+        annotations:
+          summary: "Queue {{ $labels.queue }} is too deep ({{ $value }} messages)"
+          description: >
+            The queue {{ $labels.queue }} has been at {{ $value }} messages
+            for more than 5 minutes. This exceeds the critical threshold of 200.
+            Consider adding worker replicas or investigating worker health.
+          grafana_dashboard: "STAS Scaling Dashboard"
+          runbook_url: "https://github.com/tamnguyen08/solving_tickets_as_a_service/docs/SCALING.md#scaling-rules"
+
+      - alert: QueueDepthWarning
+        expr: |
+          queue_depth{queue=~"stas\\\\.(issues|agents|events)\\\\.*", type="main"}
+          > 50
+        for: 5m
+        labels:
+          severity: warning
+          team: stas
+        annotations:
+          summary: "Queue {{ $labels.queue }} depth warning ({{ $value }} messages)"
+          description: >
+            The queue {{ $labels.queue }} has been at {{ $value }} messages
+            for more than 5 minutes. This exceeds the warning threshold of 50.
+          runbook_url: "https://github.com/tamnguyen08/solving_tickets_as_a_service/docs/SCALING.md#scaling-rules"
+
+      # ── Dead-Letter Queue Alert ────────────────────────────────────────────
+      # Any message in the DLQ indicates a processing failure that needs attention.
+
+      - alert: DLQMessagesPresent
+        expr: queue_depth{queue=~".*\\\\.dlq", type="dlq"} > 0
+        for: 1m
+        labels:
+          severity: warning
+          team: stas
+        annotations:
+          summary: "Messages in dead-letter queue ({{ $value }})"
+          description: >
+            Queue {{ $labels.queue }} has {{ $value }} messages in the DLQ.
+            These messages failed processing and were not retried successfully.
+            Investigate the cause and consider replaying via admin API.
+
+      # ── Error Rate Alerts ───────────────────────────────────────────────────
+      # Alert when error rate exceeds thresholds over a 5-minute window.
+
+      - alert: ErrorRateSpike
+        expr: |
+          (
+            rate(tasks_failed_total[5m])
+            /
+            (rate(tasks_succeeded_total[5m]) + rate(tasks_failed_total[5m]))
+            * 100
+          ) > 5
+        for: 5m
+        labels:
+          severity: critical
+          team: stas
+          slo: reliability
+        annotations:
+          summary: "Error rate spike ({{ $value | humanizePercentage }})"
+          description: >
+            The error rate has been above 5% for more than 5 minutes.
+            Current rate: {{ $value | humanizePercentage }}.
+            Investigate worker logs, OpenCode connectivity, and sandbox health.
+          runbook_url: "https://github.com/tamnguyen08/solving_tickets_as_a_service/docs/troubleshooting.md"
+
+      - alert: ErrorRateWarning
+        expr: |
+          (
+            rate(tasks_failed_total[5m])
+            /
+            (rate(tasks_succeeded_total[5m]) + rate(tasks_failed_total[5m]))
+            * 100
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: stas
+        annotations:
+          summary: "Error rate warning ({{ $value | humanizePercentage }})"
+          description: >
+            The error rate has been above 2% for more than 5 minutes.
+            Current rate: {{ $value | humanizePercentage }}.
+
+      # ── Fix Rate Alerts ─────────────────────────────────────────────────────
+      # Alert when the fix success rate drops significantly below normal.
+
+      - alert: FixRateDrop
+        expr: |
+          (
+            rate(fix_run_total{status="success"}[30m])
+            /
+            (rate(fix_run_total{status="success"}[30m]) + rate(fix_run_total{status="failed"}[30m]))
+            * 100
+          ) < 10
+          and
+          rate(fix_run_total{status="success"}[30m]) + rate(fix_run_total{status="failed"}[30m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          team: stas
+          slo: fix_rate
+        annotations:
+          summary: "Fix rate drop - below 10% of normal"
+          description: >
+            The fix success rate has dropped below 10% of the normal baseline
+            over the last 30 minutes. Current success rate: {{ $value }}%.
+            This indicates a systemic issue with the fix pipeline.
+
+      - alert: FixRateDegraded
+        expr: |
+          (
+            rate(fix_run_total{status="success"}[30m])
+            /
+            (rate(fix_run_total{status="success"}[30m]) + rate(fix_run_total{status="failed"}[30m]))
+            * 100
+          ) < 50
+          and
+          rate(fix_run_total{status="success"}[30m]) + rate(fix_run_total{status="failed"}[30m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: stas
+        annotations:
+          summary: "Fix rate degraded ({{ $value }}% success)"
+          description: >
+            The fix success rate is at {{ $value }}% over the last 30 minutes,
+            below the 50% warning threshold.
+
+      # ── Worker Pool Alerts ──────────────────────────────────────────────────
+      # Alert when all worker slots are occupied for an extended period.
+
+      - alert: WorkerPoolExhausted
+        expr: |
+          sum by(worker) (worker_busy_slots) >= sum by(worker) (worker_total_slots)
+        for: 5m
+        labels:
+          severity: critical
+          team: stas
+          slo: capacity
+        annotations:
+          summary: "Worker pool exhausted on {{ $labels.worker }}"
+          description: >
+            All worker slots on {{ $labels.worker }} have been busy for more
+            than 5 minutes. Current busy slots: {{ $value }}.
+            Consider adding worker replicas or increasing concurrency.
+          runbook_url: "https://github.com/tamnguyen08/solving_tickets_as_a_service/docs/SCALING.md#scaling-rules"
+
+      - alert: WorkerPoolHighUtilization
+        expr: |
+          (
+            sum by(worker) (worker_busy_slots)
+            /
+            sum by(worker) (worker_total_slots)
+            * 100
+          ) > 80
+        for: 10m
+        labels:
+          severity: warning
+          team: stas
+        annotations:
+          summary: "Worker pool high utilization on {{ $labels.worker }}"
+          description: >
+            Worker {{ $labels.worker }} is at {{ $value }}% capacity
+            for more than 10 minutes. Consider scaling up.
+
+      # ── Processing Latency Alerts ────────────────────────────────────────────
+      # Alert when P95 processing latency exceeds thresholds.
+
+      - alert: HighProcessingLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(processing_duration_seconds_bucket[5m])) by (le, queue)
+          ) > 300
+        for: 5m
+        labels:
+          severity: warning
+          team: stas
+        annotations:
+          summary: "High P95 latency on queue {{ $labels.queue }}"
+          description: >
+            P95 processing latency for queue {{ $labels.queue }} is
+            {{ $value }}s, exceeding the 300s threshold.
+
+      # ── Worker Heartbeat Alerts ──────────────────────────────────────────────
+      # Alert when a worker stops sending heartbeats.
+
+      - alert: WorkerDown
+        expr: |
+          time() - worker_last_heartbeat{job="stas-worker"} > 120
+        for: 1m
+        labels:
+          severity: critical
+          team: stas
+        annotations:
+          summary: "Worker {{ $labels.instance }} is down"
+          description: >
+            Worker {{ $labels.instance }} has not sent a heartbeat for
+            {{ $value | humanizeDuration }}. Expected interval: 30s.
+            Check worker container and logs.
+
+      # ── Database Connection Pool Alert ───────────────────────────────────────
+      # Alert when database connection pool usage is high.
+
+      - alert: DatabasePoolExhaustion
+        expr: |
+          pg_pool_available_connections / pg_pool_total_connections < 0.2
+        for: 5m
+        labels:
+          severity: critical
+          team: stas
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: >
+            Only {{ $value | humanizePercentage }} of database connections
+            are available. Consider increasing SCALING_PG_POOL_MAX.
+
+      # ── Rate Limiting Alert ──────────────────────────────────────────────────
+      # Alert when rate limiting is frequently triggered (users being throttled).
+
+      - alert: RateLimitFrequent
+        expr: |
+          rate(rate_limit_blocks_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: stas
+        annotations:
+          summary: "Frequent rate limiting ({{ $value | humanizePercentage }} blocks/s)"
+          description: >
+            Rate limiting is being triggered at {{ $value }} blocks per second.
+            Consider adjusting rate limit thresholds if this is expected growth.
+
+      # ── Scaling Recommendation Alert ─────────────────────────────────────────
+      # Proactive alert suggesting scale-up before queues grow too deep.
+
+      - alert: ScaleUpRecommended
+        expr: |
+          predict_linear(queue_depth{type="main"}[30m], 600) > 100
+        for: 5m
+        labels:
+          severity: warning
+          team: stas
+        annotations:
+          summary: "Scale-up recommended - queue predicted to exceed 100 in 10m"
+          description: >
+            Based on current growth rate, queue depth is predicted to reach
+            {{ $value }} messages in 10 minutes. Consider adding worker replicas.

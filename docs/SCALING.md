@@ -4,6 +4,311 @@
 
 This document describes STAS's scaling path across three phases, the architectural invariants that make it possible, and the operational notes for each phase.
 
+> **New in AIM-3208**: This document now includes a detailed **500-user load profile**, **infrastructure requirements**, **cost projection**, **rate limiting calibration**, and **monitoring setup** to guarantee capacity for 500 concurrent users.
+
+---
+
+## 500-User Load Profile (AIM-3208)
+
+### Assumptions
+
+| Parameter | Value | Source |
+|---|---|---|
+| Total users | 500 | Target capacity |
+| Active users (peak) | 150 (30%) | Typical SaaS concurrency |
+| Issues per user per day | 2 | GitHub issue creation rate |
+| Total issues per day | 1,000 | 500 × 2 |
+| Peak issues per hour | 200 | Burst factor of 5× |
+| Peak issues per second | 5 | Poisson-distributed arrivals |
+| Webhook payload size | ~5 KB | GitHub webhook average |
+| Fix duration (p50) | 120s | Measured from production |
+| Fix duration (p95) | 300s | Tail latency |
+| Fix success rate | 80%+ | SLO target |
+| Peak API requests/s | 150 | Dashboard + monitoring probes |
+| Concurrent fix runs | 20-40 | Worker pool of 4-8 machines |
+
+### Peak Load Scenarios
+
+#### Scenario 1: Normal Weekday (baseline)
+- 500 users active
+- ~1,000 issues/day
+- ~42 issues/hour sustained
+- ~5 concurrent fixes at any time
+- 2 worker nodes sufficient
+
+#### Scenario 2: Burst (product launch / incident)
+- 150 concurrent users active
+- 200 issues/hour for 2 hours
+- 20-30 concurrent fixes
+- 4-6 worker nodes needed
+- Auto-scaling triggers at queue depth > 50
+
+#### Scenario 3: Maximum Peak (DDoS / viral event)
+- 500 users all-active
+- 500 issues/hour
+- 50+ concurrent fixes
+- 8-10 worker nodes
+- Rate limiting throttles to protect backend
+- Queues may back up (target recovery < 30min)
+
+### Capacity Planning Formula
+
+```
+Workers needed = (Issues per hour × Fix duration hours) / (Concurrency per worker × Worker uptime)
+
+Example:
+  Workers = (200 issues/hr × 0.033 hr (2 min avg fix)) / (4 concurrency × 0.95 uptime)
+  Workers = 6.6 / 3.8 = ~2 workers (normal)
+  
+  Burst:
+  Workers = (500 issues/hr × 0.083 hr (5 min p95 fix)) / (4 concurrency × 0.95 uptime)
+  Workers = 41.5 / 3.8 = ~11 workers (peak)
+```
+
+---
+
+## Infrastructure Requirements
+
+### Minimum (500 users — production)
+
+| Component | Spec | Count | Total RAM | Total CPU |
+|---|---|---|---|---|
+| stas-webhook | 2GB RAM, 1 CPU | 2 (HA pair) | 4GB | 2 CPU |
+| stas-worker | 4GB RAM, 2 CPU | 4 | 16GB | 8 CPU |
+| PostgreSQL | 4GB RAM, 2 CPU | 1 | 4GB | 2 CPU |
+| RabbitMQ | 2GB RAM, 1 CPU | 1 | 2GB | 1 CPU |
+| Redis | 2GB RAM, 1 CPU | 1 | 2GB | 1 CPU |
+| Nginx | 512MB RAM, 0.5 CPU | 1 | 512MB | 0.5 CPU |
+| **Total** | | **10** | **~28.5GB** | **~14.5 CPU** |
+
+### Recommended (500 users — with headroom)
+
+| Component | Spec | Count | Total RAM | Total CPU |
+|---|---|---|---|---|
+| stas-webhook | 4GB RAM, 2 CPU | 2 | 8GB | 4 CPU |
+| stas-worker | 8GB RAM, 4 CPU | 4 | 32GB | 16 CPU |
+| PostgreSQL | 8GB RAM, 4 CPU | 1 (primary) + 1 (replica) | 16GB | 8 CPU |
+| RabbitMQ | 4GB RAM, 2 CPU | 1 (mirrored) | 4GB | 2 CPU |
+| Redis | 4GB RAM, 2 CPU | 1 (sentinel) | 4GB | 2 CPU |
+| Nginx | 1GB RAM, 1 CPU | 2 (HA pair) | 2GB | 2 CPU |
+| Prometheus + Grafana | 4GB RAM, 2 CPU | 1 | 4GB | 2 CPU |
+| **Total** | | **12** | **~70GB** | **~36 CPU** |
+
+### Database Sizing
+
+For 500 users with PostgreSQL:
+
+| Setting | Value | Reasoning |
+|---|---|---|
+| `max_connections` | 100 | 20 pool × 5 webhook/worker instances |
+| `shared_buffers` | 2GB | 25% of 8GB RAM |
+| `effective_cache_size` | 6GB | 75% of 8GB RAM |
+| `work_mem` | 32MB | Per-operation sort memory |
+| `maintenance_work_mem` | 512MB | For VACUUM, index creation |
+| `wal_buffers` | 16MB | Write-ahead log buffer |
+| `random_page_cost` | 1.1 | For SSD storage |
+| `effective_io_concurrency` | 200 | For SSD storage |
+
+### Network Requirements
+
+| Connection | Bandwidth | Latency Requirement |
+|---|---|---|
+| Webhook → Nginx | 1 Gbps | < 1ms (same host) |
+| Nginx → Webhook app | 1 Gbps | < 1ms (same host) |
+| Worker → RabbitMQ | 100 Mbps | < 5ms |
+| Worker → PostgreSQL | 100 Mbps | < 5ms |
+| Worker → Redis | 100 Mbps | < 5ms |
+| Worker → GitHub API | 100 Mbps internet | < 100ms |
+| Worker → LLM API | 100 Mbps internet | < 500ms |
+
+---
+
+## Cost Projection
+
+### Monthly Infrastructure Costs
+
+| Provider | Component | Monthly Cost |
+|---|---|---|
+| **IONOS** | 2 × Webhook VMs (2GB, 1 CPU) | €20 |
+| **IONOS** | 4 × Worker VMs (8GB, 4 CPU) | €160 |
+| **IONOS** | 1 × PostgreSQL VM (8GB, 4 CPU) | €40 |
+| **IONOS** | 1 × RabbitMQ VM (4GB, 2 CPU) | €20 |
+| **IONOS** | 1 × Redis VM (4GB, 2 CPU) | €20 |
+| **IONOS** | 1 × Nginx VM (1GB, 1 CPU) | €10 |
+| **IONOS** | S3 storage (100GB) | €5 |
+| **IONOS** | Load balancer | €15 |
+| **Subtotal (IONOS)** | | **€290** |
+
+| Provider | Component | Monthly Cost |
+|---|---|---|
+| **LLM (OpenCode)** | ~10,000 fixes × ~$0.50 avg | $5,000 |
+| **GitHub API** | 500 users × free tier | $0 |
+| **Sentry** | Error monitoring (100K events) | $29 |
+| **Better Stack / Uptime** | Status monitoring | $0 (free tier) |
+| **Subtotal (Services)** | | **$5,029** |
+
+### Per-Fix Cost Breakdown
+
+| Component | Cost per Fix |
+|---|---|
+| LLM (primary: claude-sonnet) | $0.30 - $0.80 |
+| LLM (fallback: gpt-4o) | $0.10 - $0.30 |
+| Sandbox (E2B / Docker) | $0.01 - $0.05 |
+| Infrastructure (amortized) | $0.01 - $0.03 |
+| **Total per fix** | **$0.42 - $1.18** |
+
+### Monthly Cost Scenarios
+
+| Scenario | Fixes/Month | LLM Cost | Infrastructure | Total |
+|---|---|---|---|---|
+| Light (20 users) | 1,200 | $600 | €290 | ~$950 |
+| Medium (100 users) | 6,000 | $3,000 | €290 | ~$3,350 |
+| **Target (500 users)** | **30,000** | **$15,000** | **€290** | **~$15,350** |
+| Heavy (1,000 users) | 60,000 | $30,000 | €580 | ~$30,700 |
+
+### Cost Optimization Strategies
+
+1. **Use cheaper models for triage**: gpt-4o-mini at $0.002/run vs $0.50/run
+2. **Set fix timeouts aggressively**: 600s max prevents runaway costs
+3. **Cache common fixes**: Simple pattern fixes can be templated
+4. **Batch API calls**: Reduce per-request overhead
+5. **Use spot/preemptible VMs**: 60-80% cost reduction for worker nodes
+
+---
+
+## Rate Limiting Calibration
+
+### Tier Configuration
+
+| Tier | Per-Repo (req/min) | Per-IP (req/min) | Per-User (req/min) | Concurrency |
+|---|---|---|---|---|
+| Free | 10 | 30 | 30 | 1 |
+| Pro | 50 | 200 | 300 | 3 |
+| Enterprise | 200 | 500 | 1000 | 10 |
+
+### Rate Limit Configuration (AIM-3208)
+
+```env
+# ── Scaling Rate Limits (AIM-3208) ─────────────────────────────────────
+SCALING_RATE_LIMIT_WINDOW_MS=60000
+SCALING_RATE_LIMIT_MAX_PER_REPO=100
+SCALING_RATE_LIMIT_MAX_PER_IP=500
+SCALING_RATE_LIMIT_MAX_PER_USER=1000
+```
+
+### Calibration for 500 Users
+
+| Scenario | Required Throughput | Rate Limit Setting | Headroom |
+|---|---|---|---|
+| Webhooks (GitHub) | 5 req/s | 30 req/s (Nginx) | 6× |
+| API (dashboard) | 150 req/s | 100 req/s (Nginx) | 0.67× (scale webhooks) |
+| Health checks | 5 req/s | 60 req/m (Nginx) | 12× |
+| Per-user (peak) | 10 req/min | 1,000 req/min | 100× |
+| Per-IP (GitHub webhooks) | 5 req/s | 100 req/min | 0.33× (per IP burst) |
+
+### Nginx Rate Limiting Zones
+
+```nginx
+# In nginx/nginx.conf and nginx/stas.conf:
+limit_req_zone $binary_remote_addr zone=stas_webhook:10m rate=30r/s;
+limit_req_zone $binary_remote_addr zone=stas_api:10m rate=100r/s;
+limit_req_zone $binary_remote_addr zone=stas_health:10m rate=60r/m;
+```
+
+> **Note**: For 500 users, the API rate limit may need to increase.
+> Monitor `rate_limit_blocks_total` in Prometheus and adjust as needed.
+
+---
+
+## Monitoring Setup
+
+### Prometheus Metrics Exposed
+
+| Metric | Type | Labels | Description |
+|---|---|---|---|
+| `queue_depth` | Gauge | queue, type | Current queue depth (main + DLQ) |
+| `tasks_succeeded_total` | Counter | worker, queue | Cumulative successful tasks |
+| `tasks_failed_total` | Counter | worker, queue | Cumulative failed tasks |
+| `worker_busy_slots` | Gauge | worker | Currently busy worker slots |
+| `worker_total_slots` | Gauge | worker | Total worker slots |
+| `worker_liveness` | Gauge | worker | 1 if worker is alive |
+| `processing_duration_seconds` | Histogram | queue | Task processing duration |
+| `fix_run_total` | Counter | status | Total fix runs by status |
+| `metering_cost_total` | Counter | component | Cumulative cost in cents |
+| `rate_limit_blocks_total` | Counter | tier, reason | Rate-limited requests |
+| `webhooks_received_total` | Counter | source | Webhooks received |
+| `webhooks_processed_total` | Counter | source | Webhooks processed |
+| `scaling_current_workers` | Gauge | - | Current worker count |
+| `scaling_max_workers` | Gauge | - | Maximum worker count |
+| `scaling_recommendation` | Gauge | type, priority | Scaling recommendation |
+| `scaling_events_total` | Counter | type | Scaling events counter |
+| `pg_pool_active_connections` | Gauge | - | Active DB connections |
+| `pg_pool_idle_connections` | Gauge | - | Idle DB connections |
+| `pg_pool_total_connections` | Gauge | - | Max DB connections |
+
+### Prometheus Alert Rules (AIM-3208)
+
+Alert rules are defined in `monitoring/prometheus-alerts.yml`.
+
+| Alert | Condition | Severity | Action |
+|---|---|---|---|
+| `QueueTooDeep` | queue_depth > 200 for 5m | critical | Add worker replicas |
+| `QueueDepthWarning` | queue_depth > 50 for 5m | warning | Monitor, prepare to scale |
+| `ErrorRateSpike` | error_rate > 5% for 5m | critical | Investigate worker logs |
+| `ErrorRateWarning` | error_rate > 2% for 5m | warning | Investigate |
+| `FixRateDrop` | fix_rate < 10% of normal for 5m | critical | Systemic issue |
+| `FixRateDegraded` | fix_rate < 50% for 5m | warning | Investigate pipeline |
+| `WorkerPoolExhausted` | all workers busy for 5m | critical | Add workers |
+| `WorkerPoolHighUtilization` | utilization > 80% for 10m | warning | Scale up soon |
+| `DLQMessagesPresent` | dlq > 0 | warning | Investigate failures |
+| `HighProcessingLatency` | P95 > 300s for 5m | warning | Check worker health |
+| `WorkerDown` | no heartbeat for 120s | critical | Restart worker |
+| `DatabasePoolExhaustion` | < 20% connections available | critical | Increase pool max |
+| `RateLimitFrequent` | > 10 blocks/s for 5m | warning | Adjust rate limits |
+| `ScaleUpRecommended` | queue predicted > 100 in 10m | warning | Proactive scale |
+
+### Grafana Dashboard
+
+The scaling dashboard is at `monitoring/grafana-dashboard.json` and provides:
+
+1. **Queue Depth** — Main issue queue depth with color thresholds
+2. **Fix Rate** — Percentage of successful fixes (30min rolling window)
+3. **Error Rate** — Task failure percentage (5min window)
+4. **Processing Latency (P95)** — P95 task duration by queue
+5. **Worker Pool Size** — Active workers, total slots, busy slots
+6. **Worker Utilization %** — Overall pool utilization
+7. **Cost Per Fix** — Average infrastructure + LLM cost per fix
+8. **DLQ Depth** — Dead-letter queue monitoring
+9. **Rate Limit Blocks** — Rate limiting activity
+10. **Webhook Throughput** — Received vs processed webhooks
+11. **Database Pool Utilization** — PostgreSQL connection pool
+12. **Scaling Recommendations** — Real-time recommendations table
+
+### Using the Scaling API
+
+```bash
+# Get current scaling status
+curl -H "Authorization: Bearer $ADMIN_API_KEY" http://localhost:3000/api/scaling/status
+
+# Scale up by 1
+curl -X POST -H "Authorization: Bearer $ADMIN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "scale_up", "reason": "Queue depth > 200"}' \
+  http://localhost:3000/api/scaling/scale
+
+# Scale to specific count
+curl -X POST -H "Authorization: Bearer $ADMIN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "scale_to", "count": 4, "reason": "Planned capacity increase"}' \
+  http://localhost:3000/api/scaling/scale
+
+# Get scaling recommendations
+curl -H "Authorization: Bearer $ADMIN_API_KEY" \
+  http://localhost:3000/api/scaling/recommendations
+```
+
+---
+
 ## Scaling Path
 
 ```
@@ -93,28 +398,28 @@ This single constraint is the foundation of horizontal scaling. Because no worke
 ### Topology
 
 ```
-                          ┌──────────┐
-                          │ RabbitMQ │
-                          │ + Redis  │
-                          │ + PG     │
-                          └────┬─────┘
-                               │
-          ┌────────────────────┼────────────────────┐
-          │                    │                    │
-          ▼                    ▼                    ▼
-   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-   │  Worker PC 1  │   │  Worker PC 2 │   │  Worker PC N │
-   │               │   │              │   │              │
-   │  Docker       │   │  Docker      │   │  Docker      │
-   │  Daemon       │   │  Daemon      │   │  Daemon      │
-   │               │   │              │   │              │
-   │  ┌─────────┐  │   │  ┌─────────┐ │   │  ┌─────────┐ │
-   │  │ Sandbox │  │   │  │ Sandbox │ │   │  │ Sandbox │ │
-   │  │ Pool    │  │   │  │ Pool    │ │   │  │ Pool    │ │
-   │  └─────────┘  │   │  └─────────┘ │   │  └─────────┘ │
-   │               │   │              │   │              │
-   │  GC Sweeper   │   │  GC Sweeper  │   │  GC Sweeper  │
-   └──────────────┘   └──────────────┘   └──────────────┘
+                           ┌──────────┐
+                           │ RabbitMQ │
+                           │ + Redis  │
+                           │ + PG     │
+                           └────┬─────┘
+                                │
+           ┌────────────────────┼────────────────────┐
+           │                    │                    │
+           ▼                    ▼                    ▼
+    ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+    │  Worker PC 1  │   │  Worker PC 2 │   │  Worker PC N │
+    │               │   │              │   │              │
+    │  Docker       │   │  Docker      │   │  Docker      │
+    │  Daemon       │   │  Daemon      │   │  Daemon      │
+    │               │   │              │   │              │
+    │  ┌─────────┐  │   │  ┌─────────┐ │   │  ┌─────────┐ │
+    │  │ Sandbox │  │   │  │ Sandbox │ │   │  │ Sandbox │ │
+    │  │ Pool    │  │   │  │ Pool    │ │   │  │ Pool    │ │
+    │  └─────────┘  │   │  └─────────┘ │   │  └─────────┘ │
+    │               │   │              │   │              │
+    │  GC Sweeper   │   │  GC Sweeper  │   │  GC Sweeper  │
+    └──────────────┘   └──────────────┘   └──────────────┘
 ```
 
 ### How It Works
@@ -214,38 +519,38 @@ DOCKER_CONTAINER_CPU=1
 ### Topology
 
 ```
-                      ┌──────────────┐
-                      │  IONOS ALB   │  (optional, for multi-node webhook)
-                      └──────┬───────┘
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-              ▼              ▼              ▼
-       ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-       │  Webhook VM  │ │  Webhook VM  │ │  Webhook VM  │
-       │  (2GB, 1 CPU)│ │  (2GB, 1 CPU)│ │  (2GB, 1 CPU)│
-       └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
-              │                │                │
-              └────────────────┼────────────────┘
-                               │
-                      ┌────────┴────────┐
-                      │  RabbitMQ VM    │
-                      │  (4GB, 2 CPU)   │
-                      └────────┬────────┘
-                               │
-              ┌────────────────┼────────────────┐
-              │                │                │
-              ▼                ▼                ▼
-       ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-       │  Worker VM 1 │ │  Worker VM 2 │ │  Worker VM N │
-       │  (8GB, 4 CPU)│ │  (8GB, 4 CPU)│ │  (8GB, 4 CPU)│
-       └──────────────┘ └──────────────┘ └──────────────┘
-                               │
-                      ┌────────┴────────┐
-                      │  IONOS S3       │
-                      │  (workspace     │
-                      │   artifacts)    │
-                      └─────────────────┘
+                       ┌──────────────┐
+                       │  IONOS ALB   │  (optional, for multi-node webhook)
+                       └──────┬───────┘
+                              │
+               ┌──────────────┼──────────────┐
+               │              │              │
+               ▼              ▼              ▼
+        ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+        │  Webhook VM  │ │  Webhook VM  │ │  Webhook VM  │
+        │  (2GB, 1 CPU)│ │  (2GB, 1 CPU)│ │  (2GB, 1 CPU)│
+        └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
+               │                │                │
+               └────────────────┼────────────────┘
+                                │
+                       ┌────────┴────────┐
+                       │  RabbitMQ VM    │
+                       │  (4GB, 2 CPU)   │
+                       └────────┬────────┘
+                                │
+               ┌────────────────┼────────────────┐
+               │                │                │
+               ▼                ▼                ▼
+        ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+        │  Worker VM 1 │ │  Worker VM 2 │ │  Worker VM N │
+        │  (8GB, 4 CPU)│ │  (8GB, 4 CPU)│ │  (8GB, 4 CPU)│
+        └──────────────┘ └──────────────┘ └──────────────┘
+                                │
+                       ┌────────┴────────┐
+                       │  IONOS S3       │
+                       │  (workspace     │
+                       │   artifacts)    │
+                       └─────────────────┘
 ```
 
 ### IONOS-Specific Services
@@ -350,10 +655,93 @@ Each worker can run 4-8 concurrent sandbox slots depending on task memory requir
 
 | Metric | Action |
 |---|---|
-| Queue depth > 50 for 5 minutes | Add 1 worker VM |
+| Queue depth > 200 for 5 minutes | Add 1 worker VM (critical) |
+| Queue depth > 50 for 5 minutes | Add 1 worker VM (warning) |
 | Queue depth < 10 for 30 minutes | Remove 1 worker VM (min 1) |
 | Worker CPU > 80% for 10 minutes | Increase concurrency or add VM |
 | S3 storage > 80% | Extend lifecycle policy or increase bucket limit |
+| Error rate > 5% for 5 minutes | Investigate worker health |
+| P95 latency > 300s for 5 minutes | Check worker capacity |
+
+---
+
+## Load Testing
+
+### k6 Load Tests
+
+Load test scripts are in `scripts/load-test/`:
+
+| Script | What It Tests | VUs | Duration |
+|---|---|---|---|
+| `webhook.js` | GitHub webhook delivery | 50 | 5m |
+| `api.js` | API endpoint throughput | 20 | 5m |
+| `db.js` | Database concurrent reads/writes | 50 | 3m |
+| `run.sh` | Orchestrator (runs all) | configurable | configurable |
+
+### Running Load Tests
+
+```bash
+# Run all load tests against local dev
+./scripts/load-test/run.sh
+
+# Run against staging with admin API key
+./scripts/load-test/run.sh \
+  --target https://staging.stas.dev \
+  --api-key your-admin-key \
+  --duration 10m \
+  --vu 100 \
+  --api-vu 50 \
+  --db-vu 100
+
+# Run individual test
+k6 run scripts/load-test/webhook.js \
+  --env TARGET_URL=https://staging.stas.dev/webhook \
+  --env VU=50 \
+  --env DURATION=5m
+```
+
+### Expected Thresholds
+
+| Test | Metric | Target |
+|---|---|---|
+| Webhook | p95 latency | < 2000ms |
+| Webhook | Error rate | < 1% |
+| Webhook | Throughput | > 50 req/s sustained |
+| API | p95 latency | < 1000ms |
+| API | Error rate | < 0.5% |
+| DB reads | p95 latency | < 500ms |
+| DB writes | p95 latency | < 1000ms |
+| DB | Error rate | < 1% |
+
+---
+
+## Scaling Verification
+
+Run the scaling verification script to check all components:
+
+```bash
+# Run all checks
+./scripts/scale-verify.sh
+
+# Check specific compose file and target
+./scripts/scale-verify.sh \
+  --compose-file docker-compose.prod.yml \
+  --target https://staging.stas.dev \
+  --scale 4 \
+  --db-pool-max 20
+
+# Skip Docker checks (CI environment)
+./scripts/scale-verify.sh --skip-docker
+```
+
+The verification script checks:
+
+1. **Docker Compose** — validates service definitions, no `container_name` on scalable services
+2. **PostgreSQL** — verifies `DATABASE_POOL_MAX` and `SCALING_PG_POOL_MAX` configuration
+3. **Nginx** — validates upstream blocks, rate limiting zones, worker connections
+4. **Health endpoints** — checks `/health`, `/health/ready`, `/health/queue`, `/metrics`
+5. **Queue config** — verifies RabbitMQ queues, DLQ settings, worker concurrency
+6. **Monitoring** — checks Grafana dashboard, Prometheus alert rules
 
 ---
 
@@ -408,6 +796,19 @@ Each worker can run 4-8 concurrent sandbox slots depending on task memory requir
 | `DATABASE_URL` | `postgres://localhost:5432/stas` | Phase 2+ | `src/config.ts:179` |
 | `STAS_SANDBOX_POOL_MAX_IDLE` | — | Phase 2+ | AIM-1333 |
 | `SANDBOX_POOL_SIZE` | `10` | Phase 2+ | `premium/src/routes/dashboard.ts` |
+
+### Scaling Environment Variables (AIM-3208)
+
+| Variable | Default | Description |
+|---|---|---|
+| `SCALING_MAX_WORKERS` | `10` | Maximum worker replicas allowed |
+| `SCALING_PG_POOL_MAX` | `20` | PostgreSQL connection pool max |
+| `SCALING_RATE_LIMIT_WINDOW_MS` | `60000` | Rate limit window (1 minute) |
+| `SCALING_RATE_LIMIT_MAX_PER_REPO` | `100` | Max requests per repo per window |
+| `SCALING_RATE_LIMIT_MAX_PER_IP` | `500` | Max requests per IP per window |
+| `SCALING_RATE_LIMIT_MAX_PER_USER` | `1000` | Max requests per user per window |
+| `SCALING_DLQ_MAX_SIZE` | `1000` | Dead-letter queue max messages |
+| `SCALING_DLQ_NOTIFY_AT` | `100` | DLQ notification threshold |
 
 ### Per-Machine Tuning
 
@@ -521,6 +922,7 @@ docker compose -f docker-compose.worker.yml down
 - **RabbitMQ Management**: `http://<broker-ip>:15672` — queue depths, consumer counts
 - **Prometheus**: Each worker exposes metrics on `:9090/metrics`
 - **IONOS Cloud Panel**: VM-level CPU, RAM, disk metrics
+- **Grafana**: `http://<monitoring-ip>:3000` — scaling & capacity dashboard
 
 ### Health Checks
 
@@ -533,6 +935,9 @@ curl http://<webhook>:3000/health/queue
 
 # OpenCode reachability
 curl http://<opencode-url>:4096/health
+
+# Scaling status
+curl -H "Authorization: Bearer $ADMIN_API_KEY" http://<webhook>:3000/api/scaling/status
 ```
 
 ---
