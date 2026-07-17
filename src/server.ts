@@ -68,9 +68,9 @@ import { analyticsRouter } from './routes/analytics.js';
 import { viralRouter } from './routes/viral.js';
 import { qualityRouter } from './routes/quality.js';
 import previewRoutes from './api/routes/preview.js';
+import { adminRunsRouter } from './routes/adminRuns.js';
 import { kpiRouter } from './routes/kpi.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
-import previewRoutes from './api/routes/preview.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -104,8 +104,14 @@ export async function createApp(): Promise<express.Application> {
 
   // -- Health check endpoint ------------------------------------------------
   app.get('/health', (_req: Request, res: Response) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
-  });
+    const aiDisabled = config.stas.aiDisabled;
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      aiMode: aiDisabled ? 'ai-disabled' : 'enabled',
+      description: aiDisabled ? 'AI-disabled mode — manual infrastructure operation' : 'AI agent active — automated fix pipeline',
+    });
   app.get('/health/ready', async (_req: Request, res: Response) => {
     const checks: Record<string, string> = {};
     try {
@@ -642,6 +648,9 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Admin API ────────────────────────────────────────
   app.use('/admin', adminRouter);
+
+  // ── Admin Runs API (AI-Disabled Mode) ────────────
+  app.use('/api/v1/admin', adminRunsRouter);
 
   app.use('/api/admin/audit', adminAuditRouter);
 

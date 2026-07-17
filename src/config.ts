@@ -66,6 +66,7 @@ const envSchema = z.object({
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
 	  STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
+  STAS_AI_DISABLED: boolSchema(false),
 	  STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
@@ -422,6 +423,7 @@ function buildConfig(env: ParsedEnv) {
     stas: {
 	      mode: env.STAS_MODE,
 	      aiMode: env.STAS_AI_MODE,
+	      aiDisabled: env.STAS_AI_DISABLED,
 	      label: env.STAS_LABEL,
       botName: env.BOT_NAME,
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
