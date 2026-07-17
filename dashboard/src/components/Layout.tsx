@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useState } from 'react';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -146,6 +147,9 @@ export default function Layout() {
             </svg>
           </button>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{pageTitle}</h2>
+          <div className="ml-auto flex items-center gap-2">
+            <NotificationBell />
+          </div>
         </header>
 
         {/* Page content */}
