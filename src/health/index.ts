@@ -6,7 +6,6 @@ export {
   getQueueHealth,
   hasCriticalQueues,
   getDLQSummary,
-  closeHealthRedis,
 } from './queueHealth.js';
 
 export type {

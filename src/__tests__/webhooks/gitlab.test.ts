@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockEnqueueIssue } = vi.hoisted(() => ({
   mockEnqueueIssue: vi
-    .fn<(queue: unknown, data: unknown) => Promise<string | undefined>>()
+    .fn<(data: unknown) => Promise<string | undefined>>()
     .mockResolvedValue("job-mock-id"),
 }));
 
@@ -33,23 +33,12 @@ vi.mock("../../config.js", () => ({
   },
 }));
 
-vi.mock("../../queue/issueQueue.js", () => ({
-  enqueueIssue: mockEnqueueIssue,
-}));
+
 
 import { gitlabWebhook, gitlabClient, createGitlabWebhooks } from "../../webhooks/gitlab.js";
 import type { PlatformWebhookEvent } from "../../webhooks/base.js";
 
-function createMockQueue() {
-  return {
-    add: vi.fn().mockResolvedValue({ id: "job-1" }),
-    close: vi.fn().mockResolvedValue(undefined),
-    on: vi.fn().mockReturnThis(),
-    getJob: vi.fn().mockResolvedValue(null),
-    getJobs: vi.fn().mockResolvedValue([]),
-    obliterate: vi.fn().mockResolvedValue(undefined),
-  } as any;
-}
+const mockEnqueue = vi.fn<(...args: unknown[]) => Promise<string | undefined>>().mockResolvedValue("job-mock-id");
 
 function sampleGitLabIssueOpenedPayload() {
   return {
@@ -210,21 +199,18 @@ describe("gitlabClient", () => {
 });
 
 describe("createGitlabWebhooks", () => {
-  let mockQueue: ReturnType<typeof createMockQueue>;
-
   beforeEach(() => {
     vi.clearAllMocks();
     mockEnqueueIssue.mockResolvedValue("job-mock-id");
-    mockQueue = createMockQueue();
+    mockEnqueue.mockClear();
   });
 
   it("enqueues a job for issue updated with target label", async () => {
-    const handler = createGitlabWebhooks(mockQueue);
+    const handler = createGitlabWebhooks(mockEnqueue);
     await handler.handle("Issue Hook", sampleGitLabIssueLabeledPayload());
 
     expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
     expect(mockEnqueueIssue).toHaveBeenCalledWith(
-      undefined,
       expect.objectContaining({
         repoOwner: "owner",
         repoName: "test-repo",
@@ -235,14 +221,14 @@ describe("createGitlabWebhooks", () => {
   });
 
   it("does NOT enqueue for issue open without label", async () => {
-    const handler = createGitlabWebhooks(mockQueue);
+    const handler = createGitlabWebhooks(mockEnqueue);
     await handler.handle("Issue Hook", sampleGitLabIssueOpenedPayload());
 
     expect(mockEnqueueIssue).not.toHaveBeenCalled();
   });
 
   it("does NOT enqueue for non-matching event types", async () => {
-    const handler = createGitlabWebhooks(mockQueue);
+    const handler = createGitlabWebhooks(mockEnqueue);
     await handler.handle("Push Hook", {});
 
     expect(mockEnqueueIssue).not.toHaveBeenCalled();
@@ -253,7 +239,7 @@ describe("createGitlabWebhooks", () => {
     payload.object_attributes.labels = [{ title: "other-label" }];
     payload.labels = [{ title: "other-label" }];
 
-    const handler = createGitlabWebhooks(mockQueue);
+    const handler = createGitlabWebhooks(mockEnqueue);
     await handler.handle("Issue Hook", payload);
 
     expect(mockEnqueueIssue).not.toHaveBeenCalled();

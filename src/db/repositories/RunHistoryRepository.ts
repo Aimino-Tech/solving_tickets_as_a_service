@@ -5,7 +5,7 @@
  */
 
 import { queryWithRetry } from '../connection.js';
-import type { NewRunHistory, RunHistory } from '../schema/index.js';
+import type { NewRunHistory, RunHistory } from '../types/index.js';
 
 export class RunHistoryRepository {
   /**

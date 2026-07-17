@@ -1,0 +1,15 @@
+name: default
+labels: [default]
+phases:
+  pre:
+    - command: "opencode plan --issue {issue.number}"
+      session: new
+  main:
+    - command: "opencode agent --full-cycle --issue {issue.number}"
+      session: new
+  post:
+    - command: "opencode remove-anti-slop --since origin/main"
+      session: new
+  final:
+    - command: "opencode agent --mode create-pr"
+      session: new

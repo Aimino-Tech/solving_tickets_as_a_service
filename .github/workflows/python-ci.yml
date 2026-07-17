@@ -1,0 +1,96 @@
+# =============================================================================
+# Python Model Server CI — Ruff Lint, Mypy Type Check, Pytest, Docker Build
+#
+# Runs on every push/PR that touches files under modelserver/.
+# =============================================================================
+
+name: Python CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "modelserver/**"
+      - ".github/workflows/python-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "modelserver/**"
+      - ".github/workflows/python-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint:
+    name: Lint (Ruff + Mypy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: modelserver
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: modelserver/requirements.txt
+
+      - name: Install lint tools
+        run: |
+          pip install ruff mypy
+
+      - name: Run Ruff
+        run: ruff check . --fix
+
+      - name: Run Mypy (strict)
+        run: mypy . --strict
+
+  test:
+    name: Test (Pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: modelserver
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: modelserver/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install test tools
+        run: pip install pytest pytest-cov httpx
+
+      - name: Run tests with coverage
+        run: pytest tests/ -v --cov=server --cov-report=term-missing --cov-fail-under=80
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t tabicl-modelserver:ci -f modelserver/Dockerfile .
+
+      - name: Smoke test — start and health check
+        run: |
+          docker run --rm -d --name modelserver-test -p 8090:8090 tabicl-modelserver:ci
+          sleep 3
+          curl -sf http://localhost:8090/health | python3 -c "import sys, json; d=json.load(sys.stdin); assert d['status'] == 'healthy', f'Expected healthy, got {d}'; print('Health check passed:', d['status'])"
+          docker stop modelserver-test

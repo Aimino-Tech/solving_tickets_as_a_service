@@ -25,7 +25,7 @@ import { config } from '../config.js';
 // Types
 // ---------------------------------------------------------------------------
 
-export type PlanId = 'free' | 'solo' | 'team' | 'enterprise';
+export type PlanId = 'selfHosted' | 'free' | 'solo' | 'team' | 'enterprise';
 
 /**
  * Full plan definition including Stripe references and limits.
@@ -81,6 +81,22 @@ function getPlanPriceId(planId: PlanId): string {
  * (which reads from env vars) so they can be set per-environment.
  */
 export const PLANS: Record<PlanId, Plan> = {
+  selfHosted: {
+    id: 'selfHosted',
+    name: 'Self-Hosted (OSS)',
+    description: 'Unlimited fixes, your API key, your infrastructure',
+    amountCents: 0,
+    priceId: '',
+    monthlyFixLimit: 999_999,
+    premiumModels: true,
+    concurrentFixes: 10,
+    sandboxTimeoutMs: 1_800_000,
+    maxRetries: 10,
+    customWebhooks: true,
+    prioritySupport: false,
+    trialDays: 0,
+    trialFixLimit: 999_999,
+  },
   free: {
     id: 'free',
     name: 'Free',
@@ -181,8 +197,10 @@ export function getMonthlyFixLimit(planId: PlanId): number {
 /**
  * Map a plan ID to a tier string (used in the rate limiter / pricing modules).
  */
-export function planIdToTier(planId: PlanId): 'free' | 'pro' | 'team' | 'enterprise' {
+export function planIdToTier(planId: PlanId): 'free' | 'pro' | 'team' | 'enterprise' | 'self-hosted' {
   switch (planId) {
+    case 'selfHosted':
+      return 'self-hosted';
     case 'free':
       return 'free';
     case 'solo':

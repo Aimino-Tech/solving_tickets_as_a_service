@@ -47,12 +47,12 @@ STAS has **three paths**, all pointing to paid plans for full features:
 | | Self-Hosted (OSS) | Cloud Free | Cloud Paid |
 |---|---|---|---|
 | **Fixes/mo** | Unlimited (your API key) | 10 fixes/mo | 100–500+/mo |
-| **AI model** | Your API key, your model | Our AGI (50% better than GPT-5.5) | Our AGI |
+| **AI model** | Your API key, your model | Our AGI | Our AGI |
 | **Setup** | Manual — you run it | One-click install | One-click install |
 | **Infrastructure** | You manage | We manage | We manage |
 | **Dashboard** | — | Limited analytics | Full analytics, audit log |
 | **Support** | GitHub issues (community) | Community | Slack, email, SLA |
-| **Cost** | Your API usage | Free | $49–$149/mo |
+| **Cost** | Your API usage | Free | $49–$199/mo |
 
 **Conversion funnel**:
 - **Self-host** → Cloud Paid (when infra ops hurt, dashboard needed)

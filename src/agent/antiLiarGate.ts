@@ -397,8 +397,8 @@ async function measureCoverage(
       try {
         const coverageData = JSON.parse(jsonResult.stdout);
         const totals = Object.values(coverageData).reduce(
-          (acc: any, file: any) => {
-            const f = file as any;
+          (acc: { lines: number; totalLines: number; branches: number; totalBranches: number; functions: number; totalFunctions: number; statements: number; totalStatements: number }, file: unknown) => {
+            const f = file as { lines?: { covered?: number; total?: number }; branches?: { covered?: number; total?: number }; functions?: { covered?: number; total?: number }; statements?: { covered?: number; total?: number } };
             acc.lines += f.lines?.covered || 0;
             acc.totalLines += f.lines?.total || 0;
             acc.branches += f.branches?.covered || 0;

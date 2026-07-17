@@ -541,3 +541,32 @@ jobs:
       - name: Gate 3 — Lint Diff Check
         id: gate-3
         run: bash .github/scripts/ci-gates.sh 3
+
+  ##############################################################################
+  # ANTI-AI-SLOP SCAN — detect AI-generated code quality issues
+  ##############################################################################
+  anti-ai-slop-scan:
+    name: Anti-AI-Slop Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: Aimino-Tech/anti-ai-slop-tool
+          path: anti-ai-slop-tool
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install scanner dependencies
+        working-directory: anti-ai-slop-tool
+        run: npm ci --ignore-scripts
+
+      - name: Build scanner
+        working-directory: anti-ai-slop-tool
+        run: npm run build
+
+      - name: Run slop scan on repository
+        run: node anti-ai-slop-tool/packages/cli/dist/index.js scan . --threshold critical --json

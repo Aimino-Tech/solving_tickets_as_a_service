@@ -6,7 +6,7 @@
  */
 
 import { queryWithRetry } from '../connection.js';
-import type { AuditLog, NewAuditLog } from '../schema/index.js';
+import type { AuditLog, NewAuditLog } from '../types/index.js';
 
 export interface AuditLogFilter {
   actorType?: string;

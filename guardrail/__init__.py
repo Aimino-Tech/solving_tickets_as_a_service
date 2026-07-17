@@ -4,14 +4,15 @@ Slop-intent guardrail system for LiteLLM proxy.
 Detects AI-generated code slop in LLM responses and thinking traces:
 stubs, placeholders, mocks, deferrals, self-aware demo patterns.
 
+Submodules:
+    - slop_guardrail: LiteLLM CustomGuardrail for slop detection
+    - audit_log: Persistent SQLite-backed audit logging
+    - memory_service: Persistent SQLite-backed memory storage
+    - dashboard: Lightweight query interface for audit/memory data
+
 Usage:
     from guardrail.slop_guardrail import SlopIntentGuardrail, cli
-
-Components:
-    - SlopIntentGuardrail: LiteLLM CustomGuardrail subclass
-    - cli(): CLI entrypoint for offline text scanning
-    - proxy_config.yaml: LiteLLM proxy configuration with guardrails
-    - slop_patterns.json: Canonical pattern definitions
+    from guardrail import audit_log, memory_service, dashboard
 """
 
 from guardrail.slop_guardrail import SlopIntentGuardrail, SlopIntentGuardrailError, cli

@@ -12,6 +12,7 @@
   },
   "bin": {
     "stas-init": "./scripts/init.ts",
+    "stas": "./src/template/cli.ts",
     "stas-install-mcp": "./scripts/stas-install-mcp.js"
   },
   "scripts": {
@@ -33,6 +34,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run src/__tests__/template/",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "smee": "tsx scripts/smee.ts",
     "docker:build": "docker build -t stas-bot .",
     "docker:run": "docker run -p 3000:3000 stas-bot",
@@ -72,7 +75,11 @@
     "coverage-enforce:changed": "bash scripts/coverage-enforce.sh --changed",
     "anti-liar-gate": "tsx src/agent/antiLiarGate.ts",
     "install-mcp": "bash scripts/install-mcp.sh",
-    "install-mcp:node": "node scripts/stas-install-mcp.js"
+    "install-mcp:node": "node scripts/stas-install-mcp.js",
+    "stas": "tsx src/template/cli.ts",
+    "stas:validate": "tsx src/template/cli.ts template validate",
+    "stas:dry-run": "tsx src/template/cli.ts template dry-run",
+    "stas:install-hook": "tsx src/template/cli.ts install-hook"
   },
   "dependencies": {
     "@linear/sdk": "^87.0.0",
@@ -81,19 +88,24 @@
     "@octokit/webhooks": "^13.4.0",
     "@sentry/node": "^8.0.0",
     "@slack/bolt": "^4.7.3",
-    "bullmq": "^5.78.0",
+    "amqplib": "^2.0.1",
+    "better-sqlite3": "11.10.0",
     "cors": "^2.8.6",
-    "dockerode": "^5.0.1",
     "dotenv": "^16.4.0",
     "e2b": "^2.19.0",
     "express": "^4.21.0",
+    "express-rate-limit": "^8.5.2",
     "graphlib": "^2.1.8",
     "helmet": "^8.2.0",
     "ioredis": "^5.11.1",
+    "js-yaml": "5.2.1",
+    "node-fetch": "^3.3.2",
+    "parquetjs": "^0.11.2",
     "pg": "^8.21.0",
     "pino": "^9.6.0",
     "pixelmatch": "^7.2.0",
     "stripe": "^22.2.2",
+    "xlsx": "^0.18.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -118,7 +130,9 @@
     "@vitest/coverage-v8": "^4.1.8",
     "@vitest/ui": "^4.1.8",
     "anti-hallucination-mcp": "^0.14.0",
+    "dockerode": "^5.0.1",
     "ghostcheck": "^0.1.0",
+    "graphlib": "^2.1.8",
     "knip": "^6.20.0",
     "pino-pretty": "^13.1.3",
     "smee-client": "^5.0.0",
@@ -142,5 +156,10 @@
     "mcp",
     "opencode-skill",
     "skill"
-  ]
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
+  }
 }

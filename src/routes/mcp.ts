@@ -111,10 +111,13 @@ router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
     await addToHistory(client, historyEntry);
 
     try {
-      const { enqueueIssue } = await import('../queue/issueQueue.js');
-      await enqueueIssue(undefined, {
+      const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
+      if (!isConnected()) await rmqConnect();
+      const messageId = `0:${repoOwner}/${repoName}#0-${Date.now()}`;
+      await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
         installationId: 0, repoOwner, repoName, repoPrivate: false, issueNumber: 0,
         issueTitle, issueBody, source: channel || 'mcp', labels: labels || [],
+        _meta: { messageId, enqueuedAt: new Date().toISOString() },
       });
     } catch (queueErr) {
       log.error({ err: String(queueErr), runId }, 'Failed to enqueue MCP issue');
@@ -215,6 +218,17 @@ router.post('/mcp/search', async (req: Request, res: Response) => {
     }
   } catch { log.debug('MCP server not reachable for search'); }
   res.json({ error: 'MCP server not reachable' });
+});
+
+router.post('/mcp/load_data', async (req: Request, res: Response) => {
+  try {
+    const { loadData } = await import('../loader/index.js');
+    const result = await loadData(req.body);
+    res.json(result);
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to load data');
+    res.status(400).json({ error: 'Failed to load data', details: String(err) });
+  }
 });
 
 export default router;

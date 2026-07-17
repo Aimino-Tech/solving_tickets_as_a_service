@@ -5,7 +5,7 @@
  */
 
 import { queryWithRetry } from '../connection.js';
-import type { NewUsageRecord, UsageRecord } from '../schema/index.js';
+import type { NewUsageRecord, UsageRecord } from '../types/index.js';
 
 export class UsageRepository {
   /**
