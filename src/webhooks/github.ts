@@ -352,13 +352,20 @@ export function suggestLabels(titleOrText: string, body?: string): string[] {
     'idea',
     'enhancement',
     'new feature',
+    'support for',
+    'implement',
+    'add ',
+    'like to',
+    'need ',
+    'want ',
+    'propose',
   ];
   if (featurePatterns.some((p) => text.includes(p))) {
     labels.push('enhancement');
   }
 
   // Question indicators
-  const questionPatterns = ['how to', 'how do i', 'question', 'help', 'not sure', 'what is', 'how can', 'guide'];
+  const questionPatterns = ['how to', 'how do i', 'question', 'help', 'not sure', 'what is', 'how can', 'guide', 'is there', 'can i', 'what are', 'does this', 'where', 'why does', 'explain'];
   if (questionPatterns.some((p) => text.includes(p))) {
     labels.push('question');
   }
@@ -376,7 +383,7 @@ export function suggestLabels(titleOrText: string, body?: string): string[] {
   }
 
   // Performance indicators
-  const perfPatterns = ['slow', 'performance', 'latency', 'memory', 'leak', 'optimize', 'bottleneck'];
+  const perfPatterns = ['slow', 'performance', 'latency', 'memory', 'leak', 'optimize', 'bottleneck', 'cpu', 'response time', 'throughput', 'degradation'];
   if (perfPatterns.some((p) => text.includes(p))) {
     labels.push('performance');
   }
