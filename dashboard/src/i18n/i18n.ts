@@ -1,9 +1,11 @@
 import en from './locales/en.json';
 import de from './locales/de.json';
+import fr from './locales/fr.json';
+import es from './locales/es.json';
 
-export type Locale = 'en' | 'de';
+export type Locale = 'en' | 'de' | 'fr' | 'es';
 
-const messages: Record<Locale, Record<string, string>> = { en, de };
+const messages: Record<Locale, Record<string, string>> = { en, de, fr, es };
 
 export type I18nContextValue = {
   locale: Locale;
@@ -22,10 +24,16 @@ export function detectLocale(): Locale {
     // localStorage unavailable (SSR, private browsing edge case)
   }
 
-  const browserLang = typeof navigator !== 'undefined' ? navigator.language : undefined;
-  if (browserLang) {
-    const short = browserLang.split('-')[0] as Locale;
-    if (short in messages) return short;
+  if (typeof navigator !== 'undefined') {
+    const primary = navigator.language?.split('-')[0];
+    if (primary && primary in messages) return primary as Locale;
+
+    if (navigator.languages?.length) {
+      for (const lang of navigator.languages) {
+        const code = lang.split('-')[0];
+        if (code && code in messages) return code as Locale;
+      }
+    }
   }
 
   return DEFAULT_LOCALE;
