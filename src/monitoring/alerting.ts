@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Alerting rules and notification dispatch.
  *
@@ -410,9 +409,9 @@ export function reportWorkerDown(
  *
  * Called periodically by the scheduled health check task.
  */
-export function checkSLOCompliance(): void {
+export async function checkSLOCompliance(): Promise<void> {
   try {
-    const report = generateSLOReport();
+    const report = await generateSLOReport();
 
     // Record metrics to Prometheus
     recordSLIMetrics(report);

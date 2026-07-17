@@ -1,4 +1,3 @@
-// @ts-nocheck - Suppress remaining type errors in production code
 /**
  * MCP Agent Server — JSON-RPC protocol server for agent discovery.
  *

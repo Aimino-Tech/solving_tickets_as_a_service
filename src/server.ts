@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Express API server -- webhook receiver.
  *
@@ -77,7 +76,6 @@ import { kpiRouter } from './routes/kpi.js';
 import healthRouter from './routes/health.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import { proxyRouter } from './routes/proxy.js';
-import previewRoutes from './api/routes/preview.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -105,23 +103,10 @@ export async function createApp(): Promise<express.Application> {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-request-id'],
     exposedHeaders: ['x-request-id'],
-    credentials: true,
-    maxAge: 86400, // 24 hours
   }));
 
-  // -- Health check endpoint ------------------------------------------------
-  app.get('/health', (_req: Request, res: Response) => {
-    const aiDisabled = config.stas.aiDisabled;
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      aiMode: aiDisabled ? 'ai-disabled' : 'enabled',
-      description: aiDisabled ? 'AI-disabled mode — manual infrastructure operation' : 'AI agent active — automated fix pipeline',
-    });
-  });
-
-  app.get('/health/ready', async (_req: Request, res: Response) => {
+  // -- Health check route (consolidated) -----------------------------------
+  app.get('/health', async (_req: Request, res: Response) => {
     const checks: Record<string, string> = {};
     try {
       const { queryWithRetry } = await import('./db/connection.js');
@@ -287,7 +272,7 @@ export async function createApp(): Promise<express.Application> {
       try {
         await githubWebhooks.receive({
           id: deliveryId || crypto.randomUUID(),
-          name: event as EmitterWebhookEventName,
+          name: event as any,
           payload: JSON.parse((rawBody || Buffer.from(JSON.stringify(req.body))).toString()),
         });
       } catch (err) {
@@ -589,7 +574,7 @@ export async function createApp(): Promise<express.Application> {
 
   app.get('/webhook/whatsapp', async (req: Request, res: Response) => {
     const { verifyWhatsAppWebhook } = await import('./channels/whatsapp.js');
-    const result = verifyWhatsAppWebhook(req);
+    const result = verifyWhatsAppWebhook(req as any);
     if (result.verified && result.challenge) {
       res.type('text/plain').send(result.challenge);
     } else {
@@ -711,6 +696,15 @@ export async function createApp(): Promise<express.Application> {
   // ── Shareable run page API (public, no auth) ───────────────────────
   // GET /api/runs/:id — Public run detail JSON/HTML
   app.use('/api/runs', runsRouter);
+
+  // ── Dashboard SPA (served from built dist/) ───────────────────────
+  if (config.nodeEnv !== 'production') {
+    log.info('Dashboard SPA not served in non-production mode — run `cd dashboard && npm run dev`');
+  }
+  app.use('/dashboard', express.static(path.join(__dirname, '../../dashboard/dist')));
+  app.get('/dashboard/*', (_req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, '../../dashboard/dist/index.html'));
+  });
 
   // ── Badge endpoint (public, no auth) ──────────────────────────────
   // GET /badge/:id.svg — shields.io-compatible status badge
@@ -894,7 +888,8 @@ export async function createApp(): Promise<express.Application> {
 
   // Enterprise routes (optional)
   try {
-    const { default: enterpriseRouter } = await import('./routes/enterprise.js');
+    const enterpriseModule = await import('./routes/enterprise.js');
+    const enterpriseRouter = (enterpriseModule as any).default || enterpriseModule;
     app.use('/api/v1/enterprise', enterpriseRouter);
   } catch {
     log.warn('Enterprise routes not available');

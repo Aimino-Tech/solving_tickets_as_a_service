@@ -145,7 +145,7 @@ def run_sse(host="0.0.0.0", port=4095, ssl_keyfile=None, ssl_certfile=None):
     import uvicorn
     from mcp.server.fastmcp import FastMCP as FastMCPType
 
-    app = mcp._app  # Access the underlying ASGI app
+    app = mcp.sse_app()  # Access the underlying ASGI app
 
     ssl_kwargs = {}
     if ssl_keyfile and ssl_certfile:
