@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Documentation — STAS | Solving Tickets As A Service</title>
+  <meta name="description" content="STAS documentation: Setup guides, configuration, API reference, and FAQ." />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stas.aimino.io/docs" />
+  <meta property="og:title" content="Documentation — STAS" />
+  <meta property="og:description" content="STAS documentation: Setup guides, configuration, API reference, and FAQ." />
+  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Documentation — STAS" />
+  <meta name="twitter:description" content="STAS documentation: Setup guides, configuration, API reference, and FAQ." />
+  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+
+  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo"><span class="logo-icon">S</span> STAS</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/">Home</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/trust">Trust</a></li>
+        <li><a href="/docs" class="active">Docs</a></li>
+        <li><a href="/status">Status</a></li>
+        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta">Install App →</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER (slim) -->
+  <section class="page-header" style="padding-bottom:40px">
+    <h1>Documentation</h1>
+    <p class="sub">Everything you need to install, configure, and use STAS.</p>
+  </section>
+
+  <!-- DOCS LAYOUT -->
+  <div class="docs-layout">
+    <aside class="docs-sidebar">
+      <h3>Getting Started</h3>
+      <ul>
+        <li><a href="#quick-start" class="active">Quick Start</a></li>
+        <li><a href="#manual-setup">Manual Setup</a></li>
+        <li><a href="#configuration">Configuration</a></li>
+        <li><a href="#labels">Issue Labels</a></li>
+      </ul>
+      <h3 style="margin-top:24px">Guides</h3>
+      <ul>
+        <li><a href="#docker">Docker Deployment</a></li>
+        <li><a href="#fly-io">Fly.io Deployment</a></li>
+        <li><a href="#railway">Railway Deployment</a></li>
+      </ul>
+      <h3 style="margin-top:24px">Reference</h3>
+      <ul>
+        <li><a href="#api">API Reference</a></li>
+        <li><a href="#webhooks">Webhooks</a></li>
+        <li><a href="#sandbox">Sandbox Environment</a></li>
+      </ul>
+      <h3 style="margin-top:24px">Support</h3>
+      <ul>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+      </ul>
+    </aside>
+
+    <main class="docs-content">
+
+      <!-- QUICK START -->
+      <h2 id="quick-start">Quick Start</h2>
+      <p>Get STAS running on your repository in under 5 minutes.</p>
+
+      <h3>Prerequisites</h3>
+      <ul>
+        <li>A GitHub account with admin access to a repository</li>
+        <li>Node.js 22+ (for self-hosting)</li>
+        <li>OpenCode CLI (for self-hosting)</li>
+      </ul>
+
+      <h3>One-Command Setup</h3>
+      <p>The fastest way to get started:</p>
+      <pre><code>git clone https://github.com/tamnguyen08/solving_tickets_as_a_service
+cd solving_tickets_as_a_service
+npm run init</code></pre>
+      <p>This will install dependencies, create a <code>.env</code> file, and guide you through the setup wizard.</p>
+
+      <h3>Install the GitHub App</h3>
+      <p>1. Go to the <a href="https://github.com/apps/stas-app/installations/new">STAS GitHub App page</a>.</p>
+      <p>2. Click <strong>Configure</strong> → select your repository.</p>
+      <p>3. Label an issue with <code>stas:fix</code> and watch STAS work.</p>
+
+      <div class="note">
+        <p><strong>Tip:</strong> The hosted version requires no infrastructure. Just install the app and label issues. Self-hosting is only needed if you want full control.</p>
+      </div>
+
+      <!-- MANUAL SETUP -->
+      <h2 id="manual-setup">Manual Setup</h2>
+      <h3>1. Clone & Install</h3>
+      <pre><code>git clone https://github.com/tamnguyen08/solving_tickets_as_a_service
+cd solving_tickets_as_a_service
+npm install</code></pre>
+
+      <h3>2. Start OpenCode</h3>
+      <p>OpenCode is the AI agent backend. Start it in a separate terminal:</p>
+      <pre><code>opencode serve --port 4096</code></pre>
+
+      <h3>3. Configure Environment</h3>
+      <pre><code>cp .env.example .env
+# Fill in: GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, GITHUB_WEBHOOK_SECRET</code></pre>
+
+      <h3>4. Seed Database</h3>
+      <pre><code>npx tsx src/db/seed.ts</code></pre>
+
+      <h3>5. Run</h3>
+      <pre><code>npm run dev</code></pre>
+      <p>Verify with: <code>curl http://localhost:3000/health</code></p>
+
+      <!-- CONFIGURATION -->
+      <h2 id="configuration">Configuration</h2>
+      <p>STAS is configured via environment variables. Key settings:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Variable</th><th>Required</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>GITHUB_APP_ID</code></td><td>Yes</td><td>Your GitHub App ID</td></tr>
+            <tr><td><code>GITHUB_APP_PRIVATE_KEY</code></td><td>Yes</td><td>GitHub App private key (PEM)</td></tr>
+            <tr><td><code>GITHUB_WEBHOOK_SECRET</code></td><td>Yes</td><td>Webhook secret</td></tr>
+            <tr><td><code>OPENCODE_URL</code></td><td>No</td><td>OpenCode server URL</td></tr>
+            <tr><td><code>OPENCODE_MODEL</code></td><td>No</td><td>AI model to use</td></tr>
+            <tr><td><code>LOG_LEVEL</code></td><td>No</td><td>debug | info | warn | error</td></tr>
+            <tr><td><code>PORT</code></td><td>No</td><td>Server port (default: 3000)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- LABELS -->
+      <h2 id="labels">Issue Labels</h2>
+      <p>STAS responds to the following issue labels:</p>
+      <table>
+        <thead><tr><th>Label</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><code>stas:fix</code></td><td>Automatically investigate, fix, and open a PR</td></tr>
+          <tr><td><code>stas:investigate</code></td><td>Investigate and report findings without making changes</td></tr>
+          <tr><td><code>stas:refactor</code></td><td>Refactor code with no functional changes</td></tr>
+          <tr><td><code>stas:docs</code></td><td>Generate or update documentation</td></tr>
+        </tbody>
+      </table>
+
+      <!-- DOCKER -->
+      <h2 id="docker">Docker Deployment</h2>
+      <pre><code># Build
+docker build -t stas-bot .
+
+# Run
+docker run -p 3000:3000 \
+  -e GITHUB_APP_ID=your_id \
+  -e GITHUB_APP_PRIVATE_KEY="$(cat your-private-key.pem)" \
+  -e GITHUB_WEBHOOK_SECRET=your_secret \
+  stas-bot</code></pre>
+
+      <div class="note">
+        <p><strong>Security:</strong> Use <code>--read-only --tmpfs /tmp</code> in production for read-only root filesystem.</p>
+      </div>
+
+      <!-- FLY.IO -->
+      <h2 id="fly-io">Fly.io Deployment</h2>
+      <p>STAS includes a <code>fly.toml</code> in the root directory. Deploy with:</p>
+      <pre><code># Install Fly CLI
+curl -L https://fly.io/install.sh | sh
+
+# Deploy
+fly launch
+fly secrets set GITHUB_APP_ID=...
+fly secrets set GITHUB_APP_PRIVATE_KEY="$(cat key.pem)"
+fly secrets set GITHUB_WEBHOOK_SECRET=...
+fly deploy</code></pre>
+
+      <!-- RAILWAY -->
+      <h2 id="railway">Railway Deployment</h2>
+      <p>STAS includes a <code>railway.json</code> config. Deploy on Railway:</p>
+      <pre><code># Install Railway CLI
+npm install -g @railway/cli
+
+# Deploy
+railway login
+railway init
+railway up</code></pre>
+      <p>Set environment variables in the Railway dashboard.</p>
+
+      <!-- API REFERENCE -->
+      <h2 id="api">API Reference</h2>
+      <p>STAS exposes a REST API for managing issues, checking status, and more.</p>
+
+      <h3>Health Check</h3>
+      <pre><code>GET /health</code></pre>
+      <p>Returns <code>{"status":"ok","timestamp":"..."}</code> when the service is running.</p>
+
+      <h3>Webhook Handler</h3>
+      <pre><code>POST /api/github/webhook</code></pre>
+      <p>Handles GitHub webhook events (issue labeling, push events, etc.). Requires <code>X-Hub-Signature-256</code> header for verification.</p>
+
+      <h3>Issue Status</h3>
+      <pre><code>GET /api/issues/:owner/:repo/:number</code></pre>
+      <p>Returns the current status of a STAS-managed issue.</p>
+
+      <!-- WEBHOOKS -->
+      <h2 id="webhooks">Webhooks</h2>
+      <p>STAS uses GitHub webhooks to listen for issue events. Configure your GitHub App with these webhook events:</p>
+      <ul>
+        <li><strong>Issues</strong> — label changes trigger fixes</li>
+        <li><strong>Issue comment</strong> — for interactive workflows</li>
+        <li><strong>Push</strong> — to sync repository state</li>
+        <li><strong>Pull request</strong> — to track PR status</li>
+      </ul>
+
+      <!-- SANDBOX -->
+      <h2 id="sandbox">Sandbox Environment</h2>
+      <p>Each STAS fix runs in an isolated sandbox powered by <a href="https://e2b.dev">E2B</a>. The sandbox includes:</p>
+      <ul>
+        <li>Full Linux environment with common developer tools</li>
+        <li>Network access for dependency installation</li>
+        <li>Runtime support for Node.js, Python, Go, Rust, and more</li>
+        <li>10-minute timeout per fix</li>
+        <li>Ephemeral storage — destroyed after execution</li>
+      </ul>
+
+      <!-- FAQ -->
+      <h2 id="faq">FAQ</h2>
+
+      <h3>Does STAS work with monorepos?</h3>
+      <p>Yes. STAS detects your project structure and works with any monorepo configuration. It reads your existing package manager and test runner configuration.</p>
+
+      <h3>Can I customize the fix prompt?</h3>
+      <p>Advanced users can customize the agent prompt via the <code>OPENCODE_CONFIG</code> environment variable. See the GitHub repo for examples.</p>
+
+      <h3>What happens if the fix breaks tests?</h3>
+      <p>STAS will flag the PR as failing and leave a detailed comment explaining what went wrong. The issue remains open until a human addresses it.</p>
+
+      <h3>Does STAS support GitHub Enterprise Server?</h3>
+      <p>Self-hosted STAS can be configured to work with GHES. Contact <a href="mailto:sales@aimino.io">sales@aimino.io</a> for setup assistance.</p>
+
+      <!-- TROUBLESHOOTING -->
+      <h2 id="troubleshooting">Troubleshooting</h2>
+
+      <h3>STAS doesn't respond to my label</h3>
+      <p>Check that: (1) the GitHub App is installed on your repo, (2) the webhook is configured correctly, (3) the issue has the exact label <code>stas:fix</code> (case-sensitive).</p>
+
+      <h3>Fix fails with a timeout</h3>
+      <p>Large codebases may exceed the default sandbox timeout. Consider upgrading to a Team or Enterprise plan for longer timeouts, or self-host with a custom timeout setting.</p>
+
+      <h3>How do I update STAS?</h3>
+      <p>For the hosted version, updates are automatic. For self-hosted: <code>git pull &amp;&amp; npm install &amp;&amp; npm run build &amp;&amp; npm run start</code>.</p>
+
+      <p style="margin-top:48px;text-align:center;color:var(--text3);font-size:14px">
+        Need help? <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Open a GitHub issue</a> or <a href="mailto:support@aimino.io">email support</a>.
+      </p>
+
+    </main>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/docs">Documentation</a></li>
+          <li><a href="/trust">Trust & Security</a></li>
+          <li><a href="/status">Status</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
+          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="https://aimino.io">AImino</a></li>
+          <li><a href="https://opencode.ai">OpenCode</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/LICENSE">License</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 AImino. All rights reserved.</span>
+      <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">Open Source (MIT)</a>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

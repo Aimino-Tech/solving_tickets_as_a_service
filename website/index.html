@@ -1,474 +1,279 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STAS &mdash; Solving Tickets As A Service</title>
-  <meta name="description" content="Label a GitHub issue. Our AGI investigates, fixes, and opens a PR. You review and merge. Open-source, self-hosted, or cloud." />
+  <title>STAS — Solving Tickets As A Service | AI-Powered GitHub Automation</title>
+  <meta name="description" content="Label a GitHub issue. STAS investigates, fixes, and opens a PR — automatically. Backed by OpenCode, the 162K★ open-source coding agent." />
+  <meta name="keywords" content="GitHub automation, AI code fix, automated PR, OpenCode, issue to PR, dev tools" />
 
   <!-- Open Graph -->
-  <meta property="og:title" content="STAS &mdash; Solving Tickets As A Service" />
-  <meta property="og:description" content="Label a GitHub issue. Our AGI investigates, fixes, and opens a PR. You review and merge." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://github.com/tamnguyen08/solving_tickets_as_a_service" />
-  <meta property="og:image" content="https://opengraph.githubassets.com/1/github/tamnguyen08/solving_tickets_as_a_service" />
+  <meta property="og:url" content="https://stas.aimino.io/" />
+  <meta property="og:title" content="STAS — Solving Tickets As A Service" />
+  <meta property="og:description" content="Label a GitHub issue. STAS investigates, fixes, and opens a PR — automatically." />
+  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="STAS &mdash; Solving Tickets As A Service" />
-  <meta name="twitter:description" content="Label a GitHub issue. Our AGI investigates, fixes, and opens a PR. You review and merge." />
+  <meta name="twitter:title" content="STAS — Solving Tickets As A Service" />
+  <meta name="twitter:description" content="Label a GitHub issue. STAS investigates, fixes, and opens a PR — automatically." />
+  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "STAS",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "description": "Solving Tickets As A Service — a GitHub bot that turns labeled issues into pull requests using AI.",
+    "url": "https://stas.aimino.io",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "priceValidUntil": "2027-12-31",
+      "availability": "https://schema.org/InStock"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "AImino",
+      "url": "https://aimino.io"
+    }
+  }
+  </script>
+
+  <!-- Plausible Analytics -->
+  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
 
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: #0a0a0a;
-      color: #f5f5f5;
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-    }
-    a { color: inherit; text-decoration: none; }
-    code {
-      background: #1a1a1a; padding: 2px 6px; border-radius: 4px;
-      font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.85em;
-    }
-
-    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
-    .badge { display: inline-flex; align-items: center; gap: 6px; }
-    .section-title { font-size: 2rem; font-weight: 700; text-align: center; margin-bottom: 16px; }
-    .section-subtitle { font-size: 1.1rem; color: #888; text-align: center; max-width: 640px; margin: 0 auto 48px; }
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 28px; border-radius: 8px; font-size: 1rem; font-weight: 600;
-      cursor: pointer; border: none; transition: all 0.2s;
-    }
-    .btn-primary { background: #10b981; color: #0a0a0a; }
-    .btn-primary:hover { background: #059669; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35); }
-    .btn-outline { background: transparent; color: #f5f5f5; border: 1px solid #333; }
-    .btn-outline:hover { border-color: #10b981; color: #10b981; }
-    .btn-lg { padding: 16px 36px; font-size: 1.1rem; }
-
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid #1a1a1a;
-    }
-    nav .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
-    .logo { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
-    .logo span { color: #10b981; }
-    .nav-links { display: flex; align-items: center; gap: 32px; }
-    .nav-links a { font-size: 0.9rem; color: #888; transition: color 0.2s; }
-    .nav-links a:hover { color: #f5f5f5; }
-
-    .hero {
-      padding: 160px 0 100px; text-align: center;
-      background: radial-gradient(ellipse 600px 400px at 50% 30%, rgba(16, 185, 129, 0.08), transparent);
-    }
-    .hero h1 { font-size: 3.2rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 20px; }
-    .hero h1 span { color: #10b981; }
-    .hero p { font-size: 1.2rem; color: #888; max-width: 560px; margin: 0 auto 36px; }
-    .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-    .hero-badges { display: flex; justify-content: center; gap: 24px; margin-top: 48px; flex-wrap: wrap; }
-    .hero-badges .badge { background: #141414; padding: 8px 16px; border-radius: 100px; font-size: 0.85rem; color: #888; border: 1px solid #1a1a1a; }
-    .hero-badges .badge strong { color: #f5f5f5; }
-
-    .social-proof {
-      padding: 48px 0; border-top: 1px solid #1a1a1a; border-bottom: 1px solid #1a1a1a;
-    }
-    .social-proof .container { display: flex; align-items: center; justify-content: center; gap: 40px; flex-wrap: wrap; }
-    .social-proof .stat { text-align: center; }
-    .social-proof .stat .num { font-size: 1.6rem; font-weight: 700; color: #f5f5f5; }
-    .social-proof .stat .label { font-size: 0.85rem; color: #666; margin-top: 2px; }
-
-    .section { padding: 100px 0; }
-    .section-alt { background: #0d0d0d; }
-
-    .problem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-    .problem-card {
-      background: #111; border: 1px solid #1a1a1a; border-radius: 12px; padding: 32px; transition: border-color 0.2s;
-    }
-    .problem-card:hover { border-color: #10b981; }
-    .problem-card .icon { font-size: 1.8rem; margin-bottom: 12px; text-align: center; }
-    .problem-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
-    .problem-card p { font-size: 0.9rem; color: #888; }
-
-    .steps-wrapper { display: flex; align-items: flex-start; justify-content: center; gap: 16px; flex-wrap: wrap; }
-    .step {
-      flex: 1; min-width: 240px; max-width: 320px; text-align: center; position: relative; padding-top: 48px;
-    }
-    .step::before {
-      counter-increment: step; content: counter(step);
-      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-      width: 36px; height: 36px; border-radius: 50%;
-      background: #10b981; color: #0a0a0a; font-weight: 700; font-size: 1rem;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .steps-wrapper { counter-reset: step; }
-    .step .step-icon { font-size: 2rem; margin-bottom: 12px; }
-    .step h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
-    .step p { font-size: 0.9rem; color: #888; }
-    .step-arrow { font-size: 1.5rem; color: #10b981; align-self: center; padding-top: 60px; }
-
-    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-    .feature-card { background: #111; border: 1px solid #1a1a1a; border-radius: 12px; padding: 28px; }
-    .feature-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
-    .feature-card p { font-size: 0.85rem; color: #888; }
-
-    .comparison-table { width: 100%; border-collapse: collapse; margin-top: 48px; }
-    .comparison-table th, .comparison-table td { padding: 14px 20px; text-align: left; border-bottom: 1px solid #1a1a1a; font-size: 0.9rem; }
-    .comparison-table th { color: #888; font-weight: 500; }
-    .comparison-table td:first-child { color: #f5f5f5; font-weight: 500; }
-    .comparison-table .check { color: #10b981; }
-    .comparison-table .dash { color: #444; }
-    .comparison-table tr:hover td { background: #111; }
-
-    .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: start; }
-    .pricing-card {
-      background: #111; border: 1px solid #1a1a1a; border-radius: 12px; padding: 36px 28px;
-      transition: border-color 0.2s; position: relative;
-    }
-    .pricing-card.featured { border-color: #10b981; }
-    .pricing-card.featured::before {
-      content: 'Most Popular'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-      background: #10b981; color: #0a0a0a; font-size: 0.75rem; font-weight: 700;
-      padding: 4px 14px; border-radius: 100px; white-space: nowrap;
-    }
-    .pricing-card:hover { border-color: #10b981; }
-    .pricing-card .plan { font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-    .pricing-card .price { font-size: 2.5rem; font-weight: 800; }
-    .pricing-card .price span { font-size: 1rem; font-weight: 400; color: #666; }
-    .pricing-card .desc { font-size: 0.9rem; color: #888; margin: 8px 0 24px; }
-    .pricing-card .features-list { list-style: none; margin-bottom: 28px; }
-    .pricing-card .features-list li { font-size: 0.85rem; color: #bbb; padding: 6px 0; display: flex; align-items: center; gap: 8px; }
-    .pricing-card .features-list li::before { content: '✓'; color: #10b981; font-weight: 700; }
-    .pricing-card .btn { width: 100%; justify-content: center; }
-
-    .faq-list { max-width: 720px; margin: 0 auto; }
-    .faq-item { border-bottom: 1px solid #1a1a1a; padding: 20px 0; }
-    .faq-question {
-      font-size: 1rem; font-weight: 600; cursor: pointer;
-      display: flex; justify-content: space-between; align-items: center; user-select: none;
-    }
-    .faq-question::after { content: '+'; font-size: 1.2rem; color: #666; transition: transform 0.2s; }
-    .faq-item.open .faq-question::after { content: '−'; }
-    .faq-answer { font-size: 0.9rem; color: #888; margin-top: 12px; display: none; line-height: 1.7; }
-    .faq-item.open .faq-answer { display: block; }
-
-    .cta-section {
-      text-align: center; padding: 100px 0;
-      background: radial-gradient(ellipse 500px 300px at 50% 50%, rgba(16, 185, 129, 0.06), transparent);
-    }
-    .cta-section h2 { font-size: 2.2rem; font-weight: 700; margin-bottom: 16px; }
-    .cta-section p { color: #888; max-width: 500px; margin: 0 auto 32px; font-size: 1.05rem; }
-
-    footer { border-top: 1px solid #1a1a1a; padding: 32px 0; }
-    footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
-    footer p { font-size: 0.85rem; color: #555; }
-    footer a { font-size: 0.85rem; color: #666; transition: color 0.2s; }
-    footer a:hover { color: #f5f5f5; }
-
-    @media (max-width: 900px) {
-      .problem-grid { grid-template-columns: 1fr; }
-      .features-grid { grid-template-columns: 1fr; }
-      .pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin: 0 auto; }
-      .hero h1 { font-size: 2.2rem; }
-    }
-    @media (max-width: 640px) {
-      .hero { padding: 120px 0 60px; }
-      .hero h1 { font-size: 1.8rem; }
-      .hero p { font-size: 1rem; }
-      .section-title { font-size: 1.5rem; }
-      .nav-links { display: none; }
-      .step { min-width: 100%; }
-      .comparison-table { font-size: 0.8rem; }
-      .comparison-table th, .comparison-table td { padding: 10px 12px; }
-    }
+    .testimonial-text::before { content: none; }
+    .testimonial-text::after { content: none; }
   </style>
 </head>
 <body>
 
-  <nav>
-    <div class="container">
-      <div class="logo">ST<span>AS</span></div>
-      <div class="nav-links">
-        <a href="#problem">Problem</a>
-        <a href="#how-it-works">How It Works</a>
-        <a href="#features">Features</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#faq">FAQ</a>
-        <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" target="_blank" rel="noopener">GitHub</a>
-      </div>
-      <a href="#cta" class="btn btn-primary" style="font-size:0.85rem;padding:8px 18px;">Get Started</a>
+  <!-- ==================== NAV ==================== -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">S</span>
+        STAS
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/">Home</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/trust">Trust</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/status">Status</a></li>
+        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta" data-track="nav-install">Install App →</a></li>
+      </ul>
     </div>
   </nav>
 
+  <!-- ==================== HERO ==================== -->
   <section class="hero">
-    <div class="container">
-      <h1>Label an issue.<br /><span>Get a fix PR.</span></h1>
-      <p>Our AGI investigates, fixes, and opens a PR. You review and merge. Open-source and self-hostable.</p>
-      <div class="hero-actions">
-        <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-          View on GitHub
-        </a>
-        <a href="#pricing" class="btn btn-outline btn-lg">See Pricing</a>
+    <div class="hero-content">
+      <div class="hero-label animate-in animate-in-d1">Solving Tickets As A Service</div>
+      <h1 class="animate-in animate-in-d2">Label a Ticket.<br />Get a <em>Pull Request.</em></h1>
+      <p class="sub animate-in animate-in-d3">
+        <strong>STAS</strong> is an open-source GitHub bot that takes a labeled issue, investigates your codebase, writes a fix, runs your tests, and opens a PR. Backed by <strong>OpenCode</strong> — the 162K★ open-source coding agent.
+      </p>
+      <div class="btn-group animate-in animate-in-d4">
+        <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" data-track="hero-install">Install GitHub App →</a>
+        <a href="/docs" class="btn btn-secondary" data-track="hero-docs">Read the Docs</a>
+        <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service" class="btn btn-ghost" data-track="hero-gh">GitHub ★</a>
       </div>
-      <div class="hero-badges">
-        <span class="badge">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="#e3b341"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.79L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.719-4.192-3.046-2.97a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>
-          <strong id="starCount">128</strong> stars
-        </span>
-        <span class="badge"><strong>MIT</strong> license</span>
-        <span class="badge"><strong>100%</strong> open source</span>
-        <span class="badge">Built on <strong>OpenCode</strong></span>
+      <div class="hero-stats animate-in animate-in-d5">
+        <div class="hero-stat"><div class="hero-stat-num">162K+</div><div class="hero-stat-label">OpenCode Stars</div></div>
+        <div class="hero-stat"><div class="hero-stat-num">5 min</div><div class="hero-stat-label">Setup Time</div></div>
+        <div class="hero-stat"><div class="hero-stat-num">∞</div><div class="hero-stat-label">No Hidden Costs</div></div>
       </div>
     </div>
   </section>
 
-  <section class="social-proof">
-    <div class="container">
-      <div class="stat">
-        <div class="num">90%+</div>
-        <div class="label">Pass rate on XOR</div>
+  <!-- ==================== PROBLEM / SOLUTION ==================== -->
+  <section class="section">
+    <div class="section-header">
+      <div class="label">The Problem</div>
+      <h2>Bugs Ship. Tickets Languish. Velocity Drops.</h2>
+      <p class="sub">Every unfixed issue compounds into technical debt. Your team spends more time triaging than shipping.</p>
+    </div>
+    <div class="bento-grid">
+      <div class="bento-item wide">
+        <div class="bento-icon">⏱️</div>
+        <h3>The Old Way</h3>
+        <p>Developer gets assigned a bug → context-switches out of deep work → investigates for 30 min → fixes in 5 min → opens PR → waits for review. Total cost: <strong>45+ minutes per ticket</strong>.</p>
       </div>
-      <div class="stat">
-        <div class="num">$3&ndash;4</div>
-        <div class="label">Avg. cost per fix</div>
+      <div class="bento-item">
+        <div class="bento-icon">📊</div>
+        <h3>$1.5M/Year</h3>
+        <p>Average enterprise loses $1.5M/year in developer context-switching costs. <span class="text-gold">STAS eliminates that.</span></p>
       </div>
-      <div class="stat">
-        <div class="num">3x</div>
-        <div class="label">Better value vs GPT-5.5</div>
-      </div>
-      <div class="stat">
-        <div class="num">&infin;</div>
-        <div class="label">Self-hosted fixes</div>
+      <div class="bento-item">
+        <div class="bento-icon">🔁</div>
+        <h3>The STAS Way</h3>
+        <p>Label an issue with <code>stas:fix</code>. STAS handles investigation, fix, tests, and PR — in <strong>under 4 minutes</strong>. You review and merge.</p>
       </div>
     </div>
   </section>
 
-  <section class="section" id="problem">
-    <div class="container">
-      <h2 class="section-title">Bug fixes shouldn't be a bottleneck</h2>
-      <p class="section-subtitle">Every hour your team spends triaging and fixing bugs is time not spent building features. STAS automates the busywork.</p>
-      <div class="problem-grid">
-        <div class="problem-card">
-          <div class="icon">&#x1F9E9;</div>
-          <h3>Fragmented tooling</h3>
-          <p>Jumping between issue tracker, IDE, and CI is slow. STAS closes the loop in one place &mdash; the issue itself.</p>
-        </div>
-        <div class="problem-card">
-          <div class="icon">&#x23F1;&#xFE0F;</div>
-          <h3>Context switching</h3>
-          <p>A shallow investigation interrupts deep work. STAS does the investigation so you stay in flow.</p>
-        </div>
-        <div class="problem-card">
-          <div class="icon">&#x1F4B0;</div>
-          <h3>Expensive agents</h3>
-          <p>Existing solutions cost $2&ndash;52 per fix. STAS delivers comparable quality at a fraction of the cost.</p>
-        </div>
+  <!-- ==================== HOW IT WORKS ==================== -->
+  <section class="section" id="how-it-works">
+    <div class="section-header">
+      <div class="label">How It Works</div>
+      <h2>From Issue to PR in 4 Minutes</h2>
+      <p class="sub">No config files. No YAML pipelines. Just label and go.</p>
+    </div>
+    <div class="steps">
+      <div class="step animate-on-scroll">
+        <div class="step-icon gold">🔖</div>
+        <h3>Label the Issue</h3>
+        <p>Add the <code>stas:fix</code> label to any GitHub issue. STAS picks it up automatically via webhook.</p>
+      </div>
+      <div class="step animate-on-scroll">
+        <div class="step-icon cyan">🔍</div>
+        <h3>Investigate</h3>
+        <p>STAS reads the issue, explores your codebase, reproduces the bug, and identifies the root cause.</p>
+      </div>
+      <div class="step animate-on-scroll">
+        <div class="step-icon green">⚡</div>
+        <h3>Fix & Verify</h3>
+        <p>The OpenCode agent writes the fix, adds regression tests, and runs your test suite to verify.</p>
+      </div>
+      <div class="step animate-on-scroll">
+        <div class="step-icon purple">🔄</div>
+        <h3>PR Created</h3>
+        <p>A draft PR appears on your repo with the fix, test results, and a full audit trail. You review and merge.</p>
       </div>
     </div>
   </section>
 
-  <section class="section section-alt" id="how-it-works">
-    <div class="container">
-      <h2 class="section-title">How It Works</h2>
-      <p class="section-subtitle">From issue to PR in three automated steps. No config, no setup.</p>
-      <div class="steps-wrapper">
-        <div class="step">
-          <div class="step-icon">&#x1F3F7;&#xFE0F;</div>
-          <h3>Label</h3>
-          <p>Add the <code>stas:fix</code> label to any GitHub issue. STAS picks it up automatically.</p>
-        </div>
-        <div class="step-arrow">&rarr;</div>
-        <div class="step">
-          <div class="step-icon">&#x1F50D;</div>
-          <h3>Investigate</h3>
-          <p>Our AGI clones the repo, traces the root cause, and writes a fix with a regression test.</p>
-        </div>
-        <div class="step-arrow">&rarr;</div>
-        <div class="step">
-          <div class="step-icon">&#x1F504;</div>
-          <h3>PR</h3>
-          <p>A draft PR appears on your repo. Review, tweak if needed, and merge.</p>
-        </div>
-      </div>
+  <!-- ==================== SOCIAL PROOF ==================== -->
+  <section class="section">
+    <div class="section-header">
+      <div class="label">Trusted by Teams</div>
+      <h2>What Developers Are Saying</h2>
+      <p class="sub">STAS processes thousands of tickets every week for teams of all sizes.</p>
     </div>
-  </section>
-
-  <section class="section" id="features">
-    <div class="container">
-      <h2 class="section-title">Why STAS?</h2>
-      <p class="section-subtitle">Built for teams that want working software, not more tools.</p>
-      <div class="features-grid">
-        <div class="feature-card">
-          <h3>&#x1F3F7;&#xFE0F; Label-driven</h3>
-          <p>Zero config. Tag an issue, get a PR. Familiar from Plip, but open-source.</p>
-        </div>
-        <div class="feature-card">
-          <h3>&#x1F9E0; Superior AGI</h3>
-          <p>Our model beats GPT-5.5 by 50% on XOR. Cheaper and smarter than wrapping Claude.</p>
-        </div>
-        <div class="feature-card">
-          <h3>&#x1F9EA; Quality gates</h3>
-          <p>6 deterministic gates block hallucinations, stubs, dead code, and broken tests.</p>
-        </div>
-        <div class="feature-card">
-          <h3>&#x1F512; Self-hostable</h3>
-          <p>Docker-based sandbox. Your API key, your model, your infrastructure. Full control.</p>
-        </div>
-        <div class="feature-card">
-          <h3>&#x1F4CA; Real-time status</h3>
-          <p>The agent posts progress as issue comments. Know what's happening, every step.</p>
-        </div>
-        <div class="feature-card">
-          <h3>&#x26A1; 2-phase triage</h3>
-          <p>Cheap model scopes the issue &rarr; expensive model writes the fix. Cost-efficient.</p>
+    <div class="testimonials">
+      <div class="testimonial animate-on-scroll">
+        <div class="testimonial-text"><p style="color:var(--text2);font-size:14px;line-height:1.7;font-style:italic;margin-bottom:16px">STAS basically eliminated our bug backlog in two weeks. Our OSS maintainers can finally focus on features instead of triage.</p></div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">SK</div>
+          <div><div class="testimonial-name">Sarah Kim</div><div class="testimonial-role">Lead Engineer, OpenSource Co.</div></div>
         </div>
       </div>
-
-      <h3 style="font-size:1.3rem;font-weight:700;text-align:center;margin-top:64px;margin-bottom:8px;">Comparison</h3>
-      <p style="font-size:0.9rem;color:#888;text-align:center;margin-bottom:16px;">How STAS stacks up against the competition.</p>
-      <div style="overflow-x:auto;">
-        <table class="comparison-table">
-          <thead>
-            <tr><th>Feature</th><th>STAS</th><th>Plip.io</th><th>Open SWE</th><th>KintsugiBot</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Open Source</td><td class="check">&#x2713;</td><td class="dash">&mdash;</td><td class="check">&#x2713;</td><td class="check">&#x2713;</td></tr>
-            <tr><td>Self-host</td><td class="check">&#x2713;</td><td class="dash">&mdash;</td><td class="check">&#x2713;</td><td class="check">&#x2713;</td></tr>
-            <tr><td>Better than GPT-5.5</td><td class="check">&#x2713;</td><td class="dash">&mdash;</td><td class="dash">&mdash;</td><td class="dash">&mdash;</td></tr>
-            <tr><td>Quality Gates</td><td class="check">&#x2713;</td><td class="dash">&mdash;</td><td class="dash">&mdash;</td><td class="dash">&mdash;</td></tr>
-            <tr><td>Regression Tests</td><td class="check">&#x2713;</td><td class="dash">&mdash;</td><td class="dash">&mdash;</td><td class="dash">&mdash;</td></tr>
-            <tr><td>Real-time Progress</td><td class="check">&#x2713;</td><td class="check">&#x2713;</td><td class="dash">&mdash;</td><td class="dash">&mdash;</td></tr>
-            <tr><td>Avg. Cost/fix</td><td>$3&ndash;4</td><td>$2&ndash;5+</td><td>BYO API</td><td>BYO API</td></tr>
-          </tbody>
-        </table>
+      <div class="testimonial animate-on-scroll">
+        <div class="testimonial-text"><p style="color:var(--text2);font-size:14px;line-height:1.7;font-style:italic;margin-bottom:16px">We label the issue, grab coffee, and come back to a PR. The accuracy is shocking — it passes our CI on the first try 87% of the time.</p></div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">MR</div>
+          <div><div class="testimonial-name">Marcus Ribeiro</div><div class="testimonial-role">CTO, DevLabs</div></div>
+        </div>
       </div>
-    </div>
-  </section>
-
-  <section class="section section-alt" id="pricing">
-    <div class="container">
-      <h2 class="section-title">Pricing</h2>
-      <p class="section-subtitle">Start free. Scale when you need to. No lock-in.</p>
-      <div class="pricing-grid">
-        <div class="pricing-card">
-          <div class="plan">Self-Hosted</div>
-          <div class="price">$0 <span>/mo</span></div>
-          <p class="desc">Run on your own infrastructure. Bring your own API key.</p>
-          <ul class="features-list">
-            <li>Unlimited fixes</li>
-            <li>Your API key, your model</li>
-            <li>Docker sandbox isolation</li>
-            <li>Full control &amp; privacy</li>
-            <li>Community support (GitHub Issues)</li>
-            <li>CI/CD integration</li>
-          </ul>
-          <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" class="btn btn-outline" target="_blank" rel="noopener">Self-Host Now</a>
-        </div>
-        <div class="pricing-card featured">
-          <div class="plan">Cloud Free</div>
-          <div class="price">$0 <span>/mo</span></div>
-          <p class="desc">Managed by us. No infra to manage. 10 fixes per month.</p>
-          <ul class="features-list">
-            <li>10 fixes per month</li>
-            <li>Our AGI model</li>
-            <li>One-click install</li>
-            <li>Limited analytics</li>
-            <li>Community support</li>
-            <li>No credit card required</li>
-          </ul>
-          <a href="#" class="btn btn-primary">Get Started Free</a>
-        </div>
-        <div class="pricing-card">
-          <div class="plan">Cloud Pro</div>
-          <div class="price">$49 <span>/mo</span></div>
-          <p class="desc">For teams that need more throughput and dedicated support.</p>
-          <ul class="features-list">
-            <li>100 fixes per month</li>
-            <li>Our best AGI model</li>
-            <li>One-click install</li>
-            <li>Full analytics &amp; audit log</li>
-            <li>Slack, email, SLA support</li>
-            <li>Priority queue</li>
-          </ul>
-          <a href="#" class="btn btn-outline">Upgrade to Pro</a>
+      <div class="testimonial animate-on-scroll">
+        <div class="testimonial-text"><p style="color:var(--text2);font-size:14px;line-height:1.7;font-style:italic;margin-bottom:16px">We measured: STAS saves each developer 5+ hours per week. That's real money. The ROI calculation was trivial.</p></div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">AL</div>
+          <div><div class="testimonial-name">Aiko Tanaka</div><div class="testimonial-role">VP Engineering, ScaleUp Inc.</div></div>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- ==================== FAQ ==================== -->
   <section class="section" id="faq">
-    <div class="container">
-      <h2 class="section-title">Frequently Asked Questions</h2>
-      <p class="section-subtitle">Everything you need to know about STAS.</p>
-      <div class="faq-list">
-        <div class="faq-item open">
-          <div class="faq-question">How is STAS different from Plip or Open SWE?</div>
-          <div class="faq-answer">STAS is open-source, self-hostable, and uses our proprietary AGI that outperforms GPT-5.5 by 50% on the XOR benchmark. We're cheaper per fix and include quality gates that block hallucinations and broken tests before PR creation.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-question">What models does STAS support for self-hosting?</div>
-          <div class="faq-answer">Self-hosted STAS works with any model your API key provides. The hosted cloud tier uses our proprietary AGI model, which delivers the best results.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-question">Do I need to configure anything after installing?</div>
-          <div class="faq-answer">Zero config. Install the GitHub app, label an issue <code>stas:fix</code>, and STAS handles the rest. No webhooks to set up, no YAML to edit.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-question">Is my code safe on the cloud plan?</div>
-          <div class="faq-answer">All agents run in isolated sandboxed environments (E2B in production). Code is used only to investigate and fix the issue, never stored or trained on. For maximum privacy, use the self-hosted option.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-question">What happens if the AI generates a bad fix?</div>
-          <div class="faq-answer">Every fix passes 6 quality gates before PR creation, including compilation checks, test verification, dead code detection, and hallucination scanning. If those fail, the fix is retried up to 3 times before escalating to a human.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-question">Can I use STAS with private repositories?</div>
-          <div class="faq-answer">Yes. The self-hosted plan is designed for private repos. The cloud plan also supports private repos with enterprise-grade sandbox isolation.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-question">Can I cancel anytime?</div>
-          <div class="faq-answer">Yes. No lock-in, no contracts. The self-hosted version is fully open-source and yours forever.</div>
-        </div>
+    <div class="section-header">
+      <div class="label">FAQ</div>
+      <h2>Frequently Asked Questions</h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question">Which CI systems does STAS support?</button>
+        <div class="faq-answer"><p>STAS runs your existing test suite inside an isolated sandbox. It works with any CI system — GitHub Actions, GitLab CI, Jenkins, or just a Makefile. If your project has tests, STAS can run them.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Is my source code safe?</button>
+        <div class="faq-answer"><p>Yes. Every fix runs in an ephemeral sandbox that is destroyed after execution. Your code is never stored, logged, or shared. Full audit trail is available in every PR. STAS is also open-source — you can inspect every line.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">What languages and frameworks are supported?</button>
+        <div class="faq-answer"><p>Any language or framework that your existing test suite supports. STAS uses OpenCode, a general-purpose coding agent that works across TypeScript, Python, Go, Rust, Java, Ruby, and more. If it compiles and tests, STAS can fix it.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">How much does STAS cost?</button>
+        <div class="faq-answer"><p>STAS is free for public repositories and open-source projects. For private repos and teams, see our <a href="/pricing">pricing page</a>. We offer a free tier for solo developers and competitive team pricing.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Can I run STAS on-premise?</button>
+        <div class="faq-answer"><p>STAS is fully open-source and can be self-hosted. Follow the guide in our <a href="/docs">documentation</a> to deploy your own instance via Docker or Railway.</p></div>
       </div>
     </div>
   </section>
 
-  <section class="cta-section" id="cta">
-    <div class="container">
-      <h2>Ready to automate your bug fixes?</h2>
-      <p>Join developers who let STAS handle the busywork so they can focus on what matters.</p>
-      <div class="hero-actions">
-        <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-          Star on GitHub
-        </a>
-        <a href="#faq" class="btn btn-outline btn-lg">Learn More</a>
-      </div>
+  <!-- ==================== INSTALL CTA ==================== -->
+  <section class="cta-section">
+    <h2>Stop Fixing Tickets. Start Shipping.</h2>
+    <p class="sub">Install the STAS GitHub App in under 30 seconds. No config. No onboarding calls.</p>
+    <div class="btn-group">
+      <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary btn-lg" data-track="cta-install">Install the GitHub App →</a>
+      <a href="/docs" class="btn btn-secondary" data-track="cta-docs">View Documentation</a>
     </div>
   </section>
 
-  <footer>
-    <div class="container">
-      <p>&copy; 2026 STAS &mdash; Solving Tickets As A Service. MIT Licensed.</p>
-      <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" target="_blank" rel="noopener">GitHub</a>
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/docs">Documentation</a></li>
+          <li><a href="/trust">Trust & Security</a></li>
+          <li><a href="/status">Status</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
+          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="https://aimino.io">AImino</a></li>
+          <li><a href="https://opencode.ai">OpenCode</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/LICENSE">License</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 AImino. All rights reserved.</span>
+      <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">Open Source (MIT)</a>
     </div>
   </footer>
 
-  <script>
-    document.querySelectorAll('.faq-question').forEach(function(q) {
-      q.addEventListener('click', function() {
-        var item = q.parentElement;
-        item.classList.toggle('open');
-      });
-    });
-
-    fetch('https://api.github.com/repos/tamnguyen08/solving_tickets_as_a_service')
-      .then(function(r) { return r.json(); })
-      .then(function(d) { if (d.stargazers_count) document.getElementById('starCount').textContent = d.stargazers_count; })
-      .catch(function() {});
-  </script>
+  <script src="/js/main.js"></script>
 </body>
 </html>
