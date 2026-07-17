@@ -22,6 +22,8 @@
  */
 
 import crypto from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
@@ -673,6 +675,69 @@ export async function createApp(): Promise<express.Application> {
   } catch {
     log.warn('Enterprise routes not available');
   }
+
+  // ── Public Health Endpoints ──────────────────────────────────────────
+  // These are unauthenticated endpoints used by load balancers, Docker
+  // healthcheck, monitoring systems, and Kubernetes liveness/readiness probes.
+
+  // GET /health — Basic liveness check (used by Docker HEALTHCHECK, K8s liveness)
+  app.get('/health', (_req: Request, res: Response) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      version: process.env.npm_package_version ?? '0.1.0',
+    });
+  });
+
+  // GET /health/ready — Readiness check (K8s readiness probe)
+  app.get('/health/ready', async (_req: Request, res: Response) => {
+    try {
+      const { getDependenciesHealth } = await import('./health/dependencies.js');
+      const health = await getDependenciesHealth();
+      res.status(health.status === 'ok' ? 200 : 503).json(health);
+    } catch (err) {
+      res.status(503).json({
+        status: 'error',
+        error: String(err),
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
+  // GET /health/queue — Queue health check (K8s custom probe / monitoring)
+  app.get('/health/queue', async (_req: Request, res: Response) => {
+    try {
+      const { getQueueHealth } = await import('./health/queueHealth.js');
+      const health = await getQueueHealth();
+      const httpStatus = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
+      res.status(httpStatus).json(health);
+    } catch (err) {
+      res.status(503).json({
+        status: 'error',
+        error: String(err),
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
+  // GET /metrics — Prometheus metrics endpoint
+  app.get('/metrics', async (_req: Request, res: Response) => {
+    const { bridgeMetrics } = await import('./bridge/metrics.js');
+    const metrics = bridgeMetrics.render();
+    res.type('text/plain; version=0.0.4').send(metrics);
+  });
+
+  // GET /github-app-manifest.json — GitHub App manifest for user self-service
+  app.get('/github-app-manifest.json', (_req: Request, res: Response) => {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    res.sendFile(path.join(__dirname, '..', 'public', 'github-app-manifest.json'), (err) => {
+      if (err) {
+        res.status(404).json({ error: 'Manifest not found' });
+      }
+    });
+  });
   // -- 404 handler ----------------------------------------------------------
 
   app.use((req: Request, res: Response) => {
