@@ -70,7 +70,6 @@ import { qualityRouter } from './routes/quality.js';
 import previewRoutes from './api/routes/preview.js';
 import { kpiRouter } from './routes/kpi.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
-import previewRoutes from './api/routes/preview.js';
 
 const log = rootLogger.child({ module: 'server' });
 

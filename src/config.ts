@@ -240,6 +240,11 @@ const envSchema = z.object({
   METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
+  // ── Pipeline ──
+  PIPELINE_SANDBOX_ENABLED: boolSchema(true),
+  PIPELINE_QUALITY_GATE_TIMEOUT_MS: z.coerce.number().int().positive().default(300000),
+  PIPELINE_COMPLIANCE_CHECK_ENABLED: boolSchema(true),
+
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -549,6 +554,12 @@ function buildConfig(env: ParsedEnv) {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    pipeline: {
+      sandboxEnabled: env.PIPELINE_SANDBOX_ENABLED,
+      qualityGateTimeoutMs: env.PIPELINE_QUALITY_GATE_TIMEOUT_MS,
+      complianceCheckEnabled: env.PIPELINE_COMPLIANCE_CHECK_ENABLED,
     },
   } as const;
 }
