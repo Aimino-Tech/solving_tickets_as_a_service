@@ -224,7 +224,7 @@ describe("createGitlabWebhooks", () => {
 
     expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
     expect(mockEnqueueIssue).toHaveBeenCalledWith(
-      undefined,
+      mockQueue,
       expect.objectContaining({
         repoOwner: "owner",
         repoName: "test-repo",

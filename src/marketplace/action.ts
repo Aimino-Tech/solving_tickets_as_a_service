@@ -58,7 +58,7 @@ export async function run(): Promise<void> {
     ].filter(Boolean).join('\n\n');
 
     if (github.context.payload.pull_request) {
-      core.notice(annotationBody);
+      (core as any).notice(annotationBody);
     }
 
     if (result.status === 'failed') {

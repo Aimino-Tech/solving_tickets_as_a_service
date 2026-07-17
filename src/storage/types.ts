@@ -18,7 +18,7 @@ import type {
   TeamMember,
   NewTeamMember,
   UsageRecord,
-} from '../db/schema/index.js';
+} from '../db/types/index.js';
 
 // ── Run record types (used by lightweight storage backends) ───────────
 

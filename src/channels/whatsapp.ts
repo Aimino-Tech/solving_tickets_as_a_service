@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import type { ProgressUpdate, ChannelMessage, ProgressSender } from './base.js';

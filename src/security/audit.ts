@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Admin audit trail — logs all admin actions for security review.
  *

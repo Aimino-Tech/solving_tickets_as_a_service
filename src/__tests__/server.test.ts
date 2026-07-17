@@ -54,27 +54,27 @@ const { mockLoggerChild } = vi.hoisted(() => {
   return { mockLoggerChild: logger };
 });
 
-const mockCreateIssueQueue = vi.hoisted(() => vi.fn().mockReturnValue({ add: vi.fn(), close: vi.fn() }));
-const mockEnqueueIssue = vi.hoisted(() => vi.fn().mockResolvedValue('job-mock-id'));
-const mockVerifyAndReceive = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockCreateIssueQueue = vi.hoisted(() => vi.fn().mockReturnValueOnce({ add: vi.fn(), close: vi.fn() }));
+const mockEnqueueIssue = vi.hoisted(() => vi.fn().mockResolvedValueOnce('job-mock-id'));
+const mockVerifyAndReceive = vi.hoisted(() => vi.fn().mockResolvedValueOnce(undefined));
 const mockCreateGithubWebhooks = vi.hoisted(() =>
-  vi.fn().mockReturnValue({
+  vi.fn().mockReturnValueOnce({
     verifyAndReceive: mockVerifyAndReceive,
     on: vi.fn(),
     receive: vi.fn(),
   }),
 );
-const mockCreateGitlabWebhooks = vi.hoisted(() => vi.fn().mockReturnValue({ handle: vi.fn() }));
-const mockCreateBitbucketWebhooks = vi.hoisted(() => vi.fn().mockReturnValue({ handle: vi.fn() }));
+const mockCreateGitlabWebhooks = vi.hoisted(() => vi.fn().mockReturnValueOnce({ handle: vi.fn() }));
+const mockCreateBitbucketWebhooks = vi.hoisted(() => vi.fn().mockReturnValueOnce({ handle: vi.fn() }));
 const mockStripeHandler = vi.hoisted(() => vi.fn());
-const mockCreateStripeWebhookHandler = vi.hoisted(() => vi.fn().mockReturnValue(mockStripeHandler));
+const mockCreateStripeWebhookHandler = vi.hoisted(() => vi.fn().mockReturnValueOnce(mockStripeHandler));
 const mockGetSlackBoltApp = vi.hoisted(() =>
-  vi.fn().mockReturnValue({
+  vi.fn().mockReturnValueOnce({
     mountOn: vi.fn(),
     client: { conversations: { open: vi.fn(), invite: vi.fn() } },
   }),
 );
-const mockGetTracker = vi.hoisted(() => vi.fn().mockReturnValue(null));
+const mockGetTracker = vi.hoisted(() => vi.fn().mockReturnValueOnce(null));
 const mockInitTrackers = vi.hoisted(() => vi.fn());
 const mockInitMetering = vi.hoisted(() => vi.fn());
 
@@ -233,21 +233,21 @@ vi.mock('../monitoring/sentry.js', () => ({
   addBreadcrumb: vi.fn(),
 }));
 vi.mock('../db/connection.js', () => ({
-  queryWithRetry: vi.fn().mockResolvedValue({ rows: [{ ok: 1 }] }),
+  queryWithRetry: vi.fn().mockResolvedValueOnce({ rows: [{ ok: 1 }] }),
 }));
 vi.mock('../bridge/metrics.js', () => ({
-  bridgeMetrics: { render: vi.fn().mockReturnValue('') },
+  bridgeMetrics: { render: vi.fn().mockReturnValueOnce('') },
 }));
 vi.mock('../health/opencodeHealth.js', () => ({
   opencodeHealth: {
-    getStatus: vi.fn().mockReturnValue({ status: 'healthy', circuit: 'closed', consecutiveFailures: 0, httpStatus: 200 }),
-    checkNow: vi.fn().mockResolvedValue({ status: 'healthy' }),
+    getStatus: vi.fn().mockReturnValueOnce({ status: 'healthy', circuit: 'closed', consecutiveFailures: 0, httpStatus: 200 }),
+    checkNow: vi.fn().mockResolvedValueOnce({ status: 'healthy' }),
   },
 }));
 vi.mock('../webhooks/eventLogger.js', () => ({
-  logWebhookReceived: vi.fn().mockResolvedValue(1),
-  logWebhookProcessed: vi.fn().mockResolvedValue(undefined),
-  logWebhookFailed: vi.fn().mockResolvedValue(undefined),
+  logWebhookReceived: vi.fn().mockResolvedValueOnce(1),
+  logWebhookProcessed: vi.fn().mockResolvedValueOnce(undefined),
+  logWebhookFailed: vi.fn().mockResolvedValueOnce(undefined),
 }));
 vi.mock('../webhooks/metrics.js', () => ({
   recordWebhookDuration: vi.fn(),
@@ -273,17 +273,17 @@ vi.mock('../billing/index.js', () => ({
 }));
 vi.mock('../trackers/jira.js', () => ({
   handleJiraWebhook: vi.fn(),
-  verifyJiraWebhookSignature: vi.fn().mockReturnValue(true),
+  verifyJiraWebhookSignature: vi.fn().mockReturnValueOnce(true),
 }));
 vi.mock('../trackers/linear.js', () => ({
-  handleLinearWebhook: vi.fn().mockReturnValue({ ticketId: 'test-ticket' }),
-  verifyLinearWebhookSignature: vi.fn().mockReturnValue(true),
+  handleLinearWebhook: vi.fn().mockReturnValueOnce({ ticketId: 'test-ticket' }),
+  verifyLinearWebhookSignature: vi.fn().mockReturnValueOnce(true),
 }));
 vi.mock('../ratelimit/middleware.js', () => ({
   rateLimitMiddleware: vi.fn(() => (req: any, res: any, next: any) => next()),
 }));
 vi.mock('../security/securityHeaders.js', () => ({
-  buildHelmetConfig: vi.fn().mockReturnValue({}),
+  buildHelmetConfig: vi.fn().mockReturnValueOnce({}),
   handleCspViolationReport: vi.fn(),
 }));
 vi.mock('../security/ipAllowlist.js', () => ({
@@ -304,15 +304,15 @@ vi.mock('swagger-ui-express', () => ({
   setup: vi.fn(() => (req, res, next) => next()),
 }));
 vi.mock('js-yaml', () => ({
-  default: { load: vi.fn().mockReturnValue({}) },
-  load: vi.fn().mockReturnValue({}),
+  default: { load: vi.fn().mockReturnValueOnce({}) },
+  load: vi.fn().mockReturnValueOnce({}),
 }));
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
-    readFileSync: vi.fn().mockReturnValue(''),
-    existsSync: vi.fn().mockReturnValue(false),
+    readFileSync: vi.fn().mockReturnValueOnce(''),
+    existsSync: vi.fn().mockReturnValueOnce(false),
   };
 });
 
@@ -324,28 +324,28 @@ describe('server', () => {
   let app: import('express').Application;
 
   beforeEach(async () => {
-    mockLoggerChild.child.mockReturnValue(mockLoggerChild);
-    mockEnqueueIssue.mockResolvedValue('job-mock-id');
-    mockCreateIssueQueue.mockReturnValue({ add: vi.fn(), close: vi.fn() });
-    mockCreateGithubWebhooks.mockReturnValue({
+    mockLoggerChild.child.mockReturnValueOnce(mockLoggerChild);
+    mockEnqueueIssue.mockResolvedValueOnce('job-mock-id');
+    mockCreateIssueQueue.mockReturnValueOnce({ add: vi.fn(), close: vi.fn() });
+    mockCreateGithubWebhooks.mockReturnValueOnce({
       verifyAndReceive: mockVerifyAndReceive,
       on: vi.fn(),
       receive: vi.fn(),
     });
-    mockVerifyAndReceive.mockResolvedValue(undefined);
-    mockCreateGitlabWebhooks.mockReturnValue({ handle: vi.fn() });
-    mockCreateBitbucketWebhooks.mockReturnValue({ handle: vi.fn() });
-    mockCreateStripeWebhookHandler.mockReturnValue(mockStripeHandler);
-    mockGetSlackBoltApp.mockReturnValue({
+    mockVerifyAndReceive.mockResolvedValueOnce(undefined);
+    mockCreateGitlabWebhooks.mockReturnValueOnce({ handle: vi.fn() });
+    mockCreateBitbucketWebhooks.mockReturnValueOnce({ handle: vi.fn() });
+    mockCreateStripeWebhookHandler.mockReturnValueOnce(mockStripeHandler);
+    mockGetSlackBoltApp.mockReturnValueOnce({
       mountOn: vi.fn(),
       client: { conversations: { open: vi.fn(), invite: vi.fn() } },
     });
-    mockGetTracker.mockReturnValue(null);
+    mockGetTracker.mockReturnValueOnce(null);
     const ocHealthMod = await import('../health/opencodeHealth.js');
-    ocHealthMod.opencodeHealth.getStatus.mockReturnValue({ status: 'healthy', circuit: 'closed', consecutiveFailures: 0, httpStatus: 200 });
-    ocHealthMod.opencodeHealth.checkNow.mockResolvedValue({ status: 'healthy' });
+    ocHealthMod.opencodeHealth.getStatus.mockReturnValueOnce({ status: 'healthy', circuit: 'closed', consecutiveFailures: 0, httpStatus: 200 });
+    ocHealthMod.opencodeHealth.checkNow.mockResolvedValueOnce({ status: 'healthy' });
     const dbMod = await import('../db/connection.js');
-    dbMod.queryWithRetry.mockResolvedValue({ rows: [{ ok: 1 }] });
+    dbMod.queryWithRetry.mockResolvedValueOnce({ rows: [{ ok: 1 }] });
   });
 
   describe('createApp()', () => {

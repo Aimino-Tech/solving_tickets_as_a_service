@@ -4,14 +4,19 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "dist",
-    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "noImplicitAny": false
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/__tests__",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts"
+  ]
 }

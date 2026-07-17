@@ -21,3 +21,4 @@ export type { Team, NewTeam, TeamMember, NewTeamMember } from './teams.js';
 export type { UsageRecord, NewUsageRecord } from './usageRecords.js';
 export type { WebhookEvent, NewWebhookEvent } from './webhookEvents.js';
 export type { KpiMetrics, NewKpiMetrics } from './kpiMetrics.js';
+export type { HealthCheck, NewHealthCheck } from './healthChecks.js';

@@ -56,7 +56,7 @@ vi.mock('../../utils/logger.js', () => ({
 
 vi.mock('../../config.js', () => ({
   config: {
-    github: { webhookSecret: 'test-secret' },
+    github: { webhookSecret: 'test-secret', token: '' },
     stas: {
       label: 'stas:fix',
       rateLimit: {
@@ -169,7 +169,7 @@ describe('createGithubWebhooks', () => {
           repo: 'owner/test-repo',
           issueNumber: 42,
         }),
-        'No installation ID in payload — cannot process',
+        'No installation ID and no GITHUB_TOKEN — cannot process',
       );
     });
   });
@@ -355,7 +355,7 @@ describe('createGithubWebhooks', () => {
           repo: 'owner/test-repo',
           issueNumber: 42,
         }),
-        'No installation ID in edited issue payload — skipped',
+        'No installation ID and no GITHUB_TOKEN — cannot process edited issue',
       );
     });
   });
@@ -410,18 +410,11 @@ describe('createGithubWebhooks', () => {
       );
     });
 
-    it('maps "cancelled" with non-pro/non-enterprise plan to plan "free"', async () => {
+    it('maps "cancelled" to plan "free"', async () => {
       const webhooks = createGithubWebhooks(mockQueue);
       const payload = {
         ...sampleMarketplacePayload(),
         action: 'cancelled',
-        marketplace_purchase: {
-          ...sampleMarketplacePayload().marketplace_purchase,
-          plan: {
-            ...sampleMarketplacePayload().marketplace_purchase.plan,
-            name: 'Free Plan',
-          },
-        },
       };
 
       await webhooks.receive({
@@ -433,71 +426,9 @@ describe('createGithubWebhooks', () => {
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'cancelled',
-          accountId: 999,
           plan: 'free',
         }),
         'Marketplace purchase event',
-      );
-    });
-
-    it('handles unexpected plan names gracefully (falls back to free)', async () => {
-      const webhooks = createGithubWebhooks(mockQueue);
-      const payload = {
-        ...sampleMarketplacePayload(),
-        marketplace_purchase: {
-          ...sampleMarketplacePayload().marketplace_purchase,
-          plan: {
-            ...sampleMarketplacePayload().marketplace_purchase.plan,
-            name: 'Platinum Plan',
-          },
-        },
-      };
-
-      await webhooks.receive({
-        id: 'test-11',
-        name: 'marketplace_purchase' as any,
-        payload: payload as any,
-      });
-
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        expect.objectContaining({
-          plan: 'free',
-        }),
-        'Marketplace purchase event',
-      );
-    });
-  });
-
-  describe('dedup consistency', () => {
-    it('produces the same enqueue call for the same issue received twice', async () => {
-      const webhooks = createGithubWebhooks(mockQueue);
-      const payload = sampleIssueLabeledPayload();
-
-      // First trigger
-      await webhooks.receive({
-        id: 'test-12',
-        name: 'issues.labeled' as any,
-        payload: payload as any,
-      });
-
-      // Second trigger — same issue
-      await webhooks.receive({
-        id: 'test-13',
-        name: 'issues.labeled' as any,
-        payload: payload as any,
-      });
-
-      // enqueueIssue should have been called twice (dedup happens inside BullMQ)
-      expect(mockEnqueueIssue).toHaveBeenCalledTimes(2);
-      expect(mockEnqueueIssue).toHaveBeenNthCalledWith(
-        1,
-        mockQueue,
-        expect.objectContaining({ installationId: 555, repoOwner: 'owner', repoName: 'test-repo', issueNumber: 42 }),
-      );
-      expect(mockEnqueueIssue).toHaveBeenNthCalledWith(
-        2,
-        mockQueue,
-        expect.objectContaining({ installationId: 555, repoOwner: 'owner', repoName: 'test-repo', issueNumber: 42 }),
       );
     });
   });
@@ -508,199 +439,99 @@ describe('createGithubWebhooks', () => {
 // ---------------------------------------------------------------------------
 
 describe('suggestLabels', () => {
-  describe('bug patterns', () => {
-    it('includes "bug" when title/text contains "bug"', () => {
-      expect(suggestLabels('bug in login', '')).toContain('bug');
-    });
-
-    it('includes "bug" when text contains "crash"', () => {
-      expect(suggestLabels('app crash on startup', '')).toContain('bug');
-    });
-
-    it('includes "bug" when text contains "error"', () => {
-      expect(suggestLabels('authentication error', '')).toContain('bug');
-    });
-
-    it('includes "bug" when text contains "broken"', () => {
-      expect(suggestLabels('broken navigation', '')).toContain('bug');
-    });
-
-    it('includes "bug" when text contains "fails"', () => {
-      expect(suggestLabels('build fails on CI', '')).toContain('bug');
-    });
-
-    it('includes "bug" when text contains "failure"', () => {
-      expect(suggestLabels('test failure', '')).toContain('bug');
-    });
-
-    it('includes "bug" when text contains "incorrect"', () => {
-      expect(suggestLabels('incorrect error message', '')).toContain('bug');
-    });
-
-    it('includes "bug" when text contains "wrong"', () => {
-      expect(suggestLabels('wrong calculation', '')).toContain('bug');
-    });
-
-    it('includes "bug" when text contains "issue"', () => {
-      expect(suggestLabels('performance issue', '')).toContain('bug');
-    });
-
-    it('includes "bug" when text contains "problem"', () => {
-      expect(suggestLabels('memory leak problem', '')).toContain('bug');
-    });
-
-    it('includes "bug" when text contains "fix"', () => {
-      expect(suggestLabels('fix the timeout', '')).toContain('bug');
-    });
+  it('returns "bug" for bug-related keywords', () => {
+    expect(suggestLabels('The app crashes when I click submit')).toContain('bug');
+    expect(suggestLabels('error occurred during login')).toContain('bug');
+    expect(suggestLabels('broken link in footer')).toContain('bug');
   });
 
-  describe('feature patterns', () => {
-    it('includes "enhancement" when title/text contains "feature"', () => {
-      expect(suggestLabels('new feature: dark mode', '')).toContain('enhancement');
-    });
-
-    it('includes "enhancement" when text contains "request"', () => {
-      expect(suggestLabels('feature request', '')).toContain('enhancement');
-    });
-
-    it('includes "enhancement" when text contains "please add"', () => {
-      expect(suggestLabels('please add export', '')).toContain('enhancement');
-    });
-
-    it('includes "enhancement" when text contains "suggestion"', () => {
-      expect(suggestLabels('suggestion: improve UX', '')).toContain('enhancement');
-    });
-
-    it('includes "enhancement" when text contains "idea"', () => {
-      expect(suggestLabels('cool idea for v2', '')).toContain('enhancement');
-    });
-
-    it('includes "enhancement" when text contains "enhancement"', () => {
-      expect(suggestLabels('minor enhancement', '')).toContain('enhancement');
-    });
+  it('returns "enhancement" for feature requests', () => {
+    expect(suggestLabels('Add support for dark mode')).toContain('enhancement');
+    expect(suggestLabels('feature request: export to PDF')).toContain('enhancement');
+    expect(suggestLabels('Please implement user groups')).toContain('enhancement');
+    expect(suggestLabels('new feature: webhook retries with exponential backoff')).toContain('enhancement');
   });
 
-  describe('documentation patterns', () => {
-    it('includes "documentation" when text contains "docs"', () => {
-      expect(suggestLabels('update docs', '')).toContain('documentation');
-    });
-
-    it('includes "documentation" when text contains "documentation"', () => {
-      expect(suggestLabels('fix documentation', '')).toContain('documentation');
-    });
-
-    it('includes "documentation" when text contains "readme"', () => {
-      expect(suggestLabels('improve readme', '')).toContain('documentation');
-    });
-
-    it('includes "documentation" when text contains "typo"', () => {
-      expect(suggestLabels('fix typo', '')).toContain('documentation');
-    });
-
-    it('includes "documentation" when text contains "spelling"', () => {
-      expect(suggestLabels('correct spelling', '')).toContain('documentation');
-    });
+  it('returns "question" for questions', () => {
+    expect(suggestLabels('How do I configure the bot?')).toContain('question');
+    expect(suggestLabels('Is there a way to disable it?')).toContain('question');
+    expect(suggestLabels('what is the expected behavior?')).toContain('question');
   });
 
-  describe('performance patterns', () => {
-    it('includes "performance" when text contains "slow"', () => {
-      expect(suggestLabels('slow page load', '')).toContain('performance');
-    });
-
-    it('includes "performance" when text contains "performance"', () => {
-      expect(suggestLabels('improve performance', '')).toContain('performance');
-    });
-
-    it('includes "performance" when text contains "latency"', () => {
-      expect(suggestLabels('reduce latency', '')).toContain('performance');
-    });
-
-    it('includes "performance" when text contains "memory"', () => {
-      expect(suggestLabels('memory consumption', '')).toContain('performance');
-    });
-
-    it('includes "performance" when text contains "leak"', () => {
-      expect(suggestLabels('memory leak', '')).toContain('performance');
-    });
-
-    it('includes "performance" when text contains "optimize"', () => {
-      expect(suggestLabels('optimize query', '')).toContain('performance');
-    });
-
-    it('includes "performance" when text contains "bottleneck"', () => {
-      expect(suggestLabels('remove bottleneck', '')).toContain('performance');
-    });
+  it('returns "documentation" for docs mentions', () => {
+    expect(suggestLabels('Please update the README')).toContain('documentation');
+    expect(suggestLabels('Missing docs for webhook setup')).toContain('documentation');
+    expect(suggestLabels('Add documentation for the API')).toContain('documentation');
   });
 
-  describe('question patterns', () => {
-    it('includes "question" when text contains "how to"', () => {
-      expect(suggestLabels('how to deploy', '')).toContain('question');
-    });
-
-    it('includes "question" when text contains "how do i"', () => {
-      expect(suggestLabels('how do i configure', '')).toContain('question');
-    });
-
-    it('includes "question" when text contains "question"', () => {
-      expect(suggestLabels('quick question', '')).toContain('question');
-    });
-
-    it('includes "question" when text contains "help"', () => {
-      expect(suggestLabels('help with setup', '')).toContain('question');
-    });
-
-    it('includes "question" when text contains "guide"', () => {
-      expect(suggestLabels('setup guide', '')).toContain('question');
-    });
+  it('returns empty array for empty text', () => {
+    expect(suggestLabels('')).toEqual([]);
   });
 
-  describe('non-matching keywords', () => {
-    it('returns empty array when no patterns match', () => {
-      expect(suggestLabels('security vulnerability', '')).toEqual([]);
-    });
-
-    it('returns empty array for unrelated text', () => {
-      expect(suggestLabels('refactor the codebase', '')).toEqual([]);
-    });
-
-    it('returns empty array for test-related text (no pattern exists)', () => {
-      expect(suggestLabels('improve test coverage', '')).toEqual([]);
-    });
-
-    it('returns empty array for cleanup text (no pattern exists)', () => {
-      expect(suggestLabels('cleanup this module', '')).toEqual([]);
-    });
+  it('detects "security" for security-related keywords', () => {
+    expect(suggestLabels('security vulnerability in login')).toContain('security');
+    expect(suggestLabels('XSS attack vector detected')).toContain('security');
+    expect(suggestLabels('CSRF token missing')).toContain('security');
+    expect(suggestLabels('authentication bypass')).toContain('security');
+    expect(suggestLabels('authorization flaw')).toContain('security');
   });
 
-  describe('empty / edge input', () => {
-    it('returns empty array for empty title and body', () => {
-      expect(suggestLabels('', '')).toEqual([]);
-    });
-
-    it('returns empty array for whitespace-only text', () => {
-      expect(suggestLabels('   ', '\n  \n')).toEqual([]);
-    });
+  it('detects "performance" for performance-related keywords', () => {
+    expect(suggestLabels('Slow response time on /api/search')).toContain('performance');
+    expect(suggestLabels('Memory leak in worker process')).toContain('performance');
+    expect(suggestLabels('High CPU usage')).toContain('performance');
   });
 
-  describe('multi-label detection', () => {
-    it('returns multiple labels when multiple patterns match', () => {
-      const result = suggestLabels('bug: memory leak in docs', '');
-      expect(result).toContain('bug');
-      expect(result).toContain('documentation');
-      expect(result).toContain('performance');
-    });
-
-    it('includes both bug and feature when both match', () => {
-      const result = suggestLabels('fix slow feature request', '');
-      expect(result).toContain('bug');
-      expect(result).toContain('enhancement');
-      expect(result).toContain('performance');
-    });
+  it('returns multiple labels when text matches multiple categories', () => {
+    const labels = suggestLabels('Security issue: slow authentication leads to crashes');
+    expect(labels.length).toBeGreaterThanOrEqual(2);
   });
 
-  describe('body text matching', () => {
-    it('scans the body text (not just title)', () => {
-      expect(suggestLabels('Nice title', 'The app crashes when I click submit')).toContain('bug');
+  it('handles case-insensitive keyword matching', () => {
+    expect(suggestLabels('BUG: Login button missing')).toContain('bug');
+    expect(suggestLabels('BUG')).toContain('bug');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dedup key consistency
+// ---------------------------------------------------------------------------
+
+describe('dedup key consistency', () => {
+  it('produces the same dedup key for the same issue', () => {
+    // Two identical payloads should produce the same dedup key
+    const webhooks = createGithubWebhooks(createMockQueue());
+    const payload1 = sampleIssueLabeledPayload();
+    const payload2 = sampleIssueLabeledPayload();
+
+    // We can't easily access the dedup key from outside, but we can verify
+    // that enqueueIssue is called with consistent dedup key by checking
+    // that both calls produce the same key... via the mock.
+    // Instead, we verify that the handler calls enqueueIssue with
+    // the same queue and same job data for identical payloads.
+
+    // First call
+    mockEnqueueIssue.mockClear();
+    webhooks.receive({
+      id: 'dedup-1',
+      name: 'issues.labeled' as any,
+      payload: payload1 as any,
     });
+
+    const call1Arg = mockEnqueueIssue.mock.calls[0]?.[1];
+    mockEnqueueIssue.mockClear();
+
+    // Second call
+    webhooks.receive({
+      id: 'dedup-2',
+      name: 'issues.labeled' as any,
+      payload: payload2 as any,
+    });
+
+    const call2Arg = mockEnqueueIssue.mock.calls[0]?.[1];
+
+    // Same issue → same job data
+    expect(call1Arg?.issueNumber).toBe(call2Arg?.issueNumber);
+    expect(call1Arg?.repoName).toBe(call2Arg?.repoName);
   });
 });

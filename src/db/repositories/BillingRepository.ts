@@ -3,7 +3,7 @@
  */
 
 import { queryWithRetry } from '../connection.js';
-import type { Billing, NewBilling } from '../schema/index.js';
+import type { Billing, NewBilling } from '../types/index.js';
 
 export class BillingRepository {
   async findById(id: number): Promise<Billing | undefined> {

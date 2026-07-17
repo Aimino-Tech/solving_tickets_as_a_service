@@ -123,7 +123,6 @@ const envSchema = z.object({
   STORAGE_SQLITE_PATH: z.string().default('./data/stas.db'),
 
   // CI monitoring
-  CI_MONITOR_ENABLED: boolSchema(false),
   CI_REPOS: z.string().default(''),
   CI_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
   CI_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(3),
@@ -138,9 +137,6 @@ const envSchema = z.object({
   // RapidAPI
   RAPIDAPI_PROXY_SECRET: z.string().optional(),
 
-  // GitHub OAuth
-  GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
-  GITHUB_OAUTH_CLIENT_SECRET: z.string().optional(),
 
   // Stripe pricing plans
   STRIPE_SOLO_PRICE_ID: z.string().default('price_solo'),
@@ -149,12 +145,6 @@ const envSchema = z.object({
   // Security CSP
   CSP_REPORT_URI: z.string().optional(),
 
-  // Docker
-  DOCKER_IMAGE: z.string().default('node:20-slim'),
-  DOCKER_CONTAINER_MEMORY: z.string().default('512m'),
-  DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(0.5),
-  DOCKER_NETWORK_RESTRICT: boolSchema(true),
-  DOCKER_ALLOWED_HOSTS: z.string().default(''),
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
@@ -296,7 +286,7 @@ function buildConfig(env: ParsedEnv) {
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
       direct: {
-        apiKey: env.OPENCODE_API_KEY ?? '',
+        apiKey: env.OPENAI_API_KEY ?? '',
       },
     },
 
@@ -337,13 +327,6 @@ function buildConfig(env: ParsedEnv) {
       proxySecret: env.RAPIDAPI_PROXY_SECRET,
     },
 
-    docker: {
-      image: env.DOCKER_IMAGE,
-      containerMemory: env.DOCKER_CONTAINER_MEMORY,
-      containerCpu: env.DOCKER_CONTAINER_CPU,
-      networkRestrict: env.DOCKER_NETWORK_RESTRICT,
-      allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
-    },
 
     openai: {
       apiKey: env.OPENAI_API_KEY,
@@ -386,9 +369,6 @@ function buildConfig(env: ParsedEnv) {
       rateLimitMax: env.ADMIN_RATE_LIMIT_MAX,
     },
 
-    ci: {
-      monitorEnabled: env.CI_MONITOR_ENABLED,
-    },
 
     sentry: {
       dsn: env.SENTRY_DSN,

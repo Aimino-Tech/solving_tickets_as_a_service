@@ -92,6 +92,7 @@ export interface GroundingResult {
 }
 
 export interface AgentResult {
+  [key: string]: unknown;
   summary: string;
   confidence: 'high' | 'medium' | 'low';
   fixReady: boolean;

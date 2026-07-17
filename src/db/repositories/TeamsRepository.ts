@@ -3,7 +3,7 @@
  */
 
 import { queryWithRetry } from '../connection.js';
-import type { Team, NewTeam, TeamMember, NewTeamMember } from '../schema/index.js';
+import type { Team, NewTeam, TeamMember, NewTeamMember } from '../types/index.js';
 
 export class TeamsRepository {
   async findById(id: number): Promise<Team | undefined> {

@@ -41,6 +41,7 @@ const { mockCreateAppAuth, mockAuthFn, mockOctokitConstructor, mockReadFileSync,
           privateKeyEnv: '-----BEGIN PRIVATE KEY-----\nMOCKKEY\n-----END PRIVATE KEY-----' as string | undefined,
           webhookSecret: 'test-secret',
           webhookPath: '/webhook',
+          token: '',
         },
         stas: { botName: 'STAS' },
       },
@@ -52,7 +53,7 @@ const { mockCreateAppAuth, mockAuthFn, mockOctokitConstructor, mockReadFileSync,
 // a dynamic require("node:crypto") inside convertPkcs1ToPkcs8 which
 // vi.mock cannot intercept.
 vi.mock('node:fs', () => ({ readFileSync: mockReadFileSync }));
-vi.mock('@stas/github-client', () => {
+vi.mock('../../packages/github-client/src/index.js', () => {
   const convertPkcs1ToPkcs8 = (pkcs1Pem: string) => { throw new Error(`Failed to convert PKCS#1 private key to PKCS#8: simulated`); };
   const loadPrivateKey = (config: { privateKey: string }, options?: { readFileSync?: (path: string) => string }) => {
     if (options?.readFileSync) return options.readFileSync(config.privateKey);

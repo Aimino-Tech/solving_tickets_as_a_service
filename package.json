@@ -2,10 +2,11 @@
   "name": "solving-tickets-as-a-service",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/github-client"
+  ],
   "description": "Label a GitHub issue. Our bot investigates, fixes, and opens a PR. Backed by OpenCode.",
   "type": "module",
-  "workspaces": ["packages/github-client"],
   "engines": {
     "node": ">=20"
   },
@@ -83,6 +84,7 @@
     "dotenv": "^16.4.0",
     "e2b": "^2.19.0",
     "express": "^4.21.0",
+    "express-rate-limit": "^8.6.0",
     "graphlib": "^2.1.8",
     "helmet": "^8.2.0",
     "ioredis": "^5.11.1",

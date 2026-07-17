@@ -80,7 +80,7 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
       issueTitle: payload.issue.title,
       issueBody: payload.issue.body,
       labels: issueLabels,
-      billingPlan: tier,
+      billingPlan: tier as 'free' | 'pro' | 'enterprise' | undefined,
       priority: priorityMap[tier] ?? 30,
     };
 
@@ -189,7 +189,7 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
         issueTitle: payload.issue.title,
         issueBody: payload.issue.body,
         labels: editIssueLabels,
-        billingPlan: tier,
+        billingPlan: tier as 'free' | 'pro' | 'enterprise' | undefined,
         priority: priorityMap[tier] ?? 30,
       };
 
