@@ -6,7 +6,7 @@ services:
     container_name: stas-redis
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
     volumes:
       - redis-data:/data
     healthcheck:
@@ -88,6 +88,11 @@ services:
       - REDIS_URL=redis://stas-redis:6379
       - DATABASE_URL=postgres://stas:stas@stas-postgres:5432/stas
       - NODE_ENV=development
+      - RUN_MODE=api
+      - STAS_RATE_LIMIT_WINDOW_MS=60000
+      - STAS_RATE_LIMIT_MAX=150
+      - POSTGRES_POOL_MAX=25
+      - WORKER_CONCURRENCY=4
     volumes:
       - ./src:/app/src
     networks:
@@ -141,12 +146,18 @@ services:
       - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
       - DATABASE_URL=postgres://stas:stas@stas-postgres:5432/stas
       - DJANGO_SETTINGS_MODULE=stas.settings
+      - CELERY_WORKER_CONCURRENCY=4
     volumes:
       - ./stas_project:/app/stas_project
       - ./workers:/app/workers
     networks:
       - stas-net
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "2G"
 
   # ── Flower (Celery Monitor) ────────────────────────────────────────────
   flower:
