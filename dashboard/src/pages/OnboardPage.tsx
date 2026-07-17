@@ -87,7 +87,7 @@ export default function OnboardPage() {
               Automated fixes for your GitHub issues
             </h1>
             <p className="mt-4 text-lg text-gray-500">
-              Label an issue with <code className="rounded bg-gray-100 px-2 py-0.5 text-sm font-semibold text-brand-600">stas:fix</code>. Our AGI investigates your codebase, writes a fix, runs your tests, and opens a PR.
+              Label an issue with <code className="rounded bg-gray-100 px-2 py-0.5 text-sm font-semibold text-brand-600">stas:fix</code>. STAS investigates your codebase, writes a fix, runs your tests, and opens a PR.
             </p>
           </div>
 

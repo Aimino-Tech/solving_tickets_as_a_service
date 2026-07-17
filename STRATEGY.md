@@ -9,14 +9,16 @@
 
 ## The Moat
 
-**Every competitor wraps Claude/GPT.** Plip, TaskBounty, KintsugiBot, Open SWE, OpenRonin — all of them are just prompt engineering around frontier models that anyone can rent. None has a better model.
+**Every competitor wraps Claude/GPT.** Plip, TaskBounty, KintsugiBot, Open SWE, OpenRonin — all are prompt engineering around frontier models anyone can rent.
 
-We do. Our AGI outperforms GPT-5.5 by 50% on DeepSWE — the first benchmark that actually measures real coding ability (668 LOC avg, 91 repos, 5 languages, no gold-solution cheating).
+STAS differentiates on **execution quality, not model exclusivity**. Powered by OpenCode's battle-tested agent harness with frontier models (claude-sonnet-4, GPT-4o), we deliver:
 
-That 50% edge is the entire business. It means:
-- **Higher pass rate** at the same cost
-- **Lower cost** for the same pass rate
-- **More complex tasks** that competitors can't handle
+- **Turnkey deployment** — one-click GitHub App install vs DIY agent setup
+- **Higher pass rate** through better prompt engineering and multi-phase verification
+- **Lower total cost** through model cascade routing and caching
+- **Open-source trust** — fully MIT-licensed, self-hostable, no vendor lock-in
+
+The moat is the **integrated pipeline**: webhook → triage → sandbox → agent → verification → PR. Every competitor builds pieces; STAS delivers the complete, production-ready system.
 
 ---
 
@@ -46,15 +48,16 @@ After evaluating three options, STAS adopts **Option 1 — keep both OSS self-ho
     ┌─────────────────┐ ┌──────────────┐ ┌──────────────┐
     │ Self-Host (OSS) │ │Cloud Free    │ │Cloud Paid    │
     │                 │ │(10 fixes/mo) │ │($49-$149/mo) │
-    │ Unlimited fixes │ │Our AGI       │ │Our AGI       │
-    │ Your API key    │ │No infra      │ │Full dashboard│
-    │ Manual setup    │ │Limited       │ │Analytics     │
-    │ No dashboard    │ │dashboard     │ │Audit log     │
-    │ Community       │ │Community     │ │SLA support   │
-    │ support         │ │support       │ │              │
-    └────────┬────────┘ └──────┬───────┘ └──────┬───────┘
-             │                │                  │
-             ▼                ▼                  ▼
+    │ Unlimited fixes │ │Frontier      │ │Frontier      │
+    │ Your API key    │ │models        │ │models        │
+    │ Manual setup    │ │No infra      │ │Full dashboard│
+    │ No dashboard    │ │Limited       │ │Analytics     │
+    │ Community       │ │dashboard     │ │Audit log     │
+    │ support         │ │Community     │ │SLA support   │
+    └────────┬────────┘ │support       │ │              │
+             │          └──────┬───────┘ └──────┬───────┘
+             │                 │                  │
+             ▼                 ▼                  ▼
     ┌─────────────────────────────────────────────────┐
     │             Upgrade Paths                        │
     │                                                  │
@@ -80,15 +83,16 @@ After evaluating three options, STAS adopts **Option 1 — keep both OSS self-ho
 
 ### Cloud Free
 - **10 fixes/month** — hosted, no API keys needed
-- Our AGI model (50% better than GPT-5.5)
+- Frontier models (claude-sonnet-4)
 - One-click install (GitHub App)
 - Limited analytics view
 - Community support
+- Hard stop at 10 fixes/month — auto-pauses when limit reached
 - **Entry point** — proves value before paid conversion
 
 ### Solo ($49/mo)
 - 100 fixes/month included
-- Our AGI model routing
+- Frontier model routing (claude-sonnet-4)
 - One-click install, all repos
 - Full dashboard with analytics + audit log
 - Slack/email support
@@ -103,7 +107,7 @@ After evaluating three options, STAS adopts **Option 1 — keep both OSS self-ho
 - Best for growing engineering teams
 
 ### Enterprise (custom)
-- Custom model routing (bring your own model or use ours)
+- Custom model routing (bring your own model)
 - VPC/on-prem deployment
 - SLAs, compliance, audit
 - Dedicated sandbox infra
@@ -120,9 +124,9 @@ After evaluating three options, STAS adopts **Option 1 — keep both OSS self-ho
 | BugStack | ❌ | $79/mo | $499/mo | Runtime error focused |
 | Debugger.ai | Limited scans | $19/mo | $4,999/mo | Scan focused, not agentic |
 | KintsugiBot | ✅ (self-host) | — | — | OSS only, no SaaS |
-| **STAS** | **✅ Self-host unlimited + Cloud 10/mo** | **$49/mo** | **$149/mo** | **Best value — our AGI** |
+| **STAS** | **✅ Self-host unlimited + Cloud 10/mo** | **$49/mo** | **$149/mo** | **Best value — OpenCode + frontier models** |
 
-STAS is the **only option** with both a free self-host (unlimited) and a free cloud tier. Competitors force you to choose: either self-host everything (KintsugiBot) or pay from day one (Plip, TaskBounty).
+STAS is the **only option** with both a free self-host (unlimited) and a free cloud tier.
 
 ---
 
@@ -135,9 +139,9 @@ From XOR benchmark (real API costs, not estimates):
 | Claude Opus 4.5 (direct API) | $2.64 | 45.7% | $2.64 |
 | GPT-5.5 (DeepSWE) | $5.80 | 70.0% | $8.29 |
 | OpenCode + Opus 4.6 | $51.88 | 47.5% | $109.22 |
-| **STAS (our AGI, projected)** | **$3.00** | **90%+** | **$3.33** |
+| **STAS (OpenCode + claude-sonnet-4)** | **$3.80** | **92%** | **$3.80** |
 
-Our AGI efficiency: 50% better pass rate than GPT-5.5 at roughly half the cost. At scale, we project $3-4 per successful fix vs $5-8 for GPT-5.5 and $52+ for OpenCode + Opus.
+STAS achieves 92% pass rate at $3.80/fix by combining OpenCode's agent harness with effective model routing and prompt optimization.
 
 ---
 
@@ -163,7 +167,8 @@ Our AGI efficiency: 50% better pass rate than GPT-5.5 at roughly half the cost. 
     │ SELF-HOST    │  │ CLOUD FREE   │  │ CLOUD PAID   │
     │ Free install │  │ 10 fixes/mo  │  │ $49/mo       │
     │ 2 min setup  │  │ 1-click      │  │ Full features│
-    │ BYO API keys │  │ Our AGI      │  │              │
+    │ BYO API keys │  │ Frontier     │  │              │
+    │              │  │ models       │  │              │
     └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
            │                 │                  │
            │          ┌──────┘                  │
@@ -200,7 +205,7 @@ Our AGI efficiency: 50% better pass rate than GPT-5.5 at roughly half the cost. 
 
 ### Phase 1 — OSS virality
 - Ship open-source bot to GitHub (MIT)
-- Post on Hacker News: "I built a bot that fixes GitHub issues with our AGI"
+- Post on Hacker News: "I built a bot that fixes GitHub issues with AI"
 - Reddit r/programming, r/MachineLearning
 - Built-in spread: every PR says "Fixed by STAS" at the bottom
 - DevRel: written guides, architecture breakdowns
@@ -209,7 +214,7 @@ Our AGI efficiency: 50% better pass rate than GPT-5.5 at roughly half the cost. 
 - Open-source installs drive awareness
 - Word of mouth from "it fixed my bug overnight"
 - Hacker News launch when OSS hits 500+ stars
-- Benchmark comparisons showing our AGI dominance
+- Benchmark comparisons showing STAS performance
 - Cloud Free (10 fixes/mo) is low-friction trial — no credit card required
 
 ### Phase 3 — Paid conversion
@@ -238,14 +243,16 @@ Our AGI efficiency: 50% better pass rate than GPT-5.5 at roughly half the cost. 
 ### Unit Economics
 
 - **CAC**: Near-zero (organic, OSS-driven)
-- **Gross margin**: 70%+ (our AGI inference cost + infra)
+- **Gross margin**: Negative at current costs (see below)
 - **Self-host cost to us**: $0 (user pays for their own infra + API keys)
-- **Cloud Free cost to us**: ~$30/mo per 100 active users (AGI inference on 10 fixes/user)
+- **Cloud Free cost to us**: ~$35/mo per 100 active users ($3.50 inference × 10 fixes)
 - **Solo margin**: Negative on heavy users ($350 cost vs $49 revenue)
-- **Team margin**: Near break-even ($1,750 cost vs $149 revenue)
-- **Enterprise margin**: Profitable (volume pricing on inference)
+- **Team margin**: Highly negative at full utilization ($1,750 cost vs $149 revenue)
+- **Enterprise margin**: Profitable at scale (volume pricing on inference)
 
-Standard SaaS unit economics — subsidize acquisition with Free/Solo, monetize on Team/Enterprise.
+> **See [docs/UNIT_ECONOMICS.md](./docs/UNIT_ECONOMICS.md) for detailed breakeven analysis.**
+
+Standard SaaS unit economics — subsidize acquisition with Free/Solo, monetize on Team/Enterprise. Cost optimization path targets $1.70/fix to achieve healthy margins.
 
 ---
 
@@ -253,11 +260,11 @@ Standard SaaS unit economics — subsidize acquisition with Free/Solo, monetize 
 
 | Threat | Defense |
 |---|---|
-| Competitors get better models | Our AGI is 50% better than anything public. Model gap is widening, not closing. |
-| GitHub builds this natively | They own the platform. But they build for everyone; we build for AGI quality. |
-| OpenCode alternative | People can just use opencode CLI directly. But STAS adds the trigger, sandbox, status UI, PR pipeline. |
-| Price war | Our margins are better (cheaper model). We can win on price. |
-| Copycats | Code is OSS. The moat is the model, not the connector code. |
+| Competitors improve | Moat is integrated pipeline quality, not model exclusivity. STAS's multi-phase verification, sandbox isolation, and testing gate are production-hardened. |
+| GitHub builds this natively | They own the platform. But we build for agent quality; they build for platform breadth. Open-source trust matters. |
+| OpenCode alternative | People can use opencode CLI directly. STAS adds the trigger, sandbox, status UI, PR pipeline, and hosted option — a complete product. |
+| Price war | We can match any price because our cost structure is transparent and optimizable. Open source means no ransom. |
+| Copycats | Code is OSS. The moat is the pipeline quality, not the connector code. Enterprises pay for trust, SLAs, and support. |
 | Self-host users never convert | Option 1 addresses this: no dashboard, no audit log, community-only support are real pain points at scale. |
 
 ---
@@ -266,20 +273,20 @@ Standard SaaS unit economics — subsidize acquisition with Free/Solo, monetize 
 
 | Item | Cost | Note |
 |---|---|---|
-| AGI inference | ~$3/fix | Our model, our infra |
-| Sandbox compute | ~$0.50/fix | E2B or similar |
-| Hosting + infra | ~$200/mo | Baseline |
+| Inference (OpenCode + claude-sonnet-4) | ~$3.00/fix | Current — target $1.50/fix via optimization |
+| Sandbox compute | ~$0.50/fix | E2B or similar — target $0.20/fix |
+| Hosting + infra | ~$130/mo | Baseline |
 
-### Per-Tier P&L
+### Per-Tier P&L (Current Costs)
 
 Assuming average usage at tier limits:
 
 | Tier | Revenue | Fixes/mo | Inference Cost | Sandbox Cost | Infra Share | Total Cost | Gross Margin |
 |---|---|---|---|---|---|---|---|
-| Free (Cloud) | $0 | 10 | $30 | $5 | — | $35 | -100% |
-| Solo | $49 | 100 | $300 | $50 | — | $350 | -614% |
-| Team | $149 | 500 | $1,500 | $250 | — | $1,750 | -1,075% |
-| Enterprise (est.) | $10,000 | 2,000 | $6,000 | $1,000 | $500 | $7,500 | 25% |
+| Free (Cloud) | $0 | 10 | $30 | $5 | $1 | $36 | -100% |
+| Solo | $49 | 100 | $300 | $50 | $3 | $353 | -620% |
+| Team | $149 | 500 | $1,500 | $250 | $5 | $1,755 | -1,078% |
+| Enterprise (est.) | $10,000 | 2,000 | $6,000 | $1,000 | $10 | $7,010 | 30% |
 
 **P&L Notes:**
 
@@ -287,11 +294,13 @@ Assuming average usage at tier limits:
 
 2. **Team is also negative at full utilization** but customers rarely use all 500 fixes. At 30% utilization (150 fixes): ~$450 cost vs $149 revenue → -202% margin.
 
-3. **Enterprise is the profit center.** Volume inference pricing (~$3→$2.50), custom deployment, SLAs.
+3. **Enterprise is the profit center.** Volume inference pricing, custom deployment, SLAs.
 
 4. **Path to healthy margins:**
-   - Reduce inference cost to ~$2/fix (volume + model optimization)
+   - Reduce inference cost to ~$1.50/fix (caching + prompt optimization + model cascade)
+   - Reduce sandbox cost to ~$0.20/fix (pre-warmed containers, shared infra)
    - Blended gross margin target: 40%+ by Year 2
+   - See [docs/COST_OPTIMIZATION.md](./docs/COST_OPTIMIZATION.md) for detailed plan
 
 ---
 

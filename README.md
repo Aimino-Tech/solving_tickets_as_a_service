@@ -122,7 +122,7 @@ STAS follows an **open-core model** with two paths to paid plans:
 | | Self-Hosted (OSS) | Cloud Free | Cloud Paid |
 |---|---|---|---|
 | **Fixes/mo** | Unlimited | 10 fixes/mo | 100–500+/mo |
-| **AI model** | Your API key, your choice | Our AGI (50% better than GPT-5.5) | Our AGI |
+| **AI model** | Your API key, your choice | Frontier models (claude-sonnet-4) | Frontier models |
 | **Setup** | Manual — you run it | One-click install | One-click install |
 | **Infrastructure** | You manage | We manage | We manage |
 | **Dashboard** | — | Limited analytics | Full analytics, audit log |
