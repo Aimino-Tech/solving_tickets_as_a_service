@@ -501,7 +501,7 @@ After the first successful fix, the dashboard shows a **single next action**, no
 │  └──────────────┘  └──────────────┘  └────────────────┘ │
 │                                                           │
 │  ───                                                        │
-│  All plans include: Our AGI (50% better than GPT-5.5),     │
+│  All plans include: Frontier models (claude-sonnet-4),     │
 │  automated regression tests, sandbox-isolated execution.    │
 │                                                           │
 │  Fair billing: Only charged for active months. Pause       │

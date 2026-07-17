@@ -259,7 +259,7 @@ There's no catch. The OSS version gives you unlimited fixes without any artifici
 | Feature | Cloud Free | Cloud Paid |
 |---|---|---|
 | Fixes per month | 10 | 100–500+ |
-| Models | Our AGI | Our AGI |
+| Models | Frontier models (claude-sonnet-4) | Frontier models (claude-sonnet-4) |
 | Dashboard | Limited | Full |
 | Support | Community | Slack + Email |
 
