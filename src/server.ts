@@ -22,6 +22,8 @@
  */
 
 import crypto from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
@@ -860,10 +862,51 @@ export async function createApp(): Promise<express.Application> {
     log.warn('Enterprise routes not available');
   }
 
-  // ── Preview API (public, rate-limited per IP) ──────────────────────────
-  // POST /api/v1/preview — Demo preview of fixable issues
-  app.use('/api/v1/preview', previewRoutes);
+  app.get('/health', (_req: Request, res: Response) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      version: process.env.npm_package_version ?? '0.1.0',
+    });
+  });
 
+  app.get('/health/ready', async (_req: Request, res: Response) => {
+    try {
+      const { getDependenciesHealth } = await import('./health/dependencies.js');
+      const health = await getDependenciesHealth();
+      res.status(health.status === 'ok' ? 200 : 503).json(health);
+    } catch (err) {
+      res.status(503).json({ status: 'error', error: String(err), timestamp: new Date().toISOString() });
+    }
+  });
+
+  app.get('/health/queue', async (_req: Request, res: Response) => {
+    try {
+      const { getQueueHealth } = await import('./health/queueHealth.js');
+      const health = await getQueueHealth();
+      const httpStatus = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
+      res.status(httpStatus).json(health);
+    } catch (err) {
+      res.status(503).json({ status: 'error', error: String(err), timestamp: new Date().toISOString() });
+    }
+  });
+
+  app.get('/metrics', async (_req: Request, res: Response) => {
+    const { bridgeMetrics } = await import('./bridge/metrics.js');
+    const metrics = bridgeMetrics.render();
+    res.type('text/plain; version=0.0.4').send(metrics);
+  });
+
+  app.get('/github-app-manifest.json', (_req: Request, res: Response) => {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    res.sendFile(path.join(__dirname, '..', 'public', 'github-app-manifest.json'), (err) => {
+      if (err) res.status(404).json({ error: 'Manifest not found' });
+    });
+  });
+
+  app.use('/api/v1/preview', previewRoutes);
   app.use('/api', pipelineRouter);
   // -- 404 handler ----------------------------------------------------------
 
