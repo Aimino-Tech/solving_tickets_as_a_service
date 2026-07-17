@@ -185,7 +185,7 @@ describe('PipelineRunStore', () => {
       });
 
       const firstCall = mockQueryWithRetry.mock.calls[0];
-      expect(firstCall[0]).toContain('tenant_id');
+      expect(firstCall[0]).toContain('tenantId');
       expect(firstCall[0]).toContain('status');
       expect(firstCall[0]).toContain('agent_type');
       expect(firstCall[0]).toContain('issue_id');

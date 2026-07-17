@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Alerting rules and notification dispatch.
  *

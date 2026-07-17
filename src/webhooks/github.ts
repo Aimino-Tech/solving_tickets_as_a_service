@@ -111,7 +111,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       issueTitle: payload.issue.title,
       issueBody: payload.issue.body,
       labels: issueLabels,
-      billingPlan: tier,
+      billingPlan: tier as 'free' | 'pro' | 'enterprise' | undefined,
       priority: priorityMap[tier] ?? 30,
     };
 
@@ -262,7 +262,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         issueTitle: payload.issue.title,
         issueBody: payload.issue.body,
         labels: editIssueLabels,
-        billingPlan: tier,
+        billingPlan: tier as 'free' | 'pro' | 'enterprise' | undefined,
         priority: priorityMap[tier] ?? 30,
       };
 
@@ -417,9 +417,10 @@ function mapMarketplacePlan(planName: string): BillingPlan['plan'] {
 /**
  * Suggest labels based on issue content using keyword matching.
  * Useful for recommending labels before the full triage runs.
+ * Can be called with a single text string or (title, body).
  */
-export function suggestLabels(title: string, body: string): string[] {
-  const text = `${title}\n${body}`.toLowerCase();
+export function suggestLabels(titleOrText: string, body?: string): string[] {
+  const text = body ? `${titleOrText}\n${body}`.toLowerCase() : titleOrText.toLowerCase();
   const labels: string[] = [];
 
   // Bug indicators
@@ -451,13 +452,20 @@ export function suggestLabels(title: string, body: string): string[] {
     'idea',
     'enhancement',
     'new feature',
+    'support for',
+    'implement',
+    'add ',
+    'like to',
+    'need ',
+    'want ',
+    'propose',
   ];
   if (featurePatterns.some((p) => text.includes(p))) {
     labels.push('enhancement');
   }
 
   // Question indicators
-  const questionPatterns = ['how to', 'how do i', 'question', 'help', 'not sure', 'what is', 'how can', 'guide'];
+  const questionPatterns = ['how to', 'how do i', 'question', 'help', 'not sure', 'what is', 'how can', 'guide', 'is there', 'can i', 'what are', 'does this', 'where', 'why does', 'explain'];
   if (questionPatterns.some((p) => text.includes(p))) {
     labels.push('question');
   }
@@ -468,8 +476,14 @@ export function suggestLabels(title: string, body: string): string[] {
     labels.push('documentation');
   }
 
-  // Performance
-  const perfPatterns = ['slow', 'performance', 'latency', 'memory', 'leak', 'optimize', 'bottleneck'];
+  // Security indicators
+  const securityPatterns = ['security', 'vulnerability', 'xss', 'csrf', 'injection', 'exploit', 'auth bypass', 'authentication bypass', 'authorization'];
+  if (securityPatterns.some((p) => text.includes(p))) {
+    labels.push('security');
+  }
+
+  // Performance indicators
+  const perfPatterns = ['slow', 'performance', 'latency', 'memory', 'leak', 'optimize', 'bottleneck', 'cpu', 'response time', 'throughput', 'degradation'];
   if (perfPatterns.some((p) => text.includes(p))) {
     labels.push('performance');
   }

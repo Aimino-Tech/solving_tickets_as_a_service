@@ -154,11 +154,11 @@ describe('opencodeHealth', () => {
 
   describe('checkNow', () => {
     it('checkNow returns a status without throwing', async () => {
-      // Without a running OpenCode server, checkNow will fail silently
-      // and return degraded/unknown status
+      // In the test environment there may be an OpenCode server on port 4096,
+      // so checkNow may return 'healthy', 'unknown', or 'degraded'.
       const status = await opencodeHealth.checkNow();
       expect(status).toBeDefined();
-      expect(['unknown', 'degraded']).toContain(status.status);
+      expect(['healthy', 'unknown', 'degraded']).toContain(status.status);
       expect(status.cachedAt).toBeDefined();
     });
   });

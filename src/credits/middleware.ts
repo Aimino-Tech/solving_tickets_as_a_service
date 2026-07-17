@@ -119,7 +119,7 @@ export function deductMiddleware(options?: DeductOptions) {
       const newBalance = await creditsRepository.deduct(accountId, amount, { description });
 
       // Attach deduction info to request for downstream use and potential refund
-      (req as Record<string, unknown>).creditDeduction = {
+      (req as unknown as Record<string, unknown>).creditDeduction = {
         accountId,
         amount,
         previousBalance: balance.balance,

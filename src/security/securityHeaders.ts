@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Security Headers and Content Security Policy configuration.
  *

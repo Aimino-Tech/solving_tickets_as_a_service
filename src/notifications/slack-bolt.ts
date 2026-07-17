@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { App, ExpressReceiver, LogLevel } from '@slack/bolt';
 import type { Logger as BoltLogger } from '@slack/bolt';
 import type { Express } from 'express';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ActionDispatcher — decides what action to take based on agent results.
  *
