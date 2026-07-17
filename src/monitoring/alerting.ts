@@ -64,7 +64,9 @@ export interface AlertEvent {
 async function sendSlackAlert(message: string): Promise<void> {
   const webhookUrl = config.slack.webhookUrl;
   if (!webhookUrl) {
-    log.warn('SLACK_WEBHOOK_URL not configured — skipping Slack alert');
+    if (log && typeof log.warn === 'function') {
+      try { log.warn('SLACK_WEBHOOK_URL not configured — skipping Slack alert'); } catch { /* logger unavailable */ }
+    }
     return;
   }
 
@@ -182,16 +184,11 @@ export async function dispatchAlert(alert: AlertEvent): Promise<void> {
   const { severity, rule, message, context, channel } = alert;
 
   // Always log
-  const logFn =
-    severity === 'critical'
-      ? log.error
-      : severity === 'warning'
-        ? log.warn
-        : log.info;
-  logFn(
-    { rule, message, ...(context || {}) },
-    `[${severity.toUpperCase()}] ${rule}: ${message}`,
-  );
+  const logMsg = `[${severity.toUpperCase()}] ${rule}: ${message}`;
+  const logCtx = { rule, message, ...(context || {}) };
+  if (severity === 'critical') log.error(logCtx, logMsg);
+  else if (severity === 'warning') log.warn(logCtx, logMsg);
+  else log.info(logCtx, logMsg);
 
   // Add Sentry breadcrumb for error correlation
   addBreadcrumb(

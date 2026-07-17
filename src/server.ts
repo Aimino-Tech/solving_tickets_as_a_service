@@ -24,6 +24,8 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
@@ -1024,8 +1026,7 @@ process.on('uncaughtException', (err) => {
 });
 
 process.on('unhandledRejection', (reason) => {
-  log.error({ err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection -- shutting down');
-  process.exit(1);
+  log.error({ err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection');
 });
 
 // -- Helper: Capture raw body for webhook signature verification -------------
