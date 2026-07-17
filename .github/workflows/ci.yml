@@ -543,6 +543,29 @@ jobs:
         run: bash .github/scripts/ci-gates.sh 3
 
   ##############################################################################
+  # GITLEAKS SECRET SCAN — detect hardcoded secrets (API keys, tokens, etc.)
+  #
+  # Uses gitleaks with custom .gitleaks.toml config that includes patterns for:
+  #   - OpenAI API keys (sk-*)
+  #   - Anthropic API keys (sk-ant-*)
+  #   - Hardcoded fallback keys
+  #   - All default gitleaks patterns
+  ##############################################################################
+  gitleaks:
+    name: Gitleaks Secret Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .gitleaks.toml
+
+  ##############################################################################
   # ANTI-AI-SLOP SCAN — detect AI-generated code quality issues
   ##############################################################################
   anti-ai-slop-scan:

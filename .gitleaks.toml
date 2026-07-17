@@ -1,0 +1,45 @@
+# Gitleaks configuration for STAS
+# Extends the default gitleaks rules with project-specific patterns
+
+title = "STAS Gitleaks Config"
+
+# Extend from the default gitleaks config
+[extend]
+useDefault = true
+
+# Custom rules specific to STAS
+[[rules]]
+id = "stas-openai-api-key"
+description = "OpenAI API Key (sk-*) — STAS custom pattern"
+regex = '''sk-[a-zA-Z0-9]{40,}'''
+tags = ["stas", "openai", "api-key"]
+
+[[rules]]
+id = "stas-anthropic-api-key"
+description = "Anthropic API Key (sk-ant-*)"
+regex = '''sk-ant-[a-zA-Z0-9]{40,}'''
+tags = ["stas", "anthropic", "api-key"]
+
+[[rules]]
+id = "stas-hardcoded-fallback-key"
+description = "Hardcoded fallback API key reference"
+regex = '''sk-GHNGFX2p[A-Za-z0-9]+'''
+tags = ["stas", "hardcoded", "fallback"]
+
+# Whitelist / Allowlist paths
+[allowlist]
+paths = [
+  ".git",
+  "node_modules",
+  "dist",
+  "build",
+  ".codex",
+  ".omo",
+  ".symphony",
+  ".worktrees",
+  "worktrees",
+  "stas-tsc-*",
+]
+
+# Allowlist specific commits or SHAs (for historical false positives)
+ commits = []
