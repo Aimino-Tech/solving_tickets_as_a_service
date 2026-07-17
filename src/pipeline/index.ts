@@ -71,6 +71,27 @@ export type {
   RunComplianceOptions,
 } from './compliance.js';
 
+// ── Common Sense Gate ─────────────────────────────────────────────────────
+export {
+  isValidPlatform,
+  runCommonSenseGate,
+  validateIssueReference,
+  validatePlatformUrl,
+  validateRepoName,
+} from '../guardrails/commonSenseGate.js';
+export type {
+  CommonSenseGateResult,
+  CommonSenseInput,
+  ValidationResult,
+} from '../guardrails/commonSenseGate.js';
+
+// ── Platform Validator ────────────────────────────────────────────────────
+export {
+  validateBranchName,
+  validateRepoIdentifier,
+  validateWebhookUrl,
+} from '../guardrails/platformValidator.js';
+
 // ── Types ─────────────────────────────────────────────────────────────────
 export type {
   PipelinePhase,
