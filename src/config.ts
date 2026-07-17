@@ -167,6 +167,7 @@ const envSchema = z.object({
   STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
   STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
 
+  // MCP Server Configuration
   MCP_API_KEY: z.string().optional(),
   MCP_AUTH_ENABLED: z.preprocess(
     (v) => {
@@ -175,6 +176,14 @@ const envSchema = z.object({
     },
     z.boolean(),
   ).default(true),
+  STAS_MCP_SERVER_URL: z.string().default('http://localhost:4095'),
+  STAS_MCP_PORT: z.coerce.number().int().positive().max(65535).default(4095),
+  STAS_MCP_AUTO_START: boolSchema(true),
+  STAS_MCP_SSL_ENABLED: boolSchema(false),
+  STAS_MCP_SSL_KEY_PATH: z.string().optional(),
+  STAS_MCP_SSL_CERT_PATH: z.string().optional(),
+  MCP_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  MCP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
 
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_PATH: z.string().default('/webhook/telegram'),
@@ -367,6 +376,18 @@ function buildConfig(env: ParsedEnv) {
     mcp: {
       apiKey: env.MCP_API_KEY ?? '',
       authEnabled: env.MCP_AUTH_ENABLED,
+      serverUrl: env.STAS_MCP_SERVER_URL,
+      port: env.STAS_MCP_PORT,
+      autoStart: env.STAS_MCP_AUTO_START,
+      ssl: {
+        enabled: env.STAS_MCP_SSL_ENABLED,
+        keyPath: env.STAS_MCP_SSL_KEY_PATH ?? '',
+        certPath: env.STAS_MCP_SSL_CERT_PATH ?? '',
+      },
+      rateLimit: {
+        windowMs: env.MCP_RATE_LIMIT_WINDOW_MS,
+        maxRequests: env.MCP_RATE_LIMIT_MAX,
+      },
     },
 
     telegram: {

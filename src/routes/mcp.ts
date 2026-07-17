@@ -5,6 +5,7 @@ import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { mcpSubmitIssueRequestSchema } from '../opencode-contract.js';
 import type { McpSubmitIssueResponse, McpJobStatus, McpRunHistoryEntry } from '../opencode-contract.js';
+import { mcpRateLimitMiddleware } from '../ratelimit/mcpRateLimit.js';
 
 const log = rootLogger.child({ module: 'mcp-routes' });
 
@@ -83,7 +84,11 @@ async function getHistory(client: Redis, limit: number): Promise<McpRunHistoryEn
 
 const router = Router();
 
+// Apply authentication to all /mcp routes
 router.use('/mcp', mcpAuth);
+
+// Apply rate limiting to MCP API tools (submit_issue, status, history, etc.)
+router.use('/mcp', mcpRateLimitMiddleware);
 
 router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
   const parseResult = mcpSubmitIssueRequestSchema.safeParse(req.body);

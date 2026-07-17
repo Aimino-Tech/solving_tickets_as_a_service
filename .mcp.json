@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/main/schemas/mcp-publisher.json",
+  "server": {
+    "name": "@aimino/stas-mcp",
+    "mcpName": "stas-agent-discovery",
+    "version": "1.0.0",
+    "description": "MCP server for STAS — Solving Tickets As A Service"
+  },
+  "publish": {
+    "registry": "https://registry.mcp.ai",
+    "npmPackage": "@aimino/stas-mcp",
+    "access": "public"
+  },
+  "deployment": {
+    "smithery": {
+      "enabled": true,
+      "configPath": "./smithery.yaml"
+    }
+  }
+}

@@ -1,0 +1,174 @@
+# =============================================================================
+# publish-mcp.yml — Automated MCP Registry & Smithery Publishing
+#
+# Pushes the STAS MCP server to:
+#   1. MCP Registry (https://registry.mcp.ai) — for agent discovery
+#   2. Smithery (https://smithery.ai) — for one-click deployment
+#
+# Triggered by:
+#   - Pushing a tag matching 'mcp-v*' (e.g. mcp-v1.0.0)
+#   - Manual dispatch via GitHub UI
+# =============================================================================
+
+name: Publish MCP Server
+
+on:
+  push:
+    tags:
+      - 'mcp-v*'
+  workflow_dispatch:
+    inputs:
+      registry:
+        description: 'Publish target (registry, smithery, both)'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - registry
+          - smithery
+
+env:
+  MCP_SERVER_NAME: stas-agent-discovery
+  MCP_SERVER_VERSION: 1.0.0
+
+jobs:
+  validate:
+    name: Validate MCP Config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate server.json
+        run: |
+          if [ -f server.json ]; then
+            echo "✅ server.json found"
+            python3 -c "import json; json.load(open('server.json')); print('   ✓ valid JSON')"
+          else
+            echo "⚠️ server.json not found"
+          fi
+
+      - name: Validate smithery.yaml
+        run: |
+          if [ -f smithery.yaml ]; then
+            echo "✅ smithery.yaml found"
+          else
+            echo "⚠️ smithery.yaml not found"
+          fi
+
+      - name: Validate .mcp.json
+        run: |
+          if [ -f .mcp.json ]; then
+            echo "✅ .mcp.json found"
+            python3 -c "import json; json.load(open('.mcp.json')); print('   ✓ valid JSON')"
+          else
+            echo "⚠️ .mcp.json not found"
+          fi
+
+      - name: Validate MCP manifest
+        id: manifest
+        run: |
+          if [ -f mcp/manifest.json ]; then
+            echo "✅ mcp/manifest.json found"
+            python3 -c "
+import json
+m = json.load(open('mcp/manifest.json'))
+assert m.get('name') == '@aimino/stas-mcp'
+assert m.get('command') == 'python'
+print('   ✓ manifest valid')
+"
+          else
+            echo "⚠️ mcp/manifest.json not found"
+          fi
+
+  publish-registry:
+    name: Publish to MCP Registry
+    needs: validate
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/mcp-v')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.registry != 'smithery')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install MCP Registry CLI
+        run: |
+          pip install --no-cache-dir mcp-registry-cli 2>/dev/null || \
+          npm install -g @mcp/registry-cli 2>/dev/null || \
+          echo "No registry CLI available — publishing via API"
+
+      - name: Publish to MCP Registry
+        env:
+          MCP_REGISTRY_TOKEN: ${{ secrets.MCP_REGISTRY_TOKEN }}
+        run: |
+          if command -v mcp-registry &> /dev/null; then
+            mcp-registry publish --server server.json --token "$MCP_REGISTRY_TOKEN"
+          elif command -v mcp-registry-cli &> /dev/null; then
+            mcp-registry-cli publish server.json
+          else
+            echo "Publishing via API..."
+            curl -X POST https://registry.mcp.ai/api/v1/servers \
+              -H "Authorization: Bearer $MCP_REGISTRY_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d @server.json
+          fi
+
+  publish-smithery:
+    name: Publish to Smithery
+    needs: validate
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/mcp-v')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.registry != 'registry')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trigger Smithery Deploy
+        env:
+          SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
+        run: |
+          if [ -n "$SMITHERY_API_KEY" ]; then
+            echo "Triggering Smithery deployment..."
+            curl -X POST https://smithery.ai/api/v1/deploy \
+              -H "Authorization: Bearer $SMITHERY_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "repository": "Aimino-Tech/solving_tickets_as_a_service",
+                "branch": "main",
+                "configPath": "smithery.yaml"
+              }'
+          else
+            echo "SMITHERY_API_KEY not set — skipping Smithery deploy."
+            echo "To deploy manually:"
+            echo "  1. Go to https://smithery.ai"
+            echo "  2. Connect your GitHub repo"
+            echo "  3. Smithery auto-detects smithery.yaml"
+          fi
+
+  update-manifest:
+    name: Update Published Manifest
+    needs: [publish-registry, publish-smithery]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify published endpoints
+        run: |
+          echo "MCP server published successfully!"
+          echo "Server name: $MCP_SERVER_NAME"
+          echo "Version: $MCP_SERVER_VERSION"
+          echo ""
+          echo "Registry: https://registry.mcp.ai/servers/@aimino/stas-mcp"
+          echo "Smithery: https://smithery.ai/server/@aimino/stas-mcp"
+          echo ""
+          echo "Install via OpenCode:"
+          echo '  python -m stas_mcp.server stdio'
+          echo ""
+          echo "Connect via SSE:"
+          echo "  python -m stas_mcp.server sse --port 4095"

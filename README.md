@@ -5,9 +5,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Benchmark](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/.github/badges/benchmark.svg)
 [![RapidAPI](https://img.shields.io/badge/RapidAPI-0055FF?logo=rapidapi&logoColor=white)](https://rapidapi.com/aimino/api/stas-api?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
-[![MCP](https://img.shields.io/badge/MCP_Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/stas-mcp?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
-[![OpenCode](https://img.shields.io/badge/OpenCode_Skill-7C3AED?logo=opencode&logoColor=white)](https://opencode.ai/skills/stas?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
-[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-2088FF?logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/stas-eval?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-8250DF?logo=modelcontextprotocol&logoColor=white)](https://registry.mcp.ai/servers/@aimino/stas-mcp)
+[![Smithery](https://img.shields.io/badge/Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/stas-mcp)
+[![MCP](https://img.shields.io/badge/MCP_Agent-8250DF?logo=modelcontextprotocol&logoColor=white)](https://github.com/Aimino-Tech/solving_tickets_as_a_service)
+[![OpenCode](https://img.shields.io/badge/OpenCode_Skill-7C3AED?logo=opencode&logoColor=white)](https://opencode.ai/skills/stas)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-2088FF?logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/stas-eval)
 
 **Label a GitHub issue. Get a pull request.**
 
@@ -74,6 +76,146 @@ npx tsx src/db/seed.ts
 
 # 5. Run
 npm run dev
+```
+
+## MCP Integration
+
+STAS exposes a [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that lets any MCP-compatible agent discover and invoke STAS's capabilities — label issues, trigger fix pipelines, check status, and search the codebase.
+
+### MCP Discovery Endpoint
+
+The STAS MCP server is auto-discoverable at:
+
+```
+GET /discovery/mcp.json
+```
+
+This returns a standard MCP manifest with all available tools, resources, and transport configurations.
+
+### Available Tools
+
+| Tool | Description |
+|---|---|
+| `stas_label_issue` | Label a GitHub issue with the STAS fix label |
+| `stas_run_fix` | Trigger the fix pipeline for a GitHub issue URL |
+| `stas_check_status` | Poll fix run status by run_id |
+| `stas_get_pr` | Get PR details for a completed fix run |
+| `list_issues` | List tracked issues with optional status/repo filters |
+| `search_codebase` | Search across tracked fix runs and issues |
+
+### MCP Resources
+
+| Resource URI | Description |
+|---|---|
+| `stas://runs/{run_id}` | Real-time fix run status and PR link |
+| `stas://issues/{issue_id}` | Issue details with fix status and run history |
+| `stas://status` | Server health and capability overview |
+| `stas://queue` | Current fix queue depth and status |
+
+### Transport Protocols
+
+STAS MCP supports three transport modes:
+
+| Transport | Description | Use Case |
+|---|---|---|
+| **stdio** | Python subprocess, JSON-RPC over stdin/stdout | OpenCode, Claude Desktop, Cursor |
+| **SSE** | Server-Sent Events over HTTP | Remote servers, real-time updates |
+| **Streamable HTTP** | HTTP POST with JSON-RPC | Web browsers, REST API clients |
+
+### Installation for AI Tools
+
+#### OpenCode
+
+Add to your `opencode.json`:
+
+```json
+{
+  "name": "stas-agent-discovery",
+  "transport": "stdio",
+  "command": "python",
+  "args": ["-m", "stas_mcp.server", "stdio"]
+}
+```
+
+#### Claude Desktop
+
+Add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "stas": {
+      "command": "python",
+      "args": ["-m", "stas_mcp.server", "stdio"]
+    }
+  }
+}
+```
+
+#### Cursor
+
+Add to Cursor MCP configuration:
+
+```json
+{
+  "name": "stas-agent-discovery",
+  "type": "mcp",
+  "command": "python",
+  "args": ["-m", "stas_mcp.server", "stdio"]
+}
+```
+
+### Running the MCP Server
+
+The MCP server auto-starts alongside the main STAS app (controlled by `STAS_MCP_AUTO_START=true`).
+
+To run manually:
+
+```bash
+# SSE mode (HTTP, for remote access)
+python -m stas_mcp.server sse --port 4095
+
+# stdio mode (for local AI tools)
+python -m stas_mcp.server stdio
+
+# With SSL/TLS
+python -m stas_mcp.server sse --port 4095 \
+  --ssl-keyfile /path/to/key.pem \
+  --ssl-certfile /path/to/cert.pem
+```
+
+### Quick Test
+
+```bash
+# List available tools (stdio mode)
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m stas_mcp.server stdio
+
+# Check SSE server is running
+curl http://localhost:4095/health
+```
+
+### MCP Registry Publishing
+
+STAS MCP is published to the [MCP Registry](https://registry.mcp.ai) and [Smithery](https://smithery.ai) for automated agent discovery and one-click deployment.
+
+| Channel | URL | Description |
+|---|---|---|
+| **MCP Registry** | `https://registry.mcp.ai/servers/@aimino/stas-mcp` | Central MCP server registry |
+| **Smithery** | `https://smithery.ai/server/@aimino/stas-mcp` | One-click Docker deployment |
+
+To publish a new version:
+
+```bash
+# Tag and push (triggers GitHub Action)
+git tag mcp-v1.0.0
+git push origin mcp-v1.0.0
+```
+
+Or publish manually:
+
+```bash
+# Using MCP Registry CLI
+npx @mcp/registry-cli publish server.json
 ```
 
 ## OpenCode Plugin
@@ -175,6 +317,21 @@ All config via environment variables:
 | `STAS_LABEL` | `stas:fix` | Issue label to trigger on |
 | `STAS_MAX_CONCURRENT` | `3` | Max concurrent fix runs |
 | `STAS_PORT` | `3000` | Webhook server port |
+
+### MCP Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `STAS_MCP_AUTO_START` | `true` | Auto-start MCP server with main app |
+| `STAS_MCP_SERVER_URL` | `http://localhost:4095` | MCP server public URL |
+| `STAS_MCP_PORT` | `4095` | MCP SSE server port |
+| `MCP_API_KEY` | — | API key for MCP authentication |
+| `MCP_AUTH_ENABLED` | `true` | Enable MCP auth |
+| `MCP_RATE_LIMIT_WINDOW_MS` | `60000` | MCP rate limit window |
+| `MCP_RATE_LIMIT_MAX` | `60` | Max MCP requests per window |
+| `STAS_MCP_SSL_ENABLED` | `false` | Enable SSL for MCP SSE |
+| `STAS_MCP_SSL_KEY_PATH` | — | SSL key file path |
+| `STAS_MCP_SSL_CERT_PATH` | — | SSL cert file path |
 
 
 ## RapidAPI Marketplace
@@ -346,6 +503,7 @@ Each platform has its own webhook integration, agent pipeline, CI configuration,
 - [x] Sandbox isolation (E2B — 10+ language runtimes)
 - [x] Regression test verification gate
 - [x] Real-time status streaming to issue comments
+- [x] MCP agent discovery & publishing
 - [ ] Dashboard for run history
 - [ ] Cloud hosted version
 

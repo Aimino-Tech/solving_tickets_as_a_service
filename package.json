@@ -2,10 +2,11 @@
   "name": "solving-tickets-as-a-service",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/github-client"
+  ],
   "description": "Label a GitHub issue. Our bot investigates, fixes, and opens a PR. Backed by OpenCode.",
   "type": "module",
-  "workspaces": ["packages/github-client"],
   "engines": {
     "node": ">=20"
   },
@@ -129,5 +130,6 @@
   },
   "overrides": {
     "esbuild": ">=0.25.0"
-  }
+  },
+  "mcpName": "stas-agent-discovery"
 }

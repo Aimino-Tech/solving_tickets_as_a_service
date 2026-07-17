@@ -9,6 +9,10 @@
  *   GET /discovery/mcp.json  — MCP server manifest (JSON)
  *   GET /discovery           — Human-readable discovery landing page (HTML)
  *
+ * Resource URIs:
+ *   stas://runs/{run_id}     — Real-time status + PR link for a fix run
+ *   stas://issues/{issue_id} — Issue details with fix status and run history
+ *
  * @module routes/viral
  */
 
@@ -69,7 +73,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
       {
         type: 'streamable-http',
         url: `${baseUrl}/mcp`,
-        description: 'Streamable HTTP transport (MCP POST endpoint)',
+        description: 'Streamable HTTP transport (MCP POST endpoint) — send JSON-RPC messages over HTTP',
       },
       {
         type: 'stdio',
@@ -127,12 +131,43 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
           required: ['run_id'],
         },
       },
+      {
+        name: 'list_issues',
+        description: 'List tracked issues with their STAS fix status, with optional filters by status or repo.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            status: { type: 'string', description: 'Filter by status (queued, running, completed, failed)' },
+            repo: { type: 'string', description: 'Filter by repo (format: owner/repo)' },
+            limit: { type: 'integer', description: 'Max results (default: 20, max: 100)' },
+          },
+        },
+      },
+      {
+        name: 'search_codebase',
+        description: 'Search the STAS codebase for symbols, files, or patterns across tracked fix runs.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Search query (matched against run IDs, issue URLs, repos, statuses)' },
+            repo: { type: 'string', description: 'Optional repo filter (format: owner/repo)' },
+            max_results: { type: 'integer', description: 'Max results (default: 10, max: 50)' },
+          },
+          required: ['query'],
+        },
+      },
     ],
     resources: [
       {
         uri: 'stas://runs/{run_id}',
         name: 'Fix Run Status',
-        description: 'Real-time status and PR link for a STAS fix run.',
+        description: 'Real-time status and PR link for a STAS fix run. Replace {run_id} with the actual run ID.',
+        mimeType: 'application/json',
+      },
+      {
+        uri: 'stas://issues/{issue_id}',
+        name: 'Issue Fix Status',
+        description: 'Issue details including current fix status, run history, and linked PRs. The issue_id can be a GitHub issue URL or an issue number.',
         mimeType: 'application/json',
       },
       {
@@ -165,6 +200,14 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
               args: ['-m', 'stas_mcp.server', 'stdio'],
             },
           },
+        },
+      },
+      cursor: {
+        config: {
+          name: 'stas-agent-discovery',
+          type: 'mcp',
+          command: 'python',
+          args: ['-m', 'stas_mcp.server', 'stdio'],
         },
       },
     },
@@ -213,6 +256,9 @@ export function renderDiscoveryPage(baseUrl: string): string {
     .footer a { color: #58a6ff; text-decoration: none; }
     .btn { display: inline-block; padding: 0.6rem 1.25rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; text-decoration: none; background: #238636; color: #fff; margin-top: 0.5rem; }
     .btn:hover { background: #2ea043; }
+    .transport-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+    .transport-table th, .transport-table td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #30363d; font-size: 0.85rem; }
+    .transport-table th { color: #8b949e; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -240,6 +286,8 @@ export function renderDiscoveryPage(baseUrl: string): string {
         <li><code>stas_run_fix</code> — Submit a GitHub issue URL for automated fixing</li>
         <li><code>stas_check_status</code> — Poll fix run status by run_id</li>
         <li><code>stas_get_pr</code> — Retrieve PR details for a completed fix</li>
+        <li><code>list_issues</code> — List tracked issues with optional status/repo filters</li>
+        <li><code>search_codebase</code> — Search across tracked fix runs and issues</li>
       </ul>
     </div>
 
@@ -247,9 +295,20 @@ export function renderDiscoveryPage(baseUrl: string): string {
       <h2>MCP Resources</h2>
       <ul>
         <li><code>stas://runs/{run_id}</code> — Fix run status and PR link</li>
+        <li><code>stas://issues/{issue_id}</code> — Issue details with fix status and run history</li>
         <li><code>stas://status</code> — Server health and capability overview</li>
         <li><code>stas://queue</code> — Current fix queue depth</li>
       </ul>
+    </div>
+
+    <div class="card">
+      <h2>Transport Protocols</h2>
+      <table class="transport-table">
+        <tr><th>Transport</th><th>Description</th><th>Use Case</th></tr>
+        <tr><td><strong>stdio</strong></td><td>Python subprocess, JSON-RPC over stdin/stdout</td><td>OpenCode, Claude Desktop, Cursor</td></tr>
+        <tr><td><strong>SSE</strong></td><td>Server-Sent Events, HTTP streaming</td><td>Remote servers, real-time updates</td></tr>
+        <tr><td><strong>Streamable HTTP</strong></td><td>HTTP POST with JSON-RPC, request/response</td><td>Web browsers, REST API clients</td></tr>
+      </table>
     </div>
 
     <div class="card">
@@ -269,6 +328,13 @@ export function renderDiscoveryPage(baseUrl: string): string {
       "args": ["-m", "stas_mcp.server", "stdio"]
     }
   }
+}</code></pre>
+      <p style="margin-top:1rem"><strong>Cursor</strong> — Add to Cursor MCP config:</p>
+      <pre style="background:#0d1117;padding:0.75rem;border-radius:6px;margin-top:0.5rem;font-size:0.8rem;overflow-x:auto"><code>{
+  "name": "stas-agent-discovery",
+  "type": "mcp",
+  "command": "python",
+  "args": ["-m", "stas_mcp.server", "stdio"]
 }</code></pre>
     </div>
 
