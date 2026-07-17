@@ -1,9 +1,10 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: stas-nginx
-  labels: { app: stas-nginx }
+  labels:
+    app: stas-nginx
+    tier: ingress
 spec:
   replicas: 2
   selector:
@@ -11,43 +12,84 @@ spec:
       app: stas-nginx
   template:
     metadata:
-      labels: { app: stas-nginx }
+      labels:
+        app: stas-nginx
     spec:
       containers:
         - name: nginx
           image: nginx:1.27-alpine
-          ports: [{ containerPort: 80 }]
+          ports:
+            - containerPort: 80
+            - containerPort: 443
           volumeMounts:
-            - name: config
+            - name: nginx-config
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
+            - name: nginx-ssl
+              mountPath: /etc/nginx/ssl
+              readOnly: true
           resources:
-            limits: { memory: "256Mi", cpu: "500m" }
-            requests: { memory: "128Mi", cpu: "200m" }
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
       volumes:
-        - name: config
+        - name: nginx-config
           configMap:
             name: stas-nginx-config
+        - name: nginx-ssl
+          secret:
+            secretName: stas-tls
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: stas-nginx
+  labels:
+    app: stas-nginx
 spec:
   selector:
     app: stas-nginx
   ports:
-    - port: 80
+    - name: http
+      port: 80
       targetPort: 80
+    - name: https
+      port: 443
+      targetPort: 443
+  type: LoadBalancer
 ---
-apiVersion: v1
-kind: ConfigMap
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
 metadata:
-  name: stas-nginx-config
-data:
-  nginx.conf: |
-    events { worker_connections 4096; }
-    http {
-      upstream stas_backend { server stas-bot:3000; }
-      server { listen 80; location / { proxy_pass http://stas_backend; } }
-    }
+  name: stas-nginx
+  labels:
+    app: stas-nginx
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: stas-nginx
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

@@ -72,8 +72,25 @@ const envSchema = z.object({
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
+  // Rate limiting — calibrated for 500-user scale
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
-  STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(150),
+  STAS_RATE_LIMIT_PER_REPO_MAX: z.coerce.number().int().positive().default(20),
+  STAS_RATE_LIMIT_PER_IP_MAX: z.coerce.number().int().positive().default(60),
+  STAS_RATE_LIMIT_PER_USER_MAX: z.coerce.number().int().positive().default(100),
+
+  // Queue depth limits
+  QUEUE_MAX_PENDING_PER_REPO: z.coerce.number().int().positive().default(10),
+  QUEUE_DLQ_MAX_SIZE: z.coerce.number().int().positive().default(50),
+  QUEUE_DLQ_NOTIFY_AT: z.coerce.number().int().positive().default(25),
+
+  // PostgreSQL connection pool — tuned for 500-user load
+  POSTGRES_POOL_MAX: z.coerce.number().int().positive().default(25),
+  POSTGRES_POOL_MIN: z.coerce.number().int().positive().default(5),
+
+  // Redis TTL — optimized for hot data at 500-user scale
+  REDIS_TTL_DEFAULT: z.coerce.number().int().positive().default(300),
+  REDIS_TTL_FREQUENT_ACCESS: z.coerce.number().int().positive().default(60),
   ADMIN_API_KEY: z.string().optional(),
 
   WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),

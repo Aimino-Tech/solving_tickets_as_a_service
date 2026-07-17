@@ -2,11 +2,13 @@
   "name": "stas-load-tests",
   "version": "0.1.0",
   "private": true,
-  "description": "k6 load tests for STAS",
+  "description": "k6 load tests for STAS — 500-user scaling verification",
   "scripts": {
     "test:webhook": "k6 run scenarios/webhook-flood.js",
     "test:api": "k6 run scenarios/api-benchmark.js",
     "test:queue": "k6 run scenarios/queue-throughput.js",
+    "test:db": "k6 run scenarios/database-benchmark.js",
+    "test:redis": "k6 run scenarios/redis-benchmark.js",
     "test:all": "k6 run scenarios/full-suite.js"
   }
 }
