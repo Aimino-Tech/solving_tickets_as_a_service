@@ -26,7 +26,7 @@ import { LinearTracker, verifyLinearWebhookSignature } from '../trackers/linear.
 import { config } from '../config.js';
 import { getTracker } from '../trackers/index.js';
 import { getOctokit } from '../github/auth.js';
-import { enqueueIssue, createIssueQueue } from '../queue/issueQueue.js';
+import { QUEUES, publishMessage, connect as rmqConnect, isConnected } from '../queue/rabbitmq.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from '../webhooks/eventLogger.js';
 import { recordWebhookDuration, recordWebhookReceived } from '../webhooks/metrics.js';
 import { rootLogger } from '../utils/logger.js';
@@ -250,16 +250,16 @@ async function processLinearIssue(
       trackerTicketId: ticket.id,
     };
 
-    // Enqueue for processing
-    const queue = createIssueQueue();
-    try {
-      const jobId = await enqueueIssue(queue, jobData);
-      if (jobId) {
-        log.info({ jobId, ticketId, title: ticket.title }, 'Linear issue enqueued for processing');
-      }
-    } finally {
-      await queue.close();
+    // Enqueue for processing via RabbitMQ
+    if (!isConnected()) {
+      await rmqConnect();
     }
+    const messageId = `${installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
+    await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+      ...jobData,
+      _meta: { messageId, enqueuedAt: new Date().toISOString() },
+    });
+    log.info({ messageId, ticketId, title: ticket.title }, 'Linear issue enqueued for processing via RabbitMQ');
   } catch (err) {
     log.error({ err: String(err), ticketId }, 'Failed to process Linear issue');
     if (eventId) await logWebhookFailed(eventId, String(err));

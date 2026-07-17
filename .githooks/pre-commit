@@ -1,0 +1,35 @@
+#!/bin/sh
+# STAS pre-commit hook — validates .stas/templates/*.yaml files before commit
+# Installed via: npm run stas:install-hook  or  ln -sf ../../.githooks/pre-commit .git/hooks/pre-commit
+
+set -e
+
+CHANGED_TEMPLATES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^\.stas/templates/.+\.(yaml|yml)$' || true)
+
+if [ -z "$CHANGED_TEMPLATES" ]; then
+  exit 0
+fi
+
+echo "STAS: Validating changed template files..."
+
+HAS_ERRORS=0
+for file in $CHANGED_TEMPLATES; do
+  if [ -f "$file" ]; then
+    if ! npx tsx "$(dirname "$0")/../src/template/cli.ts" template validate --file "$file" --format json > /dev/null 2>&1; then
+      echo "STAS: ✗ Validation failed for $file"
+      npx tsx "$(dirname "$0")/../src/template/cli.ts" template validate --file "$file"
+      HAS_ERRORS=1
+    else
+      echo "STAS: ✓ $file is valid"
+    fi
+  fi
+done
+
+if [ "$HAS_ERRORS" -ne 0 ]; then
+  echo ""
+  echo "STAS: Template validation failed. Commit blocked."
+  echo "STAS: Fix the errors above and try again."
+  exit 1
+fi
+
+echo "STAS: All templates valid."

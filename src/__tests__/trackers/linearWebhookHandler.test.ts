@@ -25,14 +25,13 @@ vi.mock('../../config.js', () => ({
   },
 }));
 
-// Mock the queue module
-const mockEnqueueIssue = vi.fn();
-const mockCreateIssueQueue = vi.fn(() => ({
-  close: vi.fn(),
-}));
-vi.mock('../../queue/issueQueue.js', () => ({
-  enqueueIssue: mockEnqueueIssue,
-  createIssueQueue: mockCreateIssueQueue,
+// Mock the RabbitMQ module
+const mockPublishMessage = vi.fn().mockResolvedValue(true);
+vi.mock('../../queue/rabbitmq.js', () => ({
+  QUEUES: { issuesFix: { name: 'stas.issues.fix', exchange: 'stas.direct', routingKey: 'issue.fix' } },
+  publishMessage: mockPublishMessage,
+  connect: vi.fn().mockResolvedValue(undefined),
+  isConnected: vi.fn().mockReturnValue(true),
 }));
 
 // Mock the tracker

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STAS Integrations — All Supported Agent Platforms</title>
+  <meta name="description" content="STAS integrates with every major AI agent platform: OpenCode, Claude, Cursor, Codex, Windsurf, and more." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    .container { max-width: 900px; margin: 0 auto; padding: 3rem 1.5rem; }
+    h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+    h1 span { color: #58a6ff; }
+    .subtitle { font-size: 1.1rem; color: #8b949e; margin-bottom: 2rem; }
+    h2 { font-size: 1.4rem; font-weight: 700; margin: 2rem 0 1rem; color: #f0f6fc; border-bottom: 1px solid #21262d; padding-bottom: 0.5rem; }
+    .integration { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 1.5rem; margin-bottom: 1rem; display: flex; gap: 1rem; align-items: flex-start; }
+    .integration-icon { flex-shrink: 0; width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; }
+    .integration-body { flex: 1; }
+    .integration-body h3 { font-size: 1.05rem; margin-bottom: 0.25rem; color: #f0f6fc; }
+    .integration-body .status { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.4rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; margin-left: 0.5rem; vertical-align: middle; }
+    .status-live { background: #2ea04333; color: #2ea043; border: 1px solid #2ea04355; }
+    .status-beta { background: #d9770633; color: #fbbf24; border: 1px solid #d9770655; }
+    .integration-body p { font-size: 0.85rem; color: #8b949e; margin: 0.25rem 0; }
+    .integration-body pre { background: #0d1117; padding: 0.75rem; border-radius: 6px; overflow-x: auto; font-size: 0.8rem; margin: 0.5rem 0; border: 1px solid #21262d; }
+    .integration-body code { background: #0d1117; padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.82rem; color: #f0f6fc; }
+    .integration-body .links { margin-top: 0.5rem; }
+    .integration-body .links a { color: #58a6ff; text-decoration: none; font-size: 0.82rem; margin-right: 1rem; }
+    .integration-body .links a:hover { text-decoration: underline; }
+    .badge-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0; }
+    hr { border: none; border-top: 1px solid #30363d; margin: 2rem 0; }
+    .footer { text-align: center; font-size: 0.8rem; color: #484f58; }
+    .footer a { color: #58a6ff; text-decoration: none; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.85rem; }
+    th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid #21262d; }
+    th { color: #8b949e; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+    td { color: #e6edf3; }
+    td code { background: #0d1117; padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1><span>STAS</span> Integrations</h1>
+    <p class="subtitle">All supported agent platforms and how to connect. STAS is designed to work with every major AI coding agent.</p>
+
+    <div class="badge-row">
+      <a href="https://img.shields.io/badge/OpenCode-7C3AED"><img src="https://img.shields.io/badge/OpenCode-7C3AED" alt="OpenCode" /></a>
+      <a href="https://img.shields.io/badge/Claude-000?logo=anthropic&logoColor=white"><img src="https://img.shields.io/badge/Claude-000?logo=anthropic&logoColor=white" alt="Claude" /></a>
+      <a href="https://img.shields.io/badge/Cursor-059669"><img src="https://img.shields.io/badge/Cursor-059669" alt="Cursor" /></a>
+      <a href="https://img.shields.io/badge/Codex-2563EB"><img src="https://img.shields.io/badge/Codex-2563EB" alt="Codex CLI" /></a>
+      <a href="https://img.shields.io/badge/Windsurf-8B5CF6"><img src="https://img.shields.io/badge/Windsurf-8B5CF6" alt="Windsurf" /></a>
+    </div>
+
+    <h2>AI Coding Agents</h2>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#7c3aed33;color:#a78bfa;">OC</div>
+      <div class="integration-body">
+        <h3>OpenCode <span class="status status-live">Live</span></h3>
+        <p>STAS is built on OpenCode. Add it as a skill or plugin for seamless integration.</p>
+        <pre><code>npx skills add Aimino-Tech/solving_tickets_as_a_service</code></pre>
+        <div class="links">
+          <a href="https://opencode.ai/skills/stas">OpenCode Skills →</a>
+          <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/AGENTS.md">AGENTS.md →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#d9770633;color:#fbbf24;">CD</div>
+      <div class="integration-body">
+        <h3>Claude Desktop <span class="status status-live">Live</span></h3>
+        <p>Configure STAS as an MCP server in Claude Desktop for interactive issue fixing.</p>
+        <pre><code>{
+  "mcpServers": {
+    "stas": {
+      "command": "npx",
+      "args": ["-y", "@aimino/stas-mcp"]
+    }
+  }
+}</code></pre>
+        <div class="links">
+          <a href="https://smithery.ai/server/@aimino/stas-mcp">Install from Smithery →</a>
+          <a href="https://www.npmjs.com/package/@aimino/stas-mcp">npm Package →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#05966933;color:#34d399;">CR</div>
+      <div class="integration-body">
+        <h3>Cursor <span class="status status-live">Live</span></h3>
+        <p>Add STAS as an MCP server in Cursor's config for AI-powered issue resolution.</p>
+        <pre><code>// .cursor/mcp.json
+{
+  "mcpServers": {
+    "stas": {
+      "command": "npx",
+      "args": ["-y", "@aimino/stas-mcp"]
+    }
+  }
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#2563eb33;color:#60a5fa;">CX</div>
+      <div class="integration-body">
+        <h3>Codex CLI <span class="status status-live">Live</span></h3>
+        <p>Run STAS directly from the command line using npx. Ideal for Codex CLI and agentic workflows.</p>
+        <pre><code>npx -y @aimino/stas-mcp</code></pre>
+        <div class="links">
+          <a href="https://github.com/marketplace/actions/stas-eval">GitHub Action →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#8b5cf633;color:#a78bfa;">WS</div>
+      <div class="integration-body">
+        <h3>Windsurf <span class="status status-beta">Beta</span></h3>
+        <p>Connect via MCP SSE endpoint for Windsurf's AI flow integration.</p>
+        <pre><code># SSE endpoint for Windsurf
+curl http://localhost:4095/sse</code></pre>
+      </div>
+    </div>
+
+    <h2>Git Platforms</h2>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#fff;color:#000;">GH</div>
+      <div class="integration-body">
+        <h3>GitHub <span class="status status-live">Live</span></h3>
+        <p>Install the STAS GitHub App on your repo. Label issues with <code>stas:fix</code> and get automated PRs.</p>
+        <div class="links">
+          <a href="https://github.com/marketplace/actions/stas-eval">Marketplace →</a>
+          <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service#readme">Docs →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#fc6d2633;color:#fc6d26;">GL</div>
+      <div class="integration-body">
+        <h3>GitLab <span class="status status-beta">Beta</span></h3>
+        <p>STAS supports GitLab.com and self-hosted GitLab via webhook integration.</p>
+      </div>
+    </div>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#0052cc33;color:#2684ff;">BB</div>
+      <div class="integration-body">
+        <h3>Bitbucket <span class="status status-beta">Beta</span></h3>
+        <p>Bitbucket Cloud webhook integration for automated PR creation.</p>
+      </div>
+    </div>
+
+    <h2>Marketplaces &amp; Registries</h2>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#8250df33;color:#a78bfa;">MCP</div>
+      <div class="integration-body">
+        <h3>MCP Registry <span class="status status-live">Live</span></h3>
+        <p>Published to the Model Context Protocol registry. Any MCP-compatible agent can discover STAS.</p>
+        <pre><code># Discover via MCP endpoint
+GET /.well-known/mcp-server-card.json</code></pre>
+        <div class="links">
+          <a href="https://github.com/modelcontextprotocol/servers">MCP Servers →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#000;color:#fff;">SM</div>
+      <div class="integration-body">
+        <h3>Smithery.ai <span class="status status-live">Live</span></h3>
+        <p>One-click install from Smithery. No configuration needed — just click and connect.</p>
+        <div class="links">
+          <a href="https://smithery.ai/server/@aimino/stas-mcp">Install →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#cb383733;color:#cb3837;">NP</div>
+      <div class="integration-body">
+        <h3>npm <span class="status status-live">Live</span></h3>
+        <p>Published as <code>@aimino/stas-mcp</code>. Install globally or use with npx.</p>
+        <pre><code>npm install -g @aimino/stas-mcp</code></pre>
+        <div class="links">
+          <a href="https://www.npmjs.com/package/@aimino/stas-mcp">npm Package →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#7c3aed33;color:#a78bfa;">SK</div>
+      <div class="integration-body">
+        <h3>skills.sh <span class="status status-live">Live</span></h3>
+        <p>Published as an OpenCode skill. Agents auto-install with a single command.</p>
+        <pre><code>npx skills add Aimino-Tech/solving_tickets_as_a_service</code></pre>
+      </div>
+    </div>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#2088ff33;color:#2088ff;">GA</div>
+      <div class="integration-body">
+        <h3>GitHub Marketplace <span class="status status-beta">Pending</span></h3>
+        <p>Available as a GitHub Action for CI/CD pipelines. Run STAS eval suites on every push.</p>
+        <div class="links">
+          <a href="https://github.com/marketplace/actions/stas-eval">Marketplace →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="integration">
+      <div class="integration-icon" style="background:#0055ff33;color:#0055ff;">RA</div>
+      <div class="integration-body">
+        <h3>RapidAPI <span class="status status-live">Live</span></h3>
+        <p>STAS is available as a payable REST API on the RapidAPI Marketplace.</p>
+        <div class="links">
+          <a href="https://rapidapi.com/aimino/api/stas-api">RapidAPI →</a>
+        </div>
+      </div>
+    </div>
+
+    <hr />
+    <div class="footer">
+      <p><a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">STAS</a> — Solving Tickets As A Service &mdash; <a href="agents.html">STAS for AI Agents</a> &mdash; MIT License</p>
+    </div>
+  </div>
+</body>
+</html>

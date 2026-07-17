@@ -1,0 +1,34 @@
+# STAS — Solving Tickets As A Service
+
+> Label a GitHub issue. Get a fix PR. Open-source GitHub bot that takes a labeled issue, investigates your codebase, writes a fix, runs your tests, and opens a PR.
+
+## Quick Start
+
+1. Install the GitHub App on your repo
+2. Label any issue with `stas:fix`
+3. STAS investigates, fixes, tests, and opens a draft PR
+4. You review and merge
+
+## Key Features
+
+- **6 Quality Gates**: Reality Check, Compile Check, Test Integrity, Hallucination Scan, Dead Code Check, AI Tool Scan — every fix is verified
+- **Multi-Language**: Python, TypeScript, Go, Rust, Java, and more
+- **Open Source**: MIT-licensed, self-host or use cloud
+- **Anti-Injection**: PromptSanitizer strips injection patterns from issue text
+- **GitGuard**: Blocks destructive git operations in agent sandboxes
+- **Sandbox Isolation**: Docker containers with network restrictions
+
+## Architecture
+
+GitHub Issue (labeled `stas:fix`) → Webhook Server → OpenCode Agent → Investigate → Fix → Test → PR
+
+## Links
+
+- GitHub: https://github.com/Aimino-Tech/solving_tickets_as_a_service
+- Docs: https://github.com/Aimino-Tech/solving_tickets_as_a_service/tree/main/docs
+- Discord: https://discord.gg/aimino
+- License: MIT
+
+## Configuration
+
+Key env vars: `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `OPENCODE_URL`, `STAS_LABEL` (default: `stas:fix`)

@@ -125,6 +125,19 @@ async function ensureArchiveTable(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// SQL identifier validation — prevent injection via dynamic table/column names
+// ---------------------------------------------------------------------------
+
+const SQL_IDENTIFIER_RE = /^[a-z][a-z0-9_]*$/;
+
+function validateSqlIdentifier(name: string): string {
+  if (!SQL_IDENTIFIER_RE.test(name)) {
+    throw new Error(`Invalid SQL identifier: "${name}"`);
+  }
+  return name;
+}
+
+// ---------------------------------------------------------------------------
 // Policy check helper
 // ---------------------------------------------------------------------------
 
@@ -220,7 +233,9 @@ async function cleanupTable(
   );
 
   try {
-    const findQuery = `SELECT id FROM "${tableName}" WHERE ${policy.dateColumn} < $1`;
+    const tbl = validateSqlIdentifier(tableName);
+    const col = validateSqlIdentifier(policy.dateColumn);
+    const findQuery = `SELECT id FROM "${tbl}" WHERE ${col} < $1`;
     const eligible = await queryWithRetry<{ id: number }>(findQuery, [cutoffStr]);
     const rowIds = eligible.rows.map((r) => r.id);
 
@@ -233,7 +248,7 @@ async function cleanupTable(
       await ensureArchiveTable();
       const archiveQuery = `
         WITH to_archive AS (
-          SELECT * FROM "${tableName}" WHERE id = ANY($1::int[])
+          SELECT * FROM "${tbl}" WHERE id = ANY($1::int[])
         )
         INSERT INTO archive_logs (source_table, source_row_id, archived_data)
         SELECT $2, id, row_to_json(to_archive.*) FROM to_archive
@@ -242,7 +257,7 @@ async function cleanupTable(
       result.archived = rowIds.length;
       log.info({ table: tableName, count: rowIds.length }, 'Rows archived to archive_logs');
 
-      const selectAllQuery = `SELECT * FROM "${tableName}" WHERE id = ANY($1::int[])`;
+      const selectAllQuery = `SELECT * FROM "${tbl}" WHERE id = ANY($1::int[])`;
       const allRows = await queryWithRetry(selectAllQuery, [rowIds]);
       await archiveToS3Staging(tableName, allRows.rows as Record<string, unknown>[], cutoffDate);
     }
@@ -259,20 +274,20 @@ async function cleanupTable(
     if (policy.deletionMode === 'soft') {
       try {
         await queryWithRetry(
-          `ALTER TABLE "${tableName}" ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`,
+          `ALTER TABLE "${tbl}" ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`,
         );
       } catch {
         // Column might already exist
       }
 
       await queryWithRetry(
-        `UPDATE "${tableName}" SET deleted_at = NOW() WHERE id = ANY($1::int[])`,
+        `UPDATE "${tbl}" SET deleted_at = NOW() WHERE id = ANY($1::int[])`,
         [rowIds],
       );
       log.info({ table: tableName, count: rowIds.length }, 'Soft-deleted rows');
     } else {
       await queryWithRetry(
-        `DELETE FROM "${tableName}" WHERE id = ANY($1::int[])`,
+        `DELETE FROM "${tbl}" WHERE id = ANY($1::int[])`,
         [rowIds],
       );
       log.info({ table: tableName, count: rowIds.length }, 'Hard-deleted rows');
@@ -368,9 +383,11 @@ export async function cleanRawWebhookPayloads(
   if (cutoffDate === null) return result;
 
   const cutoffStr = cutoffDate.toISOString();
+  const tbl = validateSqlIdentifier(tableName);
+  const col = validateSqlIdentifier(policy.dateColumn);
 
   try {
-    const countQuery = `SELECT COUNT(*) AS cnt FROM "${tableName}" WHERE ${policy.dateColumn} < $1 AND payload IS NOT NULL`;
+    const countQuery = `SELECT COUNT(*) AS cnt FROM "${tbl}" WHERE ${col} < $1 AND payload IS NOT NULL`;
     const countResult = await queryWithRetry<{ cnt: number }>(countQuery, [cutoffStr]);
     const count = Number(countResult.rows[0]?.cnt ?? 0);
 
@@ -385,7 +402,7 @@ export async function cleanRawWebhookPayloads(
       return result;
     }
 
-    const updateQuery = `UPDATE "${tableName}" SET payload = NULL WHERE ${policy.dateColumn} < $1 AND payload IS NOT NULL`;
+    const updateQuery = `UPDATE "${tbl}" SET payload = NULL WHERE ${col} < $1 AND payload IS NOT NULL`;
     await queryWithRetry(updateQuery, [cutoffStr]);
     result.rowsAffected = count;
     log.info({ table: tableName, count }, 'Raw webhook payloads nullified');

@@ -16,6 +16,7 @@ import { creditsRepository } from '../db/repositories/index.js';
 import { adminAuthMiddleware } from '../security/adminAuth.js';
 import { queryWithRetry } from '../db/connection.js';
 import { config } from '../config.js';
+import { mockResponses } from '../agent/mockResponses.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'admin-api' });
@@ -419,9 +420,17 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
     // Re-enqueue based on source
     if (webhookEvent.source === 'github') {
       const { createGithubWebhooks } = await import('../webhooks/github.js');
-      const { createIssueQueue } = await import('../queue/issueQueue.js');
-      const queue = createIssueQueue();
-      const githubWebhooks = createGithubWebhooks(queue);
+      const enqueueFn = async (data: import('../utils/types.js').IssueJobData) => {
+        const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
+        if (!isConnected()) await rmqConnect();
+        const messageId = `${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}-${Date.now()}`;
+        await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+          ...data,
+          _meta: { messageId, enqueuedAt: new Date().toISOString() },
+        });
+        return messageId;
+      };
+      const githubWebhooks = createGithubWebhooks(enqueueFn);
 
       const payload = typeof webhookEvent.payload === 'string'
         ? webhookEvent.payload
@@ -485,6 +494,68 @@ router.post('/gc/sweep', async (_req: Request, res: Response) => {
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to run sandbox GC sweep');
     res.status(500).json({ error: 'GC sweep failed' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /admin/ai-mode — check or change AI mode at runtime
+// ---------------------------------------------------------------------------
+
+router.get('/ai-mode', async (_req: Request, res: Response) => {
+  res.json({
+    mode: mockResponses.getEffectiveMode(),
+    configMode: config.stas.aiMode,
+    runtimeOverride: mockResponses.getEffectiveMode() !== config.stas.aiMode,
+    description: mockResponses.isStaticMode()
+      ? 'Static mode — all AI responses are deterministic placeholders'
+      : 'Live mode — AI agent is active',
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /admin/ai-mode — switch AI mode at runtime (no restart)
+// ---------------------------------------------------------------------------
+
+router.post('/ai-mode', async (req: Request, res: Response) => {
+  try {
+    const { mode } = req.body as { mode?: string };
+
+    if (mode === 'ai') {
+      mockResponses.setMode('ai');
+      log.info('[ADMIN] AI mode switched to live');
+      await logAdminAction({
+        adminId: 'admin:api-key',
+        action: 'admin.ai-mode.set',
+        resourceType: 'config',
+        resourceId: 'ai-mode',
+        details: { mode: 'ai', previousMode: mockResponses.getEffectiveMode() },
+        ipAddress: req.ip,
+        correlationId: req.requestId,
+      });
+      res.json({ mode: 'ai', status: 'switched', message: 'AI agent is now active' });
+    } else if (mode === 'static') {
+      mockResponses.setMode('static');
+      log.info('[ADMIN] AI mode switched to static (placeholders)');
+      await logAdminAction({
+        adminId: 'admin:api-key',
+        action: 'admin.ai-mode.set',
+        resourceType: 'config',
+        resourceId: 'ai-mode',
+        details: { mode: 'static', previousMode: mockResponses.getEffectiveMode() },
+        ipAddress: req.ip,
+        correlationId: req.requestId,
+      });
+      res.json({ mode: 'static', status: 'switched', message: 'AI agent is now disabled — static placeholders active' });
+    } else if (mode === null || mode === 'default') {
+      mockResponses.setMode(null);
+      log.info('[ADMIN] AI mode reset to config default');
+      res.json({ mode: config.stas.aiMode, status: 'reset', message: 'AI mode reverted to env config' });
+    } else {
+      res.status(400).json({ error: 'Invalid mode. Use "ai", "static", or null to reset.' });
+    }
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to switch AI mode');
+    res.status(500).json({ error: 'Failed to switch AI mode' });
   }
 });
 

@@ -10,6 +10,10 @@ export default defineConfig({
     // Make describe/it/expect available without imports
     globals: true,
 
+    // Template tests share module-level state via loadedTemplates Map,
+    // so sequential execution prevents cross-test file pollution.
+    fileParallelism: false,
+
     // Auto-restore mocks between tests
     restoreMocks: true,
 
