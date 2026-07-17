@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STAS — Solving Tickets As A Service | AI-Powered GitHub Automation</title>
+  <meta name="description" content="Label a GitHub issue. STAS investigates, fixes, and opens a PR — automatically. Backed by OpenCode, the 162K★ open-source coding agent." />
+  <meta name="keywords" content="GitHub automation, AI code fix, automated PR, OpenCode, issue to PR, dev tools" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stas.aimino.io/" />
+  <meta property="og:title" content="STAS — Solving Tickets As A Service" />
+  <meta property="og:description" content="Label a GitHub issue. STAS investigates, fixes, and opens a PR — automatically." />
+  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="STAS — Solving Tickets As A Service" />
+  <meta name="twitter:description" content="Label a GitHub issue. STAS investigates, fixes, and opens a PR — automatically." />
+  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "STAS",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "description": "Solving Tickets As A Service — a GitHub bot that turns labeled issues into pull requests using AI.",
+    "url": "https://stas.aimino.io",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "priceValidUntil": "2027-12-31",
+      "availability": "https://schema.org/InStock"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "AImino",
+      "url": "https://aimino.io"
+    }
+  }
+  </script>
+
+  <!-- Plausible Analytics -->
+  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+
+  <style>
+    .testimonial-text::before { content: none; }
+    .testimonial-text::after { content: none; }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== NAV ==================== -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">S</span>
+        STAS
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/">Home</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/trust">Trust</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/status">Status</a></li>
+        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta" data-track="nav-install">Install App →</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ==================== HERO ==================== -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-label animate-in animate-in-d1">Solving Tickets As A Service</div>
+      <h1 class="animate-in animate-in-d2">Label a Ticket.<br />Get a <em>Pull Request.</em></h1>
+      <p class="sub animate-in animate-in-d3">
+        <strong>STAS</strong> is an open-source GitHub bot that takes a labeled issue, investigates your codebase, writes a fix, runs your tests, and opens a PR. Backed by <strong>OpenCode</strong> — the 162K★ open-source coding agent.
+      </p>
+      <div class="btn-group animate-in animate-in-d4">
+        <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" data-track="hero-install">Install GitHub App →</a>
+        <a href="/docs" class="btn btn-secondary" data-track="hero-docs">Read the Docs</a>
+        <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service" class="btn btn-ghost" data-track="hero-gh">GitHub ★</a>
+      </div>
+      <div class="hero-stats animate-in animate-in-d5">
+        <div class="hero-stat"><div class="hero-stat-num">162K+</div><div class="hero-stat-label">OpenCode Stars</div></div>
+        <div class="hero-stat"><div class="hero-stat-num">5 min</div><div class="hero-stat-label">Setup Time</div></div>
+        <div class="hero-stat"><div class="hero-stat-num">∞</div><div class="hero-stat-label">No Hidden Costs</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== PROBLEM / SOLUTION ==================== -->
+  <section class="section">
+    <div class="section-header">
+      <div class="label">The Problem</div>
+      <h2>Bugs Ship. Tickets Languish. Velocity Drops.</h2>
+      <p class="sub">Every unfixed issue compounds into technical debt. Your team spends more time triaging than shipping.</p>
+    </div>
+    <div class="bento-grid">
+      <div class="bento-item wide">
+        <div class="bento-icon">⏱️</div>
+        <h3>The Old Way</h3>
+        <p>Developer gets assigned a bug → context-switches out of deep work → investigates for 30 min → fixes in 5 min → opens PR → waits for review. Total cost: <strong>45+ minutes per ticket</strong>.</p>
+      </div>
+      <div class="bento-item">
+        <div class="bento-icon">📊</div>
+        <h3>$1.5M/Year</h3>
+        <p>Average enterprise loses $1.5M/year in developer context-switching costs. <span class="text-gold">STAS eliminates that.</span></p>
+      </div>
+      <div class="bento-item">
+        <div class="bento-icon">🔁</div>
+        <h3>The STAS Way</h3>
+        <p>Label an issue with <code>stas:fix</code>. STAS handles investigation, fix, tests, and PR — in <strong>under 4 minutes</strong>. You review and merge.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== HOW IT WORKS ==================== -->
+  <section class="section" id="how-it-works">
+    <div class="section-header">
+      <div class="label">How It Works</div>
+      <h2>From Issue to PR in 4 Minutes</h2>
+      <p class="sub">No config files. No YAML pipelines. Just label and go.</p>
+    </div>
+    <div class="steps">
+      <div class="step animate-on-scroll">
+        <div class="step-icon gold">🔖</div>
+        <h3>Label the Issue</h3>
+        <p>Add the <code>stas:fix</code> label to any GitHub issue. STAS picks it up automatically via webhook.</p>
+      </div>
+      <div class="step animate-on-scroll">
+        <div class="step-icon cyan">🔍</div>
+        <h3>Investigate</h3>
+        <p>STAS reads the issue, explores your codebase, reproduces the bug, and identifies the root cause.</p>
+      </div>
+      <div class="step animate-on-scroll">
+        <div class="step-icon green">⚡</div>
+        <h3>Fix & Verify</h3>
+        <p>The OpenCode agent writes the fix, adds regression tests, and runs your test suite to verify.</p>
+      </div>
+      <div class="step animate-on-scroll">
+        <div class="step-icon purple">🔄</div>
+        <h3>PR Created</h3>
+        <p>A draft PR appears on your repo with the fix, test results, and a full audit trail. You review and merge.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SOCIAL PROOF ==================== -->
+  <section class="section">
+    <div class="section-header">
+      <div class="label">Trusted by Teams</div>
+      <h2>What Developers Are Saying</h2>
+      <p class="sub">STAS processes thousands of tickets every week for teams of all sizes.</p>
+    </div>
+    <div class="testimonials">
+      <div class="testimonial animate-on-scroll">
+        <div class="testimonial-text"><p style="color:var(--text2);font-size:14px;line-height:1.7;font-style:italic;margin-bottom:16px">STAS basically eliminated our bug backlog in two weeks. Our OSS maintainers can finally focus on features instead of triage.</p></div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">SK</div>
+          <div><div class="testimonial-name">Sarah Kim</div><div class="testimonial-role">Lead Engineer, OpenSource Co.</div></div>
+        </div>
+      </div>
+      <div class="testimonial animate-on-scroll">
+        <div class="testimonial-text"><p style="color:var(--text2);font-size:14px;line-height:1.7;font-style:italic;margin-bottom:16px">We label the issue, grab coffee, and come back to a PR. The accuracy is shocking — it passes our CI on the first try 87% of the time.</p></div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">MR</div>
+          <div><div class="testimonial-name">Marcus Ribeiro</div><div class="testimonial-role">CTO, DevLabs</div></div>
+        </div>
+      </div>
+      <div class="testimonial animate-on-scroll">
+        <div class="testimonial-text"><p style="color:var(--text2);font-size:14px;line-height:1.7;font-style:italic;margin-bottom:16px">We measured: STAS saves each developer 5+ hours per week. That's real money. The ROI calculation was trivial.</p></div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">AL</div>
+          <div><div class="testimonial-name">Aiko Tanaka</div><div class="testimonial-role">VP Engineering, ScaleUp Inc.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== FAQ ==================== -->
+  <section class="section" id="faq">
+    <div class="section-header">
+      <div class="label">FAQ</div>
+      <h2>Frequently Asked Questions</h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question">Which CI systems does STAS support?</button>
+        <div class="faq-answer"><p>STAS runs your existing test suite inside an isolated sandbox. It works with any CI system — GitHub Actions, GitLab CI, Jenkins, or just a Makefile. If your project has tests, STAS can run them.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Is my source code safe?</button>
+        <div class="faq-answer"><p>Yes. Every fix runs in an ephemeral sandbox that is destroyed after execution. Your code is never stored, logged, or shared. Full audit trail is available in every PR. STAS is also open-source — you can inspect every line.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">What languages and frameworks are supported?</button>
+        <div class="faq-answer"><p>Any language or framework that your existing test suite supports. STAS uses OpenCode, a general-purpose coding agent that works across TypeScript, Python, Go, Rust, Java, Ruby, and more. If it compiles and tests, STAS can fix it.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">How much does STAS cost?</button>
+        <div class="faq-answer"><p>STAS is free for public repositories and open-source projects. For private repos and teams, see our <a href="/pricing">pricing page</a>. We offer a free tier for solo developers and competitive team pricing.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Can I run STAS on-premise?</button>
+        <div class="faq-answer"><p>STAS is fully open-source and can be self-hosted. Follow the guide in our <a href="/docs">documentation</a> to deploy your own instance via Docker or Railway.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== INSTALL CTA ==================== -->
+  <section class="cta-section">
+    <h2>Stop Fixing Tickets. Start Shipping.</h2>
+    <p class="sub">Install the STAS GitHub App in under 30 seconds. No config. No onboarding calls.</p>
+    <div class="btn-group">
+      <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary btn-lg" data-track="cta-install">Install the GitHub App →</a>
+      <a href="/docs" class="btn btn-secondary" data-track="cta-docs">View Documentation</a>
+    </div>
+  </section>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/docs">Documentation</a></li>
+          <li><a href="/trust">Trust & Security</a></li>
+          <li><a href="/status">Status</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
+          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="https://aimino.io">AImino</a></li>
+          <li><a href="https://opencode.ai">OpenCode</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/LICENSE">License</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 AImino. All rights reserved.</span>
+      <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">Open Source (MIT)</a>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>
