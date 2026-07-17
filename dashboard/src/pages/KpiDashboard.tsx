@@ -163,12 +163,12 @@ export default function KpiDashboard() {
     <div className="space-y-8">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpiCards.map((card) => {
-          const trendColors = {
+          const trendColors: Record<string, string> = {
             up: card.invert ? 'text-red-600' : 'text-green-600',
             down: card.invert ? 'text-green-600' : 'text-red-600',
             neutral: 'text-brand-600',
           };
-          const trendArrows = { up: '\u2191', down: '\u2193', neutral: '\u2192' };
+          const trendArrows: Record<string, string> = { up: '\u2191', down: '\u2193', neutral: '\u2192' };
           return (
             <div key={card.label} className="card">
               <p className="text-sm text-gray-500">{card.label}</p>

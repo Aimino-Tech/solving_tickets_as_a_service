@@ -10,8 +10,8 @@
 import Stripe from 'stripe';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import type { CreditPackKey } from './credit-packs.js';
-import { CREDIT_PACKS } from './credit-packs.js';
+import type { CreditPackKey, CreditPack } from './credit-packs.js';
+import { getCreditPacks } from './credit-packs.js';
 
 const log = rootLogger.child({ module: 'stripe-checkout' });
 
@@ -56,17 +56,17 @@ export async function createCheckoutSession(opts: {
   const { accountId, priceId, successUrl, cancelUrl } = opts;
 
   // Validate the price ID matches a known credit pack
-  const pack = Object.entries(CREDIT_PACKS).find(
-    ([, p]) => p.priceId === priceId,
-  );
+  const packs = getCreditPacks();
+  const packIndex = packs.findIndex((p) => p.priceId === priceId);
 
-  if (!pack) {
+  if (packIndex === -1) {
     throw new Error(
-      `Unknown price ID "${priceId}". Must be one of: ${Object.values(CREDIT_PACKS).map((p) => p.priceId).join(', ')}`,
+      `Unknown price ID "${priceId}". Must be one of: ${packs.map((p) => p.priceId).join(', ')}`,
     );
   }
 
-  const [packKey] = pack as [CreditPackKey, (typeof CREDIT_PACKS)[CreditPackKey]];
+  const packKeys: CreditPackKey[] = ['small', 'medium', 'large'];
+  const packKey = packKeys[packIndex];
 
   log.info({ accountId, priceId, packKey }, 'Creating Stripe Checkout session');
 

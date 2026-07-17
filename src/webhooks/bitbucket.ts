@@ -196,13 +196,12 @@ export function createBitbucketWebhooks(enqueue: EnqueueHandler) {
         const jobData: IssueJobData = {
           repoOwner: parsed.issue.repoOwner,
           repoName: parsed.issue.repoName,
-          repoPrivate: parsed.issue.repoPrivate,
+          repoPrivate: parsed.issue.repoPrivate ?? true,
           issueNumber: parsed.issue.number,
           issueTitle: parsed.issue.title,
           issueBody: parsed.issue.body ?? '',
           installationId: Number(parsed.issue.installationId ?? 0),
           source: 'bitbucket',
-          repoPrivate: true,
         };
 
         try {

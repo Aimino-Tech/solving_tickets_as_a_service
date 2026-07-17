@@ -2,6 +2,7 @@ import React from 'react';
 
 interface SkeletonProps {
   className?: string;
+  style?: React.CSSProperties;
 }
 
 /** Base pulse-animated bar primitive. */

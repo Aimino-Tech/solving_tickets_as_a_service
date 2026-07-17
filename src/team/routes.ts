@@ -33,7 +33,7 @@ const log = rootLogger.child({ module: 'team-api' });
 // Router
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: import('express').Router = Router();
 
 // ---------------------------------------------------------------------------
 // Helper: extract account ID from request

@@ -4,7 +4,7 @@ import { getDependenciesHealth } from '../health/dependencies.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'health-routes' });
-const healthRouter = Router();
+const healthRouter: Router = Router();
 
 /**
  * GET /health

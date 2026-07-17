@@ -41,7 +41,14 @@ export class SloReporter {
     this.evictOldSamples();
     const ws = this.s.filter((x) => x.timestamp >= Date.now() - 86400000);
     const pm = new Map<string, PS[]>();
-    for (const x of ws) { (pm.get(x.phase) ?? (pm.set(x.phase, []), pm.get(x.phase))).push(x); }
+    for (const x of ws) {
+      const existing = pm.get(x.phase);
+      if (existing) {
+        existing.push(x);
+      } else {
+        pm.set(x.phase, [x]);
+      }
+    }
     const ph: PhaseSloReport[] = []; let ab = false, aw = false;
     for (const [pn, ps] of pm) {
       const m = this.cm(ps), hf = ps.some((x) => x.producedFix), st = this.es(m, hf);

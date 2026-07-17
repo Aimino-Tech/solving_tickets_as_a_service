@@ -1,12 +1,6 @@
 import crypto from "node:crypto";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockEnqueueIssue } = vi.hoisted(() => ({
-  mockEnqueueIssue: vi
-    .fn<(data: unknown) => Promise<string | undefined>>()
-    .mockResolvedValue("job-mock-id"),
-}));
-
 const { mockLogger } = vi.hoisted(() => {
   const logger = {
     child: vi.fn(),
@@ -142,7 +136,7 @@ describe("bitbucketWebhook", () => {
 describe("createBitbucketWebhooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockEnqueueIssue.mockResolvedValue("job-mock-id");
+    mockEnqueue.mockResolvedValue("job-mock-id");
     mockEnqueue.mockClear();
   });
 
@@ -155,8 +149,8 @@ describe("createBitbucketWebhooks", () => {
 
     await handler.handle(rawPayload, signature);
 
-    expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
-    expect(mockEnqueueIssue).toHaveBeenCalledWith(
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+    expect(mockEnqueue).toHaveBeenCalledWith(
       expect.objectContaining({
         repoOwner: "owner",
         repoName: "test-repo",
@@ -175,14 +169,14 @@ describe("createBitbucketWebhooks", () => {
 
     await handler.handle(rawPayload, signature);
 
-    expect(mockEnqueueIssue).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 
   it("does NOT enqueue when signature verification fails", async () => {
     const handler = createBitbucketWebhooks(mockEnqueue);
     await handler.handle(JSON.stringify({ event: "issue:created" }), "sha256=invalid");
 
-    expect(mockEnqueueIssue).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 
   it("does NOT enqueue for non-matching events", async () => {
@@ -194,6 +188,6 @@ describe("createBitbucketWebhooks", () => {
 
     await handler.handle(rawPayload, signature);
 
-    expect(mockEnqueueIssue).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 });

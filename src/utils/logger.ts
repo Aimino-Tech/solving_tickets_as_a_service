@@ -4,6 +4,8 @@
 
 import pino from 'pino';
 
+export type Logger = pino.Logger;
+
 const level = process.env.LOG_LEVEL || 'info';
 
 export const rootLogger = pino({

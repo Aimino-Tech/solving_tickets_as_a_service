@@ -174,6 +174,20 @@ vi.mock('../../trackers/index.js', () => ({
   getTracker: vi.fn().mockReturnValue(null),
 }));
 
+// Mock global fetch for OpenCode API calls
+const mockFetch = vi.fn().mockResolvedValue({
+  ok: true,
+  json: vi.fn().mockResolvedValue({
+    summary: 'Agent completed the fix successfully.',
+    diff: '--- a/src/index.ts\n+++ b/src/index.ts\n@@ -1,3 +1,5 @@\n+// fix',
+    branch: 'stas/fix-42',
+    confidence: 'high',
+    testOutput: 'PASS: all tests passed',
+  }),
+  text: vi.fn().mockResolvedValue(''),
+});
+vi.stubGlobal('fetch', mockFetch);
+
 // ---------------------------------------------------------------------------
 // Imports under test
 // ---------------------------------------------------------------------------

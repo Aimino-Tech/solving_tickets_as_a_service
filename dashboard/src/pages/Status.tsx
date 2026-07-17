@@ -9,6 +9,8 @@ const SERVICES = [
   { name: 'Dashboard', status: 'operational' as const, description: 'Web dashboard and analytics' },
 ];
 
+type ServiceStatus = 'operational' | 'degraded' | 'down';
+
 export default function Status() {
   const [health, setHealth] = useState<{ status: string; uptime: number } | null>(null);
   useEffect(() => {
@@ -17,9 +19,9 @@ export default function Status() {
     return () => ctrl.abort();
   }, []);
 
-  const operationalCount = SERVICES.filter(s => s.status === 'operational').length;
-  const degradedCount = SERVICES.filter(s => s.status === 'degraded').length;
-  const downCount = SERVICES.filter(s => s.status === 'down').length;
+  const operationalCount = SERVICES.filter((s: { status: ServiceStatus }) => s.status === 'operational').length;
+  const degradedCount = SERVICES.filter((s: { status: ServiceStatus }) => s.status === 'degraded').length;
+  const downCount = SERVICES.filter((s: { status: ServiceStatus }) => s.status === 'down').length;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">

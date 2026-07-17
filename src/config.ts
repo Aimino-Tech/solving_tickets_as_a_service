@@ -383,6 +383,9 @@ function buildConfig(env: ParsedEnv) {
       containerCpu: env.DOCKER_CONTAINER_CPU,
       networkRestrict: env.DOCKER_NETWORK_RESTRICT,
       allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
+      seccompProfile: (env as Record<string, unknown>).DOCKER_SECCOMP_PROFILE as string | undefined,
+      apparmorProfile: (env as Record<string, unknown>).DOCKER_APPARMOR_PROFILE as string | undefined,
+      gvisorEnabled: (env as Record<string, unknown>).DOCKER_GVISOR_ENABLED === 'true',
     },
 
     openai: {

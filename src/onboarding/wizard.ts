@@ -131,16 +131,17 @@ class RedisWizardStore implements WizardStateStore {
 
   private async getClient(): Promise<import('ioredis').Redis> {
     if (!this.redis) {
-      const IORedis = (await import('ioredis')).default;
-      this.redis = new IORedis(config.queue.redisUrl, {
+      const IORedisModule = await import('ioredis');
+      const RedisClass = IORedisModule.default || IORedisModule.Redis;
+      this.redis = new (RedisClass as unknown as new (url: string, opts: Record<string, unknown>) => import('ioredis').Redis)(config.queue.redisUrl, {
         keyPrefix: this.prefix,
         maxRetriesPerRequest: 3,
         connectTimeout: 5000,
         lazyConnect: true,
       });
-      await this.redis.connect();
+      await this.redis!.connect();
     }
-    return this.redis;
+    return this.redis!;
   }
 
   async get(tenantId: string): Promise<WizardProgress | undefined> {

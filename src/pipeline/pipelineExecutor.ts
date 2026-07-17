@@ -4,9 +4,9 @@ import { getLoadedTemplate, getResolvedCommand } from '../template/loader.js';
 import type { LoadedTemplate } from '../template/loader.js';
 import { advanceSession, createSession, failSession, getSession, retrySession } from './sessionOrchestrator.js';
 import { getPhaseStage } from './stateMachine.js';
-import type { ConfinementConfig, PhaseStepResult, PipelinePhase, PhaseStepInfo, SessionState } from './types.js';
+import type { ConfinementConfig, PhaseStepResult, PipelinePhase, PhaseStepInfo, PipelineConfigRun, SessionState } from './types.js';
 import { GateRunner } from './gates/gateRunner.js';
-import { updatePipelineRunMetrics, getPipelineVersionChain } from './pipelineConfigResolver.js';
+import { updatePipelineRunMetrics, getPipelineVersionChain, createPipelineRun, resolveConfig } from './pipelineConfigResolver.js';
 import type { GateCheckInput, GatesConfig, GateRunnerResult } from './gates/types.js';
 
 const log = rootLogger.child({ module: 'pipeline-executor' });
@@ -51,6 +51,7 @@ export class PipelineExecutor {
   private readonly context: Record<string, string>;
   private phaseOrder: PipelinePhase[] = [];
   private readonly confinement: ConfinementConfig;
+  private pipelineRun: PipelineConfigRun | null = null;
 
   /** Per-issue error signature history for dead-end detection. Key = owner/repo#number. */
   private static readonly errorSignatures: Map<string, Set<string>> = new Map();
@@ -515,7 +516,7 @@ export class PipelineExecutor {
     const template = this.template;
     if (!template) return;
 
-    const gatesConfig: GatesConfig = template.gates ?? {};
+    const gatesConfig: GatesConfig = (template as unknown as Record<string, unknown>).gates as GatesConfig ?? {};
     const hasAnyGate = gatesConfig.schema || gatesConfig.rowCount || gatesConfig.nullRate || gatesConfig.metric;
     if (!hasAnyGate) return;
 
@@ -528,10 +529,10 @@ export class PipelineExecutor {
     const allResults: GateRunnerResult[] = [];
 
     const csvCandidates = [
-      ...(template.phases?.main ?? []).map((s) => s.output),
-      ...(template.phases?.post ?? []).map((s) => s.output),
-      ...(template.phases?.final ?? []).map((s) => s.output),
-    ].filter(Boolean);
+      ...((template.phases?.main ?? []) as { command: string; session: string; output?: string }[]).map((s) => s.output),
+      ...((template.phases?.post ?? []) as { command: string; session: string; output?: string }[]).map((s) => s.output),
+      ...((template.phases?.final ?? []) as { command: string; session: string; output?: string }[]).map((s) => s.output),
+    ].filter((x): x is string => !!x);
 
     const csvPaths = [...new Set(csvCandidates)];
 

@@ -54,15 +54,7 @@ declare module '@actions/github' {
 
 declare module 'dockerode' {
   import { EventEmitter } from 'node:events';
-  export default class Docker {
-    constructor(options?: { socketPath?: string; host?: string; port?: number; protocol?: string });
-    createContainer(options: Record<string, unknown>): Promise<Container>;
-    getContainer(id: string): Container;
-    listContainers(options?: Record<string, unknown>): Promise<Array<Record<string, unknown>>>;
-    pull(image: string, options?: Record<string, unknown>): Promise<ReadableStream>;
-    modem: { demuxStream: (stream: unknown, stdout: unknown, stderr: unknown) => void };
-  }
-  export class Container extends EventEmitter {
+  class ContainerInternal extends EventEmitter {
     start(options?: Record<string, unknown>): Promise<void>;
     stop(options?: Record<string, unknown>): Promise<void>;
     remove(options?: Record<string, unknown>): Promise<void>;
@@ -72,8 +64,34 @@ declare module 'dockerode' {
     wait(): Promise<Record<string, unknown>>;
     modem: { demuxStream: (stream: unknown, stdout: unknown, stderr: unknown) => void };
   }
+  export default class Docker {
+    constructor(options?: { socketPath?: string; host?: string; port?: number; protocol?: string });
+    static Container: typeof ContainerInternal;
+    createContainer(options: Record<string, unknown>): Promise<Container>;
+    getContainer(id: string): Container;
+    listContainers(options?: Record<string, unknown>): Promise<Array<Record<string, unknown>>>;
+    pull(image: string, callback?: (err: Error | null, stream: NodeJS.ReadableStream | undefined) => void): void;
+    pull(image: string, options?: Record<string, unknown>): Promise<NodeJS.ReadableStream>;
+    modem: { demuxStream: (stream: unknown, stdout: unknown, stderr: unknown) => void };
+    version(): Promise<Record<string, string>>;
+  }
+  export { ContainerInternal as Container };
   export class Exec extends EventEmitter {
     start(options: Record<string, unknown>): Promise<unknown>;
     inspect(): Promise<Record<string, unknown>>;
+  }
+}
+
+declare module 'xlsx' {
+  export function readFile(filename: string, opts?: Record<string, unknown>): WorkBook;
+  export const utils: {
+    sheet_to_json<T = Record<string, unknown>>(sheet: WorkSheet, opts?: Record<string, unknown>): T[];
+  };
+  export interface WorkBook {
+    SheetNames: string[];
+    Sheets: Record<string, WorkSheet>;
+  }
+  export interface WorkSheet {
+    [key: string]: unknown;
   }
 }

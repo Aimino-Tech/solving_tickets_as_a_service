@@ -422,10 +422,11 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
     if (webhookEvent.source === 'github') {
       const { createGithubWebhooks } = await import('../webhooks/github.js');
       const enqueueFn = async (data: import('../utils/types.js').IssueJobData) => {
-        const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
+        const { publishMessage } = await import('../queue/amqp/producer.js');
+        const { connect: rmqConnect, isConnected } = await import('../queue/amqp/connection.js');
         if (!isConnected()) await rmqConnect();
         const messageId = `${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}-${Date.now()}`;
-        await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+        await publishMessage('stas.direct', 'issue.fix', {
           ...data,
           _meta: { messageId, enqueuedAt: new Date().toISOString() },
         });

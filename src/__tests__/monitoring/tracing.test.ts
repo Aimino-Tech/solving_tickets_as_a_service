@@ -12,7 +12,7 @@ describe('tracing', () => {
   let m: typeof import('../../monitoring/tracing.js');
   beforeEach(async () => { vi.clearAllMocks(); m = await import('../../monitoring/tracing.js'); });
   it('getPipelineTracer', () => { expect(m.getPipelineTracer()).toBeDefined(); });
-  it('setPipelineTracer', () => { const t = { startSpan: vi.fn(() => ({ end: vi.fn() })) } as unknown as Tracer; m.setPipelineTracer(t); expect(m.getPipelineTracer()).toBe(t); });
+  it('setPipelineTracer', () => { const t = { startSpan: vi.fn(() => ({ end: vi.fn(), setStatus: vi.fn(), recordException: vi.fn() })) } as unknown as Tracer; m.setPipelineTracer(t); expect(m.getPipelineTracer()).toBe(t); });
   it('startPhaseSpan', () => { expect(m.startPhaseSpan({ phase: 'run_fix', sessionId: 's1' })).toBeDefined(); });
   it('startPhaseSpan w/ parent', () => { const p = m.startPhaseSpan({ phase: 'webhook_receive', sessionId: 's1' }); expect(m.startPhaseSpan({ phase: 'enqueue', sessionId: 's1' }, p)).toBeDefined(); });
   it('tracePhase ok', async () => { expect(await m.tracePhase({ phase: 'run_fix', sessionId: 's1' }, async () => 'done')).toBe('done'); });

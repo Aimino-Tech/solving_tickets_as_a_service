@@ -141,6 +141,14 @@ export async function hasCriticalQueues(): Promise<{ critical: string[]; warning
   return { critical, warning };
 }
 
+/**
+ * Close the health check Redis connection.
+ * No-op if no Redis client is active.
+ */
+export async function closeHealthRedis(): Promise<void> {
+  // Health checks use RabbitMQ, not Redis — no connection to close
+}
+
 export async function getDLQSummary(): Promise<{ totalDlqMessages: number; queuesWithMessages: string[] }> {
   const report = await getQueueHealth();
   const dlqEntries = report.queues.filter((q) => q.type === 'dlq' && q.depth > 0);

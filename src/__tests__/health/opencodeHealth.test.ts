@@ -33,12 +33,13 @@ vi.mock('../../utils/logger.js', () => ({
 // We mock config so opencodeHealth can be loaded without process.exit
 vi.mock('../../config.js', () => ({
   config: {
+    stas: { aiMode: 'ai' },
     opencode: { url: 'http://localhost:4096' },
     opencodeHealth: {
       pollIntervalMs: 5000,
       cacheTtlMs: 30000,
       circuitBreakerThreshold: 3,
-      requestTimeoutMs: 5000,
+      requestTimeoutMs: 100,
       startupTimeoutMs: 30000,
     },
   },
