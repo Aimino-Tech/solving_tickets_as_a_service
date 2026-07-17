@@ -27,7 +27,7 @@ const reposLimiter = rateLimit({
   message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
 });
 
-const router = Router();
+const router: Router = Router();
 
 router.use(reposLimiter);
 

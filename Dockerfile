@@ -80,4 +80,4 @@ LABEL org.opencontainers.image.title="STAS Bot"
 LABEL org.opencontainers.image.description="Solving Tickets As A Service — GitHub bot"
 LABEL org.opencontainers.image.licenses="MIT"
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/src/index.js"]

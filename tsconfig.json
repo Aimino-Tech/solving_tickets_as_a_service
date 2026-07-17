@@ -4,7 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -13,5 +13,18 @@
     "declaration": true,
     "sourceMap": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "src/__tests__/**",
+    "dashboard/**",
+    "plugin/**",
+    "premium/**",
+    "website/**",
+    "eval/**",
+    "tests/**",
+    "public/**",
+    "data/**"
+  ]
 }

@@ -47,7 +47,7 @@ function resolveUserId(req: Request): string {
 // Router
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * GET /api/v1/usage

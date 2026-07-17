@@ -4,7 +4,7 @@ import { config } from '../config.js';
 
 const log = rootLogger.child({ module: 'preview' });
 
-const router = Router();
+const router: Router = Router();
 
 interface FixableIssue {
   number: number;

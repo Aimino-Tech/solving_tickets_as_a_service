@@ -32,7 +32,7 @@ const log = rootLogger.child({ module: 'linear-webhook' });
 // Rate Limiting: 30 requests per minute on Linear webhook endpoint
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 
 // ---------------------------------------------------------------------------

@@ -23,7 +23,7 @@ const log = rootLogger.child({ module: 'onboarding' });
 // Rate Limiting: 10 requests per minute for onboarding endpoints
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 
 // ---------------------------------------------------------------------------

@@ -32,7 +32,7 @@ import { queryWithRetry } from '../db/connection.js';
 
 const log = rootLogger.child({ module: 'billing-api' });
 
-const router = Router();
+const router: Router = Router();
 
 // ---------------------------------------------------------------------------
 // Rate limiting: 30 requests per minute per IP on billing endpoints
