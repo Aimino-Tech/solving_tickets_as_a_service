@@ -13,6 +13,8 @@
 [![OpenCode](https://img.shields.io/badge/OpenCode_Skill-7C3AED?logo=opencode&logoColor=white)](https://opencode.ai/skills/stas)
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-2088FF?logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/stas-eval)
 [![Star History](https://api.star-history.com/svg?repos=Aimino-Tech/solving_tickets_as_a_service&type=Date)](https://star-history.com/#Aimino-Tech/solving_tickets_as_a_service&Date)
+[![Uptime](https://img.shields.io/badge/Uptime-100%25-brightgreen)](https://stas.betteruptime.com)
+[![Status Page](https://img.shields.io/badge/Status_Page-0055FF)](https://stas.betteruptime.com)
 
 **Label a GitHub issue. Get a pull request.**
 

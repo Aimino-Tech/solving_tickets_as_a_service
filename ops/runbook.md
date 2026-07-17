@@ -282,6 +282,36 @@ docker compose -f docker-compose.prod.yml logs stas-webhook | grep -i "pagerduty
 | Rate Limit Exhausted | `rate_limit_remaining == 0` | Warning | Slack | Check tier limits |
 | SSL Certificate Expiring | `cert_expiry_days < 14` | Warning | Slack | Renew certificate |
 
+
+### External Monitoring (Better Uptime)
+
+STAS uses [Better Uptime](https://betteruptime.com) for external uptime monitoring. Configuration: `deploy/monitoring/uptime-config.yml`.
+
+#### Monitored Endpoints
+
+| Endpoint | Interval | Regions | Purpose |
+|----------|----------|---------|---------|
+| `https://api.stas.aimino.io/health` | 30s | us-east-1, eu-west-1, ap-southeast-1 | Core liveness |
+| `https://api.stas.aimino.io/health/queue` | 60s | us-east-1, eu-west-1 | Queue health |
+| `https://api.stas.aimino.io/api/pricing` | 5 min | us-east-1, eu-west-1 | Pricing API |
+| `https://stas.aimino.io/` | 5 min | us-east-1, eu-west-1, ap-southeast-1 | Website |
+| Synthetic E2E | 5 min | us-east-1 | Pipeline check |
+
+#### Setup
+
+```bash
+bash scripts/setup-uptime-monitoring.sh --dry-run
+BETTER_UPTIME_API_KEY="key" bash scripts/setup-uptime-monitoring.sh
+```
+
+#### Status Page
+
+https://stas.betteruptime.com - 90-day uptime history, public access.
+
+#### Incident Flow
+
+T+0m: Slack + Email | T+5m: SMS on-call | T+15m: PagerDuty escalation
+
 ---
 
 ## 4. Common Failures

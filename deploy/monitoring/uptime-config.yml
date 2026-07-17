@@ -1,0 +1,45 @@
+# STAS External Uptime Monitoring Configuration
+
+monitors:
+  - name: "STAS /health - Core Liveness"
+    type: "http"
+    url: "https://api.stas.aimino.io/health"
+    check_interval: 30
+    regions: ["us-east-1", "eu-west-1", "ap-southeast-1"]
+    http_method: "GET"
+    expected_status_code: 200
+    paused: false
+
+  - name: "STAS /health/queue - Queue Health"
+    type: "http"
+    url: "https://api.stas.aimino.io/health/queue"
+    check_interval: 60
+    regions: ["us-east-1", "eu-west-1"]
+    http_method: "GET"
+    expected_status_code: 200
+    paused: false
+
+  - name: "STAS /api/pricing - Pricing API"
+    type: "http"
+    url: "https://api.stas.aimino.io/api/pricing"
+    check_interval: 300
+    regions: ["us-east-1", "eu-west-1"]
+    http_method: "GET"
+    expected_status_code: 200
+    paused: false
+
+  - name: "STAS Website - stas.aimino.io"
+    type: "http"
+    url: "https://stas.aimino.io/"
+    check_interval: 300
+    regions: ["us-east-1", "eu-west-1", "ap-southeast-1"]
+    http_method: "GET"
+    expected_status_code: 200
+    paused: false
+
+  - name: "STAS Synthetic E2E - Full Pipeline"
+    type: "heartbeat"
+    url: "https://api.stas.aimino.io/monitoring/synthetic-heartbeat"
+    check_interval: 300
+    grace_period: 120
+    paused: false
