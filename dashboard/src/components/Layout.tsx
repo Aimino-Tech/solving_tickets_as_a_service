@@ -4,9 +4,15 @@ import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useState } from 'react';
 
+const LOCALES = [
+  { code: 'en' as const, label: 'EN', flag: '🇬🇧' },
+  { code: 'de' as const, label: 'DE', flag: '🇩🇪' },
+  { code: 'fr' as const, label: 'FR', flag: '🇫🇷' },
+  { code: 'es' as const, label: 'ES', flag: '🇪🇸' },
+] as const;
+
 export default function Layout() {
   const { user, logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
   const { isDark, toggleTheme } = useTheme();
   const { t, locale, setLocale } = useI18n();
   const location = useLocation();
@@ -109,26 +115,21 @@ export default function Layout() {
           </div>
           {/* Locale switcher */}
           <div className="mt-3 flex gap-1">
-            <button
-              onClick={() => setLocale('en')}
-              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-                locale === 'en'
-                  ? 'bg-brand-100 text-brand-700'
-                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              EN
-            </button>
-            <button
-              onClick={() => setLocale('de')}
-              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-                locale === 'de'
-                  ? 'bg-brand-100 text-brand-700'
-                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              DE
-            </button>
+            {LOCALES.map((loc) => (
+              <button
+                key={loc.code}
+                onClick={() => setLocale(loc.code)}
+                className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                  locale === loc.code
+                    ? 'bg-brand-100 text-brand-700'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                }`}
+                title={loc.label}
+              >
+                <span className="mr-0.5">{loc.flag}</span>
+                {loc.label}
+              </button>
+            ))}
           </div>
         </div>
       </aside>
