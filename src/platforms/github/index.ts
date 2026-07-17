@@ -79,7 +79,7 @@ export class GitHubPlatformClient implements PlatformClient {
     if (updates.body !== undefined) params.body = updates.body;
     if (updates.state !== undefined) params.state = updates.state;
     if (updates.labels !== undefined) params.labels = updates.labels;
-    await this.octokit.issues.update(params as any);
+    await this.octokit.issues.update(params as Parameters<typeof this.octokit.issues.update>[0]);
   }
 
   // ── PR operations ─────────────────────────────────────────────────

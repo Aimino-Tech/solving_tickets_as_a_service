@@ -4,10 +4,12 @@
 ![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Benchmark](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/.github/badges/benchmark.svg)
+[![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/aimino)
 [![RapidAPI](https://img.shields.io/badge/RapidAPI-0055FF?logo=rapidapi&logoColor=white)](https://rapidapi.com/aimino/api/stas-api?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
 [![MCP](https://img.shields.io/badge/MCP_Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/stas-mcp?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
 [![OpenCode](https://img.shields.io/badge/OpenCode_Skill-7C3AED?logo=opencode&logoColor=white)](https://opencode.ai/skills/stas?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-2088FF?logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/stas-eval?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
+[![Star History](https://api.star-history.com/svg?repos=Aimino-Tech/solving_tickets_as_a_service&type=Date)](https://star-history.com/#Aimino-Tech/solving_tickets_as_a_service&Date)
 
 **Label a GitHub issue. Get a pull request.**
 
@@ -62,61 +64,78 @@ npx -y @aimino/stas-mcp
 
 > See [STAS for AI Agents](website/agents.html) and [All Integrations](website/integrations.html) for complete documentation.
 
+> **⭐ If you find STAS useful, [star the repo](https://github.com/Aimino-Tech/solving_tickets_as_a_service) — it helps others discover the project!**
+
 ## How It Works
 
-1. Install the GitHub App on your repo
-2. Label any issue with `stas:fix`
-3. STAS acknowledges, investigates, fixes, verifies
-4. A draft PR appears with the fix and regression tests
-5. You review and merge
+![STAS Demo](dashboard/public/assets/launch/stas-demo.gif)
 
-Every fix runs in an isolated sandbox. Your code is never stored. Full audit trail in every PR.
+## Quick Start — First Fix in <15 Minutes
 
-## Quick Start
+Choose your install path:
 
-### One-command setup (recommended)
+### GitHub Action (zero config, ~3 minutes)
 
-```bash
-# Clone and set up everything automatically
-git clone https://github.com/tamnguyen08/solving_tickets_as_a_service
-cd solving_tickets_as_a_service
-npm run setup
+Add this workflow file to your repo at `.github/workflows/stas.yml`:
+
+```yaml
+name: STAS Auto-Fix
+on:
+  issues:
+    types: [labeled]
+jobs:
+  fix:
+    if: github.event.label.name == 'stas:fix'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.STAS_BOT_APP_ID }}
+          private-key: ${{ secrets.STAS_BOT_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+      - name: Run STAS fix agent
+        run: npx -y @aimino/stas-fix-action
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
 ```
 
-Then start the bot:
+**3 steps**: Add workflow file → Set 2 secrets (`STAS_BOT_APP_ID`, `STAS_BOT_PRIVATE_KEY`) → Label an issue. Done.
+
+### Cloud (one-click, ~2 minutes)
+
+Visit [stas.aimino.io](https://stas.aimino.io), install the GitHub App, label an issue. No servers to manage.
+
+### Self-hosted (Docker, ~10 minutes)
 
 ```bash
-# Start OpenCode (agent backend, in another terminal)
-opencode serve --port 4096
-
-# Start the bot
-npm run dev
-
-# Verify it's running
-curl http://localhost:3000/health
-```
-
-### Manual setup
-
-```bash
-# 1. Clone and install
-git clone https://github.com/tamnguyen08/solving_tickets_as_a_service
+git clone https://github.com/Aimino-Tech/solving_tickets_as_a_service
 cd solving_tickets_as_a_service
-npm install
-
-# 2. Start OpenCode (in another terminal)
-opencode serve --port 4096
-
-# 3. Configure
 cp .env.example .env
-# Fill in GITHUB_APP_ID, GITHUB_PRIVATE_KEY, GITHUB_WEBHOOK_SECRET
-
-# 4. Seed the database with a demo user (optional, for dashboard testing)
-npx tsx src/db/seed.ts
-
-# 5. Run
-npm run dev
+docker compose up -d
 ```
+
+### Try it without installing anything
+
+```bash
+curl -X POST https://api.stas.aimino.io/api/v1/preview \
+  -H "Content-Type: application/json" \
+  -d '{"repoUrl": "https://github.com/owner/repo"}'
+```
+
+Returns the top 5 fixable issues in any public repo — no auth required.
 
 ## OpenCode Plugin
 
@@ -159,21 +178,21 @@ For OpenCode users: add `@tarquinen/stas-plugin` to your opencode.json `plugin` 
 
 ## Business Model
 
-STAS follows an **open-core model** with two paths to paid plans:
+STAS follows an **open-core model** with three paths, all pointing to paid plans for full features:
 
 | | Self-Hosted (OSS) | Cloud Free | Cloud Paid |
 |---|---|---|---|
-| **Fixes/mo** | Unlimited | 10 fixes/mo | 100–500+/mo |
-| **AI model** | Your API key, your choice | Our AGI (50% better than GPT-5.5) | Our AGI |
+| **Fixes/mo** | Unlimited (your API key) | 10 fixes/mo | 100–500+/mo |
+| **AI model** | Your API key, your model | Our AGI | Our AGI |
 | **Setup** | Manual — you run it | One-click install | One-click install |
 | **Infrastructure** | You manage | We manage | We manage |
 | **Dashboard** | — | Limited analytics | Full analytics, audit log |
 | **Support** | GitHub issues (community) | Community | Slack, email, SLA |
-| **Cost** | Your API usage | Free | $49–$149/mo |
+| **Cost** | Your API usage | Free | $49–$199/mo |
 
-**Self-host** is unlimited but has caveats: no dashboard, manual setup, community support only. It's ideal for developers who want full control and have their own model API keys.
+**Conversion funnel**: Self-Hosted → Cloud Paid (when infra ops hurt), Cloud Free → Cloud Paid (when 10 fixes/mo isn't enough), Cloud Paid → Enterprise (when team needs SSO, VPC, SLAs).
 
-**Cloud Free** (10 fixes/mo) lets hosted users try STAS risk-free. Both paths point to paid plans ($49/mo Solo, $149/mo Team, custom Enterprise) for full features, higher limits, and support.
+See [Pricing Model](docs/pricing-model.md) for detailed plan breakdown and economics.
 
 ## Architecture
 
@@ -356,12 +375,13 @@ See `k8s/` for example manifests.
 STAS ships with comprehensive documentation:
 
 | Document | Description |
-|---|---|
+|---|---|---|
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Deep-dive into the pipeline: webhooks, queue, agent, sandbox, security |
 | [SECURITY.md](docs/SECURITY.md) | Security model: webhook verification, sandbox isolation, prompt injection protection |
 | [SELF_HOSTING.md](docs/SELF_HOSTING.md) | Step-by-step self-hosting guide: Docker, Kubernetes, Railway, Fly.io |
 | [CUSTOMIZATION.md](docs/CUSTOMIZATION.md) | Customizing labels, models, tools, PR templates, and environment |
 | [FAQ.md](docs/FAQ.md) | Frequently asked questions about STAS, alternatives, and troubleshooting |
+| [LAUNCH_PLAYBOOK.md](docs/launch-playbook.md) | Launch strategy playbook — 48-hour multi-channel ignition |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, testing, PR process, code style |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community guidelines |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Local development and deployment guide |
@@ -378,6 +398,36 @@ STAS now supports multiple Git hosting platforms. See the [Platforms documentati
 
 Each platform has its own webhook integration, agent pipeline, CI configuration, and eval test strategy. Platform-specific setup guides are in [`docs/platforms/`](docs/platforms/README.md).
 
+
+## AI Trust & Anti-Slop
+
+The OSS community is rightfully cautious about AI-generated PRs — "slop" (hallucinated changes, phantom files, meaningless noise) erodes trust in automation. STAS is built differently.
+
+### Verified by 6 Quality Gates, not "Generated by AI"
+
+Every STAS PR passes **6 deterministic OSS quality gates** before reaching your reviewers:
+
+| Gate | What It Checks | Tool |
+|------|---------------|------|
+| **Reality Check** | Every referenced file actually exists | `git ls-files`, `fs.stat` |
+| **Compile Check** | `tsc --noEmit` passes | TypeScript compiler |
+| **Test Integrity** | Tests have real assertions (no vacuous tests) | vitest + pattern grep |
+| **Hallucination Scan** | No TODO stubs, placeholders, fake imports | grep, npm registry scan |
+| **Dead Code Check** | No orphaned files or unused exports | knip + ts-prune |
+| **MCI Verification** | PR description matches the actual diff (no phantom claims) | Keyword + file-path heuristic scorer |
+
+### Transparency, not opacity
+
+- **AI attribution** — Every PR body clearly states: "This fix was generated by STAS AI."
+- **DCO sign-off** — All commits include `Signed-off-by: STAS Bot` for full chain-of-custody.
+- **Audit trail** — Every gate result is collapsible in the PR body; raw JSON evidence is persisted.
+- **PR-MCI scoring** — A message-code inconsistency score (0–100) tells you if the description actually matches the diff.
+
+### Our commitment
+
+We do not ship "probably fine." If any gate fails, the PR is **blocked** — no exception, no skip flag. The agent retries up to 3 times before escalating to a human.
+
+> "The best AI-generated PR is one you can trust without re-reading everything."
 
 ## Roadmap
 
@@ -398,3 +448,117 @@ Contributions are welcome! See [`CONTRIBUTING.md`](CONTRIBUTING.md) for developm
 ## License
 
 MIT — use it, modify it, ship it.
+
+## Agent Skill Ecosystem
+
+STAS is published as a skill for multiple agent platforms. Install it in your preferred coding assistant.
+
+### OpenCode
+
+Add to `opencode.json` (project root or `~/.config/opencode/opencode.json`):
+
+```json
+{
+  "mcpServers": {
+    "stas": {
+      "command": "python3",
+      "args": ["-m", "stas_mcp.server", "stdio"]
+    }
+  }
+}
+```
+
+Or use the install script:
+```bash
+# From the project root
+bash stas_mcp/install.sh --opencode
+
+# Or via npm
+npx stas install-mcp --opencode
+```
+
+### Claude Code
+
+Add to `claude_desktop_config.json` (`~/.config/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "stas": {
+      "command": "python3",
+      "args": ["-m", "stas_mcp.server", "stdio"]
+    }
+  }
+}
+```
+
+Or use the install script:
+```bash
+npx stas install-mcp --claude
+```
+
+### Cursor
+
+1. Open **Cursor Settings → Features → MCP Servers**
+2. Click **+ Add New MCP Server**
+3. Fill in:
+   - **Name:** `stas`
+   - **Type:** `command`
+   - **Command:** `python3 -m stas_mcp.server stdio`
+4. Click **Save**
+
+Or add to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "stas": {
+      "command": "python3",
+      "args": ["-m", "stas_mcp.server", "stdio"]
+    }
+  }
+}
+```
+
+### Codex CLI
+
+Add to `.codex/config.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "stas": {
+      "command": "python3",
+      "args": ["-m", "stas_mcp.server", "stdio"]
+    }
+  }
+}
+```
+
+### Claude Plugin Marketplace
+
+STAS is listed in the [Claude Plugin Marketplace](.claude-plugin/marketplace.json) with full skill definitions at `skills/stas/SKILL.md`.
+
+### Publishing Channels
+
+| Channel | Location |
+|---------|----------|
+| **skills.sh** | `skills/stas/SKILL.md` |
+| **Claude Plugin Marketplace** | `.claude-plugin/marketplace.json` |
+| **npm** | `npx stas install-mcp` — one-command install for all agents |
+| **Smithery** | `@aimino/stas-mcp` — hosted MCP server |
+| **GitHub Marketplace** | GitHub Action for STAS eval |
+| **RapidAPI** | Payable STAS API endpoint |
+
+### Verify Installation
+
+After installing the skill, verify the MCP server responds:
+
+```bash
+# List available tools via stdio
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m stas_mcp.server stdio
+
+# Or start SSE mode and curl health
+python -m stas_mcp.server sse &
+curl http://localhost:4095/health
+```

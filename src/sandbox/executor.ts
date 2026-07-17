@@ -52,8 +52,8 @@ export class E2BSandboxExecutor implements SandboxExecutorInterface {
     if (this.progressCallback) {
       try {
         this.progressCallback(phase, progress, message);
-      } catch {
-        /* ignore heartbeat failures — non-fatal */
+      } catch (err) {
+        log.warn({ err: String(err), phase, progress }, 'Progress callback failed — non-fatal');
       }
     }
   }
@@ -207,8 +207,8 @@ export class E2BSandboxExecutor implements SandboxExecutorInterface {
         return;
       }
 
-      // Commit
-      const commitResult = await this.exec(`git -C "${this.repoDir}" commit -m "fix: automated fix by STAS"`);
+      // Commit with DCO sign-off
+      const commitResult = await this.exec(`git -C "${this.repoDir}" commit -m "fix: automated fix by STAS" -m "Signed-off-by: STAS Bot <stas-bot@users.noreply.github.com>"`);
       if (commitResult.exitCode !== 0 && !commitResult.stderr.includes('nothing to commit')) {
         throw new Error(`Failed to commit: ${commitResult.stderr}`);
       }

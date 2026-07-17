@@ -16,10 +16,7 @@
 
 import { type EmitterWebhookEventName, Webhooks } from '@octokit/webhooks';
 
-import { Queue } from 'bullmq';
-
 import { config } from '../config.js';
-import { enqueueIssue } from '../queue/issueQueue.js';
 import { rootLogger } from '../utils/logger.js';
 import type { BillingPlan, IssueJobData } from '../utils/types.js';
 import { rateLimiter } from '../ratelimit/limiter.js';
@@ -29,10 +26,12 @@ import { accountsRepository } from '../db/repositories/index.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
 
+type EnqueueHandler = (data: IssueJobData) => Promise<string | undefined>;
+
 /**
  * Create the GitHub webhooks handler with all event listeners registered.
  */
-export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
+export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
   const webhooks = new Webhooks({
     secret: config.github.webhookSecret,
   });
@@ -145,7 +144,7 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
     await rateLimiter.increment('account', String(jobData.installationId));
     await rateLimiter.increment('repo', repo);
     try {
-      await enqueueIssue(queue, jobData);
+      await enqueue(jobData);
     } catch (err) {
       log.error(
         {
@@ -236,7 +235,7 @@ export function createGithubWebhooks(queue: Queue<IssueJobData>): Webhooks {
       }
 
       try {
-        await enqueueIssue(queue, jobData);
+        await enqueue(jobData);
       } catch (err) {
         log.error(
           {

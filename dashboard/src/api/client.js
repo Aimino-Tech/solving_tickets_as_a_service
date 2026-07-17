@@ -81,6 +81,40 @@ export const audit = {
         return request(`/audit${query ? `?${query}` : ''}`);
     },
 };
+// Benchmarks
+export const benchmarks = {
+    get: () => request('/benchmarks'),
+    getPrices: () => request('/benchmarks/price'),
+};
+// KPI Dashboard (admin key required)
+export const kpi = {
+    get: (params) => {
+        const qs = new URLSearchParams();
+        if (params?.days)
+            qs.set('days', String(params.days));
+        if (params?.from)
+            qs.set('from', params.from);
+        if (params?.to)
+            qs.set('to', params.to);
+        const query = qs.toString();
+        return request('/kpi' + (query ? '?' + query : ''));
+    },
+    exportUrl: (days) => {
+        const qs = days ? '?days=' + days : '';
+        return API_BASE + '/kpi/export' + qs;
+    },
+};
+// Pricing
+export const pricing = {
+    get: () => request('/pricing'),
+    calculate: (fixes, tier) => {
+        const qs = new URLSearchParams({ fixes: String(fixes) });
+        if (tier)
+            qs.set('tier', tier);
+        return request(`/pricing/calculate?${qs.toString()}`);
+    },
+    vs: (competitor) => request(`/pricing/vs/${competitor}`),
+};
 // Settings
 export const settings = {
     get: () => request('/settings'),

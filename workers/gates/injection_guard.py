@@ -100,6 +100,8 @@ class InjectionGuardConfig:
         mode: str | None = None,
         strict_threshold: float = 0.5,
         moderate_threshold: float = 0.7,
+        silent_annotate: bool | None = None,
+        guardrail_level: int | None = None,
     ) -> None:
         raw = (mode or os.getenv("QUALITY_PROMPT_INJECTION_GUARD", "strict")).strip().lower()
         if raw not in ("strict", "moderate", "off"):
@@ -108,6 +110,13 @@ class InjectionGuardConfig:
         self.mode = GuardMode(raw)
         self.strict_threshold = strict_threshold
         self.moderate_threshold = moderate_threshold
+        self.silent_annotate = silent_annotate if silent_annotate is not None else (
+            os.getenv("INJECTION_GUARD_SILENT_ANNOTATE", "").lower() in ("1", "true", "yes")
+        )
+        raw_level = guardrail_level
+        if raw_level is None:
+            raw_level = int(os.getenv("INJECTION_GUARD_LEVEL", "1"))
+        self.guardrail_level = max(1, min(3, raw_level))
 
 
 # ---------------------------------------------------------------------------
@@ -153,6 +162,16 @@ class InjectionGuardResult:
         if score > 0.0:
             return "low"
         return "none"
+
+    def caution_annotation(self) -> str:
+        if not self.detected:
+            return ""
+        patterns_str = ", ".join(self.patterns_matched)
+        return (
+            f"CAUTION: Your prompt was flagged as a potential prompt injection attempt. "
+            f"Severity: {self.severity}, Score: {self.score:.2f}, "
+            f"Patterns: {patterns_str}"
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {

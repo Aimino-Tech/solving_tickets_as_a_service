@@ -2,8 +2,8 @@
  * Teams repository — data access for the teams table.
  */
 
-import { queryWithRetry } from '../connection.js';
-import type { Team, NewTeam, TeamMember, NewTeamMember } from '../schema/index.js';
+import { queryWithRetry, validateSqlIdentifier } from '../connection.js';
+import type { Team, NewTeam, TeamMember, NewTeamMember } from '../types/index.js';
 
 export class TeamsRepository {
   async findById(id: number): Promise<Team | undefined> {
@@ -46,6 +46,12 @@ export class TeamsRepository {
     }
 
     if (sets.length === 0) return this.findById(id);
+
+    // Validate each column name in the dynamic SET clause
+    for (const clause of sets) {
+      const colName = clause.split('=')[0].trim();
+      validateSqlIdentifier(colName);
+    }
 
     values.push(id);
     const result = await queryWithRetry<Team>(

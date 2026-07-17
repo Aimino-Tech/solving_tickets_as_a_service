@@ -1,0 +1,125 @@
+{
+  "default_branch": "main",
+  "projects": {
+    "stas--solving-tickets-as-a-service": {
+      "repo": "Aimino-Tech/solving_tickets_as_a_service",
+      "branch": "main",
+      "linear_project_name": "STAS - Solving Tickets As A Service"
+    },
+    "fast-html-mcp": {
+      "repo": "Aimino-Tech/fast-html-mcp",
+      "branch": "main",
+      "linear_project_name": "fast-html-mcp"
+    },
+    "coherence-edit-mcp": {
+      "repo": "Aimino-Tech/coherence-edit-mcp",
+      "branch": "main",
+      "linear_project_name": "coherence-edit-mcp"
+    },
+    "tabular-mcp-prediction--analytics": {
+      "repo": "Aimino-Tech/tabular-mcp",
+      "branch": "main",
+      "linear_project_name": "Tabular MCP \u2014 Prediction & Analytics"
+    },
+    "oc-vision": {
+      "repo": "Aimino-Tech/oc-vision",
+      "branch": "main",
+      "linear_project_name": "oc-vision"
+    },
+    "oc-credit-german-business-credit-check-m": {
+      "repo": "Aimino-Tech/oc-credit",
+      "branch": "main",
+      "linear_project_name": "oc-credit \u2014 German Business Credit Check MCP"
+    },
+    "oc-tax-audit-german-tax-audit-preparatio": {
+      "repo": "Aimino-Tech/oc-tax-audit",
+      "branch": "main",
+      "linear_project_name": "oc-tax-audit \u2014 German Tax Audit Preparation MCP"
+    },
+    "oc-tender-german-public-tender-mcp": {
+      "repo": "Aimino-Tech/oc-tender",
+      "branch": "main",
+      "linear_project_name": "oc-tender \u2014 German Public Tender MCP"
+    },
+    "oc-slack": {
+      "repo": "Aimino-Tech/oc-slack",
+      "branch": "main",
+      "linear_project_name": "oc-slack"
+    },
+    "deepswe-benchmark-opencode-integration": {
+      "repo": "Aimino-Tech/deep-swe",
+      "branch": "main",
+      "linear_project_name": "DeepSWE Benchmark \u2014 OpenCode Integration"
+    },
+    "llm-governance-proxy": {
+      "repo": "Aimino-Tech/llm-governance",
+      "branch": "main",
+      "linear_project_name": "LLM Governance Proxy"
+    },
+    "hermes-agent-feature-integration": {
+      "repo": "Aimino-Tech/hermes-agent",
+      "branch": "main",
+      "linear_project_name": "Hermes Agent \u2014 Feature Integration"
+    },
+    "self-evolving-agent-memory": {
+      "repo": "Aimino-Tech/self-evolving-agent-memory",
+      "branch": "main",
+      "linear_project_name": "Self-Evolving Agent Memory"
+    },
+    "linkedin-buddy-clean-room-rewrite": {
+      "repo": "Aimino-Tech/linked-buddy",
+      "branch": "main",
+      "linear_project_name": "LinkedIn Buddy \u2014 Clean Room Rewrite"
+    },
+    "co-lleague": {
+      "repo": "Aimino-Tech/co-lleague",
+      "branch": "main",
+      "linear_project_name": "co-lleague"
+    },
+    "mandate-finder-hr-client-discovery": {
+      "repo": "Aimino-Tech/mandate-finder",
+      "branch": "main",
+      "linear_project_name": "Mandate Finder \u2014 HR Client Discovery"
+    },
+    "ai-archive-adidas-poc": {
+      "repo": "Aimino-Tech/ai-archive-poc",
+      "branch": "main",
+      "linear_project_name": "AI Archive \u2014 adidas POC"
+    },
+    "ki-fogger-secure-industrial-ai-inference": {
+      "repo": "Aimino-Tech/ki-fogger",
+      "branch": "main",
+      "linear_project_name": "KI-FOGGER \u2014 Secure Industrial AI Inference Stack"
+    },
+    "anti-ai-slop-tool": {
+      "repo": "Aimino-Tech/anti-ai-slop-tool",
+      "branch": "main",
+      "linear_project_name": "anti-ai-slop-tool"
+    },
+    "aether-command-open-source-launch": {
+      "repo": "Aimino-Tech/aether-command",
+      "branch": "main",
+      "linear_project_name": "Aether Command \u2014 Open-Source Launch"
+    },
+    "medtronic": {
+      "repo": "Aimino-Tech/medtronic",
+      "branch": "main",
+      "linear_project_name": "Medtronic"
+    },
+    "html-mcp": {
+      "repo": "Aimino-Tech/fast-html-mcp",
+      "branch": "main",
+      "linear_project_name": "html-mcp"
+    },
+    "opentalk2html-notmd-mcp-server": {
+      "repo": "Aimino-Tech/OpenTalk2HTML-NotMD",
+      "branch": "main",
+      "linear_project_name": "OpenTalk2HTML-NotMD MCP Server"
+    },
+    "gtm": {
+      "repo": "Aimino-Tech/GTM-strategy",
+      "branch": "main",
+      "linear_project_name": "GTM"
+    }
+  }
+}

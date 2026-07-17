@@ -31,15 +31,15 @@ import helmet from 'helmet';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
-import { createIssueQueue, createIssueWorker, enqueueIssue } from './queue/issueQueue.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
+import type { IssueJobData } from './utils/types.js';
+import { QUEUES, publishMessage, connect as rmqConnect, isConnected } from './queue/rabbitmq.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
 import { rootLogger } from './utils/logger.js';
 import { initMetering, usageRouter } from './metering/index.js';
-import type { IssueJobData } from './utils/types.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
@@ -47,6 +47,7 @@ import { featureFlagsRouter } from './routes/featureFlags.js';
 import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
 import { recordWebhookDuration } from './webhooks/metrics.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
+import { pipelineRouter } from './routes/pipeline.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 import { adminRouter } from './routes/admin.js';
 import { adminAuditRouter } from './routes/admin_audit.js';
@@ -56,6 +57,7 @@ import { slaRouter } from './routes/sla.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
 import { pricingRouter } from './routes/pricing.js';
+import { trustRouter } from './api/routes/trust.js';
 import { plgRouter } from './routes/plg.js';
 import { reposRouter } from './routes/repos.js';
 import { runsRouter } from './routes/runs.js';
@@ -63,8 +65,10 @@ import { badgeRouter } from './routes/badge.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { viralRouter } from './routes/viral.js';
 import { qualityRouter } from './routes/quality.js';
+import previewRoutes from './api/routes/preview.js';
 import { kpiRouter } from './routes/kpi.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
+import previewRoutes from './api/routes/preview.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -95,6 +99,29 @@ export async function createApp(): Promise<express.Application> {
     credentials: true,
     maxAge: 86400, // 24 hours
   }));
+
+  // -- Health check endpoint ------------------------------------------------
+  app.get('/health', (_req: Request, res: Response) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
+  });
+  app.get('/health/ready', async (_req: Request, res: Response) => {
+    const checks: Record<string, string> = {};
+    try {
+      const { queryWithRetry } = await import('./db/connection.js');
+      await queryWithRetry('SELECT 1');
+      checks.database = 'ok';
+    } catch { checks.database = 'down'; }
+    try {
+      const { Redis } = await import('ioredis');
+      const redis = new Redis(config.queue.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1, connectTimeout: 3000 });
+      await redis.connect();
+      await redis.ping();
+      checks.redis = 'ok';
+      await redis.quit().catch(() => {});
+    } catch { checks.redis = 'down'; }
+    const allOk = Object.values(checks).every(v => v === 'ok');
+    res.status(allOk ? 200 : 503).json({ status: allOk ? 'ok' : 'degraded', checks, timestamp: new Date().toISOString() });
+  });
 
   // -- IP Allowlist for webhook endpoints -----------------------------------
   app.use('/webhook', ipAllowlistMiddleware);
@@ -162,10 +189,27 @@ export async function createApp(): Promise<express.Application> {
   }
 
   // ── Webhook receiver ─────────────────────────────────────────────
-  const queue = createIssueQueue();
-  const githubWebhooks = createGithubWebhooks(queue);
-  const gitlabHandler = createGitlabWebhooks(queue);
-  const bitbucketHandler = createBitbucketWebhooks(queue);
+  // RabbitMQ enqueue function for webhook handlers
+  async function enqueueIssue(data: IssueJobData): Promise<string | undefined> {
+    if (!isConnected()) {
+      await rmqConnect();
+    }
+    const messageId = `${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}-${Date.now()}`;
+    try {
+      await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+        ...data,
+        _meta: { messageId, enqueuedAt: new Date().toISOString() },
+      });
+      return messageId;
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to enqueue issue via RabbitMQ');
+      return undefined;
+    }
+  }
+
+  const githubWebhooks = createGithubWebhooks(enqueueIssue);
+  const gitlabHandler = createGitlabWebhooks(enqueueIssue);
+  const bitbucketHandler = createBitbucketWebhooks(enqueueIssue);
 
   // -- GitHub webhook handler (shared between /webhook and /webhook/github) --
   async function handleGithubWebhook(req: Request, res: Response): Promise<void> {
@@ -207,7 +251,7 @@ export async function createApp(): Promise<express.Application> {
       try {
         await githubWebhooks.verifyAndReceive({
           id: deliveryId,
-          name: event as any,
+          name: event as EmitterWebhookEventName,
           payload: rawBody.toString(),
           signature,
         });
@@ -222,7 +266,7 @@ export async function createApp(): Promise<express.Application> {
       try {
         await githubWebhooks.receive({
           id: deliveryId || crypto.randomUUID(),
-          name: event as any,
+          name: event as EmitterWebhookEventName,
           payload: JSON.parse((rawBody || Buffer.from(JSON.stringify(req.body))).toString()),
         });
       } catch (err) {
@@ -367,7 +411,7 @@ export async function createApp(): Promise<express.Application> {
     // Log the webhook event
     const eventId = await logWebhookReceived({
       source,
-      eventType: (payload as any)?.type || 'unknown',
+      eventType: (payload as { type?: string })?.type ?? 'unknown',
       deliveryId: undefined,
       payload,
     });
@@ -409,7 +453,7 @@ export async function createApp(): Promise<express.Application> {
             trackerTicketId: ticket.id,
           };
 
-          await enqueueIssue(queue, jobData);
+          await enqueueIssue(jobData);
         } else {
           log.warn(
             'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Linear ticket not enqueued',
@@ -449,7 +493,7 @@ export async function createApp(): Promise<express.Application> {
     // Log the webhook event
     const eventId = await logWebhookReceived({
       source,
-      eventType: (payload as any)?.webhookEvent || 'unknown',
+      eventType: (payload as { webhookEvent?: string })?.webhookEvent ?? 'unknown',
       deliveryId: undefined,
       payload,
     });
@@ -491,7 +535,7 @@ export async function createApp(): Promise<express.Application> {
             trackerTicketId: ticket.id,
           };
 
-          await enqueueIssue(queue, jobData);
+          await enqueueIssue(jobData);
         } else {
           log.warn(
             'TRACKER_DEFAULT_REPO_OWNER/NAME or TRACKER_INSTALLATION_ID not configured -- Jira ticket not enqueued',
@@ -787,6 +831,10 @@ export async function createApp(): Promise<express.Application> {
   // ── Pricing API (public) ─────────────────────────────────────────
   app.use('/api/pricing', pricingRouter);
 
+  // ── Preview API (public, no auth) ────────────────────────────────
+  const { previewRouter } = await import('./routes/preview.js');
+  app.use('/api/v1', previewRouter);
+
   // KPI Dashboard API
   app.use('/api/kpi', kpiRouter);
 
@@ -811,6 +859,12 @@ export async function createApp(): Promise<express.Application> {
   } catch {
     log.warn('Enterprise routes not available');
   }
+
+  // ── Preview API (public, rate-limited per IP) ──────────────────────────
+  // POST /api/v1/preview — Demo preview of fixable issues
+  app.use('/api/v1/preview', previewRoutes);
+
+  app.use('/api', pipelineRouter);
   // -- 404 handler ----------------------------------------------------------
 
   app.use((req: Request, res: Response) => {
@@ -837,21 +891,35 @@ export async function createApp(): Promise<express.Application> {
 export async function startServer(): Promise<import('http').Server> {
   const app = await createApp();
 
-  const server = app.listen(config.port, '0.0.0.0', () => {
+  const server = app.listen(config.port, '0.0.0.0', async () => {
     log.info(
       { port: config.port, label: config.stas.label, env: config.nodeEnv },
       `STAS server listening on :${config.port}`,
     );
 
-    // Start the issue queue worker (Worker auto-starts in BullMQ 5.x)
+    // Start the RabbitMQ issue consumer
     try {
-      const worker = createIssueWorker();
-      worker.on('error', (err: Error) => {
-        log.error({ err: String(err) }, 'Issue worker error');
+      const { consumeQueue } = await import('./queue/rabbitmq.js');
+      const { runIssueAgent } = await import('./agent/issueAgent.js');
+      await consumeQueue(QUEUES.issuesFix.name, async (msg) => {
+        if (!msg) return;
+        const content = msg.content.toString();
+        let data: IssueJobData;
+        try {
+          data = JSON.parse(content) as IssueJobData;
+        } catch {
+          log.error({ content }, 'Failed to parse RabbitMQ message');
+          return;
+        }
+        try {
+          await runIssueAgent(data);
+        } catch (err) {
+          log.error({ err: String(err) }, 'Issue agent run failed');
+        }
       });
-      log.info('Issue queue worker started');
+      log.info('RabbitMQ issue consumer started');
     } catch (err) {
-      log.error({ err: String(err) }, 'Failed to start issue queue worker');
+      log.error({ err: String(err) }, 'Failed to start RabbitMQ issue consumer');
     }
   });
 

@@ -359,9 +359,9 @@ function getDiffTool(sandbox: {
       },
     },
     handler: async (args) => {
-      const path = args.path ? String(args.path) : '.';
+      const path = args.path ? String(args.path).replace(/'/g, "'\\''") : '.';
       try {
-        const result = await sandbox.exec(`git diff ${path}`);
+        const result = await sandbox.exec(`git diff '${path}'`);
         return result.stdout.slice(0, 10000) || 'No uncommitted changes.';
       } catch (err) {
         return `Error getting diff: ${String(err)}`;
@@ -410,11 +410,11 @@ function listDirectoryTool(sandbox: {
       required: ['path'],
     },
     handler: async (args) => {
-      const dirPath = String(args.path ?? '');
+      const dirPath = String(args.path ?? '').replace(/'/g, "'\\''");
       const depth = Number(args.depth ?? 1);
       if (!dirPath) return 'Error: path is required';
       try {
-        const result = await sandbox.exec(`find ${dirPath} -maxdepth ${depth} 2>/dev/null | head -200`);
+        const result = await sandbox.exec(`find '${dirPath}' -maxdepth ${depth} 2>/dev/null | head -200`);
         return result.stdout.slice(0, 5000) || 'Directory is empty or does not exist.';
       } catch (err) {
         return `Error listing directory: ${String(err)}`;
@@ -448,14 +448,14 @@ function getLineNumbersTool(sandbox: {
       required: ['file_path', 'pattern'],
     },
     handler: async (args) => {
-      const filePath = String(args.file_path ?? '');
+      const filePath = String(args.file_path ?? '').replace(/'/g, "'\\''");
       const pattern = String(args.pattern ?? '');
       const context = Number(args.context ?? 0);
       if (!filePath || !pattern) return 'Error: file_path and pattern are required';
       try {
         const ctxFlag = context > 0 ? ` -C ${context}` : '';
         const result = await sandbox.exec(
-          `grep -n${ctxFlag} '${pattern.replace(/'/g, "'\\''")}' ${filePath} 2>/dev/null | head -100`,
+          `grep -n${ctxFlag} '${pattern.replace(/'/g, "'\\''")}' '${filePath}' 2>/dev/null | head -100`,
         );
         return result.stdout.slice(0, 5000) || 'No matches found.';
       } catch (err) {
@@ -486,7 +486,7 @@ function findSymbolTool(sandbox: {
       required: ['symbol'],
     },
     handler: async (args) => {
-      const symbol = String(args.symbol ?? '');
+      const symbol = String(args.symbol ?? '').replace(/[^a-zA-Z0-9_$]/g, '');
       if (!symbol) return 'Error: symbol is required';
       try {
         // Try multiple search strategies
@@ -529,7 +529,7 @@ function traceImportsTool(sandbox: {
       required: ['file_path'],
     },
     handler: async (args) => {
-      const filePath = String(args.file_path ?? '');
+      const filePath = String(args.file_path ?? '').replace(/'/g, "'\\''");
       const depth = Number(args.depth ?? 3);
       if (!filePath) return 'Error: file_path is required';
       try {
@@ -537,7 +537,7 @@ function traceImportsTool(sandbox: {
         let current = filePath;
         const trace: string[] = [`${filePath}`];
         for (let i = 0; i < depth; i++) {
-          const imports = await sandbox.exec(`grep -E "^(import|const .* require)" ${current} 2>/dev/null | head -20`);
+          const imports = await sandbox.exec(`grep -E "^(import|const .* require)" '${current}' 2>/dev/null | head -20`);
           if (!imports.stdout.trim()) break;
           const lines = imports.stdout.split('\n').filter(Boolean);
           for (const line of lines.slice(0, 5)) {

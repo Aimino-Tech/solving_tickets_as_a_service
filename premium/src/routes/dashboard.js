@@ -97,7 +97,7 @@ router.post('/repos', async (req, res) => {
         // TODO: Persist to DB
         log.info({ owner, repo, installationId, user: req.user?.username }, 'Repo connected');
         res.status(201).json({
-            id: crypto.randomUUID(),
+            id: `repo-${owner}-${repo}`,
             owner,
             repo,
             active: true,
@@ -231,7 +231,6 @@ export { router as dashboardRouter };
 // ---------------------------------------------------------------------------
 // Mock data generators (placeholder until DB is wired)
 // ---------------------------------------------------------------------------
-import crypto from 'node:crypto';
 function generateMockRuns() {
     const statuses = [
         'success', 'success', 'success', 'failed', 'success', 'running', 'queued',
@@ -247,7 +246,7 @@ function generateMockRuns() {
         const createdAt = new Date(Date.now() - i * 3600000 * (1 + Math.random()));
         const duration = status === 'success' ? 60 + Math.floor(Math.random() * 600) : undefined;
         return {
-            id: crypto.randomUUID(),
+            id: 'repo-2',
             repoOwner: repo.owner,
             repoName: repo.repo,
             issueNumber: 100 + i,
@@ -266,7 +265,7 @@ function generateMockRuns() {
 function generateMockRepos() {
     return [
         {
-            id: crypto.randomUUID(),
+            id: 'repo-1',
             owner: 'my-org',
             repo: 'frontend-app',
             active: true,
@@ -274,7 +273,7 @@ function generateMockRepos() {
             createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
         },
         {
-            id: crypto.randomUUID(),
+            id: 'repo-2',
             owner: 'my-org',
             repo: 'api-service',
             active: true,
@@ -282,7 +281,7 @@ function generateMockRepos() {
             createdAt: new Date(Date.now() - 25 * 86400000).toISOString(),
         },
         {
-            id: crypto.randomUUID(),
+            id: 'repo-3',
             owner: 'acme-inc',
             repo: 'mobile-app',
             active: true,
@@ -297,7 +296,7 @@ function generateMockAuditEntries() {
     return Array.from({ length: 100 }, (_, i) => {
         const action = actions[i % actions.length];
         return {
-            id: crypto.randomUUID(),
+            id: `audit-${i + 1}`,
             action,
             actor: usernames[i % usernames.length],
             target: action.includes('run') ? `Run #${100 + i}` : action.includes('repo') ? `my-org/repo-${i}` : undefined,
