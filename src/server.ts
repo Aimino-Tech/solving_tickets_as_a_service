@@ -35,6 +35,7 @@ import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { config } from './config.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
+import { registerSlackMentionHandler } from './channels/slack/handler.js';
 import type { IssueJobData } from './utils/types.js';
 import { QUEUES, publishMessage, connect as rmqConnect, isConnected } from './queue/rabbitmq.js';
 import { getTracker, initTrackers } from './trackers/index.js';
@@ -191,6 +192,7 @@ export async function createApp(): Promise<express.Application> {
   // -- Slack Bolt receiver (interactive messages) ---------------------------
   const bolt = getSlackBoltApp();
   bolt.mountOn(app);
+  registerSlackMentionHandler(bolt.app);
 
   // -- Initialize trackers --------------------------------------------------
   initTrackers();
@@ -653,6 +655,10 @@ export async function createApp(): Promise<express.Application> {
   // -- MCP agent discovery routes (FastMCP integration)
   const { default: mcpDiscoveryRouter } = await import('./mcp.js');
   app.use(mcpDiscoveryRouter);
+
+  // -- MCP agent server (JSON-RPC protocol for AI agent discovery)
+  const { default: agentServerRouter } = await import('./mcp/agentServer.js');
+  app.use(agentServerRouter);
 
   // -- Health check endpoints --------------------------------------------------
   app.use(healthRouter);
