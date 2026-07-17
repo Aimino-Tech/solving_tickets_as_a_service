@@ -654,6 +654,10 @@ export async function createApp(): Promise<express.Application> {
   const { default: mcpDiscoveryRouter } = await import('./mcp.js');
   app.use(mcpDiscoveryRouter);
 
+  // -- MCP agent server (JSON-RPC protocol for AI agent discovery)
+  const { default: agentServerRouter } = await import('./mcp/agentServer.js');
+  app.use(agentServerRouter);
+
   // -- Health check endpoints --------------------------------------------------
   app.use(healthRouter);
 
