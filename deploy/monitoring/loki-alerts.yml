@@ -1,0 +1,54 @@
+# =============================================================================
+# Loki Log-Based Alert Rules — STAS
+# =============================================================================
+groups:
+  - name: stas-log-alerts
+    interval: 1m
+    limit: 10
+
+    rules:
+      - alert: HighWebhookErrorRate
+        expr: |
+          sum(count_over_time({compose_service="stas-webhook"}
+            |~ "status=(5[0-9][0-9]|500|502|503|504)"
+            [5m])) > 5
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Webhook 5xx error rate spike"
+          description: |
+            stas-webhook logged {{ $value }} 5xx responses in the last 5 minutes.
+          runbook: "ops/playbook.md#webhook-5xx"
+
+      - alert: WorkerTaskFailures
+        expr: |
+          sum(count_over_time({compose_service=~"stas-worker|celery-beat"}
+            |~ "\\b(ERROR|CRITICAL)\\b"
+            |~ "\\b(task|exception|traceback)\\b"
+            [10m])) > 3
+        for: 3m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Worker task failures detected"
+          description: |
+            Worker logged {{ $value }} ERROR/CRITICAL messages in 10 minutes.
+          runbook: "ops/playbook.md#worker-failures"
+
+      - alert: ServiceHealthCheckFailure
+        expr: |
+          sum(count_over_time({compose_project="stas"}
+            |~ "\\bhealth\\s*check\\b.*\\b(fail|unhealthy|timeout)\\b"
+            [5m])) > 5
+        for: 2m
+        labels:
+          severity: critical
+          team: ops
+        annotations:
+          summary: "Service health-check failures"
+          description: |
+            {{ $value }} health-check failures in the last 5 minutes.
+          runbook: "ops/runbook.md#health-check"

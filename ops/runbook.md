@@ -1,7 +1,7 @@
 # STAS Production Deployment Runbook
 
 > Solving Tickets As A Service — Operations Guide
-> Last updated: 2026-06-08
+> Last updated: 2026-07-17
 
 ## Table of Contents
 
@@ -13,6 +13,7 @@
 6. [Backup & Restore](#6-backup--restore)
 7. [Security Incidents](#7-security-incidents)
 8. [Quick Reference](#8-quick-reference)
+9. [Log Aggregation (Loki)](#9-log-aggregation-loki)
 
 ---
 
@@ -714,6 +715,7 @@ docker compose -f docker-compose.prod.yml run --rm certbot \
 | RabbitMQ Management | 15672 | HTTP |
 | Flower (Celery) | 5555 | HTTP |
 | Prometheus Metrics | 9464 | HTTP |
+| Loki | 3100 | HTTP |
 
 ### Key Files
 
@@ -726,6 +728,9 @@ docker compose -f docker-compose.prod.yml run --rm certbot \
 | `nginx/nginx.conf` | Reverse proxy configuration |
 | `src/db/migrations/` | Database migrations |
 | `monitoring/grafana-dashboard.json` | Grafana dashboard |
+| `deploy/monitoring/loki-config.yml` | Loki server configuration |
+| `deploy/monitoring/promtail-config.yml` | Promtail log shipper configuration |
+| `deploy/monitoring/loki-alerts.yml` | Log-based alert rules |
 | `ops/DR.md` | Disaster recovery plan |
 | `ops/playbook.md` | Alert response playbooks |
 
@@ -754,7 +759,173 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml config
 ```
 
+---
+
+## 9. Log Aggregation (Loki)
+
+STAS uses **Grafana Loki** for centralized log aggregation with **Promtail** as the log shipper. All Docker container logs from the `stas` Compose project are automatically shipped to Loki and retained for **7 days**.
+
+### Architecture
+
+
+
+### Querying Logs
+
+Loki exposes a REST API on port **3100**. Query via Grafana Log Explorer or directly:
+
+
+
+### Available Labels
+
+| Label | Source | Example |
+|-------|--------|---------|
+| `container_name` | Docker container name | `stas-webhook` |
+| `compose_service` | Docker Compose service name | `stas-worker` |
+| `compose_project` | Docker Compose project | `stas` |
+| `image_name` | Container image | `stas-webhook:latest` |
+| `log_stream` | stdout / stderr | `stdout` |
+
+### Log-Based Alerts
+
+| Alert | Condition | Severity |
+|-------|-----------|----------|
+| **HighWebhookErrorRate** | 5+ 5xx responses in 5 min | Critical |
+| **WorkerTaskFailures** | 3+ ERROR/CRITICAL in 10 min | Warning |
+| **ServiceHealthCheckFailure** | 5+ health-check failures in 5 min | Critical |
+
+Alerts fire through Loki's ruler. For production, configure a proper alertmanager or route through the existing PagerDuty integration.
+
+### Service Management
+
+
+
+### Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `deploy/monitoring/loki-config.yml` | Loki server config (7d retention, TSDB index) |
+| `deploy/monitoring/promtail-config.yml` | Promtail Docker log scraping config |
+| `deploy/monitoring/loki-alerts.yml` | Log-based alert rules (3 rules) |
+
+### Grafana Integration
+
+To add Loki as a Grafana data source:
+1. Open Grafana → **Connections** → **Data Sources**
+2. Click **Add data source** → select **Loki**
+3. Set URL to `http://loki:3100`
+4. Click **Save & Test**
+
 ### Escalation Contacts
+
+---
+
+## 9. Log Aggregation (Loki)
+
+STAS uses **Grafana Loki** for centralized log aggregation with **Promtail** as the log shipper. All Docker container logs from the `stas` Compose project are automatically shipped to Loki and retained for **7 days**.
+
+### Architecture
+
+```
+Container Logs (json-file driver)
+       |
+       v
+  [Promtail] --docker socket--> Docker API (label discovery)
+       |
+       |  HTTP POST /loki/api/v1/push
+       v
+  [Loki] --> TSDB index (filesystem)
+       |
+       |  LogQL queries
+       v
+  [Grafana] Data Source: http://loki:3100
+```
+
+### Querying Logs
+
+Loki exposes a REST API on port **3100**. Query via Grafana Log Explorer or directly:
+
+```bash
+# All logs from the webhook service (last 30 min)
+curl -s 'http://localhost:3100/loki/api/v1/query_range' \
+  --data-urlencode 'query={compose_service="stas-webhook"}' \
+  --data-urlencode 'start='$(date -d '30 min ago' +%s)'000' \
+  --data-urlencode 'end='$(date +%s)'000' \
+  --data-urlencode 'limit=100' | jq .
+
+# Error logs from all services (last 1 hour)
+curl -s 'http://localhost:3100/loki/api/v1/query_range' \
+  --data-urlencode 'query={compose_project="stas"} |= "error"' \
+  --data-urlencode 'start='$(date -d '1 hour ago' +%s)'000' \
+  --data-urlencode 'end='$(date +%s)'000' \
+  --data-urlencode 'limit=100' | jq .
+
+# Count 5xx errors per minute (metric query)
+curl -s 'http://localhost:3100/loki/api/v1/query' \
+  --data-urlencode 'query=sum(rate({compose_service="stas-webhook"} |~ "5[0-9][0-9]" [1m]))' \
+  --data-urlencode 'time='$(date +%s)'000' | jq .
+```
+
+### Available Labels
+
+Every log entry is automatically tagged with:
+
+| Label | Source | Example |
+|-------|--------|---------|
+| `container_name` | Docker container name | `stas-webhook` |
+| `compose_service` | Docker Compose service name | `stas-worker` |
+| `compose_project` | Docker Compose project | `stas` |
+| `image_name` | Container image | `stas-webhook:latest` |
+| `log_stream` | stdout / stderr | `stdout` |
+
+### Log-Based Alerts
+
+Loki's ruler evaluates alert rules defined in `deploy/monitoring/loki-alerts.yml`:
+
+| Alert | Condition | Severity |
+|-------|-----------|----------|
+| **HighWebhookErrorRate** | 5+ 5xx responses in 5 min | Critical |
+| **WorkerTaskFailures** | 3+ ERROR/CRITICAL in 10 min | Warning |
+| **ServiceHealthCheckFailure** | 5+ health-check failures in 5 min | Critical |
+
+Alerts fire through Loki's ruler. For production, configure a proper alertmanager or route through the existing PagerDuty integration.
+
+### Service Management
+
+```bash
+# Start Loki + Promtail
+docker compose -f docker-compose.prod.yml up -d loki promtail
+
+# View Loki logs
+docker compose -f docker-compose.prod.yml logs -f loki
+
+# View Promtail logs
+docker compose -f docker-compose.prod.yml logs -f promtail
+
+# Check Loki readiness
+curl -f http://localhost:3100/ready
+
+# Check storage usage
+docker exec stas-loki du -sh /loki/chunks
+```
+
+### Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `deploy/monitoring/loki-config.yml` | Loki server config (7d retention, TSDB index) |
+| `deploy/monitoring/promtail-config.yml` | Promtail Docker log scraping config |
+| `deploy/monitoring/loki-alerts.yml` | Log-based alert rules (3 rules) |
+
+### Grafana Integration
+
+To add Loki as a Grafana data source:
+1. Open Grafana > **Connections** > **Data Sources**
+2. Click **Add data source** > select **Loki**
+3. Set URL to `http://loki:3100`
+4. Click **Save & Test**
+
+---
+
 
 | Role | Contact | Response Time |
 |------|---------|---------------|

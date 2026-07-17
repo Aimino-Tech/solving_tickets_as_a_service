@@ -1,10 +1,6 @@
 # =============================================================================
 # Loki Configuration — STAS Log Aggregation
 # =============================================================================
-# Retention: 7 days for all log streams
-# Bucket: TSDB index + object store (filesystem for self-hosted)
-# =============================================================================
-
 auth_enabled: false
 
 server:
@@ -60,7 +56,7 @@ limits_config:
   max_query_series: 500
   max_query_bytes_read: 0
   max_line_size: 256KB
-  retention_period: 168h  # 7 days
+  retention_period: 168h
 
 ingester:
   chunk_idle_period: 30m
@@ -75,7 +71,7 @@ ingester:
 
 table_manager:
   retention_deletes_enabled: true
-  retention_period: 168h  # 7 days
+  retention_period: 168h
 
 ruler:
   storage:
