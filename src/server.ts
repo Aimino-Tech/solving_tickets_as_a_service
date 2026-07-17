@@ -681,6 +681,144 @@ export async function createApp(): Promise<express.Application> {
   // GET /discovery          — Human-readable discovery landing page
   app.use(viralRouter);
 
+  // ── MCP Well-Known Discovery (agent detection) ────────────────────
+  // GET /.well-known/mcp-server-card.json — AI agent auto-discovery card
+  // GET /.well-known/mcp/server-card.json — Alternative path
+  // Serves the MCP server card so AI agents can discover STAS autonomously.
+  app.get('/.well-known/mcp-server-card.json', (_req: Request, res: Response) => {
+    const baseUrl = process.env.STAS_PUBLIC_URL || `${_req.protocol}://${_req.get('host')}`;
+    const sseUrl = process.env.STAS_MCP_SERVER_URL
+      ? `${process.env.STAS_MCP_SERVER_URL}/sse`
+      : `${baseUrl}/sse`;
+    const mcpUrl = process.env.STAS_MCP_SERVER_URL
+      ? `${process.env.STAS_MCP_SERVER_URL}/mcp`
+      : `${baseUrl}/mcp`;
+
+    const card = {
+      schemaVersion: '2024-11-05',
+      server: {
+        name: '@aimino/stas-mcp',
+        version: '1.0.0',
+        description:
+          'STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot backed by OpenCode.',
+        homepage: 'https://github.com/tamnguyen08/solving_tickets_as_a_service',
+        documentation: 'https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md',
+        license: 'MIT',
+        author: { name: 'Aimino Tech', email: 'team@aimino.io', url: 'https://stas.aimino.io' },
+      },
+      capabilities: {
+        tools: {
+          stas_label_issue: {
+            description: 'Label a GitHub issue with the STAS fix label. Triggers the fix pipeline.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                owner: { type: 'string', description: 'Repository owner' },
+                repo: { type: 'string', description: 'Repository name' },
+                issue_number: { type: 'integer', description: 'Issue number' },
+                label: { type: 'string', description: 'Label to apply (default: stas:fix)' },
+              },
+              required: ['owner', 'repo', 'issue_number'],
+            },
+          },
+          stas_run_fix: {
+            description: 'Trigger the STAS fix pipeline for a GitHub issue URL.',
+            inputSchema: {
+              type: 'object',
+              properties: { issue_url: { type: 'string', description: 'Full GitHub issue URL' } },
+              required: ['issue_url'],
+            },
+          },
+          stas_check_status: {
+            description: 'Check status of a STAS fix run by run_id.',
+            inputSchema: {
+              type: 'object',
+              properties: { run_id: { type: 'string', description: 'Run ID from stas_run_fix' } },
+              required: ['run_id'],
+            },
+          },
+          stas_get_pr: {
+            description: 'Get PR URL and details for a completed fix run.',
+            inputSchema: {
+              type: 'object',
+              properties: { run_id: { type: 'string', description: 'Run ID from stas_run_fix' } },
+              required: ['run_id'],
+            },
+          },
+        },
+        resources: {
+          'stas://runs/{run_id}': { description: 'Full run details with status, PR link, and test results.' },
+          'stas://issues/{issue_id}': { description: 'Issue details with fix status, run history, and linked PRs.' },
+          'stas://status': { description: 'Server health and capability overview.' },
+          'stas://queue': { description: 'Current fix queue depth and status.' },
+        },
+      },
+      transports: [
+        { type: 'sse', url: sseUrl, description: 'Server-Sent Events transport' },
+        { type: 'streamable-http', url: mcpUrl, description: 'Streamable HTTP transport' },
+        {
+          type: 'stdio',
+          command: 'npx',
+          args: ['-y', '@aimino/stas-mcp'],
+          description: 'Stdio transport via npx',
+        },
+      ],
+      install: {
+        opencode: {
+          config: { name: 'stas-agent', transport: 'stdio', command: 'npx', args: ['-y', '@aimino/stas-mcp'] },
+        },
+        claudeDesktop: {
+          config: { mcpServers: { stas: { command: 'npx', args: ['-y', '@aimino/stas-mcp'] } } },
+        },
+        cursor: {
+          config: { mcpServers: { stas: { command: 'npx', args: ['-y', '@aimino/stas-mcp'] } } },
+        },
+      },
+      keywords: [
+        'stas', 'github-bot', 'issue-fixer', 'automated-fix',
+        'opencode', 'mcp', 'smithery', 'aimino', 'agent-discovery', 'agent-to-agent',
+      ],
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.json(card);
+  });
+
+  // GET /.well-known/mcp/server-card.json — Alternative MCP discovery path
+  app.get('/.well-known/mcp/server-card.json', (_req: Request, res: Response) => {
+    res.redirect(301, '/.well-known/mcp-server-card.json');
+  });
+
+  // GET /badge/agent-found.svg — "Agent Found STAS" badge for repo READMEs
+  app.get('/badge/agent-found.svg', (_req: Request, res: Response) => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="138" height="20" role="img" aria-label="Agent Found: STAS">
+  <title>Agent Found: STAS</title>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="138" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="90" height="20" fill="#555"/>
+    <rect x="90" width="48" height="20" fill="#8250DF"/>
+    <rect width="138" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="45" y="15" fill="#010101" fill-opacity=".3">Agent Found</text>
+    <text x="45" y="14">Agent Found</text>
+    <text x="114" y="15" fill="#010101" fill-opacity=".3">STAS</text>
+    <text x="114" y="14">STAS</text>
+  </g>
+</svg>`;
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(svg);
+  });
+
   // ── Quality Score Card API ───────────────────────────────────────
   app.use('/api/quality', qualityRouter);
 

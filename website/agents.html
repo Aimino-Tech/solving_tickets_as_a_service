@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STAS for AI Agents — Agent-to-Agent Marketing</title>
+  <meta name="description" content="STAS (Solving Tickets As A Service) is discoverable and installable by AI agents via MCP registries, Smithery, skills.sh, and npm." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    .container { max-width: 960px; margin: 0 auto; padding: 3rem 1.5rem; }
+    h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+    h1 span { color: #58a6ff; }
+    .subtitle { font-size: 1.15rem; color: #8b949e; margin-bottom: 2.5rem; max-width: 640px; }
+    h2 { font-size: 1.4rem; font-weight: 700; margin: 2rem 0 1rem; color: #f0f6fc; }
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 1.75rem; margin-bottom: 1.25rem; }
+    .card h3 { font-size: 1.05rem; margin-bottom: 0.75rem; color: #f0f6fc; }
+    .card p, .card li { font-size: 0.92rem; color: #8b949e; }
+    .card ul { list-style: none; padding: 0; }
+    .card li { padding: 0.35rem 0; }
+    .card li::before { content: "\25B8 "; color: #58a6ff; }
+    code { background: #0d1117; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85rem; color: #f0f6fc; font-family: 'SF Mono', 'Fira Code', monospace; }
+    pre { background: #0d1117; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; border: 1px solid #21262d; margin: 0.75rem 0; }
+    pre code { background: none; padding: 0; }
+    .install-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+    .install-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 1.5rem; }
+    .install-card h3 { font-size: 1rem; margin-bottom: 0.75rem; color: #f0f6fc; }
+    .install-card .agent-badge { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .agent-opencode { background: #7c3aed33; color: #a78bfa; border: 1px solid #7c3aed55; }
+    .agent-claude { background: #d9770633; color: #fbbf24; border: 1px solid #d9770655; }
+    .agent-cursor { background: #05966933; color: #34d399; border: 1px solid #05966955; }
+    .agent-codex { background: #2563eb33; color: #60a5fa; border: 1px solid #2563eb55; }
+    .badge-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0; }
+    .btn { display: inline-block; padding: 0.6rem 1.25rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; text-decoration: none; background: #238636; color: #fff; margin-top: 0.5rem; }
+    .btn:hover { background: #2ea043; }
+    .btn-outline { background: transparent; border: 1px solid #30363d; color: #e6edf3; }
+    .btn-outline:hover { border-color: #58a6ff; color: #58a6ff; }
+    .diagram-container { background: #0d1117; border: 1px solid #30363d; border-radius: 10px; padding: 1.5rem; margin: 1.5rem 0; overflow-x: auto; }
+    .diagram-container svg { display: block; margin: 0 auto; max-width: 100%; }
+    .feature-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+    .feature-item { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.25rem; }
+    .feature-item h4 { color: #f0f6fc; font-size: 0.95rem; margin-bottom: 0.4rem; }
+    .feature-item p { font-size: 0.85rem; color: #8b949e; }
+    hr { border: none; border-top: 1px solid #30363d; margin: 2rem 0; }
+    .footer { text-align: center; font-size: 0.8rem; color: #484f58; }
+    .footer a { color: #58a6ff; text-decoration: none; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.85rem; }
+    th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid #21262d; }
+    th { color: #8b949e; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+    td { color: #e6edf3; }
+    .badge-img { vertical-align: middle; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1><span>STAS</span> for AI Agents</h1>
+    <p class="subtitle">Solving Tickets As A Service — now fully discoverable and installable by AI agents. Integrate STAS into any agent's toolchain in seconds.</p>
+
+    <div class="badge-row">
+      <a href="https://img.shields.io/badge/MCP-Registry-8250DF" class="badge-link"><img src="https://img.shields.io/badge/MCP-Registry-8250DF" alt="MCP Registry" /></a>
+      <a href="https://img.shields.io/badge/Smithery-000?logo=modelcontextprotocol&logoColor=white" class="badge-link"><img src="https://img.shields.io/badge/Smithery-000?logo=modelcontextprotocol&logoColor=white" alt="Smithery" /></a>
+      <a href="https://img.shields.io/badge/skills.sh-7C3AED" class="badge-link"><img src="https://img.shields.io/badge/skills.sh-7C3AED" alt="skills.sh" /></a>
+      <a href="https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white" class="badge-link"><img src="https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white" alt="npm" /></a>
+    </div>
+
+    <!-- Agent-to-Agent Loop Diagram -->
+    <h2>Agent-to-Agent Discovery Loop</h2>
+    <div class="diagram-container">
+      <svg viewBox="0 0 860 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="STAS Agent-to-Agent Discovery Loop Diagram">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 Z" fill="#58a6ff" />
+          </marker>
+          <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 Z" fill="#2ea043" />
+          </marker>
+          <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0d1117" />
+            <stop offset="100%" stop-color="#161b22" />
+          </linearGradient>
+          <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4" />
+          </filter>
+        </defs>
+
+        <rect width="860" height="320" fill="url(#bg-grad)" rx="12" />
+
+        <!-- Node 1: MCP Registry -->
+        <rect x="30" y="30" width="160" height="70" rx="10" fill="#1f2937" stroke="#58a6ff" stroke-width="2" filter="url(#shadow)" />
+        <text x="110" y="60" text-anchor="middle" fill="#58a6ff" font-weight="700" font-size="13" font-family="system-ui">MCP Registry</text>
+        <text x="110" y="80" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui">smithery.ai / npm</text>
+
+        <!-- Node 2: AI Agent discovers -->
+        <rect x="290" y="30" width="180" height="70" rx="10" fill="#1f2937" stroke="#2ea043" stroke-width="2" filter="url(#shadow)" />
+        <text x="380" y="60" text-anchor="middle" fill="#2ea043" font-weight="700" font-size="13" font-family="system-ui">AI Agent</text>
+        <text x="380" y="80" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui">OpenCode / Claude / Cursor</text>
+
+        <!-- Node 3: Agent installs STAS -->
+        <rect x="570" y="30" width="180" height="70" rx="10" fill="#1f2937" stroke="#d97706" stroke-width="2" filter="url(#shadow)" />
+        <text x="660" y="60" text-anchor="middle" fill="#d97706" font-weight="700" font-size="13" font-family="system-ui">Agent Installs</text>
+        <text x="660" y="80" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui">npx skills add STAS</text>
+
+        <!-- Node 4: Fix Pipeline -->
+        <rect x="290" y="170" width="180" height="70" rx="10" fill="#1f2937" stroke="#f0f6fc" stroke-width="2" filter="url(#shadow)" />
+        <text x="380" y="200" text-anchor="middle" fill="#f0f6fc" font-weight="700" font-size="13" font-family="system-ui">Fix Pipeline</text>
+        <text x="380" y="220" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui">Issue → Investigate → Fix → PR</text>
+
+        <!-- Node 5: PR Created -->
+        <rect x="570" y="170" width="180" height="70" rx="10" fill="#1f2937" stroke="#2ea043" stroke-width="2" filter="url(#shadow)" />
+        <text x="660" y="200" text-anchor="middle" fill="#2ea043" font-weight="700" font-size="13" font-family="system-ui">PR Created</text>
+        <text x="660" y="220" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui">Draft PR with fix + tests</text>
+
+        <!-- Arrows: MCP Registry → Agent -->
+        <path d="M190,65 L280,65" stroke="#58a6ff" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+        <text x="235" y="55" text-anchor="middle" fill="#58a6ff" font-size="9" font-family="system-ui">1. Discovers</text>
+
+        <!-- Arrows: Agent → Installs -->
+        <path d="M470,65 L560,65" stroke="#2ea043" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+        <text x="515" y="55" text-anchor="middle" fill="#2ea043" font-size="9" font-family="system-ui">2. Installs</text>
+
+        <!-- Arrows: Installs → Fix Pipeline (down) -->
+        <path d="M660,100 L660,160" stroke="#d97706" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+        <text x="672" y="135" text-anchor="start" fill="#d97706" font-size="9" font-family="system-ui">3. Triggers</text>
+
+        <!-- Arrows: Fix Pipeline → PR -->
+        <path d="M470,205 L560,205" stroke="#f0f6fc" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+        <text x="515" y="195" text-anchor="middle" fill="#f0f6fc" font-size="9" font-family="system-ui">4. Fixes</text>
+
+        <!-- Arrows: PR → MCP Registry (feedback loop) -->
+        <path d="M660,240 Q660,280 380,280 Q110,280 110,110" stroke="#2ea043" stroke-width="2" fill="none" stroke-dasharray="6,4" marker-end="url(#arrow-green)" />
+        <text x="400" y="300" text-anchor="middle" fill="#8b949e" font-size="9" font-family="system-ui">5. Publishes result → registry feedback loop</text>
+      </svg>
+    </div>
+
+    <h2>One-Line Install Per Agent Type</h2>
+    <div class="install-grid">
+      <div class="install-card">
+        <span class="agent-badge agent-opencode">OpenCode</span>
+        <p style="font-size:0.85rem;color:#8b949e;margin-bottom:0.5rem;">Add STAS as an OpenCode skill:</p>
+        <pre><code>npx skills add Aimino-Tech/solving_tickets_as_a_service</code></pre>
+        <p style="font-size:0.8rem;color:#8b949e;margin-top:0.25rem;">Or add to <code>opencode.json</code>:</p>
+        <pre><code>{
+  "name": "stas-agent",
+  "transport": "stdio",
+  "command": "python",
+  "args": ["-m", "mcp.stas_mcp", "stdio"]
+}</code></pre>
+      </div>
+      <div class="install-card">
+        <span class="agent-badge agent-claude">Claude Desktop</span>
+        <p style="font-size:0.85rem;color:#8b949e;margin-bottom:0.5rem;">Add MCP server to Claude:</p>
+        <pre><code>{
+  "mcpServers": {
+    "stas": {
+      "command": "npx",
+      "args": ["-y", "@aimino/stas-mcp"]
+    }
+  }
+}</code></pre>
+        <p style="font-size:0.8rem;color:#8b949e;margin-top:0.25rem;">Or install from <a href="https://smithery.ai/server/@aimino/stas-mcp" style="color:#58a6ff;">Smithery</a>.</p>
+      </div>
+      <div class="install-card">
+        <span class="agent-badge agent-cursor">Cursor</span>
+        <p style="font-size:0.85rem;color:#8b949e;margin-bottom:0.5rem;">Configure in <code>.cursor/mcp.json</code>:</p>
+        <pre><code>{
+  "mcpServers": {
+    "stas": {
+      "command": "npx",
+      "args": ["-y", "@aimino/stas-mcp"]
+    }
+  }
+}</code></pre>
+      </div>
+      <div class="install-card">
+        <span class="agent-badge agent-codex">Codex CLI</span>
+        <p style="font-size:0.85rem;color:#8b949e;margin-bottom:0.5rem;">Use via npm/npx:</p>
+        <pre><code>npx -y @aimino/stas-mcp</code></pre>
+        <p style="font-size:0.8rem;color:#8b949e;margin-top:0.25rem;">Or add as a <a href="https://github.com/marketplace/actions/stas-eval" style="color:#58a6ff;">GitHub Action</a>.</p>
+      </div>
+    </div>
+
+    <h2>Auto-Discovery Features</h2>
+    <div class="feature-list">
+      <div class="feature-item">
+        <h4>MCP Registry</h4>
+        <p>Published to the Model Context Protocol registry. Any MCP-compatible agent can discover STAS via <code>.well-known/mcp/server-card.json</code>.</p>
+      </div>
+      <div class="feature-item">
+        <h4>Smithery.ai</h4>
+        <p>One-click install from Smithery. Agent discovers → clicks install → STAS is active. No config files needed.</p>
+      </div>
+      <div class="feature-item">
+        <h4>skills.sh</h4>
+        <p>Published as a skills.sh skill. OpenCode and OpenClaw agents can auto-install with a single <code>skills add</code> command.</p>
+      </div>
+      <div class="feature-item">
+        <h4>npm Registry</h4>
+        <p>Published as <code>@aimino/stas-mcp</code>. Any agent with npm access can install and run STAS as a stdio MCP server.</p>
+      </div>
+      <div class="feature-item">
+        <h4>Well-Known Discovery</h4>
+        <p>STAS serves <code>/.well-known/mcp-server-card.json</code> for automatic agent detection across the web.</p>
+      </div>
+      <div class="feature-item">
+        <h4>Agent Badge</h4>
+        <p>Repos using STAS can display the "Agent Found STAS" badge, creating a viral discovery loop.</p>
+      </div>
+    </div>
+
+    <hr />
+    <div class="footer">
+      <p><a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">STAS</a> — Solving Tickets As A Service &mdash; <a href="integrations.html">View All Integrations</a> &mdash; MIT License</p>
+    </div>
+  </div>
+</body>
+</html>

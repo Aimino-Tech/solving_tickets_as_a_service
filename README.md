@@ -22,7 +22,51 @@ flowchart LR
     C --> D[Draft PR with fix + tests]
 ```
 
+## AI Agent Discovery
+
+STAS is fully discoverable and installable by AI agents. Agents find STAS via MCP registries, install it autonomously, and start fixing issues — no human required.
+
+```mermaid
+flowchart TD
+    A[MCP Registry / Smithery / npm / skills.sh] -->|1. Agent discovers| B[AI Agent]
+    B -->|2. Installs STAS| C[npx skills add Aimino-Tech/...]
+    C -->|3. Fixes issues| D[Draft PR with fix + tests]
+    D -->|4. Badge in README| A
+```
+
+### One-line install per agent
+
+| Agent | Command / Config |
+|---|---|
+| **OpenCode** | `npx skills add Aimino-Tech/solving_tickets_as_a_service` |
+| **Claude Desktop** | Add to `claude_desktop_config.json`: `{ "mcpServers": { "stas": { "command": "npx", "args": ["-y", "@aimino/stas-mcp"] } } }` |
+| **Cursor** | Add to `.cursor/mcp.json`: same as Claude config |
+| **Codex CLI** | `npx -y @aimino/stas-mcp` |
+| **Any MCP client** | `npx -y @aimino/stas-mcp` |
+
+### Install badges
+
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-8250DF)](https://github.com/modelcontextprotocol/servers)
+[![Smithery](https://img.shields.io/badge/Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/stas-mcp)
+[![skills.sh](https://img.shields.io/badge/skills.sh-7C3AED)](https://opencode.ai/skills/stas)
+[![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/@aimino/stas-mcp)
+[![Agent Found STAS](https://img.shields.io/badge/Agent_Found-STAS-8250DF)](https://stas.aimino.io/agents.html)
+
+### Add STAS to your agent
+
+```bash
+# OpenCode / skills.sh
+npx skills add Aimino-Tech/solving_tickets_as_a_service
+
+# Any MCP-compatible agent (npx)
+npx -y @aimino/stas-mcp
+```
+
+> See [STAS for AI Agents](website/agents.html) and [All Integrations](website/integrations.html) for complete documentation.
+
 > **⭐ If you find STAS useful, [star the repo](https://github.com/Aimino-Tech/solving_tickets_as_a_service) — it helps others discover the project!**
+
+## How It Works
 
 ![STAS Demo](dashboard/public/assets/launch/stas-demo.gif)
 
