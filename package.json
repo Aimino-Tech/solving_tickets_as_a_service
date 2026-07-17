@@ -2,15 +2,17 @@
   "name": "solving-tickets-as-a-service",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/github-client"
+  ],
   "description": "Label a GitHub issue. Our bot investigates, fixes, and opens a PR. Backed by OpenCode.",
   "type": "module",
-  "workspaces": ["packages/github-client"],
   "engines": {
     "node": ">=20"
   },
   "bin": {
-    "stas-init": "./scripts/init.ts"
+    "stas-init": "./scripts/init.ts",
+    "stas-install-mcp": "./scripts/stas-install-mcp.js"
   },
   "scripts": {
     "init": "tsx scripts/init.ts",
@@ -68,7 +70,9 @@
     "coverage-enforce": "bash scripts/coverage-enforce.sh",
     "coverage-enforce:mutation": "bash scripts/coverage-enforce.sh --mutation",
     "coverage-enforce:changed": "bash scripts/coverage-enforce.sh --changed",
-    "anti-liar-gate": "tsx src/agent/antiLiarGate.ts"
+    "anti-liar-gate": "tsx src/agent/antiLiarGate.ts",
+    "install-mcp": "bash scripts/install-mcp.sh",
+    "install-mcp:node": "node scripts/stas-install-mcp.js"
   },
   "dependencies": {
     "@linear/sdk": "^87.0.0",
@@ -129,5 +133,14 @@
   },
   "overrides": {
     "esbuild": ">=0.25.0"
-  }
+  },
+  "keywords": [
+    "agentskills",
+    "claude-plugin",
+    "codex",
+    "cursor",
+    "mcp",
+    "opencode-skill",
+    "skill"
+  ]
 }

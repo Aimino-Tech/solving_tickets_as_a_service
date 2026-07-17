@@ -356,3 +356,117 @@ Contributions are welcome! See [`CONTRIBUTING.md`](CONTRIBUTING.md) for developm
 ## License
 
 MIT — use it, modify it, ship it.
+
+## Agent Skill Ecosystem
+
+STAS is published as a skill for multiple agent platforms. Install it in your preferred coding assistant.
+
+### OpenCode
+
+Add to `opencode.json` (project root or `~/.config/opencode/opencode.json`):
+
+```json
+{
+  "mcpServers": {
+    "stas": {
+      "command": "python3",
+      "args": ["-m", "stas_mcp.server", "stdio"]
+    }
+  }
+}
+```
+
+Or use the install script:
+```bash
+# From the project root
+bash stas_mcp/install.sh --opencode
+
+# Or via npm
+npx stas install-mcp --opencode
+```
+
+### Claude Code
+
+Add to `claude_desktop_config.json` (`~/.config/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "stas": {
+      "command": "python3",
+      "args": ["-m", "stas_mcp.server", "stdio"]
+    }
+  }
+}
+```
+
+Or use the install script:
+```bash
+npx stas install-mcp --claude
+```
+
+### Cursor
+
+1. Open **Cursor Settings → Features → MCP Servers**
+2. Click **+ Add New MCP Server**
+3. Fill in:
+   - **Name:** `stas`
+   - **Type:** `command`
+   - **Command:** `python3 -m stas_mcp.server stdio`
+4. Click **Save**
+
+Or add to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "stas": {
+      "command": "python3",
+      "args": ["-m", "stas_mcp.server", "stdio"]
+    }
+  }
+}
+```
+
+### Codex CLI
+
+Add to `.codex/config.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "stas": {
+      "command": "python3",
+      "args": ["-m", "stas_mcp.server", "stdio"]
+    }
+  }
+}
+```
+
+### Claude Plugin Marketplace
+
+STAS is listed in the [Claude Plugin Marketplace](.claude-plugin/marketplace.json) with full skill definitions at `skills/stas/SKILL.md`.
+
+### Publishing Channels
+
+| Channel | Location |
+|---------|----------|
+| **skills.sh** | `skills/stas/SKILL.md` |
+| **Claude Plugin Marketplace** | `.claude-plugin/marketplace.json` |
+| **npm** | `npx stas install-mcp` — one-command install for all agents |
+| **Smithery** | `@aimino/stas-mcp` — hosted MCP server |
+| **GitHub Marketplace** | GitHub Action for STAS eval |
+| **RapidAPI** | Payable STAS API endpoint |
+
+### Verify Installation
+
+After installing the skill, verify the MCP server responds:
+
+```bash
+# List available tools via stdio
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m stas_mcp.server stdio
+
+# Or start SSE mode and curl health
+python -m stas_mcp.server sse &
+curl http://localhost:4095/health
+```
