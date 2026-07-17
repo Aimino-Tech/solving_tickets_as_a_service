@@ -5,11 +5,18 @@
  * to the repository for persistence. All methods are fire-and-forget
  * (they catch errors internally) so callers never block on audit logging.
  *
+ * Enhanced with:
+ * - Audit log CRUD via repository
+ * - Audit log search/filter with advanced criteria
+ * - Retention policy enforcement (purge old entries)
+ * - Bulk export support
+ *
  * @module audit/service
  */
 
-import { auditRepository, type ActorType, type AuditLogEntry } from './repository.js';
+import { auditRepository, type ActorType, type AuditLogEntry, type AuditLogRow, type AuditLogFilter } from './repository.js';
 import { rootLogger } from '../utils/logger.js';
+import { config } from '../config.js';
 
 const log = rootLogger.child({ module: 'audit-service' });
 
@@ -225,4 +232,195 @@ export async function logRateLimitHit(params: {
     ipAddress: params.ipAddress,
     correlationId: params.correlationId,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Team-related audit log helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Log a team event (created, member invited, role changed, member removed).
+ */
+export async function logTeamEvent(params: {
+  teamId: string;
+  action: string;
+  actorId: string;
+  actorType?: ActorType;
+  details?: Record<string, unknown>;
+  correlationId?: string;
+}): Promise<void> {
+  await safeLog({
+    actorType: params.actorType ?? 'user',
+    actorId: params.actorId,
+    action: params.action,
+    resourceType: 'team',
+    resourceId: params.teamId,
+    details: params.details,
+    correlationId: params.correlationId,
+  });
+}
+
+/**
+ * Log an onboarding event.
+ */
+export async function logOnboardingEvent(params: {
+  tenantId: string;
+  action: string;
+  actorType?: ActorType;
+  details?: Record<string, unknown>;
+  correlationId?: string;
+}): Promise<void> {
+  await safeLog({
+    actorType: params.actorType ?? 'system',
+    actorId: params.tenantId,
+    action: params.action,
+    resourceType: 'onboarding',
+    resourceId: params.tenantId,
+    details: params.details,
+    correlationId: params.correlationId,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Enhanced CRUD operations
+// ---------------------------------------------------------------------------
+
+/**
+ * Query audit logs with full filter support (paginated).
+ */
+export async function queryAuditLogs(
+  filters: AuditLogFilter = {},
+): Promise<{ rows: AuditLogRow[]; total: number }> {
+  return auditRepository.query(filters);
+}
+
+/**
+ * Get a single audit log entry by ID.
+ */
+export async function getAuditLogById(id: number): Promise<AuditLogRow | undefined> {
+  return auditRepository.findById(id);
+}
+
+/**
+ * Get audit logs for a specific account.
+ */
+export async function getAuditLogsForAccount(
+  accountId: string,
+  limit = 50,
+  offset = 0,
+): Promise<AuditLogRow[]> {
+  const { rows } = await auditRepository.query({
+    actorId: accountId,
+    limit,
+    offset,
+  });
+  return rows;
+}
+
+/**
+ * Get audit logs by action type.
+ */
+export async function getAuditLogsByAction(
+  action: string,
+  limit = 50,
+  offset = 0,
+): Promise<AuditLogRow[]> {
+  const { rows } = await auditRepository.query({
+    action,
+    limit,
+    offset,
+  });
+  return rows;
+}
+
+/**
+ * Get audit logs by resource type.
+ */
+export async function getAuditLogsByResource(
+  resourceType: string,
+  resourceId?: string,
+  limit = 50,
+  offset = 0,
+): Promise<AuditLogRow[]> {
+  const { rows } = await auditRepository.query({
+    resourceType,
+    resourceId,
+    limit,
+    offset,
+  });
+  return rows;
+}
+
+/**
+ * Get audit logs within a date range.
+ */
+export async function getAuditLogsByDateRange(
+  startDate: Date,
+  endDate: Date,
+  limit = 100,
+  offset = 0,
+): Promise<AuditLogRow[]> {
+  const { rows } = await auditRepository.query({
+    startDate,
+    endDate,
+    limit,
+    offset,
+  });
+  return rows;
+}
+
+/**
+ * Count audit logs matching a filter.
+ */
+export async function countAuditLogs(
+  filters: Omit<AuditLogFilter, 'limit' | 'offset'> = {},
+): Promise<number> {
+  const { total } = await auditRepository.query(filters);
+  return total;
+}
+
+// ---------------------------------------------------------------------------
+// Retention policy enforcement
+// ---------------------------------------------------------------------------
+
+/**
+ * Purge audit log entries older than the configured retention period.
+ *
+ * This is called by a scheduled maintenance job (e.g., cron or setInterval).
+ * The retention period is configured via DATA_RETENTION_DAYS env var
+ * (default: 30 days).
+ *
+ * @returns The number of purged entries.
+ */
+export async function enforceRetentionPolicy(): Promise<number> {
+  const retentionDays = config.dataPrivacy.retentionDays;
+  const deleted = await auditRepository.deleteOlderThan(retentionDays);
+
+  if (deleted > 0) {
+    log.info({ deleted, retentionDays }, 'Audit log retention policy enforced');
+  }
+
+  return deleted;
+}
+
+/**
+ * Purge audit log entries older than a specific number of days.
+ * This is an administrative override of the configured retention policy.
+ */
+export async function purgeAuditLogsOlderThan(days: number): Promise<number> {
+  const deleted = await auditRepository.deleteOlderThan(days);
+
+  log.info({ deleted, days }, 'Audit logs purged (admin override)');
+
+  // Self-audit: log the purge action
+  await safeLog({
+    actorType: 'admin',
+    actorId: 'system',
+    action: 'audit.purge',
+    resourceType: 'audit_log',
+    resourceId: 'batch',
+    details: { deleted, retentionDays: days },
+  });
+
+  return deleted;
 }

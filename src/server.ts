@@ -57,6 +57,8 @@ import { dashboardRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
 import { slaRouter } from './routes/sla.js';
 import { onboardingRouter } from './routes/onboarding.js';
+import { teamRouter } from './team/routes.js';
+import { initWizardStore } from './onboarding/wizard.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
 import { pricingRouter } from './routes/pricing.js';
 import { trustRouter } from './api/routes/trust.js';
@@ -191,6 +193,9 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Initialize metering ───────────────────────────────────────────
   initMetering();
+
+  // ── Initialize onboarding wizard store ───────────────────────────
+  initWizardStore();
 
   // ── Start webhook retry worker ────────────────────────────────────
   // Only start if we're running as API or both
@@ -677,6 +682,15 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Onboarding API ──────────────────────────────────────────────
   app.use('/onboarding', onboardingRouter);
+
+  // ── Team Management API ───────────────────────────────────────────
+  // POST   /api/teams                          — Create a new team
+  // GET    /api/teams                          — List teams for current account
+  // GET    /api/teams/:id                       — Get team details with members
+  // POST   /api/teams/:id/invite               — Invite a member
+  // POST   /api/teams/:id/members/:userId/role  — Change member role
+  // DELETE /api/teams/:id/members/:userId       — Remove member
+  app.use('/api/teams', teamRouter);
 
   // Repos API (repo picker with webhook status)
   app.use('/api/repos', reposRouter);
