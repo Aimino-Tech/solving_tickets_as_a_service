@@ -2,10 +2,11 @@
   "name": "solving-tickets-as-a-service",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/github-client"
+  ],
   "description": "Label a GitHub issue. Our bot investigates, fixes, and opens a PR. Backed by OpenCode.",
   "type": "module",
-  "workspaces": ["packages/github-client"],
   "engines": {
     "node": ">=20"
   },
@@ -68,7 +69,16 @@
     "coverage-enforce": "bash scripts/coverage-enforce.sh",
     "coverage-enforce:mutation": "bash scripts/coverage-enforce.sh --mutation",
     "coverage-enforce:changed": "bash scripts/coverage-enforce.sh --changed",
-    "anti-liar-gate": "tsx src/agent/antiLiarGate.ts"
+    "anti-liar-gate": "tsx src/agent/antiLiarGate.ts",
+    "test:e2e:smoke": "bash scripts/run-e2e-smoke-tests.sh",
+    "test:e2e:smoke:verbose": "bash scripts/run-e2e-smoke-tests.sh --verbose",
+    "test:e2e:smoke:list": "bash scripts/run-e2e-smoke-tests.sh --list",
+    "test:launch-readiness": "vitest run tests/launch-readiness.test.ts --config vitest.config.ts",
+    "test:smoke:happy": "vitest run tests/e2e/happy-path.test.ts --config vitest.e2e.config.ts",
+    "test:smoke:error": "vitest run tests/e2e/error-handling-path.test.ts --config vitest.e2e.config.ts",
+    "test:smoke:auth": "vitest run tests/e2e/auth-path.test.ts --config vitest.e2e.config.ts",
+    "test:smoke:dlq": "vitest run tests/e2e/dlq-path.test.ts --config vitest.e2e.config.ts",
+    "test:smoke:health": "vitest run tests/e2e/health-check-path.test.ts --config vitest.e2e.config.ts"
   },
   "dependencies": {
     "@linear/sdk": "^87.0.0",
