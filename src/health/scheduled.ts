@@ -29,6 +29,14 @@ import {
   checkWorkerHeartbeats,
   checkSLOCompliance,
 } from '../monitoring/alerting.js';
+import {
+  checkQueueDepthAnomaly,
+  checkErrorRateSpike,
+  checkLatencyDegradation,
+  checkThroughputDrop,
+  checkWorkerHealth as checkWorkerAnomaly,
+  checkDbPoolUsage,
+} from '../monitoring/anomalyDetection.js';
 
 const log = rootLogger.child({ module: 'scheduled' });
 
@@ -37,6 +45,7 @@ const log = rootLogger.child({ module: 'scheduled' });
 const QUEUE_DEPTH_CHECK_INTERVAL_MS = config.monitoring.queueDepthAlertMinutes * 60 * 1000;
 const WORKER_HEARTBEAT_CHECK_INTERVAL_MS = 60_000; // every 60s
 const SLO_COMPLIANCE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // every 5min
+const ANOMALY_DETECTION_INTERVAL_MS = 2 * 60 * 1000; // every 2min
 const DLQ_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
 const METRICS_REFRESH_INTERVAL_MS = 60_000; // every 60s
 
@@ -86,6 +95,49 @@ async function checkWorkerHealth(): Promise<void> {
     log.debug('Worker heartbeat check complete');
   } catch (err) {
     log.error({ err: String(err) }, 'Worker heartbeat check failed');
+  }
+}
+
+// ── Anomaly Detection Check (AIM-3228) ─────────────────────────────
+
+async function runAnomalyDetection(): Promise<void> {
+  try {
+    const health = await getQueueHealth();
+    const queueDepth = health.queues.find((q) => q.type === 'main')?.depth ?? 0;
+
+    const queueResult = checkQueueDepthAnomaly(queueDepth, 10, 5);
+    if (queueResult.anomaly) {
+      log.warn({ score: queueResult.score, message: queueResult.message }, 'Queue depth anomaly detected');
+    }
+
+    const errorResult = checkErrorRateSpike(0, 0, 1);
+    if (errorResult.anomaly) {
+      log.warn({ score: errorResult.score, message: errorResult.message }, 'Error rate spike detected');
+    }
+
+    const latencyResult = checkLatencyDegradation(0, 100);
+    if (latencyResult.anomaly) {
+      log.warn({ score: latencyResult.score, message: latencyResult.message }, 'Latency degradation detected');
+    }
+
+    const throughputResult = checkThroughputDrop(0, 50);
+    if (throughputResult.anomaly) {
+      log.warn({ score: throughputResult.score, message: throughputResult.message }, 'Throughput drop detected');
+    }
+
+    const workerResult = checkWorkerAnomaly(0);
+    if (workerResult.anomaly) {
+      log.warn({ score: workerResult.score, message: workerResult.message }, 'Worker health anomaly detected');
+    }
+
+    const dbResult = checkDbPoolUsage(0.5);
+    if (dbResult.anomaly) {
+      log.warn({ score: dbResult.score, message: dbResult.message }, 'DB pool usage anomaly detected');
+    }
+
+    log.debug('Anomaly detection check complete — all 6 detectors run');
+  } catch (err) {
+    log.error({ err: String(err) }, 'Anomaly detection check failed');
   }
 }
 
@@ -154,6 +206,9 @@ export function startScheduledTasks(): void {
   // Worker heartbeat check (every 60s)
   timers.push(setInterval(checkWorkerHealth, WORKER_HEARTBEAT_CHECK_INTERVAL_MS));
 
+  // Anomaly detection check (every 2min)
+  timers.push(setInterval(runAnomalyDetection, ANOMALY_DETECTION_INTERVAL_MS));
+
   // SLO compliance check (every 5min)
   timers.push(setInterval(runSloCheck, SLO_COMPLIANCE_CHECK_INTERVAL_MS));
 
@@ -166,6 +221,7 @@ export function startScheduledTasks(): void {
   // Run initial checks immediately
   checkQueueDepths().catch(() => {});
   checkWorkerHealth().catch(() => {});
+  runAnomalyDetection().catch(() => {});
   runSloCheck().catch(() => {});
   cleanupDLQ().catch(() => {});
   refreshMetrics().catch(() => {});
