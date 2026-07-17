@@ -10,6 +10,7 @@
 import type { IssueJobData } from '../utils/types.js';
 import type { Platform } from '../platforms/interface.js';
 import { rootLogger } from '../utils/logger.js';
+import { runCommonSenseGate } from '../guardrails/commonSenseGate.js';
 
 const log = rootLogger.child({ module: 'webhook-router' });
 
@@ -52,10 +53,10 @@ export type PlatformHandler = (event: WebhookRouterEvent) => Promise<void>;
  */
 export class WebhookRouter {
   private readonly handlers = new Map<string, PlatformHandler[]>();
-  private readonly enqueue: EnqueueHandler;
+  private readonly enqueueHandler: EnqueueHandler;
 
-  constructor(enqueue: EnqueueHandler) {
-    this.enqueue = enqueue;
+  constructor(enqueueHandler: EnqueueHandler) {
+    this.enqueueHandler = enqueueHandler;
   }
 
   /**
@@ -129,7 +130,7 @@ export class WebhookRouter {
     const jobData = this.buildJobData(event);
 
     try {
-      await this.enqueue(jobData);
+      await this.enqueueHandler(jobData);
       log.info(
         {
           platform: event.platform,
