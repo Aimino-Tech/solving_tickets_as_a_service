@@ -117,6 +117,12 @@ export interface OpenSymphonyAdapterConfig {
    * that does not have an explicit template registered.
    */
   defaultTemplate: string[];
+
+  /**
+   * URL of the downstream OpenCode worker serve (e.g. http://localhost:4096).
+   * The ExecutionStage dispatches the prompt here for actual fix execution.
+   */
+  workerUrl?: string;
 }
 
 const DEFAULT_CONFIG: OpenSymphonyAdapterConfig = {
@@ -225,17 +231,66 @@ export class PlanningStage implements PipelineStage {
 /**
  * Execute Stage — Carry out the fix.
  *
- * This is where OpenSymphony would invoke the agent sandbox,
- * apply patches, run tests, etc.  The placeholder logs the
- * execution and returns a summary.
+ * Dispatches the prompt to the configured OpenCode worker serve endpoint
+ * (the real OpenCode serve at workerUrl, not this adapter), then returns
+ * the execution results.  Falls back to a stub summary when no worker URL
+ * is configured.
  */
 export class ExecutionStage implements PipelineStage {
   name = 'execute';
+
+  constructor(private readonly workerUrl?: string) {}
 
   async execute(context: PipelineContext): Promise<PipelineStageResult> {
     const start = Date.now();
     try {
       const plan = context.stageResults.get('plan')?.output as { steps?: string[] } | undefined;
+
+      if (this.workerUrl) {
+        const response = await fetch(`${this.workerUrl}/api/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: context.prompt, model: context.model }),
+          signal: AbortSignal.timeout(600_000),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'unknown error');
+          return {
+            stage: this.name,
+            success: false,
+            error: `Worker returned HTTP ${response.status}: ${errorText}`,
+            durationMs: Date.now() - start,
+          };
+        }
+
+        const result = (await response.json()) as Record<string, unknown>;
+
+        log.info(
+          {
+            requestId: context.requestId,
+            workerStatus: response.status,
+            confidence: result.confidence,
+          },
+          '[ExecutionStage] Worker dispatch completed',
+        );
+
+        return {
+          stage: this.name,
+          success: true,
+          output: {
+            executedSteps: plan?.steps ?? [],
+            model: context.model,
+            workerUrl: this.workerUrl,
+            diff: result.diff ?? undefined,
+            branch: result.branch ?? undefined,
+            testOutput: result.testOutput ?? undefined,
+            summary: result.summary ?? '',
+            confidence: result.confidence ?? 'medium',
+          },
+          durationMs: Date.now() - start,
+        };
+      }
 
       log.info(
         {
@@ -243,7 +298,7 @@ export class ExecutionStage implements PipelineStage {
           steps: plan?.steps?.length ?? 0,
           model: context.model,
         },
-        '[ExecutionStage] Executed fix pipeline',
+        '[ExecutionStage] No workerUrl configured — running in stub mode',
       );
 
       return {
@@ -252,8 +307,6 @@ export class ExecutionStage implements PipelineStage {
         output: {
           executedSteps: plan?.steps ?? [],
           model: context.model,
-          // In a real implementation, this would contain the actual diff,
-          // test output, and branch name from the agent run.
         },
         durationMs: Date.now() - start,
       };
@@ -271,7 +324,7 @@ export class ExecutionStage implements PipelineStage {
 /**
  * Collect Stage — Gather results from the execution.
  *
- * Aggregates diffs, test output, and branch information.
+ * Aggregates diffs, test output, and branch information from prior stages.
  */
 export class CollectionStage implements PipelineStage {
   name = 'collect';
@@ -280,7 +333,7 @@ export class CollectionStage implements PipelineStage {
     const start = Date.now();
     try {
       const execution = context.stageResults.get('execute')?.output as
-        | { model?: string; executedSteps?: string[] }
+        | { model?: string; executedSteps?: string[]; diff?: string; branch?: string; testOutput?: string; summary?: string }
         | undefined;
 
       log.info(
@@ -288,18 +341,14 @@ export class CollectionStage implements PipelineStage {
         '[CollectionStage] Collected results',
       );
 
-      // Build a unified diff placeholder if the execute stage seemed happy
-      const diff = `# OpenSymphony Pipeline Execution\n# Model: ${execution?.model ?? context.model}\n# No changes were made (placeholder stage)\n`;
-      const testOutput = 'No tests executed (placeholder pipeline).\n';
+      const diff = execution?.diff ?? `# OpenSymphony Pipeline Execution\n# Model: ${execution?.model ?? context.model}\n`;
+      const testOutput = execution?.testOutput ?? 'No test output recorded.\n';
+      const branch = execution?.branch ?? 'stas/opensymphony-placeholder';
 
       return {
         stage: this.name,
         success: true,
-        output: {
-          diff,
-          testOutput,
-          branch: 'stas/opensymphony-placeholder',
-        },
+        output: { diff, testOutput, branch },
         durationMs: Date.now() - start,
       };
     } catch (err) {
@@ -474,7 +523,7 @@ export class OpenSymphonyAdapter {
     // Register the built-in stages
     this.registerStage(new IntentStage());
     this.registerStage(new PlanningStage());
-    this.registerStage(new ExecutionStage());
+    this.registerStage(new ExecutionStage(this.config.workerUrl));
     this.registerStage(new CollectionStage());
     this.registerStage(new TasteStage());
   }

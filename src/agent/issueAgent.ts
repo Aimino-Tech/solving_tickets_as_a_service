@@ -795,6 +795,11 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
   // Build model chain: primary + fallbacks
   const models = [config.opencode.model, ...config.opencode.fallbackModels];
 
+  const opencodeBaseUrl =
+    config.opencode.provider === 'opensymphony'
+      ? `http://${config.opencode.osyHost}:${config.opencode.osyPort}`
+      : config.opencode.url;
+
   let lastError: string | undefined;
 
   for (let i = 0; i < models.length; i++) {
@@ -816,7 +821,7 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
     }
 
     try {
-      const response = await fetch(`${config.opencode.url}/api/run`, {
+      const response = await fetch(`${opencodeBaseUrl}/api/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

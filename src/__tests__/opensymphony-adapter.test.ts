@@ -28,6 +28,7 @@ import {
   TasteStage,
   type PipelineContext,
   type PipelineStage,
+  type OpenSymphonyAdapterConfig,
 } from '../opensymphony-adapter.js';
 
 // ---------------------------------------------------------------------------
@@ -447,6 +448,55 @@ describe('model routing', () => {
 
     const templatesMap = (localAdapter as unknown as { templates: Map<string, string[]> }).templates;
     expect(templatesMap.has('gpt-4o')).toBe(false);
+
+    await localAdapter.stop();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Worker Dispatch Tests
+// ---------------------------------------------------------------------------
+
+describe('worker dispatch', () => {
+  it('ExecutionStage returns stub result when no workerUrl is set', async () => {
+    const stage = new ExecutionStage();
+    const ctx: PipelineContext = {
+      requestId: 'test-stub',
+      prompt: 'Fix the bug',
+      model: 'test-model',
+      startTime: new Date(),
+      stageResults: new Map(),
+    };
+
+    const result = await stage.execute(ctx);
+    expect(result.success).toBe(true);
+    const output = result.output as { executedSteps: string[] };
+    expect(output.executedSteps).toEqual([]);
+  });
+
+  it('adapter accepts workerUrl in config', async () => {
+    const localAdapter = new OpenSymphonyAdapter({
+      port: 0,
+      host: '127.0.0.1',
+      workerUrl: 'http://localhost:4096',
+    });
+    expect(localAdapter).toBeDefined();
+    await localAdapter.stop();
+  });
+
+  it('adapter with workerUrl returns health endpoint', async () => {
+    const localPort = 4590;
+    const localAdapter = new OpenSymphonyAdapter({
+      port: localPort,
+      host: '127.0.0.1',
+      workerUrl: 'http://localhost:4096',
+    });
+    await localAdapter.start();
+
+    const { status, body } = await fetchFromAdapter('/api/health');
+    expect(status).toBe(200);
+    const b = body as Record<string, unknown>;
+    expect(b).toHaveProperty('service', 'opensymphony-adapter');
 
     await localAdapter.stop();
   });

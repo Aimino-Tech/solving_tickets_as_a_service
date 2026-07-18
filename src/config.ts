@@ -44,8 +44,11 @@ const envSchema = z.object({
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
 
+  OPENCODE_PROVIDER: z.enum(['opensymphony', 'opencode']).default('opencode'),
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
+  OPENCODE_OSY_PORT: z.coerce.number().int().positive().max(65535).default(4097),
+  OPENCODE_OSY_HOST: z.string().default("127.0.0.1"),
   OPENAI_BASE_URL: z.string().default("http://litellm-proxy:4002/v1"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
@@ -341,8 +344,11 @@ function buildConfig(env: ParsedEnv) {
     },
 
     opencode: {
+      provider: env.OPENCODE_PROVIDER,
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
+      osyPort: env.OPENCODE_OSY_PORT,
+      osyHost: env.OPENCODE_OSY_HOST,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
       direct: {
         apiKey: env.OPENAI_API_KEY ?? '',
