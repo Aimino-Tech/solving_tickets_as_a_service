@@ -651,6 +651,10 @@ export async function createApp(): Promise<express.Application> {
   const { default: agentServerRouter } = await import('./mcp/agentServer.js');
   app.use(agentServerRouter);
 
+  // -- STAS Bridge (orchestrator REST API) ------------------------------------
+  const { default: stasBridgeRouter } = await import('./routes/stasBridge.js');
+  app.use(stasBridgeRouter);
+
   // -- Health check endpoints --------------------------------------------------
   app.use(healthRouter);
 
