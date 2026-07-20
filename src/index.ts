@@ -40,11 +40,15 @@ import { opencodeHealth } from './health/opencodeHealth.js';
 import { rootLogger } from './utils/logger.js';
 import { addBreadcrumb } from './monitoring/sentry.js';
 import { startMcpServer, stopMcpServer } from './mcpAutoStart.js';
+import { startOpenSymphonyAdapter, type OpenSymphonyAdapter } from './opensymphony-adapter.js';
 
 const log = rootLogger.child({ module: 'entry' });
 
 let server: Server | undefined;
 let shutdownInProgress = false;
+
+/** OpenSymphony adapter instance (only set when provider=opensymphony). */
+let osyAdapter: OpenSymphonyAdapter | undefined;
 
 /**
  * Validate connectivity on startup — checks Redis, OpenCode, and E2B if configured.
@@ -95,6 +99,24 @@ async function validateStartupHealth(): Promise<void> {
       'OpenCode did not become healthy within startup timeout -- continuing without',
     );
     checks.push({ name: 'opencode', ok: false, error: opencodeError ?? 'timeout' });
+  }
+
+  // Check OpenSymphony adapter if provider=opensymphony
+  if (config.opencode.provider === 'opensymphony') {
+    try {
+      const adapterUrl = `http://${config.opencode.osyHost}:${config.opencode.osyPort}`;
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 5000);
+      const resp = await fetch(`${adapterUrl}/api/health`, { signal: ac.signal });
+      clearTimeout(timer);
+      if (resp.ok) {
+        checks.push({ name: 'opensymphony-adapter', ok: true });
+      } else {
+        checks.push({ name: 'opensymphony-adapter', ok: false, error: `HTTP ${resp.status}` });
+      }
+    } catch (err) {
+      checks.push({ name: 'opensymphony-adapter', ok: false, error: String(err) });
+    }
   }
 
   // Check E2B if configured
@@ -198,6 +220,16 @@ async function main(): Promise<void> {
     // Stop MCP server if it was auto-started
     stopMcpServer();
 
+    // Stop OpenSymphony adapter if it was started
+    if (osyAdapter) {
+      try {
+        await osyAdapter.stop();
+        log.info('OpenSymphony adapter stopped');
+      } catch (err) {
+        log.warn({ err: String(err) }, 'Error stopping OpenSymphony adapter (non-fatal)');
+      }
+    }
+
     // Disconnect RabbitMQ if connected
     try {
       const { disconnect: disconnectRabbitMq, isConnected } = await import('./queue/rabbitmq.js');
@@ -246,6 +278,30 @@ async function main(): Promise<void> {
 
   // Auto-start MCP server in SSE mode (for agent discovery and MCP protocol)
   startMcpServer();
+
+  // Auto-start OpenSymphony adapter if provider is set to opensymphony
+  if (config.opencode.provider === 'opensymphony') {
+    const originalOpenCodeUrl = config.opencode.url;
+    log.info(
+      { port: config.opencode.osyPort, host: config.opencode.osyHost, workerUrl: originalOpenCodeUrl },
+      'OPENCODE_PROVIDER=opensymphony — starting OpenSymphony adapter',
+    );
+    try {
+      const adapterUrl = `http://${config.opencode.osyHost}:${config.opencode.osyPort}`;
+      osyAdapter = await startOpenSymphonyAdapter({
+        port: config.opencode.osyPort,
+        host: config.opencode.osyHost,
+        workerUrl: originalOpenCodeUrl,
+      });
+      addBreadcrumb('system', 'OpenSymphony adapter started', {
+        port: config.opencode.osyPort,
+        adapterUrl,
+        workerUrl: originalOpenCodeUrl,
+      });
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to start OpenSymphony adapter');
+    }
+  }
 
   // Register signal handlers for graceful shutdown
   process.on('SIGTERM', () => shutdown('SIGTERM'));
