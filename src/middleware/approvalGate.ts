@@ -370,6 +370,14 @@ router.get('/approvals', (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/approvals/config — Get the current approval gate configuration.
+ * MUST be defined before /:id routes to avoid Express matching "config" as an :id param.
+ */
+router.get('/approvals/config', (_req: Request, res: Response) => {
+  res.json(getApprovalConfig());
+});
+
+/**
  * GET /api/approvals/:id — Get a specific approval by ID.
  */
 router.get('/approvals/:id', (req: Request, res: Response) => {
@@ -419,13 +427,6 @@ router.post('/approvals/:id/reject', (req: Request, res: Response) => {
   }
 
   res.json({ status: 'rejected', approval: result });
-});
-
-/**
- * GET /api/approvals/config — Get the current approval gate configuration.
- */
-router.get('/approvals/config', (_req: Request, res: Response) => {
-  res.json(getApprovalConfig());
 });
 
 export { router as approvalRouter };
