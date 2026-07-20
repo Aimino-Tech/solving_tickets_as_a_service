@@ -1,0 +1,330 @@
+{
+  "name": "Blog → Social Cross-Post",
+  "nodes": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Blog Published Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "blog-published-hook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "blog-published",
+        "options": {
+          "rawBody": true,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "responseMode": "onReceived",
+          "responseData": "allEntries"
+        },
+        "responseJSON": {
+          "entries": [
+            {
+              "name": "status",
+              "value": "ok"
+            },
+            {
+              "name": "message",
+              "value": "Blog post received, cross-posting initiated"
+            }
+          ]
+        }
+      },
+      "credentials": {}
+    },
+    {
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Format Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300],
+      "parameters": {
+        "mode": "raw",
+        "language": "javaScript",
+        "code": "// Blog → Social Formatting Script\n// Input: { title, link, excerpt, author, publishedDate, slug, tags? }\n\nconst item = $input.first().json;\n\nconst title = item.title || '';\nconst link = item.link || '';\nconst excerpt = item.excerpt || '';\nconst author = item.author || 'Team';\nconst tags = item.tags || [];\nconst blogName = item.blogName || 'Our Blog';\n\n// --- Twitter / X (280 chars, but X Premium allows longer) ---\nconst tweetMaxLength = 280;\nconst tweetLink = link || '';\nconst tweetPrefix = `${title}\\n\\n`;\n\nlet tweetBody = excerpt;\n// Truncate excerpt if the full tweet would exceed the character limit\nconst tweetSuffix = `\\n\\n${tweetLink}`;\nconst fullTweetLength = tweetPrefix.length + tweetBody.length + tweetSuffix.length;\n\nif (fullTweetLength > tweetMaxLength) {\n  const maxBodyLength = tweetMaxLength - tweetPrefix.length - tweetSuffix.length - 3; // 3 for '...'\n  tweetBody = tweetBody.substring(0, maxBodyLength) + '...';\n}\n\nconst tweet = `${tweetPrefix}${tweetBody}${tweetSuffix}`;\n\n// --- LinkedIn (richer, supports article-style shares) ---\nconst linkedInComment = `Just published: ${title}\\n\\n${excerpt}\\n\\nRead the full article here: ${link}`;\n\nconst linkedInTitle = title;\nconst linkedInDescription = excerpt.length > 250 ? excerpt.substring(0, 247) + '...' : excerpt;\nconst linkedInArticleUrl = link;\n\nreturn [\n  {\n    json: {\n      // Original data passes through\n      title,\n      link,\n      excerpt,\n      author,\n      publishedDate: item.publishedDate,\n      tags,\n      blogName,\n      // Formatted outputs for each platform\n      tweet,\n      linkedInComment,\n      linkedInTitle,\n      linkedInDescription,\n      linkedInArticleUrl,\n    }\n  }\n];"
+      },
+      "credentials": {}
+    },
+    {
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "name": "Post to Twitter",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 1,
+      "position": [650, 200],
+      "parameters": {
+        "resource": "tweet",
+        "operation": "create",
+        "text": "={{ $json.tweet }}",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "twitterOAuth2Api": "Twitter Blog Cross-Post Bot"
+      }
+    },
+    {
+      "id": "d4e5f6a7-b8c9-0123-defa-234567890123",
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [650, 400],
+      "parameters": {
+        "resource": "share",
+        "operation": "create",
+        "shareOwner": "={{ $json.authorId || 'urn:li:organization:default' }}",
+        "shareContent": {
+          "shareCommentary": "={{ $json.linkedInComment }}",
+          "shareMediaCategory": "ARTICLE",
+          "shareArticle": {
+            "title": "={{ $json.linkedInTitle }}",
+            "description": "={{ $json.linkedInDescription }}",
+            "sourceUrl": "={{ $json.linkedInArticleUrl }}",
+            "thumbnailUrl": "={{ $json.thumbnailUrl || '' }}"
+          }
+        },
+        "visibility": "PUBLIC"
+      },
+      "credentials": {
+        "linkedInOAuth2Api": "LinkedIn Blog Cross-Post Bot"
+      }
+    },
+    {
+      "id": "e5f6a7b8-c9d0-1234-efab-345678901234",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "parameters": {}
+    },
+    {
+      "id": "f6a7b8c9-d0e1-2345-fabc-456789012345",
+      "name": "Check Twitter Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 200],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.error }}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a7b8c9d0-e1f2-3456-abcd-567890123456",
+      "name": "Check LinkedIn Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 400],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.error }}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b8c9d0e1-f2a3-4567-bcde-678901234567",
+      "name": "Log Twitter Failure",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1050, 150],
+      "parameters": {}
+    },
+    {
+      "id": "c9d0e1f2-a3b4-5678-cdef-789012345678",
+      "name": "Log LinkedIn Failure",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1050, 450],
+      "parameters": {}
+    },
+    {
+      "id": "d0e1f2a3-b4c5-6789-defa-890123456789",
+      "name": "Error Notification (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [1250, 300],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": "={{ $env.SLACK_ERROR_CHANNEL || '#ops-alerts' }}",
+        "text": "={{ '❌ Blog social cross-post failed:\\nTitle: ' + $json.title + '\\nTwitter err: ' + $json.twitterError + '\\nLinkedIn err: ' + $json.linkedInError }}",
+        "otherOptions": {
+          "username": "Blog Cross-Post Bot"
+        }
+      },
+      "credentials": {
+        "slackApi": "STAS Slack Bot"
+      }
+    },
+    {
+      "id": "e1f2a3b4-c5d6-7890-efab-901234567890",
+      "name": "Error Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [1050, 300],
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition"
+      }
+    }
+  ],
+  "connections": {
+    "Blog Published Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Post": {
+      "main": [
+        [
+          {
+            "node": "Post to Twitter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Post to LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Twitter": {
+      "main": [
+        [
+          {
+            "node": "Check Twitter Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Check LinkedIn Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Twitter Error": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Twitter Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check LinkedIn Error": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log LinkedIn Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Twitter Failure": {
+      "main": [
+        [
+          {
+            "node": "Error Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log LinkedIn Failure": {
+      "main": [
+        [
+          {
+            "node": "Error Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Error Merge": {
+      "main": [
+        [
+          {
+            "node": "Error Notification (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "versionId": "v1-initial",
+  "active": true,
+  "settings": {
+    "timezone": "UTC",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "id": "tag-blog-automation",
+      "name": "Blog Automation"
+    },
+    {
+      "id": "tag-social-media",
+      "name": "Social Media"
+    },
+    {
+      "id": "tag-cross-post",
+      "name": "Cross-Post"
+    }
+  ],
+  "staticData": null
+}
