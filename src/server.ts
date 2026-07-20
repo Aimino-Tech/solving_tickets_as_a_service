@@ -81,6 +81,7 @@ import { proxyRouter } from './routes/proxy.js';
 import { approvalRouter, configureApprovalGate } from "./middleware/approvalGate.js";
 import { streamAuditExportCsv, streamAuditExportJson } from "./audit/export.js";
 import { de } from "./i18n/de.js";
+import { workspaceRouter } from "./routes/workspace.js";
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -889,6 +890,16 @@ export async function createApp(): Promise<express.Application> {
   // Pipeline Run History API
   app.use('/api/history', pipelineHistoryRouter);
 
+    // ── Workspace Management API (AIM-3321) ──────────────────────────
+  //   GET    /api/workspace              — List workspaces
+  //   GET    /api/workspace/plans        — List pricing plans
+  //   POST   /api/workspace/calculate-cost — Calculate workspace cost
+  //   GET    /api/workspace/:id/status   — Workspace status
+  //   POST   /api/workspace              — Create workspace (self-serve)
+  //   POST   /api/workspace/:id/setup    — Automated Slack/RabbitMQ/DB setup
+  //   DELETE /api/workspace/:id          — Cleanup workspace
+  app.use('/api/workspace', workspaceRouter);
+
   // SAML 2.0 SSO routes (optional)
   try {
     const { default: samlRouter } = await import('./routes/saml.js');
@@ -951,6 +962,16 @@ export async function createApp(): Promise<express.Application> {
       await streamAuditExportCsv(res, req.query);
     }
   });
+  // ── Workspace Management API (AIM-3321) ──────────────────────────
+  //   GET    /api/workspace              — List workspaces
+  //   GET    /api/workspace/plans        — List pricing plans
+  //   POST   /api/workspace/calculate-cost — Calculate workspace cost
+  //   GET    /api/workspace/:id/status   — Workspace status
+  //   POST   /api/workspace              — Create workspace (self-serve)
+  //   POST   /api/workspace/:id/setup    — Automated Slack/RabbitMQ/DB setup
+  //   DELETE /api/workspace/:id          — Cleanup workspace
+  app.use('/api/workspace', workspaceRouter);
+
   // -- 404 handler ----------------------------------------------------------
 
   app.use((req: Request, res: Response) => {
