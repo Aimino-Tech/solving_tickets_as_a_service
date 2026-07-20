@@ -78,6 +78,7 @@ import { kpiRouter } from './routes/kpi.js';
 import healthRouter from './routes/health.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import { proxyRouter } from './routes/proxy.js';
+import { workspaceRouter } from './routes/workspace.js'; // AIM-3321
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -880,6 +881,16 @@ export async function createApp(): Promise<express.Application> {
 
   // Pipeline Run History API
   app.use('/api/history', pipelineHistoryRouter);
+
+    // ── Workspace Management API (AIM-3321) ──────────────────────────
+  //   GET    /api/workspace              — List workspaces
+  //   GET    /api/workspace/plans        — List pricing plans
+  //   POST   /api/workspace/calculate-cost — Calculate workspace cost
+  //   GET    /api/workspace/:id/status   — Workspace status
+  //   POST   /api/workspace              — Create workspace (self-serve)
+  //   POST   /api/workspace/:id/setup    — Automated Slack/RabbitMQ/DB setup
+  //   DELETE /api/workspace/:id          — Cleanup workspace
+  app.use('/api/workspace', workspaceRouter);
 
   // SAML 2.0 SSO routes (optional)
   try {
