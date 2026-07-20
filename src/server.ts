@@ -78,7 +78,10 @@ import { kpiRouter } from './routes/kpi.js';
 import healthRouter from './routes/health.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import { proxyRouter } from './routes/proxy.js';
-import { workspaceRouter } from './routes/workspace.js'; // AIM-3321
+import { approvalRouter, configureApprovalGate } from "./middleware/approvalGate.js";
+import { streamAuditExportCsv, streamAuditExportJson } from "./audit/export.js";
+import { de } from "./i18n/de.js";
+import { workspaceRouter } from "./routes/workspace.js";
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -194,6 +197,11 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Initialize onboarding wizard store ───────────────────────────
   initWizardStore();
+
+  // ── DACH Market: Register German locale ────────────────────────────
+  app.locals.locales = app.locals.locales || {};
+  app.locals.locales["de-DE"] = de;
+  app.locals.defaultLocale = "de-DE";
 
   // ── Start webhook retry worker ────────────────────────────────────
   // Only start if we're running as API or both
@@ -928,6 +936,42 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/v1/proxy', proxyRouter);
 
   app.use('/api', pipelineRouter);
+
+  // ── DACH Market: Configure approval gate ───────────────────────────
+  configureApprovalGate({
+    enabled: process.env.APPROVAL_GATE_ENABLED === "true",
+    requiredOrgs: (process.env.APPROVAL_REQUIRED_ORGS || "").split(",").map((s) => s.trim()).filter(Boolean),
+    requiredRepos: (process.env.APPROVAL_REQUIRED_REPOS || "").split(",").map((s) => s.trim()).filter(Boolean),
+    triggerLabels: (process.env.APPROVAL_TRIGGER_LABELS || "production,stas:fix:approval").split(",").map((s) => s.trim()).filter(Boolean),
+  });
+
+  // ── DACH Market: Approval gate API ────────────────────────────────
+  // GET    /api/approvals/pending     — List pending approvals
+  // POST   /api/approvals/:id/approve — Approve a pending dispatch
+  // POST   /api/approvals/:id/reject  — Reject a pending dispatch
+  // GET    /api/approvals/config      — Get approval gate config
+  app.use("/api", approvalRouter);
+
+  // ── DACH Market: Audit export (GDPR-compliant) ────────────────────
+  // GET /api/admin/audit/export?format=csv — Export audit logs as CSV
+  // GET /api/admin/audit/export?format=json — Export audit logs as JSON
+  app.get("/api/admin/audit/export", async (req, res) => {
+    if (req.query.format === "json") {
+      await streamAuditExportJson(res, req.query);
+    } else {
+      await streamAuditExportCsv(res, req.query);
+    }
+  });
+  // ── Workspace Management API (AIM-3321) ──────────────────────────
+  //   GET    /api/workspace              — List workspaces
+  //   GET    /api/workspace/plans        — List pricing plans
+  //   POST   /api/workspace/calculate-cost — Calculate workspace cost
+  //   GET    /api/workspace/:id/status   — Workspace status
+  //   POST   /api/workspace              — Create workspace (self-serve)
+  //   POST   /api/workspace/:id/setup    — Automated Slack/RabbitMQ/DB setup
+  //   DELETE /api/workspace/:id          — Cleanup workspace
+  app.use('/api/workspace', workspaceRouter);
+
   // -- 404 handler ----------------------------------------------------------
 
   app.use((req: Request, res: Response) => {
