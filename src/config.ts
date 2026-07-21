@@ -116,6 +116,7 @@ const envSchema = z.object({
 
   PD_INTEGRATION_KEY: z.string().optional(),
   PD_ESCALATION_POLICY_ID: z.string().optional(),
+  N8N_MONITORING_WEBHOOK_URL: z.string().optional(),
 
   SLACK_WEBHOOK_URL: z.string().optional(),
   SLACK_CHANNEL: z.string().optional(),
@@ -509,6 +510,7 @@ function buildConfig(env: ParsedEnv) {
       critQueueDepth: env.ALERT_CRIT_QUEUE_DEPTH,
       warnErrorRatePercent: env.ALERT_WARN_ERROR_RATE_PERCENT,
       critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
+      n8nWebhookUrl: env.N8N_MONITORING_WEBHOOK_URL,
     },
 
     stas: {

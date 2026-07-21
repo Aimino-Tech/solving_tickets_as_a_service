@@ -210,6 +210,20 @@ export async function dispatchAlert(alert: AlertEvent): Promise<void> {
     );
   }
 
+  // Route to n8n monitoring webhook for all severities
+  if (config.alerting.n8nWebhookUrl) {
+    const { emitN8nAlert } = await import('./n8nEmitter.js');
+    await emitN8nAlert({
+      severity,
+      rule,
+      message,
+      context: context as Record<string, unknown> | undefined,
+      timestamp: alert.timestamp,
+    }).catch((err) =>
+      log.error({ err: String(err) }, 'n8n alert dispatch failed'),
+    );
+  }
+
   // Route to PagerDuty for critical alerts or escalated warnings
   if (severity === 'critical' || (severity === 'warning' && alert.escalated)) {
     await sendPagerDutyAlert(alert).catch((err) =>
