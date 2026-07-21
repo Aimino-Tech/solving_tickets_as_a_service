@@ -203,6 +203,70 @@ Replaces the in-code alert dispatch (`monitoring/alerting.ts`). OS emits alert e
 }
 ```
 
+### 4. Stripe Billing Webhooks (AIM-3340)
+
+**File:** `workflows/stripe-billing.json`
+
+Receives Stripe billing events (invoice paid, payment failed, subscription changes, credit purchases) and processes them entirely in n8n — signature verification, database updates (quota, tier, credits), and Slack notifications to `#billing`.
+
+**Flow:**
+
+```
+Stripe webhook → n8n HTTP node (verify signature via Stripe library)
+  → Switch (event type):
+    → invoice.paid                 → Reset usage quota in DB → Slack alert
+    → invoice.payment_failed        → Slack alert with failure details
+    → customer.subscription.updated → Sync billing plan + account tier in DB → Slack alert
+    → customer.subscription.deleted → Downgrade to free tier in DB → Slack alert
+    → checkout.session.completed    → Add credits in DB → Slack alert
+    → Unknown event                 → Fallback Slack message
+```
+
+**Events handled:**
+
+| Event Type | DB Action | Slack Color | Description |
+|------------|-----------|-------------|-------------|
+| `invoice.paid` | Reset `usage_count` | Green (`#2ECC71`) | Successful payment — quota reset for new period |
+| `invoice.payment_failed` | — | Red (`#E74C3C`) | Payment attempt failed |
+| `customer.subscription.updated` | Update `plan` + `tier` | Blue (`#3498DB`) | Plan change or status change |
+| `customer.subscription.deleted` | Downgrade to free tier | Red (`#E74C3C`) | Subscription ended — account downgraded |
+| `checkout.session.completed` | Add credits to balance | Green (`#2ECC71`) | Credit pack purchased |
+| Unknown | — | Gray (`#95A5A6`) | Unhandled event type |
+
+**Setup:**
+
+1. Import `workflows/stripe-billing.json` into n8n
+2. Configure the **Slack** node with OAuth credentials (`chat:write` scope) for the `#billing` channel
+3. Configure the **Postgres** nodes with your database credentials (shared `postgres` database)
+4. Configure the **Stripe** credential in n8n with `STRIPE_SECRET_KEY`
+5. Set these environment variables in n8n:
+
+   | Variable | Description |
+   |----------|-------------|
+   | `STRIPE_SECRET_KEY` | Stripe secret key (for the Verify Signature code node) |
+   | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
+   | `N8N_BASE_URL` | (Optional) Base URL for triggering the onboarding email workflow |
+
+6. Configure Stripe to send webhook events to your n8n URL:
+   ```
+   https://<your-n8n>/webhook/stripe-event
+   ```
+
+**Expected webhook payload (raw Stripe event):**
+
+The workflow receives the raw Stripe webhook payload and verifies the signature using the Stripe library. No proxying through the STAS backend is needed.
+
+**Behavior:**
+
+| Scenario | Response |
+|----------|----------|
+| Invoice paid successfully | Green Slack message to `#billing` + usage quota reset in DB |
+| Invoice payment fails | Red Slack message with amount, reason, and attempt count |
+| Subscription plan changes | Blue Slack message with new status + DB plan/tier updated |
+| Subscription cancelled | Red Slack message + account downgraded to free in DB |
+| Credit pack purchased | Green Slack message with amount + credits added in DB |
+| Unknown event type | Gray fallback message with raw event type for debugging |
+
 ## Adding a workflow
 
 1. Design the workflow in the n8n UI
