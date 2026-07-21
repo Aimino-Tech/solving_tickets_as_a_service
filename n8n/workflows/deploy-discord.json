@@ -1,0 +1,103 @@
+{
+  "name": "Deploy Notifications → Discord",
+  "nodes": [
+    {
+      "id": "webhook-1",
+      "name": "GitHub Actions Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "deploy-event",
+        "options": {}
+      }
+    },
+    {
+      "id": "if-success",
+      "name": "Is Successful Deploy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "check-conclusion",
+              "leftValue": "={{ $json.workflow_run?.conclusion || $json.conclusion }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "equal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-format-message",
+      "name": "Format Discord Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 200],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "content", "value": "={{ '' }}" },
+            { "name": "embeds[0].title", "value": "={{ '✅ Deploy Succeeded: ' + ($json.workflow_run?.name || $json.workflow || 'Deploy') }}" },
+            { "name": "embeds[0].color", "value": "5763719" },
+            { "name": "embeds[0].fields[0].name", "value": "Repository" },
+            { "name": "embeds[0].fields[0].value", "value": "={{ $json.repository?.full_name || $json.repo || 'N/A' }}" },
+            { "name": "embeds[0].fields[1].name", "value": "Branch" },
+            { "name": "embeds[0].fields[1].value", "value": "={{ $json.workflow_run?.head_branch || $json.ref?.replace('refs/heads/', '') || 'N/A' }}" },
+            { "name": "embeds[0].fields[2].name", "value": "Commit" },
+            { "name": "embeds[0].fields[2].value", "value": "={{ ($json.workflow_run?.head_commit?.id || $json.after || '').substring(0, 7) || 'N/A' }}" },
+            { "name": "embeds[0].fields[3].name", "value": "Triggered by" },
+            { "name": "embeds[0].fields[3].value", "value": "={{ $json.sender?.login || $json.actor?.login || $json.triggering_actor || 'N/A' }}" },
+            { "name": "embeds[0].fields[4].name", "value": "Run URL" },
+            { "name": "embeds[0].fields[4].value", "value": "={{ $json.workflow_run?.html_url || $json.run_url || 'N/A' }}" },
+            { "name": "embeds[0].footer.text", "value": "={{ 'GitHub Actions - ' + new Date().toISOString() }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "http-discord",
+      "name": "Send to Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1000, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_DEPLOY_WEBHOOK_URL }}",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "content", "value": "={{ $json.content }}" },
+            { "name": "embeds", "value": "={{ $json.embeds }}" }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "GitHub Actions Webhook": {
+      "main": [[{ "node": "Is Successful Deploy?", "type": "main", "index": 0 }]]
+    },
+    "Is Successful Deploy?": {
+      "main": [
+        [{ "node": "Format Discord Message", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Format Discord Message": {
+      "main": [[{ "node": "Send to Discord", "type": "main", "index": 0 }]]
+    },
+    "Send to Discord": {
+      "main": [[]]
+    }
+  }
+}
