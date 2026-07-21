@@ -544,6 +544,24 @@ export function buildPRBody(params: {
     '',
     '---',
     '',
-    `> ⚡ **Powered by [STAS](https://github.com/Aimino-Tech/solving_tickets_as_a_service)** — Label a GitHub issue with \`stas:fix\` and get a pull request. | [Add to repo](https://github.com/apps/stas-app) | [Docs](https://stas.aimino.ai)`,
+    `[![STAS](https://img.shields.io/badge/fix-powered_by_STAS-8250DF)](https://stas.aimino.ai) — [Add STAS to your repo](https://github.com/apps/${config.github.appId}/installations/new)`,
+  ].join('\n');
+}
+
+export function buildShareMessage(runUrl: string): string {
+  return [
+    `### 🎉 Fix Complete`,
+    '',
+    `This fix was automated by STAS — label an issue and get a pull request.`,
+    '',
+    'Share this result:',
+    '',
+    `- [Share on Twitter](https://twitter.com/intent/tweet?text=${encodeURIComponent('My GitHub issue was automatically fixed by STAS! 🚀')}&url=${encodeURIComponent(runUrl)})`,
+    `- [Share on LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(runUrl)})`,
+    '',
+    `[![STAS](https://img.shields.io/badge/STAS-Solving_Tickets_As_A_Service-8250DF)](https://stas.aimino.ai)`,
+    `[Add STAS to your repo](https://github.com/apps/${config.github.appId}/installations/new)`,
+    '',
+    BOT_SIGNATURE,
   ].join('\n');
 }
