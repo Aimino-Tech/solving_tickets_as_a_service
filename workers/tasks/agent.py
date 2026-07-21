@@ -48,7 +48,7 @@ def dispatch_opencode(self, ctx: dict) -> dict:
     repo_full = f"{owner}/{repo}"
     branch_name = f"stas/fix-{issue_id.lower().replace('_', '-')[:40]}"
 
-    logger.info("OpenCode implementing %s — repo=%s model=%s", issue_id, repo_full, OPENCODE_MODEL)
+    logger.info("Agent implementing %s — repo=%s model=%s", issue_id, repo_full, OPENCODE_MODEL)
 
     prompt = (
         f"Implement the following ticket in the {repo_full} repository.\n\n"
@@ -76,7 +76,7 @@ def dispatch_opencode(self, ctx: dict) -> dict:
             "--model", OPENCODE_MODEL,
             "--print-logs",
         ]
-        logger.info("Running OpenCode: %s", " ".join(cmd))
+        logger.info("Running Agent: %s", " ".join(cmd))
 
         env = os.environ.copy()
         if OPENAI_BASE_URL:
@@ -92,21 +92,21 @@ def dispatch_opencode(self, ctx: dict) -> dict:
                 env=env,
             )
         except subprocess.TimeoutExpired:
-            logger.error("OpenCode timed out after %ss", os.getenv("OPENCODE_TIMEOUT", "600"))
+            logger.error("Agent timed out after %ss", os.getenv("OPENCODE_TIMEOUT", "600"))
             raise
 
         stdout = result.stdout or ""
         stderr = result.stderr or ""
 
         if result.returncode != 0:
-            logger.error("OpenCode failed (rc=%d): %s", result.returncode, stderr[:500])
-            raise RuntimeError(f"OpenCode exited {result.returncode}")
+            logger.error("Agent failed (rc=%d): %s", result.returncode, stderr[:500])
+            raise RuntimeError(f"Agent exited {result.returncode}")
 
         subprocess.run(["git", "push", "--force", "origin", branch_name], check=True, capture_output=True, text=True, cwd=tmpdir)
         sha_result = subprocess.run(["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True, cwd=tmpdir)
         commit_sha = sha_result.stdout.strip()
 
-        logger.info("OpenCode implemented %s — branch=%s sha=%s", issue_id, branch_name, commit_sha)
+        logger.info("Agent implemented %s — branch=%s sha=%s", issue_id, branch_name, commit_sha)
 
     return {
         "repo_owner": owner,
@@ -117,5 +117,5 @@ def dispatch_opencode(self, ctx: dict) -> dict:
         "commit_sha": commit_sha,
         "issue_id": issue_id,
         "issue_title": title,
-        "summary": f"OpenCode implementation for {issue_id}: {title[:80]}",
+        "summary": f"Agent implementation for {issue_id}: {title[:80]}",
     }

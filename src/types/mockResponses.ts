@@ -76,7 +76,7 @@ class MockResponseProvider {
     metadata?: Record<string, unknown>;
   } {
     this.callCount++;
-    log.info({ callCount: this.callCount }, '[STATIC MODE] Returning mock OpenCode dispatch response');
+    log.info({ callCount: this.callCount }, '[STATIC MODE] Returning mock Agent dispatch response');
 
     return {
       success: true,

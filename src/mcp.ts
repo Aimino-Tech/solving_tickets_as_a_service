@@ -55,7 +55,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
         type: 'stdio',
         command: 'python',
         args: ['-m', 'stas_mcp.server', 'stdio'],
-        description: 'Stdio transport for tools like OpenCode and Claude Desktop',
+        description: 'Stdio transport for tools like Claude Desktop and Cursor',
       },
     ],
     tools: [

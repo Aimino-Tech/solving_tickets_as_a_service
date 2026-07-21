@@ -167,7 +167,7 @@ print('   ✓ manifest valid')
           echo "Registry: https://registry.mcp.ai/servers/@aimino/stas-mcp"
           echo "Smithery: https://smithery.ai/server/@aimino/stas-mcp"
           echo ""
-          echo "Install via OpenCode:"
+          echo "Install via stdio:"
           echo '  python -m stas_mcp.server stdio'
           echo ""
           echo "Connect via SSE:"

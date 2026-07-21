@@ -134,9 +134,9 @@ Implement the real thing. The ticket is not done until every line is real.
 - `pull`: keep branch updated with latest `origin/main` before handoff.
 - `land`: when ticket reaches `Merging`, explicitly open and follow `.codex/skills/land/SKILL.md`, which includes the `land` loop.
 
-## Oh My OpenAgent (oh-my-opencode)
+## Built-in Slash Commands
 
-The oh-my-opencode plugin is pre-installed and provides the following built-in slash commands to accelerate common workflows:
+The following built-in slash commands are available to accelerate common workflows:
 
 - `/ralph-loop` — self-referential development loop; use for complex multi-step tasks that require the agent to work until completion without stopping mid-way. Alternative to Symphony's turn-based loop.
 - `/refactor` — intelligent refactoring with LSP and AST-grep validation; use for any code restructuring.

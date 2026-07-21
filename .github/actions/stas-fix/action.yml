@@ -10,18 +10,18 @@ inputs:
     description: 'GitHub token with contents:write, issues:write, pull_requests:write permissions'
     required: true
   opencode-url:
-    description: 'OpenCode Serve URL'
+    description: 'Agent backend URL'
     required: false
     default: 'http://localhost:4096'
   opencode-api-key:
-    description: 'OpenCode API key'
+    description: 'Agent backend API key'
     required: false
   opencode-model:
-    description: 'OpenCode model to use for the fix agent'
+    description: 'Model to use for the fix agent'
     required: false
     default: 'anthropic/claude-sonnet-4-20250514'
   openai-api-key:
-    description: 'OpenAI API key (fallback if OpenCode is not available)'
+    description: 'OpenAI API key (fallback if Agent backend is not available)'
     required: false
   bot-name:
     description: 'Bot name used in comments'

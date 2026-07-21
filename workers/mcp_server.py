@@ -58,7 +58,7 @@ def _register_with_opencode():
         existing[MCP_SERVER_NAME] = server_config
         with open(config_file, "w") as f:
             json.dump(existing, f, indent=2)
-        logger.info("Registered MCP server '%s' with OpenCode", MCP_SERVER_NAME)
+        logger.info("Registered MCP server '%s' with STAS Agent framework", MCP_SERVER_NAME)
     except Exception as exc:
         logger.warning("Failed to register MCP server: %s", exc)
 

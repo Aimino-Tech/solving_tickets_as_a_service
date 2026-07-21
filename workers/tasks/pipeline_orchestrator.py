@@ -140,10 +140,10 @@ def _implement_ticket(ctx: dict) -> dict:
     try:
         subprocess.run([opencode_bin, "--version"], capture_output=True, text=True, timeout=5)
         from workers.tasks.agent import dispatch_opencode
-        logger.info("Using OpenCode agent for implementation")
+        logger.info("Using Agent for implementation")
         return dispatch_opencode.__wrapped__(ctx)
     except Exception:
-        logger.warning("OpenCode not available, using direct_fix fallback")
+        logger.warning("Agent not available, using direct_fix fallback")
         from workers.tasks.direct_fix import create_fix
         return create_fix.__wrapped__(ctx)
 
