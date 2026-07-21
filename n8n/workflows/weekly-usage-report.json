@@ -1,0 +1,147 @@
+{
+  "name": "Weekly Usage Report — DB → formatted Slack #syntaro-metrics",
+  "nodes": [
+    {
+      "id": "schedule-trigger",
+      "name": "Every Monday 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "pg-query",
+      "name": "DB: Weekly Stats Query",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [450, 300],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH weekly_stats AS (\n  SELECT\n    COALESCE((SELECT COUNT(*) FROM run_history WHERE status = 'completed' AND completed_at >= NOW() - INTERVAL '7 days'), 0) AS issues_fixed,\n    COALESCE((SELECT COUNT(*) FROM run_history WHERE status = 'failed' AND completed_at >= NOW() - INTERVAL '7 days'), 0) AS issues_failed,\n    COALESCE((SELECT SUM(tokens_total) FROM agent_analytics_runs WHERE created_at >= NOW() - INTERVAL '7 days'), 0) AS tokens_consumed,\n    COALESCE((SELECT COUNT(DISTINCT account_id) FROM usage_records WHERE timestamp >= NOW() - INTERVAL '7 days'), 0) AS active_tenants,\n    COALESCE((SELECT COUNT(*) FROM accounts WHERE created_at >= NOW() - INTERVAL '7 days'), 0) AS new_signups,\n    COALESCE((SELECT SUM(amount) FROM credit_transactions WHERE type IN ('purchase', 'subscription') AND created_at >= NOW() - INTERVAL '7 days'), 0) AS total_revenue_cents,\n    (SELECT COUNT(*) FROM accounts) AS total_accounts\n)",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "pg-trends",
+      "name": "DB: Previous Week Trends",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [450, 450],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH prev_week_stats AS (\n  SELECT\n    COALESCE((SELECT COUNT(*) FROM run_history WHERE status = 'completed' AND completed_at >= NOW() - INTERVAL '14 days' AND completed_at < NOW() - INTERVAL '7 days'), 0) AS prev_issues_fixed,\n    COALESCE((SELECT SUM(tokens_total) FROM agent_analytics_runs WHERE created_at >= NOW() - INTERVAL '14 days' AND created_at < NOW() - INTERVAL '7 days'), 0) AS prev_tokens,\n    COALESCE((SELECT COUNT(DISTINCT account_id) FROM usage_records WHERE timestamp >= NOW() - INTERVAL '14 days' AND timestamp < NOW() - INTERVAL '7 days'), 0) AS prev_active_tenants,\n    COALESCE((SELECT COUNT(*) FROM accounts WHERE created_at >= NOW() - INTERVAL '14 days' AND created_at < NOW() - INTERVAL '7 days'), 0) AS prev_signups,\n    COALESCE((SELECT SUM(amount) FROM credit_transactions WHERE type IN ('purchase', 'subscription') AND created_at >= NOW() - INTERVAL '14 days' AND created_at < NOW() - INTERVAL '7 days'), 0) AS prev_revenue_cents\n)\nSELECT * FROM prev_week_stats",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "merge-stats",
+      "name": "Merge Stats",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition"
+      }
+    },
+    {
+      "id": "code-format",
+      "name": "Format Slack Blocks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [950, 300],
+      "parameters": {
+        "language": "javascript",
+        "code": "const data = $input.first().json;\n\nfunction trend(current, previous) {\n  if (!previous || previous === 0) return current > 0 ? '+∞' : '-';  const pct = ((current - previous) / previous * 100).toFixed(1);\n  const sign = pct > 0 ? '+' : '';\n  return `${sign}${pct}%`;\n}\n\nconst issuesFixed = Number(data.issues_fixed) || 0;\nconst issuesFailed = Number(data.issues_failed) || 0;\nconst tokensUsed = Number(data.tokens_consumed) || 0;\nconst activeTenants = Number(data.active_tenants) || 0;\nconst newSignups = Number(data.new_signups) || 0;\nconst revenueCents = Number(data.total_revenue_cents) || 0;\nconst totalAccounts = Number(data.total_accounts) || 0;\n\nconst prevFixed = Number(data.prev_issues_fixed) || 0;\nconst prevTokens = Number(data.prev_tokens) || 0;\nconst prevTenants = Number(data.prev_active_tenants) || 0;\nconst prevSignups = Number(data.prev_signups) || 0;\nconst prevRevenue = Number(data.prev_revenue_cents) || 0;\n\nconst totalRuns = issuesFixed + issuesFailed;\nconst fixRate = totalRuns > 0 ? (issuesFixed / totalRuns * 100).toFixed(1) : 'N/A';\n\nconst revenue = '$' + (revenueCents / 100).toFixed(2);\nconst tokensDisplay = tokensUsed >= 1000000\n  ? (tokensUsed / 1000000).toFixed(1) + 'M'\n  : tokensUsed >= 1000\n    ? (tokensUsed / 1000).toFixed(1) + 'K'\n    : String(tokensUsed);\n\nconst timeframe = 'Mon, ' + new Date(Date.now() - 7 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' — ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });\n\nconst blocks = [\n  {\n    type: 'header',\n    text: { type: 'plain_text', text: ':bar_chart: Weekly Usage Report' }\n  },\n  {\n    type: 'context',\n    elements: [\n      { type: 'mrkdwn', text: timeframe }\n    ]\n  },\n  { type: 'divider' },\n  {\n    type: 'section',\n    fields: [\n      { type: 'mrkdwn', text: `*Issues Fixed:*\\n${issuesFixed} (${trend(issuesFixed, prevFixed)})` },\n      { type: 'mrkdwn', text: `*Fix Rate:*\\n${fixRate}%` }\n    ]\n  },\n  {\n    type: 'section',\n    fields: [\n      { type: 'mrkdwn', text: `*Tokens Consumed:*\\n${tokensDisplay} (${trend(tokensUsed, prevTokens)})` },\n      { type: 'mrkdwn', text: `*Active Tenants:*\\n${activeTenants} (${trend(activeTenants, prevTenants)})` }\n    ]\n  },\n  {\n    type: 'section',\n    fields: [\n      { type: 'mrkdwn', text: `*New Signups:*\\n${newSignups} (${trend(newSignups, prevSignups)})` },\n      { type: 'mrkdwn', text: `*Total Accounts:*\\n${totalAccounts}` }\n    ]\n  },\n  {\n    type: 'section',\n    fields: [\n      { type: 'mrkdwn', text: `*Revenue (7d):*\\n${revenue} (${trend(revenueCents, prevRevenue)})` }\n    ]\n  },\n  { type: 'divider' },\n  {\n    type: 'context',\n    elements: [\n      { type: 'mrkdwn', text: ':chart_with_upwards_trend: _Trends compare this week vs previous week_' }\n    ]\n  }\n];\n\nreturn [{\n  json: {\n    channel: '#syntaro-metrics',\n    attachments: JSON.stringify([{\n      color: '#3498DB',\n      blocks: blocks\n    }])\n  }\n}];"
+      }
+    },
+    {
+      "id": "slack-post",
+      "name": "Post to Slack #syntaro-metrics",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [1200, 300],
+      "parameters": {
+        "channel": "={{ $json.channel }}",
+        "text": "=",
+        "attachments": "={{ $json.attachments }}"
+      }
+    }
+  ],
+  "connections": {
+    "Every Monday 9am": {
+      "main": [
+        [
+          {
+            "node": "DB: Weekly Stats Query",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "DB: Previous Week Trends",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Weekly Stats Query": {
+      "main": [
+        [
+          {
+            "node": "Merge Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Previous Week Trends": {
+      "main": [
+        [
+          {
+            "node": "Merge Stats",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Stats": {
+      "main": [
+        [
+          {
+            "node": "Format Slack Blocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Slack Blocks": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack #syntaro-metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Slack #syntaro-metrics": {
+      "main": [
+        []
+      ]
+    }
+  }
+}

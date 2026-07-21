@@ -362,6 +362,51 @@ The workflow receives the raw Stripe webhook payload and verifies the signature 
 | Credit pack purchased | Green Slack message with amount + credits added in DB |
 | Unknown event type | Gray fallback message with raw event type for debugging |
 
+### 5. Weekly Usage Report — DB → #syntaro-metrics (AIM-3337)
+
+**File:** `workflows/weekly-usage-report.json`
+
+Runs every Monday at 9am, queries the database for usage statistics over the past 7 days, and posts a formatted Slack report to `#syntaro-metrics`. Includes week-over-week trend comparisons.
+
+**Flow:**
+
+```
+Schedule (every Monday 9am)
+  → DB query: current week stats (issues, tokens, tenants, signups, revenue)
+  → DB query: previous week stats (for trend comparison)
+  → Merge → Format Slack blocks (with trends)
+  → Post to #syntaro-metrics
+```
+
+**Report sections:**
+
+| Metric | Source | Description |
+|--------|--------|-------------|
+| Issues Fixed | `run_history` | Completed runs in the last 7 days |
+| Fix Rate | `run_history` | Success rate (fixed / total runs) |
+| Tokens Consumed | `agent_analytics_runs` | Total LLM tokens used |
+| Active Tenants | `usage_records` | Distinct accounts with activity |
+| New Signups | `accounts` | Accounts created in the last 7 days |
+| Total Accounts | `accounts` | All-time account count |
+| Revenue (7d) | `credit_transactions` | Gross revenue from purchases/subscriptions |
+
+Each metric shows the current value plus a week-over-week trend percentage.
+
+**Setup:**
+
+1. Import `workflows/weekly-usage-report.json` into n8n
+2. Configure the **Slack** node with OAuth credentials (`chat:write` scope, installed to `#syntaro-metrics`)
+3. Configure the **Postgres** nodes with database credentials (shared `postgres` database)
+4. No environment variables are needed — the workflow uses static SQL queries
+
+**Behavior:**
+
+| Scenario | Response |
+|----------|----------|
+| Monday 9am | Formatted report with metrics and trends posted to #syntaro-metrics |
+| Database unavailable | Postgres node returns error — n8n retries based on workflow error settings |
+| Empty data (new deployment) | Report shows zeros with `-` trends |
+
 ## Adding a workflow
 
 1. Design the workflow in the n8n UI
