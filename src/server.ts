@@ -741,7 +741,7 @@ export async function createApp(): Promise<express.Application> {
         name: '@aimino/stas-mcp',
         version: '1.0.0',
         description:
-          'STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot backed by OpenCode.',
+          'STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
         homepage: 'https://github.com/tamnguyen08/solving_tickets_as_a_service',
         documentation: 'https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md',
         license: 'MIT',

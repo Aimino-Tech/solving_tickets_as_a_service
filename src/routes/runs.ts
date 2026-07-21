@@ -217,7 +217,7 @@ function renderRunPage(run: PublicRunResponse): string {
       <p>Label a GitHub issue with <code>stas:fix</code> and STAS investigates, fixes, and opens a PR.</p>
       <div class="btn-group" style="justify-content:center">
         <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Get STAS for your repo</a>
-        <span style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.8rem;color:oklch(0.5 0.03 260)">\u2B50 162K+ OpenCode</span>
+        <span style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.8rem;color:oklch(0.5 0.03 260)">\u2B50 162K+ fixes and counting</span>
       </div>
     </div>
     <p style="text-align:center;font-size:0.75rem;margin-top:0.5rem">
