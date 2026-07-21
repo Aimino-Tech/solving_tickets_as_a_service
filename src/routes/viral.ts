@@ -2,7 +2,7 @@
  * Agent-to-agent discovery endpoint — MCP manifest for STAS.
  *
  * Serves the MCP discovery manifest at a standardised path so that
- * other agents (OpenCode, Claude Desktop, Cursor, etc.) can discover
+ * other agents (Claude Desktop, Cursor, etc.) can discover
  * STAS's capabilities and connect programmatically.
  *
  * Endpoints:
@@ -79,7 +79,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
         type: 'stdio',
         command: 'python',
         args: ['-m', 'stas_mcp.server', 'stdio'],
-        description: 'Stdio transport for tools like OpenCode and Claude Desktop',
+        description: 'Stdio transport for tools like Claude Desktop, Cursor, and other MCP clients',
       },
     ],
     tools: [
@@ -305,7 +305,7 @@ export function renderDiscoveryPage(baseUrl: string): string {
       <h2>Transport Protocols</h2>
       <table class="transport-table">
         <tr><th>Transport</th><th>Description</th><th>Use Case</th></tr>
-        <tr><td><strong>stdio</strong></td><td>Python subprocess, JSON-RPC over stdin/stdout</td><td>OpenCode, Claude Desktop, Cursor</td></tr>
+        <tr><td><strong>stdio</strong></td><td>Python subprocess, JSON-RPC over stdin/stdout</td><td>Claude Desktop, Cursor, MCP clients</td></tr>
         <tr><td><strong>SSE</strong></td><td>Server-Sent Events, HTTP streaming</td><td>Remote servers, real-time updates</td></tr>
         <tr><td><strong>Streamable HTTP</strong></td><td>HTTP POST with JSON-RPC, request/response</td><td>Web browsers, REST API clients</td></tr>
       </table>
@@ -313,7 +313,7 @@ export function renderDiscoveryPage(baseUrl: string): string {
 
     <div class="card">
       <h2>Installation</h2>
-      <p><strong>OpenCode</strong> — Add to <code>opencode.json</code>:</p>
+      <p><strong>MCP Client</strong> — Add to your MCP client config:</p>
       <pre style="background:#0d1117;padding:0.75rem;border-radius:6px;margin-top:0.5rem;font-size:0.8rem;overflow-x:auto"><code>{
   "name": "stas-agent-discovery",
   "transport": "stdio",
