@@ -52,7 +52,6 @@ describe('buildDiscoveryManifest', () => {
   it('includes install configs', async () => {
     const { buildDiscoveryManifest } = await import('../../routes/viral.js');
     const m = buildDiscoveryManifest('http://localhost:3000');
-    expect(m.install).toHaveProperty('opencode');
     expect(m.install).toHaveProperty('claudeDesktop');
   });
   it('injects base URL', async () => {

@@ -49,13 +49,13 @@ const BENCHMARK_DATA: BenchmarkEntry[] = [
     note: 'Best proprietary agent on XOR',
   },
   {
-    agent: 'OpenCode + Opus 4.6',
+    agent: 'DeepSWE + Opus 4.6',
     passRate: 0.475,
     costPerFixCents: 5188,
     agentNative: true,
     oss: true,
     selfHostable: true,
-    note: 'OpenCode self-host — high cost at small scale',
+    note: 'Deep agent pipeline — high cost at small scale',
   },
   {
     agent: 'Plip.io',

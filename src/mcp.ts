@@ -55,7 +55,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
         type: 'stdio',
         command: 'python',
         args: ['-m', 'stas_mcp.server', 'stdio'],
-        description: 'Stdio transport for tools like OpenCode and Claude Desktop',
+        description: 'Stdio transport for MCP-compatible clients (Claude Desktop, Cursor)',
       },
     ],
     tools: [
@@ -147,14 +147,6 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
       },
     ],
     install: {
-      opencode: {
-        config: {
-          name: 'stas-agent-discovery',
-          transport: 'stdio',
-          command: 'python',
-          args: ['-m', 'mcp.stas_mcp', 'stdio'],
-        },
-      },
       claudeDesktop: {
         config: {
           mcpServers: {

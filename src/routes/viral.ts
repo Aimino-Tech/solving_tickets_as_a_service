@@ -60,7 +60,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
       name: 'stas-agent-discovery',
       version: '1.0.0',
       description:
-        'STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source bot backed by OpenCode.',
+        'STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot.',
       homepage: 'https://github.com/tamnguyen08/solving_tickets_as_a_service',
       documentation: 'https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md',
     },
@@ -79,7 +79,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
         type: 'stdio',
         command: 'python',
         args: ['-m', 'stas_mcp.server', 'stdio'],
-        description: 'Stdio transport for tools like OpenCode and Claude Desktop',
+        description: 'Stdio transport for MCP-compatible clients (Claude Desktop, Cursor)',
       },
     ],
     tools: [
@@ -184,14 +184,6 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
       },
     ],
     install: {
-      opencode: {
-        config: {
-          name: 'stas-agent-discovery',
-          transport: 'stdio',
-          command: 'python',
-          args: ['-m', 'stas_mcp.server', 'stdio'],
-        },
-      },
       claudeDesktop: {
         config: {
           mcpServers: {
@@ -305,7 +297,7 @@ export function renderDiscoveryPage(baseUrl: string): string {
       <h2>Transport Protocols</h2>
       <table class="transport-table">
         <tr><th>Transport</th><th>Description</th><th>Use Case</th></tr>
-        <tr><td><strong>stdio</strong></td><td>Python subprocess, JSON-RPC over stdin/stdout</td><td>OpenCode, Claude Desktop, Cursor</td></tr>
+        <tr><td><strong>stdio</strong></td><td>Python subprocess, JSON-RPC over stdin/stdout</td><td>Claude Desktop, Cursor</td></tr>
         <tr><td><strong>SSE</strong></td><td>Server-Sent Events, HTTP streaming</td><td>Remote servers, real-time updates</td></tr>
         <tr><td><strong>Streamable HTTP</strong></td><td>HTTP POST with JSON-RPC, request/response</td><td>Web browsers, REST API clients</td></tr>
       </table>
@@ -313,14 +305,7 @@ export function renderDiscoveryPage(baseUrl: string): string {
 
     <div class="card">
       <h2>Installation</h2>
-      <p><strong>OpenCode</strong> — Add to <code>opencode.json</code>:</p>
-      <pre style="background:#0d1117;padding:0.75rem;border-radius:6px;margin-top:0.5rem;font-size:0.8rem;overflow-x:auto"><code>{
-  "name": "stas-agent-discovery",
-  "transport": "stdio",
-  "command": "python",
-  "args": ["-m", "stas_mcp.server", "stdio"]
-}</code></pre>
-      <p style="margin-top:1rem"><strong>Claude Desktop</strong> — Add to <code>claude_desktop_config.json</code>:</p>
+      <p><strong>Claude Desktop</strong> — Add to <code>claude_desktop_config.json</code>:</p>
       <pre style="background:#0d1117;padding:0.75rem;border-radius:6px;margin-top:0.5rem;font-size:0.8rem;overflow-x:auto"><code>{
   "mcpServers": {
     "stas": {
