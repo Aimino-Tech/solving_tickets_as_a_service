@@ -1,62 +1,56 @@
-// @ts-nocheck
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import type { ProgressUpdate, ChannelMessage, ProgressSender } from './base.js';
 import { formatProgressMessage } from './base.js';
 
 const log = rootLogger.child({ module: 'channel-telegram' });
-const TELEGRAM_API_BASE = 'https://api.telegram.org';
 
-function botToken(): string {
-  if (!config.telegram.botToken) throw new Error('TELEGRAM_BOT_TOKEN not configured');
-  return config.telegram.botToken;
-}
-
-async function callTelegram(method: string, body: Record<string, unknown>): Promise<boolean> {
-  const token = botToken();
+async function sendToN8n(payload: Record<string, unknown>): Promise<boolean> {
+  const webhookUrl = config.n8n.telegramWebhookUrl;
+  if (!webhookUrl) {
+    log.warn('N8N_TELEGRAM_WEBHOOK_URL not configured');
+    return false;
+  }
   try {
-    const response = await fetch(`${TELEGRAM_API_BASE}/bot${token}/${method}`, {
+    const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     });
-    if (!response.ok) {
-      const text = await response.text();
-      log.error({ method, status: response.status, body: text }, 'Telegram API error');
-      return false;
-    }
-    return true;
+    return response.ok;
   } catch (err) {
-    log.error({ err: String(err), method }, 'Telegram API call failed');
+    log.error({ err: String(err) }, 'Failed to forward Telegram message to n8n');
     return false;
   }
 }
 
-function isConfigured(): boolean {
-  return !!config.telegram.botToken;
-}
-
 export class TelegramProgressSender implements ProgressSender {
   async sendProgress(update: ProgressUpdate): Promise<void> {
-    if (!isConfigured()) { log.warn('Telegram not configured — skipping progress update'); return; }
+    if (!config.telegram.botToken) {
+      log.warn('Telegram not configured — skipping progress update');
+      return;
+    }
     const text = formatProgressMessage(update.phase, update.runId, update.detail, update.prUrl);
-    await callTelegram('sendMessage', {
-      chat_id: update.channelTarget, text, parse_mode: 'Markdown', disable_web_page_preview: false,
+    await sendToN8n({
+      chat_id: update.channelTarget,
+      text,
+      parse_mode: 'Markdown',
+      disable_web_page_preview: false,
     });
-    log.debug({ runId: update.runId, phase: update.phase, chatId: update.channelTarget }, 'Telegram progress sent');
   }
 
   async sendMessage(msg: ChannelMessage): Promise<void> {
-    if (!isConfigured()) return;
-    await callTelegram('sendMessage', {
-      chat_id: msg.channelTarget, text: msg.text, parse_mode: 'Markdown', disable_web_page_preview: false,
+    if (!config.telegram.botToken) return;
+    await sendToN8n({
+      chat_id: msg.channelTarget,
+      text: msg.text,
+      parse_mode: 'Markdown',
+      disable_web_page_preview: false,
     });
   }
 }
 
 export async function handleTelegramWebhook(payload: Record<string, unknown>): Promise<{ ok: boolean }> {
-  if (!isConfigured()) return { ok: false };
-
   const message = (payload as { message?: Record<string, unknown> })?.message;
   if (!message || !message.text) return { ok: true };
 
@@ -69,10 +63,9 @@ export async function handleTelegramWebhook(payload: Record<string, unknown>): P
 
   const parts = text.split(/\s+/);
   const command = parts[0]?.toLowerCase() || '';
-  const args = parts.slice(1);
 
   if (command === '/start') {
-    await callTelegram('sendMessage', {
+    await sendToN8n({
       chat_id: chatId,
       text: 'Welcome to STAS! Use /fix <description> to submit an issue fix request.',
       parse_mode: 'Markdown',
@@ -81,12 +74,12 @@ export async function handleTelegramWebhook(payload: Record<string, unknown>): P
   }
 
   if (command === '/fix') {
-    const issueTitle = args.join(' ') || 'Fix requested via Telegram';
+    const issueTitle = parts.slice(1).join(' ') || 'Fix requested via Telegram';
     const repoOwner = config.trackers.defaultRepoOwner;
     const repoName = config.trackers.defaultRepoName;
 
     if (!repoOwner || !repoName) {
-      await callTelegram('sendMessage', { chat_id: chatId, text: 'Error: No default repository configured.' });
+      await sendToN8n({ chat_id: chatId, text: 'Error: No default repository configured.' });
       return { ok: true };
     }
 
@@ -97,9 +90,12 @@ export async function handleTelegramWebhook(payload: Record<string, unknown>): P
       }
       const jobData = {
         installationId: config.trackers.installationId || 0,
-        repoOwner, repoName, repoPrivate: false, issueNumber: 0,
+        repoOwner,
+        repoName,
+        repoPrivate: false,
+        issueNumber: 0,
         issueTitle,
-        issueBody: `Submitted via Telegram by user ${message.from?.id || 'unknown'}\n\nDescription: ${issueTitle}`,
+        issueBody: `Submitted via Telegram by user ${(message.from as Record<string, unknown> | undefined)?.id || 'unknown'}\n\nDescription: ${issueTitle}`,
         source: 'telegram',
       };
       const messageId = `${jobData.installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
@@ -107,12 +103,13 @@ export async function handleTelegramWebhook(payload: Record<string, unknown>): P
         ...jobData,
         _meta: { messageId, enqueuedAt: new Date().toISOString() },
       });
-      await callTelegram('sendMessage', {
-        chat_id: chatId, text: `STAS is investigating: "${issueTitle}"\n\nI'll post progress updates here.`,
+      await sendToN8n({
+        chat_id: chatId,
+        text: `STAS is investigating: "${issueTitle}"\n\nI'll post progress updates here.`,
       });
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to enqueue Telegram fix request');
-      await callTelegram('sendMessage', { chat_id: chatId, text: 'Error: Failed to submit fix request.' });
+      await sendToN8n({ chat_id: chatId, text: 'Error: Failed to submit fix request.' });
     }
     return { ok: true };
   }
