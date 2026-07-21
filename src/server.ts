@@ -882,6 +882,10 @@ export async function createApp(): Promise<express.Application> {
   const { previewRouter } = await import('./routes/preview.js');
   app.use('/api/v1', previewRouter);
 
+  // Ticket Result API (non-code ticket results)
+  const { default: ticketResultRouter } = await import('./routes/ticketResult.js');
+  app.use(ticketResultRouter);
+
   // KPI Dashboard API
   app.use('/api/kpi', kpiRouter);
 app.use('/api/v1/n8n', n8nRouter);
