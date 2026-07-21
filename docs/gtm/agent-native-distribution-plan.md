@@ -1,163 +1,188 @@
 # STAS Agent-Native Distribution Plan
 
-> **Strategic document**: How STAS becomes the undisputed best MCP server for any AI agent solving SWE tickets, and what niche makes this defensible.
+> **Goal**: Define the MCP niche for STAS as the undisputed best MCP server for any AI agent solving SWE tickets, and outline an agent-native distribution model that makes this defensible.
+
+---
+
+## Table of Contents
+
+1. [MCP Ecosystem Analysis](#1-mcp-ecosystem-analysis)
+2. [Competitive MCP Positioning](#2-competitive-mcp-positioning)
+3. [Niche Recommendation](#3-niche-recommendation)
+4. [Distribution Model](#4-distribution-model)
+5. [Recommended MCP Surface](#5-recommended-mcp-surface)
+6. [Risk Assessment](#6-risk-assessment)
+7. [Recommendations](#7-recommendations)
 
 ---
 
 ## 1. MCP Ecosystem Analysis
 
-### 1.1 Agent Platforms Supporting MCP
+### 1.1 Current State (July 2026)
 
-The Model Context Protocol has reached critical mass. Every major AI coding agent now speaks MCP — the question is no longer "if" but "how deeply":
+The Model Context Protocol (MCP) has crossed from niche developer protocol into mainstream agent infrastructure:
 
-| Platform | MCP Support | Transport | Discovery | Auth | Notes |
-|----------|-------------|-----------|-----------|------|-------|
-| **Claude Code** | Native (first-class) | stdio, HTTP, WebSocket | `tools/list`, `.mcp.json`, Tool Search | OAuth 2.0, API keys, dynamic headers | No fixed per-server tool cap. Per-subagent tool scoping. Can act as MCP server itself via `claude mcp serve`. |
-| **Cursor** | Native | stdio, SSE, Streamable HTTP | `.cursor/mcp.json`, Cursor Marketplace, cursor.directory | OAuth, env vars | APPS capability for interactive UI views (unique). Auto-review mode allows MCP tools to run immediately. |
-| **Cline** | Native (origin of MCP-VSCode) | stdio, SSE | Cline MCP Marketplace (curated), GitHub submissions | API keys, env vars | First VSCode extension with MCP. Marketplace has 778+ stars. |
-| **OpenHands** | SDK + config | SSE, Streamable HTTP, stdio | `config.toml` `[mcp]` section, OpenHands UI | OAuth, Bearer token, API key headers | Proxy server pattern recommended (supergateway). OAuth flow via FastMCP. |
-| **Codex CLI** | Native | stdio, HTTP | `~/.codex/mcp.json` | — | OpenAI's coding agent. MCP support in active development. |
-| **Gemini CLI** | Via extensions | stdio | `GEMINI.md`, MCP extensions | — | Google's agent. Supports MCP via extensions. |
-| **Devin (CLI)** | Native | stdio, SSE, HTTP | Devin MCP Marketplace (Settings > Connections), custom MCP | OAuth, Bearer, API key | Built-in marketplace + custom MCP support. "Test listing tools" verification. |
-| **GitHub Copilot** | Via VS Code MCP | stdio | VS Code MCP settings | PAT | Limited MCP support via VS Code extension mechanism. |
-| **Roo Code** | Native (Cline fork) | stdio, SSE | `.roo/rules/*.md`, MCP protocol | Same as Cline | Fork with additional privacy features. |
-| **Windsurf** | Native | stdio, SSE | Cascade agent mode | OAuth | Codeium's AI IDE. Agent mode for autonomous sub-tasks. |
+| Metric | Value | Source |
+|--------|-------|--------|
+| Monthly SDK downloads | 110M+ | Anthropic AAIF announcement, Dec 2025 |
+| Active public servers | 10,000+ | Official MCP Registry API |
+| GitHub repos with mcp-server topic | 15,926 | GitHub Search API, May 2026 |
+| modelcontextprotocol/servers stars | 86,148 | GitHub API, May 2026 |
+| Enterprise production adoption | 41% of surveyed orgs | Stacklok State of MCP 2026 report |
 
-**Key takeaway**: MCP support is now table stakes for agent platforms. There is no dominant platform — agents are multi-platform, and MCP servers that work across all of them have the widest reach.
+**Key inflection points**:
 
-### 1.2 Agent Discovery & Installation Flow
+- **Nov 2024** — Anthropic launches MCP publicly (~2M monthly downloads)
+- **Mar 2025** — OpenAI adopts MCP (22M downloads) — the decisive signal that MCP won
+- **Apr 2025** — Google DeepMind adopts MCP across Gemini
+- **Jul 2025** — Microsoft integrates MCP into Copilot Studio (45M downloads)
+- **Nov 2025** — AWS Bedrock support (68M downloads)
+- **Dec 2025** — Anthropic donates MCP to Linux Foundation's Agentic AI Foundation (AAIF); OpenAI, AWS, Google, Microsoft, Cloudflare, Bloomberg join as co-founders
+- **May 2026** — MCP 2026-07-28 release candidate published — largest revision since launch
+- **Jul 28, 2026** — Final spec ships (expected)
 
-Agents discover MCP servers through four channels:
+### 1.2 Agent Platforms Supporting MCP
 
-**Channel 1 — Config file (manual setup)**
-- Claude Code: `.mcp.json` (project) or `~/.claude/settings.json` (user)
-- Cursor: `.cursor/mcp.json`
-- Cline: `cline_mcp_settings.json`
-- Codex CLI: `~/.codex/mcp.json`
-- Flow: User edits JSON → restarts agent → agent has tools
+Every major AI agent platform now supports MCP tool discovery and invocation:
 
-**Channel 2 — CLI commands**
-- Claude Code: `claude mcp add`
-- Devin CLI: `devin mcp add`
-- OpenHands: `openhands mcp add`
-- Flow: User runs CLI command → config updated → agent discovers tools
+| Platform | MCP Support | Discovery Model | Notes |
+|----------|-------------|----------------|-------|
+| **Claude Code** | Native | Configured via claude_desktop_config.json | Primary MCP reference client |
+| **Claude Desktop** | Native | Config file + directory | Reference client |
+| **ChatGPT** | Native (since Mar 2025) | Connectors + Responses API | OpenAI deprecated Assistants API for MCP |
+| **Cursor** | Native | .cursor/mcp.json config | MCP servers in Composer |
+| **VS Code** | Native (via Copilot) | Configuration | GitHub MCP server integration |
+| **Cline** | Native | Built-in MCP Marketplace | Most extensible agent w.r.t. MCP |
+| **Gemini** | Native | SDK-level MCP support | Google's agent builder |
+| **Copilot Studio** | Native | Enterprise agent builder | Microsoft's enterprise MCP surface |
+| **Continue** | Native | Open-source, IDE-agnostic | JetBrains + VS Code |
+| **Replit** | Native | Browser-based agent environment | AI agent integration |
+| **Windsurf** | Native | Cascade agent mode | Codeium's AI IDE |
+| **OpenCode** | Native | MCP tool discovery | Terminal-based agent harness |
+| **Aider** | Native | MCP server config | OSS pair programming |
 
-**Channel 3 — Marketplaces (one-click)**
-- Cline MCP Marketplace: Browse → one-click install → Cline auto-clones, configures, and sets up the server
-- Devin MCP Marketplace: Browse → click "Enable" → configure → tools available
-- Cursor Marketplace: One-click install with OAuth
-- Flow: Zero-code install — the marketplace handles config and setup
+### 1.3 MCP Protocol Roadmap & Maturity
 
-**Channel 4 — Runtime discovery (emerging)**
-- Smithery: `npx @smithery/cli install @aimino/stas-mcp`
-- MCP.Directory: Links + install instructions per client
-- Flow: Agent fetches tool definitions at runtime, user approves
+The 2026-07-28 release candidate introduces the largest revision since launch:
 
-**Key insight for STAS**: Marketplaces (Channel 3) are the highest-leverage distribution channel. Once listed in Cline Marketplace, Devin Marketplace, or Smithery, STAS becomes discoverable by millions of agents with zero extra effort per user.
+**Breaking changes (July 28, 2026)**:
 
-### 1.3 MCP Protocol Roadmap
+- **Stateless core** — The `initialize`/`initialized` handshake and `Mcp-Session-Id` header are removed. Every request carries its own context in `_meta`. Servers can run behind any round-robin load balancer with no sticky routing.
+- **Streamable HTTP** — `Mcp-Method` and `Mcp-Name` headers required for routing without body inspection.
+- **Caching** — `tools/list` and resource read results carry `ttlMs` and `cacheScope` for client-side caching.
+- **W3C Trace Context** — `traceparent`, `tracestate`, `baggage` in `_meta` for OTel compatibility.
 
-| Milestone | Status | Impact on STAS |
-|-----------|--------|----------------|
-| MCP 2024-11-05 (initial spec) | Stable | STAS is built on this. JSON-RPC 2.0 over HTTP. |
-| Streamable HTTP transport | Stable (2025) | Moving from SSE to Streamable HTTP for lower latency. |
-| OAuth 2.0 support | Stable | Enables enterprise SSO flows. |
-| Federated registry | In proposal | Analogous to npm — one registry to rule them all. |
-| Cryptographic signature layer | In proposal | Similar to sigstore — verified server identity. |
-| Tools/Skills | Extending | Distinction between stateless tools and stateful skills. |
+**New capabilities**:
 
-**Risk**: Breaking changes to MCP protocol are unlikely — too many major players are invested (Anthropic, OpenAI, Google, Microsoft, Atlassian, Salesforce). The JSON-RPC 2.0 substrate is stable.
+| SEP | Feature | Impact |
+|-----|---------|--------|
+| SEP-2322 | Multi-round-trip requests | Server sends partial results, requests clarification |
+| SEP-2567 | State handles | Opaque tokens for composable sessionless workflows |
+| SEP-2575 | Stateless mode | Server capability declaration — no session management needed |
+| SEP-1865 | MCP Apps | Servers ship interactive HTML UIs rendered in sandboxed iframes |
+| SEP-2774 | OAuth Device Auth | Headless/constrained-device authentication |
+| SEP-2704 | Audit context | Standard audit metadata on every tool call |
+| SEP-2797 | Crypto proof-of-possession | Prevents token theft and replay |
+| SEP-2767 | CTEF trust scoring | Cross-ecosystem trust evidence for MCP servers |
 
-**Opportunity**: The federated registry creates a "first-mover advantage" — servers that establish reputation early will be grandfathered into trust rankings.
+**Implication for STAS**: The stateless migration (July 28) is mandatory. STAS's MCP server must be updated to the 2026-07-28 spec within the migration window. The existing session-based Redis state must be adapted to the new stateless model.
 
-### 1.4 MCP Marketplaces & Directories
+### 1.4 MCP Marketplaces & Discovery
 
-| Marketplace | Servers | Security Audit | Discovery Mechanism | Unique Value |
-|-------------|---------|----------------|---------------------|--------------|
-| **Smithery** | 3,000+ | None | CLI install (`npx @smithery/cli`) | Largest curated catalog. Easy install. STAS **already listed**. |
-| **PulseMCP** | 21,000+ | None | Web search, categories | Largest raw catalog (aggregated from multiple sources). |
-| **MCP.Directory** | 2,300+ | None | Web search, one-click install per client | Best client-specific install instructions. |
-| **Glama** | 2,000+ | Algorithmic quality scores | GitHub activity scoring | Quality signals (stars, maintenance). |
-| **MarketNow** | 8,764 | 6-layer Sentinel pipeline | Security certificates | Only marketplace with security auditing. |
-| **MCP.so** | ~1,000+ | None | Tags, categories, search | Community-driven, clean UI. |
-| **Cline Marketplace** | ~200+ | Manual review | In-extension browsing | Direct integration with Cline. One-click install. |
-| **Devin Marketplace** | ~100+ | Devin-managed | Settings → MCP servers | Integrated with Devin session workflow. |
+The MCP ecosystem has fragmented into multiple discovery platforms:
 
-**STAS current status**: Listed on Smithery (`@aimino/stas-mcp`). Needs listing on Cline Marketplace, Devin Marketplace, MCP.Directory, and PulseMCP.
+| Marketplace | Listings | Security Audit | Install Model | Best For |
+|-------------|----------|---------------|---------------|----------|
+| **Smithery** | 3,000+ | Limited | CLI + hosted execution | Quick prototyping |
+| **Glama** | 6,000+ | None | Config download | Discovery with quality scores |
+| **PulseMCP** | 21,000+ | None | Config download | Largest catalog breadth |
+| **MCP.so** | 19,000+ | None | Manual config | Community-curated browsing |
+| **MCP Market** | 10,000+ | None | Cline-integrated | Category browsing |
+| **MCP.Directory** | 3,000+ | None | One-click install | Client integration support |
+| **MarketNow** | 8,764 | 6-layer Sentinel | CLI + cert verification | Security-conscious users |
+| **Official Registry** | 500+ (curated) | Submission review | Manual | Enterprise trust baseline |
+| **Apigene** | 251+ (verified) | OWASP scanning | One-click + gateway | Enterprise procurement |
 
-### 1.5 Most Popular MCP Servers (by install count)
+**Key insight**: No marketplace currently verifies or curates "SWE ticket solving" MCP servers. This is an open category.
 
-From Smithery's January 2026 telemetry:
+### 1.5 Popular MCP Server Categories
 
-1. **Playwright** (browser automation, Microsoft) — the #1 MCP server
-2. **Memory** (vector + graph memory, Anthropic reference)
-3. **Fetch** (HTML fetch + readability extraction)
-4. **Time** (timezone math)
-5. **SQLite** (local database for ephemeral agents)
-6. **Puppeteer** (browser automation alternative)
-7. **Sequential Thinking** (structured reasoning, Anthropic)
-8. **Git** (local repo operations)
-9. **Atlassian (Jira & Confluence)** — 17.1k installs, official
-10. **Context7** (API docs injection) — 48.2k installs
+Most popular MCP servers by category (based on installs across marketplaces):
 
-**Enterprise MCP servers** (shipped Oct 2025–Mar 2026): Salesforce, ServiceNow, Workday, Snowflake, Databricks, SAP, Microsoft, HashiCorp, Atlassian.
+| Category | Examples | Adoption Driver |
+|----------|----------|-----------------|
+| Databases | PostgreSQL, SQLite, MongoDB | Direct data access for agents |
+| Version Control | GitHub, GitLab | Repository operations |
+| Browser Automation | Playwright, Puppeteer | Web-based tasks |
+| Search/Knowledge | Web search, Semantic Scholar | Information retrieval |
+| Productivity | Google Workspace, Notion, Slack | Enterprise workflows |
+| Cloud Infrastructure | AWS, Kubernetes, Cloudflare | DevOps automation |
+| Communication | Slack, Atlassian (Jira+Confluence) | Ticket and messaging |
 
-**Key observation**: No MCP server for automated ticket fixing exists in the top ranks. STAS has a **first-mover opportunity** in a category that doesn't yet exist in the MCP ecosystem.
+**Notable absence**: No MCP server in the top categories is specifically designed for **autonomous SWE ticket solving** (investigate → fix → PR). This is the gap STAS fills.
 
 ---
 
 ## 2. Competitive MCP Positioning
 
-### 2.1 Gap Analysis: Who Exposes SWE Ticket Fixing via MCP?
+### 2.1 Competitor MCP Analysis
 
-| Product | MCP Server Exists | Issue→PR via MCP | Notes |
-|---------|-------------------|------------------|-------|
-| **Devin** | ✅ Official MCP | ❌ Session management only | Devin MCP (`mcp.devin.ai`) wraps session crud, not ticket fixing. An agent cannot say "fix this bug" and get a PR back. |
-| **OpenHands** | ❌ No MCP server | ❌ | OpenHands is an MCP **client**, not server. It consumes MCP tools but doesn't expose its own. |
-| **Claude Code** | ✅ Can act as MCP server | ⚠️ Via `claude mcp serve` | Claude Code can expose its agent capabilities as an MCP server, but this is for agent-to-agent delegation, not a packaged issue-fixing service. |
-| **Cursor** | ❌ Client only | ❌ | Cursor consumes MCP, doesn't expose it. |
-| **Copilot** | ❌ | ❌ | GitHub Copilot Agent (2025) can fix issues, but not via MCP — it's IDE-bound. |
-| **Sweep AI** | ❌ | ❌ | Pivoted to JetBrains. No MCP server. |
-| **mcp-contributor** | ✅ Community | ⚠️ Auto-contribute via opencode | Experimental, not production-ready. Uses opencode CLI as backend. No enterprise features. |
-| **Generic GitHub MCP** | ✅ Multiple | ❌ Git operations only | Servers like mcp-github-api, github-mcp-pro provide PR creation, code review — but NOT investigation, root cause analysis, or verification. They're wrappers around the GitHub API. |
-| **STAS** | ✅ Live | ✅ Full pipeline | The **only** MCP server that offers: investigate → diagnose → fix → test → PR in one tool call. |
+| Competitor | MCP Server Exists? | SWE Ticket Solving? | Agent-Discoverable? | Notes |
+|------------|-------------------|---------------------|--------------------|-------|
+| **GitHub Official MCP** | ✅ Yes | ❌ No (read/search only) | ✅ | Read repos, issues, PRs. No write/fix capability. |
+| **GitLab MCP** | ✅ Yes (community) | ❌ No | ⚠️ Limited | Basic MR operations. No fix pipeline. |
+| **Linear MCP** | ✅ Yes | ❌ No | ✅ | Issue/project management. No code changes. |
+| **Jira MCP** | ✅ Yes (Atlassian) | ❌ No | ✅ | Ticket operations only. |
+| **Devin** | ❌ No (Web UI only) | ✅ Yes (proprietary) | ❌ | No MCP endpoint. No agent-native discovery. |
+| **OpenHands** | ❌ No (CLI/SDK) | ⚠️ Partial | ❌ | No MCP server. Docker-based execution. |
+| **Copilot** | ⚠️ Via GitHub MCP | ⚠️ Agent mode | ❌ | IDE-bound, GitHub only. |
+| **Factory Droid** | ❌ No | ⚠️ Partial | ❌ | Proprietary multi-agent. No MCP. |
+| **Cline** | ⚠️ Via other MCPs | ❌ No (IDE-bound) | ✅ | Can call MCP tools but has no fix pipeline itself. |
+| **Claude Code** | ⚠️ Via other MCPs | ⚠️ Via agent | ✅ | Can discover MCP tools but has no dedicated fix server. |
+| **STAS** | **✅ Yes (4 tools + resources + prompts)** | **✅ Full pipeline** | **✅ MCP-native** | **First and only MCP server for async issue→PR.** |
 
-### 2.2 The Quality Gap
+### 2.2 How Agents Currently Handle "Fix This Bug" Without STAS
 
-The opportunity isn't just "STAS exists as MCP" — it's **quality of result**. Generic GitHub MCP servers give agents the ability to create PRs, but the agent must:
+When an AI agent encounters a "fix this bug" request without a dedicated MCP server:
 
-1. Clone the repo
-2. Understand the codebase
-3. Diagnose the root cause
-4. Write the fix
-5. Run tests
-6. Create the PR
+1. **Direct code manipulation** — Agent clones repo locally, patches code, commits via git CLI
+2. **GitHub API calls** — Agent uses generic HTTP/API tools against GitHub REST/GraphQL
+3. **Manual PR creation** — Agent creates PRs through browsers or API calls, no verification
+4. **Via IDE** — Agent in Cursor/VS Code makes local edits, user reviews in-editor
 
-With STAS, the agent does ONE tool call and gets back a verified PR. The quality gap:
+**Quality gaps without STAS**:
 
-| Dimension | Agent + GitHub MCP only | Agent + STAS MCP |
-|-----------|------------------------|------------------|
-| Codebase understanding | Agent must clone & explore (tokens, time) | STAS handles investigation (parallelized) |
-| Root cause diagnosis | Agent reasoning (variable quality) | STAS 2-phase triage (cheap model scopes, expensive model fixes) |
-| Fix quality | Agent-dependent, no verification gate | Multi-phase verification, regression tests required |
-| Test execution | Agent must run tests manually | STAS runs suite + new regression tests |
-| Multi-platform | GitHub only | GitHub + planned GitLab/Jira/Linear |
-| DACH compliance | None | EU data residency, German output (planned) |
-| Confidence | No score | Confidence, effort, risk estimates |
+| Dimension | Agent Fixing Directly | STAS MCP Server |
+|-----------|---------------------|-----------------|
+| Repo context | Limited to agent's context window | Full repo clone, investigation |
+| Test verification | Often skipped | Required gate (existing + new) |
+| PR quality | Inconsistent formatting, no description | Standardized PR with analysis |
+| Sandbox isolation | Agent's own environment | Docker/E2B sandbox |
+| Async capability | Blocking (agent must wait) | Fire-and-forget with status polling |
+| Multi-platform | GitHub only (usually) | GitHub + GitLab + Jira + Linear |
+| Cost optimization | No routing | Model routing (cheap triage → expensive fix) |
 
-### 2.3 Competitive MCP Defensibility Matrix
+### 2.3 MCP Gap Analysis
 
-| Dimension | STAS | Devin MCP | mcp-contributor | GitHub MCPs |
-|-----------|------|-----------|-----------------|-------------|
-| Issue→PR pipeline | ✅ Complete | ❌ Session mgmt only | ⚠️ Experimental | ❌ Git ops only |
-| Multi-platform | 🔲 Planned (GitLab, Jira, Linear) | ✅ GitHub, GitLab, Bitbucket, Linear, Jira | ❌ GitHub only | ⚠️ GitHub only |
-| Agent-discoverable tools | ✅ 7 tools (fix, batch, triage, estimate, check, list, get) | ✅ 10+ tools (session CRUD, search, events, schedules) | ✅ 9 tools | ✅ 11-18 tools |
-| Self-host option | ✅ Full | ❌ SaaS only | ✅ | ⚠️ Varies |
-| Verification gate | ✅ Tests must pass | ❌ | ⚠️ Quality gate (based on syntax, not tests) | ❌ |
-| Confidence/risk scoring | ✅ stas_triage, stas_estimate | ❌ | ⚠️ Quality score (0-100) | ❌ |
-| Async delegation | ✅ Fire-and-forget with polling | ✅ Session-based | ✅ Pipeline-based | ❌ Synchronous |
-| DACH compliance | 🔲 Planned | ❌ | ❌ | ❌ |
-| Open source | ✅ MIT | ❌ Proprietary | ✅ | ✅ Varies |
+The MCP ecosystem has tools for **reading** (GitHub MCP, GitLab MCP) and tools for **managing** (Linear MCP, Jira MCP) but no tool for **solving** — the critical investigation-fix-PR pipeline.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    MCP Ecosystem Map                         │
+├─────────────┬─────────────────┬─────────────────────────────┤
+│  Read Layer │  Manage Layer   │  Solve Layer (EMPTY → STAS) │
+├─────────────┼─────────────────┼─────────────────────────────┤
+│ GitHub MCP  │ Linear MCP      │ stas_fix_issue              │
+│ GitLab MCP  │ Jira MCP        │ stas_batch_fix              │
+│ Repo reader │ Project MCP     │ stas_triage                 │
+│ File viewer │ Task MCP        │ stas_estimate               │
+│ Issue reader│                 │ stas_check_status           │
+│             │                 │ stas_list_runs              │
+│             │                 │ stas_get_run                │
+└─────────────┴─────────────────┴─────────────────────────────┘
+```
+
+**STAS is uniquely positioned as the Solve Layer connector** — agents discover STAS's tools, feed it an issue reference, and STAS handles the entire investigation → fix → PR lifecycle asynchronously.
 
 ---
 
@@ -165,352 +190,348 @@ With STAS, the agent does ONE tool call and gets back a verified PR. The quality
 
 ### 3.1 Primary Niche
 
-> **The universal MCP bridge between any AI agent and any issue tracker — a single tool call that investigates, fixes, tests, and opens a PR, discoverable by agents at runtime.**
+> **The universal MCP solve layer — agents discover STAS as the only tool that turns any issue reference (GitHub, GitLab, Jira, Linear) into a verified PR, with zero human setup, async execution, and production-grade safety.**
 
-This is narrower and more defensible than "AI code fixer" or "MCP for GitHub." It specifically owns:
+### 3.2 Why This Niche is Defensible
 
-1. **Multi-platform issue intake** — not just GitHub issues, but GitLab, Jira, Linear, and Bitbucket
-2. **End-to-end fix pipeline** — from issue URL to merged PR, not just code generation
-3. **Agent-discoverable** — tools list, input schemas, and resource templates visible via MCP protocol
-4. **Safety guarantees** — verification gates, confidence scores, approval workflows
+**Narrowest defensible position**: "Multi-platform issue-to-PR via MCP for AI agents"
 
-### 3.2 Niche Defensibility
+| Factor | Analysis |
+|--------|----------|
+| **Agent-native** | STAS's MCP server is already the only one exposing issue→PR tools. First-mover advantage in agent tool registries. |
+| **Multi-platform** | No competitor covers GitHub + GitLab + Jira + Linear through a single MCP endpoint. Building this is hard — each platform requires different auth models, API quirks, and webhook integrations. |
+| **Async execution** | Most MCP servers are synchronous (call → return). STAS's fire-and-forget model (queued → investigating → fixing → testing → PR) is architected differently and hard to retrofit. |
+| **Verification gate** | Agents can call `stas_fix_issue` without knowing the codebase. The verification gate (tests must pass) provides a quality guarantee no read-only MCP server offers. |
+| **DACH compliance option** | EU data residency + German output + approval gates is a moat for DACH enterprise adoption. No MCP server offers this today. |
 
-| Defensibility Factor | Assessment |
-|----------------------|------------|
-| **Multi-platform coverage** | HIGH — No fix service covers all four (GitHub + GitLab + Jira + Linear). Devin covers GitHub+Jira, but requires Devin subscription. STAS open-source can cover all four. |
-| **Pipeline integration** | HIGH — The pipeline (webhook → triage → investigate → fix → test → PR) is STAS's core moat. Competitors would need to rebuild this. |
-| **Agent-discovery** | MEDIUM — Once STAS is listed in agent marketplaces, switching costs increase. Agents recommend tools they've used. |
-| **Safety & verification** | HIGH — Trust is the #1 barrier to autonomous code fixing. STAS's verification gate, confidence scoring, and approval workflow build institutional trust. |
-| **DACH compliance** | HIGH — No competitor offers EU data residency, German output, audit logs, and approval gates. This is a defensible regional moat. |
+### 3.3 Sub-Niches (for phased rollout)
 
-### 3.3 Niche Intersection
+| Sub-Niche | Description | Timeline | Priority |
+|-----------|-------------|----------|----------|
+| **Agent-native fix** | Any agent (Claude Code, Cline, Cursor) can discover STAS and dispatch fixes | Phase 0 (now) | Highest |
+| **Multi-platform bridge** | Unified MCP surface across GitHub, GitLab, Jira, Linear | Phase 1 (0-3mo) | High |
+| **DACH-compliant fix** | EU data residency, German output, approval gates, audit logs | Phase 2 (3-6mo) | Medium |
+| **Agent-native triage** | Agents use STAS to prioritize which issues to fix | Phase 1 (0-3mo) | High |
+| **Batch fix orchestration** | Agents dispatch multiple fixes, STAS manages parallel runs | Phase 1 (0-3mo) | Medium |
 
-The most defensible niche is the intersection of three vectors:
+### 3.4 Niche Adjacency Analysis
 
 ```
-              Multi-platform issue intake
-                    (GitHub, GitLab, Jira, Linear)
-                           |
-                           |
-    Agent-discovery ───────┼─────── Safety guarantees
-    (tools/list,           |       (verification, confidence,
-     runtime discovery)    |        approval gates)
-                           |
-                           |
-                    DACH compliance
-                    (EU residency, German output, audit)
+                        Niche Heat Map
+                    
+                    Unique to STAS    Contested
+                    ─────────────     ─────────
+High Value          ● Async issue→PR  ● Direct code editing
+                    ● Multi-platform   ● GitHub API tools
+                    ● Verification     ● IDE integrations
+                    ● DACH compliance
+                    
+Lower Value         ● Status polling  ● Issue reading
+                    ● Batch dispatch   ● PR commenting
+                       (easy to copy)     (commodity)
 ```
 
-**Recommendation**: Lead with **"multi-platform issue-to-PR for agents"** as primary niche. Layer **safety/trust** as differentiator. Use **DACH** as geographic beachhead where no competitor has presence.
-
-Do NOT lead with DACH — it narrows the addressable market too much. Lead with multi-platform agent-native fixing, then dominate DACH as the wedge.
-
-### 3.4 Niche Positioning Statement
-
-> **"STAS is the MCP server that turns any issue from any tracker into a verified PR — discovered and called by any AI agent, trusted with production code."**
+**The defensible core**: Async issue→PR pipeline with verification, accessed through a discoverable MCP server interface. The pipeline is the moat, not the individual tools.
 
 ---
 
 ## 4. Distribution Model
 
-### 4.1 Current Model vs Agent-Native Model
+### 4.1 Agent-Native Distribution vs Current Model
 
-| Dimension | Current (GitHub Label/Webhook) | Agent-Native (MCP) |
+| Dimension | Current (GitHub-label/Webhook) | Agent-Native (MCP) |
 |-----------|-------------------------------|-------------------|
-| **Trigger** | User labels issue `stas:fix` | Agent discovers STAS via `tools/list` and calls `stas_fix_issue` |
-| **Setup** | Install GitHub App, add label | Add STAS MCP server config (one-time per agent) |
-| **User** | Developer browsing GitHub | AI agent (Claude Code, Cursor, Cline, Codex CLI) |
-| **Distribution** | GitHub App Marketplace, word of mouth | Agent marketplaces, MCP directories, smithery |
-| **Conversion** | Self-host → Cloud Paid | MCP adoption → need more fixes → Cloud Paid |
-| **Virality** | "Fixed by STAS" in PR | Agent recommends STAS in output → more agents use it |
-| **Limitation** | Requires human to label the issue | No human in loop — agent calls directly |
+| **Trigger** | Label `stas:fix` on issue | Agent calls `stas_fix_issue` tool |
+| **User** | Human (labels issue) | AI agent (discovers and calls tool) |
+| **Discovery** | GitHub UI / README | MCP tools/list → agent picks tool |
+| **Setup** | GitHub App installation | MCP server URL in agent config |
+| **Audience** | Developers on GitHub | All AI agent users on any platform |
+| **Virality** | Word of mouth | Agent recommends STAS to other agents |
 
 ### 4.2 Agent Discovery Virality Loop
 
-The MCP distribution model creates a compound virality loop that the webhook model cannot match:
-
 ```
-Agent calls stas_fix_issue → fix succeeds → PR created
-                                          ↓
-                              Agent reports success to user
-                                          ↓
-                         "This issue was fixed by STAS"
-                          (appears in PR, agent output)
-                                          ↓
-                              User (or another agent)
-                              discovers STAS via mention
-                                          ↓
-                              Installs STAS MCP server
-                                          ↓
-                              Their agents discover STAS
-                                          ↓
-                              The loop repeats
+Agent needs to fix an issue
+       │
+       ▼
+Agent calls tools/list on STAS MCP server
+       │
+       ▼
+Agent discovers stas_fix_issue, stas_triage, stas_estimate
+       │
+       ▼
+Agent dispatches fix, gets successful PR
+       │
+       ▼
+Agent logs: "Fixed via STAS" in PR description
+       │
+       ▼
+Another agent reads the PR, discovers STAS
+       │
+       ▼
+Loop repeats ──────────────────────────┘
 ```
 
-**Key difference from webhook model**: In the webhook model, virality is human-to-human ("I use this GitHub App"). In the agent-native model, virality is **agent-to-agent** — one agent's successful fix output exposes STAS to another agent that reads the PR.
+**Key insight**: Every PR STAS creates becomes a distribution channel. AI agents reading PRs see "Fixed via STAS" and can discover the MCP server through the PR metadata or commit messages.
 
-### 4.3 Distribution Channels (Prioritized)
+### 4.3 Distribution Paths
 
-| Channel | Type | Effort | Reach | Priority |
-|---------|------|--------|-------|----------|
-| **Smithery** | MCP directory | ✅ Already listed | High (3,000+ servers, dominant directory) | Maintain |
-| **Cline Marketplace** | Agent marketplace | Medium — submit for review | High (millions of Cline users, one-click install) | **HIGH — Submit now** |
-| **MCP.Directory** | MCP directory | Low — add listing | Medium (2,300+ servers, client-specific install) | **HIGH — Submit now** |
-| **Devin Marketplace** | Agent marketplace | Medium — submit for review | Medium (growing Devin user base) | **HIGH — Submit now** |
-| **PulseMCP** | MCP aggregator | Low — add listing | High (21,000+ servers, largest catalog) | Medium |
-| **Cursor Marketplace** | Agent marketplace | Medium — submit | High (dominant AI IDE) | **HIGH — Submit now** |
-| **Claude Code recommended list** | Anthropic | Unknown — partnership | Very High (all Claude Code users) | Medium (requires partnership) |
-| **MCP.so** | MCP directory | Low — add listing | Low-medium | Low |
-| **npm registry** | Package registry | ✅ Already published (`@aimino/stas-mcp`) | Discovery via npm search | Maintain |
+#### Path A: Bundled Distribution (Pre-installed)
 
-### 4.4 Bundled vs On-Demand Distribution
+| Platform | Integration | Effort | Reach |
+|----------|-------------|--------|-------|
+| **Smithery** | One-click MCP deploy + listing | Low | 3K+ developers |
+| **Cline MCP Marketplace** | Curated listing in Cline | Low | High (Cline users are MCP-heavy) |
+| **MCP.Directory** | Listing with install button | Low | Growing directory |
+| **Claude Code MCP directory** | Recommended MCP server | Medium | Very high (Claude Code users) |
+| **Cursor** | MCP server templates | Medium | High (Cursor has large install base) |
 
-**Bundled distribution** (pre-installed in agent platforms):
-- **When**: Agent ships with STAS MCP server pre-configured
-- **How**: Partnership with agent platform (e.g., "STAS is one of Cline's recommended MCPs")
-- **Pros**: Zero-friction adoption, default choice
-- **Cons**: Requires platform partnerships, ongoing maintenance
-- **Strategy**: Pursue 1-2 bundled deals (Cline, Cursor marketplaces) for baseline distribution
+**Recommendation**: Pursue all low-effort listings immediately (Smithery, Cline, MCP.Directory, Glama, mcp.so). These are free and create distribution surface.
 
-**On-demand discovery** (agent fetches tools at runtime):
-- **When**: Agent calls `tools/list` on Smithery or MCP directory
-- **How**: STAS appears in search results, gets installed per-session
-- **Pros**: No partnership needed, organic growth
-- **Cons**: Higher friction, lost if not discoverable
-- **Strategy**: Ensure STAS ranks high in all MCP directories (Smithery, MCP.Directory, PulseMCP)
+#### Path B: On-Demand Discovery (Runtime)
 
-**Recommendation**: Both paths. 60% effort on marketplace listings (bundled-like), 40% on directory SEO (on-demand).
+| Mechanism | How STAS Gets Found | When It Matters |
+|-----------|--------------------|-----------------|
+| **MCP Registry API** | tools/list at connection time | Every agent that connects to STAS |
+| **Server discovery** | .well-known/mcp URL | Phase 2 (protocol matures) |
+| **Agent recommendation** | Agent logs "Installing STAS recommended by agent..." | Viral loop |
+| **PR metadata** | "Fixed via STAS" in PR footer | Cross-agent discovery |
 
-### 4.5 The MCP Analogue
+**Recommendation**: Optimize for the `tools/list` response — this is the first thing every agent sees. Tool descriptions should be clear, action-oriented, and include confidence signals.
 
-How did successful MCP servers gain adoption?
+#### Path C: Marketplace Listings (Targeted)
 
-| Server | Adoption Path | Analogy for STAS |
-|--------|---------------|------------------|
-| **Playwright** | Microsoft-maintained, solves a universal need (browser), clear docs | STAS maintains the pipeline, solves a universal dev need (bug fixing) |
-| **Atlassian (Jira+Confluence)** | Official enterprise vendor, solves authenticated access | STAS should become the official way agents fix issues, vendor-agnostic |
-| **Context7** | Solves a single clear pain point (outdated docs), zero config | STAS solves a single clear pain point (fixing bugs), zero config |
-| **Memory** | Anthropic reference, protocol definition | STAS benefits from being the reference MCP for issue fixing |
-| **Filesystem** | Universal, works everywhere, zero dependencies | STAS should be the default "fix this" tool for any agent |
+| Marketplace | Install Action | Priority | Notes |
+|-------------|---------------|----------|-------|
+| **Smithery** | `npx @smithery/cli install stas` | P0 | Largest MCP-specific marketplace |
+| **Cline Marketplace** | In-IDE install | P0 | Cline users are the most MCP-hungry |
+| **Glama** | Quality score + listing | P1 | Algorithmic discovery |
+| **MCP.Directory** | One-click install button | P1 | Broad client compatibility |
+| **mcp.so** | Community listing | P1 | Large browse audience |
+| **MarketNow** | Security-certified listing | P2 | If STAS pursues security differentiation |
+| **Official Registry** | PR-based listing | P2 | Trust signal for enterprises |
 
-**Pattern**: Successful MCP servers solve one problem perfectly, are zero-config to install, and are either vendor-backed or community-viral.
+### 4.4 What's the Analogous Adoption Pattern?
+
+**How successful MCP servers gained adoption**:
+
+| Server | Adoption Pattern | Key Tactic | STAS Takeaway |
+|--------|-----------------|------------|---------------|
+| **PostgreSQL MCP** | Viral CLI — devs installed for local DB access | "10 seconds to connect" | One-liner install for STAS |
+| **GitHub MCP** | First-party from Anthropic, bundled with Claude | Pre-installed trust | Get listed on official channels |
+| **Playwright MCP** | Reference implementation, excellent docs | Blog posts + examples | Technical content about STAS + MCP |
+| **Atlassian MCP** | Enterprise demand pull from Jira/Confluence users | OAuth simplicity | Make STAS authless for GitHub public |
+
+**STAS strategy**: Combine all three — one-liner install, first-party-level documentation, and enterprise auth that "just works."
+
+### 4.5 Partnership Opportunities
+
+| Partner | Why | What STAS Gets | What They Get |
+|---------|-----|----------------|---------------|
+| **Smithery** | Largest MCP marketplace | Distribution, hosted execution | New server in catalog |
+| **Cline** | Most MCP-extensible agent | In-marketplace listing | SWE fix capability for Cline users |
+| **Claude Code team** | Reference agent platform | Recommended status | Reference MCP solve server |
+| **Cursor** | AI IDE with large user base | MCP template inclusion | Issue→PR flow in IDE |
+| **OpenCode** | Terminal agent harness | Native integration | MCP solve server for OpenCode users |
+| **MCP.Directory** | Cross-client directory | Discovery across 10+ clients | New solve-layer server |
 
 ---
 
 ## 5. Recommended MCP Surface
 
-### 5.1 Current MCP Surface (Already Live)
+### 5.1 Design Principles
 
-STAS already has a mature MCP surface in production at `POST /mcp/jsonrpc`:
+1. **Agent-optimized descriptions** — Every tool description must tell the agent *when* to use it, not just *what* it does
+2. **Structured returns** — Machine-parseable JSON with confidence scores so agents can make decisions
+3. **Progressive disclosure** — Cheap tools first (estimate, triage), then expensive tools (fix)
+4. **Async-first** — Return immediately with a runId, let the agent poll or subscribe
+5. **Self-documenting** — Tools/resources carry enough metadata that agents self-correct errors
 
-**Tools:**
-| Tool | Description | Maturity |
-|------|-------------|----------|
-| `stas_fix_issue` | Dispatch a fix run for a GitHub issue | ✅ Live |
-| `stas_check_status` | Check fix run status by runId | ✅ Live |
-| `stas_list_runs` | List recent fix runs with optional filters | ✅ Live |
-| `stas_get_run` | Full run details by runId | ✅ Live |
-| `stas_batch_fix` | Fix multiple issues in one invocation | ✅ Live |
-| `stas_triage` | Score which issues in a repo are fixable | ✅ Live |
-| `stas_estimate` | Complexity, effort, risk analysis for an issue | ✅ Live |
+### 5.2 Tool Surface (Recommended, Not Implementation Spec)
 
-**Resources:**
-| Resource | Description | Maturity |
-|----------|-------------|----------|
+#### Phase 0 — Current (Ship Now)
+
+| Tool | Purpose | Agent Benefit |
+|------|---------|---------------|
+| `stas_fix_issue` | Dispatch a fix run | Single call to fix any issue |
+| `stas_check_status` | Poll fix progress | Async awareness |
+| `stas_list_runs` | View history | Context for decisions |
+| `stas_get_run` | Full run details | Deep inspection |
+| `stas_batch_fix` | Fix multiple issues | Scale out |
+| `stas_triage` | Score fixable issues | Prioritization |
+| `stas_estimate` | Complexity/effort/risk analysis | Cost-aware decisions |
+
+**These are live**. The remaining tools should ship in prioritized order.
+
+#### Phase 1 — Enhanced Decision Support (0-3 Months)
+
+| Tool | Description | Why Agents Need It |
+|------|-------------|--------------------|
+| `stas_explain_issue` | Return human-readable issue analysis + suggested approach | Agent decides *whether* to fix without committing resources |
+| `stas_suggest_approach` | Return fix plan (files to modify, strategy) before execution | Agent approves plan before execution |
+| `stas_estimate` (enhanced) | Return repo-specific cost/confidence based on history | Accurate predictions improve agent decision-making |
+| `stas_auto_fix` | Combined estimate + fix in one call (for high-confidence issues) | Reduce round trips for confident fixes |
+
+#### Phase 2 — Agentic Workflow (3-6 Months)
+
+| Tool | Description | Strategic Value |
+|------|-------------|-----------------|
+| `stas_review_pr` | Review an existing PR | Close the loop — STAS reviews PRs too |
+| `stas_create_branch` | Create fix branch without PR (CI integration) | Integration with existing agent workflows |
+| `stas_rollback` | Roll back a STAS-created PR if test fails | Safety net for production |
+| `stas_generate_test` | Generate regression test for an issue | Verification-first approach |
+
+### 5.3 Resource Templates
+
+| Resource | Purpose | Status |
+|----------|---------|--------|
 | `stas://runs/{runId}` | Full run details | ✅ Live |
 | `stas://issues/{issueId}` | Issue details with fix status | ✅ Live |
-| `stas://issues/{issueId}/context` | Full context bundle for an issue | ✅ Live |
-| `stas://repos/{repo}/heuristics` | Repository fix heuristics | ✅ Live |
+| `stas://issues/{issueId}/context` | Full context bundle (description, comments, files) | ✅ Live |
+| `stas://repos/{repo}/heuristics` | Repo-specific fix patterns, success history | ✅ Live |
+| `stas://repos/{repo}/active-runs` | All active runs in a repo | Phase 1 |
 
-**Prompts:**
-| Prompt | Description | Maturity |
-|--------|-------------|----------|
-| `stas_fix_pattern` | Template for common fix patterns | ✅ Live |
-| `stas_triage_pattern` | Template for triage analysis | ✅ Live |
+### 5.4 Prompt Templates
 
-### 5.2 Minimum Viable MCP Surface (Phase 1 — Now)
+| Prompt | Purpose | Status |
+|--------|---------|--------|
+| `stas_fix_pattern` | Guide an agent through fix workflow | ✅ Live |
+| `stas_triage_pattern` | Guide agent through triage | ✅ Live |
+| `stas_batch_pattern` | Guide agent through batch fix workflow | Phase 1 |
 
-The current surface is already **viable for launch**. The MVP for agent adoption:
+### 5.5 Minimum Viable MCP Surface
 
-- `stas_fix_issue` — single issue fix (the core value proposition)
-- `stas_check_status` — polling (essential for async workflow)
-- `stas_triage` — read-only adoption driver (agents discover triage first, then fix)
-- `stas_estimate` — information tool (agents estimate before committing to fix)
+The irreducible set that makes STAS the default choice for agents:
 
-**These four tools are sufficient for STAS to be the default choice** for agents needing issue-to-PR capability.
+```
+Must Have (ship now):
+  tools/list → stas_fix_issue, stas_estimate, stas_triage, stas_check_status
+  resources/list → stas://runs/{id}, stas://issues/{id}/context
+  
+Should Have (Phase 1):
+  stas_explain_issue, stas_suggest_approach
+  stas://repos/{repo}/heuristics
+  
+Nice to Have (Phase 2):
+  stas_review_pr, stas_rollback, stas_generate_test
+```
 
-### 5.3 Extended MCP Surface (Phase 2 — 1-3 months)
+### 5.6 Return Value Contract
 
-**New tools to add:**
+Every tool call should return a structured object with these fields where applicable:
 
-| Tool | Purpose | Priority |
-|------|---------|----------|
-| `stas_analyze_pr` | Review an existing PR for quality, risk, and suggestions | High |
-| `stas_explain_issue` | Explain an issue in natural language with root cause hypothesis | High |
-| `stas_suggest_approaches` | Propose 2-3 fix approaches with trade-offs before committing | Medium |
-| `stas_list_supported_platforms` | List which issue platforms STAS supports (GitHub, GitLab, etc.) | Medium |
-| `stas_get_capabilities` | Return STAS's full capabilities, limits, and current load | Low |
+| Field | Purpose | Example |
+|-------|---------|---------|
+| `runId` | Async operation handle | `"uuid-v4"` |
+| `status` | Current state | `"queued"`, `"investigating"` |
+| `confidence` | STAS's confidence in success | `"high"`, `"medium"`, `"low"` |
+| `costEstimate` | Estimated monetary cost | `0.15` |
+| `timeEstimate` | Estimated time in seconds | `300` |
+| `alternatives` | Other approaches the agent could try | `[{tool: "stas_explain_issue", ...}]` |
+| `prUrl` | Link to created PR (when complete) | `"https://github.com/..."` |
+| `message` | Human-readable status | `"Fix dispatched for repo#123"` |
 
-**Enhanced tool returns** (modify existing tools to return richer data):
-
-| Enhancement | Tool | Value |
-|-------------|------|-------|
-| Confidence score (0-100) | `stas_fix_issue` response | Agent decides whether to trust the fix |
-| Cost estimate ($) | `stas_estimate`, `stas_fix_issue` response | Agent budget-awareness |
-| Estimated time | `stas_fix_issue` response | Agent decides async vs sync |
-| Alternative approaches | `stas_fix_issue` response | Agent chooses strategy |
-| Risk classification | `stas_estimate` | Agent flags high-risk fixes for human review |
-
-### 5.4 Multi-Platform Surface (Phase 3 — 3-6 months)
-
-Current tools assume GitHub issues. Multi-platform support requires:
-
-- **`issueTracker` parameter** on `stas_fix_issue`, `stas_triage`, `stas_estimate` — accepts `github`, `gitlab`, `jira`, `linear`
-- **Abstract issue reference** — `{ platform, projectId, issueId }` instead of `{ repoOwner, repoName, issueNumber }`
-- **Platform-specific resource URIs** — `stas://github/{owner}/{repo}/issues/{number}`, `stas://gitlab/{projectId}/issues/{iid}`
-
-### 5.5 What Makes STAS the Default Choice
-
-For an agent to choose STAS over alternatives (including doing nothing), the MCP surface must:
-
-1. **Be discoverable** — `tools/list` returns a clear, well-described tool set. Agents read descriptions to decide.
-2. **Return actionable data** — Not just "fix submitted", but confidence score, estimated time, cost, and alternatives.
-3. **Support async workflow** — Fire-and-forget with polling. Agents don't block.
-4. **Provide read-before-write tools** — Triage and estimate let agents decide before committing. This builds trust.
-5. **Fail gracefully** — Clear error messages with suggestions. "This issue is out of scope because..." is better than "500 Internal Server Error."
-
-**The minimum surface that achieves "default choice" status:**
-- 1 write tool (`stas_fix_issue`)
-- 2 read tools (`stas_triage`, `stas_estimate`)
-- 1 polling tool (`stas_check_status`)
-- Rich return metadata (confidence, cost, time)
-
-**STAS already has all of these.**
+**Why this matters**: Agents make decisions based on structured returns. Cost and confidence estimates let agents decide whether to proceed. Without these, the agent treats STAS as a black box.
 
 ---
 
 ## 6. Risk Assessment
 
-### 6.1 Risk: Agent Platforms Build Native Fix Capabilities
+### 6.1 Risk Matrix
 
-| Scenario | Likelihood | Impact | Mitigation |
-|----------|------------|--------|------------|
-| Claude Code improves fix rate to 80%+ | Medium | High | STAS differentiates on multi-platform + verification + DACH |
-| Cursor ships built-in issue fixing | Medium | Medium | Cursor is IDE-bound, not async. STAS is platform-agnostic. |
-| Copilot Agent matures issue→PR | Medium-High | High | Copilot is GitHub-only. STAS covers GitLab, Jira, Linear. |
-| Devin adds MCP fix tools | Medium | Medium | Devin SaaS-only. STAS open-source self-host is differentiator. |
+| Risk | Probability | Impact | Mitigation |
+|------|------------|--------|------------|
+| **Agent platforms build native fix capabilities** | Medium | High | Double down on multi-platform + DACH. Native fix will be GitHub-only for 12+ months. |
+| **MCP fails to become standard protocol** | Low | Critical | Keep REST API + webhook trigger. MCP is already the de facto standard (110M downloads, AAIF governance). |
+| **MCP 2026-07-28 breaking changes** | Certain | Medium | Migration required by spec timeline. Stateless migration is straightforward for existing architecture. |
+| **Competitor launches MCP fix server first** | Medium | Medium | STAS already has the MCP server live. First-mover advantage in agent tool registries. Speed of execution matters. |
+| **Security concerns limit MCP adoption** | Medium | High | Build security-first posture. Audit logging, approval gates, and trust scoring turn risk into differentiation. |
+| **GitHub Copilot Agent matures** | Medium-High | High | Copilot is GitHub-only. STAS's multi-platform + DACH moat is independent of GitHub-specific competition. |
+| **Shadow MCP concerns in enterprise** | Medium | Medium | Enterprise STAS deployment through gateway architecture. VPC / on-prem option for regulated customers. |
+| **Pricing pressure from OSS competitors** | Low | Medium | Self-hosted OSS is a funnel to Cloud Paid. Critical mass of agents using STAS creates switching costs. |
 
-**Strategic response**: Speed to multi-platform + DACH is critical. Once STAS owns the "fix issues from any tracker" position, agent platforms compete with STAS rather than replacing it.
+### 6.2 What If MCP Doesn't Win?
 
-### 6.2 Risk: MCP Fails to Become Standard
+MCP is already the de facto standard, but if it were displaced:
 
-| Scenario | Likelihood | Impact | Mitigation |
-|----------|------------|--------|------------|
-| Anthropic/OpenAI diverge on protocol | Low | High | STAS MCP is JSON-RPC 2.0 over HTTP — transport-agnostic. REST API fallback exists. |
-| Agent platforms build proprietary tool APIs | Low | Medium | STAS already has REST API + webhook trigger. MCP is additive, not the only path. |
-| MCP adoption plateaus at current level | Low | Medium | Current adoption is already sufficient for distribution. 10+ major platforms support it. |
+- **A2A (Agent-to-Agent) by Google** — Complements MCP, doesn't compete. MCP is agent→tool, A2A is agent→agent.
+- **Proprietary protocols** — OpenAI Assistants API being deprecated *for* MCP. Microsoft, Google, AWS all adopted MCP.
+- **New standard** — AAIF governance means no single vendor controls the protocol. Exit cost for tool builders is low (JSON-RPC is universal).
 
-**Assessment**: MCP failure risk is low. Too many major players are invested. Even if MCP is replaced, the JSON-RPC 2.0 substrate maps trivially to any successor protocol.
+**Fallback**: STAS's REST API + webhook trigger remain functional regardless of protocol. The MCP surface is an *additional* distribution channel, not the only one.
 
-### 6.3 Risk: Dependency on Specific Agent Platforms
+### 6.3 Window of Opportunity
 
-| Platform Dependency | Risk | Mitigation |
-|--------------------|------|------------|
-| Claude Code API changes | Medium | Implement against stable MCP spec, not Claude Code extensions |
-| Cline marketplace policies | Low | STAS is open-source — no single gatekeeper |
-| Smithery directory changes | Low | Diversify across 3+ directories |
-| GitHub API rate limiting | Low | STAS can use PAT or GitHub App authentication |
+| Timeline | Threat | STAS Response |
+|----------|--------|---------------|
+| **Now - 3 months** | No known competitor building MCP fix server | Ship MCP tools, list on all marketplaces |
+| **3-6 months** | Devin/OpenHands may add MCP endpoint | First-mover advantage in agent registries |
+| **6-12 months** | GitHub Copilot Agent may become competitive | Multi-platform + DACH moat established |
+| **12+ months** | Commoditization of agent fix tools | Verification quality + compliance moat |
 
-**Strategy**: Support ALL agent platforms equally. Being "the MCP server for Cline" is risky. Being "the MCP server for issue fixing" is not.
-
-### 6.4 Risk: Competitors Claim MCP Space
-
-| Competitor | Timeline | Threat Level | STAS Response |
-|-----------|----------|-------------|---------------|
-| Devin adds issue-to-PR MCP tools | 2026–2027 | HIGH | Move fast on multi-platform + self-host. Devin is SaaS-only and expensive. |
-| OpenHands ships fix-as-service MCP | 2026 | MEDIUM | OpenHands is agent framework, not turnkey fix service. Pipeline quality gap. |
-| New startup "MCP-first fix server" | 2026 | MEDIUM | First-mover advantage + OSS community. STAS already has the pipeline, benchmarks, and listings. |
-| GitHub Actions-based MCP server | 2026 | MEDIUM | Actions are CI, not agent-native. Different use case. |
-
-**Window of opportunity**: 12–18 months before significant competition emerges in MCP issue-fixing. STAS should establish:
-1. MCP ecosystem presence (marketplaces, directories) — 0-3 months
-2. Multi-platform support (GitLab, Jira) — 3-6 months
-3. DACH compliance features — 6-12 months
-
-### 6.5 Risk Summary
-
-| Risk | Severity | Urgency | Action |
-|------|----------|---------|--------|
-| Agent platform builds native fix | High | High | Multi-platform + verification moat |
-| Competitor MCP fix server emerges | Medium | High | Establish MCP presence NOW |
-| MCP protocol fragmentation | Low | Low | REST API fallback |
-| Agent marketplace dependency | Low | Medium | List on all marketplaces |
-| DACH competitor emerges | Medium | Medium | DACH features + first reference customer |
+**The window is open for 3-6 months** before credible competitors add MCP support. STAS should use this window to:
+1. Achieve critical mass in agent tool registries (tools/list rankings)
+2. Build multi-platform integration (GitLab, Jira, Linear)
+3. Establish DACH compliance features
 
 ---
 
 ## 7. Recommendations
 
-### 7.1 Strategic Direction
+### 7.1 Immediate (0-30 Days)
 
-1. **Lead with "multi-platform issue-to-PR for agents"** — this is the widest defensible niche. Every agent on every platform needs to fix issues. STAS is the pipeline that makes it happen.
+- [ ] **List STAS on all MCP marketplaces** — Smithery, Cline Marketplace, Glama, mcp.so, MCP.Directory, MarketNow
+- [ ] **Optimize tools/list descriptions** — Every tool description must include "when to use this" guidance for agents
+- [ ] **Add structured return fields** — Ensure every tool returns costEstimate, confidence, timeEstimate
+- [ ] **Create STAS MCP documentation page** — One-liner install for each major client (Claude Code, Cursor, Cline, VS Code)
+- [ ] **Publish blog post** — "The First MCP Server for Autonomous Ticket Solving" — technical SEO for agent discovery
 
-2. **Submit to all MCP marketplaces immediately** — Cline Marketplace, Devin Marketplace, Cursor Marketplace, MCP.Directory, PulseMCP. Listing is zero-code and compounds over time.
+### 7.2 Short-Term (1-3 Months)
 
-3. **The existing MCP surface is already launch-ready** — 7 tools, 4 resources, 2 prompts. Focus on ecosystem presence, not surface expansion.
+- [ ] **Migrate to MCP 2026-07-28 spec** — Stateless transport, Mcp-Method headers, caching support
+- [ ] **Ship Phase 1 tools** — `stas_explain_issue`, `stas_suggest_approach`, enhanced `stas_estimate`
+- [ ] **Build GitLab MCP integration** — Extend stas_fix_issue to accept GitLab issue references
+- [ ] **Build Jira MCP integration** — Extend stas_fix_issue to accept Jira ticket references
+- [ ] **Implement agent discovery virality** — Add "Fixed via STAS" to PR descriptions with MCP install hint
+- [ ] **Submit to Smithery hosted** — Get STAS running on Smithery's infrastructure for zero-config agent access
+- [ ] **Create agent demo** — Video / blog of Claude Code or Cline discovering and using STAS via MCP
 
-4. **Build read-before-write as the adoption funnel** — `stas_triage` and `stas_estimate` are adoption drivers. Agents discover these first, trust the results, then graduate to `stas_fix_issue`.
+### 7.3 Medium-Term (3-6 Months)
 
-5. **Rich returns are the differentiator** — confidence scores, cost estimates, and time estimates let agents make intelligent decisions. No other MCP fix server does this.
+- [ ] **Build approval gate** — Human-in-the-loop before PR creation for regulated industries
+- [ ] **Add EU data residency** — Hetzner-based deployment option
+- [ ] **German-language PR output** — PR descriptions, commit messages in German
+- [ ] **Audit log feature** — Exportable audit trail for compliance
+- [ ] **Partner with Smithery for featured placement** — Negotiate first-page placement
+- [ ] **OpenCode native integration** — STAS as a bundled MCP server in OpenCode
 
-6. **Multi-platform is the moat** — Adding GitLab, Jira, and Linear support is the highest-leverage engineering investment for MCP distribution. No competitor covers all four.
+### 7.4 Strategic Positioning Statement
 
-7. **DACH is the geographic beachhead** — Not the primary message, but the wedge for European enterprise adoption where no competitor has presence.
+> **"STAS is the only MCP server that turns any issue into a verified PR — discoverable by any AI agent on any platform."**
 
-### 7.2 Execution Roadmap
-
-| Phase | Timeline | Actions |
-|-------|----------|---------|
-| **Phase 0: Launch readiness** | Week 1-2 | Current surface is launch-ready. Verify all tools work correctly. |
-| **Phase 1: Marketplace distribution** | Week 2-4 | Submit to Cline Marketplace, Devin Marketplace, Cursor Marketplace, MCP.Directory, PulseMCP. Update Smithery listing with richer description. |
-| **Phase 2: Richer returns** | Month 2 | Add confidence scores, cost estimates, time estimates to tool returns. |
-| **Phase 3: Multi-platform** | Months 3-6 | Add GitLab support. Add Jira support. Abstract issue reference model. |
-| **Phase 4: DACH features** | Months 6-12 | EU data residency option. German PR output. Audit log. Approval gate. |
-
-### 7.3 Metrics
+### 7.5 Success Metrics
 
 | Metric | Current | Target (3 months) | Target (6 months) |
 |--------|---------|-------------------|-------------------|
-| MCP marketplace listings | 1 (Smithery) | 5+ (all major) | 8+ (all + niche) |
-| MCP tool adoption (% of fixes via MCP) | ~0% (unmeasured) | 10% | 30% |
-| Agent platform coverage | 1 (indirect) | 5+ platforms | 10+ platforms |
-| Fix success rate via MCP | Same as webhook (92%) | Same or higher | Same or higher |
-| MCP server installs | ~0 (unlisted outside Smithery) | 100+ | 1,000+ |
-
-### 7.4 Immediate Next Steps (Execution Tickets)
-
-1. **AIM-3362** — Submit STAS MCP server to Cline Marketplace and Devin Marketplace
-2. **AIM-3363** — Add `stas_analyze_pr` tool to MCP surface
-3. **AIM-3364** — Add confidence score and cost estimate returns to `stas_fix_issue` and `stas_estimate`
-4. **AIM-3365** — Abstract issue reference model for multi-platform support (GitLab, Jira, Linear)
-5. **AIM-3366** — Update Smithery listing with richer description, screenshots, and usage examples
-6. **AIM-3367** — Write MCP-specific onboarding guide for agent developers
+| MCP tool invocations | 0 | 100/day | 1,000/day |
+| MCP marketplace listings | 0 | 6+ marketplaces | 10+ marketplaces |
+| % fix runs via MCP vs webhook | 0% | 30% | 60% |
+| Agent platforms listing STAS | 0 | 3 (Smithery, Cline, Glama) | 6+ |
+| Fix success rate (MCP) | Same as webhook | ≥90% | ≥92% |
+| MCP server uptime | N/A | 99.9% | 99.95% |
 
 ---
 
 ## References
 
-- STAS MCP Agent Server: `src/mcp/agentServer.ts` — 7 tools, 4 resources, 2 prompts over JSON-RPC 2.0
-- MCP Server JSON: `stas/mcp-server.json` — Smithery listing manifest
-- STAS Registry: `stas/stas-registry.json` — marketplace presence across 5 channels
-- Existing distribution plan: `docs/gtm/mcp-distribution-plan.md`
+- Existing MCP server: `src/mcp/agentServer.ts`
+- Current MCP plan: `docs/gtm/mcp-distribution-plan.md`
 - Competitor research: `docs/gtm/competitor-research.md`
-- DACH market analysis: `docs/gtm/germany-eu-taas-market-analysis.md`
-- OpenHands MCP docs: https://docs.openhands.dev/openhands/usage/settings/mcp-settings
-- Devin MCP docs: https://docs.devin.ai/work-with-devin/devin-mcp
-- Claude Code MCP docs: https://code.claude.com/docs/en/mcp
-- Smithery directory: https://smithery.ai
-- Cline MCP Marketplace: https://github.com/cline/mcp-marketplace
+- TaaS market analysis: `docs/gtm/germany-eu-taas-market-analysis.md`
+- MCP specification: https://modelcontextprotocol.io
+- MCP 2026-07-28 release candidate: https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/
+- MCP adoption statistics (Digital Applied): https://www.digitalapplied.com/blog/mcp-adoption-statistics-2026
+- MCP ecosystem post-2025 (Rajeev Jain): https://rajeeja.github.io/blog/mcp-landscape-seps-community-2026/
+- Smithery MCP marketplace: https://smithery.ai
+- Cline MCP Marketplace: https://cline.bot/mcp-marketplace
 - MCP.Directory: https://mcp.directory
-- MCP Server Ecosystem 2026: https://callsphere.ai/blog/mcp-server-ecosystem-2026-most-used-protocol-servers.md
