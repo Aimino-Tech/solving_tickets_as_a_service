@@ -471,3 +471,137 @@ The workflow uses `$getWorkflowStaticData('global').lastOverallStatus` to rememb
 |----------|---------|-------------|
 | `STAS_PUBLIC_URL` | `http://localhost:3000` | Base URL of the STAS API health endpoints |
 
+
+### 8. Stripe Billing Webhooks (AIM-3340)
+
+**File:** `workflows/stripe-billing.json`
+
+Receives Stripe billing events from the STAS backend and posts formatted notifications to the `#billing` Slack channel. The STAS backend verifies the Stripe webhook signature, then forwards the event to this n8n workflow for all business logic (routing, formatting, notifications).
+
+**Events handled:**
+
+| Event Type | Color | Description |
+|------------|-------|-------------|
+| `invoice.paid` | Green (`#2ECC71`) | Successful invoice payment notification |
+| `invoice.payment_failed` | Red (`#E74C3C`) | Failed payment attempt alert |
+| `customer.subscription.created` | Blue (`#3498DB`) | New subscription welcome + onboarding email trigger |
+| Unknown | Gray (`#95A5A6`) | Fallback for unhandled event types |
+
+**Flow:**
+
+```
+STAS Stripe webhook handler (signature verification)
+  → POST /webhook/stripe-event → n8n
+  → Switch by event type
+    → invoice.paid          → Format success Slack message → Post to Slack #billing
+    → invoice.payment_failed → Format failure Slack message → Post to Slack #billing
+    → customer.subscription.created → Format welcome Slack message → Post to Slack #billing
+                                     → HTTP POST → Trigger Onboarding Email workflow
+    → Unknown              → Format fallback Slack message → Post to Slack #billing
+```
+
+**Setup:**
+
+1. Import `workflows/stripe-billing.json` into n8n
+2. Configure the **Slack** node with OAuth credentials (`chat:write` scope) for the `#billing` channel
+3. Note the webhook URL n8n provides (e.g., `https://<your-n8n>/webhook/stripe-event`)
+4. Set environment variable:
+
+   ```env
+   N8N_STRIPE_WEBHOOK_URL=https://<your-n8n>/webhook/stripe-event
+   ```
+
+5. (Optional) If using the onboarding email trigger, set the n8n base URL:
+
+   ```env
+   N8N_BASE_URL=http://localhost:5678
+   ```
+
+**Expected webhook payload (from STAS backend):**
+
+```json
+{
+  "event": "stripe",
+  "type": "invoice.paid",
+  "data": {
+    "customer_email": "user@example.com",
+    "amount": 29.99,
+    "currency": "usd",
+    "subscription_id": "sub_123456",
+    "failure_reason": null
+  }
+}
+```
+
+**Behavior:**
+
+| Scenario | Response |
+|----------|----------|
+| Invoice paid successfully | Green Slack message with amount, currency, customer, and subscription ID |
+| Invoice payment fails | Red Slack message with amount, reason, and next attempt info |
+| New subscription created | Blue Slack message with plan details + triggers onboarding email workflow |
+| Unknown event type | Gray fallback message with raw event type for debugging |
+
+
+
+### 6. Onboarding Emails — Signup → Welcome + Credits (AIM-3336)
+
+**File:** `workflows/onboarding-emails.json`
+
+Receives a webhook POST when a tenant completes onboarding and sends a welcome email with credit details via a transactional email service (Loops/Resend).
+
+**Flow:**
+
+```
+Onboarding completion event → n8n HTTP endpoint
+  → Format email body (HTML + text) with account details
+  → POST to transactional email service (Loops/Resend)
+  → Log sent confirmation
+```
+
+**Setup:**
+
+1. Open your n8n instance
+2. Go to **Workflows** → **Import from File** → Select `workflows/onboarding-emails.json`
+3. Configure the **Loops / Resend** credentials in n8n:
+   - Create an API key in your Loops or Resend dashboard
+   - Set it as an HTTP Header Auth credential in n8n
+4. Note the webhook URL n8n provides (e.g., `https://<your-n8n>/webhook/onboarding-complete`)
+5. Set environment variables:
+
+   ```env
+   N8N_ONBOARDING_WEBHOOK_URL=https://<your-n8n>/webhook/onboarding-complete
+   ONBOARDING_EMAIL_API_URL=https://api.loops.so/v1/transactional
+   ONBOARDING_EMAIL_TEMPLATE_ID=welcome-credits
+   LOOPS_API_CREDENTIAL_ID=<your-loops-credential-id-in-n8n>
+   ```
+
+6. Configure OpenSymphony/STAS to POST to this webhook on onboarding completion (done automatically — see `workers/billing/onboarding.py`)
+
+**Expected webhook payload:**
+
+```json
+{
+  "tenant_id": "tenant-abc-123",
+  "email": "user@example.com",
+  "account_name": "Acme Corp",
+  "credits_granted": 100,
+  "event": "onboarding_complete"
+}
+```
+
+**Environment variables used by this workflow:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ONBOARDING_EMAIL_API_URL` | `https://api.loops.so/v1/transactional` | Transactional email API endpoint |
+| `ONBOARDING_EMAIL_TEMPLATE_ID` | `welcome-credits` | Template ID for the email service |
+| `LOOPS_API_CREDENTIAL_ID` | — | n8n credential ID for Loops HTTP Header Auth |
+
+**Behavior:**
+
+| Scenario | Response |
+|----------|----------|
+| Email sent successfully | Workflow completes silently after logging |
+| Email service unavailable | HTTP Request node error — n8n retries based on workflow error settings |
+| Missing email field | Workflow still formats the body but skips send (email will be empty) |

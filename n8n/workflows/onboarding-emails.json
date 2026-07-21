@@ -1,0 +1,95 @@
+{
+  "name": "Onboarding Emails \u2014 Signup \u2192 Welcome + Credits (AIM-3336)",
+  "nodes": [
+    {
+      "id": "webhook-1",
+      "name": "Onboarding Complete Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "onboarding-complete",
+        "options": {}
+      }
+    },
+    {
+      "id": "set-format-email",
+      "name": "Format Welcome Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "to", "value": "={{ $json.email }}" },
+            { "name": "subject", "value": "={{ 'Welcome to Syntaro \u2014 You have $' + $json.credits_granted + ' in credits!' }}" },
+            { "name": "htmlBody", "value": "={{ '<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\"><h1 style=\"color: #2563EB;\">Welcome to Syntaro!</h1><p>Hi ' + ($json.account_name || 'there') + ',</p><p>Thanks for signing up! We are excited to have you on board.</p><h2 style=\"color: #374151;\">Your Account</h2><table style=\"width: 100%; border-collapse: collapse;\"><tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><strong>Tenant ID</strong></td><td style=\"padding: 8px; border: 1px solid #ddd;\">' + $json.tenant_id + '</td></tr><tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><strong>Email</strong></td><td style=\"padding: 8px; border: 1px solid #ddd;\">' + $json.email + '</td></tr><tr><td style=\"padding: 8px; border: 1px solid #ddd;\"><strong>Credits Granted</strong></td><td style=\"padding: 8px; border: 1px solid #ddd;\">$' + $json.credits_granted + '</td></tr></table><h2 style=\"color: #374151;\">Quick Start</h2><ol><li>Install our GitHub App</li><li>Configure your first repository</li><li>We will start solving tickets automatically!</li></ol><hr style=\"border: none; border-top: 1px solid #eee;\" /><p style=\"color: #6B7280; font-size: 12px;\">You have $' + $json.credits_granted + ' in free credits to get started. Need help? Contact us at support@syntaro.com</p></div>' }}" },
+            { "name": "textBody", "value": "={{ 'Welcome to Syntaro!\\n\\nHi ' + ($json.account_name || 'there') + ',\\n\\nThanks for signing up! We are excited to have you on board.\\n\\nYour Account:\\n- Tenant ID: ' + $json.tenant_id + '\\n- Email: ' + $json.email + '\\n- Credits Granted: $' + $json.credits_granted + '\\n\\nQuick Start:\\n1. Install our GitHub App\\n2. Configure your first repository\\n3. We will start solving tickets!\\n\\nYou have $' + $json.credits_granted + ' in free credits.\\nNeed help? Contact us at support@syntaro.com' }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "http-request-1",
+      "name": "Send via Email Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [750, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ONBOARDING_EMAIL_API_URL || 'https://api.loops.so/v1/transactional' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "transactionalId",
+              "value": "={{ $env.ONBOARDING_EMAIL_TEMPLATE_ID || 'welcome-credits' }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.to }}"
+            },
+            {
+              "name": "dataVariables",
+              "value": "={{ {\n  tenant_id: $json.tenant_id,\n  account_name: $json.account_name || '',\n  credits_granted: $json.credits_granted,\n  subject: $json.subject,\n  htmlBody: $json.htmlBody,\n  textBody: $json.textBody\n} }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "{{ $env.LOOPS_API_CREDENTIAL_ID || '' }}",
+          "name": "Loops API Key"
+        }
+      }
+    },
+    {
+      "id": "noop-log",
+      "name": "Log Sent",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1000, 300],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Onboarding Complete Webhook": {
+      "main": [[{ "node": "Format Welcome Email", "type": "main", "index": 0 }]]
+    },
+    "Format Welcome Email": {
+      "main": [[{ "node": "Send via Email Service", "type": "main", "index": 0 }]]
+    },
+    "Send via Email Service": {
+      "main": [[{ "node": "Log Sent", "type": "main", "index": 0 }]]
+    },
+    "Log Sent": {
+      "main": [[]]
+    }
+  }
+}

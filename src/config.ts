@@ -123,6 +123,8 @@ const envSchema = z.object({
   SLACK_INTERACTIONS_PATH: z.string().default('/slack/events'),
 
   N8N_MONITORING_WEBHOOK_URL: z.string().optional(),
+  N8N_ONBOARDING_WEBHOOK_URL: z.string().optional(),
+  N8N_STRIPE_WEBHOOK_URL: z.string().optional(),
 
   LINEAR_API_KEY: z.string().optional(),
   LINEAR_WEBHOOK_SECRET: z.string().optional(),
@@ -445,6 +447,7 @@ function buildConfig(env: ParsedEnv) {
 
     n8n: {
       webhookUrl: env.N8N_WEBHOOK_URL ?? '',
+      stripeWebhookUrl: env.N8N_STRIPE_WEBHOOK_URL ?? '',
     },
 
     mcp: {
