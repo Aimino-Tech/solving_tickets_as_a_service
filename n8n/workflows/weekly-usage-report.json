@@ -1,0 +1,166 @@
+{
+  "name": "Weekly Usage Report — DB metrics → Slack",
+  "nodes": [
+    {
+      "id": "schedule-monday",
+      "name": "Every Monday 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "rule": {
+          "interval": 10080
+        }
+      }
+    },
+    {
+      "id": "db-issues",
+      "name": "DB: Issues Fixed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [500, 100],
+      "credentials": {
+        "postgres": "stasDb"
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*)::int AS issues_fixed FROM run_history WHERE status = 'completed' AND completed_at >= NOW() - INTERVAL '7 days'",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "db-tokens",
+      "name": "DB: Tokens Used",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [500, 220],
+      "credentials": {
+        "postgres": "stasDb"
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(SUM(tokens_total), 0)::bigint AS tokens_used FROM agent_analytics_runs WHERE completed_at >= NOW() - INTERVAL '7 days'",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "db-tenants",
+      "name": "DB: Active Tenants",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [500, 340],
+      "credentials": {
+        "postgres": "stasDb"
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(DISTINCT account_id)::int AS active_tenants FROM run_history WHERE started_at >= NOW() - INTERVAL '7 days'",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "db-signups",
+      "name": "DB: New Signups",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [500, 460],
+      "credentials": {
+        "postgres": "stasDb"
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*)::int AS new_signups FROM accounts WHERE created_at >= NOW() - INTERVAL '7 days'",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "db-revenue",
+      "name": "DB: Total Revenue",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [500, 580],
+      "credentials": {
+        "postgres": "stasDb"
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(SUM(net_revenue_cents), 0)::bigint AS revenue_cents FROM kpi_metrics WHERE snapshot_date >= CURRENT_DATE - INTERVAL '7 days'",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "merge-all",
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition"
+      }
+    },
+    {
+      "id": "code-format-report",
+      "name": "Format Slack Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 300],
+      "parameters": {
+        "language": "javascript",
+        "code": "// Collect all input items into a single row\nconst row = {};\nfor (const item of $input.all()) {\n  Object.assign(row, item.json);\n}\n\nconst issuesFixed = row.issues_fixed || 0;\nconst tokensUsed = row.tokens_used || 0;\nconst activeTenants = row.active_tenants || 0;\nconst newSignups = row.new_signups || 0;\nconst revenueCents = row.revenue_cents || 0;\nconst revenueDollars = (revenueCents / 100).toFixed(2);\n\nconst blocks = [\n  {\n    type: 'header',\n    text: { type: 'plain_text', text: '📊 Weekly Usage Report' }\n  },\n  {\n    type: 'context',\n    elements: [\n      { type: 'mrkdwn', text: '*Period:* Past 7 days' }\n    ]\n  },\n  { type: 'divider' },\n  {\n    type: 'section',\n    fields: [\n      { type: 'mrkdwn', text: `*Issues Fixed:*\\n${issuesFixed}` },\n      { type: 'mrkdwn', text: `*Tokens Consumed:*\\n${tokensUsed.toLocaleString()}` }\n    ]\n  },\n  {\n    type: 'section',\n    fields: [\n      { type: 'mrkdwn', text: `*Active Tenants:*\\n${activeTenants}` },\n      { type: 'mrkdwn', text: `*New Signups:*\\n${newSignups}` }\n    ]\n  },\n  {\n    type: 'section',\n    fields: [\n      { type: 'mrkdwn', text: `*Total Revenue:*\\n$${revenueDollars}` }\n    ]\n  }\n];\n\nreturn [{\n  json: {\n    channel: '#syntaro-metrics',\n    attachments: JSON.stringify([{\n      color: '#2ECC71',\n      blocks: blocks\n    }])\n  }\n}];"
+      }
+    },
+    {
+      "id": "slack-post",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [1250, 300],
+      "credentials": {
+        "slack": "stasSlack"
+      },
+      "parameters": {
+        "channel": "={{ $json.channel }}",
+        "attachments": "={{ $json.attachments }}",
+        "otherOptions": {
+          "unfurl_links": false,
+          "unfurl_media": false
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every Monday 9am": {
+      "main": [
+        [
+          { "node": "DB: Issues Fixed", "type": "main", "index": 0 },
+          { "node": "DB: Tokens Used", "type": "main", "index": 0 },
+          { "node": "DB: Active Tenants", "type": "main", "index": 0 },
+          { "node": "DB: New Signups", "type": "main", "index": 0 },
+          { "node": "DB: Total Revenue", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "DB: Issues Fixed": {
+      "main": [[{ "node": "Merge Results", "type": "main", "index": 0 }]]
+    },
+    "DB: Tokens Used": {
+      "main": [[{ "node": "Merge Results", "type": "main", "index": 1 }]]
+    },
+    "DB: Active Tenants": {
+      "main": [[{ "node": "Merge Results", "type": "main", "index": 2 }]]
+    },
+    "DB: New Signups": {
+      "main": [[{ "node": "Merge Results", "type": "main", "index": 3 }]]
+    },
+    "DB: Total Revenue": {
+      "main": [[{ "node": "Merge Results", "type": "main", "index": 4 }]]
+    },
+    "Merge Results": {
+      "main": [[{ "node": "Format Slack Report", "type": "main", "index": 0 }]]
+    },
+    "Format Slack Report": {
+      "main": [[{ "node": "Post to Slack", "type": "main", "index": 0 }]]
+    }
+  }
+}

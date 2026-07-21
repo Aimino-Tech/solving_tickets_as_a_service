@@ -203,6 +203,51 @@ Replaces the in-code alert dispatch (`monitoring/alerting.ts`). OS emits alert e
 }
 ```
 
+### 8. Weekly Usage Report — DB → #syntaro-metrics (AIM-3337)
+
+**File:** `workflows/weekly-usage-report.json`
+
+Every Monday at 9am, this workflow queries the database for the past week's usage statistics and posts a formatted Slack report to `#syntaro-metrics`.
+
+**Flow:**
+
+```
+Schedule (every Monday 9am)
+  → Parallel DB queries (issues fixed, tokens used, active tenants, signups, revenue)
+  → Merge results
+  → Format as Slack blocks (header + fields)
+  → Post to #syntaro-metrics
+```
+
+**Metrics tracked:**
+
+| Metric | Source | Description |
+|--------|--------|-------------|
+| Issues Fixed | `run_history` | Completed runs in the past 7 days |
+| Tokens Consumed | `agent_analytics_runs` | Total tokens used across all agents |
+| Active Tenants | `run_history` | Distinct accounts with activity |
+| New Signups | `accounts` | Accounts created in the past 7 days |
+| Total Revenue | `kpi_metrics` | Sum of net revenue (cents → dollars) |
+
+**Setup:**
+
+1. Open your n8n instance
+2. Go to **Workflows** → **Import from File** → Select `workflows/weekly-usage-report.json`
+3. Configure credentials:
+   - **Postgres** (`stasDb`): Database connection with read access to the STAS database
+   - **Slack** (`stasSlack`): OAuth token with `chat:write` scope, installed to `#syntaro-metrics`
+4. Activate the workflow — it will trigger every Monday at 9am
+
+**Slack message format:**
+
+| Section | Content |
+|---------|---------|
+| Header | 📊 Weekly Usage Report |
+| Context | Period: Past 7 days |
+| Field 1 | Issues Fixed, Tokens Consumed |
+| Field 2 | Active Tenants, New Signups |
+| Field 3 | Total Revenue (USD) |
+
 ## Adding a workflow
 
 1. Design the workflow in the n8n UI
