@@ -541,5 +541,9 @@ export function buildPRBody(params: {
         ]
       : []),
     `_🤖 Automated fix by ${BOT_NAME}_`,
+    '',
+    '---',
+    '',
+    `> ⚡ **Powered by [STAS](https://github.com/Aimino-Tech/solving_tickets_as_a_service)** — Label a GitHub issue with \`stas:fix\` and get a pull request. | [Add to repo](https://github.com/apps/stas-app) | [Docs](https://stas.aimino.ai)`,
   ].join('\n');
 }
