@@ -132,6 +132,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.issues.fix', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'issue.fix.dlq',
     messageTtl: 600_000,
@@ -140,6 +141,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.issues.feature', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'issue.feature.dlq',
     messageTtl: 600_000,
@@ -148,6 +150,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.issues.research', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'issue.research.dlq',
     messageTtl: 300_000,
@@ -156,6 +159,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.webhooks.notifications', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'webhook.notification.dlq',
     messageTtl: 300_000,
@@ -164,6 +168,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.analytics.ingestion', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'analytics.ingestion.dlq',
     messageTtl: 120_000,
@@ -172,6 +177,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.pipeline.events', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'pipeline.event.dlq',
     messageTtl: 60_000,
@@ -180,6 +186,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.retry', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     messageTtl: 30_000,
     deadLetterExchange: 'stas.direct',
     deadLetterRoutingKey: 'issue.fix',
@@ -187,6 +194,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.dlq', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
   });
   await ch.bindQueue('stas.dlq', 'stas.dlx', '#');
 

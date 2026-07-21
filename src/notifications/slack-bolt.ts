@@ -11,11 +11,11 @@ const log = rootLogger.child({ module: 'slack-bolt' });
 const ISSUE_URL = (owner: string, repo: string, number: number) =>
   `https://github.com/${owner}/${repo}/issues/${number}`;
 
-function isBoltConfigured(): boolean
+function isBoltConfigured(): boolean {
   if (config.slack.botToken && !config.slack.botToken.startsWith('xoxb-')) {
     log.warn('SLACK_BOT_TOKEN does not start with xoxb- — Slack integration disabled');
     return false;
-  } {
+  }
   return !!(config.slack.botToken && config.slack.signingSecret);
 }
 
