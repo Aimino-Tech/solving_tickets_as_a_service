@@ -70,7 +70,7 @@
   "runDetail.copyLink": "Copiar enlace",
   "runDetail.shareOnX": "Compartir en X",
   "runDetail.ctaTitle": "Etiqueta una issue de GitHub. Obtén un PR.",
-  "runDetail.ctaDesc": "STAS es un bot de código abierto que convierte issues etiquetadas en pull requests. Respaldado por OpenCode, el agente de codificación con 162K estrellas.",
+  "runDetail.ctaDesc": "STAS es un bot de código abierto que convierte issues etiquetadas en pull requests. Impulsado por agentes de IA.",
   "runDetail.getStasGitHub": "Obtener STAS en GitHub",
   "runDetail.stars": "162K+ estrellas",
   "runDetail.backToRunsLink": "← Volver a ejecuciones",

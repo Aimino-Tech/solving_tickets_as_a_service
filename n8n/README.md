@@ -56,7 +56,7 @@ Receives webhook events from OpenSymphony and posts formatted alerts to the `#sy
   "issue_title": "Fix login bug",
   "issue_url": "https://github.com/org/repo/issues/42",
   "repo": "org/repo",
-  "agent": "opencode-agent"
+  "agent": "stas-agent"
 }
 ```
 
