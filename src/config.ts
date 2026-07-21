@@ -121,6 +121,8 @@ const envSchema = z.object({
   SLACK_SIGNING_SECRET: z.string().optional(),
   SLACK_INTERACTIONS_PATH: z.string().default('/slack/events'),
 
+  N8N_MONITORING_WEBHOOK_URL: z.string().optional(),
+
   LINEAR_API_KEY: z.string().optional(),
   LINEAR_WEBHOOK_SECRET: z.string().optional(),
 
@@ -503,6 +505,7 @@ function buildConfig(env: ParsedEnv) {
       critQueueDepth: env.ALERT_CRIT_QUEUE_DEPTH,
       warnErrorRatePercent: env.ALERT_WARN_ERROR_RATE_PERCENT,
       critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
+      n8nWebhookUrl: env.N8N_MONITORING_WEBHOOK_URL,
     },
 
     stas: {

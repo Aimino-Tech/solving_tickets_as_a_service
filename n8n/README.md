@@ -151,6 +151,44 @@ GitHub Actions webhook (workflow_run.completed)
 | Deploy succeeds | Green embed posted to Discord with repo, branch, commit, actor |
 | Deploy fails or is cancelled | Workflow exits silently (no message) |
 
+### 3. Monitoring Alerts — OS Alerts → #syntaro-alerts (via n8n)
+
+**File:** `workflows/monitoring-alerts.json`
+
+Replaces the in-code alert dispatch (`monitoring/alerting.ts`). OS emits alert events via webhook, n8n formats them as Slack blocks with severity-colored attachments, and posts to `#syntaro-alerts`.
+
+**Severity formatting:**
+
+| Severity | Color | Header |
+|----------|-------|--------|
+| `critical` | Red (`#E74C3C`) | 🚨 CRITICAL: {rule} |
+| `warning` | Yellow (`#F39C12`) | ⚠️ WARNING: {rule} |
+| `info` | Blue (`#3498DB`) | ℹ️ INFO: {rule} |
+| Unknown | Gray (`#95A5A6`) | ℹ️ Alert: {rule} |
+
+**Setup:**
+
+1. Import `workflows/monitoring-alerts.json` into n8n
+2. Configure the **Slack** node with OAuth credentials (chat:write scope)
+3. Note the webhook URL (e.g., `https://<your-n8n>/webhook/monitoring-alert`)
+4. Set environment variable:
+
+   ```env
+   N8N_MONITORING_WEBHOOK_URL=https://<your-n8n>/webhook/monitoring-alert
+   ```
+
+**Expected webhook payload:**
+
+```json
+{
+  "severity": "critical",
+  "rule": "queue_depth_critical",
+  "message": "Queue depth 250 exceeds critical threshold 200 for 5+ minutes",
+  "channel": "#syntaro-alerts",
+  "timestamp": "2026-07-21T12:00:00.000Z"
+}
+```
+
 ## Adding a workflow
 
 1. Design the workflow in the n8n UI
