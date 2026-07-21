@@ -115,6 +115,7 @@ const envSchema = z.object({
   PD_INTEGRATION_KEY: z.string().optional(),
   PD_ESCALATION_POLICY_ID: z.string().optional(),
 
+  N8N_WEBHOOK_URL: z.string().optional(),
   SLACK_WEBHOOK_URL: z.string().optional(),
   SLACK_CHANNEL: z.string().optional(),
   SLACK_BOT_TOKEN: z.string().optional(),
@@ -440,6 +441,10 @@ function buildConfig(env: ParsedEnv) {
       botToken: env.SLACK_BOT_TOKEN,
       signingSecret: env.SLACK_SIGNING_SECRET,
       interactionsPath: env.SLACK_INTERACTIONS_PATH,
+    },
+
+    n8n: {
+      webhookUrl: env.N8N_WEBHOOK_URL ?? '',
     },
 
     mcp: {
