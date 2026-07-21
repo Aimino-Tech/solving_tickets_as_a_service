@@ -2,6 +2,20 @@
 
 This directory contains n8n workflow JSON exports for integrating external services.
 
+## Architecture
+
+```
+Service (Crisp, GitHub, OS) → POST /webhook/{id} → n8n workflow → action (Slack, email, etc.)
+```
+
+n8n runs as a Docker container alongside STAS, sharing the `postgres` database and `stas-net` network. Workflows are created via the n8n REST API (`POST /rest/workflows`) and can be activated/deactivated programmatically.
+
+**Setup:**
+1. `docker compose up -d n8n` — starts n8n on port 5678
+2. Set `N8N_DB_PASSWORD` and `N8N_ENCRYPTION_KEY` in `.env`
+3. Authorize services (Slack, Crisp, etc.) in n8n UI at `http://localhost:5678`
+4. Deploy workflows: `bash n8n/deploy-workflow.sh n8n/workflows/<name>.json`
+
 ## Workflows
 
 ### 1. Slack Alerts — OS Events → #syntaro-alerts
