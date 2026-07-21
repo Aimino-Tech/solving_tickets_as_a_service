@@ -1,0 +1,253 @@
+{
+  "name": "Crisp AI Support Bot",
+  "nodes": [
+    {
+      "id": "webhook-1",
+      "name": "Crisp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crisp-message",
+        "options": {}
+      }
+    },
+    {
+      "id": "set-extract-message",
+      "name": "Extract Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "question", "value": "={{ $json.content || $json.message || $json.data?.content }}" },
+            { "name": "session_id", "value": "={{ $json.session_id || $json.data?.session_id }}" },
+            { "name": "user_name", "value": "={{ $json.user?.nickname || $json.data?.user?.nickname || 'Visitor' }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "http-vector-search",
+      "name": "Vector Search Docs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [750, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.VECTOR_SEARCH_URL || 'http://vector-service:8000/search' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "query", "value": "={{ $json.question }}" },
+            { "name": "top_k", "value": 5 }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "code-build-context",
+      "name": "Build Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 300],
+      "parameters": {
+        "language": "javascript",
+        "code": "// Build context from vector search results\nconst searchResults = $input.first().json.results || $input.first().json.documents || [];\nconst context = searchResults\n  .filter(r => r.score >= 0.5)\n  .map(r => r.content || r.text || '')\n  .join('\\n\\n---\\n\\n');\n\nconst hasRelevantDocs = context.length > 100;\n\nreturn [{\n  json: {\n    context: context,\n    hasRelevantDocs: hasRelevantDocs,\n    question: $json.question,\n    session_id: $json.session_id,\n    user_name: $json.user_name\n  }\n}];"
+      }
+    },
+    {
+      "id": "switch-relevant",
+      "name": "Has Relevant Docs?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1250, 300],
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "has-docs",
+              "leftValue": "={{ $json.hasRelevantDocs }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "llm-answer",
+      "name": "LLM Generate Answer",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 2,
+      "position": [1500, 150],
+      "parameters": {
+        "options": {
+          "model": "gpt-4o-mini",
+          "temperature": 0.3,
+          "maxTokens": 500
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a helpful support assistant for Syntaro. Answer the user's question based on the provided documentation context. Be concise and friendly. If the context doesn't fully answer the question, acknowledge the limitation and offer to connect them with the team.\n\nDocumentation context:\n{{ $json.context }}"
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.question }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "code-fallback-reply",
+      "name": "Fallback Reply + Ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 500],
+      "parameters": {
+        "language": "javascript",
+        "code": "// No relevant docs found — set fallback reply and signal ticket creation\nreturn [{\n  json: {\n    question: $json.question,\n    session_id: $json.session_id,\n    user_name: $json.user_name,\n    reply: \"I'm sorry, I couldn't find enough information to answer your question. I'll forward this to our team who will get back to you shortly!\",\n    createTicket: true\n  }\n}];"
+      }
+    },
+    {
+      "id": "merge-replies",
+      "name": "Merge Replies",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [1750, 300],
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition"
+      }
+    },
+    {
+      "id": "code-extract-reply",
+      "name": "Extract Reply Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 300],
+      "parameters": {
+        "language": "javascript",
+        "code": "const reply = $json.reply || $json.choices?.[0]?.message?.content || '';\n\nreturn [{\n  json: {\n    reply: reply,\n    session_id: $json.session_id,\n    createTicket: $json.createTicket || false\n  }\n}];"
+      }
+    },
+    {
+      "id": "http-crisp-reply",
+      "name": "Post Reply to Crisp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2250, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRISP_API_URL || 'https://api.crisp.chat/v1' }}/conversation/{{ $json.session_id }}/message",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "type", "value": "text" },
+            { "name": "content", "value": "={{ $json.reply }}" },
+            { "name": "from", "value": "operator" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "switch-create-ticket",
+      "name": "Create Ticket?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2250, 500],
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "needs-ticket",
+              "leftValue": "={{ $json.createTicket }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "http-create-ticket",
+      "name": "Create Support Ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2500, 500],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.OS_API_URL || 'http://opensymphony:4000/api/v1/dispatch' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "source", "value": "crisp-support" },
+            { "name": "title", "value": "={{ 'Crisp support: ' + ($json.question || '').substring(0, 80) }}" },
+            { "name": "description", "value": "={{ 'Question from ' + ($json.user_name || 'Visitor') + ': ' + ($json.question || '') }}" }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Crisp Webhook": {
+      "main": [[{ "node": "Extract Message", "type": "main", "index": 0 }]]
+    },
+    "Extract Message": {
+      "main": [[{ "node": "Vector Search Docs", "type": "main", "index": 0 }]]
+    },
+    "Vector Search Docs": {
+      "main": [[{ "node": "Build Context", "type": "main", "index": 0 }]]
+    },
+    "Build Context": {
+      "main": [[{ "node": "Has Relevant Docs?", "type": "main", "index": 0 }]]
+    },
+    "Has Relevant Docs?": {
+      "main": [
+        [{ "node": "LLM Generate Answer", "type": "main", "index": 0 }],
+        [{ "node": "Fallback Reply + Ticket", "type": "main", "index": 0 }]
+      ]
+    },
+    "LLM Generate Answer": {
+      "main": [[{ "node": "Merge Replies", "type": "main", "index": 0 }]]
+    },
+    "Fallback Reply + Ticket": {
+      "main": [[{ "node": "Merge Replies", "type": "main", "index": 0 }]]
+    },
+    "Merge Replies": {
+      "main": [[{ "node": "Extract Reply Text", "type": "main", "index": 0 }]]
+    },
+    "Extract Reply Text": {
+      "main": [[{ "node": "Post Reply to Crisp", "type": "main", "index": 0 }, { "node": "Create Ticket?", "type": "main", "index": 0 }]]
+    },
+    "Post Reply to Crisp": {
+      "main": [[]]
+    },
+    "Create Ticket?": {
+      "main": [
+        [],
+        [{ "node": "Create Support Ticket", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}
