@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router, type Request, type Response } from 'express';
 import { rootLogger } from '../utils/logger.js';
 

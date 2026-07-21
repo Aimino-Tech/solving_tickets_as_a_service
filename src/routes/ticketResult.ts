@@ -5,7 +5,7 @@ import { postNonCodeResult } from '../trackers/nonCodeResult.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'ticket-result' });
-const router = Router();
+const router: Router = Router();
 
 router.post('/api/v1/ticket-result', async (req, res) => {
   try {

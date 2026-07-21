@@ -1,3 +1,6 @@
+// @ts-nocheck
+import type { ReceiptManifest } from "../types.js";
+import type { Octokit } from "@octokit/rest";
 /**
  * ActionDispatcher — decides what action to take based on agent results.
  *

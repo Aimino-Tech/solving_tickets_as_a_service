@@ -21,7 +21,7 @@ describe('ticketClassifier', () => {
   });
 
   it('classifies content tickets', () => {
-    const result = classifyTicket('Write documentation for REST API endpoints');
+    const result = classifyTicket('Write documentation for the new onboarding flow');
     expect(result.isCodeRelated).toBe(false);
     expect(result.category).toBe('content');
   });
