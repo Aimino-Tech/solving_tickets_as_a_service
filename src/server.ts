@@ -712,6 +712,15 @@ export async function createApp(): Promise<express.Application> {
   app.get('/', (_req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, '../website', 'index.html'));
   });
+  app.get('/pricing', (_req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, '../website', 'pricing.html'));
+  });
+  app.get('/benchmarks', (_req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, '../website', 'benchmark.html'));
+  });
+  app.get('/trust', (_req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, '../website', 'trust.html'));
+  });
 
   // ── Dashboard SPA (served from built dist/) ───────────────────────
   app.use('/dashboard', express.static(path.join(__dirname, '../dashboard/dist')));
