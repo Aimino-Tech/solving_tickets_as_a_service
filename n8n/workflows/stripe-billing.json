@@ -1,0 +1,681 @@
+{
+  "name": "Stripe Billing Webhooks — payment/subscription/credit → DB + Slack #billing",
+  "nodes": [
+    {
+      "id": "webhook-stripe",
+      "name": "Stripe Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "stripe-event",
+        "options": {
+          "rawBody": true
+        }
+      }
+    },
+    {
+      "id": "code-verify",
+      "name": "Verify Stripe Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300],
+      "parameters": {
+        "language": "javascript",
+        "code": "const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);\n\nconst rawBody = $input.first().json?.rawBody || $items($node.name).json?.rawBody || '';\nconst sigHeader = $execution?.context?.headers?.['stripe-signature'] || '';\nconst webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;\n\nif (!webhookSecret) {\n  throw new Error('STRIPE_WEBHOOK_SECRET environment variable not set');\n}\n\ntry {\n  const event = stripe.webhooks.constructEvent(rawBody, sigHeader, webhookSecret);\n  // Return the verified event\n  return [{\n    json: {\n      verified: true,\n      type: event.type,\n      id: event.id,\n      data: event.data.object,\n      created: event.created\n    }\n  }];\n} catch (err) {\n  throw new Error('Stripe signature verification failed: ' + err.message);\n}"
+      }
+    },
+    {
+      "id": "switch-event-type",
+      "name": "Route by Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.type }}",
+        "rules": [
+          {
+            "value": "invoice.paid",
+            "output": 0
+          },
+          {
+            "value": "invoice.payment_failed",
+            "output": 1
+          },
+          {
+            "value": "customer.subscription.updated",
+            "output": 2
+          },
+          {
+            "value": "customer.subscription.deleted",
+            "output": 3
+          },
+          {
+            "value": "checkout.session.completed",
+            "output": 4
+          }
+        ],
+        "fallbackOutput": 5
+      }
+    },
+    {
+      "id": "pg-invoice-paid",
+      "name": "DB: Update Quota",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [950, 50],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ 'UPDATE billing SET usage_count = 0, current_period_end = NOW() + INTERVAL \\'1 month\\' WHERE stripe_subscription_id = ' + ($json.data?.subscription ? (\"'\" + $json.data.subscription + \"'\") : 'NULL') }}",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "format-invoice-paid",
+      "name": "Format: Invoice Paid",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [950, 150],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "channel",
+              "value": "#billing"
+            },
+            {
+              "name": "color",
+              "value": "#2ECC71"
+            },
+            {
+              "name": "emoji",
+              "value": ":white_check_mark:"
+            },
+            {
+              "name": "title",
+              "value": "Invoice Paid"
+            },
+            {
+              "name": "text",
+              "value": "={{ 'Invoice paid for ' + ($json.data?.customer_email || $json.data?.customer_name || 'customer') + ' — $' + ($json.data?.amount_paid ? ($json.data.amount_paid / 100).toFixed(2) : '0.00') }}"
+            },
+            {
+              "name": "amount",
+              "value": "={{ $json.data?.amount_paid ? '$' + ($json.data.amount_paid / 100).toFixed(2) : 'Unknown' }}"
+            },
+            {
+              "name": "currency",
+              "value": "={{ ($json.data?.currency || 'usd').toUpperCase() }}"
+            },
+            {
+              "name": "subscription_id",
+              "value": "={{ $json.data?.subscription || 'N/A' }}"
+            },
+            {
+              "name": "customer_email",
+              "value": "={{ $json.data?.customer_email || $json.data?.customer_name || 'unknown' }}"
+            },
+            {
+              "name": "invoice_number",
+              "value": "={{ $json.data?.number || 'N/A' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "format-invoice-failed",
+      "name": "Format: Invoice Payment Failed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [950, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "channel",
+              "value": "#billing"
+            },
+            {
+              "name": "color",
+              "value": "#E74C3C"
+            },
+            {
+              "name": "emoji",
+              "value": ":credit_card:"
+            },
+            {
+              "name": "title",
+              "value": "Invoice Payment Failed"
+            },
+            {
+              "name": "text",
+              "value": "={{ 'Payment failed for ' + ($json.data?.customer_email || $json.data?.customer_name || 'customer') + ' — $' + ($json.data?.amount_due ? ($json.data.amount_due / 100).toFixed(2) : '0.00') }}"
+            },
+            {
+              "name": "amount",
+              "value": "={{ $json.data?.amount_due ? '$' + ($json.data.amount_due / 100).toFixed(2) : 'Unknown' }}"
+            },
+            {
+              "name": "currency",
+              "value": "={{ ($json.data?.currency || 'usd').toUpperCase() }}"
+            },
+            {
+              "name": "customer_email",
+              "value": "={{ $json.data?.customer_email || $json.data?.customer_name || 'unknown' }}"
+            },
+            {
+              "name": "reason",
+              "value": "={{ $json.data?.failure_message || $json.data?.failure_code || 'No reason provided' }}"
+            },
+            {
+              "name": "attempt_count",
+              "value": "={{ $json.data?.attempt_count ? String($json.data.attempt_count) : '1' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "pg-sub-updated",
+      "name": "DB: Update Tier",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [950, 450],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ 'UPDATE billing SET plan = \\'' + ($json.data?.items?.data[0]?.price?.id === process.env.STRIPE_SOLO_PRICE_ID ? 'solo' : $json.data?.items?.data[0]?.price?.id === process.env.STRIPE_TEAM_PRICE_ID ? 'team' : 'free') + '\\', status = \\'' + ($json.data?.status === 'active' ? 'active' : $json.data?.status === 'past_due' ? 'past_due' : 'canceled') + '\\' WHERE stripe_subscription_id = \\'' + $json.data?.id + '\\'' }}",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "pg-account-tier",
+      "name": "DB: Sync Account Tier",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1200, 450],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ 'UPDATE accounts SET tier = (SELECT CASE WHEN plan = \\'enterprise\\' THEN \\'enterprise\\' WHEN plan IN (\\'solo\\', \\'team\\') THEN \\'pro\\' ELSE \\'free\\' END FROM billing WHERE stripe_subscription_id = \\'' + $json.data?.id + '\\') WHERE id = (SELECT account_id FROM billing WHERE stripe_subscription_id = \\'' + $json.data?.id + '\\')' }}",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "format-sub-updated",
+      "name": "Format: Subscription Updated",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [950, 550],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "channel",
+              "value": "#billing"
+            },
+            {
+              "name": "color",
+              "value": "#3498DB"
+            },
+            {
+              "name": "emoji",
+              "value": ":arrows_counterclockwise:"
+            },
+            {
+              "name": "title",
+              "value": "Subscription Updated"
+            },
+            {
+              "name": "text",
+              "value": "={{ 'Subscription ' + $json.data?.id + ' updated — status: ' + ($json.data?.status || 'unknown') }}"
+            },
+            {
+              "name": "customer_email",
+              "value": "={{ $json.data?.customer_email || $json.data?.customer || 'unknown' }}"
+            },
+            {
+              "name": "subscription_id",
+              "value": "={{ $json.data?.id || 'N/A' }}"
+            },
+            {
+              "name": "status",
+              "value": "={{ $json.data?.status || 'unknown' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "pg-sub-deleted",
+      "name": "DB: Downgrade to Free",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [950, 700],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ 'UPDATE billing SET plan = \\'free\\', status = \\'canceled\\', stripe_subscription_id = NULL WHERE stripe_subscription_id = \\'' + $json.data?.id + '\\'; UPDATE accounts SET tier = \\'free\\' WHERE id = (SELECT account_id FROM billing WHERE stripe_subscription_id = \\'' + $json.data?.id + '\\')' }}",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "format-sub-deleted",
+      "name": "Format: Subscription Cancelled",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [950, 800],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "channel",
+              "value": "#billing"
+            },
+            {
+              "name": "color",
+              "value": "#E74C3C"
+            },
+            {
+              "name": "emoji",
+              "value": ":no_entry:"
+            },
+            {
+              "name": "title",
+              "value": "Subscription Cancelled"
+            },
+            {
+              "name": "text",
+              "value": "={{ 'Subscription ' + $json.data?.id + ' cancelled — account downgraded to free tier' }}"
+            },
+            {
+              "name": "customer_email",
+              "value": "={{ $json.data?.customer_email || $json.data?.customer || 'unknown' }}"
+            },
+            {
+              "name": "subscription_id",
+              "value": "={{ $json.data?.id || 'N/A' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "pg-credit-purchase",
+      "name": "DB: Add Credits",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [950, 950],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ 'UPDATE credits SET balance = balance + ' + ($json.data?.amount_total ? String(Math.floor($json.data.amount_total / 100) * 100) : '0') + ' WHERE account_id = ' + ($json.data?.metadata?.accountId || '0') }}",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "format-credit-purchased",
+      "name": "Format: Credits Purchased",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [950, 1050],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "channel",
+              "value": "#billing"
+            },
+            {
+              "name": "color",
+              "value": "#2ECC71"
+            },
+            {
+              "name": "emoji",
+              "value": ":moneybag:"
+            },
+            {
+              "name": "title",
+              "value": "Credits Purchased"
+            },
+            {
+              "name": "text",
+              "value": "={{ 'Credit purchase completed for account ' + ($json.data?.metadata?.accountId || 'unknown') + ' — $' + ($json.data?.amount_total ? ($json.data.amount_total / 100).toFixed(2) : '0.00') }}"
+            },
+            {
+              "name": "amount",
+              "value": "={{ $json.data?.amount_total ? '$' + ($json.data.amount_total / 100).toFixed(2) : 'Unknown' }}"
+            },
+            {
+              "name": "account_id",
+              "value": "={{ $json.data?.metadata?.accountId || 'unknown' }}"
+            },
+            {
+              "name": "customer_email",
+              "value": "={{ $json.data?.customer_details?.email || 'unknown' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "format-unknown",
+      "name": "Format: Unknown Event",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [950, 1200],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "channel",
+              "value": "#billing"
+            },
+            {
+              "name": "color",
+              "value": "#95A5A6"
+            },
+            {
+              "name": "emoji",
+              "value": ":grey_question:"
+            },
+            {
+              "name": "title",
+              "value": "Unknown Stripe Event"
+            },
+            {
+              "name": "text",
+              "value": "={{ 'Unhandled Stripe event: ' + $json.type }}"
+            },
+            {
+              "name": "raw_type",
+              "value": "={{ $json.type || 'unknown' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "merge-billing",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [1450, 300],
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition"
+      }
+    },
+    {
+      "id": "code-build-blocks",
+      "name": "Build Slack Blocks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1700, 300],
+      "parameters": {
+        "language": "javascript",
+        "code": "const item = $input.first().json;\nconst blocks = [\n  {\n    type: 'header',\n    text: { type: 'plain_text', text: `${item.emoji || ''} ${item.title || 'Stripe Event'}` }\n  },\n  {\n    type: 'section',\n    text: { type: 'mrkdwn', text: item.text || 'No details' }\n  }\n];\n\nconst fields = [];\nif (item.amount) {\n  fields.push({ type: 'mrkdwn', text: `*Amount:* ${item.amount}` });\n}\nif (item.currency) {\n  fields.push({ type: 'mrkdwn', text: `*Currency:* ${item.currency}` });\n}\nif (item.customer_email) {\n  fields.push({ type: 'mrkdwn', text: `*Customer:* ${item.customer_email}` });\n}\nif (item.subscription_id) {\n  fields.push({ type: 'mrkdwn', text: `*Subscription:* ${item.subscription_id}` });\n}\nif (item.invoice_number) {\n  fields.push({ type: 'mrkdwn', text: `*Invoice:* ${item.invoice_number}` });\n}\nif (item.status) {\n  fields.push({ type: 'mrkdwn', text: `*Status:* ${item.status}` });\n}\nif (item.account_id) {\n  fields.push({ type: 'mrkdwn', text: `*Account ID:* ${item.account_id}` });\n}\n\nif (fields.length > 0) {\n  blocks.push({\n    type: 'section',\n    fields: fields\n  });\n}\n\nif (item.reason) {\n  blocks.push({\n    type: 'section',\n    text: { type: 'mrkdwn', text: `*Reason:* ${item.reason}` }\n  });\n}\n\nif (item.attempt_count) {\n  blocks.push({\n    type: 'section',\n    text: { type: 'mrkdwn', text: `*Attempts:* ${item.attempt_count}` }\n  });\n}\n\nif (item.raw_type) {\n  blocks.push({\n    type: 'section',\n    text: { type: 'mrkdwn', text: `*Event Type:* ${item.raw_type}` }\n  });\n}\n\nreturn [{\n  json: {\n    channel: item.channel || '#billing',\n    attachments: JSON.stringify([{\n      color: item.color || '#95A5A6',\n      blocks: blocks\n    }])\n  }\n}];"
+      }
+    },
+    {
+      "id": "slack-post",
+      "name": "Post to Slack #billing",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [1950, 300],
+      "parameters": {
+        "channel": "={{ $json.channel }}",
+        "text": "=",
+        "attachments": "={{ $json.attachments }}"
+      }
+    },
+    {
+      "id": "http-onboarding",
+      "name": "Trigger Onboarding Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 150],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL || 'http://localhost:5678' }}/webhook/onboarding-email",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "event",
+              "value": "customer.subscription.created"
+            },
+            {
+              "name": "customer_email",
+              "value": "={{ $json.data?.customer_email || $json.data?.customer || '' }}"
+            },
+            {
+              "name": "subscription_id",
+              "value": "={{ $json.data?.subscription || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Stripe Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify Stripe Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Stripe Signature": {
+      "main": [
+        [
+          {
+            "node": "Route by Event Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Event Type": {
+      "main": [
+        [
+          {
+            "node": "DB: Update Quota",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format: Invoice Payment Failed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DB: Update Tier",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DB: Downgrade to Free",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DB: Add Credits",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format: Unknown Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Update Quota": {
+      "main": [
+        [
+          {
+            "node": "Format: Invoice Paid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format: Invoice Paid": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format: Invoice Payment Failed": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "DB: Update Tier": {
+      "main": [
+        [
+          {
+            "node": "DB: Sync Account Tier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Sync Account Tier": {
+      "main": [
+        [
+          {
+            "node": "Format: Subscription Updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format: Subscription Updated": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "DB: Downgrade to Free": {
+      "main": [
+        [
+          {
+            "node": "Format: Subscription Cancelled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format: Subscription Cancelled": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "DB: Add Credits": {
+      "main": [
+        [
+          {
+            "node": "Format: Credits Purchased",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format: Credits Purchased": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Format: Unknown Event": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Build Slack Blocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Slack Blocks": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack #billing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Onboarding Email": {
+      "main": [
+        []
+      ]
+    }
+  }
+}
