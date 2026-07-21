@@ -1,0 +1,261 @@
+{
+  "name": "Stripe Billing Webhooks",
+  "nodes": [
+    {
+      "id": "stripe-webhook",
+      "name": "Stripe Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "stripe-billing",
+        "options": {}
+      }
+    },
+    {
+      "id": "switch-event",
+      "name": "Route by Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.type }}",
+        "rules": [
+          { "value": "checkout.session.completed", "output": 0 },
+          { "value": "invoice.paid", "output": 1 },
+          { "value": "invoice.payment_failed", "output": 2 },
+          { "value": "customer.subscription.updated", "output": 3 },
+          { "value": "customer.subscription.deleted", "output": 4 }
+        ],
+        "fallbackOutput": 5
+      }
+    },
+    {
+      "id": "set-checkout",
+      "name": "Format: Checkout Completed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 100],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "event", "value": "billing_purchased" },
+            { "name": "account_id", "value": "={{ $json.data?.object?.metadata?.accountId }}" },
+            { "name": "credit_pack", "value": "={{ $json.data?.object?.metadata?.creditPack }}" },
+            { "name": "amount_paid", "value": "={{ $json.data?.object?.amount_total }}" },
+            { "name": "customer_id", "value": "={{ $json.data?.object?.customer }}" },
+            { "name": "payment_intent", "value": "={{ $json.data?.object?.payment_intent }}" },
+            { "name": "color", "value": "#2ECC71" },
+            { "name": "title", "value": "Purchase Completed" },
+            { "name": "text", "value": "={{ 'Customer ' + ($json.data?.object?.customer || 'unknown') + ' purchased credits. Amount: ' + (($json.data?.object?.amount_total || 0) / 100).toFixed(2) + ' ' + ($json.data?.object?.currency || 'usd').toUpperCase() }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-invoice-paid",
+      "name": "Format: Invoice Paid",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 200],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "event", "value": "billing_invoice_paid" },
+            { "name": "customer_id", "value": "={{ $json.data?.object?.customer }}" },
+            { "name": "invoice_id", "value": "={{ $json.data?.object?.id }}" },
+            { "name": "amount_paid", "value": "={{ $json.data?.object?.amount_paid }}" },
+            { "name": "subscription_id", "value": "={{ $json.data?.object?.subscription }}" },
+            { "name": "color", "value": "#3498DB" },
+            { "name": "title", "value": "Invoice Paid" },
+            { "name": "text", "value": "={{ 'Invoice ' + ($json.data?.object?.id || 'unknown') + ' paid — ' + (($json.data?.object?.amount_paid || 0) / 100).toFixed(2) + ' ' + ($json.data?.object?.currency || 'usd').toUpperCase() + ' for subscription ' + ($json.data?.object?.subscription || 'unknown') }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-payment-failed",
+      "name": "Format: Payment Failed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "event", "value": "billing_payment_failed" },
+            { "name": "customer_id", "value": "={{ $json.data?.object?.customer }}" },
+            { "name": "invoice_id", "value": "={{ $json.data?.object?.id }}" },
+            { "name": "amount_due", "value": "={{ $json.data?.object?.amount_due }}" },
+            { "name": "attempt_count", "value": "={{ $json.data?.object?.attempt_count }}" },
+            { "name": "color", "value": "#E74C3C" },
+            { "name": "title", "value": "Payment Failed" },
+            { "name": "text", "value": "={{ 'Invoice ' + ($json.data?.object?.id || 'unknown') + ' payment failed after ' + ($json.data?.object?.attempt_count || 0) + ' attempt(s). Amount due: ' + (($json.data?.object?.amount_due || 0) / 100).toFixed(2) + ' ' + ($json.data?.object?.currency || 'usd').toUpperCase() }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-subscription-updated",
+      "name": "Format: Subscription Updated",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 400],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "event", "value": "billing_subscription_updated" },
+            { "name": "customer_id", "value": "={{ $json.data?.object?.customer }}" },
+            { "name": "subscription_id", "value": "={{ $json.data?.object?.id }}" },
+            { "name": "status", "value": "={{ $json.data?.object?.status }}" },
+            { "name": "price_id", "value": "={{ $json.data?.object?.items?.data?.[0]?.price?.id }}" },
+            { "name": "plan_name", "value": "={{ $json.data?.object?.items?.data?.[0]?.price?.nickname }}" },
+            { "name": "current_period_start", "value": "={{ $json.data?.object?.current_period_start }}" },
+            { "name": "current_period_end", "value": "={{ $json.data?.object?.current_period_end }}" },
+            { "name": "color", "value": "#F39C12" },
+            { "name": "title", "value": "Subscription Updated" },
+            { "name": "text", "value": "={{ 'Subscription ' + ($json.data?.object?.id || 'unknown') + ' for customer ' + ($json.data?.object?.customer || 'unknown') + ' updated to ' + ($json.data?.object?.items?.data?.[0]?.price?.nickname || 'unknown') + ' — status: ' + ($json.data?.object?.status || 'unknown') }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-subscription-deleted",
+      "name": "Format: Subscription Deleted",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 500],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "event", "value": "billing_subscription_deleted" },
+            { "name": "customer_id", "value": "={{ $json.data?.object?.customer }}" },
+            { "name": "subscription_id", "value": "={{ $json.data?.object?.id }}" },
+            { "name": "color", "value": "#95A5A6" },
+            { "name": "title", "value": "Subscription Cancelled" },
+            { "name": "text", "value": "={{ 'Subscription ' + ($json.data?.object?.id || 'unknown') + ' for customer ' + ($json.data?.object?.customer || 'unknown') + ' has been cancelled.' }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-unknown",
+      "name": "Format: Unknown Event",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 600],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "event", "value": "billing_unknown" },
+            { "name": "color", "value": "#95A5A6" },
+            { "name": "title", "value": "Unknown Stripe Event" },
+            { "name": "text", "value": "={{ 'Unhandled Stripe event type: ' + ($json.type || 'unknown') }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "call-update-billing",
+      "name": "Update DB — Billing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.STAS_API_URL }}/api/billing/sync",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "={{ $env.STAS_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "call-update-credits",
+      "name": "Update DB — Credits",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 100],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.STAS_API_URL }}/api/credits/sync",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "={{ $env.STAS_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "slack-notification",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [1250, 300],
+      "parameters": {
+        "channel": "={{ $json.channel || '#syntaro-alerts' }}",
+        "text": "=",
+        "attachments": "={{ [{\"color\": $json.color, \"title\": $json.title, \"text\": $json.text, \"fields\": [{\"title\": \"Customer\", \"value\": $json.customer_id || 'N/A', \"short\": true}, {\"title\": \"Event\", \"value\": $json.event, \"short\": true}]}] }}"
+      }
+    }
+  ],
+  "connections": {
+    "Stripe Webhook": {
+      "main": [[{ "node": "Route by Event Type", "type": "main", "index": 0 }]]
+    },
+    "Route by Event Type": {
+      "main": [
+        [{ "node": "Format: Checkout Completed", "type": "main", "index": 0 }],
+        [{ "node": "Format: Invoice Paid", "type": "main", "index": 0 }],
+        [{ "node": "Format: Payment Failed", "type": "main", "index": 0 }],
+        [{ "node": "Format: Subscription Updated", "type": "main", "index": 0 }],
+        [{ "node": "Format: Subscription Deleted", "type": "main", "index": 0 }],
+        [{ "node": "Format: Unknown Event", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format: Checkout Completed": {
+      "main": [[{ "node": "Update DB — Credits", "type": "main", "index": 0 }]]
+    },
+    "Format: Invoice Paid": {
+      "main": [[{ "node": "Update DB — Billing", "type": "main", "index": 0 }]]
+    },
+    "Format: Payment Failed": {
+      "main": [[{ "node": "Post to Slack", "type": "main", "index": 0 }]]
+    },
+    "Format: Subscription Updated": {
+      "main": [[{ "node": "Update DB — Billing", "type": "main", "index": 1 }]]
+    },
+    "Format: Subscription Deleted": {
+      "main": [[{ "node": "Update DB — Billing", "type": "main", "index": 2 }]]
+    },
+    "Format: Unknown Event": {
+      "main": [[{ "node": "Post to Slack", "type": "main", "index": 1 }]]
+    },
+    "Update DB — Credits": {
+      "main": [[{ "node": "Post to Slack", "type": "main", "index": 0 }]]
+    },
+    "Update DB — Billing": {
+      "main": [[{ "node": "Post to Slack", "type": "main", "index": 0 }]]
+    }
+  }
+}

@@ -203,6 +203,79 @@ Replaces the in-code alert dispatch (`monitoring/alerting.ts`). OS emits alert e
 }
 ```
 
+### 5. Stripe Billing Webhooks (AIM-3340)
+
+**File:** `workflows/stripe-billing.json`
+
+Receives Stripe billing events forwarded from the STAS backend (which verifies the Stripe webhook signature) and routes them to the appropriate internal APIs for processing.
+
+**Events handled:**
+
+| Event Type | Action | Description |
+|------------|--------|-------------|
+| `checkout.session.completed` | Credit account via API | One-time credit purchase |
+| `invoice.paid` | Subscription credit top-up | Monthly subscription credit grant |
+| `invoice.payment_failed` | Notify account holder | Failed payment notification |
+| `customer.subscription.updated` | Sync billing plan | Update plan in database |
+| `customer.subscription.deleted` | Downgrade to free | Revert account to free tier |
+| Unknown | Logged | Fallback for unhandled event types |
+
+**Flow:**
+
+```
+STAS Stripe webhook handler (signature verification)
+  → POST /webhook/stripe-billing-event → n8n
+  → Switch by event type
+    → checkout.session.completed → HTTP POST → /api/v1/credits/credit
+    → invoice.paid              → HTTP POST → /api/v1/credits/subscription-topup
+    → invoice.payment_failed    → HTTP POST → /api/v1/notifications/payment-failed
+    → customer.subscription.updated → HTTP POST → /api/v1/billing/sync-subscription
+    → customer.subscription.deleted → HTTP POST → /api/v1/billing/downgrade-account
+    → Unknown → Logged
+```
+
+**Setup:**
+
+1. Import `workflows/stripe-billing.json` into n8n
+2. Configure **STAS API** credentials:
+   - Create a credential of type "Header Auth" named `stasApiKey`
+   - Set the header with `x-admin-key` and the admin API key value
+3. Set environment variable:
+
+   ```env
+   N8N_STRIPE_WEBHOOK_URL=https://<your-n8n>/webhook/stripe-billing-event
+   ```
+
+**Expected webhook payload (from STAS backend):**
+
+```json
+{
+  "event": "stripe",
+  "type": "checkout.session.completed",
+  "data": {
+    "customer_id": "cus_abc123",
+    "customer_email": "user@example.com",
+    "subscription_id": "sub_123456",
+    "amount": 29.99,
+    "amount_cents": 2999,
+    "currency": "usd",
+    "failure_reason": null,
+    "metadata": {}
+  }
+}
+```
+
+**Behavior:**
+
+| Scenario | Response |
+|----------|----------|
+| Credit pack purchased | Account credited via internal API |
+| Subscription invoice paid | Monthly credits added to account |
+| Payment fails | Notification sent to account holder |
+| Subscription updated | Billing plan synced in database |
+| Subscription cancelled | Account downgraded to free tier |
+| Unknown event type | Logged for debugging |
+
 ## Adding a workflow
 
 1. Design the workflow in the n8n UI
