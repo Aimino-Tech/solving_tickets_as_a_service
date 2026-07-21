@@ -165,7 +165,102 @@ GitHub Actions webhook (workflow_run.completed)
 | Deploy succeeds | Green embed posted to Discord with repo, branch, commit, actor |
 | Deploy fails or is cancelled | Workflow exits silently (no message) |
 
-### 3. Monitoring Alerts — OS Alerts → #syntaro-alerts (via n8n)
+### 4. Telegram Notifications — OS Progress → Telegram Bot (AIM-3339)
+
+**File:** `workflows/telegram-notifications.json`
+
+Receives progress update messages from the STAS Telegram channel and sends them to users via n8n's built-in Telegram node. Replaces the direct `telegram.sendMessage` calls in `src/channels/telegram.ts`.
+
+**Flow:**
+
+```
+OS progress update → POST /webhook/telegram-notification → n8n
+  → Format message payload
+  → Telegram node (sendMessage)
+```
+
+**Setup:**
+
+1. Import `workflows/telegram-notifications.json` into n8n
+2. Configure the **Telegram** credentials:
+   - Create a Telegram Bot via [@BotFather](https://t.me/BotFather)
+   - Copy the bot token
+   - Set it in n8n as a **Telegram API** credential
+3. Note the webhook URL:
+   ```
+   https://<your-n8n>/webhook/telegram-notification
+   ```
+4. Set environment variable in STAS:
+   ```env
+   N8N_TELEGRAM_WEBHOOK_URL=https://<your-n8n>/webhook/telegram-notification
+   ```
+
+**Expected webhook payload:**
+
+```json
+{
+  "chat_id": "123456789",
+  "text": ":mag: *Investigating* — Run `run-abc123`",
+  "parse_mode": "Markdown",
+  "disable_web_page_preview": true
+}
+```
+
+**Behavior:**
+
+| Scenario | Response |
+|----------|----------|
+| Valid payload received | Message sent to the specified Telegram chat |
+| Missing chat_id or text | Telegram node returns error (logged by n8n) |
+
+### 5. WhatsApp Notifications — OS Progress → WhatsApp (AIM-3339)
+
+**File:** `workflows/whatsapp-notifications.json`
+
+Receives progress update messages from the STAS WhatsApp channel and sends them to users via n8n's built-in WhatsApp Business node. Replaces the direct WhatsApp Cloud API calls in `src/channels/whatsapp.ts`.
+
+**Flow:**
+
+```
+OS progress update → POST /webhook/whatsapp-notification → n8n
+  → Format message payload
+  → WhatsApp Business node (send message)
+```
+
+**Setup:**
+
+1. Import `workflows/whatsapp-notifications.json` into n8n
+2. Configure the **WhatsApp Business** credentials:
+   - Set up a WhatsApp Business Account in Meta Developer Portal
+   - Configure a WhatsApp Business phone number
+   - Set the credentials in n8n
+3. Note the webhook URL:
+   ```
+   https://<your-n8n>/webhook/whatsapp-notification
+   ```
+4. Set environment variable in STAS:
+   ```env
+   N8N_WHATSAPP_WEBHOOK_URL=https://<your-n8n>/webhook/whatsapp-notification
+   ```
+
+**Expected webhook payload:**
+
+```json
+{
+  "to": "15551234567",
+  "text": ":rocket: *PR Created* — Run `run-abc123`\n> Fix: Update login flow",
+  "preview_url": true
+}
+```
+
+**Behavior:**
+
+| Scenario | Response |
+|----------|----------|
+| Valid payload received | WhatsApp message sent to the specified number |
+| Missing to or text | WhatsApp node returns error (logged by n8n) |
+
+### 6. Monitoring Alerts — OS Alerts → #syntaro-alerts (via n8n)
 
 **File:** `workflows/monitoring-alerts.json`
 
