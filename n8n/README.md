@@ -203,6 +203,102 @@ Replaces the in-code alert dispatch (`monitoring/alerting.ts`). OS emits alert e
 }
 ```
 
+### 4. Telegram Notifications — send message via bot (AIM-3339)
+
+**File:** `workflows/telegram-notifications.json`
+
+Receives outgoing message payloads from the STAS Telegram channel handler and sends them to the Telegram Bot API.
+
+**Flow:**
+
+```
+STAS Telegram handler → POST /webhook/telegram-send → n8n
+  → Send to Telegram Bot API (sendMessage)
+```
+
+**Setup:**
+
+1. Import `workflows/telegram-notifications.json` into n8n
+2. Create a Telegram bot via [@BotFather](https://t.me/botfather) and get the bot token
+3. Set the bot token as an environment variable in n8n:
+
+   ```env
+   TELEGRAM_BOT_TOKEN=your_bot_token_here
+   ```
+
+4. Configure STAS to forward Telegram messages to the n8n webhook:
+
+   ```env
+   N8N_TELEGRAM_WEBHOOK_URL=https://<your-n8n>/webhook/telegram-send
+   ```
+
+**Expected webhook payload:**
+```json
+{
+  "chat_id": "123456789",
+  "text": "STAS is investigating: \"Fix login bug\"\n\nI'll post progress updates here.",
+  "parse_mode": "Markdown",
+  "disable_web_page_preview": false
+}
+```
+
+**Behavior:**
+
+| Scenario | Response |
+|----------|----------|
+| Outgoing notification | Message forwarded to Telegram Bot API |
+| Progress update | Markdown-formatted progress sent to user |
+| Webhook unreachable | STAS logs warning, no retry |
+
+### 5. WhatsApp Notifications — send message via Business API (AIM-3339)
+
+**File:** `workflows/whatsapp-notifications.json`
+
+Receives outgoing message payloads from the STAS WhatsApp channel handler and sends them to the WhatsApp Business API.
+
+**Flow:**
+
+```
+STAS WhatsApp handler → POST /webhook/whatsapp-send → n8n
+  → Send to WhatsApp Business API (messages endpoint)
+```
+
+**Setup:**
+
+1. Import `workflows/whatsapp-notifications.json` into n8n
+2. Set up a WhatsApp Business Account and get your phone number ID
+3. Create an n8n credential of type **Header Auth** named `whatsappApi`:
+   - Header: `Authorization`
+   - Value: `Bearer <your-whatsapp-access-token>`
+4. Set the phone number ID as an environment variable in n8n:
+
+   ```env
+   WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id
+   ```
+
+5. Configure STAS to forward WhatsApp messages to the n8n webhook:
+
+   ```env
+   N8N_WHATSAPP_WEBHOOK_URL=https://<your-n8n>/webhook/whatsapp-send
+   ```
+
+**Expected webhook payload:**
+```json
+{
+  "to": "1234567890",
+  "text": "STAS is investigating: \"Fix login bug\"\nI'll post progress updates here.",
+  "preview_url": true
+}
+```
+
+**Behavior:**
+
+| Scenario | Response |
+|----------|----------|
+| Outgoing notification | Message forwarded to WhatsApp Business API |
+| Progress update | Text progress sent to user |
+| Webhook unreachable | STAS logs warning, no retry |
+
 ## Adding a workflow
 
 1. Design the workflow in the n8n UI
