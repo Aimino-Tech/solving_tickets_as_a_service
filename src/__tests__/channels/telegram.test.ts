@@ -5,6 +5,7 @@ vi.mock('../../config.js', () => ({
     telegram: { botToken: 'test:token', webhookPath: '/webhook/telegram' },
     trackers: { defaultRepoOwner: 'testowner', defaultRepoName: 'testrepo', installationId: 123 },
     queue: { redisUrl: 'redis://localhost:6379' },
+    n8n: { telegramWebhookUrl: 'https://n8n.example.com/webhook/telegram' },
   },
 }));
 

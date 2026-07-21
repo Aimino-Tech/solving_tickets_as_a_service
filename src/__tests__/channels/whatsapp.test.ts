@@ -5,6 +5,7 @@ vi.mock('../../config.js', () => ({
     whatsapp: { phoneNumberId: '123456', accessToken: 'test-token', webhookPath: '/webhook/whatsapp', verifyToken: 'verify-me' },
     trackers: { defaultRepoOwner: 'testowner', defaultRepoName: 'testrepo', installationId: 123 },
     queue: { redisUrl: 'redis://localhost:6379' },
+    n8n: { whatsappWebhookUrl: 'https://n8n.example.com/webhook/whatsapp' },
   },
 }));
 
