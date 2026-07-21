@@ -880,6 +880,10 @@ export async function createApp(): Promise<express.Application> {
   const { default: ticketResultRouter } = await import('./routes/ticketResult.js');
   app.use(ticketResultRouter);
 
+  // Public Status API
+  const { default: statusRouter } = await import('./routes/status.js');
+  app.use(statusRouter);
+
   // KPI Dashboard API
   app.use('/api/kpi', kpiRouter);
 app.use('/api/v1/n8n', n8nRouter);
