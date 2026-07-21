@@ -151,6 +151,63 @@ GitHub Actions webhook (workflow_run.completed)
 | Deploy succeeds | Green embed posted to Discord with repo, branch, commit, actor |
 | Deploy fails or is cancelled | Workflow exits silently (no message) |
 
+### 4. Monitoring Alerts → #syntaro-alerts (AIM-3341)
+
+**File:** `workflows/monitoring-alerts.json`
+
+Receives monitoring alert events from OpenSymphony and posts formatted messages to the `#syntaro-alerts` Slack channel with severity-appropriate formatting.
+
+**Flow:**
+
+```
+OS alert event → n8n HTTP endpoint
+  → Validate & enrich payload
+  → Route by severity (critical / warning / info)
+  → Format with severity color (red / yellow / blue)
+  → Post to Slack #syntaro-alerts
+```
+
+**Setup:**
+
+1. Open your n8n instance
+2. Go to **Workflows** → **Import from File** → Select `workflows/monitoring-alerts.json`
+3. Configure the **Slack** node:
+   - Create a Slack app with `chat:write` scope
+   - Install the app to the `#syntaro-alerts` channel
+   - Set the OAuth token in n8n credentials
+4. Note the webhook URL n8n provides (e.g., `https://<your-n8n>/webhook/monitoring-alert`)
+5. Configure OpenSymphony to POST alert events to this URL
+
+**Expected webhook payload:**
+
+```json
+{
+  "severity": "critical",
+  "rule": "queue_depth_critical",
+  "message": "Queue depth 250 exceeds critical threshold 200 for 5+ minutes",
+  "context": { "queueDepth": 250, "durationMinutes": 5 },
+  "timestamp": "2026-07-21T12:00:00.000Z"
+}
+```
+
+**Severity formatting:**
+
+| Severity | Color | Example |
+|----------|-------|---------|
+| `critical` | Red (`#E74C3C`) | Queue depth > 200, error rate > 20%, worker down |
+| `warning` | Yellow (`#F1C40F`) | Queue depth > 50, error rate > 5%, retry attempts |
+| `info` | Blue (`#3498DB`) | Fix run success, new account signup |
+| Unknown | Gray (`#95A5A6`) | Fallback for unhandled severity levels |
+
+**Behavior:**
+
+| Scenario | Response |
+|----------|----------|
+| Critical alert | Red formatted message posted to #syntaro-alerts with full context |
+| Warning alert | Yellow formatted message posted to #syntaro-alerts |
+| Info alert | Blue formatted message posted to #syntaro-alerts |
+| Unknown severity | Gray fallback message with raw payload |
+
 ## Adding a workflow
 
 1. Design the workflow in the n8n UI
