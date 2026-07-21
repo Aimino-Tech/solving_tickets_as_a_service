@@ -1,4 +1,4 @@
-const API_BASE = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) || '/api';
+const API_BASE = '/api';
 
 function getToken(): string | null {
   return localStorage.getItem('stas_token');
