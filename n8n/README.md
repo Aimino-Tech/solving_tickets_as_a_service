@@ -413,3 +413,61 @@ Each metric shows the current value plus a week-over-week trend percentage.
 2. Export as JSON: **Workflow** → **Download**
 3. Save to `n8n/workflows/<name>.json`
 4. Update this README with the workflow name and event types
+
+
+### 7. Health Checks — 5min Poll → Slack Alerts (AIM-3335)
+
+**File:** `workflows/health-checks.json`
+
+Polls the STAS health endpoints every 5 minutes and posts a Slack alert to `#syntaro-alerts` when any endpoint returns a non-200 status. Uses n8n's workflow static data to track the last known state and only sends messages on status transitions (healthy → down, down → healthy) — no alert spam.
+
+**Flow:**
+
+```
+Schedule (every 5 min) → Check all health endpoints in parallel
+  → State changed? (IF)
+    → Yes → Route by status (healthy/down) → Format Slack message → Post to #syntaro-alerts
+    → No  → Exit silently (no duplicate alerts)
+```
+
+**Endpoints checked** (loaded from `STAS_PUBLIC_URL` env var, defaults to `http://localhost:3000`):
+
+| Endpoint | Returns |
+|----------|---------|
+| `GET /health` | Database, Redis, RabbitMQ status + overall health |
+| `GET /health/queue` | Queue depths and backlog status |
+| `GET /health/dependencies` | Database, Redis, OpenCode, Sentry connectivity |
+
+**Setup:**
+
+1. Open your n8n instance
+2. Go to **Workflows** → **Import from File** → Select `workflows/health-checks.json`
+3. Configure the **Slack** node with OAuth credentials (`chat:write` scope, installed to `#syntaro-alerts`)
+4. Set environment variable in n8n:
+
+   ```env
+   STAS_PUBLIC_URL=http://localhost:3000
+   ```
+
+   If running in Docker Compose, this should match the internal service URL (e.g., `http://stas-api:3000`).
+
+**Deduplication logic:**
+
+The workflow uses `$getWorkflowStaticData('global').lastOverallStatus` to remember the last reported state. A Slack message is sent only when:
+- The state transitions from "healthy" → "down" (service failure alert)
+- The state transitions from "down" → "healthy" (recovery notification)
+- No message is sent if the state hasn't changed since the last check
+
+**Slack message format:**
+
+| Status | Color | Header | Fields |
+|--------|-------|--------|--------|
+| ✅ All Healthy | Green (`#2ECC71`) | ✅ STAS Health Checks Pass | Per-endpoint status + latency |
+| 🚨 Service Down | Red (`#E74C3C`) | 🚨 STAS Health Check FAILED | Failed endpoints + HTTP status/timeout + latency |
+
+**Environment variables used by this workflow:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STAS_PUBLIC_URL` | `http://localhost:3000` | Base URL of the STAS API health endpoints |
+
