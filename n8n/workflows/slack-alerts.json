@@ -1,0 +1,169 @@
+{
+  "name": "OS Events → #syntaro-alerts",
+  "nodes": [
+    {
+      "id": "webhook-1",
+      "name": "OS Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "os-event",
+        "options": {}
+      }
+    },
+    {
+      "id": "switch-1",
+      "name": "Route by Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.event_type }}",
+        "rules": [
+          { "value": "ticket_dispatched", "output": 0 },
+          { "value": "agent_completed", "output": 1 },
+          { "value": "quality_gate_failed", "output": 2 }
+        ],
+        "fallbackOutput": 3
+      }
+    },
+    {
+      "id": "set-ticket-dispatched",
+      "name": "Format: Ticket Dispatched",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 200],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "color", "value": "#3498DB" },
+            { "name": "title", "value": "🎫 Ticket Dispatched" },
+            { "name": "text", "value": "={{ $json.issue_title }}" },
+            { "name": "fields[0].title", "value": "Repo" },
+            { "name": "fields[0].value", "value": "={{ $json.repo }}" },
+            { "name": "fields[1].title", "value": "Issue" },
+            { "name": "fields[1].value", "value": "={{ $json.issue_url }}" },
+            { "name": "fields[2].title", "value": "Agent" },
+            { "name": "fields[2].value", "value": "={{ $json.agent }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-agent-completed",
+      "name": "Format: Agent Completed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 350],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "color", "value": "#2ECC71" },
+            { "name": "title", "value": "✅ Agent Completed" },
+            { "name": "text", "value": "={{ $json.issue_title }}" },
+            { "name": "fields[0].title", "value": "Repo" },
+            { "name": "fields[0].value", "value": "={{ $json.repo }}" },
+            { "name": "fields[1].title", "value": "PR" },
+            { "name": "fields[1].value", "value": "={{ $json.pr_url }}" },
+            { "name": "fields[2].title", "value": "Duration" },
+            { "name": "fields[2].value", "value": "={{ $json.duration }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-quality-gate-failed",
+      "name": "Format: Quality Gate Failed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 500],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "color", "value": "#E74C3C" },
+            { "name": "title", "value": "❌ Quality Gate Failed" },
+            { "name": "text", "value": "={{ $json.issue_title }}" },
+            { "name": "fields[0].title", "value": "Gate" },
+            { "name": "fields[0].value", "value": "={{ $json.gate_name }}" },
+            { "name": "fields[1].title", "value": "Reason" },
+            { "name": "fields[1].value", "value": "={{ $json.reason }}" },
+            { "name": "fields[2].title", "value": "Issue" },
+            { "name": "fields[2].value", "value": "={{ $json.issue_url }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-unknown-event",
+      "name": "Format: Unknown Event",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 650],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "color", "value": "#95A5A6" },
+            { "name": "title", "value": "ℹ️ Unknown Event" },
+            { "name": "text", "value": "={{ JSON.stringify($json) }}" },
+            { "name": "fields[0].title", "value": "Event Type" },
+            { "name": "fields[0].value", "value": "={{ $json.event_type }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "merge-1",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [1000, 300],
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition"
+      }
+    },
+    {
+      "id": "slack-1",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [1250, 300],
+      "parameters": {
+        "channel": "#syntaro-alerts",
+        "text": "=",
+        "attachments": "=[\n  {\n    \"color\": $json.color,\n    \"blocks\": [\n      {\n        \"type\": \"header\",\n        \"text\": { \"type\": \"plain_text\", \"text\": $json.title }\n      },\n      {\n        \"type\": \"section\",\n        \"text\": { \"type\": \"mrkdwn\", \"text\": $json.text }\n      },\n      {\n        \"type\": \"fields\",\n        \"fields\": $json.fields.map(f => ({ \"type\": \"mrkdwn\", \"text\": `*${f.title}:*\\n${f.value}` }))\n      }\n    ]\n  }\n]"
+      }
+    }
+  ],
+  "connections": {
+    "OS Webhook": {
+      "main": [[{ "node": "Route by Event Type", "type": "main", "index": 0 }]]
+    },
+    "Route by Event Type": {
+      "main": [
+        [{ "node": "Format: Ticket Dispatched", "type": "main", "index": 0 }],
+        [{ "node": "Format: Agent Completed", "type": "main", "index": 0 }],
+        [{ "node": "Format: Quality Gate Failed", "type": "main", "index": 0 }],
+        [{ "node": "Format: Unknown Event", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format: Ticket Dispatched": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 0 }]]
+    },
+    "Format: Agent Completed": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 1 }]]
+    },
+    "Format: Quality Gate Failed": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 2 }]]
+    },
+    "Format: Unknown Event": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 3 }]]
+    },
+    "Merge": {
+      "main": [[{ "node": "Post to Slack", "type": "main", "index": 0 }]]
+    }
+  }
+}
