@@ -4,6 +4,8 @@
 ![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Benchmark](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/.github/badges/benchmark.svg)
+[![Product Hunt](https://img.shields.io/badge/Product_Hunt-Product_of_the_Day-FF6154?logo=producthunt&logoColor=white)](https://www.producthunt.com/posts/stas)
+
 [![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/aimino)
 [![RapidAPI](https://img.shields.io/badge/RapidAPI-0055FF?logo=rapidapi&logoColor=white)](https://rapidapi.com/aimino/api/stas-api?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
 [![MCP](https://img.shields.io/badge/MCP_Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/stas-mcp?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)

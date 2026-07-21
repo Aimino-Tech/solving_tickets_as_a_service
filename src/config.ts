@@ -66,6 +66,7 @@ const envSchema = z.object({
 
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
   STAS_MONTHLY_QUOTA_ENABLED: boolSchema(true),
+  LOOPS_API_KEY: z.string().optional(),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
   STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
@@ -480,6 +481,10 @@ function buildConfig(env: ParsedEnv) {
       dlqRetentionDays: env.DLQ_RETENTION_DAYS,
     },
 
+    loops: {
+      apiKey: env.LOOPS_API_KEY,
+    },
+
     alerting: {
       slackChannel: env.ALERT_SLACK_CHANNEL,
       warnQueueDepth: env.ALERT_WARN_QUEUE_DEPTH,
@@ -507,6 +512,7 @@ function buildConfig(env: ParsedEnv) {
       queueDlqNotifyAt: env.QUEUE_DLQ_NOTIFY_AT,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+  LOOPS_API_KEY: z.string().optional(),
     remediation: {
       disabled: env.DISABLE_AUTO_REMEDIATION,
     },

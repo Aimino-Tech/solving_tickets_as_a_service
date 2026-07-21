@@ -75,6 +75,7 @@ import { qualityRouter } from './routes/quality.js';
 import previewRoutes from './api/routes/preview.js';
 import { adminRunsRouter } from './routes/adminRuns.js';
 import { kpiRouter } from './routes/kpi.js';
+import n8nRouter from './routes/n8n.js';
 import healthRouter from './routes/health.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import { proxyRouter } from './routes/proxy.js';
@@ -883,6 +884,7 @@ export async function createApp(): Promise<express.Application> {
 
   // KPI Dashboard API
   app.use('/api/kpi', kpiRouter);
+app.use('/api/v1/n8n', n8nRouter);
 
   // Agent Performance Analytics API
   app.use('/api/analytics', analyticsRouter);
