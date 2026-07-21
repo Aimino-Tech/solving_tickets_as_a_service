@@ -24,7 +24,7 @@
  */
 
 import { config } from '../config.js';
-import { mockResponses } from '../agent/mockResponses.js';
+import { mockResponses } from '../types/mockResponses.js';
 import { bridgeMetrics } from '../bridge/metrics.js';
 import { rootLogger } from '../utils/logger.js';
 

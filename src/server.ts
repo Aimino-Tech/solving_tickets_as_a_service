@@ -1006,10 +1006,10 @@ export async function startServer(): Promise<import('http').Server> {
       `STAS server listening on :${config.port}`,
     );
 
-    // Start the RabbitMQ issue consumer
+    // Start the RabbitMQ issue consumer — dispatches to OpenSymphony
     try {
       const { consumeQueue } = await import('./queue/rabbitmq.js');
-      const { runIssueAgent } = await import('./agent/issueAgent.js');
+      const { dispatchToOpenSymphony } = await import('./dispatch/osDispatch.js');
       await consumeQueue(QUEUES.issuesFix.name, async (msg) => {
         if (!msg) return;
         const content = msg.content.toString();
@@ -1021,12 +1021,17 @@ export async function startServer(): Promise<import('http').Server> {
           return;
         }
         try {
-          await runIssueAgent(data);
+          const result = await dispatchToOpenSymphony(data);
+          if (!result.success) {
+            log.error({ errors: result.errors }, 'OpenSymphony dispatch failed');
+          } else {
+            log.info({ runId: result.runId, prUrl: result.prUrl }, 'OpenSymphony dispatch completed');
+          }
         } catch (err) {
-          log.error({ err: String(err) }, 'Issue agent run failed');
+          log.error({ err: String(err) }, 'OpenSymphony dispatch error');
         }
       });
-      log.info('RabbitMQ issue consumer started');
+      log.info('RabbitMQ issue consumer started — dispatching to OpenSymphony');
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to start RabbitMQ issue consumer');
     }

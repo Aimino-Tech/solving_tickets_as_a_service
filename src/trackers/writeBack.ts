@@ -1,4 +1,4 @@
-import type { AgentResult } from '../agent/types.js';
+import type { AgentResult } from '../types/agent-types.js';
 import { getTracker } from './index.js';
 import { rootLogger } from '../utils/logger.js';
 

@@ -17,7 +17,7 @@ import { creditsRepository } from '../db/repositories/index.js';
 import { adminAuthMiddleware } from '../security/adminAuth.js';
 import { queryWithRetry } from '../db/connection.js';
 import { config } from '../config.js';
-import { mockResponses } from '../agent/mockResponses.js';
+import { mockResponses } from '../types/mockResponses.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'admin-api' });

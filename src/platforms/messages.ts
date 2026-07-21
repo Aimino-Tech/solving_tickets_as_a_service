@@ -8,7 +8,7 @@
  * predictable across all interactions and platforms.
  */
 
-import type { AgentResult, QualityGateResult } from '../agent/types.js';
+import type { AgentResult, QualityGateResult } from '../types/agent-types.js';
 import { QualityGateReporter } from '../core/quality-gate-reporter.js';
 import { config } from '../config.js';
 
