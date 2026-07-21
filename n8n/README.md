@@ -94,6 +94,63 @@ Crisp webhook (user message) → n8n HTTP endpoint
 | Docs cover the question | LLM generates answer from context → posted to Crisp |
 | Docs don't cover the question | Bot says "I'll forward this to the team" → creates OS ticket |
 
+### 3. Deploy Notifications — GitHub Actions → Discord (AIM-3342)
+
+**File:** `workflows/deploy-discord.json`
+
+Receives GitHub Actions `workflow_run.completed` events and posts success notifications to a Discord channel.
+
+**Flow:**
+
+```
+GitHub Actions webhook (workflow_run.completed)
+  → Condition (conclusion == success)
+  → Discord embed (repo, branch, commit, who triggered)
+```
+
+**Setup:**
+
+1. Open your n8n instance
+2. Go to **Workflows** → **Import from File** → Select `workflows/deploy-discord.json`
+3. Create a Discord webhook in your server:
+   - Server Settings → Integrations → Webhooks → New Webhook
+   - Select the `#deploys` channel
+   - Copy the webhook URL
+4. Set the Discord webhook URL as an environment variable in n8n:
+
+   ```env
+   DISCORD_DEPLOY_WEBHOOK_URL=https://discord.com/api/webhooks/...
+   ```
+
+5. Configure GitHub to send `workflow_run` events to your n8n webhook URL:
+   ```
+   https://<your-n8n>/webhook/deploy-event
+   ```
+
+**Expected webhook payload (GitHub Actions workflow_run.completed):**
+
+```json
+{
+  "action": "completed",
+  "workflow_run": {
+    "name": "Deploy to Production",
+    "head_branch": "main",
+    "conclusion": "success",
+    "head_commit": { "id": "abc123def456" },
+    "html_url": "https://github.com/org/repo/actions/runs/123"
+  },
+  "repository": { "full_name": "org/repo" },
+  "sender": { "login": "username" }
+}
+```
+
+**Behavior:**
+
+| Scenario | Response |
+|----------|----------|
+| Deploy succeeds | Green embed posted to Discord with repo, branch, commit, actor |
+| Deploy fails or is cancelled | Workflow exits silently (no message) |
+
 ## Adding a workflow
 
 1. Design the workflow in the n8n UI
