@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode-go/deepseek-v4-flash",
+  "small_model": "opencode-go/deepseek-v4-flash",
+  "default_agent": "Sisyphus - ultraworker",
+  "permission": {
+    "read": { "tmp_data/search_cache/**": "deny", "*": "allow" },
+    "glob": { "tmp_data/search_cache/**": "deny", "*": "allow" },
+    "grep": { "tmp_data/search_cache/**": "deny", "*": "allow" },
+    "bash": { "*": "allow" },
+    "edit": { "tmp_data/search_cache/**": "deny", "*": "allow" }
+  }
+}

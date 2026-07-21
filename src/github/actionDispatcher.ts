@@ -18,10 +18,8 @@
  * ────────────────────────────────────────────────────────────────────
  */
 
-import { type ReceiptManifest, verifyAllReceipts } from '../agent/receipts.js';
-import type { AgentResult, QualityGateResult } from '../agent/types.js';
-import type { Octokit } from '@octokit/rest';
-import type { SandboxExecutor } from '../sandbox/types.js';
+import type { AgentResult, QualityGateResult } from '../types/agent-types.js';
+import type { SandboxExecutor } from '../types/sandbox-types.js';
 import { rootLogger } from '../utils/logger.js';
 import { getOctokit } from './auth.js';
 import * as messages from '../platforms/messages.js';

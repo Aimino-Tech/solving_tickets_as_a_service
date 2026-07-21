@@ -17,7 +17,7 @@
  */
 
 import { rootLogger } from '../utils/logger.js';
-import type { SandboxExecutor } from '../sandbox/types.js';
+import type { SandboxExecutor } from '../types/sandbox-types.js';
 
 const log = rootLogger.child({ module: 'pipeline-quality-gates' });
 

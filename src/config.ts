@@ -44,13 +44,15 @@ const envSchema = z.object({
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
 
-  OPENCODE_PROVIDER: z.enum(['opensymphony', 'opencode']).default('opencode'),
+  OPENCODE_PROVIDER: z.enum(['opensymphony', 'opencode']).default('opensymphony'),
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
   OPENCODE_OSY_PORT: z.coerce.number().int().positive().max(65535).default(4097),
   OPENCODE_OSY_HOST: z.string().default("127.0.0.1"),
   OPENAI_BASE_URL: z.string().default("http://litellm-proxy:4002/v1"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
+  OS_API_URL: z.string().default("http://opensymphony:4000"),
+  OS_API_KEY: z.string().default(""),
 
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
   PHASE_TIMEOUT_TRIAGE_MS: z.coerce.number().int().positive().default(30_000),
@@ -284,6 +286,11 @@ const envSchema = z.object({
 
   // ── Onboarding Wizard ──
   ONBOARDING_WIZARD_ENABLED: boolSchema(true),
+
+  // OpenSymphony dispatch (STAS thin layer — delegate execution)
+  OPEN_SYMPHONY_DISPATCH_URL: z.string().default('http://opensymphony:4000/api/v1/dispatch'),
+  OPEN_SYMPHONY_API_KEY: z.string().optional(),
+  OPEN_SYMPHONY_TENANT: z.string().default('default'),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -353,6 +360,10 @@ function buildConfig(env: ParsedEnv) {
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
       direct: {
         apiKey: env.OPENAI_API_KEY ?? '',
+      },
+      osApi: {
+        url: env.OS_API_URL ?? 'http://opensymphony:4000',
+        apiKey: env.OS_API_KEY ?? '',
       },
     },
 
@@ -603,6 +614,12 @@ function buildConfig(env: ParsedEnv) {
       defaultRepoOwner: env.TRACKER_DEFAULT_REPO_OWNER,
       defaultRepoName: env.TRACKER_DEFAULT_REPO_NAME,
       installationId: env.TRACKER_INSTALLATION_ID || 0,
+    },
+
+    opensymphony: {
+      dispatchUrl: env.OPEN_SYMPHONY_DISPATCH_URL,
+      apiKey: env.OPEN_SYMPHONY_API_KEY,
+      tenant: env.OPEN_SYMPHONY_TENANT,
     },
 
     // ── Security ────────────────────────────────────────────────────────────
