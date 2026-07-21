@@ -4,6 +4,8 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
+from .dispatch import dispatch
+
 logger = logging.getLogger(__name__)
 
 

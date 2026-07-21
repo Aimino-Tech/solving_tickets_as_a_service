@@ -53,8 +53,6 @@ const envSchema = z.object({
   OS_API_KEY: z.string().optional(),
   OPENAI_BASE_URL: z.string().default("http://litellm-proxy:4002/v1"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
-  OS_API_URL: z.string().default("http://opensymphony:4000"),
-  OS_API_KEY: z.string().default(""),
 
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
   PHASE_TIMEOUT_TRIAGE_MS: z.coerce.number().int().positive().default(30_000),
@@ -362,10 +360,6 @@ function buildConfig(env: ParsedEnv) {
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
       direct: {
         apiKey: env.OPENAI_API_KEY ?? '',
-      },
-      osApi: {
-        url: env.OS_API_URL ?? 'http://opensymphony:4000',
-        apiKey: env.OS_API_KEY ?? '',
       },
     },
 

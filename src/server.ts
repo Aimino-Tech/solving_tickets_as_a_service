@@ -211,22 +211,16 @@ export async function createApp(): Promise<express.Application> {
   }
 
   // ── Webhook receiver ─────────────────────────────────────────────
-  // RabbitMQ enqueue function for webhook handlers
+  // OpenSymphony dispatch function for webhook handlers
   async function enqueueIssue(data: IssueJobData): Promise<string | undefined> {
-    if (!isConnected()) {
-      await rmqConnect();
+    const { dispatchToOpenSymphony } = await import('./dispatch/osDispatch.js');
+    const result = await dispatchToOpenSymphony(data);
+    if (result.success) {
+      log.info({ runId: result.runId }, 'Dispatched issue to OpenSymphony');
+      return result.runId;
     }
-    const messageId = `${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}-${Date.now()}`;
-    try {
-      await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
-        ...data,
-        _meta: { messageId, enqueuedAt: new Date().toISOString() },
-      });
-      return messageId;
-    } catch (err) {
-      log.error({ err: String(err) }, 'Failed to enqueue issue via RabbitMQ');
-      return undefined;
-    }
+    log.error({ errors: result.errors }, 'Failed to dispatch issue to OpenSymphony');
+    return undefined;
   }
 
   const githubWebhooks = createGithubWebhooks(enqueueIssue);
