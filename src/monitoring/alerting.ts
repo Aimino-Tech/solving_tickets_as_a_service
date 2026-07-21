@@ -56,17 +56,16 @@ export interface AlertEvent {
   escalated?: boolean;
 }
 
-// ── Alert Dispatch ──────────────────────────────────────────────────
+// ── Alert Dispatch via n8n ──────────────────────────────────────────
 
 /**
- * Send a Slack message via the configured webhook.
+ * Forward an alert event to the n8n monitoring webhook.
+ * n8n handles formatting (severity-colored Slack blocks) and delivery.
  */
-async function sendSlackAlert(message: string): Promise<void> {
-  const webhookUrl = config.slack.webhookUrl;
+async function sendToN8nWebhook(alert: AlertEvent): Promise<void> {
+  const webhookUrl = config.alerting.n8nWebhookUrl;
   if (!webhookUrl) {
-    if (log && typeof log.warn === 'function') {
-      try { log.warn('SLACK_WEBHOOK_URL not configured — skipping Slack alert'); } catch { /* logger unavailable */ }
-    }
+    log.warn('N8N_MONITORING_WEBHOOK_URL not configured — skipping n8n alert dispatch');
     return;
   }
 
@@ -75,8 +74,12 @@ async function sendSlackAlert(message: string): Promise<void> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        text: message,
-        channel: config.alerting.slackChannel || '#stas-alerts',
+        severity: alert.severity,
+        rule: alert.rule,
+        message: alert.message,
+        context: alert.context ?? {},
+        timestamp: alert.timestamp,
+        channel: config.alerting.slackChannel || '#syntaro-alerts',
       }),
     });
 
@@ -84,104 +87,20 @@ async function sendSlackAlert(message: string): Promise<void> {
       const body = await response.text().catch(() => 'unknown');
       log.error(
         { status: response.status, body },
-        'Slack alert delivery failed',
+        'n8n alert webhook delivery failed',
       );
     }
   } catch (err) {
-    log.error({ err: String(err) }, 'Failed to send Slack alert');
+    log.error({ err: String(err) }, 'Failed to send alert to n8n webhook');
   }
 }
 
 /**
- * Send an email alert via a configurable SMTP endpoint or generic webhook.
- * In production, this would integrate with SendGrid, SES, or similar.
- */
-async function sendEmailAlert(subject: string, body: string): Promise<void> {
-  const emailWebhookUrl = process.env.ALERT_EMAIL_WEBHOOK_URL;
-  if (!emailWebhookUrl) {
-    log.warn('ALERT_EMAIL_WEBHOOK_URL not configured — skipping email alert');
-    return;
-  }
-
-  try {
-    const response = await fetch(emailWebhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject, body, severity: 'critical' }),
-    });
-
-    if (!response.ok) {
-      log.error(
-        { status: response.status },
-        'Email alert delivery failed',
-      );
-    }
-  } catch (err) {
-    log.error({ err: String(err) }, 'Failed to send email alert');
-  }
-}
-
-/**
- * Send a PagerDuty alert via Events API v2.
- */
-async function sendPagerDutyAlert(alert: AlertEvent): Promise<void> {
-  const integrationKey = config.pagerduty.integrationKey;
-  if (!integrationKey) {
-    log.warn('PD_INTEGRATION_KEY not configured — skipping PagerDuty alert');
-    return;
-  }
-
-  const pdSeverity = alert.severity === 'critical' ? 'critical'
-    : alert.severity === 'warning' ? 'warning'
-    : 'info';
-
-  const dedupKey = `stas-${alert.rule}-${alert.timestamp.slice(0, 13)}`;
-
-  try {
-    const response = await fetch(
-      'https://events.pagerduty.com/v2/enqueue',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          routing_key: integrationKey,
-          event_action: 'trigger',
-          dedup_key: dedupKey,
-          payload: {
-            summary: `[${alert.severity.toUpperCase()}] ${alert.rule}: ${alert.message}`,
-            severity: pdSeverity,
-            source: 'stas',
-            component: 'stas-bot',
-            group: 'alerting',
-            class: 'monitoring',
-            timestamp: alert.timestamp,
-            custom_details: {
-              ...(alert.context ?? {}),
-              rule: alert.rule,
-              channel: alert.channel,
-            },
-          },
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => 'unknown');
-      log.error(
-        { status: response.status, body },
-        'PagerDuty alert delivery failed',
-      );
-    }
-  } catch (err) {
-    log.error({ err: String(err) }, 'Failed to send PagerDuty alert');
-  }
-}
-
-/**
- * Dispatch an alert to all configured channels based on severity and rule.
+ * Dispatch an alert to the n8n webhook. n8n handles formatting,
+ * severity-colored Slack blocks, and delivery to the correct channel.
  */
 export async function dispatchAlert(alert: AlertEvent): Promise<void> {
-  const { severity, rule, message, context, channel } = alert;
+  const { severity, rule, message, context } = alert;
 
   // Always log
   const logMsg = `[${severity.toUpperCase()}] ${rule}: ${message}`;
@@ -202,29 +121,10 @@ export async function dispatchAlert(alert: AlertEvent): Promise<void> {
     captureError(new Error(`[CRITICAL] ${rule}: ${message}`), context);
   }
 
-  // Route to Slack for warning/critical
-  if (severity === 'warning' || severity === 'critical') {
-    const slackMsg = `[${severity.toUpperCase()}] *${rule}*: ${message}`;
-    await sendSlackAlert(slackMsg).catch((err) =>
-      log.error({ err: String(err) }, 'Slack dispatch failed'),
-    );
-  }
-
-  // Route to PagerDuty for critical alerts or escalated warnings
-  if (severity === 'critical' || (severity === 'warning' && alert.escalated)) {
-    await sendPagerDutyAlert(alert).catch((err) =>
-      log.error({ err: String(err) }, 'PagerDuty dispatch failed'),
-    );
-  }
-
-  // Route to email for critical alerts that require it
-  if (channel === 'email' || channel === 'both') {
-    const emailSubject = `[STAS] ${severity.toUpperCase()}: ${rule}`;
-    const emailBody = `Rule: ${rule}\nSeverity: ${severity}\nMessage: ${message}\nTimestamp: ${alert.timestamp}\nContext: ${JSON.stringify(context ?? {})}`;
-    await sendEmailAlert(emailSubject, emailBody).catch((err) =>
-      log.error({ err: String(err) }, 'Email dispatch failed'),
-    );
-  }
+  // Forward to n8n for Slack delivery (handles formatting, retry, channel routing)
+  await sendToN8nWebhook(alert).catch((err) =>
+    log.error({ err: String(err) }, 'n8n dispatch failed'),
+  );
 }
 
 // ── Alerting Rules ──────────────────────────────────────────────────

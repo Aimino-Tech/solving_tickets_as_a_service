@@ -165,32 +165,31 @@ GitHub Actions webhook (workflow_run.completed)
 | Deploy succeeds | Green embed posted to Discord with repo, branch, commit, actor |
 | Deploy fails or is cancelled | Workflow exits silently (no message) |
 
-### 4. Monitoring Alerts → #syntaro-alerts (AIM-3341)
+### 3. Monitoring Alerts — OS Alerts → #syntaro-alerts (via n8n)
 
 **File:** `workflows/monitoring-alerts.json`
 
-Receives monitoring alert events from OpenSymphony and posts formatted messages to the `#syntaro-alerts` Slack channel with severity-appropriate formatting.
+Replaces the in-code alert dispatch (`monitoring/alerting.ts`). OS emits alert events via webhook, n8n formats them as Slack blocks with severity-colored attachments, and posts to `#syntaro-alerts`.
 
-**Flow:**
+**Severity formatting:**
 
-```
-OS alert event → n8n HTTP endpoint
-  → Validate & enrich payload
-  → Route by severity (critical / warning / info)
-  → Format with severity color (red / yellow / blue)
-  → Post to Slack #syntaro-alerts
-```
+| Severity | Color | Header |
+|----------|-------|--------|
+| `critical` | Red (`#E74C3C`) | 🚨 CRITICAL: {rule} |
+| `warning` | Yellow (`#F39C12`) | ⚠️ WARNING: {rule} |
+| `info` | Blue (`#3498DB`) | ℹ️ INFO: {rule} |
+| Unknown | Gray (`#95A5A6`) | ℹ️ Alert: {rule} |
 
 **Setup:**
 
-1. Open your n8n instance
-2. Go to **Workflows** → **Import from File** → Select `workflows/monitoring-alerts.json`
-3. Configure the **Slack** node:
-   - Create a Slack app with `chat:write` scope
-   - Install the app to the `#syntaro-alerts` channel
-   - Set the OAuth token in n8n credentials
-4. Note the webhook URL n8n provides (e.g., `https://<your-n8n>/webhook/monitoring-alert`)
-5. Configure OpenSymphony to POST alert events to this URL
+1. Import `workflows/monitoring-alerts.json` into n8n
+2. Configure the **Slack** node with OAuth credentials (chat:write scope)
+3. Note the webhook URL (e.g., `https://<your-n8n>/webhook/monitoring-alert`)
+4. Set environment variable:
+
+   ```env
+   N8N_MONITORING_WEBHOOK_URL=https://<your-n8n>/webhook/monitoring-alert
+   ```
 
 **Expected webhook payload:**
 
@@ -199,28 +198,10 @@ OS alert event → n8n HTTP endpoint
   "severity": "critical",
   "rule": "queue_depth_critical",
   "message": "Queue depth 250 exceeds critical threshold 200 for 5+ minutes",
-  "context": { "queueDepth": 250, "durationMinutes": 5 },
+  "channel": "#syntaro-alerts",
   "timestamp": "2026-07-21T12:00:00.000Z"
 }
 ```
-
-**Severity formatting:**
-
-| Severity | Color | Example |
-|----------|-------|---------|
-| `critical` | Red (`#E74C3C`) | Queue depth > 200, error rate > 20%, worker down |
-| `warning` | Yellow (`#F1C40F`) | Queue depth > 50, error rate > 5%, retry attempts |
-| `info` | Blue (`#3498DB`) | Fix run success, new account signup |
-| Unknown | Gray (`#95A5A6`) | Fallback for unhandled severity levels |
-
-**Behavior:**
-
-| Scenario | Response |
-|----------|----------|
-| Critical alert | Red formatted message posted to #syntaro-alerts with full context |
-| Warning alert | Yellow formatted message posted to #syntaro-alerts |
-| Info alert | Blue formatted message posted to #syntaro-alerts |
-| Unknown severity | Gray fallback message with raw payload |
 
 ## Adding a workflow
 

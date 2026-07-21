@@ -1,5 +1,5 @@
 {
-  "name": "Monitoring Alerts → #syntaro-alerts",
+  "name": "Monitoring Alerts → Slack",
   "nodes": [
     {
       "id": "webhook-1",
@@ -14,29 +14,11 @@
       }
     },
     {
-      "id": "set-validate-alert",
-      "name": "Validate & Enrich",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 2,
-      "position": [500, 300],
-      "parameters": {
-        "values": {
-          "string": [
-            { "name": "severity", "value": "={{ ($json.severity || 'info').toLowerCase() }}" },
-            { "name": "rule", "value": "={{ $json.rule || $json.alert_name || 'unknown' }}" },
-            { "name": "message", "value": "={{ $json.message || $json.description || 'No message' }}" },
-            { "name": "timestamp", "value": "={{ $json.timestamp || new Date().toISOString() }}" },
-            { "name": "context", "value": "={{ JSON.stringify($json.context || $json.annotations || {}) }}" }
-          ]
-        }
-      }
-    },
-    {
-      "id": "switch-severity",
+      "id": "switch-1",
       "name": "Route by Severity",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 2,
-      "position": [750, 300],
+      "position": [500, 300],
       "parameters": {
         "dataType": "string",
         "value1": "={{ $json.severity }}",
@@ -53,19 +35,20 @@
       "name": "Format: Critical",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
-      "position": [1000, 100],
+      "position": [750, 150],
       "parameters": {
         "values": {
           "string": [
             { "name": "color", "value": "#E74C3C" },
             { "name": "title", "value": "={{ '🚨 CRITICAL: ' + $json.rule }}" },
             { "name": "text", "value": "={{ $json.message }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-alerts' }}" },
             { "name": "fields[0].title", "value": "Rule" },
             { "name": "fields[0].value", "value": "={{ $json.rule }}" },
-            { "name": "fields[1].title", "value": "Timestamp" },
-            { "name": "fields[1].value", "value": "={{ $json.timestamp }}" },
-            { "name": "fields[2].title", "value": "Context" },
-            { "name": "fields[2].value", "value": "={{ $json.context }}" }
+            { "name": "fields[1].title", "value": "Severity" },
+            { "name": "fields[1].value", "value": "Critical" },
+            { "name": "fields[2].title", "value": "Timestamp" },
+            { "name": "fields[2].value", "value": "={{ $json.timestamp || new Date().toISOString() }}" }
           ]
         }
       }
@@ -75,19 +58,20 @@
       "name": "Format: Warning",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
-      "position": [1000, 300],
+      "position": [750, 300],
       "parameters": {
         "values": {
           "string": [
-            { "name": "color", "value": "#F1C40F" },
+            { "name": "color", "value": "#F39C12" },
             { "name": "title", "value": "={{ '⚠️ WARNING: ' + $json.rule }}" },
             { "name": "text", "value": "={{ $json.message }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-alerts' }}" },
             { "name": "fields[0].title", "value": "Rule" },
             { "name": "fields[0].value", "value": "={{ $json.rule }}" },
-            { "name": "fields[1].title", "value": "Timestamp" },
-            { "name": "fields[1].value", "value": "={{ $json.timestamp }}" },
-            { "name": "fields[2].title", "value": "Context" },
-            { "name": "fields[2].value", "value": "={{ $json.context }}" }
+            { "name": "fields[1].title", "value": "Severity" },
+            { "name": "fields[1].value", "value": "Warning" },
+            { "name": "fields[2].title", "value": "Timestamp" },
+            { "name": "fields[2].value", "value": "={{ $json.timestamp || new Date().toISOString() }}" }
           ]
         }
       }
@@ -97,17 +81,20 @@
       "name": "Format: Info",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
-      "position": [1000, 500],
+      "position": [750, 450],
       "parameters": {
         "values": {
           "string": [
             { "name": "color", "value": "#3498DB" },
             { "name": "title", "value": "={{ 'ℹ️ INFO: ' + $json.rule }}" },
             { "name": "text", "value": "={{ $json.message }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-alerts' }}" },
             { "name": "fields[0].title", "value": "Rule" },
             { "name": "fields[0].value", "value": "={{ $json.rule }}" },
-            { "name": "fields[1].title", "value": "Timestamp" },
-            { "name": "fields[1].value", "value": "={{ $json.timestamp }}" }
+            { "name": "fields[1].title", "value": "Severity" },
+            { "name": "fields[1].value", "value": "Info" },
+            { "name": "fields[2].title", "value": "Timestamp" },
+            { "name": "fields[2].value", "value": "={{ $json.timestamp || new Date().toISOString() }}" }
           ]
         }
       }
@@ -117,15 +104,18 @@
       "name": "Format: Unknown Severity",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
-      "position": [1000, 700],
+      "position": [750, 600],
       "parameters": {
         "values": {
           "string": [
             { "name": "color", "value": "#95A5A6" },
-            { "name": "title", "value": "❓ Unknown Alert Severity" },
-            { "name": "text", "value": "={{ JSON.stringify($json) }}" },
-            { "name": "fields[0].title", "value": "Severity" },
-            { "name": "fields[0].value", "value": "={{ $json.severity }}" }
+            { "name": "title", "value": "={{ 'ℹ️ Alert: ' + $json.rule }}" },
+            { "name": "text", "value": "={{ $json.message || JSON.stringify($json) }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-alerts' }}" },
+            { "name": "fields[0].title", "value": "Rule" },
+            { "name": "fields[0].value", "value": "={{ $json.rule || 'unknown' }}" },
+            { "name": "fields[1].title", "value": "Severity" },
+            { "name": "fields[1].value", "value": "={{ $json.severity || 'unknown' }}" }
           ]
         }
       }
@@ -135,7 +125,7 @@
       "name": "Merge",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2,
-      "position": [1250, 300],
+      "position": [1000, 300],
       "parameters": {
         "mode": "combine",
         "combinationMode": "mergeByPosition"
@@ -143,12 +133,12 @@
     },
     {
       "id": "slack-1",
-      "name": "Post to #syntaro-alerts",
+      "name": "Post to Slack",
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2,
-      "position": [1500, 300],
+      "position": [1250, 300],
       "parameters": {
-        "channel": "#syntaro-alerts",
+        "channel": "={{ $json.channel }}",
         "text": "=",
         "attachments": "=[\n  {\n    \"color\": $json.color,\n    \"blocks\": [\n      {\n        \"type\": \"header\",\n        \"text\": { \"type\": \"plain_text\", \"text\": $json.title }\n      },\n      {\n        \"type\": \"section\",\n        \"text\": { \"type\": \"mrkdwn\", \"text\": $json.text }\n      },\n      {\n        \"type\": \"fields\",\n        \"fields\": $json.fields.map(f => ({ \"type\": \"mrkdwn\", \"text\": `*${f.title}:*\\n${f.value}` }))\n      }\n    ]\n  }\n]"
       }
@@ -156,9 +146,6 @@
   ],
   "connections": {
     "OS Alert Webhook": {
-      "main": [[{ "node": "Validate & Enrich", "type": "main", "index": 0 }]]
-    },
-    "Validate & Enrich": {
       "main": [[{ "node": "Route by Severity", "type": "main", "index": 0 }]]
     },
     "Route by Severity": {
@@ -182,10 +169,7 @@
       "main": [[{ "node": "Merge", "type": "main", "index": 3 }]]
     },
     "Merge": {
-      "main": [[{ "node": "Post to #syntaro-alerts", "type": "main", "index": 0 }]]
-    },
-    "Post to #syntaro-alerts": {
-      "main": [[]]
+      "main": [[{ "node": "Post to Slack", "type": "main", "index": 0 }]]
     }
   }
 }
