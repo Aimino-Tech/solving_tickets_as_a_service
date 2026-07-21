@@ -23,6 +23,7 @@ import { rateLimiter } from '../ratelimit/limiter.js';
 import { getRateLimitForAccount } from '../ratelimit/tiers.js';
 import { getTierForAccount } from '../ratelimit/tiers.js';
 import { accountsRepository } from '../db/repositories/index.js';
+import { dispatchIssueToOsy } from '../services/osyDispatch.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
 
@@ -170,9 +171,9 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       return; // Do not enqueue — skip OpenCode dispatch
     }
 
-    // ── Normal Mode: Save pending record, check rate limits, enqueue ──
+    // ── Normal Mode: Save pending record, check rate limits, dispatch ──
 
-    // Save a 'pending' RunRecord before enqueueing, so every labeled issue
+    // Save a 'pending' RunRecord before dispatching, so every labeled issue
     // is recorded. The worker will update the record to 'running' / 'completed' / 'failed'.
     try {
       const { createStorage } = await import('../storage/index.js');
@@ -200,7 +201,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
     if (!accountLimitResult.allowed) {
       log.warn(
         { installationId: jobData.installationId, current: accountLimitResult.current, limit: accountLimitResult.limit },
-        'Account rate limit exceeded — not enqueuing',
+        'Account rate limit exceeded — not dispatching',
       );
       return;
     }
@@ -208,7 +209,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
     if (!repoLimitResult.allowed) {
       log.warn(
         { repo, current: repoLimitResult.current, limit: repoLimitResult.limit },
-        'Repo rate limit exceeded — not enqueuing',
+        'Repo rate limit exceeded — not dispatching',
       );
       return;
     }
@@ -216,17 +217,46 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
     // Record the rate limit hit
     await rateLimiter.increment('account', String(jobData.installationId));
     await rateLimiter.increment('repo', repo);
-    try {
-      await enqueue(jobData);
-    } catch (err) {
-      log.error(
-        {
-          err: String(err),
-          repo: `${jobData.repoOwner}/${jobData.repoName}`,
-          issueNumber: jobData.issueNumber,
-        },
-        'Failed to enqueue labeled issue',
+
+    // ── Route to OpenSymphony or local queue ──────────────────────
+    if (config.osy?.dispatchUrl) {
+      log.info(
+        { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+        'Dispatching to OpenSymphony via OS dispatch API',
       );
+      const osyResult = await dispatchIssueToOsy({
+        installationId: jobData.installationId,
+        repoOwner: jobData.repoOwner,
+        repoName: jobData.repoName,
+        issueNumber: jobData.issueNumber,
+        issueTitle: jobData.issueTitle ?? '',
+        issueBody: jobData.issueBody,
+        labels: jobData.labels ?? [],
+      });
+      if (!osyResult.success) {
+        log.error(
+          { err: osyResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+          'OS dispatch failed — falling back to local queue',
+        );
+        await enqueue(jobData);
+      }
+    } else {
+      log.info(
+        { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+        'No OS_DISPATCH_URL configured — using local queue',
+      );
+      try {
+        await enqueue(jobData);
+      } catch (err) {
+        log.error(
+          {
+            err: String(err),
+            repo: `${jobData.repoOwner}/${jobData.repoName}`,
+            issueNumber: jobData.issueNumber,
+          },
+          'Failed to enqueue labeled issue',
+        );
+      }
     }
   });
 
@@ -335,17 +365,47 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         await rateLimiter.increment('repo', repo);
       }
 
-      try {
-        await enqueue(jobData);
-      } catch (err) {
-        log.error(
-          {
-            err: String(err),
-            repo: `${jobData.repoOwner}/${jobData.repoName}`,
-            issueNumber: jobData.issueNumber,
-          },
-          'Failed to enqueue edited issue',
+      if (config.osy?.dispatchUrl) {
+        log.info(
+          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+          'Dispatching edited issue to OpenSymphony',
         );
+        const osyResult = await dispatchIssueToOsy({
+          installationId: jobData.installationId,
+          repoOwner: jobData.repoOwner,
+          repoName: jobData.repoName,
+          issueNumber: jobData.issueNumber,
+          issueTitle: jobData.issueTitle ?? '',
+          issueBody: jobData.issueBody,
+          labels: jobData.labels ?? [],
+        });
+        if (!osyResult.success) {
+          log.error(
+            { err: osyResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+            'OS dispatch failed for edited issue — falling back to local queue',
+          );
+          try {
+            await enqueue(jobData);
+          } catch (err) {
+            log.error(
+              { err: String(err) },
+              'Failed to enqueue edited issue after OS dispatch fallback',
+            );
+          }
+        }
+      } else {
+        try {
+          await enqueue(jobData);
+        } catch (err) {
+          log.error(
+            {
+              err: String(err),
+              repo: `${jobData.repoOwner}/${jobData.repoName}`,
+              issueNumber: jobData.issueNumber,
+            },
+            'Failed to enqueue edited issue',
+          );
+        }
       }
     }
   });

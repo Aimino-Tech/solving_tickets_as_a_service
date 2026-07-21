@@ -49,6 +49,8 @@ const envSchema = z.object({
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
   OPENCODE_OSY_PORT: z.coerce.number().int().positive().max(65535).default(4097),
   OPENCODE_OSY_HOST: z.string().default("127.0.0.1"),
+  OS_DISPATCH_URL: z.string().optional(),
+  OS_API_KEY: z.string().optional(),
   OPENAI_BASE_URL: z.string().default("http://litellm-proxy:4002/v1"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
   OS_API_URL: z.string().default("http://opensymphony:4000"),
@@ -365,6 +367,11 @@ function buildConfig(env: ParsedEnv) {
         url: env.OS_API_URL ?? 'http://opensymphony:4000',
         apiKey: env.OS_API_KEY ?? '',
       },
+    },
+
+    osy: {
+      dispatchUrl: env.OS_DISPATCH_URL,
+      apiKey: env.OS_API_KEY,
     },
 
     gitlab: {
