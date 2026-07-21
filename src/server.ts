@@ -707,10 +707,16 @@ export async function createApp(): Promise<express.Application> {
   // GET /api/runs/:id — Public run detail JSON/HTML
   app.use('/api/runs', runsRouter);
 
+  // ── Landing page (website/) ───────────────────────────────────────
+  app.use(express.static(path.join(__dirname, '../website')));
+  app.get('/', (_req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, '../website', 'index.html'));
+  });
+
   // ── Dashboard SPA (served from built dist/) ───────────────────────
-  app.use('/dashboard', express.static(path.join(__dirname, '../../dashboard/dist')));
+  app.use('/dashboard', express.static(path.join(__dirname, '../dashboard/dist')));
   app.get('/dashboard/*', (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../../dashboard/dist/index.html'));
+    res.sendFile(path.join(__dirname, '../dashboard/dist/index.html'));
   });
 
   // ── Badge endpoint (public, no auth) ──────────────────────────────

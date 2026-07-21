@@ -238,7 +238,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
   ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
-  CORS_ORIGIN: z.string().default('*'),
+  CORS_ORIGIN: z.string().default('https://stas.syntaro.io'),
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
 
