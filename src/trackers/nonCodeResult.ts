@@ -53,7 +53,9 @@ export async function postNonCodeResult(
 
   try {
     await tracker.postComment(ticketId, commentBody);
-    await tracker.createLink(ticketId, `https://linear.app/ticket/${ticketId}`, `${prefix} Task Result`);
+    if (evidenceUrls && evidenceUrls.length > 0) {
+      await tracker.createLink(ticketId, evidenceUrls[0], `${prefix} Task Evidence`);
+    }
     log.info({ ticketId, category }, 'Non-code result posted to tracker');
   } catch (err) {
     log.error({ err: String(err), ticketId }, 'Failed to post non-code result');
