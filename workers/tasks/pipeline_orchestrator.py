@@ -54,6 +54,17 @@ def _run_fix_mode(issue_id: str, identifier: str, ctx: dict) -> dict:
     repo = ctx.get("repo_name", "")
     branch = result.get("branch_name", "")
     summary = result.get("summary", "STAS implementation")
+    commit_sha = result.get("commit_sha", "")
+    changes = result.get("changes", [])
+
+    deliverable_summary = _build_deliverable_summary(
+        summary=summary,
+        branch=branch,
+        commit_sha=commit_sha,
+        repo=f"{owner}/{repo}",
+        changes=changes,
+    )
+    _post_linear_comment(issue_id, deliverable_summary)
 
     try:
         pr_result = _create_pr(owner, repo, branch, "main", summary)
@@ -76,8 +87,9 @@ def _run_fix_mode(issue_id: str, identifier: str, ctx: dict) -> dict:
     try:
         merge_result = _merge_pr(owner, repo, pr_number)
         if merge_result.get("merged"):
-            logger.info("PR merged: sha=%s", merge_result.get("sha", ""))
-            _post_linear_comment(issue_id, f"✅ **STAS**: PR merged — {merge_result.get('sha', '')[:8]}")
+            merge_sha = merge_result.get("sha", "")[:8]
+            logger.info("PR merged: sha=%s", merge_sha)
+            _post_linear_comment(issue_id, f"✅ **STAS**: PR merged — `{merge_sha}`")
     except Exception as exc:
         logger.warning("Merge failed for %s: %s", identifier, exc)
         _post_linear_comment(issue_id, f"⚠️ **STAS**: Merge issue — {exc}")
@@ -239,6 +251,45 @@ def _find_pr_url(issue_id: str) -> str:
 def _mark_done(issue_id: str) -> None:
     from workers.linear import client_sync as linear
     linear.transition_issue(issue_id, "Done")
+
+
+def _build_deliverable_summary(
+    summary: str,
+    branch: str,
+    commit_sha: str,
+    repo: str,
+    changes: list[dict] | None = None,
+) -> str:
+    lines = [
+        "## ✅ Implementation Complete",
+        "",
+        summary,
+        "",
+        "| Detail | Value |",
+        "|---|---|",
+        f"| Repository | `{repo}` |",
+        f"| Branch | `{branch}` |",
+    ]
+    if commit_sha:
+        lines.append(f"| Commit | `{commit_sha[:12]}` |")
+
+    if changes:
+        lines.extend([
+            "",
+            "### Files Changed",
+            "",
+        ])
+        for c in changes:
+            file_path = c.get("file", "?")
+            change_type = c.get("type", "modified")
+            lines.append(f"- `{file_path}` ({change_type})")
+
+    lines.extend([
+        "",
+        "---",
+        "_🤖 STAS — Automated Implementation_",
+    ])
+    return "\n".join(lines)
 
 
 def _post_linear_comment(issue_id: str, body: str) -> None:
