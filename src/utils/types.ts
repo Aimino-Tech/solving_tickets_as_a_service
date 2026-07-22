@@ -28,6 +28,9 @@ export interface IssueJobData {
 
   /** GitHub/Linear issue labels (e.g. ['bug', 'stas:fix']). Used for triage classification. */
   labels?: string[];
+
+  slackChannel?: string;
+  slackThreadTs?: string;
 }
 
 /**

@@ -1021,12 +1021,18 @@ export async function startServer(): Promise<import('http').Server> {
       await consumeQueue(QUEUES.issuesFix.name, async (msg) => {
         if (!msg) return;
         const content = msg.content.toString();
-        let data: IssueJobData;
+        let raw: Record<string, unknown>;
         try {
-          data = JSON.parse(content) as IssueJobData;
+          raw = JSON.parse(content) as Record<string, unknown>;
         } catch {
           log.error({ content }, 'Failed to parse RabbitMQ message');
           return;
+        }
+        const data: IssueJobData = raw as unknown as IssueJobData;
+        const meta = raw._meta as Record<string, string> | undefined;
+        if (meta?.slackChannel) {
+          data.slackChannel = meta.slackChannel;
+          data.slackThreadTs = meta.slackThreadTs;
         }
         try {
           const result = await dispatchToOpenSymphony(data);
