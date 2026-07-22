@@ -23,7 +23,7 @@ import os
 import re
 from typing import Any
 
-from workers.notifications.notifiers.slack import notify_slack
+from workers.notifications.notifiers.slack import notify_slack, notify_slack_threaded, notify_slack_progress
 from workers.notifications.notifiers.teams import notify_teams
 from workers.notifications.notifiers.email import notify_email
 from workers.notifications.rate_limiter import (
