@@ -10,6 +10,7 @@ import Status from './pages/Status';
 import Docs from './pages/Docs';
 import Blog from './pages/Blog';
 import Integrations from './pages/Integrations';
+import Faq from './pages/Faq';
 import Agents from './pages/Agents';
 import NotFound from './pages/NotFound';
 
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/docs" element={<Docs />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/integrations" element={<Integrations />} />
+          <Route path="/faq" element={<Faq />} />
           <Route path="/agents" element={<Agents />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
