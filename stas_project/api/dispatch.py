@@ -55,6 +55,10 @@ def dispatch(request):
         logger.error("Failed to create AgentRun: %s", e)
         return JsonResponse({"error": f"Failed to create run: {e}"}, status=500)
 
+    parts = repo.split("/")
+    repo_owner = parts[0] if len(parts) > 1 else ""
+    repo_name = parts[-1] if parts else ""
+
     try:
         run_issue_pipeline.delay(
             issue_url=issue_url,
@@ -62,6 +66,8 @@ def dispatch(request):
             repo_full_name=repo,
             repo_url=f"https://github.com/{repo}",
             installation_id=int(installation_id) if installation_id else 0,
+            repo_owner=repo_owner,
+            repo_name=repo_name,
         )
         logger.info("Enqueued pipeline for run %s", run.id)
     except Exception as e:

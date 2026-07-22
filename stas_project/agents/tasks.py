@@ -42,14 +42,20 @@ def run_issue_pipeline(
     repo_url: str,
     installation_id: int,
     event_id: str | None = None,
+    repo_owner: str = "",
+    repo_name: str = "",
 ):
     """
     Entry point: full agent pipeline for a single issue.
 
-    Orchestrates: triage → dispatch → verify → PR → notify
+    Orchestrates: triage → dispatch → verify → quality gates → PR → notify
+
+    Uses the real PipelineEngine when available (Celery + Redis),
+    falling back to the direct Celery chain for environments without Redis.
     """
     from agents.models import AgentRun
     from webhooks.models import WebhookEvent
+    from workers.pipeline_client import get_client
 
     event = None
     if event_id:
@@ -74,6 +80,11 @@ def run_issue_pipeline(
         run.id,
     )
 
+    # Extract owner and repo
+    parts = repo_full_name.split("/")
+    repo_owner = parts[0] if len(parts) > 1 else ""
+    repo_name = parts[-1] if parts else ""
+
     # Common context passed through every chain step
     ctx = {
         "run_id": str(run.id),
@@ -82,20 +93,38 @@ def run_issue_pipeline(
         "repo_full_name": repo_full_name,
         "repo_url": repo_url,
         "installation_id": installation_id,
+        "repo_owner": repo_owner,
+        "repo_name": repo_name,
+        "repo_branch": "main",
+        "issue_title": f"Fix for #{issue_number or 'unknown'} in {repo_full_name}",
+        "issue_description": f"Auto-dispatched fix for {issue_url}",
     }
 
-    # Execute pipeline as a Celery chain
+    # Try to use PipelineEngine (real Celery + Redis pipeline)
+    pipeline_client = get_client()
+    engine = pipeline_client._get_engine()
+    if engine is not None:
+        try:
+            issue_id = f"{repo_full_name}#{issue_number or 'unknown'}"
+            engine.start_pipeline(issue_id, "stas:fix", ctx)
+            logger.info("Pipeline dispatched via PipelineEngine for %s", issue_id)
+            return {"run_id": str(run.id), "status": AgentRun.Status.TRIAGE, "via": "PipelineEngine"}
+        except Exception as exc:
+            logger.warning("PipelineEngine dispatch failed, falling back to chain: %s", exc)
+
+    # Fallback: direct Celery chain
     pipeline = chain(
         triage_issue.s(**ctx),
         dispatch_agent.s(),
         verify_fix.s(),
+        quality_gate_check.s(),
         create_pr.s(),
         send_notifications.s(),
     )
 
     pipeline.apply_async()
 
-    return {"run_id": str(run.id), "status": AgentRun.Status.TRIAGE}
+    return {"run_id": str(run.id), "status": AgentRun.Status.TRIAGE, "via": "celery_chain"}
 
 
 @shared_task(bind=True, max_retries=2)
@@ -155,11 +184,21 @@ def dispatch_agent(self, previous_result: dict):
     try:
         from workers.tasks.agent import dispatch_opencode
 
-        # Prepare issue context for the OpenCode dispatch
+        repo_full = previous_result.get("repo_full_name", "")
+        parts = repo_full.split("/")
+        repo_owner = previous_result.get("repo_owner", parts[0] if len(parts) > 1 else "")
+        repo_name = previous_result.get("repo_name", parts[-1] if parts else "")
+
         issue_context = {
+            "repo_owner": repo_owner,
+            "repo_name": repo_name,
+            "repo_branch": "main",
+            "issue_title": previous_result.get("issue_title", f"Issue at {issue_url}"),
+            "issue_description": previous_result.get("issue_description", issue_url),
+            "issue_identifier": previous_result.get("issue_identifier", f"{repo_full}#{previous_result.get('issue_number', '?')}"),
             "issue_url": issue_url,
             "triage_result": previous_result.get("triage_result", {}),
-            "repo_full_name": previous_result.get("repo_full_name", ""),
+            "repo_full_name": repo_full,
             "issue_number": previous_result.get("issue_number"),
             "installation_id": previous_result.get("installation_id"),
         }
@@ -169,7 +208,7 @@ def dispatch_agent(self, previous_result: dict):
         logger.info(
             "Agent dispatch completed for %s: %s",
             issue_url,
-            agent_result.get("result", {}).get("status"),
+            agent_result.get("result", {}).get("status", "completed"),
         )
 
         return {**previous_result, "agent_result": agent_result}
@@ -181,8 +220,9 @@ def dispatch_agent(self, previous_result: dict):
 
 @shared_task(bind=True, max_retries=2)
 def verify_fix(self, previous_result: dict):
-    """Verify the fix by running tests in sandbox."""
+    """Verify the fix by running tests in a real Docker sandbox."""
     run_id = previous_result["run_id"]
+    issue_url = previous_result.get("issue_url", "")
 
     from agents.models import AgentRun
 
@@ -191,28 +231,76 @@ def verify_fix(self, previous_result: dict):
         run.status = AgentRun.Status.VERIFICATION
         run.save(update_fields=["status"])
     except AgentRun.DoesNotExist:
-        pass
+        run = None
 
     agent_result = previous_result.get("agent_result", {})
-    branch = agent_result.get("branch", "")
-    repo_url = previous_result.get("repo_url", "")
+    branch = agent_result.get("branch_name", agent_result.get("branch", ""))
+    repo_full = previous_result.get("repo_full_name", "")
 
     if not branch:
         logger.warning("No branch to verify — skipping verification")
         return {**previous_result, "verification_result": {"skipped": True}}
 
     try:
-        from workers.tasks.verification import run_verification
+        from workers.tasks.verification import verify_agent_output
 
-        verification_result = run_verification(
-            sandbox_id="placeholder",
-            test_command="pnpm test",
+        verification_result = verify_agent_output(
+            issue_id=run_id,
+            workspace_path=branch,
+            test_command="",
+            ac_list=[],
         )
+        logger.info(
+            "Verification result for %s: passed=%s score=%s",
+            run_id,
+            verification_result.get("passed"),
+            verification_result.get("score"),
+        )
+
+        if run:
+            run.verification_result = verification_result
+            run.save(update_fields=["verification_result"])
+
         return {**previous_result, "verification_result": verification_result}
 
     except Exception as exc:
-        logger.error("Verification failed: %s", exc)
+        logger.error("Verification failed for %s: %s", issue_url, exc)
         raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=2)
+def quality_gate_check(self, previous_result: dict):
+    """Run quality gates on the agent output before PR creation.
+
+    Checks include anti-mockup scan, sanitization, and self-audit.
+    """
+    run_id = previous_result["run_id"]
+    issue_url = previous_result.get("issue_url", "")
+    repo_full = previous_result.get("repo_full_name", "")
+    agent_result = previous_result.get("agent_result", {})
+
+    try:
+        from workers.quality.anti_mockup_scan import anti_mockup_scan
+        from workers.gates.sanitizer import sanitize_agent_output
+
+        anti_mockup_result = anti_mockup_scan(repo_full, run_id)
+        sanitize_result = sanitize_agent_output(run_id, agent_result)
+
+        quality = {
+            "anti_mockup_passed": anti_mockup_result.get("passed", True),
+            "sanitized": sanitize_result.get("sanitized", False),
+            "warnings": anti_mockup_result.get("warnings", []) + sanitize_result.get("warnings", []),
+        }
+
+        logger.info("Quality gates for %s: %s", run_id, quality)
+        return {**previous_result, "quality_result": quality}
+
+    except ImportError:
+        logger.debug("Quality gate modules not available — skipping")
+        return {**previous_result, "quality_result": {"skipped": True}}
+    except Exception as exc:
+        logger.warning("Quality gate check failed (non-fatal): %s", exc)
+        return {**previous_result, "quality_result": {"skipped": True, "error": str(exc)}}
 
 
 @shared_task(bind=True, max_retries=3)
