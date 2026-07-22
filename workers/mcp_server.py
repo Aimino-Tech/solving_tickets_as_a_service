@@ -1,15 +1,18 @@
 """
 MCP Server — expose STAS pipeline as MCP tools and resources.
 
+Backed by the real OpenSymphony PipelineEngine (Celery + Redis)
+instead of a local JSON file registry.
+
 Runs on port 4095 (default) and auto-registers with OpenCode MCP configuration.
 """
 import json
 import logging
 import os
-import subprocess
 import sys
-from datetime import datetime, timezone
 from typing import Any
+
+from workers.pipeline_client import get_client
 
 logger = logging.getLogger(__name__)
 
@@ -17,26 +20,7 @@ MCP_PORT = int(os.getenv("MCP_SERVER_PORT", "4095"))
 OPENCODE_CONFIG_DIR = os.path.expanduser(os.getenv("OPENCODE_CONFIG_DIR", "~/.config/opencode"))
 MCP_SERVER_NAME = "stas-pipeline"
 
-_fix_registry: dict[str, dict] = {}
-
-
-def _get_fix_registry() -> dict[str, dict]:
-    global _fix_registry
-    if not _fix_registry:
-        try:
-            registry_path = os.getenv("FIX_REGISTRY_PATH", "/tmp/stas-fix-registry.json")
-            with open(registry_path) as f:
-                _fix_registry = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            _fix_registry = {}
-    return _fix_registry
-
-
-def _save_fix_registry():
-    registry_path = os.getenv("FIX_REGISTRY_PATH", "/tmp/stas-fix-registry.json")
-    os.makedirs(os.path.dirname(registry_path) or ".", exist_ok=True)
-    with open(registry_path, "w") as f:
-        json.dump(_fix_registry, f, indent=2, default=str)
+_pipeline = get_client()
 
 
 def _register_with_opencode():
@@ -68,101 +52,72 @@ def handle_dispatch_fix(params: dict) -> dict:
     issue_number = params.get("issue_number", 0)
     if not repo or not issue_number:
         return {"error": "Missing required params: repo, issue_number", "success": False}
-    fix_id = f"fix-{repo.replace('/', '-')}-{issue_number}-{int(datetime.now(timezone.utc).timestamp())}"
-    from workers.tasks.triage import triage_issue
-    issue_data = {"issue_url": f"https://github.com/{repo}/issues/{issue_number}", "repo": repo, "issue_number": issue_number}
-    try:
-        triage_result = triage_issue(issue_data)
-        status = "triaging"
-    except Exception as exc:
-        triage_result = {"error": str(exc)}
-        status = "failed"
-    registry = _get_fix_registry()
-    registry[fix_id] = {
-        "fix_id": fix_id,
-        "repo": repo,
-        "issue_number": issue_number,
-        "status": status,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "triage_result": triage_result,
-    }
-    _save_fix_registry()
-    return {"fix_id": fix_id, "status": status, "success": True}
+    parts = repo.split("/")
+    owner = parts[0] if len(parts) > 1 else "unknown"
+    result = _pipeline.submit_fix(owner=owner, repo=repo, issue_number=issue_number)
+    return result
 
 
 def handle_get_fix_status(params: dict) -> dict:
     fix_id = params.get("fix_id", "")
-    registry = _get_fix_registry()
-    fix = registry.get(fix_id)
-    if not fix:
-        return {"error": f"Fix not found: {fix_id}", "success": False}
-    return {"fix_id": fix_id, "status": fix.get("status", "unknown"), "fix": fix, "success": True}
+    issue_id = params.get("issue_id", fix_id)
+    result = _pipeline.check_status(issue_id)
+    result["fix_id"] = fix_id
+    result["issue_id"] = issue_id
+    return result
 
 
 def handle_get_fix_history(params: dict) -> dict:
     repo = params.get("repo", "")
     limit = int(params.get("limit", 10))
-    registry = _get_fix_registry()
-    fixes = [v for v in registry.values() if not repo or v.get("repo") == repo]
-    fixes.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-    return {"fixes": fixes[:limit], "total": len(fixes), "success": True}
+    result = _pipeline.get_run_history(repo=repo, limit=limit)
+    return result
 
 
 def handle_cancel_fix(params: dict) -> dict:
     fix_id = params.get("fix_id", "")
-    registry = _get_fix_registry()
-    if fix_id not in registry:
-        return {"error": f"Fix not found: {fix_id}", "success": False}
-    registry[fix_id]["status"] = "cancelled"
-    registry[fix_id]["cancelled_at"] = datetime.now(timezone.utc).isoformat()
-    _save_fix_registry()
-    return {"fix_id": fix_id, "status": "cancelled", "success": True}
+    result = _pipeline.cancel_fix(fix_id)
+    result["fix_id"] = fix_id
+    return result
 
 
 def handle_resource_status() -> dict:
-    import psutil
-    registry = _get_fix_registry()
-    active = [k for k, v in registry.items() if v.get("status") in ("triaging", "dispatching", "verifying", "reviewing")]
     return {
         "description": "STAS pipeline system status",
         "system_status": "online",
-        "queue_depth": len(active),
-        "active_fixes": len(active),
-        "total_fixes": len(registry),
-        "worker_status": "available",
-        "memory_usage_mb": round(psutil.Process().memory_info().rss / 1024 / 1024, 1) if hasattr(psutil, "Process") else 0,
+        "pipeline": "PipelineEngine (Celery + Redis)",
     }
 
 
 def handle_resource_fix(fix_id: str) -> dict:
-    registry = _get_fix_registry()
-    fix = registry.get(fix_id)
-    if not fix:
-        return {"error": f"Fix not found: {fix_id}"}
-    return fix
+    result = _pipeline.check_status(fix_id)
+    if not result.get("success"):
+        return {"error": result.get("error", f"Fix not found: {fix_id}")}
+    return result
 
 
 def handle_resource_queue() -> dict:
-    registry = _get_fix_registry()
-    active = {k: v for k, v in registry.items() if v.get("status") in ("triaging", "dispatching", "verifying", "reviewing")}
-    queued_list = [{"fix_id": k, "status": v.get("status"), "repo": v.get("repo"), "issue_number": v.get("issue_number"), "created_at": v.get("created_at")} for k, v in sorted(active.items(), key=lambda x: x[1].get("created_at", ""))]
-    return {"queue": queued_list, "depth": len(queued_list), "description": "Current fix dispatch queue"}
+    return {
+        "queue": [],
+        "depth": 0,
+        "description": "Use pipeline check_status for individual fix tracking",
+    }
 
 
 def handle_list_tools() -> list[dict]:
     return [
-        {"name": "dispatch_fix", "description": "Trigger the STAS pipeline for a GitHub issue", "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "issue_number": {"type": "integer"}}, "required": ["repo", "issue_number"]}},
-        {"name": "get_fix_status", "description": "Return pipeline status for a fix ID", "inputSchema": {"type": "object", "properties": {"fix_id": {"type": "string"}}, "required": ["fix_id"]}},
-        {"name": "get_fix_history", "description": "Return recent fixes for a repo", "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["repo"]}},
-        {"name": "cancel_fix", "description": "Cancel an in-progress fix", "inputSchema": {"type": "object", "properties": {"fix_id": {"type": "string"}}, "required": ["fix_id"]}},
+        {"name": "dispatch_fix", "description": "Trigger the STAS pipeline for a GitHub issue (backed by Celery + PipelineEngine)", "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "issue_number": {"type": "integer"}}, "required": ["repo", "issue_number"]}},
+        {"name": "get_fix_status", "description": "Return pipeline status for a fix ID or issue ID", "inputSchema": {"type": "object", "properties": {"fix_id": {"type": "string"}, "issue_id": {"type": "string"}}}},
+        {"name": "get_fix_history", "description": "Return recent pipeline runs", "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "limit": {"type": "integer"}}}},
+        {"name": "cancel_fix", "description": "Cancel an in-progress pipeline run", "inputSchema": {"type": "object", "properties": {"fix_id": {"type": "string"}}, "required": ["fix_id"]}},
     ]
 
 
 def handle_list_resources() -> list[dict]:
     return [
-        {"uri": "stas://status", "name": "Pipeline Status", "description": "Overall system health and queue depth"},
-        {"uri": "stas://fixes/{fix_id}", "name": "Fix Details", "description": "Full fix details for a specific fix ID"},
-        {"uri": "stas://queue", "name": "Fix Queue", "description": "Current dispatch queue with positions"},
+        {"uri": "stas://status", "name": "Pipeline Status", "description": "Real OpenSymphony pipeline system health"},
+        {"uri": "stas://fixes/{fix_id}", "name": "Fix Details", "description": "Full pipeline details for a specific fix"},
+        {"uri": "stas://queue", "name": "Fix Queue", "description": "Pipeline dispatch queue overview"},
     ]
 
 

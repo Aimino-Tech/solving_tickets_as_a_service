@@ -2,58 +2,31 @@
 MCP Handler implementations — core business logic for STAS MCP tools.
 
 Each handler is an async function that takes typed parameters and returns
-a dict suitable for JSON serialization.  No MCP library dependency here;
-handlers are pure domain logic.
+a dict suitable for JSON serialization.
 
-All run state is backed by the STAS API (Node.js backend) via HTTP calls.
-A local JSON file cache provides fallback when the API is unreachable.
+Run state is backed by the OpenSymphony PipelineEngine (Celery + Redis)
+via PipelineClient, with the STAS API (Node.js backend) as fallback.
 """
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import re
-import uuid
 from datetime import datetime, timezone
 from typing import Any
 
 import httpx
 
+from workers.pipeline_client import get_client
+
 logger = logging.getLogger(__name__)
 
-FIX_REGISTRY_PATH = os.getenv("STAS_FIX_REGISTRY_PATH", "/tmp/stas-fix-registry.json")
 GITHUB_API_BASE = os.getenv("GITHUB_API_BASE", "https://api.github.com")
 STAS_API_URL = os.getenv("STAS_API_URL", "http://localhost:3000")
 STAS_API_KEY = os.getenv("STAS_API_KEY", "")
 
-_fix_registry: dict[str, dict[str, Any]] | None = None
-
-
-def _load_registry() -> dict[str, dict[str, Any]]:
-    global _fix_registry
-    if _fix_registry is not None:
-        return _fix_registry
-    try:
-        with open(FIX_REGISTRY_PATH) as f:
-            _fix_registry = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        _fix_registry = {}
-    return _fix_registry
-
-
-def _save_registry() -> None:
-    if _fix_registry is None:
-        return
-    os.makedirs(os.path.dirname(FIX_REGISTRY_PATH) or ".", exist_ok=True)
-    with open(FIX_REGISTRY_PATH, "w") as f:
-        json.dump(_fix_registry, f, indent=2, default=str)
-
-
-def _reset_registry() -> None:
-    global _fix_registry
-    _fix_registry = None
+_pipeline = get_client()
 
 
 def _api_headers() -> dict[str, str]:
@@ -157,58 +130,43 @@ async def run_fix(issue_url: str) -> dict[str, Any]:
     repo = parsed["repo"]
     issue_number = parsed["issue_number"]
 
-    # Try the real API first
-    api_result = await _call_api("POST", "/mcp/submit_issue", {
-        "repoOwner": owner,
-        "repoName": repo,
-        "issueNumber": issue_number,
-        "issueTitle": f"Fix for #{issue_number}",
-        "issueBody": f"Auto-triggered fix for {owner}/{repo}#{issue_number}",
-        "labels": [os.getenv("STAS_LABEL", "stas:fix")],
-        "channel": "mcp",
-    })
+    result = _pipeline.submit_fix(
+        owner=owner,
+        repo=f"{owner}/{repo}",
+        issue_number=issue_number,
+        issue_url=issue_url,
+    )
 
-    if api_result and api_result.get("runId"):
-        run_id = api_result["runId"]
-        return {
-            "success": True,
-            "run_id": run_id,
-            "status": "queued",
-            "issue_url": issue_url,
-            "message": f"Fix run {run_id} created and queued via STAS API",
-        }
+    if not result.get("success"):
+        api_result = await _call_api("POST", "/mcp/submit_issue", {
+            "repoOwner": owner,
+            "repoName": repo,
+            "issueNumber": issue_number,
+            "issueTitle": f"Fix for #{issue_number}",
+            "issueBody": f"Auto-triggered fix for {owner}/{repo}#{issue_number}",
+            "labels": [os.getenv("STAS_LABEL", "stas:fix")],
+            "channel": "mcp",
+        })
+        if api_result and api_result.get("runId"):
+            return {
+                "success": True,
+                "run_id": api_result["runId"],
+                "status": "queued",
+                "issue_url": issue_url,
+                "owner": owner, "repo": repo, "issue_number": issue_number,
+                "message": f"Fix run {api_result['runId']} created and queued via STAS API",
+            }
 
-    # Fallback: create a local run entry
-    run_id = f"stas-{uuid.uuid4().hex[:12]}"
-    registry = _load_registry()
-
-    entry: dict[str, Any] = {
-        "run_id": run_id,
+    return {
+        "success": result.get("success", False),
+        "run_id": result.get("run_id", ""),
+        "pipeline_id": result.get("pipeline_id", ""),
+        "status": result.get("status", "queued"),
         "issue_url": issue_url,
         "owner": owner,
         "repo": repo,
         "issue_number": issue_number,
-        "status": "queued",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-        "pr_url": None,
-        "pr_number": None,
-    }
-
-    registry[run_id] = entry
-    _save_registry()
-
-    try:
-        _enqueue_fix_via_internal(owner, repo, issue_number, run_id)
-    except Exception as exc:
-        logger.warning("Failed to enqueue fix, run recorded offline: %s", exc)
-
-    return {
-        "success": True,
-        "run_id": run_id,
-        "status": "queued",
-        "issue_url": issue_url,
-        "message": f"Fix run {run_id} created and queued (local fallback)",
+        "message": result.get("message", f"Fix submitted — run_id={result.get('run_id', '')}"),
     }
 
 
@@ -232,38 +190,21 @@ async def check_status(run_id: str) -> dict[str, Any]:
     if not run_id:
         return {"success": False, "error": "run_id is required"}
 
-    # Try the real API
-    api_run = await _fetch_run_from_api(run_id)
-    if api_run:
-        return {
-            "success": True,
-            "run_id": run_id,
-            "status": api_run.get("status", "unknown"),
-            "issue_url": api_run.get("issue_url"),
-            "pr_url": api_run.get("pr_url"),
-            "pr_number": api_run.get("pr_number"),
-            "created_at": api_run.get("created_at"),
-            "updated_at": api_run.get("updated_at"),
-            "completed_at": api_run.get("completed_at"),
-        }
+    result = _pipeline.check_status(run_id)
 
-    # Fallback to local cache
-    registry = _load_registry()
-    entry = registry.get(run_id)
-
-    if not entry:
-        return {"success": False, "error": f"Run not found: {run_id}"}
+    if not result.get("success"):
+        api_run = await _fetch_run_from_api(run_id)
+        if api_run:
+            result = api_run
 
     return {
-        "success": True,
+        "success": result.get("success", False),
         "run_id": run_id,
-        "status": entry.get("status", "unknown"),
-        "issue_url": entry.get("issue_url"),
-        "pr_url": entry.get("pr_url"),
-        "pr_number": entry.get("pr_number"),
-        "created_at": entry.get("created_at"),
-        "updated_at": entry.get("updated_at"),
-        "completed_at": entry.get("completed_at"),
+        "status": result.get("status", "unknown"),
+        "current_stage": result.get("current_stage", ""),
+        "progress": result.get("progress", 0.0),
+        "pipeline_id": result.get("pipeline_id", ""),
+        "error": result.get("error"),
     }
 
 
@@ -271,44 +212,20 @@ async def get_pr(run_id: str) -> dict[str, Any]:
     if not run_id:
         return {"success": False, "error": "run_id is required"}
 
-    # Try the real API
-    api_run = await _fetch_run_from_api(run_id)
-    if api_run:
-        pr_url = api_run.get("pr_url")
-        pr_number = api_run.get("pr_number")
-        if not pr_url and not pr_number:
-            return {
-                "success": True,
-                "run_id": run_id,
-                "status": api_run.get("status"),
-                "pr_url": None,
-                "message": "No PR has been created for this run yet",
-            }
+    result = _pipeline.check_status(run_id)
+    if not result.get("success"):
+        api_run = await _fetch_run_from_api(run_id)
+        if api_run:
+            result = api_run
+
+    pr_url = result.get("pr_url")
+    pr_number = result.get("pr_number")
+
+    if not pr_url:
         return {
             "success": True,
             "run_id": run_id,
-            "status": api_run.get("status"),
-            "pr_url": pr_url,
-            "pr_number": pr_number,
-            "owner": None,
-            "repo": None,
-        }
-
-    # Fallback to local cache
-    registry = _load_registry()
-    entry = registry.get(run_id)
-
-    if not entry:
-        return {"success": False, "error": f"Run not found: {run_id}"}
-
-    pr_url = entry.get("pr_url")
-    pr_number = entry.get("pr_number")
-
-    if not pr_url and not pr_number:
-        return {
-            "success": True,
-            "run_id": run_id,
-            "status": entry.get("status"),
+            "status": result.get("status", "unknown"),
             "pr_url": None,
             "message": "No PR has been created for this run yet",
         }
@@ -316,39 +233,30 @@ async def get_pr(run_id: str) -> dict[str, Any]:
     return {
         "success": True,
         "run_id": run_id,
-        "status": entry.get("status"),
+        "status": result.get("status"),
         "pr_url": pr_url,
         "pr_number": pr_number,
-        "owner": entry.get("owner"),
-        "repo": entry.get("repo"),
     }
 
 
 async def get_run_resource(run_id: str) -> dict[str, Any]:
-    # Try the real API
-    api_run = await _fetch_run_from_api(run_id)
-    if api_run:
-        return api_run
+    result = _pipeline.check_status(run_id)
+    if not result.get("success"):
+        api_run = await _fetch_run_from_api(run_id)
+        if api_run:
+            result = api_run
 
-    # Fallback to local cache
-    registry = _load_registry()
-    entry = registry.get(run_id)
-
-    if not entry:
-        return {"error": f"Run not found: {run_id}"}
+    if not result.get("success"):
+        return {"error": result.get("error", f"Run not found: {run_id}")}
 
     return {
         "run_id": run_id,
-        "status": entry.get("status", "unknown"),
-        "issue_url": entry.get("issue_url"),
-        "owner": entry.get("owner"),
-        "repo": entry.get("repo"),
-        "issue_number": entry.get("issue_number"),
-        "pr_url": entry.get("pr_url"),
-        "pr_number": entry.get("pr_number"),
-        "created_at": entry.get("created_at"),
-        "updated_at": entry.get("updated_at"),
-        "completed_at": entry.get("completed_at"),
+        "status": result.get("status", "unknown"),
+        "current_stage": result.get("current_stage", ""),
+        "progress": result.get("progress", 0.0),
+        "created_at": result.get("created_at"),
+        "updated_at": result.get("updated_at"),
+        "error": result.get("error"),
     }
 
 
@@ -380,30 +288,4 @@ def _parse_github_issue_url(url: str) -> dict[str, Any] | None:
     }
 
 
-def _enqueue_fix_via_internal(
-    owner: str,
-    repo: str,
-    issue_number: int,
-    run_id: str,
-) -> None:
-    queue_url = os.getenv("STAS_QUEUE_URL", "http://localhost:3000")
-    payload = {
-        "repoOwner": owner,
-        "repoName": repo,
-        "issueTitle": f"Fix for #{issue_number}",
-        "issueBody": f"Auto-triggered fix for {owner}/{repo}#{issue_number}",
-        "labels": [os.getenv("STAS_LABEL", "stas:fix")],
-        "channel": "mcp",
-        "channelTarget": run_id,
-    }
 
-    try:
-        resp = httpx.post(
-            f"{queue_url}/mcp/submit_issue",
-            json=payload,
-            timeout=10,
-        )
-        if resp.status_code in (200, 201):
-            logger.info("Fix run %s enqueued via internal queue", run_id)
-    except httpx.ConnectError:
-        logger.debug("Internal queue not available at %s", queue_url)
