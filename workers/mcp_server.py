@@ -16,6 +16,33 @@ from workers.pipeline_client import get_client
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Sentry SDK initialization for MCP Agent Server
+# ---------------------------------------------------------------------------
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+SENTRY_ENV = os.getenv("SENTRY_ENVIRONMENT", os.getenv("NODE_ENV", "development"))
+SENTRY_RELEASE = os.getenv("SENTRY_RELEASE", "stas@unknown")
+
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            environment=SENTRY_ENV,
+            release=SENTRY_RELEASE,
+            traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        )
+        logger.info(
+            "Sentry initialized for workers MCP Server — env=%s release=%s",
+            SENTRY_ENV,
+            SENTRY_RELEASE,
+        )
+    except Exception as e:
+        logger.warning("Failed to initialize Sentry for workers MCP Server: %s", e)
+else:
+    logger.info("SENTRY_DSN not configured — Sentry monitoring disabled for workers MCP Server")
+
 MCP_PORT = int(os.getenv("MCP_SERVER_PORT", "4095"))
 OPENCODE_CONFIG_DIR = os.path.expanduser(os.getenv("OPENCODE_CONFIG_DIR", "~/.config/opencode"))
 MCP_SERVER_NAME = "stas-pipeline"

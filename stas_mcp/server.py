@@ -28,6 +28,33 @@ from workers.pipeline_client import get_client
 from stas_mcp.handlers import _parse_github_issue_url, check_status, get_pr, get_run_resource, label_issue, list_runs_from_api, run_fix
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Sentry SDK initialization for MCP Agent Server
+# ---------------------------------------------------------------------------
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+SENTRY_ENV = os.getenv("SENTRY_ENVIRONMENT", os.getenv("NODE_ENV", "development"))
+SENTRY_RELEASE = os.getenv("SENTRY_RELEASE", "stas@unknown")
+
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            environment=SENTRY_ENV,
+            release=SENTRY_RELEASE,
+            traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        )
+        logger.info(
+            "Sentry initialized for MCP Server — env=%s release=%s",
+            SENTRY_ENV,
+            SENTRY_RELEASE,
+        )
+    except Exception as e:
+        logger.warning("Failed to initialize Sentry for MCP Server: %s", e)
+else:
+    logger.info("SENTRY_DSN not configured — Sentry monitoring disabled for MCP Server")
 SERVER_NAME = "stas-agent-discovery"
 SERVER_VERSION = "0.1.0"
 
