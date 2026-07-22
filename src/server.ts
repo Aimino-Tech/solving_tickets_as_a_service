@@ -136,6 +136,21 @@ export async function createApp(): Promise<express.Application> {
     res.status(allOk ? 200 : 503).json({ status: allOk ? 'ok' : 'degraded', checks, timestamp: new Date().toISOString(), aiMode: config.stas.aiDisabled ? 'ai-disabled' : 'enabled' });
   });
 
+  if (process.env.NODE_ENV !== 'production') {
+    app.get('/debug/sentry', async (_req: Request, res: Response) => {
+      const { Sentry } = await import('./monitoring/sentry.js');
+      const transaction = Sentry.startTransaction({ name: 'debug-test-transaction' });
+      Sentry.getCurrentScope().setSpan(transaction);
+      try {
+        Sentry.captureMessage('Sentry debug message — test from /debug/sentry endpoint', 'info');
+        Sentry.captureException(new Error('Sentry debug error — test exception from /debug/sentry'));
+        res.json({ status: 'ok', message: 'Sentry test events sent. Check your Sentry dashboard.' });
+      } finally {
+        transaction.end();
+      }
+    });
+  }
+
   // -- IP Allowlist for webhook endpoints -----------------------------------
   app.use('/webhook', ipAllowlistMiddleware);
 

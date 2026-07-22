@@ -1,8 +1,10 @@
+import '../monitoring/sentry-init.js';
 import { Octokit } from '@octokit/rest';
 import { config } from '../config.js';
 import { getOctokit } from '../github/auth.js';
 import { rootLogger } from '../utils/logger.js';
 import { QUEUES, consumeQueue, connect as rmqConnect, isConnected } from '../queue/rabbitmq.js';
+import { captureError, setUserContext } from '../monitoring/sentry.js';
 
 const log = rootLogger.child({ module: 'auto-fix-worker' });
 
@@ -38,46 +40,61 @@ export async function startAutoFixConsumer(): Promise<void> {
       return;
     }
 
-    log.info(
-      {
-        pr: `${data.repoOwner}/${data.repoName}#${data.prNumber}`,
-        attempt: data.fixAttempts,
-      },
-      'Processing auto-fix job',
-    );
+    setUserContext(data.installationId, `${data.repoOwner}/${data.repoName}`);
 
-    if (data.fixAttempts >= MAX_AUTO_FIX_ATTEMPTS) {
-      log.warn(
-        { pr: `${data.repoOwner}/${data.repoName}#${data.prNumber}`, fixAttempts: data.fixAttempts },
-        'Max auto-fix attempts reached, skipping',
+    try {
+      log.info(
+        {
+          pr: `${data.repoOwner}/${data.repoName}#${data.prNumber}`,
+          attempt: data.fixAttempts,
+        },
+        'Processing auto-fix job',
       );
-      return;
+
+      if (data.fixAttempts >= MAX_AUTO_FIX_ATTEMPTS) {
+        log.warn(
+          { pr: `${data.repoOwner}/${data.repoName}#${data.prNumber}`, fixAttempts: data.fixAttempts },
+          'Max auto-fix attempts reached, skipping',
+        );
+        return;
+      }
+
+      const octokit = await getOctokit(data.installationId);
+
+      await octokit.issues.createComment({
+        owner: data.repoOwner,
+        repo: data.repoName,
+        issue_number: data.prNumber,
+        body: [
+          `### 🔧 Auto-Fix Dispatched (Attempt #${data.fixAttempts + 1})`,
+          '',
+          `Detected problem: **${data.detectedProblem}**`,
+          '',
+          'The fix pipeline has been triggered. The agent will investigate the failure and push a fix commit.',
+          '',
+          `> — ${config.stas.botName} 🤖`,
+        ].join('\n'),
+      });
+
+      log.info(
+        {
+          pr: `${data.repoOwner}/${data.repoName}#${data.prNumber}`,
+          problem: data.detectedProblem,
+        },
+        'Auto-fix job processed — dispatched to agent pipeline',
+      );
+    } catch (err) {
+      captureError(err instanceof Error ? err : new Error(String(err)), {
+        repo: `${data.repoOwner}/${data.repoName}`,
+        prNumber: data.prNumber,
+        installationId: data.installationId,
+        errorCategory: 'auto-fix-worker',
+      });
+      log.error(
+        { err: String(err), pr: `${data.repoOwner}/${data.repoName}#${data.prNumber}` },
+        'Auto-fix job failed',
+      );
     }
-
-    const octokit = await getOctokit(data.installationId);
-
-    await octokit.issues.createComment({
-      owner: data.repoOwner,
-      repo: data.repoName,
-      issue_number: data.prNumber,
-      body: [
-        `### 🔧 Auto-Fix Dispatched (Attempt #${data.fixAttempts + 1})`,
-        '',
-        `Detected problem: **${data.detectedProblem}**`,
-        '',
-        'The fix pipeline has been triggered. The agent will investigate the failure and push a fix commit.',
-        '',
-        `> — ${config.stas.botName} 🤖`,
-      ].join('\n'),
-    });
-
-    log.info(
-      {
-        pr: `${data.repoOwner}/${data.repoName}#${data.prNumber}`,
-        problem: data.detectedProblem,
-      },
-      'Auto-fix job processed — dispatched to agent pipeline',
-    );
   });
 
   log.info('Auto-fix RabbitMQ consumer started');

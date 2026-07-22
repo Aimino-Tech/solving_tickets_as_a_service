@@ -198,6 +198,41 @@ jobs:
       digest: ${{ steps.digest.outputs.digest }}
 
   ##############################################################################
+  # SENTRY RELEASE — create release + upload source maps
+  ##############################################################################
+  sentry-release:
+    name: Sentry Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [validate, build-and-push]
+    if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install sentry-cli
+        run: npm install -g @sentry/cli
+
+      - name: Create Sentry release
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          sentry-cli releases new "stas@${VERSION}" --project "$SENTRY_PROJECT" --org "$SENTRY_ORG"
+          sentry-cli releases set-commits --auto "stas@${VERSION}"
+          sentry-cli releases finalize "stas@${VERSION}"
+          sentry-cli releases deploys "stas@${VERSION}" new -e production
+          echo "Sentry release stas@${VERSION} created and deployed"
+
+  ##############################################################################
   # GENERATE SBOM (CycloneDX)
   ##############################################################################
   sbom:
