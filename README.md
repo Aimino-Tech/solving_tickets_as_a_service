@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/Aimino-Tech/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)
 ![CD](https://github.com/Aimino-Tech/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 ![Benchmark](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/.github/badges/benchmark.svg)
 [![Product Hunt](https://img.shields.io/badge/Product_Hunt-Product_of_the_Day-FF6154?logo=producthunt&logoColor=white)](https://www.producthunt.com/posts/stas)
 
