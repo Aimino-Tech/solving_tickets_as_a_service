@@ -1,0 +1,72 @@
+{
+  "$schema": "https://opencode.ai/schemas/skill-registry.json",
+  "name": "stas",
+  "displayName": "STAS — Solving Tickets As A Service",
+  "description": "Submit fix requests to a GitHub bot that investigates, fixes, tests, and opens PRs.",
+  "version": "1.0.0",
+  "author": "Aimino Tech",
+  "homepage": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
+  "installUrl": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
+  "icon": "https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/.stas/icon.png",
+  "tags": ["github", "automation", "code-review", "pr-creation", "bug-fixing", "mcp"],
+  "platforms": {
+    "opencode": {
+      "install": "npx @aimino/stas install --opencode",
+      "config": {
+        "mcpServers": {
+          "stas": {
+            "command": "python3",
+            "args": ["-m", "stas_mcp.server", "stdio"]
+          }
+        }
+      }
+    },
+    "claude": {
+      "install": "npx @aimino/stas install --claude",
+      "config": {
+        "mcpServers": {
+          "stas": {
+            "command": "python3",
+            "args": ["-m", "stas_mcp.server", "stdio"]
+          }
+        }
+      }
+    },
+    "cursor": {
+      "install": "npx @aimino/stas install --cursor",
+      "config": {
+        "mcpServers": {
+          "stas": {
+            "command": "python3",
+            "args": ["-m", "stas_mcp.server", "stdio"]
+          }
+        }
+      }
+    },
+    "codex": {
+      "install": "npx @aimino/stas install --codex",
+      "config": {
+        "mcpServers": {
+          "stas": {
+            "command": "python3",
+            "args": ["-m", "stas_mcp.server", "stdio"]
+          }
+        }
+      }
+    }
+  },
+  "capabilities": {
+    "tools": {
+      "stas_label_issue": "Label a GitHub issue with the STAS fix label",
+      "stas_run_fix": "Trigger the STAS fix pipeline for a GitHub issue URL",
+      "stas_check_status": "Check the current status of a STAS fix run",
+      "stas_get_pr": "Get the PR URL and details for a completed STAS fix run",
+      "list_issues": "List tracked issues with their STAS fix status",
+      "search_codebase": "Search the STAS codebase for symbols, files, or patterns"
+    },
+    "resources": {
+      "stas://runs/{run_id}": "Full run details with status, timestamps, and PR link",
+      "stas://issues/{issue_id}": "Issue details with fix status and run history"
+    }
+  }
+}

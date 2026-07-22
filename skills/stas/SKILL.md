@@ -1,7 +1,11 @@
 ---
 name: stas
 description: STAS — Solving Tickets As A Service. Submit fix requests to a GitHub bot that investigates, fixes, tests, and opens PRs.
-version: 0.1.0
+version: 1.0.0
+download:
+  npm: npx @aimino/stas install
+  shell: bash stas_mcp/install.sh
+  smithery: https://smithery.ai/server/@aimino/stas-mcp
 author: Aimino Tech
 license: MIT
 homepage: https://github.com/Aimino-Tech/solving_tickets_as_a_service
@@ -33,6 +37,44 @@ capabilities:
 # STAS Skill — Solving Tickets As A Service
 
 STAS is a GitHub bot that takes issue descriptions, investigates your codebase, writes a fix, runs tests, and opens a PR. Agents access STAS through its MCP (Model Context Protocol) API.
+
+## Download & Publish
+
+### Install via npm (any agent)
+```bash
+npx @aimino/stas install
+```
+
+### Install via shell (Python env)
+```bash
+git clone https://github.com/Aimino-Tech/solving_tickets_as_a_service.git
+cd solving_tickets_as_a_service
+bash stas_mcp/install.sh
+```
+
+### Install via Smithery (Docker)
+[![Deploy to Smithery](https://smithery.ai/servers/@aimino/stas-mcp/badge)](https://smithery.ai/server/@aimino/stas-mcp)
+
+### Add to OpenCode directly
+```bash
+opencode install skill stas
+```
+
+### Publish to OpenCode Skill Registry
+The skill is registered in `.stas/skill-registry.json` and can be discovered
+by any agent with access to the repository. To publish for all users:
+
+```bash
+# Local install for current project
+bash stas_mcp/install.sh --opencode
+
+# npm publish (requires npm login as @aimino)
+npm publish --workspace=packages/stas-skill
+```
+
+### Skill Manifest
+All metadata is declared in `packages/stas-skill/skill.json` — version, tools,
+resources, and install methods.
 
 ## Quick Install
 

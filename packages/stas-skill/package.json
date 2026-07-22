@@ -1,0 +1,29 @@
+{
+  "name": "@aimino/stas",
+  "version": "1.0.0",
+  "description": "STAS — Solving Tickets As A Service. Publish fix requests to a GitHub bot that investigates, fixes, tests, and opens PRs.",
+  "keywords": ["stas", "github", "automation", "mcp", "opencode", "skill", "fix", "pr"],
+  "homepage": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
+  "bugs": "https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues",
+  "license": "MIT",
+  "author": "Aimino Tech (https://aimino.de)",
+  "bin": {
+    "stas": "./bin/stas.js"
+  },
+  "files": [
+    "bin/",
+    "skill.json",
+    "SKILL.md",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aimino-Tech/solving_tickets_as_a_service.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

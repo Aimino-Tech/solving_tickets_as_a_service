@@ -3,6 +3,12 @@
   "mcpName": "stas-agent-discovery",
   "description": "MCP server for STAS — Solving Tickets As A Service. Submit GitHub issues, list runs, search codebase, and get automated fix PRs via OpenCode agents.",
   "version": "1.0.0",
+  "download": {
+    "npm": "npx @aimino/stas install",
+    "shell": "bash stas_mcp/install.sh",
+    "smithery": "https://smithery.ai/server/@aimino/stas-mcp",
+    "opencode": "opencode install skill stas"
+  },
   "agent": {
     "name": "stas-agent",
     "version": "1.0.0",

@@ -3,6 +3,18 @@
   "model": "opencode-go/deepseek-v4-flash",
   "small_model": "opencode-go/deepseek-v4-flash",
   "default_agent": "Sisyphus - ultraworker",
+  "skills": {
+    "stas": {
+      "source": ".stas/skill-registry.json",
+      "version": "1.0.0"
+    }
+  },
+  "mcpServers": {
+    "stas": {
+      "command": "python3",
+      "args": ["-m", "stas_mcp.server", "stdio"]
+    }
+  },
   "permission": {
     "read": { "tmp_data/search_cache/**": "deny", "*": "allow" },
     "glob": { "tmp_data/search_cache/**": "deny", "*": "allow" },

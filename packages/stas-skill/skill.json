@@ -1,0 +1,87 @@
+{
+  "$schema": "https://opencode.ai/schemas/skill.json",
+  "name": "stas",
+  "displayName": "STAS — Solving Tickets As A Service",
+  "description": "Submit fix requests to a GitHub bot that investigates, fixes, tests, and opens PRs. Works with OpenCode, Claude Desktop, Cursor, and Codex CLI.",
+  "version": "1.0.0",
+  "author": "Aimino Tech",
+  "license": "MIT",
+  "homepage": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
+  "tags": ["github", "automation", "code-review", "pr-creation", "bug-fixing", "mcp"],
+  "categories": ["productivity", "developer-tools", "ci-cd"],
+  "capabilities": {
+    "tools": [
+      {
+        "name": "stas_label_issue",
+        "description": "Label a GitHub issue with the STAS fix label (e.g. stas:fix).",
+        "parameters": {
+          "owner": {"type": "string", "description": "GitHub repository owner"},
+          "repo": {"type": "string", "description": "GitHub repository name"},
+          "issue_number": {"type": "integer", "description": "Issue number"},
+          "label": {"type": "string", "description": "Label to apply (default: stas:fix)"}
+        },
+        "required": ["owner", "repo", "issue_number"]
+      },
+      {
+        "name": "stas_run_fix",
+        "description": "Trigger the STAS fix pipeline for a GitHub issue URL.",
+        "parameters": {
+          "issue_url": {"type": "string", "description": "Full GitHub issue URL"}
+        },
+        "required": ["issue_url"]
+      },
+      {
+        "name": "stas_check_status",
+        "description": "Check the current status of a STAS fix run.",
+        "parameters": {
+          "run_id": {"type": "string", "description": "Run ID from stas_run_fix"}
+        },
+        "required": ["run_id"]
+      },
+      {
+        "name": "stas_get_pr",
+        "description": "Get the PR URL and details for a completed STAS fix run.",
+        "parameters": {
+          "run_id": {"type": "string", "description": "Run ID from stas_run_fix"}
+        },
+        "required": ["run_id"]
+      },
+      {
+        "name": "list_issues",
+        "description": "List tracked issues with their STAS fix status.",
+        "parameters": {
+          "status": {"type": "string", "description": "Filter by status"},
+          "repo": {"type": "string", "description": "Filter by repo (owner/name)"},
+          "limit": {"type": "integer", "description": "Max results"}
+        }
+      },
+      {
+        "name": "search_codebase",
+        "description": "Search the STAS codebase for symbols, files, or patterns.",
+        "parameters": {
+          "query": {"type": "string", "description": "Search query"},
+          "repo": {"type": "string", "description": "Filter by repo"},
+          "max_results": {"type": "integer", "description": "Max results"}
+        },
+        "required": ["query"]
+      }
+    ],
+    "resources": [
+      {"uri": "stas://runs/{run_id}", "description": "Full run details including status, timestamps, issue info, and PR link."},
+      {"uri": "stas://issues/{issue_id}", "description": "Issue details with fix status, run history, and linked PRs."}
+    ]
+  },
+  "install": {
+    "methods": [
+      {"type": "npx", "command": "npx @aimino/stas install", "description": "Install via npm (requires Node.js 18+)"},
+      {"type": "bash", "command": "bash stas_mcp/install.sh", "description": "Install via shell script (recommended for Python environments)"},
+      {"type": "smithery", "url": "https://smithery.ai/server/@aimino/stas-mcp", "description": "Deploy via Smithery (Docker-based)"}
+    ],
+    "dependencies": {
+      "python": "3.11+",
+      "pip": ["mcp>=1.0.0", "httpx"],
+      "node": "18+"
+    }
+  },
+  "routes": ["mcp", "api"]
+}
