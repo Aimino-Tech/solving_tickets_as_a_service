@@ -81,6 +81,8 @@ export function registerSlackMentionHandler(boltApp: App | null): void {
         issueTitle: `Fix requested via Slack @stas for #${ref.issueNumber}`,
         issueBody: `Referenced in Slack by <@${userId}>\n\nIssue: https://github.com/${ref.owner}/${ref.repo}/issues/${ref.issueNumber}\n\nContext: ${text}`,
         source: 'slack',
+        slackChannel: channelId,
+        slackThreadTs: threadTs,
       };
 
       const messageId = `${jobData.installationId}:${ref.owner}/${ref.repo}#${ref.issueNumber}-${Date.now()}`;
@@ -160,6 +162,8 @@ async function handleFreeformRequest(
       issueTitle,
       issueBody: `Submitted via Slack @stas by <@${userId}>\n\nDescription: ${issueTitle}`,
       source: 'slack',
+      slackChannel: channelId,
+      slackThreadTs: threadTs,
     };
 
     const messageId = `${jobData.installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
