@@ -168,3 +168,95 @@ export interface PhaseOutputRecord {
   error?: string;
   tokenCost?: number;
 }
+
+// ── Pipeline Progress Event Types ──────────────────────────────────────
+
+export type PipelineProgressEvent =
+  | 'pipeline.started'
+  | 'pipeline.completed'
+  | 'pipeline.failed'
+  | 'stage.started'
+  | 'stage.completed';
+
+export interface PipelineProgressPayload {
+  event: PipelineProgressEvent;
+  runId: string;
+  stage?: string;
+  template?: string;
+  model?: string;
+  message?: string;
+  detail?: string;
+  duration?: number;
+  confidence?: string;
+  prUrl?: string;
+  error?: string;
+  timestamp: string;
+}
+
+// ── OpenSymphony Stage Result Types ───────────────────────────────────
+
+export interface IntentResult {
+  issueType: 'bug_fix' | 'feature_request' | 'question' | 'unknown';
+  complexity: 'simple' | 'medium' | 'complex';
+  repoOwner?: string;
+  repoName?: string;
+  issueNumber?: number;
+  summary: string;
+}
+
+export interface PlanningResult {
+  reproductionSteps: string[];
+  rootCauseHypothesis: string;
+  affectedFiles: string[];
+  approach: string;
+}
+
+export interface ExecutionResult {
+  success: boolean;
+  summary: string;
+  diff?: string;
+  branchName?: string;
+  testOutput?: string;
+  errors?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface CollectionResult {
+  diff: string;
+  branchName: string;
+  testOutput: string;
+  prUrl?: string;
+  qualityGatesPassed: boolean;
+  qualityGateDetails?: string;
+}
+
+export interface TasteResult {
+  confidence: 'high' | 'medium' | 'low';
+  evidence: string[];
+  testsPassed: boolean;
+  realDiffProduced: boolean;
+  qualityGatesPassed: boolean;
+}
+
+// ── Pipeline Template Types ──────────────────────────────────────────
+
+export type PipelineTemplateId = 'fast' | 'full';
+
+export interface PipelineTemplate {
+  id: PipelineTemplateId;
+  stages: string[];
+  description: string;
+}
+
+export const PIPELINE_TEMPLATES: Record<PipelineTemplateId, PipelineTemplate> = {
+  fast: {
+    id: 'fast',
+    stages: ['intent', 'execute', 'taste'],
+    description: 'Fast pipeline — intent classification, direct execution, quality taste',
+  },
+  full: {
+    id: 'full',
+    stages: ['intent', 'plan', 'execute', 'collect', 'taste'],
+    description: 'Full pipeline — intent, planning, execution, result collection, quality taste',
+  },
+};

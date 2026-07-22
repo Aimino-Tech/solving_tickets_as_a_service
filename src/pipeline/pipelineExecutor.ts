@@ -390,6 +390,37 @@ export class PipelineExecutor {
     };
   }
 
+  getExecutionResult(sessionId: string): {
+    success: boolean;
+    summary?: string;
+    confidence?: string;
+    error?: string;
+    output?: string;
+  } {
+    const session = getSession(sessionId) as ExtendedSession | undefined;
+    if (!session) {
+      return { success: false, error: 'Session not found' };
+    }
+
+    const lastPhase = session.phaseHistory?.[session.phaseHistory.length - 1];
+    const allCompleted = session.phaseHistory?.every((s) => s.status === 'completed') ?? false;
+
+    let confidence = 'medium';
+    if (session.status === 'completed') {
+      confidence = allCompleted ? 'high' : 'medium';
+    } else if (session.status === 'failed') {
+      confidence = 'low';
+    }
+
+    return {
+      success: session.status === 'completed',
+      summary: lastPhase?.command ? `Phase "${lastPhase.phase}" completed` : 'Pipeline finished',
+      confidence,
+      error: session.error,
+      output: lastPhase?.command,
+    };
+  }
+
   // ── Agent Confinement Enforcement ───────────────────────────────────────
 
   private checkBudget(sessionId: string, _stepCost?: number): boolean {
