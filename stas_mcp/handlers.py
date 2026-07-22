@@ -4,6 +4,9 @@ MCP Handler implementations — core business logic for STAS MCP tools.
 Each handler is an async function that takes typed parameters and returns
 a dict suitable for JSON serialization.  No MCP library dependency here;
 handlers are pure domain logic.
+
+All run state is backed by the STAS API (Node.js backend) via HTTP calls.
+A local JSON file cache provides fallback when the API is unreachable.
 """
 
 from __future__ import annotations
@@ -22,7 +25,8 @@ logger = logging.getLogger(__name__)
 
 FIX_REGISTRY_PATH = os.getenv("STAS_FIX_REGISTRY_PATH", "/tmp/stas-fix-registry.json")
 GITHUB_API_BASE = os.getenv("GITHUB_API_BASE", "https://api.github.com")
-
+STAS_API_URL = os.getenv("STAS_API_URL", "http://localhost:3000")
+STAS_API_KEY = os.getenv("STAS_API_KEY", "")
 
 _fix_registry: dict[str, dict[str, Any]] | None = None
 
@@ -50,6 +54,37 @@ def _save_registry() -> None:
 def _reset_registry() -> None:
     global _fix_registry
     _fix_registry = None
+
+
+def _api_headers() -> dict[str, str]:
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "stas-mcp-server",
+    }
+    if STAS_API_KEY:
+        headers["Authorization"] = f"Bearer {STAS_API_KEY}"
+    return headers
+
+
+async def _call_api(method: str, path: str, json_body: dict | None = None) -> dict[str, Any] | None:
+    url = f"{STAS_API_URL.rstrip('/')}/{path.lstrip('/')}"
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.request(
+                method=method,
+                url=url,
+                headers=_api_headers(),
+                json=json_body,
+                timeout=15,
+            )
+            if resp.status_code in (200, 201):
+                return resp.json()
+            logger.warning("API returned %s for %s %s: %s", resp.status_code, method, path, resp.text[:200])
+            return None
+    except (httpx.ConnectError, httpx.TimeoutException) as exc:
+        logger.debug("API unreachable at %s — fallback to local cache: %s", url, exc)
+        return None
 
 
 async def label_issue(
@@ -122,6 +157,28 @@ async def run_fix(issue_url: str) -> dict[str, Any]:
     repo = parsed["repo"]
     issue_number = parsed["issue_number"]
 
+    # Try the real API first
+    api_result = await _call_api("POST", "/mcp/submit_issue", {
+        "repoOwner": owner,
+        "repoName": repo,
+        "issueNumber": issue_number,
+        "issueTitle": f"Fix for #{issue_number}",
+        "issueBody": f"Auto-triggered fix for {owner}/{repo}#{issue_number}",
+        "labels": [os.getenv("STAS_LABEL", "stas:fix")],
+        "channel": "mcp",
+    })
+
+    if api_result and api_result.get("runId"):
+        run_id = api_result["runId"]
+        return {
+            "success": True,
+            "run_id": run_id,
+            "status": "queued",
+            "issue_url": issue_url,
+            "message": f"Fix run {run_id} created and queued via STAS API",
+        }
+
+    # Fallback: create a local run entry
     run_id = f"stas-{uuid.uuid4().hex[:12]}"
     registry = _load_registry()
 
@@ -151,14 +208,46 @@ async def run_fix(issue_url: str) -> dict[str, Any]:
         "run_id": run_id,
         "status": "queued",
         "issue_url": issue_url,
-        "message": f"Fix run {run_id} created and queued",
+        "message": f"Fix run {run_id} created and queued (local fallback)",
     }
+
+
+async def _fetch_run_from_api(run_id: str) -> dict[str, Any] | None:
+    api_result = await _call_api("GET", f"/mcp/status/{run_id}")
+    if api_result:
+        return {
+            "run_id": api_result.get("runId", run_id),
+            "status": api_result.get("status", "unknown"),
+            "issue_url": None,
+            "pr_url": api_result.get("prUrl"),
+            "pr_number": None,
+            "created_at": api_result.get("createdAt"),
+            "updated_at": api_result.get("updatedAt"),
+            "completed_at": api_result.get("completedAt"),
+        }
+    return None
 
 
 async def check_status(run_id: str) -> dict[str, Any]:
     if not run_id:
         return {"success": False, "error": "run_id is required"}
 
+    # Try the real API
+    api_run = await _fetch_run_from_api(run_id)
+    if api_run:
+        return {
+            "success": True,
+            "run_id": run_id,
+            "status": api_run.get("status", "unknown"),
+            "issue_url": api_run.get("issue_url"),
+            "pr_url": api_run.get("pr_url"),
+            "pr_number": api_run.get("pr_number"),
+            "created_at": api_run.get("created_at"),
+            "updated_at": api_run.get("updated_at"),
+            "completed_at": api_run.get("completed_at"),
+        }
+
+    # Fallback to local cache
     registry = _load_registry()
     entry = registry.get(run_id)
 
@@ -182,6 +271,30 @@ async def get_pr(run_id: str) -> dict[str, Any]:
     if not run_id:
         return {"success": False, "error": "run_id is required"}
 
+    # Try the real API
+    api_run = await _fetch_run_from_api(run_id)
+    if api_run:
+        pr_url = api_run.get("pr_url")
+        pr_number = api_run.get("pr_number")
+        if not pr_url and not pr_number:
+            return {
+                "success": True,
+                "run_id": run_id,
+                "status": api_run.get("status"),
+                "pr_url": None,
+                "message": "No PR has been created for this run yet",
+            }
+        return {
+            "success": True,
+            "run_id": run_id,
+            "status": api_run.get("status"),
+            "pr_url": pr_url,
+            "pr_number": pr_number,
+            "owner": None,
+            "repo": None,
+        }
+
+    # Fallback to local cache
     registry = _load_registry()
     entry = registry.get(run_id)
 
@@ -212,6 +325,12 @@ async def get_pr(run_id: str) -> dict[str, Any]:
 
 
 async def get_run_resource(run_id: str) -> dict[str, Any]:
+    # Try the real API
+    api_run = await _fetch_run_from_api(run_id)
+    if api_run:
+        return api_run
+
+    # Fallback to local cache
     registry = _load_registry()
     entry = registry.get(run_id)
 
@@ -231,6 +350,22 @@ async def get_run_resource(run_id: str) -> dict[str, Any]:
         "updated_at": entry.get("updated_at"),
         "completed_at": entry.get("completed_at"),
     }
+
+
+async def list_runs_from_api(status: str | None = None, repo: str | None = None, limit: int = 20) -> dict[str, Any] | None:
+    params = {}
+    if status:
+        params["status"] = status
+    if repo:
+        params["repo"] = repo
+    params["limit"] = str(max(1, min(limit, 100)))
+
+    query_string = "&".join(f"{k}={v}" for k, v in params.items())
+    path = f"/mcp/history?{query_string}" if query_string else "/mcp/history"
+    api_result = await _call_api("GET", path)
+    if api_result and "runs" in api_result:
+        return api_result
+    return None
 
 
 def _parse_github_issue_url(url: str) -> dict[str, Any] | None:

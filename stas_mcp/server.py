@@ -24,7 +24,7 @@ SSL/TLS:
 from __future__ import annotations
 import argparse, json, logging, os, sys
 from mcp.server.fastmcp import FastMCP
-from stas_mcp.handlers import _load_registry, _parse_github_issue_url, check_status, get_pr, get_run_resource, label_issue, run_fix
+from stas_mcp.handlers import _load_registry, _parse_github_issue_url, check_status, get_pr, get_run_resource, label_issue, list_runs_from_api, run_fix
 
 logger = logging.getLogger(__name__)
 SERVER_NAME = "stas-agent-discovery"
@@ -64,8 +64,27 @@ async def stas_get_pr(run_id: str) -> str:
 # Agent-First Architecture: new tools (AIM-2071)
 
 async def _list_issues_handler(status=None, repo=None, limit=20):
-    reg = _load_registry()
     l = max(1, min(limit, 100))
+
+    api_result = await list_runs_from_api(status=status, repo=repo, limit=l)
+    if api_result and "runs" in api_result:
+        issues = []
+        for r in api_result["runs"]:
+            issues.append({
+                "run_id": r.get("runId") or r.get("run_id", ""),
+                "issue_url": r.get("issue_url"),
+                "owner": r.get("repoOwner"),
+                "repo": r.get("repoName"),
+                "issue_number": r.get("issueNumber"),
+                "status": r.get("status", "unknown"),
+                "pr_url": r.get("prUrl") or r.get("pr_url"),
+                "created_at": r.get("createdAt") or r.get("created_at"),
+                "updated_at": r.get("updatedAt") or r.get("updated_at"),
+            })
+        issues.sort(key=lambda x: x.get("updated_at", "") or "", reverse=True)
+        return {"success": True, "issues": issues[:l], "total": len(issues), "limit": l, "source": "api"}
+
+    reg = _load_registry()
     issues = []
     for rid, e in reg.items():
         if status and e.get("status") != status: continue
@@ -75,7 +94,7 @@ async def _list_issues_handler(status=None, repo=None, limit=20):
                        "status": e.get("status", "unknown"), "pr_url": e.get("pr_url"),
                        "created_at": e.get("created_at"), "updated_at": e.get("updated_at")})
     issues.sort(key=lambda x: x.get("updated_at", "") or "", reverse=True)
-    return {"success": True, "issues": issues[:l], "total": len(issues), "limit": l}
+    return {"success": True, "issues": issues[:l], "total": len(issues), "limit": l, "source": "local"}
 
 async def _search_codebase_handler(query, repo=None, max_results=10):
     if not query: return {"success": False, "error": "query is required"}
