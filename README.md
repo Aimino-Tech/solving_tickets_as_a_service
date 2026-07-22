@@ -467,6 +467,10 @@ bash scripts/rapidapi-sync.sh
 See [`DEVELOPMENT.md`](DEVELOPMENT.md) for a comprehensive deployment guide covering local dev, Railway, Fly.io, and Kubernetes.
 For day-2 operations (scaling, monitoring, incident response), see the [Production Runbook](ops/runbook.md) and [Alert Playbook](ops/playbook.md).
 
+### GitHub Marketplace
+
+STAS is listed on [GitHub Marketplace](https://github.com/marketplace/actions/stas-eval). The listing copy, visual asset specs, and submission checklist are in [docs/marketplace-listing.md](docs/marketplace-listing.md).
+
 ### One-Click Deploy
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/railway.json)

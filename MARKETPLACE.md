@@ -1,3 +1,13 @@
+# STAS — GitHub Marketplace
+
+> Two listings on GitHub Marketplace:
+> 1. **STAS App** — The full GitHub App (install on repos, label issues with `stas:fix`)
+> 2. **STAS Eval Action** — CI action for running STAS evaluations in workflows
+
+For the app listing copy and visual asset preparation, see [docs/marketplace-listing.md](docs/marketplace-listing.md).
+
+---
+
 # STAS Eval Pipeline — GitHub Marketplace Action
 
 ## Prerequisites
