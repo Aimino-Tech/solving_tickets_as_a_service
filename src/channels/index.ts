@@ -4,3 +4,4 @@ export { TelegramProgressSender, handleTelegramWebhook, createTelegramProgressSe
 export { WhatsAppProgressSender, handleWhatsAppWebhook, verifyWhatsAppWebhook, createWhatsAppProgressSender } from './whatsapp.js';
 export { registerSlackMentionHandler } from './slack/handler.js';
 export { parseIssueRefs } from './slack/issueParser.js';
+export { SlackProgressSender, createSlackProgressSender } from './slack/progressSender.js';
