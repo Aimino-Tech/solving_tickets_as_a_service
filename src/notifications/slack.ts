@@ -3,6 +3,7 @@ import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import type { NotificationEvent, NotificationData, NotificationService } from './base.js';
 import { getSlackBoltApp } from './slack-bolt.js';
+import { createSlackProgressSender } from '../channels/slack/progressSender.js';
 
 const log = rootLogger.child({ module: 'slack-notifier' });
 
@@ -163,6 +164,22 @@ export class SlackNotificationService implements NotificationService {
     event: NotificationEvent,
     data: NotificationData,
   ): Promise<void> {
+    if (data.slackTarget || (data.metadata?.channelTarget as string | undefined)) {
+      const channelTarget = data.slackTarget ?? (data.metadata?.channelTarget as string);
+      const progressSender = createSlackProgressSender();
+      await progressSender.sendProgress({
+        channel: 'slack',
+        channelTarget,
+        runId: `${data.repoOwner}/${data.repoName}#${data.issueNumber}`,
+        phase: mapEventToPhase(event),
+        message: buildTextMessage(event, data),
+        detail: data.reason ?? data.errorMessage,
+        timestamp: new Date().toISOString(),
+        prUrl: data.prUrl,
+      });
+      return;
+    }
+
     const { webhookUrl } = this;
 
     const n8nSent = await sendToN8n(event, data);
@@ -211,4 +228,16 @@ export class SlackNotificationService implements NotificationService {
 
 export function createSlackNotifier(): NotificationService {
   return new SlackNotificationService();
+}
+
+function mapEventToPhase(event: NotificationEvent): string {
+  switch (event) {
+    case 'fix_started': return 'investigating';
+    case 'pr_created': return 'pr_created';
+    case 'fix_failed': return 'failed';
+    case 'verification_failed': return 'failed';
+    case 'error': return 'error';
+    case 'payment_failed': return 'error';
+    case 'payment_recovered': return 'committing';
+  }
 }
