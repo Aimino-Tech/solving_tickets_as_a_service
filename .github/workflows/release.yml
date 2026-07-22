@@ -198,6 +198,38 @@ jobs:
       digest: ${{ steps.digest.outputs.digest }}
 
   ##############################################################################
+  # SENTRY RELEASE (create release + associate commits)
+  ##############################################################################
+  sentry-release:
+    name: Create Sentry Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [validate]
+    if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Sentry release
+        uses: getsentry/action-release@v3
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          version: stas@${{ needs.validate.outputs.version }}
+          ignore_empty: true
+          sourcemaps: ./dist
+          deploy: true
+          set_commits: skip
+
+      - name: Output Sentry release info
+        run: |
+          echo "Sentry release created: stas@${{ needs.validate.outputs.version }}"
+
+  ##############################################################################
   # GENERATE SBOM (CycloneDX)
   ##############################################################################
   sbom:
