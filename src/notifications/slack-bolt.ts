@@ -1,10 +1,11 @@
 // @ts-nocheck
-import { App, ExpressReceiver, LogLevel } from '@slack/bolt';
+
 import type { Logger as BoltLogger } from '@slack/bolt';
+import { App, ExpressReceiver, LogLevel } from '@slack/bolt';
 import type { Express } from 'express';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import type { NotificationEvent, NotificationData } from './base.js';
+import type { NotificationData, NotificationEvent } from './base.js';
 
 const log = rootLogger.child({ module: 'slack-bolt' });
 
@@ -21,12 +22,8 @@ function isBoltConfigured(): boolean {
 
 function buildBlocks(event: NotificationEvent, data: NotificationData): any[] {
   const bot = data.botName ?? config.stas.botName;
-  const issueUrl = data.issueNumber > 0
-    ? ISSUE_URL(data.repoOwner, data.repoName, data.issueNumber)
-    : '';
-  const repoUrl = data.repoOwner && data.repoName
-    ? `https://github.com/${data.repoOwner}/${data.repoName}`
-    : '';
+  const issueUrl = data.issueNumber > 0 ? ISSUE_URL(data.repoOwner, data.repoName, data.issueNumber) : '';
+  const repoUrl = data.repoOwner && data.repoName ? `https://github.com/${data.repoOwner}/${data.repoName}` : '';
 
   const headerText = (() => {
     switch (event) {
@@ -265,7 +262,12 @@ export class SlackBoltApp {
 
         try {
           const { Redis } = await import('ioredis');
-          const redis = new Redis(config.queue.redisUrl, { keyPrefix: 'mcp:', lazyConnect: true, maxRetriesPerRequest: 1, connectTimeout: 3000 });
+          const redis = new Redis(config.queue.redisUrl, {
+            keyPrefix: 'mcp:',
+            lazyConnect: true,
+            maxRetriesPerRequest: 1,
+            connectTimeout: 3000,
+          });
           await redis.connect();
           const raw = await redis.get(`job:${runId}`);
           await redis.quit().catch(() => {});
@@ -306,7 +308,10 @@ export class SlackBoltApp {
           }
         } catch (err) {
           log.error({ err: String(err), runId }, 'Failed to check status');
-          await respond({ response_type: 'ephemeral', text: `Error checking status for \`${runId}\`: ${String(err).slice(0, 200)}` });
+          await respond({
+            response_type: 'ephemeral',
+            text: `Error checking status for \`${runId}\`: ${String(err).slice(0, 200)}`,
+          });
         }
         return;
       }
@@ -345,7 +350,10 @@ export class SlackBoltApp {
           const channelTarget = `${channelId}:${threadTs || ''}`;
           const jobData = {
             installationId: config.trackers.installationId || 0,
-            repoOwner, repoName, repoPrivate: false, issueNumber: 0,
+            repoOwner,
+            repoName,
+            repoPrivate: false,
+            issueNumber: 0,
             issueTitle,
             issueBody: `Submitted via Slack by <@${userId}>\n\nDescription: ${issueTitle}`,
             source: 'slack',
@@ -355,7 +363,12 @@ export class SlackBoltApp {
           const messageId = `${jobData.installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
           await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
             ...jobData,
-            _meta: { messageId, enqueuedAt: new Date().toISOString(), slackChannel: channelId, slackThreadTs: threadTs || '' },
+            _meta: {
+              messageId,
+              enqueuedAt: new Date().toISOString(),
+              slackChannel: channelId,
+              slackThreadTs: threadTs || '',
+            },
           });
 
           await respond({
@@ -393,16 +406,10 @@ export class SlackBoltApp {
       return;
     }
     app.use(this.receiver.router);
-    log.info(
-      { path: config.slack.interactionsPath },
-      'Bolt receiver mounted on Express',
-    );
+    log.info({ path: config.slack.interactionsPath }, 'Bolt receiver mounted on Express');
   }
 
-  async sendInteractiveMessage(
-    event: NotificationEvent,
-    data: NotificationData,
-  ): Promise<void> {
+  async sendInteractiveMessage(event: NotificationEvent, data: NotificationData): Promise<void> {
     if (!this.app) return;
 
     const channel = config.slack.channel || '#stas-notifications';
@@ -421,10 +428,7 @@ export class SlackBoltApp {
         'Interactive Slack message sent',
       );
     } catch (err) {
-      log.error(
-        { err: String(err), event, channel },
-        'Failed to send interactive Slack message',
-      );
+      log.error({ err: String(err), event, channel }, 'Failed to send interactive Slack message');
     }
   }
 }

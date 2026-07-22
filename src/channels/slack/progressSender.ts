@@ -1,7 +1,7 @@
 import { config } from '../../config.js';
-import { rootLogger } from '../../utils/logger.js';
 import { getSlackBoltApp } from '../../notifications/slack-bolt.js';
-import type { ProgressUpdate, ChannelMessage, ProgressSender, ProgressPhase } from '../base.js';
+import { rootLogger } from '../../utils/logger.js';
+import type { ChannelMessage, ProgressPhase, ProgressSender, ProgressUpdate } from '../base.js';
 import { formatProgressMessage } from '../base.js';
 
 const log = rootLogger.child({ module: 'channel-slack-progress' });
@@ -104,9 +104,7 @@ function buildProgressBlocks(update: ProgressUpdate): any[] {
     const bar = '█'.repeat(filled) + '░'.repeat(empty);
     blocks.push({
       type: 'context',
-      elements: [
-        { type: 'mrkdwn', text: `${bar} ${update.progress}%` },
-      ],
+      elements: [{ type: 'mrkdwn', text: `${bar} ${update.progress}%` }],
     });
   }
 
@@ -144,7 +142,10 @@ export class SlackProgressSender implements ProgressSender {
         'Slack progress update sent',
       );
     } catch (err) {
-      log.error({ err: String(err), runId: update.runId, phase: update.phase, channel }, 'Failed to send Slack progress update');
+      log.error(
+        { err: String(err), runId: update.runId, phase: update.phase, channel },
+        'Failed to send Slack progress update',
+      );
     }
   }
 

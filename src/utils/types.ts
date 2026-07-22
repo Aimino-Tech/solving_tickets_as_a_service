@@ -12,7 +12,17 @@ export interface IssueJobData {
   issueBody: string | null;
 
   /** Source platform that originated this job. Defaults to "github". */
-  source?: 'github' | 'gitlab' | 'bitbucket' | 'linear' | 'jira' | 'rapidapi' | 'slack' | 'telegram' | 'whatsapp' | 'mcp';
+  source?:
+    | 'github'
+    | 'gitlab'
+    | 'bitbucket'
+    | 'linear'
+    | 'jira'
+    | 'rapidapi'
+    | 'slack'
+    | 'telegram'
+    | 'whatsapp'
+    | 'mcp';
 
   /** Tracker ticket ID (Linear issue ID or Jira issue key) for cross-platform sync. */
   trackerTicketId?: string;
