@@ -1,6 +1,7 @@
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
+import { dispatchFullPipeline, dispatchToCeleryPipeline } from './celeryDispatcher.js';
 
 const log = rootLogger.child({ module: 'os-dispatch' });
 
@@ -13,10 +14,20 @@ export interface DispatchResult {
 }
 
 export async function dispatchToOpenSymphony(data: IssueJobData): Promise<DispatchResult> {
+  const celeryEnabled = config.opensymphony?.celeryPipeline !== false;
+
+  if (celeryEnabled) {
+    const result = await dispatchFullPipeline(data);
+    if (result.success) {
+      return result;
+    }
+    log.warn('Celery dispatch failed, falling back to HTTP dispatch');
+  }
+
   const osUrl = config.opensymphony?.dispatchUrl;
   if (!osUrl) {
-    log.error('OPEN_SYMPHONY_DISPATCH_URL not configured — cannot dispatch');
-    return { success: false, errors: ['OpenSymphony dispatch URL not configured'] };
+    log.error('OPEN_SYMPHONY_DISPATCH_URL not configured and Celery unavailable — cannot dispatch');
+    return { success: false, errors: ['No dispatch target available (Celery + HTTP both unavailable)'] };
   }
 
   const apiKey = config.opensymphony?.apiKey;
@@ -36,7 +47,7 @@ export async function dispatchToOpenSymphony(data: IssueJobData): Promise<Dispat
   };
 
   try {
-    log.info({ osUrl, repo: payload.repo }, 'Dispatching to OpenSymphony');
+    log.info({ osUrl, repo: payload.repo }, 'Dispatching to OpenSymphony HTTP endpoint');
     const response = await fetch(osUrl, {
       method: 'POST',
       headers: {
@@ -48,12 +59,12 @@ export async function dispatchToOpenSymphony(data: IssueJobData): Promise<Dispat
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'unknown error');
-      log.error({ status: response.status, error: errorText }, 'OpenSymphony dispatch failed');
+      log.error({ status: response.status, error: errorText }, 'OpenSymphony HTTP dispatch failed');
       return { success: false, errors: [`HTTP ${response.status}: ${errorText}`] };
     }
 
     const result = (await response.json()) as Record<string, unknown>;
-    log.info({ runId: result.run_id, prUrl: result.pr_url }, 'OpenSymphony dispatch accepted');
+    log.info({ runId: result.run_id, prUrl: result.pr_url }, 'OpenSymphony HTTP dispatch accepted');
 
     return {
       success: true,
@@ -62,7 +73,7 @@ export async function dispatchToOpenSymphony(data: IssueJobData): Promise<Dispat
       prUrl: result.pr_url ? String(result.pr_url) : undefined,
     };
   } catch (err) {
-    log.error({ err: String(err) }, 'OpenSymphony dispatch error');
+    log.error({ err: String(err) }, 'OpenSymphony HTTP dispatch error');
     return { success: false, errors: [String(err)] };
   }
 }

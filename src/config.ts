@@ -632,6 +632,7 @@ function buildConfig(env: ParsedEnv) {
       dispatchUrl: env.OPEN_SYMPHONY_DISPATCH_URL,
       apiKey: env.OPEN_SYMPHONY_API_KEY,
       tenant: env.OPEN_SYMPHONY_TENANT,
+      celeryPipeline: true,
     },
 
     // ── Security ────────────────────────────────────────────────────────────
