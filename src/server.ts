@@ -707,19 +707,10 @@ export async function createApp(): Promise<express.Application> {
   // GET /api/runs/:id — Public run detail JSON/HTML
   app.use('/api/runs', runsRouter);
 
-  // ── Landing page (website/) ───────────────────────────────────────
-  app.use(express.static(path.join(__dirname, '../website')));
-  app.get('/', (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../website', 'index.html'));
-  });
-  app.get('/pricing', (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../website', 'pricing.html'));
-  });
-  app.get('/benchmarks', (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../website', 'benchmark.html'));
-  });
-  app.get('/trust', (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../website', 'trust.html'));
+  // ── Marketing Site (React SPA) ──────────────────────────────────
+  app.use(express.static(path.join(__dirname, '../marketing-site/dist')));
+  app.get(/^\/(pricing|trust|benchmarks|support|status|docs|blog|integrations|agents)?$/, (_req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, '../marketing-site/dist', 'index.html'));
   });
 
   // ── Dashboard SPA (served from built dist/) ───────────────────────
