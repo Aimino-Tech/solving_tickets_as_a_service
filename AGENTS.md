@@ -1,5 +1,33 @@
 # STAS — Solving Tickets As A Service
 
+## Skill Installation
+
+STAS is available as a downloadable OpenCode skill. Any OpenCode, OpenClaw, or Claude Code agent can install it:
+
+**OpenCode/OpenClaw:**
+```bash
+# Install via skill URL
+opencode skill install https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/stas/SKILL.md
+```
+
+Or add to `opencode.json`:
+```json
+{
+  "skills": {
+    "stas": {
+      "url": "https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/stas/SKILL.md"
+    }
+  }
+}
+```
+
+**Claude Code (via MCP):**
+```bash
+npx stas install-mcp --claude
+```
+
+The skill exposes tools for submitting GitHub issues, checking fix status, and retrieving results. See `skills/stas/SKILL.md` for the full reference.
+
 ## One-liner
 
 Label a GitHub issue. STAS investigates, fixes, and opens a PR. You review and merge.

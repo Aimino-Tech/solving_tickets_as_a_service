@@ -9,5 +9,11 @@
     "grep": { "tmp_data/search_cache/**": "deny", "*": "allow" },
     "bash": { "*": "allow" },
     "edit": { "tmp_data/search_cache/**": "deny", "*": "allow" }
+  },
+  "skills": {
+    "stas": {
+      "description": "STAS — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs.",
+      "url": "https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/stas/SKILL.md"
+    }
   }
 }
