@@ -122,6 +122,8 @@ router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
       await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
         installationId: 0, repoOwner, repoName, repoPrivate: false, issueNumber: 0,
         issueTitle, issueBody, source: channel || 'mcp', labels: labels || [],
+        channel: channel || undefined,
+        channelTarget: channelTarget || undefined,
         _meta: { messageId, enqueuedAt: new Date().toISOString() },
       });
     } catch (queueErr) {
