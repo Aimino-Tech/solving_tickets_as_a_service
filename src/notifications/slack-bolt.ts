@@ -238,8 +238,11 @@ export class SlackBoltApp {
         return;
       }
 
-      if (text.startsWith('fix ')) {
-        const issueTitle = text.slice(4).trim() || 'Fix requested via Slack';
+      const subcommand = text.split(/\s+/)[0]?.toLowerCase();
+      const args = text.slice(subcommand.length).trim();
+
+      if (subcommand === 'fix') {
+        const issueTitle = args || 'Fix requested via Slack';
         const repoOwner = config.trackers.defaultRepoOwner;
         const repoName = config.trackers.defaultRepoName;
 
@@ -262,11 +265,13 @@ export class SlackBoltApp {
             issueTitle,
             issueBody: `Submitted via Slack by <@${userId}>\n\nDescription: ${issueTitle}`,
             source: 'slack',
+            slackChannel: channelId,
+            slackThreadTs: command.ts,
           };
           const messageId = `${jobData.installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
           await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
             ...jobData,
-            _meta: { messageId, enqueuedAt: new Date().toISOString() },
+            _meta: { messageId, enqueuedAt: new Date().toISOString(), slackChannel: channelId, slackThreadTs: command.ts },
           });
 
           await respond({
@@ -274,11 +279,10 @@ export class SlackBoltApp {
             text: `STAS is investigating: "${issueTitle}"\nI'll post progress updates in this thread.`,
           });
 
-          const threadTs = command.ts;
-          if (threadTs) {
+          if (command.ts) {
             await client.chat.postMessage({
               channel: channelId,
-              thread_ts: threadTs,
+              thread_ts: command.ts,
               text: `:mag: *Phase: Queued* — Run has been queued for "${issueTitle}"`,
             });
           }
@@ -289,10 +293,50 @@ export class SlackBoltApp {
             text: 'Error: Failed to submit fix request.',
           });
         }
+      } else if (subcommand === 'status') {
+        const runId = args.trim();
+        if (!runId) {
+          await respond({ response_type: 'ephemeral', text: 'Usage: `/stas status <run_id>`' });
+          return;
+        }
+        try {
+          const resp = await fetch(`${config.stas.apiUrl || 'http://localhost:3000'}/mcp/status/${runId}`, {
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (!resp.ok) {
+            await respond({ response_type: 'ephemeral', text: `Run not found: ${runId}` });
+            return;
+          }
+          const data = await resp.json();
+          const statusText = data.status || 'unknown';
+          const createdAt = data.createdAt ? new Date(data.createdAt).toISOString() : 'unknown';
+          await respond({
+            response_type: 'in_channel',
+            text: `:bar_chart: *Run Status* — \`${runId}\`\n> Status: *${statusText}*\n> Created: ${createdAt}${data.prUrl ? `\n> PR: ${data.prUrl}` : ''}`,
+          });
+        } catch (err) {
+          log.error({ err: String(err), runId }, 'Failed to check run status');
+          await respond({ response_type: 'ephemeral', text: 'Error: Could not fetch run status.' });
+        }
+      } else if (subcommand === 'help') {
+        await respond({
+          response_type: 'ephemeral',
+          text: [
+            '*STAS — Solving Tickets As A Service*',
+            '',
+            '`/stas fix <description>` — Submit a fix request',
+            '`/stas status <run_id>` — Check fix run status',
+            '`/stas help` — Show this help message',
+            '',
+            'Examples:',
+            '  `/stas fix login button not working`',
+            '  `/stas status stas-a1b2c3d4e5f6`',
+          ].join('\n'),
+        });
       } else {
         await respond({
           response_type: 'ephemeral',
-          text: 'Unknown command. Usage: `/stas fix <description>`',
+          text: 'Unknown command. Use `/stas help` to see available commands.',
         });
       }
     });
