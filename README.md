@@ -79,6 +79,8 @@ npx -y @aimino/stas-mcp
 
 ## Quick Start — First Fix in <15 Minutes
 
+> 📖 For detailed installation instructions covering all deployment options (Cloud, Docker Compose, Kubernetes, Railway/Fly.io), see the [Installation Guide](docs/install/README.md).
+
 Choose your install path:
 
 ### GitHub Action (zero config, ~3 minutes)
