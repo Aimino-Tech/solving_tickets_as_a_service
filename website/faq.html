@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ & Troubleshooting — STAS | Solving Tickets As A Service</title>
+  <meta name="description" content="Comprehensive FAQ and troubleshooting guide for STAS — the AI-powered GitHub automation bot. Covers installation, technical questions, billing, security, and common issues." />
+  <meta name="keywords" content="STAS FAQ, troubleshooting, AI GitHub bot, installation help, billing, security, common issues, developer tools" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stas.aimino.io/faq" />
+  <meta property="og:title" content="FAQ & Troubleshooting — STAS" />
+  <meta property="og:description" content="Comprehensive FAQ and troubleshooting guide for STAS — the AI-powered GitHub automation bot." />
+  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="FAQ & Troubleshooting — STAS" />
+  <meta name="twitter:description" content="Comprehensive FAQ and troubleshooting guide for STAS." />
+  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+
+  <!-- FAQPage Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is STAS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "STAS (Solving Tickets As A Service) is an AI-powered GitHub bot that reads your repository, analyzes issues, creates a detailed plan, and opens a pull request with the fix. Unlike Copilot or Cursor which provide inline suggestions, STAS works asynchronously — label an issue with 'stas:fix' and it handles the full fix cycle autonomously."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How is STAS different from GitHub Copilot?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "GitHub Copilot is a reactive code completion tool — it suggests code as you type. STAS is an asynchronous senior architect: it reads your entire repository, identifies the root cause of an issue, creates a plan, and implements the fix. They are complementary tools — Copilot helps you write code, STAS helps you resolve issues."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What does a fix look like?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "When STAS fixes an issue, it creates a pull request containing: (1) a detailed plan document explaining the root cause and approach, (2) the code changes implementing the fix, (3) a comprehensive PR description summarizing the changes, and (4) test results showing the existing test suite passes with the new code."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What languages does STAS support?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "TypeScript and JavaScript are first-class citizens with the best support. Python support is good and actively improving. Rust, Go, and Java support is in active development with improving results. As a rule of thumb: if your project has a test suite that STAS can run, it can fix it. The underlying engine (OpenCode) supports any language with a test framework."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does STAS work with private repositories?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. The Free plan covers public repositories only. Pro (€19/month) and Team (€49/month) plans include private repository support. You only grant access to the specific repositories you want STAS to work on during installation."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does STAS modify my code without approval?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. STAS always produces a detailed plan first. Only after you explicitly approve the plan does it generate the code and open a pull request. The PR is opened as a draft — you review before merging. You maintain full control at every step."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Plausible Analytics -->
+  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+
+  <style>
+    .faq-page { max-width: 800px; margin: 0 auto; padding: 0 24px 80px; }
+    .faq-page h2 { font-size: 24px; font-weight: 700; margin: 48px 0 4px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .faq-page h2:first-of-type { margin-top: 0; }
+    .faq-page .faq-intro { font-size: 15px; color: var(--text2); text-align: center; max-width: 600px; margin: 0 auto 48px; line-height: 1.7; }
+    .faq-category-label { font-size: 13px; color: var(--gold); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-top: 40px; margin-bottom: 4px; }
+    .faq-page .faq-list { margin-bottom: 24px; }
+    .faq-troubleshooting-note { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 28px 24px; margin: 40px 0; }
+    .faq-troubleshooting-note h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+    .faq-troubleshooting-note ol { margin: 0 0 0 18px; padding: 0; }
+    .faq-troubleshooting-note ol li { font-size: 14px; color: var(--text2); line-height: 1.8; }
+    .faq-troubleshooting-note ol li strong { color: var(--text); }
+    .faq-search-wrap { max-width: 500px; margin: 0 auto 40px; position: relative; }
+    .faq-search-wrap input { width: 100%; padding: 14px 18px 14px 44px; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 15px; outline: none; }
+    .faq-search-wrap input:focus { border-color: var(--gold); }
+    .faq-search-wrap .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--text3); pointer-events: none; }
+    .faq-no-results { text-align: center; padding: 40px 20px; color: var(--text3); display: none; }
+    .faq-quick-links { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 40px; }
+    .faq-quick-links a { font-size: 13px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px; color: var(--text2); text-decoration: none; transition: all 0.2s; }
+    .faq-quick-links a:hover { border-color: var(--gold); color: var(--gold); }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo"><span class="logo-icon">S</span> STAS</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/">Home</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/trust">Trust</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/faq" class="active">FAQ</a></li>
+        <li><a href="/blog">Blog</a></li>
+        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta">Install App →</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <section class="page-header">
+    <h1>FAQ & Troubleshooting</h1>
+    <p class="sub">Everything you need to know about STAS — from getting started to advanced troubleshooting.</p>
+  </section>
+
+  <!-- SEARCH -->
+  <div class="faq-search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="faqSearch" placeholder="Search FAQ..." oninput="searchFAQ(this.value)" />
+  </div>
+
+  <!-- QUICK LINKS -->
+  <div class="faq-quick-links">
+    <a href="#getting-started">Getting Started</a>
+    <a href="#technical">Technical</a>
+    <a href="#billing">Billing & Plans</a>
+    <a href="#security">Security & Privacy</a>
+    <a href="#troubleshooting">Troubleshooting</a>
+  </div>
+
+  <div class="faq-page" id="faqContainer">
+
+    <!-- GETTING STARTED -->
+    <div class="faq-category-label" id="getting-started">Getting Started</div>
+    <h2>Installation & first steps</h2>
+    <div class="faq-list">
+      <div class="faq-item" data-search="what is STAS definition overview">
+        <button class="faq-question">What is STAS?</button>
+        <div class="faq-answer"><p>STAS (Solving Tickets As A Service) is an AI-powered GitHub bot that reads your repository, analyzes issues, creates a detailed plan, and opens a pull request with the fix. Unlike Copilot or Cursor which provide inline suggestions, STAS works asynchronously — label an issue with <code>stas:fix</code> and it handles the full fix cycle autonomously: root cause analysis → plan → implementation → PR.</p></div>
+      </div>
+      <div class="faq-item" data-search="how is different from copilot cursor devin comparison">
+        <button class="faq-question">How is STAS different from Copilot / Cursor / Devin?</button>
+        <div class="faq-answer"><p><strong>GitHub Copilot</strong> is a reactive code completion tool — it suggests code as you type. <strong>Cursor</strong> is an AI-native IDE with inline chat. <strong>Devin</strong> is a fully autonomous AI software engineer at $500/month. STAS sits in a unique middle ground: it's an asynchronous senior architect that reads your entire repo, plans before coding, and opens a PR — but unlike Devin, it's affordable (€0-€49/month) and open source (AGPL v3). All these tools are complementary to STAS.</p></div>
+      </div>
+      <div class="faq-item" data-search="install installation setup github app">
+        <button class="faq-question">How do I install STAS on my repository?</button>
+        <div class="faq-answer"><p>Visit the <a href="https://github.com/apps/stas-app/installations/new">STAS GitHub App page</a>, select your repository (or all repositories), and complete the installation. No CLI, no SDK, no configuration file needed. Once installed, just label an issue with <code>stas:fix</code> and STAS will handle the rest. Full walkthrough in the <a href="/docs">Quick Start guide</a>.</p></div>
+      </div>
+      <div class="faq-item" data-search="do I need to install anything cli sdk">
+        <button class="faq-question">Do I need to install anything?</button>
+        <div class="faq-answer"><p>No. STAS runs as a GitHub App — there is nothing to install on your machine. Simply install the app from the GitHub Marketplace and grant it access to your repositories. All processing happens on STAS servers (or your infrastructure if self-hosting).</p></div>
+      </div>
+      <div class="faq-item" data-search="how long does a fix take time speed">
+        <button class="faq-question">How long does a fix take?</button>
+        <div class="faq-answer"><p>Typical fix time is ~60 seconds from labeling to PR creation. For Pro and Team subscribers with priority queue access, this drops to ~20 seconds. Actual time varies based on repository size, issue complexity, and current queue depth. Monorepos with extensive test suites may take longer.</p></div>
+      </div>
+      <div class="faq-item" data-search="does it work with private repos public">
+        <button class="faq-question">Does STAS work with private repositories?</button>
+        <div class="faq-answer"><p>Yes. The <strong>Free plan</strong> covers public repositories only. The <strong>Pro plan</strong> (€19/month) includes private repositories. The <strong>Team plan</strong> (€49/month) extends this to organization-wide private repositories. You only grant access to specific repositories during installation.</p></div>
+      </div>
+      <div class="faq-item" data-search="what does a fix look like pr plan description">
+        <button class="faq-question">What does a fix look like?</button>
+        <div class="faq-answer"><p>When STAS fixes an issue, it creates a pull request containing: (1) a detailed plan document explaining the root cause and approach, (2) the code changes implementing the fix, (3) a comprehensive PR description summarizing the changes, and (4) test results confirming the existing test suite passes with the new code. You can review everything before merging.</p></div>
+      </div>
+    </div>
+
+    <!-- TECHNICAL -->
+    <div class="faq-category-label" id="technical">Technical</div>
+    <h2>Architecture, languages & integration</h2>
+    <div class="faq-list">
+      <div class="faq-item" data-search="languages supported typescript python rust go java">
+        <button class="faq-question">What languages does STAS support?</button>
+        <div class="faq-answer"><p><strong>TypeScript and JavaScript</strong> are first-class citizens with the best support. <strong>Python</strong> support is good and actively improving. <strong>Rust, Go, and Java</strong> support is in active development. As a rule of thumb: if your project has a test suite that STAS can run, it can fix it. The underlying engine (OpenCode) supports any language with a test framework.</p></div>
+      </div>
+      <div class="faq-item" data-search="how does it read my codebase architecture AST parse">
+        <button class="faq-question">How does STAS read my entire codebase?</button>
+        <div class="faq-answer"><p>STAS performs a multi-step analysis: (1) clones the repository, (2) parses the Abstract Syntax Tree (AST) of each file, (3) builds a dependency graph to understand import/require relationships, (4) runs git blame to identify recently changed files relevant to the issue, and (5) optimizes the context window by prioritizing the most relevant files. This provides STAS with a comprehensive understanding of your codebase while respecting LLM context limits.</p></div>
+      </div>
+      <div class="faq-item" data-search="can it handle monorepo large repo">
+        <button class="faq-question">Can STAS handle monorepos?</button>
+        <div class="faq-answer"><p>Yes. STAS has configurable scope boundaries for monorepos. You can use a <code>.stasignore</code> file to exclude specific directories or define focus areas. For large monorepos, STAS prioritizes files most relevant to the issue based on dependency analysis and git history, making the analysis feasible even with context window constraints.</p></div>
+      </div>
+      <div class="faq-item" data-search="does it modify code without approval plan first workflow">
+        <button class="faq-question">Does STAS modify my code without approval?</button>
+        <div class="faq-answer"><p><strong>No.</strong> STAS always produces a detailed plan first. Only after you explicitly approve the plan does it generate the code and open a pull request. The PR is opened as a draft — you review before merging. You maintain full control at every step. This plan-first approach is a core design principle, not a feature toggle.</p></div>
+      </div>
+      <div class="faq-item" data-search="does it run my tests test suite verification">
+        <button class="faq-question">Does STAS run my tests?</button>
+        <div class="faq-answer"><p>Yes. STAS runs your entire test suite as part of the fix pipeline. A fix is only accepted if: (1) all existing tests pass with the new code, (2) any new tests added for the fix also pass, and (3) there are no regressions. If tests fail, the issue remains open with a detailed comment explaining what went wrong.</p></div>
+      </div>
+      <div class="faq-item" data-search="what if the fix is wrong incorrect bad pr draft">
+        <button class="faq-question">What if the fix is wrong?</button>
+        <div class="faq-answer"><p>PRs are opened as drafts — you review before merging. STAS runs the test suite before opening a PR, so known regressions are caught. The current fix rate across 500+ public repository issues is 92%. If a fix is incorrect, close the PR and reopen the issue with additional context. Each failure helps improve future fix quality.</p></div>
+      </div>
+      <div class="faq-item" data-search="can I configure ignored files stasignore exclude">
+        <button class="faq-question">Can I configure which files STAS should ignore?</button>
+        <div class="faq-answer"><p>Yes. Create a <code>.stasignore</code> file in your repository root (similar to <code>.gitignore</code>) to exclude specific files, directories, or patterns. STAS respects these exclusions during context gathering and fix generation. Example: <code>vendor/*</code>, <code>*.generated.*</code>, <code>dist/</code>.</p></div>
+      </div>
+      <div class="faq-item" data-search="CI CD integration github actions pipeline">
+        <button class="faq-question">How does STAS integrate with my CI/CD pipeline?</button>
+        <div class="faq-answer"><p>STAS works alongside your existing CI/CD — it doesn't replace it. STAS runs your test suite before opening a PR, but your CI pipeline still runs on the PR as normal. This provides a double validation layer. STAS also supports a <a href="https://github.com/marketplace/actions/stas-eval">GitHub Action</a> for deeper integration.</p></div>
+      </div>
+      <div class="faq-item" data-search="can I self-host deploy own infrastructure docker">
+        <button class="faq-question">Can I self-host STAS?</button>
+        <div class="faq-answer"><p>Absolutely. STAS is fully open-source (AGPL v3). Follow the <a href="/docs#self-hosting">self-hosting guide</a> to deploy via Docker, Railway, or Fly.io. You'll need a GitHub App and an API key. Self-hosting gives you full control over data residency, scaling, and customization.</p></div>
+      </div>
+      <div class="faq-item" data-search="does it create duplicate issues avoid re-run same issue">
+        <button class="faq-question">Will STAS re-run on the same issue multiple times?</button>
+        <div class="faq-answer"><p>No. STAS tracks which issues it has processed. Re-running the same issue within 24 hours doesn't consume a fix credit. This prevents accidental double-processing and wasted credits. You can force a re-run by removing and re-adding the <code>stas:fix</code> label after 24 hours.</p></div>
+      </div>
+    </div>
+
+    <!-- BILLING & PLANS -->
+    <div class="faq-category-label" id="billing">Billing & Plans</div>
+    <h2>Pricing, limits & payments</h2>
+    <div class="faq-list">
+      <div class="faq-item" data-search="free tier pricing hobby pro team">
+        <button class="faq-question">Is there a free tier?</button>
+        <div class="faq-answer"><p>Yes. The <strong>Hobby plan</strong> includes 50 fixes per month for public repositories at no cost. No credit card required. See <a href="/pricing">full pricing details</a>.</p></div>
+      </div>
+      <div class="faq-item" data-search="what happens when I hit the limit cap exceed">
+        <button class="faq-question">What happens when I hit my fix limit?</button>
+        <div class="faq-answer"><p>When you reach your monthly limit, STAS stops processing new issues until the next billing cycle or until you upgrade to a higher tier. You'll receive a notification with an upgrade prompt. Existing pending issues remain queued and will process once capacity is available.</p></div>
+      </div>
+      <div class="faq-item" data-search="cancel anytime monthly annual commitment">
+        <button class="faq-question">Can I cancel anytime?</button>
+        <div class="faq-answer"><p>Yes. Monthly plans have no annual commitment — cancel anytime, effective at the end of your current billing period. Annual plans offer a discount but require commitment; however, we offer a 14-day money-back guarantee for annual subscriptions.</p></div>
+      </div>
+      <div class="faq-item" data-search="refund money back guarantee">
+        <button class="faq-question">Do you offer refunds?</button>
+        <div class="faq-answer"><p>Annual plans come with a 14-day money-back guarantee — if you're not satisfied within the first 14 days, we'll provide a full refund. Monthly plans are pay-as-you-go and can be cancelled at any time without penalty.</p></div>
+      </div>
+      <div class="faq-item" data-search="what counts as a fix usage definition credit">
+        <button class="faq-question">What counts as a "fix"?</button>
+        <div class="faq-answer"><p>Each issue-to-PR pipeline run counts as one fix. Rerunning the same issue within 24 hours doesn't consume additional credit. Partial runs (where STAS produces a plan but doesn't proceed to code) also don't count. This means you can explore solutions without consuming your monthly allocation.</p></div>
+      </div>
+      <div class="faq-item" data-search="team enterprise org-wide pricing">
+        <button class="faq-question">Do you offer team or enterprise plans?</button>
+        <div class="faq-answer"><p>Yes. The <strong>Team plan</strong> (€49/month) includes 2,000 fixes/month with organization-wide installation. For custom Enterprise plans with dedicated support, SLA guarantees, and on-premise deployment, contact <a href="mailto:sales@aimino.io">sales@aimino.io</a>.</p></div>
+      </div>
+    </div>
+
+    <!-- SECURITY & PRIVACY -->
+    <div class="faq-category-label" id="security">Security & Privacy</div>
+    <h2>Data protection, compliance & access</h2>
+    <div class="faq-list">
+      <div class="faq-item" data-search="does STAS store my code data retention ephemeral">
+        <button class="faq-question">Does STAS store my code?</button>
+        <div class="faq-answer"><p>STAS processes your code ephemerally. The repository is cloned for analysis and fix generation, but code is not stored long-term. Fix history is retained for 30 days after generation for audit purposes. Pull requests and associated code live on GitHub as standard PRs — you control their lifecycle there.</p></div>
+      </div>
+      <div class="faq-item" data-search="where is data processed region EU US data residency">
+        <button class="faq-question">Where is data processed?</button>
+        <div class="faq-answer"><p>For cloud-hosted STAS: data is processed in US or EU regions based on customer location at signup. EU customers are routed to EU servers (Hetzner, Germany). For self-hosted deployments: data stays entirely within your infrastructure. We provide a Data Processing Agreement (DPA) for EU customers upon request.</p></div>
+      </div>
+      <div class="faq-item" data-search="SOC 2 ISO 27001 certification compliance">
+        <button class="faq-question">Is STAS SOC 2 or ISO 27001 certified?</button>
+        <div class="faq-answer"><p>SOC 2 Type I certification is in progress with a target completion within 6 months. ISO 27001 is planned for the following quarter. Enterprise customers can request our current security documentation and penetration testing results via <a href="mailto:sales@aimino.io">sales@aimino.io</a>.</p></div>
+      </div>
+      <div class="faq-item" data-search="access private repos permissions scope">
+        <button class="faq-question">Can STAS access all my private repositories?</button>
+        <div class="faq-answer"><p>No. STAS only accesses repositories you explicitly grant access to during the GitHub App installation. You can select specific repositories or all repositories. Access can be revoked at any time from your GitHub settings. STAS never accesses repositories outside its granted scope.</p></div>
+      </div>
+      <div class="faq-item" data-search="uninstall revoke access what happens to data">
+        <button class="faq-question">What happens when I uninstall STAS?</button>
+        <div class="faq-answer"><p>When you uninstall the STAS GitHub App: (1) all access tokens are immediately revoked, (2) fix history is exported and available for 30 days, (3) any in-progress fixes are cancelled, (4) existing PRs opened by STAS remain on GitHub for you to review and merge. No code is retained on STAS servers after uninstallation.</p></div>
+      </div>
+      <div class="faq-item" data-search="SSL TLS encryption in transit at rest">
+        <button class="faq-question">Is data encrypted in transit and at rest?</button>
+        <div class="faq-answer"><p>Yes. All data in transit uses TLS 1.3. Data at rest is encrypted using AES-256. Repository data processed during fix generation is stored in memory and not persisted to disk beyond temporary working directories which are cleaned after each run.</p></div>
+      </div>
+    </div>
+
+    <!-- TROUBLESHOOTING -->
+    <div class="faq-category-label" id="troubleshooting">Troubleshooting</div>
+    <h2>Common issues & solutions</h2>
+    <div class="faq-list">
+      <div class="faq-item" data-search="STAS didn't respond no comment reply issue">
+        <button class="faq-question">STAS didn't respond to my comment — what went wrong?</button>
+        <div class="faq-answer"><p>Check the following: (1) Did you label the issue with <code>stas:fix</code>? STAS only responds to the label, not comments. (2) Is the repository in the list of allowed repos? Check your GitHub App settings. (3) Have you hit your monthly fix limit? Check your plan status. (4) Is STAS experiencing an outage? Check <a href="/status">status.stas.aimino.io</a>. If none of these apply, open a <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">GitHub issue</a> with your repository details.</p></div>
+      </div>
+      <div class="faq-item" data-search="fix failed error what do I do">
+        <button class="faq-question">The fix failed — what do I do?</button>
+        <div class="faq-answer"><p>When a fix fails, STAS posts a detailed comment explaining why. Common reasons: (1) test suite failures — review the test output in the comment, (2) dependency resolution issues — confirm your dependencies are accessible, (3) context window exceeded — very large files may need a <code>.stasignore</code> entry. If the error is unclear, <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues/new">open a GitHub issue</a> with the failure comment link.</p></div>
+      </div>
+      <div class="faq-item" data-search="low quality plan bad analysis wrong approach">
+        <button class="faq-question">Why did STAS produce a low-quality plan?</button>
+        <div class="faq-answer"><p>Plan quality typically depends on: (1) issue description clarity — vague issues yield vague plans. Be specific about expected behavior vs actual behavior. (2) Repository size — very large repos may have context gaps. Use <code>.stasignore</code> to focus on relevant directories. (3) Language maturity — some languages have better support than others (see language support above). You can provide feedback on the plan before STAS proceeds to implementation.</p></div>
+      </div>
+      <div class="faq-item" data-search="can't find repo after installation missing">
+        <button class="faq-question">STAS can't find my repo after installation</button>
+        <div class="faq-answer"><p>After installing the GitHub App, STAS needs a few minutes to sync repository access. If the issue persists: (1) Confirm the installation completed successfully in your GitHub settings (Settings → Applications → STAS). (2) Ensure the repository is listed in the "Repository access" section of the app settings. (3) Try uninstalling and reinstalling the app with explicit repository selection.</p></div>
+      </div>
+      <div class="faq-item" data-search="PR has merge conflicts merge conflict resolution">
+        <button class="faq-question">The PR has merge conflicts</button>
+        <div class="faq-answer"><p>Merge conflicts can occur if the repository changed between issue labeling and fix generation. To resolve: (1) Check if you can merge via GitHub's web interface (simple conflicts). (2) Pull the branch locally and resolve conflicts manually. (3) Label the issue again with <code>stas:fix</code> and STAS will regenerate the fix against the latest main branch — this doesn't count as a new fix if within 24 hours.</p></div>
+      </div>
+      <div class="faq-item" data-search="report a bug in STAS output incorrect fix">
+        <button class="faq-question">How do I report a bug in STAS output?</button>
+        <div class="faq-answer"><p>Open a <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues/new">GitHub issue</a> with: (1) the repository URL and issue number, (2) what STAS produced (link to the PR or plan comment), (3) what you expected instead, and (4) any relevant context. Our team reviews all bug reports and uses them to improve fix quality. You can also join our <a href="https://discord.gg/aimino">Discord community</a> for faster help.</p></div>
+      </div>
+      <div class="faq-item" data-search="rate limiting too many requests throttle slow">
+        <button class="faq-question">STAS is processing slowly — is there rate limiting?</button>
+        <div class="faq-answer"><p>STAS operates with a fair-use queue. Free tier users may experience longer wait times during peak hours. Pro and Team subscribers get priority queue access (~20s average vs ~60s). If you consistently experience slow processing, check <a href="/status">our status page</a> for any ongoing incidents or consider upgrading your plan.</p></div>
+      </div>
+    </div>
+
+    <!-- TROUBLESHOOTING BEST PRACTICES -->
+    <div class="faq-troubleshooting-note">
+      <h3>⚡ Troubleshooting Best Practices</h3>
+      <ol>
+        <li><strong>Be specific in your issue description.</strong> "The login button doesn't work" is less helpful than "The login button throws a 500 error when submitting valid credentials. Expected: redirect to dashboard. Actual: spinner spins indefinitely then shows error toast."</li>
+        <li><strong>Include error messages and logs.</strong> STAS works best when it has concrete error output to analyze. Paste stack traces, console errors, or test failures.</li>
+        <li><strong>Use .stasignore for large repos.</strong> Exclude vendor directories, generated code, and build artifacts to help STAS focus on relevant code.</li>
+        <li><strong>Keep your test suite healthy.</strong> STAS validates fixes by running tests. A broken or flaky test suite reduces fix reliability.</li>
+        <li><strong>Check the plan before approving.</strong> STAS always produces a plan first. Review it carefully — if the approach seems wrong, provide feedback in the issue before STAS proceeds.</li>
+      </ol>
+    </div>
+
+    <!-- STILL STUCK -->
+    <div style="text-align:center; padding:40px 0 20px;">
+      <h3 style="font-size:20px; font-weight:700; margin-bottom:8px;">Still stuck?</h3>
+      <p style="font-size:14px; color:var(--text2); margin-bottom:20px;">We're here to help. Choose the support channel that works best for you.</p>
+      <div class="btn-group" style="justify-content:center;">
+        <a href="/support" class="btn btn-primary" data-track="faq-support">View Support Page →</a>
+        <a href="https://discord.gg/aimino" class="btn btn-secondary" data-track="faq-discord">Join Discord Community</a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SEARCH SCRIPT -->
+  <script>
+    function searchFAQ(query) {
+      const items = document.querySelectorAll('.faq-item');
+      const noResults = document.getElementById('faqNoResults') || (() => {
+        const el = document.createElement('div');
+        el.id = 'faqNoResults';
+        el.className = 'faq-no-results';
+        el.textContent = 'No matching questions found. Try different keywords.';
+        document.getElementById('faqContainer').appendChild(el);
+        return el;
+      })();
+      const q = query.toLowerCase().trim();
+      let visible = 0;
+      items.forEach(item => {
+        const searchData = (item.dataset.search || '') + ' ' + (item.querySelector('.faq-question')?.textContent || '');
+        const match = !q || searchData.toLowerCase().includes(q);
+        item.style.display = match ? '' : 'none';
+        if (match) visible++;
+      });
+      noResults.style.display = q && visible === 0 ? 'block' : 'none';
+    }
+  </script>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/docs">Documentation</a></li>
+          <li><a href="/faq">FAQ</a></li>
+          <li><a href="/trust">Trust & Security</a></li>
+          <li><a href="/status">Status</a></li>
+          <li><a href="/support">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="/blog">Blog</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
+          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="https://aimino.io">AImino</a></li>
+          <li><a href="https://opencode.ai">OpenCode</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/LICENSE">License</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 AImino. All rights reserved.</span>
+      <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">Open Source (AGPL v3)</a>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>
