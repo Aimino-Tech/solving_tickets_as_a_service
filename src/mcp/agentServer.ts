@@ -20,11 +20,12 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { Router, type Request, type Response } from 'express';
+import { type Request, type Response, Router } from 'express';
 import { Redis } from 'ioredis';
 import { config } from '../config.js';
-import { rootLogger } from '../utils/logger.js';
+import { captureError } from '../monitoring/sentry.js';
 import type { McpJobStatus, McpRunHistoryEntry } from '../opencode-contract.js';
+import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'mcp-agent-server' });
 
@@ -48,6 +49,7 @@ async function getRedis(): Promise<Redis> {
     });
     redis.on('error', (err) => {
       log.error({ err: String(err) }, 'MCP agent Redis error');
+      captureError(err instanceof Error ? err : new Error(String(err)), { service: 'mcp-agent', component: 'redis' });
     });
     await redis.connect();
   }
@@ -132,7 +134,10 @@ const tools: McpTool[] = [
       type: 'object',
       properties: {
         limit: { type: 'number', description: 'Max results to return (default: 20, max: 100)' },
-        status: { type: 'string', description: 'Filter by status (queued, investigating, fixing, testing, committing, completed, failed)' },
+        status: {
+          type: 'string',
+          description: 'Filter by status (queued, investigating, fixing, testing, committing, completed, failed)',
+        },
       },
     },
   },
@@ -205,6 +210,10 @@ router.post('/mcp/jsonrpc', async (req: Request, res: Response) => {
     }
   } catch (err) {
     log.error({ err: String(err), method }, 'MCP JSON-RPC handler error');
+    captureError(err instanceof Error ? err : new Error(String(err)), {
+      service: 'mcp-agent',
+      method: method || 'unknown',
+    });
     res.json(jsonRpcError(id, -32603, `Internal error: ${String(err)}`));
   }
 });
@@ -325,12 +334,14 @@ async function handleFixIssue(id: unknown, args: Record<string, unknown> | undef
       log.error({ err: String(queueErr), runId }, 'Failed to enqueue fix to RabbitMQ (non-fatal, run created)');
     }
 
-    res.json(jsonRpcResult(id, {
-      runId,
-      status: 'queued',
-      message: `Fix dispatched for ${repoOwner}/${repoName}#${issueNumber}`,
-      createdAt: now,
-    }));
+    res.json(
+      jsonRpcResult(id, {
+        runId,
+        status: 'queued',
+        message: `Fix dispatched for ${repoOwner}/${repoName}#${issueNumber}`,
+        createdAt: now,
+      }),
+    );
   } catch (err) {
     log.error({ err: String(err), repoOwner, repoName, issueNumber }, 'Failed to dispatch fix');
     res.json(jsonRpcError(id, -32603, `Failed to dispatch fix: ${String(err)}`));
@@ -417,13 +428,15 @@ async function handleGetRun(id: unknown, args: Record<string, unknown> | undefin
     const allHistory: McpRunHistoryEntry[] = historyRaw.map((r) => JSON.parse(r));
     const historyEntry = allHistory.find((h) => h.runId === runId);
 
-    res.json(jsonRpcResult(id, {
-      ...job,
-      repoOwner: historyEntry?.repoOwner,
-      repoName: historyEntry?.repoName,
-      issueTitle: historyEntry?.issueTitle,
-      confidence: historyEntry?.confidence,
-    }));
+    res.json(
+      jsonRpcResult(id, {
+        ...job,
+        repoOwner: historyEntry?.repoOwner,
+        repoName: historyEntry?.repoName,
+        issueTitle: historyEntry?.issueTitle,
+        confidence: historyEntry?.confidence,
+      }),
+    );
   } catch (err) {
     log.error({ err: String(err), runId }, 'Failed to get run details');
     res.json(jsonRpcError(id, -32603, `Internal error: ${String(err)}`));
@@ -476,7 +489,9 @@ async function handleResourceRead(id: unknown, params: unknown, res: Response): 
       // Match runs whose issue reference contains the issueId
       const matchingRuns = allRuns.filter((r) => {
         const runRef = `${r.repoOwner}/${r.repoName}#${(r.issueTitle || '').replace('Issue #', '')}`;
-        return runRef === issueId || r.runId === issueId || r.issueTitle?.includes(issueId) || r.repoName?.includes(issueId);
+        return (
+          runRef === issueId || r.runId === issueId || r.issueTitle?.includes(issueId) || r.repoName?.includes(issueId)
+        );
       });
 
       // Get full job details for matching runs

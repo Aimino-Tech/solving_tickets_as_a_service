@@ -24,65 +24,67 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
+import cors from 'cors';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
-
-import cors from 'cors';
 import helmet from 'helmet';
-import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
-import { rateLimitMiddleware } from './ratelimit/middleware.js';
-import { config } from './config.js';
-import { getSlackBoltApp } from './notifications/slack-bolt.js';
+import previewRoutes from './api/routes/preview.js';
+import { trustRouter } from './api/routes/trust.js';
+import { streamAuditExportCsv, streamAuditExportJson } from './audit/export.js';
 import { registerSlackMentionHandler } from './channels/slack/handler.js';
-import type { IssueJobData } from './utils/types.js';
-import { QUEUES, publishMessage, connect as rmqConnect, isConnected } from './queue/rabbitmq.js';
+import { config } from './config.js';
+import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
+import { de } from './i18n/de.js';
+import { initMetering, usageRouter } from './metering/index.js';
+import { approvalRouter, configureApprovalGate } from './middleware/approvalGate.js';
+import { setupSentryExpressErrorHandler } from './monitoring/sentry.js';
+import { getSlackBoltApp } from './notifications/slack-bolt.js';
+import { initWizardStore } from './onboarding/wizard.js';
+import { isConnected, publishMessage, QUEUES, connect as rmqConnect } from './queue/rabbitmq.js';
+import { rateLimitMiddleware } from './ratelimit/middleware.js';
+import { adminRouter } from './routes/admin.js';
+import { adminAuditRouter } from './routes/admin_audit.js';
+import { adminRunsRouter } from './routes/adminRuns.js';
+import { adminWebhooksRouter } from './routes/adminWebhooks.js';
+import { analyticsRouter } from './routes/analytics.js';
+import { badgeRouter } from './routes/badge.js';
+import { benchmarksRouter } from './routes/benchmarks.js';
+import { dashboardRouter } from './routes/dashboard.js';
+import { dpaRouter } from './routes/dpa.js';
+import { featureFlagsRouter } from './routes/featureFlags.js';
+import healthRouter from './routes/health.js';
+import { kpiRouter } from './routes/kpi.js';
+import n8nRouter from './routes/n8n.js';
+import { onboardingRouter } from './routes/onboarding.js';
+import { pipelineRouter } from './routes/pipeline.js';
+import { plgRouter } from './routes/plg.js';
+import { pricingRouter } from './routes/pricing.js';
+import { proxyRouter } from './routes/proxy.js';
+import { qualityRouter } from './routes/quality.js';
+import { reposRouter } from './routes/repos.js';
+import { runsRouter } from './routes/runs.js';
+import { slaRouter } from './routes/sla.js';
+import { viralRouter } from './routes/viral.js';
+import { workspaceRouter } from './routes/workspace.js';
+import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
+import { createStripeWebhookHandler } from './stripe/index.js';
+import { teamRouter } from './team/routes.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
-import { createStripeWebhookHandler } from './stripe/index.js';
 import { rootLogger } from './utils/logger.js';
-import { initMetering, usageRouter } from './metering/index.js';
+import type { IssueJobData } from './utils/types.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
+import { logWebhookFailed, logWebhookProcessed, logWebhookReceived } from './webhooks/eventLogger.js';
 import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
-import { featureFlagsRouter } from './routes/featureFlags.js';
-import { logWebhookReceived, logWebhookProcessed, logWebhookFailed } from './webhooks/eventLogger.js';
 import { recordWebhookDuration } from './webhooks/metrics.js';
-import { adminWebhooksRouter } from './routes/adminWebhooks.js';
-import { pipelineRouter } from './routes/pipeline.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
-import { adminRouter } from './routes/admin.js';
-import { adminAuditRouter } from './routes/admin_audit.js';
-import { dashboardRouter } from './routes/dashboard.js';
-import { dpaRouter } from './routes/dpa.js';
-import { slaRouter } from './routes/sla.js';
-import { onboardingRouter } from './routes/onboarding.js';
-import { teamRouter } from './team/routes.js';
-import { initWizardStore } from './onboarding/wizard.js';
-import { benchmarksRouter } from './routes/benchmarks.js';
-import { pricingRouter } from './routes/pricing.js';
-import { trustRouter } from './api/routes/trust.js';
-import { plgRouter } from './routes/plg.js';
-import { reposRouter } from './routes/repos.js';
-import { runsRouter } from './routes/runs.js';
-import { badgeRouter } from './routes/badge.js';
-import { analyticsRouter } from './routes/analytics.js';
-import { viralRouter } from './routes/viral.js';
-import { qualityRouter } from './routes/quality.js';
-import previewRoutes from './api/routes/preview.js';
-import { adminRunsRouter } from './routes/adminRuns.js';
-import { kpiRouter } from './routes/kpi.js';
-import n8nRouter from './routes/n8n.js';
-import healthRouter from './routes/health.js';
-import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
-import { proxyRouter } from './routes/proxy.js';
-import { approvalRouter, configureApprovalGate } from "./middleware/approvalGate.js";
-import { streamAuditExportCsv, streamAuditExportJson } from "./audit/export.js";
-import { de } from "./i18n/de.js";
-import { workspaceRouter } from "./routes/workspace.js";
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -103,14 +105,14 @@ export async function createApp(): Promise<express.Application> {
   app.use(helmet());
 
   // -- CORS -----------------------------------------------------------------
-  app.use(cors({
-    origin: config.security.corsOrigin === '*'
-      ? '*'
-      : config.security.corsOrigin.split(',').map(s => s.trim()),
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-request-id'],
-    exposedHeaders: ['x-request-id'],
-  }));
+  app.use(
+    cors({
+      origin: config.security.corsOrigin === '*' ? '*' : config.security.corsOrigin.split(',').map((s) => s.trim()),
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-request-id'],
+      exposedHeaders: ['x-request-id'],
+    }),
+  );
 
   // -- Health check route (consolidated) -----------------------------------
   app.get('/health', async (_req: Request, res: Response) => {
@@ -119,21 +121,36 @@ export async function createApp(): Promise<express.Application> {
       const { queryWithRetry } = await import('./db/connection.js');
       await queryWithRetry('SELECT 1');
       checks.database = 'ok';
-    } catch { checks.database = 'down'; }
+    } catch {
+      checks.database = 'down';
+    }
     try {
       const { Redis } = await import('ioredis');
-      const redis = new Redis(config.queue.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1, connectTimeout: 3000 });
+      const redis = new Redis(config.queue.redisUrl, {
+        lazyConnect: true,
+        maxRetriesPerRequest: 1,
+        connectTimeout: 3000,
+      });
       await redis.connect();
       await redis.ping();
       checks.redis = 'ok';
       await redis.quit().catch(() => {});
-    } catch { checks.redis = 'down'; }
+    } catch {
+      checks.redis = 'down';
+    }
     try {
       const { isConnected } = await import('./queue/rabbitmq.js');
       checks.rabbitmq = isConnected() ? 'ok' : 'down';
-    } catch { checks.rabbitmq = 'down'; }
-    const allOk = Object.values(checks).every(v => v === 'ok');
-    res.status(allOk ? 200 : 503).json({ status: allOk ? 'ok' : 'degraded', checks, timestamp: new Date().toISOString(), aiMode: config.stas.aiDisabled ? 'ai-disabled' : 'enabled' });
+    } catch {
+      checks.rabbitmq = 'down';
+    }
+    const allOk = Object.values(checks).every((v) => v === 'ok');
+    res.status(allOk ? 200 : 503).json({
+      status: allOk ? 'ok' : 'degraded',
+      checks,
+      timestamp: new Date().toISOString(),
+      aiMode: config.stas.aiDisabled ? 'ai-disabled' : 'enabled',
+    });
   });
 
   // -- IP Allowlist for webhook endpoints -----------------------------------
@@ -201,8 +218,8 @@ export async function createApp(): Promise<express.Application> {
 
   // ── DACH Market: Register German locale ────────────────────────────
   app.locals.locales = app.locals.locales || {};
-  app.locals.locales["de-DE"] = de;
-  app.locals.defaultLocale = "de-DE";
+  app.locals.locales['de-DE'] = de;
+  app.locals.defaultLocale = 'de-DE';
 
   // ── Start webhook retry worker ────────────────────────────────────
   // Only start if we're running as API or both
@@ -709,9 +726,12 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Marketing Site (React SPA) ──────────────────────────────────
   app.use(express.static(path.join(__dirname, '../marketing-site/dist')));
-  app.get(/^\/(pricing|trust|benchmarks|support|status|docs|blog|integrations|agents)?$/, (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../marketing-site/dist', 'index.html'));
-  });
+  app.get(
+    /^\/(pricing|trust|benchmarks|support|status|docs|blog|integrations|agents)?$/,
+    (_req: Request, res: Response) => {
+      res.sendFile(path.join(__dirname, '../marketing-site/dist', 'index.html'));
+    },
+  );
 
   // ── Dashboard SPA (served from built dist/) ───────────────────────
   app.use('/dashboard', express.static(path.join(__dirname, '../dashboard/dist')));
@@ -734,12 +754,8 @@ export async function createApp(): Promise<express.Application> {
   // Serves the MCP server card so AI agents can discover STAS autonomously.
   app.get('/.well-known/mcp-server-card.json', (_req: Request, res: Response) => {
     const baseUrl = process.env.STAS_PUBLIC_URL || `${_req.protocol}://${_req.get('host')}`;
-    const sseUrl = process.env.STAS_MCP_SERVER_URL
-      ? `${process.env.STAS_MCP_SERVER_URL}/sse`
-      : `${baseUrl}/sse`;
-    const mcpUrl = process.env.STAS_MCP_SERVER_URL
-      ? `${process.env.STAS_MCP_SERVER_URL}/mcp`
-      : `${baseUrl}/mcp`;
+    const sseUrl = process.env.STAS_MCP_SERVER_URL ? `${process.env.STAS_MCP_SERVER_URL}/sse` : `${baseUrl}/sse`;
+    const mcpUrl = process.env.STAS_MCP_SERVER_URL ? `${process.env.STAS_MCP_SERVER_URL}/mcp` : `${baseUrl}/mcp`;
 
     const card = {
       schemaVersion: '2024-11-05',
@@ -822,8 +838,16 @@ export async function createApp(): Promise<express.Application> {
         },
       },
       keywords: [
-        'stas', 'github-bot', 'issue-fixer', 'automated-fix',
-        'opencode', 'mcp', 'smithery', 'aimino', 'agent-discovery', 'agent-to-agent',
+        'stas',
+        'github-bot',
+        'issue-fixer',
+        'automated-fix',
+        'opencode',
+        'mcp',
+        'smithery',
+        'aimino',
+        'agent-discovery',
+        'agent-to-agent',
       ],
     };
 
@@ -892,7 +916,7 @@ export async function createApp(): Promise<express.Application> {
 
   // KPI Dashboard API
   app.use('/api/kpi', kpiRouter);
-app.use('/api/v1/n8n', n8nRouter);
+  app.use('/api/v1/n8n', n8nRouter);
 
   // Agent Performance Analytics API
   app.use('/api/analytics', analyticsRouter);
@@ -900,7 +924,7 @@ app.use('/api/v1/n8n', n8nRouter);
   // Pipeline Run History API
   app.use('/api/history', pipelineHistoryRouter);
 
-    // ── Workspace Management API (AIM-3321) ──────────────────────────
+  // ── Workspace Management API (AIM-3321) ──────────────────────────
   //   GET    /api/workspace              — List workspaces
   //   GET    /api/workspace/plans        — List pricing plans
   //   POST   /api/workspace/calculate-cost — Calculate workspace cost
@@ -949,10 +973,19 @@ app.use('/api/v1/n8n', n8nRouter);
 
   // ── DACH Market: Configure approval gate ───────────────────────────
   configureApprovalGate({
-    enabled: process.env.APPROVAL_GATE_ENABLED === "true",
-    requiredOrgs: (process.env.APPROVAL_REQUIRED_ORGS || "").split(",").map((s) => s.trim()).filter(Boolean),
-    requiredRepos: (process.env.APPROVAL_REQUIRED_REPOS || "").split(",").map((s) => s.trim()).filter(Boolean),
-    triggerLabels: (process.env.APPROVAL_TRIGGER_LABELS || "production,stas:fix:approval").split(",").map((s) => s.trim()).filter(Boolean),
+    enabled: process.env.APPROVAL_GATE_ENABLED === 'true',
+    requiredOrgs: (process.env.APPROVAL_REQUIRED_ORGS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
+    requiredRepos: (process.env.APPROVAL_REQUIRED_REPOS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
+    triggerLabels: (process.env.APPROVAL_TRIGGER_LABELS || 'production,stas:fix:approval')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
   });
 
   // ── DACH Market: Approval gate API ────────────────────────────────
@@ -960,13 +993,13 @@ app.use('/api/v1/n8n', n8nRouter);
   // POST   /api/approvals/:id/approve — Approve a pending dispatch
   // POST   /api/approvals/:id/reject  — Reject a pending dispatch
   // GET    /api/approvals/config      — Get approval gate config
-  app.use("/api", approvalRouter);
+  app.use('/api', approvalRouter);
 
   // ── DACH Market: Audit export (GDPR-compliant) ────────────────────
   // GET /api/admin/audit/export?format=csv — Export audit logs as CSV
   // GET /api/admin/audit/export?format=json — Export audit logs as JSON
-  app.get("/api/admin/audit/export", async (req, res) => {
-    if (req.query.format === "json") {
+  app.get('/api/admin/audit/export', async (req, res) => {
+    if (req.query.format === 'json') {
       await streamAuditExportJson(res, req.query);
     } else {
       await streamAuditExportCsv(res, req.query);
@@ -989,6 +1022,9 @@ app.use('/api/v1/n8n', n8nRouter);
       error: { code: 'NOT_FOUND', message: 'Not found', correlation_id: req.requestId },
     });
   });
+
+  // -- Sentry error handler (must be before the fallback error handler) ------
+  setupSentryExpressErrorHandler(app);
 
   // -- Global error handler -------------------------------------------------
   app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {

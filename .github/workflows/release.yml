@@ -30,6 +30,8 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   NODE_VERSION: '22'
+  SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+  SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
 jobs:
   ##############################################################################
@@ -117,6 +119,20 @@ jobs:
             exit 1
           fi
           echo "Version format valid: $TAG"
+
+      - name: Create Sentry release
+        if: ${{ env.SENTRY_ORG != '' && env.SENTRY_PROJECT != '' }}
+        uses: getsentry/action-release@v3
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ env.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ env.SENTRY_PROJECT }}
+        with:
+          environment: production
+          version: stas@${{ steps.get-version.outputs.version }}
+          version_prefix: stas@
+          sourcemaps: ./dist
+          ignore_missing: true
 
   ##############################################################################
   # BUILD & PUSH DOCKER IMAGE

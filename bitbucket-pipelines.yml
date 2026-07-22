@@ -66,6 +66,19 @@ pipelines:
       - step: *eval-full
       - step: *benchmark-badge
 
+  # Deploy to production — create Sentry release
+  custom:
+    deploy-production:
+      - step:
+          name: Sentry Release
+          script:
+            - npm ci
+            - bash scripts/sentry-release.sh create
+            - bash scripts/sentry-release.sh finalize
+            - bash scripts/sentry-release.sh deploy
+          artifacts:
+            - sentry-release-*.txt
+
   # Manual trigger
   custom:
     full-eval:
