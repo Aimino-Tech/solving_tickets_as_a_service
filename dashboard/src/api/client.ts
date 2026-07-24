@@ -140,6 +140,28 @@ export interface BillingPlan {
   highlighted: boolean;
 }
 
+export interface WizardProgress {
+  tenantId: string;
+  state: 'not_started' | 'in_progress' | 'completed' | 'skipped';
+  currentStep: string;
+  steps: {
+    githubInstalled: boolean;
+    repoSelected: boolean;
+    billingSetup: boolean;
+    teamSetup: boolean;
+  };
+  completedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface WizardConfig {
+  enabled: boolean;
+  requiredSteps: string[];
+  githubAppUrl: string;
+}
+
 export const auth = {
   register: (email: string, password: string, name?: string) =>
     request<AuthResult>('/v1/auth/register', {
@@ -220,4 +242,29 @@ export const billing = {
     request<BillingPlan>('/v1/billing/plan'),
   listPlans: () =>
     request<BillingPlan[]>('/v1/billing/plans'),
+};
+
+export const onboarding = {
+  start: () =>
+    request<{ success: boolean; progress: WizardProgress }>('/onboarding', { method: 'POST' }),
+  status: () =>
+    request<{ progress: WizardProgress; config: WizardConfig }>('/onboarding/status'),
+  getStatus: () =>
+    request<{ progress: WizardProgress; config: WizardConfig }>('/onboarding/status'),
+  config: () =>
+    request<{ config: WizardConfig }>('/onboarding/config'),
+  step: (step: string, data: Record<string, unknown> = {}) =>
+    request<{ success: boolean; progress: WizardProgress }>(`/onboarding/step/${step}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  completeStep: (step: string, data: Record<string, unknown> = {}) =>
+    request<{ success: boolean; progress: WizardProgress }>(`/onboarding/step/${step}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  skip: () =>
+    request<{ success: boolean; progress: WizardProgress }>('/onboarding/skip', { method: 'POST' }),
+  reset: () =>
+    request<{ success: boolean; progress: WizardProgress }>('/onboarding/reset', { method: 'POST' }),
 };

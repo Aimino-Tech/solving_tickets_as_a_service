@@ -152,6 +152,30 @@ export interface PricingData {
   competitors: CompetitorPrice[];
 }
 
+export type WizardStep = 'github_install' | 'repo_selection' | 'billing_setup' | 'team_setup' | 'complete';
+
+export interface WizardProgress {
+  tenantId: string;
+  state: 'not_started' | 'in_progress' | 'completed' | 'skipped';
+  currentStep: WizardStep;
+  steps: {
+    githubInstalled: boolean;
+    repoSelected: boolean;
+    billingSetup: boolean;
+    teamSetup: boolean;
+  };
+  completedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface WizardConfig {
+  enabled: boolean;
+  requiredSteps: string[];
+  githubAppUrl: string;
+}
+
 export interface VsComparisonData {
   competitor: string;
   competitorName: string;

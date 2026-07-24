@@ -711,6 +711,8 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/v1/auth', authRouter);
 
   // ── Onboarding API ──────────────────────────────────────────────
+  app.use('/api/v1/onboarding', onboardingRouter);
+  // Legacy mount for backward compatibility
   app.use('/onboarding', onboardingRouter);
 
   // ── Team Management API ───────────────────────────────────────────

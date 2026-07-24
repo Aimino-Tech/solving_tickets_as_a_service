@@ -29,10 +29,10 @@ export default function OnboardPage() {
   const navigate = useNavigate();
   const [connecting, setConnecting] = useState(false);
 
-  // If already authenticated, redirect to dashboard
+  // If already authenticated, redirect to onboarding wizard
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      navigate('/', { replace: true });
+      navigate('/onboarding', { replace: true });
     }
   }, [isLoading, isAuthenticated, user, navigate]);
 

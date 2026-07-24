@@ -27,6 +27,7 @@ import AdminRuns from '@/pages/AdminRuns';
 import LiveView from '@/pages/LiveView';
 import NotFound from '@/pages/NotFound';
 import Error500 from '@/pages/Error500';
+import WizardContainer from '@/pages/onboarding/WizardContainer';
 
 export default function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -57,6 +58,54 @@ export default function App() {
           <Route path="/vs" element={<VsPage />} />
           <Route path="/enterprise" element={<EnterprisePage />} />
         </Route>
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <WizardContainer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/onboarding/step-1"
+          element={
+            <ProtectedRoute>
+              <WizardContainer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/onboarding/step-2"
+          element={
+            <ProtectedRoute>
+              <WizardContainer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/onboarding/step-3"
+          element={
+            <ProtectedRoute>
+              <WizardContainer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/onboarding/step-4"
+          element={
+            <ProtectedRoute>
+              <WizardContainer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/onboarding/complete"
+          element={
+            <ProtectedRoute>
+              <WizardContainer />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/"
           element={
