@@ -71,19 +71,24 @@ async function validateStartupHealth(): Promise<void> {
   }
 
   // Check OpenSymphony dispatch endpoint
-  try {
-    const osUrl = config.opensymphony.dispatchUrl;
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 5000);
-    const resp = await fetch(`${osUrl.replace(/\/dispatch$/, '/health')}`, { signal: ac.signal });
-    clearTimeout(timer);
-    if (resp.ok) {
-      checks.push({ name: 'opensymphony', ok: true });
-    } else {
-      checks.push({ name: 'opensymphony', ok: false, error: `HTTP ${resp.status}` });
+  const osUrl = config.opensymphony.dispatchUrl;
+  if (!osUrl) {
+    log.warn('OpenSymphony dispatch URL not configured -- skipping health check');
+    checks.push({ name: 'opensymphony', ok: true });
+  } else {
+    try {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 5000);
+      const resp = await fetch(`${osUrl.replace(/\/dispatch$/, '/health')}`, { signal: ac.signal });
+      clearTimeout(timer);
+      if (resp.ok) {
+        checks.push({ name: 'opensymphony', ok: true });
+      } else {
+        checks.push({ name: 'opensymphony', ok: false, error: `HTTP ${resp.status}` });
+      }
+    } catch (err) {
+      checks.push({ name: 'opensymphony', ok: false, error: String(err) });
     }
-  } catch (err) {
-    checks.push({ name: 'opensymphony', ok: false, error: String(err) });
   }
 
   // Check E2B if configured

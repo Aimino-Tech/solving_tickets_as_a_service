@@ -93,6 +93,8 @@ services:
       - STAS_RATE_LIMIT_MAX=150
       - POSTGRES_POOL_MAX=25
       - WORKER_CONCURRENCY=4
+      - OPEN_SYMPHONY_DISPATCH_URL=http://symphony-orchestrator:4001/api/v1/events/github
+      - OPEN_SYMPHONY_API_KEY=${OPEN_SYMPHONY_API_KEY:-}
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
       - SENTRY_RELEASE=${SENTRY_RELEASE}
