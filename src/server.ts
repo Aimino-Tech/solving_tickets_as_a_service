@@ -61,6 +61,7 @@ import healthRouter from './routes/health.js';
 import { kpiRouter } from './routes/kpi.js';
 import n8nRouter from './routes/n8n.js';
 import { authRouter } from './auth/index.js';
+import { billingRouter } from './billing/index.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { pipelineRouter } from './routes/pipeline.js';
 import { plgRouter } from './routes/plg.js';
@@ -693,6 +694,8 @@ export async function createApp(): Promise<express.Application> {
 
   // ── DPA API ──────────────────────────────────────────────
   app.use('/api/v1/billing', dpaRouter);
+  // ── Billing API (subscriptions, plans, checkout) ─────────
+  app.use('/api/v1/billing', billingRouter);
 
   app.use('/api/v1', slaRouter);
 

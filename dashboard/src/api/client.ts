@@ -133,11 +133,15 @@ export interface MonthlyUsage {
 export interface BillingPlan {
   id: string;
   name: string;
-  description: string;
-  price: string;
-  period: string;
-  features: string[];
-  highlighted: boolean;
+  description?: string;
+  price?: string;
+  period?: string;
+  features?: string[];
+  highlighted?: boolean;
+  amountCents?: number;
+  trialDays?: number;
+  monthlyFixLimit?: number;
+  concurrentFixes?: number;
 }
 
 export const auth = {
@@ -219,7 +223,52 @@ export const billing = {
   plan: () =>
     request<BillingPlan>('/v1/billing/plan'),
   listPlans: () =>
-    request<BillingPlan[]>('/v1/billing/plans'),
+    request<{ plans: BillingPlan[] }>('/v1/billing/plans'),
+  createCheckout: (planId: string, successUrl: string, cancelUrl: string) =>
+    request<{ url: string; sessionId: string }>('/v1/billing/subscription/create-checkout', {
+      method: 'POST',
+      body: JSON.stringify({ planId, successUrl, cancelUrl }),
+    }),
+};
+
+export interface WizardProgress {
+  tenantId: string;
+  state: 'not_started' | 'in_progress' | 'completed' | 'skipped';
+  currentStep: string;
+  steps: {
+    githubInstalled: boolean;
+    repoSelected: boolean;
+    billingSetup: boolean;
+    teamSetup: boolean;
+  };
+  completedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface WizardConfig {
+  enabled: boolean;
+  requiredSteps: string[];
+  githubAppUrl: string;
+}
+
+export const onboarding = {
+  getStatus: () =>
+    request<{ progress: WizardProgress; config: WizardConfig }>('/v1/onboarding'),
+  start: () =>
+    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding', { method: 'POST' }),
+  completeStep: (step: string, body?: Record<string, unknown>) =>
+    request<{ success: boolean; progress: WizardProgress }>(
+      `/v1/onboarding/step/${step}`,
+      { method: 'POST', body: body ? JSON.stringify(body) : undefined },
+    ),
+  skip: () =>
+    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/skip', { method: 'POST' }),
+  reset: () =>
+    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/reset', { method: 'POST' }),
+  getConfig: () =>
+    request<{ config: WizardConfig }>('/v1/onboarding/config'),
 };
 
 export interface WizardProgress {

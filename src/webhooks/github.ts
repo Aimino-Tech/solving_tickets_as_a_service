@@ -80,6 +80,59 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
     // We wait for the label event instead of acting on open
   });
 
+  // ── installation.created ────────────────────────────────────────
+  webhooks.on('installation.created' as EmitterWebhookEventName, async ({ payload }) => {
+    try {
+      const p = payload as unknown as {
+        installation: { id: number; account?: { login?: string; type?: string } };
+        repositories?: Array<{ name: string; owner?: { login: string } }>;
+        sender?: { id: number; login?: string };
+      };
+
+      const installationId = p.installation?.id;
+      if (!installationId) {
+        log.warn('Installation created event without installation ID');
+        return;
+      }
+
+      log.info(
+        {
+          installationId,
+          accountLogin: p.installation?.account?.login,
+          accountType: p.installation?.account?.type,
+          reposCount: p.repositories?.length ?? 0,
+          sender: p.sender?.login,
+        },
+        'GitHub App installation created — recording in onboarding state',
+      );
+
+      // We log the installation event; the frontend handles mapping to the
+      // correct user/tenant via the manual confirmation button. The installation
+      // data is persisted here for audit and future cross-referencing.
+      try {
+        const { auditRepository } = await import('../audit/repository.js');
+        await auditRepository.insert({
+          actorType: 'system',
+          actorId: undefined,
+          action: 'onboarding.github.installation_received',
+          resourceType: 'onboarding',
+          resourceId: undefined,
+          details: {
+            installationId,
+            accountLogin: p.installation?.account?.login,
+            accountType: p.installation?.account?.type,
+            reposGranted: p.repositories?.length ?? 0,
+          },
+          correlationId: undefined,
+        });
+      } catch (auditErr) {
+        log.error({ err: String(auditErr) }, 'Failed to audit log installation event');
+      }
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to handle installation.created event');
+    }
+  });
+
   // ── issues.labeled ──────────────────────────────────────────────
   webhooks.on('issues.labeled', async ({ payload }) => {
     const label = payload.label?.name;
