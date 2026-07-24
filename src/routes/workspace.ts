@@ -1,29 +1,9 @@
-/**
- * Workspace onboarding and management routes — AIM-3321.
- *
- * Provides the API surface for Slack-first, zero-sales workspace distribution:
- *
- *   GET    /api/workspace/:id/status   — Workspace status
- *   POST   /api/workspace              — Create workspace (self-serve)
- *   POST   /api/workspace/:id/setup    — Automated Slack/RabbitMQ/DB setup
- *   DELETE /api/workspace/:id          — Cleanup workspace
- *
- * ── Workspace Lifecycle ─────────────────────────────────────────────────────
- *   created → setup → active → suspended → deleted
- *
- * - created:  Workspace record created, awaiting setup
- * - setup:    Automated provisioning in progress (Slack bot, queues, DB schema)
- * - active:   Fully operational, processing jobs
- * - suspended: Temporarily disabled (payment failure, policy violation)
- * - deleted:   Hardware deleted, data retained per retention policy
- * ────────────────────────────────────────────────────────────────────────────
- */
-
-import crypto from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { logAdminAction } from '../audit/service.js';
+import { workspaceRepository } from '../db/repositories/index.js';
+import type { Workspace as DbWorkspace } from '../db/types/index.js';
 import {
   listWorkspacePlans,
   findWorkspacePlan,
@@ -31,10 +11,6 @@ import {
 } from '../pricing/workspace.js';
 
 const log = rootLogger.child({ module: 'workspace-api' });
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 export type WorkspaceStatus =
   | 'created'
@@ -62,28 +38,34 @@ export interface Workspace {
   metadata?: Record<string, unknown>;
 }
 
-// ---------------------------------------------------------------------------
-// In-memory workspace store (MVP — replace with DB in production)
-// ---------------------------------------------------------------------------
-
-const workspaces = new Map<string, Workspace>();
-
-// ---------------------------------------------------------------------------
-// Router
-// ---------------------------------------------------------------------------
-
 const router: Router = Router();
-
-// ---------------------------------------------------------------------------
-// Validation helpers
-// ---------------------------------------------------------------------------
 
 function isValidPlanId(planId: string): boolean {
   return ['free', 'solo', 'team', 'enterprise'].includes(planId);
 }
 
+function dbToWorkspace(ws: DbWorkspace): Workspace {
+  return {
+    id: ws.id,
+    name: ws.name,
+    tenantId: ws.tenantId,
+    planId: ws.planId,
+    seats: ws.seats,
+    status: ws.status as WorkspaceStatus,
+    slackTeamId: ws.slackTeamId ?? undefined,
+    slackBotToken: ws.slackBotToken ?? undefined,
+    slackChannel: ws.slackChannel ?? undefined,
+    gitHubInstallationId: ws.githubInstallationId ?? undefined,
+    createdAt: ws.createdAt instanceof Date ? ws.createdAt.toISOString() : String(ws.createdAt),
+    updatedAt: ws.updatedAt instanceof Date ? ws.updatedAt.toISOString() : String(ws.updatedAt),
+    activatedAt: ws.activatedAt instanceof Date ? ws.activatedAt.toISOString() : ws.activatedAt ?? undefined,
+    suspendedAt: ws.suspendedAt instanceof Date ? ws.suspendedAt.toISOString() : ws.suspendedAt ?? undefined,
+    deletedAt: ws.deletedAt instanceof Date ? ws.deletedAt.toISOString() : ws.deletedAt ?? undefined,
+    metadata: ws.metadata ?? undefined,
+  };
+}
+
 function sanitizeWorkspace(ws: Workspace): Record<string, unknown> {
-  // Strip sensitive fields for API responses
   const { slackBotToken, ...rest } = ws;
   return {
     ...rest,
@@ -91,26 +73,19 @@ function sanitizeWorkspace(ws: Workspace): Record<string, unknown> {
   };
 }
 
-// ---------------------------------------------------------------------------
-// GET /api/workspace — List all workspaces (admin)
-// ---------------------------------------------------------------------------
-
-router.get('/', (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
-    const all = Array.from(workspaces.values()).map(sanitizeWorkspace);
+    const all = await workspaceRepository.list();
+    const result = all.map((ws) => sanitizeWorkspace(dbToWorkspace(ws)));
     res.json({
-      count: all.length,
-      workspaces: all,
+      count: result.length,
+      workspaces: result,
     });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to list workspaces');
     res.status(500).json({ error: 'Failed to list workspaces' });
   }
 });
-
-// ---------------------------------------------------------------------------
-// GET /api/workspace/plans — List available pricing plans
-// ---------------------------------------------------------------------------
 
 router.get('/plans', (_req: Request, res: Response) => {
   try {
@@ -133,10 +108,6 @@ router.get('/plans', (_req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to list workspace plans' });
   }
 });
-
-// ---------------------------------------------------------------------------
-// POST /api/workspace/calculate-cost — Calculate workspace cost
-// ---------------------------------------------------------------------------
 
 router.post('/calculate-cost', (req: Request, res: Response) => {
   try {
@@ -171,19 +142,16 @@ router.post('/calculate-cost', (req: Request, res: Response) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/workspace/:id/status — Get workspace status
-// ---------------------------------------------------------------------------
-
 router.get('/:id/status', async (req: Request, res: Response) => {
   try {
-    const workspace = workspaces.get(req.params.id);
+    const dbWorkspace = await workspaceRepository.findById(req.params.id);
 
-    if (!workspace) {
+    if (!dbWorkspace) {
       res.status(404).json({ error: 'Workspace not found' });
       return;
     }
 
+    const workspace = dbToWorkspace(dbWorkspace);
     const plan = findWorkspacePlan(workspace.planId);
 
     res.json({
@@ -220,10 +188,6 @@ function getLifecycleProgress(
   };
 }
 
-// ---------------------------------------------------------------------------
-// POST /api/workspace — Create workspace (self-serve)
-// ---------------------------------------------------------------------------
-
 router.post('/', async (req: Request, res: Response) => {
   try {
     const { name, tenantId, planId, seats, slackTeamId, gitHubInstallationId } = req.body as {
@@ -234,8 +198,6 @@ router.post('/', async (req: Request, res: Response) => {
       slackTeamId?: string;
       gitHubInstallationId?: number;
     };
-
-    // -- Validation ----------------------------------------------------------
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       res.status(400).json({ error: 'Workspace name is required' });
@@ -257,30 +219,22 @@ router.post('/', async (req: Request, res: Response) => {
 
     const effectiveSeats = Math.max(1, Math.floor(Number(seats) || 1));
 
-    // -- Create workspace ----------------------------------------------------
-
-    const now = new Date().toISOString();
-    const workspace: Workspace = {
-      id: crypto.randomUUID(),
+    const dbWorkspace = await workspaceRepository.create({
       name: name.trim(),
       tenantId: tenantId.trim(),
       planId: effectivePlanId,
       seats: effectiveSeats,
       status: 'created',
-      slackTeamId: slackTeamId?.trim(),
-      gitHubInstallationId,
-      createdAt: now,
-      updatedAt: now,
-    };
+      slackTeamId: slackTeamId?.trim() ?? null,
+      githubInstallationId: gitHubInstallationId ?? null,
+    });
 
-    workspaces.set(workspace.id, workspace);
+    const workspace = dbToWorkspace(dbWorkspace);
 
     log.info(
       { workspaceId: workspace.id, tenantId, planId: effectivePlanId, seats: effectiveSeats },
       'Workspace created',
     );
-
-    // -- Audit log -----------------------------------------------------------
 
     await logAdminAction({
       adminId: 'system',
@@ -297,18 +251,16 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// POST /api/workspace/:id/setup — Automated Slack/RabbitMQ/DB setup
-// ---------------------------------------------------------------------------
-
 router.post('/:id/setup', async (req: Request, res: Response) => {
   try {
-    const workspace = workspaces.get(req.params.id);
+    const dbWorkspace = await workspaceRepository.findById(req.params.id);
 
-    if (!workspace) {
+    if (!dbWorkspace) {
       res.status(404).json({ error: 'Workspace not found' });
       return;
     }
+
+    const workspace = dbToWorkspace(dbWorkspace);
 
     if (workspace.status !== 'created') {
       res.status(409).json({
@@ -317,49 +269,38 @@ router.post('/:id/setup', async (req: Request, res: Response) => {
       return;
     }
 
-    // -- Validate request body -----------------------------------------------
-
     const { slackBotToken, slackChannel } = req.body as {
       slackBotToken?: string;
       slackChannel?: string;
     };
 
-    // -- Transition to 'setup' -----------------------------------------------
-
-    workspace.status = 'setup';
-    workspace.updatedAt = new Date().toISOString();
-
-    // -- Slack bot token exchange ---------------------------------------------
+    const updateData: Record<string, unknown> = {
+      status: 'setup',
+    };
 
     if (slackBotToken && typeof slackBotToken === 'string') {
-      workspace.slackBotToken = slackBotToken;
+      updateData.slackBotToken = slackBotToken;
       log.info({ workspaceId: workspace.id }, 'Slack bot token configured');
     }
 
     if (slackChannel && typeof slackChannel === 'string') {
-      workspace.slackChannel = slackChannel;
+      updateData.slackChannel = slackChannel;
     }
 
-    // -- Simulate async provisioning in background ---------------------------
-    // In production, this would:
-    //   1. Create RabbitMQ queues (ingress, egress, dlq)
-    //   2. Register Slack event subscriptions (app_mention, message.channels)
-    //   3. Provision database schema (workspace_tables, audit_logs)
-    //   4. Verify GitHub App installation
-    //   5. Configure webhooks for the workspace
+    await workspaceRepository.update(workspace.id, updateData as Parameters<typeof workspaceRepository.update>[1]);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        const ws = workspaces.get(workspace.id);
-        if (!ws || ws.status !== 'setup') return;
+        const current = await workspaceRepository.findById(workspace.id);
+        if (!current || current.status !== 'setup') return;
 
-        ws.status = 'active';
-        ws.activatedAt = new Date().toISOString();
-        ws.updatedAt = ws.activatedAt;
+        await workspaceRepository.update(workspace.id, {
+          status: 'active',
+          activatedAt: new Date(),
+        });
 
         log.info({ workspaceId: workspace.id }, 'Workspace setup completed -> active');
 
-        // -- Audit log -------------------------------------------------------
         logAdminAction({
           adminId: 'system',
           action: 'workspace.activated',
@@ -369,17 +310,17 @@ router.post('/:id/setup', async (req: Request, res: Response) => {
         }).catch(() => {});
       } catch (err) {
         log.error({ err: String(err), workspaceId: workspace.id }, 'Async workspace activation failed');
-        const ws = workspaces.get(workspace.id);
-        if (ws && ws.status === 'setup') {
-          ws.status = 'suspended';
-          ws.updatedAt = new Date().toISOString();
+        const current = await workspaceRepository.findById(workspace.id).catch(() => null);
+        if (current && current.status === 'setup') {
+          await workspaceRepository.update(workspace.id, {
+            status: 'suspended',
+            suspendedAt: new Date(),
+          }).catch(() => {});
         }
       }
-    }, 2_000); // Simulated 2s provisioning delay
+    }, 2_000);
 
     log.info({ workspaceId: workspace.id }, 'Workspace setup initiated (async provisioning)');
-
-    // -- Audit log -----------------------------------------------------------
 
     await logAdminAction({
       adminId: 'system',
@@ -393,8 +334,11 @@ router.post('/:id/setup', async (req: Request, res: Response) => {
       },
     }).catch(() => {});
 
+    const updatedDb = await workspaceRepository.findById(workspace.id);
+    const updatedWs = updatedDb ? dbToWorkspace(updatedDb) : workspace;
+
     res.json({
-      ...sanitizeWorkspace(workspace),
+      ...sanitizeWorkspace(updatedWs),
       message: 'Workspace setup initiated. Provisioning will complete in the background.',
       provisioningStatus: 'in_progress',
     });
@@ -404,18 +348,16 @@ router.post('/:id/setup', async (req: Request, res: Response) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// DELETE /api/workspace/:id — Cleanup workspace
-// ---------------------------------------------------------------------------
-
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const workspace = workspaces.get(req.params.id);
+    const dbWorkspace = await workspaceRepository.findById(req.params.id);
 
-    if (!workspace) {
+    if (!dbWorkspace) {
       res.status(404).json({ error: 'Workspace not found' });
       return;
     }
+
+    const workspace = dbToWorkspace(dbWorkspace);
 
     if (workspace.status === 'deleted') {
       res.status(409).json({ error: 'Workspace is already deleted' });
@@ -423,16 +365,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
     }
 
     const previousStatus = workspace.status;
-    workspace.status = 'deleted';
-    workspace.deletedAt = new Date().toISOString();
-    workspace.updatedAt = workspace.deletedAt;
+    await workspaceRepository.softDelete(workspace.id);
 
     log.info(
       { workspaceId: workspace.id, previousStatus },
       'Workspace deleted',
     );
-
-    // -- Audit log -----------------------------------------------------------
 
     await logAdminAction({
       adminId: 'system',
@@ -442,17 +380,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
       details: { tenantId: workspace.tenantId, previousStatus },
     }).catch(() => {});
 
-    // -- Cleanup (async) -----------------------------------------------------
-    // In production, this would:
-    //   1. Remove Slack bot from workspace
-    //   2. Delete RabbitMQ queues
-    //   3. Archive database records (soft delete)
-    //   4. Revoke GitHub App installation tokens
-
     res.json({
       id: workspace.id,
-      status: workspace.status,
-      deletedAt: workspace.deletedAt,
+      status: 'deleted',
+      deletedAt: new Date().toISOString(),
       message: 'Workspace has been deleted. Data will be retained per retention policy.',
     });
   } catch (err) {
@@ -461,12 +392,11 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Expose the store for testing
-// ---------------------------------------------------------------------------
-
-export function _resetStoreForTest(): void {
-  workspaces.clear();
+export async function _resetStoreForTest(): Promise<void> {
+  const all = await workspaceRepository.list();
+  for (const ws of all) {
+    await workspaceRepository.deletePermanent(ws.id);
+  }
 }
 
 export { router as workspaceRouter };
