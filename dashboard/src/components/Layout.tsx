@@ -23,6 +23,7 @@ export default function Layout() {
     { to: '/', label: t('nav.dashboard'), icon: '◉' },
     { to: '/runs', label: t('nav.runs'), icon: '↻' },
     { to: '/repos', label: t('nav.repos'), icon: '⊞' },
+    { to: '/credits', label: 'Credits', icon: '₡' },
     { to: '/analytics', label: t('nav.analytics'), icon: '▦' },
     { to: '/kpi', label: t('nav.kpis'), icon: '📊' },
     { to: '/audit', label: t('nav.audit'), icon: '☰' },

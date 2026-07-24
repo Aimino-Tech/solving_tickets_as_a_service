@@ -25,7 +25,7 @@ const router: Router = Router();
 // Helper: extract account ID from request
 // ---------------------------------------------------------------------------
 
-function getAccountId(req: Request): number | undefined {
+async function getAccountId(req: Request): Promise<number | undefined> {
   const headerId = req.headers['x-account-id'] as string | undefined;
   if (headerId) {
     const id = Number(headerId);
@@ -36,7 +36,13 @@ function getAccountId(req: Request): number | undefined {
     const id = Number(queryId);
     if (Number.isFinite(id) && id > 0) return id;
   }
-  if (req.user?.accountId) return req.user.accountId;
+  if (req.user) {
+    const result = await queryWithRetry<{ id: number }>(
+      'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
+      [req.user.email],
+    );
+    if (result.rows.length > 0) return result.rows[0].id;
+  }
   return undefined;
 }
 

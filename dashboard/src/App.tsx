@@ -24,6 +24,7 @@ import PricingPage from '@/pages/PricingPage';
 import VsPage from '@/pages/VsPage';
 import AdminRuns from '@/pages/AdminRuns';
 import LiveView from '@/pages/LiveView';
+import Credits from '@/pages/Credits';
 import NotFound from '@/pages/NotFound';
 import Error500 from '@/pages/Error500';
 
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="runs" element={<RunsHistory />} />
           <Route path="runs/:id" element={<RunDetail />} />
           <Route path="repos" element={<Repos />} />
+          <Route path="credits" element={<Credits />} />
           <Route path="settings" element={<Settings />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="audit" element={<AuditLog />} />
