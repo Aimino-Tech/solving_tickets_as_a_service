@@ -1,43 +1,63 @@
 import { useState } from 'react';
 
 interface Props {
-  onComplete: (data: Record<string, unknown>) => Promise<void>;
+  onComplete: (params: { teamName?: string; skipTeam?: boolean }) => void;
+  onSkip: () => void;
 }
 
-export default function TeamSetup({ onComplete }: Props) {
+export default function TeamSetup({ onComplete, onSkip }: Props) {
   const [teamName, setTeamName] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [skipTeam, setSkipTeam] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitting(true);
-    try {
-      await onComplete({ teamName: teamName || undefined });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed');
-    } finally {
-      setSubmitting(false);
+    if (skipTeam) {
+      onComplete({ skipTeam: true });
+    } else if (teamName.trim()) {
+      onComplete({ teamName: teamName.trim() });
     }
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900">Set up your team</h2>
-        <p className="mt-2 text-gray-500">Create a team to collaborate. You can do this later.</p>
-      </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div>
+      <h2 className="text-2xl font-bold text-gray-900">Create Your Team</h2>
+      <p className="mt-2 text-gray-600">
+        Create a team to collaborate with others. You can always do this later.
+      </p>
+
+      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Team name</label>
-          <input type="text" value={teamName} onChange={(e) => setTeamName(e.target.value)}
-            placeholder="e.g., My Team" className="input-field mt-1 w-full min-h-[44px]" />
+          <label className="label">Team Name</label>
+          <input
+            type="text"
+            value={teamName}
+            onChange={(e) => setTeamName(e.target.value)}
+            placeholder="e.g. My Engineering Team"
+            className="input mt-1"
+            disabled={skipTeam}
+          />
         </div>
-        {error && <p className="text-sm text-red-500">{error}</p>}
-        <div className="flex items-center justify-between">
-          <button type="button" onClick={() => onComplete({ skipTeam: true })} className="text-sm text-gray-400 hover:text-gray-600">Skip</button>
-          <button type="submit" disabled={submitting} className="btn-primary">
-            {submitting ? 'Saving...' : 'Create Team & Finish'}
+
+        <label className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={skipTeam}
+            onChange={(e) => setSkipTeam(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+          />
+          <span className="text-sm text-gray-600">Skip this for now — I&apos;ll set up a team later</span>
+        </label>
+
+        <div className="flex items-center gap-4 pt-4">
+          <button
+            type="submit"
+            disabled={!teamName.trim() && !skipTeam}
+            className="btn-primary"
+          >
+            {skipTeam ? 'Skip & Finish' : 'Create Team & Finish'}
+          </button>
+          <button type="button" onClick={onSkip} className="text-sm text-gray-400 hover:text-gray-600">
+            Skip all
           </button>
         </div>
       </form>
