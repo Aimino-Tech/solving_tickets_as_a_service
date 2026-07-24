@@ -68,7 +68,7 @@ async function checkAdmin(req: Request, res: Response): Promise<boolean> {
 router.get('/', async (req: Request, res: Response) => {
   try {
     const { accountsRepository, creditsRepository } = await import('../db/repositories/index.js');
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required. Provide x-account-id header or accountId query param.' });
       return;
@@ -101,7 +101,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/usage', async (req: Request, res: Response) => {
   try {
     const { usageRepository } = await import('../db/repositories/index.js');
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
@@ -129,7 +129,7 @@ router.get('/usage', async (req: Request, res: Response) => {
 router.get('/transactions', async (req: Request, res: Response) => {
   try {
     const { creditsRepository } = await import('../db/repositories/index.js');
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
@@ -403,7 +403,7 @@ export { router as dashboardRouter };
 
 router.post('/data/deletion-request', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
@@ -419,7 +419,7 @@ router.post('/data/deletion-request', async (req: Request, res: Response) => {
 
 router.post('/data/deletion-request/cancel', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
@@ -435,7 +435,7 @@ router.post('/data/deletion-request/cancel', async (req: Request, res: Response)
 
 router.get('/data/deletion-status', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
