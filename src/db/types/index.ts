@@ -5,6 +5,7 @@
  */
 
 export type { Account, NewAccount } from './accounts.js';
+export type { User, NewUser } from './users.js';
 export type { AuditLog, NewAuditLog } from './auditLogs.js';
 export type { Billing, NewBilling } from './billing.js';
 export type { CreditBalance, NewCreditBalance } from './creditBalances.js';

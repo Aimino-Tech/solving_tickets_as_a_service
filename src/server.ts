@@ -60,6 +60,7 @@ import { featureFlagsRouter } from './routes/featureFlags.js';
 import healthRouter from './routes/health.js';
 import { kpiRouter } from './routes/kpi.js';
 import n8nRouter from './routes/n8n.js';
+import { authRouter } from './auth/index.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { pipelineRouter } from './routes/pipeline.js';
 import { plgRouter } from './routes/plg.js';
@@ -704,6 +705,9 @@ export async function createApp(): Promise<express.Application> {
   // GET /admin/webhooks/sources
   // GET /admin/webhooks/stats
   app.use('/admin/webhooks', adminWebhooksRouter);
+
+  // ── Auth API (JWT) ───────────────────────────────────────────────
+  app.use('/api/v1/auth', authRouter);
 
   // ── Onboarding API ──────────────────────────────────────────────
   app.use('/onboarding', onboardingRouter);

@@ -3,6 +3,7 @@
  */
 
 export { AccountsRepository, accountsRepository } from './AccountsRepository.js';
+export { UsersRepository, usersRepository } from './UsersRepository.js';
 export { AuditLogRepository, auditLogRepository } from './AuditLogRepository.js';
 export { BillingRepository, billingRepository } from './BillingRepository.js';
 export { CreditsRepository, creditsRepository } from './CreditsRepository.js';
