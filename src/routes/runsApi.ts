@@ -10,7 +10,17 @@ const router: Router = Router();
 
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const accountId = req.user!.accountId;
+    const user = req.user!;
+    const accountResult = await queryWithRetry<{ id: number }>(
+      'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
+      [user.email],
+    );
+    const accountId = accountResult.rows[0]?.id;
+    if (!accountId) {
+      res.status(404).json({ error: 'Account not found' });
+      return;
+    }
+
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(Math.max(1, Number(req.query.perPage) || 20), 100);
     const offset = (page - 1) * limit;
