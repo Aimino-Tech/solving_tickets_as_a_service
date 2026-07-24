@@ -696,6 +696,14 @@ export async function createApp(): Promise<express.Application> {
 
   app.use('/api/v1', slaRouter);
 
+  // ── Credits API ──────────────────────────────────────────
+  // GET  /api/v1/credits/balance
+  // GET  /api/v1/credits/transactions
+  // POST /api/v1/credits/top-up
+  // GET  /api/v1/credits/usage
+  const { creditRouter } = await import('./credits/index.js');
+  app.use('/api/v1', creditRouter);
+
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
 
@@ -711,7 +719,7 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/v1/auth', authRouter);
 
   // ── Onboarding API ──────────────────────────────────────────────
-  app.use('/onboarding', onboardingRouter);
+  app.use('/api/v1/onboarding', onboardingRouter);
 
   // ── Team Management API ───────────────────────────────────────────
   // POST   /api/teams                          — Create a new team

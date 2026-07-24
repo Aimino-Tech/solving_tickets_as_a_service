@@ -33,6 +33,7 @@ import { createCheckoutSession } from '../stripe/checkout.js';
 import { CREDIT_PACKS } from '../stripe/credit-packs.js';
 import { rootLogger } from '../utils/logger.js';
 import { queryWithRetry } from '../db/connection.js';
+import { requireAuth } from '../auth/middleware.js';
 
 const log = rootLogger.child({ module: 'credits-routes' });
 
@@ -48,25 +49,33 @@ export const creditRouter: Router = Router();
 
 /**
  * Extract the authenticated account ID from the request.
- * Reads from `x-account-id` header.
+ * Reads from `x-account-id` header or JWT user context.
  */
-function getAccountId(req: Request): number | null {
+async function getAccountId(req: Request): Promise<number | null> {
   const header = req.headers['x-account-id'];
-  if (!header) return null;
-  const id = Number(Array.isArray(header) ? header[0] : header);
-  if (!Number.isFinite(id) || id <= 0 || !Number.isInteger(id)) return null;
-  return id;
+  if (header) {
+    const id = Number(Array.isArray(header) ? header[0] : header);
+    if (Number.isFinite(id) && id > 0 && Number.isInteger(id)) return id;
+  }
+  if (req.user) {
+    const result = await queryWithRetry<{ id: number }>(
+      'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
+      [req.user.email],
+    );
+    if (result.rows.length > 0) return result.rows[0].id;
+  }
+  return null;
 }
 
 /**
  * Require a valid account ID. Sends 401 if missing/invalid.
  */
-function requireAccount(req: Request, res: Response): number | null {
-  const accountId = getAccountId(req);
+async function requireAccount(req: Request, res: Response): Promise<number | null> {
+  const accountId = await getAccountId(req);
   if (!accountId) {
     res.status(401).json({
       error: 'Unauthorized',
-      message: 'Missing or invalid x-account-id header. Provide a valid account ID to access this endpoint.',
+      message: 'Authentication required. Provide x-account-id header or valid JWT token.',
     });
     return null;
   }
@@ -136,7 +145,7 @@ const UsageSchema = z.object({
  * ```
  */
 creditRouter.get('/credits/balance', async (req: Request, res: Response) => {
-  const accountId = requireAccount(req, res);
+  const accountId = await requireAccount(req, res);
   if (!accountId) return;
 
   try {
@@ -172,7 +181,7 @@ creditRouter.get('/credits/balance', async (req: Request, res: Response) => {
  * ```
  */
 creditRouter.get('/credits/transactions', async (req: Request, res: Response) => {
-  const accountId = requireAccount(req, res);
+  const accountId = await requireAccount(req, res);
   if (!accountId) return;
 
   const parsed = PaginationSchema.safeParse(req.query);
@@ -231,7 +240,7 @@ creditRouter.get('/credits/transactions', async (req: Request, res: Response) =>
  * ```
  */
 creditRouter.post('/credits/top-up', async (req: Request, res: Response) => {
-  const accountId = requireAccount(req, res);
+  const accountId = await requireAccount(req, res);
   if (!accountId) return;
 
   const parsed = TopUpSchema.safeParse(req.body);
@@ -301,7 +310,7 @@ creditRouter.post('/credits/top-up', async (req: Request, res: Response) => {
  * ```
  */
 creditRouter.get('/credits/usage', async (req: Request, res: Response) => {
-  const accountId = requireAccount(req, res);
+  const accountId = await requireAccount(req, res);
   if (!accountId) return;
 
   const parsed = UsageSchema.safeParse(req.query);
