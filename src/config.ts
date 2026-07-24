@@ -100,6 +100,10 @@ const envSchema = z.object({
   REDIS_TTL_FREQUENT_ACCESS: z.coerce.number().int().positive().default(60),
   ADMIN_API_KEY: z.string().optional(),
 
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').default('change-me-to-a-random-secret-at-least-32-chars'),
+  JWT_EXPIRES_IN: z.string().default('24h'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
+
   WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
   WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
 
@@ -634,6 +638,13 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.OPEN_SYMPHONY_API_KEY,
       tenant: env.OPEN_SYMPHONY_TENANT,
       celeryPipeline: env.OPEN_SYMPHONY_CELERY_PIPELINE,
+    },
+
+    // ── Auth (JWT) ──────────────────────────────────────────────────────────
+    auth: {
+      jwtSecret: env.JWT_SECRET,
+      jwtExpiresIn: env.JWT_EXPIRES_IN,
+      jwtRefreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
     },
 
     // ── Security ────────────────────────────────────────────────────────────
