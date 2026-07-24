@@ -1,15 +1,41 @@
+import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
-const FEATURES = [
-  'Real-time fix run monitoring',
-  'Connected repository management',
-  'Analytics & cost tracking',
-  'Full audit log',
-  'Team collaboration (coming soon)',
-];
+type AuthMode = 'login' | 'register';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, register } = useAuth();
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<AuthMode>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      if (mode === 'login') {
+        await login(email, password);
+      } else {
+        await register(email, password, name || undefined);
+      }
+      navigate('/', { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function switchMode() {
+    setMode(mode === 'login' ? 'register' : 'login');
+    setError(null);
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -40,17 +66,6 @@ export default function Login() {
               </p>
             </div>
           </div>
-
-          <ul className="mt-8 space-y-3">
-            {FEATURES.map((feature) => (
-              <li key={feature} className="flex items-center gap-3 text-brand-100">
-                <svg className="h-5 w-5 flex-shrink-0 text-brand-300" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                </svg>
-                {feature}
-              </li>
-            ))}
-          </ul>
         </div>
 
         <p className="text-sm text-brand-200">
@@ -69,23 +84,112 @@ export default function Login() {
           </div>
 
           <div className="card">
-            <h2 className="text-xl font-semibold text-gray-900">Welcome back</h2>
+            <div className="flex border-b border-gray-200 mb-6">
+              <button
+                onClick={() => setMode('login')}
+                className={`flex-1 pb-3 text-sm font-medium text-center border-b-2 transition-colors ${
+                  mode === 'login'
+                    ? 'border-brand-600 text-brand-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => setMode('register')}
+                className={`flex-1 pb-3 text-sm font-medium text-center border-b-2 transition-colors ${
+                  mode === 'register'
+                    ? 'border-brand-600 text-brand-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Register
+              </button>
+            </div>
+
+            <h2 className="text-xl font-semibold text-gray-900">
+              {mode === 'login' ? 'Welcome back' : 'Create an account'}
+            </h2>
             <p className="mt-1 text-sm text-gray-500">
-              Sign in with your GitHub account to continue.
+              {mode === 'login'
+                ? 'Sign in with your email and password.'
+                : 'Get started with STAS in minutes.'}
             </p>
 
-            <button
-              onClick={login}
-              className="mt-6 flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow-md"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-              </svg>
-              Sign in with GitHub
-            </button>
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              {mode === 'register' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your name (optional)"
+                    className="input-field mt-1 w-full min-h-[44px]"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  className="input-field mt-1 w-full min-h-[44px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={mode === 'register' ? 'At least 8 characters' : 'Your password'}
+                  required
+                  minLength={8}
+                  className="input-field mt-1 w-full min-h-[44px]"
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full flex items-center justify-center gap-2 min-h-[44px]"
+              >
+                {loading ? (
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : mode === 'login' ? (
+                  'Sign In'
+                ) : (
+                  'Create Account'
+                )}
+              </button>
+            </form>
 
             <p className="mt-4 text-center text-xs text-gray-400">
-              By signing in, you agree to our Terms of Service.
+              {mode === 'login' ? (
+                <>
+                  Don't have an account?{' '}
+                  <button onClick={switchMode} className="text-brand-600 hover:text-brand-500 font-medium">
+                    Register
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{' '}
+                  <button onClick={switchMode} className="text-brand-600 hover:text-brand-500 font-medium">
+                    Sign in
+                  </button>
+                </>
+              )}
             </p>
           </div>
 

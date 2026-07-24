@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { usersRepository } from '../db/repositories/UsersRepository.js';
+import { accountsRepository } from '../db/repositories/AccountsRepository.js';
 import { rootLogger } from '../utils/logger.js';
 import { requireAuth } from './middleware.js';
 import { AuthError, authService } from './service.js';
@@ -94,10 +95,14 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
     return;
   }
 
+  const account = await accountsRepository.findByEmail(user.email);
+
   res.json({
     id: user.id,
     email: user.email,
     name: user.name,
+    accountId: account?.id ?? null,
+    plan: account?.tier ?? 'free',
     createdAt: user.createdAt,
   });
 });

@@ -2,6 +2,11 @@ import { queryWithRetry, validateSqlIdentifier } from '../connection.js';
 import type { Account, NewAccount } from '../types/index.js';
 
 export class AccountsRepository {
+  async findByEmail(email: string): Promise<Account | undefined> {
+    const result = await queryWithRetry<Account>('SELECT * FROM accounts WHERE email = $1', [email]);
+    return result.rows[0];
+  }
+
   /**
    * Find an account by its GitHub installation ID.
    */

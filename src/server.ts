@@ -41,6 +41,7 @@ import { config } from './config.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import { de } from './i18n/de.js';
 import { initMetering, usageRouter } from './metering/index.js';
+import { creditRouter } from './credits/index.js';
 import { approvalRouter, configureApprovalGate } from './middleware/approvalGate.js';
 import { setupSentryExpressErrorHandler } from './monitoring/sentry.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
@@ -69,6 +70,7 @@ import { proxyRouter } from './routes/proxy.js';
 import { qualityRouter } from './routes/quality.js';
 import { reposRouter } from './routes/repos.js';
 import { runsRouter } from './routes/runs.js';
+import { runsApiRouter } from './routes/runsApi.js';
 import { slaRouter } from './routes/sla.js';
 import { viralRouter } from './routes/viral.js';
 import { workspaceRouter } from './routes/workspace.js';
@@ -695,6 +697,9 @@ export async function createApp(): Promise<express.Application> {
 
   app.use('/api/v1', slaRouter);
 
+  // ── Credit system API ──────────────────────────────────────────────────
+  app.use('/api/v1', creditRouter);
+
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
 
@@ -723,6 +728,11 @@ export async function createApp(): Promise<express.Application> {
 
   // Repos API (repo picker with webhook status)
   app.use('/api/repos', reposRouter);
+
+  // ── Run history API (authenticated) ─────────────────────────────────
+  // GET /api/v1/runs — Paginated run list for the authenticated user
+  // GET /api/v1/runs/:id — Run detail for the authenticated user
+  app.use('/api/v1/runs', runsApiRouter);
 
   // ── Shareable run page API (public, no auth) ───────────────────────
   // GET /api/runs/:id — Public run detail JSON/HTML

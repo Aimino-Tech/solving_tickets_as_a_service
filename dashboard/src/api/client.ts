@@ -46,28 +46,40 @@ async function request<T>(
 }
 
 // Auth
+
 export const auth = {
-  loginUrl: () => `${API_BASE}/auth/github`,
-  me: () => request<{ user: { githubId: string; username: string; avatarUrl?: string } }>('/auth/me'),
-  logout: () => request<{ success: boolean }>('/auth/logout', { method: 'POST' }),
+  register: (email: string, password: string, name?: string) =>
+    request<import('./types').AuthResponse>('/api/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name }),
+    }),
+  login: (email: string, password: string) =>
+    request<import('./types').AuthResponse>('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+  me: () => request<import('./types').User>('/api/v1/auth/me'),
+  logout: () => request<{ message: string }>('/api/v1/auth/logout', { method: 'POST' }),
+  refresh: (refreshToken: string) =>
+    request<import('./types').AuthResponse>('/api/v1/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+    }),
 };
 
 // Runs
 export const runs = {
-  list: (params?: { page?: number; perPage?: number; status?: string; repo?: string; from?: string; to?: string }) => {
+  list: (params?: { page?: number; perPage?: number; status?: string }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
     if (params?.perPage) qs.set('perPage', String(params.perPage));
     if (params?.status) qs.set('status', params.status);
-    if (params?.repo) qs.set('repo', params.repo);
-    if (params?.from) qs.set('from', params.from);
-    if (params?.to) qs.set('to', params.to);
     const query = qs.toString();
     return request<{ data: import('./types').Run[]; total: number; page: number; perPage: number; totalPages: number }>(
-      `/runs${query ? `?${query}` : ''}`,
+      `/api/v1/runs${query ? `?${query}` : ''}`,
     );
   },
-  get: (id: string) => request<import('./types').Run>(`/runs/${id}`),
+  get: (id: string | number) => request<import('./types').Run>(`/api/v1/runs/${id}`),
 };
 
 // Repos
@@ -145,4 +157,44 @@ export const settings = {
   }>('/settings'),
   update: (body: Record<string, unknown>) =>
     request<{ success: boolean }>('/settings', { method: 'PUT', body: JSON.stringify(body) }),
+};
+
+// Credits
+export const credits = {
+  balance: () =>
+    request<import('./types').CreditBalance>('/api/v1/credits/balance'),
+  transactions: (params?: { limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.offset) qs.set('offset', String(params.offset));
+    const query = qs.toString();
+    return request<import('./types').CreditTransactionsResponse>(
+      `/api/v1/credits/transactions${query ? `?${query}` : ''}`,
+    );
+  },
+  topUp: (priceId: string, successUrl: string, cancelUrl: string) =>
+    request<{ url: string; sessionId: string }>('/api/v1/credits/top-up', {
+      method: 'POST',
+      body: JSON.stringify({ priceId, successUrl, cancelUrl }),
+    }),
+};
+
+// Account Info
+export const account = {
+  get: () => request<import('./types').PlanInfo>('/api/v1/me'),
+  usage: () => request<{
+    totalCreditsUsed: number;
+    currentMonth: { creditsUsed: number; startDate: string };
+    monthlyStats: Array<{ month: string; creditsUsed: number }>;
+    recentUsage: Array<{ id: number; creditsUsed: number; description: string; createdAt: string }>;
+  }>('/api/v1/me/usage'),
+  transactions: (params?: { limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.offset) qs.set('offset', String(params.offset));
+    const query = qs.toString();
+    return request<{ transactions: import('./types').Transaction[]; total: number; limit: number; offset: number }>(
+      `/api/v1/me/transactions${query ? `?${query}` : ''}`,
+    );
+  },
 };

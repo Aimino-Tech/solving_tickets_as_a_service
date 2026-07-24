@@ -33,6 +33,7 @@ import { createCheckoutSession } from '../stripe/checkout.js';
 import { CREDIT_PACKS } from '../stripe/credit-packs.js';
 import { rootLogger } from '../utils/logger.js';
 import { queryWithRetry } from '../db/connection.js';
+import { requireAuth } from '../auth/middleware.js';
 
 const log = rootLogger.child({ module: 'credits-routes' });
 
@@ -52,21 +53,20 @@ export const creditRouter: Router = Router();
  */
 function getAccountId(req: Request): number | null {
   const header = req.headers['x-account-id'];
-  if (!header) return null;
-  const id = Number(Array.isArray(header) ? header[0] : header);
-  if (!Number.isFinite(id) || id <= 0 || !Number.isInteger(id)) return null;
-  return id;
+  if (header) {
+    const id = Number(Array.isArray(header) ? header[0] : header);
+    if (Number.isFinite(id) && id > 0 && Number.isInteger(id)) return id;
+  }
+  if (req.user?.accountId) return req.user.accountId;
+  return null;
 }
 
-/**
- * Require a valid account ID. Sends 401 if missing/invalid.
- */
 function requireAccount(req: Request, res: Response): number | null {
   const accountId = getAccountId(req);
   if (!accountId) {
     res.status(401).json({
       error: 'Unauthorized',
-      message: 'Missing or invalid x-account-id header. Provide a valid account ID to access this endpoint.',
+      message: 'Authentication required. Provide x-account-id header or JWT Bearer token.',
     });
     return null;
   }

@@ -29,13 +29,14 @@ function getAccountId(req: Request): number | undefined {
   const headerId = req.headers['x-account-id'] as string | undefined;
   if (headerId) {
     const id = Number(headerId);
-    if (!Number.isNaN(id)) return id;
+    if (Number.isFinite(id) && id > 0) return id;
   }
   const queryId = req.query.accountId as string | undefined;
   if (queryId) {
     const id = Number(queryId);
-    if (!Number.isNaN(id)) return id;
+    if (Number.isFinite(id) && id > 0) return id;
   }
+  if (req.user?.accountId) return req.user.accountId;
   return undefined;
 }
 

@@ -2,10 +2,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import { usersRepository } from '../db/repositories/UsersRepository.js';
+import { accountsRepository } from '../db/repositories/AccountsRepository.js';
 
 export interface TokenPayload {
   sub: number;
   email: string;
+  accountId: number;
 }
 
 export interface AuthResult {
@@ -30,7 +32,17 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     const user = await usersRepository.create({ email, passwordHash, name });
 
-    return this.generateTokens(user.id, user.email);
+    let account = await accountsRepository.findByEmail(email);
+    if (!account) {
+      account = await accountsRepository.create({
+        githubInstallationId: 0,
+        email,
+        name: name ?? email.split('@')[0],
+        tier: 'free',
+      });
+    }
+
+    return this.generateTokens(user.id, user.email, account.id);
   }
 
   async login(email: string, password: string): Promise<AuthResult> {
@@ -44,13 +56,23 @@ export class AuthService {
       throw new AuthError('Invalid email or password', 401);
     }
 
-    return this.generateTokens(user.id, user.email);
+    let account = await accountsRepository.findByEmail(email);
+    if (!account) {
+      account = await accountsRepository.create({
+        githubInstallationId: 0,
+        email,
+        name: user.name ?? email.split('@')[0],
+        tier: 'free',
+      });
+    }
+
+    return this.generateTokens(user.id, user.email, account.id);
   }
 
   refreshToken(refreshToken: string): AuthResult | never {
     try {
       const payload = jwt.verify(refreshToken, config.auth.jwtSecret) as TokenPayload;
-      return this.generateTokens(payload.sub, payload.email);
+      return this.generateTokens(payload.sub, payload.email, payload.accountId);
     } catch {
       throw new AuthError('Invalid or expired refresh token', 401);
     }
@@ -64,8 +86,8 @@ export class AuthService {
     }
   }
 
-  private generateTokens(userId: number, email: string): AuthResult {
-    const payload: TokenPayload = { sub: userId, email };
+  private generateTokens(userId: number, email: string, accountId: number): AuthResult {
+    const payload: TokenPayload = { sub: userId, email, accountId };
 
     const token = jwt.sign(payload, config.auth.jwtSecret, {
       expiresIn: config.auth.jwtExpiresIn,

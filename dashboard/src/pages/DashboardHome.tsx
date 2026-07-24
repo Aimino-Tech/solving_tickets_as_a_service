@@ -1,76 +1,74 @@
 import { useState, useEffect } from 'react';
-import { stats } from '@/api/client';
-import type { DashboardStats } from '@/api/types';
+import { runs, credits } from '@/api/client';
+import { useAuth } from '@/context/AuthContext';
+import type { Run, CreditBalance } from '@/api/types';
 import { Link } from 'react-router-dom';
-import { Activity, CheckCircle, Clock, FolderGit } from 'lucide-react';
-import { useI18n } from '@/i18n/I18nProvider';
-import { formatNumber, formatPercentage, formatDurationSeconds } from '@/utils/format';
-import { SkeletonCardGrid, SkeletonChart } from '@/components/LoadingSkeleton';
+import { Wallet, Activity, CheckCircle, Clock } from 'lucide-react';
+import { SkeletonCardGrid } from '@/components/LoadingSkeleton';
 
 export default function DashboardHome() {
-  const { t } = useI18n();
-  const [data, setData] = useState<DashboardStats | null>(null);
+  const { user } = useAuth();
+  const [balance, setBalance] = useState<CreditBalance | null>(null);
+  const [recentRuns, setRecentRuns] = useState<Run[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    stats
-      .get()
-      .then(setData)
-      .catch((err) => setError(err.message));
+    Promise.all([
+      credits.balance().catch(() => null),
+      runs.list({ page: 1, perPage: 5 }).catch(() => ({ data: [] as Run[], total: 0, page: 1, perPage: 5, totalPages: 0 })),
+    ])
+      .then(([bal, runsData]) => {
+        setBalance(bal);
+        setRecentRuns(runsData.data);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
   if (error) {
     return (
       <div className="card">
-        <p className="text-red-600 dark:text-red-400">{t('dashboard.failedToLoad', { error })}</p>
+        <p className="text-red-600 dark:text-red-400">Failed to load dashboard: {error}</p>
       </div>
     );
   }
 
-  if (!data) {
+  if (loading) {
     return (
       <div className="space-y-8">
-        <SkeletonCardGrid count={4} />
-        <SkeletonChart />
+        <SkeletonCardGrid count={3} />
       </div>
     );
   }
 
   const cards = [
     {
-      label: 'Total Runs',
-      value: formatNumber(data.totalRuns),
+      label: 'Credit Balance',
+      value: balance ? `${balance.balance.toLocaleString()} credits` : '—',
       color: 'text-brand-600 dark:text-brand-400',
       bg: 'bg-brand-50 dark:bg-brand-900/50',
-      Icon: Activity,
+      Icon: Wallet,
     },
     {
-      label: 'Pass Rate',
-      value: formatPercentage(data.passRate),
+      label: 'Total Fix Runs',
+      value: recentRuns.length > 0 ? String(recentRuns.length) : '0',
       color: 'text-green-600 dark:text-green-400',
       bg: 'bg-green-50 dark:bg-green-900/50',
       Icon: CheckCircle,
     },
     {
-      label: 'Avg Duration',
-      value: formatDurationSeconds(data.avgDurationSeconds),
+      label: 'Current Plan',
+      value: user?.plan ? user.plan.charAt(0).toUpperCase() + user.plan.slice(1) : 'Free',
       color: 'text-blue-600 dark:text-blue-400',
       bg: 'bg-blue-50 dark:bg-blue-900/50',
-      Icon: Clock,
-    },
-    {
-      label: 'Active Repos',
-      value: formatNumber(data.activeRepos),
-      color: 'text-amber-600 dark:text-amber-400',
-      bg: 'bg-amber-50 dark:bg-amber-900/50',
-      Icon: FolderGit,
+      Icon: Activity,
     },
   ];
 
   return (
     <div className="space-y-8">
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
           <div key={card.label} className="card">
             <div className={`inline-flex rounded-lg ${card.bg} p-2`}>
@@ -82,78 +80,100 @@ export default function DashboardHome() {
         ))}
       </div>
 
-      {/* Recent runs chart */}
-      <div className="card">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.recentRuns')}</h3>
-          <Link to="/runs" className="text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">
-            {t('dashboard.viewAll')} &rarr;
-          </Link>
-        </div>
-        {data.runsByDay.length > 0 ? (
-          <div className="mt-4">
-            <div className="flex items-end gap-1" style={{ height: 160 }}>
-              {data.runsByDay.map((day) => {
-                const maxCount = Math.max(...data.runsByDay.map((d) => d.count), 1);
-                const height = (day.count / maxCount) * 100;
-                const passHeight = day.passed > 0 ? (day.passed / day.count) * height : 0;
-                return (
-                  <div
-                    key={day.date}
-                    className="flex flex-1 flex-col items-center justify-end gap-0.5"
-                    title={`${day.date}: ${day.passed}/${day.count} passed`}
-                  >
-                    <div
-                      className="w-full max-w-[32px] rounded-t bg-green-400 transition-all"
-                      style={{ height: `${Math.max(passHeight, 0)}%` }}
-                    />
-                    <div
-                      className="w-full max-w-[32px] rounded-t bg-brand-300 transition-all"
-                      style={{ height: `${Math.max(height - passHeight, 0)}%` }}
-                    />
-                    <span className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-                      {new Date(day.date).getDate()}
-                    </span>
-                  </div>
-                );
-              })}
+      {balance && (
+        <div className="card">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Credit Overview</h3>
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Available Balance</p>
+              <p className="text-2xl font-bold text-brand-600 dark:text-brand-400">{balance.balance.toLocaleString()}</p>
             </div>
-            <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2.5 w-2.5 rounded bg-brand-300" /> {t('dashboard.total')}
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2.5 w-2.5 rounded bg-green-400" /> {t('dashboard.passed')}
-              </span>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Lifetime Credits</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{balance.lifetimeCredits.toLocaleString()}</p>
             </div>
           </div>
+          <div className="mt-4 flex gap-3">
+            <Link to="/credits" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
+              Buy Credits
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <div className="card">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Recent Fix Runs</h3>
+          <Link to="/runs" className="text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">
+            View All &rarr;
+          </Link>
+        </div>
+        {recentRuns.length > 0 ? (
+          <div className="mt-4 space-y-3">
+            {recentRuns.map((run) => (
+              <Link
+                key={run.id}
+                to={`/runs/${run.id}`}
+                className="flex items-center justify-between rounded-lg border border-gray-200 p-3 transition-colors hover:border-brand-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-700 dark:hover:bg-gray-800"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {run.repoOwner}/{run.repoName}#{run.issueNumber}
+                  </p>
+                  <p className="truncate text-xs text-gray-500 dark:text-gray-400">{run.issueTitle}</p>
+                </div>
+                <div className="ml-4 flex items-center gap-3">
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    run.status === 'success' || run.status === 'completed'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : run.status === 'failed'
+                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      : run.status === 'running'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                  }`}>
+                    {run.status}
+                  </span>
+                  {run.durationSeconds && (
+                    <span className="hidden text-xs text-gray-400 sm:block">
+                      <Clock size={12} className="inline mr-1" />
+                      {run.durationSeconds >= 60
+                        ? `${Math.round(run.durationSeconds / 60)}m`
+                        : `${run.durationSeconds}s`}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
         ) : (
-          <p className="mt-4 text-sm text-gray-400 dark:text-gray-500">{t('dashboard.noRuns', { label: 'stas:fix' })}</p>
+          <p className="mt-4 text-sm text-gray-400 dark:text-gray-500">
+            No fixes yet — label a GitHub issue with <code className="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-gray-800">stas:fix</code> to get started.
+          </p>
         )}
       </div>
 
-      {/* Quick links */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <Link to="/repos" className="card group hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-md transition-all">
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-brand-600 dark:group-hover:text-brand-400">
-            {t('dashboard.connectedRepos')}
+            Connected Repos
           </h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {t('dashboard.manageReposDesc')}
+            Manage your GitHub repositories and webhook connections.
           </p>
           <span className="mt-3 inline-block text-sm font-medium text-brand-600 dark:text-brand-400">
-            {t('dashboard.manageRepos')} &rarr;
+            Manage Repos &rarr;
           </span>
         </Link>
-        <Link to="/analytics" className="card group hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-md transition-all">
+        <Link to="/credits" className="card group hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-md transition-all">
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-brand-600 dark:group-hover:text-brand-400">
-            {t('dashboard.analyticsTitle')}
+            Credits & Billing
           </h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {t('dashboard.analyticsDesc')}
+            View your credit balance, transaction history, and purchase more credits.
           </p>
           <span className="mt-3 inline-block text-sm font-medium text-brand-600 dark:text-brand-400">
-            {t('dashboard.viewAnalytics')} &rarr;
+            View Credits &rarr;
           </span>
         </Link>
       </div>

@@ -6,7 +6,8 @@ interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -16,28 +17,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On mount, check if there's a token in the URL (from OAuth callback) or in localStorage
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tokenFromUrl = params.get('token');
-
-    if (tokenFromUrl) {
-      setToken(tokenFromUrl);
-      // Clean the URL without a full reload
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-
     const token = localStorage.getItem('stas_token');
     if (token) {
       auth
         .me()
-        .then((res) => {
-          setUser({
-            githubId: res.user.githubId,
-            username: res.user.username,
-            avatarUrl: res.user.avatarUrl,
-          });
-        })
+        .then(setUser)
         .catch(() => {
           clearToken();
         })
@@ -49,8 +34,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(() => {
-    window.location.href = auth.loginUrl();
+  const login = useCallback(async (email: string, password: string) => {
+    const result = await auth.login(email, password);
+    setToken(result.token);
+    setUser(result.user);
+  }, []);
+
+  const register = useCallback(async (email: string, password: string, name?: string) => {
+    const result = await auth.register(email, password, name);
+    setToken(result.token);
+    setUser(result.user);
   }, []);
 
   const logout = useCallback(async () => {
@@ -70,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isLoading,
         login,
+        register,
         logout,
       }}
     >

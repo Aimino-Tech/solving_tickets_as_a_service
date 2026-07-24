@@ -4,6 +4,7 @@ import { authService } from './service.js';
 export interface AuthUser {
   id: number;
   email: string;
+  accountId: number;
 }
 
 declare global {
@@ -24,7 +25,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   const token = header.slice(7);
   try {
     const payload = authService.verifyToken(token);
-    req.user = { id: payload.sub, email: payload.email };
+    req.user = { id: payload.sub, email: payload.email, accountId: payload.accountId };
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
@@ -41,7 +42,7 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
   const token = header.slice(7);
   try {
     const payload = authService.verifyToken(token);
-    req.user = { id: payload.sub, email: payload.email };
+    req.user = { id: payload.sub, email: payload.email, accountId: payload.accountId };
   } catch {
     // Token invalid — continue without auth
   }

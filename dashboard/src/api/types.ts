@@ -1,7 +1,55 @@
 export interface User {
-  githubId: string;
-  username: string;
-  avatarUrl?: string;
+  id: number;
+  email: string;
+  name?: string;
+  accountId?: number | null;
+  plan?: string;
+  createdAt: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  refreshToken: string;
+  user: User;
+}
+
+export interface CreditBalance {
+  accountId: number;
+  balance: number;
+  lifetimeCredits: number;
+}
+
+export interface CreditTransaction {
+  id: number;
+  accountId: number;
+  amount: number;
+  type: string;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface CreditTransactionsResponse {
+  transactions: CreditTransaction[];
+  pagination: { limit: number; offset: number; total: number };
+}
+
+export interface PlanInfo {
+  id: number;
+  accountId: number;
+  plan: string;
+  status: string;
+  usageCount: number;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+}
+
+export interface Transaction {
+  id: number;
+  accountId: number;
+  amount: number;
+  type: 'credit' | 'debit' | 'purchase' | 'refund' | 'usage';
+  description?: string;
+  createdAt: string;
 }
 
 export interface Run {
