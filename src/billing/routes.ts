@@ -43,7 +43,7 @@ const router: Router = Router();
 // Helper: extract account ID from request
 // ---------------------------------------------------------------------------
 
-function getAccountId(req: Request): number | undefined {
+async function getAccountId(req: Request): Promise<number | undefined> {
   const headerId = req.headers['x-account-id'] as string | undefined;
   if (headerId) {
     const id = Number(headerId);
@@ -54,6 +54,14 @@ function getAccountId(req: Request): number | undefined {
   if (queryId) {
     const id = Number(queryId);
     if (!Number.isNaN(id)) return id;
+  }
+
+  if (req.user) {
+    const result = await queryWithRetry<{ id: number }>(
+      'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
+      [req.user.email],
+    );
+    if (result.rows.length > 0) return result.rows[0].id;
   }
 
   return undefined;
@@ -87,7 +95,7 @@ router.get('/plans', (_req: Request, res: Response) => {
 
 router.get('/trial', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required. Provide x-account-id header or accountId query param.' });
       return;
@@ -107,7 +115,7 @@ router.get('/trial', async (req: Request, res: Response) => {
 
 router.post('/subscription/create-checkout', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required. Provide x-account-id header.' });
       return;
@@ -183,7 +191,7 @@ router.post('/subscription/create-checkout', async (req: Request, res: Response)
 
 router.post('/subscription/portal', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
@@ -218,7 +226,7 @@ router.post('/subscription/portal', async (req: Request, res: Response) => {
 
 router.post('/subscription/cancel', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
@@ -250,7 +258,7 @@ router.post('/subscription/cancel', async (req: Request, res: Response) => {
 
 router.post('/subscription/reactivate', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;

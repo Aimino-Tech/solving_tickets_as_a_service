@@ -133,11 +133,15 @@ export interface MonthlyUsage {
 export interface BillingPlan {
   id: string;
   name: string;
-  description: string;
-  price: string;
-  period: string;
-  features: string[];
-  highlighted: boolean;
+  description?: string;
+  price?: string;
+  period?: string;
+  features?: string[];
+  highlighted?: boolean;
+  amountCents?: number;
+  trialDays?: number;
+  monthlyFixLimit?: number;
+  concurrentFixes?: number;
 }
 
 export const auth = {
@@ -219,7 +223,12 @@ export const billing = {
   plan: () =>
     request<BillingPlan>('/v1/billing/plan'),
   listPlans: () =>
-    request<BillingPlan[]>('/v1/billing/plans'),
+    request<{ plans: BillingPlan[] }>('/v1/billing/plans'),
+  createCheckout: (planId: string, successUrl: string, cancelUrl: string) =>
+    request<{ url: string; sessionId: string }>('/v1/billing/subscription/create-checkout', {
+      method: 'POST',
+      body: JSON.stringify({ planId, successUrl, cancelUrl }),
+    }),
 };
 
 export interface WizardProgress {

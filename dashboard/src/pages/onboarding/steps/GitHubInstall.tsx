@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { onboarding, type WizardProgress } from '@/api/client';
 
 interface Props {
@@ -9,20 +9,49 @@ interface Props {
 
 export default function GitHubInstall({ progress, onComplete, onSkip }: Props) {
   const [installing, setInstalling] = useState(false);
+  const [installationId, setInstallationId] = useState<number | null>(null);
+  const [accountLogin, setAccountLogin] = useState('');
   const githubAppUrl = progress.metadata?.githubAppUrl as string | undefined;
 
-  async function handleInstallComplete() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const idParam = params.get('installation_id');
+    const setupAction = params.get('setup_action');
+    if (idParam) {
+      const id = Number(idParam);
+      if (Number.isFinite(id) && id > 0) {
+        setInstallationId(id);
+        const loginParam = params.get('login');
+        if (loginParam) setAccountLogin(loginParam);
+        if (setupAction === 'install') {
+          handleInstallComplete(id, loginParam || '');
+        }
+      }
+    }
+  }, []);
+
+  async function handleInstallComplete(id?: number, login?: string) {
     setInstalling(true);
     try {
       const result = await onboarding.completeStep('github-install', {
-        installationId: 0,
-        accountLogin: '',
+        installationId: id ?? installationId ?? 0,
+        accountLogin: login ?? accountLogin,
       });
       onComplete(result.progress);
     } catch {
       setInstalling(false);
     }
   }
+
+  function openGitHubInstall() {
+    const redirectUri = `${window.location.origin}/onboarding`;
+    const url = githubAppUrl
+      ? `${githubAppUrl}?redirect_uri=${encodeURIComponent(redirectUri)}`
+      : 'https://github.com/apps';
+    window.open(url, '_blank');
+  }
+
+  const hasInstallationId = installationId !== null && installationId > 0;
 
   return (
     <div className="space-y-6">
@@ -39,7 +68,7 @@ export default function GitHubInstall({ progress, onComplete, onSkip }: Props) {
           Click the button below to install the STAS GitHub App on your repositories.
         </p>
         <button
-          onClick={() => window.open(githubAppUrl || 'https://github.com/apps', '_blank')}
+          onClick={openGitHubInstall}
           className="btn-primary mt-4 inline-flex items-center gap-2"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -51,11 +80,21 @@ export default function GitHubInstall({ progress, onComplete, onSkip }: Props) {
 
       <div className="rounded-lg border border-gray-200 bg-gray-50 p-6">
         <h3 className="text-lg font-semibold text-gray-900">Step 2: Confirm Installation</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          After installing, click the button below to continue.
-        </p>
-        <button onClick={handleInstallComplete} disabled={installing} className="btn-secondary mt-4">
-          {installing ? 'Confirming...' : 'I\'ve installed the app — Continue'}
+        {hasInstallationId ? (
+          <p className="mt-1 text-sm text-green-600">
+            Installation detected (ID: {installationId}). Continue to the next step.
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-gray-500">
+            After installing, come back here and click confirm.
+          </p>
+        )}
+        <button
+          onClick={() => handleInstallComplete()}
+          disabled={installing}
+          className="btn-secondary mt-4"
+        >
+          {installing ? 'Confirming...' : hasInstallationId ? 'Continue' : 'I\'ve installed the app — Continue'}
         </button>
       </div>
 
