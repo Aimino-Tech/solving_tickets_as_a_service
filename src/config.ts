@@ -296,6 +296,7 @@ const envSchema = z.object({
   OPEN_SYMPHONY_DISPATCH_URL: z.string().default('http://opensymphony:4000/api/v1/dispatch'),
   OPEN_SYMPHONY_API_KEY: z.string().optional(),
   OPEN_SYMPHONY_TENANT: z.string().default('default'),
+  OPEN_SYMPHONY_CELERY_PIPELINE: boolSchema(true),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -632,7 +633,7 @@ function buildConfig(env: ParsedEnv) {
       dispatchUrl: env.OPEN_SYMPHONY_DISPATCH_URL,
       apiKey: env.OPEN_SYMPHONY_API_KEY,
       tenant: env.OPEN_SYMPHONY_TENANT,
-      celeryPipeline: true,
+      celeryPipeline: env.OPEN_SYMPHONY_CELERY_PIPELINE,
     },
 
     // ── Security ────────────────────────────────────────────────────────────
