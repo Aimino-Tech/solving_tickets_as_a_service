@@ -134,6 +134,41 @@ export const pricing = {
     request<import('./types').VsComparisonData & { competitor: string }>(`/pricing/vs/${competitor}`),
 };
 
+export interface WizardProgress {
+  tenantId: string; state: string; currentStep: string;
+  steps: { githubInstalled: boolean; repoSelected: boolean; billingSetup: boolean; teamSetup: boolean };
+  completedAt?: string; createdAt?: string; updatedAt?: string; metadata?: Record<string, unknown>;
+}
+
+export interface WizardConfig {
+  enabled: boolean; requiredSteps: string[]; githubAppUrl: string;
+}
+
+export const onboarding = {
+  getStatus: () => request<{ progress: WizardProgress; availableTransitions: string[] }>('/onboarding/status'),
+  start: () => request<WizardProgress>('/onboarding/start', { method: 'POST' }),
+  getWizard: () => request<{ progress: WizardProgress; config: WizardConfig; githubAppUrl: string }>('/onboarding'),
+  getConfig: () => request<WizardConfig>('/onboarding/config'),
+  completeGitHubInstall: (installationId: number, accountLogin?: string, reposGranted?: number) =>
+    request<WizardProgress>('/onboarding/step/github-install', {
+      method: 'POST', body: JSON.stringify({ installationId, accountLogin, reposGranted }),
+    }),
+  completeRepoSelection: (repoOwner: string, repoName: string, repoId?: number) =>
+    request<WizardProgress>('/onboarding/step/repo-selection', {
+      method: 'POST', body: JSON.stringify({ repoOwner, repoName, repoId }),
+    }),
+  completeBillingSetup: (params: { planId?: string; trialDays?: number; skipBilling?: boolean }) =>
+    request<WizardProgress>('/onboarding/step/billing-setup', {
+      method: 'POST', body: JSON.stringify(params),
+    }),
+  completeTeamSetup: (params: { teamName?: string; skipTeam?: boolean }) =>
+    request<WizardProgress>('/onboarding/step/team-setup', {
+      method: 'POST', body: JSON.stringify(params),
+    }),
+  skip: () => request<WizardProgress>('/onboarding/skip', { method: 'POST' }),
+  reset: () => request<WizardProgress>('/onboarding/reset', { method: 'POST' }),
+};
+
 // Settings
 export const settings = {
   get: () => request<{

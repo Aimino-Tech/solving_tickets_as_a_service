@@ -24,6 +24,7 @@ import PricingPage from '@/pages/PricingPage';
 import VsPage from '@/pages/VsPage';
 import AdminRuns from '@/pages/AdminRuns';
 import LiveView from '@/pages/LiveView';
+import WizardContainer from '@/pages/onboarding/WizardContainer';
 import NotFound from '@/pages/NotFound';
 import Error500 from '@/pages/Error500';
 
@@ -74,6 +75,14 @@ export default function App() {
           <Route path="admin/runs" element={<AdminRuns />} />
           <Route path="liveview" element={<LiveView />} />
         </Route>
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <WizardContainer />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/500" element={<Error500 />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
