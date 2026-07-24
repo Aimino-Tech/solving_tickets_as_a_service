@@ -436,6 +436,25 @@ export async function isOnboardingComplete(tenantId: string): Promise<boolean> {
 }
 
 /**
+ * Skip onboarding for a tenant.
+ */
+export async function skipWizard(tenantId: string): Promise<WizardProgress> {
+  const progress = await getWizardProgress(tenantId);
+  progress.state = 'skipped';
+  progress.updatedAt = new Date().toISOString();
+  await store.set(tenantId, progress);
+
+  await safeAuditLog({
+    action: 'onboarding.wizard.skipped',
+    details: { tenantId },
+    correlationId: undefined,
+  });
+
+  log.info({ tenantId }, 'Onboarding wizard skipped');
+  return progress;
+}
+
+/**
  * Get the wizard configuration for UI rendering.
  */
 export function getWizardConfig(): {
