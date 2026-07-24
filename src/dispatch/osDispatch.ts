@@ -47,7 +47,8 @@ export async function dispatchToOpenSymphony(data: IssueJobData): Promise<Dispat
   };
 
   try {
-    log.info({ osUrl, repo: payload.repo }, 'Dispatching to OpenSymphony HTTP endpoint');
+    log.info({ osUrl, repo: payload.repo, tenant, hasApiKey: !!apiKey }, 'Dispatching to OpenSymphony HTTP endpoint');
+    log.debug({ payload }, 'OpenSymphony dispatch payload');
     const response = await fetch(osUrl, {
       method: 'POST',
       headers: {
