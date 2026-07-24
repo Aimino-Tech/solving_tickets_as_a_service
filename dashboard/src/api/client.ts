@@ -1,18 +1,41 @@
 const API_BASE = '/api';
 
 function getToken(): string | null {
-  return localStorage.getItem('stas_token');
+  try {
+    return localStorage.getItem('stas_token');
+  } catch {
+    return null;
+  }
 }
 
 export function setToken(token: string): void {
-  localStorage.setItem('stas_token', token);
+  try {
+    localStorage.setItem('stas_token', token);
+  } catch {}
+}
+
+export function getRefreshToken(): string | null {
+  try {
+    return localStorage.getItem('stas_refresh_token');
+  } catch {
+    return null;
+  }
+}
+
+export function setRefreshToken(token: string): void {
+  try {
+    localStorage.setItem('stas_refresh_token', token);
+  } catch {}
 }
 
 export function clearToken(): void {
-  localStorage.removeItem('stas_token');
+  try {
+    localStorage.removeItem('stas_token');
+    localStorage.removeItem('stas_refresh_token');
+  } catch {}
 }
 
-async function request<T>(
+export async function request<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
@@ -32,8 +55,28 @@ async function request<T>(
   });
 
   if (res.status === 401) {
+    const refreshToken = getRefreshToken();
+    if (refreshToken && !path.includes('/auth/refresh')) {
+      try {
+        const refreshRes = await fetch(`${API_BASE}/v1/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          setToken(data.token);
+          if (data.refreshToken) setRefreshToken(data.refreshToken);
+          headers['Authorization'] = `Bearer ${data.token}`;
+          const retryRes = await fetch(`${API_BASE}${path}`, { ...options, headers });
+          if (retryRes.ok) return retryRes.json() as Promise<T>;
+        }
+      } catch {}
+    }
     clearToken();
-    window.location.href = '/login';
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
     throw new Error('Unauthorized');
   }
 
@@ -45,16 +88,106 @@ async function request<T>(
   return res.json() as Promise<T>;
 }
 
-// Auth
+export interface AuthResult {
+  token: string;
+  refreshToken: string;
+  user: { id: number; email: string; name: string | null };
+}
+
+export interface FixRun {
+  id: string;
+  repoOwner: string;
+  repoName: string;
+  issueNumber: number;
+  issueTitle: string;
+  status: string;
+  confidence: string | null;
+  prUrl: string | null;
+  durationMs: number | null;
+  modelUsed: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreditBalance {
+  accountId: number;
+  balance: number;
+  lifetimeCredits: number;
+}
+
+export interface Transaction {
+  id: number;
+  accountId: number;
+  amount: number;
+  type: string;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface MonthlyUsage {
+  periodStart: string;
+  totalCredits: number;
+  totalTransactions: number;
+}
+
+export interface BillingPlan {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  period: string;
+  features: string[];
+  highlighted: boolean;
+}
+
 export const auth = {
-  loginUrl: () => `${API_BASE}/auth/github`,
-  me: () => request<{ user: { githubId: string; username: string; avatarUrl?: string } }>('/auth/me'),
-  logout: () => request<{ success: boolean }>('/auth/logout', { method: 'POST' }),
+  register: (email: string, password: string, name?: string) =>
+    request<AuthResult>('/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name }),
+    }),
+  login: (email: string, password: string) =>
+    request<AuthResult>('/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+  me: () =>
+    request<{ id: number; email: string; name: string | null; createdAt: string }>('/v1/auth/me'),
+  refresh: (refreshToken: string) =>
+    request<AuthResult>('/v1/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+    }),
+  logout: () =>
+    request<{ message: string }>('/v1/auth/logout', { method: 'POST' }),
 };
 
-// Runs
+export const credits = {
+  balance: () => request<CreditBalance>('/v1/credits/balance'),
+  transactions: (limit = 50, offset = 0) =>
+    request<{ transactions: Transaction[]; pagination: { limit: number; offset: number; total: number } }>(
+      `/v1/credits/transactions?limit=${limit}&offset=${offset}`,
+    ),
+  topUp: (priceId: string, successUrl: string, cancelUrl: string) =>
+    request<{ url: string; sessionId: string }>('/v1/credits/top-up', {
+      method: 'POST',
+      body: JSON.stringify({ priceId, successUrl, cancelUrl }),
+    }),
+  usage: (period: 'daily' | 'weekly' | 'monthly' = 'monthly') =>
+    request<{ accountId: number; period: string; usage: MonthlyUsage[] }>(
+      `/v1/credits/usage?period=${period}`,
+    ),
+};
+
 export const runs = {
-  list: (params?: { page?: number; perPage?: number; status?: string; repo?: string; from?: string; to?: string }) => {
+  list: (params?: {
+    page?: number;
+    perPage?: number;
+    status?: string;
+    repo?: string;
+    from?: string;
+    to?: string;
+  }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
     if (params?.perPage) qs.set('perPage', String(params.perPage));
@@ -63,86 +196,28 @@ export const runs = {
     if (params?.from) qs.set('from', params.from);
     if (params?.to) qs.set('to', params.to);
     const query = qs.toString();
-    return request<{ data: import('./types').Run[]; total: number; page: number; perPage: number; totalPages: number }>(
-      `/runs${query ? `?${query}` : ''}`,
+    return request<{ data: FixRun[]; total: number; page: number; perPage: number; totalPages: number }>(
+      `/v1/runs${query ? `?${query}` : ''}`,
     );
   },
-  get: (id: string) => request<import('./types').Run>(`/runs/${id}`),
+  get: (id: string) => request<FixRun>(`/v1/runs/${id}`),
 };
 
-// Repos
 export const repos = {
-  list: () => request<import('./types').Repo[]>('/repos'),
+  list: () =>
+    request<{ id: string; owner: string; repo: string; active: boolean }[]>('/repos'),
   connect: (body: { owner: string; repo: string; installationId?: number }) =>
-    request<import('./types').Repo>('/repos', { method: 'POST', body: JSON.stringify(body) }),
+    request<{ id: string; owner: string; repo: string; active: boolean }>('/repos', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   disconnect: (id: string) =>
     request<{ success: boolean }>(`/repos/${id}`, { method: 'DELETE' }),
 };
 
-// Stats
-export const stats = {
-  get: () => request<import('./types').DashboardStats>('/stats'),
-};
-
-// Audit
-export const audit = {
-  list: (params?: { page?: number; perPage?: number }) => {
-    const qs = new URLSearchParams();
-    if (params?.page) qs.set('page', String(params.page));
-    if (params?.perPage) qs.set('perPage', String(params.perPage));
-    const query = qs.toString();
-    return request<{ data: import('./types').AuditEntry[]; total: number; page: number; perPage: number; totalPages: number }>(
-      `/audit${query ? `?${query}` : ''}`,
-    );
-  },
-};
-
-// Benchmarks
-export const benchmarks = {
-  get: () =>
-    request<{ generatedAt: string; source: string; disclaimer: string; competitors: import('./types').BenchmarkEntry[] }>('/benchmarks'),
-  getPrices: () =>
-    request<{ generatedAt: string; currency: string; prices: import('./types').BenchmarkPrice[] }>('/benchmarks/price'),
-};
-
-// KPI Dashboard (admin key required)
-export const kpi = {
-  get: (params?: { days?: number; from?: string; to?: string }) => {
-    const qs = new URLSearchParams();
-    if (params?.days) qs.set('days', String(params.days));
-    if (params?.from) qs.set('from', params.from);
-    if (params?.to) qs.set('to', params.to);
-    const query = qs.toString();
-    return request<import('./types').KpiResponse>('/kpi' + (query ? '?' + query : ''));
-  },
-  exportUrl: (days?: number) => {
-    const qs = days ? '?days=' + days : '';
-    return API_BASE + '/kpi/export' + qs;
-  },
-};
-
-// Pricing
-export const pricing = {
-  get: () =>
-    request<import('./types').PricingData>('/pricing'),
-  calculate: (fixes: number, tier?: string) => {
-    const qs = new URLSearchParams({ fixes: String(fixes) });
-    if (tier) qs.set('tier', tier);
-    return request<import('./types').CostCalculation>(`/pricing/calculate?${qs.toString()}`);
-  },
-  vs: (competitor: string) =>
-    request<import('./types').VsComparisonData & { competitor: string }>(`/pricing/vs/${competitor}`),
-};
-
-// Settings
-export const settings = {
-  get: () => request<{
-    label: string;
-    model: string;
-    maxConcurrent: number;
-    sandboxPoolSize: number;
-    auditLogEnabled: boolean;
-  }>('/settings'),
-  update: (body: Record<string, unknown>) =>
-    request<{ success: boolean }>('/settings', { method: 'PUT', body: JSON.stringify(body) }),
+export const billing = {
+  plan: () =>
+    request<BillingPlan>('/v1/billing/plan'),
+  listPlans: () =>
+    request<BillingPlan[]>('/v1/billing/plans'),
 };

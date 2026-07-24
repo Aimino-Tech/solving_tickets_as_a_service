@@ -9,6 +9,7 @@ import DashboardHome from '@/pages/DashboardHome';
 import RunsHistory from '@/pages/RunsHistory';
 import RunDetail from '@/pages/RunDetail';
 import Repos from '@/pages/Repos';
+import Credits from '@/pages/Credits';
 import Settings from '@/pages/Settings';
 import Analytics from '@/pages/Analytics';
 import AuditLog from '@/pages/AuditLog';
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="runs" element={<RunsHistory />} />
           <Route path="runs/:id" element={<RunDetail />} />
           <Route path="repos" element={<Repos />} />
+          <Route path="credits" element={<Credits />} />
           <Route path="settings" element={<Settings />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="audit" element={<AuditLog />} />

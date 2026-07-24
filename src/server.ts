@@ -69,6 +69,7 @@ import { proxyRouter } from './routes/proxy.js';
 import { qualityRouter } from './routes/quality.js';
 import { reposRouter } from './routes/repos.js';
 import { runsRouter } from './routes/runs.js';
+import { runsApiRouter } from './routes/runsApi.js';
 import { slaRouter } from './routes/sla.js';
 import { viralRouter } from './routes/viral.js';
 import { workspaceRouter } from './routes/workspace.js';
@@ -937,6 +938,9 @@ export async function createApp(): Promise<express.Application> {
   //   POST   /api/workspace/:id/setup    — Automated Slack/RabbitMQ/DB setup
   //   DELETE /api/workspace/:id          — Cleanup workspace
   app.use('/api/workspace', workspaceRouter);
+
+  // ── Runs API (authenticated, paginated fix history) ────────────
+  app.use('/api/v1/runs', runsApiRouter);
 
   // SAML 2.0 SSO routes (optional)
   try {

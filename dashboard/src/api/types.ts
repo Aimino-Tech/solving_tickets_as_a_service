@@ -1,7 +1,8 @@
 export interface User {
-  githubId: string;
-  username: string;
-  avatarUrl?: string;
+  id: number;
+  email: string;
+  name: string | null;
+  createdAt: string;
 }
 
 export interface Run {
