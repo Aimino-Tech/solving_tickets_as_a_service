@@ -1,4 +1,11 @@
+<<<<<<< Updated upstream
 import type { User, Run, DashboardStats, AuditEntry, BenchmarkEntry, BenchmarkPrice, KpiResponse, PricingData, CostCalculation, VsComparisonData, PaginatedResponse } from '@/api/types';
+=======
+import type { DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice, KpiResponse, PricingData, CostCalculation, VsComparisonData } from '@/api/types';
+import type { Run } from '@/api/types';
+
+export type { Run };
+>>>>>>> Stashed changes
 
 const API_BASE = '/api';
 
@@ -168,6 +175,28 @@ export interface SLAMetrics {
   };
   breaches: number;
   byTier: Record<string, SLAByTier>;
+}
+
+export interface LitellmUsage {
+  configured: boolean;
+  message?: string;
+  budget?: {
+    remainingBudget: number;
+    maxBudget: number;
+    spendInCurrentMonth: number;
+    budgetDuration: string;
+    budgetResetAt: string;
+  };
+  todayTokens: { total: number; input: number; output: number };
+  thisMonthTokens: { total: number; input: number; output: number };
+  requestsToday: number;
+  rateLimit?: {
+    rpmRemaining: number;
+    rpmLimit: number;
+    tpmRemaining: number;
+    tpmLimit: number;
+    resetAt: string | null;
+  } | null;
 }
 
 export const auth = {
@@ -370,6 +399,10 @@ export const health = {
 export const sla = {
   getMetrics: () =>
     request<SLAMetrics>('/v1/sla/metrics'),
+};
+
+export const litellm = {
+  usage: () => request<LitellmUsage>('/v1/litellm/usage'),
 };
 
 export const stats = {

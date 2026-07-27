@@ -106,6 +106,7 @@ export default function Status() {
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">SLA Performance</h3>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
+<<<<<<< Updated upstream
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatMs(slaData.fixTimesMs.p50)}</p>
               <p className="text-xs text-gray-500">p50 Fix Time</p>
             </div>
@@ -115,6 +116,17 @@ export default function Status() {
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatMs(slaData.fixTimesMs.p99)}</p>
+=======
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatMs(slaData.fixTimesMs?.p50)}</p>
+              <p className="text-xs text-gray-500">p50 Fix Time</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatMs(slaData.fixTimesMs?.p95)}</p>
+              <p className="text-xs text-gray-500">p95 Fix Time</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatMs(slaData.fixTimesMs?.p99)}</p>
+>>>>>>> Stashed changes
               <p className="text-xs text-gray-500">p99 Fix Time</p>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">

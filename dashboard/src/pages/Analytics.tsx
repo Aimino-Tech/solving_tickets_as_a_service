@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
+<<<<<<< Updated upstream
 import { stats } from '@/api/client';
+=======
+import { stats, litellm, type LitellmUsage } from '@/api/client';
+>>>>>>> Stashed changes
 import type { DashboardStats } from '@/api/types';
 import {
   LineChart,

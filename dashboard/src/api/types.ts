@@ -150,6 +150,11 @@ export interface CostCalculation {
   }>;
 }
 
+<<<<<<< Updated upstream
+=======
+
+
+>>>>>>> Stashed changes
 export interface PricingData {
   generatedAt: string;
   plans: PricingPlan[];
