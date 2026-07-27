@@ -1,121 +1,127 @@
 import { useState, useEffect } from 'react';
-import { repos } from '@/api/client';
+import { repos, github, type GitHubInstallation } from '@/api/client';
 import type { Repo } from '@/api/types';
 import { formatRelativeTime } from '@/utils/format';
 
 export default function Repos() {
   const [repoList, setRepoList] = useState<Repo[]>([]);
+  const [installations, setInstallations] = useState<GitHubInstallation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showConnect, setShowConnect] = useState(false);
-  const [connectForm, setConnectForm] = useState({ owner: '', repo: '', installationId: '' });
-  const [connecting, setConnecting] = useState(false);
-  const [connectError, setConnectError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; githubLogin?: string }>({ connected: false });
+  const [showInstallations, setShowInstallations] = useState(false);
+  const [togglingRepo, setTogglingRepo] = useState<string | null>(null);
 
-  function loadRepos() {
+  async function loadAll() {
     setLoading(true);
     setError(null);
-    repos
-      .list()
-      .then(setRepoList)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }
-
-  useEffect(() => {
-    loadRepos();
-  }, []);
-
-  async function handleConnect(e: React.FormEvent) {
-    e.preventDefault();
-    setConnecting(true);
-    setConnectError(null);
     try {
-      await repos.connect({
-        owner: connectForm.owner,
-        repo: connectForm.repo,
-        installationId: connectForm.installationId ? Number(connectForm.installationId) : undefined,
-      });
-      setShowConnect(false);
-      setConnectForm({ owner: '', repo: '', installationId: '' });
-      loadRepos();
+      const [status, repoData] = await Promise.all([
+        github.getStatus().catch(() => ({ connected: false })),
+        repos.list().catch(() => [] as Repo[]),
+      ]);
+      setConnectionStatus(status);
+      setRepoList(repoData);
+
+      if (status.connected) {
+        const instData = await github.listInstallations().catch(() => ({ installations: [] }));
+        setInstallations(instData.installations);
+      }
     } catch (err) {
-      setConnectError(err instanceof Error ? err.message : 'Failed to connect repo');
+      setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
-      setConnecting(false);
+      setLoading(false);
     }
   }
 
-  async function handleDisconnect(id: string) {
-    if (!confirm('Disconnect this repository?')) return;
+  useEffect(() => {
+    loadAll();
+  }, []);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const oauthCode = urlParams.get('code');
+  useEffect(() => {
+    if (oauthCode) {
+      github.handleCallback(oauthCode).then(() => {
+        window.history.replaceState({}, '', window.location.pathname);
+        loadAll();
+      }).catch((err) => {
+        setError(err instanceof Error ? err.message : 'Failed to complete OAuth');
+        window.history.replaceState({}, '', window.location.pathname);
+      });
+    }
+  }, [oauthCode]);
+
+  async function handleConnectGitHub() {
     try {
-      await repos.disconnect(id);
-      loadRepos();
+      const { url } = await github.getOAuthUrl();
+      window.location.href = url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get OAuth URL');
+    }
+  }
+
+  async function handleDisconnectGitHub() {
+    if (!confirm('Disconnect GitHub account? This will remove all connected repos.')) return;
+    try {
+      await github.disconnect();
+      setConnectionStatus({ connected: false });
+      setInstallations([]);
+      setRepoList([]);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to disconnect');
     }
   }
 
+  async function handleToggleRepo(installationId: number, owner: string, repo: string, current: boolean) {
+    const key = `${owner}/${repo}`;
+    setTogglingRepo(key);
+    try {
+      if (current) {
+        await github.removeWebhook(installationId, owner, repo);
+      } else {
+        await github.configureWebhook(installationId, owner, repo);
+      }
+      const instData = await github.listInstallations();
+      setInstallations(instData.installations);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : `Failed to ${current ? 'remove' : 'configure'} webhook`);
+    } finally {
+      setTogglingRepo(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          {repoList.length} connected {repoList.length === 1 ? 'repository' : 'repositories'}
-        </p>
-        <button onClick={() => setShowConnect(!showConnect)} className="btn-primary">
-          {showConnect ? 'Cancel' : 'Connect Repo'}
-        </button>
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">GitHub Repositories</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {connectionStatus.connected
+              ? `Connected as ${connectionStatus.githubLogin}`
+              : 'Connect your GitHub account to enable STAS'}
+          </p>
+        </div>
+        {connectionStatus.connected ? (
+          <button onClick={handleDisconnectGitHub} className="btn-danger text-sm">
+            Disconnect GitHub
+          </button>
+        ) : (
+          <button onClick={handleConnectGitHub} className="btn-primary">
+            Connect GitHub
+          </button>
+        )}
       </div>
 
-      {/* Connect form */}
-      {showConnect && (
-        <div className="card">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Connect a Repository</h3>
-          <form onSubmit={handleConnect} className="mt-4 space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Owner</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. my-org"
-                  value={connectForm.owner}
-                  onChange={(e) => setConnectForm({ ...connectForm, owner: e.target.value })}
-                  className="input-field mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Repo</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. my-repo"
-                  value={connectForm.repo}
-                  onChange={(e) => setConnectForm({ ...connectForm, repo: e.target.value })}
-                  className="input-field mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Installation ID</label>
-                <input
-                  type="number"
-                  placeholder="Optional"
-                  value={connectForm.installationId}
-                  onChange={(e) => setConnectForm({ ...connectForm, installationId: e.target.value })}
-                  className="input-field mt-1"
-                />
-              </div>
-            </div>
-            {connectError && <p className="text-sm text-red-600 dark:text-red-400">{connectError}</p>}
-            <button type="submit" disabled={connecting} className="btn-primary">
-              {connecting ? 'Connecting...' : 'Connect'}
-            </button>
-          </form>
+      {error && (
+        <div className="card border-red-200 dark:border-red-800">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <button onClick={loadAll} className="mt-2 text-sm font-medium text-brand-600 dark:text-brand-400 min-h-[44px] min-w-[44px]">
+            Retry
+          </button>
         </div>
       )}
 
-      {/* Repo list */}
       {loading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
@@ -125,47 +131,133 @@ export default function Repos() {
             </div>
           ))}
         </div>
-      ) : error ? (
-        <div className="card">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
-          <button onClick={loadRepos} className="mt-2 text-sm font-medium text-brand-600 dark:text-brand-400 min-h-[44px] min-w-[44px]">
-            Retry
-          </button>
-        </div>
-      ) : repoList.length === 0 ? (
-        <div className="card text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">No repositories connected yet.</p>
-          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
-            Connect a repository to start receiving automated fixes.
-          </p>
-          <button onClick={() => setShowConnect(true)} className="btn-primary mt-4">
-            Connect your first repo
-          </button>
+      ) : connectionStatus.connected ? (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              GitHub Installations & Repos
+            </h3>
+            <button
+              onClick={() => setShowInstallations(!showInstallations)}
+              className="text-sm text-brand-600 dark:text-brand-400 min-h-[44px] min-w-[44px]"
+            >
+              {showInstallations ? 'Hide repos' : 'Show all repos'}
+            </button>
+          </div>
+
+          {installations.length === 0 ? (
+            <div className="card text-center py-12">
+              <p className="text-gray-500 dark:text-gray-400">No GitHub App installations found.</p>
+              <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
+                Install the STAS GitHub App on your repositories to get started.
+              </p>
+              <a
+                href={`https://github.com/apps/${import.meta.env.VITE_GITHUB_APP_NAME || 'stas-bot'}/installations/new`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary mt-4 inline-block"
+              >
+                Install GitHub App
+              </a>
+            </div>
+          ) : (
+            installations.map((inst) => (
+              <div key={inst.installationId} className="card">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      {inst.accountLogin}
+                      <span className="ml-2 text-xs text-gray-400">({inst.accountType})</span>
+                    </h4>
+                    <p className="text-xs text-gray-500">
+                      Installation #{inst.installationId} &middot; {inst.repoScope} repos
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => github.removeInstallation(inst.installationId).then(loadAll)}
+                    className="btn-danger text-xs"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                {showInstallations && (
+                  <div className="space-y-2">
+                    {inst.repos.map((repo) => (
+                      <div
+                        key={repo.fullName}
+                        className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-block h-2 w-2 rounded-full ${repo.stasInstalled ? 'bg-green-500' : 'bg-gray-300'}`} />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{repo.fullName}</span>
+                          {repo.private && (
+                            <span className="text-xs text-gray-400">Private</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleToggleRepo(inst.installationId, repo.owner, repo.name, repo.stasInstalled)}
+                          disabled={togglingRepo === repo.fullName}
+                          className={`text-xs px-3 py-1 rounded-full min-h-[36px] ${
+                            repo.stasInstalled
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                          }`}
+                        >
+                          {togglingRepo === repo.fullName
+                            ? '...'
+                            : repo.stasInstalled
+                              ? 'STAS Active'
+                              : 'Enable STAS'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 pt-4">
+            Connected Repositories ({repoList.length})
+          </h3>
+          {repoList.length === 0 ? (
+            <p className="text-sm text-gray-400">No repositories connected. Enable STAS on repos above.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {repoList.map((repo) => (
+                <div key={repo.id} className="card flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block h-2.5 w-2.5 rounded-full ${repo.active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        {repo.owner}/{repo.repo}
+                      </h3>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Connected {formatRelativeTime(repo.createdAt)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => repos.disconnect(repo.id)}
+                    className="btn-danger text-xs mt-3 self-start"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {repoList.map((repo) => (
-            <div key={repo.id} className="card flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${repo.active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    {repo.owner}/{repo.repo}
-                  </h3>
-                </div>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Connected {formatRelativeTime(repo.createdAt)}
-                  {repo.installationId && ` · Installation #${repo.installationId}`}
-                </p>
-              </div>
-              <button
-                onClick={() => handleDisconnect(repo.id)}
-                className="btn-danger text-xs mt-3 self-start"
-              >
-                Disconnect
-              </button>
-            </div>
-          ))}
+        <div className="card text-center py-12">
+          <p className="text-gray-500 dark:text-gray-400">No GitHub account connected.</p>
+          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
+            Connect your GitHub account to manage repositories and enable automated fixes.
+          </p>
+          <button onClick={handleConnectGitHub} className="btn-primary mt-4">
+            Connect GitHub Account
+          </button>
         </div>
       )}
     </div>

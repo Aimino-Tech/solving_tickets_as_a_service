@@ -1,6 +1,27 @@
 import { useState, useEffect } from 'react';
 import { settings } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
+import { fetchPreferences, upsertPreference, type NotificationPreference } from '@/services/notificationService';
+
+const CHANNELS: { id: NotificationPreference['channel']; label: string; icon: string }[] = [
+  { id: 'in_app', label: 'In-App', icon: '🔔' },
+  { id: 'email', label: 'Email', icon: '📧' },
+  { id: 'slack', label: 'Slack', icon: '💬' },
+  { id: 'discord', label: 'Discord', icon: '🎮' },
+  { id: 'webhook', label: 'Webhook', icon: '🔗' },
+];
+
+const EVENT_TYPES = [
+  'fix_started',
+  'pr_created',
+  'fix_completed',
+  'review_needed',
+  'rework_required',
+  'merge_completed',
+  'pipeline_failed',
+  'low_credits',
+  'payment_failed',
+];
 
 export default function Settings() {
   const [config, setConfig] = useState<{
@@ -29,8 +50,13 @@ export default function Settings() {
     } | null;
     retentionDays: number;
   } | null>(null);
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreference[]>([]);
+  const [notificationChannels, setNotificationChannels] = useState<Record<string, Record<string, boolean>>>({});
+  const [channelTargets, setChannelTargets] = useState<Record<string, string>>({});
+  const [savingNotif, setSavingNotif] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     config: true,
+    notifications: false,
     privacy: false,
     danger: false,
   });
@@ -51,7 +77,48 @@ export default function Settings() {
       .finally(() => setLoading(false));
 
     fetchDeletionStatus();
+    loadNotificationPrefs();
   }, []);
+
+  async function loadNotificationPrefs() {
+    const prefs = await fetchPreferences();
+    setNotificationPrefs(prefs);
+    const channels: Record<string, Record<string, boolean>> = {};
+    const targets: Record<string, string> = {};
+    for (const p of prefs) {
+      if (!channels[p.channel]) channels[p.channel] = {};
+      channels[p.channel][p.eventType] = p.enabled;
+      if (p.channelTarget) targets[p.channel] = p.channelTarget;
+    }
+    setNotificationChannels(channels);
+    setChannelTargets(targets);
+  }
+
+  async function handleTogglePref(channel: NotificationPreference['channel'], eventType: string, enabled: boolean) {
+    setSavingNotif(true);
+    await upsertPreference(channel, eventType, enabled, channelTargets[channel] || undefined);
+    await loadNotificationPrefs();
+    setSavingNotif(false);
+  }
+
+  async function handleChannelTargetChange(channel: string, target: string) {
+    setChannelTargets((prev) => ({ ...prev, [channel]: target }));
+  }
+
+  async function handleChannelTargetBlur(channel: NotificationPreference['channel']) {
+    const target = channelTargets[channel];
+    if (target) {
+      setSavingNotif(true);
+      for (const eventType of EVENT_TYPES) {
+        const current = notificationChannels[channel]?.[eventType];
+        if (current !== undefined) {
+          await upsertPreference(channel, eventType, current, target);
+        }
+      }
+      await loadNotificationPrefs();
+      setSavingNotif(false);
+    }
+  }
 
   async function fetchDeletionStatus() {
     try {
@@ -239,6 +306,100 @@ export default function Settings() {
                 )}
               </div>
             </form>
+          </>
+        )}
+      </div>
+
+      {/* Notification Preferences */}
+      <div className="card">
+        <button
+          onClick={() => toggleSection('notifications')}
+          className="flex w-full items-center justify-between lg:cursor-default"
+        >
+          <div>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Notification Preferences</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 hidden lg:block">
+              Choose which channels and events send you notifications.
+            </p>
+          </div>
+          <svg
+            className={`h-5 w-5 text-gray-400 transition-transform lg:hidden ${openSections.notifications ? 'rotate-180' : ''}`}
+            fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+        {openSections.notifications && (
+          <>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 lg:hidden">
+              Choose which channels and events send you notifications.
+            </p>
+            <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+              Toggle individual event types per notification channel.
+            </p>
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="py-2 pr-4 text-left font-medium text-gray-500 dark:text-gray-400">Channel</th>
+                    {EVENT_TYPES.map((et) => (
+                      <th key={et} className="px-2 py-2 text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                        {et.replace(/_/g, ' ')}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {CHANNELS.map((ch) => (
+                    <tr key={ch.id} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="py-3 pr-4">
+                        <span className="flex items-center gap-2 font-medium text-gray-700 dark:text-gray-300">
+                          <span>{ch.icon}</span>
+                          {ch.label}
+                        </span>
+                        {(ch.id === 'slack' || ch.id === 'discord' || ch.id === 'webhook') && (
+                          <input
+                            type="text"
+                            placeholder={`${ch.label} webhook URL...`}
+                            value={channelTargets[ch.id] || ''}
+                            onChange={(e) => handleChannelTargetChange(ch.id, e.target.value)}
+                            onBlur={() => handleChannelTargetBlur(ch.id)}
+                            className="mt-1 block w-full rounded border border-gray-200 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-700"
+                          />
+                        )}
+                        {ch.id === 'email' && (
+                          <input
+                            type="email"
+                            placeholder="Email address..."
+                            value={channelTargets[ch.id] || ''}
+                            onChange={(e) => handleChannelTargetChange(ch.id, e.target.value)}
+                            onBlur={() => handleChannelTargetBlur(ch.id)}
+                            className="mt-1 block w-full rounded border border-gray-200 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-700"
+                          />
+                        )}
+                      </td>
+                      {EVENT_TYPES.map((et) => {
+                        const enabled = notificationChannels[ch.id]?.[et] ?? (ch.id === 'in_app' ? true : false);
+                        return (
+                          <td key={et} className="px-2 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={enabled}
+                              disabled={savingNotif || ch.id === 'in_app'}
+                              onChange={() => handleTogglePref(ch.id, et, !enabled)}
+                              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 disabled:opacity-50"
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {savingNotif && (
+              <p className="mt-2 text-xs text-gray-400">Saving...</p>
+            )}
           </>
         )}
       </div>

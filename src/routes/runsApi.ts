@@ -25,12 +25,29 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
     const countResult = await queryWithRetry<{ total: number }>(
       'SELECT COUNT(*) as total FROM runs WHERE account_id = $1',
-      [userId],
+      [accountId],
     );
     const total = Number(countResult.rows[0]?.total ?? 0);
 
+    const runsWithCredits = await Promise.all(
+      runs.map(async (run: any) => {
+        try {
+          const txResult = await queryWithRetry<any>(
+            `SELECT COALESCE(ABS(amount), 0) as credits_used
+             FROM credit_transactions
+             WHERE account_id = $1 AND description LIKE $2 AND type = 'usage'
+             ORDER BY created_at DESC LIMIT 1`,
+            [accountId, `%${run.id}%`],
+          );
+          return { ...run, creditsUsed: Number(txResult.rows[0]?.credits_used ?? 0) };
+        } catch {
+          return { ...run, creditsUsed: 0 };
+        }
+      }),
+    );
+
     res.json({
-      data: runs,
+      data: runsWithCredits,
       total,
       page,
       perPage: limit,
@@ -56,7 +73,21 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    res.json(run);
+    let creditsUsed = 0;
+    try {
+      const txResult = await queryWithRetry<any>(
+        `SELECT COALESCE(ABS(amount), 0) as credits_used
+         FROM credit_transactions
+         WHERE description LIKE $1 AND type = 'usage'
+         ORDER BY created_at DESC LIMIT 1`,
+        [`%${run.id}%`],
+      );
+      creditsUsed = Number(txResult.rows[0]?.credits_used ?? 0);
+    } catch {
+      // Non-fatal
+    }
+
+    res.json({ ...run, creditsUsed });
   } catch (err) {
     log.error({ err: String(err), runId: req.params.id }, 'Failed to fetch run');
     res.status(500).json({ error: 'Failed to fetch run' });

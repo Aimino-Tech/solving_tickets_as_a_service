@@ -25,6 +25,7 @@ export interface Run {
   confidence?: 'high' | 'medium' | 'low';
   diff?: string;
   testOutput?: string;
+  creditsUsed?: number;
 }
 
 export interface Repo {

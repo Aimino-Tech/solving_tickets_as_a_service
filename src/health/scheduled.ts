@@ -37,6 +37,7 @@ import {
   checkWorkerHealth as checkWorkerAnomaly,
   checkDbPoolUsage,
 } from '../monitoring/anomalyDetection.js';
+import { sendLowCreditAlerts } from '../credits/index.js';
 
 const log = rootLogger.child({ module: 'scheduled' });
 
@@ -48,6 +49,7 @@ const SLO_COMPLIANCE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // every 5min
 const ANOMALY_DETECTION_INTERVAL_MS = 2 * 60 * 1000; // every 2min
 const DLQ_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
 const METRICS_REFRESH_INTERVAL_MS = 60_000; // every 60s
+const LOW_CREDIT_WARNING_INTERVAL_MS = 15 * 60 * 1000; // every 15min
 
 // ── Task state ─────────────────────────────────────────────────────
 
@@ -174,6 +176,17 @@ async function cleanupDLQ(): Promise<void> {
 
 // ── Metrics Refresh ────────────────────────────────────────────────
 
+// ── Low Credit Warning Check (AIM-3525) ──────────────────────
+
+async function runLowCreditWarning(): Promise<void> {
+  try {
+    await checkLowCreditAccounts();
+    log.debug('Low credit warning check complete');
+  } catch (err) {
+    log.error({ err: String(err) }, 'Low credit warning check failed');
+  }
+}
+
 async function refreshMetrics(): Promise<void> {
   try {
     await getQueueHealth();
@@ -212,8 +225,18 @@ export function startScheduledTasks(): void {
   // SLO compliance check (every 5min)
   timers.push(setInterval(runSloCheck, SLO_COMPLIANCE_CHECK_INTERVAL_MS));
 
+  // Low credit alert check (every 30min)
+  timers.push(setInterval(() => {
+    sendLowCreditAlerts().catch((err) => {
+      log.error({ err: String(err) }, 'Low-credit alert check failed');
+    });
+  }, 30 * 60 * 1000));
+
   // DLQ cleanup (once per day)
   timers.push(setInterval(cleanupDLQ, DLQ_CLEANUP_INTERVAL_MS));
+
+  // Low credit warning check (every 15min)
+  timers.push(setInterval(runLowCreditWarning, LOW_CREDIT_WARNING_INTERVAL_MS));
 
   // Metrics refresh (every 60s)
   timers.push(setInterval(refreshMetrics, METRICS_REFRESH_INTERVAL_MS));
@@ -223,7 +246,9 @@ export function startScheduledTasks(): void {
   checkWorkerHealth().catch(() => {});
   runAnomalyDetection().catch(() => {});
   runSloCheck().catch(() => {});
+  sendLowCreditAlerts().catch(() => {});
   cleanupDLQ().catch(() => {});
+  runLowCreditWarning().catch(() => {});
   refreshMetrics().catch(() => {});
 
   log.info('Scheduled maintenance tasks started');

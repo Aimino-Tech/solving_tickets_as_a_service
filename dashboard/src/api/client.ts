@@ -96,7 +96,21 @@ export interface AuthResult {
   user: { id: number; email: string; name: string | null };
 }
 
-
+export interface FixRun {
+  id: string;
+  repoOwner: string;
+  repoName: string;
+  issueNumber: number;
+  issueTitle: string;
+  status: string;
+  confidence: string | null;
+  creditsUsed?: number;
+  prUrl: string | null;
+  durationMs: number | null;
+  modelUsed: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface CreditBalance {
   accountId: number;
@@ -131,6 +145,45 @@ export interface BillingPlan {
   trialDays?: number;
   monthlyFixLimit?: number;
   concurrentFixes?: number;
+}
+
+// -- Health types --
+
+export interface HealthCheck {
+  status: string;
+  latencyMs?: number;
+  error?: string;
+}
+
+export interface HealthResponse {
+  status: 'ok' | 'degraded';
+  checks: Record<string, HealthCheck>;
+  timestamp: string;
+  aiMode?: string;
+  uptime?: number;
+  memoryUsage?: NodeJS.MemoryUsage;
+}
+
+// -- SLA metric types --
+
+export interface SLAByTier {
+  count: number;
+  breaches: number;
+  attainmentRate: number;
+  p50: number | null;
+  p95: number | null;
+}
+
+export interface SLAMetrics {
+  totalRecorded: number;
+  attainmentRate: number | null;
+  fixTimesMs: {
+    p50: number | null;
+    p95: number | null;
+    p99: number | null;
+  };
+  breaches: number;
+  byTier: Record<string, SLAByTier>;
 }
 
 export const auth = {
@@ -197,6 +250,31 @@ export const runs = {
   get: (id: string) => request<Run>(`/v1/runs/${id}`),
 };
 
+export interface GitHubInstallation {
+  installationId: number;
+  accountLogin: string;
+  accountType: string;
+  repoScope: string;
+  repos: Array<{
+    id: number;
+    name: string;
+    fullName: string;
+    owner: string;
+    private: boolean;
+    description: string | null;
+    defaultBranch: string;
+    language: string | null;
+    stasInstalled: boolean;
+    webhookId: number | null;
+  }>;
+}
+
+export interface GitHubConnectionStatus {
+  connected: boolean;
+  githubLogin?: string;
+  githubUserId?: number;
+}
+
 export const repos = {
   list: () =>
     request<{ id: string; owner: string; repo: string; active: boolean; installationId?: number; createdAt: string }[]>('/repos'),
@@ -207,6 +285,39 @@ export const repos = {
     }),
   disconnect: (id: string) =>
     request<{ success: boolean }>(`/repos/${id}`, { method: 'DELETE' }),
+};
+
+export const github = {
+  getOAuthUrl: () =>
+    request<{ url: string }>('/v1/auth/github/url', { method: 'POST' }),
+  handleCallback: (code: string) =>
+    request<{ githubLogin: string; githubUserId: number; avatarUrl: string }>('/v1/auth/github/callback', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+  getStatus: () =>
+    request<GitHubConnectionStatus>('/v1/auth/github/status'),
+  disconnect: () =>
+    request<{ success: boolean }>('/v1/auth/github/disconnect', { method: 'DELETE' }),
+  listInstallations: () =>
+    request<{ installations: GitHubInstallation[] }>('/v1/github/installations'),
+  syncInstallation: (body: { installationId: number; accountLogin: string; accountType?: string; repoScope?: string }) =>
+    request<{ success: boolean }>('/v1/github/installations/sync', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  removeInstallation: (installationId: number) =>
+    request<{ success: boolean }>(`/v1/github/installations/${installationId}`, { method: 'DELETE' }),
+  configureWebhook: (installationId: number, owner: string, repo: string) =>
+    request<{ success: boolean; webhookId: number }>(
+      `/v1/github/installations/${installationId}/repos/${owner}/${repo}/webhook`,
+      { method: 'POST' },
+    ),
+  removeWebhook: (installationId: number, owner: string, repo: string) =>
+    request<{ success: boolean }>(
+      `/v1/github/installations/${installationId}/repos/${owner}/${repo}/webhook`,
+      { method: 'DELETE' },
+    ),
 };
 
 export const billing = {
@@ -267,6 +378,22 @@ export const pricing = {
     ),
   vs: (slug: string) =>
     request<import('@/api/types').VsComparisonData>(`/pricing/vs/${slug}`),
+};
+
+// -- Health API --
+
+export const health = {
+  getStatus: () =>
+    request<HealthResponse>('/health'),
+  getVerbose: () =>
+    request<HealthResponse>('/health/verbose'),
+};
+
+// -- SLA API --
+
+export const sla = {
+  getMetrics: () =>
+    request<SLAMetrics>('/v1/sla/metrics'),
 };
 
 export interface WizardProgress {
