@@ -144,6 +144,45 @@ export interface BillingPlan {
   concurrentFixes?: number;
 }
 
+// -- Health types --
+
+export interface HealthCheck {
+  status: string;
+  latencyMs?: number;
+  error?: string;
+}
+
+export interface HealthResponse {
+  status: 'ok' | 'degraded';
+  checks: Record<string, HealthCheck>;
+  timestamp: string;
+  aiMode?: string;
+  uptime?: number;
+  memoryUsage?: NodeJS.MemoryUsage;
+}
+
+// -- SLA metric types --
+
+export interface SLAByTier {
+  count: number;
+  breaches: number;
+  attainmentRate: number;
+  p50: number | null;
+  p95: number | null;
+}
+
+export interface SLAMetrics {
+  totalRecorded: number;
+  attainmentRate: number | null;
+  fixTimesMs: {
+    p50: number | null;
+    p95: number | null;
+    p99: number | null;
+  };
+  breaches: number;
+  byTier: Record<string, SLAByTier>;
+}
+
 export const auth = {
   register: (email: string, password: string, name?: string) =>
     request<AuthResult>('/v1/auth/register', {
@@ -269,6 +308,22 @@ export const onboarding = {
     request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/reset', { method: 'POST' }),
   getConfig: () =>
     request<{ config: WizardConfig }>('/v1/onboarding/config'),
+};
+
+// -- Health API --
+
+export const health = {
+  getStatus: () =>
+    request<HealthResponse>('/health'),
+  getVerbose: () =>
+    request<HealthResponse>('/health/verbose'),
+};
+
+// -- SLA API --
+
+export const sla = {
+  getMetrics: () =>
+    request<SLAMetrics>('/v1/sla/metrics'),
 };
 
 export interface WizardProgress {

@@ -117,44 +117,9 @@ export async function createApp(): Promise<express.Application> {
     }),
   );
 
-  // -- Health check route (consolidated) -----------------------------------
-  app.get('/health', async (_req: Request, res: Response) => {
-    const checks: Record<string, string> = {};
-    try {
-      const { queryWithRetry } = await import('./db/connection.js');
-      await queryWithRetry('SELECT 1');
-      checks.database = 'ok';
-    } catch {
-      checks.database = 'down';
-    }
-    try {
-      const { Redis } = await import('ioredis');
-      const redis = new Redis(config.queue.redisUrl, {
-        lazyConnect: true,
-        maxRetriesPerRequest: 1,
-        connectTimeout: 3000,
-      });
-      await redis.connect();
-      await redis.ping();
-      checks.redis = 'ok';
-      await redis.quit().catch(() => {});
-    } catch {
-      checks.redis = 'down';
-    }
-    try {
-      const { isConnected } = await import('./queue/rabbitmq.js');
-      checks.rabbitmq = isConnected() ? 'ok' : 'down';
-    } catch {
-      checks.rabbitmq = 'down';
-    }
-    const allOk = Object.values(checks).every((v) => v === 'ok');
-    res.status(allOk ? 200 : 503).json({
-      status: allOk ? 'ok' : 'degraded',
-      checks,
-      timestamp: new Date().toISOString(),
-      aiMode: config.stas.aiDisabled ? 'ai-disabled' : 'enabled',
-    });
-  });
+  // -- Health check route (consolidated, handled by health router) ----------
+  // GET /health, /health/verbose, /health/queue, /health/dependencies
+  // are mounted via healthRouter below.
 
   // -- IP Allowlist for webhook endpoints -----------------------------------
   app.use('/webhook', ipAllowlistMiddleware);
