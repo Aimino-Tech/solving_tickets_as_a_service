@@ -73,6 +73,7 @@ import { reposRouter } from './routes/repos.js';
 import { gitHubOAuthRouter } from './routes/github-oauth.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
+import { litellmUsageRouter } from './routes/litellmUsage.js';
 import { runFeedbackRouter } from './routes/runFeedback.js';
 import { slaRouter } from './routes/sla.js';
 import { viralRouter } from './routes/viral.js';
@@ -677,6 +678,8 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
+
+  app.use('/api/v1', litellmUsageRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────
   // GET /admin/webhooks (paginated, filterable)
