@@ -145,6 +145,45 @@ export interface BillingPlan {
   concurrentFixes?: number;
 }
 
+// -- Health types --
+
+export interface HealthCheck {
+  status: string;
+  latencyMs?: number;
+  error?: string;
+}
+
+export interface HealthResponse {
+  status: 'ok' | 'degraded';
+  checks: Record<string, HealthCheck>;
+  timestamp: string;
+  aiMode?: string;
+  uptime?: number;
+  memoryUsage?: NodeJS.MemoryUsage;
+}
+
+// -- SLA metric types --
+
+export interface SLAByTier {
+  count: number;
+  breaches: number;
+  attainmentRate: number;
+  p50: number | null;
+  p95: number | null;
+}
+
+export interface SLAMetrics {
+  totalRecorded: number;
+  attainmentRate: number | null;
+  fixTimesMs: {
+    p50: number | null;
+    p95: number | null;
+    p99: number | null;
+  };
+  breaches: number;
+  byTier: Record<string, SLAByTier>;
+}
+
 export const auth = {
   register: (email: string, password: string, name?: string) =>
     request<AuthResult>('/v1/auth/register', {
@@ -208,6 +247,31 @@ export const runs = {
   get: (id: string) => request<FixRun>(`/v1/runs/${id}`),
 };
 
+export interface GitHubInstallation {
+  installationId: number;
+  accountLogin: string;
+  accountType: string;
+  repoScope: string;
+  repos: Array<{
+    id: number;
+    name: string;
+    fullName: string;
+    owner: string;
+    private: boolean;
+    description: string | null;
+    defaultBranch: string;
+    language: string | null;
+    stasInstalled: boolean;
+    webhookId: number | null;
+  }>;
+}
+
+export interface GitHubConnectionStatus {
+  connected: boolean;
+  githubLogin?: string;
+  githubUserId?: number;
+}
+
 export const repos = {
   list: () =>
     request<{ id: string; owner: string; repo: string; active: boolean }[]>('/repos'),
@@ -218,6 +282,39 @@ export const repos = {
     }),
   disconnect: (id: string) =>
     request<{ success: boolean }>(`/repos/${id}`, { method: 'DELETE' }),
+};
+
+export const github = {
+  getOAuthUrl: () =>
+    request<{ url: string }>('/v1/auth/github/url', { method: 'POST' }),
+  handleCallback: (code: string) =>
+    request<{ githubLogin: string; githubUserId: number; avatarUrl: string }>('/v1/auth/github/callback', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+  getStatus: () =>
+    request<GitHubConnectionStatus>('/v1/auth/github/status'),
+  disconnect: () =>
+    request<{ success: boolean }>('/v1/auth/github/disconnect', { method: 'DELETE' }),
+  listInstallations: () =>
+    request<{ installations: GitHubInstallation[] }>('/v1/github/installations'),
+  syncInstallation: (body: { installationId: number; accountLogin: string; accountType?: string; repoScope?: string }) =>
+    request<{ success: boolean }>('/v1/github/installations/sync', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  removeInstallation: (installationId: number) =>
+    request<{ success: boolean }>(`/v1/github/installations/${installationId}`, { method: 'DELETE' }),
+  configureWebhook: (installationId: number, owner: string, repo: string) =>
+    request<{ success: boolean; webhookId: number }>(
+      `/v1/github/installations/${installationId}/repos/${owner}/${repo}/webhook`,
+      { method: 'POST' },
+    ),
+  removeWebhook: (installationId: number, owner: string, repo: string) =>
+    request<{ success: boolean }>(
+      `/v1/github/installations/${installationId}/repos/${owner}/${repo}/webhook`,
+      { method: 'DELETE' },
+    ),
 };
 
 export const billing = {
@@ -270,6 +367,22 @@ export const onboarding = {
     request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/reset', { method: 'POST' }),
   getConfig: () =>
     request<{ config: WizardConfig }>('/v1/onboarding/config'),
+};
+
+// -- Health API --
+
+export const health = {
+  getStatus: () =>
+    request<HealthResponse>('/health'),
+  getVerbose: () =>
+    request<HealthResponse>('/health/verbose'),
+};
+
+// -- SLA API --
+
+export const sla = {
+  getMetrics: () =>
+    request<SLAMetrics>('/v1/sla/metrics'),
 };
 
 export interface WizardProgress {

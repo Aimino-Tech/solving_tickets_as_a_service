@@ -63,12 +63,14 @@ import n8nRouter from './routes/n8n.js';
 import { authRouter } from './auth/index.js';
 import { billingRouter } from './billing/index.js';
 import { onboardingRouter } from './routes/onboarding.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { pipelineRouter } from './routes/pipeline.js';
 import { plgRouter } from './routes/plg.js';
 import { pricingRouter } from './routes/pricing.js';
 import { proxyRouter } from './routes/proxy.js';
 import { qualityRouter } from './routes/quality.js';
 import { reposRouter } from './routes/repos.js';
+import { gitHubOAuthRouter } from './routes/github-oauth.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
 import { slaRouter } from './routes/sla.js';
@@ -117,44 +119,9 @@ export async function createApp(): Promise<express.Application> {
     }),
   );
 
-  // -- Health check route (consolidated) -----------------------------------
-  app.get('/health', async (_req: Request, res: Response) => {
-    const checks: Record<string, string> = {};
-    try {
-      const { queryWithRetry } = await import('./db/connection.js');
-      await queryWithRetry('SELECT 1');
-      checks.database = 'ok';
-    } catch {
-      checks.database = 'down';
-    }
-    try {
-      const { Redis } = await import('ioredis');
-      const redis = new Redis(config.queue.redisUrl, {
-        lazyConnect: true,
-        maxRetriesPerRequest: 1,
-        connectTimeout: 3000,
-      });
-      await redis.connect();
-      await redis.ping();
-      checks.redis = 'ok';
-      await redis.quit().catch(() => {});
-    } catch {
-      checks.redis = 'down';
-    }
-    try {
-      const { isConnected } = await import('./queue/rabbitmq.js');
-      checks.rabbitmq = isConnected() ? 'ok' : 'down';
-    } catch {
-      checks.rabbitmq = 'down';
-    }
-    const allOk = Object.values(checks).every((v) => v === 'ok');
-    res.status(allOk ? 200 : 503).json({
-      status: allOk ? 'ok' : 'degraded',
-      checks,
-      timestamp: new Date().toISOString(),
-      aiMode: config.stas.aiDisabled ? 'ai-disabled' : 'enabled',
-    });
-  });
+  // -- Health check route (consolidated, handled by health router) ----------
+  // GET /health, /health/verbose, /health/queue, /health/dependencies
+  // are mounted via healthRouter below.
 
   // -- IP Allowlist for webhook endpoints -----------------------------------
   app.use('/webhook', ipAllowlistMiddleware);
@@ -724,6 +691,14 @@ export async function createApp(): Promise<express.Application> {
   // ── Onboarding API ──────────────────────────────────────────────
   app.use('/api/v1/onboarding', onboardingRouter);
 
+  // ── Notifications API ────────────────────────────────────────────
+  // GET    /api/v1/notifications/preferences         — List user preferences
+  // PUT    /api/v1/notifications/preferences         — Upsert preference
+  // GET    /api/v1/notifications/history             — List notification history
+  // PUT    /api/v1/notifications/history/:id/read    — Mark one as read
+  // PUT    /api/v1/notifications/history/read-all    — Mark all as read
+  app.use('/api/v1/notifications', notificationsRouter);
+
   // ── Team Management API ───────────────────────────────────────────
   // POST   /api/teams                          — Create a new team
   // GET    /api/teams                          — List teams for current account
@@ -735,6 +710,9 @@ export async function createApp(): Promise<express.Application> {
 
   // Repos API (repo picker with webhook status)
   app.use('/api/repos', reposRouter);
+
+  // GitHub OAuth & Installation Management
+  app.use('/api/v1', gitHubOAuthRouter);
 
   // ── Shareable run page API (public, no auth) ───────────────────────
   // GET /api/runs/:id — Public run detail JSON/HTML

@@ -1,18 +1,18 @@
 /**
- * Webhook Health Monitor — periodic failure rate alerting.
+ * Webhook Health Monitor - periodic failure rate alerting and pipeline stall detection.
  *
  * Checks the webhook failure rate at a configurable interval.
  * If the failure rate exceeds 5% in the recent window, logs a
  * warning that can be routed to Slack or other alert channels.
  *
- * ── Usage ────────────────────────────────────────────────────────────
- *   startHealthMonitor();  // Starts periodic checks
- *   stopHealthMonitor();   // Graceful shutdown
- * ────────────────────────────────────────────────────────────────────────
+ * Also detects stalled pipelines - active pipelines that haven't had a
+ * status update within a configurable threshold.
  */
 
 import { webhookEventsRepository } from '../db/repositories/WebhookEventsRepository.js';
 import { rootLogger } from '../utils/logger.js';
+import { dispatchAlert } from '../monitoring/alerting.js';
+import { queryWithRetry } from '../db/connection.js';
 
 const log = rootLogger.child({ module: 'webhook-health-monitor' });
 
@@ -20,8 +20,9 @@ const log = rootLogger.child({ module: 'webhook-health-monitor' });
 // Configuration
 // ---------------------------------------------------------------------------
 
-const CHECK_INTERVAL_MS = 60_000; // Check every 60 seconds
-const FAILURE_RATE_THRESHOLD = 5; // Alert if > 5% failure rate
+const CHECK_INTERVAL_MS = 60_000;
+const FAILURE_RATE_THRESHOLD = 5;
+const STALL_THRESHOLD_MINUTES = 15;
 
 // ---------------------------------------------------------------------------
 // State
@@ -29,11 +30,84 @@ const FAILURE_RATE_THRESHOLD = 5; // Alert if > 5% failure rate
 
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
-// Track previous alert state to avoid repeated alert spam
 let lastAlertTriggered = false;
+let lastStallAlert: Set<string> = new Set();
 
 // ---------------------------------------------------------------------------
-// Health check logic
+// Pipeline Stall Detection
+// ---------------------------------------------------------------------------
+
+interface StalledPipeline {
+  id: number;
+  status: string;
+  agentType: string;
+  issueId: string;
+  updatedAt: string;
+  stalledMinutes: number;
+}
+
+/**
+ * Check for stalled pipelines - active pipelines that haven't been updated
+ * within the threshold. Dispatches an alert for each stalled pipeline found.
+ */
+async function checkForStalledPipelines(): Promise<void> {
+  try {
+    const result = await queryWithRetry<StalledPipeline>(
+      `SELECT id, status, agent_type AS "agentType", issue_id AS "issueId", updated_at AS "updatedAt",
+              EXTRACT(EPOCH FROM (NOW() - updated_at)) / 60 AS "stalledMinutes"
+       FROM pipeline_runs
+       WHERE status IN ('pending', 'running')
+         AND updated_at < NOW() - ($1::int || ' minutes')::interval
+       ORDER BY updated_at ASC`,
+      [String(STALL_THRESHOLD_MINUTES)],
+    );
+
+    const stalled = result.rows;
+    if (stalled.length === 0) {
+      if (lastStallAlert.size > 0) {
+        log.info('All stalled pipelines resolved');
+        lastStallAlert.clear();
+      }
+      return;
+    }
+
+    const currentStalled = new Set(stalled.map((p) => String(p.id)));
+
+    for (const pipeline of stalled) {
+      const pipelineId = String(pipeline.id);
+      if (lastStallAlert.has(pipelineId)) {
+        log.debug({ pipelineId: pipeline.id, stalledMinutes: Math.round(pipeline.stalledMinutes) }, 'Pipeline still stalled (already alerted)');
+        continue;
+      }
+
+      log.warn(
+        { pipelineId: pipeline.id, status: pipeline.status, stalledMinutes: Math.round(pipeline.stalledMinutes), issueId: pipeline.issueId },
+        `Stalled pipeline detected: ${pipeline.id} (${pipeline.status}) - no update for ${Math.round(pipeline.stalledMinutes)} minutes`,
+      );
+
+      dispatchAlert({
+        severity: 'warning',
+        rule: 'pipeline_stall_detected',
+        message: `Pipeline ${pipeline.id} (${pipeline.agentType || 'unknown'}) for issue ${pipeline.issueId || 'unknown'} has been ${pipeline.status} with no update for ${Math.round(pipeline.stalledMinutes)} minutes`,
+        context: {
+          pipelineId: pipeline.id,
+          status: pipeline.status,
+          stalledMinutes: Math.round(pipeline.stalledMinutes),
+          issueId: pipeline.issueId,
+          agentType: pipeline.agentType,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    lastStallAlert = currentStalled;
+  } catch (err) {
+    log.error({ err: String(err) }, 'Pipeline stall detection check failed');
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Health check types
 // ---------------------------------------------------------------------------
 
 export interface HealthCheckResult {
@@ -50,10 +124,6 @@ export interface HealthCheckResult {
   };
 }
 
-/**
- * Perform a health check against the webhook_events table.
- * Computes the failure rate and returns a structured result.
- */
 export async function checkWebhookHealth(): Promise<HealthCheckResult> {
   const totalProcessed = await webhookEventsRepository.countByStatus('processed');
   const totalFailed = await webhookEventsRepository.countByStatus('failed');
@@ -92,18 +162,16 @@ async function runHealthCheck(): Promise<void> {
 
     if (result.alertTriggered) {
       if (!lastAlertTriggered) {
-        // First time alerting — log prominently
         log.error(
           {
             failureRate: result.failureRate,
             threshold: result.threshold,
             counts: result.counts,
           },
-          `[ALERT] Webhook failure rate ${result.failureRate}% exceeds ${result.threshold}% threshold — review dead letter queue`,
+          `[ALERT] Webhook failure rate ${result.failureRate}% exceeds ${result.threshold}% threshold - review dead letter queue`,
         );
         lastAlertTriggered = true;
       } else {
-        // Ongoing alert — log at warn level to avoid spam
         log.warn(
           { failureRate: result.failureRate, counts: result.counts },
           'Webhook failure rate still elevated',
@@ -124,6 +192,17 @@ async function runHealthCheck(): Promise<void> {
   }
 }
 
+/**
+ * Run stall detection check.
+ */
+async function runStallCheck(): Promise<void> {
+  try {
+    await checkForStalledPipelines();
+  } catch (err) {
+    log.error({ err: String(err) }, 'Pipeline stall detection tick failed');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Lifecycle
 // ---------------------------------------------------------------------------
@@ -131,6 +210,7 @@ async function runHealthCheck(): Promise<void> {
 /**
  * Start the periodic webhook health monitor.
  * Checks failure rate at the configured interval and logs alerts.
+ * Also monitors pipeline stalls.
  */
 export function startHealthMonitor(): void {
   if (intervalHandle) {
@@ -138,20 +218,24 @@ export function startHealthMonitor(): void {
     return;
   }
 
-  log.info({ checkIntervalMs: CHECK_INTERVAL_MS, threshold: FAILURE_RATE_THRESHOLD }, 'Starting webhook health monitor');
+  log.info({ checkIntervalMs: CHECK_INTERVAL_MS, threshold: FAILURE_RATE_THRESHOLD, stallThresholdMinutes: STALL_THRESHOLD_MINUTES }, 'Starting webhook health monitor');
 
-  // Run an initial check
   runHealthCheck().catch((err) => {
     log.error({ err: String(err) }, 'Initial webhook health check failed');
+  });
+  runStallCheck().catch((err) => {
+    log.error({ err: String(err) }, 'Initial pipeline stall check failed');
   });
 
   intervalHandle = setInterval(() => {
     runHealthCheck().catch((err) => {
       log.error({ err: String(err) }, 'Webhook health monitor tick failed');
     });
+    runStallCheck().catch((err) => {
+      log.error({ err: String(err) }, 'Pipeline stall detection tick failed');
+    });
   }, CHECK_INTERVAL_MS);
 
-  // Allow process to exit even if interval is running
   if (intervalHandle && typeof intervalHandle === 'object' && 'unref' in intervalHandle) {
     intervalHandle.unref();
   }
@@ -167,6 +251,7 @@ export function stopHealthMonitor(): void {
     clearInterval(intervalHandle);
     intervalHandle = null;
     lastAlertTriggered = false;
+    lastStallAlert.clear();
     log.info('Webhook health monitor stopped');
   }
 }

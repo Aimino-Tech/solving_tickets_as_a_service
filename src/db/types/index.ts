@@ -22,3 +22,4 @@ export type { UsageRecord, NewUsageRecord } from './usageRecords.js';
 export type { WebhookEvent, NewWebhookEvent } from './webhookEvents.js';
 export type { NotificationHistory, NewNotificationHistory } from './notificationHistory.js';
 export type { WorkspaceRow, NewWorkspace } from './workspaces.js';
+export type { NotificationPreference, NewNotificationPreference, NotificationHistory, NewNotificationHistory } from './notifications.js';

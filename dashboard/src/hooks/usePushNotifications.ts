@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  addNotification,
+  addNotification as addNotif,
   subscribe,
   getNotifications,
   getUnreadCount,
   markAsRead,
   markAllAsRead,
   clearAll,
+  startPolling,
+  stopPolling,
   type Notification,
 } from '@/services/notificationService';
 
@@ -20,22 +22,24 @@ export function usePushNotifications() {
   );
 
   useEffect(() => {
+    startPolling();
     const unsubscribe = subscribe((updated) => {
       setNotifications(updated);
       setUnreadCount(getUnreadCount());
     });
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      stopPolling();
+    };
   }, []);
 
   const requestPermission = useCallback(async (): Promise<PermissionState> => {
     if (typeof Notification === 'undefined') {
       return 'denied';
     }
-
     if (Notification.permission === 'granted') {
       return 'granted';
     }
-
     try {
       const result = await Notification.requestPermission();
       setPermission(result as PermissionState);
@@ -65,20 +69,28 @@ export function usePushNotifications() {
 
   const notify = useCallback(
     (params: { title: string; body: string; type: Notification['type']; data?: Record<string, unknown> }) => {
-      const notification = addNotification(params);
+      const notification = addNotif(params);
       showBrowserNotification(notification);
       return notification;
     },
     [showBrowserNotification],
   );
 
+  const handleMarkAsRead = useCallback(async (id: string) => {
+    await markAsRead(id);
+  }, []);
+
+  const handleMarkAllAsRead = useCallback(async () => {
+    await markAllAsRead();
+  }, []);
+
   return {
     notifications,
     unreadCount,
     permission,
     requestPermission,
-    markAsRead,
-    markAllAsRead,
+    markAsRead: handleMarkAsRead,
+    markAllAsRead: handleMarkAllAsRead,
     clearAll,
     notify,
   };
