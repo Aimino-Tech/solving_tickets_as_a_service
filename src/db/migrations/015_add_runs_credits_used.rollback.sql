@@ -1,0 +1,1 @@
+ALTER TABLE runs DROP COLUMN IF EXISTS credits_used;

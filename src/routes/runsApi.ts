@@ -30,7 +30,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const total = Number(countResult.rows[0]?.total ?? 0);
 
     res.json({
-      data: runs,
+      data: runs.map(r => ({ ...r, creditsUsed: r.creditsUsed })),
       total,
       page,
       perPage: limit,
@@ -56,7 +56,10 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    res.json(run);
+    res.json({
+      ...run,
+      creditsUsed: run.creditsUsed,
+    });
   } catch (err) {
     log.error({ err: String(err), runId: req.params.id }, 'Failed to fetch run');
     res.status(500).json({ error: 'Failed to fetch run' });
