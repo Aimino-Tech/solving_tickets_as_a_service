@@ -102,6 +102,7 @@ export interface FixRun {
   issueTitle: string;
   status: string;
   confidence: string | null;
+  creditsUsed?: number;
   prUrl: string | null;
   durationMs: number | null;
   modelUsed: string | null;
