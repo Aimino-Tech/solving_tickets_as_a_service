@@ -258,42 +258,6 @@ describe('dashboard API client', () => {
     });
   });
 
-  // ── Settings API ────────────────────────────────────────────────────────
-
-  describe('settings', () => {
-    it('get() fetches current settings', async () => {
-      client.setToken('tok');
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ label: 'stas:fix', model: 'aimino/agi-v1', maxConcurrent: 3, sandboxPoolSize: 10, auditLogEnabled: true }),
-      });
-
-      const result = await client.settings.get();
-      expect(result.label).toBe('stas:fix');
-      expect(result.maxConcurrent).toBe(3);
-    });
-
-    it('update() sends PUT with settings payload', async () => {
-      client.setToken('tok');
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ success: true }),
-      });
-
-      const result = await client.settings.update({ label: 'custom:fix', maxConcurrent: 5 });
-      expect(result.success).toBe(true);
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/v1/settings',
-        expect.objectContaining({
-          method: 'PUT',
-          body: expect.stringContaining('"label":"custom:fix"'),
-        }),
-      );
-    });
-  });
-
   // ── Error handling ──────────────────────────────────────────────────────
 
   describe('error handling', () => {

@@ -65,7 +65,7 @@ export class AuthService {
     }
   }
 
-  public generateTokens(userId: string, email: string): AuthResult {
+  public generateTokens(userId: number | string, email: string): AuthResult {
     const payload = { sub: userId, email };
 
     const secret = config.auth.jwtSecret as string;
@@ -75,7 +75,7 @@ export class AuthService {
     return {
       token,
       refreshToken,
-      user: { id: userId, email, name: null },
+      user: { id: String(userId), email, name: null },
     };
   }
 }

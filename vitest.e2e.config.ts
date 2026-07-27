@@ -17,11 +17,7 @@ export default defineConfig({
 
     // E2E tests are sequential (no parallel) to avoid port conflicts
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    singleFork: true,
 
     // Global setup/teardown (runs in main process before workers)
     globalSetup: ['tests/e2e/harness/setup.ts'],

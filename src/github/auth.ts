@@ -13,7 +13,7 @@ import {
   createInstallationOctokit,
   getInstallationToken as getInstallationTokenFromPackage,
   type GitHubAppConfig,
-// @ts-expect-error - File outside rootDir, handled at runtime
+// File outside rootDir, handled at runtime
 } from '@stas/github-client';
 
 const log = rootLogger.child({ module: 'github-auth' });
@@ -97,5 +97,5 @@ export function getAppOctokitInstance(): ReturnType<typeof createAppOctokit> {
   return getAppOctokit();
 }
 
-// @ts-expect-error - File outside rootDir, handled at runtime
+// File outside rootDir, handled at runtime
 export { createAuth } from '@stas/github-client';

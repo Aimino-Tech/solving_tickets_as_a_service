@@ -608,13 +608,6 @@ function buildConfig(env: ParsedEnv) {
       installationId: env.TRACKER_INSTALLATION_ID || 0,
     },
 
-    opensymphony: {
-      dispatchUrl: env.OPEN_SYMPHONY_DISPATCH_URL,
-      apiKey: env.OPEN_SYMPHONY_API_KEY,
-      tenant: env.OPEN_SYMPHONY_TENANT,
-      celeryPipeline: env.OPEN_SYMPHONY_CELERY_PIPELINE,
-    },
-
     // ── Supabase ───────────────────────────────────────────────────────────
     supabase: {
       url: env.SUPABASE_URL,
@@ -669,20 +662,14 @@ function buildConfig(env: ParsedEnv) {
       enabled: env.OPENSYMPHONY_ENABLED,
       port: env.OPENSYMPHONY_PORT,
       host: env.OPENSYMPHONY_HOST,
+      dispatchUrl: env.OPENSYMPHONY_DISPATCH_URL,
+      apiKey: env.OPENSYMPHONY_API_KEY,
+      tenant: env.OPENSYMPHONY_TENANT,
       celeryPipeline: {
         url: env.OPENSYMPHONY_CELERY_PIPELINE_URL,
         apiKey: env.OPENSYMPHONY_CELERY_PIPELINE_API_KEY,
         enabled: env.OPENSYMPHONY_CELERY_PIPELINE_ENABLED,
       },
-      dispatchUrl: env.OPENSYMPHONY_DISPATCH_URL,
-      apiKey: env.OPENSYMPHONY_API_KEY,
-      tenant: env.OPENSYMPHONY_TENANT,
-    },
-
-    auth: {
-      jwtSecret: env.JWT_SECRET,
-      jwtExpiresIn: env.JWT_EXPIRES_IN,
-      jwtRefreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
     },
 
     osy: {
