@@ -2,6 +2,8 @@ export interface User {
   id: number;
   email: string;
   name: string | null;
+  username?: string;
+  avatarUrl?: string;
   createdAt: string;
 }
 
@@ -15,6 +17,7 @@ export interface Run {
   modelUsed?: string;
   costCents?: number;
   durationSeconds?: number;
+  durationMs?: number;
   prUrl?: string;
   errorMessage?: string;
   createdAt: string;
