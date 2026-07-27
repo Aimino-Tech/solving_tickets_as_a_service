@@ -150,10 +150,38 @@ export interface CostCalculation {
   }>;
 }
 
+export interface LitellmUsage {
+  remainingBudget: number;
+  maxBudget: number;
+  budgetResetAt: string | null;
+  tokensToday: { input: number; output: number; total: number };
+  requestsToday: number;
+  costToday: number;
+  tokensMonth: { input: number; output: number; total: number };
+  requestsMonth: number;
+  costMonth: number;
+  rateLimit: {
+    rpmRemaining: number;
+    tpmRemaining: number;
+    rpmLimit: number;
+    tpmLimit: number;
+    resetAt: string | null;
+  };
+}
+
 export interface PricingData {
   generatedAt: string;
   plans: PricingPlan[];
   competitors: CompetitorPrice[];
+}
+
+export interface LitellmUsage {
+  configured: boolean;
+  message?: string;
+  budget: { remainingBudget: number; maxBudget: number; spendInCurrentMonth: number } | null;
+  todayTokens: { input: number; output: number; total: number };
+  thisMonthTokens: { input: number; output: number; total: number };
+  rateLimit: { rpmRemaining: number; rpmLimit: number; tpmRemaining: number; tpmLimit: number; resetAt: string | null } | null;
 }
 
 export interface VsComparisonData {
