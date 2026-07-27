@@ -102,6 +102,9 @@ export interface StorageBackend {
   deleteTeam(id: number): Promise<boolean>;
   listTeams(accountId?: number, limit?: number, offset?: number): Promise<Team[]>;
 
+  recordFeedback?(data: { runId: string; rating: string; comment?: string; category?: string; userId?: number }): Promise<void>;
+  updateRunStatus?(runId: string, status: string): Promise<void>;
+
   // -------------------------------------------------------------------------
   // Run History (Drizzle ORM schema)
   // -------------------------------------------------------------------------

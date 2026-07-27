@@ -245,6 +245,13 @@ export const runs = {
     );
   },
   get: (id: string) => request<FixRun>(`/v1/runs/${id}`),
+  feedback: (id: string, rating: 'good' | 'bad' | 'neutral', comment?: string, category?: string) =>
+    request<{ success: boolean }>(`/v1/runs/${id}/feedback`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, comment, category }),
+    }),
+  cancel: (id: string) =>
+    request<{ success: boolean }>(`/v1/runs/${id}/cancel`, { method: 'POST' }),
 };
 
 export interface GitHubInstallation {

@@ -68,6 +68,63 @@ router.delete('/repos/:id', async (_req: Request, res: Response) => {
   res.status(501).json({ error: 'Repository management requires premium subscription' });
 });
 
+router.post('/runs/:id/feedback', async (req: Request, res: Response) => {
+  try {
+    const runId = req.params.id;
+    const { rating, comment, category } = req.body;
+    if (!rating || !['good', 'bad', 'neutral'].includes(rating)) {
+      res.status(400).json({ error: 'rating must be "good", "bad", or "neutral"' });
+      return;
+    }
+    const { createStorage } = await import('../storage/index.js');
+    const storage = await createStorage();
+    if (!storage) { res.status(500).json({ error: 'Storage not available' }); return; }
+    await storage.recordFeedback?.({ runId, rating, comment, category, userId: req.user?.accountId });
+    log.info({ runId, rating, category }, 'User feedback recorded');
+    res.json({ success: true });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to record feedback');
+    res.status(500).json({ error: 'Failed to record feedback' });
+  }
+});
+
+router.post('/runs/:id/cancel', async (req: Request, res: Response) => {
+  try {
+    const runId = req.params.id;
+    const { createStorage } = await import('../storage/index.js');
+    const storage = await createStorage();
+    if (!storage) { res.status(500).json({ error: 'Storage not available' }); return; }
+    await storage.updateRunStatus?.(runId, 'cancelled');
+    log.info({ runId }, 'Run cancelled by user');
+    res.json({ success: true });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to cancel run');
+    res.status(500).json({ error: 'Failed to cancel run' });
+  }
+});
+
+router.post('/escalation', async (req: Request, res: Response) => {
+  try {
+    const { issueKey, reason, details } = req.body;
+    if (!issueKey || !reason) {
+      res.status(400).json({ error: 'issueKey and reason are required' });
+      return;
+    }
+    const { dispatchEscalation } = await import('../escalation/index.js');
+    const result = await dispatchEscalation({
+      level: 'warning',
+      channel: 'slack',
+      title: `User escalation: ${reason.slice(0, 100)}`,
+      message: `User requested escalation for ${issueKey}.\nReason: ${reason}\nDetails: ${details ? JSON.stringify(details) : 'N/A'}`,
+      issueKey,
+    });
+    res.json(result);
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to handle escalation request');
+    res.status(500).json({ error: 'Failed to handle escalation request' });
+  }
+});
+
 router.get('/stats', async (_req: Request, res: Response) => {
   try {
     const { createStorage } = await import('../storage/index.js');
