@@ -12,5 +12,6 @@ export { RunHistoryRepository, runHistoryRepository } from './RunHistoryReposito
 export { RunsRepository, runsRepository } from './RunsRepository.js';
 export { TeamsRepository, teamsRepository } from './TeamsRepository.js';
 export { UsageRepository, usageRepository } from './UsageRepository.js';
+export { NotificationHistoryRepository, notificationHistoryRepository } from './NotificationHistoryRepository.js';
 export { WebhookEventsRepository, webhookEventsRepository } from './WebhookEventsRepository.js';
 export { WorkspaceRepository, workspaceRepository } from './WorkspaceRepository.js';

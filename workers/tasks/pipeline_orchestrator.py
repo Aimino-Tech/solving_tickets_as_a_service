@@ -90,6 +90,20 @@ def _run_fix_mode(issue_id: str, identifier: str, ctx: dict) -> dict:
             merge_sha = merge_result.get("sha", "")[:8]
             logger.info("PR merged: sha=%s", merge_sha)
             _post_linear_comment(issue_id, f"✅ **STAS**: PR merged — `{merge_sha}`")
+
+            # Deduct credits for the completed fix
+            try:
+                import httpx
+                account_id = ctx.get("account_id")
+                if account_id:
+                    with httpx.Client(timeout=10.0) as client:
+                        client.post(
+                            "http://localhost:3000/api/v1/admin/credits/adjust",
+                            headers={"x-admin-key": os.getenv("ADMIN_API_KEY", ""), "Content-Type": "application/json"},
+                            json={"accountId": account_id, "amount": -1, "description": f"Fix completed for {identifier}", "type": "adjustment"},
+                        )
+            except Exception as e:
+                logger.warning("Credit deduction failed (non-fatal): %s", e)
     except Exception as exc:
         logger.warning("Merge failed for %s: %s", identifier, exc)
         _post_linear_comment(issue_id, f"⚠️ **STAS**: Merge issue — {exc}")
