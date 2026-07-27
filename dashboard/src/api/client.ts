@@ -1,14 +1,4 @@
-import type {
-  DashboardStats,
-  AuditEntry,
-  PaginatedResponse,
-  BenchmarkEntry,
-  BenchmarkPrice,
-  KpiResponse,
-  PricingData,
-  CostCalculation,
-  VsComparisonData,
-} from './types';
+import type { Run, DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice, KpiResponse, PricingData, CostCalculation, VsComparisonData } from '@/api/types';
 
 const API_BASE = '/api';
 
@@ -106,7 +96,6 @@ export interface AuthResult {
   user: { id: number; email: string; name: string | null };
 }
 
-
 export interface CreditBalance {
   accountId: number;
   balance: number;
@@ -142,8 +131,6 @@ export interface BillingPlan {
   concurrentFixes?: number;
 }
 
-// -- Health types --
-
 export interface HealthCheck {
   status: string;
   latencyMs?: number;
@@ -158,8 +145,6 @@ export interface HealthResponse {
   uptime?: number;
   memoryUsage?: NodeJS.MemoryUsage;
 }
-
-// -- SLA metric types --
 
 export interface SLAByTier {
   count: number;
@@ -182,6 +167,7 @@ export interface SLAMetrics {
 }
 
 export const auth = {
+  loginUrl: () => '/api/auth/github',
   register: (email: string, password: string, name?: string) =>
     request<AuthResult>('/v1/auth/register', {
       method: 'POST',
@@ -220,19 +206,6 @@ export const credits = {
     ),
 };
 
-export interface LitellmUsage {
-  configured: boolean;
-  message?: string;
-  budget: { remainingBudget: number; maxBudget: number; spendInCurrentMonth: number } | null;
-  todayTokens: { input: number; output: number; total: number };
-  thisMonthTokens: { input: number; output: number; total: number };
-  rateLimit: { rpmRemaining: number; rpmLimit: number; tpmRemaining: number; tpmLimit: number; resetAt: string | null } | null;
-}
-
-export const litellm = {
-  usage: () => request<LitellmUsage>('/v1/litellm/usage'),
-};
-
 export const runs = {
   list: (params?: {
     page?: number;
@@ -255,6 +228,21 @@ export const runs = {
     );
   },
   get: (id: string) => request<Run>(`/v1/runs/${id}`),
+  feedbackSubmit: (id: string, verdict: string, comment?: string) =>
+    request<{ success: boolean }>(`/v1/runs/${id}/feedback`, {
+      method: 'POST',
+      body: JSON.stringify({ verdict, comment }),
+    }),
+  escalate: (id: string, reason: string) =>
+    request<{ success: boolean }>(`/v1/runs/${id}/escalate`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  rollback: (id: string, reason: string) =>
+    request<{ success: boolean }>(`/v1/runs/${id}/rollback`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
 };
 
 export interface GitHubInstallation {
@@ -284,7 +272,7 @@ export interface GitHubConnectionStatus {
 
 export const repos = {
   list: () =>
-    request<{ id: string; owner: string; repo: string; active: boolean }[]>('/repos'),
+    request<{ id: string; owner: string; repo: string; active: boolean; createdAt: string }[]>('/repos'),
   connect: (body: { owner: string; repo: string; installationId?: number }) =>
     request<{ id: string; owner: string; repo: string; active: boolean }>('/repos', {
       method: 'POST',
@@ -339,7 +327,45 @@ export const billing = {
     }),
 };
 
-// -- Health API --
+export interface WizardProgress {
+  tenantId: string;
+  state: 'not_started' | 'in_progress' | 'completed' | 'skipped';
+  currentStep: string;
+  steps: {
+    githubInstalled: boolean;
+    repoSelected: boolean;
+    billingSetup: boolean;
+    teamSetup: boolean;
+  };
+  completedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface WizardConfig {
+  enabled: boolean;
+  requiredSteps: string[];
+  githubAppUrl: string;
+}
+
+export const onboarding = {
+  getStatus: () =>
+    request<{ progress: WizardProgress; config: WizardConfig }>('/v1/onboarding'),
+  start: () =>
+    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding', { method: 'POST' }),
+  completeStep: (step: string, body?: Record<string, unknown>) =>
+    request<{ success: boolean; progress: WizardProgress }>(
+      `/v1/onboarding/step/${step}`,
+      { method: 'POST', body: body ? JSON.stringify(body) : undefined },
+    ),
+  skip: () =>
+    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/skip', { method: 'POST' }),
+  reset: () =>
+    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/reset', { method: 'POST' }),
+  getConfig: () =>
+    request<{ config: WizardConfig }>('/v1/onboarding/config'),
+};
 
 export const health = {
   getStatus: () =>
@@ -348,20 +374,14 @@ export const health = {
     request<HealthResponse>('/health/verbose'),
 };
 
-// -- SLA API --
-
 export const sla = {
   getMetrics: () =>
     request<SLAMetrics>('/v1/sla/metrics'),
 };
 
-// -- Stats API --
-
 export const stats = {
   get: () => request<DashboardStats>('/v1/stats'),
 };
-
-// -- Audit API --
 
 export const audit = {
   list: (params?: { page?: number; perPage?: number }) => {
@@ -372,14 +392,10 @@ export const audit = {
   },
 };
 
-// -- Benchmarks API --
-
 export const benchmarks = {
   get: () => request<{ competitors: BenchmarkEntry[] }>('/v1/benchmarks'),
   getPrices: () => request<{ prices: BenchmarkPrice[] }>('/v1/benchmarks/prices'),
 };
-
-// -- KPI API --
 
 export const kpi = {
   get: (params?: { days?: number }) => {
@@ -394,15 +410,11 @@ export const kpi = {
   },
 };
 
-// -- Settings API --
-
 export const settings = {
   get: () => request<{ label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }>('/v1/settings'),
   update: (data: { label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }) =>
     request<{ success: boolean }>('/v1/settings', { method: 'PUT', body: JSON.stringify(data) }),
 };
-
-// -- Pricing API --
 
 export const pricing = {
   get: () => request<PricingData>('/v1/pricing'),
