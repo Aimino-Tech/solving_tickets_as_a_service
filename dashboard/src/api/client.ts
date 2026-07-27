@@ -385,42 +385,186 @@ export const sla = {
     request<SLAMetrics>('/v1/sla/metrics'),
 };
 
-export interface WizardProgress {
-  tenantId: string;
-  state: 'not_started' | 'in_progress' | 'completed' | 'skipped';
-  currentStep: string;
-  steps: {
-    githubInstalled: boolean;
-    repoSelected: boolean;
-    billingSetup: boolean;
-    teamSetup: boolean;
-  };
-  completedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  metadata?: Record<string, unknown>;
-}
+// -- Settings API --
 
-export interface WizardConfig {
-  enabled: boolean;
-  requiredSteps: string[];
-  githubAppUrl: string;
-}
-
-export const onboarding = {
-  getStatus: () =>
-    request<{ progress: WizardProgress; config: WizardConfig }>('/v1/onboarding'),
-  start: () =>
-    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding', { method: 'POST' }),
-  completeStep: (step: string, body?: Record<string, unknown>) =>
-    request<{ success: boolean; progress: WizardProgress }>(
-      `/v1/onboarding/step/${step}`,
-      { method: 'POST', body: body ? JSON.stringify(body) : undefined },
-    ),
-  skip: () =>
-    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/skip', { method: 'POST' }),
-  reset: () =>
-    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/reset', { method: 'POST' }),
-  getConfig: () =>
-    request<{ config: WizardConfig }>('/v1/onboarding/config'),
+export const settings = {
+  get: () =>
+    request<{
+      label: string;
+      model: string;
+      maxConcurrent: number;
+      sandboxPoolSize: number;
+      auditLogEnabled: boolean;
+    }>('/v1/settings'),
+  update: (data: Record<string, unknown>) =>
+    request<{ success: boolean }>('/v1/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 };
+
+// -- Stats / Analytics API --
+
+export const stats = {
+  get: () =>
+    request<{
+      totalRuns: number;
+      passRate: number;
+      runsByDay: { date: string; count: number; passed: number }[];
+      costByDay: { date: string; costCents: number }[];
+      fixRateByWeek: { week: string; rate: number }[];
+    }>('/v1/stats'),
+};
+
+// -- Audit Log API --
+
+export const audit = {
+  list: (params: { page: number; perPage: number }) =>
+    request<{
+      data: {
+        id: string;
+        action: string;
+        actor: string;
+        target?: string;
+        details?: Record<string, unknown>;
+        createdAt: string;
+      }[];
+      total: number;
+      page: number;
+      perPage: number;
+      totalPages: number;
+    }>(`/v1/audit?page=${params.page}&perPage=${params.perPage}`),
+};
+
+// -- Benchmarks API --
+
+export const benchmarks = {
+  get: () =>
+    request<{
+      competitors: {
+        agent: string;
+        passRate: number;
+        costPerFixCents: number;
+        agentNative: boolean;
+        oss: boolean;
+        selfHostable: boolean;
+        note?: string;
+      }[];
+    }>('/v1/benchmarks'),
+  getPrices: () =>
+    request<{
+      prices: {
+        agent: string;
+        model: string;
+        costPerFixCents: number;
+        monthlyMinCents: number;
+        monthlyMaxFixes: number;
+      }[];
+    }>('/v1/benchmarks/prices'),
+};
+
+// -- KPI API --
+
+export const kpi = {
+  get: (params: { days: number }) =>
+    request<{
+      metrics: {
+        id: number;
+        snapshotDate: string;
+        activeReposMa: number;
+        fixCompletionRate: number;
+        totalRuns: number;
+        successfulRuns: number;
+        freeAccounts: number;
+        paidAccounts: number;
+        freeToPaidConversion: number;
+        netRevenueCents: number;
+        churnRate: number;
+        churnedAccounts: number;
+        viralCoefficient: number;
+        referredAccounts: number;
+        totalNewAccounts: number;
+      }[];
+      count: number;
+      generatedAt: string;
+    }>(`/v1/admin/kpi?days=${params.days}`),
+  exportUrl: (days: number) =>
+    `/api/v1/admin/kpi/export?days=${days}`,
+};
+
+// -- Pricing API --
+
+export const pricing = {
+  get: () =>
+    request<{
+      plans: {
+        id: string;
+        name: string;
+        description: string;
+        price: string;
+        period: string;
+        fixes: string;
+        monthlyFixLimit: number;
+        concurrentFixes: number;
+        premiumModels: boolean;
+        prioritySupport: boolean;
+        customWebhooks: boolean;
+        sla: boolean;
+        features: string[];
+        cta: string;
+        highlighted: boolean;
+      }[];
+      competitors: {
+        competitor: string;
+        monthlyCostCents: number;
+        costPerFixCents: number;
+        fixesPerMonth: number;
+        passRate: number;
+        selfHosted: boolean;
+        openSource: boolean;
+        ourAgi: boolean;
+      }[];
+    }>('/v1/pricing'),
+  calculate: (fixes: number, tier: string) =>
+    request<{
+      fixesPerMonth: number;
+      monthlyCostCents: number;
+      costPerFixCents: number;
+      vsCompetitors: {
+        name: string;
+        monthlyCostCents: number;
+        savingsCents: number;
+        savingsPercent: number;
+      }[];
+    }>(`/v1/pricing/calculate?fixes=${fixes}&tier=${tier}`),
+  vs: (competitor: string) =>
+    request<{
+      competitor: string;
+      competitorName: string;
+      tagline: string;
+      ourAdvantage: string;
+      categories: {
+        name: string;
+        items: {
+          feature: string;
+          us: string;
+          them: string;
+          advantage: 'us' | 'them' | 'tie';
+        }[];
+      }[];
+      priceComparison: {
+        ourMonthlyCents: number;
+        theirMonthlyCents: number;
+        ourPerFixCents: number;
+        theirPerFixCents: number;
+        annualSavingsCents: number;
+      };
+      benchmarkComparison: {
+        ourPassRate: number;
+        theirPassRate: number;
+        ourCostPerFixCents: number;
+        theirCostPerFixCents: number;
+      };
+    }>(`/v1/pricing/vs/${competitor}`),
+};
+
