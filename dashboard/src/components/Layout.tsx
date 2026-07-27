@@ -28,6 +28,7 @@ export default function Layout() {
     { to: '/audit', label: t('nav.audit'), icon: '☰' },
     { to: '/settings', label: t('nav.settings'), icon: '⚙' },
     { to: '/admin/runs', label: t('nav.admin') + ' Runs', icon: '⚡' },
+    { to: '/usage', label: 'Usage', icon: '📈' },
   ] as const;
 
   const pageTitle =

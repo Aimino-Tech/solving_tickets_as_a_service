@@ -1,3 +1,5 @@
+import type { Run, DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice, KpiResponse, PricingData, CostCalculation, VsComparisonData } from '@/api/types';
+
 const API_BASE = '/api';
 
 function getToken(): string | null {
@@ -351,25 +353,53 @@ export interface WizardConfig {
   githubAppUrl: string;
 }
 
-export const onboarding = {
-  getStatus: () =>
-    request<{ progress: WizardProgress; config: WizardConfig }>('/v1/onboarding'),
-  start: () =>
-    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding', { method: 'POST' }),
-  completeStep: (step: string, body?: Record<string, unknown>) =>
-    request<{ success: boolean; progress: WizardProgress }>(
-      `/v1/onboarding/step/${step}`,
-      { method: 'POST', body: body ? JSON.stringify(body) : undefined },
-    ),
-  skip: () =>
-    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/skip', { method: 'POST' }),
-  reset: () =>
-    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/reset', { method: 'POST' }),
-  getConfig: () =>
-    request<{ config: WizardConfig }>('/v1/onboarding/config'),
+export const stats = {
+  get: () => request<DashboardStats>('/v1/stats'),
 };
 
-// -- Health API --
+export const audit = {
+  list: (params?: { page?: number; perPage?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.perPage) qs.set('perPage', String(params.perPage));
+    const query = qs.toString();
+    return request<PaginatedResponse<AuditEntry>>(`/v1/audit${query ? `?${query}` : ''}`);
+  },
+};
+
+export const benchmarks = {
+  get: () => request<{ competitors: BenchmarkEntry[] }>('/v1/benchmarks'),
+  getPrices: () => request<{ prices: BenchmarkPrice[] }>('/v1/benchmarks/prices'),
+};
+
+export const kpi = {
+  get: (params?: { days?: number; from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.days) qs.set('days', String(params.days));
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const query = qs.toString();
+    return request<KpiResponse>(`/v1/kpi${query ? `?${query}` : ''}`);
+  },
+  exportUrl: (days?: number) => {
+    const qs = days ? `?days=${days}` : '';
+    return `/api/v1/kpi/export${qs}`;
+  },
+};
+
+export const settings = {
+  get: () => request<{ label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }>('/v1/settings'),
+  update: (data: { label?: string; model?: string; maxConcurrent?: number; sandboxPoolSize?: number; auditLogEnabled?: boolean }) =>
+    request<{ success: boolean }>('/v1/settings', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+export const pricing = {
+  get: () => request<PricingData>('/v1/pricing'),
+  calculate: (fixesPerMonth: number, tier: string) =>
+    request<CostCalculation>('/v1/pricing/calculate', { method: 'POST', body: JSON.stringify({ fixesPerMonth, tier }) }),
+  vs: (competitor: string) =>
+    request<VsComparisonData>(`/v1/pricing/vs/${competitor}`),
+};
 
 export const health = {
   getStatus: () =>
@@ -378,34 +408,10 @@ export const health = {
     request<HealthResponse>('/health/verbose'),
 };
 
-// -- SLA API --
-
 export const sla = {
   getMetrics: () =>
     request<SLAMetrics>('/v1/sla/metrics'),
 };
-
-export interface WizardProgress {
-  tenantId: string;
-  state: 'not_started' | 'in_progress' | 'completed' | 'skipped';
-  currentStep: string;
-  steps: {
-    githubInstalled: boolean;
-    repoSelected: boolean;
-    billingSetup: boolean;
-    teamSetup: boolean;
-  };
-  completedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface WizardConfig {
-  enabled: boolean;
-  requiredSteps: string[];
-  githubAppUrl: string;
-}
 
 export const onboarding = {
   getStatus: () =>
@@ -423,4 +429,36 @@ export const onboarding = {
     request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/reset', { method: 'POST' }),
   getConfig: () =>
     request<{ config: WizardConfig }>('/v1/onboarding/config'),
+};
+
+// -- LiteLLM usage monitoring --
+
+export interface LiteLLMBudget {
+  maxBudget: number | null;
+  spent: number;
+  remaining: number | null;
+}
+
+export interface LiteLLMDailyUsage {
+  date: string;
+  cost: number;
+  inputTokens: number;
+  outputTokens: number;
+  requests: number;
+}
+
+export interface LiteLLMRateLimits {
+  remainingRequests: number | null;
+  remainingTokens: number | null;
+  resetAt: string | null;
+}
+
+export interface LiteLLMUsageData {
+  budget: LiteLLMBudget;
+  dailyUsage: LiteLLMDailyUsage[];
+  rateLimits: LiteLLMRateLimits;
+}
+
+export const litellm = {
+  usage: () => request<LiteLLMUsageData>('/v1/usage/litellm'),
 };

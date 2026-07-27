@@ -25,6 +25,7 @@ import PricingPage from '@/pages/PricingPage';
 import VsPage from '@/pages/VsPage';
 import AdminRuns from '@/pages/AdminRuns';
 import LiveView from '@/pages/LiveView';
+import Usage from '@/pages/Usage';
 import NotFound from '@/pages/NotFound';
 import Error500 from '@/pages/Error500';
 import WizardContainer from '@/pages/onboarding/WizardContainer';
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="audit" element={<AuditLog />} />
           <Route path="admin/runs" element={<AdminRuns />} />
           <Route path="liveview" element={<LiveView />} />
+          <Route path="usage" element={<Usage />} />
         </Route>
         <Route path="/500" element={<Error500 />} />
         <Route path="*" element={<NotFound />} />

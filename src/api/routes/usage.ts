@@ -10,6 +10,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import { UsageTracker } from '../../core/usage-tracker.js';
+import { LiteLLMClient } from '../../core/litellm-client.js';
 import { rootLogger } from '../../utils/logger.js';
 
 const log = rootLogger.child({ module: 'usage-api' });
@@ -80,6 +81,32 @@ router.get('/', async (req: Request, res: Response) => {
   } catch (err) {
     log.error({ err: String(err), userId: resolveUserId(req) }, 'Failed to get usage');
     res.status(500).json({ error: 'Failed to get usage' });
+  }
+});
+
+/**
+ * GET /api/v1/usage/litellm
+ *
+ * Returns LiteLLM usage data including budget, spend, and daily activity
+ * for the authenticated user. Falls back gracefully if LiteLLM is unreachable.
+ */
+router.get('/litellm', async (req: Request, res: Response) => {
+  try {
+    const userId = resolveUserId(req);
+    const client = new LiteLLMClient();
+    const data = await client.getUsage(userId);
+    res.json({
+      userId,
+      ...data,
+    });
+  } catch (err) {
+    log.warn({ err: String(err), userId: resolveUserId(req) }, 'LiteLLM API unavailable');
+    res.json({
+      userId: resolveUserId(req),
+      budget: { maxBudget: null, spent: 0, remaining: null },
+      dailyUsage: [],
+      rateLimits: { remainingRequests: null, remainingTokens: null, resetAt: null },
+    });
   }
 });
 
