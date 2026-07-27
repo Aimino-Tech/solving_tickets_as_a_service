@@ -68,7 +68,7 @@ export default function VsPage() {
     if (!slug) { setLoading(false); return; }
     setLoading(true);
     setError(null);
-    pricing.vs(slug).then((result) => { setData(result); setLoading(false); }).catch((err) => { setError(err.message); setLoading(false); });
+    pricing.vs(slug).then((result: import('@/api/types').VsComparisonData) => { setData(result); setLoading(false); }).catch((err: Error) => { setError(err.message); setLoading(false); });
   }, [slug]);
 
   if (!slug) {

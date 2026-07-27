@@ -14,7 +14,7 @@ export default function BillingSetup({ progress, onComplete, onSkip }: Props) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    billing.listPlans().then(setPlans).catch(() => {});
+    billing.listPlans().then((res) => setPlans(res.plans)).catch(() => {});
   }, []);
 
   async function handleSelect() {
@@ -67,7 +67,7 @@ export default function BillingSetup({ progress, onComplete, onSkip }: Props) {
               <p className="mt-1 text-3xl font-bold text-gray-900">{plan.price}</p>
               <p className="text-sm text-gray-500">per {plan.period}</p>
               <ul className="mt-4 space-y-2">
-                {plan.features.slice(0, 3).map((f) => (
+                {(plan.features ?? []).slice(0, 3).map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
                     <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />

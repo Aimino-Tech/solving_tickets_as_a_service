@@ -38,13 +38,13 @@ export default function AuditLog() {
     setError(null);
     audit
       .list({ page: p, perPage: 30 })
-      .then((res) => {
+      .then((res: { data: AuditEntry[]; total: number; totalPages: number; page: number }) => {
         setEntries(res.data);
         setTotal(res.total);
         setTotalPages(res.totalPages);
         setPage(res.page);
       })
-      .catch((err) => setError(err.message))
+      .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }
 

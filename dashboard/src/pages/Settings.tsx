@@ -43,11 +43,11 @@ export default function Settings() {
   useEffect(() => {
     settings
       .get()
-      .then((data) => {
+      .then((data: { label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }) => {
         setConfig(data);
         setForm(data);
       })
-      .catch((err) => setError(err.message))
+      .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
 
     fetchDeletionStatus();

@@ -16,7 +16,7 @@ export default function RunDetail() {
     runs
       .get(id)
       .then(setRun)
-      .catch((err) => setError(err.message));
+      .catch((err: Error) => setError(err.message));
   }, [id]);
 
   if (error) {

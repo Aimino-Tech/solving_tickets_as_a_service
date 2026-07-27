@@ -1,3 +1,5 @@
+import type { Run, PaginatedResponse } from '@/api/types';
+
 const API_BASE = '/api';
 
 function getToken(): string | null {
@@ -94,20 +96,7 @@ export interface AuthResult {
   user: { id: number; email: string; name: string | null };
 }
 
-export interface FixRun {
-  id: string;
-  repoOwner: string;
-  repoName: string;
-  issueNumber: number;
-  issueTitle: string;
-  status: string;
-  confidence: string | null;
-  prUrl: string | null;
-  durationMs: number | null;
-  modelUsed: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+
 
 export interface CreditBalance {
   accountId: number;
@@ -164,6 +153,7 @@ export const auth = {
     }),
   logout: () =>
     request<{ message: string }>('/v1/auth/logout', { method: 'POST' }),
+  loginUrl: () => '/api/auth/github',
 };
 
 export const credits = {
@@ -200,16 +190,16 @@ export const runs = {
     if (params?.from) qs.set('from', params.from);
     if (params?.to) qs.set('to', params.to);
     const query = qs.toString();
-    return request<{ data: FixRun[]; total: number; page: number; perPage: number; totalPages: number }>(
+    return request<{ data: Run[]; total: number; page: number; perPage: number; totalPages: number }>(
       `/v1/runs${query ? `?${query}` : ''}`,
     );
   },
-  get: (id: string) => request<FixRun>(`/v1/runs/${id}`),
+  get: (id: string) => request<Run>(`/v1/runs/${id}`),
 };
 
 export const repos = {
   list: () =>
-    request<{ id: string; owner: string; repo: string; active: boolean }[]>('/repos'),
+    request<{ id: string; owner: string; repo: string; active: boolean; installationId?: number; createdAt: string }[]>('/repos'),
   connect: (body: { owner: string; repo: string; installationId?: number }) =>
     request<{ id: string; owner: string; repo: string; active: boolean }>('/repos', {
       method: 'POST',
@@ -231,44 +221,52 @@ export const billing = {
     }),
 };
 
-export interface WizardProgress {
-  tenantId: string;
-  state: 'not_started' | 'in_progress' | 'completed' | 'skipped';
-  currentStep: string;
-  steps: {
-    githubInstalled: boolean;
-    repoSelected: boolean;
-    billingSetup: boolean;
-    teamSetup: boolean;
-  };
-  completedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  metadata?: Record<string, unknown>;
-}
+export const stats = {
+  get: () => request<import('@/api/types').DashboardStats>('/v1/me/stats'),
+};
 
-export interface WizardConfig {
-  enabled: boolean;
-  requiredSteps: string[];
-  githubAppUrl: string;
-}
-
-export const onboarding = {
-  getStatus: () =>
-    request<{ progress: WizardProgress; config: WizardConfig }>('/v1/onboarding'),
-  start: () =>
-    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding', { method: 'POST' }),
-  completeStep: (step: string, body?: Record<string, unknown>) =>
-    request<{ success: boolean; progress: WizardProgress }>(
-      `/v1/onboarding/step/${step}`,
-      { method: 'POST', body: body ? JSON.stringify(body) : undefined },
+export const audit = {
+  list: (params?: { page?: number; perPage?: number }) =>
+    request<import('@/api/types').PaginatedResponse<import('@/api/types').AuditEntry>>(
+      `/v1/me/audit-log?page=${params?.page ?? 1}&perPage=${params?.perPage ?? 30}`,
     ),
-  skip: () =>
-    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/skip', { method: 'POST' }),
-  reset: () =>
-    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/reset', { method: 'POST' }),
-  getConfig: () =>
-    request<{ config: WizardConfig }>('/v1/onboarding/config'),
+};
+
+export const benchmarks = {
+  get: () => request<{ competitors: import('@/api/types').BenchmarkEntry[] }>('/benchmarks'),
+  getPrices: () => request<{ prices: import('@/api/types').BenchmarkPrice[] }>('/benchmarks/prices'),
+};
+
+export const kpi = {
+  get: (params?: { days?: number }) =>
+    request<import('@/api/types').KpiResponse>(`/kpi?days=${params?.days ?? 90}`),
+  exportUrl: (days?: number) => `/kpi/export?days=${days ?? 90}`,
+};
+
+export const settings = {
+  get: () =>
+    request<{
+      label: string;
+      model: string;
+      maxConcurrent: number;
+      sandboxPoolSize: number;
+      auditLogEnabled: boolean;
+    }>('/v1/me/settings'),
+  update: (data: Record<string, unknown>) =>
+    request<{ success: boolean }>('/v1/me/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+};
+
+export const pricing = {
+  get: () => request<import('@/api/types').PricingData>('/pricing'),
+  calculate: (fixesPerMonth: number, tier: string) =>
+    request<import('@/api/types').CostCalculation>(
+      `/pricing/calculate?fixes=${fixesPerMonth}&tier=${tier}`,
+    ),
+  vs: (slug: string) =>
+    request<import('@/api/types').VsComparisonData>(`/pricing/vs/${slug}`),
 };
 
 export interface WizardProgress {

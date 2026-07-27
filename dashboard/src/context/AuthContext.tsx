@@ -42,14 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await auth.login(email, password);
     setToken(result.token);
     setRefreshToken(result.refreshToken);
-    setUser({ id: result.user.id, email: result.user.email, name: result.user.name });
+    setUser({ id: result.user.id, email: result.user.email, name: result.user.name, createdAt: '' });
   }, []);
 
   const register = useCallback(async (email: string, password: string, name?: string) => {
     const result = await auth.register(email, password, name);
     setToken(result.token);
     setRefreshToken(result.refreshToken);
-    setUser({ id: result.user.id, email: result.user.email, name: result.user.name });
+    setUser({ id: result.user.id, email: result.user.email, name: result.user.name, createdAt: '' });
   }, []);
 
   const logout = useCallback(async () => {
