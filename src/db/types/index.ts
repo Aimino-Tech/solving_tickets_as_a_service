@@ -21,3 +21,4 @@ export type { Team, NewTeam, TeamMember, NewTeamMember } from './teams.js';
 export type { UsageRecord, NewUsageRecord } from './usageRecords.js';
 export type { WebhookEvent, NewWebhookEvent } from './webhookEvents.js';
 export type { WorkspaceRow, NewWorkspace } from './workspaces.js';
+export type { NotificationPreference, NewNotificationPreference, NotificationHistory, NewNotificationHistory } from './notifications.js';

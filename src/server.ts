@@ -63,6 +63,7 @@ import n8nRouter from './routes/n8n.js';
 import { authRouter } from './auth/index.js';
 import { billingRouter } from './billing/index.js';
 import { onboardingRouter } from './routes/onboarding.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { pipelineRouter } from './routes/pipeline.js';
 import { plgRouter } from './routes/plg.js';
 import { pricingRouter } from './routes/pricing.js';
@@ -723,6 +724,14 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Onboarding API ──────────────────────────────────────────────
   app.use('/api/v1/onboarding', onboardingRouter);
+
+  // ── Notifications API ────────────────────────────────────────────
+  // GET    /api/v1/notifications/preferences         — List user preferences
+  // PUT    /api/v1/notifications/preferences         — Upsert preference
+  // GET    /api/v1/notifications/history             — List notification history
+  // PUT    /api/v1/notifications/history/:id/read    — Mark one as read
+  // PUT    /api/v1/notifications/history/read-all    — Mark all as read
+  app.use('/api/v1/notifications', notificationsRouter);
 
   // ── Team Management API ───────────────────────────────────────────
   // POST   /api/teams                          — Create a new team
