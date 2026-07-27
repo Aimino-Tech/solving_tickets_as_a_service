@@ -28,6 +28,7 @@ import { getOctokit } from './auth.js';
 import * as messages from '../platforms/messages.js';
 import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
 import { config } from '../config.js';
+import { notifyPRCreated } from '../notifications/notificationService.js';
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
 
@@ -193,6 +194,10 @@ export class ActionDispatcher {
           confidence: 'high',
         });
 
+        notifyPRCreated(repoOwner, repoName, issueNumber, installationId, issueTitle, pr.data.html_url, pr.data.number).catch((err) => {
+          log.warn({ err: String(err) }, 'Failed to send PR-created notification');
+        });
+
         return {
           action: 'pr_created',
           prUrl: pr.data.html_url,
@@ -232,6 +237,10 @@ export class ActionDispatcher {
           repo: `${repoOwner}/${repoName}`,
           issueNumber: String(issueNumber),
           confidence: 'medium',
+        });
+
+        notifyPRCreated(repoOwner, repoName, issueNumber, installationId, issueTitle, pr.data.html_url, pr.data.number).catch((err) => {
+          log.warn({ err: String(err) }, 'Failed to send PR-created notification');
         });
 
         return {

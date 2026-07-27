@@ -31,6 +31,8 @@ function buildBlocks(event: NotificationEvent, data: NotificationData): any[] {
         return `${bot} is investigating #${data.issueNumber}`;
       case 'pr_created':
         return `${bot} opened a PR for #${data.issueNumber}`;
+      case 'fix_completed':
+        return `${bot} completed fix for #${data.issueNumber}`;
       case 'fix_failed':
         return `${bot} couldn't fix #${data.issueNumber}`;
       case 'verification_failed':
@@ -50,6 +52,8 @@ function buildBlocks(event: NotificationEvent, data: NotificationData): any[] {
         return 'mag';
       case 'pr_created':
         return 'rocket';
+      case 'fix_completed':
+        return 'white_check_mark';
       case 'fix_failed':
         return 'x';
       case 'verification_failed':

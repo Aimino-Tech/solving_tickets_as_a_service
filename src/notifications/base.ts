@@ -8,6 +8,7 @@
 export type NotificationEvent =
   | 'fix_started'
   | 'pr_created'
+  | 'fix_completed'
   | 'fix_failed'
   | 'verification_failed'
   | 'error'

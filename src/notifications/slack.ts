@@ -46,6 +46,17 @@ export function buildTextMessage(
       ].join('\n');
     }
 
+    case 'fix_completed': {
+      return [
+        `:white_check_mark: *${bot}* completed fix for ${issueLink}`,
+        `> ${data.issueTitle}`,
+        `> Repo: ${repoLink}`,
+        data.prUrl ? `> PR: <${data.prUrl}|${data.prUrl}>` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+    }
+
     case 'fix_failed':
       return [
         `:x: *${bot}* couldn't fix ${issueLink}`,
