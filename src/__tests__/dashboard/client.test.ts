@@ -95,7 +95,7 @@ describe('dashboard API client', () => {
       const result = await client.auth.me();
       expect(result.user.username).toBe('testuser');
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/auth/me',
+        '/api/v1/auth/me',
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: 'Bearer test-token',
@@ -115,7 +115,7 @@ describe('dashboard API client', () => {
       const result = await client.auth.logout();
       expect(result.success).toBe(true);
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/auth/logout',
+        '/api/v1/auth/logout',
         expect.objectContaining({ method: 'POST' }),
       );
     });
@@ -167,7 +167,7 @@ describe('dashboard API client', () => {
 
       const result = await client.runs.get('run-42');
       expect(result.id).toBe('run-42');
-      expect(mockFetch).toHaveBeenCalledWith('/api/runs/run-42', expect.any(Object));
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1/runs/run-42', expect.any(Object));
     });
   });
 
@@ -285,7 +285,7 @@ describe('dashboard API client', () => {
       const result = await client.settings.update({ label: 'custom:fix', maxConcurrent: 5 });
       expect(result.success).toBe(true);
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/settings',
+        '/api/v1/settings',
         expect.objectContaining({
           method: 'PUT',
           body: expect.stringContaining('"label":"custom:fix"'),

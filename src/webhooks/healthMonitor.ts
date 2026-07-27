@@ -18,7 +18,6 @@ import { webhookEventsRepository } from '../db/repositories/WebhookEventsReposit
 import { queryWithRetry } from '../db/connection.js';
 import { rootLogger } from '../utils/logger.js';
 import { dispatchAlert } from '../monitoring/alerting.js';
-import { queryWithRetry } from '../db/connection.js';
 
 const log = rootLogger.child({ module: 'webhook-health-monitor' });
 
@@ -34,9 +33,12 @@ const PIPELINE_STALL_THRESHOLD_MINUTES = 30;
 // State
 // ---------------------------------------------------------------------------
 
+const STALL_THRESHOLD_MINUTES = 30;
+
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 let lastAlertTriggered = false;
 let lastStallAlertCount = 0;
+let lastStallAlert: Set<string> = new Set();
 
 // ---------------------------------------------------------------------------
 // Pipeline Stall Detection
@@ -239,6 +241,17 @@ export async function checkStalledPipelines(): Promise<StallCheckResult> {
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to check stalled pipelines');
     return { stalledCount: 0, stalledRuns: [] };
+  }
+}
+
+/**
+ * Stub for pipeline stall check — delegates to checkStalledPipelines.
+ */
+async function runStallCheck(): Promise<void> {
+  try {
+    await checkStalledPipelines();
+  } catch (err) {
+    log.error({ err: String(err) }, 'Pipeline stall check failed');
   }
 }
 

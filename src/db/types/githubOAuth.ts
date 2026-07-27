@@ -5,6 +5,7 @@ export interface GitHubOAuthToken {
   refreshTokenEncrypted: string | null;
   githubLogin: string;
   githubUserId: number;
+  avatarUrl?: string | null;
   tokenExpiresAt: Date | null;
   refreshTokenExpiresAt: Date | null;
   scope: string | null;
@@ -18,6 +19,7 @@ export interface NewGitHubOAuthToken {
   refreshTokenEncrypted?: string | null;
   githubLogin: string;
   githubUserId: number;
+  avatarUrl?: string | null;
   tokenExpiresAt?: Date | null;
   refreshTokenExpiresAt?: Date | null;
   scope?: string | null;
@@ -31,6 +33,7 @@ export interface GitHubInstallation {
   accountType: 'User' | 'Organization';
   repoScope: 'all' | 'selected';
   permissions: Record<string, unknown>;
+  avatarUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,6 +45,7 @@ export interface NewGitHubInstallation {
   accountType: 'User' | 'Organization';
   repoScope?: 'all' | 'selected';
   permissions?: Record<string, unknown>;
+  avatarUrl?: string | null;
 }
 
 export interface GitHubWebhookConfig {
@@ -68,3 +72,7 @@ export interface NewGitHubWebhookConfig {
   active?: boolean;
   events?: string[];
 }
+
+// Aliases used by GitHubWebhookRepository
+export type GitHubWebhook = GitHubWebhookConfig;
+export type NewGitHubWebhook = NewGitHubWebhookConfig;

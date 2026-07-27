@@ -37,7 +37,7 @@ import {
   checkWorkerHealth as checkWorkerAnomaly,
   checkDbPoolUsage,
 } from '../monitoring/anomalyDetection.js';
-import { sendLowCreditAlerts } from '../credits/index.js';
+import { findLowCreditAccounts, sendLowCreditAlerts } from '../credits/index.js';
 
 const log = rootLogger.child({ module: 'scheduled' });
 
@@ -177,6 +177,13 @@ async function cleanupDLQ(): Promise<void> {
 // ── Metrics Refresh ────────────────────────────────────────────────
 
 // ── Low Credit Warning Check (AIM-3525) ──────────────────────
+
+async function checkLowCreditAccounts(): Promise<void> {
+  const accounts = await findLowCreditAccounts();
+  if (accounts.length > 0) {
+    log.warn({ count: accounts.length }, 'Low-credit accounts detected');
+  }
+}
 
 async function runLowCreditWarning(): Promise<void> {
   try {

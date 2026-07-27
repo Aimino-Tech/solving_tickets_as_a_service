@@ -31,7 +31,7 @@ router.post('/callback', async (req: Request, res: Response) => {
       if (et) { userId = et.userId; const { usersRepository } = await import('../db/repositories/UsersRepository.js'); const eu = await usersRepository.findById(userId); if (!eu) { res.status(500).json({ error: 'User not found' }); return; } userEmail = eu.email; }
       else { const { usersRepository } = await import('../db/repositories/UsersRepository.js'); const nu = await usersRepository.create({ email: gu.email || gu.login + '@github.user', passwordHash: '', name: gu.name || gu.login }); userId = nu.id; userEmail = nu.email; }
     }
-    await gitHubOAuthRepository.upsert({ userId, accessTokenEncrypted: encrypt(td.access_token), githubLogin: gu.login, githubUserId: gu.id, avatarUrl: gu.avatar_url, scope: td.scope || '' });
+    await gitHubOAuthRepository.upsert({ userId, accessTokenEncrypted: encrypt(td.access_token), githubLogin: gu.login, githubUserId: gu.id, scope: td.scope || '' });
     const ar = authService.generateTokens(userId, userEmail);
     res.json({ ...ar, github: { login: gu.login, id: gu.id, avatarUrl: gu.avatar_url } });
   } catch (err) { log.error({ err: String(err) }, 'GitHub OAuth callback failed'); res.status(500).json({ error: 'GitHub OAuth callback failed' }); }
@@ -46,7 +46,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
 });
 
 router.delete('/me', requireAuth, async (req: Request, res: Response) => {
-  try { await gitHubOAuthRepository.deleteByUserId(req.user!.id); res.json({ success: true }); }
+  try { await gitHubOAuthRepository.delete(req.user!.id); res.json({ success: true }); }
   catch (err) { log.error({ err: String(err) }, 'Failed'); res.status(500).json({ error: 'Failed' }); }
 });
 

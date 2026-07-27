@@ -10,7 +10,7 @@ const router: Router = Router();
 
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const accountId = req.user!.accountId;
+    const accountId = req.user!.id;
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(Math.max(1, Number(req.query.perPage) || 20), 100);
     const offset = (page - 1) * limit;

@@ -1,5 +1,5 @@
 import { queryWithRetry } from '../connection.js';
-import type { RunFeedback, NewRunFeedback } from '../types/feedback.js';
+import type { RunFeedback, NewRunFeedback } from '../types/runFeedback.js';
 
 export class RunFeedbackRepository {
   async findByRunId(runId: number): Promise<RunFeedback[]> {

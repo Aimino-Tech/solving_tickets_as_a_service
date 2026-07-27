@@ -7,7 +7,7 @@ import { AuthError, authService } from './service.js';
 
 const log = rootLogger.child({ module: 'auth-routes' });
 
-const router = Router();
+const router: Router = Router();
 
 const registerSchema = z.object({
   email: z.string().email(),

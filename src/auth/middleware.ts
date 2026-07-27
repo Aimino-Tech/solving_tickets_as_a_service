@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { authService } from './service.js';
 
 export interface AuthUser {
-  id: number;
+  id: string;
   email: string;
 }
 
