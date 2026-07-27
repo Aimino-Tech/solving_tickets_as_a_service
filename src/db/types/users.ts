@@ -1,16 +1,15 @@
 export interface User {
-  id: number;
+  id: string;
   email: string;
   passwordHash: string;
   name: string | null;
-  supabaseUid: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface NewUser {
+  id?: string;
   email: string;
   passwordHash?: string;
   name?: string | null;
-  supabaseUid?: string | null;
 }

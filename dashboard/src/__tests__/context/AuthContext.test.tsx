@@ -55,7 +55,7 @@ describe('AuthContext', () => {
   it('starts in loading state when token exists in localStorage', () => {
     localStorage.setItem('stas_token', 'existing-token');
     (auth.me as any).mockResolvedValue({
-      id: 1, email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: '', createdAt: '2024-01-01',
+      id: '1', email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: '', createdAt: '2024-01-01',
     });
 
     renderWithProvider(<TestConsumer />);
@@ -65,7 +65,7 @@ describe('AuthContext', () => {
   it('loads user when a valid token exists', async () => {
     localStorage.setItem('stas_token', 'valid-token');
     (auth.me as any).mockResolvedValue({
-      id: 1, email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: 'https://example.com/avatar.png', createdAt: '2024-01-01',
+      id: '1', email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: 'https://example.com/avatar.png', createdAt: '2024-01-01',
     });
 
     renderWithProvider(<TestConsumer />);
@@ -113,7 +113,7 @@ describe('AuthContext', () => {
   it('calls logout and clears state when logout() is invoked', async () => {
     localStorage.setItem('stas_token', 'valid-token');
     (auth.me as any).mockResolvedValue({
-      id: 1, email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: '', createdAt: '2024-01-01',
+      id: '1', email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: '', createdAt: '2024-01-01',
     });
     (auth.logout as any).mockResolvedValue({ success: true });
 
@@ -147,7 +147,7 @@ describe('AuthContext', () => {
     });
 
     (auth.me as any).mockResolvedValue({
-      id: 2, email: 'url@test.com', name: 'urluser', username: 'urluser', avatarUrl: '', createdAt: '2024-01-01',
+      id: '2', email: 'url@test.com', name: 'urluser', username: 'urluser', avatarUrl: '', createdAt: '2024-01-01',
     });
 
     renderWithProvider(<TestConsumer />);

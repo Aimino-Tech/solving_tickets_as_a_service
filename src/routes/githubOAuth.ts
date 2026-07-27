@@ -46,7 +46,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
 });
 
 router.delete('/me', requireAuth, async (req: Request, res: Response) => {
-  try { await gitHubOAuthRepository.deleteByUserId(req.user!.id); res.json({ success: true }); }
+  try { await gitHubOAuthRepository.delete(req.user!.id); res.json({ success: true }); }
   catch (err) { log.error({ err: String(err) }, 'Failed'); res.status(500).json({ error: 'Failed' }); }
 });
 

@@ -93,6 +93,15 @@ const envSchema = z.object({
   REDIS_TTL_FREQUENT_ACCESS: z.coerce.number().int().positive().default(60),
   ADMIN_API_KEY: z.string().optional(),
 
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').default('change-me-to-a-random-secret-at-least-32-chars'),
+  JWT_EXPIRES_IN: z.string().default('24h'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
+
+  // Proxy
+  PROXY_MODEL_ROUTER_ENABLED: boolSchema(true),
+  PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED: boolSchema(false),
+  PROXY_GITHUB_PAT: z.string().optional(),
+
   WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
   WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
 
@@ -382,6 +391,12 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
+    },
+
+    proxy: {
+      modelRouterEnabled: env.PROXY_MODEL_ROUTER_ENABLED,
+      githubActionsDispatchEnabled: env.PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED,
+      githubPat: env.PROXY_GITHUB_PAT ?? '',
     },
 
     slack: {

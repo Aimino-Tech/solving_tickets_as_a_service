@@ -1,6 +1,6 @@
 export interface GitHubOAuthToken {
   id: number;
-  userId: number;
+  userId: string;
   accessTokenEncrypted: string;
   refreshTokenEncrypted: string | null;
   githubLogin: string;
@@ -13,7 +13,7 @@ export interface GitHubOAuthToken {
 }
 
 export interface NewGitHubOAuthToken {
-  userId: number;
+  userId: string;
   accessTokenEncrypted: string;
   refreshTokenEncrypted?: string | null;
   githubLogin: string;
@@ -25,7 +25,7 @@ export interface NewGitHubOAuthToken {
 
 export interface GitHubInstallation {
   id: number;
-  userId: number;
+  userId: string;
   installationId: number;
   accountLogin: string;
   accountType: 'User' | 'Organization';
@@ -36,7 +36,7 @@ export interface GitHubInstallation {
 }
 
 export interface NewGitHubInstallation {
-  userId: number;
+  userId: string;
   installationId: number;
   accountLogin: string;
   accountType: 'User' | 'Organization';
@@ -46,7 +46,7 @@ export interface NewGitHubInstallation {
 
 export interface GitHubWebhookConfig {
   id: number;
-  userId: number;
+  userId: string;
   installationId: number;
   repoOwner: string;
   repoName: string;
@@ -59,7 +59,7 @@ export interface GitHubWebhookConfig {
 }
 
 export interface NewGitHubWebhookConfig {
-  userId: number;
+  userId: string;
   installationId: number;
   repoOwner: string;
   repoName: string;

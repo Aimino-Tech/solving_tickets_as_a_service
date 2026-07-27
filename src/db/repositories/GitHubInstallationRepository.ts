@@ -2,7 +2,7 @@ import { queryWithRetry } from '../connection.js';
 import type { GitHubInstallation, NewGitHubInstallation } from '../types/githubOAuth.js';
 
 export class GitHubInstallationRepository {
-  async findByUserId(userId: number): Promise<GitHubInstallation[]> {
+  async findByUserId(userId: string): Promise<GitHubInstallation[]> {
     const result = await queryWithRetry<GitHubInstallation>(
       `SELECT id, user_id, installation_id, account_login, account_type,
               repo_scope, avatar_url, created_at, updated_at

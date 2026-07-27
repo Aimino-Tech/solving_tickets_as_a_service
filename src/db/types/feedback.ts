@@ -1,7 +1,7 @@
 export interface RunFeedback {
   id: number;
   runId: number;
-  userId: number;
+  userId: string;
   verdict: string;
   comment: string | null;
   feedbackType: string;
@@ -12,7 +12,7 @@ export interface RunFeedback {
 
 export interface NewRunFeedback {
   runId: number;
-  userId: number;
+  userId: string;
   verdict?: string;
   comment?: string | null;
   feedbackType?: string;

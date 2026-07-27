@@ -1,7 +1,7 @@
 export interface RunFeedback {
   id: number;
   runId: string;
-  userId: number;
+  userId: string;
   verdict: 'good' | 'bad_fix' | 'not_working';
   comment: string | null;
   feedbackType: 'user' | 'auto' | 'escalation' | 'rollback' | 'retry';
@@ -11,7 +11,7 @@ export interface RunFeedback {
 
 export interface NewRunFeedback {
   runId: string;
-  userId: number;
+  userId: string;
   verdict: 'good' | 'bad_fix' | 'not_working';
   comment?: string | null;
   feedbackType?: 'user' | 'auto' | 'escalation' | 'rollback' | 'retry';

@@ -3,7 +3,7 @@ import type { NotificationHistory, NewNotificationHistory } from '../types/index
 
 export class NotificationHistoryRepository {
   async findByUser(
-    userId: number,
+    userId: string,
     limit = 50,
     offset = 0,
     unreadOnly = false,

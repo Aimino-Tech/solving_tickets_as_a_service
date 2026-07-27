@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
 import { getSupabaseAdmin, getSupabaseAnon, supabaseJwtSecret } from './supabase.js';
 import { usersRepository } from '../db/repositories/UsersRepository.js';
+import type { User } from '../db/types/users.js';
 
 export interface TokenPayload {
-  sub: number;
+  sub: string;
   email: string;
 }
 
@@ -11,7 +12,7 @@ export interface AuthResult {
   token: string;
   refreshToken: string;
   user: {
-    id: number;
+    id: string;
     email: string;
     name: string | null;
   };
@@ -22,11 +23,6 @@ const REFRESH_TOKEN_EXPIRY = '30d';
 
 export class AuthService {
   async register(email: string, password: string, name?: string): Promise<AuthResult> {
-    const existing = await usersRepository.findByEmail(email);
-    if (existing) {
-      throw new AuthError('Email already registered', 409);
-    }
-
     const { data: createData, error: createError } = await getSupabaseAdmin().auth.admin.createUser({
       email,
       password,
@@ -35,12 +31,20 @@ export class AuthService {
     });
     if (createError) throw new AuthError(createError.message, createError.status || 400);
 
-    const user = await usersRepository.create({
-      email,
-      passwordHash: '',
-      name,
-      supabaseUid: createData.user!.id,
-    });
+    const supabaseUid = createData.user!.id;
+
+    const existingLocal = await usersRepository.findByEmail(email).catch(() => undefined);
+    let user: User;
+    if (existingLocal) {
+      user = (await usersRepository.update(existingLocal.id, { name })) ?? existingLocal;
+    } else {
+      user = await usersRepository.create({
+        id: supabaseUid,
+        email,
+        passwordHash: '',
+        name,
+      });
+    }
 
     return this.generateTokens(user.id, user.email);
   }
@@ -76,14 +80,14 @@ export class AuthService {
       if (!payload.sub || !payload.email) {
         throw new AuthError('Invalid token payload', 401);
       }
-      return { sub: Number(payload.sub), email: payload.email };
+      return { sub: String(payload.sub), email: payload.email };
     } catch (err) {
       if (err instanceof AuthError) throw err;
       throw new AuthError('Invalid or expired token', 401);
     }
   }
 
-  generateTokens(userId: number, email: string): AuthResult {
+  generateTokens(userId: string, email: string): AuthResult {
     const payload: TokenPayload = { sub: userId, email };
 
     const token = jwt.sign(payload, supabaseJwtSecret, {
