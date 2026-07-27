@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { health, sla, type HealthResponse, type SLAMetrics } from '../api/client.js';
+import { health, sla, type HealthResponse, type SLAMetrics } from '../api/client';
 
 function formatMs(ms: number | null | undefined): string {
   if (ms == null) return '-';

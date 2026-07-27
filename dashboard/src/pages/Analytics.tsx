@@ -54,17 +54,17 @@ export default function Analytics() {
     );
   }
 
-  const costData = data.costByDay.map((d) => ({
+  const costData = data.costByDay.map((d: { date: string; costCents: number }) => ({
     date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     cost: d.costCents / 100,
   }));
 
-  const fixRateData = data.fixRateByWeek.map((d) => ({
+  const fixRateData = data.fixRateByWeek.map((d: { week: string; rate: number }) => ({
     week: d.week,
     rate: Number((d.rate * 100).toFixed(1)),
   }));
 
-  const runsByDayData = data.runsByDay.map((d) => ({
+  const runsByDayData = data.runsByDay.map((d: { date: string; count: number; passed: number }) => ({
     date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     Total: d.count,
     Passed: d.passed,
@@ -87,19 +87,19 @@ export default function Analytics() {
         <MetricCard
           label="Avg Cost / Run"
           value={data.costByDay.length > 0
-            ? `$${(data.costByDay.reduce((s, d) => s + d.costCents, 0) / Math.max(data.costByDay.length, 1) / 100).toFixed(2)}`
+            ? `$${(data.costByDay.reduce((s: number, d: { costCents: number }) => s + d.costCents, 0) / Math.max(data.costByDay.length, 1) / 100).toFixed(2)}`
             : '—'}
           trend="neutral"
         />
       </div>
 
       {/* LiteLLM Usage */}
-      {litellmUsage && (
+      {litellmData && litellmData.configured && litellmData.budget && (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
-          <MetricCard label="Remaining Budget" value={`$${litellmUsage.remainingBudget.toFixed(2)}`} trend={litellmUsage.remainingBudget > 10 ? 'up' : litellmUsage.remainingBudget > 2 ? 'neutral' : 'down'} />
-          <MetricCard label="Tokens Today" value={formatNumber(litellmUsage.tokensToday.total)} trend="neutral" />
-          <MetricCard label="Requests Today" value={String(litellmUsage.requestsToday)} trend="neutral" />
-          <MetricCard label="RPM Left" value={`${litellmUsage.rateLimit.rpmRemaining} / ${litellmUsage.rateLimit.rpmLimit}`} trend={litellmUsage.rateLimit.rpmRemaining > 50 ? 'up' : 'down'} />
+          <MetricCard label="Remaining Budget" value={`$${(litellmData.budget.remainingBudget / 100).toFixed(2)}`} trend={litellmData.budget.remainingBudget > 0 ? 'up' : 'down'} />
+          <MetricCard label="Tokens Today" value={formatNumber(litellmData.todayTokens.total)} trend="neutral" />
+          <MetricCard label="Monthly Budget" value={`$${(litellmData.budget.maxBudget / 100).toFixed(2)}`} trend="neutral" />
+          <MetricCard label="RPM Left" value={`${litellmData.rateLimit?.rpmRemaining ?? '?'} / ${litellmData.rateLimit?.rpmLimit ?? '?'}`} trend={litellmData.rateLimit && litellmData.rateLimit.rpmRemaining > 50 ? 'up' : 'down'} />
         </div>
       )}
 

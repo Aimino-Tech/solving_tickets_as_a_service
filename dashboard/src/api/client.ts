@@ -166,6 +166,28 @@ export interface SLAMetrics {
   byTier: Record<string, SLAByTier>;
 }
 
+export interface LitellmUsage {
+  configured: boolean;
+  message?: string;
+  budget?: {
+    remainingBudget: number;
+    maxBudget: number;
+    spendInCurrentMonth: number;
+    budgetDuration: string;
+    budgetResetAt: string;
+  };
+  todayTokens: { total: number; input: number; output: number };
+  thisMonthTokens: { total: number; input: number; output: number };
+  requestsToday: number;
+  rateLimit?: {
+    rpmRemaining: number;
+    rpmLimit: number;
+    tpmRemaining: number;
+    tpmLimit: number;
+    resetAt: string | null;
+  } | null;
+}
+
 export const auth = {
   loginUrl: () => '/api/auth/github',
   register: (email: string, password: string, name?: string) =>
@@ -187,6 +209,35 @@ export const auth = {
     }),
   logout: () =>
     request<{ message: string }>('/v1/auth/logout', { method: 'POST' }),
+};
+
+
+
+export interface LitellmUsage {
+  configured: boolean;
+  message?: string;
+  budget?: {
+    remainingBudget: number;
+    maxBudget: number;
+    spendInCurrentMonth: number;
+    budgetDuration: string;
+    budgetResetAt: string;
+  };
+  todayTokens: { total: number; input: number; output: number };
+  thisMonthTokens: { total: number; input: number; output: number };
+  requestsToday: number;
+  rateLimit?: {
+    rpmRemaining: number;
+    rpmLimit: number;
+    tpmRemaining: number;
+    tpmLimit: number;
+    resetAt: string | null;
+  } | null;
+}
+
+export const litellm = {
+  usage: () =>
+    request<LitellmUsage>('/v1/litellm/usage'),
 };
 
 export const credits = {
@@ -379,8 +430,16 @@ export const sla = {
     request<SLAMetrics>('/v1/sla/metrics'),
 };
 
+export const litellm = {
+  usage: () => request<LitellmUsage>('/v1/litellm/usage'),
+};
+
 export const stats = {
   get: () => request<DashboardStats>('/v1/stats'),
+};
+
+export const litellm = {
+  usage: () => request<LitellmUsage>('/v1/litellm/usage'),
 };
 
 export const audit = {
