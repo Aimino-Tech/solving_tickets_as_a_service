@@ -10,11 +10,11 @@ export default function Benchmarks() {
   useEffect(() => {
     benchmarks
       .get()
-      .then((resp) => setData(resp.competitors))
+      .then((resp: any) => setData(resp.competitors))
       .catch((err: Error) => setError(err.message));
     benchmarks
       .getPrices()
-      .then((resp) => setPrices(resp.prices))
+      .then((resp: any) => setPrices(resp.prices))
       .catch(() => {});
   }, []);
 

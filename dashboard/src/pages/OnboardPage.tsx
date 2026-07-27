@@ -1,7 +1,6 @@
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { auth } from '@/api/client';
 
 const STEPS = [
   {
@@ -48,7 +47,7 @@ export default function OnboardPage() {
     setConnecting(true);
     try {
       // Direct to GitHub OAuth
-      window.location.href = auth.loginUrl();
+      window.location.href = '/api/auth/github';
     } catch {
       setConnecting(false);
     }
@@ -140,7 +139,7 @@ export default function OnboardPage() {
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-500">
               Already have an account?{' '}
-              <button onClick={login} className="font-medium text-brand-600 hover:text-brand-500">
+              <button onClick={() => navigate('/login')} className="font-medium text-brand-600 hover:text-brand-500">
                 Sign in
               </button>
             </p>

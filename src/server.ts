@@ -73,7 +73,7 @@ import { reposRouter } from './routes/repos.js';
 import { gitHubOAuthRouter } from './routes/github-oauth.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
-import { litellmUsageRouter } from './routes/litellmUsage.js';
+import { runFeedbackRouter } from './routes/runFeedback.js';
 import { slaRouter } from './routes/sla.js';
 import { viralRouter } from './routes/viral.js';
 import { workspaceRouter } from './routes/workspace.js';
@@ -678,9 +678,6 @@ export async function createApp(): Promise<express.Application> {
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
 
-  // ── LiteLLM Usage API ─────────────────────────────────────────────
-  app.use('/api/v1', litellmUsageRouter);
-
   // ── Admin webhooks API ──────────────────────────────────────────
   // GET /admin/webhooks (paginated, filterable)
   // POST /admin/webhooks/:id/replay
@@ -934,6 +931,7 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Runs API (authenticated, paginated fix history) ────────────
   app.use('/api/v1/runs', runsApiRouter);
+  app.use('/api/v1/runs', runFeedbackRouter);
 
   // SAML 2.0 SSO routes (optional)
   try {

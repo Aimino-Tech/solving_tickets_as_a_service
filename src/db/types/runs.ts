@@ -15,7 +15,8 @@ export interface Run {
   error: string | null;
   durationMs: number | null;
   modelUsed: string | null;
-  creditsUsed: number;
+  creditsUsed: number | null;
+  costCents: number | null;
   createdAt: Date;
 }
 
@@ -32,6 +33,7 @@ export interface NewRun {
   error?: string | null;
   durationMs?: number | null;
   modelUsed?: string | null;
-  creditsUsed?: number;
+  creditsUsed?: number | null;
+  costCents?: number | null;
   createdAt?: Date;
 }

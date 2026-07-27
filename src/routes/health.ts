@@ -4,6 +4,7 @@ import { getDependenciesHealth } from '../health/dependencies.js';
 import { checkRedisHealth } from '../health/redisHealth.js';
 import { opencodeHealth } from '../health/opencodeHealth.js';
 import { config } from '../config.js';
+import { getComprehensiveHealth, getSlaMetrics } from '../health/comprehensive.js';
 import { rootLogger } from '../utils/logger.js';
 import { queryWithRetry } from '../db/connection.js';
 
@@ -17,7 +18,7 @@ async function recordHealthCheck(status: string, responseTimeMs: number): Promis
       [status, Math.round(responseTimeMs)],
     );
   } catch {
-    // Non-fatal — recording is best-effort
+    // Non-fatal
   }
 }
 
@@ -27,29 +28,21 @@ async function checkComponentHealth(): Promise<{
 }> {
   const checks: Record<string, { status: string; latencyMs?: number; error?: string }> = {};
 
-  // Database
   const dbStart = Date.now();
   try {
-    const { queryWithRetry } = await import('../db/connection.js');
     await queryWithRetry('SELECT 1');
     checks.database = { status: 'ok', latencyMs: Date.now() - dbStart };
   } catch (err) {
     checks.database = { status: 'error', latencyMs: Date.now() - dbStart, error: String(err) };
   }
 
-  // Redis
   try {
     const redisResult = await checkRedisHealth();
-    checks.redis = {
-      status: redisResult.status,
-      latencyMs: redisResult.latencyMs,
-      error: redisResult.error ?? undefined,
-    };
+    checks.redis = { status: redisResult.status, latencyMs: redisResult.latencyMs, error: redisResult.error ?? undefined };
   } catch (err) {
     checks.redis = { status: 'error', error: String(err) };
   }
 
-  // RabbitMQ
   const rmqStart = Date.now();
   try {
     const { isConnected } = await import('../queue/rabbitmq.js');
@@ -58,32 +51,18 @@ async function checkComponentHealth(): Promise<{
     checks.rabbitmq = { status: 'error', latencyMs: Date.now() - rmqStart, error: String(err) };
   }
 
-  // OpenCode
   const ocStatus = opencodeHealth.getStatus();
-  checks.opencode = {
-    status: ocStatus.status === 'healthy' ? 'ok' : ocStatus.status === 'degraded' ? 'degraded' : 'error',
-  };
-
-  // Sentry
-  checks.sentry = {
-    status: config.sentry.dsn ? 'ok' : 'disabled',
-  };
+  checks.opencode = { status: ocStatus.status === 'healthy' ? 'ok' : ocStatus.status === 'degraded' ? 'degraded' : 'error' };
+  checks.sentry = { status: config.sentry.dsn ? 'ok' : 'disabled' };
 
   const allOk = Object.values(checks).every((c) => c.status === 'ok' || c.status === 'disabled');
   return { checks, allOk };
 }
 
-/**
- * GET /health
- * Consolidated health check with per-component status.
- */
 healthRouter.get('/health', async (_req: Request, res: Response) => {
   const startTime = Date.now();
   const { checks, allOk } = await checkComponentHealth();
-
-  // Record health check result to the database
   recordHealthCheck(allOk ? 'healthy' : 'degraded', Date.now() - startTime);
-
   res.status(allOk ? 200 : 503).json({
     status: allOk ? 'ok' : 'degraded',
     checks,
@@ -92,26 +71,17 @@ healthRouter.get('/health', async (_req: Request, res: Response) => {
   });
 });
 
-/**
- * GET /health/verbose
- * Detailed diagnostics with latency per component.
- */
 healthRouter.get('/health/verbose', async (_req: Request, res: Response) => {
-  const { checks, allOk } = await checkComponentHealth();
-  res.json({
-    status: allOk ? 'ok' : 'degraded',
-    checks,
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memoryUsage: process.memoryUsage(),
-    nodeVersion: process.version,
-  });
+  try {
+    const report = await getComprehensiveHealth();
+    const sla = await getSlaMetrics();
+    res.json({ ...report, sla });
+  } catch (err) {
+    log.error({ err }, 'Verbose health check failed');
+    res.status(503).json({ status: 'error', error: 'Verbose health check failed' });
+  }
 });
 
-/**
- * GET /health/queue
- * Returns queue-specific health information.
- */
 healthRouter.get('/health/queue', async (_req: Request, res: Response) => {
   try {
     const queueHealth = await getQueueHealth();
@@ -122,10 +92,6 @@ healthRouter.get('/health/queue', async (_req: Request, res: Response) => {
   }
 });
 
-/**
- * GET /health/dependencies
- * Returns dependency health information.
- */
 healthRouter.get('/health/dependencies', async (_req: Request, res: Response) => {
   try {
     const depsHealth = await getDependenciesHealth();
@@ -133,6 +99,16 @@ healthRouter.get('/health/dependencies', async (_req: Request, res: Response) =>
   } catch (err) {
     log.error({ err }, 'Dependencies health check failed');
     res.status(503).json({ status: 'error', error: 'Dependencies health check failed' });
+  }
+});
+
+healthRouter.get('/health/sla', async (_req: Request, res: Response) => {
+  try {
+    const sla = await getSlaMetrics();
+    res.json(sla);
+  } catch (err) {
+    log.error({ err }, 'SLA metrics check failed');
+    res.status(500).json({ error: 'SLA metrics check failed' });
   }
 });
 
