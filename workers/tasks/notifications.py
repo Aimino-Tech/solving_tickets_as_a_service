@@ -4,8 +4,12 @@ Send notifications for completed STAS runs.
 Supports:
   - GitHub issue comments (via installation token)
   - Slack webhook messages (if SLACK_WEBHOOK_URL is set)
+  - Email notifications (via SMTP or SendGrid)
+  - Discord webhook messages
+  - In-app notifications (writes to notification_history table)
 """
 
+import json
 import logging
 import os
 from typing import Any
@@ -61,6 +65,117 @@ def _send_slack_webhook(message: str) -> bool:
         return True
 
 
+def _send_email_notification(
+    to_addr: str,
+    subject: str,
+    body: str,
+    from_addr: str = "stas@aimino.io",
+) -> bool:
+    """Send an email notification using available channels (SendGrid or SMTP)."""
+    sendgrid_key = os.getenv("STAS_SENDGRID_API_KEY", "")
+    if sendgrid_key:
+        try:
+            import httpx
+            data = {
+                "personalizations": [{"to": [{"email": to_addr}]}],
+                "from": {"email": from_addr},
+                "subject": subject,
+                "content": [{"type": "text/plain", "value": body}],
+            }
+            with httpx.Client(timeout=15.0) as client:
+                resp = client.post(
+                    "https://api.sendgrid.com/v3/mail/send",
+                    json=data,
+                    headers={
+                        "Authorization": f"Bearer {sendgrid_key}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                resp.raise_for_status()
+            logger.info("Email sent via SendGrid to=%s subject=%s", to_addr, subject)
+            return True
+        except Exception as exc:
+            logger.warning("SendGrid email failed — %s", exc)
+
+    smtp_host = os.getenv("STAS_SMTP_HOST", "")
+    if smtp_host:
+        try:
+            import smtplib
+            import ssl
+            from email.mime.text import MIMEText
+
+            msg = MIMEText(body, "plain", "utf-8")
+            msg["Subject"] = subject
+            msg["From"] = from_addr
+            msg["To"] = to_addr
+
+            smtp_port = int(os.getenv("STAS_SMTP_PORT", "587"))
+            smtp_user = os.getenv("STAS_SMTP_USER", "")
+            smtp_password = os.getenv("STAS_SMTP_PASSWORD", "")
+
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
+                server.starttls(context=ssl.create_default_context())
+                if smtp_user:
+                    server.login(smtp_user, smtp_password)
+                server.sendmail(from_addr, [to_addr], msg.as_string())
+            logger.info("Email sent via SMTP to=%s subject=%s", to_addr, subject)
+            return True
+        except Exception as exc:
+            logger.warning("SMTP email failed — %s", exc)
+
+    logger.debug("No email transport configured (SendGrid or SMTP)")
+    return False
+
+
+def _send_discord_webhook(message: str, webhook_url: str | None = None) -> bool:
+    """Send a message to a Discord channel via webhook."""
+    url = webhook_url or os.getenv("DISCORD_WEBHOOK_URL", "")
+    if not url:
+        logger.debug("DISCORD_WEBHOOK_URL not set — skipping Discord notification")
+        return False
+
+    try:
+        with httpx.Client() as client:
+            resp = client.post(url, json={"content": message})
+            resp.raise_for_status()
+        logger.info("Discord notification sent")
+        return True
+    except Exception as exc:
+        logger.warning("Discord webhook failed — %s", exc)
+        return False
+
+
+def _write_in_app_notification(
+    user_id: int,
+    event_type: str,
+    title: str,
+    body: str,
+    metadata: dict[str, Any] | None = None,
+) -> bool:
+    """Write a notification to the notification_history table for in-app display."""
+    try:
+        import psycopg2
+        dsn = os.getenv("DATABASE_URL", "")
+        if not dsn:
+            logger.debug("DATABASE_URL not set — skipping in-app notification")
+            return False
+
+        conn = psycopg2.connect(dsn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO notification_history (user_id, event_type, channel, title, body, metadata)
+                   VALUES (%s, %s, %s, %s, %s, %s)""",
+                [user_id, event_type, "in_app", title, body, json.dumps(metadata or {})],
+            )
+            conn.commit()
+        conn.close()
+        logger.info("In-app notification written user_id=%s event_type=%s", user_id, event_type)
+        return True
+    except Exception as exc:
+        logger.warning("Failed to write in-app notification — %s", exc)
+        return False
+
+
 def _parse_issue_url(url: str) -> dict[str, Any] | None:
     """Parse 'https://github.com/owner/repo/issues/123' into parts."""
     try:
@@ -92,11 +207,23 @@ def send_notification(self, channel: str, message: str, **kwargs) -> dict:
       - "issue-comment" — post a comment on the GitHub issue
       - "slack" — send a Slack message
       - "issue-comment+slack" — both
+      - "email" — send an email notification
+      - "discord" — send a Discord webhook message
+      - "in-app" — write to notification_history table
       - "log" — just log it (default fallback)
 
     Extra kwargs for issue-comment:
       - issue_url (str) — full GitHub issue URL
       - installation_id (int) — GitHub App installation ID
+
+    Extra kwargs for email:
+      - to (str) — recipient email address
+      - subject (str) — email subject
+
+    Extra kwargs for in-app:
+      - user_id (int) — user ID for the notification
+      - event_type (str) — event type name
+      - metadata (dict) — optional metadata dict
 
     Returns with status: "sent", "skipped", or "error".
     """
@@ -137,6 +264,37 @@ def send_notification(self, channel: str, message: str, **kwargs) -> dict:
         if channel in ("slack", "issue-comment+slack"):
             sent = _send_slack_webhook(message)
             results["slack_sent"] = sent
+
+        # --- Email ---
+        if channel == "email":
+            to_addr = kwargs.get("to", "")
+            subject = kwargs.get("subject", "STAS Notification")
+            if to_addr:
+                sent = _send_email_notification(to_addr, subject, message)
+                results["email_sent"] = sent
+            else:
+                logger.warning("Email notification skipped — no 'to' address provided")
+                results["email_skipped"] = True
+
+        # --- Discord ---
+        if channel == "discord":
+            discord_url = kwargs.get("webhook_url")
+            sent = _send_discord_webhook(message, discord_url)
+            results["discord_sent"] = sent
+
+        # --- In-app notification ---
+        if channel == "in-app":
+            user_id = kwargs.get("user_id")
+            event_type = kwargs.get("event_type", "notification")
+            metadata = kwargs.get("metadata", {})
+            if user_id:
+                sent = _write_in_app_notification(
+                    user_id, event_type, subject or "STAS Notification", message, metadata,
+                )
+                results["in_app_sent"] = sent
+            else:
+                logger.warning("In-app notification skipped — no user_id provided")
+                results["in_app_skipped"] = True
 
         # --- Log (default fallback) ---
         if channel == "log":

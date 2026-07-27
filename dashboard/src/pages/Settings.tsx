@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { settings } from '@/api/client';
+import { settings, notifications, type NotificationPreference } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Settings() {
@@ -29,8 +29,12 @@ export default function Settings() {
     } | null;
     retentionDays: number;
   } | null>(null);
+  const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
+  const [loadingPrefs, setLoadingPrefs] = useState(true);
+
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     config: true,
+    notifications: false,
     privacy: false,
     danger: false,
   });
@@ -51,7 +55,32 @@ export default function Settings() {
       .finally(() => setLoading(false));
 
     fetchDeletionStatus();
+    loadPreferences();
   }, []);
+
+  async function loadPreferences() {
+    try {
+      const data = await notifications.listPreferences();
+      setPreferences(data.preferences);
+    } catch {} finally {
+      setLoadingPrefs(false);
+    }
+  }
+
+  async function togglePreference(channel: string, eventType: string, enabled: boolean) {
+    try {
+      const result = await notifications.updatePreference({ channel, eventType, enabled });
+      setPreferences((prev) => {
+        const idx = prev.findIndex((p) => p.channel === channel && p.eventType === eventType);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = result.preference;
+          return next;
+        }
+        return [...prev, result.preference];
+      });
+    } catch {}
+  }
 
   async function fetchDeletionStatus() {
     try {
@@ -239,6 +268,69 @@ export default function Settings() {
                 )}
               </div>
             </form>
+          </>
+        )}
+      </div>
+
+      {/* Notification Preferences */}
+      <div className="card">
+        <button
+          onClick={() => toggleSection('notifications')}
+          className="flex w-full items-center justify-between lg:cursor-default"
+        >
+          <div>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Notification Preferences</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 hidden lg:block">
+              Choose which channels and events trigger notifications.
+            </p>
+          </div>
+          <svg
+            className={`h-5 w-5 text-gray-400 transition-transform lg:hidden ${openSections.notifications ? 'rotate-180' : ''}`}
+            fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+        {openSections.notifications && (
+          <>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 lg:hidden">
+              Choose which channels and events trigger notifications.
+            </p>
+            {loadingPrefs ? (
+              <div className="mt-4 space-y-3">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-10 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 space-y-4">
+                {['in_app', 'email', 'slack', 'discord'].map((channel) => {
+                  const channelPrefs = preferences.filter((p) => p.channel === channel);
+                  return (
+                    <div key={channel} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">{channel.replace('_', ' ')}</h4>
+                      <div className="mt-2 space-y-2">
+                        {['fix_started', 'pr_created', 'fix_completed', 'fix_failed'].map((eventType) => {
+                          const pref = channelPrefs.find((p) => p.eventType === eventType);
+                          const enabled = pref ? pref.enabled : true;
+                          return (
+                            <label key={eventType} className="flex items-center justify-between">
+                              <span className="text-xs text-gray-600 dark:text-gray-400 capitalize">{eventType.replace(/_/g, ' ')}</span>
+                              <input
+                                type="checkbox"
+                                checked={enabled}
+                                onChange={(e) => togglePreference(channel, eventType, e.target.checked)}
+                                className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                              />
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
       </div>

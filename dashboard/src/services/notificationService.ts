@@ -1,66 +1,81 @@
+import { request } from '@/api/client';
+
 export interface Notification {
-  id: string;
+  id: number;
+  userId: number;
+  eventType: string;
+  channel: string;
   title: string;
   body: string;
-  type: 'pipeline_event' | 'system' | 'alert';
-  timestamp: Date;
+  metadata: Record<string, unknown>;
   read: boolean;
-  data?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface Preference {
+  id: number;
+  userId: number;
+  channel: string;
+  eventType: string;
+  enabled: boolean;
+  channelTarget: string | null;
 }
 
 type NotificationListener = (notifications: Notification[]) => void;
 
-const notifications: Notification[] = [];
+let cachedNotifications: Notification[] = [];
 const listeners: Set<NotificationListener> = new Set();
+let pollingInterval: ReturnType<typeof setInterval> | null = null;
 
 function notifyListeners() {
-  listeners.forEach((listener) => listener([...notifications]));
+  listeners.forEach((listener) => listener([...cachedNotifications]));
 }
 
-function generateId(): string {
-  return `notif_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-}
-
-export function addNotification(
-  notification: Omit<Notification, 'id' | 'timestamp' | 'read'>,
-): Notification {
-  const newNotification: Notification = {
-    ...notification,
-    id: generateId(),
-    timestamp: new Date(),
-    read: false,
-  };
-  notifications.unshift(newNotification);
-  notifyListeners();
-  return newNotification;
-}
-
-export function markAsRead(id: string): void {
-  const notification = notifications.find((n) => n.id === id);
-  if (notification) {
-    notification.read = true;
+export async function fetchNotifications(limit = 50, unreadOnly = false): Promise<Notification[]> {
+  try {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (unreadOnly) params.set('unread', 'true');
+    const data = await request<{ rows: Notification[]; total: number }>(
+      `/v1/notifications/history?${params.toString()}`,
+    );
+    cachedNotifications = data.rows;
     notifyListeners();
+    return data.rows;
+  } catch {
+    return cachedNotifications;
   }
 }
 
-export function markAllAsRead(): void {
-  notifications.forEach((n) => {
-    n.read = true;
-  });
-  notifyListeners();
+export async function markAsRead(id: number): Promise<void> {
+  try {
+    await request(`/v1/notifications/history/${id}/read`, { method: 'PUT' });
+    const notif = cachedNotifications.find((n) => n.id === id);
+    if (notif) notif.read = true;
+    notifyListeners();
+  } catch {}
 }
 
-export function clearAll(): void {
-  notifications.length = 0;
-  notifyListeners();
+export async function markAllAsRead(): Promise<void> {
+  try {
+    await request('/v1/notifications/history/read-all', { method: 'PUT' });
+    cachedNotifications.forEach((n) => { n.read = true; });
+    notifyListeners();
+  } catch {}
+}
+
+export async function getUnreadCount(): Promise<number> {
+  try {
+    const data = await request<{ rows: Notification[]; total: number }>(
+      '/v1/notifications/history?unread=true&limit=1',
+    );
+    return data.total;
+  } catch {
+    return 0;
+  }
 }
 
 export function getNotifications(): Notification[] {
-  return [...notifications];
-}
-
-export function getUnreadCount(): number {
-  return notifications.filter((n) => !n.read).length;
+  return [...cachedNotifications];
 }
 
 export function subscribe(listener: NotificationListener): () => void {
@@ -70,29 +85,15 @@ export function subscribe(listener: NotificationListener): () => void {
   };
 }
 
-export function simulatePipelineEvent(
-  event: 'started' | 'completed' | 'failed',
-  runId: string,
-  repoName?: string,
-): Notification {
-  const messages: Record<string, { title: string; body: string }> = {
-    started: {
-      title: 'Pipeline Started',
-      body: `Fix run ${runId}${repoName ? ` for ${repoName}` : ''} has started.`,
-    },
-    completed: {
-      title: 'Pipeline Completed',
-      body: `Fix run ${runId}${repoName ? ` for ${repoName}` : ''} completed successfully.`,
-    },
-    failed: {
-      title: 'Pipeline Failed',
-      body: `Fix run ${runId}${repoName ? ` for ${repoName}` : ''} has failed.`,
-    },
-  };
+export function startPolling(intervalMs = 30000): void {
+  if (pollingInterval) return;
+  fetchNotifications();
+  pollingInterval = setInterval(() => fetchNotifications(), intervalMs);
+}
 
-  return addNotification({
-    type: 'pipeline_event',
-    ...messages[event],
-    data: { runId, repoName, event },
-  });
+export function stopPolling(): void {
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
 }

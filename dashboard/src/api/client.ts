@@ -310,3 +310,49 @@ export const onboarding = {
   getConfig: () =>
     request<{ config: WizardConfig }>('/v1/onboarding/config'),
 };
+
+export interface NotificationPreference {
+  id: number;
+  userId: number;
+  channel: string;
+  eventType: string;
+  enabled: boolean;
+  channelTarget: string | null;
+}
+
+export interface NotificationHistoryItem {
+  id: number;
+  userId: number;
+  eventType: string;
+  channel: string;
+  title: string;
+  body: string;
+  metadata: Record<string, unknown>;
+  read: boolean;
+  createdAt: string;
+}
+
+export const notifications = {
+  listPreferences: () =>
+    request<{ preferences: NotificationPreference[] }>('/v1/notifications/preferences'),
+  updatePreference: (data: { channel: string; eventType: string; enabled: boolean }) =>
+    request<{ preference: NotificationPreference }>('/v1/notifications/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  listHistory: (params?: { limit?: number; offset?: number; unreadOnly?: boolean }) => {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.offset) qs.set('offset', String(params.offset));
+    if (params?.unreadOnly) qs.set('unreadOnly', 'true');
+    return request<{ rows: NotificationHistoryItem[]; total: number; limit: number; offset: number }>(
+      `/v1/notifications/history${qs.toString() ? `?${qs.toString()}` : ''}`,
+    );
+  },
+  markAsRead: (id: number) =>
+    request<{ success: boolean }>(`/v1/notifications/history/${id}/read`, { method: 'PUT' }),
+  markAllAsRead: () =>
+    request<{ success: boolean }>('/v1/notifications/history/read-all', { method: 'PUT' }),
+  unreadCount: () =>
+    request<{ unreadCount: number }>('/v1/notifications/history/unread-count'),
+};

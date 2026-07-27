@@ -26,6 +26,7 @@ from typing import Any
 from workers.notifications.notifiers.slack import notify_slack, notify_slack_threaded, notify_slack_progress
 from workers.notifications.notifiers.teams import notify_teams
 from workers.notifications.notifiers.email import notify_email
+from workers.notifications.notifiers.discord import notify_discord
 from workers.notifications.rate_limiter import (
     COMMENT_RATE_LIMIT_ENABLED,
     get_comment_rate_limiter,
@@ -102,14 +103,14 @@ def _resolve_config(config: dict[str, Any]) -> dict[str, Any]:
 def _validate_notifier_entry(entry: dict[str, Any], event_type: str) -> bool:
     """Validate a single notifier entry. Returns ``True`` if valid."""
     notifier_type = entry.get("type", "")
-    if notifier_type not in ("slack", "teams", "email"):
+    if notifier_type not in ("slack", "teams", "email", "discord"):
         logger.warning(
-            "Unknown notifier type %r for event %r — supported: slack, teams, email",
+            "Unknown notifier type %r for event %r — supported: slack, teams, email, discord",
             notifier_type, event_type,
         )
         return False
     url = entry.get("url", "")
-    if notifier_type in ("slack", "teams") and not url:
+    if notifier_type in ("slack", "teams", "discord") and not url:
         logger.warning(
             "Missing webhook URL for %s notifier on event %r — skipping",
             notifier_type, event_type,
@@ -226,6 +227,8 @@ def dispatch_to_webhooks(
                 result = _dispatch_teams(entry, normalised_payload)
             elif notifier_type == "email":
                 result = _dispatch_email(entry, normalised_payload)
+            elif notifier_type == "discord":
+                result = _dispatch_discord(entry, normalised_payload)
             else:
                 result = {"status": "skipped", "error": f"unsupported notifier: {notifier_type}"}
 
@@ -284,4 +287,10 @@ def _dispatch_email(entry: dict[str, Any], payload: dict[str, Any]) -> dict[str,
         smtp_password=smtp_password,
         use_sendgrid=use_sendgrid,
     )
+    return result
+
+
+def _dispatch_discord(entry: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    url = entry["url"]
+    result = notify_discord(payload, webhook_url=url)
     return result

@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  addNotification,
   subscribe,
   getNotifications,
   getUnreadCount,
   markAsRead,
   markAllAsRead,
-  clearAll,
+  fetchNotifications,
+  startPolling,
+  stopPolling,
   type Notification,
 } from '@/services/notificationService';
 
@@ -14,28 +15,32 @@ export type PermissionState = 'default' | 'granted' | 'denied';
 
 export function usePushNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>(getNotifications());
-  const [unreadCount, setUnreadCount] = useState(getUnreadCount());
+  const [unreadCount, setUnreadCount] = useState(0);
   const [permission, setPermission] = useState<PermissionState>(
     typeof Notification !== 'undefined' ? (Notification.permission as PermissionState) : 'denied',
   );
 
   useEffect(() => {
+    startPolling();
     const unsubscribe = subscribe((updated) => {
       setNotifications(updated);
-      setUnreadCount(getUnreadCount());
+      getUnreadCount().then(setUnreadCount);
     });
-    return unsubscribe;
+    getUnreadCount().then(setUnreadCount);
+    fetchNotifications();
+    return () => {
+      unsubscribe();
+      stopPolling();
+    };
   }, []);
 
   const requestPermission = useCallback(async (): Promise<PermissionState> => {
     if (typeof Notification === 'undefined') {
       return 'denied';
     }
-
     if (Notification.permission === 'granted') {
       return 'granted';
     }
-
     try {
       const result = await Notification.requestPermission();
       setPermission(result as PermissionState);
@@ -47,29 +52,16 @@ export function usePushNotifications() {
 
   const showBrowserNotification = useCallback(
     (notification: Notification) => {
-      if (permission !== 'granted' || typeof Notification === 'undefined') {
-        return;
-      }
+      if (permission !== 'granted' || typeof Notification === 'undefined') return;
       try {
         new Notification(notification.title, {
           body: notification.body,
           icon: '/favicon.ico',
-          tag: notification.id,
+          tag: String(notification.id),
         });
-      } catch {
-        // Browser may not support notifications
-      }
+      } catch {}
     },
     [permission],
-  );
-
-  const notify = useCallback(
-    (params: { title: string; body: string; type: Notification['type']; data?: Record<string, unknown> }) => {
-      const notification = addNotification(params);
-      showBrowserNotification(notification);
-      return notification;
-    },
-    [showBrowserNotification],
   );
 
   return {
@@ -79,7 +71,6 @@ export function usePushNotifications() {
     requestPermission,
     markAsRead,
     markAllAsRead,
-    clearAll,
-    notify,
+    fetchNotifications,
   };
 }
