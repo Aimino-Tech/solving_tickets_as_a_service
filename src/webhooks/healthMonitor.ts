@@ -1,15 +1,21 @@
 /**
- * Webhook Health Monitor - periodic failure rate alerting and pipeline stall detection.
+ * Webhook Health Monitor — periodic failure rate alerting + pipeline stall detection.
  *
  * Checks the webhook failure rate at a configurable interval.
  * If the failure rate exceeds 5% in the recent window, logs a
  * warning that can be routed to Slack or other alert channels.
  *
- * Also detects stalled pipelines - active pipelines that haven't had a
- * status update within a configurable threshold.
+ * Also detects stalled pipeline runs that haven't been updated
+ * within the stall threshold.
+ *
+ * ── Usage ────────────────────────────────────────────────────────────
+ *   startHealthMonitor();  // Starts periodic checks
+ *   stopHealthMonitor();   // Graceful shutdown
+ * ────────────────────────────────────────────────────────────────────────
  */
 
 import { webhookEventsRepository } from '../db/repositories/WebhookEventsRepository.js';
+import { queryWithRetry } from '../db/connection.js';
 import { rootLogger } from '../utils/logger.js';
 import { dispatchAlert } from '../monitoring/alerting.js';
 import { queryWithRetry } from '../db/connection.js';
@@ -22,16 +28,15 @@ const log = rootLogger.child({ module: 'webhook-health-monitor' });
 
 const CHECK_INTERVAL_MS = 60_000;
 const FAILURE_RATE_THRESHOLD = 5;
-const STALL_THRESHOLD_MINUTES = 15;
+const PIPELINE_STALL_THRESHOLD_MINUTES = 30;
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
-
 let lastAlertTriggered = false;
-let lastStallAlert: Set<string> = new Set();
+let lastStallAlertCount = 0;
 
 // ---------------------------------------------------------------------------
 // Pipeline Stall Detection
@@ -187,19 +192,53 @@ async function runHealthCheck(): Promise<void> {
       lastAlertTriggered = false;
       log.debug({ failureRate: result.failureRate }, 'Webhook health check passed');
     }
+
+    // Also check for stalled pipeline runs
+    await checkStalledPipelines();
   } catch (err) {
     log.error({ err: String(err) }, 'Webhook health check failed');
   }
 }
 
-/**
- * Run stall detection check.
- */
-async function runStallCheck(): Promise<void> {
+export interface StallCheckResult {
+  stalledCount: number;
+  stalledRuns: Array<{ id: string; status: string; updatedAt: string; ageMinutes: number }>;
+}
+
+export async function checkStalledPipelines(): Promise<StallCheckResult> {
   try {
-    await checkForStalledPipelines();
+    const result = await queryWithRetry<any>(
+      `SELECT id, status, updated_at
+       FROM runs
+       WHERE (status = 'running' OR status = 'queued')
+         AND updated_at < NOW() - make_interval(mins => $1)
+       ORDER BY updated_at ASC
+       LIMIT 20`,
+      [PIPELINE_STALL_THRESHOLD_MINUTES],
+    );
+
+    const stalled = (result.rows || []).map((row: any) => {
+      const updatedAt = new Date(row.updated_at);
+      const ageMinutes = Math.round((Date.now() - updatedAt.getTime()) / 60000);
+      return { id: row.id, status: row.status, updatedAt: row.updated_at, ageMinutes };
+    });
+
+    const count = stalled.length;
+    if (count > 0 && count !== lastStallAlertCount) {
+      log.warn(
+        { stalledCount: count, stalledRuns: stalled.map((r: any) => `${r.id} (${r.status}, ${r.ageMinutes}m)`) },
+        `[ALERT] ${count} pipeline run(s) stalled for over ${PIPELINE_STALL_THRESHOLD_MINUTES} minutes`,
+      );
+      lastStallAlertCount = count;
+    } else if (count === 0 && lastStallAlertCount > 0) {
+      log.info('[RESOLVED] All stalled pipelines have recovered');
+      lastStallAlertCount = 0;
+    }
+
+    return { stalledCount: count, stalledRuns: stalled };
   } catch (err) {
-    log.error({ err: String(err) }, 'Pipeline stall detection tick failed');
+    log.error({ err: String(err) }, 'Failed to check stalled pipelines');
+    return { stalledCount: 0, stalledRuns: [] };
   }
 }
 
