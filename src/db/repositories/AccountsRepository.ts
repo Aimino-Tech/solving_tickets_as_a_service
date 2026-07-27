@@ -2,9 +2,11 @@ import { queryWithRetry, validateSqlIdentifier } from '../connection.js';
 import type { Account, NewAccount } from '../types/index.js';
 
 export class AccountsRepository {
-  /**
-   * Find an account by its GitHub installation ID.
-   */
+  async findByEmail(email: string): Promise<Account | undefined> {
+    const result = await queryWithRetry<Account>('SELECT * FROM accounts WHERE email = $1', [email]);
+    return result.rows[0];
+  }
+
   async findByInstallationId(githubInstallationId: number): Promise<Account | undefined> {
     const result = await queryWithRetry<Account>('SELECT * FROM accounts WHERE github_installation_id = $1', [
       githubInstallationId,
@@ -12,17 +14,11 @@ export class AccountsRepository {
     return result.rows[0];
   }
 
-  /**
-   * Find an account by its primary key.
-   */
   async findById(id: number): Promise<Account | undefined> {
     const result = await queryWithRetry<Account>('SELECT * FROM accounts WHERE id = $1', [id]);
     return result.rows[0];
   }
 
-  /**
-   * Create a new account.
-   */
   async create(data: NewAccount): Promise<Account> {
     const result = await queryWithRetry<Account>(
       `INSERT INTO accounts (github_installation_id, email, name, tier)
@@ -33,9 +29,6 @@ export class AccountsRepository {
     return result.rows[0];
   }
 
-  /**
-   * Update an account's fields.
-   */
   async update(id: number, data: Partial<Pick<Account, 'email' | 'name' | 'tier'>>): Promise<Account | undefined> {
     const sets: string[] = [];
     const values: unknown[] = [];
@@ -58,7 +51,6 @@ export class AccountsRepository {
       return this.findById(id);
     }
 
-    // Validate each column name in the dynamic SET clause
     for (const clause of sets) {
       const colName = clause.split('=')[0].trim();
       validateSqlIdentifier(colName);
@@ -74,17 +66,11 @@ export class AccountsRepository {
     return result.rows[0];
   }
 
-  /**
-   * Delete an account by ID.
-   */
   async delete(id: number): Promise<boolean> {
     const result = await queryWithRetry('DELETE FROM accounts WHERE id = $1', [id]);
     return (result.rowCount ?? 0) > 0;
   }
 
-  /**
-   * List all accounts (with optional pagination).
-   */
   async list(limit = 50, offset = 0): Promise<Account[]> {
     const result = await queryWithRetry<Account>('SELECT * FROM accounts ORDER BY id DESC LIMIT $1 OFFSET $2', [
       limit,

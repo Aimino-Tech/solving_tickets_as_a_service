@@ -1,7 +1,3 @@
-/**
- * Barrel export for all repositories.
- */
-
 export { AccountsRepository, accountsRepository } from './AccountsRepository.js';
 export { UsersRepository, usersRepository } from './UsersRepository.js';
 export { AuditLogRepository, auditLogRepository } from './AuditLogRepository.js';
@@ -16,4 +12,3 @@ export { NotificationHistoryRepository, notificationHistoryRepository } from './
 export { WebhookEventsRepository, webhookEventsRepository } from './WebhookEventsRepository.js';
 export { WorkspaceRepository, workspaceRepository } from './WorkspaceRepository.js';
 export { NotificationPreferencesRepository, notificationPreferencesRepository } from './NotificationPreferencesRepository.js';
-export { NotificationHistoryRepository, notificationHistoryRepository } from './NotificationHistoryRepository.js';

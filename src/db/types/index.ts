@@ -1,9 +1,3 @@
-/**
- * Barrel export for all database type definitions.
- *
- * Hand-written types (replaced Drizzle ORM schema).
- */
-
 export type { Account, NewAccount } from './accounts.js';
 export type { User, NewUser } from './users.js';
 export type { AuditLog, NewAuditLog } from './auditLogs.js';
@@ -22,4 +16,4 @@ export type { UsageRecord, NewUsageRecord } from './usageRecords.js';
 export type { WebhookEvent, NewWebhookEvent } from './webhookEvents.js';
 export type { NotificationHistory, NewNotificationHistory } from './notificationHistory.js';
 export type { WorkspaceRow, NewWorkspace } from './workspaces.js';
-export type { NotificationPreference, NewNotificationPreference, NotificationHistory, NewNotificationHistory } from './notifications.js';
+export type { NotificationPreference, NewNotificationPreference } from './notifications.js';

@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { requireAuth } from '../auth/middleware.js';
 import { queryWithRetry } from '../db/connection.js';
-import { runsRepository } from '../db/repositories/index.js';
+import { accountsRepository, runsRepository } from '../db/repositories/index.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'runs-api' });
@@ -10,7 +10,13 @@ const router: Router = Router();
 
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const accountId = req.user!.accountId;
+    const user = req.user!;
+    const account = await accountsRepository.findByEmail(user.email);
+    if (!account) {
+      res.status(404).json({ error: 'Account not found' });
+      return;
+    }
+    const accountId = account.id;
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(Math.max(1, Number(req.query.perPage) || 20), 100);
     const offset = (page - 1) * limit;
