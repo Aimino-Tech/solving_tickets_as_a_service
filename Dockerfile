@@ -12,7 +12,7 @@ WORKDIR /app
 # npm ci installs exactly what the lockfile specifies, rejecting any mismatch.
 # This prevents dependency confusion / substitution attacks.
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts --legacy-peer-deps
 
 # Verify lockfile integrity before proceeding with build
 RUN node -e "const lock = require('./package-lock.json'); const pkgs = Object.keys(lock.packages || {}); const missing = pkgs.filter(p => { const meta = lock.packages[p]; return meta && !meta.link && !meta.dev && !meta.peer && !meta.bundled && !meta.integrity; }); if (missing.length > 0) { console.error('ERROR: Packages missing integrity hashes:'); missing.forEach(p => console.error('  ' + p)); process.exit(1); } console.log('Lockfile integrity verified: ' + pkgs.length + ' packages have integrity hashes');"
