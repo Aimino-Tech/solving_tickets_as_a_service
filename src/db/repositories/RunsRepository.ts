@@ -24,8 +24,8 @@ export class RunsRepository {
    */
   async create(data: NewRun): Promise<Run> {
     const result = await queryWithRetry<Run>(
-      `INSERT INTO runs (account_id, repo_id, issue_number, status, confidence, summary, pr_url, branch_name, error, duration_ms, model_used, credits_used)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO runs (account_id, repo_id, issue_number, status, confidence, summary, pr_url, branch_name, error, duration_ms, model_used, credits_used, cost_cents)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [
         data.accountId,
@@ -39,7 +39,8 @@ export class RunsRepository {
         data.error ?? null,
         data.durationMs ?? null,
         data.modelUsed ?? null,
-        data.creditsUsed ?? 0,
+        data.creditsUsed ?? null,
+        data.costCents ?? null,
       ],
     );
     return result.rows[0];
@@ -57,7 +58,7 @@ export class RunsRepository {
    * Update run status and related fields.
    */
   async update(id: number, data: Partial<Pick<Run,
-    'status' | 'confidence' | 'summary' | 'prUrl' | 'branchName' | 'error' | 'durationMs' | 'modelUsed' | 'creditsUsed'
+    'status' | 'confidence' | 'summary' | 'prUrl' | 'branchName' | 'error' | 'durationMs' | 'modelUsed' | 'creditsUsed' | 'costCents'
   >>): Promise<Run | undefined> {
     const sets: string[] = [];
     const values: unknown[] = [];
@@ -72,6 +73,7 @@ export class RunsRepository {
     if (data.durationMs !== undefined) { sets.push(`duration_ms = $${idx++}`); values.push(data.durationMs); }
     if (data.modelUsed !== undefined) { sets.push(`model_used = $${idx++}`); values.push(data.modelUsed); }
     if (data.creditsUsed !== undefined) { sets.push(`credits_used = $${idx++}`); values.push(data.creditsUsed); }
+    if (data.costCents !== undefined) { sets.push(`cost_cents = $${idx++}`); values.push(data.costCents); }
 
     if (sets.length === 0) return this.findById(id);
 

@@ -73,7 +73,7 @@ import { reposRouter } from './routes/repos.js';
 import { gitHubOAuthRouter } from './routes/github-oauth.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
-import { recoveryRouter } from './routes/recovery.js';
+import { runFeedbackRouter } from './routes/runFeedback.js';
 import { slaRouter } from './routes/sla.js';
 import { viralRouter } from './routes/viral.js';
 import { workspaceRouter } from './routes/workspace.js';
@@ -931,8 +931,7 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Runs API (authenticated, paginated fix history) ────────────
   app.use('/api/v1/runs', runsApiRouter);
-
-  app.use('/api/v1', recoveryRouter);
+  app.use('/api/v1/runs', runFeedbackRouter);
 
   // SAML 2.0 SSO routes (optional)
   try {

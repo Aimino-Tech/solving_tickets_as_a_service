@@ -15,7 +15,7 @@ export default function RunDetail() {
     if (!id) return;
     runs
       .get(id)
-      .then((data: Run) => setRun(data))
+      .then(setRun)
       .catch((err: Error) => setError(err.message));
   }, [id]);
 
@@ -101,6 +101,7 @@ export default function RunDetail() {
           <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 dark:text-gray-500">Cost &amp; Model</h3>
           <DetailRow label="Cost" value={run.costCents ? `$${(run.costCents / 100).toFixed(2)}` : '\u2014'} />
           <DetailRow label="Model" value={run.modelUsed || '\u2014'} />
+          <DetailRow label="Credits Used" value={run.creditsUsed != null ? String(run.creditsUsed) : '\u2014'} />
         </div>
       </div>
 
