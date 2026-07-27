@@ -70,6 +70,7 @@ import { pricingRouter } from './routes/pricing.js';
 import { proxyRouter } from './routes/proxy.js';
 import { qualityRouter } from './routes/quality.js';
 import { reposRouter } from './routes/repos.js';
+import { gitHubOAuthRouter } from './routes/github-oauth.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
 import { slaRouter } from './routes/sla.js';
@@ -744,6 +745,9 @@ export async function createApp(): Promise<express.Application> {
 
   // Repos API (repo picker with webhook status)
   app.use('/api/repos', reposRouter);
+
+  // GitHub OAuth & Installation Management
+  app.use('/api/v1', gitHubOAuthRouter);
 
   // ── Shareable run page API (public, no auth) ───────────────────────
   // GET /api/runs/:id — Public run detail JSON/HTML

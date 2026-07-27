@@ -73,6 +73,7 @@ const envSchema = z.object({
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
   STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
   STAS_AI_DISABLED: boolSchema(false),
+  STAS_PUBLIC_URL: z.string().default('http://localhost:3000'),
   STAS_LABEL: z.string().default('stas:fix'),
   DISABLE_AUTO_REMEDIATION: boolSchema(false),
   BOT_NAME: z.string().default('STAS'),
@@ -540,7 +541,7 @@ function buildConfig(env: ParsedEnv) {
       queueDlqNotifyAt: env.QUEUE_DLQ_NOTIFY_AT,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
-  LOOPS_API_KEY: z.string().optional(),
+      publicUrl: env.STAS_PUBLIC_URL,
     remediation: {
       disabled: env.DISABLE_AUTO_REMEDIATION,
     },
