@@ -26,6 +26,7 @@ export default function Layout() {
     { to: '/analytics', label: t('nav.analytics'), icon: '▦' },
     { to: '/kpi', label: t('nav.kpis'), icon: '📊' },
     { to: '/audit', label: t('nav.audit'), icon: '☰' },
+    { to: '/configuration', label: 'Configuration', icon: '🔧' },
     { to: '/settings', label: t('nav.settings'), icon: '⚙' },
     { to: '/admin/runs', label: t('nav.admin') + ' Runs', icon: '⚡' },
   ] as const;

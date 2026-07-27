@@ -96,21 +96,7 @@ export interface AuthResult {
   user: { id: number; email: string; name: string | null };
 }
 
-export interface FixRun {
-  id: string;
-  repoOwner: string;
-  repoName: string;
-  issueNumber: number;
-  issueTitle: string;
-  status: string;
-  confidence: string | null;
-  creditsUsed?: number;
-  prUrl: string | null;
-  durationMs: number | null;
-  modelUsed: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+
 
 export interface CreditBalance {
   accountId: number;
@@ -161,7 +147,7 @@ export interface HealthResponse {
   timestamp: string;
   aiMode?: string;
   uptime?: number;
-  memoryUsage?: NodeJS.MemoryUsage;
+  memoryUsage?: { rss: number; heapTotal: number; heapUsed: number; external: number; arrayBuffers?: number };
 }
 
 // -- SLA metric types --
@@ -368,6 +354,41 @@ export const settings = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+};
+
+export const configApi = {
+  get: () =>
+    request<{
+      env: Record<string, string>;
+      rateLimits: Array<{ endpoint: string; limit: number; window: string }>;
+      tokens: Array<{ id: string; name: string; scopes: string[]; createdAt: string; lastUsed: string | null }>;
+      symphonies: Array<{ id: string; name: string; status: string; endpoint: string; lastSync: string | null }>;
+      subscriptions: Array<{ id: string; event: string; channel: string; target: string; enabled: boolean }>;
+      warnings: Array<{ id: string; type: string; message: string; severity: string; dismissed: boolean; createdAt: string }>;
+      integrations: Array<{ id: string; name: string; icon: string; connected: boolean; configUrl?: string }>;
+      infrastructure: Record<string, { provider: string; host: string; port: number; status: string }>;
+    }>('/v1/config'),
+  updateEnv: (env: Record<string, string>) =>
+    request<{ success: boolean }>('/v1/config/env', {
+      method: 'PUT',
+      body: JSON.stringify({ env }),
+    }),
+  updateRateLimits: (rateLimits: Array<{ endpoint: string; limit: number; window: string }>) =>
+    request<{ success: boolean }>('/v1/config/rate-limits', {
+      method: 'PUT',
+      body: JSON.stringify({ rateLimits }),
+    }),
+  regenerateToken: (tokenId: string) =>
+    request<{ token: string }>(`/v1/config/tokens/${tokenId}/regenerate`, { method: 'POST' }),
+  revokeToken: (tokenId: string) =>
+    request<{ success: boolean }>(`/v1/config/tokens/${tokenId}`, { method: 'DELETE' }),
+  toggleIntegration: (id: string, connected: boolean) =>
+    request<{ success: boolean }>(`/v1/config/integrations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ connected }),
+    }),
+  testInfrastructure: (provider: string) =>
+    request<{ status: string }>(`/v1/config/infrastructure/${provider}/test`, { method: 'POST' }),
 };
 
 export const pricing = {

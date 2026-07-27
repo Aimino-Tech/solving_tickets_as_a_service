@@ -11,6 +11,7 @@ import RunDetail from '@/pages/RunDetail';
 import Repos from '@/pages/Repos';
 import Credits from '@/pages/Credits';
 import Settings from '@/pages/Settings';
+import Configuration from '@/pages/Configuration';
 import Analytics from '@/pages/Analytics';
 import AuditLog from '@/pages/AuditLog';
 import Security from '@/pages/Security';
@@ -80,6 +81,7 @@ export default function App() {
           <Route path="repos" element={<Repos />} />
           <Route path="credits" element={<Credits />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="configuration" element={<Configuration />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="audit" element={<AuditLog />} />
           <Route path="admin/runs" element={<AdminRuns />} />

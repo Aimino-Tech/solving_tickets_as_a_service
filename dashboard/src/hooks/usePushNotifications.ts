@@ -68,8 +68,8 @@ export function usePushNotifications() {
   );
 
   const notify = useCallback(
-    (params: { title: string; body: string; type: Notification['type']; data?: Record<string, unknown> }) => {
-      const notification = addNotif(params);
+    async (params: { title: string; body: string; type: Notification['type']; data?: Record<string, unknown> }) => {
+      const notification = await addNotif(params);
       showBrowserNotification(notification);
       return notification;
     },
