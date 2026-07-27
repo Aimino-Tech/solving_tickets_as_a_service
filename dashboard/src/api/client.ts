@@ -388,91 +388,168 @@ export const sla = {
     request<SLAMetrics>('/v1/sla/metrics'),
 };
 
+// -- Stats / Analytics API --
+
 export const stats = {
-  get: () => request<DashboardStats>('/v1/stats'),
+  get: () =>
+    request<{
+      totalRuns: number;
+      passRate: number;
+      runsByDay: { date: string; count: number; passed: number }[];
+      costByDay: { date: string; costCents: number }[];
+      fixRateByWeek: { week: string; rate: number }[];
+    }>('/v1/stats'),
 };
+
+// -- Audit Log API --
 
 export const audit = {
-  list: (params?: { page?: number; perPage?: number }) => {
-    const qs = new URLSearchParams();
-    if (params?.page) qs.set('page', String(params.page));
-    if (params?.perPage) qs.set('perPage', String(params.perPage));
-    return request<PaginatedResponse<AuditEntry>>(`/v1/audit?${qs.toString()}`);
-  },
+  list: (params: { page: number; perPage: number }) =>
+    request<{
+      data: {
+        id: string;
+        action: string;
+        actor: string;
+        target?: string;
+        details?: Record<string, unknown>;
+        createdAt: string;
+      }[];
+      total: number;
+      page: number;
+      perPage: number;
+      totalPages: number;
+    }>(`/v1/audit?page=${params.page}&perPage=${params.perPage}`),
 };
 
-export const litellm = {
-  usage: () => request<LitellmUsage>('/v1/litellm/usage'),
-};
+// -- Benchmarks API --
 
 export const benchmarks = {
-  get: () => request<{ competitors: BenchmarkEntry[] }>('/v1/benchmarks'),
-  getPrices: () => request<{ prices: BenchmarkPrice[] }>('/v1/benchmarks/prices'),
+  get: () =>
+    request<{
+      competitors: {
+        agent: string;
+        passRate: number;
+        costPerFixCents: number;
+        agentNative: boolean;
+        oss: boolean;
+        selfHostable: boolean;
+        note?: string;
+      }[];
+    }>('/v1/benchmarks'),
+  getPrices: () =>
+    request<{
+      prices: {
+        agent: string;
+        model: string;
+        costPerFixCents: number;
+        monthlyMinCents: number;
+        monthlyMaxFixes: number;
+      }[];
+    }>('/v1/benchmarks/prices'),
 };
+
+// -- KPI API --
 
 export const kpi = {
-  get: (params?: { days?: number }) => {
-    const qs = new URLSearchParams();
-    if (params?.days) qs.set('days', String(params.days));
-    return request<KpiResponse>(`/v1/kpi?${qs.toString()}`);
-  },
-  exportUrl: (days?: number) => {
-    const qs = new URLSearchParams();
-    if (days) qs.set('days', String(days));
-    return `/api/v1/kpi/export?${qs.toString()}`;
-  },
+  get: (params: { days: number }) =>
+    request<{
+      metrics: {
+        id: number;
+        snapshotDate: string;
+        activeReposMa: number;
+        fixCompletionRate: number;
+        totalRuns: number;
+        successfulRuns: number;
+        freeAccounts: number;
+        paidAccounts: number;
+        freeToPaidConversion: number;
+        netRevenueCents: number;
+        churnRate: number;
+        churnedAccounts: number;
+        viralCoefficient: number;
+        referredAccounts: number;
+        totalNewAccounts: number;
+      }[];
+      count: number;
+      generatedAt: string;
+    }>(`/v1/admin/kpi?days=${params.days}`),
+  exportUrl: (days: number) =>
+    `/api/v1/admin/kpi/export?days=${days}`,
 };
 
-export const settings = {
-  get: () => request<{ label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }>('/v1/settings'),
-  update: (data: { label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }) =>
-    request<{ success: boolean }>('/v1/settings', { method: 'PUT', body: JSON.stringify(data) }),
-};
-
-export const configApi = {
-  get: () => request<{
-    env: Record<string, string>;
-    rateLimits: { endpoint: string; limit: number; window: string }[];
-    tokens: { id: string; name: string; scopes: string[]; createdAt: string; lastUsed: string | null }[];
-    symphonies: { id: string; name: string; status: string; endpoint: string; lastSync: string | null }[];
-    subscriptions: { id: string; event: string; channel: string; target: string; enabled: boolean }[];
-    warnings: { id: string; type: string; message: string; severity: string; dismissed: boolean; createdAt: string }[];
-    integrations: { id: string; name: string; icon: string; connected: boolean; configUrl?: string }[];
-    infrastructure: Record<string, { provider: string; host: string; port: number; status: string }>;
-  }>('/v1/config'),
-  updateEnv: (env: Record<string, string>) =>
-    request<{ success: boolean }>('/v1/config/env', {
-      method: 'PUT',
-      body: JSON.stringify({ env }),
-    }),
-  updateRateLimits: (rateLimits: { endpoint: string; limit: number; window: string }[]) =>
-    request<{ success: boolean }>('/v1/config/rate-limits', {
-      method: 'PUT',
-      body: JSON.stringify({ rateLimits }),
-    }),
-  regenerateToken: (tokenId: string) =>
-    request<{ token: string }>(`/v1/config/tokens/${tokenId}/regenerate`, {
-      method: 'POST',
-    }),
-  revokeToken: (tokenId: string) =>
-    request<{ success: boolean }>(`/v1/config/tokens/${tokenId}`, {
-      method: 'DELETE',
-    }),
-  toggleIntegration: (id: string, connected: boolean) =>
-    request<{ success: boolean }>(`/v1/config/integrations/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ connected }),
-    }),
-  testInfrastructure: (provider: string) =>
-    request<{ status: string }>(`/v1/config/infrastructure/${provider}/test`, {
-      method: 'POST',
-    }),
-};
+// -- Pricing API --
 
 export const pricing = {
-  get: () => request<PricingData>('/v1/pricing'),
-  calculate: (fixesPerMonth: number, tier: string) =>
-    request<CostCalculation>(`/v1/pricing/calculate?fixesPerMonth=${fixesPerMonth}&tier=${tier}`),
+  get: () =>
+    request<{
+      plans: {
+        id: string;
+        name: string;
+        description: string;
+        price: string;
+        period: string;
+        fixes: string;
+        monthlyFixLimit: number;
+        concurrentFixes: number;
+        premiumModels: boolean;
+        prioritySupport: boolean;
+        customWebhooks: boolean;
+        sla: boolean;
+        features: string[];
+        cta: string;
+        highlighted: boolean;
+      }[];
+      competitors: {
+        competitor: string;
+        monthlyCostCents: number;
+        costPerFixCents: number;
+        fixesPerMonth: number;
+        passRate: number;
+        selfHosted: boolean;
+        openSource: boolean;
+        ourAgi: boolean;
+      }[];
+    }>('/v1/pricing'),
+  calculate: (fixes: number, tier: string) =>
+    request<{
+      fixesPerMonth: number;
+      monthlyCostCents: number;
+      costPerFixCents: number;
+      vsCompetitors: {
+        name: string;
+        monthlyCostCents: number;
+        savingsCents: number;
+        savingsPercent: number;
+      }[];
+    }>(`/v1/pricing/calculate?fixes=${fixes}&tier=${tier}`),
   vs: (competitor: string) =>
-    request<VsComparisonData>(`/v1/pricing/vs/${competitor}`),
+    request<{
+      competitor: string;
+      competitorName: string;
+      tagline: string;
+      ourAdvantage: string;
+      categories: {
+        name: string;
+        items: {
+          feature: string;
+          us: string;
+          them: string;
+          advantage: 'us' | 'them' | 'tie';
+        }[];
+      }[];
+      priceComparison: {
+        ourMonthlyCents: number;
+        theirMonthlyCents: number;
+        ourPerFixCents: number;
+        theirPerFixCents: number;
+        annualSavingsCents: number;
+      };
+      benchmarkComparison: {
+        ourPassRate: number;
+        theirPassRate: number;
+        ourCostPerFixCents: number;
+        theirCostPerFixCents: number;
+      };
+    }>(`/v1/pricing/vs/${competitor}`),
 };
+
