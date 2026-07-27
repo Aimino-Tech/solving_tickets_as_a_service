@@ -9,24 +9,31 @@ import type { ReactNode } from 'react';
 // Mock the API client
 vi.mock('@/api/client', () => ({
   auth: {
-    me: vi.fn(),
     login: vi.fn(),
     register: vi.fn(),
-    logout: vi.fn(),
     refresh: vi.fn(),
+    me: vi.fn(),
+    logout: vi.fn(),
+    loginUrl: vi.fn(() => '/api/auth/github'),
   },
   setToken: vi.fn(),
-  setRefreshToken: vi.fn(),
   clearToken: vi.fn(),
+  default: {},
 }));
 
 function TestConsumer() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   return (
     <div>
       <div data-testid="loading">{String(isLoading)}</div>
       <div data-testid="authenticated">{String(isAuthenticated)}</div>
       <div data-testid="username">{user?.username ?? 'null'}</div>
+      <button data-testid="login-btn" onClick={() => login('test@test.com', 'password')}>
+        Login
+      </button>
+      <button data-testid="logout-btn" onClick={logout}>
+        Logout
+      </button>
     </div>
   );
 }
@@ -48,7 +55,7 @@ describe('AuthContext', () => {
   it('starts in loading state when token exists in localStorage', () => {
     localStorage.setItem('stas_token', 'existing-token');
     (auth.me as any).mockResolvedValue({
-      id: 1, email: 'test@test.com', name: 'Test', username: 'testuser', avatarUrl: '',
+      id: 1, email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: '', createdAt: '2024-01-01',
     });
 
     renderWithProvider(<TestConsumer />);
@@ -58,7 +65,7 @@ describe('AuthContext', () => {
   it('loads user when a valid token exists', async () => {
     localStorage.setItem('stas_token', 'valid-token');
     (auth.me as any).mockResolvedValue({
-      id: 1, email: 'test@test.com', name: 'Test', username: 'testuser', avatarUrl: 'https://example.com/avatar.png',
+      id: 1, email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: 'https://example.com/avatar.png', createdAt: '2024-01-01',
     });
 
     renderWithProvider(<TestConsumer />);
@@ -98,8 +105,32 @@ describe('AuthContext', () => {
     renderWithProvider(<TestConsumer />);
     const user = userEvent.setup();
 
-    // login is not exposed in TestConsumer anymore, this test is covered by Login page
-    expect(true).toBe(true);
+    await user.click(screen.getByTestId('login-btn'));
+
+    expect(auth.loginUrl).toHaveBeenCalled();
+  });
+
+  it('calls logout and clears state when logout() is invoked', async () => {
+    localStorage.setItem('stas_token', 'valid-token');
+    (auth.me as any).mockResolvedValue({
+      id: 1, email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: '', createdAt: '2024-01-01',
+    });
+    (auth.logout as any).mockResolvedValue({ success: true });
+
+    renderWithProvider(<TestConsumer />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('true');
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId('logout-btn'));
+
+    await waitFor(() => {
+      expect(auth.logout).toHaveBeenCalled();
+      expect(clearToken).toHaveBeenCalled();
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('false');
+    });
   });
 
   it('handles token from URL search params', async () => {
@@ -116,7 +147,7 @@ describe('AuthContext', () => {
     });
 
     (auth.me as any).mockResolvedValue({
-      id: 2, email: 'url@test.com', name: 'URL', username: 'urluser', avatarUrl: '',
+      id: 2, email: 'url@test.com', name: 'urluser', username: 'urluser', avatarUrl: '', createdAt: '2024-01-01',
     });
 
     renderWithProvider(<TestConsumer />);

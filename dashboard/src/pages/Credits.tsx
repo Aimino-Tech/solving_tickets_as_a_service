@@ -21,7 +21,7 @@ export default function Credits() {
         setTransactions(txData.transactions);
         setUsage(usageData.usage);
       })
-      .catch((err) => setError(err.message))
+      .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
@@ -59,7 +59,7 @@ export default function Credits() {
               onClick={() => {
                 credits.topUp('price_100credits', window.location.href, window.location.href)
                   .then((res) => { window.location.href = res.url; })
-                  .catch((err) => alert('Failed to initiate purchase: ' + err.message));
+                  .catch((err: Error) => alert('Failed to initiate purchase: ' + err.message));
               }}
               className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50"
             >
@@ -70,7 +70,7 @@ export default function Credits() {
               onClick={() => {
                 credits.topUp('price_500credits', window.location.href, window.location.href)
                   .then((res) => { window.location.href = res.url; })
-                  .catch((err) => alert('Failed to initiate purchase: ' + err.message));
+                  .catch((err: Error) => alert('Failed to initiate purchase: ' + err.message));
               }}
               className="flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-400"
             >

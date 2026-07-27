@@ -14,7 +14,7 @@ export default function BillingSetup({ progress, onComplete, onSkip }: Props) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    billing.listPlans().then((res) => setPlans(res.plans)).catch(() => {});
+    billing.listPlans().then((data) => setPlans(data.plans)).catch(() => {});
   }, []);
 
   async function handleSelect() {

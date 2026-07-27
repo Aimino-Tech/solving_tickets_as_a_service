@@ -24,7 +24,7 @@ export default function KpiDashboard() {
   useEffect(() => {
     kpi
       .get({ days: 90 })
-      .then((res: import('@/api/types').KpiResponse) => setMetrics(res.metrics))
+      .then((res: any) => setMetrics(res.metrics))
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);

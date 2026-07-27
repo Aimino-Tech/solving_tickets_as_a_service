@@ -18,7 +18,7 @@ export default function Repos() {
     try {
       const [status, repoData] = await Promise.all([
         github.getStatus().catch(() => ({ connected: false })),
-        repos.list().catch(() => [] as Repo[]),
+        repos.list().catch(() => [] as (Repo & { createdAt: string })[]),
       ]);
       setConnectionStatus(status);
       setRepoList(repoData);

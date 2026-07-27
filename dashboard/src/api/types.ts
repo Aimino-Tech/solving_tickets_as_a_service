@@ -150,6 +150,25 @@ export interface CostCalculation {
   }>;
 }
 
+export interface LitellmUsage {
+  remainingBudget: number;
+  maxBudget: number;
+  budgetResetAt: string | null;
+  tokensToday: { input: number; output: number; total: number };
+  requestsToday: number;
+  costToday: number;
+  tokensMonth: { input: number; output: number; total: number };
+  requestsMonth: number;
+  costMonth: number;
+  rateLimit: {
+    rpmRemaining: number;
+    tpmRemaining: number;
+    rpmLimit: number;
+    tpmLimit: number;
+    resetAt: string | null;
+  };
+}
+
 export interface PricingData {
   generatedAt: string;
   plans: PricingPlan[];

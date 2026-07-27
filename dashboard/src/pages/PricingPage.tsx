@@ -18,14 +18,14 @@ export default function PricingPage() {
   useEffect(() => {
     pricing
       .get()
-      .then((data: import('@/api/types').PricingData) => { setPlans(data.plans); setCompetitors(data.competitors); })
+      .then((data: any) => { setPlans(data.plans); setCompetitors(data.competitors); })
       .catch((err: Error) => setError(err.message));
   }, []);
 
   useEffect(() => {
     pricing
       .calculate(fixSlider, selectedTier)
-      .then((data: import('@/api/types').CostCalculation) => setCalcResult(data))
+      .then((data: any) => setCalcResult(data))
       .catch(() => {});
   }, [fixSlider, selectedTier]);
 

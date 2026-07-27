@@ -1,4 +1,4 @@
-import type { Run, PaginatedResponse } from '@/api/types';
+import type { Run, DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice, KpiResponse, PricingData, CostCalculation, VsComparisonData } from '@/api/types';
 
 const API_BASE = '/api';
 
@@ -96,8 +96,6 @@ export interface AuthResult {
   user: { id: number; email: string; name: string | null };
 }
 
-
-
 export interface CreditBalance {
   accountId: number;
   balance: number;
@@ -133,8 +131,6 @@ export interface BillingPlan {
   concurrentFixes?: number;
 }
 
-// -- Health types --
-
 export interface HealthCheck {
   status: string;
   latencyMs?: number;
@@ -147,10 +143,8 @@ export interface HealthResponse {
   timestamp: string;
   aiMode?: string;
   uptime?: number;
-  memoryUsage?: { rss: number; heapTotal: number; heapUsed: number; external: number; arrayBuffers?: number };
+  memoryUsage?: NodeJS.MemoryUsage;
 }
-
-// -- SLA metric types --
 
 export interface SLAByTier {
   count: number;
@@ -173,6 +167,7 @@ export interface SLAMetrics {
 }
 
 export const auth = {
+  loginUrl: () => '/api/auth/github',
   register: (email: string, password: string, name?: string) =>
     request<AuthResult>('/v1/auth/register', {
       method: 'POST',
@@ -192,7 +187,6 @@ export const auth = {
     }),
   logout: () =>
     request<{ message: string }>('/v1/auth/logout', { method: 'POST' }),
-  loginUrl: () => '/api/auth/github',
 };
 
 export const credits = {
@@ -234,6 +228,21 @@ export const runs = {
     );
   },
   get: (id: string) => request<Run>(`/v1/runs/${id}`),
+  feedbackSubmit: (id: string, verdict: string, comment?: string) =>
+    request<{ success: boolean }>(`/v1/runs/${id}/feedback`, {
+      method: 'POST',
+      body: JSON.stringify({ verdict, comment }),
+    }),
+  escalate: (id: string, reason: string) =>
+    request<{ success: boolean }>(`/v1/runs/${id}/escalate`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  rollback: (id: string, reason: string) =>
+    request<{ success: boolean }>(`/v1/runs/${id}/rollback`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
 };
 
 export interface GitHubInstallation {
@@ -263,7 +272,7 @@ export interface GitHubConnectionStatus {
 
 export const repos = {
   list: () =>
-    request<{ id: string; owner: string; repo: string; active: boolean; installationId?: number; createdAt: string }[]>('/repos'),
+    request<{ id: string; owner: string; repo: string; active: boolean; createdAt: string }[]>('/repos'),
   connect: (body: { owner: string; repo: string; installationId?: number }) =>
     request<{ id: string; owner: string; repo: string; active: boolean }>('/repos', {
       method: 'POST',
@@ -318,105 +327,6 @@ export const billing = {
     }),
 };
 
-export const stats = {
-  get: () => request<import('@/api/types').DashboardStats>('/v1/me/stats'),
-};
-
-export const audit = {
-  list: (params?: { page?: number; perPage?: number }) =>
-    request<import('@/api/types').PaginatedResponse<import('@/api/types').AuditEntry>>(
-      `/v1/me/audit-log?page=${params?.page ?? 1}&perPage=${params?.perPage ?? 30}`,
-    ),
-};
-
-export const benchmarks = {
-  get: () => request<{ competitors: import('@/api/types').BenchmarkEntry[] }>('/benchmarks'),
-  getPrices: () => request<{ prices: import('@/api/types').BenchmarkPrice[] }>('/benchmarks/prices'),
-};
-
-export const kpi = {
-  get: (params?: { days?: number }) =>
-    request<import('@/api/types').KpiResponse>(`/kpi?days=${params?.days ?? 90}`),
-  exportUrl: (days?: number) => `/kpi/export?days=${days ?? 90}`,
-};
-
-export const settings = {
-  get: () =>
-    request<{
-      label: string;
-      model: string;
-      maxConcurrent: number;
-      sandboxPoolSize: number;
-      auditLogEnabled: boolean;
-    }>('/v1/me/settings'),
-  update: (data: Record<string, unknown>) =>
-    request<{ success: boolean }>('/v1/me/settings', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-};
-
-export const configApi = {
-  get: () =>
-    request<{
-      env: Record<string, string>;
-      rateLimits: Array<{ endpoint: string; limit: number; window: string }>;
-      tokens: Array<{ id: string; name: string; scopes: string[]; createdAt: string; lastUsed: string | null }>;
-      symphonies: Array<{ id: string; name: string; status: string; endpoint: string; lastSync: string | null }>;
-      subscriptions: Array<{ id: string; event: string; channel: string; target: string; enabled: boolean }>;
-      warnings: Array<{ id: string; type: string; message: string; severity: string; dismissed: boolean; createdAt: string }>;
-      integrations: Array<{ id: string; name: string; icon: string; connected: boolean; configUrl?: string }>;
-      infrastructure: Record<string, { provider: string; host: string; port: number; status: string }>;
-    }>('/v1/config'),
-  updateEnv: (env: Record<string, string>) =>
-    request<{ success: boolean }>('/v1/config/env', {
-      method: 'PUT',
-      body: JSON.stringify({ env }),
-    }),
-  updateRateLimits: (rateLimits: Array<{ endpoint: string; limit: number; window: string }>) =>
-    request<{ success: boolean }>('/v1/config/rate-limits', {
-      method: 'PUT',
-      body: JSON.stringify({ rateLimits }),
-    }),
-  regenerateToken: (tokenId: string) =>
-    request<{ token: string }>(`/v1/config/tokens/${tokenId}/regenerate`, { method: 'POST' }),
-  revokeToken: (tokenId: string) =>
-    request<{ success: boolean }>(`/v1/config/tokens/${tokenId}`, { method: 'DELETE' }),
-  toggleIntegration: (id: string, connected: boolean) =>
-    request<{ success: boolean }>(`/v1/config/integrations/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ connected }),
-    }),
-  testInfrastructure: (provider: string) =>
-    request<{ status: string }>(`/v1/config/infrastructure/${provider}/test`, { method: 'POST' }),
-};
-
-export const pricing = {
-  get: () => request<import('@/api/types').PricingData>('/pricing'),
-  calculate: (fixesPerMonth: number, tier: string) =>
-    request<import('@/api/types').CostCalculation>(
-      `/pricing/calculate?fixes=${fixesPerMonth}&tier=${tier}`,
-    ),
-  vs: (slug: string) =>
-    request<import('@/api/types').VsComparisonData>(`/pricing/vs/${slug}`),
-};
-
-// -- Health API --
-
-export const health = {
-  getStatus: () =>
-    request<HealthResponse>('/health'),
-  getVerbose: () =>
-    request<HealthResponse>('/health/verbose'),
-};
-
-// -- SLA API --
-
-export const sla = {
-  getMetrics: () =>
-    request<SLAMetrics>('/v1/sla/metrics'),
-};
-
 export interface WizardProgress {
   tenantId: string;
   state: 'not_started' | 'in_progress' | 'completed' | 'skipped';
@@ -455,4 +365,61 @@ export const onboarding = {
     request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/reset', { method: 'POST' }),
   getConfig: () =>
     request<{ config: WizardConfig }>('/v1/onboarding/config'),
+};
+
+export const health = {
+  getStatus: () =>
+    request<HealthResponse>('/health'),
+  getVerbose: () =>
+    request<HealthResponse>('/health/verbose'),
+};
+
+export const sla = {
+  getMetrics: () =>
+    request<SLAMetrics>('/v1/sla/metrics'),
+};
+
+export const stats = {
+  get: () => request<DashboardStats>('/v1/stats'),
+};
+
+export const audit = {
+  list: (params?: { page?: number; perPage?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.perPage) qs.set('perPage', String(params.perPage));
+    return request<PaginatedResponse<AuditEntry>>(`/v1/audit?${qs.toString()}`);
+  },
+};
+
+export const benchmarks = {
+  get: () => request<{ competitors: BenchmarkEntry[] }>('/v1/benchmarks'),
+  getPrices: () => request<{ prices: BenchmarkPrice[] }>('/v1/benchmarks/prices'),
+};
+
+export const kpi = {
+  get: (params?: { days?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.days) qs.set('days', String(params.days));
+    return request<KpiResponse>(`/v1/kpi?${qs.toString()}`);
+  },
+  exportUrl: (days?: number) => {
+    const qs = new URLSearchParams();
+    if (days) qs.set('days', String(days));
+    return `/api/v1/kpi/export?${qs.toString()}`;
+  },
+};
+
+export const settings = {
+  get: () => request<{ label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }>('/v1/settings'),
+  update: (data: { label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }) =>
+    request<{ success: boolean }>('/v1/settings', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+export const pricing = {
+  get: () => request<PricingData>('/v1/pricing'),
+  calculate: (fixesPerMonth: number, tier: string) =>
+    request<CostCalculation>(`/v1/pricing/calculate?fixesPerMonth=${fixesPerMonth}&tier=${tier}`),
+  vs: (competitor: string) =>
+    request<VsComparisonData>(`/v1/pricing/vs/${competitor}`),
 };

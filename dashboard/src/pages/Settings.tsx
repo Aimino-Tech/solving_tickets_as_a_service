@@ -69,7 +69,7 @@ export default function Settings() {
   useEffect(() => {
     settings
       .get()
-      .then((data: { label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }) => {
+      .then((data: any) => {
         setConfig(data);
         setForm(data);
       })

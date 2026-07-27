@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { audit } from '@/api/client';
-import type { AuditEntry } from '@/api/types';
+import type { AuditEntry, PaginatedResponse } from '@/api/types';
 import { formatRelativeTime } from '@/utils/format';
 
 const ACTION_ICONS: Record<string, string> = {
@@ -38,7 +38,7 @@ export default function AuditLog() {
     setError(null);
     audit
       .list({ page: p, perPage: 30 })
-      .then((res: { data: AuditEntry[]; total: number; totalPages: number; page: number }) => {
+      .then((res: PaginatedResponse<AuditEntry>) => {
         setEntries(res.data);
         setTotal(res.total);
         setTotalPages(res.totalPages);
