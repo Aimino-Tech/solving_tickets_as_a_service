@@ -69,11 +69,11 @@ export default function Settings() {
   useEffect(() => {
     settings
       .get()
-      .then((data) => {
+      .then((data: any) => {
         setConfig(data);
         setForm(data);
       })
-      .catch((err) => setError(err.message))
+      .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
 
     fetchDeletionStatus();

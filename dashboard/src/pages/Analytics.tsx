@@ -24,7 +24,7 @@ export default function Analytics() {
     stats
       .get()
       .then(setData)
-      .catch((err) => setError(err.message));
+      .catch((err: Error) => setError(err.message));
   }, []);
 
   if (error) {
