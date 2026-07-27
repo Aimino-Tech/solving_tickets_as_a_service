@@ -1,5 +1,6 @@
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { getSupabaseAdmin, getSupabaseAnon, supabaseJwtSecret } from './supabase.js';
+import { config } from '../config.js';
 import { usersRepository } from '../db/repositories/UsersRepository.js';
 import type { User } from '../db/types/users.js';
 
@@ -18,92 +19,59 @@ export interface AuthResult {
   };
 }
 
-const ACCESS_TOKEN_EXPIRY = '24h';
-const REFRESH_TOKEN_EXPIRY = '30d';
+const SALT_ROUNDS = 12;
 
 export class AuthService {
   async register(email: string, password: string, name?: string): Promise<AuthResult> {
-    const { data: createData, error: createError } = await getSupabaseAdmin().auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { name: name || '' },
-    });
-    if (createError) {
-      const underlying = (createError as any).originalError;
-      const apiMsg = typeof underlying?.message === 'string' ? underlying.message : undefined;
-      const msg = typeof createError.message === 'string' && createError.message !== '{}'
-        ? createError.message
-        : createError.msg || apiMsg || createError.error_description || 'Registration failed';
-      throw new AuthError(msg, createError.status || 400);
+    const existing = await usersRepository.findByEmail(email);
+    if (existing) {
+      throw new AuthError('Email already registered', 409);
     }
 
-    const supabaseUid = createData.user!.id;
-
-    const existingLocal = await usersRepository.findByEmail(email).catch(() => undefined);
-    let user: User;
-    if (existingLocal) {
-      user = (await usersRepository.update(existingLocal.id, { name })) ?? existingLocal;
-    } else {
-      user = await usersRepository.create({
-        id: supabaseUid,
-        email,
-        passwordHash: '',
-        name,
-      });
-    }
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const user = await usersRepository.create({ email, passwordHash, name });
 
     return this.generateTokens(user.id, user.email);
   }
 
   async login(email: string, password: string): Promise<AuthResult> {
-    const { data: signInData, error: signInError } = await getSupabaseAnon().auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (signInError) throw new AuthError(signInError.message, 401);
-
     const user = await usersRepository.findByEmail(email);
-    if (!user) throw new AuthError('User not found', 404);
+    if (!user) {
+      throw new AuthError('Invalid email or password', 401);
+    }
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      throw new AuthError('Invalid email or password', 401);
+    }
 
     return this.generateTokens(user.id, user.email);
   }
 
-  async refreshToken(refreshToken: string): Promise<AuthResult> {
+  refreshToken(refreshToken: string): AuthResult | never {
     try {
-      const payload = jwt.verify(refreshToken, supabaseJwtSecret) as TokenPayload;
-      return this.generateTokens(payload.sub, payload.email);
+      const decoded = jwt.verify(refreshToken, config.auth.jwtSecret) as { sub: string; email: string; iat?: number; exp?: number };
+      return this.generateTokens(decoded.sub, decoded.email);
     } catch {
       throw new AuthError('Invalid or expired refresh token', 401);
     }
   }
 
   verifyToken(token: string): TokenPayload {
-    if (!supabaseJwtSecret) {
-      throw new AuthError('Supabase JWT secret not configured', 500);
-    }
     try {
-      const payload = jwt.verify(token, supabaseJwtSecret) as jwt.JwtPayload & { email?: string };
-      if (!payload.sub || !payload.email) {
-        throw new AuthError('Invalid token payload', 401);
-      }
-      return { sub: String(payload.sub), email: payload.email };
-    } catch (err) {
-      if (err instanceof AuthError) throw err;
+      const decoded = jwt.verify(token, config.auth.jwtSecret) as { sub: string; email: string; iat?: number; exp?: number };
+      return { sub: decoded.sub, email: decoded.email };
+    } catch {
       throw new AuthError('Invalid or expired token', 401);
     }
   }
 
-  generateTokens(userId: string, email: string): AuthResult {
-    const payload: TokenPayload = { sub: userId, email };
+  public generateTokens(userId: string, email: string): AuthResult {
+    const payload = { sub: userId, email };
 
-    const token = jwt.sign(payload, supabaseJwtSecret, {
-      expiresIn: ACCESS_TOKEN_EXPIRY,
-    });
-
-    const refreshToken = jwt.sign(payload, supabaseJwtSecret, {
-      expiresIn: REFRESH_TOKEN_EXPIRY,
-    });
+    const secret = config.auth.jwtSecret as string;
+    const token = jwt.sign(payload, secret, { expiresIn: config.auth.jwtExpiresIn } as jwt.SignOptions);
+    const refreshToken = jwt.sign(payload, secret, { expiresIn: config.auth.jwtRefreshExpiresIn } as jwt.SignOptions);
 
     return {
       token,

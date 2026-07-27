@@ -45,8 +45,9 @@ async function checkComponentHealth(): Promise<{
 
   const rmqStart = Date.now();
   try {
-    const { isConnected } = await import('../queue/rabbitmq.js');
-    checks.rabbitmq = { status: isConnected() ? 'ok' : 'error', latencyMs: Date.now() - rmqStart };
+    const { ensureConnected } = await import('../queue/rabbitmq.js');
+    const connected = await ensureConnected();
+    checks.rabbitmq = { status: connected ? 'ok' : 'error', latencyMs: Date.now() - rmqStart };
   } catch (err) {
     checks.rabbitmq = { status: 'error', latencyMs: Date.now() - rmqStart, error: String(err) };
   }

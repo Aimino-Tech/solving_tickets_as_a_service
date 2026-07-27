@@ -3,16 +3,8 @@ import { config } from '../config.js';
 
 export interface AuthUser {
   id: number;
-  githubUsername: string;
+  githubLogin: string;
   tier: string;
-}
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AuthUser;
-    }
-  }
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
@@ -24,7 +16,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   try {
     const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()) as {
       sub: string;
-      githubUsername: string;
+      githubLogin: string;
       tier: string;
       exp: number;
     };
@@ -34,9 +26,9 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     }
     req.user = {
       id: Number(payload.sub),
-      githubUsername: payload.githubUsername,
+      githubLogin: payload.githubLogin,
       tier: payload.tier,
-    };
+    } as any;
     next();
   } catch {
     res.status(401).json({ error: 'Invalid token' });

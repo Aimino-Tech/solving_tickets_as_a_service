@@ -121,3 +121,10 @@ class TestSignInFunctionality:
         login_page.password_input.fill("password123")
         login_page.sign_in_submit_button.click()
         page.wait_for_url(f"{base_url}/login", timeout=10000)
+
+    def test_sign_in_form_submission_shows_error(self, page: Page, base_url: str):
+        login_page = LoginPage(page, base_url)
+        login_page.goto()
+        login_page.sign_in("test@example.com", "password123")
+        page.wait_for_timeout(2000)
+        expect(login_page.error_message).to_be_visible(timeout=10000)

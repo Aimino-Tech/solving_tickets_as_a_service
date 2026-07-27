@@ -132,6 +132,9 @@ importers:
       '@types/graphlib':
         specifier: ^2.1.12
         version: 2.1.12
+      '@types/jsonwebtoken':
+        specifier: ^9.0.10
+        version: 9.0.10
       '@types/node':
         specifier: ^22.0.0
         version: 22.20.0

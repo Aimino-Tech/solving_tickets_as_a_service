@@ -96,3 +96,6 @@ export async function getInstallationToken(installationId: number): Promise<stri
 export function getAppOctokitInstance(): ReturnType<typeof createAppOctokit> {
   return getAppOctokit();
 }
+
+// @ts-expect-error - File outside rootDir, handled at runtime
+export { createAuth } from '@stas/github-client';

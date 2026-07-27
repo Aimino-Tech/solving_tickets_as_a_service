@@ -99,11 +99,11 @@ router.delete('/installations/:id/repos/:owner/:repo/webhook', async (req: Reque
     const token = await getGitHubToken(req);
     if (!token) { res.status(401).json({ error: 'GitHub access token not available' }); return; }
     const { owner, repo } = req.params;
-    const existing = await gitHubWebhookRepository.findByRepo(owner, repo);
+    const existing = await gitHubWebhookRepository.findByOwnerAndRepo(owner, repo);
     if (!existing) { res.status(404).json({ error: 'Webhook not found' }); return; }
     if (existing.userId !== req.user!.id) { res.status(403).json({ error: 'Forbidden' }); return; }
     await fetch('https://api.github.com/repos/' + owner + '/' + repo + '/hooks/' + existing.webhookId, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' } });
-    await gitHubWebhookRepository.delete(existing.id);
+    await gitHubWebhookRepository.deactivate(existing.id);
     res.json({ success: true });
   } catch (err) { log.error({ err: String(err) }, 'Failed to delete webhook'); res.status(500).json({ error: 'Failed to delete webhook' }); }
 });

@@ -50,10 +50,10 @@ router.post('/runs/:id/feedback', async (req: Request, res: Response) => {
       try {
         const tokenRow = await getGithubToken();
         if (tokenRow && run.issueNumber) {
-          const owner = run.repoId ? await getRepoOwner(run.repoId) : null;
-          if (owner) {
+          const repoInfo = run.repoId ? await getRepoInfo(run.repoId) : null;
+          if (repoInfo) {
             await postGithubComment(
-              owner, run.repoName, run.issueNumber,
+              repoInfo.owner, repoInfo.name, run.issueNumber,
               `## Re-analysis triggered\n\nUser reported this fix as "${verdict}". STAS will re-analyze with an adjusted approach.\n\n${comment ? `> ${comment}` : ''}`,
               tokenRow,
             );
@@ -73,7 +73,11 @@ router.post('/runs/:id/feedback', async (req: Request, res: Response) => {
 
 router.get('/runs/:id/feedback', async (req: Request, res: Response) => {
   try {
-    const runId = req.params.id;
+    const runId = Number(req.params.id);
+    if (!Number.isFinite(runId)) {
+      res.status(400).json({ error: 'Invalid run ID' });
+      return;
+    }
     const feedback = await runFeedbackRepository.findByRunId(runId);
     res.json({ feedback });
   } catch (err) {
@@ -118,10 +122,10 @@ router.post('/runs/:id/escalate', async (req: Request, res: Response) => {
     if (run.issueNumber) {
       const tokenRow = await getGithubToken();
       if (tokenRow) {
-        const owner = run.repoId ? await getRepoOwner(run.repoId) : null;
-        if (owner) {
+        const repoInfo = run.repoId ? await getRepoInfo(run.repoId) : null;
+        if (repoInfo) {
           await postGithubComment(
-            owner, run.repoName, run.issueNumber,
+            repoInfo.owner, repoInfo.name, run.issueNumber,
             `## Escalated to STAS Team\n\nThis issue has been escalated to the STAS team for manual review.\n\n**Reason:** ${reason}\n\nA STAS operator will review and respond shortly.`,
             tokenRow,
           );
@@ -231,11 +235,11 @@ async function getGithubToken(): Promise<string | null> {
   }
 }
 
-async function getRepoOwner(repoId: number): Promise<string | null> {
+async function getRepoInfo(repoId: number): Promise<{ owner: string; name: string } | null> {
   try {
     const { reposRepository } = await import('../db/repositories/index.js');
     const repo = await reposRepository.findById(repoId);
-    return repo?.owner ?? null;
+    return repo ? { owner: repo.owner, name: repo.name } : null;
   } catch {
     return null;
   }

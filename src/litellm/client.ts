@@ -44,7 +44,7 @@ export interface LitellmUsageResponse {
 
 async function litellmRequest<T>(path: string, params?: Record<string, string>): Promise<T | null> {
   const baseUrl = config.litellm.baseUrl;
-  const apiKey = config.litellm.adminApiKey;
+  const apiKey = config.litellm.apiKey;
   if (!apiKey) {
     log.warn('LITELLM_ADMIN_API_KEY not configured — skipping LiteLLM API call');
     return null;
@@ -67,6 +67,9 @@ async function litellmRequest<T>(path: string, params?: Record<string, string>):
     return null;
   }
 }
+
+// Alias for downstream consumers
+export type LitellmUsage = LitellmUsageResponse;
 
 export async function getRemainingBudget(userId: string): Promise<LitellmRemainingBudget | null> {
   return litellmRequest<LitellmRemainingBudget>(`/user/remaining_budget`, { user_id: userId });
@@ -120,3 +123,6 @@ export async function getAggregatedUsage(userId: string): Promise<LitellmUsageRe
     },
   };
 }
+
+// Alias for downstream consumers
+export const fetchLitellmUsage = getAggregatedUsage;

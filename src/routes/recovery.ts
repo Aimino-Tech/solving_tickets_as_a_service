@@ -35,7 +35,7 @@ router.post('/runs/:id/feedback', requireAuth, async (req: Request, res: Respons
     const { verdict, comment, triggerReanalysis, feedbackType } = req.body;
 
     const feedback = await runFeedbackRepository.create({
-      runId,
+      runId: String(runId),
       userId: req.user!.id,
       verdict: verdict ?? 'bad_fix',
       comment: comment ?? null,
@@ -55,14 +55,16 @@ router.post('/runs/:id/feedback', requireAuth, async (req: Request, res: Respons
           'The agent will retry with an adjusted approach.',
         ].join('\n'));
 
-        const { dispatchPipeline } = await import('../dispatch/celeryDispatcher.js');
-        await dispatchPipeline({
+        const { dispatchFullPipeline } = await import('../dispatch/celeryDispatcher.js');
+        await dispatchFullPipeline({
           repoOwner: repo.owner,
           repoName: repo.name,
+          repoPrivate: false,
+          installationId: 0,
           issueNumber: run.issueNumber!,
           issueTitle: 'Re-analysis of #' + run.issueNumber,
-          reanalysisOf: runId,
-        });
+          issueBody: 'Re-analysis triggered from user feedback',
+        } as any);
       }
     }
 
@@ -141,7 +143,7 @@ router.post('/runs/:id/rollback', requireAuth, async (req: Request, res: Respons
     });
 
     await runFeedbackRepository.create({
-      runId,
+      runId: String(runId),
       userId: req.user!.id,
       verdict: 'bad_fix',
       feedbackType: 'rollback',
@@ -151,7 +153,7 @@ router.post('/runs/:id/rollback', requireAuth, async (req: Request, res: Respons
       status: 'reverted',
       revertPrUrl: revertPr.data.html_url,
       revertedAt: new Date(),
-    });
+    } as any);
 
     log.info({ runId, revertPrUrl: revertPr.data.html_url }, 'Rollback PR created');
 
@@ -191,7 +193,7 @@ router.post('/runs/:id/cancel', requireAuth, async (req: Request, res: Response)
       status: 'cancelled',
       cancelReason: reason,
       cancelledAt: new Date(),
-    });
+    } as any);
 
     if (run.repoId && run.issueNumber) {
       const { reposRepository } = await import('../db/repositories/ReposRepository.js');

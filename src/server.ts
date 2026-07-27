@@ -70,7 +70,7 @@ import { pricingRouter } from './routes/pricing.js';
 import { proxyRouter } from './routes/proxy.js';
 import { qualityRouter } from './routes/quality.js';
 import { reposRouter } from './routes/repos.js';
-import { gitHubOAuthRouter } from './routes/github-oauth.js';
+import { gitHubOAuthRouter } from './routes/githubOAuth.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
 import { litellmUsageRouter } from './routes/litellmUsage.js';

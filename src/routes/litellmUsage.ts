@@ -5,9 +5,8 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'litellm-usage-routes' });
 const router: Router = Router();
-router.use(requireAuth);
 
-router.get('/litellm/usage', async (req: Request, res: Response) => {
+router.get('/litellm/usage', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = String(req.user!.id);
     const usage = await getAggregatedUsage(userId);
