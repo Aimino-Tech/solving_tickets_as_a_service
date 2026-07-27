@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 // Mock the API client
 vi.mock('@/api/client', () => ({
   auth: {
-    login: vi.fn(),
+    login: vi.fn().mockResolvedValue({ token: 'test-token', refreshToken: 'test-refresh', user: { id: 1, email: 'test@test.com', name: 'testuser', username: 'testuser' } }),
     register: vi.fn(),
     refresh: vi.fn(),
     me: vi.fn(),
@@ -17,6 +17,7 @@ vi.mock('@/api/client', () => ({
     loginUrl: vi.fn(() => '/api/auth/github'),
   },
   setToken: vi.fn(),
+  setRefreshToken: vi.fn(),
   clearToken: vi.fn(),
   default: {},
 }));
@@ -101,13 +102,16 @@ describe('AuthContext', () => {
     expect(auth.me).not.toHaveBeenCalled();
   });
 
-  it('redirects to GitHub login when login() is called', async () => {
+  it('calls login API and sets user when login() is called', async () => {
     renderWithProvider(<TestConsumer />);
     const user = userEvent.setup();
 
     await user.click(screen.getByTestId('login-btn'));
 
-    expect(auth.loginUrl).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(auth.login).toHaveBeenCalledWith('test@test.com', 'password');
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('true');
+    });
   });
 
   it('calls logout and clears state when logout() is invoked', async () => {
