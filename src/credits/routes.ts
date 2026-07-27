@@ -43,6 +43,8 @@ const log = rootLogger.child({ module: 'credits-routes' });
 
 export const creditRouter: Router = Router();
 
+creditRouter.use(requireAuth);
+
 // ---------------------------------------------------------------------------
 // Auth helpers
 // ---------------------------------------------------------------------------

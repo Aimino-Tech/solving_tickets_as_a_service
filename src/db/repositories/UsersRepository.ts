@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { queryWithRetry } from '../connection.js';
 import type { User, NewUser } from '../types/index.js';
 

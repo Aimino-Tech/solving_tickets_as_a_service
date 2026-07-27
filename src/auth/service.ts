@@ -29,7 +29,14 @@ export class AuthService {
       email_confirm: true,
       user_metadata: { name: name || '' },
     });
-    if (createError) throw new AuthError(createError.message, createError.status || 400);
+    if (createError) {
+      const underlying = (createError as any).originalError;
+      const apiMsg = typeof underlying?.message === 'string' ? underlying.message : undefined;
+      const msg = typeof createError.message === 'string' && createError.message !== '{}'
+        ? createError.message
+        : createError.msg || apiMsg || createError.error_description || 'Registration failed';
+      throw new AuthError(msg, createError.status || 400);
+    }
 
     const supabaseUid = createData.user!.id;
 

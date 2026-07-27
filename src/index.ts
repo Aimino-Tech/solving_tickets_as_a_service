@@ -141,7 +141,7 @@ async function main(): Promise<void> {
   try {
     const { createStorage } = await import('./storage/index.js');
     await createStorage();
-    log.info({ storageType: config.storage.type }, 'Storage backend initialized');
+    log.info('Storage backend initialized');
   } catch (storageErr) {
     log.warn({ err: String(storageErr) }, 'Failed to initialize storage backend (non-fatal)');
   }

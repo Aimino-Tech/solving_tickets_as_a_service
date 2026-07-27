@@ -176,9 +176,5 @@ export function createMockConfig() {
       sandboxMultiplierMax: 2.0,
     },
     usageCredits: { fixRun: 50, triage: 10, sandbox: 5 },
-    storage: {
-      type: 'sqlite' as const,
-      sqlitePath: '/tmp/stas.db',
-    },
   };
 }

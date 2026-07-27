@@ -150,10 +150,6 @@ const envSchema = z.object({
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
   FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
-  // Storage
-  STORAGE_TYPE: z.enum(['sqlite', 'postgres']).default('sqlite'),
-  STORAGE_SQLITE_PATH: z.string().default('./data/stas.db'),
-
   // CI monitoring
   CI_MONITOR_ENABLED: boolSchema(false),
   CI_REPOS: z.string().default(''),
@@ -190,7 +186,10 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().default(''),
   SUPABASE_JWT_SECRET: z.string().default(''),
 
-  DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
+  DATABASE_URL: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() !== '' ? v : process.env.SUPABASE_DATABASE_URL || 'postgres://localhost:5432/stas'),
+    z.string(),
+  ),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
   DATABASE_SSL: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(false),
@@ -348,11 +347,6 @@ function buildConfig(env: ParsedEnv) {
       appPassword: env.BITBUCKET_APP_PASSWORD ?? '',
       webhookSecret: env.BITBUCKET_WEBHOOK_SECRET ?? '',
       baseUrl: env.BITBUCKET_BASE_URL,
-    },
-
-    storage: {
-      type: env.STORAGE_TYPE,
-      sqlitePath: env.STORAGE_SQLITE_PATH,
     },
 
     ci: {

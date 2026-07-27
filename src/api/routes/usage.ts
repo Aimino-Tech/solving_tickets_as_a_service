@@ -64,8 +64,7 @@ router.get('/', async (req: Request, res: Response) => {
     // aggregate across a subscription. For the self-hosted model we
     // return the per-repo usage of the repos the user has interacted with.
     const t = getTracker();
-    const store = t.getStore();
-    const userUsage = store.getUserUsage(userId);
+    const userUsage = t.getUserUsage(userId);
 
     // Build a summary across all repos
     const totalCurrentMonth = userUsage.length > 0 ? userUsage[0]!.fixCount : 0;
@@ -95,7 +94,7 @@ router.get('/:repo', async (req: Request, res: Response) => {
     const t = getTracker();
 
     const usage = t.getUsage(userId, repoId);
-    const repoUsage = t.getStore().getRepoUsage(userId, repoId);
+    const repoUsage = t.getRepoUsage(userId, repoId);
 
     res.json({
       userId,

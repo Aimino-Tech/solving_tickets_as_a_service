@@ -38,8 +38,9 @@ let pool: pg.Pool | null = null;
 export function getPool(): pg.Pool {
   if (pool) return pool;
 
+  const isSupabase = config.database.url.includes('supabase.co');
   const rejectUnauthorized = process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0' ? false : true;
-  const sslConfig = config.database.ssl ? { ssl: { rejectUnauthorized } } : {};
+  const sslConfig = config.database.ssl || isSupabase ? { ssl: { rejectUnauthorized: false } } : {};
 
   pool = new Pool({
     connectionString: config.database.url,

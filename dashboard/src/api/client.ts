@@ -1,4 +1,9 @@
-import type { Run, DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice, KpiResponse, PricingData, CostCalculation, VsComparisonData } from '@/api/types';
+import type {
+  Run, DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice,
+  KpiResponse, PricingData, CostCalculation, VsComparisonData,
+} from '@/api/types';
+
+export type { DashboardStats };
 
 const API_BASE = '/api';
 
@@ -131,6 +136,11 @@ export interface BillingPlan {
   concurrentFixes?: number;
 }
 
+export const litellm = {
+  usage: () =>
+    request<LitellmUsage>('/v1/litellm/usage'),
+};
+
 export interface HealthCheck {
   status: string;
   latencyMs?: number;
@@ -155,12 +165,15 @@ export interface SLAByTier {
 }
 
 export interface LitellmUsage {
-  totalTokens: number;
-  promptTokens: number;
-  completionTokens: number;
-  totalCost: number;
-  modelBreakdown: Record<string, { tokens: number; cost: number }>;
-  dailyUsage: Array<{ date: string; tokens: number; cost: number }>;
+  configured: boolean;
+  message?: string;
+  remainingBudget?: number;
+  tokensToday?: { input: number; output: number; total: number };
+  requestsToday?: number;
+  rateLimit?: { rpmRemaining: number; rpmLimit: number; tpmRemaining: number; tpmLimit: number; resetAt?: string };
+  budget?: { remainingBudget: number; spendInCurrentMonth: number; maxBudget: number };
+  todayTokens?: { input: number; output: number; total: number };
+  thisMonthTokens?: { input: number; output: number; total: number };
 }
 
 export interface SLAMetrics {
@@ -383,6 +396,63 @@ export const health = {
     request<HealthResponse>('/health/verbose'),
 };
 
+export const settings = {
+  get: () =>
+    request<{
+      label: string;
+      model: string;
+      maxConcurrent: number;
+      sandboxPoolSize: number;
+      auditLogEnabled: boolean;
+    }>('/settings'),
+  update: (body: {
+    label: string;
+    model: string;
+    maxConcurrent: number;
+    sandboxPoolSize: number;
+    auditLogEnabled: boolean;
+  }) =>
+    request<{ success: boolean }>('/settings', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+};
+
+export const configApi = {
+  get: () =>
+    request<{
+      env: Record<string, string>;
+      rateLimits: Array<{ endpoint: string; limit: number; window: string }>;
+      tokens: Array<{ id: string; name: string; scopes: string[]; createdAt: string; lastUsed: string | null }>;
+      symphonies: Array<{ id: string; name: string; status: 'connected' | 'disconnected' | 'error'; endpoint: string; lastSync: string | null }>;
+      subscriptions: Array<{ id: string; event: string; channel: string; target: string; enabled: boolean }>;
+      warnings: Array<{ id: string; type: 'rate_limit' | 'quota' | 'token_expiry' | 'system'; message: string; severity: 'info' | 'warning' | 'critical'; dismissed: boolean; createdAt: string }>;
+      integrations: Array<{ id: string; name: string; icon: string; connected: boolean; configUrl?: string }>;
+      infrastructure: Record<string, { provider: string; host: string; port: number; status: 'connected' | 'disconnected' | 'error' }>;
+    }>('/v1/config'),
+  updateEnv: (env: Record<string, string>) =>
+    request<{ success: boolean }>('/v1/config/env', {
+      method: 'PUT',
+      body: JSON.stringify(env),
+    }),
+  updateRateLimits: (rateLimits: Array<{ endpoint: string; limit: number; window: string }>) =>
+    request<{ success: boolean }>('/v1/config/rate-limits', {
+      method: 'PUT',
+      body: JSON.stringify(rateLimits),
+    }),
+  regenerateToken: (tokenId: string) =>
+    request<{ success: boolean }>(`/v1/config/tokens/${tokenId}/regenerate`, { method: 'POST' }),
+  revokeToken: (tokenId: string) =>
+    request<{ success: boolean }>(`/v1/config/tokens/${tokenId}`, { method: 'DELETE' }),
+  toggleIntegration: (id: string, connected: boolean) =>
+    request<{ success: boolean }>(`/v1/config/integrations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ connected }),
+    }),
+  testInfrastructure: (provider: string) =>
+    request<{ status: string }>(`/v1/config/infrastructure/${provider}/test`, { method: 'POST' }),
+};
+
 export const sla = {
   getMetrics: () =>
     request<SLAMetrics>('/v1/sla/metrics'),
@@ -392,13 +462,7 @@ export const sla = {
 
 export const stats = {
   get: () =>
-    request<{
-      totalRuns: number;
-      passRate: number;
-      runsByDay: { date: string; count: number; passed: number }[];
-      costByDay: { date: string; costCents: number }[];
-      fixRateByWeek: { week: string; rate: number }[];
-    }>('/v1/stats'),
+    request<DashboardStats>('/v1/stats'),
 };
 
 // -- Audit Log API --
