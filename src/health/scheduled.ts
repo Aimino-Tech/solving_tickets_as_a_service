@@ -37,6 +37,7 @@ import {
   checkWorkerHealth as checkWorkerAnomaly,
   checkDbPoolUsage,
 } from '../monitoring/anomalyDetection.js';
+import { sendLowCreditAlerts } from '../credits/index.js';
 
 const log = rootLogger.child({ module: 'scheduled' });
 
@@ -212,6 +213,13 @@ export function startScheduledTasks(): void {
   // SLO compliance check (every 5min)
   timers.push(setInterval(runSloCheck, SLO_COMPLIANCE_CHECK_INTERVAL_MS));
 
+  // Low credit alert check (every 30min)
+  timers.push(setInterval(() => {
+    sendLowCreditAlerts().catch((err) => {
+      log.error({ err: String(err) }, 'Low-credit alert check failed');
+    });
+  }, 30 * 60 * 1000));
+
   // DLQ cleanup (once per day)
   timers.push(setInterval(cleanupDLQ, DLQ_CLEANUP_INTERVAL_MS));
 
@@ -223,6 +231,7 @@ export function startScheduledTasks(): void {
   checkWorkerHealth().catch(() => {});
   runAnomalyDetection().catch(() => {});
   runSloCheck().catch(() => {});
+  sendLowCreditAlerts().catch(() => {});
   cleanupDLQ().catch(() => {});
   refreshMetrics().catch(() => {});
 
