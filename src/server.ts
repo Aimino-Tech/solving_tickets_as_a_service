@@ -666,6 +666,9 @@ export async function createApp(): Promise<express.Application> {
   // ── Billing API (subscriptions, plans, checkout) ─────────
   app.use('/api/v1/billing', billingRouter);
 
+  // ── Auth API (JWT) — MUST be before /api/v1 catch-all routers ────────
+  app.use('/api/v1/auth', authRouter);
+
   app.use('/api/v1', slaRouter);
 
   // ── Credits API ──────────────────────────────────────────
@@ -688,9 +691,6 @@ export async function createApp(): Promise<express.Application> {
   // GET /admin/webhooks/sources
   // GET /admin/webhooks/stats
   app.use('/admin/webhooks', adminWebhooksRouter);
-
-  // ── Auth API (JWT) ───────────────────────────────────────────────
-  app.use('/api/v1/auth', authRouter);
 
   // ── Onboarding API ──────────────────────────────────────────────
   app.use('/api/v1/onboarding', onboardingRouter);

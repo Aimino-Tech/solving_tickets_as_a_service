@@ -154,6 +154,15 @@ export interface SLAByTier {
   p95: number | null;
 }
 
+export interface LitellmUsage {
+  totalTokens: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalCost: number;
+  modelBreakdown: Record<string, { tokens: number; cost: number }>;
+  dailyUsage: Array<{ date: string; tokens: number; cost: number }>;
+}
+
 export interface SLAMetrics {
   totalRecorded: number;
   attainmentRate: number | null;
@@ -392,6 +401,10 @@ export const audit = {
   },
 };
 
+export const litellm = {
+  usage: () => request<LitellmUsage>('/v1/litellm/usage'),
+};
+
 export const benchmarks = {
   get: () => request<{ competitors: BenchmarkEntry[] }>('/v1/benchmarks'),
   getPrices: () => request<{ prices: BenchmarkPrice[] }>('/v1/benchmarks/prices'),
@@ -414,6 +427,46 @@ export const settings = {
   get: () => request<{ label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }>('/v1/settings'),
   update: (data: { label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }) =>
     request<{ success: boolean }>('/v1/settings', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+export const configApi = {
+  get: () => request<{
+    env: Record<string, string>;
+    rateLimits: { endpoint: string; limit: number; window: string }[];
+    tokens: { id: string; name: string; scopes: string[]; createdAt: string; lastUsed: string | null }[];
+    symphonies: { id: string; name: string; status: string; endpoint: string; lastSync: string | null }[];
+    subscriptions: { id: string; event: string; channel: string; target: string; enabled: boolean }[];
+    warnings: { id: string; type: string; message: string; severity: string; dismissed: boolean; createdAt: string }[];
+    integrations: { id: string; name: string; icon: string; connected: boolean; configUrl?: string }[];
+    infrastructure: Record<string, { provider: string; host: string; port: number; status: string }>;
+  }>('/v1/config'),
+  updateEnv: (env: Record<string, string>) =>
+    request<{ success: boolean }>('/v1/config/env', {
+      method: 'PUT',
+      body: JSON.stringify({ env }),
+    }),
+  updateRateLimits: (rateLimits: { endpoint: string; limit: number; window: string }[]) =>
+    request<{ success: boolean }>('/v1/config/rate-limits', {
+      method: 'PUT',
+      body: JSON.stringify({ rateLimits }),
+    }),
+  regenerateToken: (tokenId: string) =>
+    request<{ token: string }>(`/v1/config/tokens/${tokenId}/regenerate`, {
+      method: 'POST',
+    }),
+  revokeToken: (tokenId: string) =>
+    request<{ success: boolean }>(`/v1/config/tokens/${tokenId}`, {
+      method: 'DELETE',
+    }),
+  toggleIntegration: (id: string, connected: boolean) =>
+    request<{ success: boolean }>(`/v1/config/integrations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ connected }),
+    }),
+  testInfrastructure: (provider: string) =>
+    request<{ status: string }>(`/v1/config/infrastructure/${provider}/test`, {
+      method: 'POST',
+    }),
 };
 
 export const pricing = {

@@ -72,7 +72,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
   }
 
   try {
-    const result = authService.refreshToken(parsed.data.refreshToken);
+    const result = await authService.refreshToken(parsed.data.refreshToken);
     res.json(result);
   } catch (err) {
     if (err instanceof AuthError) {

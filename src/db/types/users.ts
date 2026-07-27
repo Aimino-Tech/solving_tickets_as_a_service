@@ -3,12 +3,14 @@ export interface User {
   email: string;
   passwordHash: string;
   name: string | null;
+  supabaseUid: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface NewUser {
   email: string;
-  passwordHash: string;
+  passwordHash?: string;
   name?: string | null;
+  supabaseUid?: string | null;
 }

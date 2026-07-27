@@ -199,6 +199,11 @@ const envSchema = z.object({
   DOCKER_ALLOWED_HOSTS: z.string().default(''),
 
   // Database
+  SUPABASE_URL: z.string().default(''),
+  SUPABASE_ANON_KEY: z.string().default(''),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().default(''),
+  SUPABASE_JWT_SECRET: z.string().default(''),
+
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
@@ -642,6 +647,14 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.OPEN_SYMPHONY_API_KEY,
       tenant: env.OPEN_SYMPHONY_TENANT,
       celeryPipeline: env.OPEN_SYMPHONY_CELERY_PIPELINE,
+    },
+
+    // ── Supabase ───────────────────────────────────────────────────────────
+    supabase: {
+      url: env.SUPABASE_URL,
+      anonKey: env.SUPABASE_ANON_KEY,
+      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+      jwtSecret: env.SUPABASE_JWT_SECRET,
     },
 
     // ── Auth (JWT) ──────────────────────────────────────────────────────────
