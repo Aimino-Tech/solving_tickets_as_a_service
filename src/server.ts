@@ -712,7 +712,7 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/repos', reposRouter);
 
   app.use('/api/v1/auth/github', gitHubOAuthRouter);
-  app.use('/api/v1/github', installRouter);
+  app.use('/api/v1/github/installations', installRouter);
 
   // ── Shareable run page API (public, no auth) ───────────────────────
   // GET /api/runs/:id — Public run detail JSON/HTML
