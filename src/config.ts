@@ -30,6 +30,8 @@ const envSchema = z.object({
   GITHUB_TOKEN: z.string().optional(),
   GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
   GITHUB_OAUTH_CLIENT_SECRET: z.string().optional(),
+  GITHUB_OAUTH_REDIRECT_URL: z.string().default('http://localhost:3000/api/v1/auth/github/callback'),
+  GITHUB_APP_INSTALL_URL: z.string().default('https://github.com/apps/stas-bot/installations/new'),
   GITHUB_WEBHOOK_SECRET: z.string().min(1, 'GITHUB_WEBHOOK_SECRET is required'),
   GITHUB_WEBHOOK_PATH: z.string().default('/webhook'),
 
@@ -347,6 +349,8 @@ function buildConfig(env: ParsedEnv) {
       webhookPath: env.GITHUB_WEBHOOK_PATH,
       oauthClientId: env.GITHUB_OAUTH_CLIENT_ID ?? '',
       oauthClientSecret: env.GITHUB_OAUTH_CLIENT_SECRET ?? '',
+      oauthRedirectUrl: env.GITHUB_OAUTH_REDIRECT_URL,
+      appInstallUrl: env.GITHUB_APP_INSTALL_URL,
     },
 
     queue: {

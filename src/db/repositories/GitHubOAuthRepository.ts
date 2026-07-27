@@ -1,5 +1,5 @@
 import { queryWithRetry } from '../connection.js';
-import type { GitHubOAuthToken, NewGitHubOAuthToken } from '../types/githubOAuth.js';
+import type { GitHubOAuthToken, NewGitHubOAuthToken } from '../types/githubOauth.js';
 
 export class GitHubOAuthRepository {
   async findByUserId(userId: number): Promise<GitHubOAuthToken | undefined> {
@@ -21,38 +21,23 @@ export class GitHubOAuthRepository {
   async upsert(data: NewGitHubOAuthToken): Promise<GitHubOAuthToken> {
     const result = await queryWithRetry<GitHubOAuthToken>(
       `INSERT INTO github_oauth_tokens
-       (user_id, access_token_encrypted, refresh_token_encrypted, github_login, github_user_id, token_expires_at, refresh_token_expires_at, scope)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       (user_id, access_token_encrypted, github_login, github_user_id, token_expires_at)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (user_id)
        DO UPDATE SET
          access_token_encrypted = EXCLUDED.access_token_encrypted,
-         refresh_token_encrypted = EXCLUDED.refresh_token_encrypted,
          github_login = EXCLUDED.github_login,
          github_user_id = EXCLUDED.github_user_id,
          token_expires_at = EXCLUDED.token_expires_at,
-         refresh_token_expires_at = EXCLUDED.refresh_token_expires_at,
-         scope = EXCLUDED.scope,
          updated_at = NOW()
        RETURNING *`,
-      [
-        data.userId,
-        data.accessTokenEncrypted,
-        data.refreshTokenEncrypted ?? null,
-        data.githubLogin,
-        data.githubUserId,
-        data.tokenExpiresAt ?? null,
-        data.refreshTokenExpiresAt ?? null,
-        data.scope ?? null,
-      ],
+      [data.userId, data.accessTokenEncrypted, data.githubLogin, data.githubUserId, data.tokenExpiresAt ?? null],
     );
     return result.rows[0];
   }
 
   async delete(userId: number): Promise<boolean> {
-    const result = await queryWithRetry(
-      'DELETE FROM github_oauth_tokens WHERE user_id = $1',
-      [userId],
-    );
+    const result = await queryWithRetry('DELETE FROM github_oauth_tokens WHERE user_id = $1', [userId]);
     return (result.rowCount ?? 0) > 0;
   }
 }
