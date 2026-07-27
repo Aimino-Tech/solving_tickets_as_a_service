@@ -71,6 +71,7 @@ import { proxyRouter } from './routes/proxy.js';
 import { qualityRouter } from './routes/quality.js';
 import { reposRouter } from './routes/repos.js';
 import { gitHubOAuthRouter } from './routes/github-oauth.js';
+import { feedbackRouter } from './routes/feedback.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
 import { slaRouter } from './routes/sla.js';
@@ -930,6 +931,9 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Runs API (authenticated, paginated fix history) ────────────
   app.use('/api/v1/runs', runsApiRouter);
+
+  // ── Feedback API (authenticated, error recovery) ──────────────
+  app.use('/api/v1/feedback', feedbackRouter);
 
   // SAML 2.0 SSO routes (optional)
   try {

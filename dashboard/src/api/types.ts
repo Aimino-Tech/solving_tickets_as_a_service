@@ -147,6 +147,18 @@ export interface CostCalculation {
   }>;
 }
 
+export interface Feedback {
+  id: number;
+  runId: number;
+  userId: number;
+  rating: 'worked' | 'not_working' | 'partial';
+  comment: string;
+  action: 'none' | 'retry' | 'escalate' | 'cancel' | 'rollback';
+  resolved: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PricingData {
   generatedAt: string;
   plans: PricingPlan[];

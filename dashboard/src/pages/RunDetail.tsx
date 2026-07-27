@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { runs } from '@/api/client';
-import type { Run } from '@/api/types';
+import { runs, feedback } from '@/api/client';
+import type { Run, Feedback as FeedbackType } from '@/api/types';
 import { useParams, Link } from 'react-router-dom';
 import { formatDateTime, formatDurationSeconds } from '@/utils/format';
 import { SkeletonRunDetail } from '@/components/LoadingSkeleton';
@@ -10,6 +10,13 @@ export default function RunDetail() {
   const [run, setRun] = useState<Run | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showFullDiff, setShowFullDiff] = useState(false);
+  const [feedbackList, setFeedbackList] = useState<FeedbackType[]>([]);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState<string>('');
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [feedbackAction, setFeedbackAction] = useState<string>('none');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -18,6 +25,35 @@ export default function RunDetail() {
       .then(setRun)
       .catch((err) => setError(err.message));
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    feedback.getByRun(Number(id)).then((res) => {
+      setFeedbackList(res.feedback);
+    }).catch(() => {});
+  }, [id, feedbackSubmitted]);
+
+  const handleFeedbackSubmit = async () => {
+    if (!feedbackRating || !id) return;
+    setFeedbackSubmitting(true);
+    try {
+      await feedback.submit({
+        runId: Number(id),
+        rating: feedbackRating,
+        comment: feedbackComment,
+        action: feedbackAction,
+      });
+      setFeedbackSubmitted(true);
+      setShowFeedbackForm(false);
+      setFeedbackRating('');
+      setFeedbackComment('');
+      setFeedbackAction('none');
+    } catch (err: any) {
+      console.error('Failed to submit feedback:', err);
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
 
   if (error) {
     return (
@@ -178,6 +214,89 @@ export default function RunDetail() {
           </pre>
         </div>
       )}
+
+      <div className="card space-y-4">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Feedback</h3>
+        {feedbackList.length > 0 && (
+          <div className="space-y-2">
+            {feedbackList.map((fb) => (
+              <div key={fb.id} className="flex items-start gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  fb.rating === 'worked' ? 'bg-green-100 text-green-700' :
+                  fb.rating === 'partial' ? 'bg-amber-100 text-amber-700' :
+                  'bg-red-100 text-red-700'
+                }`}>{fb.rating}</span>
+                <div className="min-w-0 flex-1">
+                  {fb.comment && <p className="text-sm text-gray-600 dark:text-gray-300">{fb.comment}</p>}
+                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                    {fb.action !== 'none' && `Action: ${fb.action} · `}
+                    {new Date(fb.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!feedbackSubmitted && !showFeedbackForm && (
+          <button
+            onClick={() => setShowFeedbackForm(true)}
+            className="rounded-lg bg-white dark:bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          >
+            {run?.status === 'failed' || run?.status === 'cancelled' ? 'Report issue with this run' : 'Submit feedback'}
+          </button>
+        )}
+
+        {showFeedbackForm && (
+          <div className="space-y-3 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">How was this fix?</label>
+              <div className="flex gap-2">
+                {['worked', 'partial', 'not_working'].map((r) => (
+                  <button key={r} onClick={() => setFeedbackRating(r)}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors ${
+                      feedbackRating === r
+                        ? 'bg-brand-600 text-white border-brand-600'
+                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                    }`}
+                  >{r === 'worked' ? 'Worked' : r === 'partial' ? 'Partial' : 'Not Working'}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comment (optional)</label>
+              <textarea value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-sm"
+                rows={3} placeholder="What went wrong?"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Request action</label>
+              <select value={feedbackAction} onChange={(e) => setFeedbackAction(e.target.value)}
+                className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-sm"
+              >
+                <option value="none">No action</option>
+                <option value="retry">Retry with different strategy</option>
+                <option value="escalate">Escalate to human</option>
+                <option value="cancel">Cancel this run</option>
+                {run?.prUrl && <option value="rollback">Rollback PR</option>}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleFeedbackSubmit} disabled={!feedbackRating || feedbackSubmitting}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
+              >{feedbackSubmitting ? 'Submitting...' : 'Submit'}</button>
+              <button onClick={() => setShowFeedbackForm(false)}
+                className="rounded-lg bg-white dark:bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {feedbackSubmitted && (
+          <p className="text-sm text-green-600 dark:text-green-400">Thank you for your feedback!</p>
+        )}
+      </div>
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-brand-50 dark:bg-brand-900/30 p-6">
         <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">

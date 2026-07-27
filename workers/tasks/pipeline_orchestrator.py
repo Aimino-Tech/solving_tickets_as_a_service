@@ -155,23 +155,65 @@ def _run_review_mode(issue_id: str, identifier: str, ctx: dict) -> dict:
     return {"status": "completed", "mode": "review"}
 
 
+RETRY_MODELS = [
+    "claude-sonnet-4-20250514",
+    "gpt-4o-2024-11-20",
+    "opencode-go/deepseek-v4-flash",
+]
+
 def _implement_ticket(ctx: dict) -> dict:
-    """Clone the repo, implement the ticket, commit and push.
-    
-    Uses OpenCode agent when available (production-quality work),
-    falls back to direct_fix template-based implementation.
-    """
     import os, subprocess
+    retry_count = ctx.get("retry_count", 0)
     opencode_bin = os.getenv("OPENCODE_BIN", "/snap/bin/opencode")
     try:
         subprocess.run([opencode_bin, "--version"], capture_output=True, text=True, timeout=5)
-        from workers.tasks.agent import dispatch_opencode
-        logger.info("Using OpenCode agent for implementation")
-        return dispatch_opencode.__wrapped__(ctx)
     except Exception:
         logger.warning("OpenCode not available, using direct_fix fallback")
         from workers.tasks.direct_fix import create_fix
+        return _retry_with_fallback(ctx, retry_count)
+
+    from workers.tasks.agent import dispatch_opencode
+    update_ctx = dict(ctx)
+    retry_model = RETRY_MODELS[retry_count] if retry_count < len(RETRY_MODELS) else RETRY_MODELS[-1]
+    update_ctx["model"] = retry_model
+
+    if retry_count > 0:
+        prev_error = ctx.get("retry_error", "")
+        prev_strategy = ctx.get("retry_strategy", "")
+        issue_description = ctx.get("issue_description", "")
+        update_ctx["issue_description"] = (
+            f"{issue_description}\n\n"
+            f"## Previous attempt #{retry_count} failed\n"
+            f"Error: {prev_error}\n"
+            f"Previous approach: {prev_strategy}\n\n"
+            f"Please try a completely different approach."
+        )
+        logger.info("Retry #%d with model=%s for %s", retry_count + 1, retry_model, ctx.get("issue_identifier", ""))
+
+    try:
+        return dispatch_opencode.__wrapped__(update_ctx)
+    except Exception as exc:
+        if retry_count >= 2:
+            raise
+        ctx["retry_count"] = retry_count + 1
+        ctx["retry_error"] = str(exc)
+        ctx["retry_strategy"] = f"model={retry_model}"
+        logger.warning("Retry #%d failed, scheduling retry #%d", retry_count + 1, retry_count + 2)
+        return _implement_ticket(ctx)
+
+
+def _retry_with_fallback(ctx: dict, retry_count: int) -> dict:
+    from workers.tasks.direct_fix import create_fix
+    try:
         return create_fix.__wrapped__(ctx)
+    except Exception as exc:
+        if retry_count >= 2:
+            raise
+        ctx["retry_count"] = retry_count + 1
+        ctx["retry_error"] = str(exc)
+        ctx["retry_strategy"] = "direct_fix"
+        logger.warning("Direct fix retry #%d failed, retrying", retry_count + 1)
+        return _retry_with_fallback(ctx, retry_count + 1)
 
 
 def _create_pr(owner: str, repo: str, branch: str, base: str, summary: str) -> dict:

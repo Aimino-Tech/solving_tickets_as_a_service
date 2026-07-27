@@ -23,3 +23,4 @@ export type { WebhookEvent, NewWebhookEvent } from './webhookEvents.js';
 export type { NotificationHistory, NewNotificationHistory } from './notificationHistory.js';
 export type { WorkspaceRow, NewWorkspace } from './workspaces.js';
 export type { NotificationPreference, NewNotificationPreference, NotificationHistory, NewNotificationHistory } from './notifications.js';
+export type { Feedback, NewFeedback } from './feedback.js';
