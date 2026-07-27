@@ -185,6 +185,9 @@ const envSchema = z.object({
   STRIPE_SOLO_PRICE_ID: z.string().default('price_solo'),
   STRIPE_TEAM_PRICE_ID: z.string().default('price_team'),
 
+  LITELLM_BASE_URL: z.string().default('http://llm-governance:4002'),
+  LITELLM_ADMIN_API_KEY: z.string().optional(),
+
   // Security CSP
   CSP_REPORT_URI: z.string().optional(),
 
@@ -681,6 +684,11 @@ function buildConfig(env: ParsedEnv) {
       freeMonthlyCredits: env.METERING_FREE_MONTHLY_CREDITS,
       sandboxMultiplierMin: env.METERING_SANDBOX_MULTIPLIER_MIN,
       sandboxMultiplierMax: env.METERING_SANDBOX_MULTIPLIER_MAX,
+    },
+
+    litellm: {
+      baseUrl: env.LITELLM_BASE_URL,
+      adminApiKey: env.LITELLM_ADMIN_API_KEY ?? '',
     },
 
     usageCredits: {

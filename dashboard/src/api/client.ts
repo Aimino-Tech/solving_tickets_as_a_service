@@ -380,6 +380,11 @@ export const health = {
 
 // -- SLA API --
 
+export const litellm = {
+  usage: (userId?: string) =>
+    request<{ usage: LitellmUsage }>(`/v1/litellm/usage${userId ? `?user_id=${userId}` : ''}`),
+};
+
 export const sla = {
   getMetrics: () =>
     request<SLAMetrics>('/v1/sla/metrics'),

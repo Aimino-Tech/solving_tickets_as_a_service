@@ -87,6 +87,16 @@ export default function Analytics() {
         />
       </div>
 
+      {/* LiteLLM Usage */}
+      {litellmUsage && (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
+          <MetricCard label="Remaining Budget" value={`$${litellmUsage.remainingBudget.toFixed(2)}`} trend={litellmUsage.remainingBudget > 10 ? 'up' : litellmUsage.remainingBudget > 2 ? 'neutral' : 'down'} />
+          <MetricCard label="Tokens Today" value={formatNumber(litellmUsage.tokensToday.total)} trend="neutral" />
+          <MetricCard label="Requests Today" value={String(litellmUsage.requestsToday)} trend="neutral" />
+          <MetricCard label="RPM Left" value={`${litellmUsage.rateLimit.rpmRemaining} / ${litellmUsage.rateLimit.rpmLimit}`} trend={litellmUsage.rateLimit.rpmRemaining > 50 ? 'up' : 'down'} />
+        </div>
+      )}
+
       {/* Fix Rate Over Time */}
       <div className="card">
         <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Fix Rate Over Time</h3>
