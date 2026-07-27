@@ -1,4 +1,4 @@
-import type { Run, DashboardStats, AuditEntry, BenchmarkEntry, BenchmarkPrice, KpiResponse, PricingData, CostCalculation, VsComparisonData, PaginatedResponse } from '@/api/types';
+import type { User, Run, DashboardStats, AuditEntry, BenchmarkEntry, BenchmarkPrice, KpiResponse, PricingData, CostCalculation, VsComparisonData, PaginatedResponse } from '@/api/types';
 
 const API_BASE = '/api';
 
@@ -93,10 +93,8 @@ export async function request<T>(
 export interface AuthResult {
   token: string;
   refreshToken: string;
-  user: { id: number; email: string; name: string | null };
+  user: { id: number; email: string; name: string | null; username?: string; avatarUrl?: string };
 }
-
-export type FixRun = Run;
 
 export interface CreditBalance {
   accountId: number;
@@ -184,7 +182,7 @@ export const auth = {
       body: JSON.stringify({ email, password }),
     }),
   me: () =>
-    request<{ id: number; email: string; name: string | null; createdAt: string }>('/v1/auth/me'),
+    request<User>('/v1/auth/me'),
   refresh: (refreshToken: string) =>
     request<AuthResult>('/v1/auth/refresh', {
       method: 'POST',

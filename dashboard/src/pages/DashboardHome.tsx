@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { credits, runs, type CreditBalance, type FixRun } from '@/api/client';
+import { credits, runs, type CreditBalance } from '@/api/client';
+import type { Run } from '@/api/types';
 import { Link } from 'react-router-dom';
 import { Activity, Wallet, CheckCircle, Clock } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -8,14 +9,14 @@ import { SkeletonCardGrid } from '@/components/LoadingSkeleton';
 export default function DashboardHome() {
   const { t } = useI18n();
   const [balance, setBalance] = useState<CreditBalance | null>(null);
-  const [recentRuns, setRecentRuns] = useState<FixRun[]>([]);
+  const [recentRuns, setRecentRuns] = useState<Run[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       credits.balance().catch(() => null),
-      runs.list({ perPage: 5 }).catch(() => ({ data: [] as FixRun[], total: 0, page: 1, perPage: 5, totalPages: 0 })),
+      runs.list({ perPage: 5 }).catch(() => ({ data: [] as Run[], total: 0, page: 1, perPage: 5, totalPages: 0 })),
     ])
       .then(([bal, runsData]) => {
         setBalance(bal);

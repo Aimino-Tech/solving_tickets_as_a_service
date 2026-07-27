@@ -18,6 +18,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const urlToken = urlParams.get('token');
+    if (urlToken) {
+      setToken(urlToken);
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
     const token = (() => {
       try { return localStorage.getItem('stas_token'); } catch { return null; }
     })();
@@ -25,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       auth
         .me()
         .then((res) => {
-          setUser({ id: res.id, email: res.email, name: res.name, createdAt: res.createdAt });
+          setUser({ id: res.id, email: res.email, name: res.name, createdAt: res.createdAt, username: res.username, avatarUrl: res.avatarUrl });
         })
         .catch(() => {
           clearToken();
@@ -42,14 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await auth.login(email, password);
     setToken(result.token);
     setRefreshToken(result.refreshToken);
-    setUser({ id: result.user.id, email: result.user.email, name: result.user.name, createdAt: "" });
+    setUser({ id: result.user.id, email: result.user.email, name: result.user.name, createdAt: "", username: result.user.username, avatarUrl: result.user.avatarUrl });
   }, []);
 
   const register = useCallback(async (email: string, password: string, name?: string) => {
     const result = await auth.register(email, password, name);
     setToken(result.token);
     setRefreshToken(result.refreshToken);
-    setUser({ id: result.user.id, email: result.user.email, name: result.user.name, createdAt: "" });
+    setUser({ id: result.user.id, email: result.user.email, name: result.user.name, createdAt: "", username: result.user.username, avatarUrl: result.user.avatarUrl });
   }, []);
 
   const logout = useCallback(async () => {
