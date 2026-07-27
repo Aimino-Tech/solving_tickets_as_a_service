@@ -44,13 +44,8 @@ const envSchema = z.object({
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
 
-  OPENCODE_PROVIDER: z.enum(['opensymphony', 'opencode']).default('opensymphony'),
   OPENCODE_URL: z.string().default("http://localhost:4096"),
   OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
-  OPENCODE_OSY_PORT: z.coerce.number().int().positive().max(65535).default(4097),
-  OPENCODE_OSY_HOST: z.string().default("127.0.0.1"),
-  OS_DISPATCH_URL: z.string().optional(),
-  OS_API_KEY: z.string().optional(),
   OPENAI_BASE_URL: z.string().default("http://litellm-proxy:4002/v1"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
@@ -68,14 +63,11 @@ const envSchema = z.object({
 
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
   STAS_MONTHLY_QUOTA_ENABLED: boolSchema(true),
-  LOOPS_API_KEY: z.string().optional(),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
-  STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
+	  STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
   STAS_AI_DISABLED: boolSchema(false),
-  STAS_PUBLIC_URL: z.string().default('http://localhost:3000'),
-  STAS_LABEL: z.string().default('stas:fix'),
-  DISABLE_AUTO_REMEDIATION: boolSchema(false),
+	  STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
@@ -101,10 +93,6 @@ const envSchema = z.object({
   REDIS_TTL_FREQUENT_ACCESS: z.coerce.number().int().positive().default(60),
   ADMIN_API_KEY: z.string().optional(),
 
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').default('change-me-to-a-random-secret-at-least-32-chars'),
-  JWT_EXPIRES_IN: z.string().default('24h'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
-
   WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
   WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
 
@@ -117,19 +105,11 @@ const envSchema = z.object({
   BITBUCKET_WEBHOOK_SECRET: z.string().optional(),
   BITBUCKET_BASE_URL: z.string().default('https://api.bitbucket.org'),
 
-  PD_INTEGRATION_KEY: z.string().optional(),
-  PD_ESCALATION_POLICY_ID: z.string().optional(),
-
-  N8N_WEBHOOK_URL: z.string().optional(),
   SLACK_WEBHOOK_URL: z.string().optional(),
   SLACK_CHANNEL: z.string().optional(),
   SLACK_BOT_TOKEN: z.string().optional(),
   SLACK_SIGNING_SECRET: z.string().optional(),
   SLACK_INTERACTIONS_PATH: z.string().default('/slack/events'),
-
-  N8N_MONITORING_WEBHOOK_URL: z.string().optional(),
-  N8N_ONBOARDING_WEBHOOK_URL: z.string().optional(),
-  N8N_STRIPE_WEBHOOK_URL: z.string().optional(),
 
   LINEAR_API_KEY: z.string().optional(),
   LINEAR_WEBHOOK_SECRET: z.string().optional(),
@@ -185,9 +165,6 @@ const envSchema = z.object({
   STRIPE_SOLO_PRICE_ID: z.string().default('price_solo'),
   STRIPE_TEAM_PRICE_ID: z.string().default('price_team'),
 
-  LITELLM_BASE_URL: z.string().default('http://llm-governance:4002'),
-  LITELLM_ADMIN_API_KEY: z.string().optional(),
-
   // Security CSP
   CSP_REPORT_URI: z.string().optional(),
 
@@ -229,14 +206,13 @@ const envSchema = z.object({
   STAS_MCP_SSL_ENABLED: boolSchema(false),
   STAS_MCP_SSL_KEY_PATH: z.string().optional(),
   STAS_MCP_SSL_CERT_PATH: z.string().optional(),
+
+  // OpenSymphony adapter configuration
+  OPENSYMPHONY_ENABLED: boolSchema(false),
+  OPENSYMPHONY_PORT: z.coerce.number().int().positive().max(65535).default(4097),
+  OPENSYMPHONY_HOST: z.string().default('127.0.0.1'),
   MCP_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   MCP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
-
-  // ── Proxy Configuration ──
-  PROXY_MODEL_ROUTER_ENABLED: boolSchema(true),
-  PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED: boolSchema(false),
-  PROXY_GITHUB_PAT: z.string().optional(),
-
 
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_PATH: z.string().default('/webhook/telegram'),
@@ -251,7 +227,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
   ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
-  CORS_ORIGIN: z.string().default('https://stas.syntaro.io'),
+  CORS_ORIGIN: z.string().default('*'),
   REQUEST_BODY_LIMIT: z.string().default('1mb'),
   WEBHOOK_BODY_LIMIT: z.string().default('5mb'),
 
@@ -292,24 +268,6 @@ const envSchema = z.object({
   METERING_FREE_MONTHLY_CREDITS: z.coerce.number().int().default(100),
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
-  // ── Pipeline ──
-  PIPELINE_SANDBOX_ENABLED: boolSchema(true),
-  PIPELINE_QUALITY_GATE_TIMEOUT_MS: z.coerce.number().int().positive().default(300000),
-  PIPELINE_COMPLIANCE_CHECK_ENABLED: boolSchema(true),
-
-  // ── Team Management ──
-  TEAMS_ENABLED: boolSchema(true),
-  TEAMS_MAX_MEMBERS_FREE_TIER: z.coerce.number().int().positive().default(3),
-  TEAMS_MAX_MEMBERS_PRO_TIER: z.coerce.number().int().positive().default(20),
-
-  // ── Onboarding Wizard ──
-  ONBOARDING_WIZARD_ENABLED: boolSchema(true),
-
-  // OpenSymphony dispatch (STAS thin layer — delegate execution)
-  OPEN_SYMPHONY_DISPATCH_URL: z.string().default('http://opensymphony:4000/api/v1/dispatch'),
-  OPEN_SYMPHONY_API_KEY: z.string().optional(),
-  OPEN_SYMPHONY_TENANT: z.string().default('default'),
-  OPEN_SYMPHONY_CELERY_PIPELINE: boolSchema(true),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -332,15 +290,6 @@ function parseConcurrencyOverrides(raw: string): Record<string, number> {
 }
 
 function buildConfig(env: ParsedEnv) {
-  // Cross-validate AI mode flags: static mode requires AI disabled
-  if (env.STAS_AI_MODE === 'static' && !env.STAS_AI_DISABLED) {
-    console.warn('STAS_AI_MODE=static requires STAS_AI_DISABLED=true — forcing AI disabled');
-    env.STAS_AI_DISABLED = true as unknown as false;
-  }
-  if (env.STAS_AI_DISABLED && env.STAS_AI_MODE !== 'static') {
-    console.warn('STAS_AI_DISABLED=true — forcing STAS_AI_MODE=static');
-    env.STAS_AI_MODE = 'static' as unknown as 'ai';
-  }
   return {
     port: env.PORT,
     runMode: env.RUN_MODE,
@@ -371,20 +320,12 @@ function buildConfig(env: ParsedEnv) {
     },
 
     opencode: {
-      provider: env.OPENCODE_PROVIDER,
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
-      osyPort: env.OPENCODE_OSY_PORT,
-      osyHost: env.OPENCODE_OSY_HOST,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
       direct: {
         apiKey: env.OPENAI_API_KEY ?? '',
       },
-    },
-
-    osy: {
-      dispatchUrl: env.OS_DISPATCH_URL,
-      apiKey: env.OS_API_KEY,
     },
 
     gitlab: {
@@ -430,9 +371,6 @@ function buildConfig(env: ParsedEnv) {
       containerCpu: env.DOCKER_CONTAINER_CPU,
       networkRestrict: env.DOCKER_NETWORK_RESTRICT,
       allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
-      seccompProfile: (env as Record<string, unknown>).DOCKER_SECCOMP_PROFILE as string | undefined,
-      apparmorProfile: (env as Record<string, unknown>).DOCKER_APPARMOR_PROFILE as string | undefined,
-      gvisorEnabled: (env as Record<string, unknown>).DOCKER_GVISOR_ENABLED === 'true',
     },
 
     openai: {
@@ -446,22 +384,12 @@ function buildConfig(env: ParsedEnv) {
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
     },
 
-    pagerduty: {
-      integrationKey: env.PD_INTEGRATION_KEY ?? '',
-      escalationPolicyId: env.PD_ESCALATION_POLICY_ID ?? '',
-    },
-
     slack: {
       webhookUrl: env.SLACK_WEBHOOK_URL,
       channel: env.SLACK_CHANNEL,
       botToken: env.SLACK_BOT_TOKEN,
       signingSecret: env.SLACK_SIGNING_SECRET,
       interactionsPath: env.SLACK_INTERACTIONS_PATH,
-    },
-
-    n8n: {
-      webhookUrl: env.N8N_WEBHOOK_URL ?? '',
-      stripeWebhookUrl: env.N8N_STRIPE_WEBHOOK_URL ?? '',
     },
 
     mcp: {
@@ -479,12 +407,6 @@ function buildConfig(env: ParsedEnv) {
         windowMs: env.MCP_RATE_LIMIT_WINDOW_MS,
         maxRequests: env.MCP_RATE_LIMIT_MAX,
       },
-    },
-
-    proxy: {
-      modelRouterEnabled: env.PROXY_MODEL_ROUTER_ENABLED,
-      githubActionsDispatchEnabled: env.PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED,
-      githubPat: env.PROXY_GITHUB_PAT ?? '',
     },
 
     telegram: {
@@ -517,24 +439,19 @@ function buildConfig(env: ParsedEnv) {
       dlqRetentionDays: env.DLQ_RETENTION_DAYS,
     },
 
-    loops: {
-      apiKey: env.LOOPS_API_KEY,
-    },
-
     alerting: {
       slackChannel: env.ALERT_SLACK_CHANNEL,
       warnQueueDepth: env.ALERT_WARN_QUEUE_DEPTH,
       critQueueDepth: env.ALERT_CRIT_QUEUE_DEPTH,
       warnErrorRatePercent: env.ALERT_WARN_ERROR_RATE_PERCENT,
       critErrorRatePercent: env.ALERT_CRIT_ERROR_RATE_PERCENT,
-      n8nWebhookUrl: env.N8N_MONITORING_WEBHOOK_URL,
     },
 
     stas: {
-      mode: env.STAS_MODE,
-      aiMode: env.STAS_AI_MODE,
-      aiDisabled: env.STAS_AI_DISABLED,
-      label: env.STAS_LABEL,
+	      mode: env.STAS_MODE,
+	      aiMode: env.STAS_AI_MODE,
+	      aiDisabled: env.STAS_AI_DISABLED,
+	      label: env.STAS_LABEL,
       botName: env.BOT_NAME,
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
       maxAgentIterations: env.MAX_AGENT_ITERATIONS,
@@ -549,10 +466,6 @@ function buildConfig(env: ParsedEnv) {
       queueDlqNotifyAt: env.QUEUE_DLQ_NOTIFY_AT,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
-      publicUrl: env.STAS_PUBLIC_URL,
-    remediation: {
-      disabled: env.DISABLE_AUTO_REMEDIATION,
-    },
     },
 
     postgres: {
@@ -699,33 +612,16 @@ function buildConfig(env: ParsedEnv) {
       sandboxMultiplierMax: env.METERING_SANDBOX_MULTIPLIER_MAX,
     },
 
-    litellm: {
-      baseUrl: env.LITELLM_BASE_URL,
-      adminApiKey: env.LITELLM_ADMIN_API_KEY ?? '',
+    opensymphony: {
+      enabled: env.OPENSYMPHONY_ENABLED,
+      port: env.OPENSYMPHONY_PORT,
+      host: env.OPENSYMPHONY_HOST,
     },
 
     usageCredits: {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
-    },
-
-    pipeline: {
-      sandboxEnabled: env.PIPELINE_SANDBOX_ENABLED,
-      qualityGateTimeoutMs: env.PIPELINE_QUALITY_GATE_TIMEOUT_MS,
-      complianceCheckEnabled: env.PIPELINE_COMPLIANCE_CHECK_ENABLED,
-    },
-
-    // ── Team Management ─────────────────────────────────────────────────────
-    teams: {
-      enabled: env.TEAMS_ENABLED,
-      maxMembersFreeTier: env.TEAMS_MAX_MEMBERS_FREE_TIER,
-      maxMembersProTier: env.TEAMS_MAX_MEMBERS_PRO_TIER,
-    },
-
-    // ── Onboarding Wizard ───────────────────────────────────────────────────
-    onboarding: {
-      wizardEnabled: env.ONBOARDING_WIZARD_ENABLED,
     },
   } as const;
 }

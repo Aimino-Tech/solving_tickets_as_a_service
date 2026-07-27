@@ -40,11 +40,13 @@ import { opencodeHealth } from './health/opencodeHealth.js';
 import { rootLogger } from './utils/logger.js';
 import { addBreadcrumb } from './monitoring/sentry.js';
 import { startMcpServer, stopMcpServer } from './mcpAutoStart.js';
+import type { OpenSymphonyAdapter } from './opensymphony-adapter.js';
 
 const log = rootLogger.child({ module: 'entry' });
 
 let server: Server | undefined;
 let shutdownInProgress = false;
+let symphonyAdapter: OpenSymphonyAdapter | null = null;
 
 /**
  * Validate connectivity on startup — checks Redis, OpenCode, and E2B if configured.
@@ -70,25 +72,31 @@ async function validateStartupHealth(): Promise<void> {
     checks.push({ name: 'redis', ok: false, error: String(err) });
   }
 
-  // Check OpenSymphony dispatch endpoint
-  const osUrl = config.opensymphony.dispatchUrl;
-  if (!osUrl) {
-    log.warn('OpenSymphony dispatch URL not configured -- skipping health check');
-    checks.push({ name: 'opensymphony', ok: true });
-  } else {
-    try {
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), 5000);
-      const resp = await fetch(`${osUrl.replace(/\/dispatch$/, '/health')}`, { signal: ac.signal });
-      clearTimeout(timer);
-      if (resp.ok) {
-        checks.push({ name: 'opensymphony', ok: true });
-      } else {
-        checks.push({ name: 'opensymphony', ok: false, error: `HTTP ${resp.status}` });
-      }
-    } catch (err) {
-      checks.push({ name: 'opensymphony', ok: false, error: String(err) });
+  // Check OpenCode endpoint (with configurable startup timeout)
+  // The opencodeHealth client must already be started (start() called in main())
+  const startupTimeoutMs = config.opencodeHealth.startupTimeoutMs;
+  const pollInterval = 2000; // poll every 2s
+  const deadline = Date.now() + startupTimeoutMs;
+  let opencodeOk = false;
+  let opencodeError: string | undefined;
+  while (Date.now() < deadline) {
+    const status = opencodeHealth.getStatus();
+    if (status.status === 'healthy') {
+      opencodeOk = true;
+      break;
     }
+    opencodeError = `status=${status.status}, circuit=${status.circuit}, failures=${status.consecutiveFailures}`;
+    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    await opencodeHealth.checkNow().catch(() => {});
+  }
+  if (opencodeOk) {
+    checks.push({ name: 'opencode', ok: true });
+  } else {
+    log.warn(
+      { timeoutMs: startupTimeoutMs, error: opencodeError },
+      'OpenCode did not become healthy within startup timeout -- continuing without',
+    );
+    checks.push({ name: 'opencode', ok: false, error: opencodeError ?? 'timeout' });
   }
 
   // Check E2B if configured
@@ -192,6 +200,16 @@ async function main(): Promise<void> {
     // Stop MCP server if it was auto-started
     stopMcpServer();
 
+    // Stop OpenSymphony adapter sidecar gracefully
+    if (symphonyAdapter) {
+      try {
+        await symphonyAdapter.stop();
+        log.info('OpenSymphony adapter stopped');
+      } catch (err) {
+        log.warn({ err: String(err) }, 'Error stopping OpenSymphony adapter (non-fatal)');
+      }
+    }
+
     // Disconnect RabbitMQ if connected
     try {
       const { disconnect: disconnectRabbitMq, isConnected } = await import('./queue/rabbitmq.js');
@@ -240,6 +258,25 @@ async function main(): Promise<void> {
 
   // Auto-start MCP server in SSE mode (for agent discovery and MCP protocol)
   startMcpServer();
+
+  // Start OpenSymphony adapter as sidecar (alternative OpenCode protocol backend)
+  if (config.opensymphony.enabled) {
+    const { startOpenSymphonyAdapter } = await import('./opensymphony-adapter.js');
+    try {
+      symphonyAdapter = await startOpenSymphonyAdapter({
+        port: config.opensymphony.port,
+        host: config.opensymphony.host,
+      });
+      log.info(
+        { port: config.opensymphony.port, host: config.opensymphony.host },
+        'OpenSymphony adapter started',
+      );
+    } catch (err) {
+      log.warn({ err: String(err) }, 'Failed to start OpenSymphony adapter (non-fatal)');
+    }
+  } else {
+    log.debug('OpenSymphony adapter disabled — set OPENSYMPHONY_ENABLED=true to enable');
+  }
 
   // Register signal handlers for graceful shutdown
   process.on('SIGTERM', () => shutdown('SIGTERM'));
