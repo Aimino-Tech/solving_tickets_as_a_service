@@ -93,17 +93,17 @@ export default function Layout() {
             {user?.avatarUrl ? (
               <img
                 src={user.avatarUrl}
-                alt={user.username}
+                alt={user.name || user.email || ''}
                 className="h-8 w-8 rounded-full"
               />
             ) : (
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900 text-sm font-semibold text-brand-700 dark:text-brand-300">
-                {user?.username?.charAt(0).toUpperCase() ?? '?'}
+                {(user?.name || user?.email || '?').charAt(0).toUpperCase()}
               </div>
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                {user?.username ?? t('auth.user')}
+                {user?.name || user?.email || t('auth.user')}
               </p>
             </div>
             <button
