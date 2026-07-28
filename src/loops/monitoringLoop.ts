@@ -28,6 +28,9 @@ interface ProcessedError {
 }
 
 const PINO_ERROR_LEVEL = 50;
+const MAX_TICKETS_PER_CYCLE = 5;
+const CONSECUTIVE_FAILURE_LIMIT = 10;
+const CIRCUIT_BREAKER_TTL_MS = 5 * 60 * 1000;
 
 export interface MonitoringStats {
   enabled: boolean;
@@ -55,6 +58,9 @@ export class MonitoringLoop {
   private redis: Redis | null = null;
   private redisReady = false;
 
+  private consecutiveFailures = 0;
+  private circuitBreakerOpenUntil: number | null = null;
+
   private stats = {
     lastRunAt: null as string | null,
     totalWebhookErrors: 0,
@@ -63,6 +69,17 @@ export class MonitoringLoop {
     totalTicketsCreated: 0,
     lastError: null as string | null,
   };
+
+  private isCircuitBreakerOpen(): boolean {
+    if (this.circuitBreakerOpenUntil === null) return false;
+    if (Date.now() >= this.circuitBreakerOpenUntil) {
+      log.info('Circuit breaker reset — cooling period elapsed');
+      this.circuitBreakerOpenUntil = null;
+      this.consecutiveFailures = 0;
+      return false;
+    }
+    return true;
+  }
 
   getStats(): MonitoringStats {
     let logFileSize = 0;
@@ -195,7 +212,18 @@ export class MonitoringLoop {
         return;
       }
 
-      log.info({ errorCount: errors.length }, 'Monitoring loop: new errors detected, creating tickets');
+      const batch = errors.slice(0, MAX_TICKETS_PER_CYCLE);
+      if (batch.length < errors.length) {
+        log.warn({ total: errors.length, capped: batch.length }, 'Monitoring loop: capping tickets per cycle');
+      }
+
+      if (this.isCircuitBreakerOpen()) {
+        const remainingMs = this.circuitBreakerOpenUntil! - Date.now();
+        log.warn({ remainingMs, consecutiveFailures: this.consecutiveFailures }, 'Monitoring loop: circuit breaker open — skipping ticket creation');
+        return;
+      }
+
+      log.info({ errorCount: batch.length, totalErrors: errors.length }, 'Monitoring loop: new errors detected, creating tickets');
 
       const tracker = getTracker('linear');
       if (!tracker) {
@@ -204,7 +232,7 @@ export class MonitoringLoop {
       }
 
       let created = 0;
-      for (const err of errors) {
+      for (const err of batch) {
         try {
           const dup = await this.redisGet(`monitoring:dup:${err.key}`);
           if (dup) {
@@ -222,13 +250,37 @@ export class MonitoringLoop {
 
           const ticket = await tracker.createTicket(params);
           created++;
+          this.consecutiveFailures = 0;
 
           await this.redisSet(`monitoring:dup:${err.key}`, ticket.url, 86400);
 
           log.info({ key: err.key, ticketUrl: ticket.url }, 'MonitoringLoop: created ticket');
         } catch (createErr) {
+          this.consecutiveFailures++;
           this.stats.lastError = String(createErr).slice(0, 500);
-          log.error({ err: String(createErr), key: err.key }, 'MonitoringLoop: failed to create ticket');
+
+          const errStr = String(createErr);
+          let errorType = 'unknown';
+          if (errStr.includes('429') || errStr.includes('rate limit')) errorType = 'rate_limited';
+          else if (errStr.includes('401') || errStr.includes('unauthorized')) errorType = 'auth_error';
+          else if (errStr.includes('403') || errStr.includes('forbidden')) errorType = 'forbidden';
+          else if (errStr.includes('timeout') || errStr.includes('ETIMEDOUT')) errorType = 'network_timeout';
+          else if (errStr.includes('ENOTFOUND') || errStr.includes('ECONNREFUSED')) errorType = 'network_error';
+
+          log.error({
+            err: errStr.slice(0, 500),
+            key: err.key,
+            errorType,
+            consecutiveFailures: this.consecutiveFailures,
+          }, 'MonitoringLoop: failed to create ticket');
+
+          if (this.consecutiveFailures >= CONSECUTIVE_FAILURE_LIMIT) {
+            this.circuitBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
+            log.error({
+              consecutiveFailures: this.consecutiveFailures,
+              coolingPeriodMs: CIRCUIT_BREAKER_TTL_MS,
+            }, 'MonitoringLoop: circuit breaker opened — too many consecutive failures');
+          }
         }
       }
       this.stats.totalTicketsCreated += created;
