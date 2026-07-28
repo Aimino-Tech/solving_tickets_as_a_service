@@ -285,7 +285,15 @@ async function main(): Promise<void> {
   addBreadcrumb('system', 'STAS started successfully');
 }
 
+process.on('uncaughtException', (err) => {
+  log.error(
+    { module: 'entry', err: String(err), stack: (err as Error).stack },
+    'Uncaught exception at entry point -- shutting down',
+  );
+  process.exit(1);
+});
+
 main().catch((err) => {
-  log.error({ err: String(err) }, 'Fatal error during startup');
+  log.error({ module: 'entry', err: String(err) }, 'Fatal error during startup');
   process.exit(1);
 });
