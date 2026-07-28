@@ -402,6 +402,118 @@ export class SlackBoltApp {
         text: `Unknown command: \`${text}\`. Try \`/stas help\` or \`/stas fix <description>\`.`,
       });
     });
+
+    this.app.command('/stas-ticket', async ({ ack, client, body, command }) => {
+      await ack();
+
+      try {
+        await client.views.open({
+          trigger_id: body.trigger_id,
+          view: {
+            type: 'modal',
+            callback_id: 'stas_ticket_modal',
+            title: { type: 'plain_text', text: 'Create STAS Ticket' },
+            submit: { type: 'plain_text', text: 'Create' },
+            close: { type: 'plain_text', text: 'Cancel' },
+            blocks: [
+              {
+                type: 'input',
+                block_id: 'title_block',
+                label: { type: 'plain_text', text: 'Title' },
+                element: {
+                  type: 'plain_text_input',
+                  action_id: 'title',
+                  placeholder: { type: 'plain_text', text: 'Brief issue title' },
+                  max_length: 255,
+                },
+              },
+              {
+                type: 'input',
+                block_id: 'description_block',
+                label: { type: 'plain_text', text: 'Description' },
+                element: {
+                  type: 'plain_text_input',
+                  action_id: 'description',
+                  multiline: true,
+                  placeholder: { type: 'plain_text', text: 'Detailed description of the issue or feature request' },
+                },
+              },
+              {
+                type: 'input',
+                block_id: 'priority_block',
+                label: { type: 'plain_text', text: 'Priority' },
+                element: {
+                  type: 'static_select',
+                  action_id: 'priority',
+                  placeholder: { type: 'plain_text', text: 'Select priority' },
+                  options: [
+                    { text: { type: 'plain_text', text: 'Urgent' }, value: '1' },
+                    { text: { type: 'plain_text', text: 'High' }, value: '2' },
+                    { text: { type: 'plain_text', text: 'Medium' }, value: '3' },
+                    { text: { type: 'plain_text', text: 'Low' }, value: '4' },
+                  ],
+                  initial_option: { text: { type: 'plain_text', text: 'Medium' }, value: '3' },
+                },
+              },
+            ],
+          },
+        });
+      } catch (err) {
+        log.error({ err: String(err) }, 'Failed to open /stas-ticket modal');
+      }
+    });
+
+    this.app.view('stas_ticket_modal', async ({ ack, body, view, client }) => {
+      const values = view.state.values;
+      const title = values.title_block?.title?.value ?? '';
+      const description = values.description_block?.description?.value ?? '';
+      const priorityRaw = values.priority_block?.priority?.value ?? '3';
+      const priority = Number(priorityRaw);
+
+      const errors: Record<string, string> = {};
+      if (!title.trim()) errors.title_block = 'Title is required';
+      if (!description.trim()) errors.description_block = 'Description is required';
+
+      if (Object.keys(errors).length > 0) {
+        await ack({ response_action: 'errors', errors });
+        return;
+      }
+
+      await ack();
+
+      try {
+        const { getTracker } = await import('../trackers/index.js');
+        const tracker = getTracker('linear');
+
+        if (!tracker) {
+          await client.chat.postMessage({
+            channel: body.user.id,
+            text: 'Failed to create ticket: Linear tracker is not configured (LINEAR_API_KEY).',
+          });
+          return;
+        }
+
+        const ticket = await tracker.createTicket({
+          teamId: 'AIM',
+          projectId: '7ce85efdc6bd',
+          title: title.trim(),
+          description: description.trim(),
+          priority,
+        });
+
+        const channelId = (body as any)?.channel?.id || body.user.id;
+        await client.chat.postMessage({
+          channel: channelId,
+          text: `Ticket created: *${ticket.title}*\n${ticket.url}`,
+        });
+      } catch (err) {
+        log.error({ err: String(err) }, 'Failed to create ticket from /stas-ticket modal');
+        await client.chat.postMessage({
+          channel: body.user.id,
+          text: `Error creating ticket: ${String(err).slice(0, 300)}`,
+        });
+      }
+    });
   }
 
   mountOn(app: Express): void {
