@@ -11,20 +11,27 @@ export default function DashboardHome() {
   const [balance, setBalance] = useState<CreditBalance | null>(null);
   const [recentRuns, setRecentRuns] = useState<Run[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
+  const [runsError, setRunsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const ac = new AbortController();
     Promise.all([
-      credits.balance({ signal: ac.signal }).catch(() => null),
-      runs.list({ perPage: 5 }, { signal: ac.signal }).catch(() => ({ data: [] as import('@/api/types').Run[], total: 0, page: 1, perPage: 5, totalPages: 0 })),
+      credits.balance({ signal: ac.signal })
+        .catch((err: Error) => {
+          if (err.name !== 'AbortError') setBalanceError(err.message);
+          return null;
+        }),
+      runs.list({ perPage: 5 }, { signal: ac.signal })
+        .catch((err: Error) => {
+          if (err.name !== 'AbortError') setRunsError(err.message);
+          return { data: [] as import('@/api/types').Run[], total: 0, page: 1, perPage: 5, totalPages: 0 };
+        }),
     ])
       .then(([bal, runsData]) => {
         setBalance(bal);
         setRecentRuns(runsData.data);
-        if (!bal && runsData.data.length === 0) {
-          setError('Failed to load dashboard data');
-        }
       })
       .catch((err) => {
         if (err.name !== 'AbortError') setError(err.message);
@@ -90,6 +97,14 @@ export default function DashboardHome() {
         ))}
       </div>
 
+      {balanceError && (
+        <div className="card border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/20">
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            Failed to load credit balance: {balanceError}
+          </p>
+        </div>
+      )}
+
       {balance && (
         <div className="card">
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Credit Overview</h3>
@@ -108,6 +123,14 @@ export default function DashboardHome() {
               Buy Credits
             </Link>
           </div>
+        </div>
+      )}
+
+      {runsError && (
+        <div className="card border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/20">
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            Failed to load recent runs: {runsError}
+          </p>
         </div>
       )}
 
