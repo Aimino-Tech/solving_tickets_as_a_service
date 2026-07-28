@@ -23,14 +23,16 @@ export default function Analytics() {
   const [litellmLoading, setLitellmLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     stats
       .get()
-      .then(setData)
-      .catch((err) => setError(err.message));
+      .then((d) => { if (!cancelled) setData(d); })
+      .catch((err) => { if (!cancelled) setError(err.message); });
     litellm.usage()
-      .then(setLitellmData)
+      .then((d) => { if (!cancelled) setLitellmData(d); })
       .catch(() => {})
-      .finally(() => setLitellmLoading(false));
+      .finally(() => { if (!cancelled) setLitellmLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   if (error) {

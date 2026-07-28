@@ -14,27 +14,23 @@ export default function PricingPage() {
     vsCompetitors: Array<{ name: string; monthlyCostCents: number; savingsCents: number; savingsPercent: number }>;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [calcError, setCalcError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     pricing
       .get()
-      .then((data: any) => { setPlans(data.plans); setCompetitors(data.competitors); })
-      .catch((err: Error) => setError(err.message));
+      .then((data: any) => { if (!cancelled) { setPlans(data.plans); setCompetitors(data.competitors); } })
+      .catch((err: Error) => { if (!cancelled) setError(err.message); });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    setCalcError(null);
+    let cancelled = false;
     pricing
       .calculate(fixSlider, selectedTier)
-      .then((data: any) => {
-        setCalcResult(data);
-        setCalcError(null);
-      })
-      .catch((err: Error) => {
-        setCalcResult(null);
-        setCalcError(err.message || 'Calculation failed');
-      });
+      .then((data: any) => { if (!cancelled) setCalcResult(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, [fixSlider, selectedTier]);
 
   return (
@@ -100,7 +96,6 @@ export default function PricingPage() {
                 </button>
               ))}
             </div>
-            {calcError && <p className="text-sm text-red-600">{calcError}</p>}
           </div>
           {calcResult && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-6">
@@ -178,7 +173,7 @@ export default function PricingPage() {
       <div className="card border-gray-200 bg-gray-50 text-center">
         <h3 className="text-base font-semibold text-gray-900">Prefer Self-Hosted?</h3>
         <p className="mt-2 text-sm text-gray-600">STAS is fully open-source under the MIT license.</p>
-        <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service" target="_blank" rel="noopener noreferrer"
+        <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" target="_blank" rel="noopener noreferrer"
           className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand-600 hover:text-brand-700">
           View on GitHub</a>
       </div>

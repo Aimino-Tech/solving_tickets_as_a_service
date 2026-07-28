@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { configApi } from '@/api/client';
 
 type EnvVar = {
@@ -115,26 +115,23 @@ export default function Configuration() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const successTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
-
-  useEffect(() => {
-    return () => {
-      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
-    };
-  }, []);
-
   const [activeTab, setActiveTab] = useState('env');
+
   useEffect(() => {
-    loadConfig();
+    const ac = new AbortController();
+    loadConfig(ac.signal);
+    return () => ac.abort();
   }, []);
 
-  async function loadConfig() {
+  async function loadConfig(signal?: AbortSignal) {
     try {
-      const data = await configApi.get();
+      const data = await configApi.get({ signal });
       setConfig(data);
       setEnvValues(data.env || {});
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load configuration');
+      if ((err as Error).name !== 'AbortError') {
+        setError(err instanceof Error ? err.message : 'Failed to load configuration');
+      }
     } finally {
       setLoading(false);
     }
@@ -147,7 +144,7 @@ export default function Configuration() {
     try {
       await configApi.updateEnv(envValues);
       setSuccess('Environment variables updated successfully.');
-      successTimeoutRef.current = setTimeout(() => setSuccess(null), 3000);
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -162,7 +159,7 @@ export default function Configuration() {
     try {
       await configApi.updateRateLimits(config.rateLimits);
       setSuccess('Rate limits updated successfully.');
-      successTimeoutRef.current = setTimeout(() => setSuccess(null), 3000);
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -335,7 +332,7 @@ export default function Configuration() {
               <p className="text-sm text-gray-400 dark:text-gray-500">No rate limits configured. Add one below.</p>
             ) : (
               config.rateLimits.map((rl, i) => (
-                <div key={`${rl.endpoint}-${rl.window}`} className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                <div key={i} className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                   <div className="flex-1 min-w-[200px]">
                     <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Endpoint</label>
                     <input
@@ -475,13 +472,13 @@ export default function Configuration() {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => setError && setError('Coming soon')} className="btn-secondary text-xs min-h-[44px]">Edit</button>
-                    <button onClick={() => handleToggleIntegration(sym.id)} className="btn-danger text-xs min-h-[44px]">Disconnect</button>
+                    <button className="btn-secondary text-xs min-h-[44px]">Edit</button>
+                    <button className="btn-danger text-xs min-h-[44px]">Disconnect</button>
                   </div>
                 </div>
               ))
             )}
-            <button onClick={() => setError && setError('Coming soon')} className="btn-primary text-sm">+ Connect Symphony</button>
+            <button className="btn-primary text-sm">+ Connect Symphony</button>
           </div>
         </div>
       )}
@@ -518,12 +515,12 @@ export default function Configuration() {
                       }}
                       className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                     />
-                    <button onClick={() => { const updated = config.subscriptions.filter(s => s.id !== sub.id); setConfig({ ...config, subscriptions: updated }); }} className="text-red-500 hover:text-red-700 text-xs font-medium min-h-[44px]">Remove</button>
+                    <button className="text-red-500 hover:text-red-700 text-xs font-medium min-h-[44px]">Remove</button>
                   </div>
                 </div>
               ))
             )}
-            <button onClick={() => setError && setError('Coming soon')} className="btn-primary text-sm">+ Add Subscription</button>
+            <button className="btn-primary text-sm">+ Add Subscription</button>
           </div>
         </div>
       )}
@@ -561,7 +558,7 @@ export default function Configuration() {
                         </p>
                       </div>
                     </div>
-                    <button onClick={() => { const updated = config.warnings.filter(ww => ww.id !== w.id); setConfig({ ...config, warnings: updated }); }} className="text-xs text-gray-400 hover:text-gray-600 min-h-[44px]">Dismiss</button>
+                    <button className="text-xs text-gray-400 hover:text-gray-600 min-h-[44px]">Dismiss</button>
                   </div>
                 </div>
               ))

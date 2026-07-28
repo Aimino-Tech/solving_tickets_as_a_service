@@ -12,43 +12,51 @@ export default function Repos() {
   const [showInstallations, setShowInstallations] = useState(false);
   const [togglingRepo, setTogglingRepo] = useState<string | null>(null);
 
-  async function loadAll() {
+  async function loadAll(signal?: AbortSignal) {
     setLoading(true);
     setError(null);
     try {
       const [status, repoData] = await Promise.all([
-        github.getStatus().catch(() => ({ connected: false })),
-        repos.list().catch(() => [] as (Repo & { createdAt: string })[]),
+        github.getStatus({ signal }).catch(() => ({ connected: false })),
+        repos.list({ signal }).catch(() => [] as (Repo & { createdAt: string })[]),
       ]);
       setConnectionStatus(status);
       setRepoList(repoData);
 
       if (status.connected) {
-        const instData = await github.listInstallations().catch(() => ({ installations: [] }));
+        const instData = await github.listInstallations({ signal }).catch(() => ({ installations: [] }));
         setInstallations(instData.installations);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      if ((err as Error).name !== 'AbortError') {
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+      }
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadAll();
+    const ac = new AbortController();
+    loadAll(ac.signal);
+    return () => ac.abort();
   }, []);
 
   const urlParams = new URLSearchParams(window.location.search);
   const oauthCode = urlParams.get('code');
   useEffect(() => {
     if (oauthCode) {
-      github.handleCallback(oauthCode).then(() => {
+      const ac = new AbortController();
+      github.handleCallback(oauthCode, { signal: ac.signal }).then(() => {
         window.history.replaceState({}, '', window.location.pathname);
-        loadAll();
+        loadAll(ac.signal);
       }).catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to complete OAuth');
+        if (err.name !== 'AbortError') {
+          setError(err instanceof Error ? err.message : 'Failed to complete OAuth');
+        }
         window.history.replaceState({}, '', window.location.pathname);
       });
+      return () => ac.abort();
     }
   }, [oauthCode]);
 
@@ -198,7 +206,7 @@ export default function Repos() {
                         <button
                           onClick={() => handleToggleRepo(inst.installationId, repo.owner, repo.name, repo.stasInstalled)}
                           disabled={togglingRepo === repo.fullName}
-                          className={`text-xs px-3 py-1 rounded-full min-h-[36px] ${
+                          className={`text-xs px-3 py-1 rounded-full min-h-[44px] ${
                             repo.stasInstalled
                               ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                               : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
