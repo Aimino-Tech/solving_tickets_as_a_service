@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { runs } from '@/api/client';
 import type { Run } from '@/api/types';
 import { Link } from 'react-router-dom';
@@ -28,23 +28,48 @@ export default function LiveView() {
   const [recentRuns, setRecentRuns] = useState<Run[]>([]);
   const [loading, setLoading] = useState(true);
   const [time, setTime] = useState(new Date());
+  const abortRef = useRef<AbortController | null>(null);
 
+  // AIM-3595: AbortController for polling to cancel stale requests
   const fetchRuns = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
-      const data = await runs.list({ perPage: 10 });
-      setRecentRuns(data.data ?? data ?? []);
+      const data = await runs.list({ perPage: 10 }, { signal: controller.signal });
+      if (!controller.signal.aborted) {
+        // AIM-3585: Safe array fallback - handle malformed responses
+        setRecentRuns(Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []);
+      }
     } catch { /* ignore */ }
-    setLoading(false);
+    if (!controller.signal.aborted) {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { fetchRuns(); const i = setInterval(fetchRuns, POLL_INTERVAL_MS); return () => clearInterval(i); }, [fetchRuns]);
+  useEffect(() => {
+    fetchRuns();
+    const i = setInterval(fetchRuns, POLL_INTERVAL_MS);
+    return () => {
+      clearInterval(i);
+      abortRef.current?.abort();
+    };
+  }, [fetchRuns]);
   useEffect(() => { const i = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(i); }, []);
 
-  const queueDepth = recentRuns.filter(r => r.status === 'queued' || r.status === 'running').length;
+  // AIM-3612: Fix queue badge - only count queued, not running
+  const queueDepth = recentRuns.filter(r => r.status === 'queued').length;
   const activeFixes = recentRuns.filter(r => r.status === 'running').length;
-  const successCount = recentRuns.filter(r => r.status === 'success').length;
-  const successRate = recentRuns.length > 0 ? Math.round((successCount / recentRuns.length) * 100) : 0;
-  const avgDuration = recentRuns.reduce((s, r) => s + (r.durationSeconds ?? 0), 0) / Math.max(recentRuns.length, 1);
+
+  // AIM-3606: Exclude in-progress from success rate
+  const completedRuns = recentRuns.filter(r => r.status !== 'running' && r.status !== 'queued');
+  const successCount = completedRuns.filter(r => r.status === 'success').length;
+  const successRate = completedRuns.length > 0 ? Math.round((successCount / completedRuns.length) * 100) : 0;
+
+  // AIM-3607: Exclude in-progress from avg fix time
+  const avgDuration = completedRuns.length > 0
+    ? completedRuns.reduce((s, r) => s + (r.durationSeconds ?? 0), 0) / completedRuns.length
+    : 0;
 
   const metrics: MetricCard[] = METRICS.map(m => {
     if (m.label === 'Queue Depth') return { ...m, value: String(queueDepth) };
@@ -108,7 +133,8 @@ export default function LiveView() {
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-gray-100">
                 {run.repoOwner}/{run.repoName}#{run.issueNumber}
               </span>
-              <span className="hidden text-xs text-gray-500 sm:inline dark:text-gray-400">{run.durationSeconds ? `${run.durationSeconds}s` : '—'}</span>
+              {/* AIM-3613: Fix 0 duration falsy check - use != null instead of truthy check */}
+              <span className="hidden text-xs text-gray-500 sm:inline dark:text-gray-400">{run.durationSeconds != null ? `${run.durationSeconds}s` : '—'}</span>
               <span className="hidden text-xs text-gray-500 sm:inline dark:text-gray-400">{run.createdAt ? formatDateTime(run.createdAt) : ''}</span>
               {run.id && <Link to={`/runs/${run.id}`} className="text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">View</Link>}
             </div>

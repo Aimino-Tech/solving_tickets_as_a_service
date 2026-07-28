@@ -34,7 +34,9 @@ export default function RunsHistory() {
     } else {
       params.delete(key);
     }
-    params.delete('page');
+    if (key !== 'page') {
+      params.delete('page');
+    }
     setSearchParams(params);
   }
 

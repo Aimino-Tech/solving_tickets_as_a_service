@@ -22,6 +22,9 @@ export default function DashboardHome() {
       .then(([bal, runsData]) => {
         setBalance(bal);
         setRecentRuns(runsData.data);
+        if (!bal && runsData.data.length === 0) {
+          setError('Failed to load dashboard data');
+        }
       })
       .catch((err) => {
         if (err.name !== 'AbortError') setError(err.message);
@@ -34,6 +37,9 @@ export default function DashboardHome() {
     return (
       <div className="card">
         <p className="text-red-600 dark:text-red-400">{t('dashboard.failedToLoad', { error })}</p>
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          Unable to load dashboard data. Please try again later.
+        </p>
       </div>
     );
   }
@@ -49,7 +55,7 @@ export default function DashboardHome() {
   const cards = [
     {
       label: 'Credit Balance',
-      value: balance ? `${balance.balance.toLocaleString()} credits` : '—',
+      value: balance ? `${balance.balance.toLocaleString('en-US')} credits` : '\u2014',
       color: 'text-brand-600 dark:text-brand-400',
       bg: 'bg-brand-50 dark:bg-brand-900/50',
       Icon: Wallet,
@@ -63,7 +69,7 @@ export default function DashboardHome() {
     },
     {
       label: 'Active Repos',
-      value: '—',
+      value: '\u2014',
       color: 'text-amber-600 dark:text-amber-400',
       bg: 'bg-amber-50 dark:bg-amber-900/50',
       Icon: Activity,
@@ -90,11 +96,11 @@ export default function DashboardHome() {
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Available Balance</p>
-              <p className="text-2xl font-bold text-brand-600 dark:text-brand-400">{balance.balance.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-brand-600 dark:text-brand-400">{balance.balance.toLocaleString('en-US')}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Lifetime Credits</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{balance.lifetimeCredits.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{balance.lifetimeCredits.toLocaleString('en-US')}</p>
             </div>
           </div>
           <div className="mt-4 flex gap-3">
@@ -138,12 +144,12 @@ export default function DashboardHome() {
                   }`}>
                     {run.status}
                   </span>
-                  {run.durationMs && (
+                  {run.durationSeconds != null && (
                     <span className="hidden text-xs text-gray-400 sm:block">
                       <Clock size={12} className="inline mr-1" />
-                      {run.durationMs >= 60_000
-                        ? `${(run.durationMs / 60_000).toFixed(1)}m`
-                        : `${Math.round(run.durationMs / 1000)}s`}
+                      {run.durationSeconds >= 60
+                        ? `${(run.durationSeconds / 60).toFixed(1)}m`
+                        : `${run.durationSeconds}s`}
                     </span>
                   )}
                 </div>
@@ -152,7 +158,7 @@ export default function DashboardHome() {
           </div>
         ) : (
           <p className="mt-4 text-sm text-gray-400 dark:text-gray-500">
-            No fixes yet — label a GitHub issue with <code className="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-gray-800">stas:fix</code> to get started.
+            No fixes yet \u2014 label a GitHub issue with <code className="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-gray-800">stas:fix</code> to get started.
           </p>
         )}
       </div>

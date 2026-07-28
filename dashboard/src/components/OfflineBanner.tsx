@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface OfflineBannerProps {
   readonly isOffline: boolean;
@@ -6,10 +6,21 @@ interface OfflineBannerProps {
 
 export function OfflineBanner({ isOffline }: OfflineBannerProps) {
   const [visible, setVisible] = useState(isOffline);
+  const dismissedRef = useRef(false);
 
   useEffect(() => {
-    setVisible(isOffline);
+    if (isOffline) {
+      if (!dismissedRef.current) setVisible(true);
+    } else {
+      setVisible(false);
+      dismissedRef.current = false;
+    }
   }, [isOffline]);
+
+  const handleDismiss = useCallback(() => {
+    setVisible(false);
+    dismissedRef.current = true;
+  }, []);
 
   if (!visible) return null;
 
@@ -31,7 +42,7 @@ export function OfflineBanner({ isOffline }: OfflineBannerProps) {
         </svg>
         <span>You are offline. Showing cached data.</span>
         <button
-          onClick={() => setVisible(false)}
+          onClick={handleDismiss}
           className="ml-2 text-yellow-100 hover:text-white transition-colors"
           aria-label="Dismiss offline notification"
         >

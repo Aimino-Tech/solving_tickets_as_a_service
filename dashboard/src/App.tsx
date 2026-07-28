@@ -19,7 +19,6 @@ import Privacy from '@/pages/Privacy';
 import Status from '@/pages/Status';
 import DPAPage from '@/pages/DPAPage';
 import Benchmarks from '@/pages/Benchmarks';
-import Pricing from '@/pages/Pricing';
 import EnterprisePage from '@/pages/EnterprisePage';
 import KpiDashboard from '@/pages/KpiDashboard';
 import PricingPage from '@/pages/PricingPage';
@@ -87,6 +86,7 @@ export default function App() {
           <Route path="audit" element={<AuditLog />} />
           <Route path="admin/runs" element={<AdminRuns />} />
           <Route path="liveview" element={<LiveView />} />
+          <Route path="kpi" element={<KpiDashboard />} />
           <Route path="monitoring" element={<Monitoring />} />
         </Route>
         <Route path="/500" element={<Error500 />} />

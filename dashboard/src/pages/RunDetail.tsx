@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { runs } from '@/api/client';
 import type { Run } from '@/api/types';
 import { useParams, Link } from 'react-router-dom';
-import { formatDateTime, formatDurationSeconds } from '@/utils/format';
 import { SkeletonRunDetail } from '@/components/LoadingSkeleton';
 
 export default function RunDetail() {
@@ -60,7 +59,7 @@ export default function RunDetail() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <nav className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
+      <nav className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
         <div>
           <Link to="/runs" className="hover:text-brand-600">Runs</Link>
           <span className="mx-2">/</span>
@@ -95,14 +94,14 @@ export default function RunDetail() {
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="card space-y-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 dark:text-gray-500">Timing</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Timing</h3>
           <DetailRow label="Created" value={new Date(run.createdAt).toLocaleString()} />
           <DetailRow label="Updated" value={new Date(run.updatedAt).toLocaleString()} />
           <DetailRow label="Duration" value={formatDuration(run.durationSeconds)} />
         </div>
 
         <div className="card space-y-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 dark:text-gray-500">Cost &amp; Model</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Cost &amp; Model</h3>
           <DetailRow label="Cost" value={run.costCents ? `$${(run.costCents / 100).toFixed(2)}` : '\u2014'} />
           <DetailRow label="Model" value={run.modelUsed || '\u2014'} />
           <DetailRow label="Credits Used" value={run.creditsUsed != null ? String(run.creditsUsed) : '\u2014'} />
@@ -111,7 +110,7 @@ export default function RunDetail() {
 
       {run.confidence && (
         <div className="card">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 dark:text-gray-500">Confidence Score</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Confidence Score</h3>
           <div className="mt-2 flex items-center gap-3">
             <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${confStyles[run.confidence] || 'text-gray-600 bg-gray-50'}`}>
               {run.confidence === 'high' && '\u2705 '}
@@ -119,7 +118,7 @@ export default function RunDetail() {
               {run.confidence === 'low' && '\u274C '}
               {run.confidence}
             </span>
-            <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
               {run.confidence === 'high' && 'Tests pass and the fix looks clean.'}
               {run.confidence === 'medium' && 'Basic verification passed, manual review recommended.'}
               {run.confidence === 'low' && 'Some checks did not pass. Review carefully.'}
@@ -130,13 +129,15 @@ export default function RunDetail() {
 
       {diff && (
         <div className="card">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 dark:text-gray-500">Changes</h3>
-          <pre className="mt-2 max-h-96 overflow-auto rounded-lg bg-gray-900 p-4 text-xs leading-relaxed text-green-400 font-mono">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Changes</h3>
+          <pre id="diff-content" className="mt-2 max-h-96 overflow-auto rounded-lg bg-gray-900 p-4 text-xs leading-relaxed text-green-400 font-mono">
             {diffPreview || '(no diff preview available)'}
           </pre>
           {hasMoreDiff && (
             <button
               onClick={() => setShowFullDiff(!showFullDiff)}
+              aria-expanded={showFullDiff}
+              aria-controls="diff-content"
               className="mt-2 text-sm font-medium text-brand-600 hover:text-brand-700"
             >
               {showFullDiff ? 'Show less \u2191' : `Show all (${formatBytes(diff.length)})\u2193`}
@@ -147,7 +148,7 @@ export default function RunDetail() {
 
       {run.testOutput && (
         <div className="card">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 dark:text-gray-500">Test Results</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Test Results</h3>
           <pre className="mt-2 max-h-64 overflow-auto rounded-lg bg-gray-50 p-4 text-xs leading-relaxed text-gray-700 font-mono border border-gray-200">
             {run.testOutput.slice(0, 5000)}
           </pre>
@@ -159,7 +160,7 @@ export default function RunDetail() {
 
       {run.prUrl && (
         <div className="card">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 dark:text-gray-500">Pull Request</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pull Request</h3>
           <a
             href={run.prUrl}
             target="_blank"
@@ -187,7 +188,7 @@ export default function RunDetail() {
         <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">
           <div className="flex-1">
             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Share this run</h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Share the public link to show the fix result, test output, and confidence score.
             </p>
           </div>
@@ -248,7 +249,7 @@ export default function RunDetail() {
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
-      <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">{label}</span>
+      <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{value}</span>
     </div>
   );

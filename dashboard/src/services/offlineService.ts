@@ -126,8 +126,10 @@ export async function processRetryQueue(): Promise<void> {
         headers: request.headers,
         body: request.body ?? undefined,
       });
+      await response.text(); // consume body to free connection
 
       if (response.ok) {
+        await response.text();
         successfulIds.push(request.id);
       }
     } catch {
