@@ -5,6 +5,7 @@ import path from 'node:path';
 const apiPort = process.env.VITE_API_PORT || '3000';
 
 export default defineConfig({
+  base: '/dashboard/',
   plugins: [react()],
   resolve: {
     alias: {

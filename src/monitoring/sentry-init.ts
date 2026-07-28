@@ -11,6 +11,12 @@
  * Process-level error handlers (uncaughtException, unhandledRejection)
  * are centralized in server.ts to avoid duplicate handlers and ensure
  * consistent logging with module context.
+ * are centralized in server.ts to provide consistent module context
+ * and Sentry integration. The Sentry SDK automatically captures these
+ * events through its own instrumentation.
+ *
+ * A startup-time uncaughtException handler is kept here for early
+ * error protection before server.ts is loaded.
  *
  * Usage (must be FIRST import in index.ts):
  *   import './monitoring/sentry-init.js';
@@ -24,3 +30,16 @@ initSentry();
 // Set environment-level tags
 setTag('service', 'stas');
 setTag('runtime', 'node');
+
+// ── Startup Uncaught Exception Handler ─────────────────────────────
+// Provides early error protection before server.ts registers its
+// more comprehensive handler. This handler exits the process to
+// prevent continued execution in an undefined state.
+process.on('uncaughtException', (err) => {
+  rootLogger.error(
+    { err: String(err), stack: (err as Error).stack },
+    'Uncaught exception at startup — shutting down',
+  );
+  // Give Sentry a moment to flush before exiting
+  setTimeout(() => process.exit(1), 2000);
+});
