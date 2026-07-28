@@ -144,12 +144,12 @@ export default function DashboardHome() {
                   }`}>
                     {run.status}
                   </span>
-                  {run.durationMs && (
+                  {run.durationSeconds != null && (
                     <span className="hidden text-xs text-gray-400 sm:block">
                       <Clock size={12} className="inline mr-1" />
-                      {run.durationMs >= 60_000
-                        ? `${(run.durationMs / 60_000).toFixed(1)}m`
-                        : `${Math.round(run.durationMs / 1000)}s`}
+                      {run.durationSeconds >= 60
+                        ? `${(run.durationSeconds / 60).toFixed(1)}m`
+                        : `${run.durationSeconds}s`}
                     </span>
                   )}
                 </div>
