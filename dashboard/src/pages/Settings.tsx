@@ -67,21 +67,29 @@ export default function Settings() {
   }
 
   useEffect(() => {
+    const ac = new AbortController();
     settings
-      .get()
+      .get(ac.signal)
       .then((data: any) => {
+        if (ac.signal.aborted) return;
         setConfig(data);
         setForm(data);
       })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err: Error) => {
+        if (err.name !== 'AbortError') setError(err.message);
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) setLoading(false);
+      });
 
-    fetchDeletionStatus();
-    loadNotificationPrefs();
+    fetchDeletionStatus(ac.signal);
+    loadNotificationPrefs(ac.signal);
+    return () => ac.abort();
   }, []);
 
-  async function loadNotificationPrefs() {
-    const prefs = await fetchPreferences();
+  async function loadNotificationPrefs(signal?: AbortSignal) {
+    const prefs = await fetchPreferences(signal);
+    if (signal?.aborted) return;
     setNotificationPrefs(prefs);
     const channels: Record<string, Record<string, boolean>> = {};
     const targets: Record<string, string> = {};
@@ -120,11 +128,12 @@ export default function Settings() {
     }
   }
 
-  async function fetchDeletionStatus() {
+  async function fetchDeletionStatus(signal?: AbortSignal) {
     try {
       const token = localStorage.getItem('stas_token');
       const res = await fetch('/api/v1/me/data/deletion-status', {
         headers: { 'Authorization': `Bearer ${token}` },
+        signal,
       });
       if (res.ok) {
         setDeletionStatus(await res.json());

@@ -16,17 +16,21 @@ export default function PricingPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const ac = new AbortController();
     pricing
-      .get()
+      .get(ac.signal)
       .then((data: any) => { setPlans(data.plans); setCompetitors(data.competitors); })
       .catch((err: Error) => setError(err.message));
+    return () => ac.abort();
   }, []);
 
   useEffect(() => {
+    const ac = new AbortController();
     pricing
-      .calculate(fixSlider, selectedTier)
+      .calculate(fixSlider, selectedTier, ac.signal)
       .then((data: any) => setCalcResult(data))
       .catch(() => {});
+    return () => ac.abort();
   }, [fixSlider, selectedTier]);
 
   return (

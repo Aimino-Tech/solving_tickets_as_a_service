@@ -12,44 +12,53 @@ export default function Repos() {
   const [showInstallations, setShowInstallations] = useState(false);
   const [togglingRepo, setTogglingRepo] = useState<string | null>(null);
 
-  async function loadAll() {
+  async function loadAll(signal?: AbortSignal) {
     setLoading(true);
     setError(null);
     try {
       const [status, repoData] = await Promise.all([
-        github.getStatus().catch(() => ({ connected: false })),
-        repos.list().catch(() => [] as (Repo & { createdAt: string })[]),
+        github.getStatus(signal).catch(() => ({ connected: false })),
+        repos.list(signal).catch(() => [] as (Repo & { createdAt: string })[]),
       ]);
+      if (signal?.aborted) return;
       setConnectionStatus(status);
       setRepoList(repoData);
 
       if (status.connected) {
-        const instData = await github.listInstallations().catch(() => ({ installations: [] }));
+        const instData = await github.listInstallations(signal).catch(() => ({ installations: [] }));
+        if (signal?.aborted) return;
         setInstallations(instData.installations);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      if (err instanceof Error && err.name !== 'AbortError') {
+        setError(err.message);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadAll();
+    const ac = new AbortController();
+    loadAll(ac.signal);
+    return () => ac.abort();
   }, []);
 
   const urlParams = new URLSearchParams(window.location.search);
   const oauthCode = urlParams.get('code');
   useEffect(() => {
-    if (oauthCode) {
-      github.handleCallback(oauthCode).then(() => {
-        window.history.replaceState({}, '', window.location.pathname);
-        loadAll();
-      }).catch((err) => {
+    if (!oauthCode) return;
+    const ac = new AbortController();
+    github.handleCallback(oauthCode, ac.signal).then(() => {
+      window.history.replaceState({}, '', window.location.pathname);
+      loadAll(ac.signal);
+    }).catch((err) => {
+      if (err.name !== 'AbortError') {
         setError(err instanceof Error ? err.message : 'Failed to complete OAuth');
-        window.history.replaceState({}, '', window.location.pathname);
-      });
-    }
+      }
+      window.history.replaceState({}, '', window.location.pathname);
+    });
+    return () => ac.abort();
   }, [oauthCode]);
 
   async function handleConnectGitHub() {

@@ -66,9 +66,11 @@ export default function VsPage() {
 
   useEffect(() => {
     if (!slug) { setLoading(false); return; }
+    const ac = new AbortController();
     setLoading(true);
     setError(null);
-    pricing.vs(slug).then((result: any) => { setData(result); setLoading(false); }).catch((err: Error) => { setError(err.message); setLoading(false); });
+    pricing.vs(slug, ac.signal).then((result: any) => { setData(result); setLoading(false); }).catch((err: Error) => { setError(err.message); setLoading(false); });
+    return () => ac.abort();
   }, [slug]);
 
   if (!slug) {

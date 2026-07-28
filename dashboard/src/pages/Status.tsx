@@ -16,13 +16,15 @@ export default function Status() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const ac = new AbortController();
     Promise.all([
-      health.getVerbose().catch(() => null),
-      sla.getMetrics().catch(() => null),
+      health.getVerbose(ac.signal).catch(() => null),
+      sla.getMetrics(ac.signal).catch(() => null),
     ]).then(([h, s]) => {
       setHealthData(h);
       setSlaData(s);
     }).finally(() => setLoading(false));
+    return () => ac.abort();
   }, []);
 
   const checks = healthData?.checks ?? {};
