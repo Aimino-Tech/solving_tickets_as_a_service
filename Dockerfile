@@ -39,6 +39,9 @@ RUN apk upgrade --no-cache
 # SHELL hardening: ensure pipefail is set for all RUN commands
 SHELL ["/bin/sh", "-o", "pipefail", "-c"]
 
+RUN apk add --no-cache python3 py3-pip py3-uvicorn && \
+    pip3 install --no-cache-dir "mcp>=1.0.0" httpx sentry-sdk 2>&1 | tail -3
+
 # Create non-root user for security
 RUN addgroup -S stas && adduser -S stas -G stas
 
@@ -50,6 +53,11 @@ COPY --from=build --chown=stas:stas /app/node_modules ./node_modules
 COPY --from=build --chown=stas:stas /app/package.json ./
 COPY --from=build --chown=stas:stas /app/package-lock.json ./
 COPY --from=build --chown=stas:stas /app/dashboard/dist ./dashboard/dist
+
+# Copy Python source code for MCP server
+COPY --chown=stas:stas stas_mcp/ ./stas_mcp/
+COPY --chown=stas:stas workers/ ./workers/
+COPY --chown=stas:stas requirements.txt ./
 
 # Supply chain: keep lockfile in runtime image for SBOM traceability
 # package-lock.json is read-only at runtime (stas user)

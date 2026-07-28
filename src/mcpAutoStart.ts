@@ -13,7 +13,7 @@
  *   MCP_API_KEY          — API key for MCP auth
  */
 
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, type ChildProcess, execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { rootLogger } from './utils/logger.js';
 
@@ -21,15 +21,33 @@ const log = rootLogger.child({ module: 'mcp-autostart' });
 
 let mcpProcess: ChildProcess | null = null;
 
-/**
- * Start the MCP server as a child process in SSE mode.
- * Returns the child process reference, or null if auto-start is disabled.
- */
+function isPythonAvailable(): boolean {
+  try {
+    execFileSync('python3', ['--version'], { stdio: 'ignore', timeout: 3000 });
+    execFileSync('python3', ['-c', 'import mcp.server.fastmcp'], {
+      stdio: 'ignore',
+      timeout: 5000,
+      env: { ...process.env, PYTHONWARNINGS: 'ignore' },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function startMcpServer(): ChildProcess | null {
   const autoStart = process.env.STAS_MCP_AUTO_START !== 'false';
 
   if (!autoStart) {
     log.info('MCP server auto-start disabled via STAS_MCP_AUTO_START=false');
+    return null;
+  }
+
+  if (!isPythonAvailable()) {
+    log.warn(
+      'Python 3 or mcp package not available — MCP server will not start. '
+      + 'Install python3 and run: pip install "mcp>=1.0.0"',
+    );
     return null;
   }
 
@@ -59,9 +77,8 @@ export function startMcpServer(): ChildProcess | null {
     mcpProcess.stderr?.on('data', (data: Buffer) => {
       const msg = data.toString().trim();
       if (msg) {
-        // MCP SDK logs to stderr — treat as info, not error
         if (msg.includes('Error') || msg.includes('Traceback')) {
-          log.error({ mcp: 'stderr' }, msg);
+          log.warn({ mcp: 'stderr' }, msg);
         } else {
           log.info({ mcp: 'stderr' }, msg);
         }
@@ -69,7 +86,7 @@ export function startMcpServer(): ChildProcess | null {
     });
 
     mcpProcess.on('error', (err: Error) => {
-      log.error({ err: String(err) }, 'MCP server process error');
+      log.warn({ err: String(err) }, 'MCP server process error');
     });
 
     mcpProcess.on('exit', (code: number | null, signal: string | null) => {
@@ -77,20 +94,17 @@ export function startMcpServer(): ChildProcess | null {
       mcpProcess = null;
     });
 
-    // Give it a moment to start, then log status
     setTimeout(() => {
       if (mcpProcess && mcpProcess.exitCode === null) {
         log.info({ port, pid: mcpProcess.pid }, `MCP server started on :${port} (SSE mode)`);
       } else {
         log.warn({ port }, 'MCP server failed to start — continuing without it');
-        log.info('Run manually: python -m stas_mcp.server sse --port ' + port);
       }
     }, 2000);
 
     return mcpProcess;
   } catch (err) {
-    log.error({ err: String(err) }, 'Failed to spawn MCP server process');
-    log.info('Run manually: python -m stas_mcp.server sse --port ' + port);
+    log.warn({ err: String(err) }, 'Failed to spawn MCP server process');
     return null;
   }
 }
