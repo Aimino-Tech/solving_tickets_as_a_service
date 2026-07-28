@@ -74,6 +74,7 @@ async function validateStartupHealth(): Promise<void> {
 
   // Check OpenCode endpoint (with configurable startup timeout)
   // The opencodeHealth client must already be started (start() called in main())
+  const opencodeUrl = config.opencode.url;
   const startupTimeoutMs = config.opencodeHealth.startupTimeoutMs;
   const pollInterval = 2000; // poll every 2s
   const deadline = Date.now() + startupTimeoutMs;
@@ -85,7 +86,7 @@ async function validateStartupHealth(): Promise<void> {
       opencodeOk = true;
       break;
     }
-    opencodeError = `status=${status.status}, circuit=${status.circuit}, failures=${status.consecutiveFailures}`;
+    opencodeError = `url=${opencodeUrl}, status=${status.status}, circuit=${status.circuit}, failures=${status.consecutiveFailures}`;
     await new Promise((resolve) => setTimeout(resolve, pollInterval));
     await opencodeHealth.checkNow().catch(() => {});
   }
@@ -93,8 +94,8 @@ async function validateStartupHealth(): Promise<void> {
     checks.push({ name: 'opencode', ok: true });
   } else {
     log.warn(
-      { timeoutMs: startupTimeoutMs, error: opencodeError },
-      'OpenCode did not become healthy within startup timeout -- continuing without',
+      { opencodeUrl, timeoutMs: startupTimeoutMs, error: opencodeError },
+      `OpenCode did not become healthy within startup timeout (${opencodeUrl}) -- continuing without`,
     );
     checks.push({ name: 'opencode', ok: false, error: opencodeError ?? 'timeout' });
   }
@@ -118,9 +119,18 @@ async function validateStartupHealth(): Promise<void> {
   const failures = checks.filter((c) => !c.ok);
   if (failures.length > 0) {
     for (const f of failures) {
-      log.error({ service: f.name, error: f.error }, `Startup health check FAILED: ${f.name}`);
+      if (f.name === 'opencode') {
+        log.warn({ service: f.name, error: f.error }, `Startup health check non-critical: ${f.name}`);
+      } else {
+        log.error({ service: f.name, error: f.error }, `Startup health check FAILED: ${f.name}`);
+      }
     }
-    log.error({ checks }, 'Startup health validation completed with failures');
+    const hasCritical = failures.some((f) => f.name !== 'opencode');
+    if (hasCritical) {
+      log.error({ checks }, 'Startup health validation completed with critical failures');
+    } else {
+      log.warn({ checks }, 'Startup health validation completed with non-critical warnings');
+    }
   } else {
     log.info({ checks: checks.map((c) => c.name) }, 'All startup health checks passed');
   }
