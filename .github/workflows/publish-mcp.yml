@@ -68,17 +68,43 @@ jobs:
       - name: Validate MCP manifest
         id: manifest
         run: |
-          if [ -f mcp/manifest.json ]; then
-            echo "✅ mcp/manifest.json found"
+          if [ -f mcp-manifest/manifest.json ]; then
+            echo "✅ mcp-manifest/manifest.json found"
             python3 -c "
 import json
-m = json.load(open('mcp/manifest.json'))
+m = json.load(open('mcp-manifest/manifest.json'))
 assert m.get('name') == '@aimino/stas-mcp'
 assert m.get('command') == 'python'
 print('   ✓ manifest valid')
 "
           else
-            echo "⚠️ mcp/manifest.json not found"
+            echo "⚠️ mcp-manifest/manifest.json not found"
+          fi
+
+  publish-npm:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish @aimino/stas-mcp to npm
+        working-directory: packages/stas-mcp
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NODE_AUTH_TOKEN" ]; then
+            npm publish --access public
+          else
+            echo "NPM_TOKEN not set — skipping npm publish."
+            echo "To publish manually:"
+            echo "  cd packages/stas-mcp"
+            echo "  npm publish --access public"
           fi
 
   publish-registry:
@@ -152,7 +178,7 @@ print('   ✓ manifest valid')
 
   update-manifest:
     name: Update Published Manifest
-    needs: [publish-registry, publish-smithery]
+    needs: [publish-npm, publish-registry, publish-smithery]
     if: always()
     runs-on: ubuntu-latest
     steps:

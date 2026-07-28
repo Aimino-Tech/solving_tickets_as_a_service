@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { getSupabaseAdmin } from './supabase.js';
 import { rootLogger } from '../utils/logger.js';
+import { captureEvent } from '../analytics/tracker.js';
 import { requireAuth } from './middleware.js';
 import { AuthError, authService } from './service.js';
 
@@ -33,6 +34,17 @@ router.post('/register', async (req: Request, res: Response) => {
 
   try {
     const result = await authService.register(parsed.data.email, parsed.data.password, parsed.data.name);
+
+    // Track user signup in PostHog
+    try {
+      captureEvent('user_signup', result.user.id, {
+        email: result.user.email,
+        name: result.user.name,
+      });
+    } catch (analyticsErr) {
+      log.error({ err: String(analyticsErr) }, 'Failed to track user_signup event');
+    }
+
     res.status(201).json(result);
   } catch (err) {
     if (err instanceof AuthError) {

@@ -4,7 +4,8 @@
   "private": true,
   "license": "AGPL-3.0-only",
   "workspaces": [
-    "packages/github-client"
+    "packages/github-client",
+    "packages/stas-mcp"
   ],
   "description": "Label a GitHub issue. Our bot investigates, fixes, and opens a PR. Backed by OpenCode.",
   "type": "module",
@@ -90,12 +91,21 @@
     "test:smoke:auth": "vitest run tests/e2e/auth-path.test.ts --config vitest.e2e.config.ts",
     "test:smoke:dlq": "vitest run tests/e2e/dlq-path.test.ts --config vitest.e2e.config.ts",
     "test:smoke:health": "vitest run tests/e2e/health-check-path.test.ts --config vitest.e2e.config.ts",
+<<<<<<< HEAD
     "test:automation": "npx playwright test --config tests/automation/playwright.config.ts",
     "test:automation:health": "npx playwright test tests/automation/tests/01-health --config tests/automation/playwright.config.ts",
     "test:automation:login": "npx playwright test tests/automation/tests/02-login --config tests/automation/playwright.config.ts",
     "test:automation:integration": "npx playwright test tests/automation/tests/06-integration --config tests/automation/playwright.config.ts",
     "test:automation:report": "npx playwright show-report tests/automation/reports/html",
     "test:automation:ui": "npx playwright test --ui --config tests/automation/playwright.config.ts"
+=======
+    "test:automation": "cd tests/automation && python -m pytest -v",
+    "test:automation:health": "cd tests/automation && python -m pytest test_health.py -v",
+    "test:automation:login": "cd tests/automation && python -m pytest test_login.py -v",
+    "test:automation:api": "cd tests/automation && python -m pytest test_auth_api.py -v",
+    "test:automation:integration": "cd tests/automation && python -m pytest test_integration.py -v",
+    "test:automation:all": "cd tests/automation && python -m pytest -v --tb=long"
+>>>>>>> 0ad81405d7066b26461a937466d7d86a7246d7b5
   },
   "dependencies": {
     "@linear/sdk": "^87.0.0",
@@ -107,7 +117,6 @@
     "@supabase/supabase-js": "^2.110.9",
     "amqplib": "^2.0.1",
     "bcryptjs": "^3.0.3",
-
     "cors": "^2.8.6",
     "dotenv": "^16.4.0",
     "e2b": "^2.19.0",
@@ -123,6 +132,7 @@
     "pg": "^8.21.0",
     "pino": "^9.6.0",
     "pixelmatch": "^7.2.0",
+    "posthog-node": "^4.18.0",
     "stripe": "^22.2.2",
     "xlsx": "^0.18.5",
     "zod": "^3.25.76"
@@ -138,7 +148,6 @@
     "@sentry/types": "^8.55.2",
     "@stryker-mutator/core": "^9.6.1",
     "@stryker-mutator/vitest-runner": "^9.6.1",
-
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.0",
     "@types/graphlib": "^2.1.12",

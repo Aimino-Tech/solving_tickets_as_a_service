@@ -14,15 +14,16 @@
 
 *Maximum 180 characters — shown in search results and card views.*
 
-> AI senior architect for GitHub issues. Reads your repo, plans the fix, and opens a PR — in under 60 seconds. Just label an issue with `stas:fix`.
+> AI senior architect for GitHub issues. Reads your repo, plans the fix, and opens a PR — all from a single `stas:fix` label. In under 60 seconds.
 
-**Character count:** 158/180 ✓
+**Character count:** 147/180 ✓
 
 ---
 
 ## Full Description
 
 *Maximum 1,000 characters — main listing body.*
+*Current count: ~970 characters.*
 
 STAS is an AI senior architect that reads your entire codebase, plans the fix, and opens a pull request — all from a single label. No IDE required. No context switching. Just label an issue and come back to a PR.
 
@@ -42,13 +43,22 @@ STAS is an AI senior architect that reads your entire codebase, plans the fix, a
 - **Open core** — AGPL v3 licensed. Self-host on your own infrastructure or use the cloud version. No vendor lock-in
 - **MCP-enabled** — connect STAS to any MCP-compatible agent (Claude Desktop, Cursor, Codex CLI, OpenCode) for zero-config setup
 
+### Pricing
+
+| Tier | Price | Fixes/mo | Private Repos |
+|------|-------|----------|---------------|
+| **Free** | $0 | 50 | ❌ |
+| **Solo** | $49/mo | 2,000 | ✅ Up to 5 |
+| **Team** | $149/mo | 10,000 | ✅ Unlimited |
+| **Enterprise** | Custom | Unlimited | ✅ Unlimited |
+
 ### Who It's For
 
-Solo developers, small teams, and organizations tired of backlog bugs. Free tier available for public repos. Pro plan for private repos and priority support.
+Solo developers, small teams, and organizations tired of backlog bugs. Free tier available for public repos. Paid plans for private repos and priority support.
 
 ### Get Started
 
-[Install STAS →](https://github.com/marketplace/actions/stas-eval)
+[Install STAS on GitHub Marketplace →](https://github.com/marketplace/actions/stas-eval)
 
 Label an issue with `stas:fix` and watch your backlog shrink.
 
@@ -58,19 +68,7 @@ Label an issue with `stas:fix` and watch your backlog shrink.
 
 **Code review / Automated fixes**
 
-> GitHub Marketplace categories: "Code review", "Automated fixes", "Bots", "Developer tools". "Code review / Automated fixes" is the closest match and where STAS will appear in search.
-
----
-
-## Pricing Plan
-
-| Tier | Price | Fixes/mo | Private Repos | Queue | MCP/API |
-|------|-------|----------|---------------|-------|---------|
-| **Free** | $0 | 50 | ❌ | Standard | ❌ |
-| **Pro** | $19/mo | 500 | ✅ | Priority | ✅ |
-| **Team** | $49/mo | 2,000 | ✅ | Priority | ✅ |
-
-All tiers include: full-repo context, plan-first workflow, test execution, draft PR creation, and community support.
+> GitHub Marketplace categories: "Code review", "Automated fixes", "Bots", "Developer tools". "Code review / Automated fixes" matches both and is where STAS will appear in search.
 
 ---
 
@@ -172,9 +170,9 @@ Before submitting to Marketplace, ensure the following URLs are live and linked 
 
 ## Submission Checklist
 
-- [ ] App name and short description written (≤180 chars)
-- [ ] Full description written and reviewed (≤1,000 chars)
-- [ ] Category selected: "Code review / Automated fixes"
+- [x] App name and short description written (≤180 chars)
+- [x] Full description written and reviewed (≤1,000 chars)
+- [x] Category selected: "Code review / Automated fixes"
 - [ ] Logo prepared (120×120 PNG)
 - [ ] Screenshot(s) prepared (1280×640 PNG, ≤2MB)
 - [ ] Demo GIF recorded (optional, 30-45s, ≤10MB)

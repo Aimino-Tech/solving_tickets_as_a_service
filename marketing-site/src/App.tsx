@@ -3,6 +3,7 @@ import Nav from './components/Nav';
 import Footer from './components/Footer';
 import Home from './pages/Home';
 import Pricing from './pages/Pricing';
+import PricingSuccess from './pages/PricingSuccess';
 import Trust from './pages/Trust';
 import Benchmark from './pages/Benchmark';
 import Support from './pages/Support';
@@ -22,6 +23,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/pricing/success" element={<PricingSuccess />} />
           <Route path="/trust" element={<Trust />} />
           <Route path="/benchmarks" element={<Benchmark />} />
           <Route path="/support" element={<Support />} />

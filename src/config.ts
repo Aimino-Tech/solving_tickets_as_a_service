@@ -49,6 +49,11 @@ const envSchema = z.object({
   OPENAI_BASE_URL: z.string().default("http://litellm-proxy:4002/v1"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
+  FREE_TIER_MODEL: z.string().default("free-tier"),
+  FREE_TIER_BASE_URL: z.string().default("http://localhost:4002"),
+  PAID_TIER_MODEL: z.string().default("deepseek-v4-flash"),
+  PAID_TIER_BASE_URL: z.string().default("http://localhost:4002"),
+
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
   PHASE_TIMEOUT_TRIAGE_MS: z.coerce.number().int().positive().default(30_000),
   PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(600_000),
@@ -139,6 +144,9 @@ const envSchema = z.object({
   STRIPE_PRICE_100_CREDITS: z.string().default('price_100credits'),
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
+
+  POSTHOG_API_KEY: z.string().optional(),
+  POSTHOG_HOST: z.string().default('https://us.i.posthog.com'),
 
   DPA_VERSION: z.string().default('2026-06-01'),
   DPA_REQUIRE_ACCEPTANCE: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(true),
@@ -390,6 +398,12 @@ function buildConfig(env: ParsedEnv) {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
+      modelTier: {
+        freeModel: env.FREE_TIER_MODEL,
+        freeBaseUrl: env.FREE_TIER_BASE_URL,
+        paidModel: env.PAID_TIER_MODEL,
+        paidBaseUrl: env.PAID_TIER_BASE_URL,
+      },
       direct: {
         apiKey: env.OPENAI_API_KEY ?? '',
       },
@@ -584,6 +598,11 @@ function buildConfig(env: ParsedEnv) {
       price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
       soloPriceId: env.STRIPE_SOLO_PRICE_ID,
       teamPriceId: env.STRIPE_TEAM_PRICE_ID,
+    },
+
+    posthog: {
+      apiKey: env.POSTHOG_API_KEY,
+      host: env.POSTHOG_HOST,
     },
 
     dataPrivacy: {
