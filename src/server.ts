@@ -1086,7 +1086,15 @@ export async function createApp(): Promise<express.Application> {
 
   // -- Global error handler -------------------------------------------------
   app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-    log.error({ err: String(err), requestId: req.requestId }, 'Unhandled error');
+    const errorContext = {
+      err: String(err),
+      stack: err.stack,
+      requestId: req.requestId,
+      method: req.method,
+      path: req.path,
+    };
+    log.error(errorContext, 'Unhandled error');
+    captureError(err, { requestId: req.requestId, method: req.method, path: req.path });
     res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error', correlation_id: req.requestId },
     });
@@ -1190,6 +1198,11 @@ process.on('uncaughtException', (err) => {
     { module: 'server', err: String(err), stack: (err as Error).stack },
     'Uncaught exception -- attempting graceful shutdown',
   );
+
+  captureError(err instanceof Error ? err : new Error(String(err)), {
+    module: 'server',
+    type: 'uncaughtException',
+  });
 
   if (shuttingDown) return;
   shuttingDown = true;

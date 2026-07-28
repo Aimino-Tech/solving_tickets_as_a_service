@@ -9,6 +9,8 @@
  *   2. Instrument modules as they are loaded (auto-instrumentation)
  *
  * Process-level error handlers (uncaughtException, unhandledRejection)
+ * are centralized in server.ts to avoid duplicate handlers and ensure
+ * consistent logging with module context.
  * are centralized in server.ts to provide consistent module context
  * and Sentry integration. The Sentry SDK automatically captures these
  * events through its own instrumentation.
@@ -21,7 +23,6 @@
  */
 
 import { initSentry, setTag } from './sentry.js';
-import { rootLogger } from '../utils/logger.js';
 
 // Initialize Sentry immediately — this is the first module loaded
 initSentry();
