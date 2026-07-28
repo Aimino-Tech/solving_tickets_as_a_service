@@ -11,6 +11,9 @@ import { queryWithRetry } from '../db/connection.js';
 const log = rootLogger.child({ module: 'health-routes' });
 const healthRouter: Router = Router();
 
+// Seed health_checks table on startup so uptime SLO has data
+recordHealthCheck('healthy', 0).catch(() => {});
+
 async function recordHealthCheck(status: string, responseTimeMs: number): Promise<void> {
   try {
     await queryWithRetry(

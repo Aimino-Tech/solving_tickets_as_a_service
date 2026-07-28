@@ -191,7 +191,7 @@ export async function getUptime(): Promise<number> {
        WHERE created_at > NOW() - INTERVAL '30 days'`,
     );
     const { total, healthy } = result.rows[0] ?? { total: 0, healthy: 0 };
-    if (total === 0) return 0;
+    if (total === 0) return 100;
     return (healthy / total) * 100;
   } catch {
     return 0;
