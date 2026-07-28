@@ -22,6 +22,8 @@
  */
 
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -764,11 +766,32 @@ export async function createApp(): Promise<express.Application> {
     },
   );
 
-  // ── Dashboard SPA (served from built dist/) ───────────────────────
-  app.use('/dashboard', express.static(path.join(__dirname, '../dashboard/dist')));
-  app.get('/dashboard/*', (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../dashboard/dist/index.html'));
-  });
+  // ── Dashboard SPA (served from built dist/ or Vite dev proxy) ────
+  const dashboardDist = path.join(__dirname, '../dashboard/dist');
+  const viteDevUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
+  if (fs.existsSync(path.join(dashboardDist, 'index.html'))) {
+    app.use('/dashboard', express.static(dashboardDist));
+    app.get('/dashboard/*', (_req: Request, res: Response) => {
+      res.sendFile(path.join(dashboardDist, 'index.html'));
+    });
+  } else {
+    log.info({ viteDevUrl }, 'dashboard/dist not found — proxying to Vite dev server');
+    app.use('/dashboard', (req: Request, res: Response) => {
+      const targetUrl = `${viteDevUrl}${req.originalUrl.replace(/^\/dashboard/, '') || '/'}`;
+      const proxyReq = http.request(targetUrl, { method: req.method, headers: req.headers }, (proxyRes) => {
+        res.writeHead(proxyRes.statusCode!, proxyRes.headers);
+        proxyRes.pipe(res);
+      });
+      proxyReq.on('error', (err) => {
+        log.error({ err: String(err), targetUrl }, 'Vite dev proxy error');
+        res.status(502).send('Dashboard not available — is Vite dev server running?');
+      });
+      if (req.body) {
+        proxyReq.write(JSON.stringify(req.body));
+      }
+      proxyReq.end();
+    });
+  }
 
   // ── Badge endpoint (public, no auth) ──────────────────────────────
   // GET /badge/:id.svg — shields.io-compatible status badge

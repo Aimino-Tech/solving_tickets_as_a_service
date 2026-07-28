@@ -90,7 +90,13 @@
     "test:smoke:error": "vitest run tests/e2e/error-handling-path.test.ts --config vitest.e2e.config.ts",
     "test:smoke:auth": "vitest run tests/e2e/auth-path.test.ts --config vitest.e2e.config.ts",
     "test:smoke:dlq": "vitest run tests/e2e/dlq-path.test.ts --config vitest.e2e.config.ts",
-    "test:smoke:health": "vitest run tests/e2e/health-check-path.test.ts --config vitest.e2e.config.ts"
+    "test:smoke:health": "vitest run tests/e2e/health-check-path.test.ts --config vitest.e2e.config.ts",
+    "test:automation": "cd tests/automation && python -m pytest -v",
+    "test:automation:health": "cd tests/automation && python -m pytest test_health.py -v",
+    "test:automation:login": "cd tests/automation && python -m pytest test_login.py -v",
+    "test:automation:api": "cd tests/automation && python -m pytest test_auth_api.py -v",
+    "test:automation:integration": "cd tests/automation && python -m pytest test_integration.py -v",
+    "test:automation:all": "cd tests/automation && python -m pytest -v --tb=long"
   },
   "dependencies": {
     "@linear/sdk": "^87.0.0",
