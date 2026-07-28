@@ -1,7 +1,7 @@
 # STAS Production Deployment Runbook
 
 > Solving Tickets As A Service — Operations Guide
-> Last updated: 2026-07-17
+> Last updated: 2026-07-28
 
 ## Table of Contents
 
@@ -14,6 +14,7 @@
 7. [Security Incidents](#7-security-incidents)
 8. [Quick Reference](#8-quick-reference)
 9. [Log Aggregation (Loki)](#9-log-aggregation-loki)
+10. [Incident Response](#10-incident-response)
 
 ---
 
@@ -733,6 +734,10 @@ docker compose -f docker-compose.prod.yml run --rm certbot \
 | `deploy/monitoring/loki-alerts.yml` | Log-based alert rules |
 | `ops/DR.md` | Disaster recovery plan |
 | `ops/playbook.md` | Alert response playbooks |
+| `ops/incident-response-checklist.md` | On-call incident response checklist |
+| `ops/post-mortem-template.md` | Blameless post-mortem template |
+| `ops/status-page-template.md` | Status page communication templates |
+| `ops/scripts/restore-drill.sh` | Quarterly restore drill automation |
 
 ### Useful Commands
 
@@ -758,64 +763,6 @@ docker compose -f docker-compose.prod.yml ps
 # Export current configuration
 docker compose -f docker-compose.prod.yml config
 ```
-
----
-
-## 9. Log Aggregation (Loki)
-
-STAS uses **Grafana Loki** for centralized log aggregation with **Promtail** as the log shipper. All Docker container logs from the `stas` Compose project are automatically shipped to Loki and retained for **7 days**.
-
-### Architecture
-
-
-
-### Querying Logs
-
-Loki exposes a REST API on port **3100**. Query via Grafana Log Explorer or directly:
-
-
-
-### Available Labels
-
-| Label | Source | Example |
-|-------|--------|---------|
-| `container_name` | Docker container name | `stas-webhook` |
-| `compose_service` | Docker Compose service name | `stas-worker` |
-| `compose_project` | Docker Compose project | `stas` |
-| `image_name` | Container image | `stas-webhook:latest` |
-| `log_stream` | stdout / stderr | `stdout` |
-
-### Log-Based Alerts
-
-| Alert | Condition | Severity |
-|-------|-----------|----------|
-| **HighWebhookErrorRate** | 5+ 5xx responses in 5 min | Critical |
-| **WorkerTaskFailures** | 3+ ERROR/CRITICAL in 10 min | Warning |
-| **ServiceHealthCheckFailure** | 5+ health-check failures in 5 min | Critical |
-
-Alerts fire through Loki's ruler. For production, configure a proper alertmanager or route through the existing PagerDuty integration.
-
-### Service Management
-
-
-
-### Configuration Files
-
-| File | Purpose |
-|------|---------|
-| `deploy/monitoring/loki-config.yml` | Loki server config (7d retention, TSDB index) |
-| `deploy/monitoring/promtail-config.yml` | Promtail Docker log scraping config |
-| `deploy/monitoring/loki-alerts.yml` | Log-based alert rules (3 rules) |
-
-### Grafana Integration
-
-To add Loki as a Grafana data source:
-1. Open Grafana → **Connections** → **Data Sources**
-2. Click **Add data source** → select **Loki**
-3. Set URL to `http://loki:3100`
-4. Click **Save & Test**
-
-### Escalation Contacts
 
 ---
 
@@ -926,10 +873,210 @@ To add Loki as a Grafana data source:
 
 ---
 
+---
 
-| Role | Contact | Response Time |
-|------|---------|---------------|
-| On-call Engineer | #on-call in Slack | 15 min |
-| DevOps Lead | @devops-lead | 30 min |
-| Security Team | security@aimino.com | 1 hour |
-| Emergency | +1-xxx-xxx-xxxx | 5 min |
+## 10. Incident Response
+
+### 10.1 Incident Severity Levels
+
+STAS incidents are classified by severity. Severity determines response time, notification channels, and escalation path.
+
+#### SEV-1 — Service Down / Data Loss
+
+| Property | Value |
+|---|---|
+| **Definition** | Complete service outage or data loss. No issues can be processed. Or confirmed data corruption / loss. |
+| **Response Time** | 5 minutes (acknowledge), 15 minutes (first update) |
+| **Notification** | PagerDuty (critical) + Slack `#stas-incidents` + Slack `#stas-on-call` + status page |
+| **Examples** | Webhook not accepting requests; Worker pool completely down; Database corrupted; RabbitMQ queue lost; Credit balance errors |
+| **Escalation** | Immediate — on-call engineer, auto-escalate at T+10 to DevOps Lead if no acknowledgement |
+| **Post-mortem** | Required within 3 business days |
+
+#### SEV-2 — Major Feature Broken
+
+| Property | Value |
+|---|---|
+| **Definition** | A major feature is unavailable or significantly impaired. Core functionality is degraded. |
+| **Response Time** | 15 minutes (acknowledge), 30 minutes (first update) |
+| **Notification** | PagerDuty (warning) + Slack `#stas-incidents` + status page |
+| **Examples** | Agent success rate < 80%; GitHub API rate limited; Webhook delivery failing for a subset of repos; Stripe payment processing broken; OpenCode serve unhealthy |
+| **Escalation** | DevOps Lead at T+30 if unresolved |
+| **Post-mortem** | Required within 5 business days |
+
+#### SEV-3 — Minor Feature Degraded
+
+| Property | Value |
+|---|---|
+| **Definition** | A non-critical feature is degraded. Core functionality is working. Workarounds exist. |
+| **Response Time** | 1 hour (acknowledge) |
+| **Notification** | Slack `#stas-incidents` only (no PagerDuty unless escalated) |
+| **Examples** | Dashboard latency; Rate limit near exhaustion; Backup stale; Non-critical API endpoint slow; Nginx latency |
+| **Escalation** | DevOps Lead at T+2h if unresolved |
+| **Post-mortem** | Optional — brief summary in incident log |
+
+#### SEV-4 — Cosmetic / Non-Urgent
+
+| Property | Value |
+|---|---|
+| **Definition** | Cosmetic issue, minor bug, or feature request. No user-facing impact on functionality. |
+| **Response Time** | Next business day |
+| **Notification** | GitHub issue or Linear ticket only |
+| **Examples** | Typo in UI; Log message formatting; Minor metric discrepancy; Stale cache display; Deprecation warning |
+| **Escalation** | N/A — triaged during regular sprint planning |
+| **Post-mortem** | Not required |
+
+### 10.2 Incident Response Flow
+
+Every incident follows this formal five-stage flow:
+
+```
+Detection → Triage → Mitigation → Resolution → Post-Mortem
+```
+
+#### Stage 1: Detection
+
+| Trigger | Source | Action |
+|---|---|---|
+| Prometheus alert | Alertmanager → PagerDuty / Slack | Acknowledge within SLA |
+| Better Uptime alert | SMS / Email / Slack | Confirm alert is valid |
+| Customer report | Support email / Slack / Statuspage | Open PagerDuty incident |
+| Internal discovery | Engineer monitoring | Open PagerDuty incident |
+| Automated canary | CI/CD pipeline | Auto-file incident |
+
+**Output**: Acknowledged incident with severity assignment.
+
+#### Stage 2: Triage
+
+1. **Confirm** the alert is real (not a false positive)
+2. **Classify** severity using §10.1 definitions
+3. **Assess** blast radius (single user? all users? data at risk?)
+4. **Check** runbook and playbook for guidance
+5. **Communicate** initial status to `#stas-incidents` and status page
+6. **Decide** on mitigation approach (workaround vs full fix)
+
+**SLA**: SEV-1: 5 min, SEV-2: 15 min, SEV-3: 1 hour
+
+**Output**: Severity classification + initial communication + mitigation plan.
+
+#### Stage 3: Mitigation
+
+1. **Apply** immediate workaround (scale workers, restart service, rollback deploy)
+2. **Verify** mitigation is effective (health check passes, error rate drops)
+3. **Monitor** for stability (at least 5 minutes of clean metrics)
+4. **Update** status page to "Monitoring"
+5. **Document** what was done for post-mortem
+
+**Goal**: Restore service as quickly as possible, even with a temporary fix.
+
+**Output**: Service restored (possibly with temporary fix).
+
+#### Stage 4: Resolution
+
+1. **Confirm** all health checks pass
+2. **Verify** no residual errors in logs
+3. **Test** end-to-end flow (process a test issue)
+4. **Update** status page to "Resolved"
+5. **Post** final summary to `#stas-incidents`
+6. **Close** PagerDuty incident with resolution notes
+
+**Output**: Incident closed, service confirmed healthy.
+
+#### Stage 5: Post-Mortem
+
+1. **Schedule** post-mortem review (within SLA per severity)
+2. **Draft** post-mortem using `ops/post-mortem-template.md`
+3. **Identify** root cause (5 Whys)
+4. **Assign** action items with owners and deadlines
+5. **Update** playbook if new failure pattern discovered
+6. **File** follow-up tickets for each action item
+7. **Present** findings to affected teams
+
+**Output**: Published post-mortem with tracked action items.
+
+### 10.3 Escalation Contacts
+
+| Role | Contact | Response SLA | SEV-1 | SEV-2 | SEV-3 | Available |
+|---|---|---|---|---|---|---|
+| **On-call Engineer** | `#stas-on-call` Slack, PagerDuty | 5 min / 15 min / 1h | ✓ Primary | ✓ Primary | ✓ Primary | 24/7 |
+| **DevOps Lead** | @devops-lead Slack, +1-555-0102 | 15 min / 30 min | ✓ Escalation | ✓ Escalation | ✓ Escalation | 24/7 |
+| **Engineering Manager** | @eng-mgr Slack, +1-555-0103 | 30 min / 1h | ✓ Escalation | ✓ Escalation | — | Business hours |
+| **Security Team** | security@aimino.com, `#security` Slack | 1 hour | ✓ Security | ✓ Security | — | 24/7 |
+| **CTO** | @cto Slack, +1-555-0104 | Upon escalation | ✓ Escalation | — | — | Business hours |
+| **Emergency NOC** | +1-555-0199 | 5 min | ✓ Infra | ✓ Infra | — | 24/7 |
+
+### 10.4 Monitoring Dashboards
+
+#### Grafana
+
+| Dashboard | URL | Purpose |
+|---|---|---|
+| **STAS Overview** | `http://localhost:3000/d/stas-overview` | Primary — all services, queue depth, error rates, fix rate |
+| **STAS Workers** | `http://localhost:3000/d/stas-workers` | Worker pool health, job duration, success rate |
+| **STAS Database** | `http://localhost:3000/d/stas-database` | Connection pool, query performance, replication lag |
+| **STAS Queue** | `http://localhost:3000/d/stas-queue` | Queue depth by priority, DLQ, processing rate |
+| **STAS Costs** | `http://localhost:3000/d/stas-costs` | Inference cost per model, daily spend, cost/fix ratio |
+
+> **Note**: Replace `localhost:3000` with the actual Grafana URL in production.
+> Default credentials: `admin` / `admin` (change immediately on first login).
+
+#### Prometheus
+
+- **Metrics endpoint**: `http://localhost:9464/metrics`
+- **Alertmanager UI**: `http://localhost:9093`
+- **Expression browser**: `http://localhost:9090/graph`
+
+#### Logging
+
+- **Loki**: `http://localhost:3100` (query via Grafana Log Explorer)
+- **Promtail**: Ships Docker logs automatically (config: `deploy/monitoring/promtail-config.yml`)
+
+#### External Monitoring
+
+- **Better Uptime Status Page**: `https://stas.betteruptime.com`
+- **Better Uptime Dashboard**: `https://betteruptime.com/teams/aimino`
+- **Sentry Error Tracking**: `https://sentry.io/organizations/aimino/issues/`
+
+#### Quick Metric Queries
+
+```bash
+# Current queue depth
+curl -s http://localhost:9464/metrics | grep "^stas_queue_depth"
+
+# Worker count
+curl -s http://localhost:9464/metrics | grep "^stas_worker_count"
+
+# Recent webhook failure rate (last 5 minutes)
+curl -s 'http://localhost:9090/api/v1/query'   --data-urlencode 'query=rate(stas_webhooks_failed_total[5m])' | jq '.data.result'
+
+# Agent success rate (last hour)
+curl -s 'http://localhost:9090/api/v1/query'   --data-urlencode 'query=sum(rate(stas_issues_processed_total{status="success"}[1h])) / sum(rate(stas_issues_processed_total[1h]))' | jq '.data.result'
+```
+
+### 10.5 Incident Management Tools
+
+| Tool | Purpose | URL / Config |
+|---|---|---|
+| **PagerDuty** | On-call alerting, scheduling, escalation | Service: "STAS Production", Integration: Events API v2 |
+| **Slack** | Real-time incident communication | Channels: `#stas-incidents`, `#stas-on-call` |
+| **Better Uptime** | External monitoring, status page | `https://stas.betteruptime.com` |
+| **Grafana** | Dashboards, alerting, log exploration | Local: `http://localhost:3000` |
+| **Prometheus** | Metrics storage, alert rules | `deploy/monitoring/prometheus-rules.yml` |
+| **Sentry** | Error tracking, performance monitoring | `src/monitoring/sentry.ts` |
+| **PagerDuty** | On-call schedule, incident tracking | `PD_INTEGRATION_KEY` in `.env` |
+
+### 10.6 Incident Directory
+
+All post-mortems and incident records are stored in `ops/security-incidents/`:
+
+```
+ops/security-incidents/
+├── INC-0001-2026-06-08-db-pool-exhaustion.md
+├── INC-0002-2026-07-04-github-rate-limit.md
+└── ...
+```
+
+---
+
+*For on-call procedures, see [ops/incident-response-checklist.md](incident-response-checklist.md).*
+*For alert-specific playbooks, see [ops/playbook.md](playbook.md).*
+*For disaster recovery, see [ops/DR.md](DR.md).*
