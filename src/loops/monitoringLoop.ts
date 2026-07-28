@@ -29,8 +29,8 @@ interface ProcessedError {
 
 const PINO_ERROR_LEVEL = 50;
 const MAX_TICKETS_PER_CYCLE = 5;
-const CONSECUTIVE_FAILURE_LIMIT = 10;
-const CIRCUIT_BREAKER_TTL_MS = 5 * 60 * 1000;
+const CIRCUIT_BREAKER_THRESHOLD = 10;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 300_000;
 
 export interface MonitoringStats {
   enabled: boolean;
@@ -58,7 +58,7 @@ export class MonitoringLoop {
   private redis: Redis | null = null;
   private redisReady = false;
 
-  private consecutiveFailures = 0;
+  private consecutiveCreateFailures = 0;
   private circuitBreakerOpenUntil: number | null = null;
 
   private stats = {
@@ -69,17 +69,6 @@ export class MonitoringLoop {
     totalTicketsCreated: 0,
     lastError: null as string | null,
   };
-
-  private isCircuitBreakerOpen(): boolean {
-    if (this.circuitBreakerOpenUntil === null) return false;
-    if (Date.now() >= this.circuitBreakerOpenUntil) {
-      log.info('Circuit breaker reset — cooling period elapsed');
-      this.circuitBreakerOpenUntil = null;
-      this.consecutiveFailures = 0;
-      return false;
-    }
-    return true;
-  }
 
   getStats(): MonitoringStats {
     let logFileSize = 0;
@@ -212,23 +201,25 @@ export class MonitoringLoop {
         return;
       }
 
-      const batch = errors.slice(0, MAX_TICKETS_PER_CYCLE);
-      if (batch.length < errors.length) {
-        log.warn({ total: errors.length, capped: batch.length }, 'Monitoring loop: capping tickets per cycle');
-      }
-
-      if (this.isCircuitBreakerOpen()) {
-        const remainingMs = this.circuitBreakerOpenUntil! - Date.now();
-        log.warn({ remainingMs, consecutiveFailures: this.consecutiveFailures }, 'Monitoring loop: circuit breaker open — skipping ticket creation');
-        return;
-      }
-
-      log.info({ errorCount: batch.length, totalErrors: errors.length }, 'Monitoring loop: new errors detected, creating tickets');
+      log.info({ errorCount: errors.length }, 'Monitoring loop: new errors detected, creating tickets');
 
       const tracker = getTracker('linear');
       if (!tracker) {
         log.warn('Linear tracker not available — skipping ticket creation');
         return;
+      }
+
+      if (this.circuitBreakerOpenUntil && Date.now() < this.circuitBreakerOpenUntil) {
+        log.warn(
+          { remainingMs: this.circuitBreakerOpenUntil - Date.now() },
+          'Ticket creation circuit breaker open — skipping this cycle',
+        );
+        return;
+      }
+
+      const batch = errors.slice(0, MAX_TICKETS_PER_CYCLE);
+      if (batch.length < errors.length) {
+        log.info({ total: errors.length, capped: batch.length }, 'Rate limiting ticket creation to max per cycle');
       }
 
       let created = 0;
@@ -250,37 +241,21 @@ export class MonitoringLoop {
 
           const ticket = await tracker.createTicket(params);
           created++;
-          this.consecutiveFailures = 0;
 
           await this.redisSet(`monitoring:dup:${err.key}`, ticket.url, 86400);
 
           log.info({ key: err.key, ticketUrl: ticket.url }, 'MonitoringLoop: created ticket');
         } catch (createErr) {
-          this.consecutiveFailures++;
           this.stats.lastError = String(createErr).slice(0, 500);
-
-          const errStr = String(createErr);
-          let errorType = 'unknown';
-          if (errStr.includes('429') || errStr.includes('rate limit')) errorType = 'rate_limited';
-          else if (errStr.includes('401') || errStr.includes('unauthorized')) errorType = 'auth_error';
-          else if (errStr.includes('403') || errStr.includes('forbidden')) errorType = 'forbidden';
-          else if (errStr.includes('timeout') || errStr.includes('ETIMEDOUT')) errorType = 'network_timeout';
-          else if (errStr.includes('ENOTFOUND') || errStr.includes('ECONNREFUSED')) errorType = 'network_error';
-
-          log.error({
-            err: errStr.slice(0, 500),
-            key: err.key,
-            errorType,
-            consecutiveFailures: this.consecutiveFailures,
-          }, 'MonitoringLoop: failed to create ticket');
-
-          if (this.consecutiveFailures >= CONSECUTIVE_FAILURE_LIMIT) {
-            this.circuitBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
-            log.error({
-              consecutiveFailures: this.consecutiveFailures,
-              coolingPeriodMs: CIRCUIT_BREAKER_TTL_MS,
-            }, 'MonitoringLoop: circuit breaker opened — too many consecutive failures');
+          this.consecutiveCreateFailures++;
+          if (this.consecutiveCreateFailures >= CIRCUIT_BREAKER_THRESHOLD) {
+            this.circuitBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_COOLDOWN_MS;
+            log.warn(
+              { consecutiveFailures: this.consecutiveCreateFailures, cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS },
+              'Ticket creation circuit breaker opened — pausing for 5 minutes',
+            );
           }
+          log.error({ err: String(createErr), key: err.key }, 'MonitoringLoop: failed to create ticket');
         }
       }
       this.stats.totalTicketsCreated += created;
@@ -355,6 +330,8 @@ export class MonitoringLoop {
           if (pinoLevel < 50) continue;
           if (entry.module === 'monitoring-loop') continue;
           if (entry.module === 'webhook-event-logger') continue;
+          if (entry.module === 'health-validation') continue;
+          if (entry.module === 'rabbitmq') continue;
 
           const errMsg = entry.err?.message || entry.msg || 'Unknown error';
           const errStack = entry.err?.stack || '';
