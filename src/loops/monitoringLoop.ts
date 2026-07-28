@@ -303,6 +303,7 @@ export class MonitoringLoop {
           if (pinoLevel < 50) continue;
           if (entry.module === 'monitoring-loop') continue;
           if (entry.module === 'webhook-event-logger') continue;
+          if (entry.module === 'health-validation') continue;
 
           const errMsg = entry.err?.message || entry.msg || 'Unknown error';
           const errStack = entry.err?.stack || '';
