@@ -460,8 +460,8 @@ export const configApi = {
 };
 
 export const sla = {
-  getMetrics: () =>
-    request<SLAMetrics>('/v1/sla/metrics'),
+  getMetrics: (signal?: AbortSignal) =>
+    request<SLAMetrics>('/v1/sla/metrics', signal ? { signal } : undefined),
 };
 
 // -- Stats / Analytics API --
@@ -494,7 +494,7 @@ export const audit = {
 // -- Benchmarks API --
 
 export const benchmarks = {
-  get: () =>
+  get: (signal?: AbortSignal) =>
     request<{
       competitors: {
         agent: string;
@@ -505,8 +505,8 @@ export const benchmarks = {
         selfHostable: boolean;
         note?: string;
       }[];
-    }>('/v1/benchmarks'),
-  getPrices: () =>
+    }>('/v1/benchmarks', signal ? { signal } : undefined),
+  getPrices: (signal?: AbortSignal) =>
     request<{
       prices: {
         agent: string;
@@ -515,13 +515,13 @@ export const benchmarks = {
         monthlyMinCents: number;
         monthlyMaxFixes: number;
       }[];
-    }>('/v1/benchmarks/prices'),
+    }>('/v1/benchmarks/prices', signal ? { signal } : undefined),
 };
 
 // -- KPI API --
 
 export const kpi = {
-  get: (params: { days: number }) =>
+  get: (params: { days: number }, signal?: AbortSignal) =>
     request<{
       metrics: {
         id: number;
@@ -542,7 +542,7 @@ export const kpi = {
       }[];
       count: number;
       generatedAt: string;
-    }>(`/v1/admin/kpi?days=${params.days}`),
+    }>(`/v1/admin/kpi?days=${params.days}`, signal ? { signal } : undefined),
   exportUrl: (days: number) =>
     `/api/v1/admin/kpi/export?days=${days}`,
 };
