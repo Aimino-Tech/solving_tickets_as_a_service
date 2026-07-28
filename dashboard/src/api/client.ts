@@ -298,8 +298,8 @@ export interface GitHubConnectionStatus {
 }
 
 export const repos = {
-  list: () =>
-    request<{ id: string; owner: string; repo: string; active: boolean; createdAt: string }[]>('/repos'),
+  list: (signal?: AbortSignal) =>
+    request<{ id: string; owner: string; repo: string; active: boolean; createdAt: string }[]>('/repos', signal ? { signal } : undefined),
   connect: (body: { owner: string; repo: string; installationId?: number }) =>
     request<{ id: string; owner: string; repo: string; active: boolean }>('/repos', {
       method: 'POST',
@@ -550,7 +550,7 @@ export const kpi = {
 // -- Pricing API --
 
 export const pricing = {
-  get: () =>
+  get: (signal?: AbortSignal) =>
     request<{
       plans: {
         id: string;
@@ -579,8 +579,8 @@ export const pricing = {
         openSource: boolean;
         ourAgi: boolean;
       }[];
-    }>('/v1/pricing'),
-  calculate: (fixes: number, tier: string) =>
+    }>('/v1/pricing', signal ? { signal } : undefined),
+  calculate: (fixes: number, tier: string, signal?: AbortSignal) =>
     request<{
       fixesPerMonth: number;
       monthlyCostCents: number;
@@ -591,7 +591,7 @@ export const pricing = {
         savingsCents: number;
         savingsPercent: number;
       }[];
-    }>(`/v1/pricing/calculate?fixes=${fixes}&tier=${tier}`),
+    }>(`/v1/pricing/calculate?fixes=${fixes}&tier=${tier}`, signal ? { signal } : undefined),
   vs: (competitor: string) =>
     request<{
       competitor: string;
