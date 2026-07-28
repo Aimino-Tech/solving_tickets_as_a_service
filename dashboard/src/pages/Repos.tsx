@@ -198,7 +198,7 @@ export default function Repos() {
                         <button
                           onClick={() => handleToggleRepo(inst.installationId, repo.owner, repo.name, repo.stasInstalled)}
                           disabled={togglingRepo === repo.fullName}
-                          className={`text-xs px-3 py-1 rounded-full min-h-[36px] ${
+                          className={`text-xs px-3 py-1 rounded-full min-h-[44px] min-w-[44px] ${
                             repo.stasInstalled
                               ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                               : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
