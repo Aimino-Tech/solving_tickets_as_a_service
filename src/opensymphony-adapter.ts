@@ -34,6 +34,7 @@
 import crypto from 'node:crypto';
 import http from 'node:http';
 import { rootLogger } from './utils/logger.js';
+import { captureEvent } from './analytics/tracker.js';
 
 type Logger = ReturnType<typeof rootLogger.child>;
 import {
@@ -196,6 +197,12 @@ export class PlanningStage implements PipelineStage {
         { requestId: context.requestId, issue: intent?.estimatedIssue ?? 'unknown' },
         '[PlanningStage] Generated fix plan',
       );
+
+      captureEvent('plan_generated', context.requestId, {
+        estimatedIssue: intent?.estimatedIssue ?? null,
+        promptLength: intent?.promptLength ?? null,
+        durationMs: Date.now() - start,
+      });
 
       return {
         stage: this.name,
