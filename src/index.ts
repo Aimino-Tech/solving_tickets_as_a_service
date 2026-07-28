@@ -47,7 +47,7 @@ let server: Server | undefined;
 let shutdownInProgress = false;
 
 /**
- * Validate connectivity on startup — checks Redis, OpenCode, and E2B if configured.
+ * Validate connectivity on startup — checks Redis, OpenSymphony, and E2B if configured.
  * Fails fast with clear error message if any required service is unreachable.
  */
 async function validateStartupHealth(): Promise<void> {
@@ -84,10 +84,10 @@ async function validateStartupHealth(): Promise<void> {
       if (resp.ok) {
         checks.push({ name: 'opensymphony', ok: true });
       } else {
-        checks.push({ name: 'opensymphony', ok: false, error: `HTTP ${resp.status}` });
+        checks.push({ name: 'opensymphony', ok: false, error: `HTTP ${resp.status}`, url: osUrl.replace(/\/dispatch$/, '/health') });
       }
     } catch (err) {
-      checks.push({ name: 'opensymphony', ok: false, error: String(err) });
+      checks.push({ name: 'opensymphony', ok: false, error: String(err), url: osUrl.replace(/\/dispatch$/, '/health') });
     }
   }
 
