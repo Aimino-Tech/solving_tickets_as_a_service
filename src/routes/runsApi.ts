@@ -54,7 +54,16 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
-    log.error({ err: String(err) }, 'Failed to list runs');
+    log.error(
+      {
+        err: String(err),
+        accountId: (req as any).user?.accountId,
+        page,
+        limit,
+        statusFilter: status,
+      },
+      'Failed to list runs',
+    );
     res.status(500).json({ error: 'Failed to list runs' });
   }
 });
