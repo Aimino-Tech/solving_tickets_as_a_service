@@ -174,7 +174,7 @@ export async function getAgentSuccessRate(): Promise<number> {
     const row = result.rows[0];
     const total = Number(row?.total ?? 0);
     const succeeded = Number(row?.succeeded ?? 0);
-    if (total === 0) return 0;
+    if (total === 0) return 100;
     const rate = (succeeded / total) * 100;
     return Number.isFinite(rate) ? Math.round(rate) : 0;
   } catch {

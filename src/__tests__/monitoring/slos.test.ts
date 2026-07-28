@@ -84,10 +84,10 @@ describe('monitoring/slos', () => {
       expect(result).toBe(70);
     });
 
-    it('returns 0 when no runs exist', async () => {
+    it('returns 100 when no runs exist (no data = compliant)', async () => {
       mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ total: 0, succeeded: 0 }] });
       const result = await slos.getAgentSuccessRate();
-      expect(result).toBe(0);
+      expect(result).toBe(100);
     });
 
     it('returns 0 on query error', async () => {
@@ -111,7 +111,7 @@ describe('monitoring/slos', () => {
     it('handles pg string zero to avoid NaN division', async () => {
       mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ total: '0', succeeded: '0' }] });
       const result = await slos.getAgentSuccessRate();
-      expect(result).toBe(0);
+      expect(result).toBe(100);
     });
 
     it('returns 0 when division produces NaN/Infinity', async () => {
