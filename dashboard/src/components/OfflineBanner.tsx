@@ -1,14 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface OfflineBannerProps {
   readonly isOffline: boolean;
 }
 
+const DISMISSED_KEY = 'stas:offline-dismissed';
+
 export function OfflineBanner({ isOffline }: OfflineBannerProps) {
-  const [visible, setVisible] = useState(isOffline);
+  const [visible, setVisible] = useState(() => {
+    try {
+      return isOffline && !sessionStorage.getItem(DISMISSED_KEY);
+    } catch {
+      return isOffline;
+    }
+  });
+  const prevIsOffline = useRef(isOffline);
 
   useEffect(() => {
-    setVisible(isOffline);
+    prevIsOffline.current = isOffline;
+    if (isOffline) {
+      try {
+        const dismissed = sessionStorage.getItem(DISMISSED_KEY);
+        if (!dismissed) setVisible(true);
+      } catch {
+        setVisible(true);
+      }
+    } else {
+      setVisible(false);
+      try {
+        sessionStorage.removeItem(DISMISSED_KEY);
+      } catch {}
+    }
   }, [isOffline]);
 
   if (!visible) return null;
@@ -31,7 +53,12 @@ export function OfflineBanner({ isOffline }: OfflineBannerProps) {
         </svg>
         <span>You are offline. Showing cached data.</span>
         <button
-          onClick={() => setVisible(false)}
+          onClick={() => {
+            setVisible(false);
+            try {
+              sessionStorage.setItem(DISMISSED_KEY, '1');
+            } catch {}
+          }}
           className="ml-2 text-yellow-100 hover:text-white transition-colors"
           aria-label="Dismiss offline notification"
         >

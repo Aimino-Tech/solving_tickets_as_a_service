@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { configApi } from '@/api/client';
 
 type EnvVar = {

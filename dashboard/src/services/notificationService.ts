@@ -55,9 +55,12 @@ export async function fetchHistory(limit = 50, offset = 0, unreadOnly = false): 
       read: n.read,
       data: n.metadata,
     }));
-    localNotifications.length = 0;
-    localNotifications.push(...mapped);
-    notifyListeners();
+    const existingIds = new Set(localNotifications.map((n) => n.id));
+    const newEntries = mapped.filter((n) => !existingIds.has(n.id));
+    if (newEntries.length > 0) {
+      localNotifications.unshift(...newEntries);
+      notifyListeners();
+    }
   } catch {
     // Backend unavailable, keep local notifications
   }
@@ -65,7 +68,6 @@ export async function fetchHistory(limit = 50, offset = 0, unreadOnly = false): 
 
 export function startPolling(intervalMs = 30000): void {
   stopPolling();
-  fetchHistory();
   pollInterval = setInterval(() => fetchHistory(), intervalMs);
 }
 

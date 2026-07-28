@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { settings } from '@/api/client';
+import { useState, useEffect, useRef } from 'react';
+import { settings, request } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import { fetchPreferences, upsertPreference, type NotificationPreference } from '@/services/notificationService';
 
@@ -61,10 +61,17 @@ export default function Settings() {
     danger: false,
   });
   useAuth();
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function toggleSection(key: string) {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   }
+
+  useEffect(() => {
+    return () => {
+      if (successTimer.current) clearTimeout(successTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     settings
@@ -109,12 +116,14 @@ export default function Settings() {
     const target = channelTargets[channel];
     if (target) {
       setSavingNotif(true);
-      for (const eventType of EVENT_TYPES) {
-        const current = notificationChannels[channel]?.[eventType];
-        if (current !== undefined) {
-          await upsertPreference(channel, eventType, current, target);
-        }
-      }
+      await Promise.all(
+        EVENT_TYPES.map(async (eventType) => {
+          const current = notificationChannels[channel]?.[eventType];
+          if (current !== undefined) {
+            await upsertPreference(channel, eventType, current, target);
+          }
+        }),
+      );
       await loadNotificationPrefs();
       setSavingNotif(false);
     }
@@ -122,13 +131,11 @@ export default function Settings() {
 
   async function fetchDeletionStatus() {
     try {
-      const token = localStorage.getItem('stas_token');
-      const res = await fetch('/api/v1/me/data/deletion-status', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (res.ok) {
-        setDeletionStatus(await res.json());
-      }
+      const data = await request<{
+        activeRequest: { id: number; status: string; scheduled_deletion_at: string } | null;
+        retentionDays: number;
+      }>('/v1/me/data/deletion-status');
+      setDeletionStatus(data);
     } catch {
       // Non-critical background fetch
     }
@@ -137,12 +144,7 @@ export default function Settings() {
   async function handleRequestDeletion() {
     if (!window.confirm('Are you sure you want to request data deletion? This will schedule all your data for permanent removal.')) return;
     try {
-      const token = localStorage.getItem('stas_token');
-      const res = await fetch('/api/v1/me/data/deletion-request', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      });
-      if (!res.ok) throw new Error((await res.json()).error);
+      await request('/v1/me/data/deletion-request', { method: 'POST' });
       setError(null);
       await fetchDeletionStatus();
     } catch (err) {
@@ -152,12 +154,7 @@ export default function Settings() {
 
   async function handleCancelDeletion() {
     try {
-      const token = localStorage.getItem('stas_token');
-      const res = await fetch('/api/v1/me/data/deletion-request/cancel', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      });
-      if (!res.ok) throw new Error((await res.json()).error);
+      await request('/v1/me/data/deletion-request/cancel', { method: 'POST' });
       setError(null);
       await fetchDeletionStatus();
     } catch (err) {
@@ -173,7 +170,7 @@ export default function Settings() {
     try {
       await settings.update(form);
       setSuccess('Settings saved successfully.');
-      setTimeout(() => setSuccess(null), 3000);
+      successTimer.current = setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save settings');
     } finally {
@@ -485,9 +482,26 @@ export default function Settings() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
           </svg>
         </button>
-        {openSections.danger && (
+          {openSections.danger && (
           <div className="mt-4 flex">
-            <button className="btn-danger text-xs">Reset All Settings</button>
+            <button
+              onClick={async () => {
+                if (!window.confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) return;
+                try {
+                  await settings.update({ label: 'stas:fix', model: '', maxConcurrent: 3, sandboxPoolSize: 10, auditLogEnabled: true });
+                  setSuccess('Settings reset to defaults.');
+                  successTimer.current = setTimeout(() => setSuccess(null), 3000);
+                  const data = await settings.get();
+                  setConfig(data);
+                  setForm(data);
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'Failed to reset settings');
+                }
+              }}
+              className="btn-danger text-xs"
+            >
+              Reset All Settings
+            </button>
           </div>
         )}
       </div>

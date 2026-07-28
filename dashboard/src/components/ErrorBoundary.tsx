@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode, createRef } from 'react';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -7,6 +7,7 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+  retryKey: number;
 }
 
 function logError(error: Error, errorInfo: ErrorInfo): void {
@@ -18,33 +19,29 @@ function logError(error: Error, errorInfo: ErrorInfo): void {
     componentStack: errorInfo.componentStack,
   };
 
-  // Structured console output for dev tools
   console.groupCollapsed(`%c[ErrorBoundary] ${timestamp}`, 'color: #ef4444; font-weight: bold');
   console.error('Error:', error.message);
   console.error('Stack:', error.stack);
   console.error('Component stack:', errorInfo.componentStack);
   console.groupEnd();
 
-  // Persist to localStorage for offline debugging
   try {
     const LOG_KEY = 'stas:error-boundary-log';
     const existing: unknown[] = JSON.parse(localStorage.getItem(LOG_KEY) ?? '[]');
     existing.push(entry);
-    // Keep last 20 entries
     localStorage.setItem(LOG_KEY, JSON.stringify(existing.slice(-20)));
   } catch {
-    // localStorage may be full or unavailable — fail silently
   }
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, retryKey: 0 };
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
+    return { hasError: true, error, retryKey: 0 };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
@@ -52,7 +49,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   handleRetry = (): void => {
-    this.setState({ hasError: false, error: null });
+    this.setState((prev) => ({ hasError: false, error: null, retryKey: prev.retryKey + 1 }));
   };
 
   render(): ReactNode {
@@ -60,7 +57,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-6">
           <div className="w-full max-w-md rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 shadow-sm text-center">
-            {/* Error icon */}
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
               <svg
                 className="h-7 w-7 text-red-600 dark:text-red-400"
@@ -85,7 +81,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               The dashboard encountered an unexpected error. You can try again or check the details below.
             </p>
 
-            {/* Retry button */}
             <button
               onClick={this.handleRetry}
               className="btn-primary"
@@ -106,7 +101,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               Try again
             </button>
 
-            {/* Collapsible error details */}
             {this.state.error && (
               <details className="mt-6 text-left group">
                 <summary className="cursor-pointer text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 select-none">
@@ -123,6 +117,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       );
     }
 
-    return this.props.children;
+    return <div key={this.state.retryKey}>{this.props.children}</div>;
   }
 }
