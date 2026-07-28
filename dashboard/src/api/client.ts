@@ -102,7 +102,7 @@ export async function request<T>(
 export interface AuthResult {
   token: string;
   refreshToken: string;
-  user: { id: string; email: string; name: string | null; createdAt?: string };
+  user: { id: string; email: string; name: string | null; createdAt?: string; username?: string; avatarUrl?: string };
 }
 
 export interface CreditBalance {
@@ -205,7 +205,7 @@ export const auth = {
       body: JSON.stringify({ email, password }),
     }),
   me: () =>
-    request<{ id: string; email: string; name: string | null; createdAt: string }>('/v1/auth/me'),
+    request<{ id: string; email: string; name: string | null; createdAt: string; username?: string; avatarUrl?: string }>('/v1/auth/me'),
   refresh: (refreshToken: string) =>
     request<AuthResult>('/v1/auth/refresh', {
       method: 'POST',

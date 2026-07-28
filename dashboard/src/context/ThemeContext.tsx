@@ -34,13 +34,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
-    localStorage.setItem(STORAGE_KEY, theme);
+    try { localStorage.setItem(STORAGE_KEY, theme); } catch {}
   }, [theme]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e: MediaQueryListEvent) => {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        let stored: string | null = null;
+        try { stored = localStorage.getItem(STORAGE_KEY); } catch {}
       if (!stored) {
         setTheme(e.matches ? 'dark' : 'light');
       }
