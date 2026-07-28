@@ -22,6 +22,9 @@ export default function DashboardHome() {
       .then(([bal, runsData]) => {
         setBalance(bal);
         setRecentRuns(runsData.data);
+        if (!bal && runsData.data.length === 0) {
+          setError('Failed to load dashboard data');
+        }
       })
       .catch((err) => {
         if (err.name !== 'AbortError') setError(err.message);
