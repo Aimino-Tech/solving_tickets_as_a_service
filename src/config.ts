@@ -49,6 +49,11 @@ const envSchema = z.object({
   OPENAI_BASE_URL: z.string().default("http://litellm-proxy:4002/v1"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
+  FREE_TIER_MODEL: z.string().default("free-tier"),
+  FREE_TIER_BASE_URL: z.string().default("http://localhost:4002"),
+  PAID_TIER_MODEL: z.string().default("deepseek-v4-flash"),
+  PAID_TIER_BASE_URL: z.string().default("http://localhost:4002"),
+
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
   PHASE_TIMEOUT_TRIAGE_MS: z.coerce.number().int().positive().default(30_000),
   PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(600_000),
@@ -393,6 +398,12 @@ function buildConfig(env: ParsedEnv) {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
+      modelTier: {
+        freeModel: env.FREE_TIER_MODEL,
+        freeBaseUrl: env.FREE_TIER_BASE_URL,
+        paidModel: env.PAID_TIER_MODEL,
+        paidBaseUrl: env.PAID_TIER_BASE_URL,
+      },
       direct: {
         apiKey: env.OPENAI_API_KEY ?? '',
       },
