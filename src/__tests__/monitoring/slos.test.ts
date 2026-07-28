@@ -128,10 +128,10 @@ describe('monitoring/slos', () => {
       expect(result).toBeCloseTo(99);
     });
 
-    it('returns 0 when no health checks exist', async () => {
+    it('returns 100 when no health checks exist', async () => {
       mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ total: 0, healthy: 0 }] });
       const result = await slos.getUptime();
-      expect(result).toBe(0);
+      expect(result).toBe(100);
     });
 
     it('returns 0 on query error', async () => {
@@ -149,7 +149,7 @@ describe('monitoring/slos', () => {
     it('handles pg string zero to avoid NaN division', async () => {
       mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ total: '0', healthy: '0' }] });
       const result = await slos.getUptime();
-      expect(result).toBe(0);
+      expect(result).toBe(100);
     });
   });
 
