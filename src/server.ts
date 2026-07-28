@@ -1145,13 +1145,6 @@ process.on('uncaughtException', (err) => {
   }, 10_000);
   forceExitTimer.unref();
 
-  try {
-    const { rootLogger } = require('./utils/logger.js');
-    rootLogger.flush?.();
-  } catch {
-    // logger flush is best-effort
-  }
-
   process.exit(1);
 });
 
