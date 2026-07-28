@@ -14,6 +14,7 @@ export default function PricingPage() {
     vsCompetitors: Array<{ name: string; monthlyCostCents: number; savingsCents: number; savingsPercent: number }>;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [calcError, setCalcError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,12 +26,11 @@ export default function PricingPage() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    setCalcError(null);
     pricing
       .calculate(fixSlider, selectedTier)
-      .then((data: any) => { if (!cancelled) setCalcResult(data); })
-      .catch(() => {});
-    return () => { cancelled = true; };
+      .then((data: any) => { setCalcResult(data); setCalcError(null); })
+      .catch((err: Error) => { setCalcResult(null); setCalcError(err.message); });
   }, [fixSlider, selectedTier]);
 
   return (
@@ -97,6 +97,11 @@ export default function PricingPage() {
               ))}
             </div>
           </div>
+          {calcError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+              <p className="text-sm text-red-600">Failed to calculate: {calcError}</p>
+            </div>
+          )}
           {calcResult && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-6">
               <div className="grid grid-cols-2 gap-4">
@@ -173,7 +178,7 @@ export default function PricingPage() {
       <div className="card border-gray-200 bg-gray-50 text-center">
         <h3 className="text-base font-semibold text-gray-900">Prefer Self-Hosted?</h3>
         <p className="mt-2 text-sm text-gray-600">STAS is fully open-source under the MIT license.</p>
-        <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" target="_blank" rel="noopener noreferrer"
+        <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service" target="_blank" rel="noopener noreferrer"
           className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand-600 hover:text-brand-700">
           View on GitHub</a>
       </div>
