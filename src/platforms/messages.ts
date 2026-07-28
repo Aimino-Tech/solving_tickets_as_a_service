@@ -8,7 +8,7 @@
  * predictable across all interactions and platforms.
  */
 
-import type { AgentResult, QualityGateResult } from '../types/agent-types.js';
+import type { AgentResult, FixUnabledReason, QualityGateResult } from '../types/agent-types.js';
 import { QualityGateReporter } from '../core/quality-gate-reporter.js';
 import { config } from '../config.js';
 
@@ -93,13 +93,42 @@ export function lowConfidenceComment(result: AgentResult, testOutput: string): s
 }
 
 /**
+ * Render a structured explanation of why an auto-fix was not possible.
+ */
+function renderNoFixReason(reason: FixUnabledReason): string {
+  const lines: string[] = [
+    `**What went wrong**: ${reason.category} — ${reason.detail}`,
+    '',
+    `**Suggested action**: ${reason.userSuggestion}`,
+  ];
+
+  if (reason.docsLink) {
+    lines.push('', `**Documentation**: ${reason.docsLink}`);
+  }
+
+  return lines.join('\n');
+}
+
+/**
  * No fix possible — explains why and invites contributors.
+ *
+ * When `result.noFixReason` is provided as a structured FixUnabledReason,
+ * it renders a detailed breakdown of what went wrong and suggested next steps.
+ * Falls back to `result.summary` for backward compatibility.
  */
 export function noFixComment(
   result: AgentResult,
   relevantPRs?: Array<{ url: string; title: string; state: string }>,
 ): string {
-  const lines: string[] = [`### ❌ Could Not Fix`, '', result.noFixReason || result.summary, ''];
+  const lines: string[] = [`### ❌ Could Not Fix`, ''];
+
+  if (result.noFixReason) {
+    lines.push(renderNoFixReason(result.noFixReason));
+  } else {
+    lines.push(result.summary);
+  }
+
+  lines.push('');
 
   if (relevantPRs && relevantPRs.length > 0) {
     lines.push(
