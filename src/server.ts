@@ -52,6 +52,7 @@ import { adminRouter } from './routes/admin.js';
 import { adminAuditRouter } from './routes/admin_audit.js';
 import { adminRunsRouter } from './routes/adminRuns.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
+import { initAnalytics } from './analytics/tracker.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { badgeRouter } from './routes/badge.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
@@ -185,6 +186,9 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Initialize metering ───────────────────────────────────────────
   initMetering();
+
+  // ── Initialize analytics ────────────────────────────────────────
+  initAnalytics();
 
   // ── Initialize onboarding wizard store ───────────────────────────
   initWizardStore();

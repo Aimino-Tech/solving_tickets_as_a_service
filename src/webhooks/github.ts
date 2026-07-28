@@ -22,6 +22,7 @@ import { type EmitterWebhookEventName, Webhooks } from '@octokit/webhooks';
 
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { captureEvent } from '../analytics/tracker.js';
 import type { BillingPlan, IssueJobData } from '../utils/types.js';
 import { rateLimiter } from '../ratelimit/limiter.js';
 import { getRateLimitForAccount } from '../ratelimit/tiers.js';
@@ -132,6 +133,17 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         });
       } catch (auditErr) {
         log.error({ err: String(auditErr) }, 'Failed to audit log installation event');
+      }
+
+      // Track app installation in PostHog
+      try {
+        captureEvent('app_installed', String(installationId), {
+          accountLogin: p.installation?.account?.login,
+          accountType: p.installation?.account?.type,
+          reposCount: p.repositories?.length ?? 0,
+        });
+      } catch (analyticsErr) {
+        log.error({ err: String(analyticsErr) }, 'Failed to track app_installed event');
       }
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to handle installation.created event');
@@ -275,6 +287,19 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
     // Record the rate limit hit
     await rateLimiter.increment('account', String(jobData.installationId));
     await rateLimiter.increment('repo', repo);
+
+    // Track issue_labeled event in PostHog
+    try {
+      captureEvent('issue_labeled', String(jobData.installationId), {
+        repoOwner: jobData.repoOwner,
+        repoName: jobData.repoName,
+        issueNumber: jobData.issueNumber,
+        label,
+        tier,
+      });
+    } catch (analyticsErr) {
+      log.error({ err: String(analyticsErr) }, 'Failed to track issue_labeled event');
+    }
 
     // ── Route to OpenSymphony or local queue ──────────────────────
     if (config.osy?.dispatchUrl) {
