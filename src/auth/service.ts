@@ -1,9 +1,6 @@
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import { getSupabaseAdmin, getSupabaseAnon } from './supabase.js';
-import { usersRepository } from '../db/repositories/UsersRepository.js';
-import type { User } from '../db/types/users.js';
 
 export interface TokenPayload {
   sub: string;
@@ -20,19 +17,17 @@ export interface AuthResult {
   };
 }
 
-const SALT_ROUNDS = 12;
-
 export class AuthService {
   async register(email: string, password: string, name?: string): Promise<AuthResult> {
-    const existing = await usersRepository.findByEmail(email);
-    if (existing) {
-      throw new AuthError('Email already registered', 409);
-    }
+    const { data, error } = await getSupabaseAdmin().auth.admin.createUser({
+      email,
+      password,
+      user_metadata: name ? { name } : undefined,
+    });
+    if (error) throw new AuthError(error.message, 400);
 
-    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    const user = await usersRepository.create({ email, passwordHash, name });
-
-    return this.generateTokens(user.id, user.email);
+    const user = data.user;
+    return this.generateTokens(user.id, user.email!, name ?? null);
   }
 
   async login(email: string, password: string): Promise<AuthResult> {
@@ -42,10 +37,10 @@ export class AuthService {
     });
     if (signInError) throw new AuthError(signInError.message || 'Invalid email or password', 401);
 
-    const user = await usersRepository.findByEmail(email);
-    if (!user) throw new AuthError('User not found', 404);
+    const supabaseUser = signInData.user;
+    const name = supabaseUser.user_metadata?.name as string | undefined;
 
-    return this.generateTokens(user.id, user.email);
+    return this.generateTokens(supabaseUser.id, supabaseUser.email!, name ?? null);
   }
 
   refreshToken(refreshToken: string): AuthResult | never {
@@ -66,7 +61,7 @@ export class AuthService {
     }
   }
 
-  public generateTokens(userId: number | string, email: string): AuthResult {
+  public generateTokens(userId: string, email: string, name: string | null = null): AuthResult {
     const payload = { sub: userId, email };
 
     const secret = config.auth.jwtSecret as string;
@@ -76,7 +71,7 @@ export class AuthService {
     return {
       token,
       refreshToken,
-      user: { id: String(userId), email, name: null },
+      user: { id: userId, email, name },
     };
   }
 }

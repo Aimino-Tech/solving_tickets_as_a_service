@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { usersRepository } from '../db/repositories/UsersRepository.js';
+import { getSupabaseAdmin } from './supabase.js';
 import { rootLogger } from '../utils/logger.js';
 import { requireAuth } from './middleware.js';
 import { AuthError, authService } from './service.js';
@@ -88,17 +88,18 @@ router.post('/logout', (_req: Request, res: Response) => {
 });
 
 router.get('/me', requireAuth, async (req: Request, res: Response) => {
-  const user = await usersRepository.findById(req.user!.id);
-  if (!user) {
+  const { data, error } = await getSupabaseAdmin().auth.admin.getUserById(req.user!.id);
+  if (error || !data.user) {
     res.status(404).json({ error: 'User not found' });
     return;
   }
 
+  const user = data.user;
   res.json({
     id: user.id,
     email: user.email,
-    name: user.name,
-    createdAt: user.createdAt,
+    name: user.user_metadata?.name ?? null,
+    createdAt: user.created_at,
   });
 });
 
