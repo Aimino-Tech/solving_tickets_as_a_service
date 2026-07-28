@@ -6,8 +6,8 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 const LOCALE_KEY = 'stas-locale';
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(detectLocale);
-  const [tFn, setTFn] = useState(() => createT(detectLocale()));
+  const [locale, setLocaleState] = useState<Locale>(() => detectLocale());
+  const [tFn, setTFn] = useState(() => createT(locale));
 
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);
