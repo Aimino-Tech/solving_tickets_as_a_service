@@ -557,7 +557,7 @@ async function handleResourceRead(id: unknown, params: unknown, res: Response): 
   }
 }
 
-async function handleSlackSend(id: unknown, args: Record<string, unknown> | undefined, res: Response): Promise<void> {
+export async function handleSlackSend(id: unknown, args: Record<string, unknown> | undefined, res: Response): Promise<void> {
   const channel = args?.channel as string | undefined;
   const text = args?.text as string | undefined;
 
@@ -596,7 +596,7 @@ async function handleSlackSend(id: unknown, args: Record<string, unknown> | unde
   }
 }
 
-async function handleSlackTicket(id: unknown, args: Record<string, unknown> | undefined, res: Response): Promise<void> {
+export async function handleSlackTicket(id: unknown, args: Record<string, unknown> | undefined, res: Response): Promise<void> {
   const title = args?.title as string | undefined;
   const description = (args?.description as string | undefined) ?? '';
   const priority = (args?.priority as number | undefined) ?? 0;
