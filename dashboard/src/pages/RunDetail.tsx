@@ -13,10 +13,14 @@ export default function RunDetail() {
 
   useEffect(() => {
     if (!id) return;
+    const ac = new AbortController();
     runs
-      .get(id)
+      .get(id, { signal: ac.signal })
       .then(setRun)
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => {
+        if (err.name !== 'AbortError') setError(err.message);
+      });
+    return () => ac.abort();
   }, [id]);
 
   if (error) {

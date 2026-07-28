@@ -22,11 +22,13 @@ export default function KpiDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     kpi
       .get({ days: 90 })
-      .then((res: any) => setMetrics(res.metrics))
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .then((res: any) => { if (!cancelled) setMetrics(res.metrics); })
+      .catch((err: Error) => { if (!cancelled) setError(err.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   if (loading) {

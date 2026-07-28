@@ -14,16 +14,20 @@ export default function DashboardHome() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const ac = new AbortController();
     Promise.all([
-      credits.balance().catch(() => null),
-      runs.list({ perPage: 5 }).catch(() => ({ data: [] as import('@/api/types').Run[], total: 0, page: 1, perPage: 5, totalPages: 0 })),
+      credits.balance({ signal: ac.signal }).catch(() => null),
+      runs.list({ perPage: 5 }, { signal: ac.signal }).catch(() => ({ data: [] as import('@/api/types').Run[], total: 0, page: 1, perPage: 5, totalPages: 0 })),
     ])
       .then(([bal, runsData]) => {
         setBalance(bal);
         setRecentRuns(runsData.data);
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        if (err.name !== 'AbortError') setError(err.message);
+      })
       .finally(() => setLoading(false));
+    return () => ac.abort();
   }, []);
 
   if (error) {

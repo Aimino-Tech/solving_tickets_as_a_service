@@ -214,19 +214,19 @@ export const auth = {
 };
 
 export const credits = {
-  balance: () => request<CreditBalance>('/v1/credits/balance'),
-  transactions: (limit = 50, offset = 0) =>
+  balance: (opts?: { signal?: AbortSignal }) => request<CreditBalance>('/v1/credits/balance', opts),
+  transactions: (limit = 50, offset = 0, opts?: { signal?: AbortSignal }) =>
     request<{ transactions: Transaction[]; pagination: { limit: number; offset: number; total: number } }>(
-      `/v1/credits/transactions?limit=${limit}&offset=${offset}`,
+      `/v1/credits/transactions?limit=${limit}&offset=${offset}`, opts,
     ),
   topUp: (priceId: string, successUrl: string, cancelUrl: string) =>
     request<{ url: string; sessionId: string }>('/v1/credits/top-up', {
       method: 'POST',
       body: JSON.stringify({ priceId, successUrl, cancelUrl }),
     }),
-  usage: (period: 'daily' | 'weekly' | 'monthly' = 'monthly') =>
+  usage: (period: 'daily' | 'weekly' | 'monthly' = 'monthly', opts?: { signal?: AbortSignal }) =>
     request<{ accountId: number; period: string; usage: MonthlyUsage[] }>(
-      `/v1/credits/usage?period=${period}`,
+      `/v1/credits/usage?period=${period}`, opts,
     ),
 };
 
@@ -238,7 +238,7 @@ export const runs = {
     repo?: string;
     from?: string;
     to?: string;
-  }) => {
+  }, opts?: { signal?: AbortSignal }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
     if (params?.perPage) qs.set('perPage', String(params.perPage));
@@ -248,10 +248,10 @@ export const runs = {
     if (params?.to) qs.set('to', params.to);
     const query = qs.toString();
     return request<{ data: Run[]; total: number; page: number; perPage: number; totalPages: number }>(
-      `/v1/runs${query ? `?${query}` : ''}`,
+      `/v1/runs${query ? `?${query}` : ''}`, opts,
     );
   },
-  get: (id: string) => request<Run>(`/v1/runs/${id}`),
+  get: (id: string, opts?: { signal?: AbortSignal }) => request<Run>(`/v1/runs/${id}`, opts),
   feedbackSubmit: (id: string, verdict: string, comment?: string) =>
     request<{ success: boolean }>(`/v1/runs/${id}/feedback`, {
       method: 'POST',
@@ -295,8 +295,8 @@ export interface GitHubConnectionStatus {
 }
 
 export const repos = {
-  list: () =>
-    request<{ id: string; owner: string; repo: string; active: boolean; createdAt: string }[]>('/repos'),
+  list: (opts?: { signal?: AbortSignal }) =>
+    request<{ id: string; owner: string; repo: string; active: boolean; createdAt: string }[]>('/repos', opts),
   connect: (body: { owner: string; repo: string; installationId?: number }) =>
     request<{ id: string; owner: string; repo: string; active: boolean }>('/repos', {
       method: 'POST',
@@ -309,17 +309,18 @@ export const repos = {
 export const github = {
   getOAuthUrl: () =>
     request<{ url: string }>('/v1/auth/github/url', { method: 'POST' }),
-  handleCallback: (code: string) =>
+  handleCallback: (code: string, opts?: { signal?: AbortSignal }) =>
     request<{ githubLogin: string; githubUserId: number; avatarUrl: string }>('/v1/auth/github/callback', {
       method: 'POST',
       body: JSON.stringify({ code }),
+      ...opts,
     }),
-  getStatus: () =>
-    request<GitHubConnectionStatus>('/v1/auth/github/status'),
+  getStatus: (opts?: { signal?: AbortSignal }) =>
+    request<GitHubConnectionStatus>('/v1/auth/github/status', opts),
   disconnect: () =>
     request<{ success: boolean }>('/v1/auth/github/disconnect', { method: 'DELETE' }),
-  listInstallations: () =>
-    request<{ installations: GitHubInstallation[] }>('/v1/github/installations'),
+  listInstallations: (opts?: { signal?: AbortSignal }) =>
+    request<{ installations: GitHubInstallation[] }>('/v1/github/installations', opts),
   syncInstallation: (body: { installationId: number; accountLogin: string; accountType?: string; repoScope?: string }) =>
     request<{ success: boolean }>('/v1/github/installations/sync', {
       method: 'POST',
@@ -399,14 +400,14 @@ export const health = {
 };
 
 export const settings = {
-  get: () =>
+  get: (opts?: { signal?: AbortSignal }) =>
     request<{
       label: string;
       model: string;
       maxConcurrent: number;
       sandboxPoolSize: number;
       auditLogEnabled: boolean;
-    }>('/settings'),
+    }>('/settings', opts),
   update: (body: {
     label: string;
     model: string;
@@ -421,7 +422,7 @@ export const settings = {
 };
 
 export const configApi = {
-  get: () =>
+  get: (opts?: { signal?: AbortSignal }) =>
     request<{
       env: Record<string, string>;
       rateLimits: Array<{ endpoint: string; limit: number; window: string }>;
@@ -431,7 +432,7 @@ export const configApi = {
       warnings: Array<{ id: string; type: 'rate_limit' | 'quota' | 'token_expiry' | 'system'; message: string; severity: 'info' | 'warning' | 'critical'; dismissed: boolean; createdAt: string }>;
       integrations: Array<{ id: string; name: string; icon: string; connected: boolean; configUrl?: string }>;
       infrastructure: Record<string, { provider: string; host: string; port: number; status: 'connected' | 'disconnected' | 'error' }>;
-    }>('/v1/config'),
+    }>('/v1/config', opts),
   updateEnv: (env: Record<string, string>) =>
     request<{ success: boolean }>('/v1/config/env', {
       method: 'PUT',
@@ -470,7 +471,7 @@ export const stats = {
 // -- Audit Log API --
 
 export const audit = {
-  list: (params: { page: number; perPage: number }) =>
+  list: (params: { page: number; perPage: number }, opts?: { signal?: AbortSignal }) =>
     request<{
       data: {
         id: string;
@@ -484,7 +485,7 @@ export const audit = {
       page: number;
       perPage: number;
       totalPages: number;
-    }>(`/v1/audit?page=${params.page}&perPage=${params.perPage}`),
+    }>(`/v1/audit?page=${params.page}&perPage=${params.perPage}`, opts),
 };
 
 // -- Benchmarks API --

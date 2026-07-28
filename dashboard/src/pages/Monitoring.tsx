@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { SkeletonCard } from '@/components/LoadingSkeleton';
 
 interface MonitoringData {
@@ -21,24 +21,29 @@ export default function Monitoring() {
   const [data, setData] = useState<MonitoringData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchStatus = useCallback(async () => {
-    try {
-      const res = await fetch('/api/monitoring/status');
-      if (!res.ok) return;
-      const json = await res.json();
-      setData(json);
-    } catch {
-      // ignore polling errors
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
+    let cancelled = false;
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/api/monitoring/status');
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelled) setData(json);
+      } catch {
+        // ignore polling errors
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
     fetchStatus();
     const interval = setInterval(fetchStatus, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchStatus]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
 
   function fmtBytes(bytes: number): string {
     if (!bytes) return '0 B';

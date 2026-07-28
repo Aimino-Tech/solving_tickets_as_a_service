@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { audit } from '@/api/client';
 import type { AuditEntry, PaginatedResponse } from '@/api/types';
 import { formatRelativeTime } from '@/utils/format';
@@ -33,23 +33,33 @@ export default function AuditLog() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  function loadPage(p: number) {
+  const requestIdRef = useRef(0);
+
+  function loadPage(p: number, signal?: AbortSignal) {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     audit
-      .list({ page: p, perPage: 30 })
+      .list({ page: p, perPage: 30 }, { signal })
       .then((res: PaginatedResponse<AuditEntry>) => {
+        if (requestId !== requestIdRef.current) return;
         setEntries(res.data);
         setTotal(res.total);
         setTotalPages(res.totalPages);
         setPage(res.page);
       })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err: Error) => {
+        if (err.name !== 'AbortError') setError(err.message);
+      })
+      .finally(() => {
+        if (requestId === requestIdRef.current) setLoading(false);
+      });
   }
 
   useEffect(() => {
-    loadPage(page);
+    const ac = new AbortController();
+    loadPage(page, ac.signal);
+    return () => ac.abort();
   }, [page]);
 
   function formatAction(action: string): string {

@@ -16,13 +16,17 @@ export default function Status() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     Promise.all([
       health.getVerbose().catch(() => null),
       sla.getMetrics().catch(() => null),
     ]).then(([h, s]) => {
-      setHealthData(h);
-      setSlaData(s);
-    }).finally(() => setLoading(false));
+      if (!cancelled) {
+        setHealthData(h);
+        setSlaData(s);
+      }
+    }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   const checks = healthData?.checks ?? {};

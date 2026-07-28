@@ -16,17 +16,21 @@ export default function PricingPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     pricing
       .get()
-      .then((data: any) => { setPlans(data.plans); setCompetitors(data.competitors); })
-      .catch((err: Error) => setError(err.message));
+      .then((data: any) => { if (!cancelled) { setPlans(data.plans); setCompetitors(data.competitors); } })
+      .catch((err: Error) => { if (!cancelled) setError(err.message); });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     pricing
       .calculate(fixSlider, selectedTier)
-      .then((data: any) => setCalcResult(data))
+      .then((data: any) => { if (!cancelled) setCalcResult(data); })
       .catch(() => {});
+    return () => { cancelled = true; };
   }, [fixSlider, selectedTier]);
 
   return (
