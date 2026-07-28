@@ -1,3 +1,4 @@
+import os
 import pytest
 from playwright.sync_api import Page, BrowserContext, APIRequestContext, sync_playwright
 
@@ -31,7 +32,12 @@ def page(context: BrowserContext) -> Page:
 
 @pytest.fixture(scope="session")
 def base_url() -> str:
-    return "http://localhost:5173"
+    return os.environ.get("STAS_FE_URL", "http://localhost:5173/dashboard")
+
+
+@pytest.fixture(scope="session")
+def backend_url() -> str:
+    return os.environ.get("STAS_BACKEND_URL", "http://localhost:3000")
 
 
 @pytest.fixture(scope="function")
