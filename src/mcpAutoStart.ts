@@ -14,12 +14,25 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import path from 'node:path';
 import { rootLogger } from './utils/logger.js';
 
 const log = rootLogger.child({ module: 'mcp-autostart' });
 
 let mcpProcess: ChildProcess | null = null;
+
+function checkPythonDeps(): boolean {
+  try {
+    execSync('python3 -c "import mcp"', { stdio: 'pipe', timeout: 5000 });
+    return true;
+  } catch {
+    log.warn(
+      'Python package "mcp" not found — MCP server auto-start skipped. Install with: pip install "mcp>=1.0.0"',
+    );
+    return false;
+  }
+}
 
 /**
  * Start the MCP server as a child process in SSE mode.
@@ -30,6 +43,10 @@ export function startMcpServer(): ChildProcess | null {
 
   if (!autoStart) {
     log.info('MCP server auto-start disabled via STAS_MCP_AUTO_START=false');
+    return null;
+  }
+
+  if (!checkPythonDeps()) {
     return null;
   }
 
@@ -59,9 +76,8 @@ export function startMcpServer(): ChildProcess | null {
     mcpProcess.stderr?.on('data', (data: Buffer) => {
       const msg = data.toString().trim();
       if (msg) {
-        // MCP SDK logs to stderr — treat as info, not error
         if (msg.includes('Error') || msg.includes('Traceback')) {
-          log.error({ mcp: 'stderr' }, msg);
+          log.warn({ mcp: 'stderr' }, msg);
         } else {
           log.info({ mcp: 'stderr' }, msg);
         }
