@@ -31,7 +31,8 @@ def page(context: BrowserContext) -> Page:
 
 @pytest.fixture(scope="session")
 def base_url() -> str:
-    return "http://localhost:5173"
+    import os
+    return os.environ.get("STAS_URL", "http://localhost:5173")
 
 
 @pytest.fixture(scope="function")
