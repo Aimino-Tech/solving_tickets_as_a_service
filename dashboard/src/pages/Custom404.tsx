@@ -47,6 +47,7 @@ export default function Custom404() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search runs..."
+              aria-label="Search runs"
               className="w-full rounded-lg border border-gray-200 bg-white py-3 pl-10 pr-4 text-gray-900 placeholder-gray-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-brand-400 dark:focus:ring-brand-400/20"
             />
           </div>
