@@ -36,7 +36,7 @@ router.post('/runs/:id/feedback', requireAuth, async (req: Request, res: Respons
 
     const feedback = await runFeedbackRepository.create({
       runId: String(runId),
-      userId: req.user!.id,
+      userId: Number(req.user!.id),
       verdict: verdict ?? 'bad_fix',
       comment: comment ?? null,
       feedbackType: feedbackType ?? 'user',
@@ -144,7 +144,7 @@ router.post('/runs/:id/rollback', requireAuth, async (req: Request, res: Respons
 
     await runFeedbackRepository.create({
       runId: String(runId),
-      userId: req.user!.id,
+      userId: Number(req.user!.id),
       verdict: 'bad_fix',
       feedbackType: 'rollback',
     });

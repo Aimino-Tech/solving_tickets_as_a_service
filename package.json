@@ -98,6 +98,7 @@
     "@octokit/webhooks": "^13.4.0",
     "@sentry/node": "^8.0.0",
     "@slack/bolt": "^4.7.3",
+    "@supabase/supabase-js": "^2.110.9",
     "amqplib": "^2.0.1",
     "bcryptjs": "^3.0.3",
 

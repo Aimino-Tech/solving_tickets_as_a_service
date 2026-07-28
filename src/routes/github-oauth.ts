@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-const router = Router();
+const router: Router = Router();
 
 router.get('/auth/github', (_req, res) => {
   res.status(501).json({ error: 'GitHub OAuth not configured' });
