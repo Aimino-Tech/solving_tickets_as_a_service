@@ -322,8 +322,8 @@ export const github = {
     request<GitHubConnectionStatus>('/v1/auth/github/status', signal ? { signal } : undefined),
   disconnect: () =>
     request<{ success: boolean }>('/v1/auth/github/disconnect', { method: 'DELETE' }),
-  listInstallations: () =>
-    request<{ installations: GitHubInstallation[] }>('/v1/github/installations'),
+  listInstallations: (signal?: AbortSignal) =>
+    request<{ installations: GitHubInstallation[] }>('/v1/github/installations', signal ? { signal } : undefined),
   syncInstallation: (body: { installationId: number; accountLogin: string; accountType?: string; repoScope?: string }) =>
     request<{ success: boolean }>('/v1/github/installations/sync', {
       method: 'POST',
@@ -396,10 +396,10 @@ export const onboarding = {
 };
 
 export const health = {
-  getStatus: () =>
-    request<HealthResponse>('/health'),
-  getVerbose: () =>
-    request<HealthResponse>('/health/verbose'),
+  getStatus: (signal?: AbortSignal) =>
+    request<HealthResponse>('/health', signal ? { signal } : undefined),
+  getVerbose: (signal?: AbortSignal) =>
+    request<HealthResponse>('/health/verbose', signal ? { signal } : undefined),
 };
 
 export const settings = {
@@ -467,8 +467,8 @@ export const sla = {
 // -- Stats / Analytics API --
 
 export const stats = {
-  get: () =>
-    request<DashboardStats>('/v1/stats'),
+  get: (signal?: AbortSignal) =>
+    request<DashboardStats>('/v1/stats', signal ? { signal } : undefined),
 };
 
 // -- Audit Log API --

@@ -21,9 +21,9 @@ export default function Monitoring() {
   const [data, setData] = useState<MonitoringData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch('/api/monitoring/status');
+      const res = await fetch('/api/monitoring/status', { signal });
       if (!res.ok) return;
       const json = await res.json();
       setData(json);
@@ -35,9 +35,10 @@ export default function Monitoring() {
   }, []);
 
   useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, POLL_INTERVAL);
-    return () => clearInterval(interval);
+    const ac = new AbortController();
+    fetchStatus(ac.signal);
+    const interval = setInterval(() => fetchStatus(ac.signal), POLL_INTERVAL);
+    return () => { clearInterval(interval); ac.abort(); };
   }, [fetchStatus]);
 
   function fmtBytes(bytes: number): string {

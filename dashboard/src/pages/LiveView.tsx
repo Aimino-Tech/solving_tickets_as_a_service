@@ -29,15 +29,20 @@ export default function LiveView() {
   const [loading, setLoading] = useState(true);
   const [time, setTime] = useState(new Date());
 
-  const fetchRuns = useCallback(async () => {
+  const fetchRuns = useCallback(async (signal?: AbortSignal) => {
     try {
-      const data = await runs.list({ perPage: 10 });
+      const data = await runs.list({ perPage: 10 }, signal);
       setRecentRuns(data.data ?? data ?? []);
     } catch { /* ignore */ }
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchRuns(); const i = setInterval(fetchRuns, POLL_INTERVAL_MS); return () => clearInterval(i); }, [fetchRuns]);
+  useEffect(() => {
+    const ac = new AbortController();
+    fetchRuns(ac.signal);
+    const i = setInterval(() => fetchRuns(ac.signal), POLL_INTERVAL_MS);
+    return () => { clearInterval(i); ac.abort(); };
+  }, [fetchRuns]);
   useEffect(() => { const i = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(i); }, []);
 
   const queueDepth = recentRuns.filter(r => r.status === 'queued' || r.status === 'running').length;

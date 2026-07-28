@@ -33,23 +33,30 @@ export default function AuditLog() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  function loadPage(p: number) {
+  function loadPage(p: number, signal?: AbortSignal) {
     setLoading(true);
     setError(null);
     audit
-      .list({ page: p, perPage: 30 })
+      .list({ page: p, perPage: 30 }, signal)
       .then((res: PaginatedResponse<AuditEntry>) => {
+        if (signal?.aborted) return;
         setEntries(res.data);
         setTotal(res.total);
         setTotalPages(res.totalPages);
         setPage(res.page);
       })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err: Error) => {
+        if (err.name !== 'AbortError') setError(err.message);
+      })
+      .finally(() => {
+        if (!signal?.aborted) setLoading(false);
+      });
   }
 
   useEffect(() => {
-    loadPage(page);
+    const ac = new AbortController();
+    loadPage(page, ac.signal);
+    return () => ac.abort();
   }, [page]);
 
   function formatAction(action: string): string {
