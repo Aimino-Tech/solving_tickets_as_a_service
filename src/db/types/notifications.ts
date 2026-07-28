@@ -1,6 +1,6 @@
 export interface NotificationPreference {
   id: number;
-  userId: number;
+  userId: string;
   channel: 'email' | 'slack' | 'discord' | 'webhook' | 'in_app';
   eventType: string;
   enabled: boolean;
@@ -10,7 +10,7 @@ export interface NotificationPreference {
 }
 
 export interface NewNotificationPreference {
-  userId: number;
+  userId: string;
   channel: 'email' | 'slack' | 'discord' | 'webhook' | 'in_app';
   eventType: string;
   enabled?: boolean;
@@ -19,7 +19,7 @@ export interface NewNotificationPreference {
 
 export interface NotificationHistory {
   id: number;
-  userId: number;
+  userId: string;
   eventType: string;
   channel: string;
   title: string;
@@ -30,7 +30,7 @@ export interface NotificationHistory {
 }
 
 export interface NewNotificationHistory {
-  userId: number;
+  userId: string;
   eventType: string;
   channel: string;
   title: string;

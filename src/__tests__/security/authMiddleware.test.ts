@@ -33,7 +33,7 @@ describe('security/authMiddleware', () => {
     it('returns 401 when token is expired', () => {
       // Create an expired JWT
       const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-      const payload = btoa(JSON.stringify({ sub: '1', githubUsername: 'test', tier: 'free', exp: Math.floor(Date.now() / 1000) - 3600 }));
+      const payload = btoa(JSON.stringify({ sub: '1', githubLogin: 'test', tier: 'free', exp: Math.floor(Date.now() / 1000) - 3600 }));
       const token = `${header}.${payload}.signature`;
       const req = { headers: { authorization: `Bearer ${token}` } } as any;
       const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
@@ -44,7 +44,7 @@ describe('security/authMiddleware', () => {
 
     it('calls next() when token is valid', () => {
       const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-      const payload = btoa(JSON.stringify({ sub: '1', githubUsername: 'test', tier: 'free', exp: Math.floor(Date.now() / 1000) + 3600 }));
+      const payload = btoa(JSON.stringify({ sub: '1', githubLogin: 'test', tier: 'free', exp: Math.floor(Date.now() / 1000) + 3600 }));
       const token = `${header}.${payload}.signature`;
       const req = { headers: { authorization: `Bearer ${token}` } } as any;
       const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
@@ -53,7 +53,7 @@ describe('security/authMiddleware', () => {
       expect(next).toHaveBeenCalled();
       expect(req.user).toBeDefined();
       expect(req.user!.id).toBe(1);
-      expect(req.user!.githubUsername).toBe('test');
+      expect(req.user!.githubLogin).toBe('test');
     });
   });
 });

@@ -234,8 +234,8 @@ export async function inviteMember(params: {
 
   const currentMembers = await teamsRepository.getMembers(params.teamId);
   const maxMembers = ownerTier === 'pro'
-    ? config.teams.maxMembersProTier
-    : config.teams.maxMembersFreeTier;
+    ? config.teams.maxMembers * 3
+    : config.teams.maxMembers;
 
   if (currentMembers.length >= maxMembers) {
     throw new Error(

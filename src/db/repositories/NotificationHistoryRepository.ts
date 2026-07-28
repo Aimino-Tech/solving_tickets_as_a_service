@@ -1,9 +1,9 @@
 import { queryWithRetry } from '../connection.js';
-import type { NotificationHistory, NewNotificationHistory } from '../types/notifications.js';
+import type { NotificationHistory, NewNotificationHistory } from '../types/index.js';
 
 export class NotificationHistoryRepository {
   async findByUser(
-    userId: number,
+    userId: string,
     limit = 50,
     offset = 0,
     unreadOnly = false,

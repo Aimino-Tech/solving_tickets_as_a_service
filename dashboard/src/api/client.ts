@@ -1,3 +1,10 @@
+import type {
+  Run, DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice,
+  KpiResponse, PricingData, CostCalculation, VsComparisonData,
+} from '@/api/types';
+
+export type { DashboardStats };
+
 const API_BASE = '/api';
 
 function getToken(): string | null {
@@ -73,9 +80,11 @@ export async function request<T>(
         }
       } catch {}
     }
-    clearToken();
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
+    if (path.includes('/auth/')) {
+      clearToken();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
     }
     throw new Error('Unauthorized');
   }
@@ -91,23 +100,7 @@ export async function request<T>(
 export interface AuthResult {
   token: string;
   refreshToken: string;
-  user: { id: number; email: string; name: string | null };
-}
-
-export interface FixRun {
-  id: string;
-  repoOwner: string;
-  repoName: string;
-  issueNumber: number;
-  issueTitle: string;
-  status: string;
-  confidence: string | null;
-  creditsUsed?: number;
-  prUrl: string | null;
-  durationMs: number | null;
-  modelUsed: string | null;
-  createdAt: string;
-  updatedAt: string;
+  user: { id: string; email: string; name: string | null };
 }
 
 export interface CreditBalance {
@@ -145,7 +138,10 @@ export interface BillingPlan {
   concurrentFixes?: number;
 }
 
-// -- Health types --
+export const litellm = {
+  usage: () =>
+    request<LitellmUsage>('/v1/litellm/usage'),
+};
 
 export interface HealthCheck {
   status: string;
@@ -162,14 +158,24 @@ export interface HealthResponse {
   memoryUsage?: NodeJS.MemoryUsage;
 }
 
-// -- SLA metric types --
-
 export interface SLAByTier {
   count: number;
   breaches: number;
   attainmentRate: number;
   p50: number | null;
   p95: number | null;
+}
+
+export interface LitellmUsage {
+  configured: boolean;
+  message?: string;
+  remainingBudget?: number;
+  tokensToday?: { input: number; output: number; total: number };
+  requestsToday?: number;
+  rateLimit?: { rpmRemaining: number; rpmLimit: number; tpmRemaining: number; tpmLimit: number; resetAt?: string };
+  budget?: { remainingBudget: number; spendInCurrentMonth: number; maxBudget: number };
+  todayTokens?: { input: number; output: number; total: number };
+  thisMonthTokens?: { input: number; output: number; total: number };
 }
 
 export interface SLAMetrics {
@@ -185,6 +191,7 @@ export interface SLAMetrics {
 }
 
 export const auth = {
+  loginUrl: () => '/api/auth/github',
   register: (email: string, password: string, name?: string) =>
     request<AuthResult>('/v1/auth/register', {
       method: 'POST',
@@ -196,7 +203,7 @@ export const auth = {
       body: JSON.stringify({ email, password }),
     }),
   me: () =>
-    request<{ id: number; email: string; name: string | null; createdAt: string }>('/v1/auth/me'),
+    request<{ id: string; email: string; name: string | null; createdAt: string }>('/v1/auth/me'),
   refresh: (refreshToken: string) =>
     request<AuthResult>('/v1/auth/refresh', {
       method: 'POST',
@@ -240,11 +247,26 @@ export const runs = {
     if (params?.from) qs.set('from', params.from);
     if (params?.to) qs.set('to', params.to);
     const query = qs.toString();
-    return request<{ data: FixRun[]; total: number; page: number; perPage: number; totalPages: number }>(
+    return request<{ data: Run[]; total: number; page: number; perPage: number; totalPages: number }>(
       `/v1/runs${query ? `?${query}` : ''}`,
     );
   },
-  get: (id: string) => request<FixRun>(`/v1/runs/${id}`),
+  get: (id: string) => request<Run>(`/v1/runs/${id}`),
+  feedbackSubmit: (id: string, verdict: string, comment?: string) =>
+    request<{ success: boolean }>(`/v1/runs/${id}/feedback`, {
+      method: 'POST',
+      body: JSON.stringify({ verdict, comment }),
+    }),
+  escalate: (id: string, reason: string) =>
+    request<{ success: boolean }>(`/v1/runs/${id}/escalate`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  rollback: (id: string, reason: string) =>
+    request<{ success: boolean }>(`/v1/runs/${id}/rollback`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
 };
 
 export interface GitHubInstallation {
@@ -274,7 +296,7 @@ export interface GitHubConnectionStatus {
 
 export const repos = {
   list: () =>
-    request<{ id: string; owner: string; repo: string; active: boolean }[]>('/repos'),
+    request<{ id: string; owner: string; repo: string; active: boolean; createdAt: string }[]>('/repos'),
   connect: (body: { owner: string; repo: string; installationId?: number }) =>
     request<{ id: string; owner: string; repo: string; active: boolean }>('/repos', {
       method: 'POST',
@@ -369,23 +391,12 @@ export const onboarding = {
     request<{ config: WizardConfig }>('/v1/onboarding/config'),
 };
 
-// -- Health API --
-
 export const health = {
   getStatus: () =>
     request<HealthResponse>('/health'),
   getVerbose: () =>
     request<HealthResponse>('/health/verbose'),
 };
-
-// -- SLA API --
-
-export const sla = {
-  getMetrics: () =>
-    request<SLAMetrics>('/v1/sla/metrics'),
-};
-
-// -- Settings API --
 
 export const settings = {
   get: () =>
@@ -395,25 +406,65 @@ export const settings = {
       maxConcurrent: number;
       sandboxPoolSize: number;
       auditLogEnabled: boolean;
-    }>('/v1/settings'),
-  update: (data: Record<string, unknown>) =>
-    request<{ success: boolean }>('/v1/settings', {
+    }>('/settings'),
+  update: (body: {
+    label: string;
+    model: string;
+    maxConcurrent: number;
+    sandboxPoolSize: number;
+    auditLogEnabled: boolean;
+  }) =>
+    request<{ success: boolean }>('/settings', {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify(body),
     }),
+};
+
+export const configApi = {
+  get: () =>
+    request<{
+      env: Record<string, string>;
+      rateLimits: Array<{ endpoint: string; limit: number; window: string }>;
+      tokens: Array<{ id: string; name: string; scopes: string[]; createdAt: string; lastUsed: string | null }>;
+      symphonies: Array<{ id: string; name: string; status: 'connected' | 'disconnected' | 'error'; endpoint: string; lastSync: string | null }>;
+      subscriptions: Array<{ id: string; event: string; channel: string; target: string; enabled: boolean }>;
+      warnings: Array<{ id: string; type: 'rate_limit' | 'quota' | 'token_expiry' | 'system'; message: string; severity: 'info' | 'warning' | 'critical'; dismissed: boolean; createdAt: string }>;
+      integrations: Array<{ id: string; name: string; icon: string; connected: boolean; configUrl?: string }>;
+      infrastructure: Record<string, { provider: string; host: string; port: number; status: 'connected' | 'disconnected' | 'error' }>;
+    }>('/v1/config'),
+  updateEnv: (env: Record<string, string>) =>
+    request<{ success: boolean }>('/v1/config/env', {
+      method: 'PUT',
+      body: JSON.stringify(env),
+    }),
+  updateRateLimits: (rateLimits: Array<{ endpoint: string; limit: number; window: string }>) =>
+    request<{ success: boolean }>('/v1/config/rate-limits', {
+      method: 'PUT',
+      body: JSON.stringify(rateLimits),
+    }),
+  regenerateToken: (tokenId: string) =>
+    request<{ success: boolean }>(`/v1/config/tokens/${tokenId}/regenerate`, { method: 'POST' }),
+  revokeToken: (tokenId: string) =>
+    request<{ success: boolean }>(`/v1/config/tokens/${tokenId}`, { method: 'DELETE' }),
+  toggleIntegration: (id: string, connected: boolean) =>
+    request<{ success: boolean }>(`/v1/config/integrations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ connected }),
+    }),
+  testInfrastructure: (provider: string) =>
+    request<{ status: string }>(`/v1/config/infrastructure/${provider}/test`, { method: 'POST' }),
+};
+
+export const sla = {
+  getMetrics: () =>
+    request<SLAMetrics>('/v1/sla/metrics'),
 };
 
 // -- Stats / Analytics API --
 
 export const stats = {
   get: () =>
-    request<{
-      totalRuns: number;
-      passRate: number;
-      runsByDay: { date: string; count: number; passed: number }[];
-      costByDay: { date: string; costCents: number }[];
-      fixRateByWeek: { week: string; rate: number }[];
-    }>('/v1/stats'),
+    request<DashboardStats>('/v1/stats'),
 };
 
 // -- Audit Log API --

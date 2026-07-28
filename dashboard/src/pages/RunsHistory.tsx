@@ -23,7 +23,7 @@ export default function RunsHistory() {
     runs
       .list({ page, perPage: 20, status: statusFilter || undefined, repo: repoFilter || undefined })
       .then(setData)
-      .catch((err) => setError(err.message))
+      .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, [page, statusFilter, repoFilter]);
 

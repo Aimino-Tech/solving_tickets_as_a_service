@@ -22,6 +22,16 @@ export function isConnected(): boolean {
   return _connected;
 }
 
+export async function ensureConnected(): Promise<boolean> {
+  if (_connected) return true;
+  try {
+    await connect();
+    return _connected;
+  } catch {
+    return false;
+  }
+}
+
 export async function connect(): Promise<void> {
   if (_connected && _channel) return;
   if (_reconnecting) return;
@@ -63,7 +73,6 @@ export async function connect(): Promise<void> {
     _connected = false;
     log.error({ err: String(err), attempt: _connectAttempts }, 'Failed to connect to RabbitMQ');
     scheduleReconnect();
-    throw err;
   } finally {
     _reconnecting = false;
   }

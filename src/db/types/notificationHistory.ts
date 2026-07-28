@@ -1,6 +1,6 @@
 export interface NotificationHistory {
   id: number;
-  userId: number;
+  userId: string;
   eventType: string;
   channel: string;
   title: string | null;
@@ -11,7 +11,7 @@ export interface NotificationHistory {
 }
 
 export interface NewNotificationHistory {
-  userId: number;
+  userId: string;
   eventType: string;
   channel?: string;
   title?: string;

@@ -2,7 +2,7 @@ import { queryWithRetry } from '../connection.js';
 import type { GitHubOAuthToken, NewGitHubOAuthToken } from '../types/githubOAuth.js';
 
 export class GitHubOAuthRepository {
-  async findByUserId(userId: number): Promise<GitHubOAuthToken | undefined> {
+  async findByUserId(userId: string): Promise<GitHubOAuthToken | undefined> {
     const result = await queryWithRetry<GitHubOAuthToken>(
       'SELECT * FROM github_oauth_tokens WHERE user_id = $1',
       [userId],
@@ -48,7 +48,7 @@ export class GitHubOAuthRepository {
     return result.rows[0];
   }
 
-  async delete(userId: number): Promise<boolean> {
+  async delete(userId: string): Promise<boolean> {
     const result = await queryWithRetry(
       'DELETE FROM github_oauth_tokens WHERE user_id = $1',
       [userId],

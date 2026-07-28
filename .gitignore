@@ -8,6 +8,7 @@ dist/
 .DS_Store
 *.egg-info/
 .env
+*.env*
 # Environment files (contain secrets - NEVER commit)
 .env.*.local
 .env.local
@@ -30,6 +31,23 @@ npm-debug.log*
 .pytest_cache/
 # Python
 sbom/
+__pycache__/
+*.py[cod]
+
+# Báo cáo test & Artifacts
+/allure-results/
+/allure-report/
+/test-results/
+/playwright-report/
+/coverage/
+
+# Ảnh chụp màn hình và video ghi lỗi
+/screenshots/
+/videos/
+
+# Môi trường & Bí mật (Token, Password)
+.env
+.env.local
 .stas
 .stas-private-key.pem
 stas-private-key.pem
