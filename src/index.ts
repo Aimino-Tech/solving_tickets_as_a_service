@@ -74,6 +74,8 @@ async function validateStartupHealth(): Promise<void> {
 
   // Check OpenCode endpoint (with configurable startup timeout)
   // The opencodeHealth client must already be started (start() called in main())
+  // Wait for the first poll to complete before starting checks
+  await new Promise((resolve) => setTimeout(resolve, 2000));
   const startupTimeoutMs = config.opencodeHealth.startupTimeoutMs;
   const pollInterval = 2000; // poll every 2s
   const deadline = Date.now() + startupTimeoutMs;
@@ -92,7 +94,7 @@ async function validateStartupHealth(): Promise<void> {
   if (opencodeOk) {
     checks.push({ name: 'opencode', ok: true });
   } else {
-    log.warn(
+    log.info(
       { timeoutMs: startupTimeoutMs, error: opencodeError },
       'OpenCode did not become healthy within startup timeout -- continuing without',
     );
@@ -118,12 +120,12 @@ async function validateStartupHealth(): Promise<void> {
   const failures = checks.filter((c) => !c.ok);
   if (failures.length > 0) {
     for (const f of failures) {
-      log.warn(
+      log.info(
         { module: 'health-validation', service: f.name, error: f.error },
         `Startup health check FAILED: ${f.name} — ${f.error ? f.error.slice(0, 200) : 'No error details'} (expected during warm-up, check service availability if persistent)`,
       );
     }
-    log.warn(
+    log.info(
       { module: 'health-validation', checks },
       `Startup health validation completed with ${failures.length} failure(s) — non-fatal, continuing startup`,
     );
