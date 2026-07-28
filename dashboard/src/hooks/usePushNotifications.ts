@@ -22,14 +22,12 @@ export function usePushNotifications() {
   );
 
   useEffect(() => {
-    startPolling();
     const unsubscribe = subscribe((updated) => {
       setNotifications(updated);
       setUnreadCount(getUnreadCount());
     });
     return () => {
       unsubscribe();
-      stopPolling();
     };
   }, []);
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { request, onboarding } from '@/api/client';
 
 interface Props {
@@ -11,18 +11,22 @@ export default function GitHubInstall({ progress, onComplete, onSkip }: Props) {
   const [installing, setInstalling] = useState(false);
   const [githubToken, setGithubToken] = useState<string | null>(null);
 
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data.type === 'github-oauth-callback') {
+        setGithubToken(event.data.accessToken);
+        sessionStorage.setItem('github_oauth', JSON.stringify(event.data));
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   async function handleGithubLogin() {
     try {
       const data = await request<{ url: string }>('/v1/github/login');
-      const popup = window.open(data.url, 'github-oauth', 'width=800,height=700');
-
-      window.addEventListener('message', async (event) => {
-        if (event.origin !== window.location.origin) return;
-        if (event.data.type === 'github-oauth-callback') {
-          setGithubToken(event.data.accessToken);
-          sessionStorage.setItem('github_oauth', JSON.stringify(event.data));
-        }
-      });
+      window.open(data.url, 'github-oauth', 'width=800,height=700');
     } catch {}
   }
 
