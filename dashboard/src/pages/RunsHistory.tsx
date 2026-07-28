@@ -40,6 +40,12 @@ export default function RunsHistory() {
     setSearchParams(params);
   }
 
+  function handlePageChange(newPage: number) {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', String(newPage));
+    setSearchParams(params);
+  }
+
   function formatDuration(seconds?: number): string {
     if (!seconds) return '—';
     if (seconds < 60) return `${seconds}s`;
@@ -198,14 +204,14 @@ export default function RunsHistory() {
           <div className="flex gap-2">
             <button
               disabled={page <= 1}
-              onClick={() => updateFilter('page', String(page - 1))}
+              onClick={() => handlePageChange(page - 1)}
               className="btn-secondary text-xs"
             >
               Previous
             </button>
             <button
               disabled={page >= data.totalPages}
-              onClick={() => updateFilter('page', String(page + 1))}
+              onClick={() => handlePageChange(page + 1)}
               className="btn-secondary text-xs"
             >
               Next
