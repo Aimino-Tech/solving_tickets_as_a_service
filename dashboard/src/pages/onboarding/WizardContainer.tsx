@@ -7,14 +7,14 @@ import TeamSetup from './steps/TeamSetup';
 import Complete from './steps/Complete';
 
 const STEP_LABELS: Record<string, string> = {
-  github_install: 'GitHub Installation',
-  repo_selection: 'Repository Selection',
-  billing_setup: 'Billing Setup',
-  team_setup: 'Team Setup',
+  'github-install': 'GitHub Installation',
+  'repo-selection': 'Repository Selection',
+  'billing-setup': 'Billing Setup',
+  'team-setup': 'Team Setup',
   complete: 'Complete',
 };
 
-const STEP_ORDER = ['github_install', 'repo_selection', 'billing_setup', 'team_setup', 'complete'];
+const STEP_ORDER = ['github-install', 'repo-selection', 'billing-setup', 'team-setup', 'complete'];
 
 function getStepIndex(step: string): number {
   return STEP_ORDER.indexOf(step);
@@ -150,16 +150,16 @@ export default function WizardContainer() {
       </div>
 
       <div className="card">
-        {currentStep === 'github_install' && (
+        {currentStep === 'github-install' && (
           <GitHubInstall progress={progress} onComplete={handleStepComplete} onSkip={handleSkip} />
         )}
-        {currentStep === 'repo_selection' && (
+        {currentStep === 'repo-selection' && (
           <RepoSelection progress={progress} onComplete={handleStepComplete} onSkip={handleSkip} />
         )}
-        {currentStep === 'billing_setup' && (
+        {currentStep === 'billing-setup' && (
           <BillingSetup progress={progress} onComplete={handleStepComplete} onSkip={handleSkip} />
         )}
-        {currentStep === 'team_setup' && (
+        {currentStep === 'team-setup' && (
           <TeamSetup progress={progress} onComplete={handleStepComplete} onSkip={handleSkip} />
         )}
       </div>
