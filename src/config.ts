@@ -140,6 +140,9 @@ const envSchema = z.object({
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
 
+  POSTHOG_API_KEY: z.string().optional(),
+  POSTHOG_HOST: z.string().default('https://us.i.posthog.com'),
+
   DPA_VERSION: z.string().default('2026-06-01'),
   DPA_REQUIRE_ACCEPTANCE: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(true),
   DATA_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
@@ -584,6 +587,11 @@ function buildConfig(env: ParsedEnv) {
       price2000Credits: env.STRIPE_PRICE_2000_CREDITS,
       soloPriceId: env.STRIPE_SOLO_PRICE_ID,
       teamPriceId: env.STRIPE_TEAM_PRICE_ID,
+    },
+
+    posthog: {
+      apiKey: env.POSTHOG_API_KEY,
+      host: env.POSTHOG_HOST,
     },
 
     dataPrivacy: {
