@@ -44,7 +44,7 @@ export async function connect(): Promise<void> {
     _connection = await amqplib.connect(RABBITMQ_URL);
 
     _connection.on('error', (err) => {
-      log.error({ err: String(err) }, 'RabbitMQ connection error');
+      log.warn({ err: String(err) }, 'RabbitMQ connection error');
       _connected = false;
       scheduleReconnect();
     });
@@ -58,7 +58,7 @@ export async function connect(): Promise<void> {
     _channel = await _connection.createChannel();
 
     _channel.on('error', (err) => {
-      log.error({ err: String(err) }, 'RabbitMQ channel error');
+      log.warn({ err: String(err) }, 'RabbitMQ channel error');
     });
 
     _channel.on('close', () => {
@@ -71,7 +71,7 @@ export async function connect(): Promise<void> {
     log.info('RabbitMQ connected successfully');
   } catch (err) {
     _connected = false;
-    log.error({ err: String(err), attempt: _connectAttempts }, 'Failed to connect to RabbitMQ');
+    log.warn({ err: String(err), attempt: _connectAttempts }, 'Failed to connect to RabbitMQ');
     scheduleReconnect();
   } finally {
     _reconnecting = false;
@@ -81,7 +81,7 @@ export async function connect(): Promise<void> {
 function scheduleReconnect(): void {
   if (_reconnecting || _connectAttempts >= MAX_RECONNECT_ATTEMPTS) {
     if (_connectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      log.error({ attempts: _connectAttempts }, 'Max RabbitMQ reconnection attempts reached');
+      log.warn({ attempts: _connectAttempts }, 'Max RabbitMQ reconnection attempts reached');
     }
     return;
   }

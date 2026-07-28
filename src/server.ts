@@ -1108,7 +1108,7 @@ export async function startServer(): Promise<import('http').Server> {
       });
       log.info('RabbitMQ issue consumer started — dispatching to OpenSymphony');
     } catch (err) {
-      log.error({ err: String(err) }, 'Failed to start RabbitMQ issue consumer');
+      log.warn({ err: String(err) }, 'Failed to start RabbitMQ issue consumer');
     }
   });
 
