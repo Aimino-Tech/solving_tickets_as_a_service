@@ -29,6 +29,7 @@ import {
   checkWorkerHeartbeats,
   checkSLOCompliance,
 } from '../monitoring/alerting.js';
+import { startMonitoringLoop, stopMonitoringLoop } from '../loops/monitoringLoop.js';
 import {
   checkQueueDepthAnomaly,
   checkErrorRateSpike,
@@ -220,6 +221,9 @@ export function startScheduledTasks(): void {
     'Starting scheduled maintenance tasks',
   );
 
+  // Monitoring loop (Phase 2) — detects errors from DB/webhooks and creates Linear tickets
+  startMonitoringLoop();
+
   // Queue depth check (on interval matching queueDepthAlertMinutes)
   timers.push(setInterval(checkQueueDepths, QUEUE_DEPTH_CHECK_INTERVAL_MS));
 
@@ -270,5 +274,6 @@ export function stopScheduledTasks(): void {
     clearInterval(timer);
   }
   timers.length = 0;
+  stopMonitoringLoop();
   log.info('Scheduled maintenance tasks stopped');
 }

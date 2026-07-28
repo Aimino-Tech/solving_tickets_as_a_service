@@ -58,6 +58,10 @@ interface JiraWebhookPayload {
 export class JiraTracker implements Tracker {
   readonly source = 'jira' as const;
 
+  async createTicket(): Promise<Ticket> {
+    throw new Error('Jira ticket creation not implemented in STAS monitoring loop');
+  }
+
   private get baseUrl(): string {
     const url = config.trackers?.jira?.url;
     if (!url) throw new Error('JIRA_URL is not configured');

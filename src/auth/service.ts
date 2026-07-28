@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
+import { getSupabaseAdmin, getSupabaseAnon } from './supabase.js';
 import { usersRepository } from '../db/repositories/UsersRepository.js';
 import type { User } from '../db/types/users.js';
 
@@ -35,15 +36,14 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<AuthResult> {
-    const user = await usersRepository.findByEmail(email);
-    if (!user) {
-      throw new AuthError('Invalid email or password', 401);
-    }
+    const { data: signInData, error: signInError } = await getSupabaseAnon().auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (signInError) throw new AuthError(signInError.message || 'Invalid email or password', 401);
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
-      throw new AuthError('Invalid email or password', 401);
-    }
+    const user = await usersRepository.findByEmail(email);
+    if (!user) throw new AuthError('User not found', 404);
 
     return this.generateTokens(user.id, user.email);
   }

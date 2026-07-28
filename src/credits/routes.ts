@@ -65,6 +65,8 @@ async function getAccountId(req: Request): Promise<number | null> {
       [req.user.email],
     );
     if (result.rows.length > 0) return result.rows[0].id;
+
+    return null;
   }
   return null;
 }

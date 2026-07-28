@@ -150,6 +150,13 @@ const envSchema = z.object({
   FEATURE_FLAGS_DEFAULT_TTL_SECONDS: z.coerce.number().int().positive().default(30),
   FEATURE_FLAGS_AUTO_DISABLE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.05),
 
+  // Monitoring Loop (Phase 2)
+  MONITORING_LOOP_ENABLED: boolSchema(false),
+  MONITORING_LOOP_INTERVAL_MS: z.coerce.number().int().positive().default(10000),
+  MONITORING_LOOP_TEAM_ID: z.string().default(''),
+  MONITORING_LOOP_PROJECT_ID: z.string().optional(),
+  MONITORING_LOOP_DEFAULT_ACCOUNT_ID: z.coerce.number().int().positive().optional(),
+
   // CI monitoring
   CI_MONITOR_ENABLED: boolSchema(false),
   CI_REPOS: z.string().default(''),
@@ -235,6 +242,7 @@ const envSchema = z.object({
 
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  STAS_LOG_FILE: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
   ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
@@ -350,6 +358,7 @@ function buildConfig(env: ParsedEnv) {
   return {
     port: env.PORT,
     runMode: env.RUN_MODE,
+    logFile: env.STAS_LOG_FILE ?? '',
     logLevel: env.LOG_LEVEL,
     nodeEnv: env.NODE_ENV,
     github: {
@@ -498,6 +507,14 @@ function buildConfig(env: ParsedEnv) {
       queueDepthCritThreshold: env.HEALTH_QUEUE_DEPTH_CRIT_THRESHOLD,
       queueDepthAlertMinutes: env.HEALTH_QUEUE_DEPTH_ALERT_MINUTES,
       dlqRetentionDays: env.DLQ_RETENTION_DAYS,
+    },
+
+    monitoringLoop: {
+      enabled: env.MONITORING_LOOP_ENABLED,
+      intervalMs: env.MONITORING_LOOP_INTERVAL_MS,
+      teamId: env.MONITORING_LOOP_TEAM_ID,
+      projectId: env.MONITORING_LOOP_PROJECT_ID,
+      defaultAccountId: env.MONITORING_LOOP_DEFAULT_ACCOUNT_ID,
     },
 
     alerting: {

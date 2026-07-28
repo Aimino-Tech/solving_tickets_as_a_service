@@ -35,6 +35,7 @@ import express from 'express';
 import helmet from 'helmet';
 import previewRoutes from './api/routes/preview.js';
 import { trustRouter } from './api/routes/trust.js';
+
 import { streamAuditExportCsv, streamAuditExportJson } from './audit/export.js';
 import { registerSlackMentionHandler } from './channels/slack/handler.js';
 import { config } from './config.js';
@@ -646,6 +647,34 @@ export async function createApp(): Promise<express.Application> {
 
   // -- Health check endpoints --------------------------------------------------
   app.use(healthRouter);
+
+  // ── Monitoring Loop Status ────────────────────────────────────────
+  // GET /api/monitoring/status — Monitoring loop stats (JSON)
+  // GET /monitoring           — Monitoring dashboard (HTML)
+  app.get('/api/monitoring/status', async (_req: Request, res: Response) => {
+    try {
+      const mod = await import('./loops/monitoringLoop.js');
+      const stats = mod.monitoringLoop?.getStats();
+      if (!stats) {
+        res.json({ status: 'not_started' });
+        return;
+      }
+      res.json({
+        status: stats.enabled ? (stats.running ? 'running' : 'idle') : 'disabled',
+        ...stats,
+      });
+    } catch {
+      res.json({ status: 'error', message: 'Monitoring loop module not available' });
+    }
+  });
+  app.get('/monitoring', async (_req: Request, res: Response) => {
+    try {
+      const mod = await import('./routes/monitoringUi.js');
+      res.send(mod.html);
+    } catch {
+      res.status(500).send('Monitoring UI not available');
+    }
+  });
 
   // -- Feature flags admin API ------------------------------------------------
   app.use('/api/v1/admin/feature-flags', featureFlagsRouter);

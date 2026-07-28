@@ -80,9 +80,11 @@ export async function request<T>(
         }
       } catch {}
     }
-    clearToken();
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
+    if (path.includes('/auth/')) {
+      clearToken();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
     }
     throw new Error('Unauthorized');
   }
