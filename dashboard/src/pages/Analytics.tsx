@@ -21,6 +21,7 @@ export default function Analytics() {
   const [error, setError] = useState<string | null>(null);
   const [litellmData, setLitellmData] = useState<LitellmUsage | null>(null);
   const [litellmLoading, setLitellmLoading] = useState(true);
+  const [litellmError, setLitellmError] = useState<string | null>(null); // AIM-3592
 
   useEffect(() => {
     let cancelled = false;
@@ -30,7 +31,7 @@ export default function Analytics() {
       .catch((err) => { if (!cancelled) setError(err.message); });
     litellm.usage()
       .then((d) => { if (!cancelled) setLitellmData(d); })
-      .catch(() => {})
+      .catch((err: Error) => { if (!cancelled) setLitellmError(err.message); })
       .finally(() => { if (!cancelled) setLitellmLoading(false); });
     return () => { cancelled = true; };
   }, []);
@@ -39,6 +40,9 @@ export default function Analytics() {
     return (
       <div className="card">
         <p className="text-red-600 dark:text-red-400">Failed to load analytics: {error}</p>
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          Analytics data may be temporarily unavailable. Please try again later.
+        </p>
       </div>
     );
   }
@@ -90,13 +94,21 @@ export default function Analytics() {
           label="Avg Cost / Run"
           value={data.costByDay.length > 0
             ? `$${(data.costByDay.reduce((s, d) => s + d.costCents, 0) / Math.max(data.costByDay.length, 1) / 100).toFixed(2)}`
-            : '—'}
+            : '\u2014'}
           trend="neutral"
         />
       </div>
 
       {/* LiteLLM Usage */}
-      {litellmData && (
+      {/* AIM-3592: show litellm error state */}
+      {litellmError && !litellmLoading && (
+        <div className="card border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/20">
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            LiteLLM usage data unavailable: {litellmError}
+          </p>
+        </div>
+      )}
+      {litellmData && !litellmError && (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
           <MetricCard label="Remaining Budget" value={`$${litellmData.remainingBudget?.toFixed(2) ?? '0.00'}`} trend={litellmData.remainingBudget && litellmData.remainingBudget > 10 ? 'up' : litellmData.remainingBudget && litellmData.remainingBudget > 2 ? 'neutral' : 'down'} />
           <MetricCard label="Tokens Today" value={formatNumber(litellmData.tokensToday?.total ?? 0)} trend="neutral" />
@@ -204,17 +216,17 @@ export default function Analytics() {
             <div className="card">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Today Tokens</h3>
               <div className="mt-3 space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-gray-500">Input</span><span className="font-medium text-gray-900">{(litellmData.todayTokens?.input ?? 0).toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-500">Output</span><span className="font-medium text-gray-900">{(litellmData.todayTokens?.output ?? 0).toLocaleString()}</span></div>
-                <div className="flex justify-between border-t border-gray-100 pt-2 text-sm"><span className="font-medium text-gray-700">Total</span><span className="font-bold text-gray-900">{(litellmData.todayTokens?.total ?? 0).toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">Input</span><span className="font-medium text-gray-900">{(litellmData.todayTokens?.input ?? 0).toLocaleString('en-US')}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">Output</span><span className="font-medium text-gray-900">{(litellmData.todayTokens?.output ?? 0).toLocaleString('en-US')}</span></div>
+                <div className="flex justify-between border-t border-gray-100 pt-2 text-sm"><span className="font-medium text-gray-700">Total</span><span className="font-bold text-gray-900">{(litellmData.todayTokens?.total ?? 0).toLocaleString('en-US')}</span></div>
               </div>
             </div>
             <div className="card">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">This Month Tokens</h3>
               <div className="mt-3 space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-gray-500">Input</span><span className="font-medium text-gray-900">{(litellmData.thisMonthTokens?.input ?? 0).toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-500">Output</span><span className="font-medium text-gray-900">{(litellmData.thisMonthTokens?.output ?? 0).toLocaleString()}</span></div>
-                <div className="flex justify-between border-t border-gray-100 pt-2 text-sm"><span className="font-medium text-gray-700">Total</span><span className="font-bold text-gray-900">{(litellmData.thisMonthTokens?.total ?? 0).toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">Input</span><span className="font-medium text-gray-900">{(litellmData.thisMonthTokens?.input ?? 0).toLocaleString('en-US')}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">Output</span><span className="font-medium text-gray-900">{(litellmData.thisMonthTokens?.output ?? 0).toLocaleString('en-US')}</span></div>
+                <div className="flex justify-between border-t border-gray-100 pt-2 text-sm"><span className="font-medium text-gray-700">Total</span><span className="font-bold text-gray-900">{(litellmData.thisMonthTokens?.total ?? 0).toLocaleString('en-US')}</span></div>
               </div>
             </div>
           </div>
@@ -237,7 +249,7 @@ export default function Analytics() {
                     <div className="h-2 flex-1 rounded-full bg-gray-200 dark:bg-gray-700">
                       <div className="h-2 rounded-full bg-brand-600" style={{ width: `${Math.min(100, (litellmData.rateLimit.tpmLimit > 0 ? (litellmData.rateLimit.tpmRemaining / litellmData.rateLimit.tpmLimit) * 100 : 0))}%` }} />
                     </div>
-                    <span className="text-sm font-medium text-gray-700">{(litellmData.rateLimit.tpmRemaining).toLocaleString()} / {(litellmData.rateLimit.tpmLimit).toLocaleString()}</span>
+                    <span className="text-sm font-medium text-gray-700">{(litellmData.rateLimit.tpmRemaining).toLocaleString('en-US')} / {(litellmData.rateLimit.tpmLimit).toLocaleString('en-US')}</span>
                   </div>
                 </div>
               </div>

@@ -84,6 +84,7 @@ export default function App() {
           <Route path="configuration" element={<Configuration />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="audit" element={<AuditLog />} />
+          <Route path="kpi" element={<KpiDashboard />} /> {/* AIM-3581 */}
           <Route path="admin/runs" element={<AdminRuns />} />
           <Route path="liveview" element={<LiveView />} />
           <Route path="monitoring" element={<Monitoring />} />

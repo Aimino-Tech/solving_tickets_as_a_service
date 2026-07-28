@@ -16,6 +16,9 @@ import {
 } from 'recharts';
 import { formatNumber, formatPercentage, formatDate } from '@/utils/format';
 
+/** SLA breach threshold — treat rates below this as breaching */
+const SLA_THRESHOLD = 0.95;
+
 export default function KpiDashboard() {
   const [metrics, setMetrics] = useState<KpiMetric[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -58,24 +61,42 @@ export default function KpiDashboard() {
     );
   }
 
-  const latest = metrics[0];
-  const prev = metrics[1];
+  // Sort chronologically ascending so latest is last (AIM-3602)
+  const sorted = [...metrics].sort(
+    (a, b) => new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime(),
+  );
 
-  function trend(current: number, previous: number | undefined): 'up' | 'down' | 'neutral' {
-    if (previous === undefined) return 'neutral';
+  const latest = sorted[sorted.length - 1] ?? null;
+  const prev = sorted[sorted.length - 2] ?? null;
+
+  function trend(current: number, previous: number | null | undefined): 'up' | 'down' | 'neutral' {
+    if (previous === null || previous === undefined) return 'neutral';
     if (current > previous) return 'up';
     if (current < previous) return 'down';
     return 'neutral';
   }
 
-  const latestRate = latest ? (latest.fixCompletionRate * 100).toFixed(1) : '—';
-  const prevRate = prev ? (prev.fixCompletionRate * 100).toFixed(1) : undefined;
-  const latestChurn = latest ? (latest.churnRate * 100).toFixed(2) : '—';
-  const prevChurn = prev ? (prev.churnRate * 100).toFixed(2) : undefined;
-  const latestViral = latest ? latest.viralCoefficient.toFixed(3) : '—';
-  const prevViral = prev ? prev.viralCoefficient.toFixed(3) : undefined;
-  const latestRevenue = latest ? `$${(latest.netRevenueCents / 100).toLocaleString()}` : '—';
-  const prevRevenue = prev ? prev.netRevenueCents / 100 : undefined;
+  // Guard each field individually against null/undefined (AIM-3608)
+  const latestRate =
+    latest?.fixCompletionRate != null ? (latest.fixCompletionRate * 100).toFixed(1) : null;
+  const prevRate =
+    prev?.fixCompletionRate != null ? (prev.fixCompletionRate * 100).toFixed(1) : null;
+  const latestChurn =
+    latest?.churnRate != null ? (latest.churnRate * 100).toFixed(2) : null;
+  const prevChurn =
+    prev?.churnRate != null ? (prev.churnRate * 100).toFixed(2) : null;
+  const latestViral =
+    latest?.viralCoefficient != null ? latest.viralCoefficient.toFixed(3) : null;
+  const prevViral =
+    prev?.viralCoefficient != null ? prev.viralCoefficient.toFixed(3) : null;
+  const latestRevenue =
+    latest?.netRevenueCents != null
+      ? `$${(latest.netRevenueCents / 100).toLocaleString('en-US')}` // AIM-3609
+      : '—';
+  const prevRevenue = prev?.netRevenueCents != null ? prev.netRevenueCents / 100 : null;
+
+  const slaBreach =
+    latest?.fixCompletionRate != null && latest.fixCompletionRate < SLA_THRESHOLD;
 
   const kpiCards = [
     {
@@ -85,8 +106,10 @@ export default function KpiDashboard() {
     },
     {
       label: 'Fix Completion Rate',
-      value: `${latestRate}%`,
-      trend: trend(Number(latestRate), prevRate ? Number(prevRate) : undefined),
+      // AIM-3622: show "—" instead of "—%"
+      value: latestRate != null ? `${latestRate}%` : '—',
+      trend: trend(latestRate != null ? Number(latestRate) : 0, prevRate != null ? Number(prevRate) : null),
+      slaBreach,
     },
     {
       label: 'Free → Paid Conversion',
@@ -96,23 +119,20 @@ export default function KpiDashboard() {
     {
       label: 'Net Revenue',
       value: latestRevenue,
-      trend: trend(latest?.netRevenueCents ?? 0, prev ? prev.netRevenueCents : undefined),
+      trend: trend(latest?.netRevenueCents ?? 0, prevRevenue),
     },
     {
       label: 'Churn Rate',
-      value: `${latestChurn}%`,
-      trend:
-        latestChurn !== '—' && prevChurn !== undefined
-          ? Number(latestChurn) <= Number(prevChurn)
-            ? 'up'
-            : 'down'
-          : 'neutral',
+      // AIM-3622: show "—" instead of "—%"
+      value: latestChurn != null ? `${latestChurn}%` : '—',
+      // AIM-3605: use shared trend helper
+      trend: trend(Number(latestChurn), prevChurn ? Number(prevChurn) : undefined),
       invert: true,
     },
     {
       label: 'Viral Coeff (K)',
-      value: latestViral,
-      trend: trend(Number(latestViral), prevViral ? Number(prevViral) : undefined),
+      value: latestViral != null ? latestViral : '—',
+      trend: trend(latestViral != null ? Number(latestViral) : 0, prevViral != null ? Number(prevViral) : null),
     },
     {
       label: 'Paid Accounts',
@@ -120,10 +140,6 @@ export default function KpiDashboard() {
       trend: trend(latest?.paidAccounts ?? 0, prev?.paidAccounts),
     },
   ];
-
-  const sorted = [...metrics].sort(
-    (a, b) => new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime(),
-  );
 
   const activeReposData = sorted.map((m) => ({
     date: new Date(m.snapshotDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -174,7 +190,15 @@ export default function KpiDashboard() {
           return (
             <div key={card.label} className="card">
               <p className="text-sm text-gray-500">{card.label}</p>
-              <p className={`mt-1 text-2xl font-bold ${trendColors[card.trend]}`}>{card.value}</p>
+              <p className={`mt-1 text-2xl font-bold ${trendColors[card.trend]}`}>
+                {card.value}
+                {/* AIM-3619: SLA breach label */}
+                {(card as any).slaBreach && (
+                  <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                    SLA Breach
+                  </span>
+                )}
+              </p>
               <p className={`mt-0.5 text-xs ${trendColors[card.trend]}`}>
                 {trendArrows[card.trend]} vs previous day
               </p>
@@ -320,7 +344,7 @@ export default function KpiDashboard() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">
           {metrics.length > 0
-            ? `${metrics.length} daily snapshots available (${metrics[metrics.length - 1]?.snapshotDate} \u2013 ${metrics[0]?.snapshotDate})`
+            ? `${metrics.length} daily snapshots available (${sorted[0]?.snapshotDate} \u2013 ${sorted[sorted.length - 1]?.snapshotDate})`
             : 'No data yet'}
         </p>
         <a
