@@ -118,9 +118,15 @@ async function validateStartupHealth(): Promise<void> {
   const failures = checks.filter((c) => !c.ok);
   if (failures.length > 0) {
     for (const f of failures) {
-      log.error({ service: f.name, error: f.error }, `Startup health check FAILED: ${f.name}`);
+      log.warn(
+        { module: 'health-validation', service: f.name, error: f.error },
+        `Startup health check FAILED: ${f.name} — ${f.error ? f.error.slice(0, 200) : 'No error details'} (expected during warm-up, check service availability if persistent)`,
+      );
     }
-    log.error({ checks }, 'Startup health validation completed with failures');
+    log.warn(
+      { module: 'health-validation', checks },
+      `Startup health validation completed with ${failures.length} failure(s) — non-fatal, continuing startup`,
+    );
   } else {
     log.info({ checks: checks.map((c) => c.name) }, 'All startup health checks passed');
   }
