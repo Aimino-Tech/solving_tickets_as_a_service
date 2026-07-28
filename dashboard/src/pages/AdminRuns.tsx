@@ -24,7 +24,8 @@ interface PaginatedResponse {
 }
 
 function getAdminHeaders(): Record<string, string> {
-  const token = localStorage.getItem('stas_admin_key');
+  let token: string | null = null;
+  try { token = localStorage.getItem('stas_admin_key'); } catch { /* localStorage unavailable */ }
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['x-admin-key'] = token;
   return headers;
@@ -51,8 +52,12 @@ export default function AdminRuns() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [adminKey, setAdminKey] = useState(() => localStorage.getItem('stas_admin_key') || '');
-  const [showKeyInput, setShowKeyInput] = useState(!localStorage.getItem('stas_admin_key'));
+  const [adminKey, setAdminKey] = useState(() => {
+    try { return localStorage.getItem('stas_admin_key') || ''; } catch { return ''; }
+  });
+  const [showKeyInput, setShowKeyInput] = useState(() => {
+    try { return !localStorage.getItem('stas_admin_key'); } catch { return true; }
+  });
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
 
@@ -92,7 +97,7 @@ export default function AdminRuns() {
 
   function saveKey() {
     if (!adminKey.trim()) return;
-    localStorage.setItem('stas_admin_key', adminKey.trim());
+    try { localStorage.setItem('stas_admin_key', adminKey.trim()); } catch { /* localStorage unavailable */ }
     setShowKeyInput(false);
     fetchRuns();
   }
@@ -208,7 +213,7 @@ export default function AdminRuns() {
             <option value="failed">Failed</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <button onClick={() => { localStorage.removeItem('stas_admin_key'); setShowKeyInput(true); }} className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
+          <button onClick={() => { try { localStorage.removeItem('stas_admin_key'); } catch { /* localStorage unavailable */ } setShowKeyInput(true); }} className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
             Change key
           </button>
         </div>

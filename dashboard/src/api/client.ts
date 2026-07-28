@@ -78,7 +78,9 @@ export async function request<T>(
           const retryRes = await fetch(`${API_BASE}${path}`, { ...options, headers });
           if (retryRes.ok) return retryRes.json() as Promise<T>;
         }
-      } catch {}
+      } catch (refreshErr) {
+        console.warn('Token refresh failed:', refreshErr);
+      }
     }
     if (path.includes('/auth/')) {
       clearToken();
@@ -100,7 +102,7 @@ export async function request<T>(
 export interface AuthResult {
   token: string;
   refreshToken: string;
-  user: { id: string; email: string; name: string | null };
+  user: { id: string; email: string; name: string | null; createdAt?: string };
 }
 
 export interface CreditBalance {
