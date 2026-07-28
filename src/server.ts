@@ -43,7 +43,7 @@ import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import { de } from './i18n/de.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import { approvalRouter, configureApprovalGate } from './middleware/approvalGate.js';
-import { setupSentryExpressErrorHandler } from './monitoring/sentry.js';
+import { captureError, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { initWizardStore } from './onboarding/wizard.js';
 import { isConnected, publishMessage, QUEUES, connect as rmqConnect } from './queue/rabbitmq.js';
@@ -1063,7 +1063,15 @@ export async function createApp(): Promise<express.Application> {
 
   // -- Global error handler -------------------------------------------------
   app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-    log.error({ err: String(err), requestId: req.requestId }, 'Unhandled error');
+    const errorContext = {
+      err: String(err),
+      stack: err.stack,
+      requestId: req.requestId,
+      method: req.method,
+      path: req.path,
+    };
+    log.error(errorContext, 'Unhandled error');
+    captureError(err, { requestId: req.requestId, method: req.method, path: req.path });
     res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error', correlation_id: req.requestId },
     });
@@ -1168,6 +1176,11 @@ process.on('uncaughtException', (err) => {
     'Uncaught exception -- attempting graceful shutdown',
   );
 
+  captureError(err instanceof Error ? err : new Error(String(err)), {
+    module: 'server',
+    type: 'uncaughtException',
+  });
+
   if (shuttingDown) return;
   shuttingDown = true;
 
@@ -1181,7 +1194,15 @@ process.on('uncaughtException', (err) => {
 });
 
 process.on('unhandledRejection', (reason) => {
-  log.error({ module: 'server', err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection');
+  log.error(
+    { module: 'server', err: String(reason), stack: (reason as Error)?.stack },
+    'Unhandled promise rejection — shutting down',
+  );
+  captureError(reason instanceof Error ? reason : new Error(String(reason)), {
+    module: 'server',
+    type: 'unhandledRejection',
+  });
+  process.exit(1);
 });
 
 // -- Helper: Capture raw body for webhook signature verification -------------
