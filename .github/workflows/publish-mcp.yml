@@ -68,17 +68,17 @@ jobs:
       - name: Validate MCP manifest
         id: manifest
         run: |
-          if [ -f mcp/manifest.json ]; then
-            echo "✅ mcp/manifest.json found"
+          if [ -f mcp-manifest/manifest.json ]; then
+            echo "✅ mcp-manifest/manifest.json found"
             python3 -c "
 import json
-m = json.load(open('mcp/manifest.json'))
+m = json.load(open('mcp-manifest/manifest.json'))
 assert m.get('name') == '@aimino/stas-mcp'
 assert m.get('command') == 'python'
 print('   ✓ manifest valid')
 "
           else
-            echo "⚠️ mcp/manifest.json not found"
+            echo "⚠️ mcp-manifest/manifest.json not found"
           fi
 
   publish-registry:
