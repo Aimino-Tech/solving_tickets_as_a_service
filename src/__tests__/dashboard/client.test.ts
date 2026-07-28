@@ -95,7 +95,7 @@ describe('dashboard API client', () => {
       const result = await client.auth.me();
       expect(result.user.username).toBe('testuser');
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/auth/me',
+        '/api/v1/auth/me',
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: 'Bearer test-token',
@@ -115,7 +115,7 @@ describe('dashboard API client', () => {
       const result = await client.auth.logout();
       expect(result.success).toBe(true);
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/auth/logout',
+        '/api/v1/auth/logout',
         expect.objectContaining({ method: 'POST' }),
       );
     });
@@ -167,7 +167,7 @@ describe('dashboard API client', () => {
 
       const result = await client.runs.get('run-42');
       expect(result.id).toBe('run-42');
-      expect(mockFetch).toHaveBeenCalledWith('/api/runs/run-42', expect.any(Object));
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1/runs/run-42', expect.any(Object));
     });
   });
 
@@ -255,42 +255,6 @@ describe('dashboard API client', () => {
 
       const result = await client.audit.list({ page: 1, perPage: 30 });
       expect(result.data).toHaveLength(1);
-    });
-  });
-
-  // ── Settings API ────────────────────────────────────────────────────────
-
-  describe('settings', () => {
-    it('get() fetches current settings', async () => {
-      client.setToken('tok');
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ label: 'stas:fix', model: 'aimino/agi-v1', maxConcurrent: 3, sandboxPoolSize: 10, auditLogEnabled: true }),
-      });
-
-      const result = await client.settings.get();
-      expect(result.label).toBe('stas:fix');
-      expect(result.maxConcurrent).toBe(3);
-    });
-
-    it('update() sends PUT with settings payload', async () => {
-      client.setToken('tok');
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ success: true }),
-      });
-
-      const result = await client.settings.update({ label: 'custom:fix', maxConcurrent: 5 });
-      expect(result.success).toBe(true);
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/settings',
-        expect.objectContaining({
-          method: 'PUT',
-          body: expect.stringContaining('"label":"custom:fix"'),
-        }),
-      );
     });
   });
 

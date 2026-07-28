@@ -117,7 +117,7 @@ export class GitHubActionsDispatcher {
     }
 
     // Check PAT
-    const pat = config.proxy.githubPat;
+    const pat = config.proxy.pat;
     if (!pat) {
       const result: DispatchWorkflowResult = {
         success: false,
@@ -224,7 +224,7 @@ export class GitHubActionsDispatcher {
    */
   getStatus(): DispatchStatus {
     return {
-      configured: !!config.proxy.githubPat,
+      configured: !!config.proxy.pat,
       totalDispatches: this.totalDispatches,
       successfulDispatches: this.successfulDispatches,
       failedDispatches: this.failedDispatches,

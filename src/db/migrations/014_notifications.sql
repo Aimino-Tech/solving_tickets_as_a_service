@@ -21,24 +21,12 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
     UNIQUE(user_id, channel, event_type)
 );
 
-CREATE TABLE IF NOT EXISTS notification_history (
-    id              SERIAL PRIMARY KEY,
-    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    event_type      VARCHAR(50) NOT NULL,
-    channel         VARCHAR(50) NOT NULL,
-    title           VARCHAR(500) NOT NULL,
-    body            TEXT NOT NULL DEFAULT '',
-    metadata        JSONB NOT NULL DEFAULT '{}'::jsonb,
-    read            BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+-- notification_history is created in 014_notification_history.sql
+-- Add the `read` column and indexes if not present (required by notificationHistory.ts type)
+ALTER TABLE notification_history ADD COLUMN IF NOT EXISTS read BOOLEAN NOT NULL DEFAULT FALSE;
 
-CREATE INDEX IF NOT EXISTS idx_notif_history_user_id
-    ON notification_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_notif_history_user_read
     ON notification_history(user_id, read);
-CREATE INDEX IF NOT EXISTS idx_notif_history_created_at
-    ON notification_history(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notif_prefs_user_id
     ON notification_preferences(user_id);
 

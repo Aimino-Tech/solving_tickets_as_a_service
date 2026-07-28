@@ -1,7 +1,16 @@
 import { queryWithRetry } from '../connection.js';
-import type { GitHubWebhook, NewGitHubWebhook } from '../types/githubOAuth.js';
+import type { GitHubWebhookConfig as GitHubWebhook, NewGitHubWebhookConfig as NewGitHubWebhook } from '../types/githubOAuth.js';
 
 export class GitHubWebhookRepository {
+  async findByInstallationId(installationId: number): Promise<GitHubWebhook[]> {
+    const result = await queryWithRetry<GitHubWebhook>(
+      `SELECT id, user_id, installation_id, repo_owner, repo_name, webhook_id, webhook_url, active, created_at, updated_at
+       FROM github_webhooks WHERE installation_id = $1 AND active = true`,
+      [installationId],
+    );
+    return result.rows;
+  }
+
   async findByUserId(userId: number): Promise<GitHubWebhook[]> {
     const result = await queryWithRetry<GitHubWebhook>(
       `SELECT id, user_id, installation_id, repo_owner, repo_name, webhook_id, webhook_url, active, created_at, updated_at
@@ -35,6 +44,16 @@ export class GitHubWebhookRepository {
       'UPDATE github_webhooks SET active = false, updated_at = NOW() WHERE id = $1',
       [id],
     );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async delete(id: number): Promise<boolean> {
+    const result = await queryWithRetry('DELETE FROM github_webhooks WHERE id = $1', [id]);
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async deleteByInstallationId(installationId: number): Promise<boolean> {
+    const result = await queryWithRetry('DELETE FROM github_webhooks WHERE installation_id = $1', [installationId]);
     return (result.rowCount ?? 0) > 0;
   }
 }

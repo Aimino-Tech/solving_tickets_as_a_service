@@ -35,6 +35,7 @@ import express from 'express';
 import helmet from 'helmet';
 import previewRoutes from './api/routes/preview.js';
 import { trustRouter } from './api/routes/trust.js';
+
 import { streamAuditExportCsv, streamAuditExportJson } from './audit/export.js';
 import { registerSlackMentionHandler } from './channels/slack/handler.js';
 import { config } from './config.js';
@@ -70,9 +71,11 @@ import { pricingRouter } from './routes/pricing.js';
 import { proxyRouter } from './routes/proxy.js';
 import { qualityRouter } from './routes/quality.js';
 import { reposRouter } from './routes/repos.js';
-import { gitHubOAuthRouter } from './routes/github-oauth.js';
+import { gitHubOAuthRouter } from './routes/githubOAuth.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
+import { litellmUsageRouter } from './routes/litellmUsage.js';
+import { runFeedbackRouter } from './routes/runFeedback.js';
 import { slaRouter } from './routes/sla.js';
 import { viralRouter } from './routes/viral.js';
 import { workspaceRouter } from './routes/workspace.js';
@@ -645,6 +648,34 @@ export async function createApp(): Promise<express.Application> {
   // -- Health check endpoints --------------------------------------------------
   app.use(healthRouter);
 
+  // ── Monitoring Loop Status ────────────────────────────────────────
+  // GET /api/monitoring/status — Monitoring loop stats (JSON)
+  // GET /monitoring           — Monitoring dashboard (HTML)
+  app.get('/api/monitoring/status', async (_req: Request, res: Response) => {
+    try {
+      const mod = await import('./loops/monitoringLoop.js');
+      const stats = mod.monitoringLoop?.getStats();
+      if (!stats) {
+        res.json({ status: 'not_started' });
+        return;
+      }
+      res.json({
+        status: stats.enabled ? (stats.running ? 'running' : 'idle') : 'disabled',
+        ...stats,
+      });
+    } catch {
+      res.json({ status: 'error', message: 'Monitoring loop module not available' });
+    }
+  });
+  app.get('/monitoring', async (_req: Request, res: Response) => {
+    try {
+      const mod = await import('./routes/monitoringUi.js');
+      res.send(mod.html);
+    } catch {
+      res.status(500).send('Monitoring UI not available');
+    }
+  });
+
   // -- Feature flags admin API ------------------------------------------------
   app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
 
@@ -664,6 +695,9 @@ export async function createApp(): Promise<express.Application> {
   // ── Billing API (subscriptions, plans, checkout) ─────────
   app.use('/api/v1/billing', billingRouter);
 
+  // ── Auth API (JWT) — MUST be before /api/v1 catch-all routers ────────
+  app.use('/api/v1/auth', authRouter);
+
   app.use('/api/v1', slaRouter);
 
   // ── Credits API ──────────────────────────────────────────
@@ -677,6 +711,8 @@ export async function createApp(): Promise<express.Application> {
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
 
+  app.use('/api/v1', litellmUsageRouter);
+
   // ── Admin webhooks API ──────────────────────────────────────────
   // GET /admin/webhooks (paginated, filterable)
   // POST /admin/webhooks/:id/replay
@@ -684,9 +720,6 @@ export async function createApp(): Promise<express.Application> {
   // GET /admin/webhooks/sources
   // GET /admin/webhooks/stats
   app.use('/admin/webhooks', adminWebhooksRouter);
-
-  // ── Auth API (JWT) ───────────────────────────────────────────────
-  app.use('/api/v1/auth', authRouter);
 
   // ── Onboarding API ──────────────────────────────────────────────
   app.use('/api/v1/onboarding', onboardingRouter);
@@ -930,6 +963,7 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Runs API (authenticated, paginated fix history) ────────────
   app.use('/api/v1/runs', runsApiRouter);
+  app.use('/api/v1/runs', runFeedbackRouter);
 
   // SAML 2.0 SSO routes (optional)
   try {

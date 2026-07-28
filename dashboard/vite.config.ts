@@ -12,8 +12,12 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      '/api/v1/auth': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+      },
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:3002',
         changeOrigin: true,
       },
     },
@@ -24,5 +28,6 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+
   },
 });

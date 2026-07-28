@@ -1,10 +1,12 @@
 import { queryWithRetry } from '../connection.js';
 import type { User, NewUser } from '../types/index.js';
 
+const USER_COLUMNS = 'id, email, password_hash AS "passwordHash", name, created_at AS "createdAt", updated_at AS "updatedAt"';
+
 export class UsersRepository {
   async findByEmail(email: string): Promise<User | undefined> {
     const result = await queryWithRetry<User>(
-      'SELECT id, email, password_hash, name, created_at, updated_at FROM users WHERE email = $1',
+      `SELECT ${USER_COLUMNS} FROM users WHERE email = $1`,
       [email],
     );
     return result.rows[0];
@@ -12,7 +14,7 @@ export class UsersRepository {
 
   async findById(id: number): Promise<User | undefined> {
     const result = await queryWithRetry<User>(
-      'SELECT id, email, password_hash, name, created_at, updated_at FROM users WHERE id = $1',
+      `SELECT ${USER_COLUMNS} FROM users WHERE id = $1`,
       [id],
     );
     return result.rows[0];
@@ -22,7 +24,7 @@ export class UsersRepository {
     const result = await queryWithRetry<User>(
       `INSERT INTO users (email, password_hash, name)
        VALUES ($1, $2, $3)
-       RETURNING id, email, password_hash, name, created_at, updated_at`,
+       RETURNING ${USER_COLUMNS}`,
       [data.email, data.passwordHash, data.name ?? null],
     );
     return result.rows[0];
@@ -46,7 +48,7 @@ export class UsersRepository {
     values.push(id);
 
     const result = await queryWithRetry<User>(
-      `UPDATE users SET ${sets.join(', ')} WHERE id = $${idx} RETURNING id, email, password_hash, name, created_at, updated_at`,
+      `UPDATE users SET ${sets.join(', ')} WHERE id = $${idx} RETURNING ${USER_COLUMNS}`,
       values,
     );
     return result.rows[0];

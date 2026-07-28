@@ -10,10 +10,8 @@
  *   await storage.saveRun({ ... });
  */
 
-import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import type { StorageBackend } from './types.js';
-import { SQLiteStorage } from './sqlite.js';
 import { PostgresStorage } from './postgres/index.js';
 
 const log = rootLogger.child({ module: 'storage:factory' });
@@ -25,41 +23,16 @@ const log = rootLogger.child({ module: 'storage:factory' });
 let storageInstance: StorageBackend | undefined = undefined;
 
 /**
- * Create (or return the existing) storage backend based on the active config.
+ * Create (or return the existing) storage backend.
  *
- * The backend is determined by `config.storage.type`:
- *   - `'sqlite'`    → `SQLiteStorage` (default for OSS / self-hosted)
- *   - `'postgres'`  → `PostgresStorage` (production / hosted)
- *
- * The instance is cached so subsequent calls return the same object.
+ * Always uses PostgresStorage.  The instance is cached so subsequent
+ * calls return the same object.
  */
 export async function createStorage(): Promise<StorageBackend | undefined> {
   if (storageInstance) return storageInstance;
 
-  const storageType = config.storage.type;
-
-  log.info({ storageType }, 'Creating storage backend');
-
-  switch (storageType) {
-    case 'sqlite': {
-      const dbPath = config.storage.sqlitePath;
-      log.info({ dbPath }, 'Initializing SQLite storage');
-      storageInstance = new SQLiteStorage(dbPath) as unknown as StorageBackend;
-      break;
-    }
-
-    case 'postgres': {
-      log.info('Initializing Postgres storage');
-      storageInstance = new PostgresStorage() as unknown as StorageBackend;
-      break;
-    }
-
-    default: {
-      const msg = `Unknown storage type: ${storageType}`;
-      log.error({ storageType }, msg);
-      throw new Error(msg);
-    }
-  }
+  log.info('Initializing Postgres storage');
+  storageInstance = new PostgresStorage() as unknown as StorageBackend;
 
   return storageInstance;
 }

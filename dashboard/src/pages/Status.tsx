@@ -17,8 +17,8 @@ export default function Status() {
 
   useEffect(() => {
     Promise.all([
-      health.get().catch(() => null),
-      sla.metrics().catch(() => null),
+      health.getVerbose().catch(() => null),
+      sla.getMetrics().catch(() => null),
     ]).then(([h, s]) => {
       setHealthData(h);
       setSlaData(s);
@@ -106,28 +106,28 @@ export default function Status() {
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">SLA Performance</h3>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatMs(slaData.p50FixTimeMs)}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatMs(slaData.fixTimesMs?.p50)}</p>
               <p className="text-xs text-gray-500">p50 Fix Time</p>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatMs(slaData.p95FixTimeMs)}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatMs(slaData.fixTimesMs?.p95)}</p>
               <p className="text-xs text-gray-500">p95 Fix Time</p>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatMs(slaData.p99FixTimeMs)}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatMs(slaData.fixTimesMs?.p99)}</p>
               <p className="text-xs text-gray-500">p99 Fix Time</p>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
-              <p className={`text-2xl font-bold ${(slaData.slaAttainmentRate ?? 100) < 95 ? 'text-red-600' : (slaData.slaAttainmentRate ?? 100) < 99 ? 'text-yellow-600' : 'text-green-600'}`}>
-                {slaData.slaAttainmentRate ?? 100}%
+              <p className={`text-2xl font-bold ${(slaData.attainmentRate ?? 100) < 95 ? 'text-red-600' : (slaData.attainmentRate ?? 100) < 99 ? 'text-yellow-600' : 'text-green-600'}`}>
+                {slaData.attainmentRate ?? 100}%
               </p>
               <p className="text-xs text-gray-500">SLA Attainment</p>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
-              <p className={`text-2xl font-bold ${(slaData.breachedCount ?? 0) > 0 ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}`}>
-                {slaData.breachedCount ?? 0}
+              <p className={`text-2xl font-bold ${(slaData.breaches ?? 0) > 0 ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}`}>
+                {slaData.breaches ?? 0}
               </p>
-              <p className="text-xs text-gray-500">Breached ({slaData.totalRuns ?? 0} total)</p>
+              <p className="text-xs text-gray-500">Breached ({slaData.totalRecorded ?? 0} total)</p>
             </div>
           </div>
         </div>
