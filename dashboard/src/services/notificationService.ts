@@ -55,8 +55,9 @@ export async function fetchHistory(limit = 50, offset = 0, unreadOnly = false): 
       read: n.read,
       data: n.metadata,
     }));
+    const localOnly = localNotifications.filter((n) => n.id.startsWith('notif_'));
     localNotifications.length = 0;
-    localNotifications.push(...mapped);
+    localNotifications.push(...mapped, ...localOnly);
     notifyListeners();
   } catch {
     // Backend unavailable, keep local notifications

@@ -22,6 +22,7 @@ export default function NotificationBell() {
   const bellRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    if (!isOpen) return;
     function handleClickOutside(e: MouseEvent) {
       if (
         dropdownRef.current &&
@@ -34,7 +35,7 @@ export default function NotificationBell() {
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   const handleBellClick = () => {
     setIsOpen((prev) => !prev);

@@ -19,7 +19,6 @@ import Privacy from '@/pages/Privacy';
 import Status from '@/pages/Status';
 import DPAPage from '@/pages/DPAPage';
 import Benchmarks from '@/pages/Benchmarks';
-import Pricing from '@/pages/Pricing';
 import EnterprisePage from '@/pages/EnterprisePage';
 import KpiDashboard from '@/pages/KpiDashboard';
 import PricingPage from '@/pages/PricingPage';
