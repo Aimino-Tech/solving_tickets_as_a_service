@@ -28,6 +28,9 @@ interface ProcessedError {
 }
 
 const PINO_ERROR_LEVEL = 50;
+const MAX_TICKETS_PER_CYCLE = 5;
+const CONSECUTIVE_FAILURE_LIMIT = 10;
+const CIRCUIT_BREAKER_TTL_MS = 5 * 60 * 1000;
 
 export interface MonitoringStats {
   enabled: boolean;
@@ -40,6 +43,9 @@ export interface MonitoringStats {
   totalRunErrors: number;
   totalLogErrors: number;
   totalTicketsCreated: number;
+  totalConsecutiveFailures: number;
+  circuitBreakerOpen: boolean;
+  circuitBreakerOpenedAt: string | null;
   lastError: string | null;
 }
 
@@ -55,6 +61,9 @@ export class MonitoringLoop {
   private redis: Redis | null = null;
   private redisReady = false;
 
+  private consecutiveFailures = 0;
+  private circuitBreakerOpenUntil: number | null = null;
+
   private stats = {
     lastRunAt: null as string | null,
     totalWebhookErrors: 0,
@@ -63,6 +72,17 @@ export class MonitoringLoop {
     totalTicketsCreated: 0,
     lastError: null as string | null,
   };
+
+  private isCircuitBreakerOpen(): boolean {
+    if (this.circuitBreakerOpenUntil === null) return false;
+    if (Date.now() >= this.circuitBreakerOpenUntil) {
+      log.info('Circuit breaker reset — cooling period elapsed');
+      this.circuitBreakerOpenUntil = null;
+      this.consecutiveFailures = 0;
+      return false;
+    }
+    return true;
+  }
 
   getStats(): MonitoringStats {
     let logFileSize = 0;
@@ -80,6 +100,11 @@ export class MonitoringLoop {
       totalRunErrors: this.stats.totalRunErrors,
       totalLogErrors: this.stats.totalLogErrors,
       totalTicketsCreated: this.stats.totalTicketsCreated,
+      totalConsecutiveFailures: this.consecutiveFailures,
+      circuitBreakerOpen: this.isCircuitBreakerOpen(),
+      circuitBreakerOpenedAt: this.circuitBreakerOpenUntil
+        ? new Date(this.circuitBreakerOpenUntil).toISOString()
+        : null,
       lastError: this.stats.lastError,
     };
   }
@@ -170,6 +195,14 @@ export class MonitoringLoop {
     this.running = true;
 
     try {
+      if (this.isCircuitBreakerOpen()) {
+        const remaining = this.circuitBreakerOpenUntil
+          ? Math.round((this.circuitBreakerOpenUntil - Date.now()) / 1000)
+          : 0;
+        log.warn({ remainingSec: remaining }, 'Circuit breaker open — skipping ticket creation');
+        return;
+      }
+
       const now = new Date().toISOString();
       this.stats.lastRunAt = now;
 
@@ -195,7 +228,15 @@ export class MonitoringLoop {
         return;
       }
 
-      log.info({ errorCount: errors.length }, 'Monitoring loop: new errors detected, creating tickets');
+      const capped = errors.slice(0, MAX_TICKETS_PER_CYCLE);
+      if (errors.length > MAX_TICKETS_PER_CYCLE) {
+        log.warn(
+          { total: errors.length, capped: MAX_TICKETS_PER_CYCLE },
+          'Monitoring loop: capping tickets to avoid flooding',
+        );
+      }
+
+      log.info({ errorCount: capped.length }, 'Monitoring loop: new errors detected, creating tickets');
 
       const tracker = getTracker('linear');
       if (!tracker) {
@@ -204,7 +245,8 @@ export class MonitoringLoop {
       }
 
       let created = 0;
-      for (const err of errors) {
+      let cycleFailures = 0;
+      for (const err of capped) {
         try {
           const dup = await this.redisGet(`monitoring:dup:${err.key}`);
           if (dup) {
@@ -224,14 +266,35 @@ export class MonitoringLoop {
           created++;
 
           await this.redisSet(`monitoring:dup:${err.key}`, ticket.url, 86400);
-
           log.info({ key: err.key, ticketUrl: ticket.url }, 'MonitoringLoop: created ticket');
         } catch (createErr) {
-          this.stats.lastError = String(createErr).slice(0, 500);
-          log.error({ err: String(createErr), key: err.key }, 'MonitoringLoop: failed to create ticket');
+          cycleFailures++;
+          const errStr = String(createErr);
+          this.stats.lastError = errStr.slice(0, 500);
+
+          if (errStr.includes('429') || errStr.includes('rate limit') || errStr.includes('RATE_LIMITED')) {
+            log.warn({ key: err.key }, 'MonitoringLoop: rate limited by Linear API');
+          } else if (errStr.includes('401') || errStr.includes('unauthorized') || errStr.includes('API key')) {
+            log.warn({ key: err.key }, 'MonitoringLoop: Linear API auth error');
+          } else {
+            log.warn({ err: errStr, key: err.key }, 'MonitoringLoop: failed to create ticket');
+          }
         }
       }
       this.stats.totalTicketsCreated += created;
+
+      if (cycleFailures > 0) {
+        this.consecutiveFailures += cycleFailures;
+        if (this.consecutiveFailures >= CONSECUTIVE_FAILURE_LIMIT) {
+          this.circuitBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
+          log.warn(
+            { failures: this.consecutiveFailures, ttlMs: CIRCUIT_BREAKER_TTL_MS },
+            `Circuit breaker opened — stopping ticket creation for ${CIRCUIT_BREAKER_TTL_MS / 1000}s`,
+          );
+        }
+      } else {
+        this.consecutiveFailures = 0;
+      }
 
       if (created > 0) {
         log.info({ created, total: this.stats.totalTicketsCreated }, 'MonitoringLoop: batch complete');
