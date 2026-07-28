@@ -8,14 +8,16 @@ export default function Benchmarks() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     benchmarks
       .get()
-      .then((resp: any) => setData(resp.competitors))
-      .catch((err: Error) => setError(err.message));
+      .then((resp: any) => { if (!cancelled) setData(resp.competitors); })
+      .catch((err: Error) => { if (!cancelled) setError(err.message); });
     benchmarks
       .getPrices()
-      .then((resp: any) => setPrices(resp.prices))
+      .then((resp: any) => { if (!cancelled) setPrices(resp.prices); })
       .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   if (error) {

@@ -118,16 +118,20 @@ export default function Configuration() {
   const [activeTab, setActiveTab] = useState('env');
 
   useEffect(() => {
-    loadConfig();
+    const ac = new AbortController();
+    loadConfig(ac.signal);
+    return () => ac.abort();
   }, []);
 
-  async function loadConfig() {
+  async function loadConfig(signal?: AbortSignal) {
     try {
-      const data = await configApi.get();
+      const data = await configApi.get({ signal });
       setConfig(data);
       setEnvValues(data.env || {});
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load configuration');
+      if ((err as Error).name !== 'AbortError') {
+        setError(err instanceof Error ? err.message : 'Failed to load configuration');
+      }
     } finally {
       setLoading(false);
     }
