@@ -3,7 +3,7 @@
  *
  * Intercepts issue dispatch for orgs/repos requiring approval before executing
  * fixes. Stores pending approvals in-process and exposes a REST API for
- * approval/rejection flow.
+ * approval/rejection flow. Auto-approves after 30 seconds if no action is taken.
  *
  * Routes (mounted at /api/approvals):
  *   GET    /api/approvals/pending        — List pending approvals
@@ -73,6 +73,16 @@ let approvalConfig: ApprovalGateConfig = { ...DEFAULT_CONFIG };
 
 // In-memory store for pending approvals
 const pendingApprovals = new Map<string, PendingApproval>();
+
+// ---------------------------------------------------------------------------
+// Auto-approve timer constants and map
+// ---------------------------------------------------------------------------
+
+/** How long to wait before auto-approving (30 seconds). */
+const AUTO_APPROVE_TIMEOUT_MS = 30_000;
+
+/** Map of approval ID to its auto-approve timer handle. Cleared on manual action. */
+const autoApproveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 // ---------------------------------------------------------------------------
 // Config management
@@ -172,6 +182,45 @@ export function checkRequiresApproval(params: {
     'Approval gate: created pending approval',
   );
 
+  // ── Auto-approve timer ───────────────────────────────────────────
+  // If not approved/rejected within 30 seconds, auto-approve it.
+  const timer = setTimeout(() => {
+    const current = pendingApprovals.get(approval.id);
+    if (current && current.status === 'pending') {
+      current.status = 'approved';
+      current.approvedAt = new Date().toISOString();
+      current.approvedBy = 'auto-approve-timer';
+      log.info(
+        {
+          approvalId: approval.id,
+          repo: `${repoOwner}/${repoName}`,
+          issueNumber,
+          issueTitle,
+        },
+        'Approval gate: auto-approved after timeout',
+      );
+
+      // Self-audit the auto-approval
+      logAdminAction({
+        adminId: 'auto-approve-timer',
+        action: 'approval.auto_approve',
+        resourceType: 'approval',
+        resourceId: approval.id,
+        details: {
+          repoOwner,
+          repoName,
+          issueNumber,
+          issueTitle,
+          reason: 'Auto-approve timer expired (30s)',
+        },
+        correlationId,
+      }).catch((err) => log.error({ err: String(err) }, 'Failed to log auto-approval audit'));
+    }
+    autoApproveTimers.delete(approval.id);
+  }, AUTO_APPROVE_TIMEOUT_MS);
+
+  autoApproveTimers.set(approval.id, timer);
+
   return { requiresApproval: true, approval };
 }
 
@@ -197,6 +246,13 @@ export function approveApproval(params: {
       'Approval gate: approval is not in pending state',
     );
     return null;
+  }
+
+  // Clear the auto-approve timer if it exists
+  const timer = autoApproveTimers.get(id);
+  if (timer) {
+    clearTimeout(timer);
+    autoApproveTimers.delete(id);
   }
 
   approval.status = 'approved';
@@ -254,6 +310,13 @@ export function rejectApproval(params: {
       'Approval gate: approval is not in pending state',
     );
     return null;
+  }
+
+  // Clear the auto-approve timer if it exists
+  const timer = autoApproveTimers.get(id);
+  if (timer) {
+    clearTimeout(timer);
+    autoApproveTimers.delete(id);
   }
 
   approval.status = 'rejected';
@@ -330,6 +393,12 @@ export function pruneOldApprovals(maxAgeMs: number = 86_400_000): number {
   for (const [id, approval] of pendingApprovals) {
     const requestedAt = new Date(approval.requestedAt).getTime();
     if (requestedAt < cutoff) {
+      // Clear any associated auto-approve timer
+      const timer = autoApproveTimers.get(id);
+      if (timer) {
+        clearTimeout(timer);
+        autoApproveTimers.delete(id);
+      }
       pendingApprovals.delete(id);
       pruned++;
     }
