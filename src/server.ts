@@ -43,7 +43,7 @@ import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import { de } from './i18n/de.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import { approvalRouter, configureApprovalGate } from './middleware/approvalGate.js';
-import { setupSentryExpressErrorHandler } from './monitoring/sentry.js';
+import { captureError, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { initWizardStore } from './onboarding/wizard.js';
 import { isConnected, publishMessage, QUEUES, connect as rmqConnect } from './queue/rabbitmq.js';
@@ -1181,7 +1181,15 @@ process.on('uncaughtException', (err) => {
 });
 
 process.on('unhandledRejection', (reason) => {
-  log.error({ module: 'server', err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection');
+  log.error(
+    { module: 'server', err: String(reason), stack: (reason as Error)?.stack },
+    'Unhandled promise rejection — shutting down',
+  );
+  captureError(reason instanceof Error ? reason : new Error(String(reason)), {
+    module: 'server',
+    type: 'unhandledRejection',
+  });
+  process.exit(1);
 });
 
 // -- Helper: Capture raw body for webhook signature verification -------------
