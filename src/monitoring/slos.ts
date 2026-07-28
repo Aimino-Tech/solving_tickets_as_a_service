@@ -171,12 +171,9 @@ export async function getAgentSuccessRate(): Promise<number> {
        FROM run_history
        WHERE created_at > NOW() - INTERVAL '24 hours'`,
     );
-    const row = result.rows[0];
-    const total = Number(row?.total ?? 0);
-    const succeeded = Number(row?.succeeded ?? 0);
+    const { total, succeeded } = result.rows[0] ?? { total: 0, succeeded: 0 };
     if (total === 0) return 0;
-    const rate = (succeeded / total) * 100;
-    return Number.isFinite(rate) ? Math.round(rate) : 0;
+    return Math.round((succeeded / total) * 100);
   } catch {
     return 0;
   }
@@ -193,12 +190,9 @@ export async function getUptime(): Promise<number> {
        FROM health_checks
        WHERE created_at > NOW() - INTERVAL '30 days'`,
     );
-    const row = result.rows[0];
-    const total = Number(row?.total ?? 0);
-    const healthy = Number(row?.healthy ?? 0);
-    if (total === 0) return 0;
-    const rate = (healthy / total) * 100;
-    return Number.isFinite(rate) ? rate : 0;
+    const { total, healthy } = result.rows[0] ?? { total: 0, healthy: 0 };
+    if (total === 0) return 100;
+    return (healthy / total) * 100;
   } catch {
     return 0;
   }

@@ -7,7 +7,7 @@ import { AuthError, authService } from './service.js';
 
 const log = rootLogger.child({ module: 'auth-routes' });
 
-const router = Router();
+const router: Router = Router();
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -72,7 +72,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
   }
 
   try {
-    const result = authService.refreshToken(parsed.data.refreshToken);
+    const result = await authService.refreshToken(parsed.data.refreshToken);
     res.json(result);
   } catch (err) {
     if (err instanceof AuthError) {

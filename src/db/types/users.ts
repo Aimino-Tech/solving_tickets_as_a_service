@@ -1,5 +1,5 @@
 export interface User {
-  id: number;
+  id: string;
   email: string;
   passwordHash: string;
   name: string | null;
@@ -8,7 +8,8 @@ export interface User {
 }
 
 export interface NewUser {
+  id?: string;
   email: string;
-  passwordHash: string;
+  passwordHash?: string;
   name?: string | null;
 }

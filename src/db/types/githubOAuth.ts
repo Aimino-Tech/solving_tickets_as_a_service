@@ -1,10 +1,11 @@
 export interface GitHubOAuthToken {
   id: number;
-  userId: number;
+  userId: string;
   accessTokenEncrypted: string;
   refreshTokenEncrypted: string | null;
   githubLogin: string;
   githubUserId: number;
+  avatarUrl?: string | null;
   tokenExpiresAt: Date | null;
   refreshTokenExpiresAt: Date | null;
   scope: string | null;
@@ -13,11 +14,12 @@ export interface GitHubOAuthToken {
 }
 
 export interface NewGitHubOAuthToken {
-  userId: number;
+  userId: string;
   accessTokenEncrypted: string;
   refreshTokenEncrypted?: string | null;
   githubLogin: string;
   githubUserId: number;
+  avatarUrl?: string | null;
   tokenExpiresAt?: Date | null;
   refreshTokenExpiresAt?: Date | null;
   scope?: string | null;
@@ -25,28 +27,30 @@ export interface NewGitHubOAuthToken {
 
 export interface GitHubInstallation {
   id: number;
-  userId: number;
+  userId: string;
   installationId: number;
   accountLogin: string;
   accountType: 'User' | 'Organization';
   repoScope: 'all' | 'selected';
   permissions: Record<string, unknown>;
+  avatarUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface NewGitHubInstallation {
-  userId: number;
+  userId: string;
   installationId: number;
   accountLogin: string;
   accountType: 'User' | 'Organization';
   repoScope?: 'all' | 'selected';
   permissions?: Record<string, unknown>;
+  avatarUrl?: string | null;
 }
 
 export interface GitHubWebhookConfig {
   id: number;
-  userId: number;
+  userId: string;
   installationId: number;
   repoOwner: string;
   repoName: string;
@@ -59,7 +63,7 @@ export interface GitHubWebhookConfig {
 }
 
 export interface NewGitHubWebhookConfig {
-  userId: number;
+  userId: string;
   installationId: number;
   repoOwner: string;
   repoName: string;
@@ -68,3 +72,7 @@ export interface NewGitHubWebhookConfig {
   active?: boolean;
   events?: string[];
 }
+
+// Aliases used by GitHubWebhookRepository
+export type GitHubWebhook = GitHubWebhookConfig;
+export type NewGitHubWebhook = NewGitHubWebhookConfig;

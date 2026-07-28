@@ -35,6 +35,7 @@ import express from 'express';
 import helmet from 'helmet';
 import previewRoutes from './api/routes/preview.js';
 import { trustRouter } from './api/routes/trust.js';
+
 import { streamAuditExportCsv, streamAuditExportJson } from './audit/export.js';
 import { registerSlackMentionHandler } from './channels/slack/handler.js';
 import { config } from './config.js';
@@ -70,7 +71,7 @@ import { pricingRouter } from './routes/pricing.js';
 import { proxyRouter } from './routes/proxy.js';
 import { qualityRouter } from './routes/quality.js';
 import { reposRouter } from './routes/repos.js';
-import { gitHubOAuthRouter } from './routes/github-oauth.js';
+import { gitHubOAuthRouter } from './routes/githubOAuth.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
 import { litellmUsageRouter } from './routes/litellmUsage.js';
@@ -647,6 +648,34 @@ export async function createApp(): Promise<express.Application> {
   // -- Health check endpoints --------------------------------------------------
   app.use(healthRouter);
 
+  // ── Monitoring Loop Status ────────────────────────────────────────
+  // GET /api/monitoring/status — Monitoring loop stats (JSON)
+  // GET /monitoring           — Monitoring dashboard (HTML)
+  app.get('/api/monitoring/status', async (_req: Request, res: Response) => {
+    try {
+      const mod = await import('./loops/monitoringLoop.js');
+      const stats = mod.monitoringLoop?.getStats();
+      if (!stats) {
+        res.json({ status: 'not_started' });
+        return;
+      }
+      res.json({
+        status: stats.enabled ? (stats.running ? 'running' : 'idle') : 'disabled',
+        ...stats,
+      });
+    } catch {
+      res.json({ status: 'error', message: 'Monitoring loop module not available' });
+    }
+  });
+  app.get('/monitoring', async (_req: Request, res: Response) => {
+    try {
+      const mod = await import('./routes/monitoringUi.js');
+      res.send(mod.html);
+    } catch {
+      res.status(500).send('Monitoring UI not available');
+    }
+  });
+
   // -- Feature flags admin API ------------------------------------------------
   app.use('/api/v1/admin/feature-flags', featureFlagsRouter);
 
@@ -665,6 +694,9 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/v1/billing', dpaRouter);
   // ── Billing API (subscriptions, plans, checkout) ─────────
   app.use('/api/v1/billing', billingRouter);
+
+  // ── Auth API (JWT) — MUST be before /api/v1 catch-all routers ────────
+  app.use('/api/v1/auth', authRouter);
 
   app.use('/api/v1', slaRouter);
 
@@ -688,9 +720,6 @@ export async function createApp(): Promise<express.Application> {
   // GET /admin/webhooks/sources
   // GET /admin/webhooks/stats
   app.use('/admin/webhooks', adminWebhooksRouter);
-
-  // ── Auth API (JWT) ───────────────────────────────────────────────
-  app.use('/api/v1/auth', authRouter);
 
   // ── Onboarding API ──────────────────────────────────────────────
   app.use('/api/v1/onboarding', onboardingRouter);
@@ -1099,13 +1128,28 @@ export async function startServer(): Promise<import('http').Server> {
 
 // -- Process-level error handlers --------------------------------------------
 
+let shuttingDown = false;
+
 process.on('uncaughtException', (err) => {
-  log.error({ err: String(err), stack: (err as Error).stack }, 'Uncaught exception -- shutting down');
+  log.error(
+    { module: 'server', err: String(err), stack: (err as Error).stack },
+    'Uncaught exception -- attempting graceful shutdown',
+  );
+
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  const forceExitTimer = setTimeout(() => {
+    log.error('Graceful shutdown timed out — forcing exit');
+    process.exit(1);
+  }, 10_000);
+  forceExitTimer.unref();
+
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
-  log.error({ err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection');
+  log.error({ module: 'server', err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection');
 });
 
 // -- Helper: Capture raw body for webhook signature verification -------------

@@ -1,4 +1,9 @@
-import type { Run, DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice, KpiResponse, PricingData, CostCalculation, VsComparisonData } from '@/api/types';
+import type {
+  Run, DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice,
+  KpiResponse, PricingData, CostCalculation, VsComparisonData,
+} from '@/api/types';
+
+export type { DashboardStats };
 
 const API_BASE = '/api';
 
@@ -75,9 +80,11 @@ export async function request<T>(
         }
       } catch {}
     }
-    clearToken();
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
+    if (path.includes('/auth/')) {
+      clearToken();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
     }
     throw new Error('Unauthorized');
   }
@@ -93,7 +100,7 @@ export async function request<T>(
 export interface AuthResult {
   token: string;
   refreshToken: string;
-  user: { id: number; email: string; name: string | null };
+  user: { id: string; email: string; name: string | null };
 }
 
 export interface CreditBalance {
@@ -131,6 +138,11 @@ export interface BillingPlan {
   concurrentFixes?: number;
 }
 
+export const litellm = {
+  usage: () =>
+    request<LitellmUsage>('/v1/litellm/usage'),
+};
+
 export interface HealthCheck {
   status: string;
   latencyMs?: number;
@@ -152,6 +164,18 @@ export interface SLAByTier {
   attainmentRate: number;
   p50: number | null;
   p95: number | null;
+}
+
+export interface LitellmUsage {
+  configured: boolean;
+  message?: string;
+  remainingBudget?: number;
+  tokensToday?: { input: number; output: number; total: number };
+  requestsToday?: number;
+  rateLimit?: { rpmRemaining: number; rpmLimit: number; tpmRemaining: number; tpmLimit: number; resetAt?: string };
+  budget?: { remainingBudget: number; spendInCurrentMonth: number; maxBudget: number };
+  todayTokens?: { input: number; output: number; total: number };
+  thisMonthTokens?: { input: number; output: number; total: number };
 }
 
 export interface SLAMetrics {
@@ -179,7 +203,7 @@ export const auth = {
       body: JSON.stringify({ email, password }),
     }),
   me: () =>
-    request<{ id: number; email: string; name: string | null; createdAt: string }>('/v1/auth/me'),
+    request<{ id: string; email: string; name: string | null; createdAt: string }>('/v1/auth/me'),
   refresh: (refreshToken: string) =>
     request<AuthResult>('/v1/auth/refresh', {
       method: 'POST',
@@ -374,52 +398,224 @@ export const health = {
     request<HealthResponse>('/health/verbose'),
 };
 
+export const settings = {
+  get: () =>
+    request<{
+      label: string;
+      model: string;
+      maxConcurrent: number;
+      sandboxPoolSize: number;
+      auditLogEnabled: boolean;
+    }>('/settings'),
+  update: (body: {
+    label: string;
+    model: string;
+    maxConcurrent: number;
+    sandboxPoolSize: number;
+    auditLogEnabled: boolean;
+  }) =>
+    request<{ success: boolean }>('/settings', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+};
+
+export const configApi = {
+  get: () =>
+    request<{
+      env: Record<string, string>;
+      rateLimits: Array<{ endpoint: string; limit: number; window: string }>;
+      tokens: Array<{ id: string; name: string; scopes: string[]; createdAt: string; lastUsed: string | null }>;
+      symphonies: Array<{ id: string; name: string; status: 'connected' | 'disconnected' | 'error'; endpoint: string; lastSync: string | null }>;
+      subscriptions: Array<{ id: string; event: string; channel: string; target: string; enabled: boolean }>;
+      warnings: Array<{ id: string; type: 'rate_limit' | 'quota' | 'token_expiry' | 'system'; message: string; severity: 'info' | 'warning' | 'critical'; dismissed: boolean; createdAt: string }>;
+      integrations: Array<{ id: string; name: string; icon: string; connected: boolean; configUrl?: string }>;
+      infrastructure: Record<string, { provider: string; host: string; port: number; status: 'connected' | 'disconnected' | 'error' }>;
+    }>('/v1/config'),
+  updateEnv: (env: Record<string, string>) =>
+    request<{ success: boolean }>('/v1/config/env', {
+      method: 'PUT',
+      body: JSON.stringify(env),
+    }),
+  updateRateLimits: (rateLimits: Array<{ endpoint: string; limit: number; window: string }>) =>
+    request<{ success: boolean }>('/v1/config/rate-limits', {
+      method: 'PUT',
+      body: JSON.stringify(rateLimits),
+    }),
+  regenerateToken: (tokenId: string) =>
+    request<{ success: boolean }>(`/v1/config/tokens/${tokenId}/regenerate`, { method: 'POST' }),
+  revokeToken: (tokenId: string) =>
+    request<{ success: boolean }>(`/v1/config/tokens/${tokenId}`, { method: 'DELETE' }),
+  toggleIntegration: (id: string, connected: boolean) =>
+    request<{ success: boolean }>(`/v1/config/integrations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ connected }),
+    }),
+  testInfrastructure: (provider: string) =>
+    request<{ status: string }>(`/v1/config/infrastructure/${provider}/test`, { method: 'POST' }),
+};
+
 export const sla = {
   getMetrics: () =>
     request<SLAMetrics>('/v1/sla/metrics'),
 };
 
+// -- Stats / Analytics API --
+
 export const stats = {
-  get: () => request<DashboardStats>('/v1/stats'),
+  get: () =>
+    request<DashboardStats>('/v1/stats'),
 };
+
+// -- Audit Log API --
 
 export const audit = {
-  list: (params?: { page?: number; perPage?: number }) => {
-    const qs = new URLSearchParams();
-    if (params?.page) qs.set('page', String(params.page));
-    if (params?.perPage) qs.set('perPage', String(params.perPage));
-    return request<PaginatedResponse<AuditEntry>>(`/v1/audit?${qs.toString()}`);
-  },
+  list: (params: { page: number; perPage: number }) =>
+    request<{
+      data: {
+        id: string;
+        action: string;
+        actor: string;
+        target?: string;
+        details?: Record<string, unknown>;
+        createdAt: string;
+      }[];
+      total: number;
+      page: number;
+      perPage: number;
+      totalPages: number;
+    }>(`/v1/audit?page=${params.page}&perPage=${params.perPage}`),
 };
+
+// -- Benchmarks API --
 
 export const benchmarks = {
-  get: () => request<{ competitors: BenchmarkEntry[] }>('/v1/benchmarks'),
-  getPrices: () => request<{ prices: BenchmarkPrice[] }>('/v1/benchmarks/prices'),
+  get: () =>
+    request<{
+      competitors: {
+        agent: string;
+        passRate: number;
+        costPerFixCents: number;
+        agentNative: boolean;
+        oss: boolean;
+        selfHostable: boolean;
+        note?: string;
+      }[];
+    }>('/v1/benchmarks'),
+  getPrices: () =>
+    request<{
+      prices: {
+        agent: string;
+        model: string;
+        costPerFixCents: number;
+        monthlyMinCents: number;
+        monthlyMaxFixes: number;
+      }[];
+    }>('/v1/benchmarks/prices'),
 };
+
+// -- KPI API --
 
 export const kpi = {
-  get: (params?: { days?: number }) => {
-    const qs = new URLSearchParams();
-    if (params?.days) qs.set('days', String(params.days));
-    return request<KpiResponse>(`/v1/kpi?${qs.toString()}`);
-  },
-  exportUrl: (days?: number) => {
-    const qs = new URLSearchParams();
-    if (days) qs.set('days', String(days));
-    return `/api/v1/kpi/export?${qs.toString()}`;
-  },
+  get: (params: { days: number }) =>
+    request<{
+      metrics: {
+        id: number;
+        snapshotDate: string;
+        activeReposMa: number;
+        fixCompletionRate: number;
+        totalRuns: number;
+        successfulRuns: number;
+        freeAccounts: number;
+        paidAccounts: number;
+        freeToPaidConversion: number;
+        netRevenueCents: number;
+        churnRate: number;
+        churnedAccounts: number;
+        viralCoefficient: number;
+        referredAccounts: number;
+        totalNewAccounts: number;
+      }[];
+      count: number;
+      generatedAt: string;
+    }>(`/v1/admin/kpi?days=${params.days}`),
+  exportUrl: (days: number) =>
+    `/api/v1/admin/kpi/export?days=${days}`,
 };
 
-export const settings = {
-  get: () => request<{ label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }>('/v1/settings'),
-  update: (data: { label: string; model: string; maxConcurrent: number; sandboxPoolSize: number; auditLogEnabled: boolean }) =>
-    request<{ success: boolean }>('/v1/settings', { method: 'PUT', body: JSON.stringify(data) }),
-};
+// -- Pricing API --
 
 export const pricing = {
-  get: () => request<PricingData>('/v1/pricing'),
-  calculate: (fixesPerMonth: number, tier: string) =>
-    request<CostCalculation>(`/v1/pricing/calculate?fixesPerMonth=${fixesPerMonth}&tier=${tier}`),
+  get: () =>
+    request<{
+      plans: {
+        id: string;
+        name: string;
+        description: string;
+        price: string;
+        period: string;
+        fixes: string;
+        monthlyFixLimit: number;
+        concurrentFixes: number;
+        premiumModels: boolean;
+        prioritySupport: boolean;
+        customWebhooks: boolean;
+        sla: boolean;
+        features: string[];
+        cta: string;
+        highlighted: boolean;
+      }[];
+      competitors: {
+        competitor: string;
+        monthlyCostCents: number;
+        costPerFixCents: number;
+        fixesPerMonth: number;
+        passRate: number;
+        selfHosted: boolean;
+        openSource: boolean;
+        ourAgi: boolean;
+      }[];
+    }>('/v1/pricing'),
+  calculate: (fixes: number, tier: string) =>
+    request<{
+      fixesPerMonth: number;
+      monthlyCostCents: number;
+      costPerFixCents: number;
+      vsCompetitors: {
+        name: string;
+        monthlyCostCents: number;
+        savingsCents: number;
+        savingsPercent: number;
+      }[];
+    }>(`/v1/pricing/calculate?fixes=${fixes}&tier=${tier}`),
   vs: (competitor: string) =>
-    request<VsComparisonData>(`/v1/pricing/vs/${competitor}`),
+    request<{
+      competitor: string;
+      competitorName: string;
+      tagline: string;
+      ourAdvantage: string;
+      categories: {
+        name: string;
+        items: {
+          feature: string;
+          us: string;
+          them: string;
+          advantage: 'us' | 'them' | 'tie';
+        }[];
+      }[];
+      priceComparison: {
+        ourMonthlyCents: number;
+        theirMonthlyCents: number;
+        ourPerFixCents: number;
+        theirPerFixCents: number;
+        annualSavingsCents: number;
+      };
+      benchmarkComparison: {
+        ourPassRate: number;
+        theirPassRate: number;
+        ourCostPerFixCents: number;
+        theirCostPerFixCents: number;
+      };
+    }>(`/v1/pricing/vs/${competitor}`),
 };
+

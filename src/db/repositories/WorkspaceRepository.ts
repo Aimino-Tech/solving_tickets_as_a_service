@@ -88,6 +88,11 @@ export class WorkspaceRepository {
     );
     return result.rows[0];
   }
+
+  async deletePermanent(id: string): Promise<boolean> {
+    const result = await queryWithRetry('DELETE FROM workspaces WHERE id = $1', [id]);
+    return (result.rowCount ?? 0) > 0;
+  }
 }
 
 export const workspaceRepository = new WorkspaceRepository();

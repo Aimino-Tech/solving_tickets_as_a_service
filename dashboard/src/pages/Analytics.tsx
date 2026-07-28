@@ -94,12 +94,12 @@ export default function Analytics() {
       </div>
 
       {/* LiteLLM Usage */}
-      {litellmUsage && (
+      {litellmData && (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
-          <MetricCard label="Remaining Budget" value={`$${litellmUsage.remainingBudget.toFixed(2)}`} trend={litellmUsage.remainingBudget > 10 ? 'up' : litellmUsage.remainingBudget > 2 ? 'neutral' : 'down'} />
-          <MetricCard label="Tokens Today" value={formatNumber(litellmUsage.tokensToday.total)} trend="neutral" />
-          <MetricCard label="Requests Today" value={String(litellmUsage.requestsToday)} trend="neutral" />
-          <MetricCard label="RPM Left" value={`${litellmUsage.rateLimit.rpmRemaining} / ${litellmUsage.rateLimit.rpmLimit}`} trend={litellmUsage.rateLimit.rpmRemaining > 50 ? 'up' : 'down'} />
+          <MetricCard label="Remaining Budget" value={`$${litellmData.remainingBudget?.toFixed(2) ?? '0.00'}`} trend={litellmData.remainingBudget && litellmData.remainingBudget > 10 ? 'up' : litellmData.remainingBudget && litellmData.remainingBudget > 2 ? 'neutral' : 'down'} />
+          <MetricCard label="Tokens Today" value={formatNumber(litellmData.tokensToday?.total ?? 0)} trend="neutral" />
+          <MetricCard label="Requests Today" value={String(litellmData.requestsToday ?? 0)} trend="neutral" />
+          <MetricCard label="RPM Left" value={`${litellmData.rateLimit?.rpmRemaining ?? 0} / ${litellmData.rateLimit?.rpmLimit ?? 0}`} trend={litellmData.rateLimit && litellmData.rateLimit.rpmRemaining > 50 ? 'up' : 'down'} />
         </div>
       )}
 
@@ -202,17 +202,17 @@ export default function Analytics() {
             <div className="card">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Today Tokens</h3>
               <div className="mt-3 space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-gray-500">Input</span><span className="font-medium text-gray-900">{(litellmData.todayTokens.input ?? 0).toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-500">Output</span><span className="font-medium text-gray-900">{(litellmData.todayTokens.output ?? 0).toLocaleString()}</span></div>
-                <div className="flex justify-between border-t border-gray-100 pt-2 text-sm"><span className="font-medium text-gray-700">Total</span><span className="font-bold text-gray-900">{(litellmData.todayTokens.total ?? 0).toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">Input</span><span className="font-medium text-gray-900">{(litellmData.todayTokens?.input ?? 0).toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">Output</span><span className="font-medium text-gray-900">{(litellmData.todayTokens?.output ?? 0).toLocaleString()}</span></div>
+                <div className="flex justify-between border-t border-gray-100 pt-2 text-sm"><span className="font-medium text-gray-700">Total</span><span className="font-bold text-gray-900">{(litellmData.todayTokens?.total ?? 0).toLocaleString()}</span></div>
               </div>
             </div>
             <div className="card">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">This Month Tokens</h3>
               <div className="mt-3 space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-gray-500">Input</span><span className="font-medium text-gray-900">{(litellmData.thisMonthTokens.input ?? 0).toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-500">Output</span><span className="font-medium text-gray-900">{(litellmData.thisMonthTokens.output ?? 0).toLocaleString()}</span></div>
-                <div className="flex justify-between border-t border-gray-100 pt-2 text-sm"><span className="font-medium text-gray-700">Total</span><span className="font-bold text-gray-900">{(litellmData.thisMonthTokens.total ?? 0).toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">Input</span><span className="font-medium text-gray-900">{(litellmData.thisMonthTokens?.input ?? 0).toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">Output</span><span className="font-medium text-gray-900">{(litellmData.thisMonthTokens?.output ?? 0).toLocaleString()}</span></div>
+                <div className="flex justify-between border-t border-gray-100 pt-2 text-sm"><span className="font-medium text-gray-700">Total</span><span className="font-bold text-gray-900">{(litellmData.thisMonthTokens?.total ?? 0).toLocaleString()}</span></div>
               </div>
             </div>
           </div>

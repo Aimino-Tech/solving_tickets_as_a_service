@@ -78,7 +78,7 @@ function initializeProxy(): ProxyModule {
 
   const modelRouterEnabled = config.proxy.modelRouterEnabled;
   const githubActionsDispatchEnabled = config.proxy.githubActionsDispatchEnabled;
-  const hasPat = !!config.proxy.githubPat;
+  const hasPat = !!config.proxy.pat;
 
   log.info(
     {

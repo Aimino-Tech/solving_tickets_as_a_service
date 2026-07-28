@@ -14,7 +14,7 @@ export interface DispatchResult {
 }
 
 export async function dispatchToOpenSymphony(data: IssueJobData): Promise<DispatchResult> {
-  const celeryEnabled = config.opensymphony?.celeryPipeline === true;
+  const celeryEnabled = config.opensymphony?.celeryPipeline?.enabled === true;
 
   if (celeryEnabled) {
     const result = await dispatchFullPipeline(data);

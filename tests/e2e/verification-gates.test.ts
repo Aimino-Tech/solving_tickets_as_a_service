@@ -180,15 +180,15 @@ describe('Verification Gates: Infrastructure Configuration', () => {
     });
 
     it('IP allowlist middleware exists', () => {
-      expect(
-        fs.existsSync(path.join(PROJECT_ROOT, 'src/security/ipAllowlist.js')),
-      ).toBe(true);
+      const exists = fs.existsSync(path.join(PROJECT_ROOT, 'src/security/ipAllowlist.js')) ||
+                     fs.existsSync(path.join(PROJECT_ROOT, 'src/security/ipAllowlist.ts'));
+      expect(exists).toBe(true);
     });
 
     it('Admin auth middleware exists', () => {
-      expect(
-        fs.existsSync(path.join(PROJECT_ROOT, 'src/security/adminAuth.js')),
-      ).toBe(true);
+      const exists = fs.existsSync(path.join(PROJECT_ROOT, 'src/security/adminAuth.js')) ||
+                     fs.existsSync(path.join(PROJECT_ROOT, 'src/security/adminAuth.ts'));
+      expect(exists).toBe(true);
     });
   });
 

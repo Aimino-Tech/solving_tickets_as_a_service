@@ -29,6 +29,7 @@ import {
   checkWorkerHeartbeats,
   checkSLOCompliance,
 } from '../monitoring/alerting.js';
+import { startMonitoringLoop, stopMonitoringLoop } from '../loops/monitoringLoop.js';
 import {
   checkQueueDepthAnomaly,
   checkErrorRateSpike,
@@ -37,7 +38,7 @@ import {
   checkWorkerHealth as checkWorkerAnomaly,
   checkDbPoolUsage,
 } from '../monitoring/anomalyDetection.js';
-import { sendLowCreditAlerts } from '../credits/index.js';
+import { findLowCreditAccounts, sendLowCreditAlerts } from '../credits/index.js';
 
 const log = rootLogger.child({ module: 'scheduled' });
 
@@ -178,6 +179,13 @@ async function cleanupDLQ(): Promise<void> {
 
 // ── Low Credit Warning Check (AIM-3525) ──────────────────────
 
+async function checkLowCreditAccounts(): Promise<void> {
+  const accounts = await findLowCreditAccounts();
+  if (accounts.length > 0) {
+    log.warn({ count: accounts.length }, 'Low-credit accounts detected');
+  }
+}
+
 async function runLowCreditWarning(): Promise<void> {
   try {
     await checkLowCreditAccounts();
@@ -212,6 +220,9 @@ export function startScheduledTasks(): void {
     },
     'Starting scheduled maintenance tasks',
   );
+
+  // Monitoring loop (Phase 2) — detects errors from DB/webhooks and creates Linear tickets
+  startMonitoringLoop();
 
   // Queue depth check (on interval matching queueDepthAlertMinutes)
   timers.push(setInterval(checkQueueDepths, QUEUE_DEPTH_CHECK_INTERVAL_MS));
@@ -263,5 +274,6 @@ export function stopScheduledTasks(): void {
     clearInterval(timer);
   }
   timers.length = 0;
+  stopMonitoringLoop();
   log.info('Scheduled maintenance tasks stopped');
 }

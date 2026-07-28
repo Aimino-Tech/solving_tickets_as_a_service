@@ -10,7 +10,7 @@ const router: Router = Router();
 
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const accountId = req.user!.accountId;
+    const accountId = Number(req.user!.id);
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(Math.max(1, Number(req.query.perPage) || 20), 100);
     const offset = (page - 1) * limit;
@@ -54,7 +54,16 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
-    log.error({ err: String(err) }, 'Failed to list runs');
+    log.error(
+      {
+        err: String(err),
+        accountId: (req as any).user?.accountId,
+        page,
+        limit,
+        statusFilter: status,
+      },
+      'Failed to list runs',
+    );
     res.status(500).json({ error: 'Failed to list runs' });
   }
 });
