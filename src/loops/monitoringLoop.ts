@@ -28,6 +28,9 @@ interface ProcessedError {
 }
 
 const PINO_ERROR_LEVEL = 50;
+const MAX_TICKETS_PER_CYCLE = 5;
+const CIRCUIT_BREAKER_THRESHOLD = 10;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 300_000;
 
 export interface MonitoringStats {
   enabled: boolean;
@@ -54,6 +57,9 @@ export class MonitoringLoop {
   private running = false;
   private redis: Redis | null = null;
   private redisReady = false;
+
+  private consecutiveCreateFailures = 0;
+  private circuitBreakerOpenUntil: number | null = null;
 
   private stats = {
     lastRunAt: null as string | null,
@@ -203,8 +209,21 @@ export class MonitoringLoop {
         return;
       }
 
+      if (this.circuitBreakerOpenUntil && Date.now() < this.circuitBreakerOpenUntil) {
+        log.warn(
+          { remainingMs: this.circuitBreakerOpenUntil - Date.now() },
+          'Ticket creation circuit breaker open — skipping this cycle',
+        );
+        return;
+      }
+
+      const batch = errors.slice(0, MAX_TICKETS_PER_CYCLE);
+      if (batch.length < errors.length) {
+        log.info({ total: errors.length, capped: batch.length }, 'Rate limiting ticket creation to max per cycle');
+      }
+
       let created = 0;
-      for (const err of errors) {
+      for (const err of batch) {
         try {
           const dup = await this.redisGet(`monitoring:dup:${err.key}`);
           if (dup) {
@@ -228,6 +247,14 @@ export class MonitoringLoop {
           log.info({ key: err.key, ticketUrl: ticket.url }, 'MonitoringLoop: created ticket');
         } catch (createErr) {
           this.stats.lastError = String(createErr).slice(0, 500);
+          this.consecutiveCreateFailures++;
+          if (this.consecutiveCreateFailures >= CIRCUIT_BREAKER_THRESHOLD) {
+            this.circuitBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_COOLDOWN_MS;
+            log.warn(
+              { consecutiveFailures: this.consecutiveCreateFailures, cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS },
+              'Ticket creation circuit breaker opened — pausing for 5 minutes',
+            );
+          }
           log.error({ err: String(createErr), key: err.key }, 'MonitoringLoop: failed to create ticket');
         }
       }
