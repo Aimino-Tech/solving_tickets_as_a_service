@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { audit } from '@/api/client';
 import type { AuditEntry, PaginatedResponse } from '@/api/types';
-import { formatRelativeTime } from '@/utils/format';
 
 const ACTION_ICONS: Record<string, string> = {
   run_started: '▶',
@@ -32,24 +31,37 @@ export default function AuditLog() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const latestRequestRef = useRef(0);
 
   function loadPage(p: number) {
+    const requestId = Date.now();
+    latestRequestRef.current = requestId;
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
     audit
-      .list({ page: p, perPage: 30 })
+      .list({ page: p, perPage: 30 }, controller.signal)
       .then((res: PaginatedResponse<AuditEntry>) => {
+        if (latestRequestRef.current !== requestId) return;
         setEntries(res.data);
         setTotal(res.total);
         setTotalPages(res.totalPages);
         setPage(res.page);
       })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err: Error) => {
+        if (latestRequestRef.current !== requestId) return;
+        if (err.name === 'AbortError') return;
+        setError(err.message);
+      })
+      .finally(() => {
+        if (latestRequestRef.current === requestId) setLoading(false);
+      });
+    return controller;
   }
 
   useEffect(() => {
-    loadPage(page);
+    const controller = loadPage(page);
+    return () => controller.abort();
   }, [page]);
 
   function formatAction(action: string): string {

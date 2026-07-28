@@ -139,8 +139,8 @@ export interface BillingPlan {
 }
 
 export const litellm = {
-  usage: () =>
-    request<LitellmUsage>('/v1/litellm/usage'),
+  usage: (signal?: AbortSignal) =>
+    request<LitellmUsage>('/v1/litellm/usage', signal ? { signal } : undefined),
 };
 
 export interface HealthCheck {
@@ -214,19 +214,21 @@ export const auth = {
 };
 
 export const credits = {
-  balance: () => request<CreditBalance>('/v1/credits/balance'),
-  transactions: (limit = 50, offset = 0) =>
+  balance: (signal?: AbortSignal) => request<CreditBalance>('/v1/credits/balance', signal ? { signal } : undefined),
+  transactions: (limit = 50, offset = 0, signal?: AbortSignal) =>
     request<{ transactions: Transaction[]; pagination: { limit: number; offset: number; total: number } }>(
       `/v1/credits/transactions?limit=${limit}&offset=${offset}`,
+      signal ? { signal } : undefined,
     ),
   topUp: (priceId: string, successUrl: string, cancelUrl: string) =>
     request<{ url: string; sessionId: string }>('/v1/credits/top-up', {
       method: 'POST',
       body: JSON.stringify({ priceId, successUrl, cancelUrl }),
     }),
-  usage: (period: 'daily' | 'weekly' | 'monthly' = 'monthly') =>
+  usage: (period: 'daily' | 'weekly' | 'monthly' = 'monthly', signal?: AbortSignal) =>
     request<{ accountId: number; period: string; usage: MonthlyUsage[] }>(
       `/v1/credits/usage?period=${period}`,
+      signal ? { signal } : undefined,
     ),
 };
 
@@ -238,7 +240,7 @@ export const runs = {
     repo?: string;
     from?: string;
     to?: string;
-  }) => {
+  }, signal?: AbortSignal) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
     if (params?.perPage) qs.set('perPage', String(params.perPage));
@@ -249,9 +251,10 @@ export const runs = {
     const query = qs.toString();
     return request<{ data: Run[]; total: number; page: number; perPage: number; totalPages: number }>(
       `/v1/runs${query ? `?${query}` : ''}`,
+      signal ? { signal } : undefined,
     );
   },
-  get: (id: string) => request<Run>(`/v1/runs/${id}`),
+  get: (id: string, signal?: AbortSignal) => request<Run>(`/v1/runs/${id}`, signal ? { signal } : undefined),
   feedbackSubmit: (id: string, verdict: string, comment?: string) =>
     request<{ success: boolean }>(`/v1/runs/${id}/feedback`, {
       method: 'POST',
@@ -295,8 +298,8 @@ export interface GitHubConnectionStatus {
 }
 
 export const repos = {
-  list: () =>
-    request<{ id: string; owner: string; repo: string; active: boolean; createdAt: string }[]>('/repos'),
+  list: (signal?: AbortSignal) =>
+    request<{ id: string; owner: string; repo: string; active: boolean; createdAt: string }[]>('/repos', signal ? { signal } : undefined),
   connect: (body: { owner: string; repo: string; installationId?: number }) =>
     request<{ id: string; owner: string; repo: string; active: boolean }>('/repos', {
       method: 'POST',
@@ -309,17 +312,18 @@ export const repos = {
 export const github = {
   getOAuthUrl: () =>
     request<{ url: string }>('/v1/auth/github/url', { method: 'POST' }),
-  handleCallback: (code: string) =>
+  handleCallback: (code: string, signal?: AbortSignal) =>
     request<{ githubLogin: string; githubUserId: number; avatarUrl: string }>('/v1/auth/github/callback', {
       method: 'POST',
       body: JSON.stringify({ code }),
+      ...(signal ? { signal } : {}),
     }),
-  getStatus: () =>
-    request<GitHubConnectionStatus>('/v1/auth/github/status'),
+  getStatus: (signal?: AbortSignal) =>
+    request<GitHubConnectionStatus>('/v1/auth/github/status', signal ? { signal } : undefined),
   disconnect: () =>
     request<{ success: boolean }>('/v1/auth/github/disconnect', { method: 'DELETE' }),
-  listInstallations: () =>
-    request<{ installations: GitHubInstallation[] }>('/v1/github/installations'),
+  listInstallations: (signal?: AbortSignal) =>
+    request<{ installations: GitHubInstallation[] }>('/v1/github/installations', signal ? { signal } : undefined),
   syncInstallation: (body: { installationId: number; accountLogin: string; accountType?: string; repoScope?: string }) =>
     request<{ success: boolean }>('/v1/github/installations/sync', {
       method: 'POST',
@@ -392,21 +396,21 @@ export const onboarding = {
 };
 
 export const health = {
-  getStatus: () =>
-    request<HealthResponse>('/health'),
-  getVerbose: () =>
-    request<HealthResponse>('/health/verbose'),
+  getStatus: (signal?: AbortSignal) =>
+    request<HealthResponse>('/health', signal ? { signal } : undefined),
+  getVerbose: (signal?: AbortSignal) =>
+    request<HealthResponse>('/health/verbose', signal ? { signal } : undefined),
 };
 
 export const settings = {
-  get: () =>
+  get: (signal?: AbortSignal) =>
     request<{
       label: string;
       model: string;
       maxConcurrent: number;
       sandboxPoolSize: number;
       auditLogEnabled: boolean;
-    }>('/settings'),
+    }>('/settings', signal ? { signal } : undefined),
   update: (body: {
     label: string;
     model: string;
@@ -421,7 +425,7 @@ export const settings = {
 };
 
 export const configApi = {
-  get: () =>
+  get: (signal?: AbortSignal) =>
     request<{
       env: Record<string, string>;
       rateLimits: Array<{ endpoint: string; limit: number; window: string }>;
@@ -431,7 +435,7 @@ export const configApi = {
       warnings: Array<{ id: string; type: 'rate_limit' | 'quota' | 'token_expiry' | 'system'; message: string; severity: 'info' | 'warning' | 'critical'; dismissed: boolean; createdAt: string }>;
       integrations: Array<{ id: string; name: string; icon: string; connected: boolean; configUrl?: string }>;
       infrastructure: Record<string, { provider: string; host: string; port: number; status: 'connected' | 'disconnected' | 'error' }>;
-    }>('/v1/config'),
+    }>('/v1/config', signal ? { signal } : undefined),
   updateEnv: (env: Record<string, string>) =>
     request<{ success: boolean }>('/v1/config/env', {
       method: 'PUT',
@@ -456,21 +460,21 @@ export const configApi = {
 };
 
 export const sla = {
-  getMetrics: () =>
-    request<SLAMetrics>('/v1/sla/metrics'),
+  getMetrics: (signal?: AbortSignal) =>
+    request<SLAMetrics>('/v1/sla/metrics', signal ? { signal } : undefined),
 };
 
 // -- Stats / Analytics API --
 
 export const stats = {
-  get: () =>
-    request<DashboardStats>('/v1/stats'),
+  get: (signal?: AbortSignal) =>
+    request<DashboardStats>('/v1/stats', signal ? { signal } : undefined),
 };
 
 // -- Audit Log API --
 
 export const audit = {
-  list: (params: { page: number; perPage: number }) =>
+  list: (params: { page: number; perPage: number }, signal?: AbortSignal) =>
     request<{
       data: {
         id: string;
@@ -484,13 +488,13 @@ export const audit = {
       page: number;
       perPage: number;
       totalPages: number;
-    }>(`/v1/audit?page=${params.page}&perPage=${params.perPage}`),
+    }>(`/v1/audit?page=${params.page}&perPage=${params.perPage}`, signal ? { signal } : undefined),
 };
 
 // -- Benchmarks API --
 
 export const benchmarks = {
-  get: () =>
+  get: (signal?: AbortSignal) =>
     request<{
       competitors: {
         agent: string;
@@ -501,8 +505,8 @@ export const benchmarks = {
         selfHostable: boolean;
         note?: string;
       }[];
-    }>('/v1/benchmarks'),
-  getPrices: () =>
+    }>('/v1/benchmarks', signal ? { signal } : undefined),
+  getPrices: (signal?: AbortSignal) =>
     request<{
       prices: {
         agent: string;
@@ -511,13 +515,13 @@ export const benchmarks = {
         monthlyMinCents: number;
         monthlyMaxFixes: number;
       }[];
-    }>('/v1/benchmarks/prices'),
+    }>('/v1/benchmarks/prices', signal ? { signal } : undefined),
 };
 
 // -- KPI API --
 
 export const kpi = {
-  get: (params: { days: number }) =>
+  get: (params: { days: number }, signal?: AbortSignal) =>
     request<{
       metrics: {
         id: number;
@@ -538,7 +542,7 @@ export const kpi = {
       }[];
       count: number;
       generatedAt: string;
-    }>(`/v1/admin/kpi?days=${params.days}`),
+    }>(`/v1/admin/kpi?days=${params.days}`, signal ? { signal } : undefined),
   exportUrl: (days: number) =>
     `/api/v1/admin/kpi/export?days=${days}`,
 };
@@ -546,7 +550,7 @@ export const kpi = {
 // -- Pricing API --
 
 export const pricing = {
-  get: () =>
+  get: (signal?: AbortSignal) =>
     request<{
       plans: {
         id: string;
@@ -575,8 +579,8 @@ export const pricing = {
         openSource: boolean;
         ourAgi: boolean;
       }[];
-    }>('/v1/pricing'),
-  calculate: (fixes: number, tier: string) =>
+    }>('/v1/pricing', signal ? { signal } : undefined),
+  calculate: (fixes: number, tier: string, signal?: AbortSignal) =>
     request<{
       fixesPerMonth: number;
       monthlyCostCents: number;
@@ -587,7 +591,7 @@ export const pricing = {
         savingsCents: number;
         savingsPercent: number;
       }[];
-    }>(`/v1/pricing/calculate?fixes=${fixes}&tier=${tier}`),
+    }>(`/v1/pricing/calculate?fixes=${fixes}&tier=${tier}`, signal ? { signal } : undefined),
   vs: (competitor: string) =>
     request<{
       competitor: string;
@@ -618,4 +622,3 @@ export const pricing = {
       };
     }>(`/v1/pricing/vs/${competitor}`),
 };
-

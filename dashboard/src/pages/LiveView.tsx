@@ -29,22 +29,33 @@ export default function LiveView() {
   const [loading, setLoading] = useState(true);
   const [time, setTime] = useState(new Date());
 
-  const fetchRuns = useCallback(async () => {
+  const fetchRuns = useCallback(async (signal?: AbortSignal) => {
     try {
-      const data = await runs.list({ perPage: 10 });
-      setRecentRuns(data.data ?? data ?? []);
+      const data = await runs.list({ perPage: 10 }, signal);
+      if (!signal?.aborted) setRecentRuns(data.data ?? data ?? []);
     } catch { /* ignore */ }
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchRuns(); const i = setInterval(fetchRuns, POLL_INTERVAL_MS); return () => clearInterval(i); }, [fetchRuns]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchRuns(controller.signal);
+    const i = setInterval(() => {
+      const c = new AbortController();
+      fetchRuns(c.signal);
+    }, POLL_INTERVAL_MS);
+    return () => { controller.abort(); clearInterval(i); };
+  }, [fetchRuns]);
+
   useEffect(() => { const i = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(i); }, []);
 
-  const queueDepth = recentRuns.filter(r => r.status === 'queued' || r.status === 'running').length;
+  const completedRuns = recentRuns.filter(r => r.status === 'success' || r.status === 'failed');
+  const queueDepth = recentRuns.filter(r => r.status === 'queued').length;
   const activeFixes = recentRuns.filter(r => r.status === 'running').length;
-  const successCount = recentRuns.filter(r => r.status === 'success').length;
-  const successRate = recentRuns.length > 0 ? Math.round((successCount / recentRuns.length) * 100) : 0;
-  const avgDuration = recentRuns.reduce((s, r) => s + (r.durationSeconds ?? 0), 0) / Math.max(recentRuns.length, 1);
+  const successCount = completedRuns.filter(r => r.status === 'success').length;
+  const successRate = completedRuns.length > 0 ? Math.round((successCount / completedRuns.length) * 100) : 0;
+  const completedDurations = recentRuns.filter(r => r.status === 'success' || r.status === 'failed').map(r => r.durationSeconds ?? 0);
+  const avgDuration = completedDurations.length > 0 ? completedDurations.reduce((s, d) => s + d, 0) / completedDurations.length : 0;
 
   const metrics: MetricCard[] = METRICS.map(m => {
     if (m.label === 'Queue Depth') return { ...m, value: String(queueDepth) };
@@ -108,7 +119,7 @@ export default function LiveView() {
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-gray-100">
                 {run.repoOwner}/{run.repoName}#{run.issueNumber}
               </span>
-              <span className="hidden text-xs text-gray-500 sm:inline dark:text-gray-400">{run.durationSeconds ? `${run.durationSeconds}s` : '—'}</span>
+              <span className="hidden text-xs text-gray-500 sm:inline dark:text-gray-400">{run.durationSeconds != null && run.durationSeconds > 0 ? `${run.durationSeconds}s` : '—'}</span>
               <span className="hidden text-xs text-gray-500 sm:inline dark:text-gray-400">{run.createdAt ? formatDateTime(run.createdAt) : ''}</span>
               {run.id && <Link to={`/runs/${run.id}`} className="text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">View</Link>}
             </div>

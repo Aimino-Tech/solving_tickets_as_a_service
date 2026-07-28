@@ -21,23 +21,27 @@ export default function Monitoring() {
   const [data, setData] = useState<MonitoringData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch('/api/monitoring/status');
+      const res = await fetch('/api/monitoring/status', signal ? { signal } : undefined);
       if (!res.ok) return;
       const json = await res.json();
-      setData(json);
+      if (!signal?.aborted) setData(json);
     } catch {
       // ignore polling errors
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, POLL_INTERVAL);
-    return () => clearInterval(interval);
+    const controller = new AbortController();
+    fetchStatus(controller.signal);
+    const interval = setInterval(() => {
+      const c = new AbortController();
+      fetchStatus(c.signal);
+    }, POLL_INTERVAL);
+    return () => { controller.abort(); clearInterval(interval); };
   }, [fetchStatus]);
 
   function fmtBytes(bytes: number): string {

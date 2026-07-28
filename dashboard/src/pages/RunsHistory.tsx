@@ -18,13 +18,22 @@ export default function RunsHistory() {
   const repoFilter = searchParams.get('repo') || '';
 
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
     setLoading(true);
     setError(null);
     runs
-      .list({ page, perPage: 20, status: statusFilter || undefined, repo: repoFilter || undefined })
-      .then(setData)
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .list({ page, perPage: 20, status: statusFilter || undefined, repo: repoFilter || undefined }, signal)
+      .then((d) => {
+        if (!signal.aborted) setData(d);
+      })
+      .catch((err: Error) => {
+        if (!signal.aborted) setError(err.message);
+      })
+      .finally(() => {
+        if (!signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, [page, statusFilter, repoFilter]);
 
   function updateFilter(key: string, value: string) {
@@ -34,7 +43,7 @@ export default function RunsHistory() {
     } else {
       params.delete(key);
     }
-    params.delete('page');
+    if (key !== 'page') params.delete('page');
     setSearchParams(params);
   }
 

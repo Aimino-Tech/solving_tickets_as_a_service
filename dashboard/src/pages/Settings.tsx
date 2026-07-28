@@ -67,20 +67,29 @@ export default function Settings() {
   }
 
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
     settings
-      .get()
+      .get(signal)
       .then((data: any) => {
-        setConfig(data);
-        setForm(data);
+        if (!signal.aborted) {
+          setConfig(data);
+          setForm(data);
+        }
       })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err: Error) => {
+        if (!signal.aborted) setError(err.message);
+      })
+      .finally(() => {
+        if (!signal.aborted) setLoading(false);
+      });
 
-    fetchDeletionStatus();
-    loadNotificationPrefs();
+    fetchDeletionStatus(signal);
+    loadNotificationPrefs(signal);
+    return () => controller.abort();
   }, []);
 
-  async function loadNotificationPrefs() {
+  async function loadNotificationPrefs(signal?: AbortSignal) {
     const prefs = await fetchPreferences();
     setNotificationPrefs(prefs);
     const channels: Record<string, Record<string, boolean>> = {};
@@ -120,11 +129,12 @@ export default function Settings() {
     }
   }
 
-  async function fetchDeletionStatus() {
+  async function fetchDeletionStatus(signal?: AbortSignal) {
     try {
       const token = localStorage.getItem('stas_token');
       const res = await fetch('/api/v1/me/data/deletion-status', {
         headers: { 'Authorization': `Bearer ${token}` },
+        ...(signal ? { signal } : {}),
       });
       if (res.ok) {
         setDeletionStatus(await res.json());
@@ -176,6 +186,30 @@ export default function Settings() {
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleResetAllSettings() {
+    if (!window.confirm('Are you sure you want to reset ALL settings to defaults? This cannot be undone.')) return;
+    const defaults = {
+      label: 'stas:fix',
+      model: '',
+      maxConcurrent: 3,
+      sandboxPoolSize: 10,
+      auditLogEnabled: true,
+    };
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await settings.update(defaults);
+      setConfig(defaults);
+      setForm(defaults);
+      setSuccess('All settings have been reset to defaults.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset settings');
     } finally {
       setSaving(false);
     }
@@ -487,7 +521,7 @@ export default function Settings() {
         </button>
         {openSections.danger && (
           <div className="mt-4 flex">
-            <button className="btn-danger text-xs">Reset All Settings</button>
+            <button onClick={handleResetAllSettings} className="btn-danger text-xs">Reset All Settings</button>
           </div>
         )}
       </div>

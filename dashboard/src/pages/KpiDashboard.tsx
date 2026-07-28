@@ -22,11 +22,14 @@ export default function KpiDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
     kpi
-      .get({ days: 90 })
-      .then((res: any) => setMetrics(res.metrics))
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .get({ days: 90 }, signal)
+      .then((res: any) => { if (!signal.aborted) setMetrics(res.metrics); })
+      .catch((err: Error) => { if (!signal.aborted) setError(err.message); })
+      .finally(() => { if (!signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, []);
 
   if (loading) {
@@ -56,8 +59,12 @@ export default function KpiDashboard() {
     );
   }
 
-  const latest = metrics[0];
-  const prev = metrics[1];
+  const sorted = [...metrics].sort(
+    (a, b) => new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime(),
+  );
+
+  const latest = sorted[sorted.length - 1];
+  const prev = sorted.length >= 2 ? sorted[sorted.length - 2] : undefined;
 
   function trend(current: number, previous: number | undefined): 'up' | 'down' | 'neutral' {
     if (previous === undefined) return 'neutral';
@@ -101,9 +108,11 @@ export default function KpiDashboard() {
       value: `${latestChurn}%`,
       trend:
         latestChurn !== '—' && prevChurn !== undefined
-          ? Number(latestChurn) <= Number(prevChurn)
-            ? 'up'
-            : 'down'
+          ? Number(latestChurn) < Number(prevChurn)
+            ? 'down'
+            : Number(latestChurn) > Number(prevChurn)
+              ? 'up'
+              : 'neutral'
           : 'neutral',
       invert: true,
     },
@@ -118,10 +127,6 @@ export default function KpiDashboard() {
       trend: trend(latest?.paidAccounts ?? 0, prev?.paidAccounts),
     },
   ];
-
-  const sorted = [...metrics].sort(
-    (a, b) => new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime(),
-  );
 
   const activeReposData = sorted.map((m) => ({
     date: new Date(m.snapshotDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),

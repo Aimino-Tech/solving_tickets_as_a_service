@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { configApi } from '@/api/client';
 
 type EnvVar = {
@@ -117,21 +117,26 @@ export default function Configuration() {
   const [success, setSuccess] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('env');
 
-  useEffect(() => {
-    loadConfig();
-  }, []);
-
-  async function loadConfig() {
+  const loadConfig = useCallback(async (signal?: AbortSignal) => {
     try {
-      const data = await configApi.get();
-      setConfig(data);
-      setEnvValues(data.env || {});
+      const data = await configApi.get(signal);
+      if (!signal?.aborted) {
+        setConfig(data);
+        setEnvValues(data.env || {});
+      }
     } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Failed to load configuration');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadConfig(controller.signal);
+    return () => controller.abort();
+  }, [loadConfig]);
 
   async function handleSaveEnv() {
     setSaving(true);
@@ -308,7 +313,7 @@ export default function Configuration() {
               <button onClick={handleSaveEnv} disabled={saving} className="btn-primary">
                 {saving ? 'Saving...' : 'Save Environment'}
               </button>
-              <button onClick={loadConfig} className="btn-secondary">
+              <button onClick={() => loadConfig()} className="btn-secondary">
                 Refresh
               </button>
             </div>
@@ -328,7 +333,7 @@ export default function Configuration() {
               <p className="text-sm text-gray-400 dark:text-gray-500">No rate limits configured. Add one below.</p>
             ) : (
               config.rateLimits.map((rl, i) => (
-                <div key={i} className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                <div key={`${rl.endpoint}-${i}`} className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                   <div className="flex-1 min-w-[200px]">
                     <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Endpoint</label>
                     <input

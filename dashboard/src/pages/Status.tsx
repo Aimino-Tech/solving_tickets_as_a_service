@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { health, sla, type HealthResponse, type SLAMetrics } from '../api/client.js';
+import { health, sla, type HealthResponse, type SLAMetrics } from '../api/client';
 
 function formatMs(ms: number | null | undefined): string {
   if (ms == null) return '-';
@@ -16,13 +16,20 @@ export default function Status() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
     Promise.all([
-      health.getVerbose().catch(() => null),
-      sla.getMetrics().catch(() => null),
+      health.getVerbose(signal).catch(() => null),
+      sla.getMetrics(signal).catch(() => null),
     ]).then(([h, s]) => {
-      setHealthData(h);
-      setSlaData(s);
-    }).finally(() => setLoading(false));
+      if (!signal.aborted) {
+        setHealthData(h);
+        setSlaData(s);
+      }
+    }).finally(() => {
+      if (!signal.aborted) setLoading(false);
+    });
+    return () => controller.abort();
   }, []);
 
   const checks = healthData?.checks ?? {};
@@ -118,8 +125,8 @@ export default function Status() {
               <p className="text-xs text-gray-500">p99 Fix Time</p>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
-              <p className={`text-2xl font-bold ${(slaData.attainmentRate ?? 100) < 95 ? 'text-red-600' : (slaData.attainmentRate ?? 100) < 99 ? 'text-yellow-600' : 'text-green-600'}`}>
-                {slaData.attainmentRate ?? 100}%
+              <p className={`text-2xl font-bold ${slaData.attainmentRate != null && slaData.attainmentRate < 95 ? 'text-red-600' : slaData.attainmentRate != null && slaData.attainmentRate < 99 ? 'text-yellow-600' : 'text-green-600'}`}>
+                {slaData.attainmentRate != null ? slaData.attainmentRate : '—'}%
               </p>
               <p className="text-xs text-gray-500">SLA Attainment</p>
             </div>

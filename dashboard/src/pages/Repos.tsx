@@ -12,43 +12,51 @@ export default function Repos() {
   const [showInstallations, setShowInstallations] = useState(false);
   const [togglingRepo, setTogglingRepo] = useState<string | null>(null);
 
-  async function loadAll() {
+  async function loadAll(signal?: AbortSignal) {
     setLoading(true);
     setError(null);
     try {
       const [status, repoData] = await Promise.all([
-        github.getStatus().catch(() => ({ connected: false })),
-        repos.list().catch(() => [] as (Repo & { createdAt: string })[]),
+        github.getStatus(signal).catch(() => ({ connected: false })),
+        repos.list(signal).catch(() => [] as (Repo & { createdAt: string })[]),
       ]);
+      if (signal?.aborted) return;
       setConnectionStatus(status);
       setRepoList(repoData);
 
       if (status.connected) {
-        const instData = await github.listInstallations().catch(() => ({ installations: [] }));
+        const instData = await github.listInstallations(signal).catch(() => ({ installations: [] }));
+        if (signal?.aborted) return;
         setInstallations(instData.installations);
       }
     } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadAll();
+    const controller = new AbortController();
+    loadAll(controller.signal);
+    return () => controller.abort();
   }, []);
 
   const urlParams = new URLSearchParams(window.location.search);
   const oauthCode = urlParams.get('code');
   useEffect(() => {
     if (oauthCode) {
-      github.handleCallback(oauthCode).then(() => {
+      const controller = new AbortController();
+      github.handleCallback(oauthCode, controller.signal).then(() => {
         window.history.replaceState({}, '', window.location.pathname);
         loadAll();
       }).catch((err) => {
+        if (err?.name === 'AbortError') return;
         setError(err instanceof Error ? err.message : 'Failed to complete OAuth');
         window.history.replaceState({}, '', window.location.pathname);
       });
+      return () => controller.abort();
     }
   }, [oauthCode]);
 
@@ -116,7 +124,7 @@ export default function Repos() {
       {error && (
         <div className="card border-red-200 dark:border-red-800">
           <p className="text-red-600 dark:text-red-400">{error}</p>
-          <button onClick={loadAll} className="mt-2 text-sm font-medium text-brand-600 dark:text-brand-400 min-h-[44px] min-w-[44px]">
+          <button onClick={() => loadAll()} className="mt-2 text-sm font-medium text-brand-600 dark:text-brand-400 min-h-[44px] min-w-[44px]">
             Retry
           </button>
         </div>
@@ -174,7 +182,7 @@ export default function Repos() {
                     </p>
                   </div>
                   <button
-                    onClick={() => github.removeInstallation(inst.installationId).then(loadAll)}
+                    onClick={() => github.removeInstallation(inst.installationId).then(() => loadAll())}
                     className="btn-danger text-xs"
                   >
                     Remove
@@ -198,7 +206,7 @@ export default function Repos() {
                         <button
                           onClick={() => handleToggleRepo(inst.installationId, repo.owner, repo.name, repo.stasInstalled)}
                           disabled={togglingRepo === repo.fullName}
-                          className={`text-xs px-3 py-1 rounded-full min-h-[36px] ${
+                          className={`text-xs px-3 py-1 rounded-full min-h-[44px] ${
                             repo.stasInstalled
                               ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                               : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'

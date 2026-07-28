@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { runs } from '@/api/client';
 import type { Run } from '@/api/types';
 import { useParams, Link } from 'react-router-dom';
-import { formatDateTime, formatDurationSeconds } from '@/utils/format';
+import { formatDateTime } from '@/utils/format';
 import { SkeletonRunDetail } from '@/components/LoadingSkeleton';
 
 export default function RunDetail() {
@@ -13,10 +13,17 @@ export default function RunDetail() {
 
   useEffect(() => {
     if (!id) return;
+    const controller = new AbortController();
+    const { signal } = controller;
     runs
-      .get(id)
-      .then(setRun)
-      .catch((err: Error) => setError(err.message));
+      .get(id, signal)
+      .then((data) => {
+        if (!signal.aborted) setRun(data);
+      })
+      .catch((err: Error) => {
+        if (!signal.aborted) setError(err.message);
+      });
+    return () => controller.abort();
   }, [id]);
 
   if (error) {

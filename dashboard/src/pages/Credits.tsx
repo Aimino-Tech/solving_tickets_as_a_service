@@ -11,18 +11,27 @@ export default function Credits() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
     Promise.all([
-      credits.balance().catch(() => null),
-      credits.transactions(20, 0).catch(() => ({ transactions: [], pagination: { limit: 20, offset: 0, total: 0 } })),
-      credits.usage('monthly').catch(() => ({ accountId: 0, period: 'monthly', usage: [] })),
+      credits.balance(signal).catch(() => null),
+      credits.transactions(20, 0, signal).catch(() => ({ transactions: [], pagination: { limit: 20, offset: 0, total: 0 } })),
+      credits.usage('monthly', signal).catch(() => ({ accountId: 0, period: 'monthly', usage: [] })),
     ])
       .then(([bal, txData, usageData]) => {
-        setBalance(bal);
-        setTransactions(txData.transactions);
-        setUsage(usageData.usage);
+        if (!signal.aborted) {
+          setBalance(bal);
+          setTransactions(txData.transactions);
+          setUsage(usageData.usage);
+        }
       })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err: Error) => {
+        if (!signal.aborted) setError(err.message);
+      })
+      .finally(() => {
+        if (!signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, []);
 
   if (error) {
