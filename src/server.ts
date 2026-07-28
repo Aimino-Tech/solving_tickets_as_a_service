@@ -1072,62 +1072,90 @@ export async function createApp(): Promise<express.Application> {
   return app;
 }
 
+const MAX_PORT_RETRIES = 5;
+
+async function tryListen(
+  app: express.Application,
+  port: number,
+  attempt: number,
+): Promise<import('http').Server> {
+  return new Promise((resolve, reject) => {
+    const server = app.listen(port, '0.0.0.0', async () => {
+      log.info(
+        { port, label: config.stas.label, env: config.nodeEnv },
+        `STAS server listening on :${port}`,
+      );
+
+      // Start the RabbitMQ issue consumer — dispatches to OpenSymphony
+      try {
+        const { consumeQueue } = await import('./queue/rabbitmq.js');
+        const { dispatchToOpenSymphony } = await import('./dispatch/osDispatch.js');
+        await consumeQueue(QUEUES.issuesFix.name, async (msg) => {
+          if (!msg) return;
+          const content = msg.content.toString();
+          let data: IssueJobData;
+          try {
+            data = JSON.parse(content) as IssueJobData;
+          } catch {
+            log.error({ content }, 'Failed to parse RabbitMQ message');
+            return;
+          }
+          try {
+            const result = await dispatchToOpenSymphony(data);
+            if (!result.success) {
+              log.error({ errors: result.errors }, 'OpenSymphony dispatch failed');
+            } else {
+              log.info({ runId: result.runId, prUrl: result.prUrl }, 'OpenSymphony dispatch completed');
+            }
+          } catch (err) {
+            log.error({ err: String(err) }, 'OpenSymphony dispatch error');
+          }
+        });
+        log.info('RabbitMQ issue consumer started — dispatching to OpenSymphony');
+      } catch (err) {
+        log.warn({ err: String(err) }, 'Failed to start RabbitMQ issue consumer');
+      }
+
+      resolve(server);
+    });
+
+    server.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        if (attempt < MAX_PORT_RETRIES) {
+          const nextPort = port + 1;
+          log.warn(
+            { port, nextPort, attempt, maxRetries: MAX_PORT_RETRIES },
+            `Port ${port} is already in use — trying ${nextPort}`,
+          );
+          server.close(() => {
+            tryListen(app, nextPort, attempt + 1).then(resolve, reject);
+          });
+        } else {
+          log.error(
+            { port, attempt, maxRetries: MAX_PORT_RETRIES },
+            `Port ${port} is already in use — exhausted all retries`,
+          );
+          reject(err);
+        }
+      } else if (err.code === 'EACCES') {
+        log.error({ port }, `Permission denied for port ${port}`);
+        reject(err);
+      } else {
+        log.error({ err: String(err) }, 'Server failed to start');
+        reject(err);
+      }
+    });
+  });
+}
+
 /**
  * Start the Express server on the configured port.
+ * Retries with port+1 on EADDRINUSE up to MAX_PORT_RETRIES times.
  * Returns the server instance so callers can close it during graceful shutdown.
  */
 export async function startServer(): Promise<import('http').Server> {
   const app = await createApp();
-
-  const server = app.listen(config.port, '0.0.0.0', async () => {
-    log.info(
-      { port: config.port, label: config.stas.label, env: config.nodeEnv },
-      `STAS server listening on :${config.port}`,
-    );
-
-    // Start the RabbitMQ issue consumer — dispatches to OpenSymphony
-    try {
-      const { consumeQueue } = await import('./queue/rabbitmq.js');
-      const { dispatchToOpenSymphony } = await import('./dispatch/osDispatch.js');
-      await consumeQueue(QUEUES.issuesFix.name, async (msg) => {
-        if (!msg) return;
-        const content = msg.content.toString();
-        let data: IssueJobData;
-        try {
-          data = JSON.parse(content) as IssueJobData;
-        } catch {
-          log.error({ content }, 'Failed to parse RabbitMQ message');
-          return;
-        }
-        try {
-          const result = await dispatchToOpenSymphony(data);
-          if (!result.success) {
-            log.error({ errors: result.errors }, 'OpenSymphony dispatch failed');
-          } else {
-            log.info({ runId: result.runId, prUrl: result.prUrl }, 'OpenSymphony dispatch completed');
-          }
-        } catch (err) {
-          log.error({ err: String(err) }, 'OpenSymphony dispatch error');
-        }
-      });
-      log.info('RabbitMQ issue consumer started — dispatching to OpenSymphony');
-    } catch (err) {
-      log.warn({ err: String(err) }, 'Failed to start RabbitMQ issue consumer');
-    }
-  });
-
-  server.on('error', (err: NodeJS.ErrnoException) => {
-    if (err.code === 'EADDRINUSE') {
-      log.error({ port: config.port }, `Port ${config.port} is already in use`);
-    } else if (err.code === 'EACCES') {
-      log.error({ port: config.port }, `Permission denied for port ${config.port}`);
-    } else {
-      log.error({ err: String(err) }, 'Server failed to start');
-    }
-    process.exit(1);
-  });
-
-  return server;
+  return tryListen(app, config.port, 1);
 }
 
 // -- Process-level error handlers --------------------------------------------
