@@ -1076,13 +1076,14 @@ export async function createApp(): Promise<express.Application> {
  * Start the Express server on the configured port.
  * Returns the server instance so callers can close it during graceful shutdown.
  */
-export async function startServer(): Promise<import('http').Server> {
+export async function startServer(port?: number): Promise<import('http').Server> {
   const app = await createApp();
+  const targetPort = port ?? config.port;
 
-  const server = app.listen(config.port, '0.0.0.0', async () => {
+  const server = app.listen(targetPort, '0.0.0.0', async () => {
     log.info(
-      { port: config.port, label: config.stas.label, env: config.nodeEnv },
-      `STAS server listening on :${config.port}`,
+      { port: targetPort, label: config.stas.label, env: config.nodeEnv },
+      `STAS server listening on :${targetPort}`,
     );
 
     // Start the RabbitMQ issue consumer — dispatches to OpenSymphony
@@ -1118,13 +1119,20 @@ export async function startServer(): Promise<import('http').Server> {
 
   server.on('error', (err: NodeJS.ErrnoException) => {
     if (err.code === 'EADDRINUSE') {
-      log.error({ port: config.port }, `Port ${config.port} is already in use`);
+      log.warn({ port: targetPort }, `Port ${targetPort} is already in use, trying ${targetPort + 1}`);
+      server.close(() => {
+        startServer(targetPort + 1).catch((e) => {
+          log.error({ err: String(e) }, 'Failed to start on fallback port');
+          process.exit(1);
+        });
+      });
     } else if (err.code === 'EACCES') {
-      log.error({ port: config.port }, `Permission denied for port ${config.port}`);
+      log.error({ port: targetPort }, `Permission denied for port ${targetPort}`);
+      process.exit(1);
     } else {
       log.error({ err: String(err) }, 'Server failed to start');
+      process.exit(1);
     }
-    process.exit(1);
   });
 
   return server;
