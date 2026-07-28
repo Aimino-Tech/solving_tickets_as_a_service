@@ -1128,13 +1128,28 @@ export async function startServer(): Promise<import('http').Server> {
 
 // -- Process-level error handlers --------------------------------------------
 
+let shuttingDown = false;
+
 process.on('uncaughtException', (err) => {
-  log.error({ err: String(err), stack: (err as Error).stack }, 'Uncaught exception -- shutting down');
+  log.error(
+    { module: 'server', err: String(err), stack: (err as Error).stack },
+    'Uncaught exception -- attempting graceful shutdown',
+  );
+
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  const forceExitTimer = setTimeout(() => {
+    log.error('Graceful shutdown timed out — forcing exit');
+    process.exit(1);
+  }, 10_000);
+  forceExitTimer.unref();
+
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
-  log.error({ err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection');
+  log.error({ module: 'server', err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection');
 });
 
 // -- Helper: Capture raw body for webhook signature verification -------------
