@@ -56,11 +56,12 @@ export function formatNumber(num: number, locale?: string): string {
  * Format a number as a percentage (e.g., "73.5%")
  */
 export function formatPercentage(num: number, locale?: string, decimals = 1): string {
+  const normalized = num > 1 ? num / 100 : num;
   return new Intl.NumberFormat(locale ?? defaultLocale(), {
     style: 'percent',
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  }).format(num);
+  }).format(normalized);
 }
 
 /**
@@ -79,10 +80,11 @@ export function formatDuration(minutes: number): string {
  * Format a duration in seconds as a compact string (e.g., "2h 15m").
  */
 export function formatDurationSeconds(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
+  const totalSeconds = Math.round(seconds);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  if (totalSeconds < 3600) return `${Math.floor(totalSeconds / 60)}m ${totalSeconds % 60}s`;
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
   return `${h}h ${m}m`;
 }
 
