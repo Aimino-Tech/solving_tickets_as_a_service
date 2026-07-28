@@ -9,6 +9,8 @@
  *   - stas_check_status   — Check status of a fix run by runId
  *   - stas_list_runs      — List recent fix runs with optional filters
  *   - stas_get_run        — Full run details by runId
+ *   - stas_slack_send     — Send a message to a Slack channel
+ *   - stas_slack_ticket   — Create a Linear ticket from Slack
  *
  * Resources:
  *   - stas://runs/{runId}    — Full run details
@@ -152,6 +154,32 @@ const tools: McpTool[] = [
       required: ['runId'],
     },
   },
+  {
+    name: 'stas_slack_send',
+    description: 'Send a message to a Slack channel via the Slack Web API.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        channel: { type: 'string', description: 'Slack channel ID or name (e.g. #general or C12345)' },
+        text: { type: 'string', description: 'Message text to send' },
+      },
+      required: ['channel', 'text'],
+    },
+  },
+  {
+    name: 'stas_slack_ticket',
+    description: 'Create a Linear ticket from Slack with optional Slack notification.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Ticket title' },
+        description: { type: 'string', description: 'Ticket description in markdown' },
+        priority: { type: 'number', description: 'Priority (0=none, 1=urgent, 2=high, 3=medium, 4=low)' },
+        channel: { type: 'string', description: 'Optional Slack channel to notify after creation' },
+      },
+      required: ['title', 'description'],
+    },
+  },
 ];
 
 const resources: McpResource[] = [
@@ -242,6 +270,12 @@ async function handleToolCall(id: unknown, params: unknown, res: Response): Prom
       break;
     case 'stas_get_run':
       await handleGetRun(id, args, res);
+      break;
+    case 'stas_slack_send':
+      await handleSlackSend(id, args, res);
+      break;
+    case 'stas_slack_ticket':
+      await handleSlackTicket(id, args, res);
       break;
     default:
       res.json(jsonRpcError(id, -32601, `Tool not found: ${name}`));
@@ -520,6 +554,148 @@ async function handleResourceRead(id: unknown, params: unknown, res: Response): 
   } catch (err) {
     log.error({ err: String(err), uri }, 'Failed to read resource');
     res.json(jsonRpcError(id, -32603, `Internal error: ${String(err)}`));
+  }
+}
+
+async function handleSlackSend(id: unknown, args: Record<string, unknown> | undefined, res: Response): Promise<void> {
+  const channel = args?.channel as string | undefined;
+  const text = args?.text as string | undefined;
+
+  if (!channel || !text) {
+    res.json(jsonRpcError(id, -32602, 'Missing required parameters: channel, text'));
+    return;
+  }
+
+  const botToken = config.slack?.botToken;
+  if (!botToken) {
+    res.json(jsonRpcError(id, -32000, 'Slack bot token not configured (SLACK_BOT_TOKEN)'));
+    return;
+  }
+
+  try {
+    const response = await fetch('https://slack.com/api/chat.postMessage', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${botToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ channel, text }),
+    });
+
+    const body = (await response.json()) as { ok: boolean; error?: string; ts?: string; channel?: string };
+
+    if (!body.ok) {
+      res.json(jsonRpcError(id, -32000, `Slack API error: ${body.error ?? 'unknown'}`));
+      return;
+    }
+
+    res.json(jsonRpcResult(id, { ok: true, channel: body.channel, ts: body.ts }));
+  } catch (err) {
+    log.error({ err: String(err), channel }, 'Slack API call failed');
+    res.json(jsonRpcError(id, -32603, `Slack API call failed: ${String(err)}`));
+  }
+}
+
+async function handleSlackTicket(id: unknown, args: Record<string, unknown> | undefined, res: Response): Promise<void> {
+  const title = args?.title as string | undefined;
+  const description = (args?.description as string | undefined) ?? '';
+  const priority = (args?.priority as number | undefined) ?? 0;
+  const channel = args?.channel as string | undefined;
+
+  if (!title) {
+    res.json(jsonRpcError(id, -32602, 'Missing required parameter: title'));
+    return;
+  }
+
+  const apiKey = config.trackers?.linear?.apiKey;
+  if (!apiKey) {
+    res.json(jsonRpcError(id, -32000, 'Linear API key not configured (LINEAR_API_KEY)'));
+    return;
+  }
+
+  try {
+    const query = `
+      mutation CreateIssue($title: String!, $description: String, $priority: Int) {
+        issueCreate(
+          input: { title: $title, description: $description, priority: $priority }
+        ) {
+          success
+          issue {
+            id
+            title
+            description
+            priority
+            url
+            createdAt
+          }
+        }
+      }
+    `;
+
+    const response = await fetch('https://api.linear.app/graphql', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, variables: { title, description, priority } }),
+    });
+
+    const body = (await response.json()) as {
+      data?: {
+        issueCreate?: { success: boolean; issue?: { id: string; title: string; url: string; createdAt: string } };
+      };
+      errors?: Array<{ message: string }>;
+    };
+
+    if (body.errors?.length) {
+      res.json(jsonRpcError(id, -32000, `Linear API error: ${body.errors.map((e) => e.message).join('; ')}`));
+      return;
+    }
+
+    const issue = body.data?.issueCreate?.issue;
+    if (!issue) {
+      res.json(jsonRpcError(id, -32000, 'Linear API returned success=false'));
+      return;
+    }
+
+    if (channel) {
+      const botToken = config.slack?.botToken;
+      if (botToken) {
+        fetch('https://slack.com/api/chat.postMessage', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${botToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            channel,
+            text: `New Linear ticket created: *${issue.title}*\n${issue.url}`,
+            unfurl_links: true,
+          }),
+        }).catch((slackErr) => {
+          log.warn({ err: String(slackErr) }, 'Slack notification failed (non-fatal)');
+        });
+      } else {
+        log.warn('Slack bot token not configured -- skipping Slack notification');
+      }
+    }
+
+    res.json(
+      jsonRpcResult(id, {
+        ok: true,
+        ticket: {
+          id: issue.id,
+          title: issue.title,
+          url: issue.url,
+          createdAt: issue.createdAt,
+        },
+        slackNotified: !!channel,
+      }),
+    );
+  } catch (err) {
+    log.error({ err: String(err), title }, 'Failed to create Linear ticket');
+    res.json(jsonRpcError(id, -32603, `Failed to create Linear ticket: ${String(err)}`));
   }
 }
 
