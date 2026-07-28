@@ -23,14 +23,16 @@ export default function Analytics() {
   const [litellmLoading, setLitellmLoading] = useState(true);
 
   useEffect(() => {
+    const ac = new AbortController();
     stats
-      .get()
-      .then(setData)
-      .catch((err) => setError(err.message));
-    litellm.usage()
-      .then(setLitellmData)
+      .get(ac.signal)
+      .then((d) => { if (!ac.signal.aborted) setData(d); })
+      .catch((err) => { if (err.name !== 'AbortError') setError(err.message); });
+    litellm.usage(ac.signal)
+      .then((d) => { if (!ac.signal.aborted) setLitellmData(d); })
       .catch(() => {})
-      .finally(() => setLitellmLoading(false));
+      .finally(() => { if (!ac.signal.aborted) setLitellmLoading(false); });
+    return () => ac.abort();
   }, []);
 
   if (error) {

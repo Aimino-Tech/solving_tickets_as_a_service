@@ -592,7 +592,7 @@ export const pricing = {
         savingsPercent: number;
       }[];
     }>(`/v1/pricing/calculate?fixes=${fixes}&tier=${tier}`, signal ? { signal } : undefined),
-  vs: (competitor: string) =>
+  vs: (competitor: string, signal?: AbortSignal) =>
     request<{
       competitor: string;
       competitorName: string;
@@ -620,6 +620,6 @@ export const pricing = {
         ourCostPerFixCents: number;
         theirCostPerFixCents: number;
       };
-    }>(`/v1/pricing/vs/${competitor}`),
+    }>(`/v1/pricing/vs/${competitor}`, signal ? { signal } : undefined),
 };
 

@@ -22,11 +22,13 @@ export default function KpiDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const ac = new AbortController();
     kpi
-      .get({ days: 90 })
-      .then((res: any) => setMetrics(res.metrics))
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .get({ days: 90 }, ac.signal)
+      .then((res: any) => { if (!ac.signal.aborted) setMetrics(res.metrics); })
+      .catch((err: Error) => { if (err.name !== 'AbortError') setError(err.message); })
+      .finally(() => { if (!ac.signal.aborted) setLoading(false); });
+    return () => ac.abort();
   }, []);
 
   if (loading) {

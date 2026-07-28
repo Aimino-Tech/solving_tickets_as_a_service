@@ -88,7 +88,7 @@ export default function Settings() {
   }, []);
 
   async function loadNotificationPrefs(signal?: AbortSignal) {
-    const prefs = await fetchPreferences(signal);
+    const prefs = await fetchPreferences();
     if (signal?.aborted) return;
     setNotificationPrefs(prefs);
     const channels: Record<string, Record<string, boolean>> = {};

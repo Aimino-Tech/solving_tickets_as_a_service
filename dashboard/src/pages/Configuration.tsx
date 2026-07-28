@@ -313,7 +313,7 @@ export default function Configuration() {
               <button onClick={handleSaveEnv} disabled={saving} className="btn-primary">
                 {saving ? 'Saving...' : 'Save Environment'}
               </button>
-              <button onClick={loadConfig} className="btn-secondary">
+              <button onClick={() => loadConfig()} className="btn-secondary">
                 Refresh
               </button>
             </div>

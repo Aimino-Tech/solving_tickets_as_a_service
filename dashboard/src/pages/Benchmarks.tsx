@@ -8,14 +8,16 @@ export default function Benchmarks() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const ac = new AbortController();
     benchmarks
-      .get()
-      .then((resp: any) => setData(resp.competitors))
-      .catch((err: Error) => setError(err.message));
+      .get(ac.signal)
+      .then((resp: any) => { if (!ac.signal.aborted) setData(resp.competitors); })
+      .catch((err: Error) => { if (err.name !== 'AbortError') setError(err.message); });
     benchmarks
-      .getPrices()
-      .then((resp: any) => setPrices(resp.prices))
+      .getPrices(ac.signal)
+      .then((resp: any) => { if (!ac.signal.aborted) setPrices(resp.prices); })
       .catch(() => {});
+    return () => ac.abort();
   }, []);
 
   if (error) {

@@ -69,7 +69,7 @@ export default function VsPage() {
     const ac = new AbortController();
     setLoading(true);
     setError(null);
-    pricing.vs(slug, ac.signal).then((result: any) => { setData(result); setLoading(false); }).catch((err: Error) => { setError(err.message); setLoading(false); });
+    pricing.vs(slug, ac.signal).then((result: any) => { if (!ac.signal.aborted) { setData(result); setLoading(false); } }).catch((err: Error) => { if (err.name !== 'AbortError') { setError(err.message); setLoading(false); } });
     return () => ac.abort();
   }, [slug]);
 
