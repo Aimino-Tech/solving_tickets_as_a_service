@@ -21,7 +21,7 @@ describe('auth/middleware', () => {
       const next = vi.fn();
       mod.requireAuth(req, res, next);
       expect(mockVerifyToken).toHaveBeenCalledWith('valid.jwt.token');
-      expect(req.user).toEqual({ id: 42, email: 'test@test.com' });
+      expect(req.user).toEqual({ id: '42', email: 'test@test.com' });
       expect(next).toHaveBeenCalled();
     });
 
@@ -91,7 +91,7 @@ describe('auth/middleware', () => {
       const res = {} as any;
       const next = vi.fn();
       mod.optionalAuth(req, res, next);
-      expect(req.user).toEqual({ id: 7, email: 'user@test.com' });
+      expect(req.user).toEqual({ id: '7', email: 'user@test.com' });
       expect(next).toHaveBeenCalled();
     });
 

@@ -21,7 +21,11 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     return;
   }
 
-  const token = header.slice(7);
+  const token = header.slice(7).trim();
+  if (!token) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
   try {
     const payload = authService.verifyToken(token);
     req.user = { id: String(payload.sub), email: payload.email };
@@ -38,7 +42,12 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
     return;
   }
 
-  const token = header.slice(7);
+  const token = header.slice(7).trim();
+  if (!token) {
+    next();
+    return;
+  }
+
   try {
     const payload = authService.verifyToken(token);
     req.user = { id: String(payload.sub), email: payload.email };
