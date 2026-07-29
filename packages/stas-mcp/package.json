@@ -1,0 +1,31 @@
+{
+  "name": "@aimino/stas-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for STAS — Solving Tickets As A Service. Label a GitHub issue and get an automated fix PR.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "bin": {
+    "stas-mcp": "./index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aimino-Tech/solving_tickets_as_a_service.git"
+  },
+  "homepage": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
+  "bugs": {
+    "url": "https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues"
+  },
+  "keywords": [
+    "stas",
+    "mcp",
+    "github-bot",
+    "issue-fixer",
+    "automated-fix",
+    "opencode",
+    "agent",
+    "ai"
+  ]
+}

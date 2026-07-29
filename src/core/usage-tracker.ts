@@ -8,8 +8,7 @@
  *   - Checking whether an action is allowed under the current tier
  */
 
-import { getTierConfig, UNLIMITED, type TierConfig, type TierName } from '../config/tiers.js';
-import { UsageStore, currentYearMonth } from './usage-store-sqlite.js';
+import { getTierConfig, UNLIMITED, type TierConfig } from '../config/tiers.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'usage-tracker' });
@@ -54,20 +53,48 @@ export interface QuotaCheck {
 }
 
 // ---------------------------------------------------------------------------
+// In-memory store (replaces the old SQLite-backed UsageStore)
+// ---------------------------------------------------------------------------
+
+interface RecordEntry {
+  userId: string;
+  repoId: string;
+  action: string;
+  tierAtTime: string;
+  timestamp: Date;
+  metadata?: Record<string, unknown>;
+}
+
+interface MonthlyEntry {
+  userId: string;
+  repoId: string;
+  yearMonth: string;
+  fixCount: number;
+}
+
+function currentYearMonth(): string {
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+function nextMonthStart(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0, 0));
+}
+
+function monthlyKey(userId: string, repoId: string, yearMonth: string): string {
+  return `${userId}::${repoId}::${yearMonth}`;
+}
+
+// ---------------------------------------------------------------------------
 // UsageTracker
 // ---------------------------------------------------------------------------
 
 export class UsageTracker {
-  private store: UsageStore;
-
-  /**
-   * @param store  UsageStore instance. Defaults to a new in-memory store
-   *               for backward compatibility; production code should pass
-   *               a configured store explicitly.
-   */
-  constructor(store?: UsageStore) {
-    this.store = store ?? new UsageStore(':memory:');
-  }
+  private records: RecordEntry[] = [];
+  private monthlyCounters = new Map<string, MonthlyEntry>();
 
   // -----------------------------------------------------------------------
   // Public API
@@ -81,10 +108,28 @@ export class UsageTracker {
     const tierConfig = getTierConfigForRepo(record.repoId);
     const yearMonth = currentYearMonth();
 
-    this.store.record(record.userId, record.repoId, record.action, tierConfig.displayName, record.metadata);
+    this.records.push({
+      userId: record.userId,
+      repoId: record.repoId,
+      action: record.action,
+      tierAtTime: tierConfig.displayName,
+      timestamp: new Date(),
+      metadata: record.metadata,
+    });
 
     if (record.action === 'fix-run') {
-      this.store.incrementMonthly(record.userId, record.repoId, yearMonth);
+      const key = monthlyKey(record.userId, record.repoId, yearMonth);
+      const existing = this.monthlyCounters.get(key);
+      if (existing) {
+        existing.fixCount += 1;
+      } else {
+        this.monthlyCounters.set(key, {
+          userId: record.userId,
+          repoId: record.repoId,
+          yearMonth,
+          fixCount: 1,
+        });
+      }
     }
 
     log.info(
@@ -103,14 +148,14 @@ export class UsageTracker {
    */
   getUsage(userId: string, repoId: string): UsageSummary {
     const tierConfig = getTierConfigForRepo(repoId);
-    const currentMonthUsage = this.store.getCurrentMonthCount(userId, repoId);
+    const currentMonthUsage = this.getCurrentMonthCount(userId, repoId);
 
     return {
       currentMonthUsage,
       monthlyLimit: tierConfig.monthlyFixLimit,
       remaining: calculateRemaining(tierConfig.monthlyFixLimit, currentMonthUsage),
       plan: tierConfig.displayName,
-      resetAt: this.store.getResetTimestamp(userId, repoId),
+      resetAt: nextMonthStart().toISOString(),
       unlimited: tierConfig.monthlyFixLimit === UNLIMITED,
     };
   }
@@ -135,7 +180,7 @@ export class UsageTracker {
       return { allowed: true, reason: null, statusCode: 200 };
     }
 
-    const currentMonthUsage = this.store.getCurrentMonthCount(userId, repoId);
+    const currentMonthUsage = this.getCurrentMonthCount(userId, repoId);
 
     if (currentMonthUsage >= tierConfig.monthlyFixLimit) {
       return {
@@ -164,15 +209,46 @@ export class UsageTracker {
   }
 
   /**
-   * Return the underlying store (for testing).
+   * Return usage records for a user (for API queries).
    */
-  getStore(): UsageStore {
-    return this.store;
+  getUserUsage(userId: string): { yearMonth: string; fixCount: number }[] {
+    const result = new Map<string, number>();
+    for (const entry of this.monthlyCounters.values()) {
+      if (entry.userId === userId) {
+        result.set(entry.yearMonth, (result.get(entry.yearMonth) ?? 0) + entry.fixCount);
+      }
+    }
+    return Array.from(result.entries())
+      .map(([yearMonth, fixCount]) => ({ yearMonth, fixCount }))
+      .sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
   }
 
-  /** Close the underlying store. */
+  /**
+   * Return usage records for a user + repo (for API queries).
+   */
+  getRepoUsage(userId: string, repoId: string): { yearMonth: string; fixCount: number }[] {
+    const result: { yearMonth: string; fixCount: number }[] = [];
+    for (const entry of this.monthlyCounters.values()) {
+      if (entry.userId === userId && entry.repoId === repoId) {
+        result.push({ yearMonth: entry.yearMonth, fixCount: entry.fixCount });
+      }
+    }
+    return result.sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
+  }
+
+  /**
+   * Get the monthly fix count for a user + repo in the current month.
+   */
+  getCurrentMonthCount(userId: string, repoId: string): number {
+    const yearMonth = currentYearMonth();
+    const key = monthlyKey(userId, repoId, yearMonth);
+    return this.monthlyCounters.get(key)?.fixCount ?? 0;
+  }
+
+  /** Close the underlying store (no-op for in-memory). */
   close(): void {
-    this.store.close();
+    this.records = [];
+    this.monthlyCounters.clear();
   }
 }
 

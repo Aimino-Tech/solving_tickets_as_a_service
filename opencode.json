@@ -1,0 +1,31 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode-go/deepseek-v4-flash",
+  "small_model": "opencode-go/deepseek-v4-flash",
+  "default_agent": "Sisyphus - ultraworker",
+
+  "instructions": [
+    "This project is STAS (Solving Tickets As A Service) — a GitHub bot that turns labeled issues into PRs.",
+    "READ ../.opencode.md BEFORE writing any code — it documents the exact tech stack, test helpers, and architecture patterns for both STAS and OpenSymphony.",
+    "NEVER fabricate libraries. This project uses Vitest (NOT Jest), Playwright (NOT Cypress), Biome (NOT ESLint for formatting), tsx (NOT ts-node).",
+    "Test helpers already exist: createTestHarness() in tests/e2e/harness/, ConsoleCapture/ActionLogger/NetworkCapture in tests/automation/core/, mocks in src/__tests__/mocks.ts, fixtures in src/__tests__/fixtures.ts.",
+    "ALL imports use .js extension (NodeNext module resolution).",
+    "NEVER use @jest/globals, jest.fn(), or jest.mock() — use vitest's vi.fn() and vi.mock().",
+    "Bot pipeline: Webhook (Express) → Queue (RabbitMQ) → Agent Dispatch → Fix → PR."
+  ],
+
+  "permission": {
+    "read": { "tmp_data/search_cache/**": "deny", "*": "allow" },
+    "glob": { "tmp_data/search_cache/**": "deny", "*": "allow" },
+    "grep": { "tmp_data/search_cache/**": "deny", "*": "allow" },
+    "bash": { "*": "allow" },
+    "edit": { "tmp_data/search_cache/**": "deny", "*": "allow" }
+  },
+
+  "skills": {
+    "stas": {
+      "description": "STAS — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs.",
+      "url": "https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/stas/SKILL.md"
+    }
+  }
+}

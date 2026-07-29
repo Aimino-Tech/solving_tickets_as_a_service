@@ -12,7 +12,17 @@ export interface IssueJobData {
   issueBody: string | null;
 
   /** Source platform that originated this job. Defaults to "github". */
-  source?: 'github' | 'gitlab' | 'bitbucket' | 'linear' | 'jira' | 'rapidapi';
+  source?:
+    | 'github'
+    | 'gitlab'
+    | 'bitbucket'
+    | 'linear'
+    | 'jira'
+    | 'rapidapi'
+    | 'slack'
+    | 'telegram'
+    | 'whatsapp'
+    | 'mcp';
 
   /** Tracker ticket ID (Linear issue ID or Jira issue key) for cross-platform sync. */
   trackerTicketId?: string;
@@ -28,6 +38,12 @@ export interface IssueJobData {
 
   /** GitHub/Linear issue labels (e.g. ['bug', 'stas:fix']). Used for triage classification. */
   labels?: string[];
+
+  /** Originating channel for progress updates ('slack', 'telegram', 'whatsapp', etc.). */
+  channel?: string;
+
+  /** Channel target identifier (e.g. Slack channelId:threadTs for thread replies). */
+  channelTarget?: string;
 }
 
 /**

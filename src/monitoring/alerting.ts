@@ -53,17 +53,19 @@ export interface AlertEvent {
   context?: Record<string, unknown>;
   timestamp: string;
   channel?: AlertChannel;
+  escalated?: boolean;
 }
 
-// ── Alert Dispatch ──────────────────────────────────────────────────
+// ── Alert Dispatch via n8n ──────────────────────────────────────────
 
 /**
- * Send a Slack message via the configured webhook.
+ * Forward an alert event to the n8n monitoring webhook.
+ * n8n handles formatting (severity-colored Slack blocks) and delivery.
  */
-async function sendSlackAlert(message: string): Promise<void> {
-  const webhookUrl = config.slack.webhookUrl;
+async function sendToN8nWebhook(alert: AlertEvent): Promise<void> {
+  const webhookUrl = config.alerting.n8nWebhookUrl;
   if (!webhookUrl) {
-    log.warn('SLACK_WEBHOOK_URL not configured — skipping Slack alert');
+    log.warn('N8N_MONITORING_WEBHOOK_URL not configured — skipping n8n alert dispatch');
     return;
   }
 
@@ -72,8 +74,12 @@ async function sendSlackAlert(message: string): Promise<void> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        text: message,
-        channel: config.alerting.slackChannel || '#stas-alerts',
+        severity: alert.severity,
+        rule: alert.rule,
+        message: alert.message,
+        context: alert.context ?? {},
+        timestamp: alert.timestamp,
+        channel: config.alerting.slackChannel || '#syntaro-alerts',
       }),
     });
 
@@ -81,60 +87,27 @@ async function sendSlackAlert(message: string): Promise<void> {
       const body = await response.text().catch(() => 'unknown');
       log.error(
         { status: response.status, body },
-        'Slack alert delivery failed',
+        'n8n alert webhook delivery failed',
       );
     }
   } catch (err) {
-    log.error({ err: String(err) }, 'Failed to send Slack alert');
+    log.error({ err: String(err) }, 'Failed to send alert to n8n webhook');
   }
 }
 
 /**
- * Send an email alert via a configurable SMTP endpoint or generic webhook.
- * In production, this would integrate with SendGrid, SES, or similar.
- */
-async function sendEmailAlert(subject: string, body: string): Promise<void> {
-  const emailWebhookUrl = process.env.ALERT_EMAIL_WEBHOOK_URL;
-  if (!emailWebhookUrl) {
-    log.warn('ALERT_EMAIL_WEBHOOK_URL not configured — skipping email alert');
-    return;
-  }
-
-  try {
-    const response = await fetch(emailWebhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject, body, severity: 'critical' }),
-    });
-
-    if (!response.ok) {
-      log.error(
-        { status: response.status },
-        'Email alert delivery failed',
-      );
-    }
-  } catch (err) {
-    log.error({ err: String(err) }, 'Failed to send email alert');
-  }
-}
-
-/**
- * Dispatch an alert to all configured channels based on severity and rule.
+ * Dispatch an alert to the n8n webhook. n8n handles formatting,
+ * severity-colored Slack blocks, and delivery to the correct channel.
  */
 export async function dispatchAlert(alert: AlertEvent): Promise<void> {
-  const { severity, rule, message, context, channel } = alert;
+  const { severity, rule, message, context } = alert;
 
   // Always log
-  const logFn =
-    severity === 'critical'
-      ? log.error
-      : severity === 'warning'
-        ? log.warn
-        : log.info;
-  logFn(
-    { rule, message, ...(context || {}) },
-    `[${severity.toUpperCase()}] ${rule}: ${message}`,
-  );
+  const logMsg = `[${severity.toUpperCase()}] ${rule}: ${message}`;
+  const logCtx = { rule, message, ...(context || {}) };
+  if (severity === 'critical') log.error(logCtx, logMsg);
+  else if (severity === 'warning') log.warn(logCtx, logMsg);
+  else log.info(logCtx, logMsg);
 
   // Add Sentry breadcrumb for error correlation
   addBreadcrumb(
@@ -148,22 +121,10 @@ export async function dispatchAlert(alert: AlertEvent): Promise<void> {
     captureError(new Error(`[CRITICAL] ${rule}: ${message}`), context);
   }
 
-  // Route to Slack for warning/critical
-  if (severity === 'warning' || severity === 'critical') {
-    const slackMsg = `[${severity.toUpperCase()}] *${rule}*: ${message}`;
-    await sendSlackAlert(slackMsg).catch((err) =>
-      log.error({ err: String(err) }, 'Slack dispatch failed'),
-    );
-  }
-
-  // Route to email for critical alerts that require it
-  if (channel === 'email' || channel === 'both') {
-    const emailSubject = `[STAS] ${severity.toUpperCase()}: ${rule}`;
-    const emailBody = `Rule: ${rule}\nSeverity: ${severity}\nMessage: ${message}\nTimestamp: ${alert.timestamp}\nContext: ${JSON.stringify(context ?? {})}`;
-    await sendEmailAlert(emailSubject, emailBody).catch((err) =>
-      log.error({ err: String(err) }, 'Email dispatch failed'),
-    );
-  }
+  // Forward to n8n for Slack delivery (handles formatting, retry, channel routing)
+  await sendToN8nWebhook(alert).catch((err) =>
+    log.error({ err: String(err) }, 'n8n dispatch failed'),
+  );
 }
 
 // ── Alerting Rules ──────────────────────────────────────────────────
@@ -345,9 +306,9 @@ export function reportWorkerDown(
  *
  * Called periodically by the scheduled health check task.
  */
-export function checkSLOCompliance(): void {
+export async function checkSLOCompliance(): Promise<void> {
   try {
-    const report = generateSLOReport();
+    const report = await generateSLOReport();
 
     // Record metrics to Prometheus
     recordSLIMetrics(report);
@@ -456,11 +417,12 @@ export function reportDbConnectionFailure(error: string): void {
  * Report an SLO breach for a given SLI.
  */
 export function reportSLOBreach(sliName: string, currentValue: number, target: number): void {
+  const safeValue = Number.isFinite(currentValue) ? currentValue : 0;
   dispatchAlert({
     severity: 'critical',
     rule: `slo_breach_${sliName}`,
-    message: `SLO breached for ${sliName}: current=${currentValue}, target=${target}`,
-    context: { sliName, currentValue, target },
+    message: `SLO breached for ${sliName}: current=${safeValue}, target=${target}`,
+    context: { sliName, currentValue: safeValue, target },
     timestamp: new Date().toISOString(),
   });
 }

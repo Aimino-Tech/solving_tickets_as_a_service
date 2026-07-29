@@ -36,8 +36,8 @@ describe('TIER_FEATURES', () => {
       expect(free.concurrentFixes).toBe(1);
     });
 
-    it('has monthly quota of 10 fixes', () => {
-      expect(free.monthlyFixQuota).toBe(10);
+    it('has monthly quota of 50 fixes', () => {
+      expect(free.monthlyFixQuota).toBe(50);
     });
 
     it('does not have premium models', () => {
@@ -207,8 +207,8 @@ describe('canUsePremiumModels', () => {
 });
 
 describe('getMonthlyQuota', () => {
-  it('returns 10 for free tier', () => {
-    expect(getMonthlyQuota('free')).toBe(10);
+  it('returns 50 for free tier', () => {
+    expect(getMonthlyQuota('free')).toBe(50);
   });
 
   it('returns 100 for pro tier', () => {

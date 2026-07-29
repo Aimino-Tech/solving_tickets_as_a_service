@@ -9,12 +9,17 @@ import type { ReactNode } from 'react';
 // Mock the API client
 vi.mock('@/api/client', () => ({
   auth: {
-    loginUrl: vi.fn(() => '/api/auth/github'),
+    login: vi.fn(),
+    register: vi.fn(),
+    refresh: vi.fn(),
     me: vi.fn(),
     logout: vi.fn(),
+    loginUrl: vi.fn(() => '/api/auth/github'),
   },
   setToken: vi.fn(),
+  setRefreshToken: vi.fn(),
   clearToken: vi.fn(),
+  default: {},
 }));
 
 function TestConsumer() {
@@ -24,7 +29,7 @@ function TestConsumer() {
       <div data-testid="loading">{String(isLoading)}</div>
       <div data-testid="authenticated">{String(isAuthenticated)}</div>
       <div data-testid="username">{user?.username ?? 'null'}</div>
-      <button data-testid="login-btn" onClick={login}>
+      <button data-testid="login-btn" onClick={() => login('test@test.com', 'password')}>
         Login
       </button>
       <button data-testid="logout-btn" onClick={logout}>
@@ -51,7 +56,7 @@ describe('AuthContext', () => {
   it('starts in loading state when token exists in localStorage', () => {
     localStorage.setItem('stas_token', 'existing-token');
     (auth.me as any).mockResolvedValue({
-      user: { githubId: '123', username: 'testuser', avatarUrl: '' },
+      id: '1', email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: '', createdAt: '2024-01-01',
     });
 
     renderWithProvider(<TestConsumer />);
@@ -61,7 +66,7 @@ describe('AuthContext', () => {
   it('loads user when a valid token exists', async () => {
     localStorage.setItem('stas_token', 'valid-token');
     (auth.me as any).mockResolvedValue({
-      user: { githubId: '123', username: 'testuser', avatarUrl: 'https://example.com/avatar.png' },
+      id: '1', email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: 'https://example.com/avatar.png', createdAt: '2024-01-01',
     });
 
     renderWithProvider(<TestConsumer />);
@@ -97,19 +102,32 @@ describe('AuthContext', () => {
     expect(auth.me).not.toHaveBeenCalled();
   });
 
-  it('redirects to GitHub login when login() is called', async () => {
+  it('logs in with email and password', async () => {
+    (auth.login as any).mockResolvedValue({
+      token: 'new-token',
+      refreshToken: 'new-refresh',
+      user: { id: '3', email: 'test@test.com', name: 'TestUser', createdAt: '2024-01-01' },
+    });
+
     renderWithProvider(<TestConsumer />);
     const user = userEvent.setup();
 
     await user.click(screen.getByTestId('login-btn'));
 
-    expect(auth.loginUrl).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(auth.login).toHaveBeenCalledWith('test@test.com', 'password');
+    });
+    expect(setToken).toHaveBeenCalledWith('new-token');
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('true');
+    });
+    expect(screen.getByTestId('username')).toHaveTextContent('TestUser');
   });
 
   it('calls logout and clears state when logout() is invoked', async () => {
     localStorage.setItem('stas_token', 'valid-token');
     (auth.me as any).mockResolvedValue({
-      user: { githubId: '123', username: 'testuser', avatarUrl: '' },
+      id: '1', email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: '', createdAt: '2024-01-01',
     });
     (auth.logout as any).mockResolvedValue({ success: true });
 
@@ -143,7 +161,7 @@ describe('AuthContext', () => {
     });
 
     (auth.me as any).mockResolvedValue({
-      user: { githubId: '456', username: 'urluser', avatarUrl: '' },
+      id: '2', email: 'url@test.com', name: 'urluser', username: 'urluser', avatarUrl: '', createdAt: '2024-01-01',
     });
 
     renderWithProvider(<TestConsumer />);

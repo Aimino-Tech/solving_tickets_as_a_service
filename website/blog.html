@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog — STAS | Solving Tickets As A Service</title>
+  <meta name="description" content="STAS blog: Product updates, engineering deep-dives, and stories from the team behind the AI-powered GitHub automation bot." />
+  <meta name="keywords" content="STAS blog, AI automation, GitHub bot, OpenCode, developer tools, engineering" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stas.aimino.io/blog" />
+  <meta property="og:title" content="Blog — STAS" />
+  <meta property="og:description" content="Product updates, engineering deep-dives, and stories from the team behind STAS." />
+  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Blog — STAS" />
+  <meta name="twitter:description" content="Product updates, engineering deep-dives, and stories from the team behind STAS." />
+  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+
+  <!-- Plausible Analytics -->
+  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+
+  <style>
+    .blog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; max-width: var(--max-width); margin: 0 auto; padding: 0 24px 80px; }
+    .blog-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 32px 28px; transition: transform 0.25s, border-color 0.25s; display: flex; flex-direction: column; }
+    .blog-card:hover { transform: translateY(-4px); border-color: rgba(232,185,49,0.25); }
+    .blog-card-tags { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .blog-card-date { font-size: 12px; color: var(--text3); margin-bottom: 8px; font-family: var(--font-sans); letter-spacing: 0.5px; }
+    .blog-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 10px; line-height: 1.3; }
+    .blog-card h3 a { color: var(--text); }
+    .blog-card h3 a:hover { color: var(--gold); }
+    .blog-card p { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 20px; flex: 1; }
+    .blog-card .read-more { font-size: 14px; font-weight: 600; color: var(--gold); display: inline-flex; align-items: center; gap: 6px; }
+    .blog-card .read-more:hover { color: var(--gold2); }
+    .blog-card .blog-author { font-size: 12px; color: var(--text3); margin-top: 16px; border-top: 1px solid var(--border-light); padding-top: 14px; display: flex; align-items: center; gap: 8px; }
+    .blog-card .blog-author-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--gold); }
+    .blog-subscribe { text-align: center; padding: 60px 24px; max-width: 600px; margin: 0 auto; }
+    .blog-subscribe h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .blog-subscribe p { font-size: 14px; color: var(--text2); margin-bottom: 24px; }
+    .blog-subscribe .btn-group { justify-content: center; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo"><span class="logo-icon">S</span> STAS</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/">Home</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/trust">Trust</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/blog" class="active">Blog</a></li>
+        <li><a href="/status">Status</a></li>
+        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta">Install App →</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <section class="page-header">
+    <h1>Blog</h1>
+    <p class="sub">Product updates, engineering deep-dives, and stories from the STAS team.</p>
+  </section>
+
+  <!-- BLOG GRID -->
+  <div class="blog-grid">
+
+    <!-- Post 1 -->
+    <article class="blog-card animate-on-scroll">
+      <div class="blog-card-tags">
+        <span class="tag tag-gold">Announcement</span>
+        <span class="tag tag-cyan">Product</span>
+      </div>
+      <div class="blog-card-date">July 20, 2026</div>
+      <h3><a href="/blog/stas-v1-launch">STAS v1.0: From Issue to PR in Under 4 Minutes</a></h3>
+      <p>Today we're launching STAS v1.0 — an open-source GitHub bot that takes a labeled issue and turns it into a pull request automatically. Here's what we built and why it matters.</p>
+      <a href="/blog/stas-v1-launch" class="read-more">Read More →</a>
+      <div class="blog-author">
+        <span class="blog-author-avatar">AT</span>
+        AImino Team
+      </div>
+    </article>
+
+    <!-- Post 2 -->
+    <article class="blog-card animate-on-scroll">
+      <div class="blog-card-tags">
+        <span class="tag tag-green">Engineering</span>
+        <span class="tag tag-purple">OpenCode</span>
+      </div>
+      <div class="blog-card-date">July 15, 2026</div>
+      <h3><a href="/blog/opencode-integration">How STAS Uses OpenCode to Fix Real-World Bugs</a></h3>
+      <p>Under the hood, every STAS fix is powered by OpenCode — the 162K★ open-source coding agent. We dive into the integration architecture, sandbox isolation, and quality gates.</p>
+      <a href="/blog/opencode-integration" class="read-more">Read More →</a>
+      <div class="blog-author">
+        <span class="blog-author-avatar">AT</span>
+        AImino Team
+      </div>
+    </article>
+
+    <!-- Post 3 -->
+    <article class="blog-card animate-on-scroll">
+      <div class="blog-card-tags">
+        <span class="tag tag-amber">Security</span>
+        <span class="tag tag-gold">Trust</span>
+      </div>
+      <div class="blog-card-date">July 8, 2026</div>
+      <h3><a href="/blog/trust-and-safety">Trust & Safety in AI-Generated Code: The STAS Approach</a></h3>
+      <p>AI-generated code raises legitimate questions about quality and security. We explain STAS's 6-gate quality system, anti-hallucination measures, and sandbox isolation model.</p>
+      <a href="/blog/trust-and-safety" class="read-more">Read More →</a>
+      <div class="blog-author">
+        <span class="blog-author-avatar">AT</span>
+        AImino Team
+      </div>
+    </article>
+
+  </div>
+
+  <!-- SUBSCRIBE -->
+  <section class="blog-subscribe">
+    <h3>Stay Updated</h3>
+    <p>Get the latest STAS news, engineering deep-dives, and product updates delivered to your inbox.</p>
+    <div class="btn-group">
+      <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service" class="btn btn-primary" data-track="blog-sub-gh">Follow on GitHub</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/docs">Documentation</a></li>
+          <li><a href="/trust">Trust & Security</a></li>
+          <li><a href="/status">Status</a></li>
+          <li><a href="/support">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="/blog">Blog</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
+          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="https://aimino.io">AImino</a></li>
+          <li><a href="https://opencode.ai">OpenCode</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/LICENSE">License</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 AImino. All rights reserved.</span>
+      <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">Open Source (MIT)</a>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

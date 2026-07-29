@@ -14,7 +14,7 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'routes:admin-dashboard' });
 
-export const adminDashboardRouter = Router();
+export const adminDashboardRouter: Router = Router();
 
 
 function requireAdmin(req: Request, res: Response): boolean {

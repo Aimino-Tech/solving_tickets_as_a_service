@@ -17,7 +17,7 @@ import { Router, type Request, type Response } from 'express';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'enterprise-api' });
-const router = Router();
+const router: Router = Router();
 
 
 const ENTERPRISE_FEATURES = [

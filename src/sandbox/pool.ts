@@ -93,7 +93,7 @@ export class SandboxPool {
       args.push('--security-opt', `apparmor=${apparmorProfile}`);
     }
 
-    if (config.docker.gvisorEnabled) {
+    if ((config.docker as Record<string, unknown>).gvisorEnabled) {
       args.push('--runtime', 'runsc');
     }
 

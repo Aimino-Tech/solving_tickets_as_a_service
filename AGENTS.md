@@ -1,5 +1,33 @@
 # STAS — Solving Tickets As A Service
 
+## Skill Installation
+
+STAS is available as a downloadable OpenCode skill. Any OpenCode, OpenClaw, or Claude Code agent can install it:
+
+**OpenCode/OpenClaw:**
+```bash
+# Install via skill URL
+opencode skill install https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/stas/SKILL.md
+```
+
+Or add to `opencode.json`:
+```json
+{
+  "skills": {
+    "stas": {
+      "url": "https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/stas/SKILL.md"
+    }
+  }
+}
+```
+
+**Claude Code (via MCP):**
+```bash
+npx stas install-mcp --claude
+```
+
+The skill exposes tools for submitting GitHub issues, checking fix status, and retrieving results. See `skills/stas/SKILL.md` for the full reference.
+
 ## One-liner
 
 Label a GitHub issue. STAS investigates, fixes, and opens a PR. You review and merge.
@@ -97,4 +125,102 @@ Before any PR or state transition to Human Review, run **6 deterministic gates**
 ```bash
 npm run quality-gates              # full repo scan (all 6 gates)
 npm run quality-gates:changed      # only changed files vs origin/main
+```
+
+## MCP Agent Server (AIM-3240)
+
+STAS exposes a TypeScript-based MCP (Model Context Protocol) server at `/mcp/jsonrpc` for AI agent discovery. Agents can discover and call STAS tools over JSON-RPC 2.0.
+
+### Endpoint
+
+```
+POST /mcp/jsonrpc
+Content-Type: application/json
+```
+
+### Methods
+
+#### `tools/list` — List all available tools
+
+Request:
+```json
+{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
+```
+
+Response includes: `stas_fix_issue`, `stas_check_status`, `stas_list_runs`, `stas_get_run`.
+
+#### `tools/call` — Invoke a tool
+
+**stas_fix_issue**: Dispatch a fix run for a GitHub issue.
+```json
+{
+  "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+  "params": { "name": "stas_fix_issue", "arguments": { "repoOwner": "owner", "repoName": "repo", "issueNumber": 42 } }
+}
+```
+
+**stas_check_status**: Check fix run status by runId.
+```json
+{
+  "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+  "params": { "name": "stas_check_status", "arguments": { "runId": "uuid" } }
+}
+```
+
+**stas_list_runs**: List recent fix runs with optional status filter.
+```json
+{
+  "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+  "params": { "name": "stas_list_runs", "arguments": { "limit": 20, "status": "completed" } }
+}
+```
+
+**stas_get_run**: Get full details for a fix run.
+```json
+{
+  "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+  "params": { "name": "stas_get_run", "arguments": { "runId": "uuid" } }
+}
+```
+
+#### `resources/list` — List available resources
+
+Request:
+```json
+{"jsonrpc": "2.0", "id": 1, "method": "resources/list"}
+```
+
+Resources: `stas://runs/{runId}`, `stas://issues/{issueId}`.
+
+#### `resources/read` — Read a resource
+
+```json
+{
+  "jsonrpc": "2.0", "id": 1, "method": "resources/read",
+  "params": { "uri": "stas://runs/some-uuid" }
+}
+```
+
+### Architecture
+
+The MCP agent server (`src/mcp/agentServer.ts`) is an Express router mounted at `/mcp/jsonrpc`. It:
+
+- Stores job state in Redis (shared with `src/routes/mcp.ts`)
+- Dispatches fix runs via RabbitMQ to the existing pipeline
+- Uses JSON-RPC 2.0 over HTTP POST for MCP protocol compliance
+- Reuses existing `McpJobStatus`, `McpRunHistoryEntry` types from `src/opencode-contract.ts`
+
+### Agent Discovery Flow
+
+```
+AI Agent
+  │
+  ├─ POST /mcp/jsonrpc { method: "tools/list" }
+  │     → Discovers stas_fix_issue, stas_check_status, etc.
+  │
+  ├─ POST /mcp/jsonrpc { method: "tools/call", name: "stas_fix_issue", args: {...} }
+  │     → Run created, dispatched to RabbitMQ pipeline
+  │
+  └─ POST /mcp/jsonrpc { method: "tools/call", name: "stas_check_status", args: { runId } }
+        → Returns current status (queued → investigating → fixing → ... → completed/failed)
 ```

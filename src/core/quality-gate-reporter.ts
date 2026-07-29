@@ -10,7 +10,7 @@
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { QualityGateResult } from '../agent/types.js';
+import type { QualityGateResult } from '../types/agent-types.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'quality-gate-reporter' });

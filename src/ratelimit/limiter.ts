@@ -63,6 +63,10 @@ export function getRedisClient(): Redis {
       maxRetriesPerRequest: null,
       enableReadyCheck: true,
       retryStrategy: (times: number) => {
+        if (times > 10) {
+          log.error({ attempts: times }, 'Rate limiter Redis retry limit reached — giving up');
+          return null;
+        }
         const delay = Math.min(times * 100, 3000);
         log.warn({ attempt: times }, `Rate limiter Redis retry in ${delay}ms`);
         return delay;

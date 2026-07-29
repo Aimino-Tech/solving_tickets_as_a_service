@@ -107,7 +107,7 @@ export function auditMiddleware(options: AuditMiddlewareOptions) {
 
       const entry: AuditLogEntry = {
         actorType: options.actorType ?? 'system',
-        actorId: (req as Record<string, unknown>).adminId as string ?? (req as Record<string, unknown>).accountId as string,
+        actorId: (req as unknown as Record<string, unknown>).adminId as string ?? (req as unknown as Record<string, unknown>).accountId as string,
         action: options.action,
         resourceType: options.resourceType,
         resourceId,

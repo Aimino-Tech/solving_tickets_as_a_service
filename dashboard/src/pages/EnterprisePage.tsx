@@ -105,22 +105,22 @@ export default function EnterprisePage() {
           <form onSubmit={submit} className="mt-8 space-y-6">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Name *</label>
-                <input type="text" required value={f.name} onChange={e => h('name', e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm" placeholder="Jane Smith" />
+                <label htmlFor="contact-name" className="block text-sm font-medium text-gray-700">Name *</label>
+                <input id="contact-name" type="text" required aria-required="true" value={f.name} onChange={e => h('name', e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm" placeholder="Jane Smith" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Email *</label>
-                <input type="email" required value={f.email} onChange={e => h('email', e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm" placeholder="jane@company.com" />
+                <label htmlFor="contact-email" className="block text-sm font-medium text-gray-700">Email *</label>
+                <input id="contact-email" type="email" required aria-required="true" value={f.email} onChange={e => h('email', e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm" placeholder="jane@company.com" />
               </div>
             </div>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Company *</label>
-                <input type="text" required value={f.company} onChange={e => h('company', e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm" placeholder="Acme Corp" />
+                <label htmlFor="contact-company" className="block text-sm font-medium text-gray-700">Company *</label>
+                <input id="contact-company" type="text" required aria-required="true" value={f.company} onChange={e => h('company', e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm" placeholder="Acme Corp" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Team Size</label>
-                <select value={f.teamSize} onChange={e => h('teamSize', e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm">
+                <label htmlFor="contact-team-size" className="block text-sm font-medium text-gray-700">Team Size</label>
+                <select id="contact-team-size" value={f.teamSize} onChange={e => h('teamSize', e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm">
                   <option value="">Select...</option>
                   <option value="1-10">1-10</option><option value="11-50">11-50</option>
                   <option value="51-200">51-200</option><option value="201+">201+</option>
@@ -128,8 +128,8 @@ export default function EnterprisePage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Message *</label>
-              <textarea required rows={4} value={f.message} onChange={e => h('message', e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm" placeholder="Tell us about your needs..." />
+              <label htmlFor="contact-message" className="block text-sm font-medium text-gray-700">Message *</label>
+              <textarea id="contact-message" required aria-required="true" rows={4} value={f.message} onChange={e => h('message', e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 text-sm" placeholder="Tell us about your needs..." />
             </div>
             <button type="submit" className="w-full rounded-lg bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">Contact Sales</button>
           </form>

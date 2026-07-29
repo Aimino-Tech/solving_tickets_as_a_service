@@ -29,6 +29,16 @@ import {
   checkWorkerHeartbeats,
   checkSLOCompliance,
 } from '../monitoring/alerting.js';
+import { startMonitoringLoop, stopMonitoringLoop } from '../loops/monitoringLoop.js';
+import {
+  checkQueueDepthAnomaly,
+  checkErrorRateSpike,
+  checkLatencyDegradation,
+  checkThroughputDrop,
+  checkWorkerHealth as checkWorkerAnomaly,
+  checkDbPoolUsage,
+} from '../monitoring/anomalyDetection.js';
+import { findLowCreditAccounts, sendLowCreditAlerts } from '../credits/index.js';
 
 const log = rootLogger.child({ module: 'scheduled' });
 
@@ -37,8 +47,10 @@ const log = rootLogger.child({ module: 'scheduled' });
 const QUEUE_DEPTH_CHECK_INTERVAL_MS = config.monitoring.queueDepthAlertMinutes * 60 * 1000;
 const WORKER_HEARTBEAT_CHECK_INTERVAL_MS = 60_000; // every 60s
 const SLO_COMPLIANCE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // every 5min
+const ANOMALY_DETECTION_INTERVAL_MS = 2 * 60 * 1000; // every 2min
 const DLQ_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
 const METRICS_REFRESH_INTERVAL_MS = 60_000; // every 60s
+const LOW_CREDIT_WARNING_INTERVAL_MS = 15 * 60 * 1000; // every 15min
 
 // ── Task state ─────────────────────────────────────────────────────
 
@@ -89,6 +101,49 @@ async function checkWorkerHealth(): Promise<void> {
   }
 }
 
+// ── Anomaly Detection Check (AIM-3228) ─────────────────────────────
+
+async function runAnomalyDetection(): Promise<void> {
+  try {
+    const health = await getQueueHealth();
+    const queueDepth = health.queues.find((q) => q.type === 'main')?.depth ?? 0;
+
+    const queueResult = checkQueueDepthAnomaly(queueDepth, 10, 5);
+    if (queueResult.anomaly) {
+      log.warn({ score: queueResult.score, message: queueResult.message }, 'Queue depth anomaly detected');
+    }
+
+    const errorResult = checkErrorRateSpike(0, 0, 1);
+    if (errorResult.anomaly) {
+      log.warn({ score: errorResult.score, message: errorResult.message }, 'Error rate spike detected');
+    }
+
+    const latencyResult = checkLatencyDegradation(0, 100);
+    if (latencyResult.anomaly) {
+      log.warn({ score: latencyResult.score, message: latencyResult.message }, 'Latency degradation detected');
+    }
+
+    const throughputResult = checkThroughputDrop(0, 50);
+    if (throughputResult.anomaly) {
+      log.warn({ score: throughputResult.score, message: throughputResult.message }, 'Throughput drop detected');
+    }
+
+    const workerResult = checkWorkerAnomaly(0);
+    if (workerResult.anomaly) {
+      log.warn({ score: workerResult.score, message: workerResult.message }, 'Worker health anomaly detected');
+    }
+
+    const dbResult = checkDbPoolUsage(0.5);
+    if (dbResult.anomaly) {
+      log.warn({ score: dbResult.score, message: dbResult.message }, 'DB pool usage anomaly detected');
+    }
+
+    log.debug('Anomaly detection check complete — all 6 detectors run');
+  } catch (err) {
+    log.error({ err: String(err) }, 'Anomaly detection check failed');
+  }
+}
+
 // ── SLO Compliance Check (AIM-1272) ────────────────────────────────
 
 async function runSloCheck(): Promise<void> {
@@ -122,6 +177,24 @@ async function cleanupDLQ(): Promise<void> {
 
 // ── Metrics Refresh ────────────────────────────────────────────────
 
+// ── Low Credit Warning Check (AIM-3525) ──────────────────────
+
+async function checkLowCreditAccounts(): Promise<void> {
+  const accounts = await findLowCreditAccounts();
+  if (accounts.length > 0) {
+    log.warn({ count: accounts.length }, 'Low-credit accounts detected');
+  }
+}
+
+async function runLowCreditWarning(): Promise<void> {
+  try {
+    await checkLowCreditAccounts();
+    log.debug('Low credit warning check complete');
+  } catch (err) {
+    log.error({ err: String(err) }, 'Low credit warning check failed');
+  }
+}
+
 async function refreshMetrics(): Promise<void> {
   try {
     await getQueueHealth();
@@ -148,17 +221,33 @@ export function startScheduledTasks(): void {
     'Starting scheduled maintenance tasks',
   );
 
+  // Monitoring loop (Phase 2) — detects errors from DB/webhooks and creates Linear tickets
+  startMonitoringLoop();
+
   // Queue depth check (on interval matching queueDepthAlertMinutes)
   timers.push(setInterval(checkQueueDepths, QUEUE_DEPTH_CHECK_INTERVAL_MS));
 
   // Worker heartbeat check (every 60s)
   timers.push(setInterval(checkWorkerHealth, WORKER_HEARTBEAT_CHECK_INTERVAL_MS));
 
+  // Anomaly detection check (every 2min)
+  timers.push(setInterval(runAnomalyDetection, ANOMALY_DETECTION_INTERVAL_MS));
+
   // SLO compliance check (every 5min)
   timers.push(setInterval(runSloCheck, SLO_COMPLIANCE_CHECK_INTERVAL_MS));
 
+  // Low credit alert check (every 30min)
+  timers.push(setInterval(() => {
+    sendLowCreditAlerts().catch((err) => {
+      log.error({ err: String(err) }, 'Low-credit alert check failed');
+    });
+  }, 30 * 60 * 1000));
+
   // DLQ cleanup (once per day)
   timers.push(setInterval(cleanupDLQ, DLQ_CLEANUP_INTERVAL_MS));
+
+  // Low credit warning check (every 15min)
+  timers.push(setInterval(runLowCreditWarning, LOW_CREDIT_WARNING_INTERVAL_MS));
 
   // Metrics refresh (every 60s)
   timers.push(setInterval(refreshMetrics, METRICS_REFRESH_INTERVAL_MS));
@@ -166,8 +255,11 @@ export function startScheduledTasks(): void {
   // Run initial checks immediately
   checkQueueDepths().catch(() => {});
   checkWorkerHealth().catch(() => {});
+  runAnomalyDetection().catch(() => {});
   runSloCheck().catch(() => {});
+  sendLowCreditAlerts().catch(() => {});
   cleanupDLQ().catch(() => {});
+  runLowCreditWarning().catch(() => {});
   refreshMetrics().catch(() => {});
 
   log.info('Scheduled maintenance tasks started');
@@ -182,5 +274,6 @@ export function stopScheduledTasks(): void {
     clearInterval(timer);
   }
   timers.length = 0;
+  stopMonitoringLoop();
   log.info('Scheduled maintenance tasks stopped');
 }

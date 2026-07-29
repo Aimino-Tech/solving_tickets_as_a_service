@@ -26,11 +26,13 @@ import time
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Any, Optional
+import urllib.request
 
 logger = logging.getLogger(__name__)
 
 _ONBOARDING_REDIS_PREFIX = "stas:onboarding:"
 _ONBOARDING_TTL_S = int(os.getenv("ONBOARDING_TTL_S", str(7 * 24 * 3600)))
+_N8N_ONBOARDING_WEBHOOK_URL: str | None = os.getenv("N8N_ONBOARDING_WEBHOOK_URL")
 
 
 def _get_file_dir() -> str:
@@ -209,6 +211,28 @@ class OnboardingStateMachine:
     @staticmethod
     def _trigger_first_issue_wizard(tenant_id: str, state: OnboardingState) -> None:
         logger.info("Triggering first-issue wizard tenant=%s installation_id=%s", tenant_id, state.installation_id)
+        # Fire n8n onboarding email webhook
+        if _N8N_ONBOARDING_WEBHOOK_URL:
+            try:
+                payload = json.dumps({
+                    "tenant_id": tenant_id,
+                    "email": "",
+                    "account_name": None,
+                    "credits_granted": 100,
+                    "event": "onboarding_complete",
+                }).encode("utf-8")
+                req = urllib.request.Request(
+                    _N8N_ONBOARDING_WEBHOOK_URL,
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                urllib.request.urlopen(req, timeout=10)
+                logger.info("n8n onboarding webhook fired tenant=%s", tenant_id)
+            except Exception as exc:
+                logger.warning("n8n onboarding webhook failed for %s -- %s", tenant_id, exc)
+        else:
+            logger.debug("N8N_ONBOARDING_WEBHOOK_URL not set — skipping n8n webhook")
         try:
             from workers.tasks import dispatch_first_issue_wizard
             dispatch_first_issue_wizard.delay(tenant_id=tenant_id, installation_id=state.installation_id)

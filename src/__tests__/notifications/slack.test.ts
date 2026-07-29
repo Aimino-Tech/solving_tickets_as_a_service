@@ -1,7 +1,7 @@
 /**
  * Unit tests for src/notifications/slack.ts — Slack notification service.
  */
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockGetSlackBoltApp = vi.fn();
 const mockSendInteractiveMessage = vi.fn();
@@ -11,7 +11,7 @@ vi.mock('../../notifications/slack-bolt.js', () => ({
 }));
 
 vi.mock('../../config.js', () => ({
-  config: { stas: { botName: 'STAS' }, slack: { webhookUrl: '' } },
+  config: { stas: { botName: 'STAS' }, slack: { webhookUrl: '' }, n8n: { webhookUrl: '' } },
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -34,7 +34,10 @@ describe('notifications/slack', () => {
     it('warns and skips when no Slack integration configured', async () => {
       const service = new slack.SlackNotificationService('');
       await service.sendNotification('fix_started', {
-        repoOwner: 'owner', repoName: 'repo', issueNumber: 1, issueTitle: 'Test',
+        repoOwner: 'owner',
+        repoName: 'repo',
+        issueNumber: 1,
+        issueTitle: 'Test',
       });
       // No error, just warn
     });
@@ -43,7 +46,10 @@ describe('notifications/slack', () => {
       global.fetch = vi.fn().mockResolvedValue({ ok: true, text: vi.fn() });
       const service = new slack.SlackNotificationService('https://hooks.slack.com/test');
       await service.sendNotification('fix_started', {
-        repoOwner: 'owner', repoName: 'repo', issueNumber: 1, issueTitle: 'Test',
+        repoOwner: 'owner',
+        repoName: 'repo',
+        issueNumber: 1,
+        issueTitle: 'Test',
       });
       expect(global.fetch).toHaveBeenCalled();
     });
@@ -55,7 +61,10 @@ describe('notifications/slack', () => {
       });
       const service = new slack.SlackNotificationService('');
       await service.sendNotification('fix_started', {
-        repoOwner: 'owner', repoName: 'repo', issueNumber: 1, issueTitle: 'Test',
+        repoOwner: 'owner',
+        repoName: 'repo',
+        issueNumber: 1,
+        issueTitle: 'Test',
       });
       expect(mockSendInteractiveMessage).toHaveBeenCalled();
     });

@@ -1,0 +1,26 @@
+{
+  "name": "STAS",
+  "logo": "/logo.png",
+  "favicon": "/favicon.png",
+  "colors": {
+    "primary": "#4f46e5",
+    "light": "#818cf8",
+    "dark": "#3730a3"
+  },
+  "topbarCtaButton": {
+    "name": "Get Started",
+    "url": "https://stas.aimino.io"
+  },
+  "anchors": [
+    { "name": "API Reference", "icon": "code", "url": "api-reference" },
+    { "name": "GitHub", "icon": "github", "url": "https://github.com/Aimino-Tech/solving_tickets_as_a_service" }
+  ],
+  "navigation": [
+    { "group": "Getting Started", "pages": ["docs/getting-started", "docs/quickstart"] },
+    { "group": "Guides", "pages": ["docs/self-hosting", "docs/customization"] },
+    { "group": "Architecture", "pages": ["docs/architecture"] },
+    { "group": "API Reference", "pages": ["docs/api/overview", "docs/api/webhooks", "docs/api/mcp"] }
+  ],
+  "feedback": { "thumbsRating": true },
+  "analytics": { "posthog": { "apiKey": "YOUR_POSTHOG_KEY" } }
+}

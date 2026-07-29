@@ -13,21 +13,6 @@ vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-key');
 
 vi.mock('tsarch', () => ({}));
 
-vi.mock('better-sqlite3', () => {
-  const mockDb = {
-    exec: vi.fn(),
-    prepare: vi.fn(() => ({
-      run: vi.fn(),
-      get: vi.fn(),
-      all: vi.fn(),
-      finalize: vi.fn(),
-    })),
-    close: vi.fn(),
-  };
-  function MockDatabase() { return mockDb; }
-  return { default: MockDatabase };
-});
-
 vi.mock('tsarch', () => {
   const chainable = {
     matchingPattern: () => chainable,
@@ -37,19 +22,4 @@ vi.mock('tsarch', () => {
     filesOfProject: () => chainable,
   };
   return { filesOfProject: () => chainable };
-});
-
-vi.mock('better-sqlite3', () => {
-  const mockDb = {
-    exec: vi.fn(),
-    prepare: vi.fn(() => ({
-      run: vi.fn(),
-      get: vi.fn(),
-      all: vi.fn(),
-      finalize: vi.fn(),
-    })),
-    close: vi.fn(),
-  };
-  function MockDatabase() { return mockDb; }
-  return { default: MockDatabase };
 });

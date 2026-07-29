@@ -101,3 +101,34 @@ def render_text() -> str:
 
 def render_json() -> str:
     return json.dumps(summary(), indent=2, default=str)
+
+
+def status() -> dict[str, Any]:
+    """Return guardrail status for /guardrail/status endpoint.
+
+    Returns a compact status payload suitable for health-check endpoints.
+    """
+    audit_path = get_audit_db_path()
+    memory_path = get_memory_db_path()
+    audit_log.init_db(audit_path)
+    memory_service.init_db(memory_path)
+
+    recent = audit_log.query_events(limit=5, db_path=audit_path)
+    last_decision = recent[0]["decision"] if recent else None
+    last_guardrail = recent[0]["guardrail"] if recent else None
+
+    return {
+        "status": "ok",
+        "guardrail": "active",
+        "total_audit_events": audit_log.count_events(db_path=audit_path),
+        "total_memory_entries": len(memory_service.query(limit=1, db_path=memory_path)),
+        "last_decision": last_decision,
+        "last_guardrail": last_guardrail,
+        "audit_db_path": audit_path,
+        "memory_db_path": memory_path,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def render_status_json() -> str:
+    return json.dumps(status(), indent=2, default=str)

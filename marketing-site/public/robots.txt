@@ -1,0 +1,11 @@
+# STAS — Production Website
+# https://stas.aimino.io
+
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /trust
+Allow: /docs
+Allow: /status
+
+Sitemap: https://stas.aimino.io/sitemap.xml

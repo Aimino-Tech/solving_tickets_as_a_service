@@ -229,6 +229,17 @@ export function setupTestEnvironment(options?: TestHarnessOptions): void {
   process.env.STRIPE_SECRET_KEY = '';
   process.env.ADMIN_API_KEY = 'test-admin-key';
   process.env.IP_ALLOWLIST_ENABLED = 'false';
+  process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-jwt-secret';
+  process.env.SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET ?? 'test-supabase-jwt';
+  process.env.DPA_VERSION = process.env.DPA_VERSION ?? '2026-06-01';
+  process.env.DPA_REQUIRE_ACCEPTANCE = 'false';
+  process.env.DATA_RETENTION_DAYS = '30';
+  process.env.OPENSYMPHONY_ENABLED = 'false';
+  process.env.STAS_MCP_AUTO_START = 'false';
+  process.env.CI_MONITOR_ENABLED = 'false';
+  process.env.STAS_AI_DISABLED = 'true';
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://localhost:5432/stas_test';
+  process.env.RABBITMQ_URL = process.env.RABBITMQ_URL ?? 'amqp://guest:guest@localhost:5672';
 
   // Override with any custom env vars
   if (options?.env) {

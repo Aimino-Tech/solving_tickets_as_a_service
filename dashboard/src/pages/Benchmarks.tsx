@@ -6,22 +6,28 @@ export default function Benchmarks() {
   const [data, setData] = useState<BenchmarkEntry[] | null>(null);
   const [prices, setPrices] = useState<BenchmarkPrice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [priceError, setPriceError] = useState<string | null>(null); // AIM-3599
 
   useEffect(() => {
+    let cancelled = false;
     benchmarks
       .get()
-      .then((resp) => setData(resp.competitors))
-      .catch((err: Error) => setError(err.message));
+      .then((resp: any) => { if (!cancelled) setData(resp.competitors); })
+      .catch((err: Error) => { if (!cancelled) setError(err.message); });
     benchmarks
       .getPrices()
-      .then((resp) => setPrices(resp.prices))
-      .catch(() => {});
+      .then((resp: any) => { if (!cancelled) setPrices(resp.prices); })
+      .catch((err: Error) => { if (!cancelled) setPriceError(err.message); });
+    return () => { cancelled = true; };
   }, []);
 
   if (error) {
     return (
       <div className="card">
         <p className="text-red-600">Failed to load benchmarks: {error}</p>
+        <p className="mt-2 text-sm text-gray-500">
+          Please try again later. If the problem persists, contact support.
+        </p>
       </div>
     );
   }
@@ -98,23 +104,23 @@ export default function Benchmarks() {
                     </td>
                     <td className="py-3 pr-4">
                       {entry.agentNative ? (
-                        <span className="text-green-600">✓</span>
+                        <span className="text-green-600">\u2713</span>
                       ) : (
-                        <span className="text-gray-300">—</span>
+                        <span className="text-gray-300">\u2014</span>
                       )}
                     </td>
                     <td className="py-3 pr-4">
                       {entry.oss ? (
-                        <span className="text-green-600">✓</span>
+                        <span className="text-green-600">\u2713</span>
                       ) : (
-                        <span className="text-gray-300">—</span>
+                        <span className="text-gray-300">\u2014</span>
                       )}
                     </td>
                     <td className="py-3">
                       {entry.selfHostable ? (
-                        <span className="text-green-600">✓</span>
+                        <span className="text-green-600">\u2713</span>
                       ) : (
-                        <span className="text-gray-300">—</span>
+                        <span className="text-gray-300">\u2014</span>
                       )}
                     </td>
                   </tr>
@@ -124,6 +130,14 @@ export default function Benchmarks() {
           </table>
         </div>
       </div>
+
+      {priceError && (
+        <div className="card border-amber-200 bg-amber-50/50">
+          <p className="text-sm text-amber-700">
+            Failed to load pricing data: {priceError}
+          </p>
+        </div>
+      )}
 
       {prices && prices.length > 0 && (
         <div className="card">

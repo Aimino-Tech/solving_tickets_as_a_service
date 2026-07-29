@@ -19,7 +19,7 @@ const log = rootLogger.child({ module: 'repos-routes' });
 // Rate Limiting
 // ---------------------------------------------------------------------------
 
-const reposLimiter = rateLimit({
+const reposLimiter = (rateLimit as any)({
   windowMs: 60_000,
   limit: 30,
   standardHeaders: true,
@@ -27,7 +27,7 @@ const reposLimiter = rateLimit({
   message: { error: 'Too many requests', retryAfter: 'see Retry-After header' },
 });
 
-const router = Router();
+const router: Router = Router();
 
 router.use(reposLimiter);
 

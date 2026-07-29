@@ -11,9 +11,19 @@ export interface Ticket {
   updatedAt: string;
 }
 
+export interface CreateTicketParams {
+  teamId: string;
+  projectId?: string;
+  title: string;
+  description: string;
+  priority?: number;
+  labels?: string[];
+}
+
 export interface Tracker {
   readonly source: 'linear' | 'jira';
   getTicket(id: string): Promise<Ticket>;
+  createTicket(params: CreateTicketParams): Promise<Ticket>;
   postComment(ticketId: string, body: string): Promise<void>;
   updateStatus(ticketId: string, status: string): Promise<void>;
   createLink(ticketId: string, url: string, title: string): Promise<void>;

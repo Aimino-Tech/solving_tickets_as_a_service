@@ -7,6 +7,7 @@ vi.mock('@slack/bolt', () => ({
   App: vi.fn(function () {
     this.client = { chat: { postMessage: vi.fn() } };
     this.action = vi.fn();
+    this.command = vi.fn();
   }),
   ExpressReceiver: vi.fn(function () {
     this.router = { post: vi.fn() };

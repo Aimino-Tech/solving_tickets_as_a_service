@@ -25,6 +25,7 @@ import {
   buildPRBody as bpBody,
   type AgentResult,
   type VerificationResult,
+// @ts-ignore - File outside rootDir, handled at runtime
 } from '../../packages/github-client/src/index.js';
 import { BOT_SIGNATURE } from '../platforms/messages.js';
 

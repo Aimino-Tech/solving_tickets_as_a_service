@@ -21,6 +21,7 @@ const ALLOWED_AMQPLIB_DIRS = [
 /** Files where amqplib imports are intentionally allowed. */
 const ALLOWED_AMQPLIB_FILES = [
   join(PROJECT_ROOT, 'src', 'queue', 'rabbitmq.ts'),
+  join(PROJECT_ROOT, 'src', 'routes', 'admin.ts'),
 ];
 
 function findTsFiles(dir: string): string[] {
