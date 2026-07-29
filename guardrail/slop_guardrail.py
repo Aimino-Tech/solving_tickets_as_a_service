@@ -41,13 +41,32 @@ import traceback
 from pathlib import Path
 from typing import Any, AsyncGenerator, Optional
 
-import litellm
-from litellm.integrations.custom_guardrail import CustomGuardrail
-from litellm.types.utils import ModelResponseStream
-
 from guardrail.metrics import record_counter, STRICT_MODE
 
 logger = logging.getLogger(__name__)
+
+CAUTION_PREFIX = "\n\n[CAUTION: Slop pattern detected"
+
+def _get_litellm():
+    try:
+        import litellm
+        return litellm
+    except ImportError:
+        return None
+
+def _get_custom_guardrail():
+    try:
+        from litellm.integrations.custom_guardrail import CustomGuardrail
+        return CustomGuardrail
+    except ImportError:
+        return None
+
+def _get_model_response_stream():
+    try:
+        from litellm.types.utils import ModelResponseStream
+        return ModelResponseStream
+    except ImportError:
+        return None
 
 # ── Pattern loading ──────────────────────────────────────────────────────────
 
@@ -87,8 +106,11 @@ class SlopIntentGuardrailError(ValueError):
 
 GUARDRAIL_BLOCKED_CODE = "GUARDRAIL_BLOCKED"
 
+_CustomGuardrail = _get_custom_guardrail() or object
+_ModelResponseStream = _get_model_response_stream()
 
-class SlopIntentGuardrail(CustomGuardrail):
+
+class SlopIntentGuardrail(_CustomGuardrail):  # type: ignore[valid-type,misc]
     """
     LiteLLM guardrail that detects slop-intent patterns in model responses.
 
@@ -109,12 +131,16 @@ class SlopIntentGuardrail(CustomGuardrail):
     """
 
     def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
+        _litellm = _get_litellm()
+        if _litellm and _CustomGuardrail:
+            super().__init__(**kwargs)
         self._categorized = _load_patterns()
         self._all_patterns = _flatten_patterns(self._categorized)
         self._match_log: list[dict[str, str]] = []
 
-        self.gate_mode = (kwargs.get("gate_mode") or "block").lower()
+        env_gate_mode = os.environ.get("SLOP_GATE_MODE", "").lower()
+        effective_gate_mode = kwargs.get("gate_mode") or env_gate_mode or "block"
+        self.gate_mode = effective_gate_mode.lower()
         if self.gate_mode not in ("warn", "annotate", "block"):
             logger.warning(
                 "Unknown gate_mode '%s', falling back to 'block'",
@@ -122,7 +148,9 @@ class SlopIntentGuardrail(CustomGuardrail):
             )
             self.gate_mode = "block"
 
-        self.block_threshold = float(kwargs.get("block_threshold") or 0.5)
+        env_threshold = os.environ.get("SLOP_BLOCK_THRESHOLD", "")
+        effective_threshold = kwargs.get("block_threshold") or env_threshold or "0.5"
+        self.block_threshold = float(effective_threshold)
         self.block_threshold = max(0.0, min(1.0, self.block_threshold))
 
         if not self._all_patterns:
@@ -139,6 +167,15 @@ class SlopIntentGuardrail(CustomGuardrail):
             self.block_threshold,
         )
 
+    def _compute_slop_score(self) -> float:
+        if not self._match_log:
+            return 0.0
+        matched_categories = set(m["category"] for m in self._match_log)
+        total_categories = len(self._categorized)
+        if total_categories == 0:
+            return 0.0
+        return len(matched_categories) / total_categories
+
     # ── Public hooks ─────────────────────────────────────────────────────
 
     async def async_post_call_success_hook(
@@ -154,8 +191,15 @@ class SlopIntentGuardrail(CustomGuardrail):
           - annotate: Inject CAUTION prefix into response content
           - warn:     Log detection only
         """
+        _litellm = _get_litellm()
+        if _litellm is None:
+            logger.error("GUARDRAIL FAILURE [async_post_call_success_hook]: litellm not installed")
+            if STRICT_MODE:
+                raise RuntimeError("litellm is required for guardrail but not installed")
+            return
+
         try:
-            if not isinstance(response, litellm.ModelResponse):
+            if not isinstance(response, _litellm.ModelResponse):
                 return
 
             self._match_log = []
@@ -179,11 +223,11 @@ class SlopIntentGuardrail(CustomGuardrail):
                     m["source"],
                     m["snippet"],
                     score,
-                    self._gate_mode,
+                    self.gate_mode,
                 )
 
-            if self._gate_mode == "block" or (
-                self._gate_mode == "annotate" and score >= self._block_threshold
+            if self.gate_mode == "block" or (
+                self.gate_mode == "annotate" and score >= self.block_threshold
             ):
                 first = self._match_log[0]
                 raise SlopIntentGuardrailError(
@@ -202,36 +246,12 @@ class SlopIntentGuardrail(CustomGuardrail):
             if STRICT_MODE:
                 raise
 
-        if self.gate_mode == "block":
-            if category_ratio >= self.block_threshold:
-                raise SlopIntentGuardrailError(
-                    source=first["source"],
-                    pattern=first["pattern"],
-                    snippet=first["snippet"],
-                )
-            logger.info(
-                "Block threshold not met: %.2f < %.2f — falling back to warn",
-                category_ratio, self.block_threshold,
-            )
-
-        elif self.gate_mode == "annotate":
-            annotation = (
-                f"\n\n[CAUTION: Slop pattern detected — '{first['pattern']}' "
-                f"in {first['source']} — response may contain placeholder content.]\n"
-            )
-            for choice in response.choices:
-                msg = choice.message
-                if msg.content:
-                    msg.content = annotation + msg.content
-
-        # warn mode: just log (already done above)
-
     async def async_post_call_streaming_iterator_hook(
         self,
         user_api_key_dict: Any,
         response: Any,
         request_data: dict,
-    ) -> AsyncGenerator[ModelResponseStream, None]:
+    ) -> AsyncGenerator[Any, None]:
         """
         For streaming requests: buffer chunks, scan progressively, and
         inject CAUTION annotation at chunk boundary when slop is detected.
@@ -267,10 +287,10 @@ class SlopIntentGuardrail(CustomGuardrail):
                                     "SLOP DETECTED (streaming): category=%s, pattern='%s', mode=%s",
                                     category,
                                     slop_pattern,
-                                    self._gate_mode,
+                                    self.gate_mode,
                                 )
 
-                                if self._gate_mode == "annotate":
+                                if self.gate_mode == "annotate":
                                     annotation = (
                                         f"\n\n---\n*CAUTION — Slop pattern detected in stream:*\n"
                                         f"* Category: {category}\n"
@@ -287,7 +307,7 @@ class SlopIntentGuardrail(CustomGuardrail):
 
                 yield chunk
 
-            if slop_detected and self._gate_mode == "block":
+            if slop_detected and self.gate_mode == "block":
                 raise SlopIntentGuardrailError(
                     source="streaming",
                     pattern=slop_pattern,
@@ -303,18 +323,6 @@ class SlopIntentGuardrail(CustomGuardrail):
             record_counter("guardrail_failures_total", 1, module="async_post_call_streaming_iterator_hook")
             if STRICT_MODE:
                 raise
-
-        matched_patterns: list[str] = []
-        for pattern in self._all_patterns:
-            match = pattern.search(assembled)
-            if match:
-                matched_patterns.append(match.group(0))
-
-        if matched_patterns:
-            logger.warning(
-                "SLOP DETECTED (streaming, post-delivery): '%s'",
-                "', '".join(matched_patterns[:5]),
-            )
 
     # ── Internal checks ──────────────────────────────────────────────────
 
