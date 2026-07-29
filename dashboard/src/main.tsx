@@ -23,7 +23,7 @@ function OfflineWrapper() {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider>
-      <BrowserRouter basename="/dashboard">
+      <BrowserRouter>
         <I18nProvider>
           <AuthProvider>
             <OfflineWrapper />
