@@ -717,6 +717,11 @@ export async function createApp(): Promise<express.Application> {
   // ── Dashboard API ──────────────────────────────────────
   app.use('/api/v1/me', dashboardRouter);
 
+  // ── Stats & Audit API ──────────────────────────────────
+  const { statsRouter, auditRouter } = await import('./routes/statsAndAudit.js');
+  app.use('/api/v1/stats', statsRouter);
+  app.use('/api/v1/audit', auditRouter);
+
   // ── DPA API ──────────────────────────────────────────────
   app.use('/api/v1/billing', dpaRouter);
   // ── Billing API (subscriptions, plans, checkout) ─────────
@@ -724,6 +729,9 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Auth API (JWT) — MUST be before /api/v1 catch-all routers ────────
   app.use('/api/v1/auth', authRouter);
+
+  // GitHub OAuth — before /api/v1 catch-all to avoid requireAuth conflict
+  app.use('/api/v1/auth/github', gitHubOAuthRouter);
 
   app.use('/api/v1', slaRouter);
 
@@ -778,34 +786,42 @@ export async function createApp(): Promise<express.Application> {
   // Repos API (repo picker with webhook status)
   app.use('/api/repos', reposRouter);
 
-  // GitHub OAuth & Installation Management
-  app.use('/api/v1', gitHubOAuthRouter);
+  // GitHub Installation & Webhook Management
+  const { githubRouter } = await import('./routes/github.js');
+  app.use('/api/v1/github', githubRouter);
 
   // ── Shareable run page API (public, no auth) ───────────────────────
   // GET /api/runs/:id — Public run detail JSON/HTML
   app.use('/api/runs', runsRouter);
 
-  // ── Marketing Site (React SPA) ──────────────────────────────────
-  app.use(express.static(path.join(__dirname, '../marketing-site/dist')));
-  app.get(
-    /^\/(pricing|trust|benchmarks|support|status|docs|blog|integrations|agents)?$/,
-    (_req: Request, res: Response) => {
-      res.sendFile(path.join(__dirname, '../marketing-site/dist', 'index.html'));
-    },
-  );
-
-  // ── Dashboard SPA (served from built dist/ or Vite dev proxy) ────
+  // ── Dashboard SPA (served from built dist/) ───────────────────────
+  // Served at root `/` — all routes except /api/* and /health go to dashboard
   const dashboardDist = path.join(__dirname, '../dashboard/dist');
   const viteDevUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
   if (fs.existsSync(path.join(dashboardDist, 'index.html'))) {
-    app.use('/dashboard', express.static(dashboardDist));
-    app.get('/dashboard/*', (_req: Request, res: Response) => {
+    app.use(express.static(dashboardDist));
+    app.get('*', (req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+        next();
+        return;
+      }
       res.sendFile(path.join(dashboardDist, 'index.html'));
     });
   } else {
     log.info({ viteDevUrl }, 'dashboard/dist not found — proxying to Vite dev server');
-    app.use('/dashboard', (req: Request, res: Response) => {
-      const targetUrl = `${viteDevUrl}${req.originalUrl.replace(/^\/dashboard/, '') || '/'}`;
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      // Don't proxy API, health, badge or other backend routes
+      if (
+        req.path.startsWith('/api/') ||
+        req.path.startsWith('/health') ||
+        req.path.startsWith('/badge/') ||
+        req.path.startsWith('/discovery') ||
+        req.path.startsWith('/.well-known')
+      ) {
+        next();
+        return;
+      }
+      const targetUrl = `${viteDevUrl}${req.originalUrl}`;
       const proxyReq = http.request(targetUrl, { method: req.method, headers: req.headers }, (proxyRes) => {
         res.writeHead(proxyRes.statusCode!, proxyRes.headers);
         proxyRes.pipe(res);
@@ -976,13 +992,13 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/quality', qualityRouter);
 
   // ── Benchmarks API (public) ──────────────────────────────────────
-  app.use('/api/benchmarks', benchmarksRouter);
+  app.use('/api/v1/benchmarks', benchmarksRouter);
 
   // ── PLG self-serve onboarding API ─────────────────────────────────
   app.use('/plg', plgRouter);
 
   // ── Pricing API (public) ─────────────────────────────────────────
-  app.use('/api/pricing', pricingRouter);
+  app.use('/api/v1/pricing', pricingRouter);
 
   // ── Preview API (public, no auth) ────────────────────────────────
   let previewRouter: Router;
@@ -1018,7 +1034,7 @@ export async function createApp(): Promise<express.Application> {
   app.use(statusRouter);
 
   // KPI Dashboard API
-  app.use('/api/kpi', kpiRouter);
+  app.use('/api/v1/admin/kpi', kpiRouter);
   app.use('/api/v1/n8n', n8nRouter);
 
   // Agent Performance Analytics API
