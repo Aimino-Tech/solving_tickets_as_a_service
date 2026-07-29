@@ -3,29 +3,18 @@
  *
  * Tests cover:
  *   - Tier configuration loading and lookup
- *   - UsageStore (SQLite) CRUD operations
  *   - UsageTracker recording and quota checking
  *   - Tier gate middleware
  *   - Usage API routes
  *   - Edge cases (unlimited tiers, missing data, etc.)
- *
- * NOTE: This test uses the real better-sqlite3 module (not the global mock
- * from setup.ts) because the mock is too minimal for our storage tests.
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import express from 'express';
 import { tiers, getTierConfig, UNLIMITED, type TierName } from '../config/tiers.js';
-import { UsageStore } from '../core/usage-store-sqlite.js';
 import { UsageTracker } from '../core/usage-tracker.js';
 import { createTierGate, closeDefaultTracker } from '../middleware/tier-gate.js';
 import { usageRouter } from '../api/routes/usage.js';
-
-// Use the real better-sqlite3 module instead of the global mock from setup.ts
-vi.mock('better-sqlite3', async () => {
-  const actual = await vi.importActual<{ default: new (...args: unknown[]) => unknown }>('better-sqlite3');
-  return { default: actual.default };
-});
 
 // ---------------------------------------------------------------------------
 // Tests: Tier configuration
@@ -82,87 +71,7 @@ describe('TierConfig', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Tests: UsageStore
-// ---------------------------------------------------------------------------
 
-describe('UsageStore', () => {
-  let store: UsageStore;
-
-  beforeAll(() => {
-    store = new UsageStore(':memory:');
-  });
-
-  afterAll(() => {
-    store.close();
-  });
-
-  it('records a usage event', () => {
-    const id = store.record('user-1', 'owner/repo', 'fix-run', 'Cloud Free', { issue: '#42' });
-    expect(id).toBeGreaterThan(0);
-  });
-
-  it('increments monthly counter', () => {
-    store.incrementMonthly('user-1', 'owner/repo', '2026-07');
-    const count = store.getMonthlyCount('user-1', 'owner/repo', '2026-07');
-    expect(count).toBe(1);
-  });
-
-  it('increments monthly counter cumulatively', () => {
-    store.incrementMonthly('user-1', 'owner/repo', '2026-07');
-    store.incrementMonthly('user-1', 'owner/repo', '2026-07');
-    const count = store.getMonthlyCount('user-1', 'owner/repo', '2026-07');
-    expect(count).toBe(3);
-  });
-
-  it('returns 0 for months with no usage', () => {
-    const count = store.getMonthlyCount('nonexistent', 'no/repo', '2026-07');
-    expect(count).toBe(0);
-  });
-
-  it('returns usage history for a user', () => {
-    store.incrementMonthly('user-2', 'repo/a', '2026-06');
-    store.incrementMonthly('user-2', 'repo/b', '2026-07');
-
-    const usage = store.getUserUsage('user-2');
-    expect(usage.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('returns repo-specific usage', () => {
-    store.incrementMonthly('user-3', 'specific/repo', '2026-06');
-    store.incrementMonthly('user-3', 'specific/repo', '2026-07');
-
-    const repoUsage = store.getRepoUsage('user-3', 'specific/repo');
-    expect(repoUsage.length).toBe(2);
-    expect(repoUsage[0]!.yearMonth).toBe('2026-07');
-  });
-
-  it('getCurrentMonthCount returns count for the current month', () => {
-    const now = new Date();
-    const y = now.getUTCFullYear();
-    const m = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const yearMonth = `${y}-${m}`;
-
-    store.incrementMonthly('user-month', 'current/repo', yearMonth);
-    const count = store.getCurrentMonthCount('user-month', 'current/repo');
-    expect(count).toBeGreaterThanOrEqual(1);
-  });
-
-  it('getResetTimestamp returns a future ISO date', () => {
-    const reset = store.getResetTimestamp('user-1', 'owner/repo');
-    const resetDate = new Date(reset);
-    expect(resetDate.getTime()).toBeGreaterThan(Date.now());
-  });
-
-  it('clear removes all data', () => {
-    store.record('user-clear', 'clear/repo', 'fix-run', 'Cloud Free');
-    store.incrementMonthly('user-clear', 'clear/repo', '2026-07');
-
-    store.clear();
-
-    expect(store.getMonthlyCount('user-clear', 'clear/repo', '2026-07')).toBe(0);
-  });
-});
 
 // ---------------------------------------------------------------------------
 // Tests: UsageTracker
@@ -174,7 +83,7 @@ describe('UsageTracker', () => {
   beforeAll(() => {
     // Use in-memory store and set default tier to cloud-free
     vi.stubEnv('STAS_DEFAULT_TIER', 'cloud-free');
-    tracker = new UsageTracker(new UsageStore(':memory:'));
+    tracker = new UsageTracker();
   });
 
   afterAll(() => {
@@ -218,7 +127,7 @@ describe('UsageTracker', () => {
   });
 
   it('checkQuota returns unlimited for self-hosted', () => {
-    const selfHostedTracker = new UsageTracker(new UsageStore(':memory:'));
+    const selfHostedTracker = new UsageTracker();
     // Set env for this specific test
     vi.stubEnv('STAS_TIER__TEST_', 'self-hosted');
     // Note: the env var format makes this hard to test; test the logic via config
@@ -252,7 +161,7 @@ describe('TierGate middleware', () => {
 
   beforeAll(() => {
     vi.stubEnv('STAS_DEFAULT_TIER', 'cloud-free');
-    tracker = new UsageTracker(new UsageStore(':memory:'));
+    tracker = new UsageTracker();
   });
 
   afterAll(() => {

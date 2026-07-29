@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
 
 const FEATURES = [
   'Real-time fix run monitoring',
@@ -9,15 +11,41 @@ const FEATURES = [
 ];
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, register } = useAuth();
+  const navigate = useNavigate();
+
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+
+    try {
+      if (mode === 'login') {
+        await login(email, password);
+      } else {
+        await register(email, password, name || undefined);
+      }
+      navigate('/', { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Authentication failed');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="flex min-h-screen">
       <div className="hidden flex-1 flex-col justify-between bg-gradient-to-br from-brand-600 to-brand-900 p-12 text-white lg:flex">
         <div>
           <div className="flex items-center gap-3">
-            <span className="text-3xl">⚡</span>
-            <span className="text-2xl font-bold">STAS</span>
+            <span className="text-3xl font-bold">STAS</span>
           </div>
         </div>
 
@@ -62,32 +90,101 @@ export default function Login() {
         <div className="w-full max-w-sm">
           <div className="mb-8 text-center lg:hidden">
             <div className="flex items-center justify-center gap-2">
-              <span className="text-2xl">⚡</span>
-              <span className="text-xl font-bold text-gray-900">STAS</span>
+              <span className="text-2xl font-bold text-gray-900">STAS</span>
             </div>
             <p className="mt-1 text-sm text-gray-500">Solving Tickets As A Service</p>
           </div>
 
           <div className="card">
-            <h2 className="text-xl font-semibold text-gray-900">Welcome back</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Sign in with your GitHub account to continue.
-            </p>
+            <div className="flex mb-4 rounded-lg border border-gray-200 p-0.5">
+              <button
+                type="button"
+                onClick={() => { setMode('login'); setError(null); }}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  mode === 'login' ? 'bg-brand-600 text-white' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode('register'); setError(null); }}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  mode === 'register' ? 'bg-brand-600 text-white' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Register
+              </button>
+            </div>
 
-            <button
-              onClick={login}
-              className="mt-6 flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow-md"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-              </svg>
-              Sign in with GitHub
-            </button>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === 'register' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your name"
+                    className="input-field mt-1 w-full min-h-[44px]"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  className="input-field mt-1 w-full min-h-[44px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={mode === 'register' ? 'At least 8 characters' : 'Your password'}
+                  required
+                  minLength={8}
+                  className="input-field mt-1 w-full min-h-[44px]"
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-red-500">{error}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary w-full min-h-[44px]"
+              >
+                {submitting ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+              </button>
+            </form>
 
             <p className="mt-4 text-center text-xs text-gray-400">
               By signing in, you agree to our Terms of Service.
             </p>
           </div>
+
+          <p className="mt-4 text-center text-sm text-gray-500">
+            <Link to="/onboarding" className="font-medium text-brand-600 hover:text-brand-500">
+              New to STAS? Learn more
+            </Link>
+          </p>
 
           <p className="mt-4 text-center text-xs text-gray-400 lg:hidden">
             &copy; {new Date().getFullYear()} STAS. All rights reserved.

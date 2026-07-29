@@ -4,14 +4,14 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'linear-webhook' });
 
-const router = Router();
+const router: Router = Router();
 
 const LINEAR_WEBHOOK_SECRET = process.env.LINEAR_WEBHOOK_SECRET || '';
 
 function verifySignature(payload: string, signature: string): boolean {
   if (!LINEAR_WEBHOOK_SECRET) {
-    log.warn('LINEAR_WEBHOOK_SECRET not set — webhook signature verification disabled');
-    return true;
+    log.warn('LINEAR_WEBHOOK_SECRET not set — rejecting webhook');
+    return false;
   }
   const expected = crypto
     .createHmac('sha256', LINEAR_WEBHOOK_SECRET)

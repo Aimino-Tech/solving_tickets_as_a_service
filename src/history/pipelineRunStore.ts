@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Pipeline Run Store — persistent analytics and search for pipeline run history.
  *

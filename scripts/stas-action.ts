@@ -32,7 +32,7 @@ const ENV = {
   OPENCODE_API_KEY: process.env.OPENCODE_API_KEY || "",
   OPENCODE_MODEL: process.env.OPENCODE_MODEL || "",
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
-  OPENAI_BASE_URL: process.env.OPENAI_BASE_URL || "http://litellm-proxy:4002/v1",
+  OPENAI_BASE_URL: process.env.OPENAI_BASE_URL || "",
   OPENAI_CHEAP_MODEL: process.env.OPENAI_CHEAP_MODEL || "gpt-4o-mini",
   BOT_NAME: process.env.BOT_NAME || "STAS",
   CI: process.env.CI === "true",
@@ -104,7 +104,7 @@ async function callAI(
 
   if (AI.provider === "openai") {
     const { OpenAI } = await import("openai");
-    const openai = new OpenAI({ apiKey: ENV.OPENAI_API_KEY, baseURL: ENV.OPENAI_BASE_URL || "http://litellm-proxy:4002" });
+    const openai = new OpenAI({ apiKey: ENV.OPENAI_API_KEY, baseURL: ENV.OPENAI_BASE_URL });
     try {
       const messages: { role: string; content: string }[] = [];
       if (options?.system) messages.push({ role: "system", content: options.system });

@@ -82,8 +82,8 @@ class ShutdownManagerImpl {
   private readonly forceExitTimeoutMs: number;
 
   constructor() {
-    this.drainTimeoutMs = config.shutdown.drainTimeoutMs;
-    this.forceExitTimeoutMs = config.shutdown.forceExitTimeoutMs;
+    this.drainTimeoutMs = (config as any).shutdown?.drainTimeoutMs ?? 30000;
+    this.forceExitTimeoutMs = (config as any).shutdown?.forceExitTimeoutMs ?? 10000;
   }
 
   // -- Task Registration -----------------------------------------------

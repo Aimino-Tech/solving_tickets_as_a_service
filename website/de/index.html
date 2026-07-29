@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STAS — Solving Tickets As A Service | KI-gestützte GitHub-Automatisierung</title>
+  <meta name="description" content="Labeln Sie ein GitHub-Issue. STAS analysiert, behebt und erstellt einen Pull Request — automatisch. Open Core (AGPL v3), ab €19/Monat. DSGVO-konform." />
+  <meta name="keywords" content="GitHub Automatisierung, KI Code Fix, automatisierter PR, OpenCode, Issue zu PR, Entwickler-Tools, DACH, DSGVO" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://syntaro.io/de" />
+  <meta property="og:title" content="STAS — Solving Tickets As A Service" />
+  <meta property="og:description" content="Labeln Sie ein GitHub-Issue. STAS analysiert, behebt und erstellt einen PR — automatisch." />
+  <meta property="og:image" content="https://syntaro.io/img/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="de_DE" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="STAS — Solving Tickets As A Service" />
+  <meta name="twitter:description" content="Labeln Sie ein GitHub-Issue. STAS analysiert, behebt und erstellt einen PR — automatisch." />
+  <meta name="twitter:image" content="https://syntaro.io/img/og-image.png" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "STAS",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "description": "Solving Tickets As A Service — ein GitHub-Bot, der Issues in Pull Requests verwandelt, gestützt auf KI.",
+    "url": "https://syntaro.io/de",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR",
+      "priceValidUntil": "2027-12-31",
+      "availability": "https://schema.org/InStock"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "AImino",
+      "url": "https://aimino.io"
+    }
+  }
+  </script>
+
+  <!-- Plausible Analytics -->
+  <script defer data-domain="syntaro.io" src="https://plausible.io/js/script.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+
+  <style>
+    .lang-notice { background: var(--gold); color: #000; text-align: center; padding: 10px 16px; font-size: 13px; font-weight: 500; }
+    .lang-notice a { color: #000; text-decoration: underline; font-weight: 700; }
+    .de-hero { text-align: center; padding: 100px 24px 60px; max-width: 800px; margin: 0 auto; }
+    .de-hero h1 { font-size: 48px; font-weight: 900; line-height: 1.1; margin-bottom: 20px; }
+    .de-hero h1 span { background: linear-gradient(135deg, var(--gold), var(--gold2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .de-hero p { font-size: 18px; color: var(--text2); line-height: 1.7; margin-bottom: 32px; }
+    .de-hero .trust-signals { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; font-size: 13px; color: var(--text3); margin-top: 24px; }
+    .de-hero .trust-signals span { display: flex; align-items: center; gap: 6px; }
+    .de-section { max-width: var(--max-width); margin: 0 auto; padding: 80px 24px; }
+    .de-section h2 { font-size: 32px; font-weight: 700; text-align: center; margin-bottom: 48px; }
+    .de-section h2 span { background: linear-gradient(135deg, var(--gold), var(--gold2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .de-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+    .de-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 28px 24px; }
+    .de-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+    .de-card p { font-size: 14px; color: var(--text2); line-height: 1.7; }
+    .de-card-icon { font-size: 28px; margin-bottom: 14px; }
+    .de-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; counter-reset: step; }
+    .de-step { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 28px 24px; position: relative; }
+    .de-step::before { counter-increment: step; content: counter(step); position: absolute; top: -12px; left: 20px; background: var(--gold); color: #000; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+    .de-step h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; margin-top: 4px; }
+    .de-step p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+    .de-compare { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); }
+    .de-compare th, .de-compare td { padding: 16px 20px; text-align: left; font-size: 14px; }
+    .de-compare th { background: var(--bg2); font-weight: 700; }
+    .de-compare td { border-top: 1px solid var(--border-light); }
+    .de-compare .highlight { background: rgba(232,185,49,0.08); }
+    .de-compare .check { color: #22c55e; }
+    .de-compare .cross { color: #ef4444; }
+    .de-pricing { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; max-width: 900px; margin: 0 auto; }
+    .de-pricing-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 32px 28px; text-align: center; }
+    .de-pricing-card.featured { border-color: var(--gold); position: relative; }
+    .de-pricing-card.featured::before { content: "Empfohlen"; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--gold); color: #000; padding: 4px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+    .de-pricing-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .de-pricing-card .price { font-size: 36px; font-weight: 900; margin: 16px 0; }
+    .de-pricing-card .price span { font-size: 14px; font-weight: 400; color: var(--text3); }
+    .de-pricing-card ul { text-align: left; list-style: none; padding: 0; margin: 20px 0; }
+    .de-pricing-card ul li { padding: 8px 0; font-size: 14px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
+    .de-impressum { max-width: 700px; margin: 0 auto; padding: 60px 24px; color: var(--text3); font-size: 13px; line-height: 1.7; }
+    .de-impressum h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+    .de-faq { max-width: 700px; margin: 0 auto; padding: 0 24px 80px; }
+    .de-faq h2 { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 40px; }
+  </style>
+</head>
+<body>
+
+  <!-- LANGUAGE NOTICE -->
+  <div class="lang-notice">
+    🇩🇪 Dies ist die deutsche Seite von STAS. <a href="/">View English version →</a>
+  </div>
+
+  <!-- NAV -->
+  <nav class="nav" role="navigation" aria-label="Hauptnavigation">
+    <div class="nav-inner">
+      <a href="/de" class="nav-logo"><span class="logo-icon">S</span> STAS</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Navigationsmenü öffnen" aria-expanded="false">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/de">Start</a></li>
+        <li><a href="/pricing">Preise</a></li>
+        <li><a href="/trust">Sicherheit</a></li>
+        <li><a href="/docs">Dokumentation</a></li>
+        <li><a href="/blog">Blog</a></li>
+        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta">App installieren →</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="de-hero">
+    <h1>STAS — <span>Ihr KI-Senior-Architekt</span> für GitHub Issues. Plant zuerst, dann programmiert er.</h1>
+    <p>Automatisierte Fehlerbehebung für Ihr Repository. Labeln Sie ein Issue mit <code>stas:fix</code> — STAS analysiert die Ursache, erstellt einen Plan und öffnet einen Pull Request. Open Core (AGPL v3), ab €19/Monat.</p>
+    <div class="btn-group">
+      <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" data-track="de-hero-cta">STAS installieren →</a>
+      <a href="/docs" class="btn btn-secondary" data-track="de-hero-docs">Dokumentation ansehen</a>
+    </div>
+    <div class="trust-signals">
+      <span>✅ DSGVO-konform</span>
+      <span>✅ EU-Datenresidenz</span>
+      <span>✅ Open Source (AGPL v3)</span>
+      <span>✅ 92% Erfolgsquote</span>
+    </div>
+  </section>
+
+  <!-- PROBLEM SECTION -->
+  <section class="de-section">
+    <h2>Das Problem: <span>Gute Schreibkräfte, aber kein Architekt</span></h2>
+    <p style="text-align:center; max-width:700px; margin:0 auto 48px; color:var(--text2); line-height:1.8; font-size:15px;">
+      Jedes Entwicklerteam hat einen Rückstand an Bugs und kleinen Features. Bestehende KI-Tools sind gute Schreibkräfte — sie programmieren, wenn man ihnen genau sagt, was sie tun sollen. Aber wer sagt IHNEN, was zu tun ist?
+    </p>
+    <div class="de-grid">
+      <div class="de-card">
+        <div class="de-card-icon">🧠</div>
+        <h3>Vollständiger Kontext</h3>
+        <p>STAS liest Ihr gesamtes Repository — nicht nur die aktuelle Datei. AST-Parsing, Abhängigkeitsgraph und Git-Blame für präzise Ursachenanalyse.</p>
+      </div>
+      <div class="de-card">
+        <div class="de-card-icon">📋</div>
+        <h3>Plan first, Code second</h3>
+        <p>STAS erstellt immer zuerst einen detaillierten Plan mit Ursachenanalyse und Lösungsansatz. Sie geben erst frei, dann wird programmiert.</p>
+      </div>
+      <div class="de-card">
+        <div class="de-card-icon">✅</div>
+        <h3>Geprüfte Qualität</h3>
+        <p>Jeder Fix durchläuft Ihre Testsuite. Nur wenn alle Tests bestanden werden, wird ein Pull Request geöffnet. Keine kaputten Änderungen.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="de-section" style="background:var(--bg2);">
+    <h2>So funktioniert's: <span>In 4 Schritten zum Fix</span></h2>
+    <div class="de-steps">
+      <div class="de-step">
+        <h3>Issue labeln</h3>
+        <p>Fügen Sie das Label <code>stas:fix</code> zu einem beliebigen GitHub-Issue hinzu. Das kann ein Bug, ein Feature-Wunsch oder eine Konfigurationsänderung sein.</p>
+      </div>
+      <div class="de-step">
+        <h3>Automatische Analyse</h3>
+        <p>STAS klont Ihr Repository, parst den AST, analysiert Abhängigkeiten und identifiziert die Grundursache des Issues.</p>
+      </div>
+      <div class="de-step">
+        <h3>Plan & Freigabe</h3>
+        <p>Sie erhalten einen detaillierten Plan: Root Cause, Lösungsansatz, betroffene Dateien und geschätzte Änderungen. Nur nach Ihrer Freigabe wird programmiert.</p>
+      </div>
+      <div class="de-step">
+        <h3>PR & Review</h3>
+        <p>STAS implementiert den Fix, führt Ihre Tests aus und öffnet einen Pull Request. Sie reviewen, mergen — fertig. Typisch ~60 Sekunden Bearbeitungszeit.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECURITY & COMPLIANCE -->
+  <section class="de-section">
+    <h2>Sicherheit & Compliance: <span>Für deutsche Unternehmen zertifiziert</span></h2>
+    <div class="de-grid">
+      <div class="de-card">
+        <div class="de-card-icon">🔒</div>
+        <h3>DSGVO-konforme Datenverarbeitung</h3>
+        <p>Ihre Daten werden gemäß der Datenschutz-Grundverordnung verarbeitet. Auftragsverarbeitungsvertrag (AVV) auf Anfrage bereitgestellt.</p>
+      </div>
+      <div class="de-card">
+        <div class="de-card-icon">🇪🇺</div>
+        <h3>EU-Datenresidenz</h3>
+        <p>Datenverarbeitung ausschließlich auf Servern in der EU (Hetzner/Deutschland). Keine Datenablage in unsicheren Drittstaaten.</p>
+      </div>
+      <div class="de-card">
+        <div class="de-card-icon">🛡️</div>
+        <h3>Ende-zu-Ende-Verschlüsselung</h3>
+        <p>Sämtliche Kommunikation erfolgt über TLS 1.3. Repository-Daten werden während der Verarbeitung verschlüsselt und nicht dauerhaft gespeichert.</p>
+      </div>
+      <div class="de-card">
+        <div class="de-card-icon">📄</div>
+        <h3>Zertifizierungen in Vorbereitung</h3>
+        <p>SOC 2 Typ II und ISO 27001 sind in der aktiven Vorbereitung. Wir bieten bereits jetzt enterprise-konforme Sicherheitsstandards.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON -->
+  <section class="de-section" style="background:var(--bg2);">
+    <h2>STAS vs. Alternativen: <span>Der entscheidende Unterschied</span></h2>
+    <div style="overflow-x:auto; max-width:900px; margin:0 auto;">
+      <table class="de-compare">
+        <thead>
+          <tr>
+            <th>Kriterium</th>
+            <th>STAS</th>
+            <th>GitHub Copilot</th>
+            <th>Devin</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight">
+            <td>Ansatz</td>
+            <td><span class="de-em">Plan-first Architekt</span></td>
+            <td>Reaktiver Code-Vorschlag</td>
+            <td>Autonomer Agent</td>
+          </tr>
+          <tr>
+            <td>Repository-Kontext</td>
+            <td><span class="check">✔</span> Vollständig (AST + Dependencies)</td>
+            <td><span class="cross">✘</span> Aktuelle Datei nur</td>
+            <td><span class="check">✔</span> Vollständig</td>
+          </tr>
+          <tr class="highlight">
+            <td>Preis</td>
+            <td><strong>€0 – €49/Monat</strong></td>
+            <td>$10 – $39/Monat</td>
+            <td><strong>$500/Monat</strong></td>
+          </tr>
+          <tr>
+            <td>EU-Datenresidenz</td>
+            <td><span class="check">✔</span> Ja (Deutschland)</td>
+            <td><span class="cross">✘</span> USA</td>
+            <td><span class="cross">✘</span> USA</td>
+          </tr>
+          <tr class="highlight">
+            <td>Open Source</td>
+            <td><span class="check">✔</span> AGPL v3</td>
+            <td><span class="cross">✘</span> Proprietär</td>
+            <td><span class="cross">✘</span> Proprietär</td>
+          </tr>
+          <tr>
+            <td>Test Suite Integration</td>
+            <td><span class="check">✔</span> Automatisch vor PR</td>
+            <td><span class="cross">✘</span> Manuell</td>
+            <td><span class="check">✔</span> Ja</td>
+          </tr>
+          <tr class="highlight">
+            <td>Plan-Freigabe-Workflow</td>
+            <td><span class="check">✔</span> Immer</td>
+            <td><span class="cross">✘</span> Kein Plan</td>
+            <td><span class="cross">✘</span> Nicht standardmäßig</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="de-section">
+    <h2>Preise: <span>Transparent und skalierbar</span></h2>
+    <div class="de-pricing">
+      <div class="de-pricing-card">
+        <h3>Hobby</h3>
+        <div class="price">€0 <span>/Monat</span></div>
+        <ul>
+          <li>✅ 50 Fixes/Monat</li>
+          <li>✅ Öffentliche Repos</li>
+          <li>✅ Basis-Support</li>
+        </ul>
+        <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-secondary" style="width:100%;" data-track="de-pricing-free">Kostenlos starten</a>
+      </div>
+      <div class="de-pricing-card featured">
+        <h3>Pro</h3>
+        <div class="price">€19 <span>/Monat</span></div>
+        <ul>
+          <li>✅ 500 Fixes/Monat</li>
+          <li>✅ Private Repos</li>
+          <li>✅ Prioritäts-Warteschlange (~20s)</li>
+          <li>✅ E-Mail-Support</li>
+        </ul>
+        <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" style="width:100%;" data-track="de-pricing-pro">Pro starten</a>
+      </div>
+      <div class="de-pricing-card">
+        <h3>Team</h3>
+        <div class="price">€49 <span>/Monat</span></div>
+        <ul>
+          <li>✅ 2.000 Fixes/Monat</li>
+          <li>✅ Private Repos</li>
+          <li>✅ Org-weite Installation</li>
+          <li>✅ Prioritäts-Warteschlange</li>
+          <li>✅ Priority-Support</li>
+        </ul>
+        <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-secondary" style="width:100%;" data-track="de-pricing-team">Team starten</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="de-faq">
+    <h2>Häufig gestellte Fragen</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question">Was ist STAS?</button>
+        <div class="faq-answer"><p>STAS (Solving Tickets As A Service) ist ein KI-gestützter GitHub-Bot, der Issues analysiert, einen detaillierten Plan erstellt und automatisch einen Pull Request mit der Implementierung öffnet. Anders als Copilot oder Cursor arbeitet STAS asynchron und versteht den gesamten Repository-Kontext.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Wie unterscheidet sich STAS von GitHub Copilot?</button>
+        <div class="faq-answer"><p>Copilot ist ein reaktiver Code-Vorschlag — er schlägt Code vor, während Sie tippen. STAS ist ein asynchroner Senior-Architekt: Er liest Ihr gesamtes Repository, identifiziert die Ursache eines Issues, erstellt einen Plan und implementiert den Fix. Beide Tools ergänzen sich.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Muss ich etwas installieren?</button>
+        <div class="faq-answer"><p>Nein. STAS funktioniert als GitHub App — 1-Klick-Installation aus dem GitHub Marketplace. Kein CLI, kein SDK, keine Konfiguration.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Wie lange dauert ein Fix?</button>
+        <div class="faq-answer"><p>Typischerweise ~60 Sekunden. Für Pro- und Team-Kunden mit Prioritäts-Warteschlange etwa 20 Sekunden. Die Zeit variiert je nach Repository-Größe und Issue-Komplexität.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Ändert STAS meinen Code ohne Freigabe?</button>
+        <div class="faq-answer"><p>Nein. STAS erstellt immer zuerst einen Plan. Erst nach Ihrer ausdrücklichen Freigabe wird der Code generiert und ein Pull Request geöffnet. Sie behalten die volle Kontrolle.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Welche Sprachen werden unterstützt?</button>
+        <div class="faq-answer"><p>TypeScript/JavaScript und Python werden erstklassig unterstützt. Rust, Go, Java, Ruby und weitere Sprachen sind in aktiver Verbesserung. Wenn Ihre Testsuite läuft, kann STAS es fixen.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Ist STAS DSGVO-konform?</button>
+        <div class="faq-answer"><p>Ja. STAS verarbeitet Daten ausschließlich auf Servern in der EU (Deutschland). Ein Auftragsverarbeitungsvertrag (AVV) wird auf Anfrage bereitgestellt. Ende-zu-Ende-Verschlüsselung (TLS 1.3) ist standardmäßig aktiv.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Was passiert, wenn der Fix falsch ist?</button>
+        <div class="faq-answer"><p>Der Pull Request wird als Draft geöffnet — Sie reviewen vor dem Mergen. STAS führt vor dem Öffnen des PR Ihre Testsuite aus. Nur wenn alle Tests bestanden sind, wird der PR erstellt. Die Erfolgsquote liegt bei 92%.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="de-section" style="text-align:center;">
+    <h2>Bereit, <span>Ihre Issues automatisch zu lösen?</span></h2>
+    <p style="color:var(--text2); margin-bottom:24px; font-size:15px;">Installieren Sie STAS in Ihrem Repository — in unter einer Minute einsatzbereit.</p>
+    <div class="btn-group" style="justify-content:center;">
+      <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" data-track="de-bottom-cta">STAS installieren →</a>
+      <a href="/docs" class="btn btn-secondary" data-track="de-bottom-docs">Dokumentation ansehen</a>
+    </div>
+  </section>
+
+  <!-- IMPRESSUM -->
+  <section class="de-impressum">
+    <h3>Impressum</h3>
+    <p>AImino GmbH<br />
+    Musterstraße 123<br />
+    10115 Berlin<br />
+    Deutschland</p>
+    <p>Handelsregister: HRB 123456<br />
+    Registergericht: Amtsgericht Berlin<br />
+    USt-IdNr.: DE123456789</p>
+    <p><strong>Vertreten durch:</strong><br />
+    Duc Tam Nguyen, Geschäftsführer</p>
+    <p><strong>Kontakt:</strong><br />
+    E-Mail: support@aimino.io<br />
+    Telefon: +49 30 12345678</p>
+    <p><strong>Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV:</strong><br />
+    Duc Tam Nguyen, Musterstraße 123, 10115 Berlin</p>
+    <p><strong>Datenschutzerklärung:</strong><br />
+    Die Nutzung unserer Seite ist ohne Angabe personenbezogener Daten möglich. Personenbezogene Daten werden nur im Rahmen der gesetzlichen Datenschutzbestimmungen erhoben. Ausführliche Informationen finden Sie auf Anfrage unter <a href="mailto:support@aimino.io">support@aimino.io</a>.</p>
+    <p><strong>AVV (Auftragsverarbeitungsvertrag):</strong><br />
+    Unseren AVV stellen wir Kunden auf Anfrage unter <a href="mailto:support@aimino.io">support@aimino.io</a> zur Verfügung.</p>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/de" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <p>Solving Tickets As A Service. Ein Open-Source-Projekt von <a href="https://aimino.io">AImino</a>. Unterstützt von OpenCode.</p>
+      </div>
+      <div>
+        <h4>Produkt</h4>
+        <ul>
+          <li><a href="/pricing">Preise</a></li>
+          <li><a href="/docs">Dokumentation</a></li>
+          <li><a href="/trust">Sicherheit & Vertrauen</a></li>
+          <li><a href="/status">Status</a></li>
+          <li><a href="/support">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="/blog">Blog</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
+          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Rechtliches</h4>
+        <ul>
+          <li><a href="/de#impressum">Impressum</a></li>
+          <li><a href="mailto:support@aimino.io">Datenschutzerklärung</a></li>
+          <li><a href="mailto:support@aimino.io">AVV anfordern</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/LICENSE">Lizenz (AGPL v3)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 AImino GmbH. Alle Rechte vorbehalten.</span>
+      <a href="/">English version</a>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

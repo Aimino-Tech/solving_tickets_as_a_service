@@ -58,8 +58,12 @@ export class TokenBucketRateLimiter {
       maxRetriesPerRequest: null,
       enableReadyCheck: true,
       retryStrategy: (times: number) => {
+        if (times > 10) {
+          log.error({ attempts: times }, 'RateLimiter Redis retry limit reached — giving up');
+          return null;
+        }
         const delay = Math.min(times * 100, 3000);
-        log.warn({ attempt: times }, 'RateLimiter Redis retry in ${delay}ms');
+        log.warn({ attempt: times }, 'RateLimiter Redis retry');
         return delay;
       },
       lazyConnect: true,
@@ -121,6 +125,7 @@ export class TokenBucketRateLimiter {
         };
       }
 
+      log.warn({ key, maxTokens }, 'Rate limiter Redis unavailable — failing open');
       return { allowed: true, remaining: maxTokens, resetMs: windowMs };
     } catch (err) {
       log.error({ err: String(err), key }, 'Rate limit check failed — allowing request');

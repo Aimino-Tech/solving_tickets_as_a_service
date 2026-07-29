@@ -1,0 +1,88 @@
+{
+  "name": "WhatsApp Notifications — OS events → WhatsApp",
+  "nodes": [
+    {
+      "id": "webhook-wa",
+      "name": "WhatsApp Notification Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-notification",
+        "options": {}
+      }
+    },
+    {
+      "id": "format-wa",
+      "name": "Format WhatsApp Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "to",
+              "value": "={{ $json.to }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "name": "preview_url",
+              "value": "={{ $json.preview_url === false ? 'false' : 'true' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "whatsapp-send",
+      "name": "Send to WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "recipientType": "individual",
+        "to": "={{ $json.to }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "preview_url": "={{ $json.preview_url === 'false' ? false : true }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "WhatsApp Notification Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Send to WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to WhatsApp": {
+      "main": [
+        []
+      ]
+    }
+  }
+}

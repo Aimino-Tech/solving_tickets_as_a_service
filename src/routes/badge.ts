@@ -139,6 +139,15 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/stas-badge.json', (_req: Request, res: Response) => {
+  res.json({
+    schemaVersion: 1,
+    label: 'STAS',
+    message: 'Solving Tickets As A Service',
+    color: '8250DF',
+  });
+});
+
 async function resolveBadge(runId: string): Promise<BadgeConfig> {
   const { runsRepository } = await import('../db/repositories/index.js');
   const numericId = Number(runId);

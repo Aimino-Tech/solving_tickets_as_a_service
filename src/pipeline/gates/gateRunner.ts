@@ -13,6 +13,7 @@ import { NullRateGate } from './nullRateGate.js';
 import { MetricGate } from './metricGate.js';
 import type {
   GateCheckInput,
+  GateResult,
   GateRunnerResult,
   GatesConfig,
   PipelineGate,

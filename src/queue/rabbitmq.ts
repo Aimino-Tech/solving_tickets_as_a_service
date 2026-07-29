@@ -22,6 +22,16 @@ export function isConnected(): boolean {
   return _connected;
 }
 
+export async function ensureConnected(): Promise<boolean> {
+  if (_connected) return true;
+  try {
+    await connect();
+    return _connected;
+  } catch {
+    return false;
+  }
+}
+
 export async function connect(): Promise<void> {
   if (_connected && _channel) return;
   if (_reconnecting) return;
@@ -34,7 +44,7 @@ export async function connect(): Promise<void> {
     _connection = await amqplib.connect(RABBITMQ_URL);
 
     _connection.on('error', (err) => {
-      log.error({ err: String(err) }, 'RabbitMQ connection error');
+      log.warn({ err: String(err) }, 'RabbitMQ connection error');
       _connected = false;
       scheduleReconnect();
     });
@@ -48,7 +58,7 @@ export async function connect(): Promise<void> {
     _channel = await _connection.createChannel();
 
     _channel.on('error', (err) => {
-      log.error({ err: String(err) }, 'RabbitMQ channel error');
+      log.warn({ err: String(err) }, 'RabbitMQ channel error');
     });
 
     _channel.on('close', () => {
@@ -61,9 +71,8 @@ export async function connect(): Promise<void> {
     log.info('RabbitMQ connected successfully');
   } catch (err) {
     _connected = false;
-    log.error({ err: String(err), attempt: _connectAttempts }, 'Failed to connect to RabbitMQ');
+    log.warn({ err: String(err), attempt: _connectAttempts }, 'Failed to connect to RabbitMQ');
     scheduleReconnect();
-    throw err;
   } finally {
     _reconnecting = false;
   }
@@ -72,7 +81,7 @@ export async function connect(): Promise<void> {
 function scheduleReconnect(): void {
   if (_reconnecting || _connectAttempts >= MAX_RECONNECT_ATTEMPTS) {
     if (_connectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      log.error({ attempts: _connectAttempts }, 'Max RabbitMQ reconnection attempts reached');
+      log.warn({ attempts: _connectAttempts }, 'Max RabbitMQ reconnection attempts reached');
     }
     return;
   }
@@ -132,6 +141,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.issues.fix', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'issue.fix.dlq',
     messageTtl: 600_000,
@@ -140,6 +150,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.issues.feature', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'issue.feature.dlq',
     messageTtl: 600_000,
@@ -148,6 +159,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.issues.research', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'issue.research.dlq',
     messageTtl: 300_000,
@@ -156,6 +168,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.webhooks.notifications', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'webhook.notification.dlq',
     messageTtl: 300_000,
@@ -164,6 +177,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.analytics.ingestion', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'analytics.ingestion.dlq',
     messageTtl: 120_000,
@@ -172,6 +186,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.pipeline.events', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'pipeline.event.dlq',
     messageTtl: 60_000,
@@ -180,6 +195,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.retry', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
     messageTtl: 30_000,
     deadLetterExchange: 'stas.direct',
     deadLetterRoutingKey: 'issue.fix',
@@ -187,6 +203,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.dlq', {
     durable: true,
+      arguments: { "x-message-ttl": 600000 },
   });
   await ch.bindQueue('stas.dlq', 'stas.dlx', '#');
 

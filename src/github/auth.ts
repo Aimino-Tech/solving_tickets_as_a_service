@@ -13,7 +13,8 @@ import {
   createInstallationOctokit,
   getInstallationToken as getInstallationTokenFromPackage,
   type GitHubAppConfig,
-} from '../../packages/github-client/src/index.js';
+// File outside rootDir, handled at runtime
+} from '@stas/github-client';
 
 const log = rootLogger.child({ module: 'github-auth' });
 
@@ -50,7 +51,7 @@ function getAuth() {
     const loadOpts = config.github.privateKeyPath
       ? { readFileSync: readFileSync as (path: string) => string }
       : undefined;
-    _auth = createAuth(cfg, loadOpts ? (c) => loadKey(c, loadOpts) : undefined);
+    _auth = createAuth(cfg, loadOpts ? (c: any) => loadKey(c, loadOpts) : undefined);
   }
   return _auth;
 }
@@ -63,7 +64,7 @@ function getAppOctokit() {
     const loadOpts = config.github.privateKeyPath
       ? { readFileSync: readFileSync as (path: string) => string }
       : undefined;
-    _appOctokit = createAppOctokit(cfg, loadOpts ? (c) => loadKey(c, loadOpts) : undefined);
+    _appOctokit = createAppOctokit(cfg, loadOpts ? (c: any) => loadKey(c, loadOpts) : undefined);
   }
   return _appOctokit;
 }
@@ -95,3 +96,6 @@ export async function getInstallationToken(installationId: number): Promise<stri
 export function getAppOctokitInstance(): ReturnType<typeof createAppOctokit> {
   return getAppOctokit();
 }
+
+// File outside rootDir, handled at runtime
+export { createAuth } from '@stas/github-client';

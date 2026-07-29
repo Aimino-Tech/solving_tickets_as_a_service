@@ -58,6 +58,10 @@ interface JiraWebhookPayload {
 export class JiraTracker implements Tracker {
   readonly source = 'jira' as const;
 
+  async createTicket(): Promise<Ticket> {
+    throw new Error('Jira ticket creation not implemented in STAS monitoring loop');
+  }
+
   private get baseUrl(): string {
     const url = config.trackers?.jira?.url;
     if (!url) throw new Error('JIRA_URL is not configured');
@@ -222,8 +226,8 @@ function toJiraDoc(text: string): unknown {
 export function verifyJiraWebhookSignature(rawBody: Buffer, signatureHeader: string): boolean {
   const secret = config.trackers?.jira?.webhookSecret;
   if (!secret) {
-    log.warn('JIRA_WEBHOOK_SECRET not configured — skipping webhook verification');
-    return true;
+    log.warn('JIRA_WEBHOOK_SECRET not configured — rejecting webhook');
+    return false;
   }
 
   const computed = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');

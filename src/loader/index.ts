@@ -223,9 +223,9 @@ async function parseExcel(filePath: string, sheetName: string | undefined, hasHe
     columns = Object.keys(jsonData[0] || {});
     data = jsonData as Record<string, string>[];
   } else {
-    columns = (jsonData[0] as string[] || []).map((_: string, i: number) => `column_${i + 1}`);
+    columns = ((jsonData[0] as unknown as string[]) || []).map((_: string, i: number) => `column_${i + 1}`);
     data = jsonData.slice(1).map((row) => {
-      const values = row as string[];
+      const values = row as unknown as string[];
       const r: Record<string, string> = {};
       columns.forEach((col, i) => {
         r[col] = values[i] ?? '';

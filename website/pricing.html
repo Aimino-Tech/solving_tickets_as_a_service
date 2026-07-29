@@ -4,19 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pricing — STAS | Solving Tickets As A Service</title>
-  <meta name="description" content="STAS pricing: Free for open-source. Solo, Team, and Enterprise plans for every scale." />
+  <meta name="description" content="STAS pricing: Free for open-source. Solo $49/mo, Team $149/mo, and Enterprise plans for every scale." />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://stas.aimino.io/pricing" />
   <meta property="og:title" content="Pricing — STAS" />
-  <meta property="og:description" content="STAS pricing: Free for open-source. Solo, Team, and Enterprise plans for every scale." />
+  <meta property="og:description" content="STAS pricing: Free for open-source. Solo $49/mo, Team $149/mo, and Enterprise plans for every scale." />
   <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Pricing — STAS" />
-  <meta name="twitter:description" content="STAS pricing: Free for open-source. Solo, Team, and Enterprise plans for every scale." />
+  <meta name="twitter:description" content="STAS pricing: Free for open-source. Solo $49/mo, Team $149/mo, and Enterprise plans for every scale." />
   <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
 
   <!-- JSON-LD -->
@@ -28,8 +28,8 @@
     "description": "Solving Tickets As A Service — AI-powered GitHub automation",
     "offers": [
       { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "Free for open-source" },
-      { "@type": "Offer", "name": "Solo", "price": "19", "priceCurrency": "USD", "priceValidUntil": "2027-12-31", "description": "For individual developers" },
-      { "@type": "Offer", "name": "Team", "price": "99", "priceCurrency": "USD", "priceValidUntil": "2027-12-31", "description": "For small teams" },
+      { "@type": "Offer", "name": "Solo", "price": "49", "priceCurrency": "USD", "priceValidUntil": "2027-12-31", "description": "For individual developers" },
+      { "@type": "Offer", "name": "Team", "price": "149", "priceCurrency": "USD", "priceValidUntil": "2027-12-31", "description": "For small teams" },
       { "@type": "Offer", "name": "Enterprise", "price": "Custom", "priceCurrency": "USD", "description": "For organizations" }
     ]
   }
@@ -54,6 +54,7 @@
       <ul class="nav-links" id="navLinks">
         <li><a href="/">Home</a></li>
         <li><a href="/pricing" class="active">Pricing</a></li>
+        <li><a href="/blog">Blog</a></li>
         <li><a href="/trust">Trust</a></li>
         <li><a href="/docs">Docs</a></li>
         <li><a href="/status">Status</a></li>
@@ -93,8 +94,8 @@
       <div class="pricing-card animate-on-scroll">
         <div class="pricing-name">Solo</div>
         <div class="pricing-desc">For individual developers</div>
-        <div class="pricing-price">$19 <span>/ month</span></div>
-        <div class="pricing-period">Or $190 yearly (save 16%)</div>
+        <div class="pricing-price">$49 <span>/ month</span></div>
+        <div class="pricing-period">Or $490 yearly (save 16%)</div>
         <ul class="pricing-features">
           <li>Up to 5 private repos</li>
           <li>2,000 fixes / month</li>
@@ -104,7 +105,10 @@
           <li class="missing">Team analytics</li>
           <li class="missing">SSO / SAML</li>
         </ul>
-        <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" style="width:100%;justify-content:center" data-track="pricing-solo">Subscribe →</a>
+        <form action="/api/v1/billing/subscription/create-checkout" method="POST">
+          <input type="hidden" name="price_id" value="price_solo_monthly" />
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" data-track="pricing-solo">Subscribe — $49/mo</button>
+        </form>
       </div>
 
       <!-- Team (Featured) -->
@@ -112,8 +116,8 @@
         <div class="pricing-badge">Most Popular</div>
         <div class="pricing-name">Team</div>
         <div class="pricing-desc">For small teams and startups</div>
-        <div class="pricing-price">$99 <span>/ month</span></div>
-        <div class="pricing-period">Or $990 yearly (save 16%)</div>
+        <div class="pricing-price">$149 <span>/ month</span></div>
+        <div class="pricing-period">Or $1,490 yearly (save 16%)</div>
         <ul class="pricing-features">
           <li>Unlimited private repos</li>
           <li>10,000 fixes / month</li>
@@ -124,7 +128,10 @@
           <li class="missing">SSO / SAML</li>
           <li class="missing">Dedicated infrastructure</li>
         </ul>
-        <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" style="width:100%;justify-content:center" data-track="pricing-team">Subscribe →</a>
+        <form action="/api/v1/billing/subscription/create-checkout" method="POST">
+          <input type="hidden" name="price_id" value="price_team_monthly" />
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" data-track="pricing-team">Subscribe — $149/mo</button>
+        </form>
       </div>
 
       <!-- Enterprise -->
@@ -204,11 +211,13 @@
           <li><a href="/docs">Documentation</a></li>
           <li><a href="/trust">Trust & Security</a></li>
           <li><a href="/status">Status</a></li>
+          <li><a href="/support">Support</a></li>
         </ul>
       </div>
       <div>
         <h4>Community</h4>
         <ul>
+          <li><a href="/blog">Blog</a></li>
           <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
           <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
           <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>

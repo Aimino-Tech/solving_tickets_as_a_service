@@ -1,0 +1,124 @@
+# ── STAS Prometheus Alert Rules (AIM-3228) ─────────────────────────────
+
+groups:
+  - name: stas_anomaly_detection
+    interval: 30s
+    rules:
+      - alert: StasQueueDepthAnomaly
+        expr: |
+          abs(
+            stas_queue_depth
+            - avg_over_time(stas_queue_depth[1h])
+          ) / stddev_over_time(stas_queue_depth[1h]) > 3
+        for: 2m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Queue depth anomaly detected (z-score > 3 sigma)"
+          description: >
+            Current queue depth {{ $value }} is more than 3 standard deviations
+            from the 1-hour rolling mean. Investigate for sudden job spikes or
+            worker failures.
+
+      - alert: StasErrorRateSpike
+        expr: |
+          abs(
+            stas_error_rate
+            - avg_over_time(stas_error_rate[1h])
+          ) / stddev_over_time(stas_error_rate[1h]) > 2
+        for: 3m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Error rate spike detected (z-score > 2 sigma)"
+          description: >
+            Current error rate ({{ $value }}) is more than 2 standard deviations
+            above the 1-hour baseline. Check for upstream API failures or
+            deployment issues.
+
+      - alert: StasLatencyDegradation
+        expr: |
+          (
+            stas_p95_latency_ms
+            - avg_over_time(stas_p95_latency_ms[1h])
+          ) / avg_over_time(stas_p95_latency_ms[1h]) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "P95 latency degraded by more than 20%"
+          description: >
+            Current P95 latency ({{ $value }}ms) has increased by more than 20%
+            compared to the 1-hour rolling average. Investigate slow queries or
+            resource contention.
+
+      - alert: StasThroughputDrop
+        expr: |
+          rate(stas_fix_completed_total[5m])
+          /
+          avg_over_time(rate(stas_fix_completed_total[5m])[1h]) < 0.5
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Fix throughput dropped below 50% of 1-hour average"
+          description: >
+            Current fix completion rate ({{ $value }}) is less than 50% of the
+            1-hour rolling average. Check worker health and queue status.
+
+      - alert: StasWorkerHealthAnomaly
+        expr: |
+          increase(stas_worker_restarts_total[5m]) > 3
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Worker crash loop detected ({{ $value }} restarts in 5 min)"
+          description: >
+            More than 3 worker restarts in the last 5 minutes - possible crash
+            loop. Check worker logs and resource limits.
+
+      - alert: StasDbPoolExhaustion
+        expr: |
+          stas_db_pool_usage_ratio > 0.8
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Database connection pool near exhaustion ({{ $value | humanizePercentage }})"
+          description: >
+            Database connection pool usage has been above 80% for more than 5
+            minutes. Scale up the connection pool or investigate connection leaks.
+
+      - alert: StasHighConcurrentWebhooks
+        expr: |
+          stas_webhook_concurrent_requests > 50
+        for: 2m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High number of concurrent webhook requests ({{ $value }})"
+          description: >
+            More than 50 concurrent webhook requests detected. This may indicate
+            a burst of GitHub events or a replay attack. Check webhook source IPs.
+
+      - alert: StasFixRunTimeout
+        expr: |
+          time() - stas_fix_run_start_timestamp_seconds > 600
+        for: 1m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Fix run exceeded 10-minute timeout ({{ $value | humanizeDuration }})"
+          description: >
+            A fix run has been executing for more than 10 minutes without
+            completing. This may indicate a stuck agent or an infinite loop.
+            Investigate the agent run logs.

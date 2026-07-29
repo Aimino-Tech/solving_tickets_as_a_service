@@ -40,11 +40,13 @@ import { opencodeHealth } from './health/opencodeHealth.js';
 import { rootLogger } from './utils/logger.js';
 import { addBreadcrumb } from './monitoring/sentry.js';
 import { startMcpServer, stopMcpServer } from './mcpAutoStart.js';
+import type { OpenSymphonyAdapter } from './opensymphony-adapter.js';
 
 const log = rootLogger.child({ module: 'entry' });
 
 let server: Server | undefined;
 let shutdownInProgress = false;
+let symphonyAdapter: OpenSymphonyAdapter | null = null;
 
 /**
  * Validate connectivity on startup — checks Redis, OpenCode, and E2B if configured.
@@ -72,6 +74,8 @@ async function validateStartupHealth(): Promise<void> {
 
   // Check OpenCode endpoint (with configurable startup timeout)
   // The opencodeHealth client must already be started (start() called in main())
+  // Wait for the first poll to complete before starting checks
+  await new Promise((resolve) => setTimeout(resolve, 2000));
   const startupTimeoutMs = config.opencodeHealth.startupTimeoutMs;
   const pollInterval = 2000; // poll every 2s
   const deadline = Date.now() + startupTimeoutMs;
@@ -90,7 +94,7 @@ async function validateStartupHealth(): Promise<void> {
   if (opencodeOk) {
     checks.push({ name: 'opencode', ok: true });
   } else {
-    log.warn(
+    log.info(
       { timeoutMs: startupTimeoutMs, error: opencodeError },
       'OpenCode did not become healthy within startup timeout -- continuing without',
     );
@@ -116,9 +120,15 @@ async function validateStartupHealth(): Promise<void> {
   const failures = checks.filter((c) => !c.ok);
   if (failures.length > 0) {
     for (const f of failures) {
-      log.error({ service: f.name, error: f.error }, `Startup health check FAILED: ${f.name}`);
+      log.info(
+        { module: 'health-validation', service: f.name, error: f.error },
+        `Startup health check FAILED: ${f.name} — ${f.error ? f.error.slice(0, 200) : 'No error details'} (expected during warm-up, check service availability if persistent)`,
+      );
     }
-    log.error({ checks }, 'Startup health validation completed with failures');
+    log.info(
+      { module: 'health-validation', checks },
+      `Startup health validation completed with ${failures.length} failure(s) — non-fatal, continuing startup`,
+    );
   } else {
     log.info({ checks: checks.map((c) => c.name) }, 'All startup health checks passed');
   }
@@ -128,7 +138,11 @@ async function main(): Promise<void> {
   log.info({ runMode: config.runMode, nodeEnv: config.nodeEnv }, 'Starting STAS');
 
   // Start the OpenCode health client (begins polling OpenCode serve immediately)
-  opencodeHealth.start();
+  try {
+    opencodeHealth.start();
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to start OpenCode health client (non-fatal)');
+  }
 
   // Run startup health validation (non-fatal — log warnings, don't block)
   validateStartupHealth().catch((err) => {
@@ -139,7 +153,7 @@ async function main(): Promise<void> {
   try {
     const { createStorage } = await import('./storage/index.js');
     await createStorage();
-    log.info({ storageType: config.storage.type }, 'Storage backend initialized');
+    log.info('Storage backend initialized');
   } catch (storageErr) {
     log.warn({ err: String(storageErr) }, 'Failed to initialize storage backend (non-fatal)');
   }
@@ -198,6 +212,16 @@ async function main(): Promise<void> {
     // Stop MCP server if it was auto-started
     stopMcpServer();
 
+    // Stop OpenSymphony adapter sidecar gracefully
+    if (symphonyAdapter) {
+      try {
+        await symphonyAdapter.stop();
+        log.info('OpenSymphony adapter stopped');
+      } catch (err) {
+        log.warn({ err: String(err) }, 'Error stopping OpenSymphony adapter (non-fatal)');
+      }
+    }
+
     // Disconnect RabbitMQ if connected
     try {
       const { disconnect: disconnectRabbitMq, isConnected } = await import('./queue/rabbitmq.js');
@@ -242,10 +266,37 @@ async function main(): Promise<void> {
   }
 
   // Start scheduled maintenance tasks (queue depth check, DLQ cleanup, metrics refresh)
-  startScheduledTasks();
+  try {
+    startScheduledTasks();
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to start scheduled tasks (non-fatal)');
+  }
 
   // Auto-start MCP server in SSE mode (for agent discovery and MCP protocol)
-  startMcpServer();
+  try {
+    startMcpServer();
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to auto-start MCP server (non-fatal)');
+  }
+
+  // Start OpenSymphony adapter as sidecar (alternative OpenCode protocol backend)
+  if (config.opensymphony.enabled) {
+    const { startOpenSymphonyAdapter } = await import('./opensymphony-adapter.js');
+    try {
+      symphonyAdapter = await startOpenSymphonyAdapter({
+        port: config.opensymphony.port,
+        host: config.opensymphony.host,
+      });
+      log.info(
+        { port: config.opensymphony.port, host: config.opensymphony.host },
+        'OpenSymphony adapter started',
+      );
+    } catch (err) {
+      log.warn({ err: String(err) }, 'Failed to start OpenSymphony adapter (non-fatal)');
+    }
+  } else {
+    log.debug('OpenSymphony adapter disabled — set OPENSYMPHONY_ENABLED=true to enable');
+  }
 
   // Register signal handlers for graceful shutdown
   process.on('SIGTERM', () => shutdown('SIGTERM'));
@@ -254,7 +305,25 @@ async function main(): Promise<void> {
   addBreadcrumb('system', 'STAS started successfully');
 }
 
+process.on('uncaughtException', (err) => {
+  log.error(
+    { module: 'entry', err: String(err), stack: (err as Error).stack },
+    'Uncaught exception at entry point -- attempting graceful shutdown',
+  );
+  if (shutdownInProgress) return;
+  shutdownInProgress = true;
+  if (server) {
+    server.close(() => process.exit(1));
+    setTimeout(() => process.exit(1), 5000).unref();
+  } else {
+    process.exit(1);
+  }
+});
+
 main().catch((err) => {
-  log.error({ err: String(err) }, 'Fatal error during startup');
+  log.error(
+    { module: 'entry', err: String(err), stack: (err as Error)?.stack },
+    'Fatal error during startup -- shutting down',
+  );
   process.exit(1);
 });

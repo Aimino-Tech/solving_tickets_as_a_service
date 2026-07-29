@@ -1,7 +1,10 @@
 export interface User {
-  githubId: string;
-  username: string;
+  id: string;
+  email: string;
+  name: string | null;
+  username?: string;
   avatarUrl?: string;
+  createdAt: string;
 }
 
 export interface Run {
@@ -14,6 +17,7 @@ export interface Run {
   modelUsed?: string;
   costCents?: number;
   durationSeconds?: number;
+  durationMs?: number;
   prUrl?: string;
   errorMessage?: string;
   createdAt: string;
@@ -21,6 +25,7 @@ export interface Run {
   confidence?: 'high' | 'medium' | 'low';
   diff?: string;
   testOutput?: string;
+  creditsUsed?: number;
 }
 
 export interface Repo {
@@ -143,6 +148,25 @@ export interface CostCalculation {
     savingsCents: number;
     savingsPercent: number;
   }>;
+}
+
+export interface LitellmUsage {
+  remainingBudget: number;
+  maxBudget: number;
+  budgetResetAt: string | null;
+  tokensToday: { input: number; output: number; total: number };
+  requestsToday: number;
+  costToday: number;
+  tokensMonth: { input: number; output: number; total: number };
+  requestsMonth: number;
+  costMonth: number;
+  rateLimit: {
+    rpmRemaining: number;
+    tpmRemaining: number;
+    rpmLimit: number;
+    tpmLimit: number;
+    resetAt: string | null;
+  };
 }
 
 export interface PricingData {

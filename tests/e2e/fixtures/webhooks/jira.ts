@@ -99,10 +99,4 @@ export function jiraIssueDeleted() {
   return payload;
 }
 
-/**
- * Alias for jiraIssueCreated — used by full-flow.test.ts
- * Returns a complete Jira issue creation webhook payload.
- */
-export function sampleJiraWebhookPayload() {
-  return jiraIssueCreated();
-}
+

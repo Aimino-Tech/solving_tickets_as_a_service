@@ -21,3 +21,4 @@
 
 export { creditRouter } from './routes.js';
 export { deductMiddleware, refundCredits } from './middleware.js';
+export { findLowCreditAccounts, sendLowCreditAlerts } from './lowCreditWarning.js';

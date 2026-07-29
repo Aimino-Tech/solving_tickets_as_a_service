@@ -19,7 +19,7 @@ describe('buildDiscoveryManifest', () => {
     expect(m.transports.length).toBeGreaterThanOrEqual(1);
     expect(m.transports.map(t => t.type)).toContain('stdio');
   });
-  it('registers all 4 tools', async () => {
+  it('registers all 6 tools', async () => {
     const { buildDiscoveryManifest } = await import('../../routes/viral.js');
     const m = buildDiscoveryManifest('http://localhost:3000');
     const names = m.tools.map(t => t.name);
@@ -27,7 +27,9 @@ describe('buildDiscoveryManifest', () => {
     expect(names).toContain('stas_run_fix');
     expect(names).toContain('stas_check_status');
     expect(names).toContain('stas_get_pr');
-    expect(m.tools.length).toBe(4);
+    expect(names).toContain('list_issues');
+    expect(names).toContain('search_codebase');
+    expect(m.tools.length).toBe(6);
   });
   it('each tool has an inputSchema', async () => {
     const { buildDiscoveryManifest } = await import('../../routes/viral.js');
@@ -37,14 +39,15 @@ describe('buildDiscoveryManifest', () => {
       expect(typeof tool.inputSchema).toBe('object');
     }
   });
-  it('registers all 3 resources', async () => {
+  it('registers all 4 resources', async () => {
     const { buildDiscoveryManifest } = await import('../../routes/viral.js');
     const m = buildDiscoveryManifest('http://localhost:3000');
     const uris = m.resources.map(r => r.uri);
     expect(uris).toContain('stas://runs/{run_id}');
+    expect(uris).toContain('stas://issues/{issue_id}');
     expect(uris).toContain('stas://status');
     expect(uris).toContain('stas://queue');
-    expect(m.resources.length).toBe(3);
+    expect(m.resources.length).toBe(4);
   });
   it('includes install configs', async () => {
     const { buildDiscoveryManifest } = await import('../../routes/viral.js');

@@ -3,18 +3,8 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const mockStorageConfig = { storage: { type: 'sqlite' as string, sqlitePath: ':memory:' as string } };
-
-vi.mock('../../config.js', () => ({
-  config: mockStorageConfig,
-}));
-
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
-}));
-
-vi.mock('../../storage/sqlite.js', () => ({
-  SQLiteStorage: vi.fn(function () { return { close: vi.fn() }; }),
 }));
 
 vi.mock('../../storage/postgres/index.js', () => ({
@@ -23,10 +13,10 @@ vi.mock('../../storage/postgres/index.js', () => ({
 
 describe('storage/index', () => {
   beforeEach(() => {
-    mockStorageConfig.storage.type = 'sqlite';
+    vi.resetModules();
   });
 
-  it('creates SQLite storage when configured', async () => {
+  it('creates Postgres storage', async () => {
     const mod = await import('../../storage/index.js');
     const storage = await mod.createStorage();
     expect(storage).toBeDefined();
@@ -38,12 +28,5 @@ describe('storage/index', () => {
     await mod.closeStorage();
     const storage = await mod.createStorage();
     expect(storage).toBeDefined();
-  });
-
-  it('throws for unknown storage type', async () => {
-    mockStorageConfig.storage.type = 'unknown';
-    vi.resetModules();
-    const mod = await import('../../storage/index.js');
-    await expect(mod.createStorage()).rejects.toThrow('Unknown storage type');
   });
 });

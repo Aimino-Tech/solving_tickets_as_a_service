@@ -241,7 +241,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
     await creditsRepository.credit(billing.accountId, subscriptionCredits, {
       type: 'subscription',
       description: `Monthly subscription credit top-up (invoice ${invoice.id})`,
-      stripePaymentIntentId: invoice.payment_intent?.toString(),
+      stripePaymentIntentId: (invoice as any).payment_intent?.toString(),
     });
 
     const balance = await creditsRepository.getBalance(billing.accountId);

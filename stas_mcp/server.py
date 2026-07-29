@@ -24,9 +24,37 @@ SSL/TLS:
 from __future__ import annotations
 import argparse, json, logging, os, sys
 from mcp.server.fastmcp import FastMCP
-from stas_mcp.handlers import _load_registry, _parse_github_issue_url, check_status, get_pr, get_run_resource, label_issue, run_fix
+from workers.pipeline_client import get_client
+from stas_mcp.handlers import _parse_github_issue_url, check_status, get_pr, get_run_resource, label_issue, list_runs_from_api, run_fix
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Sentry SDK initialization for MCP Agent Server
+# ---------------------------------------------------------------------------
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+SENTRY_ENV = os.getenv("SENTRY_ENVIRONMENT", os.getenv("NODE_ENV", "development"))
+SENTRY_RELEASE = os.getenv("SENTRY_RELEASE", "stas@unknown")
+
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            environment=SENTRY_ENV,
+            release=SENTRY_RELEASE,
+            traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        )
+        logger.info(
+            "Sentry initialized for MCP Server — env=%s release=%s",
+            SENTRY_ENV,
+            SENTRY_RELEASE,
+        )
+    except Exception as e:
+        logger.warning("Failed to initialize Sentry for MCP Server: %s", e)
+else:
+    logger.info("SENTRY_DSN not configured — Sentry monitoring disabled for MCP Server")
 SERVER_NAME = "stas-agent-discovery"
 SERVER_VERSION = "0.1.0"
 
@@ -64,61 +92,48 @@ async def stas_get_pr(run_id: str) -> str:
 # Agent-First Architecture: new tools (AIM-2071)
 
 async def _list_issues_handler(status=None, repo=None, limit=20):
-    reg = _load_registry()
+    _pl = get_client()
     l = max(1, min(limit, 100))
-    issues = []
-    for rid, e in reg.items():
-        if status and e.get("status") != status: continue
-        if repo and f"{e.get('owner', '')}/{e.get('repo', '')}" != repo: continue
-        issues.append({"run_id": rid, "issue_url": e.get("issue_url"), "owner": e.get("owner"),
-                       "repo": e.get("repo"), "issue_number": e.get("issue_number"),
-                       "status": e.get("status", "unknown"), "pr_url": e.get("pr_url"),
-                       "created_at": e.get("created_at"), "updated_at": e.get("updated_at")})
-    issues.sort(key=lambda x: x.get("updated_at", "") or "", reverse=True)
-    return {"success": True, "issues": issues[:l], "total": len(issues), "limit": l}
+    result = _pl.get_run_history(repo=repo or "", limit=l)
+    issues = result.get("runs", [])
+    if not issues:
+        api_result = await list_runs_from_api(status=status, repo=repo, limit=l)
+        if api_result and "runs" in api_result:
+            issues = api_result["runs"]
+    return {"success": True, "issues": issues, "total": len(issues), "limit": l}
 
 async def _search_codebase_handler(query, repo=None, max_results=10):
-    if not query: return {"success": False, "error": "query is required"}
+    if not query:
+        return {"success": False, "error": "query is required"}
+    _pl = get_client()
     l = max(1, min(max_results, 50))
-    results, reg, q = [], _load_registry(), query.lower()
-    for rid, e in reg.items():
-        if repo and f"{e.get('owner', '')}/{e.get('repo', '')}" != repo: continue
-        score, fields = 0, []
-        if q in rid.lower(): score += 10; fields.append("run_id")
-        if q in (e.get("issue_url", "") or "").lower(): score += 8; fields.append("issue_url")
-        if q in (e.get("owner", "") or "").lower() or q in (e.get("repo", "") or "").lower(): score += 5; fields.append("repo")
-        if q in (e.get("status", "") or "").lower(): score += 3; fields.append("status")
+    result = _pl.get_run_history(repo=repo or "", limit=l)
+    runs = result.get("runs", [])
+    q = query.lower()
+    results = []
+    for r in runs:
+        score = 0
+        fields = []
+        if q in r.get("run_id", "").lower(): score += 10; fields.append("run_id")
+        if q in r.get("issue_url", "").lower(): score += 8; fields.append("issue_url")
+        if q in r.get("status", "").lower(): score += 3; fields.append("status")
         if score > 0:
-            results.append({"run_id": rid, "score": score, "matched_fields": fields,
-                            "issue_url": e.get("issue_url"), "owner": e.get("owner"),
-                            "repo": e.get("repo"), "issue_number": e.get("issue_number"),
-                            "status": e.get("status"), "pr_url": e.get("pr_url"),
-                            "created_at": e.get("created_at")})
+            results.append({**r, "score": score, "matched_fields": fields})
     results.sort(key=lambda x: (-x["score"], x.get("created_at", "") or ""))
     return {"success": True, "query": query, "results": results[:l], "total": len(results), "limit": l}
 
 async def _get_issue_resource_handler(issue_id):
-    reg = _load_registry()
+    _pl = get_client()
+    result = _pl.check_status(issue_id)
     parsed = _parse_github_issue_url(issue_id)
-    owner = repo = number = None
-    if parsed: owner, repo, number = parsed["owner"], parsed["repo"], parsed["issue_number"]
-    matching = []
-    for rid, e in reg.items():
-        if parsed:
-            if e.get("owner") == owner and e.get("repo") == repo and e.get("issue_number") == number:
-                matching.append({"run_id": rid, "status": e.get("status"), "pr_url": e.get("pr_url"),
-                                 "pr_number": e.get("pr_number"), "created_at": e.get("created_at"),
-                                 "updated_at": e.get("updated_at")})
-        elif rid == issue_id or e.get("issue_url") == issue_id:
-            matching.append({"run_id": rid, "status": e.get("status"), "pr_url": e.get("pr_url"),
-                             "pr_number": e.get("pr_number"), "created_at": e.get("created_at"),
-                             "updated_at": e.get("updated_at")})
-    matching.sort(key=lambda x: x.get("updated_at", "") or "", reverse=True)
-    if not matching and parsed:
+    owner = parsed["owner"] if parsed else ""
+    repo = parsed["repo"] if parsed else ""
+    number = parsed["issue_number"] if parsed else None
+    if not result.get("success"):
         return {"issue_id": issue_id, "owner": owner, "repo": repo, "issue_number": number,
-                "status": "unknown", "runs": [], "message": "No fix runs found"}
+                "status": "unknown", "runs": [], "message": result.get("error", "No fix runs found")}
     return {"issue_id": issue_id, "owner": owner, "repo": repo, "issue_number": number,
-            "total_runs": len(matching), "runs": matching}
+            "total_runs": 1, "runs": [result]}
 
 @mcp.tool(name="list_issues", description="List tracked issues with their STAS fix status, with optional filters.")
 async def list_issues_tool(status=None, repo=None, limit=20):
@@ -145,7 +160,7 @@ def run_sse(host="0.0.0.0", port=4095, ssl_keyfile=None, ssl_certfile=None):
     import uvicorn
     from mcp.server.fastmcp import FastMCP as FastMCPType
 
-    app = mcp._app  # Access the underlying ASGI app
+    app = mcp.sse_app()  # Access the underlying ASGI app
 
     ssl_kwargs = {}
     if ssl_keyfile and ssl_certfile:

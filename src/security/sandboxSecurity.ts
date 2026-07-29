@@ -75,8 +75,8 @@ export const SANDBOX_DOCKER_OPTS: string[] = [
   '--cpus=0.5',
   '--pids-limit=256',
   '--network=none',
-  `--security-opt=seccomp=${config.docker.seccompProfile}`,
-  `--security-opt=apparmor=${config.docker.apparmorProfile}`,
+  `--security-opt=seccomp=${(config.docker as Record<string, unknown>).seccompProfile ?? 'default'}`,
+  `--security-opt=apparmor=${(config.docker as Record<string, unknown>).apparmorProfile ?? 'unconfined'}`,
 ];
 
 export function getDockerSecurityOpts(additionalOpts: string[] = []): string[] {

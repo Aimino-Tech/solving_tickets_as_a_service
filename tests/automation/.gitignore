@@ -1,0 +1,5 @@
+reports/
+.tickets/
+.visbaseline/
+node_modules/
+*.zip

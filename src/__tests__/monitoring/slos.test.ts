@@ -53,7 +53,7 @@ describe('monitoring/slos', () => {
     it('accepts custom windowMinutes', async () => {
       mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ percentile: 1.0 }] });
       await slos.getWebhookLatencyP99(120);
-      expect(mockQueryWithRetry.mock.calls[0][1][0]).toContain('T');
+      expect(mockQueryWithRetry.mock.calls[0][1][0]).toContain('120');
     });
   });
 
@@ -84,10 +84,10 @@ describe('monitoring/slos', () => {
       expect(result).toBe(70);
     });
 
-    it('returns 0 when no runs exist', async () => {
+    it('returns 100 when no runs exist (no data = compliant)', async () => {
       mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ total: 0, succeeded: 0 }] });
       const result = await slos.getAgentSuccessRate();
-      expect(result).toBe(0);
+      expect(result).toBe(100);
     });
 
     it('returns 0 on query error', async () => {
@@ -101,6 +101,24 @@ describe('monitoring/slos', () => {
       const result = await slos.getAgentSuccessRate();
       expect(result).toBe(100);
     });
+
+    it('handles pg bigint returned as string (int8 => string)', async () => {
+      mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ total: '10', succeeded: '7' }] });
+      const result = await slos.getAgentSuccessRate();
+      expect(result).toBe(70);
+    });
+
+    it('handles pg string zero to avoid NaN division', async () => {
+      mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ total: '0', succeeded: '0' }] });
+      const result = await slos.getAgentSuccessRate();
+      expect(result).toBe(100);
+    });
+
+    it('returns 100 when division produces NaN/Infinity', async () => {
+      mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ total: NaN, succeeded: NaN }] });
+      const result = await slos.getAgentSuccessRate();
+      expect(result).toBe(100);
+    });
   });
 
   describe('getUptime', () => {
@@ -110,16 +128,28 @@ describe('monitoring/slos', () => {
       expect(result).toBeCloseTo(99);
     });
 
-    it('returns 0 when no health checks exist', async () => {
+    it('returns 100 when no health checks exist', async () => {
       mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ total: 0, healthy: 0 }] });
       const result = await slos.getUptime();
-      expect(result).toBe(0);
+      expect(result).toBe(100);
     });
 
     it('returns 0 on query error', async () => {
       mockQueryWithRetry.mockRejectedValueOnce(new Error('DB down'));
       const result = await slos.getUptime();
       expect(result).toBe(0);
+    });
+
+    it('handles pg bigint returned as string', async () => {
+      mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ total: '100', healthy: '99' }] });
+      const result = await slos.getUptime();
+      expect(result).toBeCloseTo(99);
+    });
+
+    it('handles pg string zero to avoid NaN division', async () => {
+      mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ total: '0', healthy: '0' }] });
+      const result = await slos.getUptime();
+      expect(result).toBe(100);
     });
   });
 
@@ -167,7 +197,7 @@ describe('monitoring/slos', () => {
 
       expect(report.slis[0].currentValue).toBe(99);
       expect(report.slis[2].currentValue).toBe(100);
-      expect(report.slis[1].currentValue).toBe(1);
+      expect(report.slis[1].currentValue).toBeCloseTo(1);
       expect(report.slis[3].currentValue).toBe(100);
       expect(mockQueryWithRetry).toHaveBeenCalledTimes(2);
     });

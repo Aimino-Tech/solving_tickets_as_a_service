@@ -155,6 +155,11 @@ vi.mock('../config.js', () => ({
       defaultRepoName: undefined,
       installationId: 0,
     },
+    proxy: {
+      modelRouterEnabled: false,
+      githubActionsDispatchEnabled: false,
+      githubPat: '',
+    },
     security: {
       corsOrigin: '*',
       requestBodyLimit: '1mb',

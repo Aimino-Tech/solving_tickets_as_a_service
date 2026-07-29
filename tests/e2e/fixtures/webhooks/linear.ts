@@ -79,10 +79,4 @@ export function linearCommentCreate() {
   };
 }
 
-/**
- * Alias for linearIssueCreate — used by full-flow.test.ts
- * Returns a complete Linear issue creation webhook payload.
- */
-export function sampleLinearWebhookPayload() {
-  return linearIssueCreate();
-}
+

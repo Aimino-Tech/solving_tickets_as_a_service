@@ -1,10 +1,11 @@
 ---
 name: stas
 description: STAS — Solving Tickets As A Service. Submit fix requests to a GitHub bot that investigates, fixes, tests, and opens PRs.
-version: 0.1.0
+version: 0.2.0
 author: Aimino Tech
 license: MIT
 homepage: https://github.com/Aimino-Tech/solving_tickets_as_a_service
+installUrl: https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/stas/SKILL.md
 tags:
   - github
   - automation
@@ -12,6 +13,8 @@ tags:
   - pr-creation
   - bug-fixing
   - mcp
+  - api
+  - developer-tools
 routes:
   - mcp
   - api
@@ -19,15 +22,28 @@ categories:
   - productivity
   - developer-tools
   - ci-cd
+platforms:
+  - opencode
+  - openclaw
+  - claude-code
 capabilities:
   tools:
     - submit_issue
     - check_status
     - get_run_history
     - list_repos
+    - poll_job
   resources:
     - stas://runs/{run_id}
     - stas://issues/{issue_id}
+    - stas://jobs/{job_id}
+  mcp:
+    transport: stdio
+    command: python3
+    args:
+      - -m
+      - stas_mcp.server
+      - stdio
 ---
 
 # STAS Skill — Solving Tickets As A Service

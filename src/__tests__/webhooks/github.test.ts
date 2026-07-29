@@ -26,14 +26,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Mocks — hoisted before imports by vitest
 // ---------------------------------------------------------------------------
 
-const { mockEnqueueIssue } = vi.hoisted(() => {
-  return {
-    mockEnqueueIssue: vi
-      .fn<(data: unknown) => Promise<string | undefined>>()
-      .mockResolvedValue('job-mock-id'),
-  };
-});
-
 const { mockLogger } = vi.hoisted(() => {
   const logger = {
     child: vi.fn(),
@@ -59,13 +51,11 @@ vi.mock('../../config.js', () => ({
     github: { webhookSecret: 'test-secret' },
     stas: {
       label: 'stas:fix',
-      rateLimit: {
-        windowMs: 60_000,
-        max: 30,
-        repoLimit: 5,
-        accountLimit: 10,
-        repoConcurrencyMax: 3,
-      },
+      rateLimitWindowMs: 60_000,
+      rateLimitMax: 30,
+      rateLimitPerRepoMax: 5,
+      rateLimitPerIpMax: 30,
+      rateLimitPerUserMax: 10,
     },
   },
 }));
@@ -93,7 +83,7 @@ describe('createGithubWebhooks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockEnqueue.mockClear();
-    mockEnqueueIssue.mockResolvedValue('job-mock-id');
+    mockEnqueue.mockResolvedValue('job-mock-id');
   });
 
   describe('issues.labeled' as any, () => {
@@ -107,16 +97,16 @@ describe('createGithubWebhooks', () => {
         payload: payload as any,
       });
 
-      expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
-      expect(mockEnqueueIssue).toHaveBeenCalledWith(
+      expect(mockEnqueue).toHaveBeenCalledTimes(1);
+      expect(mockEnqueue).toHaveBeenCalledWith(
         expect.objectContaining({
           installationId: 555,
           repoOwner: 'owner',
           repoName: 'test-repo',
           issueNumber: 42,
-          issueTitle: 'Test Issue',
-          issueBody: 'Test body',
-          labels: ['bug'],
+          issueTitle: 'Fix broken user login',
+          issueBody: 'Users are unable to log in when the password contains special characters.',
+          labels: ['stas:fix'],
         }),
       );
     });
@@ -132,7 +122,7 @@ describe('createGithubWebhooks', () => {
         payload: payload as any,
       });
 
-      expect(mockEnqueueIssue).not.toHaveBeenCalled();
+      expect(mockEnqueue).not.toHaveBeenCalled();
     });
 
     it('does NOT enqueue when installation ID is missing', async () => {
@@ -148,7 +138,7 @@ describe('createGithubWebhooks', () => {
         payload: payloadWithoutInstallation as any,
       });
 
-      expect(mockEnqueueIssue).not.toHaveBeenCalled();
+      expect(mockEnqueue).not.toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
           repo: 'owner/test-repo',
@@ -170,7 +160,7 @@ describe('createGithubWebhooks', () => {
         payload: payload as any,
       });
 
-      expect(mockEnqueueIssue).not.toHaveBeenCalled();
+      expect(mockEnqueue).not.toHaveBeenCalled();
     });
   });
 
@@ -248,8 +238,8 @@ describe('createGithubWebhooks', () => {
         payload,
       });
 
-      expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
-      expect(mockEnqueueIssue).toHaveBeenCalledWith(
+      expect(mockEnqueue).toHaveBeenCalledTimes(1);
+      expect(mockEnqueue).toHaveBeenCalledWith(
         expect.objectContaining({
           installationId: 555,
           repoOwner: 'owner',
@@ -271,7 +261,7 @@ describe('createGithubWebhooks', () => {
         payload: { ...payload, action: 'edited' } as any,
       });
 
-      expect(mockEnqueueIssue).not.toHaveBeenCalled();
+      expect(mockEnqueue).not.toHaveBeenCalled();
     });
 
     it('does NOT enqueue when the issue has target label but no installation ID', async () => {
@@ -333,7 +323,7 @@ describe('createGithubWebhooks', () => {
         payload,
       });
 
-      expect(mockEnqueueIssue).not.toHaveBeenCalled();
+      expect(mockEnqueue).not.toHaveBeenCalled();
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.objectContaining({
           repo: 'owner/test-repo',
@@ -472,12 +462,12 @@ describe('createGithubWebhooks', () => {
       });
 
       // enqueueIssue should have been called twice (dedup happens inside BullMQ)
-      expect(mockEnqueueIssue).toHaveBeenCalledTimes(2);
-      expect(mockEnqueueIssue).toHaveBeenNthCalledWith(
+      expect(mockEnqueue).toHaveBeenCalledTimes(2);
+      expect(mockEnqueue).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({ installationId: 555, repoOwner: 'owner', repoName: 'test-repo', issueNumber: 42 }),
       );
-      expect(mockEnqueueIssue).toHaveBeenNthCalledWith(
+      expect(mockEnqueue).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({ installationId: 555, repoOwner: 'owner', repoName: 'test-repo', issueNumber: 42 }),
       );
@@ -638,7 +628,7 @@ describe('suggestLabels', () => {
 
   describe('non-matching keywords', () => {
     it('returns empty array when no patterns match', () => {
-      expect(suggestLabels('security vulnerability', '')).toEqual([]);
+      expect(suggestLabels('refactoring code', '')).toEqual([]);
     });
 
     it('returns empty array for unrelated text', () => {

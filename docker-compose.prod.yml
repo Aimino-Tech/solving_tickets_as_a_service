@@ -68,7 +68,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: stas-postgres
-    restart: "no"
+    <<: *default-restart
     ports:
       - "5432:5432"
     environment:
@@ -89,7 +89,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: stas-redis
-    restart: "no"
+    <<: *default-restart
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes --appendfsync everysec --auto-aof-rewrite-percentage 100 --auto-aof-rewrite-min-size 64mb
@@ -107,7 +107,7 @@ services:
   rabbitmq:
     image: rabbitmq:4-management-alpine
     container_name: stas-rabbitmq
-    restart: "no"
+    <<: *default-restart
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -132,7 +132,7 @@ services:
       dockerfile: Dockerfile
     image: stas-webhook:latest
     container_name: stas-webhook
-    restart: "no"
+    <<: *default-restart
     ports:
       - "3000:3000"
     env_file: .env
@@ -142,6 +142,10 @@ services:
       - REDIS_URL=redis://stas-redis:6379
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
       - DATABASE_URL=postgres://${POSTGRES_USER:-stas}:${POSTGRES_PASSWORD:-stas-password}@stas-postgres:5432/${POSTGRES_DB:-stas}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      - SENTRY_RELEASE=${SENTRY_RELEASE}
+      - SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     depends_on:
       redis:
         condition: service_healthy
@@ -171,15 +175,21 @@ services:
       dockerfile: Dockerfile
     image: stas-worker:latest
     container_name: stas-worker
-    restart: "no"
+    <<: *default-restart
     command: celery -A workers.celery_app worker -l info -Q stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications --concurrency=4
     env_file: .env
     environment:
       - REDIS_URL=redis://stas-redis:6379
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
       - DATABASE_URL=postgres://${POSTGRES_USER:-stas}:${POSTGRES_PASSWORD:-stas-password}@stas-postgres:5432/${POSTGRES_DB:-stas}
+      - PGPoolSize=50
+      - PGMAXClientConnections=75
       - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
       - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+      - SENTRY_DSN=${SENTRY_DSN}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      - SENTRY_RELEASE=${SENTRY_RELEASE}
+      - SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     depends_on:
       redis:
         condition: service_healthy
@@ -204,7 +214,7 @@ services:
   celery-beat:
     image: stas-worker:latest
     container_name: stas-celery-beat
-    restart: "no"
+    <<: *default-restart
     command: celery -A workers.celery_app beat -l info
     env_file: .env
     environment:
@@ -212,6 +222,10 @@ services:
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
       - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
       - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+      - SENTRY_DSN=${SENTRY_DSN}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      - SENTRY_RELEASE=${SENTRY_RELEASE}
+      - SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     depends_on:
       redis:
         condition: service_healthy
@@ -230,7 +244,7 @@ services:
   flower:
     image: mher/flower:latest
     container_name: stas-flower
-    restart: "no"
+    <<: *default-restart
     ports:
       - "5555:5555"
     command: flower --port=5555 --broker=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
@@ -254,7 +268,7 @@ services:
   nginx:
     image: nginx:alpine
     container_name: stas-nginx
-    restart: "no"
+    <<: *default-restart
     ports:
       - "80:80"
       - "443:443"
@@ -263,7 +277,14 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - htpasswd-data:/etc/nginx/.htpasswd:ro
     depends_on:
-      - stas-webhook
+      stas-webhook:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     <<: *resources-light
     logging: *default-logging
     networks:
@@ -278,7 +299,7 @@ services:
       dockerfile: Dockerfile
     image: stas-dashboard:latest
     container_name: stas-dashboard
-    restart: "no"
+    <<: *default-restart
     ports:
       - "5173:80"
     env_file: .env
@@ -286,7 +307,8 @@ services:
       - VITE_API_URL=http://stas-webhook:3000
       - NODE_ENV=production
     depends_on:
-      - stas-webhook
+      stas-webhook:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/healthz"]
       interval: 30s
@@ -304,7 +326,7 @@ services:
   certbot:
     image: certbot/certbot:latest
     container_name: stas-certbot
-    restart: "no"
+    <<: *default-restart
     entrypoint: ""
     command: >
       sh -c "
@@ -329,7 +351,7 @@ services:
   stas-backup:
     image: stas-webhook:latest
     container_name: stas-backup
-    restart: "no"
+    <<: *default-restart
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -380,7 +402,7 @@ services:
       dockerfile: Dockerfile
     image: stas-egress-proxy:latest
     container_name: stas-egress-proxy
-    restart: "no"
+    <<: *default-restart
     ports:
       - "3128:3128"
     environment:
@@ -397,6 +419,46 @@ services:
     <<: *resources-light
     logging: *default-logging
 
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: stas-loki
+    <<: *default-restart
+    ports:
+      - "3100:3100"
+      - "9096:9096"
+    volumes:
+      - ./deploy/monitoring/loki-config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/config.yml
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    <<: *resources-light
+    logging: *default-logging
+    networks:
+      - stas-net
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: stas-promtail
+    <<: *default-restart
+    volumes:
+      - ./deploy/monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/log:/var/log:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      loki:
+        condition: service_healthy
+    <<: *resources-light
+    logging: *default-logging
+    networks:
+      - stas-net
+
 volumes:
   postgres-data:
     driver: local
@@ -411,6 +473,8 @@ volumes:
   backup-data:
     driver: local
   htpasswd-data:
+    driver: local
+  loki-data:
     driver: local
 
 networks:
