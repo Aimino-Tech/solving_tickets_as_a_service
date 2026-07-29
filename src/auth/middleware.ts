@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { authService } from './service.js';
 
 export interface AuthUser {
-  id: number;
+  id: string;
   email: string;
 }
 
@@ -24,7 +24,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   const token = header.slice(7);
   try {
     const payload = authService.verifyToken(token);
-    req.user = { id: Number(payload.sub), email: payload.email };
+    req.user = { id: String(payload.sub), email: payload.email };
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
@@ -41,7 +41,7 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
   const token = header.slice(7);
   try {
     const payload = authService.verifyToken(token);
-    req.user = { id: Number(payload.sub), email: payload.email };
+    req.user = { id: String(payload.sub), email: payload.email };
   } catch {
     // Token invalid — continue without auth
   }

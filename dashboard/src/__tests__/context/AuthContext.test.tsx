@@ -17,6 +17,7 @@ vi.mock('@/api/client', () => ({
     loginUrl: vi.fn(() => '/api/auth/github'),
   },
   setToken: vi.fn(),
+  setRefreshToken: vi.fn(),
   clearToken: vi.fn(),
   default: {},
 }));
@@ -101,13 +102,26 @@ describe('AuthContext', () => {
     expect(auth.me).not.toHaveBeenCalled();
   });
 
-  it('redirects to GitHub login when login() is called', async () => {
+  it('logs in with email and password', async () => {
+    (auth.login as any).mockResolvedValue({
+      token: 'new-token',
+      refreshToken: 'new-refresh',
+      user: { id: '3', email: 'test@test.com', name: 'TestUser', createdAt: '2024-01-01' },
+    });
+
     renderWithProvider(<TestConsumer />);
     const user = userEvent.setup();
 
     await user.click(screen.getByTestId('login-btn'));
 
-    expect(auth.loginUrl).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(auth.login).toHaveBeenCalledWith('test@test.com', 'password');
+    });
+    expect(setToken).toHaveBeenCalledWith('new-token');
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('true');
+    });
+    expect(screen.getByTestId('username')).toHaveTextContent('TestUser');
   });
 
   it('calls logout and clears state when logout() is invoked', async () => {

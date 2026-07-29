@@ -35,21 +35,21 @@ export class NotificationHistoryRepository {
     return result.rows[0];
   }
 
-  async markRead(id: number, userId: number): Promise<void> {
+  async markRead(id: number, userId: string): Promise<void> {
     await queryWithRetry(
       `UPDATE notification_history SET read = TRUE WHERE id = $1 AND user_id = $2`,
       [id, userId],
     );
   }
 
-  async markAllRead(userId: number): Promise<void> {
+  async markAllRead(userId: string): Promise<void> {
     await queryWithRetry(
       `UPDATE notification_history SET read = TRUE WHERE user_id = $1 AND read = FALSE`,
       [userId],
     );
   }
 
-  async deleteOld(userId: number, beforeDays = 90): Promise<number> {
+  async deleteOld(userId: string, beforeDays = 90): Promise<number> {
     const result = await queryWithRetry<{ deleted: number }>(
       `DELETE FROM notification_history WHERE user_id = $1 AND created_at < NOW() - make_interval(days => $2)
        RETURNING id`,

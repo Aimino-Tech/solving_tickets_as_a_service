@@ -54,7 +54,7 @@ describe('billing/usage', () => {
 
   describe('hasExceededUsageLimit', () => {
     it('returns true when at limit', async () => {
-      mockRedisClient.zcount.mockResolvedValue(10);
+      mockRedisClient.zcount.mockResolvedValue(50);
       expect(await usage.hasExceededUsageLimit(42, 'free')).toBe(true);
     });
     it('returns false when under limit', async () => {
@@ -68,7 +68,7 @@ describe('billing/usage', () => {
 
   describe('isUsageAtThreshold', () => {
     it('returns true when at threshold', async () => {
-      mockRedisClient.zcount.mockResolvedValue(8);
+      mockRedisClient.zcount.mockResolvedValue(40);
       expect(await usage.isUsageAtThreshold(42, 'free', 80)).toBe(true);
     });
   });
