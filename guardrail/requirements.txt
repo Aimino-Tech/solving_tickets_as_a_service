@@ -1,7 +1,10 @@
 # LiteLLM proxy (runtime for guardrail)
 litellm>=1.69.0
 
-# If using the guardrail as a standalone CLI tool (no extra deps needed)
+# Optional: structured JSON logging
+# GUARDRAIL_LOG_FORMAT=json
+python-json-logger>=7.0.0
 
-# Dashboard module imports guardrail packages
-# (audit_log and memory_service use stdlib sqlite3 only)
+# Optional: PostgreSQL audit log backend
+# GUARDRAIL_AUDIT_BACKEND=postgres
+psycopg2-binary>=2.9.0
