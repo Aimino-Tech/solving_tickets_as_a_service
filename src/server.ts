@@ -638,15 +638,36 @@ export async function createApp(): Promise<express.Application> {
   });
 
   // -- MCP server routes (OpenClaw multi-channel API)
-  const { default: mcpRouter } = await import('./routes/mcp.js');
+  let mcpRouter: Router;
+  try {
+    const mod = await import('./routes/mcp.js');
+    mcpRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load MCP routes — using empty router');
+    mcpRouter = Router();
+  }
   app.use(mcpRouter);
 
   // -- MCP agent discovery routes (FastMCP integration)
-  const { default: mcpDiscoveryRouter } = await import('./mcp.js');
+  let mcpDiscoveryRouter: Router;
+  try {
+    const mod = await import('./mcp.js');
+    mcpDiscoveryRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load MCP discovery routes — using empty router');
+    mcpDiscoveryRouter = Router();
+  }
   app.use(mcpDiscoveryRouter);
 
   // -- MCP agent server (JSON-RPC protocol for AI agent discovery)
-  const { default: agentServerRouter } = await import('./mcp/agentServer.js');
+  let agentServerRouter: Router;
+  try {
+    const mod = await import('./mcp/agentServer.js');
+    agentServerRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load MCP agent server routes — using empty router');
+    agentServerRouter = Router();
+  }
   app.use(agentServerRouter);
 
   // -- Health check endpoints --------------------------------------------------
@@ -709,7 +730,14 @@ export async function createApp(): Promise<express.Application> {
   // GET  /api/v1/credits/transactions
   // POST /api/v1/credits/top-up
   // GET  /api/v1/credits/usage
-  const { creditRouter } = await import('./credits/index.js');
+  let creditRouter: Router;
+  try {
+    const mod = await import('./credits/index.js');
+    creditRouter = mod.creditRouter;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load credits API — using empty router');
+    creditRouter = Router();
+  }
   app.use('/api/v1', creditRouter);
 
   // ── Usage metering API ──────────────────────────────────────────
@@ -934,15 +962,36 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/pricing', pricingRouter);
 
   // ── Preview API (public, no auth) ────────────────────────────────
-  const { previewRouter } = await import('./routes/preview.js');
+  let previewRouter: Router;
+  try {
+    const mod = await import('./routes/preview.js');
+    previewRouter = mod.previewRouter;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load preview API — using empty router');
+    previewRouter = Router();
+  }
   app.use('/api/v1', previewRouter);
 
   // Ticket Result API (non-code ticket results)
-  const { default: ticketResultRouter } = await import('./routes/ticketResult.js');
+  let ticketResultRouter: Router;
+  try {
+    const mod = await import('./routes/ticketResult.js');
+    ticketResultRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load ticket result API — using empty router');
+    ticketResultRouter = Router();
+  }
   app.use(ticketResultRouter);
 
   // Public Status API
-  const { default: statusRouter } = await import('./routes/status.js');
+  let statusRouter: Router;
+  try {
+    const mod = await import('./routes/status.js');
+    statusRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load status API — using empty router');
+    statusRouter = Router();
+  }
   app.use(statusRouter);
 
   // KPI Dashboard API
@@ -973,8 +1022,8 @@ export async function createApp(): Promise<express.Application> {
   try {
     const { default: samlRouter } = await import('./routes/saml.js');
     app.use('/api/v1/saml', samlRouter);
-  } catch {
-    log.warn('SAML routes not available');
+  } catch (err) {
+    log.warn({ err: String(err) }, 'SAML routes not available — skipping');
   }
 
   // Enterprise routes (optional)
@@ -982,14 +1031,19 @@ export async function createApp(): Promise<express.Application> {
     const enterpriseModule = await import('./routes/enterprise.js');
     const enterpriseRouter = (enterpriseModule as any).default || enterpriseModule;
     app.use('/api/v1/enterprise', enterpriseRouter);
-  } catch {
-    log.warn('Enterprise routes not available');
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Enterprise routes not available — skipping');
   }
 
   app.get('/metrics', async (_req: Request, res: Response) => {
-    const { bridgeMetrics } = await import('./bridge/metrics.js');
-    const metrics = bridgeMetrics.render();
-    res.type('text/plain; version=0.0.4').send(metrics);
+    try {
+      const { bridgeMetrics } = await import('./bridge/metrics.js');
+      const metrics = bridgeMetrics.render();
+      res.type('text/plain; version=0.0.4').send(metrics);
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to load metrics');
+      res.status(500).send('# Metrics unavailable\n');
+    }
   });
 
   app.get('/github-app-manifest.json', (_req: Request, res: Response) => {
