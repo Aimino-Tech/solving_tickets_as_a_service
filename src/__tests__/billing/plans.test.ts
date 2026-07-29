@@ -28,10 +28,10 @@ describe('billing/plans', () => {
       expect(plans.PLANS).toHaveProperty('enterprise');
     });
 
-    it('free plan has 0 amount cents and 10 monthly fix limit', () => {
+    it('free plan has 0 amount cents and 50 monthly fix limit', () => {
       const free = plans.PLANS.free;
       expect(free.amountCents).toBe(0);
-      expect(free.monthlyFixLimit).toBe(10);
+      expect(free.monthlyFixLimit).toBe(50);
       expect(free.premiumModels).toBe(false);
     });
 
@@ -92,7 +92,7 @@ describe('billing/plans', () => {
 
   describe('getMonthlyFixLimit', () => {
     it('returns the correct monthly fix limit', () => {
-      expect(plans.getMonthlyFixLimit('free')).toBe(10);
+      expect(plans.getMonthlyFixLimit('free')).toBe(50);
       expect(plans.getMonthlyFixLimit('solo')).toBe(100);
       expect(plans.getMonthlyFixLimit('team')).toBe(500);
       expect(plans.getMonthlyFixLimit('enterprise')).toBe(999_999);

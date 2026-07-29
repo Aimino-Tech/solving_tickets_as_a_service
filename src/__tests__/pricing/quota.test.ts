@@ -124,7 +124,7 @@ describe('getRemainingQuota', () => {
   it('returns quota minus usage for free tier', async () => {
     mockRedisClient.zcount.mockResolvedValue(3);
     const remaining = await getRemainingQuota(12345, 'free');
-    expect(remaining).toBe(7); // 10 - 3
+    expect(remaining).toBe(47); // 50 - 3
   });
 
   it('returns quota minus usage for pro tier', async () => {
@@ -140,7 +140,7 @@ describe('getRemainingQuota', () => {
   });
 
   it('returns 0 when usage exceeds quota', async () => {
-    mockRedisClient.zcount.mockResolvedValue(15);
+    mockRedisClient.zcount.mockResolvedValue(55);
     const remaining = await getRemainingQuota(12345, 'free');
     expect(remaining).toBe(0);
   });

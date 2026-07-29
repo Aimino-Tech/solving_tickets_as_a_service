@@ -305,8 +305,8 @@ export class LinearTracker implements Tracker {
 export function verifyLinearWebhookSignature(rawBody: Buffer, signatureHeader: string): boolean {
   const secret = config.trackers?.linear?.webhookSecret;
   if (!secret) {
-    log.warn('LINEAR_WEBHOOK_SECRET not configured — skipping webhook verification');
-    return true;
+    log.warn('LINEAR_WEBHOOK_SECRET not configured — rejecting webhook');
+    return false;
   }
 
   const prefix = 'sha256=';

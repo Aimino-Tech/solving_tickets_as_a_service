@@ -102,6 +102,11 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('24h'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
 
+  AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  AUTH_LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  AUTH_REGISTER_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(3),
+  AUTH_REFRESH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+
   // Proxy
   PROXY_MODEL_ROUTER_ENABLED: boolSchema(true),
   PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED: boolSchema(false),
@@ -668,6 +673,10 @@ function buildConfig(env: ParsedEnv) {
       jwtSecret: env.JWT_SECRET,
       jwtExpiresIn: env.JWT_EXPIRES_IN,
       jwtRefreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
+      rateLimitWindowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+      loginRateLimitMax: env.AUTH_LOGIN_RATE_LIMIT_MAX,
+      registerRateLimitMax: env.AUTH_REGISTER_RATE_LIMIT_MAX,
+      refreshRateLimitMax: env.AUTH_REFRESH_RATE_LIMIT_MAX,
     },
 
     // ── Security ────────────────────────────────────────────────────────────

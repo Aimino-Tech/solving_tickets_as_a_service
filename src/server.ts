@@ -13,8 +13,11 @@
  * - Exponential backoff retry worker (1min, 5min, 30min, max 3)
  *
  * --- Error Handling Audit ---------------------------------------------------
+ * - express-async-errors patches Express Router to forward async rejections
+ *   to the global error middleware (prevents unhandled promise rejections)
  * - Global Express error middleware (4-arg handler) at bottom of chain
  * - Process-level uncaughtException and unhandledRejection handlers
+ * - unhandledRejection handler calls process.exit(1) (prevents silent failure)
  * - app.listen() error event handled (EADDRINUSE, EACCES, etc.)
  * - Server instance returned for graceful shutdown by caller
  * - Request ID middleware for log correlation
@@ -22,12 +25,15 @@
  */
 
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+import 'express-async-errors';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import cors from 'cors';
 import type { NextFunction, Request, Response } from 'express';
@@ -43,7 +49,7 @@ import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import { de } from './i18n/de.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import { approvalRouter, configureApprovalGate } from './middleware/approvalGate.js';
-import { setupSentryExpressErrorHandler } from './monitoring/sentry.js';
+import { captureError, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { initWizardStore } from './onboarding/wizard.js';
 import { isConnected, publishMessage, QUEUES, connect as rmqConnect } from './queue/rabbitmq.js';
@@ -272,18 +278,11 @@ export async function createApp(): Promise<express.Application> {
         return;
       }
     } else {
-      // No signature — receive without verification (dev mode or unsigned transport)
-      try {
-        await githubWebhooks.receive({
-          id: deliveryId || crypto.randomUUID(),
-          name: event as any,
-          payload: JSON.parse((rawBody || Buffer.from(JSON.stringify(req.body))).toString()),
-        });
-      } catch (err) {
-        log.warn({ err: String(err) }, 'Webhook processing error (no signature)');
-        if (eventId) await logWebhookFailed(eventId, `Processing error: ${String(err)}`);
-        // Still respond 202 — we've logged the event for replay
-      }
+      // No signature — fail closed
+      log.warn('GitHub webhook signature missing — rejecting');
+      if (eventId) await logWebhookFailed(eventId, 'Signature missing');
+      res.status(401).json({ error: 'Signature required' });
+      return;
     }
 
     // Mark as processed on success
@@ -333,7 +332,13 @@ export async function createApp(): Promise<express.Application> {
       payload: parsedPayload,
     });
 
-    if (config.gitlab.webhookSecret) {
+    if (!config.gitlab.webhookSecret) {
+      log.error('GITLAB_WEBHOOK_SECRET not configured — cannot verify webhook');
+      if (eventId) await logWebhookFailed(eventId, 'Webhook secret not configured');
+      res.status(500).json({ error: 'Webhook secret not configured' });
+      return;
+    }
+    {
       const { gitlabWebhook: gw } = await import('./webhooks/gitlab.js');
       if (!gw.verify(rawBody.toString(), token, config.gitlab.webhookSecret)) {
         log.warn('GitLab webhook token verification failed');
@@ -571,18 +576,28 @@ export async function createApp(): Promise<express.Application> {
       res.status(400).json({ error: 'Invalid JSON' });
       return;
     }
-    const { handleTelegramWebhook } = await import('./channels/telegram.js');
-    const result = await handleTelegramWebhook(payload);
-    res.status(result.ok ? 200 : 500).json(result);
+    try {
+      const { handleTelegramWebhook } = await import('./channels/telegram.js');
+      const result = await handleTelegramWebhook(payload);
+      res.status(result.ok ? 200 : 500).json(result);
+    } catch (err) {
+      log.error({ err: String(err) }, 'Telegram webhook handler error');
+      res.status(500).json({ ok: false, error: 'Internal error' });
+    }
   });
 
   app.get('/webhook/whatsapp', async (req: Request, res: Response) => {
-    const { verifyWhatsAppWebhook } = await import('./channels/whatsapp.js');
-    const result = verifyWhatsAppWebhook(req as any);
-    if (result.verified && result.challenge) {
-      res.type('text/plain').send(result.challenge);
-    } else {
-      res.status(403).send('Verification failed');
+    try {
+      const { verifyWhatsAppWebhook } = await import('./channels/whatsapp.js');
+      const result = verifyWhatsAppWebhook(req as any);
+      if (result.verified && result.challenge) {
+        res.type('text/plain').send(result.challenge);
+      } else {
+        res.status(403).send('Verification failed');
+      }
+    } catch (err) {
+      log.error({ err: String(err) }, 'WhatsApp webhook verification error');
+      res.status(500).send('Verification error');
     }
   });
 
@@ -595,9 +610,14 @@ export async function createApp(): Promise<express.Application> {
       res.status(400).json({ error: 'Invalid JSON' });
       return;
     }
-    const { handleWhatsAppWebhook } = await import('./channels/whatsapp.js');
-    const result = await handleWhatsAppWebhook(payload);
-    res.status(result.ok ? 200 : 500).json(result);
+    try {
+      const { handleWhatsAppWebhook } = await import('./channels/whatsapp.js');
+      const result = await handleWhatsAppWebhook(payload);
+      res.status(result.ok ? 200 : 500).json(result);
+    } catch (err) {
+      log.error({ err: String(err) }, 'WhatsApp webhook handler error');
+      res.status(500).json({ ok: false, error: 'Internal error' });
+    }
   });
 
   // -- Stripe webhook -------------------------------------------------------
@@ -629,7 +649,8 @@ export async function createApp(): Promise<express.Application> {
         if (eventId) await logWebhookProcessed(eventId);
       } catch (err) {
         if (eventId) await logWebhookFailed(eventId, String(err));
-        throw err;
+        next2(err as Error);
+        return;
       }
       recordWebhookDuration(source, Date.now() - startTime);
     };
@@ -638,15 +659,36 @@ export async function createApp(): Promise<express.Application> {
   });
 
   // -- MCP server routes (OpenClaw multi-channel API)
-  const { default: mcpRouter } = await import('./routes/mcp.js');
+  let mcpRouter: Router;
+  try {
+    const mod = await import('./routes/mcp.js');
+    mcpRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load MCP routes — using empty router');
+    mcpRouter = Router();
+  }
   app.use(mcpRouter);
 
   // -- MCP agent discovery routes (FastMCP integration)
-  const { default: mcpDiscoveryRouter } = await import('./mcp.js');
+  let mcpDiscoveryRouter: Router;
+  try {
+    const mod = await import('./mcp.js');
+    mcpDiscoveryRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load MCP discovery routes — using empty router');
+    mcpDiscoveryRouter = Router();
+  }
   app.use(mcpDiscoveryRouter);
 
   // -- MCP agent server (JSON-RPC protocol for AI agent discovery)
-  const { default: agentServerRouter } = await import('./mcp/agentServer.js');
+  let agentServerRouter: Router;
+  try {
+    const mod = await import('./mcp/agentServer.js');
+    agentServerRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load MCP agent server routes — using empty router');
+    agentServerRouter = Router();
+  }
   app.use(agentServerRouter);
 
   // -- Health check endpoints --------------------------------------------------
@@ -694,6 +736,11 @@ export async function createApp(): Promise<express.Application> {
   // ── Dashboard API ──────────────────────────────────────
   app.use('/api/v1/me', dashboardRouter);
 
+  // ── Stats & Audit API ──────────────────────────────────
+  const { statsRouter, auditRouter } = await import('./routes/statsAndAudit.js');
+  app.use('/api/v1/stats', statsRouter);
+  app.use('/api/v1/audit', auditRouter);
+
   // ── DPA API ──────────────────────────────────────────────
   app.use('/api/v1/billing', dpaRouter);
   // ── Billing API (subscriptions, plans, checkout) ─────────
@@ -702,6 +749,9 @@ export async function createApp(): Promise<express.Application> {
   // ── Auth API (JWT) — MUST be before /api/v1 catch-all routers ────────
   app.use('/api/v1/auth', authRouter);
 
+  // GitHub OAuth — before /api/v1 catch-all to avoid requireAuth conflict
+  app.use('/api/v1/auth/github', gitHubOAuthRouter);
+
   app.use('/api/v1', slaRouter);
 
   // ── Credits API ──────────────────────────────────────────
@@ -709,7 +759,14 @@ export async function createApp(): Promise<express.Application> {
   // GET  /api/v1/credits/transactions
   // POST /api/v1/credits/top-up
   // GET  /api/v1/credits/usage
-  const { creditRouter } = await import('./credits/index.js');
+  let creditRouter: Router;
+  try {
+    const mod = await import('./credits/index.js');
+    creditRouter = mod.creditRouter;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load credits API — using empty router');
+    creditRouter = Router();
+  }
   app.use('/api/v1', creditRouter);
 
   // ── Usage metering API ──────────────────────────────────────────
@@ -748,27 +805,56 @@ export async function createApp(): Promise<express.Application> {
   // Repos API (repo picker with webhook status)
   app.use('/api/repos', reposRouter);
 
-  // GitHub OAuth & Installation Management
-  app.use('/api/v1', gitHubOAuthRouter);
+  // GitHub Installation & Webhook Management
+  const { githubRouter } = await import('./routes/github.js');
+  app.use('/api/v1/github', githubRouter);
 
   // ── Shareable run page API (public, no auth) ───────────────────────
   // GET /api/runs/:id — Public run detail JSON/HTML
   app.use('/api/runs', runsRouter);
 
-  // ── Marketing Site (React SPA) ──────────────────────────────────
-  app.use(express.static(path.join(__dirname, '../marketing-site/dist')));
-  app.get(
-    /^\/(pricing|trust|benchmarks|support|status|docs|blog|integrations|agents)?$/,
-    (_req: Request, res: Response) => {
-      res.sendFile(path.join(__dirname, '../marketing-site/dist', 'index.html'));
-    },
-  );
-
   // ── Dashboard SPA (served from built dist/) ───────────────────────
-  app.use('/dashboard', express.static(path.join(__dirname, '../dashboard/dist')));
-  app.get('/dashboard/*', (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../dashboard/dist/index.html'));
-  });
+  // Served at root `/` — all routes except /api/* and /health go to dashboard
+  const dashboardDist = path.join(__dirname, '../dashboard/dist');
+  const viteDevUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
+  if (fs.existsSync(path.join(dashboardDist, 'index.html'))) {
+    app.use(express.static(dashboardDist));
+    app.get('*', (req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+        next();
+        return;
+      }
+      res.sendFile(path.join(dashboardDist, 'index.html'));
+    });
+  } else {
+    log.info({ viteDevUrl }, 'dashboard/dist not found — proxying to Vite dev server');
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      // Don't proxy API, health, badge or other backend routes
+      if (
+        req.path.startsWith('/api/') ||
+        req.path.startsWith('/health') ||
+        req.path.startsWith('/badge/') ||
+        req.path.startsWith('/discovery') ||
+        req.path.startsWith('/.well-known')
+      ) {
+        next();
+        return;
+      }
+      const targetUrl = `${viteDevUrl}${req.originalUrl}`;
+      const proxyReq = http.request(targetUrl, { method: req.method, headers: req.headers }, (proxyRes) => {
+        res.writeHead(proxyRes.statusCode!, proxyRes.headers);
+        proxyRes.pipe(res);
+      });
+      proxyReq.on('error', (err) => {
+        log.error({ err: String(err), targetUrl }, 'Vite dev proxy error');
+        res.status(502).send('Dashboard not available — is Vite dev server running?');
+      });
+      if (req.body) {
+        proxyReq.write(JSON.stringify(req.body));
+      }
+      proxyReq.end();
+    });
+  }
 
   // ── Badge endpoint (public, no auth) ──────────────────────────────
   // GET /badge/:id.svg — shields.io-compatible status badge
@@ -925,28 +1011,49 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/quality', qualityRouter);
 
   // ── Benchmarks API (public) ──────────────────────────────────────
-  app.use('/api/benchmarks', benchmarksRouter);
+  app.use('/api/v1/benchmarks', benchmarksRouter);
 
   // ── PLG self-serve onboarding API ─────────────────────────────────
   app.use('/plg', plgRouter);
 
   // ── Pricing API (public) ─────────────────────────────────────────
-  app.use('/api/pricing', pricingRouter);
+  app.use('/api/v1/pricing', pricingRouter);
 
   // ── Preview API (public, no auth) ────────────────────────────────
-  const { previewRouter } = await import('./routes/preview.js');
+  let previewRouter: Router;
+  try {
+    const mod = await import('./routes/preview.js');
+    previewRouter = mod.previewRouter;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load preview API — using empty router');
+    previewRouter = Router();
+  }
   app.use('/api/v1', previewRouter);
 
   // Ticket Result API (non-code ticket results)
-  const { default: ticketResultRouter } = await import('./routes/ticketResult.js');
+  let ticketResultRouter: Router;
+  try {
+    const mod = await import('./routes/ticketResult.js');
+    ticketResultRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load ticket result API — using empty router');
+    ticketResultRouter = Router();
+  }
   app.use(ticketResultRouter);
 
   // Public Status API
-  const { default: statusRouter } = await import('./routes/status.js');
+  let statusRouter: Router;
+  try {
+    const mod = await import('./routes/status.js');
+    statusRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load status API — using empty router');
+    statusRouter = Router();
+  }
   app.use(statusRouter);
 
   // KPI Dashboard API
-  app.use('/api/kpi', kpiRouter);
+  app.use('/api/v1/admin/kpi', kpiRouter);
   app.use('/api/v1/n8n', n8nRouter);
 
   // Agent Performance Analytics API
@@ -973,8 +1080,8 @@ export async function createApp(): Promise<express.Application> {
   try {
     const { default: samlRouter } = await import('./routes/saml.js');
     app.use('/api/v1/saml', samlRouter);
-  } catch {
-    log.warn('SAML routes not available');
+  } catch (err) {
+    log.warn({ err: String(err) }, 'SAML routes not available — skipping');
   }
 
   // Enterprise routes (optional)
@@ -982,14 +1089,19 @@ export async function createApp(): Promise<express.Application> {
     const enterpriseModule = await import('./routes/enterprise.js');
     const enterpriseRouter = (enterpriseModule as any).default || enterpriseModule;
     app.use('/api/v1/enterprise', enterpriseRouter);
-  } catch {
-    log.warn('Enterprise routes not available');
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Enterprise routes not available — skipping');
   }
 
   app.get('/metrics', async (_req: Request, res: Response) => {
-    const { bridgeMetrics } = await import('./bridge/metrics.js');
-    const metrics = bridgeMetrics.render();
-    res.type('text/plain; version=0.0.4').send(metrics);
+    try {
+      const { bridgeMetrics } = await import('./bridge/metrics.js');
+      const metrics = bridgeMetrics.render();
+      res.type('text/plain; version=0.0.4').send(metrics);
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to load metrics');
+      res.status(500).send('# Metrics unavailable\n');
+    }
   });
 
   app.get('/github-app-manifest.json', (_req: Request, res: Response) => {
@@ -1063,7 +1175,15 @@ export async function createApp(): Promise<express.Application> {
 
   // -- Global error handler -------------------------------------------------
   app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-    log.error({ err: String(err), requestId: req.requestId }, 'Unhandled error');
+    const errorContext = {
+      err: String(err),
+      stack: err.stack,
+      requestId: req.requestId,
+      method: req.method,
+      path: req.path,
+    };
+    log.error(errorContext, 'Unhandled error');
+    captureError(err, { requestId: req.requestId, method: req.method, path: req.path });
     res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error', correlation_id: req.requestId },
     });
@@ -1168,6 +1288,11 @@ process.on('uncaughtException', (err) => {
     'Uncaught exception -- attempting graceful shutdown',
   );
 
+  captureError(err instanceof Error ? err : new Error(String(err)), {
+    module: 'server',
+    type: 'uncaughtException',
+  });
+
   if (shuttingDown) return;
   shuttingDown = true;
 
@@ -1181,7 +1306,25 @@ process.on('uncaughtException', (err) => {
 });
 
 process.on('unhandledRejection', (reason) => {
-  log.error({ module: 'server', err: String(reason), stack: (reason as Error)?.stack }, 'Unhandled promise rejection');
+  log.error(
+    { module: 'server', err: String(reason), stack: (reason as Error)?.stack },
+    'Unhandled promise rejection — shutting down',
+  );
+
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  const forceExitTimer = setTimeout(() => {
+    log.error('Graceful shutdown timed out — forcing exit');
+    process.exit(1);
+  }, 10_000);
+  forceExitTimer.unref();
+
+  captureError(reason instanceof Error ? reason : new Error(String(reason)), {
+    module: 'server',
+    type: 'unhandledRejection',
+  });
+  process.exit(1);
 });
 
 // -- Helper: Capture raw body for webhook signature verification -------------

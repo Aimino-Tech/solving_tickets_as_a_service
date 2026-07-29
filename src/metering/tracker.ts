@@ -273,6 +273,18 @@ export class UsageTracker {
       credits: 0,
       durationMs: 0,
     });
+
+    try {
+      captureEvent('pr_created', this.runId, {
+        source: this.source,
+        installationId: this.installationId,
+        repo: this.repo,
+        issueNumber: this.issueNumber,
+        runId: this.runId,
+      });
+    } catch (analyticsErr) {
+      log.error({ err: String(analyticsErr) }, 'Failed to track pr_created event');
+    }
   }
 
   /**

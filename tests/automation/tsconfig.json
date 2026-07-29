@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/tests/automation",
+    "rootDir": ".",
+    "types": ["node", "@playwright/test"]
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["reports/**"]
+}
