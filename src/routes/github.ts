@@ -30,7 +30,7 @@ router.get('/installations', async (req: Request, res: Response) => {
     const r = await fetch('https://api.github.com/user/installations', { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' } });
     if (!r.ok) { res.status(r.status).json({ error: 'GitHub API error' }); return; }
     const d = await r.json();
-    const stored = await gitHubInstallationRepository.findByUserId(req.user!.id);
+    const stored = await gitHubInstallationRepository.findByUserId(Number(req.user!.id));
     const sm = new Map(stored.map(s => [s.installationId, s]));
     res.json({ installations: d.installations.map((i: any) => ({ id: i.id, accountLogin: i.account.login, accountType: i.target_type, avatarUrl: i.account.avatar_url, repoScope: i.repository_selection, htmlUrl: i.html_url, stored: sm.has(i.id), storedId: sm.get(i.id)?.id ?? null })) });
   } catch (err) { log.error({ err: String(err) }, 'Failed to list installations'); res.status(500).json({ error: 'Failed to list installations' }); }
