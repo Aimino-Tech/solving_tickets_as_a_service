@@ -13,8 +13,11 @@
  * - Exponential backoff retry worker (1min, 5min, 30min, max 3)
  *
  * --- Error Handling Audit ---------------------------------------------------
+ * - express-async-errors patches Express Router to forward async rejections
+ *   to the global error middleware (prevents unhandled promise rejections)
  * - Global Express error middleware (4-arg handler) at bottom of chain
  * - Process-level uncaughtException and unhandledRejection handlers
+ * - unhandledRejection handler calls process.exit(1) (prevents silent failure)
  * - app.listen() error event handled (EADDRINUSE, EACCES, etc.)
  * - Server instance returned for graceful shutdown by caller
  * - Request ID middleware for log correlation
@@ -30,6 +33,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+import 'express-async-errors';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import cors from 'cors';
 import type { NextFunction, Request, Response } from 'express';
@@ -573,18 +577,28 @@ export async function createApp(): Promise<express.Application> {
       res.status(400).json({ error: 'Invalid JSON' });
       return;
     }
-    const { handleTelegramWebhook } = await import('./channels/telegram.js');
-    const result = await handleTelegramWebhook(payload);
-    res.status(result.ok ? 200 : 500).json(result);
+    try {
+      const { handleTelegramWebhook } = await import('./channels/telegram.js');
+      const result = await handleTelegramWebhook(payload);
+      res.status(result.ok ? 200 : 500).json(result);
+    } catch (err) {
+      log.error({ err: String(err) }, 'Telegram webhook handler error');
+      res.status(500).json({ ok: false, error: 'Internal error' });
+    }
   });
 
   app.get('/webhook/whatsapp', async (req: Request, res: Response) => {
-    const { verifyWhatsAppWebhook } = await import('./channels/whatsapp.js');
-    const result = verifyWhatsAppWebhook(req as any);
-    if (result.verified && result.challenge) {
-      res.type('text/plain').send(result.challenge);
-    } else {
-      res.status(403).send('Verification failed');
+    try {
+      const { verifyWhatsAppWebhook } = await import('./channels/whatsapp.js');
+      const result = verifyWhatsAppWebhook(req as any);
+      if (result.verified && result.challenge) {
+        res.type('text/plain').send(result.challenge);
+      } else {
+        res.status(403).send('Verification failed');
+      }
+    } catch (err) {
+      log.error({ err: String(err) }, 'WhatsApp webhook verification error');
+      res.status(500).send('Verification error');
     }
   });
 
@@ -597,9 +611,14 @@ export async function createApp(): Promise<express.Application> {
       res.status(400).json({ error: 'Invalid JSON' });
       return;
     }
-    const { handleWhatsAppWebhook } = await import('./channels/whatsapp.js');
-    const result = await handleWhatsAppWebhook(payload);
-    res.status(result.ok ? 200 : 500).json(result);
+    try {
+      const { handleWhatsAppWebhook } = await import('./channels/whatsapp.js');
+      const result = await handleWhatsAppWebhook(payload);
+      res.status(result.ok ? 200 : 500).json(result);
+    } catch (err) {
+      log.error({ err: String(err) }, 'WhatsApp webhook handler error');
+      res.status(500).json({ ok: false, error: 'Internal error' });
+    }
   });
 
   // -- Stripe webhook -------------------------------------------------------
@@ -631,7 +650,8 @@ export async function createApp(): Promise<express.Application> {
         if (eventId) await logWebhookProcessed(eventId);
       } catch (err) {
         if (eventId) await logWebhookFailed(eventId, String(err));
-        throw err;
+        next2(err as Error);
+        return;
       }
       recordWebhookDuration(source, Date.now() - startTime);
     };
@@ -1291,6 +1311,16 @@ process.on('unhandledRejection', (reason) => {
     { module: 'server', err: String(reason), stack: (reason as Error)?.stack },
     'Unhandled promise rejection — shutting down',
   );
+
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  const forceExitTimer = setTimeout(() => {
+    log.error('Graceful shutdown timed out — forcing exit');
+    process.exit(1);
+  }, 10_000);
+  forceExitTimer.unref();
+
   captureError(reason instanceof Error ? reason : new Error(String(reason)), {
     module: 'server',
     type: 'unhandledRejection',
