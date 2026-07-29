@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import { getSupabaseAdmin, getSupabaseAnon } from './supabase.js';
+import { rootLogger } from '../utils/logger.js';
+
+const log = rootLogger.child({ module: 'auth-service' });
 
 export interface TokenPayload {
   sub: string;
@@ -13,17 +16,21 @@ export interface AuthResult {
   user: {
     id: string;
     email: string;
+    emailVerified: boolean;
     name: string | null;
   };
+  verificationToken?: string;
 }
+
+const VERIFICATION_TOKEN_EXPIRY = '24h';
 
 export class AuthService {
   async register(email: string, password: string, name?: string): Promise<AuthResult> {
     const { data, error } = await getSupabaseAdmin().auth.admin.createUser({
       email,
       password,
-      email_confirm: true,
-      user_metadata: name ? { name } : undefined,
+      email_confirm: false,
+      user_metadata: { ...(name ? { name } : {}), email_verified: false },
     });
     if (error) {
       const status = error.code === 'email_exists' || error.message?.toLowerCase().includes('already registered') || error.message?.toLowerCase().includes('duplicate')
@@ -33,7 +40,75 @@ export class AuthService {
     }
 
     const user = data.user;
-    return this.generateTokens(user.id, user.email!, name ?? null);
+    const verificationToken = this.generateVerificationToken(user.id, user.email!);
+
+    log.info({ userId: user.id, email: user.email, verificationToken }, 'User registered — email verification required');
+
+    const tokens = this.generateTokens(user.id, user.email!, name ?? null);
+    return { ...tokens, user: { ...tokens.user, emailVerified: false }, verificationToken };
+  }
+
+  generateVerificationToken(userId: string, email: string): string {
+    return jwt.sign(
+      { sub: userId, email, purpose: 'email_verify' },
+      config.auth.jwtSecret as string,
+      { expiresIn: VERIFICATION_TOKEN_EXPIRY },
+    );
+  }
+
+  async verifyEmail(token: string): Promise<{ email: string }> {
+    let payload: { sub: string; email: string; purpose?: string };
+    try {
+      payload = jwt.verify(token, config.auth.jwtSecret as string) as { sub: string; email: string; purpose?: string };
+      if (payload.purpose !== 'email_verify') {
+        throw new AuthError('Invalid verification token', 400);
+      }
+    } catch (err) {
+      if (err instanceof AuthError) throw err;
+      throw new AuthError('Invalid or expired verification token', 400);
+    }
+
+    const { data, error } = await getSupabaseAdmin().auth.admin.getUserById(payload.sub);
+    if (error || !data.user) {
+      throw new AuthError('User not found', 404);
+    }
+
+    if (data.user.email_confirmed_at) {
+      throw new AuthError('Email already verified', 400);
+    }
+
+    const { error: updateError } = await getSupabaseAdmin().auth.admin.updateUserById(
+      payload.sub,
+      { email_confirm: true, user_metadata: { ...data.user.user_metadata, email_verified: true } },
+    );
+    if (updateError) {
+      throw new AuthError('Failed to verify email', 500);
+    }
+
+    log.info({ userId: payload.sub, email: payload.email }, 'Email verified');
+    return { email: payload.email };
+  }
+
+  async resendVerification(email: string): Promise<{ verificationToken: string }> {
+    const { data: { users }, error: listError } = await getSupabaseAdmin().auth.admin.listUsers();
+    if (listError) {
+      throw new AuthError('Failed to find user', 500);
+    }
+
+    const user = users.find((u) => u.email === email);
+    if (!user) {
+      throw new AuthError('User not found', 404);
+    }
+
+    if (user.email_confirmed_at) {
+      throw new AuthError('Email already verified', 400);
+    }
+
+    const verificationToken = this.generateVerificationToken(user.id, user.email!);
+
+    log.info({ userId: user.id, email }, 'Resent verification email');
+
+    return { verificationToken };
   }
 
   async login(email: string, password: string): Promise<AuthResult> {
@@ -77,7 +152,7 @@ export class AuthService {
     return {
       token,
       refreshToken,
-      user: { id: userId, email, name },
+      user: { id: userId, email, emailVerified: false, name },
     };
   }
 }
