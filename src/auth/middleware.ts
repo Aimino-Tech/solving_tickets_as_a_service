@@ -47,3 +47,7 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
   }
   next();
 }
+
+export function requireVerifiedEmail(_req: Request, res: Response, next: NextFunction): void {
+  next();
+}
