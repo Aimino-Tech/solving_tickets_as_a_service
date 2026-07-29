@@ -226,8 +226,8 @@ function toJiraDoc(text: string): unknown {
 export function verifyJiraWebhookSignature(rawBody: Buffer, signatureHeader: string): boolean {
   const secret = config.trackers?.jira?.webhookSecret;
   if (!secret) {
-    log.warn('JIRA_WEBHOOK_SECRET not configured — skipping webhook verification');
-    return true;
+    log.warn('JIRA_WEBHOOK_SECRET not configured — rejecting webhook');
+    return false;
   }
 
   const computed = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
