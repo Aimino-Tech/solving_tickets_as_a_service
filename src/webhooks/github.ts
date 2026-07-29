@@ -22,6 +22,7 @@ import { type EmitterWebhookEventName, Webhooks } from '@octokit/webhooks';
 
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { generateTraceId } from '../utils/trace.js';
 import { captureEvent } from '../analytics/tracker.js';
 import type { BillingPlan, IssueJobData } from '../utils/types.js';
 import { rateLimiter } from '../ratelimit/limiter.js';
@@ -335,9 +336,10 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
     }
 
     // ── Route through Governance Proxy → OpenSymphony or local queue ─
+    const traceId = generateTraceId();
     if (config.proxy.dispatchUrl) {
       log.info(
-        { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+        { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber, traceId },
         'Dispatching through governance proxy',
       );
       const govResult = await dispatchThroughGovernance({
@@ -348,6 +350,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         issueTitle: jobData.issueTitle ?? '',
         issueBody: jobData.issueBody,
         labels: jobData.labels ?? [],
+        traceId,
       });
       if (!govResult.success) {
         log.error(
@@ -375,6 +378,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         issueTitle: jobData.issueTitle ?? '',
         issueBody: jobData.issueBody,
         labels: jobData.labels ?? [],
+        traceId,
       });
       if (!osyResult.success) {
         log.error(
@@ -514,9 +518,10 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         await rateLimiter.increment('repo', repo);
       }
 
+      const traceId = generateTraceId();
       if (config.proxy.dispatchUrl) {
         log.info(
-          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber, traceId },
           'Dispatching edited issue through governance proxy',
         );
         const govResult = await dispatchThroughGovernance({
@@ -527,6 +532,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           issueTitle: jobData.issueTitle ?? '',
           issueBody: jobData.issueBody,
           labels: jobData.labels ?? [],
+          traceId,
         });
         if (!govResult.success) {
           log.error(
@@ -554,6 +560,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           issueTitle: jobData.issueTitle ?? '',
           issueBody: jobData.issueBody,
           labels: jobData.labels ?? [],
+          traceId,
         });
         if (!osyResult.success) {
           log.error(
