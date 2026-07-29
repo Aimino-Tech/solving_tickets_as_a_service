@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { requireAuth } from '../auth/middleware.js';
-import { queryWithRetry, isTableNotFoundError } from '../db/connection.js';
+import { queryWithRetry, isTableNotFoundError, isDatabaseConnectionError } from '../db/connection.js';
 import { runsRepository } from '../db/repositories/index.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -56,6 +56,20 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   } catch (err) {
     if (isTableNotFoundError(err)) {
       res.json({ data: [], total: 0, page, perPage: limit, totalPages: 0 });
+      return;
+    }
+    if (isDatabaseConnectionError(err)) {
+      log.warn(
+        {
+          err: String(err),
+          accountId: (req as any).user?.accountId,
+          page,
+          limit,
+          statusFilter: status,
+        },
+        'Database unavailable — returning degraded response for runs list',
+      );
+      res.json({ data: [], total: 0, page, perPage: limit, totalPages: 0, degraded: true });
       return;
     }
     log.error(

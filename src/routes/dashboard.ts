@@ -9,7 +9,7 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import { queryWithRetry } from '../db/connection.js';
+import { queryWithRetry, isDatabaseConnectionError } from '../db/connection.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'dashboard-api' });
@@ -270,6 +270,11 @@ router.get('/dashboard/runs', async (req: Request, res: Response) => {
     });
     res.json({ runs: results, limit, offset });
   } catch (err) {
+    if (isDatabaseConnectionError(err)) {
+      log.warn({ err: String(err) }, 'Database unavailable — returning degraded response for dashboard runs list');
+      res.json({ runs: [], limit, offset, degraded: true });
+      return;
+    }
     log.error({ err: String(err) }, 'Failed to list runs');
     res.status(500).json({ error: 'Failed to list runs' });
   }
@@ -287,6 +292,11 @@ router.get('/dashboard/accounts/:accountId/runs', async (req: Request, res: Resp
     const results = await runsRepository.list({ accountId, status, limit, offset });
     res.json({ runs: results, limit, offset });
   } catch (err) {
+    if (isDatabaseConnectionError(err)) {
+      log.warn({ err: String(err) }, 'Database unavailable — returning degraded response for account runs list');
+      res.json({ runs: [], limit, offset, degraded: true });
+      return;
+    }
     log.error({ err: String(err) }, 'Failed to list runs for account');
     res.status(500).json({ error: 'Failed to list runs' });
   }

@@ -11,6 +11,7 @@ import {
 } from '../db/repositories/index.js';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { isDatabaseConnectionError } from '../db/connection.js';
 
 const log = rootLogger.child({ module: 'routes:admin-dashboard' });
 
@@ -151,6 +152,11 @@ adminDashboardRouter.get('/runs', async (req: Request, res: Response) => {
     });
     res.json({ runs: results, limit, offset });
   } catch (err) {
+    if (isDatabaseConnectionError(err)) {
+      log.warn({ err: String(err) }, 'Database unavailable — returning degraded response for admin runs list');
+      res.json({ runs: [], limit, offset, degraded: true });
+      return;
+    }
     log.error({ err: String(err) }, 'Failed to list runs');
     res.status(500).json({ error: 'Failed to list runs' });
   }
@@ -168,6 +174,11 @@ adminDashboardRouter.get('/accounts/:accountId/runs', async (req: Request, res: 
     const results = await runsRepository.list({ accountId, status, limit, offset });
     res.json({ runs: results, limit, offset });
   } catch (err) {
+    if (isDatabaseConnectionError(err)) {
+      log.warn({ err: String(err) }, 'Database unavailable — returning degraded response for account runs list');
+      res.json({ runs: [], limit, offset, degraded: true });
+      return;
+    }
     log.error({ err: String(err) }, 'Failed to list runs for account');
     res.status(500).json({ error: 'Failed to list runs' });
   }

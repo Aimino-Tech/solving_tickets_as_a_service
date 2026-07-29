@@ -14,7 +14,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import { config } from '../config.js';
-import { queryWithRetry } from '../db/connection.js';
+import { queryWithRetry, isDatabaseConnectionError } from '../db/connection.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'admin-runs-api' });
@@ -98,6 +98,11 @@ router.get('/runs', async (req: Request, res: Response) => {
       aiDisabled: config.stas.aiDisabled,
     });
   } catch (err) {
+    if (isDatabaseConnectionError(err)) {
+      log.warn({ err: String(err) }, 'Database unavailable — returning degraded response for admin runs list');
+      res.json({ runs: [], total: 0, limit, offset, degraded: true });
+      return;
+    }
     log.error({ err: String(err) }, 'Failed to list admin runs');
     res.status(500).json({ error: 'Failed to list runs' });
   }

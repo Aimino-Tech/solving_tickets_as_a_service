@@ -84,6 +84,25 @@ export function isTableNotFoundError(err: unknown): boolean {
   return false;
 }
 
+export function isDatabaseConnectionError(err: unknown): boolean {
+  if (err instanceof Error) {
+    const msg = err.message ?? '';
+    return (
+      msg.includes('ECONNREFUSED') ||
+      msg.includes('connect ETIMEDOUT') ||
+      msg.includes('getaddrinfo ENOTFOUND') ||
+      msg.includes('timeout') ||
+      msg.includes('remaining connection slots') ||
+      msg.includes('Connection terminated unexpectedly') ||
+      msg.includes('no PostgreSQL user name') ||
+      (err as any).code === 'ECONNREFUSED' ||
+      (err as any).code === 'ETIMEDOUT' ||
+      (err as any).code === 'ENOTFOUND'
+    );
+  }
+  return false;
+}
+
 export async function queryWithRetry<T extends pg.QueryResultRow>(
   queryText: string,
   params?: unknown[],

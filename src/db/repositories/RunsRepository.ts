@@ -6,7 +6,7 @@
  * confidence scores, PR URLs, duration, and model info.
  */
 
-import { queryWithRetry, validateSqlIdentifier, isTableNotFoundError } from '../connection.js';
+import { queryWithRetry, validateSqlIdentifier, isTableNotFoundError, isDatabaseConnectionError } from '../connection.js';
 import type { Run, NewRun } from '../types/index.js';
 
 export interface RunFilter {
