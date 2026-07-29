@@ -22,9 +22,15 @@ export class AuthService {
     const { data, error } = await getSupabaseAdmin().auth.admin.createUser({
       email,
       password,
+      email_confirm: true,
       user_metadata: name ? { name } : undefined,
     });
-    if (error) throw new AuthError(error.message, 400);
+    if (error) {
+      const status = error.code === 'email_exists' || error.message?.toLowerCase().includes('already registered') || error.message?.toLowerCase().includes('duplicate')
+        ? 409
+        : 400;
+      throw new AuthError(error.message, status);
+    }
 
     const user = data.user;
     return this.generateTokens(user.id, user.email!, name ?? null);
