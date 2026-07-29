@@ -46,7 +46,8 @@ export default function Settings() {
     activeRequest: {
       id: number;
       status: string;
-      scheduled_deletion_at: string;
+      requestedAt?: string;
+      scheduled_deletion_at?: string;
     } | null;
     retentionDays: number;
   } | null>(null);
@@ -54,7 +55,7 @@ export default function Settings() {
   const [notificationChannels, setNotificationChannels] = useState<Record<string, Record<string, boolean>>>({});
   const [channelTargets, setChannelTargets] = useState<Record<string, string>>({});
   const [savingNotif, setSavingNotif] = useState(false);
-  const successTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
@@ -131,8 +132,8 @@ export default function Settings() {
 
   async function fetchDeletionStatus() {
     try {
-      const data = await request<{ activeRequest: { requestedAt: string; status: string } | null; retentionDays: number }>('/v1/me/data/deletion-status');
-      setDeletionStatus(data);
+      const data = await request<{ activeRequest: { id?: number; status: string; requestedAt?: string; scheduled_deletion_at?: string } | null; retentionDays: number }>('/v1/me/data/deletion-status');
+      setDeletionStatus(data as typeof deletionStatus);
     } catch {
       // Non-critical background fetch
     }
@@ -434,7 +435,7 @@ export default function Settings() {
                 {deletionStatus.activeRequest?.status === 'pending' && (
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     Scheduled for{' '}
-                    {new Date(deletionStatus.activeRequest.scheduled_deletion_at).toLocaleDateString()}
+                    {deletionStatus.activeRequest.scheduled_deletion_at ? new Date(deletionStatus.activeRequest.scheduled_deletion_at).toLocaleDateString() : deletionStatus.activeRequest.requestedAt ? new Date(deletionStatus.activeRequest.requestedAt).toLocaleDateString() : 'N/A'}
                     {' '}({deletionStatus.retentionDays}-day retention policy)
                   </p>
                 )}

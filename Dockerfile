@@ -37,7 +37,7 @@ COPY dashboard/ ./dashboard/
 RUN cd dashboard && npm install --legacy-peer-deps --ignore-scripts && npm run build
 
 # Prune dev dependencies (keep only what's needed at runtime)
-RUN npm prune --production
+RUN npm prune --production --legacy-peer-deps
 
 # Stage 2: Runtime
 FROM node:22-alpine
