@@ -68,7 +68,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: stas-postgres
-    restart: "no"
+    <<: *default-restart
     ports:
       - "5432:5432"
     environment:
@@ -89,7 +89,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: stas-redis
-    restart: "no"
+    <<: *default-restart
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes --appendfsync everysec --auto-aof-rewrite-percentage 100 --auto-aof-rewrite-min-size 64mb
@@ -107,7 +107,7 @@ services:
   rabbitmq:
     image: rabbitmq:4-management-alpine
     container_name: stas-rabbitmq
-    restart: "no"
+    <<: *default-restart
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -132,7 +132,7 @@ services:
       dockerfile: Dockerfile
     image: stas-webhook:latest
     container_name: stas-webhook
-    restart: "no"
+    <<: *default-restart
     ports:
       - "3000:3000"
     env_file: .env
@@ -175,7 +175,7 @@ services:
       dockerfile: Dockerfile
     image: stas-worker:latest
     container_name: stas-worker
-    restart: "no"
+    <<: *default-restart
     command: celery -A workers.celery_app worker -l info -Q stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications --concurrency=4
     env_file: .env
     environment:
@@ -214,7 +214,7 @@ services:
   celery-beat:
     image: stas-worker:latest
     container_name: stas-celery-beat
-    restart: "no"
+    <<: *default-restart
     command: celery -A workers.celery_app beat -l info
     env_file: .env
     environment:
@@ -244,7 +244,7 @@ services:
   flower:
     image: mher/flower:latest
     container_name: stas-flower
-    restart: "no"
+    <<: *default-restart
     ports:
       - "5555:5555"
     command: flower --port=5555 --broker=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
@@ -268,7 +268,7 @@ services:
   nginx:
     image: nginx:alpine
     container_name: stas-nginx
-    restart: "no"
+    <<: *default-restart
     ports:
       - "80:80"
       - "443:443"
@@ -277,7 +277,14 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - htpasswd-data:/etc/nginx/.htpasswd:ro
     depends_on:
-      - stas-webhook
+      stas-webhook:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     <<: *resources-light
     logging: *default-logging
     networks:
@@ -292,7 +299,7 @@ services:
       dockerfile: Dockerfile
     image: stas-dashboard:latest
     container_name: stas-dashboard
-    restart: "no"
+    <<: *default-restart
     ports:
       - "5173:80"
     env_file: .env
@@ -300,7 +307,8 @@ services:
       - VITE_API_URL=http://stas-webhook:3000
       - NODE_ENV=production
     depends_on:
-      - stas-webhook
+      stas-webhook:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/healthz"]
       interval: 30s
@@ -318,7 +326,7 @@ services:
   certbot:
     image: certbot/certbot:latest
     container_name: stas-certbot
-    restart: "no"
+    <<: *default-restart
     entrypoint: ""
     command: >
       sh -c "
@@ -343,7 +351,7 @@ services:
   stas-backup:
     image: stas-webhook:latest
     container_name: stas-backup
-    restart: "no"
+    <<: *default-restart
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -394,7 +402,7 @@ services:
       dockerfile: Dockerfile
     image: stas-egress-proxy:latest
     container_name: stas-egress-proxy
-    restart: "no"
+    <<: *default-restart
     ports:
       - "3128:3128"
     environment:
@@ -415,7 +423,7 @@ services:
   loki:
     image: grafana/loki:3.0.0
     container_name: stas-loki
-    restart: "no"
+    <<: *default-restart
     ports:
       - "3100:3100"
       - "9096:9096"
@@ -437,7 +445,7 @@ services:
   promtail:
     image: grafana/promtail:3.0.0
     container_name: stas-promtail
-    restart: "no"
+    <<: *default-restart
     volumes:
       - ./deploy/monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock
