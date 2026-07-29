@@ -107,11 +107,18 @@ const log = rootLogger.child({ module: 'server' });
 export async function createApp(): Promise<express.Application> {
   const app = express();
 
-  // -- Request ID middleware ------------------------------------------------
+  // -- Request ID + Trace ID middleware -------------------------------------
   app.use((req: Request, res: Response, next: NextFunction) => {
     const requestId = (req.headers['x-request-id'] as string) || crypto.randomUUID();
     req.requestId = requestId;
     res.setHeader('x-request-id', requestId);
+
+    // Generate or extract trace ID for cross-system correlation
+    const { extractOrGenerateTraceId, TRACE_HEADER } = require('./utils/trace.js');
+    const traceId = extractOrGenerateTraceId(req.headers as Record<string, string | string[] | undefined>);
+    req.traceId = traceId;
+    res.setHeader(TRACE_HEADER, traceId);
+
     next();
   });
 
@@ -1338,11 +1345,12 @@ function addRawBody(req: Request, _res: Response, buf: Buffer): void {
   (req as { rawBody?: Buffer }).rawBody = buf;
 }
 
-// Extend Express Request to include requestId
+// Extend Express Request to include requestId and traceId
 declare global {
   namespace Express {
     interface Request {
       requestId?: string;
+      traceId?: string;
     }
   }
 }
