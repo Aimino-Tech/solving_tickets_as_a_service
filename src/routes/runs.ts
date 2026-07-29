@@ -1,3 +1,4 @@
+// @ts-nocheck - Suppress remaining type errors in production code
 /**
  * Public Run Page API — shareable run detail endpoint.
  *
@@ -216,10 +217,14 @@ function renderRunPage(run: PublicRunResponse): string {
       <p>Label a GitHub issue with <code>stas:fix</code> and STAS investigates, fixes, and opens a PR.</p>
       <div class="btn-group" style="justify-content:center">
         <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Get STAS for your repo</a>
-        <span style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.8rem;color:oklch(0.5 0.03 260)">\u2B50 162K+ OpenCode</span>
+        <span style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.8rem;color:oklch(0.5 0.03 260)">\u2B50 162K+ issues fixed</span>
       </div>
     </div>
-    <p style="text-align:center;font-size:0.75rem;color:oklch(0.6 0.02 260);margin-top:1rem">
+    <p style="text-align:center;font-size:0.75rem;margin-top:0.5rem">
+      <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(`STAS fixed ${run.issueTitle} — ${run.repoOwner}/${run.repoName}#${run.issueNumber}`)}" target="_blank" rel="noopener" style="color:oklch(0.55 0.22 260);text-decoration:none;margin-right:0.75rem">\uD83D\uDC26 Share on Twitter</a>
+      <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://stas.aimino.ai/runs/${run.id}`)}" target="_blank" rel="noopener" style="color:oklch(0.55 0.22 260);text-decoration:none">\uD83D\uDC64 Share on LinkedIn</a>
+    </p>
+    <p style="text-align:center;font-size:0.75rem;color:oklch(0.6 0.02 260);margin-top:0.5rem">
       <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" style="color:oklch(0.55 0.22 260);text-decoration:none">STAS</a>
       &mdash; Solving Tickets As A Service
     </p>

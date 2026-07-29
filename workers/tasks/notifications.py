@@ -210,6 +210,58 @@ def _build_event_payload(
     }
 
 
+def _post_linear_deliverable(payload: dict[str, Any]) -> bool:
+    """Post the deliverables summary as a comment on the Linear ticket.
+
+    Extracts the issue_id and summary from the event payload and posts
+    the summary as a Linear comment so the result is visible directly
+    in the ticket's activity feed — not just in GitHub.
+
+    Returns True if the comment was posted successfully.
+    """
+    issue_id = payload.get("issue_id", "")
+    summary = payload.get("summary", "")
+    event_type = payload.get("event_type", "")
+    pr_url = payload.get("pr_url", "")
+
+    if not issue_id or not summary:
+        logger.debug("No issue_id or summary in payload — skipping Linear deliverable")
+        return False
+
+    pr_section = ""
+    if pr_url:
+        pr_section = f"\n\n**PR**: {pr_url}"
+
+    emoji = "\u2705" if event_type in ("fix_completed", "merge_completed") else "\u2139\ufe0f"
+    body = (
+        f"{emoji} **STAS Deliverables Summary**\n\n"
+        f"{summary}"
+        f"{pr_section}"
+        f"\n\n---\n_Posted automatically by STAS_"
+    )
+
+    try:
+        from workers.linear.client_sync import post_comment
+        result = post_comment(issue_id, body)
+        if result and result.get("id"):
+            logger.info(
+                "Linear deliverable comment posted issue=%s comment=%s",
+                issue_id, result["id"],
+            )
+            return True
+        logger.warning(
+            "Linear deliverable comment returned no ID for issue=%s — response=%s",
+            issue_id, result,
+        )
+        return False
+    except Exception as exc:
+        logger.warning(
+            "Failed to post Linear deliverable comment issue=%s — %s",
+            issue_id, exc,
+        )
+        return False
+
+
 @shared_task(
     bind=True,
     max_retries=2,
@@ -228,6 +280,9 @@ def dispatch_webhook_event(
     Called as a pipeline step after PR creation, review decision, or
     pipeline failure. Builds an event payload from context and delegates
     to ``dispatch_to_webhooks``.
+
+    Also posts the deliverables summary as a Linear comment so the
+    result is visible directly in the ticket's activity feed.
 
     Returns the dispatch results. Notification failures are logged as
     warnings but never raise — the pipeline continues.
@@ -248,6 +303,9 @@ def dispatch_webhook_event(
             "Webhook dispatch complete — event=%s results=%d",
             event_type, len(results),
         )
+
+        _post_linear_deliverable(payload)
+
         return {
             "event_type": event_type,
             "status": "dispatched",

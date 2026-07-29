@@ -23,7 +23,7 @@ import { rootLogger } from './utils/logger.js';
 
 const log = rootLogger.child({ module: 'mcp-discovery' });
 
-const router = Router();
+const router: Router = Router();
 
 // ---------------------------------------------------------------------------
 // MCP agent discovery endpoint
@@ -55,7 +55,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
         type: 'stdio',
         command: 'python',
         args: ['-m', 'stas_mcp.server', 'stdio'],
-        description: 'Stdio transport for tools like OpenCode and Claude Desktop',
+        description: 'Stdio transport for tools like Claude Desktop, Cursor, and other MCP clients',
       },
     ],
     tools: [

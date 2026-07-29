@@ -1,0 +1,150 @@
+groups:
+  - name: stas-alerts
+    interval: 30s
+    rules:
+      # ── Queue Depth ──────────────────────────────────────────────────
+      - alert: QueueDepthCritical
+        expr: bullmq_queue_depth{queue="stas-issues"} > 100
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Queue depth > 100 for 2 minutes"
+          description: "Queue stas-issues has {{ $value }} pending items. Scale workers."
+
+      - alert: QueueDepthWarning
+        expr: bullmq_queue_depth{queue="stas-issues"} > 50
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Queue depth elevated"
+          description: "Queue depth is {{ $value }}. Investigate if sustained."
+
+      # ── DLQ Alerts ───────────────────────────────────────────────────
+      - alert: DLQDepthWarning
+        expr: bullmq_queue_depth{queue=~".*dlq"} > 5
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "DLQ has {{ $value }} messages"
+          description: "Dead letter queue has {{ $value }} messages. Investigate root cause."
+
+      - alert: DLQDepthCritical
+        expr: bullmq_queue_depth{queue=~".*dlq"} > 10
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "DLQ > 10 messages — immediate investigation needed"
+          description: "DLQ has {{ $value }} messages. Auto-notify operator."
+
+      # ── Error Rate ───────────────────────────────────────────────────
+      - alert: ErrorRateSpike
+        expr: rate(stas_webhook_errors_total[5m]) / rate(stas_webhook_requests_total[5m]) > 0.05
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Error rate > 5%"
+          description: "Webhook error rate is {{ $value | humanizePercentage }}"
+
+      # ── Latency ──────────────────────────────────────────────────────
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(webhook_processing_duration_ms_bucket[5m])) > 0.5
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "P95 latency > 500ms"
+          description: "P95 webhook latency is {{ $value }}s"
+
+      # ── Fix Rate ─────────────────────────────────────────────────────
+      - alert: FixRateDrop
+        expr: rate(stas_fixes_completed_total[1h]) < 0.5 * rate(stas_fixes_completed_total[1h] offset 1h)
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Fix rate dropped 50%"
+          description: "Fix completion rate dropped significantly from previous hour"
+
+      # ── Redis ────────────────────────────────────────────────────────
+      - alert: RedisMemoryPressure
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Redis memory > 80%"
+          description: "Redis at {{ $value | humanizePercentage }}. Consider increasing maxmemory."
+
+      # ── PostgreSQL ───────────────────────────────────────────────────
+      - alert: PGConnectionExhaustion
+        expr: pg_pool_available_connections < 5
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "PostgreSQL connection pool near exhaustion"
+          description: "Only {{ $value }} connections available. Increase PGPoolSize."
+
+      - alert: PGConnectionWarning
+        expr: pg_pool_available_connections < 10
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "PostgreSQL connection pool running low"
+          description: "Only {{ $value }} connections available."
+
+      # ── Rate Limits ──────────────────────────────────────────────────
+      - alert: RateLimitExhausted
+        expr: rate_limit_remaining{plan="free"} == 0
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          summary: "Free tier rate limit exhausted"
+          description: "Free tier users are being rate limited. Consider upgrading."
+
+      - alert: GlobalRateLimitNear
+        expr: sum(rate(api_requests_total[5m])) > 2000
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "API request rate approaching limit"
+          description: "Global API rate is {{ $value }} req/s"
+
+      # ── Webhook Delivery ─────────────────────────────────────────────
+      - alert: NoWebhooksReceived
+        expr: rate(stas_webhook_requests_total[10m]) == 0
+        for: 30m
+        labels: { severity: info }
+        annotations:
+          summary: "No webhooks received (30m)"
+          description: "No webhook activity in 30 minutes. Check GitHub App."
+
+      # ── Worker Health ────────────────────────────────────────────────
+      - alert: NoWorkersActive
+        expr: count(worker_liveness == 1) == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "No active workers"
+          description: "All workers are down. Restart worker pool immediately."
+
+      - alert: WorkerCountLow
+        expr: count(worker_liveness == 1) < 2
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Worker count low"
+          description: "Only {{ $value }} workers active. Scale up."
+
+      # ── Cost Alerts ──────────────────────────────────────────────────
+      - alert: DailyInferenceCostHigh
+        expr: sum(increase(inference_cost_total[24h])) > 100
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Daily inference cost > $100"
+          description: "Daily inference cost is ${{ $value }}. Check usage."
+
+      - alert: CostPerFixHigh
+        expr: sum(increase(inference_cost_total[1h])) / sum(increase(fixes_completed_total[1h])) > 0.5
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Cost per fix > $0.50"
+          description: "Average cost per fix is ${{ $value }}. Investigate."

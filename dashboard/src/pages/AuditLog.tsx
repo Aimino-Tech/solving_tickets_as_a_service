@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { audit } from '@/api/client';
-import type { AuditEntry } from '@/api/types';
+import type { AuditEntry, PaginatedResponse } from '@/api/types';
+import { formatRelativeTime } from '@/utils/format';
 
 const ACTION_ICONS: Record<string, string> = {
   run_started: '▶',
@@ -32,23 +33,33 @@ export default function AuditLog() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  function loadPage(p: number) {
+  const requestIdRef = useRef(0);
+
+  function loadPage(p: number, signal?: AbortSignal) {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     audit
-      .list({ page: p, perPage: 30 })
-      .then((res) => {
+      .list({ page: p, perPage: 30 }, { signal })
+      .then((res: PaginatedResponse<AuditEntry>) => {
+        if (requestId !== requestIdRef.current) return;
         setEntries(res.data);
         setTotal(res.total);
         setTotalPages(res.totalPages);
         setPage(res.page);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err: Error) => {
+        if (err.name !== 'AbortError') setError(err.message);
+      })
+      .finally(() => {
+        if (requestId === requestIdRef.current) setLoading(false);
+      });
   }
 
   useEffect(() => {
-    loadPage(page);
+    const ac = new AbortController();
+    loadPage(page, ac.signal);
+    return () => ac.abort();
   }, [page]);
 
   function formatAction(action: string): string {
@@ -61,7 +72,7 @@ export default function AuditLog() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{total} total entries</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{total} total entries</p>
       </div>
 
       {/* Timeline */}
@@ -69,25 +80,25 @@ export default function AuditLog() {
         <div className="space-y-4">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="card animate-pulse flex gap-4">
-              <div className="h-10 w-1 rounded bg-gray-200" />
+              <div className="h-10 w-1 rounded bg-gray-200 dark:bg-gray-700" />
               <div className="flex-1">
-                <div className="h-4 w-32 rounded bg-gray-200" />
-                <div className="mt-2 h-3 w-48 rounded bg-gray-200" />
+                <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700" />
+                <div className="mt-2 h-3 w-48 rounded bg-gray-200 dark:bg-gray-700" />
               </div>
             </div>
           ))}
         </div>
       ) : error ? (
         <div className="card">
-          <p className="text-red-600">{error}</p>
-          <button onClick={() => loadPage(page)} className="mt-2 text-sm font-medium text-brand-600">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <button onClick={() => loadPage(page)} className="mt-2 text-sm font-medium text-brand-600 min-h-[44px] min-w-[44px]">
             Retry
           </button>
         </div>
       ) : entries.length === 0 ? (
         <div className="card text-center py-12">
-          <p className="text-gray-500">No audit entries yet.</p>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="text-gray-500 dark:text-gray-400">No audit entries yet.</p>
+          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
             Actions will appear here as the bot processes fixes.
           </p>
         </div>
@@ -104,15 +115,15 @@ export default function AuditLog() {
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {formatAction(entry.action)}
                     </span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
                       by {entry.actor}
                     </span>
                   </div>
                   {entry.target && (
-                    <p className="mt-0.5 text-xs text-gray-500">{entry.target}</p>
+                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{entry.target}</p>
                   )}
                   {entry.details && Object.keys(entry.details).length > 0 && (
                     <pre className="mt-1 text-xs text-gray-400 font-mono overflow-x-auto">
@@ -131,8 +142,8 @@ export default function AuditLog() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Page {page} of {totalPages}
           </p>
           <div className="flex gap-2">

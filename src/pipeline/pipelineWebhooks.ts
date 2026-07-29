@@ -1,6 +1,6 @@
 import { createHmac, randomUUID } from 'node:crypto';
 import { rootLogger } from '../utils/logger.js';
-import type { WebhookConfig, WebhookDelivery } from './types.js';
+import type { WebhookConfig, WebhookDelivery, SessionState } from './types.js';
 
 const log = rootLogger.child({ module: 'pipeline-webhooks' });
 

@@ -407,3 +407,136 @@ def notify_slack(
     except httpx.RequestError as exc:
         logger.warning("Slack webhook request failed — %s", exc)
         return {"status": "error", "error": str(exc)}
+
+
+def notify_slack_threaded(
+    payload: dict[str, Any],
+    channel: str,
+    thread_ts: str | None = None,
+) -> dict[str, Any]:
+    """Send a bidirectional Slack notification using the bot token.
+
+    Uses the Slack Web API (bot token) instead of a webhook URL,
+    enabling threaded replies and interactive message components.
+
+    Parameters
+    ----------
+    payload:
+        Normalised event payload.
+    channel:
+        Slack channel ID (e.g. ``C0123456789``).
+    thread_ts:
+        Optional thread timestamp for threaded replies.
+
+    Returns
+    -------
+    Dict with keys ``status`` (``sent`` / ``error``).
+    """
+    from workers.slack.publisher import get_client
+
+    client = get_client()
+    if not client:
+        return {"status": "error", "error": "SLACK_BOT_TOKEN not configured"}
+
+    event_type = payload.get("event_type", "fix_completed")
+    blocks = _build_blocks(event_type, payload)
+    text = f"[STAS] {event_type} — {payload.get('issue_id', '?')}"
+
+    try:
+        resp = client.chat_postMessage(
+            channel=channel,
+            text=text,
+            blocks=blocks,
+            thread_ts=thread_ts,
+        )
+        logger.info(
+            "Slack threaded notification sent — event=%s channel=%s ts=%s",
+            event_type, channel, resp.get("ts", "?"),
+        )
+        return {"status": "sent", "ts": resp.get("ts", "")}
+    except Exception as exc:
+        logger.error("Slack threaded notification failed: %s", exc)
+        return {"status": "error", "error": str(exc)}
+
+
+def notify_slack_progress(
+    channel: str,
+    thread_ts: str,
+    run_id: str,
+    status: str,
+    stage: str = "",
+    progress: float = 0.0,
+    pr_url: str | None = None,
+) -> dict[str, Any]:
+    """Send a progress update to a Slack thread.
+
+    Updates the original fix request thread with pipeline progress.
+
+    Parameters
+    ----------
+    channel:
+        Slack channel ID.
+    thread_ts:
+        Thread timestamp from the original fix request message.
+    run_id:
+        STAS pipeline run ID.
+    status:
+        Pipeline status (queued, in_progress, completed, failed, cancelled).
+    stage:
+        Current pipeline stage.
+    progress:
+        Progress percentage (0.0 - 1.0).
+    pr_url:
+        Pull request URL (for completed status).
+
+    Returns
+    -------
+    Dict with keys ``status`` (``sent`` / ``error``).
+    """
+    from workers.slack.publisher import get_client
+
+    client = get_client()
+    if not client:
+        return {"status": "error", "error": "SLACK_BOT_TOKEN not configured"}
+
+    emoji = {
+        "queued": "⏳", "in_progress": "🔄", "completed": "✅",
+        "failed": "❌", "cancelled": "🚫",
+    }.get(status, "ℹ️")
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f"{emoji} *Pipeline {status}* — `{run_id}`"},
+        },
+    ]
+    if stage:
+        blocks.append({
+            "type": "context",
+            "elements": [{"type": "mrkdwn", "text": f"Stage: *{stage}*  ·  Progress: {int(progress * 100)}%"}],
+        })
+    if pr_url:
+        blocks.append({
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f"🔗 <{pr_url}|Pull Request Created>"},
+        })
+
+    if status in ("completed", "failed", "cancelled"):
+        blocks.append({
+            "type": "actions",
+            "elements": [
+                {"type": "button", "text": {"type": "plain_text", "text": "🔄 Retry"}, "value": run_id, "action_id": "retry_fix"},
+            ],
+        })
+
+    try:
+        resp = client.chat_postMessage(
+            channel=channel,
+            text=f"Pipeline {status}: {run_id}",
+            thread_ts=thread_ts,
+            blocks=blocks,
+        )
+        return {"status": "sent", "ts": resp.get("ts", "")}
+    except Exception as exc:
+        logger.error("Slack progress notification failed: %s", exc)
+        return {"status": "error", "error": str(exc)}

@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockEnqueueIssue } = vi.hoisted(() => ({
-  mockEnqueueIssue: vi
-    .fn<(data: unknown) => Promise<string | undefined>>()
-    .mockResolvedValue("job-mock-id"),
-}));
-
 const { mockLogger } = vi.hoisted(() => {
   const logger = {
     child: vi.fn(),
@@ -201,7 +195,7 @@ describe("gitlabClient", () => {
 describe("createGitlabWebhooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockEnqueueIssue.mockResolvedValue("job-mock-id");
+    mockEnqueue.mockResolvedValue("job-mock-id");
     mockEnqueue.mockClear();
   });
 
@@ -209,8 +203,8 @@ describe("createGitlabWebhooks", () => {
     const handler = createGitlabWebhooks(mockEnqueue);
     await handler.handle("Issue Hook", sampleGitLabIssueLabeledPayload());
 
-    expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
-    expect(mockEnqueueIssue).toHaveBeenCalledWith(
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+    expect(mockEnqueue).toHaveBeenCalledWith(
       expect.objectContaining({
         repoOwner: "owner",
         repoName: "test-repo",
@@ -224,14 +218,14 @@ describe("createGitlabWebhooks", () => {
     const handler = createGitlabWebhooks(mockEnqueue);
     await handler.handle("Issue Hook", sampleGitLabIssueOpenedPayload());
 
-    expect(mockEnqueueIssue).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 
   it("does NOT enqueue for non-matching event types", async () => {
     const handler = createGitlabWebhooks(mockEnqueue);
     await handler.handle("Push Hook", {});
 
-    expect(mockEnqueueIssue).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 
   it("does NOT enqueue for update without target label", async () => {
@@ -242,6 +236,6 @@ describe("createGitlabWebhooks", () => {
     const handler = createGitlabWebhooks(mockEnqueue);
     await handler.handle("Issue Hook", payload);
 
-    expect(mockEnqueueIssue).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 });

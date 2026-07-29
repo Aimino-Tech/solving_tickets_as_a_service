@@ -76,7 +76,7 @@ export interface ExtractedIssueContext {
 // Express Router
 // ---------------------------------------------------------------------------
 
-export const linearWebhookRouter = Router();
+export const linearWebhookRouter: Router = Router();
 
 /**
  * POST /webhook/linear

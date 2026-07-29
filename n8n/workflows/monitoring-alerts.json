@@ -1,0 +1,175 @@
+{
+  "name": "Monitoring Alerts → Slack",
+  "nodes": [
+    {
+      "id": "webhook-1",
+      "name": "OS Alert Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "monitoring-alert",
+        "options": {}
+      }
+    },
+    {
+      "id": "switch-1",
+      "name": "Route by Severity",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.severity }}",
+        "rules": [
+          { "value": "critical", "output": 0 },
+          { "value": "warning", "output": 1 },
+          { "value": "info", "output": 2 }
+        ],
+        "fallbackOutput": 3
+      }
+    },
+    {
+      "id": "set-critical",
+      "name": "Format: Critical",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 150],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "color", "value": "#E74C3C" },
+            { "name": "title", "value": "={{ '🚨 CRITICAL: ' + $json.rule }}" },
+            { "name": "text", "value": "={{ $json.message }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-alerts' }}" },
+            { "name": "fields[0].title", "value": "Rule" },
+            { "name": "fields[0].value", "value": "={{ $json.rule }}" },
+            { "name": "fields[1].title", "value": "Severity" },
+            { "name": "fields[1].value", "value": "Critical" },
+            { "name": "fields[2].title", "value": "Timestamp" },
+            { "name": "fields[2].value", "value": "={{ $json.timestamp || new Date().toISOString() }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-warning",
+      "name": "Format: Warning",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "color", "value": "#F39C12" },
+            { "name": "title", "value": "={{ '⚠️ WARNING: ' + $json.rule }}" },
+            { "name": "text", "value": "={{ $json.message }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-alerts' }}" },
+            { "name": "fields[0].title", "value": "Rule" },
+            { "name": "fields[0].value", "value": "={{ $json.rule }}" },
+            { "name": "fields[1].title", "value": "Severity" },
+            { "name": "fields[1].value", "value": "Warning" },
+            { "name": "fields[2].title", "value": "Timestamp" },
+            { "name": "fields[2].value", "value": "={{ $json.timestamp || new Date().toISOString() }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-info",
+      "name": "Format: Info",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 450],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "color", "value": "#3498DB" },
+            { "name": "title", "value": "={{ 'ℹ️ INFO: ' + $json.rule }}" },
+            { "name": "text", "value": "={{ $json.message }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-alerts' }}" },
+            { "name": "fields[0].title", "value": "Rule" },
+            { "name": "fields[0].value", "value": "={{ $json.rule }}" },
+            { "name": "fields[1].title", "value": "Severity" },
+            { "name": "fields[1].value", "value": "Info" },
+            { "name": "fields[2].title", "value": "Timestamp" },
+            { "name": "fields[2].value", "value": "={{ $json.timestamp || new Date().toISOString() }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set-unknown",
+      "name": "Format: Unknown Severity",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [750, 600],
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "color", "value": "#95A5A6" },
+            { "name": "title", "value": "={{ 'ℹ️ Alert: ' + $json.rule }}" },
+            { "name": "text", "value": "={{ $json.message || JSON.stringify($json) }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-alerts' }}" },
+            { "name": "fields[0].title", "value": "Rule" },
+            { "name": "fields[0].value", "value": "={{ $json.rule || 'unknown' }}" },
+            { "name": "fields[1].title", "value": "Severity" },
+            { "name": "fields[1].value", "value": "={{ $json.severity || 'unknown' }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "merge-1",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [1000, 300],
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition"
+      }
+    },
+    {
+      "id": "slack-1",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [1250, 300],
+      "parameters": {
+        "channel": "={{ $json.channel }}",
+        "text": "=",
+        "attachments": "=[\n  {\n    \"color\": $json.color,\n    \"blocks\": [\n      {\n        \"type\": \"header\",\n        \"text\": { \"type\": \"plain_text\", \"text\": $json.title }\n      },\n      {\n        \"type\": \"section\",\n        \"text\": { \"type\": \"mrkdwn\", \"text\": $json.text }\n      },\n      {\n        \"type\": \"fields\",\n        \"fields\": $json.fields.map(f => ({ \"type\": \"mrkdwn\", \"text\": `*${f.title}:*\\n${f.value}` }))\n      }\n    ]\n  }\n]"
+      }
+    }
+  ],
+  "connections": {
+    "OS Alert Webhook": {
+      "main": [[{ "node": "Route by Severity", "type": "main", "index": 0 }]]
+    },
+    "Route by Severity": {
+      "main": [
+        [{ "node": "Format: Critical", "type": "main", "index": 0 }],
+        [{ "node": "Format: Warning", "type": "main", "index": 0 }],
+        [{ "node": "Format: Info", "type": "main", "index": 0 }],
+        [{ "node": "Format: Unknown Severity", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format: Critical": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 0 }]]
+    },
+    "Format: Warning": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 1 }]]
+    },
+    "Format: Info": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 2 }]]
+    },
+    "Format: Unknown Severity": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 3 }]]
+    },
+    "Merge": {
+      "main": [[{ "node": "Post to Slack", "type": "main", "index": 0 }]]
+    }
+  }
+}

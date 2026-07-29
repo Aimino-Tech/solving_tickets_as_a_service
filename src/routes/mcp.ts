@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { Router, type Request, type Response } from 'express';
+import { type Request, type Response, Router } from 'express';
 import { Redis } from 'ioredis';
 import { config } from '../config.js';
-import { rootLogger } from '../utils/logger.js';
+import type { McpJobStatus, McpRunHistoryEntry, McpSubmitIssueResponse } from '../opencode-contract.js';
 import { mcpSubmitIssueRequestSchema } from '../opencode-contract.js';
-import type { McpSubmitIssueResponse, McpJobStatus, McpRunHistoryEntry } from '../opencode-contract.js';
 import { mcpRateLimitMiddleware } from '../ratelimit/mcpRateLimit.js';
+import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'mcp-routes' });
 
@@ -38,9 +38,15 @@ function redisKey(...parts: string[]): string {
 }
 
 function mcpAuth(req: Request, res: Response, next: () => void): void {
-  if (!config.mcp.authEnabled) { next(); return; }
+  if (!config.mcp.authEnabled) {
+    next();
+    return;
+  }
   const apiKey = config.mcp.apiKey;
-  if (!apiKey) { next(); return; }
+  if (!apiKey) {
+    next();
+    return;
+  }
   const authHeader = req.headers['authorization'];
   if (!authHeader) {
     res.status(401).json({ error: 'Missing authorization header' });
@@ -82,7 +88,7 @@ async function getHistory(client: Redis, limit: number): Promise<McpRunHistoryEn
   return raw.map((r) => JSON.parse(r));
 }
 
-const router = Router();
+const router: Router = Router();
 
 // Apply authentication to all /mcp routes
 router.use('/mcp', mcpAuth);
@@ -105,13 +111,22 @@ router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
     const now = new Date().toISOString();
 
     const jobData: McpJobStatus = {
-      runId, status: 'queued', message: 'Issue queued for processing', createdAt: now, updatedAt: now,
+      runId,
+      status: 'queued',
+      message: 'Issue queued for processing',
+      createdAt: now,
+      updatedAt: now,
     };
 
     await saveJob(client, runId, jobData);
 
     const historyEntry: McpRunHistoryEntry = {
-      runId, repoOwner, repoName, issueTitle, status: 'queued', createdAt: now,
+      runId,
+      repoOwner,
+      repoName,
+      issueTitle,
+      status: 'queued',
+      createdAt: now,
     };
     await addToHistory(client, historyEntry);
 
@@ -120,8 +135,17 @@ router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
       if (!isConnected()) await rmqConnect();
       const messageId = `0:${repoOwner}/${repoName}#0-${Date.now()}`;
       await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
-        installationId: 0, repoOwner, repoName, repoPrivate: false, issueNumber: 0,
-        issueTitle, issueBody, source: channel || 'mcp', labels: labels || [],
+        installationId: 0,
+        repoOwner,
+        repoName,
+        repoPrivate: false,
+        issueNumber: 0,
+        issueTitle,
+        issueBody,
+        source: channel || 'mcp',
+        labels: labels || [],
+        channel: channel || undefined,
+        channelTarget: channelTarget || undefined,
         _meta: { messageId, enqueuedAt: new Date().toISOString() },
       });
     } catch (queueErr) {
@@ -169,9 +193,10 @@ router.get('/mcp/history', async (req: Request, res: Response) => {
 
 router.get('/mcp/repos', (_req: Request, res: Response) => {
   try {
-    const repos = config.trackers.defaultRepoOwner && config.trackers.defaultRepoName
-      ? [{ owner: config.trackers.defaultRepoOwner, name: config.trackers.defaultRepoName, private: false }]
-      : [];
+    const repos =
+      config.trackers.defaultRepoOwner && config.trackers.defaultRepoName
+        ? [{ owner: config.trackers.defaultRepoOwner, name: config.trackers.defaultRepoName, private: false }]
+        : [];
     res.json({ repos });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to list repos');
@@ -187,18 +212,35 @@ router.get('/mcp/issues', async (req: Request, res: Response) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        jsonrpc: '2.0', id: randomUUID(), method: 'tools/call',
-        params: { name: 'list_issues', arguments: { status: req.query.status, repo: req.query.repo, limit: Math.min(Math.abs(Number(req.query.limit) || 20), 100) } },
+        jsonrpc: '2.0',
+        id: randomUUID(),
+        method: 'tools/call',
+        params: {
+          name: 'list_issues',
+          arguments: {
+            status: req.query.status,
+            repo: req.query.repo,
+            limit: Math.min(Math.abs(Number(req.query.limit) || 20), 100),
+          },
+        },
       }),
       signal: AbortSignal.timeout(10_000),
     });
     if (resp.ok) {
       const data = await resp.json();
       const text = data?.result?.content?.[0]?.text;
-      if (text) { try { return res.json(JSON.parse(text)); } catch { return res.json({ result: text }); } }
+      if (text) {
+        try {
+          return res.json(JSON.parse(text));
+        } catch {
+          return res.json({ result: text });
+        }
+      }
       return res.json(data.result);
     }
-  } catch { log.debug('MCP server not reachable for list_issues'); }
+  } catch {
+    log.debug('MCP server not reachable for list_issues');
+  }
   res.json({ error: 'MCP server not reachable' });
 });
 
@@ -210,18 +252,35 @@ router.post('/mcp/search', async (req: Request, res: Response) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        jsonrpc: '2.0', id: randomUUID(), method: 'tools/call',
-        params: { name: 'search_codebase', arguments: { query: req.body.query, repo: req.body.repo, max_results: Math.min(Math.abs(Number(req.body.max_results) || 10), 50) } },
+        jsonrpc: '2.0',
+        id: randomUUID(),
+        method: 'tools/call',
+        params: {
+          name: 'search_codebase',
+          arguments: {
+            query: req.body.query,
+            repo: req.body.repo,
+            max_results: Math.min(Math.abs(Number(req.body.max_results) || 10), 50),
+          },
+        },
       }),
       signal: AbortSignal.timeout(10_000),
     });
     if (resp.ok) {
       const data = await resp.json();
       const text = data?.result?.content?.[0]?.text;
-      if (text) { try { return res.json(JSON.parse(text)); } catch { return res.json({ result: text }); } }
+      if (text) {
+        try {
+          return res.json(JSON.parse(text));
+        } catch {
+          return res.json({ result: text });
+        }
+      }
       return res.json(data.result);
     }
-  } catch { log.debug('MCP server not reachable for search'); }
+  } catch {
+    log.debug('MCP server not reachable for search');
+  }
   res.json({ error: 'MCP server not reachable' });
 });
 

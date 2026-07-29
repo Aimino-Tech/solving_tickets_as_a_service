@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { auth, setToken, clearToken } from '@/api/client';
+import { auth, setToken, setRefreshToken, clearToken } from '@/api/client';
 import type { User } from '@/api/types';
 
 interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -16,29 +17,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On mount, check if there's a token in the URL (from OAuth callback) or in localStorage
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const tokenFromUrl = params.get('token');
-
-    if (tokenFromUrl) {
-      setToken(tokenFromUrl);
-      // Clean the URL without a full reload
+    const urlToken = params.get('token');
+    if (urlToken) {
+      setToken(urlToken);
       window.history.replaceState({}, '', window.location.pathname);
     }
 
-    const token = localStorage.getItem('stas_token');
+    const token = (() => {
+      try { return localStorage.getItem('stas_token'); } catch { return null; }
+    })();
     if (token) {
       auth
         .me()
         .then((res) => {
-          setUser({
-            githubId: res.user.githubId,
-            username: res.user.username,
-            avatarUrl: res.user.avatarUrl,
-          });
+          setUser({ id: res.id, email: res.email, name: res.name, username: res.username, avatarUrl: res.avatarUrl, createdAt: res.createdAt });
         })
-        .catch(() => {
+        .catch((err) => {
+          console.warn('Failed to fetch user session, clearing token:', err);
           clearToken();
         })
         .finally(() => {
@@ -49,15 +46,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(() => {
-    window.location.href = auth.loginUrl();
+  const login = useCallback(async (email: string, password: string) => {
+    const result = await auth.login(email, password);
+    setToken(result.token);
+    setRefreshToken(result.refreshToken);
+    setUser({ id: result.user.id, email: result.user.email, name: result.user.name, username: result.user.name ?? undefined, createdAt: result.user.createdAt || "" });
+  }, []);
+
+  const register = useCallback(async (email: string, password: string, name?: string) => {
+    const result = await auth.register(email, password, name);
+    setToken(result.token);
+    setRefreshToken(result.refreshToken);
+    setUser({ id: result.user.id, email: result.user.email, name: result.user.name, createdAt: result.user.createdAt || "" });
   }, []);
 
   const logout = useCallback(async () => {
     try {
       await auth.logout();
     } catch {
-      // Ignore errors during logout
     }
     clearToken();
     setUser(null);
@@ -70,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isLoading,
         login,
+        register,
         logout,
       }}
     >

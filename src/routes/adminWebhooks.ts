@@ -25,7 +25,7 @@ const log = rootLogger.child({ module: 'admin-webhooks' });
 // Rate Limiting: 30 requests per minute on admin webhook endpoints
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 // All admin webhook routes require authentication and rate limiting
 router.use(adminAuthMiddleware);

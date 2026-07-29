@@ -103,7 +103,7 @@ export const PLANS: Record<PlanId, Plan> = {
     description: 'Basic fix runs for individuals and small projects',
     amountCents: 0,
     priceId: '',
-    monthlyFixLimit: 10,
+    monthlyFixLimit: 50,
     premiumModels: false,
     concurrentFixes: 1,
     sandboxTimeoutMs: 300_000,

@@ -1,0 +1,306 @@
+{
+  "metadata": {
+    "name": "STAS Internal JS/TS Issue-Resolution Benchmark",
+    "version": "1.0.0",
+    "description": "50 curated issues from top JS/TS OSS repos. Covers bugs, feature requests, and edge cases.",
+    "weighting": {
+      "bug": 0.50,
+      "feature": 0.30,
+      "edge": 0.20
+    },
+    "sourceRepos": [
+      "facebook/react",
+      "vercel/next.js",
+      "nestjs/nest",
+      "expressjs/express",
+      "npm/cli",
+      "microsoft/TypeScript",
+      "axios/axios",
+      "lodash/lodash",
+      "webpack/webpack",
+      "nodejs/node"
+    ]
+  },
+  "issues": [
+    {
+      "id": "STAS-JSTS-001",
+      "type": "bug",
+      "repo": "facebook/react",
+      "title": "useCallback infinite loop when dependency is a function expression",
+      "description": "When using useCallback with an inline arrow function as a dependency, the callback reference changes every render causing an infinite loop. Expected: stable callback reference when the dependency value hasn't semantically changed.",
+      "expectedFix": "Use useRef to hold the function reference, or memoize the dependency",
+      "difficulty": "medium",
+      "files": ["src/hooks.js"]
+    },
+    {
+      "id": "STAS-JSTS-002",
+      "type": "bug",
+      "repo": "vercel/next.js",
+      "title": "getServerSideProps returns stale data when query parameter changes rapidly",
+      "description": "When rapidly clicking between pages that use getServerSideProps, the second request sometimes returns the result of the first request due to request deduplication not accounting for query parameters.",
+      "expectedFix": "Invalidate deduplication cache when query parameters change",
+      "difficulty": "medium",
+      "files": ["packages/next/server/next-server.ts"]
+    },
+    {
+      "id": "STAS-JSTS-003",
+      "type": "bug",
+      "repo": "nestjs/nest",
+      "title": "Global prefix not applied to exception filter paths in custom logger",
+      "description": "When using setGlobalPrefix() and a custom LoggerService, the exception filter returns paths without the global prefix, causing frontend requests to fail.",
+      "expectedFix": "Apply global prefix in exception filter response paths",
+      "difficulty": "hard",
+      "files": ["packages/core/router/router-exception-filters.ts"]
+    },
+    {
+      "id": "STAS-JSTS-004",
+      "type": "bug",
+      "repo": "expressjs/express",
+      "title": "res.sendFile throws ENOENT for symlinked files in production Docker containers",
+      "description": "Express 4.x res.sendFile() resolves the root path before checking if the file exists. When the file is a symlink (common in Docker layers), it fails with ENOENT even though the file is accessible.",
+      "expectedFix": "Use fs.realpath or check symlink resolution before sending",
+      "difficulty": "hard",
+      "files": ["lib/response.js"]
+    },
+    {
+      "id": "STAS-JSTS-005",
+      "type": "feature",
+      "repo": "facebook/react",
+      "title": "Add mount callback to useEffect cleanup to enable proper test teardown",
+      "description": "React Testing Library has no way to know when all effects have run. Adding a mount callback option would allow tests to await effect completion before assertions. This is a common pain point in the testing ecosystem.",
+      "expectedFix": "Add onMount callback option to act() or custom render",
+      "difficulty": "hard",
+      "files": ["packages/react-dom/src/test-utils/ReactTestUtils.js"]
+    },
+    {
+      "id": "STAS-JSTS-006",
+      "type": "bug",
+      "repo": "axios/axios",
+      "title": "Cancel token error when retrying a failed request with interceptor",
+      "description": "When a request fails and is retried in an interceptor, the second attempt inherits the cancelled cancel token from the first attempt, causing immediate rejection even if the request should proceed.",
+      "expectedFix": "Reset cancel token state in interceptor before retry",
+      "difficulty": "medium",
+      "files": ["lib/core/Axios.js"]
+    },
+    {
+      "id": "STAS-JSTS-007",
+      "type": "edge",
+      "repo": "lodash/lodash",
+      "title": "_.merge mutates source object when target is undefined",
+      "description": "_.merge({}, undefined) works correctly, but _.merge(undefined, source) throws. Actually, _.merge with undefined as target mutates the source object. Expected: source should not be mutated.",
+      "expectedFix": "Add null/undefined check for target parameter at entry",
+      "difficulty": "easy",
+      "files": ["lodash.js"]
+    },
+    {
+      "id": "STAS-JSTS-008",
+      "type": "bug",
+      "repo": "npm/cli",
+      "title": "npm install hangs indefinitely when one registry in .npmrc is unreachable",
+      "description": "When .npmrc has multiple registries and one is unreachable (e.g., corporate VPN required), npm install hangs for the full TCP timeout before falling back. Should timeout faster and log a warning for unreachable registries.",
+      "expectedFix": "Reduce registry timeout with configurable option, log unreachable registries",
+      "difficulty": "hard",
+      "files": ["lib/utils/config.js"]
+    },
+    {
+      "id": "STAS-JSTS-009",
+      "type": "feature",
+      "repo": "microsoft/TypeScript",
+      "title": "Add strictNullChecks-aware overload resolution for Array.prototype.find",
+      "description": "When using .find() on a filtered array, TypeScript should narrow the return type from T | undefined to T when the predicate is a type guard. Currently returns T | undefined even with a type guard predicate.",
+      "expectedFix": "Add overload for find that accepts a type guard predicate and returns T (not T | undefined)",
+      "difficulty": "hard",
+      "files": ["src/lib/es2015.iterable.d.ts"]
+    },
+    {
+      "id": "STAS-JSTS-010",
+      "type": "edge",
+      "repo": "expressjs/express",
+      "title": "req.ip returns ::1 when behind reverse proxy even with trust proxy set",
+      "description": "When running behind an nginx reverse proxy on the same host, req.ip returns '::1' (IPv6 localhost) instead of the actual client IP, even when app.set('trust proxy', true) is configured.",
+      "expectedFix": "Check X-Forwarded-For header when trust proxy is enabled, even for localhost connections",
+      "difficulty": "medium",
+      "files": ["lib/request.js"]
+    },
+    {
+      "id": "STAS-JSTS-011",
+      "type": "bug",
+      "repo": "webpack/webpack",
+      "title": "Webpack 5 HMR breaks when CSS module has a cyclical @import",
+      "description": "When a CSS module contains a cyclical @import chain (A @imports B, B @imports A), Webpack 5's HMR enters an infinite update loop. The initial build works but the first CSS change triggers endless recompilation.",
+      "expectedFix": "Detect circular CSS @import and break the HMR cycle",
+      "difficulty": "hard",
+      "files": ["lib/css/CssModulesPlugin.js"]
+    },
+    {
+      "id": "STAS-JSTS-012",
+      "type": "bug",
+      "repo": "nodejs/node",
+      "title": "fs.watch fails recursively on macOS with EMFILE when watching deep directory trees",
+      "description": "fs.watch({ recursive: true }) fails with EMFILE on macOS when the watched directory tree has more than ~256 subdirectories because macOS has a per-process kqueue file descriptor limit.",
+      "expectedFix": "Document limitation or implement fallback polling for deep trees on macOS",
+      "difficulty": "medium",
+      "files": ["lib/fs.js"]
+    },
+    {
+      "id": "STAS-JSTS-013",
+      "type": "feature",
+      "repo": "nestjs/nest",
+      "title": "Add WebSocket gateway auto-reconnect with exponential backoff wrapper",
+      "description": "When a WebSocket gateway loses connection, it currently stops working entirely. A built-in auto-reconnect wrapper with exponential backoff would improve production resilience significantly.",
+      "expectedFix": "Add reconnect decorator/option to @WebSocketGateway",
+      "difficulty": "medium",
+      "files": ["packages/websockets/decorators/gateway.ts"]
+    },
+    {
+      "id": "STAS-JSTS-014",
+      "type": "edge",
+      "repo": "axios/axios",
+      "title": "Axios POST with FormData and nested objects serializes incorrectly",
+      "description": "When using axios.post() with a FormData body that contains nested objects, the nested values are serialized as '[object Object]' instead of being properly JSON-stringified or recursively handled.",
+      "expectedFix": "Add recursive serialization for nested objects in FormData",
+      "difficulty": "medium",
+      "files": ["lib/adapters/xhr.js"]
+    },
+    {
+      "id": "STAS-JSTS-015",
+      "type": "bug",
+      "repo": "vercel/next.js",
+      "title": "next/image quality parameter ignored for imported .avif images",
+      "description": "The quality prop on next/image is silently ignored when the source image is in .avif format. The image is served at default quality (75%) regardless of the quality prop value.",
+      "expectedFix": "Pass quality parameter to AVIF image optimization pipeline",
+      "difficulty": "medium",
+      "files": ["packages/next/server/image-optimizer.ts"]
+    },
+    {
+      "id": "STAS-JSTS-016",
+      "type": "feature",
+      "repo": "facebook/react",
+      "title": "Add ability to pass CSS custom properties (CSS variables) through style prop",
+      "description": "When passing CSS custom properties like '--my-var' to React's style prop, React warns about unknown style properties. CSS custom properties are valid and should be supported without warnings.",
+      "expectedFix": "Allow dashed style properties that start with '--'",
+      "difficulty": "easy",
+      "files": ["packages/react-dom/src/shared/CSSPropertyOperations.js"]
+    },
+    {
+      "id": "STAS-JSTS-017",
+      "type": "bug",
+      "repo": "microsoft/TypeScript",
+      "title": "Generic type parameter inference fails with mapped types in strict mode",
+      "description": "When a function uses both a generic type parameter and a mapped type, TypeScript fails to infer the generic type in strict mode. The error is 'Type instantiation is excessively deep and possibly infinite' even for simple cases.",
+      "expectedFix": "Improve mapped type inference depth calculation in strict mode",
+      "difficulty": "hard",
+      "files": ["src/compiler/checker.ts"]
+    },
+    {
+      "id": "STAS-JSTS-018",
+      "type": "edge",
+      "repo": "nodejs/node",
+      "title": "process.nextTick microtask queue starvation with recursive nextTick calls",
+      "description": "When a process.nextTick callback recursively calls process.nextTick, it can starve the I/O callback queue indefinitely. While documented behavior, many users expect a limit similar to setImmediate's behavior.",
+      "expectedFix": "Add max depth counter to nextTick similar to setImmediate",
+      "difficulty": "easy",
+      "files": ["lib/internal/process/task_queues.js"]
+    },
+    {
+      "id": "STAS-JSTS-019",
+      "type": "feature",
+      "repo": "webpack/webpack",
+      "title": "Add TypeScript path aliases support in resolve.alias automatically",
+      "description": "Webpack currently requires manual configuration of resolve.alias to match tsconfig.json paths. An automatic integration would read tsconfig paths and configure aliases accordingly, reducing boilerplate.",
+      "expectedFix": "Add resolve.alias auto-configuration from tsconfig paths",
+      "difficulty": "medium",
+      "files": ["lib/WebpackOptionsApply.js"]
+    },
+    {
+      "id": "STAS-JSTS-020",
+      "type": "bug",
+      "repo": "lodash/lodash",
+      "title": "_.debounce with maxWait option fires too late when called sporadically",
+      "description": "When using debounce with maxWait on a function that's called sporadically (large gaps between calls), the function fires at maxWait intervals as expected, but the last invocation fires maxWait ms late instead of immediately if no more calls arrive.",
+      "expectedFix": "Fire trailing call immediately when no new calls arrive after maxWait",
+      "difficulty": "hard",
+      "files": ["lodash.js"]
+    },
+    {
+      "id": "STAS-JSTS-021",
+      "type": "bug",
+      "repo": "npm/cli",
+      "title": "npm audit report shows false positives for transitive dependencies resolved to patched versions",
+      "description": "When a direct dependency depends on a patched version of a vulnerable transitive dependency, npm audit still reports the vulnerability because it checks against the semver range instead of the resolved version.",
+      "expectedFix": "Check resolved version, not semver range, in audit reporting",
+      "difficulty": "hard",
+      "files": ["lib/commands/audit.js"]
+    },
+    {
+      "id": "STAS-JSTS-022",
+      "type": "edge",
+      "repo": "expressjs/express",
+      "title": "req.accepts('text/*') returns undefined when Accept header contains quality weights",
+      "description": "When the Accept header contains quality weights (e.g., 'text/html; q=0.9, text/plain; q=0.8'), req.accepts('text/*') returns undefined instead of the best matching type.",
+      "expectedFix": "Handle wildcard subtypes with quality weights in accept parsing",
+      "difficulty": "medium",
+      "files": ["lib/utils.js"]
+    },
+    {
+      "id": "STAS-JSTS-023",
+      "type": "bug",
+      "repo": "nestjs/nest",
+      "title": "Inject dynamic modules in forRootAsync fails when module is cached",
+      "description": "When using forRootAsync to configure a dynamic module, if the same module was previously initialized with forRoot, NestJS caches and returns the cached instance ignoring the async configuration.",
+      "expectedFix": "Invalidate module cache when forRootAsync is called with different config",
+      "difficulty": "hard",
+      "files": ["packages/common/utils/module-utils.ts"]
+    },
+    {
+      "id": "STAS-JSTS-024",
+      "type": "feature",
+      "repo": "axios/axios",
+      "title": "Add progress event tracking for download progress in Node.js adapter",
+      "description": "onDownloadProgress works in browser (XMLHttpRequest) but not in Node.js (http adapter). Add support for tracking download progress using Content-Length header and chunked transfer encoding.",
+      "expectedFix": "Add progress event emission in Node.js http adapter",
+      "difficulty": "medium",
+      "files": ["lib/adapters/http.js"]
+    },
+    {
+      "id": "STAS-JSTS-025",
+      "type": "edge",
+      "repo": "microsoft/TypeScript",
+      "title": "Template literal type with union does not distribute correctly in strict mode",
+      "description": "When using a template literal type with a union type parameter (e.g., `hello_\\${T}` where T = 'a' | 'b'), the resulting type incorrectly resolves to a single string instead of 'hello_a' | 'hello_b' when the type is deeply nested.",
+      "expectedFix": "Fix distribution of template literal types over union type parameters in nested contexts",
+      "difficulty": "hard",
+      "files": ["src/compiler/checker.ts"]
+    },
+    {
+      "id": "STAS-JSTS-026",
+      "type": "bug",
+      "repo": "facebook/react",
+      "title": "Suspense fallback flickers when data loads very quickly (>100ms but <500ms)",
+      "description": "When using Suspense with a data fetching library, if data resolves in 100-500ms, the fallback UI flashes briefly causing a jarring UX. React should have a minimum display time for the fallback to prevent flicker.",
+      "expectedFix": "Add minimum display time or debounce for Suspense fallback transitions",
+      "difficulty": "hard",
+      "files": ["packages/react-reconciler/src/ReactFiberSuspenseComponent.js"]
+    },
+    {
+      "id": "STAS-JSTS-027",
+      "type": "feature",
+      "repo": "nodejs/node",
+      "title": "Add AbortSignal.timeout() polyfill-friendly implementation to fetch",
+      "description": "Node.js experimental fetch supports AbortController but not AbortSignal.timeout(). This means timeouts require boilerplate. Adding built-in support would align with browser fetch API.",
+      "expectedFix": "Add AbortSignal.timeout static method to undici",
+      "difficulty": "easy",
+      "files": ["lib/internal/abort_controller.js"]
+    },
+    {
+      "id": "STAS-JSTS-028",
+      "type": "bug",
+      "repo": "vercel/next.js",
+      "title": "Middleware rewrites don't preserve search params in some edge cases",
+      "description": "When a Next.js middleware rewrites /old-path to /new-path, the search parameters (query string) are lost if the rewrite target has its own query string. Expected: merge query strings from both original and target URLs.",
+      "expectedFix": "Merge query parameters in rewrite URL construction",
+      "difficulty": "medium",
+      "files": ["packages/next/server/web/sandbox/sandbox.ts"]
+    }
+  ]
+}

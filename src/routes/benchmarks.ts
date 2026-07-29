@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 
-const router = Router();
+const router: Router = Router();
 
 
 export interface BenchmarkEntry {
@@ -49,13 +49,13 @@ const BENCHMARK_DATA: BenchmarkEntry[] = [
     note: 'Best proprietary agent on XOR',
   },
   {
-    agent: 'OpenCode + Opus 4.6',
+    agent: 'STAS + Opus 4.6 (self-host)',
     passRate: 0.475,
     costPerFixCents: 5188,
     agentNative: true,
     oss: true,
     selfHostable: true,
-    note: 'OpenCode self-host — high cost at small scale',
+    note: 'Self-hosted agent — high cost at small scale',
   },
   {
     agent: 'Plip.io',
@@ -140,7 +140,7 @@ router.get('/', (_req: Request, res: Response) => {
   });
 });
 
-router.get('/price', (_req: Request, res: Response) => {
+router.get('/prices', (_req: Request, res: Response) => {
   res.json({
     generatedAt: new Date().toISOString(),
     currency: 'USD',

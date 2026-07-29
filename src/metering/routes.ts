@@ -15,7 +15,7 @@ import { getCostConfig, isWithinFreeTier } from './costs.js';
 // Rate Limiting: 60 requests per minute on usage statistics endpoints
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 
 // ---------------------------------------------------------------------------

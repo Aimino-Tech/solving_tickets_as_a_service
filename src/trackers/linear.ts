@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import type { Ticket, Tracker } from './base.js';
+import type { Ticket, Tracker, CreateTicketParams } from './base.js';
 
 const log = rootLogger.child({ module: 'tracker-linear' });
 
@@ -42,7 +42,7 @@ export class LinearTracker implements Tracker {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: apiKey,
       },
       body: JSON.stringify({ query, variables }),
     });
@@ -59,6 +59,72 @@ export class LinearTracker implements Tracker {
     }
 
     return body.data as T;
+  }
+
+  async createTicket(params: CreateTicketParams): Promise<Ticket> {
+    const mutation = `
+      mutation IssueCreate($input: IssueCreateInput!) {
+        issueCreate(input: $input) {
+          success
+          issue {
+            id
+            title
+            url
+            description
+            priority
+            state { name type }
+            createdAt
+            updatedAt
+          }
+        }
+      }
+    `;
+
+    interface CreateResponse {
+      issueCreate: {
+        success: boolean;
+        issue: {
+          id: string;
+          title: string;
+          url: string;
+          description: string | null;
+          priority: number;
+          state: { name: string; type: string };
+          createdAt: string;
+          updatedAt: string;
+        };
+      };
+    }
+
+    const result = await this.graphql<CreateResponse>(mutation, {
+      input: {
+        teamId: params.teamId,
+        projectId: params.projectId,
+        title: params.title,
+        description: params.description,
+        priority: params.priority ?? 2,
+      },
+    });
+
+    if (!result.issueCreate.success) {
+      throw new Error(`Failed to create Linear ticket: ${params.title}`);
+    }
+
+    const issue = result.issueCreate.issue;
+    log.info({ ticketId: issue.id, url: issue.url, title: issue.title }, 'Linear ticket created');
+
+    return {
+      id: issue.id,
+      title: issue.title,
+      description: issue.description,
+      status: issue.state.name,
+      priority: issue.priority,
+      url: issue.url,
+      source: 'linear',
+      labels: [],
+      createdAt: issue.createdAt,
+      updatedAt: issue.updatedAt,
+    };
   }
 
   async getTicket(id: string): Promise<Ticket> {
@@ -239,8 +305,8 @@ export class LinearTracker implements Tracker {
 export function verifyLinearWebhookSignature(rawBody: Buffer, signatureHeader: string): boolean {
   const secret = config.trackers?.linear?.webhookSecret;
   if (!secret) {
-    log.warn('LINEAR_WEBHOOK_SECRET not configured — skipping webhook verification');
-    return true;
+    log.warn('LINEAR_WEBHOOK_SECRET not configured — rejecting webhook');
+    return false;
   }
 
   const prefix = 'sha256=';

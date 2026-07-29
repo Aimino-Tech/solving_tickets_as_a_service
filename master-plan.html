@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STAS Master Plan — Solving Tickets As A Service</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: #1e1e30;
+    --text: #e2e2f0;
+    --dim: #8888a0;
+    --accent: #6c5ce7;
+    --accent2: #00cec9;
+    --green: #00b894;
+    --orange: #fdcb6e;
+    --red: #e17055;
+    --blue: #74b9ff;
+    --purple: #a29bfe;
+    --pink: #fd79a8;
+    --font: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Navigation ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(10,10,15,.85); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 56px;
+    display: flex; align-items: center; gap: 24px;
+    overflow-x: auto;
+  }
+  nav .logo { font-weight: 700; color: var(--accent); font-size: 14px; white-space: nowrap; }
+  nav a {
+    font-size: 12px; color: var(--dim); white-space: nowrap;
+    transition: color .15s;
+  }
+  nav a:hover { color: var(--text); text-decoration: none; }
+
+  /* ── Layout ── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  .hero {
+    padding: 120px 0 64px;
+    text-align: center;
+    background: radial-gradient(ellipse 600px 300px at 50% -80px, rgba(108,92,231,.15), transparent);
+  }
+  .hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; letter-spacing: -.02em; }
+  .hero h1 span { color: var(--accent); }
+  .hero .sub { font-size: 1.05rem; color: var(--dim); max-width: 640px; margin: 16px auto 0; }
+  .hero .meta {
+    margin-top: 24px;
+    display: flex; justify-content: center; gap: 32px; flex-wrap: wrap;
+    font-size: 13px; color: var(--dim);
+  }
+  .hero .meta strong { color: var(--text); }
+
+  /* ── Sections ── */
+  section { padding: 60px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  h2 {
+    font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .badge {
+    font-size: 11px; font-weight: 600;
+    padding: 2px 10px; border-radius: 100px;
+    background: var(--accent); color: #fff;
+  }
+  .section-intro { color: var(--dim); margin-bottom: 32px; font-size: 14px; max-width: 720px; }
+
+  /* ── Cards ── */
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px;
+  }
+  .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .card p, .card li { font-size: 13px; color: var(--dim); line-height: 1.6; }
+  .card ul { list-style: none; padding: 0; }
+  .card ul li { padding-left: 16px; position: relative; margin-bottom: 4px; }
+  .card ul li::before { content: '›'; position: absolute; left: 0; color: var(--accent2); font-weight: 700; }
+  .card .stat {
+    font-size: 1.6rem; font-weight: 700; color: var(--accent2); line-height: 1.2;
+  }
+  .card .stat-label { font-size: 12px; color: var(--dim); }
+
+  /* ── Phase Timeline ── */
+  .phases { display: flex; flex-direction: column; gap: 12px; }
+  .phase {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    gap: 16px;
+    align-items: start;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    border-left: 3px solid var(--border);
+    transition: border-color .2s;
+  }
+  .phase:hover { border-left-color: var(--accent); }
+  .phase .tag { font-size: 11px; font-weight: 600; color: #fff; padding: 2px 10px; border-radius: 100px; white-space: nowrap; display: inline-block; }
+  .phase .tag.done { background: var(--green); }
+  .phase .tag.active { background: var(--accent); }
+  .phase .tag.next { background: var(--orange); color: #222; }
+  .phase .tag.future { background: var(--dim); }
+  .phase h3 { font-size: 14px; font-weight: 600; }
+  .phase p { font-size: 13px; color: var(--dim); margin-top: 4px; }
+  .phase .status { font-size: 12px; color: var(--dim); white-space: nowrap; }
+
+  /* ── Growth Loop Card ── */
+  .loop { border-left: 3px solid var(--accent2); }
+  .loop h3 { color: var(--accent2); }
+  .loop .coeff { font-size: 1.2rem; font-weight: 700; color: var(--green); }
+
+  /* ── KPI Table ── */
+  .kpi-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .kpi-table th, .kpi-table td {
+    text-align: left; padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .kpi-table th { font-weight: 600; color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  .kpi-table tr:hover td { background: rgba(108,92,231,.04); }
+  .kpi-table .good { color: var(--green); }
+  .kpi-table .warn { color: var(--orange); }
+  .kpi-table .bad { color: var(--red); }
+
+  /* ── Metrics bar ── */
+  .metric-bar { display: flex; flex-wrap: wrap; gap: 24px; }
+  .metric {
+    flex: 1; min-width: 140px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .metric .value { font-size: 1.5rem; font-weight: 700; color: var(--accent2); }
+  .metric .label { font-size: 11px; color: var(--dim); margin-top: 4px; }
+
+  /* ── Channel Matrix ── */
+  .channel { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .channel:last-child { border-bottom: none; }
+  .channel .effort { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 100px; white-space: nowrap; }
+  .channel .high { background: var(--red); color: #fff; }
+  .channel .med { background: var(--orange); color: #222; }
+  .channel .low { background: var(--green); color: #fff; }
+  .channel .name { flex: 1; font-size: 14px; font-weight: 500; }
+  .channel .desc { font-size: 12px; color: var(--dim); flex: 2; }
+
+  /* ── Risk Matrix ── */
+  .risk { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .risk:last-child { border-bottom: none; }
+  .risk .level {
+    font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 100px;
+    white-space: nowrap; align-self: start;
+  }
+  .risk .critical { background: var(--red); color: #fff; }
+  .risk .high { background: var(--orange); color: #222; }
+  .risk .medium { background: var(--blue); color: #fff; }
+  .risk .low { background: var(--dim); color: #fff; }
+  .risk .what { flex: 1; }
+  .risk .what h4 { font-size: 13px; font-weight: 600; }
+  .risk .what p { font-size: 12px; color: var(--dim); }
+  .risk .mitigation { flex: 1; font-size: 12px; color: var(--accent2); }
+
+  /* ── Marketing Calendar ── */
+  .week {
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .week h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .week .theme { font-size: 12px; color: var(--accent2); font-weight: 500; }
+  .week ul { margin-top: 6px; }
+  .week ul li { font-size: 12px; color: var(--dim); margin-bottom: 2px; }
+
+  /* ── Conversion Funnel ── */
+  .funnel { display: flex; flex-direction: column; align-items: center; }
+  .funnel-step {
+    width: 100%; max-width: 500px;
+    text-align: center;
+    padding: 16px 20px;
+    margin-bottom: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    position: relative;
+  }
+  .funnel-step .pct {
+    font-size: 1.2rem; font-weight: 700; color: var(--accent2);
+  }
+  .funnel-step .desc { font-size: 12px; color: var(--dim); }
+  .funnel-arrow { color: var(--dim); font-size: 18px; margin: 2px 0; }
+
+  /* ── Tabs ── */
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 6px 16px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    background: transparent;
+    color: var(--dim);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: var(--font);
+  }
+  .tab-btn:hover { border-color: var(--accent); color: var(--text); }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── Launch Checklist ── */
+  .checklist-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+  .checklist-cat {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+    display: flex; flex-direction: column; gap: 0;
+  }
+  .checklist-cat h3 {
+    font-size: 13px; font-weight: 700; margin-bottom: 12px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;
+  }
+  .checklist-cat h3 .cat-progress { font-size: 11px; font-weight: 400; color: var(--dim); }
+  .checklist-item {
+    display: flex; align-items: flex-start; gap: 10px; padding: 6px 0;
+    font-size: 12px; line-height: 1.5; color: var(--dim);
+    border-bottom: 1px solid rgba(30,30,48,.5);
+  }
+  .checklist-item:last-child { border-bottom: none; }
+  .checklist-item .chk {
+    flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px;
+    border-radius: 50%; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+  }
+  .checklist-item .chk.done { background: var(--green); border-color: var(--green); color: #fff; }
+  .checklist-item .chk.progress { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .checklist-item .chk.pending { background: transparent; border-color: var(--dim); color: var(--dim); }
+  .checklist-item .chk.waiting { background: var(--orange); border-color: var(--orange); color: #222; }
+  .checklist-item .chk.done::after { content: '✓'; }
+  .checklist-item .chk.progress::after { content: '◐'; }
+  .checklist-item .chk.pending::after { content: '○'; }
+  .checklist-item .chk.waiting::after { content: '⌛'; }
+  .checklist-item .chk-label { flex: 1; }
+  .checklist-item .chk-label .chk-desc { font-size: 11px; color: rgba(136,136,160,.7); }
+  .checklist-item .chk-tag {
+    font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 100px; white-space: nowrap;
+    display: inline-block; margin-left: 4px;
+  }
+  .chk-tag.code { background: rgba(116,185,255,.15); color: var(--blue); }
+  .chk-tag.infra { background: rgba(0,206,201,.15); color: var(--accent2); }
+  .chk-tag.mktg { background: rgba(253,203,110,.15); color: var(--orange); }
+  .chk-tag.legal { background: rgba(225,112,85,.15); color: var(--red); }
+  .chk-tag.biz { background: rgba(162,155,254,.15); color: var(--purple); }
+  .chk-tag.dach { background: rgba(253,121,168,.15); color: var(--pink); }
+  .chk-progress-bar {
+    height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 12px 0 4px;
+  }
+  .chk-progress-bar .fill {
+    height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width .3s;
+  }
+  .chk-summary {
+    display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;
+    padding: 20px; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--surface); margin-bottom: 24px;
+  }
+  .chk-summary .stat { font-size: 1.3rem; font-weight: 700; }
+  .chk-summary .stat-label { font-size: 11px; color: var(--dim); }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center; padding: 40px 24px;
+    font-size: 12px; color: var(--dim);
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── misc ── */
+  .mt-16 { margin-top: 16px; }
+  .mt-24 { margin-top: 24px; }
+  .mt-32 { margin-top: 32px; }
+  .gap-8 { gap: 8px; }
+  .tag {
+    font-size: 10px; font-weight: 600; padding: 1px 8px; border-radius: 100px;
+    display: inline-block; margin-right: 4px;
+  }
+  .tag-plg { background: rgba(108,92,231,.2); color: var(--accent); }
+  .tag-viral { background: rgba(0,206,201,.2); color: var(--accent2); }
+  .tag-mcp { background: rgba(253,121,168,.2); color: var(--pink); }
+  .tag-pql { background: rgba(253,203,110,.2); color: var(--orange); }
+
+  @media (max-width: 640px) {
+    .phase { grid-template-columns: 1fr; }
+    .phase .tag { width: fit-content; }
+    .hero .meta { gap: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">◈ STAS</span>
+  <a href="#vision">Vision</a>
+  <a href="#roadmap">Roadmap</a>
+  <a href="#growth">Growth Loops</a>
+  <a href="#ux">UX / Funnel</a>
+  <a href="#channels">Channels</a>
+  <a href="#competition">Competition</a>
+  <a href="#pricing">Pricing</a>
+  <a href="#kpis">KPIs</a>
+  <a href="#content">Content</a>
+  <a href="#launch">Launch</a>
+  <a href="#backlog">Backlog</a>
+  <a href="#marketplace">Marketplace</a>
+  <a href="#risks">Risks</a>
+  <a href="#mcp">Agent / MCP</a>
+  <a href="#economics">Unit Economics</a>
+</nav>
+
+<!-- ════════════════ HERO ════════════════ -->
+<div class="hero">
+  <h1>STAS <span>Master Plan</span></h1>
+  <p class="sub">Solving Tickets As A Service — Open-core AI agent that fixes GitHub issues automatically. PLG-powered, MCP-distributed, virally amplified.</p>
+  <div class="meta">
+    <span>📦 <strong>Open-Core</strong> &mdash; AGPL + SaaS</span>
+    <span>💰 <strong>$49–$149</strong> / month</span>
+    <span>🔄 <strong>Viral Coeff</strong> 0.35–0.50 target</span>
+    <span>🧪 <strong>92%</strong> pass rate @ $3.80/fix</span>
+    <span>📅 <strong>Day 2</strong> of 90-Day Launch</span>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ═══════════ 1. VISION & STRATEGY ═══════════ -->
+<section id="vision">
+  <h2>📍 Vision &amp; Strategy <span class="badge">North Star</span></h2>
+  <p class="section-intro">Make automated issue resolution the default for every GitHub repository. STAS is a purpose-built AI agent that understands your codebase, fixes tickets, and submits PRs — all from a comment or MCP call.</p>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>🎯 Mission</h3>
+      <p>Eliminate backlog friction. Every developer should be able to type <code>@stas fix</code> and get a working PR in minutes. We collapse the gap between bug report and resolved issue.</p>
+    </div>
+    <div class="card">
+      <h3>🧠 Strategic Moat</h3>
+      <ul>
+        <li><strong>Context mastery</strong> — STAS reads your full repo, not just the issue</li>
+        <li><strong>Modular pipeline</strong> — Classifier → OS dispatch → service layer → trackers (replaced monolithic agent)</li>
+        <li><strong>n8n workflow engine</strong> — 12 production workflows for billing, alerts, onboarding, multi-channel notifications</li>
+        <li><strong>Multi-language runtime</strong> — TypeScript webhook + Python worker (Celery, FastAPI)</li>
+        <li><strong>Full production stack</strong> — RabbitMQ, PostgreSQL, Redis, Nginx, Docker Compose, horizontal scaling</li>
+        <li><strong>MCP first-mover advantage</strong> — First in market with agent-to-agent issue resolution via MCP protocol. Muse Spark 1.1 and growing MCP ecosystem validate this bet</li>
+        <li><strong>Plan-first differentiator</strong> — Unique WORKFLOW.md dispatch pipeline that separates planning from execution. No model release (GPT-5.6, Fable 5, Grok 4.5) has addressed this workflow gap</li>
+        <li><strong>Async autonomous execution</strong> — STAS's poll-loop daemon mode is unmatched. All new model releases focus on interactive use, not headless operation</li>
+        <li><strong>Multi-provider routing</strong> — 12x price spread between value models ($4.25/Mtok Muse Spark) and frontier models ($50/Mtok Fable 5). STAS routes each task to the optimal model</li>
+        <li><strong>DACH-first differentiation</strong> — GitLab, Jira, Slack, German output, EU data residency, approval gates — no competitor covers all of these</li>
+        <li><strong>Open-core gravity</strong> — Community + SaaS power users create a self-reinforcing funnel</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🏗️ Business Model</h3>
+      <p><strong>Open Core (AGPL v3)</strong> — Free self-hosted version for individuals and small teams with core fix capability.</p>
+      <p class="mt-16"><strong>SaaS Tiers:</strong></p>
+      <ul>
+        <li><strong>Hobby</strong> — $0/mo &bull; 50 fixes/mo &bull; public repos only &bull; GitHub comment trigger</li>
+        <li><strong>Pro</strong> — $49/mo &bull; 500 fixes/mo &bull; private repos &bull; priority queue &bull; MCP access</li>
+        <li><strong>Team</strong> — $149/mo &bull; 2,000 fixes/mo &bull; org-wide install &bull; custom configs &bull; audit log</li>
+        <li><strong>Enterprise</strong> — Custom &bull; Unlimited &bull; On-prem &bull; SLA &bull; SSO &bull; dedicated infra</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📊 Unit Economics</h3>
+      <div class="grid grid-2" style="padding-top:8px;">
+        <div><span class="stat">$3.80</span><div class="stat-label">Avg cost per fix</div></div>
+        <div><span class="stat">92%</span><div class="stat-label">Pass rate</div></div>
+        <div><span class="stat">~$34</span><div class="stat-label">Gross margin / Pro sub</div></div>
+        <div><span class="stat">9.7x</span><div class="stat-label">Gross margin multiple</div></div>
+      </div>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">At $49/mo (Pro) with 10 fixes per month average usage: $4.90/fix vs $3.80 cost = $1.10 gross profit per fix. Breakeven at ~12 fixes. After that, pure margin expansion as inference costs drop.</p>
+    </div>
+    <div class="card">
+      <h3>🧪 Key Assumptions (to validate)</h3>
+      <ul>
+        <li>Developers trust AI enough to merge auto-generated PRs</li>
+        <li>92% pass rate persists across diverse codebases (not just JS/TS)</li>
+        <li>MCP Registry provides meaningful distribution (not just noise)</li>
+        <li>Free-tier users convert at ≥3% to paid within 30 days</li>
+        <li>Viral coefficient of 0.35 achievable via PR footer + share flow</li>
+        <li>Cost per fix scales down with inference improvements over time</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>⚡ GTM Phases</h3>
+      <ul>
+        <li><strong>Phase 0 (Pre-launch):</strong> GitHub Marketplace listing, MCP Registry submission, docs, landing page, waitlist</li>
+        <li><strong>Phase 1 (MVP):</strong> ✅ Done — core fix-agent, basic GitHub app, CLI</li>
+        <li><strong>Phase 2 (Launch):</strong> 🔄 In progress — architecture refactor (classifier/dispatch/trackers), n8n workflows, marketing site, Python backend, production stack</li>
+        <li><strong>Phase 3 (Growth):</strong> Content marketing, ambassador program, GitHub Actions marketplace, enterprise pilots, DACH GTM launch (German landing page, DPA, EU hosting)</li>
+        <li><strong>Phase 4 (Scale):</strong> Self-serve PLG machine — PQL routing, multi-language support, G2/peer review loop, GitLab + Jira integrations, German PR output, approval gates</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 2. ROADMAP ═══════════ -->
+<section id="roadmap">
+  <h2>🗺️ Product Roadmap <span class="badge">Phased</span></h2>
+  <p class="section-intro">Incremental delivery across four phases. Each phase unlocks the next growth lever.</p>
+
+  <div class="phases">
+    <div class="phase">
+      <div><span class="tag done">✅ Phase 1</span></div>
+      <div>
+        <h3>MVP — Core Fix Engine</h3>
+        <p>STAS agent reads repo context, generates fix, opens PR. CLI + basic GitHub App integration. Manual billing via Gumroad.</p>
+        <ul style="margin-top:6px;font-size:12px;color:var(--dim);">
+          <li>Issue comment trigger: <code>@stas fix</code></li>
+          <li>Automated PR generation with test validation</li>
+          <li>Self-hosted deployment (AGPL)</li>
+          <li>Basic error reporting and logging</li>
+        </ul>
+      </div>
+      <div class="status">Complete</div>
+    </div>
+
+    <div class="phase" style="border-left-color:var(--accent);">
+      <div><span class="tag active">🔄 Phase 2</span></div>
+      <div>
+        <h3>SaaS Launch — PLG Engine</h3>
+        <p>Self-serve onboarding, Stripe billing, viral mechanics, MCP distribution. Major refactor: replaced monolithic agent system with modular dispatch/classifier/tracker pipeline.</p>
+        <ul style="margin-top:6px;font-size:12px;color:var(--dim);">
+          <li>✅ Agent system replaced — classifier + OS dispatch + service layer + trackers</li>
+          <li>✅ MCP server at <code>/mcp/jsonrpc</code> with 6 tools (stas_fix_issue, stas_label_issue, etc.)</li>
+          <li>✅ n8n workflow engine — 12 workflows (billing, monitoring, slack, telegram, WhatsApp, Crisp)</li>
+          <li>✅ Marketing site deployed — pages for Agents, Benchmark, Blog, Pricing, Trust, Integrations</li>
+          <li>✅ Python STAS project (FastAPI + Celery + PostgreSQL + RabbitMQ)</li>
+          <li>✅ Enterprise production stack: Docker Compose with Nginx, Flower, workers</li>
+          <li>Stripe integration with metered billing</li>
+          <li>GitHub Marketplace listing (free + paid tiers)</li>
+          <li>Viral PR footer: <em>"This fix was generated by STAS — try it free"</em></li>
+          <li>3-click onboarding: Install → Configure → First fix</li>
+          <li>Free tier: 50 fixes/month, public repos only</li>
+        </ul>
+      </div>
+      <div class="status">In Progress</div>
+    </div>
+
+    <div class="phase" style="border-left-color:var(--orange);">
+      <div><span class="tag next">⏳ Phase 3</span></div>
+      <div>
+        <h3>Growth — Content &amp; Community</h3>
+        <p>Content marketing engine, ambassador program, GitHub Actions marketplace, case studies.</p>
+        <ul style="margin-top:6px;font-size:12px;color:var(--dim);">
+          <li>12-week content calendar (launch posts, tutorials, benchmarks)</li>
+          <li>GitHub Actions &amp; GitLab CI integration</li>
+          <li>Ambassador / referral program ($50 credit per referral)</li>
+          <li>Comparison benchmarks vs Copilot, Codeium, SWE-Agent</li>
+          <li>Case studies with open-source projects using STAS</li>
+          <li>German-language landing page &amp; case studies for DACH market</li>
+          <li>DPA/AVV template + EU data residency (Hetzner) configuration</li>
+          <li>GitLab integration (MR trigger, webhook handler, GitLab API layer)</li>
+        </ul>
+      </div>
+      <div class="status">Planned (Day 30+)</div>
+    </div>
+
+    <div class="phase" style="border-left-color:var(--dim);">
+      <div><span class="tag future">🚀 Phase 4</span></div>
+      <div>
+        <h3>Scale — Self-Serve PLG Machine</h3>
+        <p>PQL routing, multi-language support, G2/peer review loop, enterprise self-serve.</p>
+        <ul style="margin-top:6px;font-size:12px;color:var(--dim);">
+          <li>PQL scoring — convert based on fix frequency, org size, repos</li>
+          <li>Multi-language fix engine (Python, Rust, Go, Java)</li>
+          <li>G2 / peer review accumulation</li>
+          <li>Enterprise self-serve upsell flow</li>
+          <li>API-first access for CI/CD pipelines</li>
+        </ul>
+      </div>
+      <div class="status">Future (Day 60+)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 3. GROWTH LOOPS ═══════════ -->
+<section id="growth">
+  <h2>🔄 Growth Loops <span class="badge">5 Loops</span></h2>
+  <p class="section-intro">Each loop feeds the next. Combined they target a viral coefficient of <strong>0.35–0.50</strong> by Day 60.</p>
+
+  <div class="grid grid-2">
+    <div class="card loop">
+      <h3>Loop 1: PR Footer Viral</h3>
+      <div class="coeff">k = 0.15–0.25</div>
+      <p class="mt-16">Every PR generated by STAS appends: <em>"This fix was automatically generated by STAS. Get started for free →"</em> with a tracked link. Anyone seeing the PR is one click from onboarding.</p>
+      <div class="mt-16">
+        <span class="tag tag-viral">viral</span>
+        <span class="tag tag-plg">PLG</span>
+      </div>
+    </div>
+
+    <div class="card loop">
+      <h3>Loop 2: GitHub Marketplace</h3>
+      <div class="coeff">k = 0.08–0.12</div>
+      <p class="mt-16">Listed in GitHub Marketplace with "Free" tier. Organic discovery from developers browsing for issue-tracking tools. GitHub handles auth, install flow, and billing integration.</p>
+      <div class="mt-16">
+        <span class="tag tag-plg">PLG</span>
+      </div>
+    </div>
+
+    <div class="card loop">
+      <h3>Loop 3: MCP Agent Distribution</h3>
+      <div class="coeff">k = 0.05–0.10</div>
+      <p class="mt-16">STAS exposes an MCP tool (<code>stas_fix_issue</code>) registered in the MCP Registry (backed by Anthropic/GitHub/Microsoft, 97M monthly SDK downloads). AI agents discover and invoke STAS autonomously — each invocation is an acquisition.</p>
+      <div class="mt-16">
+        <span class="tag tag-mcp">MCP</span>
+      </div>
+    </div>
+
+    <div class="card loop">
+      <h3>Loop 4: Content &amp; SEO</h3>
+      <div class="coeff">k = 0.03–0.06</div>
+      <p class="mt-16">12-week content calendar targeting "AI code fix", "automated PR review", "GitHub issue automation" keywords. Tutorials, benchmarks, and comparison posts drive organic signups. Each piece targets a long-tail keyword cluster.</p>
+      <div class="mt-16">
+        <span class="tag tag-pql">compounding</span>
+      </div>
+    </div>
+
+    <div class="card loop">
+      <h3>Loop 5: Referral &amp; Ambassador</h3>
+      <div class="coeff">k = 0.04–0.08</div>
+      <p class="mt-16">In-app referral: "Invite a teammate → you both get 50 free fixes." Ambassador program: power users get $50 credit per referral, featured in case studies, early access to features.</p>
+      <div class="mt-16">
+        <span class="tag tag-viral">viral</span>
+        <span class="tag tag-pql">PQL</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📐 Viral Target Model</h3>
+      <table class="kpi-table">
+        <tr><th>Loop</th><th>k (conservative)</th><th>k (target)</th></tr>
+        <tr><td>PR Footer</td><td>0.15</td><td>0.25</td></tr>
+        <tr><td>GitHub Marketplace</td><td>0.08</td><td>0.12</td></tr>
+        <tr><td>MCP Agent Dist.</td><td>0.05</td><td>0.10</td></tr>
+        <tr><td>Content &amp; SEO</td><td>0.03</td><td>0.06</td></tr>
+        <tr><td>Referral</td><td>0.04</td><td>0.08</td></tr>
+        <tr style="border-top:2px solid var(--border);"><td><strong>Combined</strong></td><td><strong>0.35</strong></td><td><strong class="good">0.61</strong></td></tr>
+      </table>
+      <p style="font-size:11px;color:var(--dim);margin-top:8px;">At k ≥ 0.40, growth becomes self-sustaining. Target: Day 60.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 4. UX / CONVERSION FUNNEL ═══════════ -->
+<section id="ux">
+  <h2>🎨 UX Design &amp; Conversion Funnel <span class="badge">3-Click Flow</span></h2>
+  <p class="section-intro">From landing page to first fix in under 60 seconds. No demo booking, no sales call.</p>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>🖱️ 3-Click Onboarding</h3>
+      <ol style="list-style:decimal;padding-left:20px;font-size:13px;color:var(--dim);margin-top:8px;">
+        <li><strong>Install</strong> — Click "Install STAS for GitHub" → OAuth flow (5s)</li>
+        <li><strong>Configure</strong> — Select repos → choose trigger mode (comment / auto-scan) (10s)</li>
+        <li><strong>First fix</strong> — Open any issue → type <code>@stas fix</code> → PR appears in <span style="color:var(--accent2);">~45s</span></li>
+      </ol>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">Time-to-value: <strong>&lt; 60 seconds</strong>. No credit card required for free tier.</p>
+    </div>
+
+    <div class="card">
+      <h3>📈 Conversion Funnel</h3>
+      <div class="funnel">
+        <div class="funnel-step">
+          <div class="pct">100%</div>
+          <div class="desc">Landing page visitor</div>
+        </div>
+        <div class="funnel-arrow">↓</div>
+        <div class="funnel-step">
+          <div class="pct">~4%</div>
+          <div class="desc">Installs GitHub App (dev tool baseline: 1-3%, top quartile: 3-6%)</div>
+        </div>
+        <div class="funnel-arrow">↓</div>
+        <div class="funnel-step">
+          <div class="pct">~45%</div>
+          <div class="desc">Triggers first fix (of installers)</div>
+        </div>
+        <div class="funnel-arrow">↓</div>
+        <div class="funnel-step">
+          <div class="pct">~30%</div>
+          <div class="desc">Active weekly usage (of first-fix users)</div>
+        </div>
+        <div class="funnel-arrow">↓</div>
+        <div class="funnel-step">
+          <div class="pct">~5–8%</div>
+          <div class="desc">Converts to paid (90-day trigger rate rule)</div>
+        </div>
+        <div class="funnel-step" style="border-color:var(--accent2);margin-top:8px;">
+          <div class="pct" style="color:var(--orange);">~0.03–0.07%</div>
+          <div class="desc">Visitor → Paid (overall blended conversion)</div>
+        </div>
+      </div>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">Per StackOverflow 2025 survey: 84% of devs use SO, 67% GitHub, 61% YouTube, 54% Reddit. Each channel has different conversion curves. GitHub transparent signup alone provides ~35% lift over gated flows. The 90-day trigger rate rule: 5-12% of active users convert within 90 days when levers (usage limits + feature gates + milestone triggers) are properly sequenced.</p>
+    </div>
+
+    <div class="card">
+      <h3>🔥 Conversion Lever Framework</h3>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:8px;">Three lever types sequenced across the 90-day conversion window. Dev tool benchmark: baseline 1-3% overall conversion; top-quartile teams hit 3-6% by optimizing all three levers. GitHub transparent signup alone provides ~35% lift.</p>
+      <p style="font-size:12px;font-weight:600;color:var(--accent2);margin-top:8px;">Usage Limits (low effort, high impact):</p>
+      <ul>
+        <li><strong>Fix limit reached</strong> — "You've used 50/50 free fixes. Upgrade to Pro for 500/mo" → inline upsell</li>
+        <li><strong>Private repo block</strong> — "Private repos require Pro ($49/mo). Upgrade in one click"</li>
+        <li><strong>Speed gate</strong> — Free tier: standard queue (~60s). Pro: priority (~20s)</li>
+      </ul>
+      <p style="font-size:12px;font-weight:600;color:var(--accent2);margin-top:8px;">Feature Gates (medium effort, sustained impact):</p>
+      <ul>
+        <li><strong>MCP/API access</strong> — Free tier: comment trigger only. Pro: full MCP + API access for CI/CD</li>
+        <li><strong>Team dashboard</strong> — "Your team has made 50+ fixes this week. Switch to Team for org-wide analytics"</li>
+        <li><strong>Audit log</strong> — Enterprise requirement, Team tier and above</li>
+      </ul>
+      <p style="font-size:12px;font-weight:600;color:var(--accent2);margin-top:8px;">Milestone Triggers (timing-dependent, conversion acceleration):</p>
+      <ul>
+        <li><strong>First 10 fixes</strong> — "You've saved ~2 hours of dev time. Unlock priority queue with Pro"</li>
+        <li><strong>Week 4 check-in</strong> — "You're approaching your free limit. Here's 20% off your first Pro month"</li>
+        <li><strong>Team activity spike</strong> — "3 team members active. Switch to Team for centralized billing"</li>
+      </ul>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">The 90-day trigger rate rule: 5-12% of active users convert within 90 days when levers are properly sequenced. Without lever sequencing, conversion stalls at baseline 1-3%.</p>
+    </div>
+
+    <div class="card">
+      <h3>🆓 Free Tier Design</h3>
+      <ul>
+        <li><strong>50 fixes / month</strong> — enough for active solo devs, too few for teams</li>
+        <li><strong>Public repos only</strong> — private = conversion trigger</li>
+        <li><strong>Standard queue</strong> — typical ~60s, vs Pro ~20s</li>
+        <li><strong>GitHub comment trigger only</strong> — no API/MCP access</li>
+        <li><strong>Basic analytics</strong> — fix count, pass rate. No audit log</li>
+        <li><strong>No SLA</strong> — best-effort availability</li>
+      </ul>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">Designed to demonstrate clear value while creating natural upgrade pressure.<br>Target: 40% of active users hit the limit within 30 days. Conversion levers trigger at limit, private repo block, and milestone events.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 5. CHANNEL STRATEGY ═══════════ -->
+<section id="channels">
+  <h2>📡 Channel Strategy <span class="badge">Matrix</span></h2>
+  <p class="section-intro">Five distribution channels prioritized by effort vs. impact for the first 90 days.</p>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:4px 20px;">
+    <div class="channel">
+      <span class="effort low">Low</span>
+      <span class="name">GitHub Marketplace</span>
+      <span class="desc">Submit to GitHub Marketplace. Passive discovery from 100M+ devs browsing for issue tools. GitHub handles auth + billing.</span>
+      <span class="tag tag-plg">quick win</span>
+    </div>
+    <div class="channel">
+      <span class="effort low">Low</span>
+      <span class="name">MCP Registry</span>
+      <span class="desc">Register STAS as an MCP server. Backed by Anthropic/GitHub/Microsoft. 97M monthly SDK downloads = agent-based distribution.</span>
+      <span class="tag tag-mcp">first-mover</span>
+    </div>
+    <div class="channel">
+      <span class="effort med">Medium</span>
+      <span class="name">Hacker News Launch</span>
+      <span class="desc">Show HN post with demo video and pass rate benchmarks. Best single source of early adopter traffic if it hits front page.</span>
+      <span class="tag tag-pql">high risk/return</span>
+    </div>
+    <div class="channel">
+      <span class="effort med">Medium</span>
+      <span class="name">Dev Content (SEO)</span>
+      <span class="desc">12-week content calendar. Tutorials, benchmarks, "how to automate issue resolution". Compounding organic growth.</span>
+      <span class="tag tag-pql">compounding</span>
+    </div>
+    <div class="channel">
+      <span class="effort high">High</span>
+      <span class="name">Ambassador Program</span>
+      <span class="desc">Recruit power users. $50 credit per referral. Case studies, featured slots. Higher effort but higher trust conversion.</span>
+      <span class="tag tag-viral">scalable</span>
+    </div>
+    <div class="channel">
+      <span class="effort low">Low</span>
+      <span class="name">GitHub Actions</span>
+      <span class="desc">Publish a <code>stas-fix</code> Action. Triggers on issue labels or comments. More integration surface, more discovery.</span>
+      <span class="tag tag-plg">extension</span>
+    </div>
+  </div>
+
+  <div class="grid grid-2 mt-24">
+    <div class="card">
+      <h3>👨‍💻 Dev Community Channels</h3>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:8px;">Per Stack Overflow 2025 Developer Survey — top channels where devs discover tools:</p>
+      <table class="kpi-table">
+        <tr><th>Channel</th><th>Reach</th><th>Strategy</th></tr>
+        <tr><td>Stack Overflow</td><td class="good">84% of devs</td><td>Answer "how to automate issue fixing" questions → subtle STAS mentions in answers</td></tr>
+        <tr><td>GitHub</td><td class="good">67% of devs</td><td>Marketplace listing + organic discovery via PR footers + starred repos</td></tr>
+        <tr><td>YouTube</td><td class="good">61% of devs</td><td>Tutorial walkthroughs: "STAS in 5 minutes", comparison benchmarks</td></tr>
+        <tr><td>Reddit</td><td class="good">54% of devs</td><td>r/programming, r/MachineLearning, r/github — launch post + community engagement</td></tr>
+      </table>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">Unlike traditional B2B channels, dev tools benefit from high overlap — the same dev who finds STAS on SO may upvote on Reddit and install from GitHub Marketplace the same day. Channel strategy: be present on all four, optimize for discoverability, let the best channel win.</p>
+    </div>
+    <div class="card">
+      <h3>🚀 Viral Launch Playbook</h3>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:8px;">48-hour coordinated launch sequence modeled after successful dev tool launches:</p>
+      <p style="font-size:12px;font-weight:600;color:var(--accent2);margin-top:8px;">Hour 0 — Pre-seed:</p>
+      <ul>
+        <li>DM 20-30 dev community leaders for early feedback + launch-day support</li>
+        <li>Prepare HN post, Reddit posts (r/programming, r/github, r/MachineLearning), Product Hunt draft</li>
+        <li>Schedule tweet thread with demo GIF and benchmark data (92% pass rate)</li>
+      </ul>
+      <p style="font-size:12px;font-weight:600;color:var(--accent2);margin-top:8px;">Hour 0-24 — Coordinated drop:</p>
+      <ul>
+        <li>HN + Reddit + PH posts within same 2-hour window (cross-traffic amplification)</li>
+        <li>GitHub Trending trigger: pre-coordinate ~20 star/fork actions at launch</li>
+        <li>Reference case studies: <strong>AFFiNE</strong> (0→10K stars in 43 days), <strong>OpenClaw</strong> (157K stars in 60 days), <strong>zerobrew</strong> (speed demo-driven viral growth)</li>
+      </ul>
+      <p style="font-size:12px;font-weight:600;color:var(--accent2);margin-top:8px;">Hour 24-48 — Amplification:</p>
+      <ul>
+        <li>Respond to every HN/Reddit comment (engagement = ranking signal)</li>
+        <li>Cross-post to dev newsletters (TLDR AI, The Batch, DevTools Weekly)</li>
+        <li>Activate ambassador network for social proof in comments</li>
+      </ul>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">GitHub Trending is the highest-leverage distribution channel for dev tools. A single Trending day can deliver 5K-15K stars and 500+ installs. Pre-coordination is key — the algorithm weights first-hour velocity heavily.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 6. COMPETITIVE & MARKET ANALYSIS ═══════════ -->
+<section id="competition">
+  <h2>🏟️ Competitive &amp; Market Analysis <span class="badge">DACH Gap</span></h2>
+  <p class="section-intro">Comprehensive analysis of 10+ competitors across 4 tiers. Core finding: <strong>no competitor combines GitHub-native async fix with DACH-specific features</strong> — this is STAS's primary differentiation.</p>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>🥇 Competitive Landscape</h3>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:8px;">Four tiers of competitors in the AI SWE ticket-solving space:</p>
+      <table class="kpi-table">
+        <tr><th>Tier</th><th>Tools</th><th>STAS Position</th></tr>
+        <tr><td><strong>Tier 1: Autonomous SWE</strong></td><td>Devin ($500/mo), OpenHands (60K★), SWE-agent (74% bench), Factory AI, AWS Kiro, Google Jules</td><td>Devin owns enterprise, OpenHands leads OSS. STAS wins on <strong>DACH-specific depth</strong></td></tr>
+        <tr><td><strong>Tier 2: IDE Assistants</strong></td><td>Cursor ($20/mo), Windsurf ($15/mo), Cline, Claude Code</td><td>Complementary — no async ticket mode. STAS integrates <strong>with</strong> them via MCP</td></tr>
+        <tr><td><strong>Tier 3: Issue→PR</strong></td><td>Sweep AI (pivoted to JetBrains), <strong>STAS</strong></td><td>Sweep's pivot leaves a gap. STAS is the last standing pure issue→PR tool</td></tr>
+        <tr><td><strong>Tier 4: Multi-Agent</strong></td><td>Codens (JP-first), OpenHands</td><td>Different market focus — Codens is Japan-only, OpenHands is generic</td></tr>
+      </table>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);"><strong>Watch list:</strong> GitHub Copilot Agent (2025, $10-39/mo, massive distribution), Devin adding GitLab/Jira depth, OpenHands adding enterprise features. <strong>New (Jul 2026):</strong> GPT-5.6 Sol + ChatGPT Work (desktop agent), Claude Fable 5 at 80.4% SWE-Bench Pro, Meta Muse Spark 1.1 (MCP-native, $1.25/Mtok), Kimi K3 open-weight (2.8T params) — see Executive Briefing below.</p>
+    </div>
+
+    <div class="card" style="border-color:var(--accent);">
+      <h3>📡 Executive Briefing: AI Model Flood (May–Jul 2026)</h3>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:8px;">8+ model releases in 60 days reshaping the AI coding landscape. The "Great AI Tool Flood" creates both threats and opportunities for STAS.</p>
+      <table class="kpi-table">
+        <tr><th>Model</th><th>Maker</th><th>Released</th><th>Price (in/out per Mtok)</th><th>Key Stats</th></tr>
+        <tr><td><strong>GPT-5.6 Sol/Terra/Luna</strong></td><td>OpenAI</td><td>Jul 9</td><td>$1–$5 / $6–$30</td><td>Sol: 91.9% Terminal-Bench</td></tr>
+        <tr><td><strong>Grok 4.5</strong></td><td>xAI/SpaceXAI</td><td>Jul 8</td><td>$2 / $6</td><td>AA Index 54 (#4)</td></tr>
+        <tr><td><strong>Muse Spark 1.1</strong></td><td>Meta</td><td>Jul 9</td><td>$1.25 / $4.25</td><td>1M context, MCP native</td></tr>
+        <tr><td><strong>Claude Fable 5</strong></td><td>Anthropic</td><td>Jun 9</td><td>$10 / $50</td><td>80.4% SWE-Bench Pro</td></tr>
+        <tr><td><strong>Claude Opus 5</strong></td><td>Anthropic</td><td>Jul 24</td><td>$5 / $25</td><td>New flagship, effort dial</td></tr>
+        <tr><td><strong>SWE-1.7</strong></td><td>Cognition</td><td>Jul 9</td><td>Via Devin</td><td>42.3% FrontierCode</td></tr>
+        <tr><td><strong>Kimi K3</strong></td><td>Moonshot AI</td><td>Jul 16</td><td>$3 / $15</td><td>2.8T params, open-weight</td></tr>
+        <tr><td><strong>Xiaomi MiMo Code</strong></td><td>Xiaomi</td><td>Jun 10</td><td>Free tier</td><td>OpenCode fork, MIT</td></tr>
+        <tr><td><strong>Inkling</strong></td><td>Thinking Machines</td><td>Jul 15</td><td>$1.87 / $4.68</td><td>975B MoE, Apache 2.0</td></tr>
+      </table>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);"><strong>Key Trends:</strong> Price war (12x output gap $4.25–$50/Mtok), model consolidation (Codex→ChatGPT), multi-model routing demand, SWE-Bench saturation (80.4% ceiling), MCP ecosystem validation, open-weight surge, ChatGPT Work desktop agent.</p>
+      <p class="mt-16" style="font-size:12px;color:var(--accent2);">STAS impact: MCP first-mover advantage validated. Plan-first differentiator remains unique. Open-weight models enable self-hosting. 12x price spread makes intelligent routing essential — STAS is positioned as the routing layer.</p>
+    </div>
+
+    <div class="card">
+      <h3>🇪🇺 DACH Market Gap</h3>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:8px;">No competitor covers the full DACH enterprise stack:</p>
+      <table class="kpi-table">
+        <tr><th>Feature</th><th>Devin</th><th>OpenHands</th><th>GitHub Copilot</th><th>Sweep</th><th style="color:var(--accent2);"><strong>STAS</strong></th></tr>
+        <tr><td>GitHub PR</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td style="color:var(--accent2);"><strong>✅</strong></td></tr>
+        <tr><td>GitLab MR</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td style="color:var(--accent2);"><strong>🔲 Planned</strong></td></tr>
+        <tr><td>Linear</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td style="color:var(--accent2);"><strong>✅</strong></td></tr>
+        <tr><td>Jira</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td style="color:var(--accent2);"><strong>🔲 Planned</strong></td></tr>
+        <tr><td>Slack interactive</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td style="color:var(--accent2);"><strong>✅</strong></td></tr>
+        <tr><td>EU data residency</td><td>❌</td><td>✅ self</td><td>✅ EU</td><td>❌</td><td style="color:var(--accent2);"><strong>🔲 Planned</strong></td></tr>
+        <tr><td>German output</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td style="color:var(--accent2);"><strong>🔲 Planned</strong></td></tr>
+        <tr><td>Approval gate</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td style="color:var(--accent2);"><strong>🔲 Planned</strong></td></tr>
+        <tr><td>Audit log</td><td style="color:var(--orange);">🔲</td><td>❌</td><td>❌</td><td>❌</td><td style="color:var(--accent2);"><strong>🔲 Planned</strong></td></tr>
+        <tr><td>Workspace pricing</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td style="color:var(--accent2);"><strong>✅ Planned</strong></td></tr>
+        <tr><td>Open source</td><td>❌</td><td>✅</td><td>❌</td><td>✅</td><td style="color:var(--accent2);"><strong>✅</strong></td></tr>
+      </table>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);"><strong>Gap:</strong> No tool caters specifically to DACH enterprises. STAS fills this with GitLab + Jira, German output, EU hosting, approval gates, and audit logs.</p>
+    </div>
+
+    <div class="card">
+      <h3>📊 DACH Market Size &amp; Dynamics</h3>
+      <table class="kpi-table">
+        <tr><th>Metric</th><th>Value</th><th>Source</th></tr>
+        <tr><td>Germany SaaS market (2024)</td><td>~€24B</td><td>Industry reports</td></tr>
+        <tr><td>Projected by 2030</td><td>~€50B</td><td>Market projections</td></tr>
+        <tr><td>Annual growth rate</td><td>12.2%</td><td>Sector analysis</td></tr>
+        <tr><td>DACH B2B SaaS CAC</td><td>€200-700</td><td>Published benchmarks</td></tr>
+        <tr><td>DACH sales cycle (SMB)</td><td>60-120 days</td><td>Operator data</td></tr>
+        <tr><td>DACH sales cycle (mid-market)</td><td>4-9 months</td><td>Operator data</td></tr>
+        <tr><td>Federal AI investment</td><td>€5B</td><td>Government funding</td></tr>
+      </table>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);"><strong>Key dynamics:</strong> High willingness to pay, low churn once won, under-served by US AI tools. But ~60% of international SaaS expansions fail in DACH in first 2 years due to cultural/regulatory mismatches.</p>
+    </div>
+
+    <div class="card">
+      <h3>🧩 DACH Enterprise Buying Committee</h3>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:8px;">German enterprise sales involves 4+ veto points, each with distinct concerns:</p>
+      <ul>
+        <li><strong>Business Sponsor</strong> (initiates) — ROI, time-to-value, competitive edge</li>
+        <li><strong>IT Security</strong> (veto) — Data protection, SOC 2, ISO 27001, EU residency</li>
+        <li><strong>Legal</strong> (veto) — DPA/AVV, liability clauses, GDPR compliance</li>
+        <li><strong>Procurement</strong> (veto) — Pricing negotiation, contract terms, references</li>
+        <li><strong>Works Council / Betriebsrat</strong> (veto) — Employee impact, co-determination</li>
+      </ul>
+      <p class="mt-16" style="font-size:12px;color:var(--accent2);">Positioning: Compliance-first, risk-first. German buyers evaluate risk <em>before</em> opportunity. Never lead with features — lead with security, data residency, and audit readiness.</p>
+    </div>
+
+    <div class="card">
+      <h3>🎯 GTM Recommendations for DACH</h3>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:8px;">Immediate (0-3 months):</p>
+      <ul>
+        <li>Produce German-language case studies and landing page</li>
+        <li>Prepare DACH-enterprise-ready DPA/AVV template</li>
+        <li>Add STAS_MODE=hosted with EU data residency option (Hetzner)</li>
+        <li>Document compliance posture (ISO 27001, SOC 2)</li>
+      </ul>
+      <p style="font-size:12px;color:var(--dim);margin-top:8px;">Short-term (3-6 months):</p>
+      <ul>
+        <li>Hire German-speaking commercial lead for DACH</li>
+        <li>Attend 2 relevant DACH industry events (Hannover Messe, sector trade shows)</li>
+        <li>Build GitLab + Jira integrations</li>
+        <li>Add German-language PR output feature</li>
+        <li>Establish first German reference customer</li>
+      </ul>
+      <p style="font-size:12px;color:var(--dim);margin-top:8px;">Medium-term (6-12 months):</p>
+      <ul>
+        <li>Set up German GmbH legal entity</li>
+        <li>Build Slack App Directory listing</li>
+        <li>Add approval gate for regulated industries</li>
+        <li>Launch audit log feature</li>
+        <li>Target Mittelstand companies with sector-specific approach</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>📐 Positioning Statement</h3>
+      <blockquote style="border-left:3px solid var(--accent2);padding:12px 16px;margin:8px 0;font-size:13px;color:var(--dim);font-style:italic;">
+        "STAS is your AI developer for European teams — works where you work (GitLab, Jira, Slack), speaks your language, and meets your compliance standards."
+      </blockquote>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">Five core differentiators that form the competitive moat:</p>
+      <ul>
+        <li><strong>Async issue→PR</strong> — Like Sweep's original model but actively maintained (they pivoted)</li>
+        <li><strong>Open source</strong> — Like OpenHands, but DACH-focused with enterprise integrations</li>
+        <li><strong>Slack-first</strong> — Unlike any competitor (Devin is web-first, others are IDE/GitHub-first)</li>
+        <li><strong>GitLab + Jira</strong> — The only tool covering all four: GitHub, GitLab, Linear, Jira</li>
+        <li><strong>DACH-native</strong> — German output, EU hosting, compliance-first. No US competitor offers this.</li>
+      </ul>
+      <p class="mt-16" style="font-size:12px;color:var(--accent2);">Strategic response to threats: Speed (DACH features before competitors adapt), Depth (deeper integrations), Distribution (Slack-first + OSS > traditional enterprise sales), Compliance (turn GDPR/ISO from cost into differentiator).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 7. PRICING ═══════════ -->
+<section id="pricing">
+  <h2>💰 Pricing Strategy <span class="badge">Tiered</span></h2>
+  <p class="section-intro">Usage-based metering with clear tiers. Free version is a deliberate conversion funnel, not a charity.</p>
+
+  <div class="grid grid-3" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));">
+    <div class="card" style="text-align:center;">
+      <h3 style="font-size:18px;">Hobby</h3>
+      <div class="stat" style="font-size:2rem;">$0</div>
+      <div class="stat-label">/ month</div>
+      <ul style="text-align:left;margin-top:16px;">
+        <li>50 fixes per month</li>
+        <li>Public repos only</li>
+        <li>Standard queue (~60s)</li>
+        <li>Comment trigger only</li>
+        <li>Basic analytics</li>
+      </ul>
+    </div>
+    <div class="card" style="text-align:center;border-color:var(--accent);border-width:2px;">
+      <h3 style="font-size:18px;color:var(--accent);">Pro ✦</h3>
+      <div class="stat" style="font-size:2rem;color:var(--accent);">$49</div>
+      <div class="stat-label">/ month</div>
+      <ul style="text-align:left;margin-top:16px;">
+        <li>500 fixes per month</li>
+        <li>Private &amp; public repos</li>
+        <li>Priority queue (~20s)</li>
+        <li>MCP / API access</li>
+        <li>Usage dashboard</li>
+      </ul>
+      <div style="margin-top:12px;"><span class="tag" style="background:var(--accent);color:#fff;">⭐ Anchor</span></div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <h3 style="font-size:18px;">Team</h3>
+      <div class="stat" style="font-size:2rem;">$149</div>
+      <div class="stat-label">/ month</div>
+      <ul style="text-align:left;margin-top:16px;">
+        <li>2,000 fixes per month</li>
+        <li>Org-wide install</li>
+        <li>Custom configs per repo</li>
+        <li>Audit log</li>
+        <li>Team dashboard</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid grid-2 mt-24">
+    <div class="card">
+      <h3>📐 Pricing Rationale</h3>
+      <ul>
+        <li><strong>Hobby</strong> builds habit and demonstrates value. 50 fixes = ~5-10 issues per week for a solo dev. Deliberately capped to create upgrade pressure.</li>
+        <li><strong>Pro at $49</strong> is priced below Copilot ($10/mo for individuals but STAS is complementary, not competitive). Benchmarked against other dev tools: Linear $8/seat, Sentry $26/mo — $49 is premium but justified by fix value.</li>
+        <li><strong>Team at $149</strong> creates a clear step up. 4x the fixes for 3x the price = perceived value. Org-wide install is the key unlock for enterprise adoption.</li>
+        <li><strong>Enterprise (custom)</strong> handles the 5% of revenue that comes from 95% of compliance/security-driven buyers.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📊 Revenue Model at Scale</h3>
+      <table class="kpi-table">
+        <tr><th>Cohort</th><th>Free Users</th><th>Conversion</th><th>Paid Users</th><th>MRR</th></tr>
+        <tr><td>Month 1</td><td>200</td><td>2.5%</td><td>5</td><td>$350</td></tr>
+        <tr><td>Month 3</td><td>1,200</td><td>3.5%</td><td>42</td><td>$2.9K</td></tr>
+        <tr><td>Month 6</td><td>4,000</td><td>5%</td><td>200</td><td>$13.8K</td></tr>
+        <tr><td>Month 12</td><td>12,000</td><td>5.5%</td><td>660</td><td>$45.5K</td></tr>
+      </table>
+      <p style="font-size:11px;color:var(--dim);margin-top:8px;">Assumes: 70% Pro / 20% Team / 10% Enterprise revenue mix. Conversion ramp reflects the 90-day trigger rate rule — free users need time to hit usage limits before upgrading. Baseline dev tool conversion 1-3%; top quartile 3-6%. Target: top-quartile by M6 via lever optimization.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 8. KPIs & METRICS ═══════════ -->
+<section id="kpis">
+  <h2>📊 KPIs &amp; Success Metrics <span class="badge">North Star</span></h2>
+  <p class="section-intro">One North Star metric: <strong>Weekly Active Repos (WAR)</strong> — repos that triggered ≥1 fix in the last 7 days. Everything else lags or leads this.</p>
+
+  <div class="metric-bar">
+    <div class="metric">
+      <div class="value">WAR</div>
+      <div class="label">North Star — Weekly Active Repos</div>
+    </div>
+    <div class="metric">
+      <div class="value">k</div>
+      <div class="label">Viral Coefficient (target &gt; 0.35)</div>
+    </div>
+    <div class="metric">
+      <div class="value">PQL</div>
+      <div class="label">Product-Qualified Leads / week</div>
+    </div>
+    <div class="metric">
+      <div class="value">CAC</div>
+      <div class="label">Customer Acquisition Cost</div>
+    </div>
+  </div>
+
+  <div class="grid grid-2 mt-24">
+    <div class="card">
+      <h3>🔑 Leading Indicators (Daily)</h3>
+      <table class="kpi-table">
+        <tr><th>Metric</th><th>Target (D30)</th><th>Target (D90)</th></tr>
+        <tr><td>GitHub App installs</td><td>50 / wk</td><td>300 / wk</td></tr>
+        <tr><td>First fix completed</td><td>40% of installs</td><td>50% of installs</td></tr>
+        <tr><td>PR footer impressions</td><td>800 / wk</td><td>8,000 / wk</td></tr>
+        <tr><td>MCP tool invocations</td><td>50 / wk</td><td>800 / wk</td></tr>
+        <tr><td>Referral signups</td><td>3 / wk</td><td>25 / wk</td></tr>
+      </table>
+      <p style="font-size:11px;color:var(--dim);margin-top:8px;">Dev tool baseline conversion: 1-3% visitor→install, top quartile 3-6%. GitHub transparent signup (no demo gate) gives ~35% lift over gated flows — STAS uses this for the free tier. The first-fix completion rate is deliberately lower than optimistic models: many installers are tire-kickers or eval-only.</p>
+    </div>
+    <div class="card">
+      <h3>📈 Lagging Indicators (Weekly)</h3>
+      <table class="kpi-table">
+        <tr><th>Metric</th><th>Target (D30)</th><th>Target (D90)</th></tr>
+        <tr><td>Weekly Active Repos (WAR)</td><td>150</td><td>1,500</td></tr>
+        <tr><td>Paid conversions</td><td>3 / wk</td><td>20 / wk</td></tr>
+        <tr><td>Monthly Recurring Revenue</td><td>$1K</td><td>$15K</td></tr>
+        <tr><td>Net Revenue Retention</td><td>—</td><td>100%+</td></tr>
+        <tr><td>Viral coefficient (k)</td><td>0.10</td><td>0.25</td></tr>
+      </table>
+      <p style="font-size:11px;color:var(--dim);margin-top:8px;">90-day trigger rate rule: 5-12% of active users convert within 90 days when levers (usage limits + feature gates + milestone triggers) are properly sequenced. A 0.25 viral coefficient at D90 is ambitious but achievable with PR footer + referral working in tandem — AFFiNE hit 10K stars in 43 days with similar PLG mechanics.</p>
+    </div>
+    <div class="card">
+      <h3>🧪 PQL Signals</h3>
+      <p style="font-size:13px;color:var(--dim);">A user becomes Product-Qualified when they exhibit ≥2 of:</p>
+      <ul>
+        <li>Installed on 3+ repos</li>
+        <li>Fixed 20+ issues in a week</li>
+        <li>Invited 2+ team members</li>
+        <li>Used STAS on a private repo</li>
+        <li>Triggered a fix via MCP/API</li>
+        <li>Issued a <code>@stas fix</code> across multiple repos</li>
+      </ul>
+      <p class="mt-16" style="font-size:12px;color:var(--accent2);">PQLs get routed to: in-app upgrade prompt → email sequence → (if 30d no conversion) sales outreach.</p>
+    </div>
+    <div class="card">
+      <h3>🏦 Budget &amp; Burn</h3>
+      <table class="kpi-table">
+        <tr><th>Item</th><th>Monthly</th><th>Notes</th></tr>
+        <tr><td>LLM inference (API)</td><td>$1,200</td><td>~$3.80/fix × 300 fixes/mo for dev</td></tr>
+        <tr><td>Infrastructure</td><td>$400</td><td>VPS, CDN, DB</td></tr>
+        <tr><td>GitHub Marketplace fee</td><td>$0</td><td>Free for open source</td></tr>
+        <tr><td>Marketing (ads + tools)</td><td>$800</td><td>Phased in from D15</td></tr>
+        <tr><td><strong>Total burn</strong></td><td><strong>$2,400</strong></td><td></td></tr>
+      </table>
+      <p style="font-size:11px;color:var(--dim);margin-top:8px;">At $49/mo Pro: ~49 paid users = breakeven. Target: D60 breakeven.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 9. CONTENT CALENDAR ═══════════ -->
+<section id="content">
+  <h2>📅 Content Calendar <span class="badge">12 Weeks</span></h2>
+  <p class="section-intro">Themed weekly content targeting keyword clusters. Each piece drives a specific acquisition channel.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">
+    <div class="week">
+      <h4>Week 1 — Launch (48h coordinated drop)</h4>
+      <div class="theme">Show HN + Reddit + Product Hunt: "STAS — AI that fixes GitHub issues automatically"</div>
+      <ul>
+        <li><strong>48-hour playbook:</strong> HN + Reddit (r/programming, r/github) + PH within same 2h window</li>
+        <li>GitHub Trending trigger: pre-coordinate ~20 star/fork actions at launch hour</li>
+        <li>Launch tweet thread with demo GIF + 92% pass rate benchmark</li>
+        <li>GitHub Marketplace + MCP Registry submission</li>
+        <li>Cross-post to TLDR AI, The Batch, DevTools Weekly newsletters</li>
+        <li>Reference models: AFFiNE (10K stars/43d), OpenClaw (157K/60d), zerobrew (speed demo viral)</li>
+      </ul>
+    </div>
+    <div class="week">
+      <h4>Week 2 — Technical Deep-Dive</h4>
+      <div class="theme">"How STAS achieves 92% pass rate on real-world issues"</div>
+      <ul>
+        <li>Architecture blog post (context gathering → fix gen → validation → PR)</li>
+        <li>Hacker News / Lobsters re-submission</li>
+        <li>Reddit r/MachineLearning, r/programming</li>
+      </ul>
+    </div>
+    <div class="week">
+      <h4>Week 3 — Comparison / Benchmark</h4>
+      <div class="theme">"STAS vs Copilot vs SWE-Agent vs Codeium: head-to-head"</div>
+      <ul>
+        <li>Benchmark blog with reproducible methodology</li>
+        <li>YouTube walkthrough video</li>
+        <li>Target: get linked from comparison articles</li>
+      </ul>
+    </div>
+    <div class="week">
+      <h4>Week 4 — Open Source Spotlight</h4>
+      <div class="theme">"How open-source projects use STAS to clear their backlog"</div>
+      <ul>
+        <li>Case study with 2-3 open-source projects</li>
+        <li>Guest post / collaboration with project maintainers</li>
+        <li>GitHub Discussions / community engagement</li>
+      </ul>
+    </div>
+    <div class="week">
+      <h4>Week 5 — Tutorial: CI/CD Integration</h4>
+      <div class="theme">"Automate your entire fix pipeline with STAS + GitHub Actions"</div>
+      <ul>
+        <li>Step-by-step tutorial with GitHub Action YAML</li>
+        <li>Dev.to / Medium cross-post</li>
+        <li>Hacker News: "Show HN" updated with CI demo</li>
+      </ul>
+    </div>
+    <div class="week">
+      <h4>Week 6 — MCP &amp; Agent Ecosystem</h4>
+      <div class="theme">"Why MCP is the next distribution frontier for AI tools"</div>
+      <ul>
+        <li>Thought leadership post about agent-to-agent economics</li>
+        <li>Technical walkthrough: calling stas_fix_issue from Claude</li>
+        <li>Target: AI/ML newsletters (The Batch, TLDR AI, etc.)</li>
+      </ul>
+    </div>
+    <div class="week">
+      <h4>Week 7 — User Stories</h4>
+      <div class="theme">"How [Company] reduced issue resolution time by 80% with STAS"</div>
+      <ul>
+        <li>Customer case study (design-heavy post)</li>
+        <li>Video testimonial or written interview</li>
+        <li>Push to G2 / Capterra for reviews</li>
+      </ul>
+    </div>
+    <div class="week">
+      <h4>Week 8 — Advanced Features</h4>
+      <div class="theme">"Multi-repo fixes, custom configs, and org-wide policies in STAS"</div>
+      <ul>
+        <li>Product update blog (new features for Team tier)</li>
+        <li>Email campaign to trial users</li>
+        <li>Twitter thread: "STAS now supports X, Y, Z"</li>
+      </ul>
+    </div>
+    <div class="week">
+      <h4>Week 9 — "State of AI Fixes" Report</h4>
+      <div class="theme">"The State of Automated Issue Resolution — 2026"</div>
+      <ul>
+        <li>Data-rich report (fix types, languages, avg time, success rates)</li>
+        <li>Structured data from STAS usage analytics</li>
+        <li>PR / outreach to tech press (TechCrunch, The Verge, Ars Technica)</li>
+      </ul>
+    </div>
+    <div class="week">
+      <h4>Week 10 — Security &amp; Trust</h4>
+      <div class="theme">"How STAS handles security: sandboxing, permissions, and audit trails"</div>
+      <ul>
+        <li>Security whitepaper / transparency post</li>
+        <li>Address enterprise security concerns proactively</li>
+        <li>Target: enterprise devs evaluating STAS</li>
+      </ul>
+    </div>
+    <div class="week">
+      <h4>Week 11 — Community Building</h4>
+      <div class="theme">"Launch STAS Ambassador Program"</div>
+      <ul>
+        <li>Recruitment post + landing page for ambassadors</li>
+        <li>Power user spotlights</li>
+        <li>Referral program launch (double-sided incentives)</li>
+      </ul>
+    </div>
+    <div class="week">
+      <h4>Week 12 — Growth Retrospective</h4>
+      <div class="theme">"90 days of STAS: lessons, metrics, and what's next"</div>
+      <ul>
+        <li>Full retrospective blog post with data</li>
+        <li>Revenue, users, pass rate, viral coefficient</li>
+        <li>Roadmap reveal for next 90 days</li>
+        <li>Target: leadership / decision-maker audience</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid grid-2 mt-24">
+    <div class="card">
+      <h3>📊 Benchmark Strategy</h3>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:8px;">SWE-bench is saturating — top models now score 70%+. Diminishing differentiation returns. Recommendation: build a <strong>STAS-specific benchmark</strong> focused on real-world JS/TS issue resolution.</p>
+      <p style="font-size:12px;font-weight:600;color:var(--accent2);margin-top:8px;">Why SWE-bench is no longer sufficient:</p>
+      <ul>
+        <li>SWE-bench verified → all frontier models cluster in 60-70%+ range</li>
+        <li>Python-heavy (70%+ Python tasks); JS/TS underrepresented</li>
+        <li>Static dataset — no live repo context, no test suite validation requirement</li>
+        <li>Doesn't measure PR quality, CI pass rate, or merge acceptance</li>
+      </ul>
+      <p style="font-size:12px;font-weight:600;color:var(--accent2);margin-top:8px;">Proposed STAS Benchmark (JS/TS-focused):</p>
+      <ul>
+        <li><strong>50 real-world issues</strong> from popular OSS JS/TS repos (Next.js, Express, Prisma, etc.)</li>
+        <li><strong>3-phase scoring:</strong> fix correctness (40%) → CI pass rate (35%) → PR mergeability (25%)</li>
+        <li><strong>Live repo context:</strong> full repo clone, not synthetic snippets</li>
+        <li><strong>Regression test requirement:</strong> fix must include a regression test that passes</li>
+        <li><strong>Time-bounded:</strong> 5-minute max per issue (realistic dev expectation)</li>
+      </ul>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">Publishing STAS-specific benchmark results creates a moat: competitors can't easily replicate without building the same evaluation pipeline. Target: publish benchmark + results page by D45.</p>
+    </div>
+    <div class="card">
+      <h3>📈 Benchmark Promotion Plan</h3>
+      <ul>
+        <li>Publish interactive benchmark dashboard (pass rate by language, issue type, complexity)</li>
+        <li>Write "Why we built our own benchmark" blog post — critique SWE-bench limitations</li>
+        <li>Submit to HN/Reddit as data-driven analysis, not marketing</li>
+        <li>Invite competitors to submit — turns rivalry into engagement</li>
+        <li>Update quarterly with new issue types and language coverage</li>
+      </ul>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">Goal: make the STAS benchmark the <strong>industry standard</strong> for measuring automated issue resolution quality in JS/TS ecosystems. First-mover advantage in benchmark definition is a durable moat.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 10. LAUNCH READINESS CHECKLIST ═══════════ -->
+<section id="launch">
+  <h2>✅ Launch Readiness Checklist <span class="badge">Live tracker</span></h2>
+  <p class="section-intro">Pre-flight checklist for STAS public launch. Updated as the codebase evolves. <strong style="color:var(--accent2);">Target: Day 90.</strong> Progress: automatically synced with repo changes via commit hooks.</p>
+
+  <div class="chk-summary" id="launch-summary">
+    <div><span class="stat" id="total-items">52</span><div class="stat-label">Total items</div></div>
+    <div><span class="stat" style="color:var(--green);" id="done-count">18</span><div class="stat-label">✅ Done</div></div>
+    <div><span class="stat" style="color:var(--accent);" id="progress-count">6</span><div class="stat-label">🔄 In progress</div></div>
+    <div><span class="stat" style="color:var(--orange);" id="waiting-count">3</span><div class="stat-label">⌛ Blocked</div></div>
+    <div><span class="stat" style="color:var(--dim);" id="pending-count">25</span><div class="stat-label">⬜ Pending</div></div>
+  </div>
+
+  <div class="chk-progress-bar"><div class="fill" style="width:35%"></div></div>
+  <p style="font-size:11px;color:var(--dim);text-align:center;margin-bottom:24px;">Overall progress: 19/52 done (35%)</p>
+
+  <div class="checklist-grid">
+
+    <!-- ── Category: Codebase & Product ── -->
+    <div class="checklist-cat">
+      <h3>🖥️ Codebase &amp; Product <span class="cat-progress">4/9 done</span></h3>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">Core fix pipeline functional <span class="chk-desc">— classifier → dispatch → agent → PR</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">Webhook server with signature verification <span class="chk-desc">— Express, issue_comment.created</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">MCP Discovery endpoint (<code>/mcp/discovery</code>) <span class="chk-desc">— 6 tools + 2 resources</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">MCP JSON-RPC Agent Server (<code>/mcp/jsonrpc</code>) <span class="chk-desc">— 4 tools + Redis + RabbitMQ</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">n8n workflow engine deployed <span class="chk-desc">— 12 workflows (billing, alerts, onboarding)</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">Python STAS backend (FastAPI + Celery) <span class="chk-desc">— worker pool, PostgreSQL, RabbitMQ</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk progress"></span>
+        <span class="chk-label">Quality gates passing <span class="chk-desc">— npm run quality-gates: all 6 gates clean</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">GitHub status checks on PRs <span class="chk-desc">— auto-run quality gates on open PRs</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">End-to-end test suite <span class="chk-desc">— label issue → verify PR created → verify content</span></span>
+      </div>
+    </div>
+
+    <!-- ── Category: Infrastructure & DevOps ── -->
+    <div class="checklist-cat">
+      <h3>☁️ Infrastructure &amp; DevOps <span class="cat-progress">3/6 done</span></h3>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">Docker Compose production stack <span class="chk-desc">— Nginx, PostgreSQL, Redis, RabbitMQ, Flower, workers</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">CI/CD pipeline <span class="chk-desc">— GitHub Actions: lint, test, build, deploy</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">Staging environment <span class="chk-desc">— isolated stack for pre-release testing</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk progress"></span>
+        <span class="chk-label">Monitoring &amp; alerting <span class="chk-desc">— uptime, fix latency, error rate, cost tracking</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Log aggregation <span class="chk-desc">— centralized logs, searchable, 30d retention</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Backup &amp; disaster recovery <span class="chk-desc">— automated DB snapshots, restore tested</span></span>
+      </div>
+    </div>
+
+    <!-- ── Category: Billing & Commercial ── -->
+    <div class="checklist-cat">
+      <h3>💳 Billing &amp; Commercial <span class="cat-progress">1/6 done</span></h3>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">n8n billing workflows <span class="chk-desc">— usage metering, invoice generation</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk progress"></span>
+        <span class="chk-label">Stripe integration (metered billing) <span class="chk-desc">— usage-based pricing, webhooks</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">GitHub Marketplace billing plan <span class="chk-desc">— free + paid tiers defined in Marketplace</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Free tier (50 fixes/mo) <span class="chk-desc">— rate-limited, public repos only</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Pro tier ($49/mo) <span class="chk-desc">— 500 fixes, private repos, priority queue</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Team tier ($149/mo) <span class="chk-desc">— 2000 fixes, org-wide, audit log</span></span>
+      </div>
+    </div>
+
+    <!-- ── Category: GitHub Marketplace ── -->
+    <div class="checklist-cat">
+      <h3>🏪 GitHub Marketplace <span class="cat-progress">1/6 done</span></h3>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">GitHub App created with permissions <span class="chk-desc">— Issues R/W, PRs W, Checks R</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Listing copy + screenshots <span class="chk-desc">— 120x120 logo, 1280x640 screenshot, description</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Privacy policy + ToS URLs <span class="chk-desc">— hosted, reviewed, linked</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Demo GIF/video <span class="chk-desc">— full @stas fix flow in action</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk waiting"></span>
+        <span class="chk-label">Submitted for Marketplace review <span class="chk-desc">— 3-7 day review queue</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Marketplace listing approved <span class="chk-desc">— public listing live</span></span>
+      </div>
+    </div>
+
+    <!-- ── Category: MCP Distribution ── -->
+    <div class="checklist-cat">
+      <h3>🤖 MCP Distribution <span class="cat-progress">2/5 done</span></h3>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">MCP Agent Server code complete <span class="chk-desc">— /mcp/jsonrpc with tools/list, tools/call</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">Discovery endpoint live <span class="chk-desc">— /mcp/discovery with tool/resource listing</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Registered in MCP Registry <span class="chk-desc">— agent discovery directory</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Claude Desktop compatibility tested <span class="chk-desc">— stdio transport works end-to-end</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Listed on Smithery + Glama <span class="chk-desc">— community MCP directories</span></span>
+      </div>
+    </div>
+
+    <!-- ── Category: Website & Documentation ── -->
+    <div class="checklist-cat">
+      <h3>📄 Website &amp; Docs <span class="cat-progress">2/7 done</span></h3>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">Marketing site deployed <span class="chk-desc">— 6 pages: Agents, Benchmark, Blog, Pricing, Trust, Integrations</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk done"></span>
+        <span class="chk-label">Quickstart / getting-started guide <span class="chk-desc">— 3-click onboarding documented</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk progress"></span>
+        <span class="chk-label">Installation guide <span class="chk-desc">— Docker Compose, self-host, cloud</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">API reference docs <span class="chk-desc">— MCP tools, webhook events, configuration</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Blog with 3+ posts <span class="chk-desc">— launch post, architecture deep-dive, benchmark report</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Case study: OSS project using STAS <span class="chk-desc">— real usage data and testimonials</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">FAQ + Troubleshooting page <span class="chk-desc">— common issues and resolutions</span></span>
+      </div>
+    </div>
+
+    <!-- ── Category: Legal & Compliance ── -->
+    <div class="checklist-cat">
+      <h3>⚖️ Legal &amp; Compliance <span class="cat-progress">0/5 done</span></h3>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Terms of Service <span class="chk-desc">— hosted, legally reviewed</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Privacy Policy<span class="chk-desc">— GDPR-compliant, data processing disclosed</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">GDPR DPA (Data Processing Agreement) <span class="chk-desc">— enterprise-ready template</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">SOC 2 / ISO 27001 documentation <span class="chk-desc">— readiness report, compliance posture</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Open-source license file (AGPL v3) <span class="chk-desc">— LICENSE in repo root</span></span>
+      </div>
+    </div>
+
+    <!-- ── Category: DACH/EU GTM ── -->
+    <div class="checklist-cat">
+      <h3>🇪🇺 DACH / EU GTM <span class="cat-progress">0/6 done</span></h3>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">German-language landing page <span class="chk-desc">— localized copy, EU pricing in EUR</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">EU data residency option <span class="chk-desc">— Hetzner/DE hosting, STAS_MODE=hosted:eu</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">DPA template prepared <span class="chk-desc">— German-legal compliant AVV</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">German-language case studies <span class="chk-desc">— at least 1 reference customer</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">GitLab integration (MVP) <span class="chk-desc">— issue reading + MR creation</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Jira integration (MVP) <span class="chk-desc">— webhook → issue → fix → link</span></span>
+      </div>
+    </div>
+
+    <!-- ── Category: Marketing & Launch ── -->
+    <div class="checklist-cat">
+      <h3>🚀 Marketing &amp; Launch <span class="cat-progress">0/8 done</span></h3>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">HN launch post drafted <span class="chk-desc">— "Show HN: STAS — AI that fixes GitHub issues"</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Launch tweet thread <span class="chk-desc">— 8-10 tweets with fix examples + demo GIF</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Reddit posts (3 subreddits) <span class="chk-desc">— r/programming, r/MachineLearning, r/devtools</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Product Hunt submission <span class="chk-desc">— listing page, first 100 upvotes target</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Demo video (2-3 min) <span class="chk-desc">— install → fix → PR in under 60s</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Benchmark data published <span class="chk-desc">— pass rate, cost/fix, comparison table</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Newsletter outreach <span class="chk-desc">— TLDR AI, The Batch, dev newsletters</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Launch coordination timeline <span class="chk-desc">— 48h HN → Reddit → PH drop sequence</span></span>
+      </div>
+    </div>
+
+    <!-- ── Category: Post-Launch Readiness ── -->
+    <div class="checklist-cat">
+      <h3>📊 Post-Launch Readiness <span class="cat-progress">0/6 done</span></h3>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Error tracking (Sentry/PostHog) <span class="chk-desc">— real-time error alerts, crash reporting</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Usage analytics dashboard <span class="chk-desc">— WAR, fix count, conversion funnel</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Cost monitoring <span class="chk-desc">— per-fix cost alerts, monthly burn tracking</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Customer support channel <span class="chk-desc">— Slack community + GitHub issues</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Feedback collection system <span class="chk-desc">— in-app NPS, feature requests, bug reports</span></span>
+      </div>
+      <div class="checklist-item">
+        <span class="chk pending"></span>
+        <span class="chk-label">Runbook / incident response <span class="chk-desc">— documented escalation paths, restore procedures</span></span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════ 11. MARKETPLACE CHECKLIST ═══════════ -->
+<!-- section numbering shifted: 10→launch section, 11→marketplace, 12→risks, 13→mcp, 14→economics -->
+<section id="marketplace">
+  <h2>🏪 GitHub Marketplace Checklist <span class="badge">Required</span></h2>
+  <p class="section-intro">GitHub Marketplace is the primary distribution channel. Listing must pass review before launch.</p>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>✅ Pre-Submission</h3>
+      <ul>
+        <li>GitHub App with <strong>3 permissions</strong>: Issues (read/write), Pull Requests (write), Checks (read)</li>
+        <li>Webhook handler for <code>issue_comment.created</code> events</li>
+        <li>OAuth flow with proper scoping (repo, user)</li>
+        <li>Privacy policy URL + Terms of Service</li>
+        <li>Branding: logo (120x120), screenshot (1280x640), description (≤ 1,000 chars)</li>
+        <li>Pricing plan defined in Marketplace billing</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📋 Listing Requirements</h3>
+      <ul>
+        <li>Category: <strong>Code review / Automated fixes</strong></li>
+        <li>Clear value prop in first sentence: "STAS automatically fixes GitHub issues and opens pull requests"</li>
+        <li>Demo GIF showing the full @stas fix flow</li>
+        <li>Installation instructions (1-click install)</li>
+        <li>Configuration guide (which repos, trigger modes)</li>
+        <li>Link to docs site</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🧪 Post-Submission Checks</h3>
+      <ul>
+        <li>Test installation on a clean org</li>
+        <li>Verify webhook delivery end-to-end</li>
+        <li>Test uninstall flow (cleanup hooks, revoke tokens)</li>
+        <li>Verify billing metering (usage-based for paid plans)</li>
+        <li>Test upgrade/downgrade flows</li>
+        <li>Monitor Marketplace review queue (typically 3-7 days)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📊 Post-Launch Optimization</h3>
+      <ul>
+        <li>Collect reviews (target 4.5★ after first 20 ratings)</li>
+        <li>Respond to all reviews within 48h</li>
+        <li>Monthly changelog updates to listing</li>
+        <li>A/B test listing copy after 500 installs</li>
+        <li>Add "Featured" badges for relevant categories</li>
+        <li>Cross-link from GitHub Actions listing</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 12. BACKLOG ═══════════ -->
+<section id="backlog">
+  <h2>📋 Launch Backlog <span class="badge">23 tickets</span></h2>
+  <p class="section-intro">Prioritized issue backlog organized by launch phase. These are the concrete deliverables needed to take STAS from current state to public launch. Updated as work progresses.</p>
+
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <!-- Phase 1: Foundation & Core Product -->
+    <div class="phase" style="border-left-color:var(--green);">
+      <div><span class="tag done">Phase 1</span></div>
+      <div>
+        <h3>Foundation &amp; Core Product</h3>
+        <p>Things that must work before anything else — code quality, infrastructure, error handling.</p>
+        <table class="kpi-table" style="margin-top:8px;">
+          <tr><th style="width:60px;">Pri</th><th>Ticket</th><th>Effort</th></tr>
+          <tr>
+            <td><span class="tag" style="background:var(--red);color:#fff;">P0</span></td>
+            <td><strong>Add LICENSE file</strong> — AGPL v3 license for the repository. Required for any open-source distribution.</td>
+            <td>XS</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--red);color:#fff;">P0</span></td>
+            <td><strong>Quality gates CI integration</strong> — Integrate existing quality gates (npm run quality-gates) into GitHub Actions CI. Block PRs that fail.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>Error tracking (Sentry)</strong> — Integrate Sentry for runtime error capture across Express server, MCP endpoints, and queue workers.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>Monitoring dashboards</strong> — Deploy Grafana dashboards for LLM cost, fix latency, error rates, queue depth, and API usage.</td>
+            <td>L</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>Log aggregation</strong> — Centralized logging (Loki/Elastic) for production debugging. Structured JSON logging across all services.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>Automated backup &amp; recovery</strong> — PostgreSQL + Redis backup strategy. Point-in-time recovery for production data.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--blue);color:#fff;">P2</span></td>
+            <td><strong>End-to-end test suite</strong> — Full integration tests: label issue → fix generated → PR created → status verified.</td>
+            <td>L</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Phase 2: Launch Infrastructure -->
+    <div class="phase" style="border-left-color:var(--accent);">
+      <div><span class="tag active">Phase 2</span></div>
+      <div>
+        <h3>Launch Infrastructure</h3>
+        <p>Getting the service ready for public use — billing, docs, onboarding.</p>
+        <table class="kpi-table" style="margin-top:8px;">
+          <tr><th style="width:60px;">Pri</th><th>Ticket</th><th>Effort</th></tr>
+          <tr>
+            <td><span class="tag" style="background:var(--red);color:#fff;">P0</span></td>
+            <td><strong>GitHub Marketplace submission</strong> — Submit STAS GitHub App for Marketplace listing. Required for discoverability and billing integration. 3-7 day review queue.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--red);color:#fff;">P0</span></td>
+            <td><strong>Terms of Service &amp; Privacy Policy</strong> — Legal pages covering data handling, GDPR compliance, liability, and service terms.</td>
+            <td>S</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>Pricing page with Stripe checkout</strong> — Live pricing page connected to Stripe billing (metered usage, subscription management).</td>
+            <td>L</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>Demo video</strong> — 60-90s screen recording showing: comment @stas fix → fix generated → PR created. Essential for HN, homepage, and marketplace.</td>
+            <td>S</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>Installation &amp; onboarding guide</strong> — Quickstart guide covering: GitHub App install, repo selection, first fix trigger, configuration options.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>Demo repository</strong> — Public repo with pre-configured issues so users can try STAS without setting up their own repo.</td>
+            <td>S</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Phase 3: Launch Execution -->
+    <div class="phase" style="border-left-color:var(--orange);">
+      <div><span class="tag next">Phase 3</span></div>
+      <div>
+        <h3>Launch Execution</h3>
+        <p>Launch day deliverables — the coordinated drop across all channels.</p>
+        <table class="kpi-table" style="margin-top:8px;">
+          <tr><th style="width:60px;">Pri</th><th>Ticket</th><th>Effort</th></tr>
+          <tr>
+            <td><span class="tag" style="background:var(--red);color:#fff;">P0</span></td>
+            <td><strong>HN Show HN post + materials</strong> — Draft Show HN post with benchmark data (92% pass rate), demo GIF, and comment response templates.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--red);color:#fff;">P0</span></td>
+            <td><strong>Launch tweet &amp; Reddit posts</strong> — Coordinated social posts on X/Twitter (thread with examples), r/MachineLearning, r/programming, r/opensource.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>MCP Registry submission</strong> — Register STAS at mcp-registry.com, Claude MCP directory, Cursor tools marketplace. Zero-cost agent distribution.</td>
+            <td>S</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>Claude Desktop MCP test</strong> — End-to-end verification: Claude Desktop → STAS MCP tool → fix issue → confirm PR created.</td>
+            <td>S</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--blue);color:#fff;">P2</span></td>
+            <td><strong>Product Hunt submission</strong> — PH launch with maker comment, demo video, and coordinated upvotes. Best on Tuesday/Wednesday.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--blue);color:#fff;">P2</span></td>
+            <td><strong>MCP "STAS + Claude" tutorial</strong> — Step-by-step tutorial showing Claude Desktop calling STAS to fix issues. Publish on docs site and dev.to.</td>
+            <td>S</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Phase 4: Post-Launch Growth -->
+    <div class="phase" style="border-left-color:var(--purple);">
+      <div><span class="tag future">Phase 4</span></div>
+      <div>
+        <h3>Post-Launch Growth (Weeks 2-4)</h3>
+        <p>Momentum building activities after the initial launch spike subsides.</p>
+        <table class="kpi-table" style="margin-top:8px;">
+          <tr><th style="width:60px;">Pri</th><th>Ticket</th><th>Effort</th></tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>GitHub Actions marketplace listing</strong> — Publish stas-fix GitHub Action for CI/CD pipeline integration.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>Benchmark blog post</strong> — "STAS vs Copilot vs SWE-Agent vs OpenHands" with reproducible methodology. SEO play for comparison traffic.</td>
+            <td>L</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--orange);color:#222;">P1</span></td>
+            <td><strong>Case study with pilot user</strong> — First external user case study: issues fixed, time saved, pass rate. Anchor for trust-building.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--blue);color:#fff;">P2</span></td>
+            <td><strong>Referral program launch</strong> — "Invite a teammate → you both get 50 free fixes." In-app referral tracking and reward distribution.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--blue);color:#fff;">P2</span></td>
+            <td><strong>Ambassador program recruitment</strong> — Power user program: $50 credit per referral, featured spot, early access to features.</td>
+            <td>S</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--blue);color:#fff;">P2</span></td>
+            <td><strong>API documentation site</strong> — Full API docs for REST endpoints and MCP tools. Auto-generated from OpenAPI spec.</td>
+            <td>L</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Phase 5: DACH & Enterprise -->
+    <div class="phase" style="border-left-color:var(--pink);">
+      <div><span class="tag future">Phase 5</span></div>
+      <div>
+        <h3>DACH &amp; Enterprise Expansion (Month 2-3)</h3>
+        <p>DACH-specific features and compliance work for European enterprise adoption.</p>
+        <table class="kpi-table" style="margin-top:8px;">
+          <tr><th style="width:60px;">Pri</th><th>Ticket</th><th>Effort</th></tr>
+          <tr>
+            <td><span class="tag" style="background:var(--blue);color:#fff;">P2</span></td>
+            <td><strong>German-language landing page</strong> — German i18n for marketing site. 2-3x conversion lift for non-developer DACH buyers.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--blue);color:#fff;">P2</span></td>
+            <td><strong>German PR output</strong> — PR descriptions and commit messages in German. No competitor offers this.</td>
+            <td>M</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--blue);color:#fff;">P2</span></td>
+            <td><strong>GitLab integration</strong> — GitLab MR support (DACH enterprises use self-hosted GitLab, not GitHub).</td>
+            <td>XL</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--blue);color:#fff;">P2</span></td>
+            <td><strong>Jira integration</strong> — Jira ticket sync (DACH enterprises use Jira for project management).</td>
+            <td>XL</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--blue);color:#fff;">P2</span></td>
+            <td><strong>EU hosting &amp; data residency</strong> — Hosted option on Hetzner/AWS Frankfurt with EU-only data storage. Required for GDPR compliance.</td>
+            <td>L</td>
+          </tr>
+          <tr>
+            <td><span class="tag" style="background:var(--blue);color:#fff;">P2</span></td>
+            <td><strong>DPA/AVV template</strong> — Enterprise-ready Data Processing Agreement in German. Required by German procurement from first conversation.</td>
+            <td>S</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 13. RISK MATRIX ═══════════ -->
+<section id="risks">
+  <h2>⚠️ Risk Matrix <span class="badge">Mitigations</span></h2>
+  <p class="section-intro">Major risks identified, with mitigations.</p>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:4px 20px;">
+    <div class="risk">
+      <span class="level critical">Critical</span>
+      <div class="what">
+        <h4>Fix quality degradation at scale</h4>
+        <p>92% pass rate is on current benchmarks. Diverse codebases will surface edge cases. Bad fixes erode trust rapidly.</p>
+      </div>
+      <div class="mitigation">Invest in test harness: every fix must pass repo tests before PR. Manual CI gate for first 500 fixes per repo. Continuous benchmark suite.</div>
+    </div>
+    <div class="risk">
+      <span class="level critical">Critical</span>
+      <div class="what">
+        <h4>AI safety / malicious code generation</h4>
+        <p>OpenClaw case study: malware-style skill caused reputational collapse. If STAS generates vulnerable code, trust destroyed.</p>
+      </div>
+      <div class="mitigation">Sandboxed fix generation. Static analysis scan before PR. No dependency installation without user approval. Prompt injection guards.</div>
+    </div>
+    <div class="risk">
+      <span class="level high">High</span>
+      <div class="what">
+        <h4>Viral coefficient below threshold</h4>
+        <p>If k &lt; 0.20, growth stalls. PLG requires organic amplification. Without it, paid acquisition costs kill unit economics.</p>
+      </div>
+      <div class="mitigation">PR footer A/B testing from day 1. Multi-channel redundancy. If k &lt; 0.20 by D45, pivot to direct sales / outbound.</div>
+    </div>
+    <div class="risk">
+      <span class="level high">High</span>
+      <div class="what">
+        <h4>GitHub Marketplace rejection / delays</h4>
+        <p>Review queue can take 2-4 weeks. Rejection for policy violations resets clock. Delays kill launch timeline.</p>
+      </div>
+      <div class="mitigation">Submit 3 weeks before launch date. Pre-review against GitHub's listing policy. Have fallback: direct OAuth install page.</div>
+    </div>
+    <div class="risk">
+      <span class="level medium">Medium</span>
+      <div class="what">
+        <h4>LLM API cost overruns</h4>
+        <p>$3.80/fix is current. Heavy usage by free tier at 50 fixes/user could burn cash if conversion is slow.</p>
+      </div>
+      <div class="mitigation">Rate limiting on free tier. Cheaper model variants for free tier (e.g., Claude Haiku vs Sonnet). Monitor cost per fix weekly.</div>
+    </div>
+    <div class="risk">
+      <span class="level medium">Medium</span>
+      <div class="what">
+        <h4>MCP Registry adoption uncertainty</h4>
+        <p>New channel. Unclear how many devs discover tools via MCP. Could be zero-distribution channel.</p>
+      </div>
+      <div class="mitigation">Low effort to register. Don't depend on it. Treat as bonus distribution. Track MCP invocations from day 1.</div>
+    </div>
+    <div class="risk">
+      <span class="level low">Low</span>
+      <div class="what">
+        <h4>Competitive response</h4>
+        <p>Copilot, Codeium, or SWE-Agent add similar auto-fix capability. Market becomes crowded.</p>
+      </div>
+      <div class="mitigation">Focus on STAS specialization (issue → PR pipeline) vs general code gen. Speed and pass rate as differentiators. Open-source community lock-in.</div>
+    </div>
+    <div class="risk">
+      <span class="level low">Low</span>
+      <div class="what">
+        <h4>GitHub API rate limits / changes</h4>
+        <p>STAS depends on GitHub API for reading repos, creating PRs. API changes could break integration.</p>
+      </div>
+      <div class="mitigation">Abstract GitHub API layer. Monitor GitHub Changelog. Have fallback: CLI-based workflow. GitLab roadmap for Q3.</div>
+    </div>
+    <div class="risk">
+      <span class="level high">High</span>
+      <div class="what">
+        <h4>ChatGPT Work adds issue→PR mode</h4>
+        <p>OpenAI's ChatGPT Work desktop agent (launched Jul 2026) could add direct GitHub issue→PR capability, compressing STAS's core differentiation.</p>
+      </div>
+      <div class="mitigation">Deepen DACH/enterprise features (GitLab, Jira, compliance) that ChatGPT Work is unlikely to match. Focus on multi-provider routing as differentiator.</div>
+    </div>
+    <div class="risk">
+      <span class="level medium">Medium</span>
+      <div class="what">
+        <h4>Meta enters issue→PR via MCP</h4>
+        <p>Meta's Muse Spark 1.1 (MCP-native, $1.25/Mtok) could serve as backbone for an MCP-based issue→PR competitor. Meta has distribution through open-source ecosystem.</p>
+      </div>
+      <div class="mitigation">Leverage STAS's existing Linear/GitLab integrations and WORKFLOW.md policy engine. Meta entering MCP space validates the protocol — benefit outweighs threat.</div>
+    </div>
+    <div class="risk">
+      <span class="level medium">Medium</span>
+      <div class="what">
+        <h4>Kimi K3 open weights enable EU competitors</h4>
+        <p>Moonshot AI's Kimi K3 (2.8T params, open-weight) enables EU startups to build coding agents with GDPR-native positioning and self-hosting.</p>
+      </div>
+      <div class="mitigation">Accelerate DACH GTM to establish STAS as the open-source orchestration standard. Partner with open-weight models rather than compete.</div>
+    </div>
+    <div class="risk">
+      <span class="level low">Low</span>
+      <div class="what">
+        <h4>Xiaomi MiMo Code global traction</h4>
+        <p>MiMo Code (MIT, OpenCode fork) could gain traction in cost-sensitive markets as a free coding agent with strong capabilities.</p>
+      </div>
+      <div class="mitigation">STAS already works with OpenCode as a backend — MiMo Code adoption adds another compatible backend. Low threat, potential opportunity.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 14. MCP / AGENT DISTRIBUTION ═══════════ -->
+<section id="mcp">
+  <h2>🤖 MCP &amp; Agent Distribution Strategy <span class="badge">Channel 5</span></h2>
+  <p class="section-intro">Aakash Gupta's Agent Distribution framework identifies MCP/Agent Discovery as Channel 5 — the emerging distribution layer where AI agents discover and invoke other AI tools autonomously.</p>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>📡 What It Is</h3>
+      <p><strong>MCP (Model Context Protocol)</strong> is an open standard backed by <strong>Anthropic, GitHub, and Microsoft</strong>. It enables AI agents (Claude, Cursor, VS Code, etc.) to discover and call external tools via a standard interface.</p>
+      <p class="mt-16">The <strong>MCP Registry</strong> is the discovery layer where tools are listed — similar to npm or GitHub Marketplace, but for agent-consumable tools.</p>
+      <ul class="mt-16">
+        <li><strong>97 million</strong> monthly MCP SDK downloads (growing)</li>
+        <li><strong>First-mover advantage</strong> — very few issue-resolution MCP servers exist</li>
+        <li><strong>Agent virality</strong> — one agent calls STAS → result gets shared → another agent discovers</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🔧 STAS MCP Implementation</h3>
+      <p>STAS exposes <strong>two</strong> MCP endpoints:</p>
+      <p class="mt-16"><strong>1. MCP Discovery</strong> (<code>/mcp/discovery</code>) — REST + tool listing with 6 tools:</p>
+      <ul>
+        <li><code>stas_label_issue</code> — Label a GitHub issue for fixing</li>
+        <li><code>stas_run_fix</code> — Trigger the fix pipeline from an issue URL</li>
+        <li><code>stas_check_status</code> — Poll fix run status by run_id</li>
+        <li><code>stas_get_pr</code> — Get PR details for a completed fix run</li>
+        <li><code>list_issues</code> — List tracked issues with status filters</li>
+        <li><code>search_codebase</code> — Search across fix runs and issues</li>
+      </ul>
+      <p class="mt-16"><strong>2. MCP Agent Server</strong> (<code>/mcp/jsonrpc</code>) — JSON-RPC 2.0 with 4 tools:</p>
+      <ul>
+        <li><code>stas_fix_issue</code> — Dispatch a fix run (params: repoOwner, repoName, issueNumber)</li>
+        <li><code>stas_check_status</code> — Check status by runId</li>
+        <li><code>stas_list_runs</code> — List recent runs (limit, status filter)</li>
+        <li><code>stas_get_run</code> — Full run details by runId</li>
+      </ul>
+      <p class="mt-16"><strong>Resources:</strong> <code>stas://runs/{runId}</code>, <code>stas://issues/{issueId}</code></p>
+      <p class="mt-16"><strong>Transports:</strong> SSE, Streamable HTTP, stdio</p>
+      <p><strong>Backend:</strong> Redis job store + RabbitMQ dispatch pipeline</p>
+    </div>
+    <div class="card">
+      <h3>📋 Agent Distribution Playbook</h3>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:8px;">Existing agent distribution companies and their models — STAS can learn from and integrate with these:</p>
+      <ul>
+        <li><strong>Firmly</strong> — Agent-based code review distribution. STAS parallels: fix-as-a-service via agent invocation</li>
+        <li><strong>Manufact</strong> — Manufacturing agent marketplace. Model: multi-agent orchestration layer</li>
+        <li><strong>MCPize</strong> — MCP tool wrapper/distribution. STAS should publish an MCPize-compatible package</li>
+        <li><strong>Bazak Bridge</strong> — Agent-to-agent API bridge. STAS can offer a Bazak-compatible endpoint for cross-agent fix dispatch</li>
+      </ul>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">Strategy: register on ALL distribution platforms. Zero-cost distribution. Each platform is a new acquisition channel with zero marginal cost per invocation.</p>
+      <ul class="mt-16">
+        <li>Submit to <strong>MCP Registry</strong> (mcp-registry.com) for agent discoverability</li>
+        <li>Register STAS in Claude MCP directory, Cursor tools, VS Code agent marketplace</li>
+        <li>Publish OpenAPI spec for agent parsers</li>
+        <li>Add MCP badge to README + GitHub Marketplace listing</li>
+        <li>Create "MCP + STAS" tutorial showing Claude calling STAS to fix issues</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🔍 MCP SEO &amp; Discoverability</h3>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:8px;">Agent distribution is a search-and-discovery game. Multiple registries and discovery layers exist — STAS must rank in all:</p>
+      <ul>
+        <li><strong>Smithery</strong> — MCP server directory. Rank by capability tags, fix rate, response time</li>
+        <li><strong>Glama</strong> — AI tool marketplace. Optimization: complete profile, demo video, verified usage stats</li>
+        <li><strong>GitHub MCP Registry</strong> — Official registry (backed by Anthropic/GitHub/MS). Primary listing target</li>
+        <li><strong>MCP Server Card</strong> — Standardized server metadata card for auto-discovery by MCP clients</li>
+        <li><strong>Twig optimizer</strong> — MCP tool performance optimizer. STAS should publish Twig-compatible metrics</li>
+        <li><strong>Agentic Resource Discovery</strong> — Emerging standard for agents to discover resources dynamically</li>
+      </ul>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">Each registry is a search engine for agents. STAS needs presence in all of them. Optimization levers: description keywords (fix, issue, PR, automate), demonstrated reliability (response time, success rate), and integration breadth (GitHub, GitLab, linear).</p>
+    </div>
+    <div class="card">
+      <h3>📊 MCP Channel Projections</h3>
+      <table class="kpi-table">
+        <tr><th>Metric</th><th>Conservative</th><th>Optimistic</th></tr>
+        <tr><td>MCP tool invocations (D30)</td><td>100/wk</td><td>500/wk</td></tr>
+        <tr><td>MCP-driven signups (D60)</td><td>20/wk</td><td>100/wk</td></tr>
+        <tr><td>Share of total acquisition (D90)</td><td>5%</td><td>15%</td></tr>
+        <tr><td>Cost per MCP-driven install</td><td>$0</td><td>$0</td></tr>
+      </table>
+      <p style="font-size:11px;color:var(--dim);margin-top:8px;">Zero marginal distribution cost. Every MCP invocation is free marketing.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 15. UNIT ECONOMICS ═══════════ -->
+<section id="economics">
+  <h2>🧮 Unit Economics &amp; Models <span class="badge">$3.80/fix</span></h2>
+  <p class="section-intro">Detailed breakdown of cost per fix, gross margin, and scaling economics.</p>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>📉 Cost Per Fix Breakdown</h3>
+      <table class="kpi-table">
+        <tr><th>Component</th><th>Cost</th><th>% of Total</th></tr>
+        <tr><td>LLM inference (primary)</td><td>$2.40</td><td>63%</td></tr>
+        <tr><td>Context gathering (repo read)</td><td>$0.60</td><td>16%</td></tr>
+        <tr><td>Test validation run</td><td>$0.50</td><td>13%</td></tr>
+        <tr><td>Infrastructure overhead</td><td>$0.30</td><td>8%</td></tr>
+        <tr style="border-top:2px solid var(--border);"><td><strong>Total per fix</strong></td><td><strong>$3.80</strong></td><td><strong>100%</strong></td></tr>
+      </table>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">With model improvements, target $2.00/fix by D90 (cheaper inference, caching, context reuse).</p>
+    </div>
+    <div class="card">
+      <h3>📈 Margin Expansion Path</h3>
+      <table class="kpi-table">
+        <tr><th>Scenario</th><th>Cost/Fix</th><th>Pro Revenue/Fix*</th><th>Gross Margin</th></tr>
+        <tr><td>Today (baseline)</td><td>$3.80</td><td>$4.90</td><td class="good">22%</td></tr>
+        <tr><td>D90 target (cheaper model)</td><td>$2.00</td><td>$4.90</td><td class="good">59%</td></tr>
+        <tr><td>Scale (D180, volume discount)</td><td>$1.20</td><td>$4.90</td><td class="good">75%</td></tr>
+        <tr><td>Optimized (dedicated infra)</td><td>$0.80</td><td>$4.90</td><td class="good">84%</td></tr>
+      </table>
+      <p style="font-size:11px;color:var(--dim);margin-top:8px;">*Pro tier: $49/mo ÷ 10 fixes/mo (average usage) = $4.90/fix. Higher usage = higher margin per customer.</p>
+    </div>
+    <div class="card">
+      <h3>💳 LTV / CAC Model</h3>
+      <table class="kpi-table">
+        <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+        <tr><td>Avg Monthly Revenue (Pro)</td><td>$49</td><td></td></tr>
+        <tr><td>Avg Monthly Revenue (Team)</td><td>$149</td><td></td></tr>
+        <tr><td>Blended ARPU</td><td>$68</td><td>Assumes 70/20/10 mix</td></tr>
+        <tr><td>Avg Lifetime (months)</td><td>14</td><td>Based on dev tools benchmark</td></tr>
+        <tr><td><strong>LTV (blended)</strong></td><td><strong>$952</strong></td><td></td></tr>
+        <tr><td>CAC (PLG, self-serve)</td><td>$85</td><td>Content + marketplace cost</td></tr>
+        <tr><td><strong>LTV:CAC</strong></td><td><strong>11.2:1</strong></td><td class="good">Excellent</td></tr>
+        <tr><td>CAC payback period</td><td>1.3 months</td><td></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>🧮 Breakeven Analysis</h3>
+      <div class="grid grid-2" style="padding-top:8px;">
+        <div><span class="stat">$2,400</span><div class="stat-label">Monthly fixed costs</div></div>
+        <div><span class="stat">~49</span><div class="stat-label">Paid users to breakeven</div></div>
+        <div><span class="stat">$1.10</span><div class="stat-label">Gross profit per fix (current)</div></div>
+        <div><span class="stat">~2,182</span><div class="stat-label">Fixes needed for breakeven</div></div>
+      </div>
+      <p class="mt-16" style="font-size:12px;color:var(--dim);">At current cost structure, 49 paid Pro subscribers or ~2,182 paid fixes/month covers all operating costs. Target D60 breakeven.</p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <p>STAS — Solving Tickets As A Service &bull; Master Plan v1.2 &bull; Generated 2026-07-27</p>
+  <p style="margin-top:4px;">This document synthesizes STRATEGY.md, ROADMAP.md, stas-plg-ux-design.md, .sisyphus/stas-90-day-growth-plan.md, MARKETPLACE.md, AGENTS.md, PLG channel research, and competitive-analysis.md v2.0 AI model landscape supplement.</p>
+</footer>
+
+</body>
+</html>

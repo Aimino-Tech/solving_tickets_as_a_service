@@ -185,7 +185,7 @@ describe('PipelineRunStore', () => {
       });
 
       const firstCall = mockQueryWithRetry.mock.calls[0];
-      expect(firstCall[0]).toContain('tenant_id');
+      expect(firstCall[0]).toContain('tenantId');
       expect(firstCall[0]).toContain('status');
       expect(firstCall[0]).toContain('agent_type');
       expect(firstCall[0]).toContain('issue_id');
@@ -242,8 +242,8 @@ describe('PipelineRunStore', () => {
         status: 'running',
       });
 
-      expect(event.stage_name).toBe('investigate');
-      expect(event.tenant_id).toBe('t1');
+      expect(event.stageName).toBe('investigate');
+      expect(event.tenantId).toBe('t1');
     });
   });
 
@@ -258,7 +258,7 @@ describe('PipelineRunStore', () => {
 
       const events = await store.getStageEvents(1);
       expect(events).toHaveLength(2);
-      expect(events[0].stage_name).toBe('investigate');
+      expect(events[0].stageName).toBe('investigate');
     });
   });
 

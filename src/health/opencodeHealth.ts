@@ -24,7 +24,7 @@
  */
 
 import { config } from '../config.js';
-import { mockResponses } from '../agent/mockResponses.js';
+import { mockResponses } from '../types/mockResponses.js';
 import { bridgeMetrics } from '../bridge/metrics.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -110,7 +110,7 @@ export class OpenCodeHealthClient {
    */
   start(): void {
     if (this.started) {
-      log.debug('OpenCode health client already started');
+      log.debug('Agent health client already started');
       return;
     }
     this.started = true;
@@ -123,18 +123,18 @@ export class OpenCodeHealthClient {
         circuitBreakerThreshold: this.circuitBreakerThreshold,
         opencodeUrl: config.opencode.url,
       },
-      'Starting OpenCode health client',
+      'Starting agent health client',
     );
 
     // Perform initial check immediately
     this.poll().catch((err) => {
-      log.warn({ err: String(err) }, 'Initial OpenCode health poll failed');
+      log.warn({ err: String(err) }, 'Initial agent health poll failed');
     });
 
     // Schedule periodic polling
     this.pollTimer = setInterval(() => {
       this.poll().catch((err) => {
-        log.warn({ err: String(err) }, 'Scheduled OpenCode health poll failed');
+        log.warn({ err: String(err) }, 'Scheduled agent health poll failed');
       });
     }, this.pollIntervalMs);
 
@@ -168,7 +168,7 @@ export class OpenCodeHealthClient {
       this.abortController = null;
     }
 
-    log.info('OpenCode health client stopped');
+    log.info('Agent health client stopped');
   }
 
   /**
@@ -245,7 +245,7 @@ export class OpenCodeHealthClient {
         responseBody = (await response.json()) as OpenCodeHealthResponse;
       } catch {
         parseError = true;
-        log.warn({ httpStatus: response.status }, 'OpenCode health returned non-JSON response');
+        log.warn({ httpStatus: response.status }, 'Agent health endpoint returned non-JSON response');
       }
 
       if (response.ok && !parseError && responseBody) {
@@ -262,7 +262,7 @@ export class OpenCodeHealthClient {
           queueDepth: (responseBody.queue_depth as number) ?? null,
           activeSessions: (responseBody.active_sessions as number) ?? (responseBody.sessions as number) ?? null,
         };
-        log.debug('OpenCode health check succeeded');
+        log.debug('Agent health check succeeded');
       } else {
         // Non-OK response or parse failure
         this.handleFailure(response.status, parseError ? 'Non-JSON response' : `HTTP ${response.status}`);
@@ -297,7 +297,7 @@ export class OpenCodeHealthClient {
             threshold: this.circuitBreakerThreshold,
             error,
           },
-          'OpenCode circuit breaker opened — marking as degraded',
+          'Agent circuit breaker opened — marking as degraded',
         );
       }
     } else {
@@ -312,7 +312,7 @@ export class OpenCodeHealthClient {
         circuit: this.status.circuit,
         error,
       },
-      'OpenCode health check failed',
+      'Agent health check failed',
     );
   }
 

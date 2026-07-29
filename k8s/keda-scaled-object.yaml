@@ -111,6 +111,14 @@ spec:
     - type: rabbitmq
       metadata:
         protocol: amqp0-9-1
+        queueName: stas.agents.dlq
+        mode: QueueLength
+        value: "1"
+      authenticationRef:
+        name: stas-rabbitmq-auth
+    - type: rabbitmq
+      metadata:
+        protocol: amqp0-9-1
         queueName: stas.agents.triage
         mode: QueueLength
         value: "5"

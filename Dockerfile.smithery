@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy MCP server code
 COPY stas_mcp/ ./stas_mcp/
-COPY mcp/ ./mcp/
+COPY mcp-manifest/ ./mcp-manifest/
 
 # Install Python dependencies
 RUN pip install --no-cache-dir "mcp>=1.0.0" httpx

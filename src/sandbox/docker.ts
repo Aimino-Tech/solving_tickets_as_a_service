@@ -31,7 +31,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, writeFileSync, unlinkSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
-import Docker from 'dockerode';
+import Docker, { Container as DockerodeContainer } from 'dockerode';
 import { Writable } from 'node:stream';
 
 import { config } from '../config.js';
@@ -125,7 +125,7 @@ export function dockerCmd(args: string[], timeoutMs = DOCKER_TIMEOUT_MS): ExecRe
 export class DockerSandbox implements SandboxExecutor {
   private docker: Docker;
   private container: ContainerInfo | null = null;
-  private dockerContainer: Docker.Container | null = null;
+  private dockerContainer: DockerodeContainer | null = null;
   private tempDir: string = '';
   private repoDir: string = '';
   private repoHostPath: string = '';
@@ -239,12 +239,12 @@ export class DockerSandbox implements SandboxExecutor {
         stdin: false,
       });
 
-      const { stdout, stderr } = await collectExecOutput(stream);
+      const { stdout, stderr } = await collectExecOutput(stream as NodeJS.ReadableStream);
 
       let exitCode = 0;
       try {
         const inspect = await execInstance.inspect();
-        exitCode = inspect.ExitCode ?? -1;
+        exitCode = (inspect.ExitCode as number) ?? -1;
       } catch {
         exitCode = -1;
       }
@@ -805,7 +805,7 @@ export class DockerSandbox implements SandboxExecutor {
 
   private async pullImage(image: string): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      this.docker.pull(image, (err: Error | null, stream: NodeJS.ReadableStream | undefined) => {
+      const pullCallback: (err: Error | null, stream?: NodeJS.ReadableStream) => void = (err, stream) => {
         if (err) {
           reject(new Error(`Failed to pull image '${image}': ${err.message}`));
           return;
@@ -816,7 +816,8 @@ export class DockerSandbox implements SandboxExecutor {
         } else {
           resolve();
         }
-      });
+      };
+      (this.docker.pull as (image: string, cb: (err: Error | null, stream?: NodeJS.ReadableStream) => void) => void)(image, pullCallback);
     });
   }
 

@@ -149,7 +149,7 @@ export const bitbucketClient: PlatformClient = {
       installationId: Number(event.issue.installationId ?? 0),
       repoOwner: event.issue.repoOwner,
       repoName: event.issue.repoName,
-      repoPrivate: event.issue.repoPrivate,
+      repoPrivate: event.issue.repoPrivate ?? true,
       issueNumber: event.issue.number,
       issueTitle: event.issue.title,
       issueBody: event.issue.body,
@@ -196,7 +196,7 @@ export function createBitbucketWebhooks(enqueue: EnqueueHandler) {
         const jobData: IssueJobData = {
           repoOwner: parsed.issue.repoOwner,
           repoName: parsed.issue.repoName,
-          repoPrivate: parsed.issue.repoPrivate,
+          repoPrivate: parsed.issue.repoPrivate ?? true,
           issueNumber: parsed.issue.number,
           issueTitle: parsed.issue.title,
           issueBody: parsed.issue.body ?? '',

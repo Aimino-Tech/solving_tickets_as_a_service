@@ -1,0 +1,92 @@
+{
+  "name": "Telegram Notifications — OS events → STAS Telegram bot",
+  "nodes": [
+    {
+      "id": "webhook-tg",
+      "name": "Telegram Notification Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-notification",
+        "options": {}
+      }
+    },
+    {
+      "id": "format-tg",
+      "name": "Format Telegram Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "name": "parse_mode",
+              "value": "={{ $json.parse_mode || 'Markdown' }}"
+            },
+            {
+              "name": "disable_web_page_preview",
+              "value": "={{ $json.disable_web_page_preview === false ? 'false' : 'true' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "telegram-send",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "={{ $json.parse_mode }}",
+          "disable_web_page_preview": "={{ $json.disable_web_page_preview === 'false' ? false : true }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Notification Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Telegram Message": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Telegram": {
+      "main": [
+        []
+      ]
+    }
+  }
+}

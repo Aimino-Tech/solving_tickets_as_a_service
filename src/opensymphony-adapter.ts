@@ -33,7 +33,10 @@
 
 import crypto from 'node:crypto';
 import http from 'node:http';
-import { type Logger, rootLogger } from './utils/logger.js';
+import { rootLogger } from './utils/logger.js';
+import { captureEvent } from './analytics/tracker.js';
+
+type Logger = ReturnType<typeof rootLogger.child>;
 import {
   openCodeDispatchRequestSchema,
   safeParseDispatchRequest,
@@ -194,6 +197,12 @@ export class PlanningStage implements PipelineStage {
         { requestId: context.requestId, issue: intent?.estimatedIssue ?? 'unknown' },
         '[PlanningStage] Generated fix plan',
       );
+
+      captureEvent('plan_generated', context.requestId, {
+        estimatedIssue: intent?.estimatedIssue ?? null,
+        promptLength: intent?.promptLength ?? null,
+        durationMs: Date.now() - start,
+      });
 
       return {
         stage: this.name,
@@ -429,9 +438,9 @@ async function runPipeline(
       ? `OpenSymphony pipeline completed successfully (${successCount}/${stageCount} stages passed in ${totalDurationMs}ms).`
       : `OpenSymphony pipeline completed with ${errors.length} error(s) (${successCount}/${stageCount} stages passed).`,
     confidence,
-    output: collectOutput?.diff ?? null,
-    branch: collectOutput?.branch ?? null,
-    testOutput: collectOutput?.testOutput ?? null,
+    output: collectOutput?.diff ?? undefined,
+    branch: collectOutput?.branch ?? undefined,
+    testOutput: collectOutput?.testOutput ?? undefined,
     errors,
     metadata: {
       requestId: context.requestId,

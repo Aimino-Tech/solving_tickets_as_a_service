@@ -59,14 +59,10 @@ async function createTestDb(): Promise<{ run: (sql: string) => Promise<void>; cl
     };
   }
 
-  // Fallback to SQLite for local/CI (no external DB needed)
-  const Database = (await import('better-sqlite3')).default;
-  const dbPath = '/tmp/stas-test-migrations.db';
-
-  // Remove existing test DB if present
-  try { unlinkSync(dbPath); } catch { /* ignore */ }
-
-  const db = new Database(dbPath);
+  throw new Error(
+    'No DATABASE_URL set. This test requires a PostgreSQL connection URL ' +
+    'via the DATABASE_URL environment variable.',
+  );
 
   return {
     run: async (sql: string) => {

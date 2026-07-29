@@ -9,7 +9,7 @@ const log = rootLogger.child({ module: 'api-routes' });
 // Rate Limiting: 60 requests per minute per IP on API endpoints
 // ---------------------------------------------------------------------------
 
-const router = Router();
+const router: Router = Router();
 
 router.use(requireAuth);
 

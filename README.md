@@ -1,9 +1,11 @@
 # STAS — Solving Tickets As A Service
 
-![CI](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)
-![CD](https://github.com/tamnguyen08/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![CI](https://github.com/Aimino-Tech/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)
+![CD](https://github.com/Aimino-Tech/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 ![Benchmark](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/.github/badges/benchmark.svg)
+[![Product Hunt](https://img.shields.io/badge/Product_Hunt-Product_of_the_Day-FF6154?logo=producthunt&logoColor=white)](https://www.producthunt.com/posts/stas)
+
 [![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/aimino)
 [![RapidAPI](https://img.shields.io/badge/RapidAPI-0055FF?logo=rapidapi&logoColor=white)](https://rapidapi.com/aimino/api/stas-api?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
 [![MCP](https://img.shields.io/badge/MCP_Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/stas-mcp?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
@@ -13,6 +15,8 @@
 [![OpenCode](https://img.shields.io/badge/OpenCode_Skill-7C3AED?logo=opencode&logoColor=white)](https://opencode.ai/skills/stas)
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-2088FF?logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/stas-eval)
 [![Star History](https://api.star-history.com/svg?repos=Aimino-Tech/solving_tickets_as_a_service&type=Date)](https://star-history.com/#Aimino-Tech/solving_tickets_as_a_service&Date)
+[![Uptime](https://img.shields.io/badge/Uptime-100%25-brightgreen)](https://stas.betteruptime.com)
+[![Status Page](https://img.shields.io/badge/Status_Page-0055FF)](https://stas.betteruptime.com)
 
 **Label a GitHub issue. Get a pull request.**
 
@@ -74,6 +78,8 @@ npx -y @aimino/stas-mcp
 ![STAS Demo](dashboard/public/assets/launch/stas-demo.gif)
 
 ## Quick Start — First Fix in <15 Minutes
+
+> 📖 For detailed installation instructions covering all deployment options (Cloud, Docker Compose, Kubernetes, Railway/Fly.io), see the [Installation Guide](docs/install/README.md).
 
 Choose your install path:
 
@@ -462,6 +468,10 @@ bash scripts/rapidapi-sync.sh
 
 See [`DEVELOPMENT.md`](DEVELOPMENT.md) for a comprehensive deployment guide covering local dev, Railway, Fly.io, and Kubernetes.
 For day-2 operations (scaling, monitoring, incident response), see the [Production Runbook](ops/runbook.md) and [Alert Playbook](ops/playbook.md).
+
+### GitHub Marketplace
+
+STAS is listed on [GitHub Marketplace](https://github.com/marketplace/actions/stas-eval). The listing copy, visual asset specs, and submission checklist are in [docs/marketplace-listing.md](docs/marketplace-listing.md).
 
 ### One-Click Deploy
 

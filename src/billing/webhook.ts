@@ -19,6 +19,7 @@ import type { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { captureEvent } from '../analytics/tracker.js';
 import { queryWithRetry } from '../db/connection.js';
 import { getPlanByPriceId } from './plans.js';
 import type { PlanId } from './plans.js';
@@ -211,6 +212,17 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
       currentPeriodEnd.toISOString(),
     ],
   );
+
+  // Track user conversion in PostHog
+  try {
+    captureEvent('user_converted', String(accountId), {
+      planId,
+      subscriptionId,
+      customerId,
+    });
+  } catch (analyticsErr) {
+    log.error({ err: String(analyticsErr) }, 'Failed to track user_converted event');
+  }
 }
 
 /**
@@ -317,4 +329,14 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Pro
      WHERE stripe_subscription_id = $1`,
     [subscriptionId],
   );
+
+  // Track user cancellation in PostHog
+  try {
+    const customerId = subscription.customer?.toString() ?? '';
+    captureEvent('user_canceled', customerId, {
+      subscriptionId,
+    });
+  } catch (analyticsErr) {
+    log.error({ err: String(analyticsErr) }, 'Failed to track user_canceled event');
+  }
 }

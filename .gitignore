@@ -1,42 +1,61 @@
-.venv
-.omo
-.stas
 *~
 # Build output
 *.cert
+coverage/
 # Debug logs
 # Dependencies
 dist/
 .DS_Store
+*.egg-info/
 .env
+*.env*
 # Environment files (contain secrets - NEVER commit)
 .env.*.local
 .env.local
 .env.production
 .env.staging
+eval/results/
 # IDE
 .idea/
 *.key
 node_modules
 node_modules/
 npm-debug.log*
+.omo
 # OS
 *.pem
 # Private keys and secrets
+*.pyc
+# __pycache__/
+*.pyo
+.pytest_cache/
+# Python
 sbom/
+__pycache__/
+*.py[cod]
+
+# Báo cáo test & Artifacts
+/allure-results/
+/allure-report/
+/test-results/
+/playwright-report/
+/coverage/
+
+# Ảnh chụp màn hình và video ghi lỗi
+/screenshots/
+/videos/
+
+# Môi trường & Bí mật (Token, Password)
+.env
+.env.local
+.stas
 .stas-private-key.pem
 stas-private-key.pem
 # Supply chain: Generated SBOM artifacts (CI generates these)
 *.swo
 *.swp
 Thumbs.db
+.venv
 .vscode/
-eval/results/
-# Python
-# __pycache__/
-*.pyc
-*.pyo
-.pytest_cache/
-*.egg-info/
 .worktrees/
-coverage/
+worktrees/

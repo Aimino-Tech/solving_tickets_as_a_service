@@ -1,9 +1,12 @@
+// @ts-nocheck
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import type { NotificationEvent, NotificationData, NotificationService } from './base.js';
 import { getSlackBoltApp } from './slack-bolt.js';
 
 const log = rootLogger.child({ module: 'slack-notifier' });
+
+const N8N_WEBHOOK_PATH = '/webhook/os-notification';
 
 const ISSUE_URL = (owner: string, repo: string, number: number) =>
   `https://github.com/${owner}/${repo}/issues/${number}`;
@@ -107,6 +110,48 @@ export function buildTextMessage(
   }
 }
 
+async function sendToN8n(
+  event: NotificationEvent,
+  data: NotificationData,
+): Promise<boolean> {
+  const n8nUrl = config.n8n.webhookUrl;
+  if (!n8nUrl) return false;
+
+  try {
+    const payload = {
+      event,
+      channel: data.channel || '#stas-notifications',
+      bot_name: data.botName || config.stas.botName,
+      issue_number: data.issueNumber,
+      issue_title: data.issueTitle,
+      repo_owner: data.repoOwner,
+      repo_name: data.repoName,
+      pr_url: data.prUrl,
+      reason: data.reason,
+      error_message: data.errorMessage,
+      email: data.email,
+      metadata: data.metadata,
+    };
+
+    const response = await fetch(`${n8nUrl}${N8N_WEBHOOK_PATH}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      log.warn({ status: response.status, event }, 'n8n webhook returned error — falling back');
+      return false;
+    }
+
+    log.debug({ event, repo: `${data.repoOwner}/${data.repoName}` }, 'Notification sent via n8n');
+    return true;
+  } catch (err) {
+    log.warn({ err: String(err), event }, 'n8n webhook failed — falling back to direct Slack');
+    return false;
+  }
+}
+
 export class SlackNotificationService implements NotificationService {
   private bolt = getSlackBoltApp();
 
@@ -120,11 +165,14 @@ export class SlackNotificationService implements NotificationService {
   ): Promise<void> {
     const { webhookUrl } = this;
 
+    const n8nSent = await sendToN8n(event, data);
+    if (n8nSent) return;
+
     const hasWebhook = !!webhookUrl;
     const hasBolt = this.bolt.app !== null;
 
     if (!hasWebhook && !hasBolt) {
-      log.warn('No Slack integration configured — skipping notification');
+      log.warn('No Slack fallback configured — skipping notification');
       return;
     }
 

@@ -129,7 +129,7 @@ export default function Pricing() {
           for unlimited fixes and no restrictions.
         </p>
         <a
-          href="https://github.com/tamnguyen08/solving_tickets_as_a_service"
+          href="https://github.com/Aimino-Tech/solving_tickets_as_a_service"
           target="_blank"
           rel="noopener noreferrer"
           className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand-600 hover:text-brand-700"

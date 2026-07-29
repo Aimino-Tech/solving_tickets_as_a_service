@@ -32,7 +32,7 @@ import { queryWithRetry } from '../db/connection.js';
 
 const log = rootLogger.child({ module: 'billing-api' });
 
-const router = Router();
+const router: Router = Router();
 
 // ---------------------------------------------------------------------------
 // Rate limiting: 30 requests per minute per IP on billing endpoints
@@ -43,7 +43,7 @@ const router = Router();
 // Helper: extract account ID from request
 // ---------------------------------------------------------------------------
 
-function getAccountId(req: Request): number | undefined {
+async function getAccountId(req: Request): Promise<number | undefined> {
   const headerId = req.headers['x-account-id'] as string | undefined;
   if (headerId) {
     const id = Number(headerId);
@@ -56,8 +56,44 @@ function getAccountId(req: Request): number | undefined {
     if (!Number.isNaN(id)) return id;
   }
 
+  if (req.user) {
+    const result = await queryWithRetry<{ id: number }>(
+      'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
+      [req.user.email],
+    );
+    if (result.rows.length > 0) return result.rows[0].id;
+  }
+
   return undefined;
 }
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/billing/plan — Get current subscription plan for account
+// ---------------------------------------------------------------------------
+
+router.get('/plan', async (req: Request, res: Response) => {
+  try {
+    const accountId = await getAccountId(req);
+    const planId: PlanId = config.stas.defaultTier === 'pro' ? 'pro' : 'free';
+    const plan = PLANS[planId];
+    if (!plan) { res.status(404).json({ error: 'Plan not found' }); return; }
+    res.json({
+      id: plan.id,
+      name: plan.name,
+      description: plan.description,
+      amountCents: plan.amountCents,
+      monthlyFixLimit: plan.monthlyFixLimit,
+      premiumModels: plan.premiumModels,
+      concurrentFixes: plan.concurrentFixes,
+      customWebhooks: plan.customWebhooks,
+      prioritySupport: plan.prioritySupport,
+      trialDays: plan.trialDays,
+    });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to get plan');
+    res.status(500).json({ error: 'Failed to get plan' });
+  }
+});
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/billing/plans — List available subscription plans
@@ -87,7 +123,7 @@ router.get('/plans', (_req: Request, res: Response) => {
 
 router.get('/trial', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required. Provide x-account-id header or accountId query param.' });
       return;
@@ -107,7 +143,7 @@ router.get('/trial', async (req: Request, res: Response) => {
 
 router.post('/subscription/create-checkout', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required. Provide x-account-id header.' });
       return;
@@ -183,7 +219,7 @@ router.post('/subscription/create-checkout', async (req: Request, res: Response)
 
 router.post('/subscription/portal', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
@@ -218,7 +254,7 @@ router.post('/subscription/portal', async (req: Request, res: Response) => {
 
 router.post('/subscription/cancel', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
@@ -250,7 +286,7 @@ router.post('/subscription/cancel', async (req: Request, res: Response) => {
 
 router.post('/subscription/reactivate', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await getAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;

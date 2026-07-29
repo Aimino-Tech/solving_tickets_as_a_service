@@ -1,286 +1,185 @@
-/**
- * Onboarding wizard routes.
- *
- * Provides the API surface for the onboarding wizard flow:
- *   GET  /onboarding       — Returns the wizard UI / onboarding state
- *   POST /onboarding/github  — Records GitHub App installation completion
- *   POST /onboarding/linear  — Handles Linear OAuth callback
- *   GET  /onboarding/status — Returns structured onboarding progress
- *
- * State is managed by the `OnboardingStateMachine` in the workers package
- * via HTTP calls to the Celery task endpoint or direct Redis access.
- *
- * @module routes/onboarding
- */
-
 import { Router, type Request, type Response } from 'express';
-import { config } from '../config.js';
+import { requireAuth } from '../auth/middleware.js';
+import { z } from 'zod';
+import {
+  getWizardProgress,
+  startWizard,
+  recordGitHubInstallation,
+  recordRepoSelection,
+  recordBillingSetup,
+  recordTeamSetup,
+  resetWizard,
+  skipWizard,
+  getWizardConfig,
+} from '../onboarding/wizard.js';
+import type { GitHubInstallationParams, RepoSelectionParams, BillingSetupParams, TeamSetupParams } from '../onboarding/wizard.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'onboarding' });
 
-// ---------------------------------------------------------------------------
-// Rate Limiting: 10 requests per minute for onboarding endpoints
-// ---------------------------------------------------------------------------
+const router: Router = Router();
 
-const router = Router();
+const GitHubInstallSchema = z.object({
+  installationId: z.number().int().positive(),
+  accountLogin: z.string().optional(),
+  accountType: z.enum(['user', 'organization']).optional(),
+  reposGranted: z.number().int().optional(),
+});
 
+const RepoSelectionSchema = z.object({
+  repoOwner: z.string().min(1),
+  repoName: z.string().min(1),
+  repoId: z.number().int().optional(),
+});
 
-// ---------------------------------------------------------------------------
-// Helper: extract tenant / account identifier
-// ---------------------------------------------------------------------------
+const BillingSetupSchema = z.object({
+  planId: z.string().optional(),
+  trialDays: z.number().int().optional(),
+  skipBilling: z.boolean().optional(),
+});
 
-function getTenantId(req: Request): string | undefined {
-  const headerId = req.headers['x-tenant-id'] as string | undefined;
-  if (headerId) return headerId;
-  const queryId = req.query.tenantId as string | undefined;
-  if (queryId) return queryId;
-  // Fall back to a default tenant in OSS mode
-  if (config.stas.mode === 'oss') return 'default';
-  return undefined;
+const TeamSetupSchema = z.object({
+  teamName: z.string().optional(),
+  skipTeam: z.boolean().optional(),
+});
+
+const StepParamSchema = z.enum(['github-install', 'repo-selection', 'billing-setup', 'team-setup']);
+
+router.use(requireAuth);
+
+function getTenantId(req: Request): string {
+  return String(req.user!.id);
 }
 
-// ---------------------------------------------------------------------------
-// POST /onboarding/github — Record GitHub App installation
-// ---------------------------------------------------------------------------
-
-/**
- * Called after the tenant installs the GitHub App.  Marks the
- * `github_installed` state in the onboarding state machine.
- *
- * Body: { installationId: number, tenantId?: string }
- */
-router.post('/github', async (req: Request, res: Response) => {
-  try {
-    const tenantId = req.body.tenantId ?? getTenantId(req);
-    const { installationId } = req.body;
-
-    if (!tenantId) {
-      res.status(400).json({ error: 'Tenant identification required. Provide x-tenant-id header, tenantId query param, or tenantId in body.' });
-      return;
-    }
-    if (!installationId || typeof installationId !== 'number') {
-      res.status(400).json({ error: 'installationId (number) is required in request body' });
-      return;
-    }
-
-    // Record GitHub installation by dispatching to the Celery task
-    const { default: fetch } = await import('node-fetch');
-    const workerUrl = process.env.WORKER_API_URL ?? 'http://localhost:9090';
-
-    const response = await fetch(`${workerUrl}/api/onboarding/github`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenant_id: tenantId, installation_id: installationId }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => 'unknown');
-      log.error({ tenantId, installationId, status: response.status, errorBody }, 'Worker onboarding task failed');
-      res.status(502).json({ error: 'Failed to record GitHub installation', detail: errorBody });
-      return;
-    }
-
-    const result = await response.json() as { state: string };
-    log.info({ tenantId, installationId, state: result.state }, 'GitHub installation recorded');
-
-    res.json({ success: true, state: result.state });
-  } catch (err) {
-    log.error({ err: String(err) }, 'Failed to process GitHub installation');
-    res.status(500).json({ error: 'Failed to process GitHub installation' });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// POST /onboarding/linear — Handle Linear OAuth callback
-// ---------------------------------------------------------------------------
-
-/**
- * Called when the tenant completes the Linear OAuth flow.  Marks the
- * `linear_authed` state.
- *
- * Body: { code: string, tenantId?: string }
- */
-router.post('/linear', async (req: Request, res: Response) => {
-  try {
-    const tenantId = req.body.tenantId ?? getTenantId(req);
-    const { code } = req.body;
-
-    if (!tenantId) {
-      res.status(400).json({ error: 'Tenant identification required.' });
-      return;
-    }
-    if (!code || typeof code !== 'string') {
-      res.status(400).json({ error: 'OAuth authorization code (string) is required in request body' });
-      return;
-    }
-
-    // Exchange the OAuth code for a token and record the auth state
-    const { default: fetch } = await import('node-fetch');
-    const workerUrl = process.env.WORKER_API_URL ?? 'http://localhost:9090';
-
-    const response = await fetch(`${workerUrl}/api/onboarding/linear`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenant_id: tenantId, code }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => 'unknown');
-      log.error({ tenantId, status: response.status, errorBody }, 'Worker onboarding linear task failed');
-      res.status(502).json({ error: 'Failed to process Linear OAuth', detail: errorBody });
-      return;
-    }
-
-    const result = await response.json() as { state: string };
-    log.info({ tenantId, state: result.state }, 'Linear OAuth completed');
-
-    res.json({ success: true, state: result.state });
-  } catch (err) {
-    log.error({ err: String(err) }, 'Failed to process Linear OAuth');
-    res.status(500).json({ error: 'Failed to process Linear OAuth' });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// GET /onboarding/status — Returns structured onboarding progress
-// ---------------------------------------------------------------------------
-
-/**
- * Returns the current onboarding state for a tenant.
- *
- * Query params: tenantId (optional, falls back to x-tenant-id header)
- */
-router.get('/status', async (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const tenantId = getTenantId(req);
-
-    if (!tenantId) {
-      res.status(400).json({ error: 'Tenant identification required. Provide x-tenant-id header or tenantId query param.' });
-      return;
-    }
-
-    // Fetch onboarding state from the worker
-    const { default: fetch } = await import('node-fetch');
-    const workerUrl = process.env.WORKER_API_URL ?? 'http://localhost:9090';
-
-    const response = await fetch(`${workerUrl}/api/onboarding/status?tenant_id=${encodeURIComponent(tenantId)}`);
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => 'unknown');
-      log.error({ tenantId, status: response.status, errorBody }, 'Worker onboarding status fetch failed');
-      res.status(502).json({ error: 'Failed to fetch onboarding status', detail: errorBody });
-      return;
-    }
-
-    const result = await response.json() as {
-      tenant_id: string;
-      state: string;
-      github_installed: boolean;
-      linear_authed: boolean;
-      repo_selected: boolean;
-      completed: boolean;
-      installed_repos?: number;
-      created_at?: string;
-      updated_at?: string;
-    };
-
-    res.json({
-      tenantId: result.tenant_id,
-      state: result.state,
-      steps: {
-        githubInstalled: result.github_installed,
-        linearAuthed: result.linear_authed,
-        repoSelected: result.repo_selected,
-        completed: result.completed,
-      },
-      installedRepos: result.installed_repos ?? 0,
-      createdAt: result.created_at ?? null,
-      updatedAt: result.updated_at ?? null,
-    });
+    const progress = await startWizard(tenantId);
+    res.status(201).json({ success: true, progress });
   } catch (err) {
-    log.error({ err: String(err) }, 'Failed to get onboarding status');
-    res.status(500).json({ error: 'Failed to get onboarding status' });
+    log.error({ err: String(err) }, 'Failed to start wizard');
+    res.status(500).json({ error: 'Failed to start wizard' });
   }
 });
 
-// ---------------------------------------------------------------------------
-// GET /onboarding — Returns the full wizard state for the UI
-// ---------------------------------------------------------------------------
-
-/**
- * Returns the current onboarding state and any relevant metadata
- * for rendering the wizard UI.
- *
- * Query params: tenantId (optional, falls back to x-tenant-id header)
- */
 router.get('/', async (req: Request, res: Response) => {
   try {
     const tenantId = getTenantId(req);
-
-    if (!tenantId) {
-      // In OSS mode, if no tenant is identified, return the minimal response
-      if (config.stas.mode === 'oss') {
-        res.json({
-          wizard: 'oss',
-          state: 'not_started',
-          steps: {
-            githubInstalled: false,
-            linearAuthed: false,
-            repoSelected: false,
-            completed: false,
-          },
-          githubAppUrl: `https://github.com/apps/${config.github.appId}/installations/new`,
-        });
-        return;
-      }
-      res.status(400).json({ error: 'Tenant identification required.' });
-      return;
-    }
-
-    // Fetch full onboarding status from the worker
-    const { default: fetch } = await import('node-fetch');
-    const workerUrl = process.env.WORKER_API_URL ?? 'http://localhost:9090';
-
-    const response = await fetch(`${workerUrl}/api/onboarding/status?tenant_id=${encodeURIComponent(tenantId)}`);
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => 'unknown');
-      log.error({ tenantId, status: response.status, errorBody }, 'Worker onboarding fetch failed');
-      res.status(502).json({ error: 'Failed to fetch onboarding data', detail: errorBody });
-      return;
-    }
-
-    const result = await response.json() as {
-      tenant_id: string;
-      state: string;
-      github_installed: boolean;
-      linear_authed: boolean;
-      repo_selected: boolean;
-      completed: boolean;
-      installed_repos?: number;
-      created_at?: string;
-      updated_at?: string;
-    };
-
-    res.json({
-      wizard: 'hosted',
-      tenantId: result.tenant_id,
-      state: result.state,
-      steps: {
-        githubInstalled: result.github_installed,
-        linearAuthed: result.linear_authed,
-        repoSelected: result.repo_selected,
-        completed: result.completed,
-      },
-      installedRepos: result.installed_repos ?? 0,
-      githubAppUrl: `https://github.com/apps/${config.github.appId}/installations/new`,
-      createdAt: result.created_at ?? null,
-      updatedAt: result.updated_at ?? null,
-    });
+    const progress = await getWizardProgress(tenantId);
+    res.json({ progress, config: getWizardConfig() });
   } catch (err) {
-    log.error({ err: String(err) }, 'Failed to get onboarding wizard');
-    res.status(500).json({ error: 'Failed to get onboarding wizard' });
+    log.error({ err: String(err) }, 'Failed to get wizard state');
+    res.status(500).json({ error: 'Failed to get wizard state' });
+  }
+});
+
+router.get('/status', async (req: Request, res: Response) => {
+  try {
+    const tenantId = getTenantId(req);
+    const progress = await getWizardProgress(tenantId);
+    res.json({ progress, config: getWizardConfig() });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to get wizard status');
+    res.status(500).json({ error: 'Failed to get wizard status' });
+  }
+});
+
+router.post('/step/:step', async (req: Request, res: Response) => {
+  try {
+    const tenantId = getTenantId(req);
+    const { step } = req.params;
+
+    const parsedStep = StepParamSchema.safeParse(step);
+    if (!parsedStep.success) {
+      res.status(400).json({
+        error: 'Invalid step',
+        message: 'Step must be one of: github-install, repo-selection, billing-setup, team-setup',
+      });
+      return;
+    }
+
+    let progress;
+
+    switch (parsedStep.data) {
+      case 'github-install': {
+        const body = GitHubInstallSchema.safeParse(req.body);
+        if (!body.success) {
+          res.status(400).json({ error: 'Invalid request body', details: body.error.issues });
+          return;
+        }
+        progress = await recordGitHubInstallation(tenantId, body.data as GitHubInstallationParams);
+        break;
+      }
+      case 'repo-selection': {
+        const body = RepoSelectionSchema.safeParse(req.body);
+        if (!body.success) {
+          res.status(400).json({ error: 'Invalid request body', details: body.error.issues });
+          return;
+        }
+        progress = await recordRepoSelection(tenantId, body.data as RepoSelectionParams);
+        break;
+      }
+      case 'billing-setup': {
+        const body = BillingSetupSchema.safeParse(req.body);
+        if (!body.success) {
+          res.status(400).json({ error: 'Invalid request body', details: body.error.issues });
+          return;
+        }
+        progress = await recordBillingSetup(tenantId, body.data as BillingSetupParams);
+        break;
+      }
+      case 'team-setup': {
+        const body = TeamSetupSchema.safeParse(req.body);
+        if (!body.success) {
+          res.status(400).json({ error: 'Invalid request body', details: body.error.issues });
+          return;
+        }
+        progress = await recordTeamSetup(tenantId, body.data as TeamSetupParams);
+        break;
+      }
+    }
+
+    res.json({ success: true, progress });
+  } catch (err) {
+    const message = String(err);
+    if (message.includes('must be') || message.includes('before')) {
+      res.status(400).json({ error: message });
+      return;
+    }
+    log.error({ err: message }, 'Failed to complete wizard step');
+    res.status(500).json({ error: 'Failed to complete wizard step' });
+  }
+});
+
+router.post('/skip', async (req: Request, res: Response) => {
+  try {
+    const tenantId = getTenantId(req);
+    const progress = await skipWizard(tenantId);
+    res.json({ success: true, progress });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to skip onboarding');
+    res.status(500).json({ error: 'Failed to skip onboarding' });
+  }
+});
+
+router.post('/reset', async (req: Request, res: Response) => {
+  try {
+    const tenantId = getTenantId(req);
+    const progress = await resetWizard(tenantId);
+    res.json({ success: true, progress });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to reset wizard');
+    res.status(500).json({ error: 'Failed to reset wizard' });
+  }
+});
+
+router.get('/config', async (_req: Request, res: Response) => {
+  try {
+    const config = getWizardConfig();
+    res.json({ config });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to get wizard config');
+    res.status(500).json({ error: 'Failed to get wizard config' });
   }
 });
 
