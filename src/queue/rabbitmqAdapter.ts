@@ -33,7 +33,8 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
 				await rmqConnect();
 			}
 
-			const messageId = `${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}-${Date.now()}`;
+			const source = data.source ?? 'github';
+			const messageId = `${source}:${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}`;
 			const content = {
 				...data,
 				_meta: {
