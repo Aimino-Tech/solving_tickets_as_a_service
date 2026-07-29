@@ -281,15 +281,16 @@ async function main(): Promise<void> {
 
   // Start OpenSymphony adapter as sidecar (alternative OpenCode protocol backend)
   if (config.opensymphony.enabled) {
+    log.warn('OpenSymphony adapter is a WIP placeholder — all pipeline stages are no-ops. Implement real stages per AIM-3378.');
     const { startOpenSymphonyAdapter } = await import('./opensymphony-adapter.js');
     try {
       symphonyAdapter = await startOpenSymphonyAdapter({
         port: config.opensymphony.port,
         host: config.opensymphony.host,
       });
-      log.info(
+      log.warn(
         { port: config.opensymphony.port, host: config.opensymphony.host },
-        'OpenSymphony adapter started',
+        'OpenSymphony adapter started (WIP placeholder)',
       );
     } catch (err) {
       log.warn({ err: String(err) }, 'Failed to start OpenSymphony adapter (non-fatal)');

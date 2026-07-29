@@ -34,7 +34,6 @@
 import crypto from 'node:crypto';
 import http from 'node:http';
 import { rootLogger } from './utils/logger.js';
-import { captureEvent } from './analytics/tracker.js';
 
 type Logger = ReturnType<typeof rootLogger.child>;
 import {
@@ -49,6 +48,10 @@ import {
 // ---------------------------------------------------------------------------
 
 const log: Logger = rootLogger.child({ module: 'opensymphony-adapter' });
+
+const WIP_MSG = 'OpenSymphony adapter is a WIP placeholder — all pipeline stages are no-ops. Set OPENSYMPHONY_ENABLED=false or implement real stages per AIM-3378.';
+
+log.warn(WIP_MSG);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -132,248 +135,78 @@ const DEFAULT_CONFIG: OpenSymphonyAdapterConfig = {
 // Built-in Pipeline Stages
 // ---------------------------------------------------------------------------
 
-/**
- * Intent Stage — Parse the prompt to classify what the user wants.
- *
- * In a real OpenSymphony deployment this would invoke an LLM call.
- * The placeholder logs the prompt length and extracts basic metadata.
- */
 export class IntentStage implements PipelineStage {
   name = 'intent';
 
   async execute(context: PipelineContext): Promise<PipelineStageResult> {
     const start = Date.now();
-    try {
-      // Extract a rough description from the prompt's first heading
-      const lines = context.prompt.split('\n').slice(0, 20);
-      const titleLine = lines.find((l) => l.startsWith('**#')) || lines[0] || '(no title)';
-      const promptLength = context.prompt.length;
-
-      log.info(
-        { requestId: context.requestId, promptLength, titleLine: titleLine.slice(0, 120) },
-        '[IntentStage] Classified intent',
-      );
-
-      return {
-        stage: this.name,
-        success: true,
-        output: {
-          titleLine,
-          promptLength,
-          estimatedIssue: titleLine.replace(/^\*{0,2}#?\d*:?\s*\*{0,2}/, ''),
-          type: 'bug_fix', // heuristic — STAS issues are usually bug fixes
-        },
-        durationMs: Date.now() - start,
-      };
-    } catch (err) {
-      return {
-        stage: this.name,
-        success: false,
-        error: String(err),
-        durationMs: Date.now() - start,
-      };
-    }
+    log.warn({ requestId: context.requestId }, '[IntentStage] WIP placeholder — skipping');
+    return {
+      stage: this.name,
+      success: false,
+      error: WIP_MSG,
+      durationMs: Date.now() - start,
+    };
   }
 }
 
-/**
- * Plan Stage — Create a fix plan from the prompt and intent.
- *
- * The placeholder generates a simple plan structure.  A real
- * implementation would decompose the issue into steps, identify
- * relevant files, and outline the approach.
- */
 export class PlanningStage implements PipelineStage {
   name = 'plan';
 
   async execute(context: PipelineContext): Promise<PipelineStageResult> {
     const start = Date.now();
-    try {
-      const intent = context.stageResults.get('intent')?.output as
-        | { estimatedIssue?: string; promptLength?: number }
-        | undefined;
-
-      log.info(
-        { requestId: context.requestId, issue: intent?.estimatedIssue ?? 'unknown' },
-        '[PlanningStage] Generated fix plan',
-      );
-
-      captureEvent('plan_generated', context.requestId, {
-        estimatedIssue: intent?.estimatedIssue ?? null,
-        promptLength: intent?.promptLength ?? null,
-        durationMs: Date.now() - start,
-      });
-
-      return {
-        stage: this.name,
-        success: true,
-        output: {
-          steps: [
-            'Reproduce the issue',
-            'Trace root cause in relevant files',
-            'Implement minimal fix',
-            'Write regression test',
-            'Run existing test suite',
-            'Commit and push changes',
-          ],
-          estimatedIssue: intent?.estimatedIssue ?? null,
-        },
-        durationMs: Date.now() - start,
-      };
-    } catch (err) {
-      return {
-        stage: this.name,
-        success: false,
-        error: String(err),
-        durationMs: Date.now() - start,
-      };
-    }
+    log.warn({ requestId: context.requestId }, '[PlanningStage] WIP placeholder — skipping');
+    return {
+      stage: this.name,
+      success: false,
+      error: WIP_MSG,
+      durationMs: Date.now() - start,
+    };
   }
 }
 
-/**
- * Execute Stage — Carry out the fix.
- *
- * This is where OpenSymphony would invoke the agent sandbox,
- * apply patches, run tests, etc.  The placeholder logs the
- * execution and returns a summary.
- */
 export class ExecutionStage implements PipelineStage {
   name = 'execute';
 
   async execute(context: PipelineContext): Promise<PipelineStageResult> {
     const start = Date.now();
-    try {
-      const plan = context.stageResults.get('plan')?.output as { steps?: string[] } | undefined;
-
-      log.info(
-        {
-          requestId: context.requestId,
-          steps: plan?.steps?.length ?? 0,
-          model: context.model,
-        },
-        '[ExecutionStage] Executed fix pipeline',
-      );
-
-      return {
-        stage: this.name,
-        success: true,
-        output: {
-          executedSteps: plan?.steps ?? [],
-          model: context.model,
-          // In a real implementation, this would contain the actual diff,
-          // test output, and branch name from the agent run.
-        },
-        durationMs: Date.now() - start,
-      };
-    } catch (err) {
-      return {
-        stage: this.name,
-        success: false,
-        error: String(err),
-        durationMs: Date.now() - start,
-      };
-    }
+    log.warn({ requestId: context.requestId }, '[ExecutionStage] WIP placeholder — skipping');
+    return {
+      stage: this.name,
+      success: false,
+      error: WIP_MSG,
+      durationMs: Date.now() - start,
+    };
   }
 }
 
-/**
- * Collect Stage — Gather results from the execution.
- *
- * Aggregates diffs, test output, and branch information.
- */
 export class CollectionStage implements PipelineStage {
   name = 'collect';
 
   async execute(context: PipelineContext): Promise<PipelineStageResult> {
     const start = Date.now();
-    try {
-      const execution = context.stageResults.get('execute')?.output as
-        | { model?: string; executedSteps?: string[] }
-        | undefined;
-
-      log.info(
-        { requestId: context.requestId, model: execution?.model },
-        '[CollectionStage] Collected results',
-      );
-
-      // Build a unified diff placeholder if the execute stage seemed happy
-      const diff = `# OpenSymphony Pipeline Execution\n# Model: ${execution?.model ?? context.model}\n# No changes were made (placeholder stage)\n`;
-      const testOutput = 'No tests executed (placeholder pipeline).\n';
-
-      return {
-        stage: this.name,
-        success: true,
-        output: {
-          diff,
-          testOutput,
-          branch: 'stas/opensymphony-placeholder',
-        },
-        durationMs: Date.now() - start,
-      };
-    } catch (err) {
-      return {
-        stage: this.name,
-        success: false,
-        error: String(err),
-        durationMs: Date.now() - start,
-      };
-    }
+    log.warn({ requestId: context.requestId }, '[CollectionStage] WIP placeholder — skipping');
+    return {
+      stage: this.name,
+      success: false,
+      error: WIP_MSG,
+      durationMs: Date.now() - start,
+    };
   }
 }
 
-/**
- * Taste Stage — Quality assessment and confidence scoring.
- *
- * Evaluates the collected results and assigns a confidence level.
- */
 export class TasteStage implements PipelineStage {
   name = 'taste';
 
   async execute(context: PipelineContext): Promise<PipelineStageResult> {
     const start = Date.now();
-    try {
-      const results = Array.from(context.stageResults.values());
-      const allSucceeded = results.length > 0 && results.every((r) => r.success);
-      const totalDurationMs = results.reduce((sum, r) => sum + r.durationMs, 0);
-
-      // Determine confidence based on success rate
-      const successCount = results.filter((r) => r.success).length;
-      const ratio = results.length > 0 ? successCount / results.length : 0;
-      let confidence: ConfidenceLevel = 'low';
-      if (ratio >= 0.8) confidence = 'high';
-      else if (ratio >= 0.5) confidence = 'medium';
-
-      log.info(
-        {
-          requestId: context.requestId,
-          allSucceeded,
-          successCount,
-          totalStages: results.length,
-          confidence,
-          totalDurationMs,
-        },
-        '[TasteStage] Assessed quality',
-      );
-
-      return {
-        stage: this.name,
-        success: true,
-        output: {
-          confidence,
-          allSucceeded,
-          totalDurationMs,
-        },
-        durationMs: Date.now() - start,
-      };
-    } catch (err) {
-      return {
-        stage: this.name,
-        success: false,
-        error: String(err),
-        durationMs: Date.now() - start,
-      };
-    }
+    log.warn({ requestId: context.requestId }, '[TasteStage] WIP placeholder — skipping');
+    return {
+      stage: this.name,
+      success: false,
+      error: WIP_MSG,
+      durationMs: Date.now() - start,
+    };
   }
 }
 
@@ -651,6 +484,8 @@ export class OpenSymphonyAdapter {
       status: 'ok',
       service: 'opensymphony-adapter',
       version: '0.1.0',
+      wip: true,
+      wipNotice: WIP_MSG,
       model: Array.from(this.templates.keys()).join(',') || 'default',
       queue_depth: 0,
       active_sessions: 0,
