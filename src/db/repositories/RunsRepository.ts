@@ -6,7 +6,7 @@
  * confidence scores, PR URLs, duration, and model info.
  */
 
-import { queryWithRetry, validateSqlIdentifier } from '../connection.js';
+import { queryWithRetry, validateSqlIdentifier, isTableNotFoundError } from '../connection.js';
 import type { Run, NewRun } from '../types/index.js';
 
 export interface RunFilter {
@@ -123,8 +123,15 @@ export class RunsRepository {
     const sql = `SELECT * FROM runs ${where} ORDER BY created_at DESC LIMIT $${idx++} OFFSET $${idx++}`;
     params.push(limit, offset);
 
-    const result = await queryWithRetry<Run>(sql, params);
-    return result.rows;
+    try {
+      const result = await queryWithRetry<Run>(sql, params);
+      return result.rows;
+    } catch (err) {
+      if (isTableNotFoundError(err)) {
+        return [];
+      }
+      throw err;
+    }
   }
 
   /**
