@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import { getSupabaseAdmin, getSupabaseAnon } from './supabase.js';
+import { rootLogger } from '../utils/logger.js';
+
+const log = rootLogger.child({ module: 'auth-service' });
 
 export interface TokenPayload {
   sub: string;
@@ -65,6 +68,52 @@ export class AuthService {
     } catch {
       throw new AuthError('Invalid or expired token', 401);
     }
+  }
+
+  async createPasswordResetToken(email: string): Promise<void> {
+    try {
+      const { data: { users }, error: listError } = await getSupabaseAdmin().auth.admin.listUsers();
+      if (listError || !users) return;
+      const user = users.find((u) => u.email === email);
+      if (!user) return;
+
+      const resetToken = jwt.sign(
+        { sub: user.id, email: user.email, purpose: 'password_reset' },
+        config.auth.jwtSecret as string,
+        { expiresIn: '15m' },
+      );
+
+      log.info({ userId: user.id, email, resetToken }, 'Password reset token generated');
+    } catch (err) {
+      log.error({ err }, 'Failed to create password reset token');
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    if (newPassword.length < 8) {
+      throw new AuthError('Password must be at least 8 characters', 400);
+    }
+
+    let payload: { sub: string; email: string; purpose?: string };
+    try {
+      payload = jwt.verify(token, config.auth.jwtSecret as string) as { sub: string; email: string; purpose?: string };
+      if (payload.purpose !== 'password_reset') {
+        throw new AuthError('Invalid reset token', 400);
+      }
+    } catch (err) {
+      if (err instanceof AuthError) throw err;
+      throw new AuthError('Invalid or expired reset token', 400);
+    }
+
+    const { error: updateError } = await getSupabaseAdmin().auth.admin.updateUserById(
+      payload.sub,
+      { password: newPassword },
+    );
+    if (updateError) {
+      throw new AuthError('Failed to reset password', 500);
+    }
+
+    log.info({ userId: payload.sub, email: payload.email }, 'Password reset successful');
   }
 
   public generateTokens(userId: string, email: string, name: string | null = null): AuthResult {

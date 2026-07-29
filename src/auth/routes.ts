@@ -96,6 +96,51 @@ router.post('/refresh', refreshLimiter, async (req: Request, res: Response) => {
   }
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+router.post('/forgot-password', async (req: Request, res: Response) => {
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0].message });
+    return;
+  }
+
+  try {
+    await authService.createPasswordResetToken(parsed.data.email);
+    res.json({ message: 'If an account with that email exists, a reset link has been sent' });
+  } catch (err) {
+    log.error({ err }, 'Forgot password failed');
+    res.json({ message: 'If an account with that email exists, a reset link has been sent' });
+  }
+});
+
+router.post('/reset-password', async (req: Request, res: Response) => {
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0].message });
+    return;
+  }
+
+  try {
+    await authService.resetPassword(parsed.data.token, parsed.data.newPassword);
+    res.json({ message: 'Password reset successfully' });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      res.status(err.statusCode).json({ error: err.message });
+      return;
+    }
+    log.error({ err }, 'Reset password failed');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.post('/logout', (_req: Request, res: Response) => {
   res.json({ message: 'Logged out successfully' });
 });
