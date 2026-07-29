@@ -124,7 +124,7 @@ export default function Repos() {
       {error && (
         <div className="card border-red-200 dark:border-red-800">
           <p className="text-red-600 dark:text-red-400">{error}</p>
-          <button onClick={loadAll} className="mt-2 text-sm font-medium text-brand-600 dark:text-brand-400 min-h-[44px] min-w-[44px]">
+          <button onClick={() => loadAll()} className="mt-2 text-sm font-medium text-brand-600 dark:text-brand-400 min-h-[44px] min-w-[44px]">
             Retry
           </button>
         </div>
@@ -182,7 +182,7 @@ export default function Repos() {
                     </p>
                   </div>
                   <button
-                    onClick={() => github.removeInstallation(inst.installationId).then(loadAll)}
+                    onClick={() => github.removeInstallation(inst.installationId).then(() => loadAll())}
                     className="btn-danger text-xs"
                   >
                     Remove
