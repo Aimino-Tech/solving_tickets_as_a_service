@@ -30,6 +30,7 @@ import { getTierForAccount } from '../ratelimit/tiers.js';
 import { accountsRepository } from '../db/repositories/index.js';
 import { dispatchIssueToOsy } from '../services/osyDispatch.js';
 import { parseSlashCommand } from '../github/slashCommands.js';
+import { recordGovernanceFailure } from '../bridge/metrics.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
 
@@ -62,6 +63,37 @@ async function postIssueReceivedComment(
     log.warn(
       { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
       'Failed to post "issue received" comment',
+    );
+  }
+}
+
+/**
+ * Post a comment when governance proxy is unavailable.
+ * Fail-closed: the issue is not processed when governance is down.
+ */
+async function postGovernanceFailureComment(
+  installationId: number,
+  repoOwner: string,
+  repoName: string,
+  issueNumber: number,
+): Promise<void> {
+  try {
+    const { getOctokit } = await import('../github/auth.js');
+    const octokit = await getOctokit(installationId);
+    await octokit.issues.createComment({
+      owner: repoOwner,
+      repo: repoName,
+      issue_number: issueNumber,
+      body: `### ⚠️ Governance Proxy Unavailable\n\nSTAS was unable to verify this issue through the governance proxy. Processing has been **blocked** to maintain security policy compliance.\n\n> The issue will not be processed until the governance service is restored. An administrator should investigate the governance proxy status.\n\nIssue ID: #${issueNumber}`,
+    });
+    log.info(
+      { repo: `${repoOwner}/${repoName}`, issueNumber },
+      'Posted governance failure comment',
+    );
+  } catch (err) {
+    log.warn(
+      { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
+      'Failed to post governance failure comment',
     );
   }
 }
@@ -319,9 +351,15 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       if (!osyResult.success) {
         log.error(
           { err: osyResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-          'OS dispatch failed — falling back to local queue',
+          'OS dispatch failed — governance proxy unavailable, blocking issue',
         );
-        await enqueue(jobData);
+        recordGovernanceFailure(repo, osyResult.error ?? 'unknown');
+        await postGovernanceFailureComment(
+          installationId || 0,
+          jobData.repoOwner,
+          jobData.repoName,
+          jobData.issueNumber,
+        );
       }
     } else {
       log.info(
@@ -465,16 +503,15 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         if (!osyResult.success) {
           log.error(
             { err: osyResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-            'OS dispatch failed for edited issue — falling back to local queue',
+            'OS dispatch failed for edited issue — governance proxy unavailable, blocking issue',
           );
-          try {
-            await enqueue(jobData);
-          } catch (err) {
-            log.error(
-              { err: String(err) },
-              'Failed to enqueue edited issue after OS dispatch fallback',
-            );
-          }
+          recordGovernanceFailure(repo, osyResult.error ?? 'unknown');
+          await postGovernanceFailureComment(
+            installationId || 0,
+            jobData.repoOwner,
+            jobData.repoName,
+            jobData.issueNumber,
+          );
         }
       } else {
         try {
