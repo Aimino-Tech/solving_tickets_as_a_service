@@ -79,7 +79,7 @@ export function getPool(): pg.Pool {
 export function isTableNotFoundError(err: unknown): boolean {
   if (err instanceof Error) {
     const pgErr = err as any;
-    return pgErr.code === '42P01' || pgErr.message?.includes('relation')?.includes('does not exist');
+    return pgErr.code === '42P01' || (typeof pgErr.message === 'string' && pgErr.message.includes('relation') && pgErr.message.includes('does not exist'));
   }
   return false;
 }

@@ -9,10 +9,10 @@ const log = rootLogger.child({ module: 'runs-api' });
 const router: Router = Router();
 
 router.get('/', requireAuth, async (req: Request, res: Response) => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(Math.max(1, Number(req.query.perPage) || 20), 100);
   try {
     const accountId = Number(req.user!.id);
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(Math.max(1, Number(req.query.perPage) || 20), 100);
     const offset = (page - 1) * limit;
     const status = req.query.status as string | undefined;
 
