@@ -74,7 +74,7 @@ async function getAccountId(req: Request): Promise<number | undefined> {
 router.get('/plan', async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req);
-    const planId: PlanId = config.stas.defaultTier === 'pro' ? 'pro' : 'free';
+    const planId: PlanId = (config.stas.defaultTier === 'pro' ? 'pro' : 'free') as PlanId;
     const plan = PLANS[planId];
     if (!plan) { res.status(404).json({ error: 'Plan not found' }); return; }
     res.json({

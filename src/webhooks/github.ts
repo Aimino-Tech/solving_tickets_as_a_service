@@ -505,7 +505,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
             { err: osyResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
             'OS dispatch failed for edited issue — governance proxy unavailable, blocking issue',
           );
-          recordGovernanceFailure(repo, osyResult.error ?? 'unknown');
+          recordGovernanceFailure(`${jobData.repoOwner}/${jobData.repoName}`, osyResult.error ?? 'unknown');
           await postGovernanceFailureComment(
             installationId || 0,
             jobData.repoOwner,

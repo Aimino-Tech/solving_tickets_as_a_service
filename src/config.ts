@@ -111,6 +111,11 @@ const envSchema = z.object({
   PROXY_MODEL_ROUTER_ENABLED: boolSchema(true),
   PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED: boolSchema(false),
   PROXY_GITHUB_PAT: z.string().optional(),
+  PROXY_HAS_PAT: boolSchema(false),
+  PROXY_PAT: z.string().default(''),
+  PROXY_DISPATCH_URL: z.string().default(''),
+  PROXY_API_KEY: z.string().default(''),
+  PROXY_ALLOWED_ORGS: z.string().default(''),
 
   WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
   WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
@@ -302,11 +307,6 @@ const envSchema = z.object({
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
 
-  // JWT Auth
-  JWT_SECRET: z.string().default('stas-jwt-secret-change-me'),
-  JWT_EXPIRES_IN: z.string().default('15m'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
-
   // OSY Dispatch
   OSY_DISPATCH_URL: z.string().default(''),
   OSY_API_KEY: z.string().default(''),
@@ -316,15 +316,6 @@ const envSchema = z.object({
   LITELLM_API_KEY: z.string().default(''),
   LITELLM_BASE_URL: z.string().default('http://localhost:4000'),
   LITELLM_MODEL: z.string().default('gpt-4o'),
-
-  // Proxy
-  PROXY_MODEL_ROUTER_ENABLED: boolSchema(false),
-  PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED: boolSchema(false),
-  PROXY_HAS_PAT: boolSchema(false),
-  PROXY_PAT: z.string().default(''),
-  PROXY_DISPATCH_URL: z.string().default(''),
-  PROXY_API_KEY: z.string().default(''),
-  PROXY_ALLOWED_ORGS: z.string().default(''),
 
   // Onboarding
   ONBOARDING_ENABLED: boolSchema(false),
@@ -466,12 +457,6 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
-    },
-
-    proxy: {
-      modelRouterEnabled: env.PROXY_MODEL_ROUTER_ENABLED,
-      githubActionsDispatchEnabled: env.PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED,
-      githubPat: env.PROXY_GITHUB_PAT ?? '',
     },
 
     slack: {

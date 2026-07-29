@@ -37,6 +37,7 @@ import 'express-async-errors';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import cors from 'cors';
 import type { NextFunction, Request, Response } from 'express';
+import { Router } from 'express';
 import express from 'express';
 import helmet from 'helmet';
 import previewRoutes from './api/routes/preview.js';

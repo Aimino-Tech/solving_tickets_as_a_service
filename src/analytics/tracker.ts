@@ -33,7 +33,7 @@ export function captureEvent(event: string, distinctId: string, properties?: Rec
 
 export async function shutdownAnalytics(): Promise<void> {
   if (client) {
-    await client.shutdownAsync();
+    await client.shutdown();
     client = null;
   }
 }

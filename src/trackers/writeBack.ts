@@ -91,7 +91,7 @@ export async function writeBack(params: WriteBackParams): Promise<void> {
       await tracker.updateStatus(trackerTicketId, 'Backlog');
       const body = buildDeliverableComment({
         status: '❌ Fix Failed',
-        summary: agentResult.noFixReason || agentResult.summary || 'Unknown error',
+        summary: (agentResult.noFixReason ?? agentResult.summary) as string || 'Unknown error',
         errors: agentResult.errors,
       });
       await tracker.postComment(trackerTicketId, body);
