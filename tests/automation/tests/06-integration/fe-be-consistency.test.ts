@@ -4,7 +4,7 @@ const STAS_URL = process.env.STAS_URL || 'http://localhost:3000';
 
 test.describe('FE + BE Consistency', () => {
   test('Dashboard page loads (may redirect to login if not authenticated)', async ({ loggedPage }) => {
-    await loggedPage.actionLogger.navigate('/dashboard');
+    await loggedPage.actionLogger.navigate('/');
     await loggedPage.waitForLoadState('networkidle');
 
     const url = await loggedPage.evaluate(() => window.location.href);
@@ -20,7 +20,7 @@ test.describe('FE + BE Consistency', () => {
   });
 
   test('Runs page loads (may redirect to login if not authenticated)', async ({ loggedPage }) => {
-    await loggedPage.actionLogger.navigate('/dashboard/runs');
+    await loggedPage.actionLogger.navigate('/runs');
     await loggedPage.waitForLoadState('networkidle');
 
     const url = await loggedPage.evaluate(() => window.location.href);
@@ -33,7 +33,7 @@ test.describe('FE + BE Consistency', () => {
   });
 
   test('No console errors or failed network requests on main pages', async ({ loggedPage }) => {
-    const pages = ['/dashboard', '/dashboard/login', '/dashboard/runs'];
+    const pages = ['/', '/login', '/runs'];
 
     for (const pagePath of pages) {
       await loggedPage.actionLogger.navigate(pagePath);

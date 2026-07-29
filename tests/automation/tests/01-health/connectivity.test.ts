@@ -6,16 +6,14 @@ const OSY_URL = process.env.OSY_URL || 'http://localhost:4096';
 test.describe('STAS + OpenSymphony Connectivity', () => {
   test('STAS (FE) health endpoint is reachable', async () => {
     const resp = await fetch(`${STAS_URL}/health`);
-    // Accept 200 (healthy) or 503 (degraded but alive)
     expect([200, 503]).toContain(resp.status);
     const body = await resp.json() as Record<string, unknown>;
     expect(body.status).toBeDefined();
   });
 
   test('STAS (FE) homepage loads correctly', async ({ page }) => {
-    await page.goto(`${STAS_URL}/dashboard`, { waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
-    // Navigate to dashboard - may have asset loading errors in dev mode but page should render
-    await page.goto(`${STAS_URL}/dashboard`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(`${STAS_URL}/login`, { waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
+    await page.goto(`${STAS_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
     const title = await page.title();
     expect(title).toBeTruthy();
