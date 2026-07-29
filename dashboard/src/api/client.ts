@@ -33,7 +33,12 @@ async function request<T>(
 
   if (res.status === 401) {
     clearToken();
-    window.location.href = '/login';
+    const _isLoginOrRegister = path.includes('/auth/login') || path.includes('/auth/register');
+    if (!_isLoginOrRegister) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
     throw new Error('Unauthorized');
   }
 
