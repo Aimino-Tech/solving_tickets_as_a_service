@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { requireAuth } from '../auth/middleware.js';
-import { queryWithRetry } from '../db/connection.js';
+import { queryWithRetry, isTableNotFoundError } from '../db/connection.js';
 import { runsRepository } from '../db/repositories/index.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -54,6 +54,10 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
+    if (isTableNotFoundError(err)) {
+      res.json({ data: [], total: 0, page, perPage: limit, totalPages: 0 });
+      return;
+    }
     log.error(
       {
         err: String(err),
