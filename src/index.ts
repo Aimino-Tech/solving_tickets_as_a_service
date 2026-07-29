@@ -138,7 +138,11 @@ async function main(): Promise<void> {
   log.info({ runMode: config.runMode, nodeEnv: config.nodeEnv }, 'Starting STAS');
 
   // Start the OpenCode health client (begins polling OpenCode serve immediately)
-  opencodeHealth.start();
+  try {
+    opencodeHealth.start();
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to start OpenCode health client (non-fatal)');
+  }
 
   // Run startup health validation (non-fatal — log warnings, don't block)
   validateStartupHealth().catch((err) => {
@@ -262,10 +266,18 @@ async function main(): Promise<void> {
   }
 
   // Start scheduled maintenance tasks (queue depth check, DLQ cleanup, metrics refresh)
-  startScheduledTasks();
+  try {
+    startScheduledTasks();
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to start scheduled tasks (non-fatal)');
+  }
 
   // Auto-start MCP server in SSE mode (for agent discovery and MCP protocol)
-  startMcpServer();
+  try {
+    startMcpServer();
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to auto-start MCP server (non-fatal)');
+  }
 
   // Start OpenSymphony adapter as sidecar (alternative OpenCode protocol backend)
   if (config.opensymphony.enabled) {
@@ -296,12 +308,22 @@ async function main(): Promise<void> {
 process.on('uncaughtException', (err) => {
   log.error(
     { module: 'entry', err: String(err), stack: (err as Error).stack },
-    'Uncaught exception at entry point -- shutting down',
+    'Uncaught exception at entry point -- attempting graceful shutdown',
   );
-  process.exit(1);
+  if (shutdownInProgress) return;
+  shutdownInProgress = true;
+  if (server) {
+    server.close(() => process.exit(1));
+    setTimeout(() => process.exit(1), 5000).unref();
+  } else {
+    process.exit(1);
+  }
 });
 
 main().catch((err) => {
-  log.error({ module: 'entry', err: String(err) }, 'Fatal error during startup');
+  log.error(
+    { module: 'entry', err: String(err), stack: (err as Error)?.stack },
+    'Fatal error during startup -- shutting down',
+  );
   process.exit(1);
 });

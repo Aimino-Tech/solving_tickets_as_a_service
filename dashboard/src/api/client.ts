@@ -82,13 +82,14 @@ export async function request<T>(
         console.warn('Token refresh failed:', refreshErr);
       }
     }
-    if (path.includes('/auth/')) {
+    const _isLoginOrRegister = path.includes('/auth/login') || path.includes('/auth/register');
+    if (!_isLoginOrRegister) {
       clearToken();
       if (typeof window !== 'undefined') {
         window.location.href = '/login';
       }
     }
-    throw new Error('Unauthorized');
+    throw new Error(_isLoginOrRegister ? 'Invalid login credentials' : 'Unauthorized');
   }
 
   if (!res.ok) {
@@ -205,7 +206,7 @@ export const auth = {
       body: JSON.stringify({ email, password }),
     }),
   me: () =>
-    request<{ id: string; email: string; name: string | null; createdAt: string }>('/v1/auth/me'),
+    request<{ id: string; email: string; name: string | null; username?: string; avatarUrl?: string; createdAt: string }>('/v1/auth/me'),
   refresh: (refreshToken: string) =>
     request<AuthResult>('/v1/auth/refresh', {
       method: 'POST',
