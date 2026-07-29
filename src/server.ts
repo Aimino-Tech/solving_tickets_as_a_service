@@ -272,18 +272,11 @@ export async function createApp(): Promise<express.Application> {
         return;
       }
     } else {
-      // No signature — receive without verification (dev mode or unsigned transport)
-      try {
-        await githubWebhooks.receive({
-          id: deliveryId || crypto.randomUUID(),
-          name: event as any,
-          payload: JSON.parse((rawBody || Buffer.from(JSON.stringify(req.body))).toString()),
-        });
-      } catch (err) {
-        log.warn({ err: String(err) }, 'Webhook processing error (no signature)');
-        if (eventId) await logWebhookFailed(eventId, `Processing error: ${String(err)}`);
-        // Still respond 202 — we've logged the event for replay
-      }
+      // No signature — fail closed
+      log.warn('GitHub webhook signature missing — rejecting');
+      if (eventId) await logWebhookFailed(eventId, 'Signature missing');
+      res.status(401).json({ error: 'Signature required' });
+      return;
     }
 
     // Mark as processed on success
@@ -333,7 +326,13 @@ export async function createApp(): Promise<express.Application> {
       payload: parsedPayload,
     });
 
-    if (config.gitlab.webhookSecret) {
+    if (!config.gitlab.webhookSecret) {
+      log.error('GITLAB_WEBHOOK_SECRET not configured — cannot verify webhook');
+      if (eventId) await logWebhookFailed(eventId, 'Webhook secret not configured');
+      res.status(500).json({ error: 'Webhook secret not configured' });
+      return;
+    }
+    {
       const { gitlabWebhook: gw } = await import('./webhooks/gitlab.js');
       if (!gw.verify(rawBody.toString(), token, config.gitlab.webhookSecret)) {
         log.warn('GitLab webhook token verification failed');
