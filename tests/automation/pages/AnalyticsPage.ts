@@ -24,7 +24,7 @@ export class AnalyticsPage extends BasePage {
   }
 
   async navigateTo(): Promise<void> {
-    await this.goto('/dashboard/analytics');
+    await this.goto('/analytics');
     await this.waitForLoad();
   }
 

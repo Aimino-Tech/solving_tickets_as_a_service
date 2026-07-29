@@ -28,7 +28,7 @@ export class SettingsPage extends BasePage {
   }
 
   async navigateTo(): Promise<void> {
-    await this.goto('/dashboard/settings');
+    await this.goto('/settings');
     await this.waitForLoad();
   }
 

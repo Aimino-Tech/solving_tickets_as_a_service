@@ -32,7 +32,7 @@ export class RunDetailPage extends BasePage {
   }
 
   async navigateTo(runId: string): Promise<void> {
-    await this.goto(`/dashboard/runs/${runId}`);
+    await this.goto(`/runs/${runId}`);
     await this.waitForLoad();
   }
 

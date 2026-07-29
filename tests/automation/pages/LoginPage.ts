@@ -44,7 +44,7 @@ export class LoginPage extends BasePage {
   }
 
   async navigateTo(): Promise<void> {
-    await this.goto('/dashboard/login');
+    await this.goto('/login');
     await this.waitForLoad();
   }
 

@@ -32,7 +32,7 @@ export class DashboardPage extends BasePage {
   }
 
   async navigateTo(): Promise<void> {
-    await this.goto('/dashboard');
+    await this.goto('/');
     await this.waitForLoad();
   }
 

@@ -28,7 +28,7 @@ export class RunsPage extends BasePage {
   }
 
   async navigateTo(): Promise<void> {
-    await this.goto('/dashboard/runs');
+    await this.goto('/runs');
     await this.waitForLoad();
   }
 
