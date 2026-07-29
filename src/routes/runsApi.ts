@@ -8,13 +8,45 @@ const log = rootLogger.child({ module: 'runs-api' });
 
 const router: Router = Router();
 
+/**
+ * Resolve a numeric account ID from the authenticated user.
+ * The JWT user ID is a UUID string (Supabase) — we need the numeric account_id.
+ * Falls back to looking up by email if direct conversion fails.
+ */
+async function resolveAccountId(req: Request): Promise<number | null> {
+  const directId = Number(req.user!.id);
+  if (Number.isFinite(directId) && directId > 0 && Number.isInteger(directId)) {
+    return directId;
+  }
+  // Look up by email from JWT
+  if (req.user!.email) {
+    try {
+      const result = await queryWithRetry<{ id: number }>(
+        'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
+        [req.user!.email],
+      );
+      if (result.rows.length > 0) return result.rows[0].id;
+    } catch {
+      // DB might not be available
+    }
+  }
+  return null;
+}
+
 router.get('/', requireAuth, async (req: Request, res: Response) => {
-  const page = Math.max(1, Number(req.query.page) || 1);
-  const limit = Math.min(Math.max(1, Number(req.query.perPage) || 20), 100);
+  let page = 1;
+  let limit = 20;
+  let status: string | undefined;
   try {
-    const accountId = Number(req.user!.id);
+    const accountId = await resolveAccountId(req);
+    if (!accountId) {
+      res.json({ data: [], total: 0, page: 1, perPage: limit, totalPages: 0 });
+      return;
+    }
+    page = Math.max(1, Number(req.query.page) || 1);
+    limit = Math.min(Math.max(1, Number(req.query.perPage) || 20), 100);
     const offset = (page - 1) * limit;
-    const status = req.query.status as string | undefined;
+    status = req.query.status as string | undefined;
 
     const runs = await runsRepository.list({
       accountId,

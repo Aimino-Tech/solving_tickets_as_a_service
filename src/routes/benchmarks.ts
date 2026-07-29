@@ -140,7 +140,7 @@ router.get('/', (_req: Request, res: Response) => {
   });
 });
 
-router.get('/price', (_req: Request, res: Response) => {
+router.get('/prices', (_req: Request, res: Response) => {
   res.json({
     generatedAt: new Date().toISOString(),
     currency: 'USD',
