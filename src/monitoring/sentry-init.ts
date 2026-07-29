@@ -23,6 +23,7 @@
  */
 
 import { initSentry, setTag } from './sentry.js';
+import { rootLogger } from '../utils/logger.js';
 
 // Initialize Sentry immediately — this is the first module loaded
 initSentry();
