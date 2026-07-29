@@ -29,6 +29,7 @@ import { getRateLimitForAccount } from '../ratelimit/tiers.js';
 import { getTierForAccount } from '../ratelimit/tiers.js';
 import { accountsRepository } from '../db/repositories/index.js';
 import { dispatchIssueToOsy } from '../services/osyDispatch.js';
+import { dispatchThroughGovernance } from '../governance/client.js';
 import { parseSlashCommand } from '../github/slashCommands.js';
 import { recordGovernanceFailure } from '../bridge/metrics.js';
 
@@ -333,11 +334,38 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       log.error({ err: String(analyticsErr) }, 'Failed to track issue_labeled event');
     }
 
-    // ── Route to OpenSymphony or local queue ──────────────────────
-    if (config.osy?.dispatchUrl) {
+    // ── Route through Governance Proxy → OpenSymphony or local queue ─
+    if (config.proxy.dispatchUrl) {
       log.info(
         { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-        'Dispatching to OpenSymphony via OS dispatch API',
+        'Dispatching through governance proxy',
+      );
+      const govResult = await dispatchThroughGovernance({
+        installationId: jobData.installationId,
+        repoOwner: jobData.repoOwner,
+        repoName: jobData.repoName,
+        issueNumber: jobData.issueNumber,
+        issueTitle: jobData.issueTitle ?? '',
+        issueBody: jobData.issueBody,
+        labels: jobData.labels ?? [],
+      });
+      if (!govResult.success) {
+        log.error(
+          { err: govResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+          'Governance proxy dispatch failed — blocking issue (fail-closed)',
+        );
+        recordGovernanceFailure(repo, govResult.error ?? 'unknown');
+        await postGovernanceFailureComment(
+          installationId || 0,
+          jobData.repoOwner,
+          jobData.repoName,
+          jobData.issueNumber,
+        );
+      }
+    } else if (config.osy?.dispatchUrl) {
+      log.info(
+        { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+        'Dispatching to OpenSymphony via OS dispatch API (no governance proxy)',
       );
       const osyResult = await dispatchIssueToOsy({
         installationId: jobData.installationId,
@@ -351,7 +379,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       if (!osyResult.success) {
         log.error(
           { err: osyResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-          'OS dispatch failed — governance proxy unavailable, blocking issue',
+          'OS dispatch failed — OpenSymphony unavailable',
         );
         recordGovernanceFailure(repo, osyResult.error ?? 'unknown');
         await postGovernanceFailureComment(
@@ -364,7 +392,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
     } else {
       log.info(
         { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-        'No OS_DISPATCH_URL configured — using local queue',
+        'No dispatch URL configured — using local queue',
       );
       try {
         await enqueue(jobData);
@@ -486,10 +514,37 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         await rateLimiter.increment('repo', repo);
       }
 
-      if (config.osy?.dispatchUrl) {
+      if (config.proxy.dispatchUrl) {
         log.info(
           { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-          'Dispatching edited issue to OpenSymphony',
+          'Dispatching edited issue through governance proxy',
+        );
+        const govResult = await dispatchThroughGovernance({
+          installationId: jobData.installationId,
+          repoOwner: jobData.repoOwner,
+          repoName: jobData.repoName,
+          issueNumber: jobData.issueNumber,
+          issueTitle: jobData.issueTitle ?? '',
+          issueBody: jobData.issueBody,
+          labels: jobData.labels ?? [],
+        });
+        if (!govResult.success) {
+          log.error(
+            { err: govResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+            'Governance proxy dispatch failed for edited issue — blocking (fail-closed)',
+          );
+          recordGovernanceFailure(`${jobData.repoOwner}/${jobData.repoName}`, govResult.error ?? 'unknown');
+          await postGovernanceFailureComment(
+            installationId || 0,
+            jobData.repoOwner,
+            jobData.repoName,
+            jobData.issueNumber,
+          );
+        }
+      } else if (config.osy?.dispatchUrl) {
+        log.info(
+          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+          'Dispatching edited issue to OpenSymphony (no governance proxy)',
         );
         const osyResult = await dispatchIssueToOsy({
           installationId: jobData.installationId,
@@ -503,7 +558,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         if (!osyResult.success) {
           log.error(
             { err: osyResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-            'OS dispatch failed for edited issue — governance proxy unavailable, blocking issue',
+            'OS dispatch failed for edited issue — OpenSymphony unavailable',
           );
           recordGovernanceFailure(`${jobData.repoOwner}/${jobData.repoName}`, osyResult.error ?? 'unknown');
           await postGovernanceFailureComment(
