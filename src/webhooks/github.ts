@@ -23,6 +23,7 @@ import { rateLimiter } from '../ratelimit/limiter.js';
 import { getRateLimitForAccount } from '../ratelimit/tiers.js';
 import { getTierForAccount } from '../ratelimit/tiers.js';
 import { accountsRepository } from '../db/repositories/index.js';
+import { recordStasDispatch, recordStasDispatchError } from '../stas/telemetry.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
 
@@ -202,6 +203,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         { installationId: jobData.installationId, current: accountLimitResult.current, limit: accountLimitResult.limit },
         'Account rate limit exceeded — not enqueuing',
       );
+      recordStasDispatchError({
+        repoOwner: jobData.repoOwner,
+        repoName: jobData.repoName,
+        issueNumber: jobData.issueNumber,
+        installationId: jobData.installationId,
+        error: 'account_rate_limit_exceeded',
+        source: 'github',
+      });
       return;
     }
 
@@ -210,6 +219,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         { repo, current: repoLimitResult.current, limit: repoLimitResult.limit },
         'Repo rate limit exceeded — not enqueuing',
       );
+      recordStasDispatchError({
+        repoOwner: jobData.repoOwner,
+        repoName: jobData.repoName,
+        issueNumber: jobData.issueNumber,
+        installationId: jobData.installationId,
+        error: 'repo_rate_limit_exceeded',
+        source: 'github',
+      });
       return;
     }
 
@@ -218,6 +235,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
     await rateLimiter.increment('repo', repo);
     try {
       await enqueue(jobData);
+      recordStasDispatch({
+        repoOwner: jobData.repoOwner,
+        repoName: jobData.repoName,
+        issueNumber: jobData.issueNumber,
+        installationId: jobData.installationId,
+        source: 'github',
+        templateName: 'stas:pipeline',
+      });
     } catch (err) {
       log.error(
         {
@@ -227,6 +252,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         },
         'Failed to enqueue labeled issue',
       );
+      recordStasDispatchError({
+        repoOwner: jobData.repoOwner,
+        repoName: jobData.repoName,
+        issueNumber: jobData.issueNumber,
+        installationId: jobData.installationId,
+        error: 'enqueue_failed',
+        source: 'github',
+      });
     }
   });
 
@@ -319,6 +352,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
             { installationId: jobData.installationId, current: accountLimitResult.current, limit: accountLimitResult.limit },
             'Account rate limit exceeded — not enqueuing edited issue',
           );
+          recordStasDispatchError({
+            repoOwner: jobData.repoOwner,
+            repoName: jobData.repoName,
+            issueNumber: jobData.issueNumber,
+            installationId: jobData.installationId,
+            error: 'account_rate_limit_exceeded',
+            source: 'github',
+          });
           return;
         }
 
@@ -327,6 +368,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
             { repo, current: repoLimitResult.current, limit: repoLimitResult.limit },
             'Repo rate limit exceeded — not enqueuing edited issue',
           );
+          recordStasDispatchError({
+            repoOwner: jobData.repoOwner,
+            repoName: jobData.repoName,
+            issueNumber: jobData.issueNumber,
+            installationId: jobData.installationId,
+            error: 'repo_rate_limit_exceeded',
+            source: 'github',
+          });
           return;
         }
 
@@ -337,6 +386,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
 
       try {
         await enqueue(jobData);
+        recordStasDispatch({
+          repoOwner: jobData.repoOwner,
+          repoName: jobData.repoName,
+          issueNumber: jobData.issueNumber,
+          installationId: jobData.installationId,
+          source: 'github',
+          templateName: 'stas:pipeline',
+        });
       } catch (err) {
         log.error(
           {
@@ -346,6 +403,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           },
           'Failed to enqueue edited issue',
         );
+        recordStasDispatchError({
+          repoOwner: jobData.repoOwner,
+          repoName: jobData.repoName,
+          issueNumber: jobData.issueNumber,
+          installationId: jobData.installationId,
+          error: 'enqueue_failed',
+          source: 'github',
+        });
       }
     }
   });

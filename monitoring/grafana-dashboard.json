@@ -35,9 +35,9 @@
       "version": "1.0.0"
     }
   ],
-  "title": "STAS — Celery & Queue Monitoring",
-  "description": "Dashboard for monitoring STAS task queues, Celery workers, and DLQ health",
-  "tags": ["stas", "celery", "rabbitmq", "dlq"],
+  "title": "STAS — Celery, Queue & Dispatch Monitoring",
+  "description": "Dashboard for monitoring STAS task queues, Celery workers, DLQ health, and dispatch telemetry",
+  "tags": ["stas", "celery", "rabbitmq", "dlq", "telemetry"],
   "timezone": "browser",
   "schemaVersion": 38,
   "version": 1,
@@ -447,6 +447,86 @@
         }
       },
       "description": "Percentage of feature flag evaluations that returned enabled (rollout adoption)"
+    },
+    {
+      "id": 17,
+      "title": "STAS Dispatch Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 54 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "rate(stas_dispatches_total[5m])",
+          "legendFormat": "{{status}} — {{source}}",
+          "interval": "15s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0
+        }
+      },
+      "description": "Rate of STAS issue dispatches by status and source"
+    },
+    {
+      "id": 18,
+      "title": "STAS Dispatch Errors",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 54 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "rate(stas_dispatch_errors_total[5m])",
+          "legendFormat": "{{error}} — {{source}}",
+          "interval": "15s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.1 },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "description": "Rate of STAS dispatch errors by error type and source"
+    },
+    {
+      "id": 19,
+      "title": "STAS Dispatch Success Rate",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 62 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(stas_dispatches_total{status=\"success\"}) / (sum(stas_dispatches_total{status=\"success\"}) + sum(stas_dispatches_total{status=\"error\"})) * 100",
+          "legendFormat": "Success %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 90 },
+              { "color": "green", "value": 99 }
+            ]
+          }
+        }
+      },
+      "description": "Percentage of STAS dispatches that succeeded"
     }
   ],
   "rows": [],
