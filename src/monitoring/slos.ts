@@ -101,6 +101,7 @@ function evaluateSLI(
   currentValue: number,
   errorBudgetRemaining?: number,
 ): SLIDefinition {
+  if (!Number.isFinite(currentValue)) currentValue = 0;
   let status: SLOStatus;
   if (sli.operator === 'lt') {
     status =

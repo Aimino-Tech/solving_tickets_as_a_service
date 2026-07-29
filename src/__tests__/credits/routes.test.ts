@@ -20,6 +20,7 @@ const routeHandlers: Array<{ method: string; path: string; handler: Function }> 
 
 vi.mock('express', () => ({
   Router: vi.fn(() => ({
+    use: vi.fn(),
     get: vi.fn((path: string, ...middleware: Function[]) => {
       routeHandlers.push({ method: 'get', path, handler: middleware[middleware.length - 1] });
     }),

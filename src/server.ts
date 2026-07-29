@@ -25,6 +25,8 @@
  */
 
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -47,7 +49,7 @@ import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import { de } from './i18n/de.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import { approvalRouter, configureApprovalGate } from './middleware/approvalGate.js';
-import { setupSentryExpressErrorHandler } from './monitoring/sentry.js';
+import { captureError, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { initWizardStore } from './onboarding/wizard.js';
 import { isConnected, publishMessage, QUEUES, connect as rmqConnect } from './queue/rabbitmq.js';
@@ -658,15 +660,36 @@ export async function createApp(): Promise<express.Application> {
   });
 
   // -- MCP server routes (OpenClaw multi-channel API)
-  const { default: mcpRouter } = await import('./routes/mcp.js');
+  let mcpRouter: Router;
+  try {
+    const mod = await import('./routes/mcp.js');
+    mcpRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load MCP routes — using empty router');
+    mcpRouter = Router();
+  }
   app.use(mcpRouter);
 
   // -- MCP agent discovery routes (FastMCP integration)
-  const { default: mcpDiscoveryRouter } = await import('./mcp.js');
+  let mcpDiscoveryRouter: Router;
+  try {
+    const mod = await import('./mcp.js');
+    mcpDiscoveryRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load MCP discovery routes — using empty router');
+    mcpDiscoveryRouter = Router();
+  }
   app.use(mcpDiscoveryRouter);
 
   // -- MCP agent server (JSON-RPC protocol for AI agent discovery)
-  const { default: agentServerRouter } = await import('./mcp/agentServer.js');
+  let agentServerRouter: Router;
+  try {
+    const mod = await import('./mcp/agentServer.js');
+    agentServerRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load MCP agent server routes — using empty router');
+    agentServerRouter = Router();
+  }
   app.use(agentServerRouter);
 
   // -- Health check endpoints --------------------------------------------------
@@ -714,6 +737,11 @@ export async function createApp(): Promise<express.Application> {
   // ── Dashboard API ──────────────────────────────────────
   app.use('/api/v1/me', dashboardRouter);
 
+  // ── Stats & Audit API ──────────────────────────────────
+  const { statsRouter, auditRouter } = await import('./routes/statsAndAudit.js');
+  app.use('/api/v1/stats', statsRouter);
+  app.use('/api/v1/audit', auditRouter);
+
   // ── DPA API ──────────────────────────────────────────────
   app.use('/api/v1/billing', dpaRouter);
   // ── Billing API (subscriptions, plans, checkout) ─────────
@@ -722,6 +750,9 @@ export async function createApp(): Promise<express.Application> {
   // ── Auth API (JWT) — MUST be before /api/v1 catch-all routers ────────
   app.use('/api/v1/auth', authRouter);
 
+  // GitHub OAuth — before /api/v1 catch-all to avoid requireAuth conflict
+  app.use('/api/v1/auth/github', gitHubOAuthRouter);
+
   app.use('/api/v1', slaRouter);
 
   // ── Credits API ──────────────────────────────────────────
@@ -729,7 +760,14 @@ export async function createApp(): Promise<express.Application> {
   // GET  /api/v1/credits/transactions
   // POST /api/v1/credits/top-up
   // GET  /api/v1/credits/usage
-  const { creditRouter } = await import('./credits/index.js');
+  let creditRouter: Router;
+  try {
+    const mod = await import('./credits/index.js');
+    creditRouter = mod.creditRouter;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load credits API — using empty router');
+    creditRouter = Router();
+  }
   app.use('/api/v1', creditRouter);
 
   // ── Usage metering API ──────────────────────────────────────────
@@ -768,27 +806,56 @@ export async function createApp(): Promise<express.Application> {
   // Repos API (repo picker with webhook status)
   app.use('/api/repos', reposRouter);
 
-  // GitHub OAuth & Installation Management
-  app.use('/api/v1', gitHubOAuthRouter);
+  // GitHub Installation & Webhook Management
+  const { githubRouter } = await import('./routes/github.js');
+  app.use('/api/v1/github', githubRouter);
 
   // ── Shareable run page API (public, no auth) ───────────────────────
   // GET /api/runs/:id — Public run detail JSON/HTML
   app.use('/api/runs', runsRouter);
 
-  // ── Marketing Site (React SPA) ──────────────────────────────────
-  app.use(express.static(path.join(__dirname, '../marketing-site/dist')));
-  app.get(
-    /^\/(pricing|trust|benchmarks|support|status|docs|blog|integrations|agents)?$/,
-    (_req: Request, res: Response) => {
-      res.sendFile(path.join(__dirname, '../marketing-site/dist', 'index.html'));
-    },
-  );
-
   // ── Dashboard SPA (served from built dist/) ───────────────────────
-  app.use('/dashboard', express.static(path.join(__dirname, '../dashboard/dist')));
-  app.get('/dashboard/*', (_req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../dashboard/dist/index.html'));
-  });
+  // Served at root `/` — all routes except /api/* and /health go to dashboard
+  const dashboardDist = path.join(__dirname, '../dashboard/dist');
+  const viteDevUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
+  if (fs.existsSync(path.join(dashboardDist, 'index.html'))) {
+    app.use(express.static(dashboardDist));
+    app.get('*', (req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+        next();
+        return;
+      }
+      res.sendFile(path.join(dashboardDist, 'index.html'));
+    });
+  } else {
+    log.info({ viteDevUrl }, 'dashboard/dist not found — proxying to Vite dev server');
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      // Don't proxy API, health, badge or other backend routes
+      if (
+        req.path.startsWith('/api/') ||
+        req.path.startsWith('/health') ||
+        req.path.startsWith('/badge/') ||
+        req.path.startsWith('/discovery') ||
+        req.path.startsWith('/.well-known')
+      ) {
+        next();
+        return;
+      }
+      const targetUrl = `${viteDevUrl}${req.originalUrl}`;
+      const proxyReq = http.request(targetUrl, { method: req.method, headers: req.headers }, (proxyRes) => {
+        res.writeHead(proxyRes.statusCode!, proxyRes.headers);
+        proxyRes.pipe(res);
+      });
+      proxyReq.on('error', (err) => {
+        log.error({ err: String(err), targetUrl }, 'Vite dev proxy error');
+        res.status(502).send('Dashboard not available — is Vite dev server running?');
+      });
+      if (req.body) {
+        proxyReq.write(JSON.stringify(req.body));
+      }
+      proxyReq.end();
+    });
+  }
 
   // ── Badge endpoint (public, no auth) ──────────────────────────────
   // GET /badge/:id.svg — shields.io-compatible status badge
@@ -945,28 +1012,49 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/quality', qualityRouter);
 
   // ── Benchmarks API (public) ──────────────────────────────────────
-  app.use('/api/benchmarks', benchmarksRouter);
+  app.use('/api/v1/benchmarks', benchmarksRouter);
 
   // ── PLG self-serve onboarding API ─────────────────────────────────
   app.use('/plg', plgRouter);
 
   // ── Pricing API (public) ─────────────────────────────────────────
-  app.use('/api/pricing', pricingRouter);
+  app.use('/api/v1/pricing', pricingRouter);
 
   // ── Preview API (public, no auth) ────────────────────────────────
-  const { previewRouter } = await import('./routes/preview.js');
+  let previewRouter: Router;
+  try {
+    const mod = await import('./routes/preview.js');
+    previewRouter = mod.previewRouter;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load preview API — using empty router');
+    previewRouter = Router();
+  }
   app.use('/api/v1', previewRouter);
 
   // Ticket Result API (non-code ticket results)
-  const { default: ticketResultRouter } = await import('./routes/ticketResult.js');
+  let ticketResultRouter: Router;
+  try {
+    const mod = await import('./routes/ticketResult.js');
+    ticketResultRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load ticket result API — using empty router');
+    ticketResultRouter = Router();
+  }
   app.use(ticketResultRouter);
 
   // Public Status API
-  const { default: statusRouter } = await import('./routes/status.js');
+  let statusRouter: Router;
+  try {
+    const mod = await import('./routes/status.js');
+    statusRouter = mod.default;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load status API — using empty router');
+    statusRouter = Router();
+  }
   app.use(statusRouter);
 
   // KPI Dashboard API
-  app.use('/api/kpi', kpiRouter);
+  app.use('/api/v1/admin/kpi', kpiRouter);
   app.use('/api/v1/n8n', n8nRouter);
 
   // Agent Performance Analytics API
@@ -993,8 +1081,8 @@ export async function createApp(): Promise<express.Application> {
   try {
     const { default: samlRouter } = await import('./routes/saml.js');
     app.use('/api/v1/saml', samlRouter);
-  } catch {
-    log.warn('SAML routes not available');
+  } catch (err) {
+    log.warn({ err: String(err) }, 'SAML routes not available — skipping');
   }
 
   // Enterprise routes (optional)
@@ -1002,14 +1090,19 @@ export async function createApp(): Promise<express.Application> {
     const enterpriseModule = await import('./routes/enterprise.js');
     const enterpriseRouter = (enterpriseModule as any).default || enterpriseModule;
     app.use('/api/v1/enterprise', enterpriseRouter);
-  } catch {
-    log.warn('Enterprise routes not available');
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Enterprise routes not available — skipping');
   }
 
   app.get('/metrics', async (_req: Request, res: Response) => {
-    const { bridgeMetrics } = await import('./bridge/metrics.js');
-    const metrics = bridgeMetrics.render();
-    res.type('text/plain; version=0.0.4').send(metrics);
+    try {
+      const { bridgeMetrics } = await import('./bridge/metrics.js');
+      const metrics = bridgeMetrics.render();
+      res.type('text/plain; version=0.0.4').send(metrics);
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to load metrics');
+      res.status(500).send('# Metrics unavailable\n');
+    }
   });
 
   app.get('/github-app-manifest.json', (_req: Request, res: Response) => {
@@ -1083,7 +1176,15 @@ export async function createApp(): Promise<express.Application> {
 
   // -- Global error handler -------------------------------------------------
   app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-    log.error({ err: String(err), requestId: req.requestId }, 'Unhandled error');
+    const errorContext = {
+      err: String(err),
+      stack: err.stack,
+      requestId: req.requestId,
+      method: req.method,
+      path: req.path,
+    };
+    log.error(errorContext, 'Unhandled error');
+    captureError(err, { requestId: req.requestId, method: req.method, path: req.path });
     res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error', correlation_id: req.requestId },
     });
@@ -1188,6 +1289,11 @@ process.on('uncaughtException', (err) => {
     'Uncaught exception -- attempting graceful shutdown',
   );
 
+  captureError(err instanceof Error ? err : new Error(String(err)), {
+    module: 'server',
+    type: 'uncaughtException',
+  });
+
   if (shuttingDown) return;
   shuttingDown = true;
 
@@ -1215,6 +1321,10 @@ process.on('unhandledRejection', (reason) => {
   }, 10_000);
   forceExitTimer.unref();
 
+  captureError(reason instanceof Error ? reason : new Error(String(reason)), {
+    module: 'server',
+    type: 'unhandledRejection',
+  });
   process.exit(1);
 });
 

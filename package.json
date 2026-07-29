@@ -90,7 +90,16 @@
     "test:smoke:error": "vitest run tests/e2e/error-handling-path.test.ts --config vitest.e2e.config.ts",
     "test:smoke:auth": "vitest run tests/e2e/auth-path.test.ts --config vitest.e2e.config.ts",
     "test:smoke:dlq": "vitest run tests/e2e/dlq-path.test.ts --config vitest.e2e.config.ts",
-    "test:smoke:health": "vitest run tests/e2e/health-check-path.test.ts --config vitest.e2e.config.ts"
+    "test:smoke:health": "vitest run tests/e2e/health-check-path.test.ts --config vitest.e2e.config.ts",
+    "test:automation": "npx playwright test --config tests/automation/playwright.config.ts",
+    "test:automation:health": "npx playwright test tests/automation/tests/01-health --config tests/automation/playwright.config.ts",
+    "test:automation:login": "npx playwright test tests/automation/tests/02-login --config tests/automation/playwright.config.ts",
+    "test:automation:integration": "npx playwright test tests/automation/tests/06-integration --config tests/automation/playwright.config.ts",
+    "test:automation:report": "npx playwright show-report tests/automation/reports/html",
+    "test:automation:ui": "npx playwright test --ui --config tests/automation/playwright.config.ts",
+    "test:automation:python": "cd tests/automation && python -m pytest -v",
+    "test:automation:python:login": "cd tests/automation && python -m pytest test_login.py -v",
+    "test:automation:python:api": "cd tests/automation && python -m pytest test_auth_api.py -v"
   },
   "dependencies": {
     "@linear/sdk": "^87.0.0",
