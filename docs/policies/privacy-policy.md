@@ -2,13 +2,13 @@
 title: Privacy Policy
 last-updated: 2026-07-28
 version: 1.0.0
-status: draft
+status: active
 ---
 
 # Privacy Policy
 
 **STAS (Solving Tickets As A Service)**
-**Version 1.0.0 — Draft**
+**Version 1.0.0**
 **Last Updated: July 28, 2026**
 
 ---
@@ -351,6 +351,7 @@ We may update this Privacy Policy from time to time. We will notify you of mater
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2026-07-28 | Initial draft |
+| 1.0.1 | 2026-07-30 | Finalized for GitHub Marketplace — published at stas.aimino.io/privacy |
 
 We recommend that you review this Privacy Policy periodically. Your continued use of the Service after changes take effect constitutes acceptance of the updated policy.
 
