@@ -149,12 +149,18 @@ export default function DashboardHome() {
             </div>
           </div>
           <div className="mt-4 flex gap-3">
-            <button
-              onClick={handleOpenPortal}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors"
-            >
-              Manage Subscription
-            </button>
+            {plan?.hasBillingRecord ? (
+              <button
+                onClick={handleOpenPortal}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors"
+              >
+                Manage Subscription
+              </button>
+            ) : (
+              <a href="https://syntaro.io/pricing" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
+                Subscribe
+              </a>
+            )}
           </div>
           {portalError && (
             <p className="mt-2 text-sm text-red-600 dark:text-red-400">{portalError}</p>
@@ -169,9 +175,9 @@ export default function DashboardHome() {
             Get 500 fixes/mo, priority support, and more for just $49/mo.
           </p>
           <div className="mt-4 flex gap-3">
-            <Link to="/pricing" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
+            <a href="https://syntaro.io/pricing" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
               View Plans
-            </Link>
+            </a>
           </div>
         </div>
       )}

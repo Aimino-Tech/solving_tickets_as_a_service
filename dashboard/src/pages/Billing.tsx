@@ -122,19 +122,25 @@ export default function Billing() {
               </p>
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={handleOpenPortal}
-                disabled={portalLoading}
-                className="btn-primary min-h-[44px]"
-              >
-                {portalLoading ? 'Opening...' : 'Manage Subscription'}
-              </button>
+              {activePlan.hasBillingRecord ? (
+                <button
+                  onClick={handleOpenPortal}
+                  disabled={portalLoading}
+                  className="btn-primary min-h-[44px]"
+                >
+                  {portalLoading ? 'Opening...' : 'Manage Subscription'}
+                </button>
+              ) : (
+                <a href="https://syntaro.io/pricing" className="btn-primary min-h-[44px] inline-flex items-center">
+                  Upgrade Plan
+                </a>
+              )}
             </div>
           </div>
         ) : (
           <div className="mt-4">
             <p className="text-gray-500 dark:text-gray-400">No active plan found.</p>
-            <a href="/pricing" className="btn-primary mt-3 inline-block min-h-[44px]">View Plans</a>
+            <a href="https://syntaro.io/pricing" className="btn-primary mt-3 inline-block min-h-[44px]">View Plans</a>
           </div>
         )}
         {portalError && (

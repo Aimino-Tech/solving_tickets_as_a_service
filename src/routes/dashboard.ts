@@ -433,8 +433,11 @@ configRouter.get('/', (_req: Request, res: Response) => {
     const env: Record<string, string> = {};
     const trackedKeys = ['LINEAR_API_KEY', 'BITBUCKET_APP_PASSWORD', 'JIRA_API_TOKEN', 'GITHUB_TOKEN'];
     for (const key of trackedKeys) {
-      if (key in envOverrides && envOverrides[key]) {
-        env[key] = envOverrides[key];
+      const val = key in envOverrides && envOverrides[key]
+        ? envOverrides[key]
+        : process.env[key] || '';
+      if (val) {
+        env[key] = val;
       }
     }
 

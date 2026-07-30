@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from './supabase.js';
 import { rootLogger } from '../utils/logger.js';
 import { captureEvent } from '../analytics/tracker.js';
 import { requireAuth } from './middleware.js';
+import { loginLimiter, registerLimiter, refreshLimiter } from './rateLimit.js';
 import { AuthError, authService } from './service.js';
 import { queryWithRetry } from '../db/connection.js';
 import { auditLog } from '../audit/middleware.js';
@@ -173,29 +174,54 @@ router.post('/logout', requireAuth, (req: Request, res: Response) => {
 
 router.get('/me', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { data, error } = await getSupabaseAdmin().auth.admin.getUserById(req.user!.id);
-    if (!error && data?.user) {
-      const user = data.user;
-      const plan = user.app_metadata?.plan as string | undefined;
-      res.json({
-        id: user.id,
-        email: user.email,
-        name: user.user_metadata?.name ?? null,
-        plan: plan ?? 'free',
-        createdAt: user.created_at,
-      });
-      return;
+    const email = req.user!.email ?? '';
+    let plan: string = 'free';
+    let userId: string = req.user!.id;
+    let name: string | null = null;
+    let createdAt: string = new Date().toISOString();
+
+    // Try Supabase Auth admin API first
+    try {
+      const supabaseAdmin = getSupabaseAdmin();
+      const { data, error } = await supabaseAdmin.auth.admin.getUserById(req.user!.id);
+      if (!error && data?.user) {
+        const supaUser = data.user;
+        plan = (supaUser.app_metadata?.plan as string) ?? 'free';
+        name = supaUser.user_metadata?.name ?? null;
+        createdAt = supaUser.created_at;
+      }
+    } catch {
+      // Supabase not available — continue with fallback
     }
-  } catch {
-    // Supabase not available in dev — fall through to JWT data
+
+    // Fallback: if plan is still 'free', check accounts table for overrides.
+    // This ensures users whose plan was set via accounts.plan (not through Stripe)
+    // get the correct plan displayed everywhere.
+    // The accounts table stores user-friendly names ('pro'), while billing uses IDs ('solo').
+    if (plan === 'free' && email) {
+      try {
+        const acctResult = await queryWithRetry<{ plan: string; name: string | null }>(
+          'SELECT plan, name FROM accounts WHERE email = $1',
+          [email],
+        );
+        if (acctResult.rows.length > 0) {
+          const acctPlan = acctResult.rows[0].plan;
+          if (acctPlan && acctPlan !== 'free') {
+            // Map account plan names to billing PlanId: 'pro' → 'solo', 'team' → 'team', etc.
+            plan = acctPlan === 'pro' ? 'solo' : acctPlan;
+          }
+          if (!name) name = acctResult.rows[0].name;
+        }
+      } catch {
+        // accounts table unavailable — ignore
+      }
+    }
+
+    res.json({ id: userId, email, name, plan, createdAt });
+  } catch (err) {
+    log.error({ err }, 'Failed to get user');
+    res.status(500).json({ error: 'Failed to get user' });
   }
-  res.json({
-    id: req.user!.id,
-    email: req.user!.email ?? 'dev@test.com',
-    name: 'Dev User',
-    plan: 'free',
-    createdAt: new Date().toISOString(),
-  });
 });
 
 export default router;

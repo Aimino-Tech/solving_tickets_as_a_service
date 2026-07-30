@@ -50,6 +50,7 @@ describe('Billing', () => {
       amountCents: 4900,
       monthlyFixLimit: 500,
       description: 'For individual developers',
+      hasBillingRecord: true,
     });
 
     mockLitellmUsage.mockResolvedValue({
@@ -187,7 +188,7 @@ describe('Billing', () => {
       expect(screen.getByText('View Plans')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('View Plans').closest('a')).toHaveAttribute('href', '/pricing');
+    expect(screen.getByText('View Plans').closest('a')).toHaveAttribute('href', 'https://syntaro.io/pricing');
   });
 
   it('shows portal error message when portal call fails', async () => {

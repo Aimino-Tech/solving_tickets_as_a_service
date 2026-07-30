@@ -10,9 +10,21 @@ import {
   Link as LinkIcon,
   Shield,
   GitPullRequest,
+  Eye,
+  EyeOff,
   GitBranch,
   Key,
   Pencil,
+  Play,
+  CheckCircle,
+  RefreshCw,
+  GitMerge,
+  AlertTriangle,
+  CreditCard,
+  XCircle,
+  ChevronRight,
+  Check,
+  X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -28,6 +40,18 @@ const EVENT_TYPES = [
   'fix_started', 'pr_created', 'fix_completed', 'review_needed',
   'rework_required', 'merge_completed', 'pipeline_failed', 'low_credits', 'payment_failed',
 ];
+
+const EVENT_ICONS: Record<string, LucideIcon> = {
+  fix_started: Play,
+  pr_created: GitPullRequest,
+  fix_completed: CheckCircle,
+  review_needed: Eye,
+  rework_required: RefreshCw,
+  merge_completed: GitMerge,
+  pipeline_failed: AlertTriangle,
+  low_credits: CreditCard,
+  payment_failed: XCircle,
+};
 
 const API_KEYS = [
   { id: 'linear_key', label: 'Linear API Key', key: 'LINEAR_API_KEY', icon: GitBranch, required: true, placeholder: 'lin_api_...', docUrl: 'https://linear.app/settings/api' },
@@ -139,6 +163,7 @@ export default function Settings() {
   const [apiKeyValues, setApiKeyValues] = useState<Record<string, string>>({});
   const [apiKeySaving, setApiKeySaving] = useState<Record<string, boolean>>({});
   const [editMode, setEditMode] = useState<Record<string, boolean>>({});
+  const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({});
   const [verifying, setVerifying] = useState<Record<string, boolean>>({});
 
   async function handleSaveApiKey(keyId: string) {
@@ -294,16 +319,19 @@ export default function Settings() {
                           </span>
                           {apiKey.id === 'linear_key' && (() => {
                             const li = sysConfig?.integrations?.find((i: any) => i.id === 'linear');
-                            return li ? (
+                            const hasEnvVar = !!sysConfig.env?.[apiKey.key];
+                            if (!li) return null;
+                            const effectivelyConnected = li.connected && hasEnvVar;
+                            return (
                               <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                li.connected
+                                effectivelyConnected
                                   ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                   : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
                               }`}>
-                                <span className={`h-1.5 w-1.5 rounded-full ${li.connected ? 'bg-green-500' : 'bg-gray-400'}`} />
-                                {li.connected ? 'Connected' : 'Not Connected'}
+                                <span className={`h-1.5 w-1.5 rounded-full ${effectivelyConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
+                                {effectivelyConnected ? 'Connected' : 'Not Connected'}
                               </span>
-                            ) : null;
+                            );
                           })()}
                         </>
                       )}
@@ -317,12 +345,20 @@ export default function Settings() {
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <input
-                          type="password"
+                          type={showApiKey[apiKey.id] ? 'text' : 'password'}
                           value={apiKeyValues[apiKey.id] || ''}
                           onChange={(e) => setApiKeyValues((prev) => ({ ...prev, [apiKey.id]: e.target.value }))}
                           placeholder={apiKey.placeholder}
-                          className="input-field w-full font-mono text-sm min-h-[44px]"
+                          className="input-field w-full font-mono text-sm min-h-[44px] pr-10"
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowApiKey((prev) => ({ ...prev, [apiKey.id]: !prev[apiKey.id] }))}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                          tabIndex={-1}
+                        >
+                          {showApiKey[apiKey.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
                       </div>
                       <button
                         onClick={() => handleSaveApiKey(apiKey.id)}
@@ -382,45 +418,65 @@ export default function Settings() {
             <p className="text-sm text-gray-500">Choose how and when you receive notifications</p>
           </div>
         </div>
-        <div className="card">
-          {notificationsLoading ? (
-            <div className="space-y-4 animate-pulse">{[...Array(6)].map((_, i) => <div key={i} className="h-10 w-full rounded bg-gray-200 dark:bg-gray-700" />)}</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+        {notificationsLoading ? (
+          <div className="space-y-3 animate-pulse">{[...Array(6)].map((_, i) => <div key={i} className="h-14 w-full rounded-lg bg-gray-200 dark:bg-gray-700" />)}</div>
+        ) : (
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="py-3 px-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
                 Email notifications enabled. Slack and Telegram coming soon.
               </p>
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="py-3 pr-4 text-left font-medium text-gray-500 dark:text-gray-400">Event</th>
-                    {CHANNELS.map((ch) => (
-                      <th key={ch.id} className="px-3 py-3 text-center font-medium text-gray-500 dark:text-gray-400">
-                        <ch.icon size={16} className="inline-block mr-1" />
-                        {ch.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {EVENT_TYPES.map((event) => (
-                    <tr key={event} className="border-b border-gray-100 dark:border-gray-800">
-                      <td className="py-3 pr-4 text-gray-900 dark:text-gray-100 font-medium capitalize">{event.replace(/_/g, ' ')}</td>
-                      {CHANNELS.map((ch) => {
-                        const pref = notifications.find((n) => n.channel === ch.id && n.eventType === event);
-                        return (
-                          <td key={ch.id} className="px-3 py-3 text-center">
-                            <input type="checkbox" checked={pref?.enabled ?? false} onChange={(e) => handleToggleNotif(ch.id, event, e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
-          )}
-        </div>
+            {EVENT_TYPES.map((event) => {
+              const EventIcon = EVENT_ICONS[event] || Bell;
+              return (
+                <div
+                  key={event}
+                  className="py-3 px-5 border-b border-gray-100 dark:border-gray-800 last:border-b-0 flex items-center justify-between gap-4 transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-gray-800/30"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="text-gray-400 dark:text-gray-500 flex-shrink-0 flex items-center justify-center">
+                      <EventIcon size={18} />
+                    </div>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize truncate">
+                      {event.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {CHANNELS.map((ch) => {
+                      const pref = notifications.find((n) => n.channel === ch.id && n.eventType === event);
+                      const enabled = pref?.enabled ?? false;
+                      return (
+                        <button
+                          key={ch.id}
+                          onClick={() => handleToggleNotif(ch.id, event, !enabled)}
+                          className={`inline-flex items-center gap-1 rounded-full border py-1 px-2 text-xs font-medium transition-colors ${
+                            enabled
+                              ? 'border-brand-400 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300 dark:border-brand-600 hover:bg-brand-100 dark:hover:bg-brand-900/30'
+                              : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                          title={`${ch.label}: ${enabled ? 'Enabled' : 'Disabled'}`}
+                        >
+                          {enabled ? (
+                            <span className="rounded-full bg-brand p-0.5">
+                              <Check size={10} className="text-white" />
+                            </span>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600">
+                              <X size={10} />
+                            </span>
+                          )}
+                          <span className="hidden sm:inline">{ch.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <ChevronRight size={16} className="text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>}
 
       {activeTab === 'privacy' && <section>

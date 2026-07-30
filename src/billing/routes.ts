@@ -34,6 +34,17 @@ import { auditLog } from '../audit/middleware.js';
 
 const log = rootLogger.child({ module: 'billing-api' });
 
+// Account-level plan names (from accounts table) to billing PlanId mapping.
+// The accounts table stores user-friendly tier names like 'pro', while billing uses plan IDs ('solo').
+const ACCOUNT_PLAN_TO_PLAN_ID: Record<string, PlanId> = {
+  free: 'free',
+  pro: 'solo',
+  solo: 'solo',
+  team: 'team',
+  enterprise: 'enterprise',
+  selfHosted: 'selfHosted',
+};
+
 const router: Router = Router();
 
 // ---------------------------------------------------------------------------
@@ -77,14 +88,27 @@ router.get('/plan', requireAuth, async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req);
     let planId: PlanId = 'free';
+    let hasBillingRecord = false;
     if (accountId) {
-      const result = await queryWithRetry<{ plan: string }>(
-        'SELECT plan FROM billing WHERE account_id = $1',
+      // First check dedicated billing table (Stripe-backed subscriptions)
+      const billingResult = await queryWithRetry<{ plan: string; stripe_customer_id: string | null }>(
+        'SELECT plan, stripe_customer_id FROM billing WHERE account_id = $1',
         [accountId],
       );
-      if (result.rows.length > 0) {
-        const dbPlan = result.rows[0].plan as PlanId;
+      if (billingResult.rows.length > 0) {
+        const dbPlan = billingResult.rows[0].plan as PlanId;
         if (PLANS[dbPlan]) planId = dbPlan;
+        hasBillingRecord = billingResult.rows[0].stripe_customer_id !== null;
+      } else {
+        // Fallback to accounts.plan for users whose plan is set directly (e.g. via admin)
+        const accountResult = await queryWithRetry<{ plan: string }>(
+          'SELECT plan FROM accounts WHERE id = $1',
+          [accountId],
+        );
+        if (accountResult.rows.length > 0) {
+          const mappedPlanId = ACCOUNT_PLAN_TO_PLAN_ID[accountResult.rows[0].plan];
+          if (mappedPlanId && PLANS[mappedPlanId]) planId = mappedPlanId;
+        }
       }
     }
     const plan = PLANS[planId];
@@ -100,6 +124,7 @@ router.get('/plan', requireAuth, async (req: Request, res: Response) => {
       customWebhooks: plan.customWebhooks,
       prioritySupport: plan.prioritySupport,
       trialDays: plan.trialDays,
+      hasBillingRecord,
     });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to get plan');

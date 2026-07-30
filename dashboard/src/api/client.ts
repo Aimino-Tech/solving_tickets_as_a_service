@@ -140,6 +140,7 @@ export interface BillingPlan {
   trialDays?: number;
   monthlyFixLimit?: number;
   concurrentFixes?: number;
+  hasBillingRecord?: boolean;
 }
 
 export const litellm = {

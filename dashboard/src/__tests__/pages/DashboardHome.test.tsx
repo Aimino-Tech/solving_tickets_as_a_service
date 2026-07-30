@@ -155,6 +155,7 @@ describe('DashboardHome', () => {
       register: vi.fn(),
       logout: vi.fn(),
     });
+    mockBillingPlan.mockResolvedValue({ id: 'solo', name: 'Solo', monthlyFixLimit: 500, hasBillingRecord: true });
     mockBillingPortal.mockResolvedValue({ url: 'https://stripe.com/portal' });
 
     renderWithProviders(<DashboardHome />);
@@ -176,6 +177,7 @@ describe('DashboardHome', () => {
       register: vi.fn(),
       logout: vi.fn(),
     });
+    mockBillingPlan.mockResolvedValue({ id: 'solo', name: 'Solo', monthlyFixLimit: 500, hasBillingRecord: true });
     mockBillingPortal.mockRejectedValue(new Error('No billing record found'));
 
     renderWithProviders(<DashboardHome />);
