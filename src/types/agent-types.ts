@@ -91,6 +91,13 @@ export interface GroundingResult {
   details: string[];
 }
 
+export interface FixUnabledReason {
+  category: 'cannot_reproduce' | 'insufficient_context' | 'security_concern' | 'dependency_error' | 'timeout' | 'unsupported_language' | 'unknown';
+  detail: string;
+  userSuggestion: string;
+  docsLink?: string;
+}
+
 export interface AgentResult {
   [key: string]: unknown;
   summary: string;
@@ -102,7 +109,7 @@ export interface AgentResult {
   testOutput?: string;
   errors?: string[];
   relevantPRs?: Array<{ url: string; title: string; state: string }>;
-  noFixReason?: string;
+  noFixReason?: FixUnabledReason;
   alreadyFixed?: boolean;
   investigationOnly?: boolean;
   verification?: VerificationResult;

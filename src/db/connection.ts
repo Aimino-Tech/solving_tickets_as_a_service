@@ -76,6 +76,14 @@ export function getPool(): pg.Pool {
  * Execute a query with automatic retry on connection failure.
  * Retries up to 3 times with a 1-second delay between attempts.
  */
+export function isTableNotFoundError(err: unknown): boolean {
+  if (err instanceof Error) {
+    const pgErr = err as any;
+    return pgErr.code === '42P01' || (typeof pgErr.message === 'string' && pgErr.message.includes('relation') && pgErr.message.includes('does not exist'));
+  }
+  return false;
+}
+
 export async function queryWithRetry<T extends pg.QueryResultRow>(
   queryText: string,
   params?: unknown[],

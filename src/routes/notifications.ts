@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { rootLogger } from '../utils/logger.js';
-import { requireAuth } from '../security/authMiddleware.js';
+import { requireAuth } from '../auth/middleware.js';
 import { notificationPreferencesRepository } from '../db/repositories/NotificationPreferencesRepository.js';
 import { notificationHistoryRepository } from '../db/repositories/NotificationHistoryRepository.js';
 import type { NewNotificationPreference } from '../db/types/notifications.js';
@@ -11,13 +11,9 @@ const router: Router = Router();
 
 router.use(requireAuth);
 
-function getUserId(req: Request): number | undefined {
-  return (req as any).userId;
-}
-
 router.get('/preferences', async (req: Request, res: Response) => {
   try {
-    const userId = getUserId(req);
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: 'Unauthorized' }); return; }
     const preferences = await notificationPreferencesRepository.findByUser(userId);
     res.json({ preferences });
@@ -29,7 +25,7 @@ router.get('/preferences', async (req: Request, res: Response) => {
 
 router.put('/preferences', async (req: Request, res: Response) => {
   try {
-    const userId = getUserId(req);
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: 'Unauthorized' }); return; }
     const { channel, eventType, enabled, channelTarget } = req.body;
     if (!channel || !eventType) {
@@ -49,7 +45,7 @@ router.put('/preferences', async (req: Request, res: Response) => {
 
 router.get('/history', async (req: Request, res: Response) => {
   try {
-    const userId = getUserId(req);
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: 'Unauthorized' }); return; }
     const limit = Math.min(Math.abs(Number(req.query.limit) || 50), 200);
     const offset = Math.abs(Number(req.query.offset) || 0);
@@ -64,7 +60,7 @@ router.get('/history', async (req: Request, res: Response) => {
 
 router.put('/history/:id/read', async (req: Request, res: Response) => {
   try {
-    const userId = getUserId(req);
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: 'Unauthorized' }); return; }
     const id = Number(req.params.id);
     if (Number.isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
@@ -78,7 +74,7 @@ router.put('/history/:id/read', async (req: Request, res: Response) => {
 
 router.put('/history/read-all', async (req: Request, res: Response) => {
   try {
-    const userId = getUserId(req);
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: 'Unauthorized' }); return; }
     await notificationHistoryRepository.markAllRead(userId);
     res.json({ success: true });

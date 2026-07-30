@@ -22,10 +22,10 @@
 .*/__fixtures__/.*$
 .*/test-data/.*$
 
-# Example .env files (documentation-only, never loaded in production)
-\.env\.example$
-\.env\.sample$
-\.env\.template$
+# Example .env files in test/subdirectory only — repo-root .env.example should NOT be suppressed
+.*/test-data/\.env\.example$
+.*/test-data/\.env\.sample$
+.*/test-data/\.env\.template$
 
 # Documentation containing fake credentials for illustrative purposes
 .*/docs/.*\.md$

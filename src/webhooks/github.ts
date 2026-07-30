@@ -3,12 +3,16 @@
  *
  * Receives webhook events from GitHub and routes them to the appropriate
  * handlers. Primary handler is issues.labeled with the "stas:fix" label.
- * Also handles marketplace_purchase for billing plan changes.
+ * Also handles marketplace_purchase for billing plan changes,
+ * pull_request.closed for the "STAS fixed this" badge, and
+ * issue_comment.created for the approval slash commands (/stas approve, /stas reject).
  *
  * ── Error Handling Audit ────────────────────────────────────────────
  * ✅ issues.labeled handler catches enqueue failures with context
  * ✅ issues.edited handler catches enqueue failures with context
  * ✅ marketplace_purchase handler catches errors with context
+ * ✅ pull_request.closed handler catches lookups and comment failures with context
+ * ✅ issue_comment.created handler catches parse/approve/reject failures with context
  * ✅ Missing installation ID logged and handled gracefully
  * ✅ All handlers log event name and delivery context
  * ────────────────────────────────────────────────────────────────────
@@ -18,6 +22,8 @@ import { type EmitterWebhookEventName, Webhooks } from '@octokit/webhooks';
 
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { generateTraceId } from '../utils/trace.js';
+import { captureEvent } from '../analytics/tracker.js';
 import type { BillingPlan, IssueJobData } from '../utils/types.js';
 import { rateLimiter } from '../ratelimit/limiter.js';
 import { getRateLimitForAccount } from '../ratelimit/tiers.js';
@@ -25,6 +31,9 @@ import { getTierForAccount } from '../ratelimit/tiers.js';
 import { accountsRepository } from '../db/repositories/index.js';
 import { dispatchIssueToOsy } from '../services/osyDispatch.js';
 import * as auditService from '../audit/service.js';
+import { dispatchThroughGovernance } from '../governance/client.js';
+import { parseSlashCommand } from '../github/slashCommands.js';
+import { recordGovernanceFailure } from '../bridge/metrics.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
 
@@ -57,6 +66,37 @@ async function postIssueReceivedComment(
     log.warn(
       { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
       'Failed to post "issue received" comment',
+    );
+  }
+}
+
+/**
+ * Post a comment when governance proxy is unavailable.
+ * Fail-closed: the issue is not processed when governance is down.
+ */
+async function postGovernanceFailureComment(
+  installationId: number,
+  repoOwner: string,
+  repoName: string,
+  issueNumber: number,
+): Promise<void> {
+  try {
+    const { getOctokit } = await import('../github/auth.js');
+    const octokit = await getOctokit(installationId);
+    await octokit.issues.createComment({
+      owner: repoOwner,
+      repo: repoName,
+      issue_number: issueNumber,
+      body: `### ⚠️ Governance Proxy Unavailable\n\nSTAS was unable to verify this issue through the governance proxy. Processing has been **blocked** to maintain security policy compliance.\n\n> The issue will not be processed until the governance service is restored. An administrator should investigate the governance proxy status.\n\nIssue ID: #${issueNumber}`,
+    });
+    log.info(
+      { repo: `${repoOwner}/${repoName}`, issueNumber },
+      'Posted governance failure comment',
+    );
+  } catch (err) {
+    log.warn(
+      { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
+      'Failed to post governance failure comment',
     );
   }
 }
@@ -131,6 +171,17 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         });
       } catch (auditErr) {
         log.error({ err: String(auditErr) }, 'Failed to audit log installation event');
+      }
+
+      // Track app installation in PostHog
+      try {
+        captureEvent('app_installed', String(installationId), {
+          accountLogin: p.installation?.account?.login,
+          accountType: p.installation?.account?.type,
+          reposCount: p.repositories?.length ?? 0,
+        });
+      } catch (analyticsErr) {
+        log.error({ err: String(analyticsErr) }, 'Failed to track app_installed event');
       }
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to handle installation.created event');
@@ -288,7 +339,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
     if (config.osy?.dispatchUrl) {
       log.info(
         { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-        'Dispatching to OpenSymphony via OS dispatch API',
+        'Dispatching to OpenSymphony via OS dispatch API (no governance proxy)',
       );
       const osyResult = await dispatchIssueToOsy({
         installationId: jobData.installationId,
@@ -298,6 +349,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         issueTitle: jobData.issueTitle ?? '',
         issueBody: jobData.issueBody,
         labels: jobData.labels ?? [],
+        traceId,
       });
       if (!osyResult.success) {
         auditService.logFixJobEvent({
@@ -310,14 +362,20 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         });
         log.error(
           { err: osyResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-          'OS dispatch failed — falling back to local queue',
+          'OS dispatch failed — OpenSymphony unavailable',
         );
-        await enqueue(jobData);
+        recordGovernanceFailure(repo, osyResult.error ?? 'unknown');
+        await postGovernanceFailureComment(
+          installationId || 0,
+          jobData.repoOwner,
+          jobData.repoName,
+          jobData.issueNumber,
+        );
       }
     } else {
       log.info(
         { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-        'No OS_DISPATCH_URL configured — using local queue',
+        'No dispatch URL configured — using local queue',
       );
       try {
         await enqueue(jobData);
@@ -439,10 +497,39 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         await rateLimiter.increment('repo', repo);
       }
 
-      if (config.osy?.dispatchUrl) {
+      const traceId = generateTraceId();
+      if (config.proxy.dispatchUrl) {
+        log.info(
+          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber, traceId },
+          'Dispatching edited issue through governance proxy',
+        );
+        const govResult = await dispatchThroughGovernance({
+          installationId: jobData.installationId,
+          repoOwner: jobData.repoOwner,
+          repoName: jobData.repoName,
+          issueNumber: jobData.issueNumber,
+          issueTitle: jobData.issueTitle ?? '',
+          issueBody: jobData.issueBody,
+          labels: jobData.labels ?? [],
+          traceId,
+        });
+        if (!govResult.success) {
+          log.error(
+            { err: govResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+            'Governance proxy dispatch failed for edited issue — blocking (fail-closed)',
+          );
+          recordGovernanceFailure(`${jobData.repoOwner}/${jobData.repoName}`, govResult.error ?? 'unknown');
+          await postGovernanceFailureComment(
+            installationId || 0,
+            jobData.repoOwner,
+            jobData.repoName,
+            jobData.issueNumber,
+          );
+        }
+      } else if (config.osy?.dispatchUrl) {
         log.info(
           { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-          'Dispatching edited issue to OpenSymphony',
+          'Dispatching edited issue to OpenSymphony (no governance proxy)',
         );
         const osyResult = await dispatchIssueToOsy({
           installationId: jobData.installationId,
@@ -452,20 +539,20 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           issueTitle: jobData.issueTitle ?? '',
           issueBody: jobData.issueBody,
           labels: jobData.labels ?? [],
+          traceId,
         });
         if (!osyResult.success) {
           log.error(
             { err: osyResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-            'OS dispatch failed for edited issue — falling back to local queue',
+            'OS dispatch failed for edited issue — OpenSymphony unavailable',
           );
-          try {
-            await enqueue(jobData);
-          } catch (err) {
-            log.error(
-              { err: String(err) },
-              'Failed to enqueue edited issue after OS dispatch fallback',
-            );
-          }
+          recordGovernanceFailure(`${jobData.repoOwner}/${jobData.repoName}`, osyResult.error ?? 'unknown');
+          await postGovernanceFailureComment(
+            installationId || 0,
+            jobData.repoOwner,
+            jobData.repoName,
+            jobData.issueNumber,
+          );
         }
       } else {
         try {
@@ -541,6 +628,243 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       log.error(
         { err: String(err), payload: JSON.stringify(payload).slice(0, 500) },
         'Failed to handle marketplace purchase event',
+      );
+    }
+  });
+
+  // ── pull_request.closed ──────────────────────────────────────────
+  // When a PR that STAS created gets merged, post a "STAS fixed this" badge comment.
+  webhooks.on('pull_request.closed' as EmitterWebhookEventName, async ({ payload }) => {
+    try {
+      const p = payload as unknown as {
+        action: string;
+        pull_request: {
+          merged: boolean;
+          html_url: string;
+          number: number;
+        };
+        repository: {
+          owner: { login: string };
+          name: string;
+        };
+        installation?: { id: number };
+      };
+
+      // Only act on merged PRs
+      if (p.action !== 'closed' || !p.pull_request.merged) {
+        return;
+      }
+
+      const prUrl = p.pull_request.html_url;
+      const repoOwner = p.repository.owner.login;
+      const repoName = p.repository.name;
+      const prNumber = p.pull_request.number;
+      const installationId = p.installation?.id ?? 0;
+
+      log.info(
+        {
+          repo: `${repoOwner}/${repoName}`,
+          prNumber,
+          prUrl,
+        },
+        'PR merged — checking if this was a STAS-created PR',
+      );
+
+      // Look up the STAS run by PR URL in the database
+      const { queryWithRetry } = await import('../db/connection.js');
+      const result = await queryWithRetry<{
+        id: number;
+        installation_id: number;
+        repo_owner: string;
+        repo_name: string;
+        issue_number: number;
+      }>(
+        `SELECT id, installation_id, repo_owner, repo_name, issue_number
+         FROM run_history
+         WHERE pr_url = $1
+         LIMIT 1`,
+        [prUrl],
+      );
+
+      const run = result.rows[0];
+      if (!run) {
+        log.info(
+          { prUrl },
+          'No STAS run found for this PR — not posting badge',
+        );
+        return;
+      }
+
+      log.info(
+        {
+          runId: run.id,
+          issueNumber: run.issue_number,
+          repo: `${repoOwner}/${repoName}`,
+        },
+        'Found STAS run for merged PR — posting badge comment',
+      );
+
+      // Post the "STAS fixed this" badge comment
+      const { getOctokit } = await import('../github/auth.js');
+      const octokit = await getOctokit(installationId || run.installation_id);
+      await octokit.issues.createComment({
+        owner: repoOwner,
+        repo: repoName,
+        issue_number: run.issue_number,
+        body: [
+          '![STAS Fixed This](https://stas.aimino.io/badge/stas-fixed-this.svg)',
+          '',
+          '🤖 This PR was fixed by **STAS** — automated bug fixing for your GitHub issues.',
+          '',
+          '[Add STAS to your repo](https://github.com/apps/stas-app/installations/new?utm_source=github&utm_medium=pr-badge&utm_campaign=aim-4215) | [View Dashboard](https://stas.aimino.io/dashboard)',
+        ].join('\n'),
+      });
+
+      log.info(
+        {
+          runId: run.id,
+          issueNumber: run.issue_number,
+          repo: `${repoOwner}/${repoName}`,
+        },
+        'Badge comment posted on merged PR issue',
+      );
+    } catch (err) {
+      log.error(
+        { err: String(err) },
+        'Failed to handle pull_request.closed event',
+      );
+    }
+  });
+
+  // ── issue_comment.created ───────────────────────────────────────
+  // Parse slash commands (/stas approve, /stas reject) and wire to approval gate.
+  webhooks.on('issue_comment.created' as EmitterWebhookEventName, async ({ payload }) => {
+    try {
+      const p = payload as unknown as {
+        action: string;
+        comment: {
+          body: string;
+          user: { login: string };
+        };
+        issue: { number: number };
+        repository: {
+          owner: { login: string };
+          name: string;
+        };
+        installation?: { id: number };
+      };
+
+      const commentBody = p.comment.body;
+      const parsed = parseSlashCommand(commentBody);
+      if (!parsed) {
+        return; // Not a slash command we handle
+      }
+
+      const repoOwner = p.repository.owner.login;
+      const repoName = p.repository.name;
+      const issueNumber = p.issue.number;
+      const commentUser = p.comment.user.login;
+
+      log.info(
+        {
+          repo: `${repoOwner}/${repoName}`,
+          issueNumber,
+          command: parsed.command,
+          args: parsed.args,
+          user: commentUser,
+        },
+        'Slash command received',
+      );
+
+      if (parsed.command === 'stas:approve') {
+        // Find pending approvals for this issue
+        const { getPendingApprovals, approveApproval } = await import('../middleware/approvalGate.js');
+        const pending = getPendingApprovals();
+        const match = pending.find(
+          (a) =>
+            a.repoOwner === repoOwner &&
+            a.repoName === repoName &&
+            a.issueNumber === issueNumber &&
+            a.status === 'pending',
+        );
+
+        if (!match) {
+          log.warn(
+            { repo: `${repoOwner}/${repoName}`, issueNumber },
+            'No pending approval found for approve command',
+          );
+          // Post a reply indicating no pending approval
+          const { getOctokit } = await import('../github/auth.js');
+          const installationId = p.installation?.id ?? 0;
+          const octokit = await getOctokit(installationId);
+          await octokit.issues.createComment({
+            owner: repoOwner,
+            repo: repoName,
+            issue_number: issueNumber,
+            body: `⚠️ No pending approval found for this issue. The approval may have already been processed or this issue was not flagged for approval.`,
+          });
+          return;
+        }
+
+        const approved = approveApproval({
+          id: match.id,
+          approvedBy: commentUser,
+        });
+
+        if (approved) {
+          log.info(
+            { approvalId: match.id, user: commentUser },
+            'Approval granted via slash command',
+          );
+        }
+      } else if (parsed.command === 'stas:reject') {
+        const { getPendingApprovals, rejectApproval } = await import('../middleware/approvalGate.js');
+        const pending = getPendingApprovals();
+        const match = pending.find(
+          (a) =>
+            a.repoOwner === repoOwner &&
+            a.repoName === repoName &&
+            a.issueNumber === issueNumber &&
+            a.status === 'pending',
+        );
+
+        if (!match) {
+          log.warn(
+            { repo: `${repoOwner}/${repoName}`, issueNumber },
+            'No pending approval found for reject command',
+          );
+          const { getOctokit } = await import('../github/auth.js');
+          const installationId = p.installation?.id ?? 0;
+          const octokit = await getOctokit(installationId);
+          await octokit.issues.createComment({
+            owner: repoOwner,
+            repo: repoName,
+            issue_number: issueNumber,
+            body: `⚠️ No pending approval found for this issue.`,
+          });
+          return;
+        }
+
+        const reason = parsed.args.join(' ') || undefined;
+        const rejected = rejectApproval({
+          id: match.id,
+          rejectedBy: commentUser,
+          reason,
+        });
+
+        if (rejected) {
+          log.info(
+            { approvalId: match.id, user: commentUser, reason },
+            'Rejection recorded via slash command',
+          );
+        }
+      } else {
+        log.debug({ command: parsed.command }, 'Unknown slash command — ignoring');
+      }
+    } catch (err) {
+      log.error(
+        { err: String(err) },
+        'Failed to handle issue_comment.created event',
       );
     }
   });

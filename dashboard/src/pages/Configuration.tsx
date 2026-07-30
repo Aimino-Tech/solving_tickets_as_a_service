@@ -115,7 +115,7 @@ export default function Configuration() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const successTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
@@ -320,7 +320,7 @@ export default function Configuration() {
               <button onClick={handleSaveEnv} disabled={saving} className="btn-primary">
                 {saving ? 'Saving...' : 'Save Environment'}
               </button>
-              <button onClick={loadConfig} className="btn-secondary">
+              <button onClick={() => loadConfig()} className="btn-secondary">
                 Refresh
               </button>
             </div>

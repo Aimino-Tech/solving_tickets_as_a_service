@@ -20,10 +20,11 @@ function buildCeleryMessage(
   taskName: string,
   kwargs: Record<string, unknown>,
   delaySeconds?: number,
+  deterministicId?: string,
 ): CeleryMessage {
   const msg: CeleryMessage = {
     task: taskName,
-    id: randomUUID(),
+    id: deterministicId ?? randomUUID(),
     args: [],
     kwargs,
     retries: 0,
@@ -61,7 +62,9 @@ export async function dispatchToCeleryPipeline(data: IssueJobData): Promise<{
   errors?: string[];
 }> {
   const issueId = data.trackerTicketId || `gh-${data.repoOwner}-${data.repoName}-${data.issueNumber}`;
-  const runId = `pipe-${randomUUID().slice(0, 8)}`;
+  const source = data.source ?? 'github';
+  const runId = `${source}:${data.repoOwner}/${data.repoName}#${data.issueNumber}`;
+  const dedupId = `${source}:${data.repoOwner}/${data.repoName}#${data.issueNumber}`;
 
   log.info({ runId, issueId, repo: `${data.repoOwner}/${data.repoName}` }, 'Dispatching to Celery pipeline');
 
@@ -81,10 +84,10 @@ export async function dispatchToCeleryPipeline(data: IssueJobData): Promise<{
     source: data.source || 'github',
     installation_id: data.installationId,
     current_state: 'Todo',
-    run_id: runId,
+    run_id: dedupId,
   };
 
-  const msg = buildCeleryMessage('workers.tasks.triage.classify_issue', ctx);
+  const msg = buildCeleryMessage('workers.tasks.triage.classify_issue', ctx, undefined, dedupId);
   const published = await publishToQueue('stas.direct', 'issue.fix', msg);
 
   if (!published) {
@@ -111,7 +114,7 @@ export async function dispatchToCeleryPipeline(data: IssueJobData): Promise<{
 
   return {
     success: true,
-    runId,
+    runId: dedupId,
     summary: `Dispatched to Celery pipeline: triage → agent → verification → PR`,
   };
 }
@@ -124,9 +127,10 @@ export async function dispatchFullPipeline(data: IssueJobData): Promise<{
   errors?: string[];
 }> {
   const issueId = data.trackerTicketId || `gh-${data.repoOwner}-${data.repoName}-${data.issueNumber}`;
-  const runId = `pipe-${randomUUID().slice(0, 8)}`;
+  const source = data.source ?? 'github';
+  const dedupId = `${source}:${data.repoOwner}/${data.repoName}#${data.issueNumber}`;
 
-  log.info({ runId, issueId, repo: `${data.repoOwner}/${data.repoName}` }, 'Dispatching full pipeline');
+  log.info({ runId: dedupId, issueId, repo: `${data.repoOwner}/${data.repoName}` }, 'Dispatching full pipeline');
 
   const ctx: Record<string, unknown> = {
     issue_id: issueId,
@@ -142,10 +146,10 @@ export async function dispatchFullPipeline(data: IssueJobData): Promise<{
     source: data.source || 'github',
     installation_id: data.installationId,
     current_state: 'Todo',
-    run_id: runId,
+    run_id: dedupId,
   };
 
-  const msg = buildCeleryMessage('workers.tasks.pipeline_orchestrator.run_full_pipeline', ctx);
+  const msg = buildCeleryMessage('workers.tasks.pipeline_orchestrator.run_full_pipeline', ctx, undefined, dedupId);
   const published = await publishToQueue('stas.direct', 'issue.fix', msg);
 
   if (!published) {
@@ -172,7 +176,7 @@ export async function dispatchFullPipeline(data: IssueJobData): Promise<{
 
   return {
     success: true,
-    runId,
+    runId: dedupId,
     summary: 'Dispatched to Celery full pipeline orchestrator',
   };
 }

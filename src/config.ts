@@ -49,6 +49,11 @@ const envSchema = z.object({
   OPENAI_BASE_URL: z.string().default("http://litellm-proxy:4002/v1"),
   FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
 
+  FREE_TIER_MODEL: z.string().default("free-tier"),
+  FREE_TIER_BASE_URL: z.string().default("http://localhost:4002"),
+  PAID_TIER_MODEL: z.string().default("deepseek-v4-flash"),
+  PAID_TIER_BASE_URL: z.string().default("http://localhost:4002"),
+
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
   PHASE_TIMEOUT_TRIAGE_MS: z.coerce.number().int().positive().default(30_000),
   PHASE_TIMEOUT_SANDBOX_MS: z.coerce.number().int().positive().default(600_000),
@@ -97,10 +102,20 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('24h'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
 
+  AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  AUTH_LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  AUTH_REGISTER_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(3),
+  AUTH_REFRESH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+
   // Proxy
   PROXY_MODEL_ROUTER_ENABLED: boolSchema(true),
   PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED: boolSchema(false),
   PROXY_GITHUB_PAT: z.string().optional(),
+  PROXY_HAS_PAT: boolSchema(false),
+  PROXY_PAT: z.string().default(''),
+  PROXY_DISPATCH_URL: z.string().default(''),
+  PROXY_API_KEY: z.string().default(''),
+  PROXY_ALLOWED_ORGS: z.string().default(''),
 
   WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
   WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
@@ -139,6 +154,9 @@ const envSchema = z.object({
   STRIPE_PRICE_100_CREDITS: z.string().default('price_100credits'),
   STRIPE_PRICE_500_CREDITS: z.string().default('price_500credits'),
   STRIPE_PRICE_2000_CREDITS: z.string().default('price_2000credits'),
+
+  POSTHOG_API_KEY: z.string().optional(),
+  POSTHOG_HOST: z.string().default('https://us.i.posthog.com'),
 
   DPA_VERSION: z.string().default('2026-06-01'),
   DPA_REQUIRE_ACCEPTANCE: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(true),
@@ -289,11 +307,6 @@ const envSchema = z.object({
   METERING_SANDBOX_MULTIPLIER_MIN: z.coerce.number().min(0.1).max(1.0).default(0.5),
   METERING_SANDBOX_MULTIPLIER_MAX: z.coerce.number().min(1.0).max(5.0).default(2.0),
 
-  // JWT Auth
-  JWT_SECRET: z.string().default('stas-jwt-secret-change-me'),
-  JWT_EXPIRES_IN: z.string().default('15m'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
-
   // OSY Dispatch
   OSY_DISPATCH_URL: z.string().default(''),
   OSY_API_KEY: z.string().default(''),
@@ -303,15 +316,6 @@ const envSchema = z.object({
   LITELLM_API_KEY: z.string().default(''),
   LITELLM_BASE_URL: z.string().default('http://localhost:4000'),
   LITELLM_MODEL: z.string().default('gpt-4o'),
-
-  // Proxy
-  PROXY_MODEL_ROUTER_ENABLED: boolSchema(false),
-  PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED: boolSchema(false),
-  PROXY_HAS_PAT: boolSchema(false),
-  PROXY_PAT: z.string().default(''),
-  PROXY_DISPATCH_URL: z.string().default(''),
-  PROXY_API_KEY: z.string().default(''),
-  PROXY_ALLOWED_ORGS: z.string().default(''),
 
   // Onboarding
   ONBOARDING_ENABLED: boolSchema(false),
@@ -390,6 +394,12 @@ function buildConfig(env: ParsedEnv) {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
       fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
+      modelTier: {
+        freeModel: env.FREE_TIER_MODEL,
+        freeBaseUrl: env.FREE_TIER_BASE_URL,
+        paidModel: env.PAID_TIER_MODEL,
+        paidBaseUrl: env.PAID_TIER_BASE_URL,
+      },
       direct: {
         apiKey: env.OPENAI_API_KEY ?? '',
       },
@@ -447,12 +457,6 @@ function buildConfig(env: ParsedEnv) {
       apiKey: env.E2B_API_KEY,
       templateId: env.E2B_TEMPLATE_ID,
       sandboxTimeoutMs: env.E2B_SANDBOX_TIMEOUT_MS,
-    },
-
-    proxy: {
-      modelRouterEnabled: env.PROXY_MODEL_ROUTER_ENABLED,
-      githubActionsDispatchEnabled: env.PROXY_GITHUB_ACTIONS_DISPATCH_ENABLED,
-      githubPat: env.PROXY_GITHUB_PAT ?? '',
     },
 
     slack: {
@@ -586,6 +590,11 @@ function buildConfig(env: ParsedEnv) {
       teamPriceId: env.STRIPE_TEAM_PRICE_ID,
     },
 
+    posthog: {
+      apiKey: env.POSTHOG_API_KEY,
+      host: env.POSTHOG_HOST,
+    },
+
     dataPrivacy: {
       dpaVersion: env.DPA_VERSION,
       requireDpaAcceptance: env.DPA_REQUIRE_ACCEPTANCE,
@@ -649,6 +658,10 @@ function buildConfig(env: ParsedEnv) {
       jwtSecret: env.JWT_SECRET,
       jwtExpiresIn: env.JWT_EXPIRES_IN,
       jwtRefreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
+      rateLimitWindowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+      loginRateLimitMax: env.AUTH_LOGIN_RATE_LIMIT_MAX,
+      registerRateLimitMax: env.AUTH_REGISTER_RATE_LIMIT_MAX,
+      refreshRateLimitMax: env.AUTH_REFRESH_RATE_LIMIT_MAX,
     },
 
     // ── Security ────────────────────────────────────────────────────────────

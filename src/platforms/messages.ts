@@ -8,7 +8,7 @@
  * predictable across all interactions and platforms.
  */
 
-import type { AgentResult, QualityGateResult } from '../types/agent-types.js';
+import type { AgentResult, FixUnabledReason, QualityGateResult } from '../types/agent-types.js';
 import { QualityGateReporter } from '../core/quality-gate-reporter.js';
 import { config } from '../config.js';
 
@@ -93,13 +93,42 @@ export function lowConfidenceComment(result: AgentResult, testOutput: string): s
 }
 
 /**
+ * Render a structured explanation of why an auto-fix was not possible.
+ */
+function renderNoFixReason(reason: FixUnabledReason): string {
+  const lines: string[] = [
+    `**What went wrong**: ${reason.category} — ${reason.detail}`,
+    '',
+    `**Suggested action**: ${reason.userSuggestion}`,
+  ];
+
+  if (reason.docsLink) {
+    lines.push('', `**Documentation**: ${reason.docsLink}`);
+  }
+
+  return lines.join('\n');
+}
+
+/**
  * No fix possible — explains why and invites contributors.
+ *
+ * When `result.noFixReason` is provided as a structured FixUnabledReason,
+ * it renders a detailed breakdown of what went wrong and suggested next steps.
+ * Falls back to `result.summary` for backward compatibility.
  */
 export function noFixComment(
   result: AgentResult,
   relevantPRs?: Array<{ url: string; title: string; state: string }>,
 ): string {
-  const lines: string[] = [`### ❌ Could Not Fix`, '', result.noFixReason || result.summary, ''];
+  const lines: string[] = [`### ❌ Could Not Fix`, ''];
+
+  if (result.noFixReason) {
+    lines.push(renderNoFixReason(result.noFixReason));
+  } else {
+    lines.push(result.summary);
+  }
+
+  lines.push('');
 
   if (relevantPRs && relevantPRs.length > 0) {
     lines.push(
@@ -454,6 +483,47 @@ export function verificationWarningComment(result: AgentResult): string {
   return lines.join("\n");
 }
 
+// ---------------------------------------------------------------------------
+// Fix stats — data-driven stats block for PR footers
+// ---------------------------------------------------------------------------
+
+/** Statistical data about the fix for display in the PR footer. */
+export interface FixStats {
+  timeToFixSeconds?: number;
+  filesChanged?: number;
+  testsPassed?: number;
+  testsTotal?: number;
+}
+
+/**
+ * Format the fix stats section for inclusion in a PR body.
+ */
+function formatFixStats(stats?: FixStats): string {
+  if (!stats) return '';
+
+  const rows: string[] = ['', '## Fix Stats', '', '| Metric | Value |', '|---|---|'];
+
+  if (stats.timeToFixSeconds !== undefined) {
+    const minutes = Math.round(stats.timeToFixSeconds / 60);
+    const seconds = stats.timeToFixSeconds % 60;
+    const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+    rows.push(`| ⏱ Time to fix | ${timeStr} |`);
+  }
+
+  if (stats.filesChanged !== undefined) {
+    rows.push(`| 📁 Files changed | ${stats.filesChanged} |`);
+  }
+
+  if (stats.testsPassed !== undefined && stats.testsTotal !== undefined) {
+    rows.push(`| ✅ Tests passed | ${stats.testsPassed}/${stats.testsTotal} |`);
+  } else if (stats.testsPassed !== undefined) {
+    rows.push(`| ✅ Tests passed | ${stats.testsPassed} |`);
+  }
+
+  rows.push('');
+  return rows.join('\n');
+}
+
 /**
  * Build a structured PR body.
  */
@@ -464,8 +534,10 @@ export function buildPRBody(params: {
   isDraft: boolean;
   branchName: string;
   runId?: string | number;
+  /** Optional fix stats for the footer section. */
+  fixStats?: FixStats;
 }): string {
-  const { issueNumber, result, fileLinks, branchName, runId } = params;
+  const { issueNumber, result, fileLinks, branchName, runId, fixStats } = params;
 
   const ver = result.verification;
   const verSection: string[] = [];
@@ -506,6 +578,9 @@ export function buildPRBody(params: {
     qualitySection.push('', '## Quality Gates', '', qr.formatMarkdown(qualityGates), '');
   }
 
+  // Fix stats section (data-driven)
+  const statsSection = formatFixStats(fixStats);
+
   return [
     `## Summary`,
     '',
@@ -526,6 +601,7 @@ export function buildPRBody(params: {
       ? `<details><summary>Test Output</summary>\n\n\`\`\`\n${result.testOutput.slice(0, 5000)}\n\`\`\`\n</details>`
       : 'Tests were run as part of the fix process.',
     ...qualitySection,
+    ...(statsSection ? [statsSection] : []),
     '',
     `## Branch`,
     '',
@@ -544,7 +620,7 @@ export function buildPRBody(params: {
     '',
     '---',
     '',
-    `[![STAS](https://img.shields.io/badge/fix-powered_by_STAS-8250DF)](https://stas.aimino.ai) — [Add STAS to your repo](https://github.com/apps/${config.github.appId}/installations/new)`,
+    `[![STAS](https://img.shields.io/badge/fix-powered_by_STAS-8250DF)](https://stas.aimino.ai?utm_source=github&utm_medium=pr-footer&utm_campaign=aim-4215) — [Add STAS to your repo](https://github.com/apps/${config.github.appId}/installations/new?utm_source=github&utm_medium=pr-footer&utm_campaign=aim-4215)`,
   ].join('\n');
 }
 
