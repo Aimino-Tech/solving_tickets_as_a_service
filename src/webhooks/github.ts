@@ -24,6 +24,7 @@ import { getRateLimitForAccount } from '../ratelimit/tiers.js';
 import { getTierForAccount } from '../ratelimit/tiers.js';
 import { accountsRepository } from '../db/repositories/index.js';
 import { dispatchIssueToOsy } from '../services/osyDispatch.js';
+import * as auditService from '../audit/service.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
 
@@ -77,6 +78,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       },
       'Received issues.opened event',
     );
+    auditService.logWebhookReceived({
+      source: 'github',
+      eventType: 'issues.opened',
+      details: {
+        repo: `${payload.repository.owner.login}/${payload.repository.name}`,
+        issueNumber: payload.issue.number,
+      },
+    });
     // We wait for the label event instead of acting on open
   });
 
@@ -110,20 +119,15 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       // correct user/tenant via the manual confirmation button. The installation
       // data is persisted here for audit and future cross-referencing.
       try {
-        const { auditRepository } = await import('../audit/repository.js');
-        await auditRepository.insert({
-          actorType: 'system',
-          actorId: undefined,
-          action: 'onboarding.github.installation_received',
-          resourceType: 'onboarding',
-          resourceId: undefined,
+        await auditService.logWebhookReceived({
+          source: 'github',
+          eventType: 'installation.created',
           details: {
             installationId,
             accountLogin: p.installation?.account?.login,
             accountType: p.installation?.account?.type,
             reposGranted: p.repositories?.length ?? 0,
           },
-          correlationId: undefined,
         });
       } catch (auditErr) {
         log.error({ err: String(auditErr) }, 'Failed to audit log installation event');
@@ -272,6 +276,15 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
     await rateLimiter.increment('repo', repo);
 
     // ── Route to OpenSymphony or local queue ──────────────────────
+    auditService.logFixJobEvent({
+      jobId: `gh-${jobData.repoOwner}-${jobData.repoName}-${jobData.issueNumber}`,
+      event: 'started',
+      accountId: String(jobData.installationId),
+      repo: `${jobData.repoOwner}/${jobData.repoName}`,
+      issueNumber: jobData.issueNumber,
+      details: { dispatchTarget: config.osy?.dispatchUrl ? 'opensymphony' : 'local' },
+    });
+
     if (config.osy?.dispatchUrl) {
       log.info(
         { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
@@ -287,6 +300,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         labels: jobData.labels ?? [],
       });
       if (!osyResult.success) {
+        auditService.logFixJobEvent({
+          jobId: `gh-${jobData.repoOwner}-${jobData.repoName}-${jobData.issueNumber}`,
+          event: 'failed',
+          accountId: String(jobData.installationId),
+          repo: `${jobData.repoOwner}/${jobData.repoName}`,
+          issueNumber: jobData.issueNumber,
+          error: osyResult.error,
+        });
         log.error(
           { err: osyResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
           'OS dispatch failed — falling back to local queue',
@@ -489,6 +510,17 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         },
         'Marketplace purchase event',
       );
+
+      auditService.logWebhookReceived({
+        source: 'github',
+        eventType: 'marketplace_purchase',
+        details: {
+          action: p.action,
+          accountId: plan.accountId,
+          plan: plan.plan,
+          effectiveAt: p.effective_date,
+        },
+      });
 
       // Update the billing plan in the database
       if (p.action === 'purchased' || p.action === 'changed') {
