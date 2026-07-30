@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — STAS</title>
+  <meta name="description" content="Privacy Policy for STAS — Solving Tickets As A Service" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #0a0a0a;
+      color: #f5f5f5;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #10b981; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid #1a1a1a;
+    }
+    nav .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .logo { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
+    .logo span { color: #10b981; }
+    .nav-links { display: flex; align-items: center; gap: 32px; }
+    .nav-links a { font-size: 0.9rem; color: #888; transition: color 0.2s; }
+    .nav-links a:hover { color: #f5f5f5; text-decoration: none; }
+
+    main { padding: 120px 0 60px; }
+    h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 8px; }
+    .effective-date { color: #888; font-size: 0.9rem; margin-bottom: 40px; }
+    h2 { font-size: 1.3rem; font-weight: 700; margin: 32px 0 12px; }
+    p { color: #bbb; margin-bottom: 16px; }
+    ul { color: #bbb; margin-bottom: 16px; padding-left: 24px; }
+    ul li { margin-bottom: 8px; }
+
+    footer { border-top: 1px solid #1a1a1a; padding: 32px 0; margin-top: 60px; }
+    footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    footer p { font-size: 0.85rem; color: #555; }
+    footer a { font-size: 0.85rem; color: #666; transition: color 0.2s; }
+    footer a:hover { color: #f5f5f5; text-decoration: none; }
+
+    @media (max-width: 640px) {
+      nav .container { flex-wrap: wrap; }
+      .nav-links { gap: 16px; font-size: 0.85rem; }
+      h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <a href="/" class="logo" style="color:#f5f5f5;">ST<span>AS</span></a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/trust.html">Trust</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <div class="container">
+      <h1>Privacy Policy</h1>
+      <p class="effective-date">Effective Date: July 30, 2026</p>
+
+      <h2>1. Introduction</h2>
+      <p>STAS ("we," "our," or "us") operates the STAS service at <a href="https://stas.aimino.io">stas.aimino.io</a> and related services (the "Service"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Service.</p>
+      <p>This policy applies to both the cloud-hosted version of STAS and data processed during self-hosted deployments where our systems interact with your repositories.</p>
+
+      <h2>2. Information We Collect</h2>
+      <p><strong>Information You Provide:</strong> When you install the STAS GitHub App, authenticate via OAuth, or contact us, we may collect your GitHub username, email address, and repository metadata relevant to issue resolution.</p>
+      <p><strong>Information Automatically Collected:</strong> We automatically collect certain information when you use the Service, including your IP address, browser type, operating system, referring URLs, and usage data (such as pages viewed and features accessed).</p>
+      <p><strong>Code and Issue Data:</strong> To perform issue resolution, STAS accesses public and authorized private repository contents, issues, pull requests, and comments. This data is processed ephemerally in isolated sandbox environments and is not stored beyond what is necessary for issue resolution and auditing.</p>
+      <p><strong>Cookies:</strong> We use essential cookies to maintain session state and optional analytics cookies to improve the Service. You can control cookie preferences through your browser settings.</p>
+
+      <h2>3. How We Use Your Information</h2>
+      <p>We use the collected information to:</p>
+      <ul>
+        <li>Provide, operate, and maintain the STAS Service</li>
+        <li>Process and resolve GitHub issues you submit through the Service</li>
+        <li>Communicate with you about Service updates, support, and technical issues</li>
+        <li>Monitor and analyze usage patterns to improve the Service</li>
+        <li>Detect, prevent, and address technical issues, fraud, and abuse</li>
+        <li>Comply with legal obligations and enforce our Terms of Service</li>
+      </ul>
+
+      <h2>4. Data Sharing and Disclosure</h2>
+      <p>We do not sell your personal information. We may share your information in the following circumstances:</p>
+      <ul>
+        <li><strong>Service Providers:</strong> With third-party vendors who perform services on our behalf (cloud hosting, monitoring, analytics), subject to contractual data protection obligations</li>
+        <li><strong>Legal Requirements:</strong> When required by law, court order, or governmental regulation, or to protect our rights, property, or safety</li>
+        <li><strong>Business Transfers:</strong> In connection with a merger, acquisition, or sale of all or a portion of our assets, with notice to you</li>
+        <li><strong>Aggregated Data:</strong> We may share anonymized, aggregated statistical data about Service usage that cannot identify individual users</li>
+      </ul>
+
+      <h2>5. Data Retention</h2>
+      <p>We retain your information only as long as necessary to provide the Service and fulfill the purposes described in this policy. Issue processing data (repository contents, generated fixes) is retained for a maximum of 30 days for auditing and quality improvement purposes unless otherwise required by law. You may request deletion of your data by contacting us.</p>
+
+      <h2>6. Data Security</h2>
+      <p>We implement appropriate technical and organizational security measures to protect your information, including encryption in transit (TLS) and at rest, access controls, and regular security audits. All code processing occurs in ephemeral, isolated sandbox environments (gVisor/E2B) that are destroyed after each fix run. However, no method of electronic storage or transmission is 100% secure.</p>
+
+      <h2>7. Your Rights and Choices</h2>
+      <p>Depending on your jurisdiction, you may have rights regarding your personal data, including:</p>
+      <ul>
+        <li><strong>Access:</strong> Request a copy of the personal data we hold about you</li>
+        <li><strong>Correction:</strong> Request that we correct inaccurate or incomplete data</li>
+        <li><strong>Deletion:</strong> Request that we delete your personal data, subject to legal retention requirements</li>
+        <li><strong>Portability:</strong> Request a copy of your data in a machine-readable format</li>
+        <li><strong>Objection:</strong> Object to the processing of your personal data for certain purposes</li>
+      </ul>
+      <p>To exercise these rights, contact us at privacy@aimino.io. We will respond within 30 days.</p>
+
+      <h2>8. Third-Party Services</h2>
+      <p>STAS integrates with third-party services including GitHub, OpenAI-compatible API providers, and cloud infrastructure providers. These services have their own privacy policies governing data handling. We encourage you to review their policies. STAS does not control and is not responsible for the privacy practices of these third parties.</p>
+
+      <h2>9. Children's Privacy</h2>
+      <p>The Service is not intended for individuals under the age of 13 (or the applicable age of consent in your jurisdiction). We do not knowingly collect personal information from children. If we become aware that a child has provided us with personal data, we will delete it.</p>
+
+      <h2>10. International Data Transfers</h2>
+      <p>Your information may be transferred to and processed in countries other than your own. We ensure appropriate safeguards are in place through standard contractual clauses or equivalent mechanisms when transferring data across borders.</p>
+
+      <h2>11. Changes to This Policy</h2>
+      <p>We may update this Privacy Policy from time to time. We will notify you of material changes by posting the updated policy on this page with a revised effective date. Your continued use of the Service after changes constitutes acceptance of the updated policy.</p>
+
+      <h2>12. Contact Us</h2>
+      <p>If you have questions about this Privacy Policy, please contact us at <a href="mailto:privacy@aimino.io">privacy@aimino.io</a> or open an issue on our <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub repository</a>.</p>
+      <p>STAS is provided by Aimino Technologies. Our registered address is available upon request.</p>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 STAS &mdash; Solving Tickets As A Service. AGPL-3.0 Licensed.</p>
+      <div>
+        <a href="/privacy.html" style="margin-right:16px;">Privacy</a>
+        <a href="/terms.html">Terms</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

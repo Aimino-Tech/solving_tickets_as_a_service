@@ -50,6 +50,7 @@ COPY --from=build --chown=stas:stas /app/node_modules ./node_modules
 COPY --from=build --chown=stas:stas /app/package.json ./
 COPY --from=build --chown=stas:stas /app/package-lock.json ./
 COPY --from=build --chown=stas:stas /app/dashboard/dist ./dashboard/dist
+COPY --chown=stas:stas website ./website
 
 # Supply chain: keep lockfile in runtime image for SBOM traceability
 # package-lock.json is read-only at runtime (stas user)

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — STAS</title>
+  <meta name="description" content="Terms of Service for STAS — Solving Tickets As A Service" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #0a0a0a;
+      color: #f5f5f5;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #10b981; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid #1a1a1a;
+    }
+    nav .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .logo { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
+    .logo span { color: #10b981; }
+    .nav-links { display: flex; align-items: center; gap: 32px; }
+    .nav-links a { font-size: 0.9rem; color: #888; transition: color 0.2s; }
+    .nav-links a:hover { color: #f5f5f5; text-decoration: none; }
+
+    main { padding: 120px 0 60px; }
+    h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 8px; }
+    .effective-date { color: #888; font-size: 0.9rem; margin-bottom: 40px; }
+    h2 { font-size: 1.3rem; font-weight: 700; margin: 32px 0 12px; }
+    h3 { font-size: 1.05rem; font-weight: 600; margin: 24px 0 8px; color: #ddd; }
+    p { color: #bbb; margin-bottom: 16px; }
+    ul { color: #bbb; margin-bottom: 16px; padding-left: 24px; }
+    ul li { margin-bottom: 8px; }
+
+    footer { border-top: 1px solid #1a1a1a; padding: 32px 0; margin-top: 60px; }
+    footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    footer p { font-size: 0.85rem; color: #555; }
+    footer a { font-size: 0.85rem; color: #666; transition: color 0.2s; }
+    footer a:hover { color: #f5f5f5; text-decoration: none; }
+
+    @media (max-width: 640px) {
+      nav .container { flex-wrap: wrap; }
+      .nav-links { gap: 16px; font-size: 0.85rem; }
+      h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <a href="/" class="logo" style="color:#f5f5f5;">ST<span>AS</span></a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/trust.html">Trust</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <div class="container">
+      <h1>Terms of Service</h1>
+      <p class="effective-date">Effective Date: July 30, 2026</p>
+
+      <h2>1. Acceptance of Terms</h2>
+      <p>By accessing or using STAS ("the Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Service. These Terms apply to all users of the Service, including both cloud-hosted and self-hosted deployments.</p>
+
+      <h2>2. Description of Service</h2>
+      <p>STAS is an AI-powered service that automatically investigates GitHub issues, generates fixes, runs tests, and creates pull requests. The Service is provided by Aimino Technologies ("we," "our," "us"). STAS is offered in three tiers:</p>
+      <ul>
+        <li><strong>Self-Hosted (OSS):</strong> The open-source software you run on your own infrastructure</li>
+        <li><strong>Cloud Free:</strong> Our hosted version with limited monthly usage</li>
+        <li><strong>Cloud Paid:</strong> Our hosted version with enhanced features, support, and higher usage limits</li>
+      </ul>
+
+      <h2>3. Eligibility</h2>
+      <p>You must be at least 13 years of age (or the age of digital consent in your jurisdiction) to use the Service. If you are using the Service on behalf of an organization, you represent that you have the authority to bind that organization to these Terms.</p>
+
+      <h2>4. User Accounts and Authentication</h2>
+      <p>You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You must notify us immediately of any unauthorized use of your account. We are not liable for any loss or damage arising from your failure to safeguard your credentials.</p>
+
+      <h2>5. Acceptable Use</h2>
+      <p>You agree not to:</p>
+      <ul>
+        <li>Use the Service for any unlawful purpose or in violation of any applicable laws or regulations</li>
+        <li>Attempt to circumvent any usage limits, rate limits, or access controls</li>
+        <li>Use the Service to generate code that is malicious, harmful, or violates third-party rights</li>
+        <li>Reverse engineer, decompile, or disassemble the Service (except as permitted by applicable law)</li>
+        <li>Interfere with or disrupt the integrity or performance of the Service</li>
+        <li>Use the Service to violate GitHub's Terms of Service or Acceptable Use Policies</li>
+      </ul>
+
+      <h2>6. Intellectual Property</h2>
+      <h3>6.1 Our IP</h3>
+      <p>The STAS software is licensed under the AGPL-3.0 license. All intellectual property rights in the Service, including trademarks, service marks, and trade dress, are owned by Aimino Technologies.</p>
+      <h3>6.2 Your IP</h3>
+      <p>You retain all rights to your code, data, and content processed through the Service. We claim no ownership over the fixes, pull requests, or other outputs generated by the Service on your behalf. The Service processes your content solely for the purpose of providing the Service.</p>
+      <h3>6.3 Feedback</h3>
+      <p>If you provide us with suggestions, ideas, or feedback about the Service, we may use it without restriction or obligation to you.</p>
+
+      <h2>7. Payment and Billing</h2>
+      <p>Cloud Paid plans are billed on a monthly subscription basis. Fees are non-refundable except as expressly stated in our refund policy. We may change our fees with 30 days' notice. Failure to pay may result in suspension or termination of your account.</p>
+
+      <h2>8. Service Level and Availability</h2>
+      <p>We strive to maintain high availability of the cloud Service but do not guarantee uninterrupted or error-free operation. We reserve the right to perform maintenance, updates, and modifications that may temporarily affect availability. Self-hosted deployments are entirely under your control and are not covered by any SLA.</p>
+
+      <h2>9. Limitation of Liability</h2>
+      <p>To the maximum extent permitted by applicable law, Aimino Technologies shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or goodwill, arising out of or in connection with your use of the Service. Our total liability for any claim arising from these Terms shall not exceed the amount you have paid us in the 12 months preceding the claim.</p>
+
+      <p><strong>No Warranty:</strong> THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. AI-generated code may contain errors, vulnerabilities, or inaccuracies. You are responsible for reviewing and testing all generated code before deploying it.</p>
+
+      <h2>10. Indemnification</h2>
+      <p>You agree to indemnify and hold harmless Aimino Technologies, its affiliates, officers, agents, and employees from any claims, damages, losses, or expenses (including reasonable attorneys' fees) arising from your use of the Service, your violation of these Terms, or your violation of any third-party rights.</p>
+
+      <h2>11. Third-Party Services</h2>
+      <p>The Service integrates with third-party services including GitHub. Your use of these services is governed by their respective terms. We are not responsible for the availability, security, or operation of third-party services.</p>
+
+      <h2>12. Termination</h2>
+      <p>We may terminate or suspend your access to the Service at any time, with or without cause, with or without notice. Upon termination, your right to use the Service will immediately cease. Sections 6 (Intellectual Property), 9 (Limitation of Liability), 10 (Indemnification), and 13 (Governing Law) shall survive termination.</p>
+
+      <h2>13. Governing Law</h2>
+      <p>These Terms shall be governed by and construed in accordance with the laws of Germany, without regard to its conflict of law provisions. Any disputes arising from these Terms shall be resolved in the courts of Berlin, Germany.</p>
+
+      <h2>14. Changes to Terms</h2>
+      <p>We reserve the right to modify these Terms at any time. We will notify users of material changes via email or through the Service. Your continued use of the Service after changes constitutes acceptance of the modified Terms. If you do not agree to the changes, you must stop using the Service.</p>
+
+      <h2>15. Entire Agreement</h2>
+      <p>These Terms, together with our Privacy Policy, constitute the entire agreement between you and Aimino Technologies regarding the Service and supersede any prior agreements or understandings.</p>
+
+      <h2>16. Contact</h2>
+      <p>For questions about these Terms, contact us at <a href="mailto:legal@aimino.io">legal@aimino.io</a> or open an issue on our <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub repository</a>.</p>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 STAS &mdash; Solving Tickets As A Service. AGPL-3.0 Licensed.</p>
+      <div>
+        <a href="/privacy.html" style="margin-right:16px;">Privacy</a>
+        <a href="/terms.html">Terms</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

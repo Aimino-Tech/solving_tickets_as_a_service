@@ -22,6 +22,7 @@
  */
 
 import crypto from 'node:crypto';
+import path from 'node:path';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
@@ -727,6 +728,10 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/v1/preview', previewRoutes);
 
   app.use('/api', pipelineRouter);
+
+  // ── Static website (privacy, terms, landing pages) ─────────────────
+  app.use(express.static(path.join(__dirname, '../website')));
+
   // -- 404 handler ----------------------------------------------------------
 
   app.use((req: Request, res: Response) => {
