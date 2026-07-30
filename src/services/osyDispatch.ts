@@ -17,6 +17,8 @@ export interface IssueDispatchPayload {
   issueTitle: string;
   issueBody: string | null | undefined;
   labels: string[];
+  /** Optional trace ID for cross-system log correlation. */
+  traceId?: string;
 }
 
 function getDispatchUrl(): string | undefined {
@@ -32,12 +34,17 @@ export async function dispatchIssueToOsy(payload: IssueDispatchPayload): Promise
   }
 
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-API-Key': config.osy?.apiKey ?? '',
+    };
+    if (payload.traceId) {
+      headers['x-stas-trace-id'] = payload.traceId;
+      headers['traceparent'] = `00-${payload.traceId.replace(/-/g, '')}-${payload.traceId.slice(0, 16)}-01`;
+    }
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': config.osy?.apiKey ?? '',
-      },
+      headers,
       body: JSON.stringify({
         issue_id: `${payload.repoOwner}/${payload.repoName}#${payload.issueNumber}`,
         repo: `${payload.repoOwner}/${payload.repoName}`,

@@ -80,7 +80,7 @@ async function sendLowBalanceAlert(accountId: number, balance: number, level: 'w
       : `Your STAS credit balance is ${balance} credits. Consider purchasing more credits soon.`;
 
     await notificationHistoryRepository.create({
-      userId: accountId,
+      userId: String(accountId),
       eventType: 'low_balance',
       channel: 'in_app',
       title,

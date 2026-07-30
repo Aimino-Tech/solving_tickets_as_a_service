@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <defs>
+    <linearGradient id="brand-grad" x1="0" y1="0" x2="400" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="accent-grad" x1="0" y1="0" x2="400" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+  </defs>
+  <!-- Ticket body -->
+  <rect x="85" y="95" width="230" height="200" rx="24" fill="url(#brand-grad)" opacity="0.12"/>
+  <rect x="100" y="108" width="200" height="174" rx="16" fill="url(#brand-grad)" opacity="0.25"/>
+  <!-- Perforation line (dashed) -->
+  <line x1="205" y1="108" x2="205" y2="282" stroke="url(#brand-grad)" stroke-width="2" stroke-dasharray="6,6" opacity="0.4"/>
+  <!-- Ticket stub (left half) -->
+  <rect x="115" y="120" width="75" height="150" rx="10" fill="url(#brand-grad)" opacity="0.35"/>
+  <!-- Checkmark — the tail extends through the right half, morphing from the ticket -->
+  <path d="M150 200 L180 228 L250 162" stroke="url(#accent-grad)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Small decorative dots on ticket stub -->
+  <circle cx="140" cy="148" r="3" fill="url(#brand-grad)" opacity="0.5"/>
+  <circle cx="140" cy="170" r="3" fill="url(#brand-grad)" opacity="0.5"/>
+  <circle cx="165" cy="148" r="3" fill="url(#brand-grad)" opacity="0.5"/>
+  <circle cx="165" cy="170" r="3" fill="url(#brand-grad)" opacity="0.5"/>
+  <!-- STAS wordmark -->
+  <text x="200" y="345" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="48" fill="url(#brand-grad)" letter-spacing="4">STAS</text>
+  <text x="200" y="370" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="400" font-size="14" fill="#9ca3af" letter-spacing="6">SOLVING TICKETS AS A SERVICE</text>
+</svg>

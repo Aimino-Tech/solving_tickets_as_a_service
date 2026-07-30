@@ -212,9 +212,9 @@ function verifySignature(
   const secret = config.trackers?.linear?.webhookSecret;
   if (!secret) {
     log.warn(
-      'LINEAR_WEBHOOK_SECRET not configured -- skipping signature verification',
+      'LINEAR_WEBHOOK_SECRET not configured -- rejecting webhook',
     );
-    return true;
+    return false;
   }
 
   const prefix = 'sha256=';

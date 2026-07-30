@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
+import { Octokit } from '@octokit/rest';
 import { config } from '../config.js';
 import { requireAuth } from '../auth/middleware.js';
 import { gitHubInstallationRepository } from '../db/repositories/GitHubInstallationRepository.js';
@@ -165,11 +166,14 @@ router.delete('/installations/:id', async (req: Request, res: Response) => {
 
 router.get('/installations/:id/repos', async (req: Request, res: Response) => {
   try {
-    const token = await getGitHubToken(req);
-    if (!token) { res.status(401).json({ error: 'GitHub access token not available' }); return; }
     const iid = Number(req.params.id);
     if (isNaN(iid)) { res.status(400).json({ error: 'Invalid installation ID' }); return; }
-    const r = await fetch('https://api.github.com/user/installations/' + iid + '/repositories', { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' } });
+    const token = await getInstallationToken(iid);
+    if (!token) {
+      res.status(503).json({ error: 'Failed to get installation token — check GitHub App configuration' });
+      return;
+    }
+    const r = await fetch('https://api.github.com/installation/repositories', { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' } });
     if (!r.ok) { res.status(r.status).json({ error: 'GitHub API error' }); return; }
     const d = await r.json();
     const wh = await gitHubWebhookRepository.findByInstallationId(iid);

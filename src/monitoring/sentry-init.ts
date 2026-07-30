@@ -23,6 +23,7 @@
  */
 
 import { initSentry, setTag } from './sentry.js';
+import { rootLogger } from '../utils/logger.js';
 
 // Initialize Sentry immediately — this is the first module loaded
 initSentry();
@@ -39,6 +40,15 @@ process.on('uncaughtException', (err) => {
   rootLogger.error(
     { err: String(err), stack: (err as Error).stack },
     'Uncaught exception at startup — shutting down',
+  );
+  // Give Sentry a moment to flush before exiting
+  setTimeout(() => process.exit(1), 2000);
+});
+
+process.on('unhandledRejection', (reason) => {
+  rootLogger.error(
+    { err: String(reason), stack: (reason as Error)?.stack },
+    'Unhandled promise rejection — shutting down',
   );
   // Give Sentry a moment to flush before exiting
   setTimeout(() => process.exit(1), 2000);

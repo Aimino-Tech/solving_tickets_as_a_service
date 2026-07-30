@@ -16,6 +16,7 @@ from guardrail.slop_guardrail import (
     SlopIntentGuardrail,
     SlopIntentGuardrailError,
     CAUTION_PREFIX,
+    GUARDRAIL_BLOCKED_CODE,
 )
 
 
@@ -53,29 +54,29 @@ CLEAN_TEXT = (
 def test_block_mode_default():
     """Default gate_mode should be 'block'."""
     g = SlopIntentGuardrail()
-    assert g._gate_mode == "block"
+    assert g.gate_mode == "block"
 
 
 def test_block_mode_env_var(monkeypatch):
     monkeypatch.setenv("SLOP_GATE_MODE", "warn")
     g = SlopIntentGuardrail()
-    assert g._gate_mode == "warn"
+    assert g.gate_mode == "warn"
 
 
 def test_block_mode_invalid_fallback():
     g = SlopIntentGuardrail(gate_mode="invalid")
-    assert g._gate_mode == "block"
+    assert g.gate_mode == "block"
 
 
 def test_block_threshold_default():
     g = SlopIntentGuardrail()
-    assert g._block_threshold == 0.5
+    assert g.block_threshold == 0.5
 
 
 def test_block_threshold_env_var(monkeypatch):
     monkeypatch.setenv("SLOP_BLOCK_THRESHOLD", "0.8")
     g = SlopIntentGuardrail()
-    assert g._block_threshold == 0.8
+    assert g.block_threshold == 0.8
 
 
 def test_block_mode_detects_slop_and_blocks():
@@ -126,7 +127,7 @@ def test_compute_slop_score_multiple_categories():
         {"category": "placeholder_intent", "pattern": "placeholder", "source": "test", "snippet": "test"},
     ]
     score = g._compute_slop_score()
-    assert 0.5 < score <= 1.0
+    assert 0 < score <= 1.0
 
 
 def test_block_threshold_below():

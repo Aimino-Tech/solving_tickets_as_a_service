@@ -3,6 +3,8 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'litellm-client' });
 
+const isDev = config.nodeEnv === 'development';
+
 export interface LitellmRemainingBudget {
   remainingBudget: number;
   maxBudget: number;
@@ -46,6 +48,12 @@ async function litellmRequest<T>(path: string, params?: Record<string, string>):
   const baseUrl = config.litellm.baseUrl;
   const apiKey = config.litellm.apiKey;
   if (!apiKey) {
+    if (isDev) {
+      log.info('LITELLM_ADMIN_API_KEY not configured — using dev mock');
+      const { createMockLitellmRouter } = await import('./mock.js');
+      const mockRouter = createMockLitellmRouter();
+      return null;
+    }
     log.warn('LITELLM_ADMIN_API_KEY not configured — skipping LiteLLM API call');
     return null;
   }
@@ -84,6 +92,12 @@ export async function getDailyActivity(userId: string): Promise<LitellmDailyActi
 }
 
 export async function getAggregatedUsage(userId: string): Promise<LitellmUsageResponse | null> {
+  if (isDev && !config.litellm.apiKey) {
+    const { generateMockUsageResponse } = await import('./mock.js');
+    log.info('Using mock LiteLLM usage data (dev mode, no API key)');
+    return generateMockUsageResponse();
+  }
+
   const [budget, dailyActivity] = await Promise.all([
     getRemainingBudget(userId),
     getDailyActivity(userId),

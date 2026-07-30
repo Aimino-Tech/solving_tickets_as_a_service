@@ -26,6 +26,7 @@ import { type Request, type Response, Router } from 'express';
 import { Redis } from 'ioredis';
 import { config } from '../config.js';
 import { captureError } from '../monitoring/sentry.js';
+import { captureEvent } from '../analytics/tracker.js';
 import type { McpJobStatus, McpRunHistoryEntry } from '../opencode-contract.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -106,7 +107,7 @@ interface McpTextResourceContents {
 const tools: McpTool[] = [
   {
     name: 'stas_fix_issue',
-    description: 'Dispatch a STAS fix run for a GitHub issue. Returns a runId for polling status.',
+    description: 'Submit a GitHub issue to the STAS pipeline for automated investigation and PR creation. Use this when you have identified a fixable bug or feature request with a clear scope. Returns a runId that you can poll with stas_check_status to track progress through investigation, fixing, testing, and PR stages.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -120,7 +121,7 @@ const tools: McpTool[] = [
   },
   {
     name: 'stas_check_status',
-    description: 'Check the current status of a STAS fix run by runId.',
+    description: 'Poll the progress of an active fix run by runId. Use this after submitting a fix with stas_fix_issue to check whether it completed, failed, or is still being worked on. Returns the current stage (queued, investigating, fixing, testing, committing, completed, or failed) along with timestamps and any error messages.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -131,7 +132,7 @@ const tools: McpTool[] = [
   },
   {
     name: 'stas_list_runs',
-    description: 'List recent STAS fix runs with optional status filter.',
+    description: 'Browse recent fix runs with optional status filtering. Use this to review the history of submitted fixes, monitor overall activity, or locate a specific runId for further inspection. Returns a list of runs with repository context, current status, and creation timestamps.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -145,7 +146,7 @@ const tools: McpTool[] = [
   },
   {
     name: 'stas_get_run',
-    description: 'Get full details for a STAS fix run by runId.',
+    description: 'Retrieve comprehensive details for a specific fix run by runId. Use this when you need the full picture including repository context, issue title, confidence score, and PR link. Returns the complete run record with all available metadata beyond the basic status fields.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -156,7 +157,7 @@ const tools: McpTool[] = [
   },
   {
     name: 'stas_slack_send',
-    description: 'Send a message to a Slack channel via the Slack Web API.',
+    description: 'Post a message to a Slack channel for notifications and status updates. Use this to alert team members about fix results, deployment notices, or other operational events. Returns confirmation with the channel ID and Slack message timestamp.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -168,7 +169,7 @@ const tools: McpTool[] = [
   },
   {
     name: 'stas_slack_ticket',
-    description: 'Create a Linear ticket from Slack with optional Slack notification.',
+    description: 'Create a Linear issue to formally track work that needs attention. Use this when a bug, feature request, or task has been identified and should be tracked in the project management system. Returns the created ticket details including Linear URL, with an optional Slack notification to the specified channel.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -368,6 +369,7 @@ async function handleFixIssue(id: unknown, args: Record<string, unknown> | undef
       log.error({ err: String(queueErr), runId }, 'Failed to enqueue fix to RabbitMQ (non-fatal, run created)');
     }
 
+    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'stas_fix_issue', repoOwner, repoName, issueNumber }); } catch { /* ignore */ }
     res.json(
       jsonRpcResult(id, {
         runId,
@@ -401,6 +403,7 @@ async function handleCheckStatus(id: unknown, args: Record<string, unknown> | un
       res.json(jsonRpcError(id, -32000, `Run not found: ${runId}`));
       return;
     }
+    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'stas_check_status', runId }); } catch { /* ignore */ }
     res.json(jsonRpcResult(id, JSON.parse(raw)));
   } catch (err) {
     log.error({ err: String(err), runId }, 'Failed to check run status');
@@ -426,6 +429,7 @@ async function handleListRuns(id: unknown, args: Record<string, unknown> | undef
       runs = runs.filter((r) => r.status.toLowerCase() === statusFilter.toLowerCase());
     }
 
+    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'stas_list_runs', limit: args?.limit || 20 }); } catch { /* ignore */ }
     res.json(jsonRpcResult(id, { runs, total: runs.length }));
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to list runs');
@@ -462,6 +466,7 @@ async function handleGetRun(id: unknown, args: Record<string, unknown> | undefin
     const allHistory: McpRunHistoryEntry[] = historyRaw.map((r) => JSON.parse(r));
     const historyEntry = allHistory.find((h) => h.runId === runId);
 
+    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'stas_get_run', runId }); } catch { /* ignore */ }
     res.json(
       jsonRpcResult(id, {
         ...job,
@@ -589,6 +594,7 @@ export async function handleSlackSend(id: unknown, args: Record<string, unknown>
       return;
     }
 
+    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'stas_slack_send', channel: args?.channel }); } catch { /* ignore */ }
     res.json(jsonRpcResult(id, { ok: true, channel: body.channel, ts: body.ts }));
   } catch (err) {
     log.error({ err: String(err), channel }, 'Slack API call failed');
@@ -681,6 +687,7 @@ export async function handleSlackTicket(id: unknown, args: Record<string, unknow
       }
     }
 
+    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'stas_slack_ticket', title: args?.title }); } catch { /* ignore */ }
     res.json(
       jsonRpcResult(id, {
         ok: true,

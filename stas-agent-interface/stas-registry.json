@@ -13,5 +13,5 @@
     {"name":"get_pricing","description":"Get STAS subscription pricing","scope":"read","mcp_tool":true,"rest_endpoint":"GET /pricing"}
   ],
   "auth": {"type":"api_key_jwt","key_prefix":"sk-","scopes":["read","write","admin"],"scope_hierarchy":"read < write < admin"},
-  "marketplace": {"category":"developer-tools","tags":["stas","mcp","agent","github-bot"],"plans":[{"id":"free","name":"Free","monthly_fix_limit":10,"price_cents":0},{"id":"solo","name":"Solo","monthly_fix_limit":100,"price_cents":4900},{"id":"team","name":"Team","monthly_fix_limit":500,"price_cents":14900},{"id":"enterprise","name":"Enterprise","monthly_fix_limit":999999,"price_cents":0}]}
+  "marketplace": {"category":"developer-tools","tags":["stas","mcp","agent","github-bot","ai","code-review","pr-automation","developer-tools","bug-fixing","automation","code-quality","pull-request-bot"],"plans":[{"id":"free","name":"Free","monthly_fix_limit":10,"price_cents":0},{"id":"solo","name":"Solo","monthly_fix_limit":100,"price_cents":4900},{"id":"team","name":"Team","monthly_fix_limit":500,"price_cents":14900},{"id":"enterprise","name":"Enterprise","monthly_fix_limit":999999,"price_cents":0}]}
 }

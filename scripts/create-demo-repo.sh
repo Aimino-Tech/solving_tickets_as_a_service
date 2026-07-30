@@ -1,5 +1,11 @@
 #!/bin/bash
 # Creates a stas-demo repository with pre-configured issues labeled stas:fix
+#
+# NOTE: The primary stas-demo repo is already live at:
+#   https://github.com/Aimino-Tech/stas-demo
+#
+# This script is preserved for creating additional demo instances
+# (e.g. for staging, testing, or workshop environments).
 set -euo pipefail
 
 DEMO_REPO="${1:-stas-demo}"
@@ -7,6 +13,14 @@ GITHUB_TOKEN="${GITHUB_TOKEN:?GITHUB_TOKEN required}"
 
 # Create repo
 gh repo create "$DEMO_REPO" --public --description "Demo repo for STAS - Solving Tickets As A Service" --confirm
+
+# Seed the repo from the canonical demo app
+echo "Cloning canonical demo repo..."
+TMP_DIR=$(mktemp -d)
+git clone https://github.com/Aimino-Tech/stas-demo.git "$TMP_DIR"
+cd "$TMP_DIR"
+git remote set-url origin "https://github.com/Aimino-Tech/$DEMO_REPO.git"
+git push -u origin main
 
 # Create issues with stas:fix label
 gh label create stas:fix --repo "$DEMO_REPO" --color "8250DF" --description "STAS will automatically fix this issue" 2>/dev/null || true

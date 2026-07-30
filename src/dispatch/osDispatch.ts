@@ -2,6 +2,7 @@ import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
 import { dispatchFullPipeline, dispatchToCeleryPipeline } from './celeryDispatcher.js';
+import * as auditService from '../audit/service.js';
 
 const log = rootLogger.child({ module: 'os-dispatch' });
 
@@ -67,14 +68,30 @@ export async function dispatchToOpenSymphony(data: IssueJobData): Promise<Dispat
     const result = (await response.json()) as Record<string, unknown>;
     log.info({ runId: result.run_id, prUrl: result.pr_url }, 'OpenSymphony HTTP dispatch accepted');
 
+    const runId = String(result.run_id || '');
+    auditService.logFixJobEvent({
+      jobId: runId || `os-${data.repoOwner}-${data.repoName}-${data.issueNumber}`,
+      event: 'started',
+      repo: `${data.repoOwner}/${data.repoName}`,
+      issueNumber: data.issueNumber,
+      details: { dispatchTarget: 'opensymphony-http', runId },
+    });
+
     return {
       success: true,
-      runId: String(result.run_id || ''),
+      runId: runId || undefined,
       summary: String(result.summary || 'Dispatched to OpenSymphony'),
       prUrl: result.pr_url ? String(result.pr_url) : undefined,
     };
   } catch (err) {
     log.error({ err: String(err) }, 'OpenSymphony HTTP dispatch error');
+    auditService.logFixJobEvent({
+      jobId: `os-${data.repoOwner}-${data.repoName}-${data.issueNumber}`,
+      event: 'failed',
+      repo: `${data.repoOwner}/${data.repoName}`,
+      issueNumber: data.issueNumber,
+      error: String(err),
+    });
     return { success: false, errors: [String(err)] };
   }
 }

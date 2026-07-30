@@ -13,8 +13,11 @@
  * - Exponential backoff retry worker (1min, 5min, 30min, max 3)
  *
  * --- Error Handling Audit ---------------------------------------------------
+ * - express-async-errors patches Express Router to forward async rejections
+ *   to the global error middleware (prevents unhandled promise rejections)
  * - Global Express error middleware (4-arg handler) at bottom of chain
  * - Process-level uncaughtException and unhandledRejection handlers
+ * - unhandledRejection handler calls process.exit(1) (prevents silent failure)
  * - app.listen() error event handled (EADDRINUSE, EACCES, etc.)
  * - Server instance returned for graceful shutdown by caller
  * - Request ID middleware for log correlation
@@ -30,9 +33,11 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+import 'express-async-errors';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import cors from 'cors';
 import type { NextFunction, Request, Response } from 'express';
+import { Router } from 'express';
 import express from 'express';
 import helmet from 'helmet';
 import previewRoutes from './api/routes/preview.js';
@@ -102,11 +107,18 @@ const log = rootLogger.child({ module: 'server' });
 export async function createApp(): Promise<express.Application> {
   const app = express();
 
-  // -- Request ID middleware ------------------------------------------------
+  // -- Request ID + Trace ID middleware -------------------------------------
   app.use((req: Request, res: Response, next: NextFunction) => {
     const requestId = (req.headers['x-request-id'] as string) || crypto.randomUUID();
     req.requestId = requestId;
     res.setHeader('x-request-id', requestId);
+
+    // Generate or extract trace ID for cross-system correlation
+    const { extractOrGenerateTraceId, TRACE_HEADER } = require('./utils/trace.js');
+    const traceId = extractOrGenerateTraceId(req.headers as Record<string, string | string[] | undefined>);
+    req.traceId = traceId;
+    res.setHeader(TRACE_HEADER, traceId);
+
     next();
   });
 
@@ -274,18 +286,11 @@ export async function createApp(): Promise<express.Application> {
         return;
       }
     } else {
-      // No signature — receive without verification (dev mode or unsigned transport)
-      try {
-        await githubWebhooks.receive({
-          id: deliveryId || crypto.randomUUID(),
-          name: event as any,
-          payload: JSON.parse((rawBody || Buffer.from(JSON.stringify(req.body))).toString()),
-        });
-      } catch (err) {
-        log.warn({ err: String(err) }, 'Webhook processing error (no signature)');
-        if (eventId) await logWebhookFailed(eventId, `Processing error: ${String(err)}`);
-        // Still respond 202 — we've logged the event for replay
-      }
+      // No signature — fail closed
+      log.warn('GitHub webhook signature missing — rejecting');
+      if (eventId) await logWebhookFailed(eventId, 'Signature missing');
+      res.status(401).json({ error: 'Signature required' });
+      return;
     }
 
     // Mark as processed on success
@@ -335,7 +340,13 @@ export async function createApp(): Promise<express.Application> {
       payload: parsedPayload,
     });
 
-    if (config.gitlab.webhookSecret) {
+    if (!config.gitlab.webhookSecret) {
+      log.error('GITLAB_WEBHOOK_SECRET not configured — cannot verify webhook');
+      if (eventId) await logWebhookFailed(eventId, 'Webhook secret not configured');
+      res.status(500).json({ error: 'Webhook secret not configured' });
+      return;
+    }
+    {
       const { gitlabWebhook: gw } = await import('./webhooks/gitlab.js');
       if (!gw.verify(rawBody.toString(), token, config.gitlab.webhookSecret)) {
         log.warn('GitLab webhook token verification failed');
@@ -573,18 +584,28 @@ export async function createApp(): Promise<express.Application> {
       res.status(400).json({ error: 'Invalid JSON' });
       return;
     }
-    const { handleTelegramWebhook } = await import('./channels/telegram.js');
-    const result = await handleTelegramWebhook(payload);
-    res.status(result.ok ? 200 : 500).json(result);
+    try {
+      const { handleTelegramWebhook } = await import('./channels/telegram.js');
+      const result = await handleTelegramWebhook(payload);
+      res.status(result.ok ? 200 : 500).json(result);
+    } catch (err) {
+      log.error({ err: String(err) }, 'Telegram webhook handler error');
+      res.status(500).json({ ok: false, error: 'Internal error' });
+    }
   });
 
   app.get('/webhook/whatsapp', async (req: Request, res: Response) => {
-    const { verifyWhatsAppWebhook } = await import('./channels/whatsapp.js');
-    const result = verifyWhatsAppWebhook(req as any);
-    if (result.verified && result.challenge) {
-      res.type('text/plain').send(result.challenge);
-    } else {
-      res.status(403).send('Verification failed');
+    try {
+      const { verifyWhatsAppWebhook } = await import('./channels/whatsapp.js');
+      const result = verifyWhatsAppWebhook(req as any);
+      if (result.verified && result.challenge) {
+        res.type('text/plain').send(result.challenge);
+      } else {
+        res.status(403).send('Verification failed');
+      }
+    } catch (err) {
+      log.error({ err: String(err) }, 'WhatsApp webhook verification error');
+      res.status(500).send('Verification error');
     }
   });
 
@@ -597,9 +618,14 @@ export async function createApp(): Promise<express.Application> {
       res.status(400).json({ error: 'Invalid JSON' });
       return;
     }
-    const { handleWhatsAppWebhook } = await import('./channels/whatsapp.js');
-    const result = await handleWhatsAppWebhook(payload);
-    res.status(result.ok ? 200 : 500).json(result);
+    try {
+      const { handleWhatsAppWebhook } = await import('./channels/whatsapp.js');
+      const result = await handleWhatsAppWebhook(payload);
+      res.status(result.ok ? 200 : 500).json(result);
+    } catch (err) {
+      log.error({ err: String(err) }, 'WhatsApp webhook handler error');
+      res.status(500).json({ ok: false, error: 'Internal error' });
+    }
   });
 
   // -- Stripe webhook -------------------------------------------------------
@@ -631,7 +657,8 @@ export async function createApp(): Promise<express.Application> {
         if (eventId) await logWebhookProcessed(eventId);
       } catch (err) {
         if (eventId) await logWebhookFailed(eventId, String(err));
-        throw err;
+        next2(err as Error);
+        return;
       }
       recordWebhookDuration(source, Date.now() - startTime);
     };
@@ -1294,6 +1321,16 @@ process.on('unhandledRejection', (reason) => {
     { module: 'server', err: String(reason), stack: (reason as Error)?.stack },
     'Unhandled promise rejection — shutting down',
   );
+
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  const forceExitTimer = setTimeout(() => {
+    log.error('Graceful shutdown timed out — forcing exit');
+    process.exit(1);
+  }, 10_000);
+  forceExitTimer.unref();
+
   captureError(reason instanceof Error ? reason : new Error(String(reason)), {
     module: 'server',
     type: 'unhandledRejection',
@@ -1311,11 +1348,12 @@ function addRawBody(req: Request, _res: Response, buf: Buffer): void {
   (req as { rawBody?: Buffer }).rawBody = buf;
 }
 
-// Extend Express Request to include requestId
+// Extend Express Request to include requestId and traceId
 declare global {
   namespace Express {
     interface Request {
       requestId?: string;
+      traceId?: string;
     }
   }
 }

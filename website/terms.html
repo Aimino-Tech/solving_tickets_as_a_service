@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — STAS | Solving Tickets As A Service</title>
+  <meta name="description" content="STAS Terms of Service: legal agreement governing your use of the STAS platform, subscriptions, data handling, and intellectual property." />
+  <meta name="keywords" content="STAS terms of service, ToS, legal agreement, subscription terms, data policy" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stas.aimino.io/terms" />
+  <meta property="og:title" content="Terms of Service — STAS" />
+  <meta property="og:description" content="STAS Terms of Service: legal agreement governing your use of the STAS platform." />
+  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Terms of Service — STAS" />
+  <meta name="twitter:description" content="STAS Terms of Service: legal agreement governing your use of the STAS platform." />
+  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+
+  <!-- Plausible Analytics -->
+  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+
+  <style>
+    .policy-header { max-width: 720px; margin: 0 auto; padding: 40px 24px 20px; text-align: center; }
+    .policy-header h1 { font-size: 36px; font-weight: 900; margin-bottom: 8px; }
+    .policy-meta { font-size: 14px; color: var(--text2); margin-bottom: 4px; }
+    .policy-meta code { font-family: 'JetBrains Mono', monospace; background: var(--bg2); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; }
+    .policy-content { max-width: 720px; margin: 0 auto; padding: 20px 24px 80px; }
+    .policy-content h2 { font-size: 22px; font-weight: 700; margin-top: 48px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .policy-content h3 { font-size: 17px; font-weight: 600; margin-top: 32px; margin-bottom: 12px; }
+    .policy-content p { font-size: 15px; line-height: 1.7; color: var(--text); margin-bottom: 16px; }
+    .policy-content ol, .policy-content ul { font-size: 15px; line-height: 1.7; color: var(--text); margin-bottom: 16px; padding-left: 24px; }
+    .policy-content li { margin-bottom: 6px; }
+    .policy-content strong { font-weight: 700; }
+    .policy-content code { font-family: 'JetBrains Mono', monospace; background: var(--bg2); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    .policy-content a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+    .policy-content a:hover { opacity: 0.8; }
+    .policy-content table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+    .policy-content th { background: var(--bg2); text-align: left; padding: 10px 14px; border: 1px solid var(--border); font-weight: 600; }
+    .policy-content td { padding: 10px 14px; border: 1px solid var(--border); }
+    .policy-content pre { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; overflow-x: auto; margin: 16px 0 24px; }
+    .policy-content pre code { background: none; padding: 0; font-size: 13px; }
+    .policy-content hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+    .policy-content blockquote { border-left: 3px solid var(--accent); padding: 12px 20px; margin: 16px 0; background: var(--bg2); border-radius: 0 8px 8px 0; }
+    .policy-content blockquote p { margin-bottom: 0; }
+    @media (max-width: 640px) {
+      .policy-header h1 { font-size: 28px; }
+      .policy-content h2 { font-size: 19px; }
+      .policy-content table { font-size: 13px; }
+      .policy-content th, .policy-content td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo"><span class="logo-icon">S</span> STAS</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/">Home</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/trust">Trust</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/blog">Blog</a></li>
+        <li><a href="/status">Status</a></li>
+        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta">Install App →</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <section class="policy-header">
+    <h1>Terms of Service</h1>
+    <p class="policy-meta">Version <code>1.0.0</code> &middot; Last updated: July 28, 2026</p>
+    <p class="policy-meta">STAS (Solving Tickets As A Service) by Aimino Technologies GmbH</p>
+  </section>
+
+  <!-- POLICY CONTENT -->
+  <article class="policy-content">
+
+    <h2>1. Introduction</h2>
+    <p>Welcome to STAS ("Solving Tickets As A Service"), an AI-powered service that automatically fixes GitHub issues by generating and submitting pull requests. These Terms of Service ("Terms") govern your access to and use of the STAS service, website, and associated applications (collectively, the "Service").</p>
+    <p>By registering for, accessing, or using the Service, you enter into a legally binding agreement with <strong>Aimino Technologies GmbH</strong> ("Aimino," "we," "us," or "our"), a company registered in Germany. If you are using the Service on behalf of an organization, you represent and warrant that you have the authority to bind that organization to these Terms.</p>
+    <p><strong>If you do not agree to these Terms, you must not access or use the Service.</strong></p>
+
+    <h3>1.1 Definitions</h3>
+    <ul>
+      <li><strong>"Service"</strong> means the STAS platform, including the web application, API, bot account, and all associated infrastructure that provides automated GitHub issue resolution.</li>
+      <li><strong>"User"</strong>, <strong>"you"</strong>, <strong>"your"</strong> means the individual or entity that registers for and uses the Service.</li>
+      <li><strong>"Account"</strong> means the registered user account on the Service.</li>
+      <li><strong>"Repository"</strong> means a GitHub repository that you have authorized the Service to access.</li>
+      <li><strong>"Fix"</strong> means a pull request, patch, or code change generated by the Service's AI agents in response to a GitHub issue.</li>
+      <li><strong>"Subscription"</strong> means a paid plan that provides access to Service features for a defined period.</li>
+      <li><strong>"Confidential Information"</strong> means non-public data, code, or business information shared through the Service.</li>
+    </ul>
+
+    <h2>2. Eligibility and Registration</h2>
+
+    <h3>2.1 Eligibility</h3>
+    <p>To use the Service, you must:</p>
+    <ol>
+      <li>Be at least 18 years of age or the age of majority in your jurisdiction;</li>
+      <li>Have the legal capacity to enter into binding contracts;</li>
+      <li>Not be located in a country subject to EU or US trade sanctions;</li>
+      <li>Not be listed on any EU or US restricted party list; and</li>
+      <li>Not be a direct competitor of Aimino, unless expressly authorized in writing.</li>
+    </ol>
+
+    <h3>2.2 Registration</h3>
+    <p>You must create an Account to use the Service. You agree to:</p>
+    <ol>
+      <li>Provide accurate, current, and complete registration information;</li>
+      <li>Maintain and promptly update your Account information;</li>
+      <li>Maintain the security and confidentiality of your Account credentials;</li>
+      <li>Not share your Account with any third party;</li>
+      <li>Not create multiple Accounts to circumvent usage limits or restrictions;</li>
+      <li>Notify us immediately of any unauthorized access or breach of your Account.</li>
+    </ol>
+
+    <h3>2.3 Account Types</h3>
+    <p>The Service offers the following Account types:</p>
+    <ul>
+      <li><strong>Free Account</strong>: Access to basic features with limited usage quotas.</li>
+      <li><strong>Pro Account</strong>: Paid subscription with expanded features and higher usage quotas.</li>
+      <li><strong>Team Account</strong>: Paid subscription for organizations with collaborative features and advanced quotas.</li>
+      <li><strong>Enterprise Account</strong>: Custom subscription with tailored features, dedicated support, and negotiated terms.</li>
+    </ul>
+
+    <h2>3. Service Description</h2>
+
+    <h3>3.1 What STAS Does</h3>
+    <p>STAS is an automated GitHub issue resolution service. When installed and configured on your GitHub repositories, STAS:</p>
+    <ol>
+      <li>Monitors specified repositories for new or assigned issues;</li>
+      <li>Analyzes issue descriptions, labels, priority, and repository context;</li>
+      <li>Generates AI-powered code fixes using one or more AI models (including but not limited to OpenAI, Anthropic, and open-source models);</li>
+      <li>Creates pull requests containing the proposed fixes;</li>
+      <li>Responds to issue comments and pull request feedback;</li>
+      <li>Provides status updates and reports through GitHub, email, and the STAS dashboard.</li>
+    </ol>
+
+    <h3>3.2 How It Works</h3>
+    <p>The Service operates as a GitHub App that you install on selected repositories. You configure which types of issues STAS should handle, labeling conventions, branch naming rules, and other operational parameters. STAS then automatically processes matching issues through its AI agent pipeline and produces pull requests for your review.</p>
+
+    <h3>3.3 AI-Generated Code</h3>
+    <p>All fixes, patches, and code generated by the Service are produced by artificial intelligence models. While we strive for high-quality output, we make no guarantees regarding:</p>
+    <ol>
+      <li>The correctness, completeness, or suitability of generated code;</li>
+      <li>Compliance with specific coding standards, licensing requirements, or regulatory frameworks;</li>
+      <li>Absence of bugs, vulnerabilities, or security issues in generated code;</li>
+      <li>Adherence to your project's architectural patterns or design philosophy.</li>
+    </ol>
+    <p><strong>All AI-generated code must be reviewed by a qualified human developer before deployment to production environments.</strong></p>
+
+    <h3>3.4 Service Modifications</h3>
+    <p>We reserve the right to modify, update, or discontinue features of the Service at any time. We will provide reasonable notice of material changes that negatively affect the Service's functionality. We are not liable for any modification, suspension, or discontinuation of the Service.</p>
+
+    <h2>4. Subscription Terms and Pricing</h2>
+
+    <h3>4.1 Subscription Plans</h3>
+    <p>The Service is offered on a subscription basis with the following tiers:</p>
+    <table>
+      <thead>
+        <tr><th>Tier</th><th>Monthly Fixes</th><th>Price (Monthly)</th><th>Price (Annual)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Free</td><td>50 fixes/mo</td><td>&euro;0</td><td>N/A</td></tr>
+        <tr><td>Pro</td><td>500 fixes/mo</td><td>&euro;49/month</td><td>&euro;490/year</td></tr>
+        <tr><td>Team</td><td>2,000 fixes/mo</td><td>&euro;199/month</td><td>&euro;1,990/year</td></tr>
+        <tr><td>Enterprise</td><td>Custom</td><td>Custom</td><td>Custom</td></tr>
+      </tbody>
+    </table>
+    <p>All prices are in Euros (&euro;) and exclusive of applicable VAT or other taxes unless otherwise stated.</p>
+
+    <h3>4.2 Subscription Term</h3>
+    <p>Subscriptions begin on the date of purchase and continue for the duration of the chosen billing cycle:</p>
+    <ul>
+      <li><strong>Monthly subscriptions</strong>: Auto-renew each month on the same day of the month as the initial subscription date.</li>
+      <li><strong>Annual subscriptions</strong>: Auto-renew each year on the same date as the initial subscription date.</li>
+      <li><strong>Enterprise subscriptions</strong>: As defined in the applicable order form or agreement.</li>
+    </ul>
+
+    <h3>4.3 Auto-Renewal</h3>
+    <p>Unless you cancel before the end of your current billing period, your subscription will automatically renew for the same duration and at the then-current price. We will send you a renewal reminder at least 7 days before the renewal date.</p>
+
+    <h3>4.4 Cancellation</h3>
+    <p>You may cancel your subscription at any time through your Account settings or by contacting support@stas.ai. Upon cancellation:</p>
+    <ol>
+      <li>The Service will remain active until the end of your current billing period;</li>
+      <li>No refunds will be issued for partial billing periods;</li>
+      <li>Accrued but unused fixes do not carry over after cancellation;</li>
+      <li>Your Account will convert to the Free tier at the end of the billing period;</li>
+      <li>If you do not wish to maintain a Free Account, you may delete your Account entirely.</li>
+    </ol>
+
+    <h3>4.5 Price Changes</h3>
+    <p>We may change subscription prices with 30 days' prior notice. If you do not agree to the price change, you may cancel your subscription before the new prices take effect. Continued use after the price change constitutes acceptance of the new pricing.</p>
+
+    <h2>5. Usage Limits and Fair Use</h2>
+
+    <h3>5.1 Fix Quotas</h3>
+    <p>Each subscription tier includes a monthly allocation of fixes, as specified in Section 4.1:</p>
+    <ul>
+      <li><strong>Free</strong>: 50 fixes per calendar month</li>
+      <li><strong>Pro</strong>: 500 fixes per calendar month</li>
+      <li><strong>Team</strong>: 2,000 fixes per calendar month</li>
+      <li><strong>Enterprise</strong>: As specified in the order form</li>
+    </ul>
+    <p>"Fix" means a single AI agent execution that processes one issue and may produce (or attempt to produce) a pull request. The following do not count toward your fix quota:</p>
+    <ul>
+      <li>Issues that are rejected during triage (e.g., insufficient information, duplicate);</li>
+      <li>Issues that fail basic validation before agent dispatch;</li>
+      <li>Manual review and approval actions;</li>
+      <li>Listings, searches, and dashboard access.</li>
+    </ul>
+
+    <h3>5.2 Quota Reset</h3>
+    <p>Monthly fix quotas reset on the first day of each billing month. Unused fixes from previous months do not roll over.</p>
+
+    <h3>5.3 Overages</h3>
+    <p>If you exceed your fix quota:</p>
+    <ol>
+      <li>New fix requests will be queued until the next quota reset;</li>
+      <li>You may purchase additional fix packs (available on Pro, Team, and Enterprise plans);</li>
+      <li>Enterprise customers may negotiate overage terms in their agreement.</li>
+    </ol>
+
+    <h3>5.4 Rate Limits</h3>
+    <p>To ensure service stability, we enforce rate limits on API requests and fix submissions. Rate limits vary by tier:</p>
+    <ul>
+      <li><strong>Free</strong>: 10 requests per minute</li>
+      <li><strong>Pro</strong>: 60 requests per minute</li>
+      <li><strong>Team</strong>: 120 requests per minute</li>
+      <li><strong>Enterprise</strong>: Custom limits</li>
+    </ul>
+
+    <h3>5.5 Fair Use</h3>
+    <p>We reserve the right to impose additional reasonable limits to prevent abuse or degradation of service for other users. Excessive use that significantly impacts system performance may result in temporary throttling.</p>
+
+    <h2>6. Service Level Agreement (SLA)</h2>
+
+    <h3>6.1 Uptime Commitment</h3>
+    <p>We commit to the following monthly uptime percentages for the Service API and web application:</p>
+    <ul>
+      <li><strong>Free tier</strong>: Best-effort availability (no formal SLA)</li>
+      <li><strong>Pro tier</strong>: 99.5% uptime</li>
+      <li><strong>Team tier</strong>: 99.5% uptime</li>
+      <li><strong>Enterprise tier</strong>: 99.9% uptime (or as negotiated)</li>
+    </ul>
+    <p>Uptime is calculated as the percentage of time the Service API and dashboard are operational during a calendar month, excluding scheduled maintenance.</p>
+
+    <h3>6.2 Exclusions</h3>
+    <p>The SLA does not apply to:</p>
+    <ol>
+      <li>Scheduled maintenance (notified at least 48 hours in advance);</li>
+      <li>Emergency maintenance for security vulnerabilities;</li>
+      <li>Downtime caused by third-party services (GitHub, AI model providers, cloud infrastructure);</li>
+      <li>Downtime caused by your actions, configuration, or failure to meet system requirements;</li>
+      <li>Force majeure events;</li>
+      <li>Factors outside our reasonable control.</li>
+    </ol>
+
+    <h3>6.3 Service Credits</h3>
+    <p>If we fail to meet the SLA commitment, you may request service credits:</p>
+    <table>
+      <thead>
+        <tr><th>Uptime (Pro/Team)</th><th>Credit</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>&lt; 99.5%</td><td>5% of monthly fee</td></tr>
+        <tr><td>&lt; 99.0%</td><td>10% of monthly fee</td></tr>
+        <tr><td>&lt; 95.0%</td><td>25% of monthly fee</td></tr>
+      </tbody>
+    </table>
+    <p>Claims must be submitted within 30 days of the month in which the SLA failure occurred. Credits are applied to future invoices and are not refundable.</p>
+
+    <h2>7. Acceptable Use Policy</h2>
+
+    <h3>7.1 Prohibited Conduct</h3>
+    <p>You agree not to, and not to allow third parties to:</p>
+    <ol>
+      <li>Use the Service for any unlawful purpose or in violation of any applicable laws or regulations;</li>
+      <li>Use the Service to generate malicious code, malware, exploits, or software intended to cause harm;</li>
+      <li>Reverse engineer, decompile, disassemble, or attempt to derive the source code of the Service;</li>
+      <li>Circumvent any usage limits, rate limits, or access controls;</li>
+      <li>Scrape, crawl, or data-mine the Service without our prior written consent;</li>
+      <li>Interfere with or disrupt the integrity or performance of the Service;</li>
+      <li>Attempt to gain unauthorized access to any part of the Service, other accounts, or connected systems;</li>
+      <li>Use the Service to process issues from repositories that violate GitHub's Terms of Service or Acceptable Use Policies;</li>
+      <li>Upload or transmit viruses, malware, or any malicious code;</li>
+      <li>Use the Service to send unsolicited communications (spam);</li>
+      <li>Impersonate any person or entity, or misrepresent your affiliation with any person or entity;</li>
+      <li>Use the Service in a way that could damage, disable, overburden, or impair our infrastructure.</li>
+    </ol>
+
+    <h3>7.2 Repository Content</h3>
+    <p>You are solely responsible for the content of repositories you authorize the Service to access. You warrant that:</p>
+    <ol>
+      <li>You have all necessary rights to the code and content in those repositories;</li>
+      <li>The repositories do not contain any material that violates applicable law or third-party rights;</li>
+      <li>You have obtained all necessary permissions for the Service to process those repositories.</li>
+    </ol>
+
+    <h3>7.3 Reporting Violations</h3>
+    <p>If you become aware of any violation of this Acceptable Use Policy, please report it immediately to abuse@stas.ai. We will investigate all reports and take appropriate action, which may include suspension or termination of accounts.</p>
+
+    <h2>8. Data Handling and Privacy</h2>
+
+    <h3>8.1 Data Processing</h3>
+    <p>Your use of the Service involves the processing of data as described in our <a href="/privacy">Privacy Policy</a>. Key principles include:</p>
+    <ol>
+      <li><strong>Code Snippets</strong>: Repository code accessed for fix generation is processed in memory and retained for a maximum of 90 days;</li>
+      <li><strong>GitHub Data</strong>: We access GitHub metadata, issue content, and code as necessary to provide the Service;</li>
+      <li><strong>Usage Analytics</strong>: We collect usage data to improve the Service.</li>
+    </ol>
+
+    <h3>8.2 Data Deletion</h3>
+    <p>Upon termination of your Account or upon your request:</p>
+    <ol>
+      <li>Code snippets and issue data are deleted within 30 days;</li>
+      <li>Account information is deleted within 90 days, unless retention is required by law;</li>
+      <li>Aggregated, anonymized data may be retained for analytics purposes.</li>
+    </ol>
+
+    <h3>8.3 Data Security</h3>
+    <p>We implement appropriate technical and organizational measures to protect your data, including:</p>
+    <ol>
+      <li>Encryption in transit (TLS 1.3);</li>
+      <li>Encryption at rest (AES-256);</li>
+      <li>Access controls and authentication;</li>
+      <li>Regular security audits and penetration testing;</li>
+      <li>Incident response procedures.</li>
+    </ol>
+
+    <h2>9. Intellectual Property</h2>
+
+    <h3>9.1 Your Rights</h3>
+    <p>You retain all rights, title, and interest in and to:</p>
+    <ol>
+      <li>Your source code, including any modifications or fixes generated by the Service;</li>
+      <li>Your repository content and issue descriptions;</li>
+      <li>Your trademarks, logos, and brand assets;</li>
+      <li>Any feedback, suggestions, or feature requests you provide (with the right for us to use them without obligation).</li>
+    </ol>
+
+    <h3>9.2 Service Ownership</h3>
+    <p>We retain all rights, title, and interest in and to:</p>
+    <ol>
+      <li>The Service, including its software, architecture, algorithms, and infrastructure;</li>
+      <li>Our trademarks, trade names, logos, and brand assets;</li>
+      <li>Our proprietary AI models, training methodologies, and prompt engineering;</li>
+      <li>Aggregated, anonymized data derived from Service usage (excluding your specific code or content).</li>
+    </ol>
+
+    <h3>9.3 License to Operate</h3>
+    <p>By using the Service, you grant us a limited, revocable, non-exclusive, worldwide license to:</p>
+    <ol>
+      <li>Access and process your repositories as necessary to provide the Service;</li>
+      <li>Create derivative works (fixes, patches) based on your code as part of the Service operation;</li>
+      <li>Display your GitHub avatar, name, and usage statistics on the Service (unless you opt out).</li>
+    </ol>
+
+    <h3>9.4 Feedback</h3>
+    <p>We welcome feedback, suggestions, and feature requests. If you provide such feedback, you grant us an unrestricted, irrevocable, perpetual, royalty-free license to use it without any obligation to you.</p>
+
+    <h2>10. Limitation of Liability</h2>
+
+    <h3>10.1 AI-Generated Code Provided "As-Is"</h3>
+    <p><strong>THE SERVICE AND ALL AI-GENERATED CODE ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT ANY WARRANTY, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, OR COURSE OF PERFORMANCE.</strong></p>
+    <p>Aimino does not warrant that:</p>
+    <ol>
+      <li>The Service will meet your specific requirements;</li>
+      <li>Generated code will be error-free, secure, or suitable for your intended use;</li>
+      <li>The Service will be uninterrupted, timely, or error-free;</li>
+      <li>The results obtained from the Service will be accurate or reliable;</li>
+      <li>The quality of any products, services, or information obtained through the Service will meet your expectations.</li>
+    </ol>
+
+    <h3>10.2 No Liability for Code Quality</h3>
+    <p>You acknowledge that AI-generated code may contain errors, vulnerabilities, or non-functional elements. You assume all risk associated with the use of AI-generated code, including the risk of:</p>
+    <ol>
+      <li>Software defects or bugs;</li>
+      <li>Security vulnerabilities;</li>
+      <li>License compliance issues;</li>
+      <li>Performance degradation;</li>
+      <li>Data loss or corruption.</li>
+    </ol>
+
+    <h3>10.3 Limitation of Liability</h3>
+    <p>To the maximum extent permitted by applicable law (including the German Product Liability Act &mdash; Produkthaftungsgesetz):</p>
+    <ol>
+      <li><strong>Direct Damages</strong>: Aimino's total liability for any claims arising under these Terms shall not exceed the total fees paid by you in the 12 months preceding the event giving rise to the liability;</li>
+      <li><strong>Indirect Damages</strong>: Aimino shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to lost profits, lost revenue, lost business opportunities, loss of data, or cost of substitute services;</li>
+      <li><strong>Statutory Liability</strong>: Nothing in these Terms limits or excludes liability for death or personal injury caused by negligence, fraud, intentional misconduct, gross negligence, or liability under the German Product Liability Act.</li>
+    </ol>
+
+    <h3>10.4 Service Interruption</h3>
+    <p>We are not liable for damages arising from:</p>
+    <ol>
+      <li>Scheduled or emergency maintenance;</li>
+      <li>Third-party service outages (GitHub, AI model providers, cloud infrastructure);</li>
+      <li>Events beyond our reasonable control;</li>
+      <li>Your failure to maintain adequate backups.</li>
+    </ol>
+
+    <h2>11. Indemnification</h2>
+    <p>You agree to indemnify, defend, and hold harmless Aimino Technologies GmbH, its affiliates, officers, directors, employees, and agents from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising from or related to:</p>
+    <ol>
+      <li>Your use of the Service in violation of these Terms;</li>
+      <li>Your violation of any applicable law or regulation;</li>
+      <li>Your repository content, including claims of intellectual property infringement;</li>
+      <li>Any dispute between you and a third party arising from your use of the Service;</li>
+      <li>Any harm caused by code from your repositories that the Service processes.</li>
+    </ol>
+
+    <h2>12. Termination</h2>
+
+    <h3>12.1 Termination by You</h3>
+    <p>You may terminate these Terms and delete your Account at any time by:</p>
+    <ol>
+      <li>Cancelling your subscription through Account settings; and</li>
+      <li>Deleting your Account through Account settings, or by contacting support@stas.ai.</li>
+    </ol>
+
+    <h3>12.2 Termination by Us</h3>
+    <p>We may terminate or suspend your access to the Service immediately, without prior notice or liability, for any reason, including:</p>
+    <ol>
+      <li>Breach of these Terms (including the Acceptable Use Policy);</li>
+      <li>Violation of applicable laws or regulations;</li>
+      <li>Non-payment of fees;</li>
+      <li>Conduct that could harm other users, third parties, or our operations;</li>
+      <li>Extended periods of inactivity (12+ months with no usage);</li>
+      <li>At our convenience with 30 days' notice.</li>
+    </ol>
+
+    <h3>12.3 Effect of Termination</h3>
+    <p>Upon termination:</p>
+    <ol>
+      <li>Your right to access and use the Service ceases immediately;</li>
+      <li>We will delete your data as described in Section 8.2;</li>
+      <li>Sections 8 (Data Handling), 9 (Intellectual Property), 10 (Limitation of Liability), 11 (Indemnification), and 14 (General Provisions) survive termination.</li>
+    </ol>
+
+    <h2>13. GDPR Compliance</h2>
+
+    <h3>13.1 Data Controller</h3>
+    <p>Aimino Technologies GmbH acts as the <strong>Data Controller</strong> for personal data collected through the Service. Our registered address is:</p>
+    <pre><code>Aimino Technologies GmbH
+[Registered Address]
+[City, Postal Code]
+Germany</code></pre>
+
+    <h3>13.2 Data Processing Agreement</h3>
+    <p>For Enterprise customers who qualify as Data Controllers under GDPR, we offer a Data Processing Agreement (DPA) that complies with Article 28 GDPR. Please contact legal@stas.ai to execute a DPA.</p>
+
+    <h3>13.3 Your Rights</h3>
+    <p>As a data subject under GDPR, you have the right to:</p>
+    <ol>
+      <li><strong>Access</strong> (Article 15): Obtain confirmation of whether we process your data and request a copy;</li>
+      <li><strong>Rectification</strong> (Article 16): Request correction of inaccurate or incomplete data;</li>
+      <li><strong>Erasure</strong> (Article 17): Request deletion of your data ("right to be forgotten");</li>
+      <li><strong>Restriction</strong> (Article 18): Request restriction of processing;</li>
+      <li><strong>Portability</strong> (Article 20): Receive your data in a structured, commonly used format;</li>
+      <li><strong>Objection</strong> (Article 21): Object to processing based on legitimate interests or for direct marketing;</li>
+      <li><strong>Withdraw Consent</strong>: Withdraw consent at any time where processing is based on consent.</li>
+    </ol>
+    <p>To exercise these rights, contact privacy@stas.ai. We will respond within 30 days.</p>
+
+    <h3>13.4 Data Protection Officer</h3>
+    <p>Our Data Protection Officer can be reached at dpo@stas.ai or by mail at our registered address.</p>
+
+    <h3>13.5 Supervisory Authority</h3>
+    <p>You have the right to lodge a complaint with your local data protection supervisory authority or with the <strong>Bavarian State Office for Data Protection Supervision (BayLDA)</strong>:</p>
+    <pre><code>Bayerisches Landesamt für Datenschutzaufsicht (BayLDA)
+Promenade 27
+91522 Ansbach
+Germany</code></pre>
+
+    <h2>14. Governing Law and Jurisdiction</h2>
+
+    <h3>14.1 Governing Law</h3>
+    <p>These Terms shall be governed by and construed in accordance with the laws of the <strong>Federal Republic of Germany</strong>, without regard to its conflict of law provisions. The United Nations Convention on Contracts for the International Sale of Goods (CISG) is expressly excluded.</p>
+
+    <h3>14.2 Jurisdiction</h3>
+    <p>Any disputes arising from or relating to these Terms or the Service shall be submitted to the exclusive jurisdiction of the courts of <strong>Munich, Germany</strong>. For consumers resident in the EU, mandatory consumer protection provisions of their country of residence apply.</p>
+
+    <h3>14.3 Alternative Dispute Resolution</h3>
+    <p>We are committed to resolving disputes amicably. Before initiating legal proceedings, you agree to contact us at legal@stas.ai and attempt to resolve the dispute informally for 30 days. The European Commission provides an online dispute resolution platform at <a href="https://ec.europa.eu/consumers/odr/">https://ec.europa.eu/consumers/odr/</a>. We are not obligated to participate in out-of-court dispute resolution.</p>
+
+    <h2>15. Payment Terms</h2>
+
+    <h3>15.1 Payment Processing</h3>
+    <p>All payments are processed securely through <strong>Stripe</strong>, our third-party payment processor. We do not store full credit card numbers on our systems. By providing payment information, you authorize us to charge the applicable fees through Stripe.</p>
+
+    <h3>15.2 Billing Cycle</h3>
+    <ul>
+      <li><strong>Monthly subscriptions</strong>: Charged on the subscription start date and each subsequent month on the same date.</li>
+      <li><strong>Annual subscriptions</strong>: Charged on the subscription start date and each subsequent year.</li>
+      <li><strong>Additional purchases</strong>: Charged immediately at the time of purchase.</li>
+    </ul>
+
+    <h3>15.3 Automatic Charges</h3>
+    <p>By subscribing, you authorize automatic recurring charges. We will automatically charge your designated payment method:</p>
+    <ol>
+      <li>At the start of each billing period;</li>
+      <li>For any overage fees or additional purchases;</li>
+      <li>For any outstanding balances.</li>
+    </ol>
+
+    <h3>15.4 Failed Payments</h3>
+    <p>If a payment fails:</p>
+    <ol>
+      <li>We will notify you and attempt the charge again within 3 days;</li>
+      <li>If the second attempt fails, we will attempt again within 7 days;</li>
+      <li>If all attempts fail within 14 days, your Account will be suspended;</li>
+      <li>Accounts suspended for non-payment for 30 days may be terminated.</li>
+    </ol>
+
+    <h3>15.5 Taxes</h3>
+    <p>You are responsible for all applicable taxes, including VAT, sales tax, or withholding taxes. If we are required to collect taxes, the amount will be added to your invoice and shown separately.</p>
+
+    <h3>15.6 Refunds</h3>
+    <p>Fees are non-refundable except as expressly provided in these Terms or as required by applicable law. EU consumers have the right to withdraw from distance purchases within 14 days (Fernabsatzgesetz), but this right expires once the Service begins, which happens immediately upon subscription.</p>
+
+    <h2>16. General Provisions</h2>
+
+    <h3>16.1 Entire Agreement</h3>
+    <p>These Terms, together with the Privacy Policy and any applicable order forms, constitute the entire agreement between you and Aimino regarding the Service and supersede all prior agreements.</p>
+
+    <h3>16.2 Changes to Terms</h3>
+    <p>We may modify these Terms at any time. We will notify you of material changes via email or through the Service at least 30 days before they take effect. Your continued use of the Service after the changes take effect constitutes acceptance of the new Terms.</p>
+
+    <h3>16.3 Severability</h3>
+    <p>If any provision of these Terms is held to be invalid or unenforceable, the remaining provisions shall remain in full force and effect.</p>
+
+    <h3>16.4 Waiver</h3>
+    <p>Our failure to enforce any right or provision of these Terms shall not constitute a waiver of such right or provision.</p>
+
+    <h3>16.5 Assignment</h3>
+    <p>You may not assign or transfer these Terms, or any rights or obligations hereunder, without our prior written consent. We may assign these Terms without restriction in connection with a merger, acquisition, or sale of assets.</p>
+
+    <h3>16.6 Notices</h3>
+    <p>Unless otherwise specified, notices shall be sent:</p>
+    <ul>
+      <li><strong>To Aimino</strong>: legal@stas.ai or our registered address</li>
+      <li><strong>To you</strong>: via the email address associated with your Account</li>
+    </ul>
+
+    <h3>16.7 Force Majeure</h3>
+    <p>Neither party shall be liable for delays or failures in performance resulting from causes beyond its reasonable control, including acts of God, natural disasters, war, terrorism, pandemics, government actions, internet failures, or third-party service disruptions.</p>
+
+    <h3>16.8 Language</h3>
+    <p>These Terms may be provided in multiple languages. The English version shall prevail in case of any conflict, unless otherwise required by German law.</p>
+
+    <h2>17. Contact Information</h2>
+    <p>For questions, concerns, or legal inquiries:</p>
+    <table>
+      <thead>
+        <tr><th>Purpose</th><th>Contact</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>General support</td><td>support@stas.ai</td></tr>
+        <tr><td>Legal inquiries</td><td>legal@stas.ai</td></tr>
+        <tr><td>Privacy matters</td><td>privacy@stas.ai</td></tr>
+        <tr><td>Data Protection Officer</td><td>dpo@stas.ai</td></tr>
+        <tr><td>Abuse reporting</td><td>abuse@stas.ai</td></tr>
+        <tr><td>Postal address</td><td>Aimino Technologies GmbH<br />[Registered Address]<br />[City, Postal Code]<br />Germany</td></tr>
+      </tbody>
+    </table>
+
+    <hr />
+    <p style="text-align:center; color:var(--text2); font-size:14px; margin-top:32px;">&copy; 2026 Aimino Technologies GmbH. All rights reserved.</p>
+
+  </article>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/docs">Documentation</a></li>
+          <li><a href="/trust">Trust & Security</a></li>
+          <li><a href="/status">Status</a></li>
+          <li><a href="/support">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="/blog">Blog</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
+          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="https://aimino.io">AImino</a></li>
+          <li><a href="https://opencode.ai">OpenCode</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/LICENSE">License</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 AImino. All rights reserved.</span>
+      <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">Open Source (MIT)</a>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

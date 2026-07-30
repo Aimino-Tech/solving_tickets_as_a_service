@@ -16,3 +16,7 @@ export function trackSlaBreach(tenantId: string, tier: string, breachType: 'resp
 export function trackSlaEscalation(tenantId: string, tier: string, level: string): void {
   bridgeMetrics.incrementCounter('stas_sla_escalations_total', { tenant_id: tenantId, tier, level });
 }
+
+export function trackGovernanceFailure(repo: string, error: string): void {
+  bridgeMetrics.incrementCounter('stas_governance_failures_total', { repo, error });
+}

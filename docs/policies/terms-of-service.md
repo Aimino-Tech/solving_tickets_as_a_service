@@ -2,13 +2,13 @@
 title: Terms of Service
 last-updated: 2026-07-28
 version: 1.0.0
-status: draft
+status: active
 ---
 
 # Terms of Service
 
 **STAS (Solving Tickets As A Service)**
-**Version 1.0.0 — Draft**
+**Version 1.0.0**
 **Last Updated: July 28, 2026**
 
 ---
@@ -538,3 +538,5 @@ For questions, concerns, or legal inquiries:
 ---
 
 **© 2026 Aimino Technologies GmbH. All rights reserved.**
+
+*Version 1.0.1 — Published for GitHub Marketplace (2026-07-30)*

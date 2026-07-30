@@ -27,7 +27,7 @@ const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
 
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', registerLimiter, async (req: Request, res: Response) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.errors[0].message });
@@ -98,7 +98,7 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.errors[0].message });
@@ -138,7 +138,7 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/refresh', async (req: Request, res: Response) => {
+router.post('/refresh', refreshLimiter, async (req: Request, res: Response) => {
   const parsed = refreshSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.errors[0].message });
