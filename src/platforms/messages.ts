@@ -16,6 +16,26 @@ const BOT_NAME = config.stas.botName;
 export const BOT_SIGNATURE = `> — ${BOT_NAME} 🤖`;
 
 /**
+ * Generate the "Powered by STAS" footer with tracking.
+ *
+ * Conditionally included based on `POWERED_BY_FOOTER_ENABLED` config.
+ * The `ref=pr-footer` query param enables PostHog/analytics tracking
+ * of click-through rate from PR and issue comment impressions.
+ *
+ * @returns Footer markdown string, or empty string if disabled.
+ */
+export function poweredByFooter(): string {
+  if (!config.stas.poweredByFooterEnabled) return '';
+
+  return [
+    '',
+    '---',
+    '',
+    `[![STAS](https://img.shields.io/badge/fix-powered_by_STAS-8250DF)](https://stas.aimino.ai?ref=pr-footer) — [Add STAS to your repo](https://github.com/apps/${config.github.appId}/installations/new)`,
+  ].join('\n');
+}
+
+/**
  * High-confidence fix — PR is ready for review (non-draft).
  *
  * @param prUrl   Platform-specific URL to the PR/MR
@@ -40,6 +60,7 @@ export function highConfidenceIssueComment(prNumber: number, result: AgentResult
     '',
     'Please review and merge at your convenience.',
     BOT_SIGNATURE,
+    poweredByFooter(),
   ]
     .filter(Boolean)
     .join('\n');
@@ -64,6 +85,7 @@ export function draftIssueComment(prNumber: number, result: AgentResult): string
     '',
     'Please review the draft, make any needed changes, and mark it ready for review.',
     BOT_SIGNATURE,
+    poweredByFooter(),
   ]
     .filter(Boolean)
     .join('\n');
@@ -541,10 +563,7 @@ export function buildPRBody(params: {
         ]
       : []),
     `_🤖 Automated fix by ${BOT_NAME}_`,
-    '',
-    '---',
-    '',
-    `[![STAS](https://img.shields.io/badge/fix-powered_by_STAS-8250DF)](https://stas.aimino.ai) — [Add STAS to your repo](https://github.com/apps/${config.github.appId}/installations/new)`,
+    poweredByFooter(),
   ].join('\n');
 }
 

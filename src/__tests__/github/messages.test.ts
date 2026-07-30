@@ -24,10 +24,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { sampleAgentResult } from '../fixtures.js';
 
-// Mock config so messages can read BOT_NAME
+// Mock config so messages can read BOT_NAME and poweredByFooterEnabled
 vi.mock('../../config.js', () => ({
   config: {
-    stas: { botName: 'STAS' },
+    stas: { botName: 'STAS', poweredByFooterEnabled: true },
+    github: { appId: 'test-app' },
   },
 }));
 
@@ -52,6 +53,7 @@ import {
   queueRetryComment,
   deadLetterComment,
 } from "../../github/messages.js";
+import { poweredByFooter } from "../../platforms/messages.js";
 
 describe('github/messages', () => {
   // ── Shared test data ──────────────────────────────────────────────────
@@ -786,6 +788,24 @@ const msg = queueRetryComment(1, 3, "Job timeout");
     it("includes bot signature", () => {
       const msg = deadLetterComment("error");
       expect(msg).toContain("STAS");
+    });
+  });
+
+  // ── 18. poweredByFooter ──────────────────────────────────────────────
+
+  describe("poweredByFooter", () => {
+    it('returns a non-empty string with tracked link when enabled', () => {
+      const footer = poweredByFooter();
+      expect(footer).toContain("powered_by_STAS");
+      expect(footer).toContain("ref=pr-footer");
+      expect(footer).toContain("https://stas.aimino.ai");
+      expect(footer).toContain("installations/new");
+      expect(footer).toContain("test-app");
+    });
+
+    it("includes a separator line before the footer content", () => {
+      const footer = poweredByFooter();
+      expect(footer.startsWith("\n---")).toBe(true);
     });
   });
 });

@@ -72,6 +72,7 @@ const envSchema = z.object({
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
+  POWERED_BY_FOOTER_ENABLED: boolSchema(true),
   // Rate limiting — calibrated for 500-user scale
   STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(150),
@@ -466,6 +467,7 @@ function buildConfig(env: ParsedEnv) {
       queueDlqNotifyAt: env.QUEUE_DLQ_NOTIFY_AT,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+      poweredByFooterEnabled: env.POWERED_BY_FOOTER_ENABLED,
     },
 
     postgres: {
