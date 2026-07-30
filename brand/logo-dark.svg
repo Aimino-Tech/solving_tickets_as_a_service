@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <defs>
+    <linearGradient id="brand-dark" x1="0" y1="0" x2="400" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="accent-dark" x1="0" y1="0" x2="400" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+  </defs>
+  <!-- Dark background variant — lighter colors for dark bg -->
+  <rect x="85" y="95" width="230" height="200" rx="24" fill="url(#brand-dark)" opacity="0.15"/>
+  <rect x="100" y="108" width="200" height="174" rx="16" fill="url(#brand-dark)" opacity="0.25"/>
+  <line x1="205" y1="108" x2="205" y2="282" stroke="url(#brand-dark)" stroke-width="2" stroke-dasharray="6,6" opacity="0.5"/>
+  <rect x="115" y="120" width="75" height="150" rx="10" fill="url(#brand-dark)" opacity="0.35"/>
+  <path d="M150 200 L180 228 L250 162" stroke="url(#accent-dark)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="140" cy="148" r="3" fill="url(#brand-dark)" opacity="0.5"/>
+  <circle cx="140" cy="170" r="3" fill="url(#brand-dark)" opacity="0.5"/>
+  <circle cx="165" cy="148" r="3" fill="url(#brand-dark)" opacity="0.5"/>
+  <circle cx="165" cy="170" r="3" fill="url(#brand-dark)" opacity="0.5"/>
+  <text x="200" y="345" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="48" fill="url(#brand-dark)" letter-spacing="4">STAS</text>
+  <text x="200" y="370" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="400" font-size="14" fill="#6b7280" letter-spacing="6">SOLVING TICKETS AS A SERVICE</text>
+</svg>
