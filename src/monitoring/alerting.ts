@@ -417,11 +417,12 @@ export function reportDbConnectionFailure(error: string): void {
  * Report an SLO breach for a given SLI.
  */
 export function reportSLOBreach(sliName: string, currentValue: number, target: number): void {
+  const safeValue = Number.isFinite(currentValue) ? currentValue : 0;
   dispatchAlert({
     severity: 'critical',
     rule: `slo_breach_${sliName}`,
-    message: `SLO breached for ${sliName}: current=${currentValue}, target=${target}`,
-    context: { sliName, currentValue, target },
+    message: `SLO breached for ${sliName}: current=${safeValue}, target=${target}`,
+    context: { sliName, currentValue: safeValue, target },
     timestamp: new Date().toISOString(),
   });
 }

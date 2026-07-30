@@ -68,6 +68,34 @@ async function getAccountId(req: Request): Promise<number | undefined> {
 }
 
 // ---------------------------------------------------------------------------
+// GET /api/v1/billing/plan — Get current subscription plan for account
+// ---------------------------------------------------------------------------
+
+router.get('/plan', async (req: Request, res: Response) => {
+  try {
+    const accountId = await getAccountId(req);
+    const planId: PlanId = (config.stas.defaultTier === 'pro' ? 'pro' : 'free') as PlanId;
+    const plan = PLANS[planId];
+    if (!plan) { res.status(404).json({ error: 'Plan not found' }); return; }
+    res.json({
+      id: plan.id,
+      name: plan.name,
+      description: plan.description,
+      amountCents: plan.amountCents,
+      monthlyFixLimit: plan.monthlyFixLimit,
+      premiumModels: plan.premiumModels,
+      concurrentFixes: plan.concurrentFixes,
+      customWebhooks: plan.customWebhooks,
+      prioritySupport: plan.prioritySupport,
+      trialDays: plan.trialDays,
+    });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to get plan');
+    res.status(500).json({ error: 'Failed to get plan' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/v1/billing/plans — List available subscription plans
 // ---------------------------------------------------------------------------
 

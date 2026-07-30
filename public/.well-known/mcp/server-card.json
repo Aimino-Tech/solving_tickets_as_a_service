@@ -4,9 +4,9 @@
     "name": "@aimino/stas-mcp",
     "version": "1.0.0",
     "description": "STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot backed by OpenCode.",
-    "homepage": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
-    "documentation": "https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md",
-    "license": "MIT",
+    "homepage": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
+    "documentation": "https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/README.md",
+    "license": "AGPL-3.0-only",
     "author": {
       "name": "Aimino Tech",
       "email": "team@aimino.io",

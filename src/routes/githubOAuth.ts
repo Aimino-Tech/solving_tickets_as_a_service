@@ -1,8 +1,10 @@
+import crypto from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { authService } from '../auth/service.js';
 import { requireAuth } from '../auth/middleware.js';
+import { getSupabaseAdmin } from '../auth/supabase.js';
 import { gitHubOAuthRepository } from '../db/repositories/GitHubOAuthRepository.js';
 import { encrypt } from '../utils/encryption.js';
 import { rootLogger } from '../utils/logger.js';
@@ -11,6 +13,24 @@ const log = rootLogger.child({ module: 'github-oauth' });
 const router: Router = Router();
 const callbackSchema = z.object({ code: z.string().min(1) });
 
+// POST /url — Generate GitHub OAuth authorization URL
+router.post('/url', async (_req: Request, res: Response) => {
+  try {
+    const clientId = config.github.oauthClientId;
+    if (!clientId) {
+      res.status(501).json({ error: 'GitHub OAuth not configured — set GITHUB_OAUTH_CLIENT_ID' });
+      return;
+    }
+    const redirectUri = `${(config as any).publicUrl || `http://localhost:${config.port}`}/api/v1/auth/github/callback`;
+    const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user&state=${crypto.randomUUID()}`;
+    res.json({ url });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to generate GitHub OAuth URL');
+    res.status(500).json({ error: 'Failed to generate OAuth URL' });
+  }
+});
+
+// POST /callback — Handle GitHub OAuth callback
 router.post('/callback', async (req: Request, res: Response) => {
   try {
     const parsed = callbackSchema.safeParse(req.body);
@@ -28,25 +48,52 @@ router.post('/callback', async (req: Request, res: Response) => {
       catch { res.status(401).json({ error: 'Invalid token' }); return; }
     } else {
       const et = await gitHubOAuthRepository.findByGithubUserId(gu.id);
-      if (et) { userId = et.userId; const { usersRepository } = await import('../db/repositories/UsersRepository.js'); const eu = await usersRepository.findById(userId); if (!eu) { res.status(500).json({ error: 'User not found' }); return; } userEmail = eu.email; }
-      else { const { usersRepository } = await import('../db/repositories/UsersRepository.js'); const nu = await usersRepository.create({ email: gu.email || gu.login + '@github.user', passwordHash: '', name: gu.name || gu.login }); userId = nu.id; userEmail = nu.email; }
+      if (et) {
+        const ue = gu.email || gu.login + '@github.user';
+        userId = et.userId; userEmail = ue;
+      } else {
+        const { data, error } = await getSupabaseAdmin().auth.admin.createUser({
+          email: gu.email || gu.login + '@github.user',
+          password: crypto.randomUUID(),
+          user_metadata: { name: gu.name || gu.login },
+        });
+        if (error) { res.status(500).json({ error: 'Failed to create user' }); return; }
+        userId = data.user.id; userEmail = data.user.email!;
+      }
     }
-    await gitHubOAuthRepository.upsert({ userId: Number(userId), accessTokenEncrypted: encrypt(td.access_token), githubLogin: gu.login, githubUserId: gu.id, scope: td.scope || '' });
-    const ar = authService.generateTokens(String(userId), userEmail);
+    await gitHubOAuthRepository.upsert({ userId: userId, accessTokenEncrypted: encrypt(td.access_token), githubLogin: gu.login, githubUserId: gu.id, scope: td.scope || '' });
+    const ar = authService.generateTokens(userId, userEmail);
     res.json({ ...ar, github: { login: gu.login, id: gu.id, avatarUrl: gu.avatar_url } });
   } catch (err) { log.error({ err: String(err) }, 'GitHub OAuth callback failed'); res.status(500).json({ error: 'GitHub OAuth callback failed' }); }
 });
 
-router.get('/me', requireAuth, async (req: Request, res: Response) => {
+// GET /status — Check GitHub connection status for authenticated user
+router.get('/status', requireAuth, async (req: Request, res: Response) => {
   try {
-    const t = await gitHubOAuthRepository.findByUserId(Number(req.user!.id));
+    const t = await gitHubOAuthRepository.findByUserId(req.user!.id);
+    if (!t) {
+      res.json({ connected: false });
+      return;
+    }
+    res.json({ connected: true, githubLogin: t.githubLogin, githubUserId: t.githubUserId });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to check GitHub status');
+    res.json({ connected: false });
+  }
+});
+
+// GET /profile — Get GitHub OAuth profile for authenticated user
+router.get('/profile', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const t = await gitHubOAuthRepository.findByUserId(req.user!.id);
     if (!t) { res.status(404).json({ error: 'No GitHub OAuth token found' }); return; }
     res.json({ id: t.id, githubLogin: t.githubLogin, githubUserId: t.githubUserId, avatarUrl: t.avatarUrl, scope: t.scope, tokenExpiresAt: t.tokenExpiresAt, createdAt: t.createdAt });
   } catch (err) { log.error({ err: String(err) }, 'Failed'); res.status(500).json({ error: 'Failed' }); }
 });
 
-router.delete('/me', requireAuth, async (req: Request, res: Response) => {
-  try { await gitHubOAuthRepository.delete(Number(req.user!.id)); res.json({ success: true }); }
+// DELETE /disconnect — Disconnect GitHub account
+router.delete('/disconnect', requireAuth, async (req: Request, res: Response) => {
+  try { await gitHubOAuthRepository.delete(req.user!.id); res.json({ success: true }); }
   catch (err) { log.error({ err: String(err) }, 'Failed'); res.status(500).json({ error: 'Failed' }); }
 });
 

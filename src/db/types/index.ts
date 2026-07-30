@@ -25,3 +25,4 @@ export type { Workspace, NewWorkspace } from './workspaces.js';
 export type { NotificationPreference, NewNotificationPreference } from './notifications.js';
 export type { NotificationHistory, NewNotificationHistory } from './notificationHistory.js';
 export type { RunFeedback, NewRunFeedback } from './runFeedback.js';
+export type { RefreshToken, NewRefreshToken, RefreshTokenRepository } from './refreshTokens.js';

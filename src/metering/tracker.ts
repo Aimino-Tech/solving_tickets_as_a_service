@@ -25,6 +25,7 @@ import { randomUUID } from 'node:crypto';
 import { meteringEvents, type PhaseUsage, type UsageRecord } from './events.js';
 import { calculatePipelineCost } from './costs.js';
 import { rootLogger } from '../utils/logger.js';
+import { captureEvent } from '../analytics/tracker.js';
 
 const log = rootLogger.child({ module: 'usage-tracker' });
 
@@ -181,6 +182,24 @@ export class UsageTracker {
       'Usage recorded',
     );
 
+    // Track fix_completed in PostHog
+    try {
+      captureEvent('fix_completed', this.runId, {
+        source: this.source,
+        totalCredits,
+        durationMs,
+        prCreated: this._prCreated,
+        retryCount: this._retryCount,
+        fallbackUsed: this._fallbackUsed,
+        modelsUsed: record.modelsUsed,
+        installationId: this.installationId,
+        repo: this.repo,
+        issueNumber: this.issueNumber,
+      });
+    } catch (analyticsErr) {
+      log.error({ err: String(analyticsErr) }, 'Failed to track fix_completed event');
+    }
+
     return record;
   }
 
@@ -254,6 +273,18 @@ export class UsageTracker {
       credits: 0,
       durationMs: 0,
     });
+
+    try {
+      captureEvent('pr_created', this.runId, {
+        source: this.source,
+        installationId: this.installationId,
+        repo: this.repo,
+        issueNumber: this.issueNumber,
+        runId: this.runId,
+      });
+    } catch (analyticsErr) {
+      log.error({ err: String(analyticsErr) }, 'Failed to track pr_created event');
+    }
   }
 
   /**
