@@ -30,6 +30,7 @@ import { getRateLimitForAccount } from '../ratelimit/tiers.js';
 import { getTierForAccount } from '../ratelimit/tiers.js';
 import { accountsRepository } from '../db/repositories/index.js';
 import { dispatchIssueToOsy } from '../services/osyDispatch.js';
+import * as auditService from '../audit/service.js';
 import { dispatchThroughGovernance } from '../governance/client.js';
 import { parseSlashCommand } from '../github/slashCommands.js';
 import { recordGovernanceFailure } from '../bridge/metrics.js';
@@ -117,6 +118,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       },
       'Received issues.opened event',
     );
+    auditService.logWebhookReceived({
+      source: 'github',
+      eventType: 'issues.opened',
+      details: {
+        repo: `${payload.repository.owner.login}/${payload.repository.name}`,
+        issueNumber: payload.issue.number,
+      },
+    });
     // We wait for the label event instead of acting on open
   });
 
@@ -150,20 +159,15 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       // correct user/tenant via the manual confirmation button. The installation
       // data is persisted here for audit and future cross-referencing.
       try {
-        const { auditRepository } = await import('../audit/repository.js');
-        await auditRepository.insert({
-          actorType: 'system',
-          actorId: undefined,
-          action: 'onboarding.github.installation_received',
-          resourceType: 'onboarding',
-          resourceId: undefined,
+        await auditService.logWebhookReceived({
+          source: 'github',
+          eventType: 'installation.created',
           details: {
             installationId,
             accountLogin: p.installation?.account?.login,
             accountType: p.installation?.account?.type,
             reposGranted: p.repositories?.length ?? 0,
           },
-          correlationId: undefined,
         });
       } catch (auditErr) {
         log.error({ err: String(auditErr) }, 'Failed to audit log installation event');
@@ -322,50 +326,17 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
     await rateLimiter.increment('account', String(jobData.installationId));
     await rateLimiter.increment('repo', repo);
 
-    // Track issue_labeled event in PostHog
-    try {
-      captureEvent('issue_labeled', String(jobData.installationId), {
-        repoOwner: jobData.repoOwner,
-        repoName: jobData.repoName,
-        issueNumber: jobData.issueNumber,
-        label,
-        tier,
-      });
-    } catch (analyticsErr) {
-      log.error({ err: String(analyticsErr) }, 'Failed to track issue_labeled event');
-    }
+    // ── Route to OpenSymphony or local queue ──────────────────────
+    auditService.logFixJobEvent({
+      jobId: `gh-${jobData.repoOwner}-${jobData.repoName}-${jobData.issueNumber}`,
+      event: 'started',
+      accountId: String(jobData.installationId),
+      repo: `${jobData.repoOwner}/${jobData.repoName}`,
+      issueNumber: jobData.issueNumber,
+      details: { dispatchTarget: config.osy?.dispatchUrl ? 'opensymphony' : 'local' },
+    });
 
-    // ── Route through Governance Proxy → OpenSymphony or local queue ─
-    const traceId = generateTraceId();
-    if (config.proxy.dispatchUrl) {
-      log.info(
-        { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber, traceId },
-        'Dispatching through governance proxy',
-      );
-      const govResult = await dispatchThroughGovernance({
-        installationId: jobData.installationId,
-        repoOwner: jobData.repoOwner,
-        repoName: jobData.repoName,
-        issueNumber: jobData.issueNumber,
-        issueTitle: jobData.issueTitle ?? '',
-        issueBody: jobData.issueBody,
-        labels: jobData.labels ?? [],
-        traceId,
-      });
-      if (!govResult.success) {
-        log.error(
-          { err: govResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
-          'Governance proxy dispatch failed — blocking issue (fail-closed)',
-        );
-        recordGovernanceFailure(repo, govResult.error ?? 'unknown');
-        await postGovernanceFailureComment(
-          installationId || 0,
-          jobData.repoOwner,
-          jobData.repoName,
-          jobData.issueNumber,
-        );
-      }
-    } else if (config.osy?.dispatchUrl) {
+    if (config.osy?.dispatchUrl) {
       log.info(
         { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
         'Dispatching to OpenSymphony via OS dispatch API (no governance proxy)',
@@ -381,6 +352,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         traceId,
       });
       if (!osyResult.success) {
+        auditService.logFixJobEvent({
+          jobId: `gh-${jobData.repoOwner}-${jobData.repoName}-${jobData.issueNumber}`,
+          event: 'failed',
+          accountId: String(jobData.installationId),
+          repo: `${jobData.repoOwner}/${jobData.repoName}`,
+          issueNumber: jobData.issueNumber,
+          error: osyResult.error,
+        });
         log.error(
           { err: osyResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
           'OS dispatch failed — OpenSymphony unavailable',
@@ -618,6 +597,17 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         },
         'Marketplace purchase event',
       );
+
+      auditService.logWebhookReceived({
+        source: 'github',
+        eventType: 'marketplace_purchase',
+        details: {
+          action: p.action,
+          accountId: plan.accountId,
+          plan: plan.plan,
+          effectiveAt: p.effective_date,
+        },
+      });
 
       // Update the billing plan in the database
       if (p.action === 'purchased' || p.action === 'changed') {

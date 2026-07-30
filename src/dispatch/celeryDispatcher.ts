@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
+import * as auditService from '../audit/service.js';
 
 const log = rootLogger.child({ module: 'celery-dispatcher' });
 
@@ -90,11 +91,26 @@ export async function dispatchToCeleryPipeline(data: IssueJobData): Promise<{
   const published = await publishToQueue('stas.direct', 'issue.fix', msg);
 
   if (!published) {
+    auditService.logFixJobEvent({
+      jobId: runId,
+      event: 'failed',
+      repo: `${data.repoOwner}/${data.repoName}`,
+      issueNumber: data.issueNumber,
+      error: 'Failed to dispatch to Celery pipeline — RabbitMQ unavailable',
+    });
     return {
       success: false,
       errors: ['Failed to dispatch to Celery pipeline — RabbitMQ unavailable'],
     };
   }
+
+  auditService.logFixJobEvent({
+    jobId: runId,
+    event: 'started',
+    repo: `${data.repoOwner}/${data.repoName}`,
+    issueNumber: data.issueNumber,
+    details: { pipeline: 'celery-triage', task: 'workers.tasks.triage.classify_issue' },
+  });
 
   return {
     success: true,
@@ -137,11 +153,26 @@ export async function dispatchFullPipeline(data: IssueJobData): Promise<{
   const published = await publishToQueue('stas.direct', 'issue.fix', msg);
 
   if (!published) {
+    auditService.logFixJobEvent({
+      jobId: runId,
+      event: 'failed',
+      repo: `${ctx.repo_owner}/${ctx.repo_name}`,
+      issueNumber: ctx.issue_number as number,
+      error: 'Failed to dispatch to Celery pipeline — RabbitMQ unavailable',
+    });
     return {
       success: false,
       errors: ['Failed to dispatch full pipeline — RabbitMQ unavailable'],
     };
   }
+
+  auditService.logFixJobEvent({
+    jobId: runId,
+    event: 'started',
+    repo: `${ctx.repo_owner}/${ctx.repo_name}`,
+    issueNumber: ctx.issue_number as number,
+    details: { pipeline: 'celery-full', task: 'workers.tasks.pipeline_orchestrator.run_full_pipeline' },
+  });
 
   return {
     success: true,
