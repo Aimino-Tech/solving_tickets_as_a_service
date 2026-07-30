@@ -36,6 +36,7 @@ import * as auditService from '../audit/service.js';
 import { dispatchThroughGovernance } from '../governance/client.js';
 import { parseSlashCommand } from '../github/slashCommands.js';
 import { recordGovernanceFailure } from '../bridge/metrics.js';
+import { getOctokit } from '../github/auth.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
 
@@ -220,6 +221,52 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           })),
         });
         log.info({ installationId, accountLogin: inst.accountLogin, userId: inst.userId }, 'Saved installation to DB');
+
+        const firstRepo = p.repositories?.[0];
+        if (firstRepo) {
+          try {
+            const octokit = await getOctokit(installationId);
+            const welcomeBody = [
+              '## Welcome to STAS! 🎉',
+              '',
+              'Thank you for installing **STAS** — your AI-powered bug-fixing bot.',
+              '',
+              '### How It Works',
+              '',
+              '1. **Label an issue** with `stas:fix` (or your configured label)',
+              '2. **STAS investigates** the issue in an isolated sandbox',
+              '3. **A fix PR** is automatically created for your review',
+              '',
+              '### Quick Start',
+              '',
+              'Create a test issue or label an existing bug — STAS will take it from there!',
+              '',
+              '### Resources',
+              '',
+              `- [Documentation](https://stas.aimino.ai/docs)`,
+              `- [GitHub App Settings](https://github.com/settings/installations/${installationId})`,
+              '',
+              'Happy fixing!',
+              '',
+              `> — ${config.stas.botName}`,
+            ].join('\n');
+            await octokit.issues.create({
+              owner: firstRepo.owner?.login ?? 'unknown',
+              repo: firstRepo.name,
+              title: '🎉 Welcome to STAS!',
+              body: welcomeBody,
+            });
+            log.info(
+              { repo: `${firstRepo.owner?.login}/${firstRepo.name}`, installationId },
+              'Welcome issue created',
+            );
+          } catch (welcomeErr) {
+            log.warn(
+              { err: String(welcomeErr), installationId, repo: firstRepo.name },
+              'Failed to create welcome issue (non-fatal)',
+            );
+          }
+        }
       } catch (dbErr) {
         log.error({ err: String(dbErr), installationId }, 'Failed to persist installation to DB');
       }

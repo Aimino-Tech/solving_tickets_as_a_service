@@ -180,6 +180,20 @@ export class ActionDispatcher {
           body: prBody,
         });
 
+        try {
+          await octokit.pulls.requestReviewers({
+            owner: repoOwner,
+            repo: repoName,
+            pull_number: pr.data.number,
+            reviewers: [repoOwner],
+          });
+        } catch (reviewReqErr) {
+          log.warn(
+            { err: String(reviewReqErr), prNumber: pr.data.number },
+            'Failed to request reviewers (non-fatal)',
+          );
+        }
+
         const body = messages.highConfidenceIssueComment(pr.data.number, agentResult);
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
@@ -220,6 +234,20 @@ export class ActionDispatcher {
           body: prBody,
           draft: true,
         });
+
+        try {
+          await octokit.pulls.requestReviewers({
+            owner: repoOwner,
+            repo: repoName,
+            pull_number: pr.data.number,
+            reviewers: [repoOwner],
+          });
+        } catch (reviewReqErr) {
+          log.warn(
+            { err: String(reviewReqErr), prNumber: pr.data.number },
+            'Failed to request reviewers (non-fatal)',
+          );
+        }
 
         const body = messages.draftIssueComment(pr.data.number, agentResult);
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
