@@ -26,11 +26,69 @@ flowchart LR
 
 ![STAS Demo](dashboard/public/assets/launch/stas-demo.gif)
 
+1. Label any issue with `stas:fix`
+2. STAS acknowledges, investigates, fixes, verifies
+3. A draft PR appears with the fix and regression tests
+4. You review and merge
+
+## 🎮 Try STAS on a Demo Repo
+
+Want to see STAS in action without setting anything up? We created a **[demo repository](https://github.com/Aimino-Tech/stas-demo)** with 6 curated bugs:
+
+| # | Bug Type | Difficulty |
+|---|----------|------------|
+| 1 | Null reference crash | Easy |
+| 2 | Broken import path | Easy |
+| 3 | Deprecated API usage | Easy |
+| 4 | Race condition (overselling) | Medium |
+| 5 | SQL injection vulnerability | Hard |
+| 6 | Monolithic function refactor | Medium |
+
+**How to try it:**
+1. Go to [Aimino-Tech/stas-demo](https://github.com/Aimino-Tech/stas-demo)
+2. Label any issue with `stas:fix`
+3. Watch STAS investigate, fix, test, and open a PR
+
 ## Quick Start — First Fix in <15 Minutes
 
 Choose your install path:
 
-### GitHub Action (zero config, ~3 minutes)
+### 🚀 Zero-config GitHub Action (recommended)
+
+**8 lines of YAML, no setup required.** Add this workflow file to your repo:
+
+```yaml
+# .github/workflows/stas.yml
+name: STAS Fix
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  fix:
+    if: github.event.label.name == 'stas:fix'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aimino/stas/.github/actions/stas-fix@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          opencode-endpoint: ${{ secrets.STAS_OPENCODE_ENDPOINT }}
+```
+
+**What you get:**
+- Zero infrastructure — runs entirely in GitHub Actions
+- No webhooks, no servers, no Docker, no database
+- Every fix runs in a fresh sandbox
+- Full audit trail on every PR
+- Works with any public or private repo
+
+### One-command setup (self-hosted)
 
 Add this workflow file to your repo at `.github/workflows/stas.yml`:
 

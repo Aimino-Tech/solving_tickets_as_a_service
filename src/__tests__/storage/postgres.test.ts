@@ -4,7 +4,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const mockQuery = vi.fn();
-vi.mock('../../db/connection.js', () => ({ queryWithRetry: mockQuery }));
+vi.mock('../../db/connection.js', () => ({ queryWithRetry: mockQuery, closePool: vi.fn() }));
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));

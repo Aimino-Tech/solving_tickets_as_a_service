@@ -22,7 +22,7 @@ function getLicensePublicKey(): string {
 }
 
 export function isSelfHosted(): boolean {
-  return config.runMode !== 'cloud' && !process.env.STRIPE_SECRET_KEY;
+  return config.stas.mode !== 'hosted' && !process.env.STRIPE_SECRET_KEY;
 }
 
 export function verifyLicenseKey(key: string): LicensePayload | null {

@@ -65,7 +65,7 @@ const envSchema = z.object({
   STAS_MONTHLY_QUOTA_ENABLED: boolSchema(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
-	  STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
+	  STAS_AI_MODE: z.enum(['ai', 'static']).default('static'),
 	  STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
@@ -156,6 +156,9 @@ const envSchema = z.object({
   DOCKER_CONTAINER_CPU: z.coerce.number().min(0.1).default(0.5),
   DOCKER_NETWORK_RESTRICT: boolSchema(true),
   DOCKER_ALLOWED_HOSTS: z.string().default(''),
+  DOCKER_SECCOMP_PROFILE: z.string().default('default'),
+  DOCKER_APPARMOR_PROFILE: z.string().default(''),
+  DOCKER_GVISOR_ENABLED: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(false),
 
   // Database
   DATABASE_URL: z.string().default('postgres://localhost:5432/stas'),
@@ -334,6 +337,9 @@ function buildConfig(env: ParsedEnv) {
       containerCpu: env.DOCKER_CONTAINER_CPU,
       networkRestrict: env.DOCKER_NETWORK_RESTRICT,
       allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
+      seccompProfile: env.DOCKER_SECCOMP_PROFILE,
+      apparmorProfile: env.DOCKER_APPARMOR_PROFILE,
+      gvisorEnabled: env.DOCKER_GVISOR_ENABLED,
     },
 
     openai: {

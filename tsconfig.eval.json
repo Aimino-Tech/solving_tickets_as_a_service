@@ -1,8 +1,9 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src", "eval"],
+  "include": ["src", "eval", "dashboard/src", "plugin/src", "premium/src", "packages/github-client/src"],
   "compilerOptions": {
     "rootDir": ".",
-    "noEmit": true
+    "noEmit": true,
+    "types": ["vitest/globals"]
   }
 }

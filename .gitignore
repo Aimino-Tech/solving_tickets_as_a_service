@@ -40,3 +40,4 @@ eval/results/
 *.egg-info/
 .worktrees/
 coverage/
+.omo/ulw-research/

@@ -67,7 +67,7 @@ function runCommand(
 ): { stdout: string; stderr: string; exitCode: number; durationMs: number } {
   const start = Date.now();
   try {
-    const stdout = execSync(command, EXEC_OPTIONS);
+    const stdout = execSync(command, EXEC_OPTIONS).toString();
     const durationMs = Date.now() - start;
     log.info({ command: label, durationMs }, 'Command succeeded');
     return { stdout, stderr: '', exitCode: 0, durationMs };

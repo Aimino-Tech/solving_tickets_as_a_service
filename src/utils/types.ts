@@ -21,13 +21,16 @@ export interface IssueJobData {
   trackerType?: 'linear' | 'jira';
 
   /** Billing tier for this account — determines priority and rate limits. */
-  billingPlan?: 'free' | 'pro' | 'enterprise';
+  billingPlan?: 'free' | 'pro' | 'team' | 'enterprise';
 
   /** Job priority (lower = higher priority). Free=30, Pro=20, Enterprise=10. */
   priority?: number;
 
   /** GitHub/Linear issue labels (e.g. ['bug', 'stas:fix']). Used for triage classification. */
   labels?: string[];
+
+  /** Pipeline identifier from the tracker (e.g. 'feature', 'research', 'fix'). */
+  pipeline?: string;
 }
 
 /**
@@ -52,7 +55,7 @@ export interface TriageData {
   trackerType?: 'linear' | 'jira';
 
   /** Billing tier for this account — determines priority and rate limits. */
-  billingPlan?: 'free' | 'pro' | 'enterprise';
+  billingPlan?: 'free' | 'pro' | 'team' | 'enterprise';
 
   /** Job priority (lower = higher priority). Free=30, Pro=20, Enterprise=10. */
   priority?: number;

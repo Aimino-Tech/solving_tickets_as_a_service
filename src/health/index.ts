@@ -3,6 +3,7 @@
  */
 
 export {
+  closeHealthRedis,
   getQueueHealth,
   hasCriticalQueues,
   getDLQSummary,

@@ -9,6 +9,7 @@
  */
 
 import type { AgentResult, QualityGateResult } from '../agent/types.js';
+import type { ReceiptManifest } from '../agent/receipts.js';
 import { QualityGateReporter } from '../core/quality-gate-reporter.js';
 import { config } from '../config.js';
 
@@ -464,6 +465,7 @@ export function buildPRBody(params: {
   isDraft: boolean;
   branchName: string;
   runId?: string | number;
+  receiptManifest?: ReceiptManifest;
 }): string {
   const { issueNumber, result, fileLinks, branchName, runId } = params;
 
@@ -499,12 +501,19 @@ export function buildPRBody(params: {
   }
 
   // Quality gate report section
-  const qualityGates = ver?.qualityGates;
-  const qualitySection: string[] = [];
+  const qualityGates = ver?.qualityGates ?? result.verification?.qualityGates;
+  let qualitySection: string[] = [];
   if (qualityGates && qualityGates.length > 0) {
     const qr = new QualityGateReporter();
     qualitySection.push('', '## Quality Gates', '', qr.formatMarkdown(qualityGates), '');
   }
+  // Build quality report from verification quality gates if present
+  const qualityReportMd =
+    qualityGates && qualityGates.length > 0
+      ? new QualityGateReporter().formatMarkdown(
+          QualityGateReporter.fromQualityGateResults(qualityGates),
+        )
+      : '';
 
   return [
     `## Summary`,
@@ -526,6 +535,8 @@ export function buildPRBody(params: {
       ? `<details><summary>Test Output</summary>\n\n\`\`\`\n${result.testOutput.slice(0, 5000)}\n\`\`\`\n</details>`
       : 'Tests were run as part of the fix process.',
     ...qualitySection,
+    '',
+    ...(qualityReportMd ? [`## Quality Report`, '', qualityReportMd, ''] : []),
     '',
     `## Branch`,
     '',

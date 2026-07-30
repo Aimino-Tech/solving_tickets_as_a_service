@@ -52,10 +52,10 @@ export type PlatformHandler = (event: WebhookRouterEvent) => Promise<void>;
  */
 export class WebhookRouter {
   private readonly handlers = new Map<string, PlatformHandler[]>();
-  private readonly enqueue: EnqueueHandler;
+  private readonly enqueueHandler: EnqueueHandler;
 
   constructor(enqueue: EnqueueHandler) {
-    this.enqueue = enqueue;
+    this.enqueueHandler = enqueue;
   }
 
   /**
@@ -129,7 +129,7 @@ export class WebhookRouter {
     const jobData = this.buildJobData(event);
 
     try {
-      await this.enqueue(jobData);
+      await this.enqueueHandler(jobData);
       log.info(
         {
           platform: event.platform,

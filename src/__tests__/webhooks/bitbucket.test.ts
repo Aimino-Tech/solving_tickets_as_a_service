@@ -155,8 +155,8 @@ describe("createBitbucketWebhooks", () => {
 
     await handler.handle(rawPayload, signature);
 
-    expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
-    expect(mockEnqueueIssue).toHaveBeenCalledWith(
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+    expect(mockEnqueue).toHaveBeenCalledWith(
       expect.objectContaining({
         repoOwner: "owner",
         repoName: "test-repo",
@@ -175,14 +175,14 @@ describe("createBitbucketWebhooks", () => {
 
     await handler.handle(rawPayload, signature);
 
-    expect(mockEnqueueIssue).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 
   it("does NOT enqueue when signature verification fails", async () => {
     const handler = createBitbucketWebhooks(mockEnqueue);
     await handler.handle(JSON.stringify({ event: "issue:created" }), "sha256=invalid");
 
-    expect(mockEnqueueIssue).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 
   it("does NOT enqueue for non-matching events", async () => {
@@ -194,6 +194,6 @@ describe("createBitbucketWebhooks", () => {
 
     await handler.handle(rawPayload, signature);
 
-    expect(mockEnqueueIssue).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 });

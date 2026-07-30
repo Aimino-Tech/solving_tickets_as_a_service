@@ -6,6 +6,8 @@
  */
 
 import type { PlatformClient, Issue, PR, CreatePRParams, StatusParams } from '../interface.js';
+import type { PlatformWebhookEvent } from '../../webhooks/base.js';
+import type { IssueJobData } from '../../utils/types.js';
 import { rootLogger } from '../../utils/logger.js';
 
 const log = rootLogger.child({ module: 'platform-bitbucket' });
@@ -156,6 +158,21 @@ export class BitbucketPlatformClient implements PlatformClient {
       { repoOwner: params.repoOwner, repoName: params.repoName, sha: params.sha },
       'setStatus not directly supported on Bitbucket — consider using Pipelines',
     );
+  }
+
+  // ── Issue job data ────────────────────────────────────────────────
+
+  toIssueJobData(event: PlatformWebhookEvent): IssueJobData {
+    return {
+      installationId: 0,
+      repoOwner: event.issue.repoOwner,
+      repoName: event.issue.repoName,
+      repoPrivate: event.issue.repoPrivate,
+      issueNumber: event.issue.number,
+      issueTitle: event.issue.title,
+      issueBody: event.issue.body,
+      source: 'bitbucket',
+    };
   }
 
   // ── User info ─────────────────────────────────────────────────────

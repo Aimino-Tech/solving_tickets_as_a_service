@@ -126,9 +126,9 @@ function createBitbucketPlatformClient(): BitbucketPlatformClient {
 export const bitbucketClient: PlatformClient = {
   platform: 'bitbucket',
 
-  async createComment(repoOwner: string, repoName: string, issueNumber: number, body: string): Promise<void> {
+  async createComment(repo: string, issueNumber: number, body: string): Promise<void> {
     const client = createBitbucketPlatformClient();
-    await client.createComment(`${repoOwner}/${repoName}`, issueNumber, body);
+    await client.createComment(repo, issueNumber, body);
   },
 
   async createPullRequest(params: CreatePullRequestParams): Promise<{ url: string; number: number }> {

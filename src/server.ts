@@ -68,7 +68,7 @@ import { qualityRouter } from './routes/quality.js';
 import previewRoutes from './api/routes/preview.js';
 import { kpiRouter } from './routes/kpi.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
-import previewRoutes from './api/routes/preview.js';
+import osCompatRoutes from './api/osCompatRoutes.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -212,9 +212,13 @@ export async function createApp(): Promise<express.Application> {
   const bitbucketHandler = createBitbucketWebhooks(enqueueIssue);
 
   // -- GitHub webhook handler (shared between /webhook and /webhook/github) --
+
+  /** Base (non-action-qualified) event names only — X-GitHub-Event never includes '.action' suffixes. */
+  type BaseGitHubEventName = Exclude<EmitterWebhookEventName, `${string}.${string}`>;
+
   async function handleGithubWebhook(req: Request, res: Response): Promise<void> {
     const startTime = Date.now();
-    const event = req.headers['x-github-event'] as string;
+    const event = req.headers['x-github-event'] as BaseGitHubEventName;
     const deliveryId = req.headers['x-github-delivery'] as string;
     const signature = req.headers['x-hub-signature-256'] as string;
     const source = 'github';
@@ -251,7 +255,7 @@ export async function createApp(): Promise<express.Application> {
       try {
         await githubWebhooks.verifyAndReceive({
           id: deliveryId,
-          name: event as EmitterWebhookEventName,
+          name: event,
           payload: rawBody.toString(),
           signature,
         });
@@ -266,9 +270,9 @@ export async function createApp(): Promise<express.Application> {
       try {
         await githubWebhooks.receive({
           id: deliveryId || crypto.randomUUID(),
-          name: event as EmitterWebhookEventName,
+          name: event,
           payload: JSON.parse((rawBody || Buffer.from(JSON.stringify(req.body))).toString()),
-        });
+        } as Parameters<typeof githubWebhooks.receive>[0]);
       } catch (err) {
         log.warn({ err: String(err) }, 'Webhook processing error (no signature)');
         if (eventId) await logWebhookFailed(eventId, `Processing error: ${String(err)}`);
@@ -568,7 +572,7 @@ export async function createApp(): Promise<express.Application> {
 
   app.get('/webhook/whatsapp', async (req: Request, res: Response) => {
     const { verifyWhatsAppWebhook } = await import('./channels/whatsapp.js');
-    const result = verifyWhatsAppWebhook(req);
+    const result = verifyWhatsAppWebhook({ query: req.query as Record<string, string | string[] | undefined> });
     if (result.verified && result.challenge) {
       res.type('text/plain').send(result.challenge);
     } else {
@@ -716,7 +720,7 @@ export async function createApp(): Promise<express.Application> {
 
   // Enterprise routes (optional)
   try {
-    const { default: enterpriseRouter } = await import('./routes/enterprise.js');
+    const { enterpriseRouter } = await import('./routes/enterprise.js');
     app.use('/api/v1/enterprise', enterpriseRouter);
   } catch {
     log.warn('Enterprise routes not available');
@@ -727,6 +731,11 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/v1/preview', previewRoutes);
 
   app.use('/api', pipelineRouter);
+
+  // ── OpenSymphony compatibility bridge ───────────────────────────────────
+  // POST /api/tickets, GET /api/tickets/:id — expected by SymphonyElixir.STAS.AppServer
+  app.use('/api', osCompatRoutes);
+
   // -- 404 handler ----------------------------------------------------------
 
   app.use((req: Request, res: Response) => {

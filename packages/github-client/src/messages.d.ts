@@ -43,6 +43,12 @@ export declare function phantomIssueComment(missingFiles: string[], skipReason: 
 export declare function ciFailureComment(prNumber: number, failedChecks: string[], botName?: string): string;
 export declare function regressionBlockComment(result: AgentResult, botName?: string): string;
 export declare function verificationWarningComment(result: AgentResult, botName?: string): string;
+export interface QualityGateReportEntry {
+    name: string;
+    passed: boolean | null;
+    details: string[];
+    durationMs: number;
+}
 export declare function buildPRBody(params: {
     issueNumber: number;
     result: AgentResult;
@@ -50,4 +56,5 @@ export declare function buildPRBody(params: {
     isDraft: boolean;
     branchName: string;
     botName?: string;
+    qualityReportMarkdown?: string;
 }): string;

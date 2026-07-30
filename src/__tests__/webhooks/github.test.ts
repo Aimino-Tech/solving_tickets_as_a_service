@@ -107,16 +107,19 @@ describe('createGithubWebhooks', () => {
         payload: payload as any,
       });
 
-      expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
-      expect(mockEnqueueIssue).toHaveBeenCalledWith(
+      expect(mockEnqueue).toHaveBeenCalledTimes(1);
+      expect(mockEnqueue).toHaveBeenCalledWith(
         expect.objectContaining({
           installationId: 555,
           repoOwner: 'owner',
           repoName: 'test-repo',
+          repoPrivate: false,
           issueNumber: 42,
-          issueTitle: 'Test Issue',
-          issueBody: 'Test body',
-          labels: ['bug'],
+          issueTitle: 'Fix broken user login',
+          issueBody: 'Users are unable to log in when the password contains special characters.',
+          labels: ['stas:fix'],
+          billingPlan: 'free',
+          priority: 30,
         }),
       );
     });
@@ -132,7 +135,7 @@ describe('createGithubWebhooks', () => {
         payload: payload as any,
       });
 
-      expect(mockEnqueueIssue).not.toHaveBeenCalled();
+      expect(mockEnqueue).not.toHaveBeenCalled();
     });
 
     it('does NOT enqueue when installation ID is missing', async () => {
@@ -148,7 +151,7 @@ describe('createGithubWebhooks', () => {
         payload: payloadWithoutInstallation as any,
       });
 
-      expect(mockEnqueueIssue).not.toHaveBeenCalled();
+      expect(mockEnqueue).not.toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
           repo: 'owner/test-repo',
@@ -170,7 +173,7 @@ describe('createGithubWebhooks', () => {
         payload: payload as any,
       });
 
-      expect(mockEnqueueIssue).not.toHaveBeenCalled();
+      expect(mockEnqueue).not.toHaveBeenCalled();
     });
   });
 
@@ -248,8 +251,8 @@ describe('createGithubWebhooks', () => {
         payload,
       });
 
-      expect(mockEnqueueIssue).toHaveBeenCalledTimes(1);
-      expect(mockEnqueueIssue).toHaveBeenCalledWith(
+      expect(mockEnqueue).toHaveBeenCalledTimes(1);
+      expect(mockEnqueue).toHaveBeenCalledWith(
         expect.objectContaining({
           installationId: 555,
           repoOwner: 'owner',
@@ -271,7 +274,7 @@ describe('createGithubWebhooks', () => {
         payload: { ...payload, action: 'edited' } as any,
       });
 
-      expect(mockEnqueueIssue).not.toHaveBeenCalled();
+      expect(mockEnqueue).not.toHaveBeenCalled();
     });
 
     it('does NOT enqueue when the issue has target label but no installation ID', async () => {
@@ -333,7 +336,7 @@ describe('createGithubWebhooks', () => {
         payload,
       });
 
-      expect(mockEnqueueIssue).not.toHaveBeenCalled();
+      expect(mockEnqueue).not.toHaveBeenCalled();
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.objectContaining({
           repo: 'owner/test-repo',
@@ -472,12 +475,12 @@ describe('createGithubWebhooks', () => {
       });
 
       // enqueueIssue should have been called twice (dedup happens inside BullMQ)
-      expect(mockEnqueueIssue).toHaveBeenCalledTimes(2);
-      expect(mockEnqueueIssue).toHaveBeenNthCalledWith(
+      expect(mockEnqueue).toHaveBeenCalledTimes(2);
+      expect(mockEnqueue).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({ installationId: 555, repoOwner: 'owner', repoName: 'test-repo', issueNumber: 42 }),
       );
-      expect(mockEnqueueIssue).toHaveBeenNthCalledWith(
+      expect(mockEnqueue).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({ installationId: 555, repoOwner: 'owner', repoName: 'test-repo', issueNumber: 42 }),
       );

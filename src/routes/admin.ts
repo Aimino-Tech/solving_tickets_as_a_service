@@ -8,8 +8,9 @@
  * @module routes/admin
  */
 
+import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import { Router, type Request, type Response } from 'express';
-import { auditRepository } from '../audit/repository.js';
+import { auditRepository, type ActorType } from '../audit/repository.js';
 import { logAdminAction } from '../audit/service.js';
 import { accountsRepository } from '../db/repositories/index.js';
 import { creditsRepository } from '../db/repositories/index.js';
@@ -325,7 +326,7 @@ router.get('/audit-logs', async (req: Request, res: Response) => {
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
     const result = await auditRepository.query({
-      actorType: req.query.actorType as string | undefined,
+      actorType: req.query.actorType as ActorType | undefined,
       actorId: req.query.actorId as string,
       action: req.query.action as string,
       resourceType: req.query.resourceType as string,
@@ -442,10 +443,6 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
         payload,
         signature: '', // Skip verification for replay
       });
-
-      if (typeof githubWebhooks.close === 'function') {
-        await githubWebhooks.close();
-      }
     } else {
       res.status(400).json({ error: `Replay not supported for source: ${webhookEvent.source}` });
       return;
@@ -474,7 +471,7 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
 // POST /admin/gc/sweep — trigger sandbox container GC sweep
 // ---------------------------------------------------------------------------
 
-router.post('/gc/sweep', async (_req: Request, res: Response) => {
+router.post('/gc/sweep', async (req: Request, res: Response) => {
   try {
     const { SandboxGC } = await import('../sandbox/gc.js');
     const gc = new SandboxGC();

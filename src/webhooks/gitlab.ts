@@ -133,8 +133,8 @@ export const gitlabWebhook: PlatformWebhook = {
 export const gitlabClient: PlatformClient = {
   platform: 'gitlab',
 
-  async createComment(repoOwner: string, repoName: string, issueNumber: number, body: string): Promise<void> {
-    const projectEncoded = encodeURIComponent(`${repoOwner}/${repoName}`);
+  async createComment(repo: string, issueNumber: number, body: string): Promise<void> {
+    const projectEncoded = encodeURIComponent(repo);
     const url = `${config.gitlab.url}/api/v4/projects/${projectEncoded}/issues/${issueNumber}/notes`;
 
     const response = await fetch(url, {
@@ -149,7 +149,7 @@ export const gitlabClient: PlatformClient = {
     if (!response.ok) {
       const text = await response.text();
       log.error(
-        { status: response.status, body: text, repoOwner, repoName, issueNumber },
+        { status: response.status, body: text, repo, issueNumber },
         'Failed to create GitLab comment',
       );
       throw new Error(`GitLab comment failed: ${response.status} ${text}`);

@@ -129,13 +129,13 @@ export function createLinearPoller(options: LinearPollerOptions = {}): LinearPol
       log.info({ intervalMs, label: targetLabel }, 'Starting Linear poller');
 
       // Immediate first poll
-      pollNow().catch((err) => {
+      poller.pollNow().catch((err: Error) => {
         log.error({ err: String(err) }, 'Linear poller initial poll failed');
       });
 
       // Schedule recurring polls
       intervalHandle = setInterval(() => {
-        pollNow().catch((err) => {
+        poller.pollNow().catch((err: Error) => {
           log.error({ err: String(err) }, 'Linear poller cycle failed');
         });
       }, intervalMs);

@@ -120,6 +120,12 @@
       "repo": "Aimino-Tech/GTM-strategy",
       "branch": "main",
       "linear_project_name": "GTM"
+    },
+    "stas-demo": {
+      "repo": "Aimino-Tech/stas-demo",
+      "branch": "main",
+      "linear_project_name": "STAS - Solving Tickets As A Service",
+      "description": "Demo repository with 6 curated bugs showcasing STAS fix capabilities"
     }
   }
 }

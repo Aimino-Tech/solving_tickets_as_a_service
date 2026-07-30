@@ -13,6 +13,17 @@ import { join } from 'node:path';
 import type { QualityGateResult } from '../agent/types.js';
 import { rootLogger } from '../utils/logger.js';
 
+/**
+ * Simplified gate result for the markdown report.
+ * Bridges between verification pipeline results and the report format.
+ */
+export interface GateResult {
+  name: string;
+  passed: boolean | null;
+  details: string[];
+  durationMs: number;
+}
+
 const log = rootLogger.child({ module: 'quality-gate-reporter' });
 
 /**
@@ -33,14 +44,17 @@ export class QualityGateReporter {
   /**
    * Format quality gate results as a GitHub-collapsible markdown section.
    *
+   * Accepts either QualityGateResult[] (from the verification pipeline) or
+   * GateResult[] (from fromQualityGateResults conversion). When GateResult[]
+   * is passed, it is converted internally to QualityGateResult[].
+   *
    * The output uses `<details>` / `<summary>` tags for a clean collapsed
    * overview and an HTML table with Gate | Status | Detail columns showing
    * every gate result inline.
-   *
-   * @param results  Array of QualityGateResult from the verification pipeline.
-   * @returns A markdown string ready to embed in a PR body.
    */
-  formatMarkdown(results: QualityGateResult[]): string {
+  formatMarkdown(results: QualityGateResult[]): string;
+  formatMarkdown(results: GateResult[]): string;
+  formatMarkdown(results: QualityGateResult[] | GateResult[]): string {
     if (results.length === 0) {
       return [
         '<!-- stas-quality-report -->',
@@ -53,16 +67,30 @@ export class QualityGateReporter {
       ].join('\n');
     }
 
-    const passedCount = results.filter((r) => r.passed).length;
-    const totalCount = results.length;
+    // GateResult[] (has 'name' not 'gate') → convert to QualityGateResult[]
+    if ('name' in results[0] && !('gate' in results[0])) {
+      const gateResults = (results as GateResult[]).map((r) => ({
+        gate: r.name as QualityGateResult['gate'],
+        passed: r.passed ?? false,
+        ossTool: '',
+        command: '',
+        stdout: '',
+        stderr: '',
+        details: r.details,
+      }));
+      return this.formatMarkdown(gateResults);
+    }
+
+    const gateResults = results as QualityGateResult[];
+    const passedCount = gateResults.filter((r) => r.passed).length;
+    const totalCount = gateResults.length;
     const allPassed = passedCount === totalCount;
 
     const summaryEmoji = allPassed ? '✅' : '❌';
     const summaryLine = `${summaryEmoji} Quality Gates — ${passedCount}/${totalCount} passed`;
 
-    const rows = results.map((r) => this.formatRow(r));
+    const rows = gateResults.map((r) => this.formatRow(r));
 
-    // Build the table
     const tableHeader = ['| Gate | Status | Detail |', '|------|--------|--------|'];
     const table = [...tableHeader, ...rows];
 
@@ -78,6 +106,21 @@ export class QualityGateReporter {
       '',
       '<!-- /stas-quality-report -->',
     ].join('\n');
+  }
+
+  /**
+   * Convert QualityGateResult[] (from the verification pipeline) into
+   * GateResult[] for the markdown reporter.
+   */
+  static fromQualityGateResults(
+    qualityGates: QualityGateResult[],
+  ): GateResult[] {
+    return qualityGates.map((qg) => ({
+      name: qg.gate,
+      passed: qg.passed,
+      details: qg.details,
+      durationMs: 0,
+    }));
   }
 
   /**

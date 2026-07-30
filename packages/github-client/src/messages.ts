@@ -349,6 +349,13 @@ export function verificationWarningComment(result: AgentResult, botName?: string
   return lines.join('\n');
 }
 
+export interface QualityGateReportEntry {
+  name: string;
+  passed: boolean | null;
+  details: string[];
+  durationMs: number;
+}
+
 export function buildPRBody(params: {
   issueNumber: number;
   result: AgentResult;
@@ -356,8 +363,9 @@ export function buildPRBody(params: {
   isDraft: boolean;
   branchName: string;
   botName?: string;
+  qualityReportMarkdown?: string;
 }): string {
-  const { issueNumber, result, fileLinks, branchName, botName } = params;
+  const { issueNumber, result, fileLinks, branchName, botName, qualityReportMarkdown } = params;
   const sig = botSignature(botName ?? DEFAULT_BOT_NAME);
 
   const ver = result.verification;
@@ -410,6 +418,8 @@ export function buildPRBody(params: {
     `\`${branchName}\``,
     '',
     '---',
+    '',
+    qualityReportMarkdown || '',
     '',
     `_🤖 Automated fix by ${botName ?? DEFAULT_BOT_NAME}_`,
   ].join('\n');

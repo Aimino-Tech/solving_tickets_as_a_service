@@ -59,7 +59,7 @@ export async function handleTelegramWebhook(payload: Record<string, unknown>): P
   const message = (payload as { message?: Record<string, unknown> })?.message;
   if (!message || !message.text) return { ok: true };
 
-  const chatId = String(message.chat.id);
+  const chatId = String((message.chat as { id: number | string }).id);
   const text = String(message.text).trim();
   const entities = message.entities as Array<{ type: string; offset: number; length: number }> | undefined;
 
@@ -98,7 +98,7 @@ export async function handleTelegramWebhook(payload: Record<string, unknown>): P
         installationId: config.trackers.installationId || 0,
         repoOwner, repoName, repoPrivate: false, issueNumber: 0,
         issueTitle,
-        issueBody: `Submitted via Telegram by user ${message.from?.id || 'unknown'}\n\nDescription: ${issueTitle}`,
+        issueBody: `Submitted via Telegram by user ${(message.from as { id?: number | string } | undefined)?.id || 'unknown'}\n\nDescription: ${issueTitle}`,
         source: 'telegram',
       };
       const messageId = `${jobData.installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;

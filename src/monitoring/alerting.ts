@@ -124,17 +124,15 @@ async function sendEmailAlert(subject: string, body: string): Promise<void> {
 export async function dispatchAlert(alert: AlertEvent): Promise<void> {
   const { severity, rule, message, context, channel } = alert;
 
-  // Always log
-  const logFn =
-    severity === 'critical'
-      ? log.error
-      : severity === 'warning'
-        ? log.warn
-        : log.info;
-  logFn(
-    { rule, message, ...(context || {}) },
-    `[${severity.toUpperCase()}] ${rule}: ${message}`,
-  );
+  const logMsg = { rule, message, ...(context || {}) };
+  const logText = `[${severity.toUpperCase()}] ${rule}: ${message}`;
+  if (severity === 'critical') {
+    log.error(logMsg, logText);
+  } else if (severity === 'warning') {
+    log.warn(logMsg, logText);
+  } else {
+    log.info(logMsg, logText);
+  }
 
   // Add Sentry breadcrumb for error correlation
   addBreadcrumb(
@@ -345,9 +343,9 @@ export function reportWorkerDown(
  *
  * Called periodically by the scheduled health check task.
  */
-export function checkSLOCompliance(): void {
+export async function checkSLOCompliance(): Promise<void> {
   try {
-    const report = generateSLOReport();
+    const report = await generateSLOReport();
 
     // Record metrics to Prometheus
     recordSLIMetrics(report);

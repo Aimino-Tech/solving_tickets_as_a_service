@@ -79,8 +79,8 @@ export async function handleWhatsAppWebhook(payload: Record<string, unknown>): P
   if (!isConfigured()) return { ok: false };
 
   const entry = (payload as { entry?: Array<Record<string, unknown>> })?.entry?.[0];
-  const change = entry?.changes?.[0];
-  const value = change?.value;
+  const change = (entry?.changes as Array<Record<string, unknown>> | undefined)?.[0];
+  const value = change?.value as Record<string, unknown> | undefined;
   const messages = value?.messages;
 
   if (!messages || !Array.isArray(messages) || messages.length === 0) return { ok: true };

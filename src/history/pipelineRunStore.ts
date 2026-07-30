@@ -517,8 +517,8 @@ export class PipelineRunStore {
     let byStatus: Record<string, number> = {};
     let byAgentType: Record<string, number> = {};
     try {
-      byStatus = JSON.parse(row?.by_status ?? '{}');
-      byAgentType = JSON.parse(row?.by_agent_type ?? '{}');
+      byStatus = JSON.parse(String(row?.by_status ?? '{}'));
+      byAgentType = JSON.parse(String(row?.by_agent_type ?? '{}'));
     } catch {
       // Graceful fallback
     }

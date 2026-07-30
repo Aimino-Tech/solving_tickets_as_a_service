@@ -16,7 +16,7 @@
 
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { config } from '../../config.js';
-import { CREDIT_PACKS } from '../../stripe/credit-packs.js';
+import { getCreditPack, CREDIT_PACKS } from '../../stripe/credit-packs.js';
 
 // -- Mocks -------------------------------------------------------------------
 
@@ -82,9 +82,11 @@ describe('createCheckoutSession', () => {
         url: 'https://checkout.stripe.com/cs_test_small',
       });
 
+      const smallPriceId = getCreditPack('small').priceId;
+
       const result = await createCheckoutSession({
         accountId: 1,
-        priceId: CREDIT_PACKS.small.priceId,
+        priceId: smallPriceId,
         successUrl,
         cancelUrl,
       });
@@ -96,7 +98,7 @@ describe('createCheckoutSession', () => {
 
       expect(mockSessionsCreate).toHaveBeenCalledWith({
         mode: 'payment',
-        line_items: [{ price: CREDIT_PACKS.small.priceId, quantity: 1 }],
+        line_items: [{ price: smallPriceId, quantity: 1 }],
         metadata: { accountId: '1', creditPack: 'small' },
         success_url: successUrl,
         cancel_url: cancelUrl,
@@ -109,9 +111,11 @@ describe('createCheckoutSession', () => {
         url: 'https://checkout.stripe.com/cs_test_medium',
       });
 
+      const mediumPriceId = getCreditPack('medium').priceId;
+
       const result = await createCheckoutSession({
         accountId: 42,
-        priceId: CREDIT_PACKS.medium.priceId,
+        priceId: mediumPriceId,
         successUrl,
         cancelUrl,
       });
@@ -120,7 +124,7 @@ describe('createCheckoutSession', () => {
       expect(mockSessionsCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           metadata: { accountId: '42', creditPack: 'medium' },
-          line_items: [{ price: CREDIT_PACKS.medium.priceId, quantity: 1 }],
+          line_items: [{ price: mediumPriceId, quantity: 1 }],
         }),
       );
     });
@@ -131,9 +135,11 @@ describe('createCheckoutSession', () => {
         url: 'https://checkout.stripe.com/cs_test_large',
       });
 
+      const largePriceId = getCreditPack('large').priceId;
+
       const result = await createCheckoutSession({
         accountId: 99,
-        priceId: CREDIT_PACKS.large.priceId,
+        priceId: largePriceId,
         successUrl,
         cancelUrl,
       });
@@ -142,7 +148,7 @@ describe('createCheckoutSession', () => {
       expect(mockSessionsCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           metadata: { accountId: '99', creditPack: 'large' },
-          line_items: [{ price: CREDIT_PACKS.large.priceId, quantity: 1 }],
+          line_items: [{ price: largePriceId, quantity: 1 }],
         }),
       );
     });
@@ -169,7 +175,7 @@ describe('createCheckoutSession', () => {
       await expect(
         createCheckoutSession({
           accountId: 1,
-          priceId: CREDIT_PACKS.small.priceId,
+          priceId: getCreditPack('small').priceId,
           successUrl,
           cancelUrl,
         }),
@@ -185,7 +191,7 @@ describe('createCheckoutSession', () => {
       await expect(
         createCheckoutSession({
           accountId: 1,
-          priceId: CREDIT_PACKS.small.priceId,
+          priceId: getCreditPack('small').priceId,
           successUrl,
           cancelUrl,
         }),
@@ -198,7 +204,7 @@ describe('createCheckoutSession', () => {
       await expect(
         createCheckoutSession({
           accountId: 1,
-          priceId: CREDIT_PACKS.small.priceId,
+          priceId: getCreditPack('small').priceId,
           successUrl,
           cancelUrl,
         }),
@@ -210,7 +216,7 @@ describe('createCheckoutSession', () => {
 describe('CREDIT_PACKS', () => {
   it('defines three credit packs with expected values', () => {
     expect(CREDIT_PACKS.small).toEqual({
-      priceId: 'price_100credits',
+      priceId: '',
       credits: 100,
       bonus: 0,
       label: '100 Credits',
@@ -218,7 +224,7 @@ describe('CREDIT_PACKS', () => {
     });
 
     expect(CREDIT_PACKS.medium).toEqual({
-      priceId: 'price_500credits',
+      priceId: '',
       credits: 500,
       bonus: 50,
       label: '500 + 50 Bonus',
@@ -226,7 +232,7 @@ describe('CREDIT_PACKS', () => {
     });
 
     expect(CREDIT_PACKS.large).toEqual({
-      priceId: 'price_2000credits',
+      priceId: '',
       credits: 2000,
       bonus: 200,
       label: '2000 + 200 Bonus',

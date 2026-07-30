@@ -42,7 +42,7 @@ export interface CreatePullRequestParams {
 
 export interface PlatformClient {
   readonly platform: WebhookPlatform;
-  createComment(repoOwner: string, repoName: string, issueNumber: number, body: string): Promise<void>;
+  createComment(repo: string, issueNumber: number, body: string): Promise<void>;
   createPullRequest(params: CreatePullRequestParams): Promise<{ url: string; number: number }>;
   toIssueJobData(event: PlatformWebhookEvent): IssueJobData;
 }

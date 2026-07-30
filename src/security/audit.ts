@@ -56,6 +56,7 @@ export async function writeAuditLog(entry: AuditEntry): Promise<void> {
         action: entry.action,
         resourceType: 'account',
         resourceId: entry.target,
+        accountId: 0,
         details: {
           ...entry.details,
           outcome: entry.outcome,

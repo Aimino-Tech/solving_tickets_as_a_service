@@ -1,6 +1,7 @@
 import { rootLogger } from '../utils/logger.js';
 import type { SandboxExecutor } from '../sandbox/types.js';
 import type { QualityGateResult } from './types.js';
+import { persistGateResults } from './quality-gate-reporter.js';
 
 const log = rootLogger.child({ module: 'oss-quality-gates' });
 
@@ -805,6 +806,7 @@ export async function gateSyntheticDataCheck(
 export async function runAllQualityGates(
   sandbox: SandboxExecutor,
   diff: string,
+  fixId?: string,
 ): Promise<QualityGateResult[]> {
   const results = await Promise.all([
     gateRealityCheck(sandbox, diff),
@@ -821,6 +823,13 @@ export async function runAllQualityGates(
     );
   } else {
     log.info('All 4 quality gates passed');
+  }
+
+  // Persist results to disk if a fixId was provided
+  if (fixId) {
+    await persistGateResults(fixId, results).catch((err) => {
+      log.warn({ err: String(err) }, 'Failed to persist gate results');
+    });
   }
 
   return results;

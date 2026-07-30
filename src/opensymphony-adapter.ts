@@ -33,7 +33,8 @@
 
 import crypto from 'node:crypto';
 import http from 'node:http';
-import { type Logger, rootLogger } from './utils/logger.js';
+import { rootLogger } from './utils/logger.js';
+import type { Logger } from 'pino';
 import {
   openCodeDispatchRequestSchema,
   safeParseDispatchRequest,
@@ -429,9 +430,9 @@ async function runPipeline(
       ? `OpenSymphony pipeline completed successfully (${successCount}/${stageCount} stages passed in ${totalDurationMs}ms).`
       : `OpenSymphony pipeline completed with ${errors.length} error(s) (${successCount}/${stageCount} stages passed).`,
     confidence,
-    output: collectOutput?.diff ?? null,
-    branch: collectOutput?.branch ?? null,
-    testOutput: collectOutput?.testOutput ?? null,
+    output: collectOutput?.diff ?? undefined,
+    branch: collectOutput?.branch ?? undefined,
+    testOutput: collectOutput?.testOutput ?? undefined,
     errors,
     metadata: {
       requestId: context.requestId,

@@ -790,7 +790,17 @@ async function dispatchToOpenCode(params: OpenCodeDispatchParams): Promise<OpenC
     baselineTestResult,
   });
 
-  const sanitizedPrompt = sanitizeUserContent(prompt);
+  // Sanitize user-provided content against prompt injection
+  const sanitizer = new PromptSanitizer();
+  const sanitized = sanitizer.sanitizeAndWrap(prompt, 'issue context');
+  const sanitizedPrompt = sanitized.safePrompt;
+
+  if (sanitized.warnings.length > 0) {
+    log.warn(
+      { strippedPatterns: sanitized.strippedPatterns },
+      sanitized.warnings[0],
+    );
+  }
 
   // Build model chain: primary + fallbacks
   const models = [config.opencode.model, ...config.opencode.fallbackModels];

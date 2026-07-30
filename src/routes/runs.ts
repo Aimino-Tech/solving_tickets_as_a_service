@@ -69,7 +69,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     const raw = run as Record<string, unknown>;
     const data: PublicRunResponse = {
-      id: raw.id ?? raw.runId ?? runId,
+      id: (raw.id ?? raw.runId ?? runId) as string | number,
       repoOwner: String(raw.repoOwner ?? raw.repo_owner ?? ''),
       repoName: String(raw.repoName ?? raw.repo_name ?? ''),
       issueNumber: Number(raw.issueNumber ?? raw.issue_number ?? 0),

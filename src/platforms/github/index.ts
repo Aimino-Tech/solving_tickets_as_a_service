@@ -7,6 +7,8 @@
 
 import type { Octokit } from '@octokit/rest';
 import type { PlatformClient, Issue, PR, CreatePRParams, StatusParams } from '../interface.js';
+import type { PlatformWebhookEvent } from '../../webhooks/base.js';
+import type { IssueJobData } from '../../utils/types.js';
 import { getOctokit } from '../../github/auth.js';
 import { rootLogger } from '../../utils/logger.js';
 
@@ -132,6 +134,21 @@ export class GitHubPlatformClient implements PlatformClient {
       description: description ?? '',
       target_url: targetUrl ?? '',
     });
+  }
+
+  // ── Issue job data ────────────────────────────────────────────────
+
+  toIssueJobData(event: PlatformWebhookEvent): IssueJobData {
+    return {
+      installationId: this.installationId,
+      repoOwner: event.issue.repoOwner,
+      repoName: event.issue.repoName,
+      repoPrivate: event.issue.repoPrivate,
+      issueNumber: event.issue.number,
+      issueTitle: event.issue.title,
+      issueBody: event.issue.body,
+      source: 'github',
+    };
   }
 
   // ── User info ─────────────────────────────────────────────────────

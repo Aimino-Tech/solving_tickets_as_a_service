@@ -5,15 +5,23 @@ import { rootLogger } from '../utils/logger.js';
 import { validateTemplateYaml } from './validator.js';
 import { templateRegistry } from './templateRegistry.js';
 import type { JobTemplate } from './types.js';
+import type { GatesConfig } from '../pipeline/gates/types.js';
 
 const log = rootLogger.child({ module: 'template-loader' });
 
 const DEFAULT_RETRY_DELAYS = [30_000, 120_000, 300_000, 900_000];
 
+export interface PhaseStep {
+  command: string;
+  session: string;
+  output?: string;
+}
+
 export interface LoadedTemplate {
   name: string;
   labels: string[];
-  phases: Record<string, { command: string; session: string }[]>;
+  phases: Record<string, PhaseStep[]>;
+  gates?: GatesConfig;
 }
 
 const loadedTemplates: Map<string, LoadedTemplate> = new Map();

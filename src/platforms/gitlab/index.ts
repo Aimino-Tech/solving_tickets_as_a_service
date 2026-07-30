@@ -6,6 +6,8 @@
  */
 
 import type { PlatformClient, Issue, PR, CreatePRParams, StatusParams } from '../interface.js';
+import type { PlatformWebhookEvent } from '../../webhooks/base.js';
+import type { IssueJobData } from '../../utils/types.js';
 import { rootLogger } from '../../utils/logger.js';
 
 const log = rootLogger.child({ module: 'platform-gitlab' });
@@ -147,6 +149,21 @@ export class GitLabPlatformClient implements PlatformClient {
       description: params.description ?? '',
       target_url: params.targetUrl ?? '',
     });
+  }
+
+  // ── Issue job data ────────────────────────────────────────────────
+
+  toIssueJobData(event: PlatformWebhookEvent): IssueJobData {
+    return {
+      installationId: 0,
+      repoOwner: event.issue.repoOwner,
+      repoName: event.issue.repoName,
+      repoPrivate: event.issue.repoPrivate,
+      issueNumber: event.issue.number,
+      issueTitle: event.issue.title,
+      issueBody: event.issue.body,
+      source: 'gitlab',
+    };
   }
 
   // ── User info ─────────────────────────────────────────────────────

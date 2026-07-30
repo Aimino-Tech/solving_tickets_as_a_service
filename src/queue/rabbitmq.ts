@@ -216,7 +216,8 @@ export async function consumeQueue(
   options?: amqplib.Options.Consume,
 ): Promise<string> {
   const ch = getChannel();
-  await ch.assertQueue(queueName, { durable: true });
+  // Queue was already declared by declareTopology() — skip assertQueue
+  // to avoid PRECONDITION_FAILED on argument mismatch (e.g. x-message-ttl).
   const consumerTag = await ch.consume(
     queueName,
     async (msg) => {

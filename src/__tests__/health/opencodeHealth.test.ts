@@ -41,6 +41,7 @@ vi.mock('../../config.js', () => ({
       requestTimeoutMs: 5000,
       startupTimeoutMs: 30000,
     },
+    stas: { aiMode: 'ai' },
   },
 }));
 

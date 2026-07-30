@@ -2,6 +2,14 @@ import { access, constants } from 'node:fs/promises';
 import { extname } from 'node:path';
 import { LoadDataError, type LoadDataOptions, type LoadDataResult, type DataFormat } from './types.js';
 
+declare module 'parquetjs' {
+  export const ParquetReader: {
+    openFile(path: string): Promise<{
+      getCursor(): { next(): Promise<Record<string, unknown> | null> };
+    }>;
+  };
+}
+
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_URL_SIZE = 50 * 1024 * 1024;
 const URL_FETCH_TIMEOUT = 30_000;
@@ -223,8 +231,8 @@ async function parseExcel(filePath: string, sheetName: string | undefined, hasHe
     columns = Object.keys(jsonData[0] || {});
     data = jsonData as Record<string, string>[];
   } else {
-    columns = (jsonData[0] as string[] || []).map((_: string, i: number) => `column_${i + 1}`);
-    data = jsonData.slice(1).map((row) => {
+    columns = (jsonData[0] as unknown as string[] || []).map((_: string, i: number) => `column_${i + 1}`);
+    data = jsonData.slice(1).map((row: unknown) => {
       const values = row as string[];
       const r: Record<string, string> = {};
       columns.forEach((col, i) => {

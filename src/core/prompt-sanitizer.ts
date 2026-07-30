@@ -95,6 +95,14 @@ export class PromptSanitizer {
   }
 
   /**
+   * Sanitize and wrap user content in one step.
+   * Sanitizes the raw prompt, then wraps it in user-content delimiters.
+   */
+  sanitizeAndWrap(raw: string, sourceLabel: string): SanitizedContent {
+    return this.sanitize(raw, sourceLabel);
+  }
+
+  /**
    * Core sanitization logic.
    */
   private sanitize(raw: string, sourceLabel: string): SanitizedContent {

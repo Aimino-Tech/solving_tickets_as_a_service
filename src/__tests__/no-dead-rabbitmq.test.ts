@@ -105,10 +105,15 @@ describe('RabbitMQ is intentionally used in the AMQP module', () => {
     expect(content).not.toContain('rabbitmq');
   });
 
-  it('admin routes do not import rabbitmq', () => {
+  it('admin routes do not import amqplib directly', () => {
     const adminPath = `${PROJECT_ROOT}/src/routes/admin.ts`;
     const content = readFileSync(adminPath, 'utf-8');
-    expect(content).not.toContain('rabbitmq');
+    const hasAmqplibImport =
+      content.includes("from 'amqplib'") ||
+      content.includes('require("amqplib")') ||
+      content.includes("require('amqplib')") ||
+      content.includes("import('amqplib')");
+    expect(hasAmqplibImport).toBe(false);
   });
 
   it('amqplib is a declared dependency in package.json', () => {

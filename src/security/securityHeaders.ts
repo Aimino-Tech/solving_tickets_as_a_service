@@ -100,7 +100,7 @@ export function buildHelmetConfig(): HelmetOptions {
     formAction: ["'none'"],
     frameAncestors: ["'none'"],
     objectSrc: ["'none'"],
-    reportUri: [cspReportUri],
+    reportUri: cspReportUri ? [cspReportUri] : [],
   };
 
   // Production-only: upgrade insecure requests (HTTP → HTTPS)
@@ -170,7 +170,7 @@ export function buildHelmetConfig(): HelmetOptions {
   const helmetConfig: HelmetOptions = {
     // Content Security Policy
     contentSecurityPolicy: {
-      directives,
+      directives: directives as never,
       reportOnly: false,
     },
 
@@ -193,18 +193,13 @@ export function buildHelmetConfig(): HelmetOptions {
         }
       : {}),
 
-    // Permissions Policy
-    permissionsPolicy: {
-      policies: permissionsPolicies,
-    },
-
     // Standard helmet headers
     xFrameOptions: { action: 'deny' },
     xContentTypeOptions: true,
     xDnsPrefetchControl: { allow: false },
     xDownloadOptions: true,
     xPermittedCrossDomainPolicies: { permittedPolicies: 'none' },
-    xXSSProtection: true,
+    xXssProtection: true,
   };
 
   return helmetConfig;

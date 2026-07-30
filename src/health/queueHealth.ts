@@ -141,6 +141,12 @@ export async function hasCriticalQueues(): Promise<{ critical: string[]; warning
   return { critical, warning };
 }
 
+/**
+ * Close the health Redis connection (no-op — Redis is not used in this module).
+ * Provided for lifecycle management compatibility.
+ */
+export async function closeHealthRedis(): Promise<void> {}
+
 export async function getDLQSummary(): Promise<{ totalDlqMessages: number; queuesWithMessages: string[] }> {
   const report = await getQueueHealth();
   const dlqEntries = report.queues.filter((q) => q.type === 'dlq' && q.depth > 0);
