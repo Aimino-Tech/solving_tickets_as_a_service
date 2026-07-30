@@ -181,7 +181,7 @@ Before submitting to Marketplace, ensure the following URLs are live and linked 
 - [ ] Screenshot(s) prepared (1280×640 PNG, ≤2MB)
 - [ ] Demo GIF recorded (optional, 30-45s, ≤10MB)
 - [ ] Pricing plan configured in GitHub Marketplace billing UI
-- [ ] Privacy policy URL configured
-- [ ] Terms of service URL configured
+- [x] Privacy policy URL configured (https://stas.aimino.io/privacy)
+- [x] Terms of service URL configured (https://stas.aimino.io/terms)
 - [ ] Verified Publisher badge obtained (see [GitHub docs](https://docs.github.com/en/apps/github-marketplace/github-marketplace-overview/applying-for-publisher-verification-for-your-organization))
 - [ ] App public page reviewed at `https://github.com/marketplace` after publishing
