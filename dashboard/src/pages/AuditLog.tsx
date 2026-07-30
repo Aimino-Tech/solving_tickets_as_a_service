@@ -2,16 +2,28 @@ import { useState, useEffect, useRef } from 'react';
 import { audit } from '@/api/client';
 import type { AuditEntry, PaginatedResponse } from '@/api/types';
 import { formatRelativeTime } from '@/utils/format';
+import {
+  Play,
+  Check,
+  X,
+  GitFork,
+  GitBranch,
+  Settings,
+  ArrowRight,
+  ArrowLeft,
+  Circle,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-const ACTION_ICONS: Record<string, string> = {
-  run_started: '▶',
-  run_completed: '✓',
-  run_failed: '✗',
-  repo_connected: '⊞',
-  repo_disconnected: '⊟',
-  settings_updated: '⚙',
-  user_login: '→',
-  user_logout: '←',
+const ACTION_ICONS: Record<string, LucideIcon> = {
+  run_started: Play,
+  run_completed: Check,
+  run_failed: X,
+  repo_connected: GitFork,
+  repo_disconnected: GitBranch,
+  settings_updated: Settings,
+  user_login: ArrowRight,
+  user_logout: ArrowLeft,
 };
 
 const ACTION_COLORS: Record<string, string> = {
@@ -111,7 +123,10 @@ export default function AuditLog() {
             >
               <div className="flex items-start gap-3">
                 <span className="mt-0.5 text-lg">
-                  {ACTION_ICONS[entry.action] || '•'}
+                  {(() => {
+                    const Icon = ACTION_ICONS[entry.action];
+                    return Icon ? <Icon size={16} /> : <Circle size={16} />;
+                  })()}
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">

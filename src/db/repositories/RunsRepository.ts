@@ -100,19 +100,19 @@ export class RunsRepository {
     let idx = 1;
 
     if (filter.accountId !== undefined) {
-      conditions.push(`account_id = $${idx++}`);
+      conditions.push(`runs.account_id = $${idx++}`);
       params.push(filter.accountId);
     }
     if (filter.repoId !== undefined) {
-      conditions.push(`repo_id = $${idx++}`);
+      conditions.push(`runs.repo_id = $${idx++}`);
       params.push(filter.repoId);
     }
     if (filter.issueNumber !== undefined) {
-      conditions.push(`issue_number = $${idx++}`);
+      conditions.push(`runs.issue_number = $${idx++}`);
       params.push(filter.issueNumber);
     }
     if (filter.status !== undefined) {
-      conditions.push(`status = $${idx++}`);
+      conditions.push(`runs.status = $${idx++}`);
       params.push(filter.status);
     }
 
@@ -120,7 +120,7 @@ export class RunsRepository {
     const limit = filter.limit ?? 50;
     const offset = filter.offset ?? 0;
 
-    const sql = `SELECT * FROM runs ${where} ORDER BY created_at DESC LIMIT $${idx++} OFFSET $${idx++}`;
+    const sql = `SELECT runs.*, repos.owner AS repo_owner, repos.name AS repo_name FROM runs LEFT JOIN repos ON runs.repo_id = repos.id ${where} ORDER BY runs.created_at DESC LIMIT $${idx++} OFFSET $${idx++}`;
     params.push(limit, offset);
 
     try {

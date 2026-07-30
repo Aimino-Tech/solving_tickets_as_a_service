@@ -14,6 +14,9 @@
 import type { Request, Response, NextFunction } from 'express';
 import { UsageTracker } from '../core/usage-tracker.js';
 import { rootLogger } from '../utils/logger.js';
+import { queryWithRetry } from '../db/connection.js';
+import { planIdToTier } from '../billing/plans.js';
+import type { PlanId } from '../billing/plans.js';
 
 const log = rootLogger.child({ module: 'tier-gate-middleware' });
 
@@ -62,7 +65,7 @@ export function createTierGate(options: TierGateOptions = {}) {
   const upgradeUrl = options.upgradeUrl ?? 'https://stas.ai/pricing';
   const skip = options.skipEnforcement ?? false;
 
-  return function tierGate(req: Request, res: Response, next: NextFunction): void {
+  return async function tierGate(req: Request, res: Response, next: NextFunction): Promise<void> {
     // In self-hosted mode or when enforcement is disabled, pass through
     if (skip) {
       next();
@@ -80,11 +83,28 @@ export function createTierGate(options: TierGateOptions = {}) {
       return;
     }
 
+    // Resolve plan from users table for SaaS email/password auth path.
+    // Falls back to env-based resolution for GitHub OAuth and self-hosted.
+    let tierOverride: string | undefined;
+    if (userId && userId !== 'anonymous' && userId !== '0') {
+      try {
+        const userResult = await queryWithRetry<{ plan: string }>(
+          'SELECT plan FROM users WHERE id = $1::uuid',
+          [userId],
+        );
+        if (userResult?.rows?.[0]) {
+          tierOverride = planIdToTier(userResult.rows[0].plan as PlanId);
+        }
+      } catch (err) {
+        log.warn({ err: String(err), userId }, 'Failed to resolve plan from users table');
+      }
+    }
+
     // Check quota before proceeding
-    const quota = tracker.checkQuota(userId, repoId, 'fix-run');
+    const quota = tracker.checkQuota(userId, repoId, 'fix-run', tierOverride);
 
     // Get usage summary for headers
-    const usage = tracker.getUsage(userId, repoId);
+    const usage = tracker.getUsage(userId, repoId, tierOverride);
 
     // Set usage-related response headers
     if (usage.unlimited) {

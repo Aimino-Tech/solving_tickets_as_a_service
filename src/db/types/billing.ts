@@ -5,6 +5,7 @@
 export interface Billing {
   id: number;
   accountId: number;
+  userId: string | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   plan: string;
@@ -17,6 +18,7 @@ export interface Billing {
 export interface NewBilling {
   id?: number;
   accountId: number;
+  userId?: string | null;
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
   plan?: string;

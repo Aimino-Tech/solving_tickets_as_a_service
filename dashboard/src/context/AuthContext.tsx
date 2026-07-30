@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       auth
         .me()
         .then((res) => {
-          setUser({ id: res.id, email: res.email, name: res.name, username: res.username, avatarUrl: res.avatarUrl, createdAt: res.createdAt });
+          setUser({ id: res.id, email: res.email, name: res.name, username: res.username, avatarUrl: res.avatarUrl, plan: res.plan, createdAt: res.createdAt });
         })
         .catch((err) => {
           console.warn('Failed to fetch user session, clearing token:', err);
@@ -50,14 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await auth.login(email, password);
     setToken(result.token);
     setRefreshToken(result.refreshToken);
-    setUser({ id: result.user.id, email: result.user.email, name: result.user.name, username: result.user.name ?? undefined, createdAt: result.user.createdAt || "" });
+    setUser({ id: result.user.id, email: result.user.email, name: result.user.name, username: result.user.name ?? undefined, plan: 'free', createdAt: result.user.createdAt || "" });
   }, []);
 
   const register = useCallback(async (email: string, password: string, name?: string) => {
     const result = await auth.register(email, password, name);
     setToken(result.token);
     setRefreshToken(result.refreshToken);
-    setUser({ id: result.user.id, email: result.user.email, name: result.user.name, createdAt: result.user.createdAt || "" });
+    setUser({ id: result.user.id, email: result.user.email, name: result.user.name, plan: 'solo', createdAt: result.user.createdAt || "" });
   }, []);
 
   const logout = useCallback(async () => {

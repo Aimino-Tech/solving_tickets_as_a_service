@@ -4,12 +4,22 @@ import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useState } from 'react';
 import NotificationBell from '@/components/NotificationBell';
+import {
+  LayoutDashboard,
+  RotateCw,
+  GitFork,
+  CreditCard,
+  ScrollText,
+  Settings as SettingsIcon,
+  Zap,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 const LOCALES = [
-  { code: 'en' as const, label: 'EN', flag: '🇬🇧' },
-  { code: 'de' as const, label: 'DE', flag: '🇩🇪' },
-  { code: 'fr' as const, label: 'FR', flag: '🇫🇷' },
-  { code: 'es' as const, label: 'ES', flag: '🇪🇸' },
+  { code: 'en' as const, label: 'EN' },
+  { code: 'de' as const, label: 'DE' },
+  { code: 'fr' as const, label: 'FR' },
+  { code: 'es' as const, label: 'ES' },
 ] as const;
 
 export default function Layout() {
@@ -19,18 +29,14 @@ export default function Layout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const NAV_ITEMS = [
-    { to: '/', label: t('nav.dashboard'), icon: '◉' },
-    { to: '/runs', label: t('nav.runs'), icon: '↻' },
-    { to: '/repos', label: t('nav.repos'), icon: '⊞' },
-    { to: '/analytics', label: t('nav.analytics'), icon: '▦' },
-    { to: '/kpi', label: t('nav.kpis'), icon: '📊' },
-    { to: '/audit', label: t('nav.audit'), icon: '☰' },
-    { to: '/configuration', label: 'Configuration', icon: '🔧' },
-    { to: '/settings', label: t('nav.settings'), icon: '⚙' },
-    { to: '/monitoring', label: 'Monitoring', icon: '📡' },
-    { to: '/admin/runs', label: t('nav.admin') + ' Runs', icon: '⚡' },
-  ] as const;
+  const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
+    { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { to: '/runs', label: t('nav.runs'), icon: RotateCw },
+    { to: '/repos', label: t('nav.repos'), icon: GitFork },
+    { to: '/billing', label: 'Billing', icon: CreditCard },
+    { to: '/audit', label: t('nav.audit'), icon: ScrollText },
+    { to: '/settings', label: t('nav.settings'), icon: SettingsIcon },
+  ];
 
   const pageTitle =
     NAV_ITEMS.find((item) =>
@@ -55,7 +61,7 @@ export default function Layout() {
       >
         {/* Brand */}
         <div className="flex h-16 items-center gap-3 border-b border-gray-200 dark:border-gray-700 px-6">
-          <span className="text-2xl">⚡</span>
+          <Zap className="h-6 w-6 text-brand-600 dark:text-brand-400" />
           <div>
             <h1 className="text-base font-bold text-gray-900 dark:text-gray-100">STAS</h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">Premium Dashboard</p>
@@ -80,7 +86,7 @@ export default function Layout() {
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
               >
-                <span className="text-lg">{item.icon}</span>
+                <item.icon size={20} />
                 {item.label}
               </NavLink>
             );
@@ -129,7 +135,6 @@ export default function Layout() {
                 }`}
                 title={loc.label}
               >
-                <span className="mr-0.5">{loc.flag}</span>
                 {loc.label}
               </button>
             ))}

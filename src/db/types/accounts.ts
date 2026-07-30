@@ -14,6 +14,7 @@ export interface Account {
   name: string | null;
   plan: string;
   tier: string;
+  userId: string | null;
   trialEndsAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -28,6 +29,7 @@ export interface NewAccount {
   name?: string | null;
   plan?: string;
   tier?: string;
+  userId?: string | null;
   trialEndsAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;

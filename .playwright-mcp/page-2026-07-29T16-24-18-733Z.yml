@@ -1,0 +1,21 @@
+- generic [ref=e6]:
+  - generic [ref=e7]:
+    - generic [ref=e8]: STAS
+    - paragraph [ref=e10]: Solving Tickets As A Service
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - button "Sign In" [ref=e13] [cursor=pointer]
+      - button "Register" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: Email
+        - textbox "you@example.com" [ref=e18]
+      - generic [ref=e19]:
+        - generic [ref=e20]: Password
+        - textbox "Your password" [ref=e21]
+      - button "Sign In" [ref=e22] [cursor=pointer]
+    - paragraph [ref=e23]: By signing in, you agree to our Terms of Service.
+  - paragraph [ref=e24]:
+    - link "New to STAS? Learn more" [ref=e25] [cursor=pointer]:
+      - /url: /onboarding
+  - paragraph [ref=e26]: © 2026 STAS. All rights reserved.

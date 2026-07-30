@@ -3,6 +3,7 @@ import { requireAuth } from '../auth/middleware.js';
 import { queryWithRetry, isTableNotFoundError } from '../db/connection.js';
 import { runsRepository } from '../db/repositories/index.js';
 import { rootLogger } from '../utils/logger.js';
+import { auditMiddleware } from '../audit/middleware.js';
 
 const log = rootLogger.child({ module: 'runs-api' });
 
@@ -33,7 +34,7 @@ async function resolveAccountId(req: Request): Promise<number | null> {
   return null;
 }
 
-router.get('/', requireAuth, async (req: Request, res: Response) => {
+router.get('/', requireAuth, auditMiddleware({ action: 'runs.list', actorType: 'user' }), async (req: Request, res: Response) => {
   let page = 1;
   let limit = 20;
   let status: string | undefined;
@@ -78,8 +79,25 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       }),
     );
 
+    const mapped = runsWithCredits.map((r: any) => ({
+      id: r.id,
+      status: r.status,
+      issueNumber: r.issue_number,
+      issueTitle: r.summary || '',
+      repoOwner: (r as any).repo_owner || '',
+      repoName: (r as any).repo_name || '',
+      durationSeconds: r.duration_ms ? Math.round(r.duration_ms / 1000) : null,
+      costCents: r.cost_cents ?? 0,
+      creditsUsed: r.creditsUsed ?? 0,
+      confidence: r.confidence,
+      prUrl: r.pr_url,
+      branchName: r.branch_name,
+      error: r.error,
+      createdAt: r.created_at,
+    }));
+
     res.json({
-      data: runsWithCredits,
+      data: mapped,
       total,
       page,
       perPage: limit,
@@ -104,7 +122,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/:id', requireAuth, async (req: Request, res: Response) => {
+router.get('/:id', requireAuth, auditMiddleware({ action: 'runs.view', actorType: 'user' }), async (req: Request, res: Response) => {
   try {
     const runId = Number(req.params.id);
     if (!Number.isFinite(runId)) {

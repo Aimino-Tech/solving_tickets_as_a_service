@@ -4,7 +4,7 @@ import path from 'node:path';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const apiPort = env.VITE_API_PORT || '3000';
+  const apiPort = env.VITE_API_PORT || '3001';
 
   return {
     base: '/',

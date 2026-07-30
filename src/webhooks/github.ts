@@ -28,6 +28,8 @@ import { rateLimiter } from '../ratelimit/limiter.js';
 import { getRateLimitForAccount } from '../ratelimit/tiers.js';
 import { getTierForAccount } from '../ratelimit/tiers.js';
 import { accountsRepository } from '../db/repositories/index.js';
+import { gitHubInstallationRepository } from '../db/repositories/GitHubInstallationRepository.js';
+import { gitHubOAuthRepository } from '../db/repositories/GitHubOAuthRepository.js';
 import { dispatchIssueToOsy } from '../services/osyDispatch.js';
 import { parseSlashCommand } from '../github/slashCommands.js';
 
@@ -144,6 +146,44 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         });
       } catch (analyticsErr) {
         log.error({ err: String(analyticsErr) }, 'Failed to track app_installed event');
+      }
+
+      // Persist installation to github_installations table so the dashboard
+      // can show it even without a matching OAuth token.
+      try {
+        let userId: string | undefined;
+
+        // Try to link installation to a local user via sender's GitHub user ID
+        if (p.sender?.id) {
+          const oauthToken = await gitHubOAuthRepository.findByGithubUserId(p.sender.id);
+          if (oauthToken) {
+            userId = oauthToken.userId;
+          } else {
+            log.info(
+              { senderId: p.sender.id, senderLogin: p.sender.login },
+              'No OAuth token found for sender — saving installation without user link',
+            );
+          }
+        }
+
+        const inst = await gitHubInstallationRepository.create({
+          userId: userId ?? crypto.randomUUID(),
+          installationId,
+          accountLogin: p.installation?.account?.login ?? 'unknown',
+          accountType: (p.installation?.account?.type as 'User' | 'Organization') ?? 'User',
+          repoScope: p.repositories ? 'selected' : 'all',
+          avatarUrl: null,
+          reposJson: (p.repositories ?? []).map((r) => ({
+            name: r.name,
+            owner: r.owner?.login ?? 'unknown',
+            fullName: (r.owner?.login ?? 'unknown') + '/' + r.name,
+            private: false,
+            stasInstalled: false,
+          })),
+        });
+        log.info({ installationId, accountLogin: inst.accountLogin, userId: inst.userId }, 'Saved installation to DB');
+      } catch (dbErr) {
+        log.error({ err: String(dbErr), installationId }, 'Failed to persist installation to DB');
       }
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to handle installation.created event');

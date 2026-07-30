@@ -16,6 +16,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import { rootLogger } from '../utils/logger.js';
+import { requireAuth } from '../auth/middleware.js';
 import { PLANS } from './plans.js';
 import type { PlanId } from './plans.js';
 import {
@@ -29,6 +30,7 @@ import { createBillingWebhookHandler } from './webhook.js';
 import { getDpaStatus } from './dpa.js';
 import { config } from '../config.js';
 import { queryWithRetry } from '../db/connection.js';
+import { auditLog } from '../audit/middleware.js';
 
 const log = rootLogger.child({ module: 'billing-api' });
 
@@ -71,10 +73,20 @@ async function getAccountId(req: Request): Promise<number | undefined> {
 // GET /api/v1/billing/plan — Get current subscription plan for account
 // ---------------------------------------------------------------------------
 
-router.get('/plan', async (req: Request, res: Response) => {
+router.get('/plan', requireAuth, async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req);
-    const planId: PlanId = config.stas.defaultTier === 'pro' ? 'pro' : 'free';
+    let planId: PlanId = 'free';
+    if (accountId) {
+      const result = await queryWithRetry<{ plan: string }>(
+        'SELECT plan FROM billing WHERE account_id = $1',
+        [accountId],
+      );
+      if (result.rows.length > 0) {
+        const dbPlan = result.rows[0].plan as PlanId;
+        if (PLANS[dbPlan]) planId = dbPlan;
+      }
+    }
     const plan = PLANS[planId];
     if (!plan) { res.status(404).json({ error: 'Plan not found' }); return; }
     res.json({
@@ -121,7 +133,7 @@ router.get('/plans', (_req: Request, res: Response) => {
 // GET /api/v1/billing/trial — Get trial status for account
 // ---------------------------------------------------------------------------
 
-router.get('/trial', async (req: Request, res: Response) => {
+router.get('/trial', requireAuth, async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req);
     if (!accountId) {
@@ -141,7 +153,7 @@ router.get('/trial', async (req: Request, res: Response) => {
 // POST /api/v1/billing/subscription/create-checkout — Create Checkout Session
 // ---------------------------------------------------------------------------
 
-router.post('/subscription/create-checkout', async (req: Request, res: Response) => {
+router.post('/subscription/create-checkout', requireAuth, async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req);
     if (!accountId) {
@@ -206,6 +218,18 @@ router.post('/subscription/create-checkout', async (req: Request, res: Response)
       trialDays,
     });
 
+    auditLog({
+      actorType: 'user',
+      actorId: String(accountId),
+      action: 'billing.checkout.created',
+      resourceType: 'billing',
+      resourceId: String(accountId),
+      details: { planId },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    });
+
     res.json(session);
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to create checkout session');
@@ -217,7 +241,7 @@ router.post('/subscription/create-checkout', async (req: Request, res: Response)
 // POST /api/v1/billing/subscription/portal — Create billing portal session
 // ---------------------------------------------------------------------------
 
-router.post('/subscription/portal', async (req: Request, res: Response) => {
+router.post('/subscription/portal', requireAuth, async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req);
     if (!accountId) {
@@ -252,7 +276,7 @@ router.post('/subscription/portal', async (req: Request, res: Response) => {
 // POST /api/v1/billing/subscription/cancel — Cancel subscription
 // ---------------------------------------------------------------------------
 
-router.post('/subscription/cancel', async (req: Request, res: Response) => {
+router.post('/subscription/cancel', requireAuth, async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req);
     if (!accountId) {
@@ -273,6 +297,19 @@ router.post('/subscription/cancel', async (req: Request, res: Response) => {
     }
 
     await cancelSubscriptionAtPeriodEnd(subscriptionId);
+
+    auditLog({
+      actorType: 'user',
+      actorId: String(accountId),
+      action: 'billing.subscription.cancelled',
+      resourceType: 'billing',
+      resourceId: String(accountId),
+      details: { subscriptionId },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    });
+
     res.json({ success: true, message: 'Subscription will be canceled at the end of the current billing period.' });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to cancel subscription');
@@ -284,7 +321,7 @@ router.post('/subscription/cancel', async (req: Request, res: Response) => {
 // POST /api/v1/billing/subscription/reactivate — Reactivate subscription
 // ---------------------------------------------------------------------------
 
-router.post('/subscription/reactivate', async (req: Request, res: Response) => {
+router.post('/subscription/reactivate', requireAuth, async (req: Request, res: Response) => {
   try {
     const accountId = await getAccountId(req);
     if (!accountId) {
@@ -305,6 +342,19 @@ router.post('/subscription/reactivate', async (req: Request, res: Response) => {
     }
 
     await reactivateSubscription(subscriptionId);
+
+    auditLog({
+      actorType: 'user',
+      actorId: String(accountId),
+      action: 'billing.subscription.reactivated',
+      resourceType: 'billing',
+      resourceId: String(accountId),
+      details: { subscriptionId },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    });
+
     res.json({ success: true, message: 'Subscription reactivated.' });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to reactivate subscription');

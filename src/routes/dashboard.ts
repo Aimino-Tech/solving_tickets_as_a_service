@@ -11,6 +11,7 @@
 import { Router, type Request, type Response } from 'express';
 import { queryWithRetry } from '../db/connection.js';
 import { rootLogger } from '../utils/logger.js';
+import { config } from '../config.js';
 
 const log = rootLogger.child({ module: 'dashboard-api' });
 
@@ -143,6 +144,37 @@ router.get('/transactions', async (req: Request, res: Response) => {
     log.error({ err: String(err) }, 'Failed to fetch transactions');
     res.status(500).json({ error: 'Failed to fetch transactions' });
   }
+});
+
+// ============================================================================
+// Settings (mounted at /api/v1/me)
+// ============================================================================
+
+// In-memory overrides for runtime settings. Defaults come from env/config.
+const settingsStore: Record<string, string | number | boolean> = {};
+
+// In-memory overrides for config/env — runtime env var overrides (not persisted to .env)
+const envOverrides: Record<string, string> = {};
+
+router.get('/settings', (_req: Request, res: Response) => {
+  const { config } = require('../config.js');
+  res.json({
+    label: (settingsStore.label as string) || config.label || process.env.STAS_LABEL || 'stas:fix',
+    model: (settingsStore.model as string) || 'claude-sonnet-4',
+    maxConcurrent: (settingsStore.maxConcurrent as number) ?? 3,
+    sandboxPoolSize: (settingsStore.sandboxPoolSize as number) ?? 2,
+    auditLogEnabled: (settingsStore.auditLogEnabled as boolean) ?? true,
+  });
+});
+
+router.put('/settings', (req: Request, res: Response) => {
+  const { label, model, maxConcurrent, sandboxPoolSize, auditLogEnabled } = req.body || {};
+  if (label !== undefined) settingsStore.label = String(label);
+  if (model !== undefined) settingsStore.model = String(model);
+  if (maxConcurrent !== undefined) settingsStore.maxConcurrent = Number(maxConcurrent);
+  if (sandboxPoolSize !== undefined) settingsStore.sandboxPoolSize = Number(sandboxPoolSize);
+  if (auditLogEnabled !== undefined) settingsStore.auditLogEnabled = Boolean(auditLogEnabled);
+  res.json({ success: true });
 });
 
 // ============================================================================
@@ -390,7 +422,100 @@ router.get('/dashboard/accounts/:accountId/usage/total', async (req: Request, re
   }
 });
 
-export { router as dashboardRouter };
+// ============================================================================
+// Config API — separate router mounted at /api/v1/config
+// ============================================================================
+
+const configRouter: Router = Router();
+
+configRouter.get('/', (_req: Request, res: Response) => {
+  try {
+    const env: Record<string, string> = {};
+    const trackedKeys = ['LINEAR_API_KEY', 'BITBUCKET_APP_PASSWORD', 'JIRA_API_TOKEN', 'GITHUB_TOKEN'];
+    for (const key of trackedKeys) {
+      if (key in envOverrides && envOverrides[key]) {
+        env[key] = envOverrides[key];
+      }
+    }
+
+    const integrations = [
+      {
+        id: 'github',
+        name: 'GitHub',
+        icon: 'github',
+        connected: !!(config.github.appId && (config.github.privateKeyEnv || config.github.privateKeyPath)),
+        configUrl: '',
+      },
+      {
+        id: 'linear',
+        name: 'Linear',
+        icon: 'linear',
+        connected: !!(process.env.LINEAR_API_KEY || envOverrides.LINEAR_API_KEY),
+        configUrl: 'https://linear.app/settings/api',
+      },
+    ];
+
+    res.json({
+      env,
+      rateLimits: [
+        { endpoint: '/api/v1/*', limit: config.stas.rateLimitMax, window: `${config.stas.rateLimitWindowMs}ms` },
+      ],
+      tokens: [],
+      symphonies: [],
+      subscriptions: [],
+      warnings: [],
+      integrations,
+      infrastructure: {},
+    });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to get config');
+    res.status(500).json({ error: 'Failed to load configuration' });
+  }
+});
+
+configRouter.put('/env', (req: Request, res: Response) => {
+  try {
+    const updates = req.body || {};
+    for (const [key, val] of Object.entries(updates)) {
+      if (typeof val === 'string') {
+        envOverrides[key] = val;
+      }
+    }
+    log.info({ keys: Object.keys(updates) }, 'Config env overrides updated');
+    res.json({ success: true });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to update config env');
+    res.status(500).json({ error: 'Failed to update environment variables' });
+  }
+});
+
+configRouter.post('/verify', async (req: Request, res: Response) => {
+  try {
+    const { service, apiKey } = req.body || {};
+    if (!service || !apiKey) {
+      res.status(400).json({ connected: false, error: 'service and apiKey are required' });
+      return;
+    }
+    if (service === 'linear') {
+      const { LinearClient } = await import('@linear/sdk');
+      const client = new LinearClient({ apiKey });
+      const viewer = await client.viewer;
+      if (viewer?.id) {
+        res.json({ connected: true, name: viewer.name || viewer.displayName || null });
+      } else {
+        res.json({ connected: false, error: 'Invalid API key — could not authenticate with Linear' });
+      }
+    } else {
+      res.status(400).json({ connected: false, error: `Unknown service: ${service}` });
+    }
+  } catch (err: any) {
+    const msg = err?.message || String(err);
+    log.error({ err: msg, service: req.body?.service }, 'Service verification failed');
+    res.json({ connected: false, error: msg });
+  }
+});
+
+export { router as dashboardRouter, configRouter };
 
 // Data Deletion (mounted at /api/v1/me)
 

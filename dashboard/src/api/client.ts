@@ -94,7 +94,8 @@ export async function request<T>(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(body.error || `Request failed: ${res.status}`);
+    const errorMsg = typeof body.error === 'string' ? body.error : `Request failed: ${res.status}`;
+    throw new Error(errorMsg);
   }
 
   return res.json() as Promise<T>;
@@ -205,8 +206,8 @@ export const auth = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
-  me: () =>
-    request<{ id: string; email: string; name: string | null; username?: string; avatarUrl?: string; createdAt: string }>('/v1/auth/me'),
+me: () =>
+  request<{ id: string; email: string; name: string | null; username?: string; avatarUrl?: string; plan?: string; createdAt: string }>('/v1/auth/me'),
   refresh: (refreshToken: string) =>
     request<AuthResult>('/v1/auth/refresh', {
       method: 'POST',
@@ -298,8 +299,10 @@ export interface GitHubConnectionStatus {
 }
 
 export const repos = {
-  list: (opts?: { signal?: AbortSignal }) =>
-    request<{ id: string; owner: string; repo: string; active: boolean; createdAt: string }[]>('/repos', opts),
+  list: async (opts?: { signal?: AbortSignal }) => {
+    const res = await request<any>('/repos', opts);
+    return Array.isArray(res) ? res : (res?.data ?? []);
+  },
   connect: (body: { owner: string; repo: string; installationId?: number }) =>
     request<{ id: string; owner: string; repo: string; active: boolean }>('/repos', {
       method: 'POST',
@@ -312,6 +315,11 @@ export const repos = {
 export const github = {
   getOAuthUrl: () =>
     request<{ url: string }>('/v1/auth/github/url', { method: 'POST' }),
+  storeToken: (providerToken: string) =>
+    request<{ success: boolean }>('/v1/auth/github/token', {
+      method: 'POST',
+      body: JSON.stringify({ providerToken }),
+    }),
   handleCallback: (code: string, opts?: { signal?: AbortSignal }) =>
     request<{ githubLogin: string; githubUserId: number; avatarUrl: string }>('/v1/auth/github/callback', {
       method: 'POST',
@@ -323,7 +331,7 @@ export const github = {
   disconnect: () =>
     request<{ success: boolean }>('/v1/auth/github/disconnect', { method: 'DELETE' }),
   listInstallations: (opts?: { signal?: AbortSignal }) =>
-    request<{ installations: GitHubInstallation[] }>('/v1/github/installations', opts),
+    request<{ installations: GitHubInstallation[]; error?: string }>('/v1/github/installations', opts),
   syncInstallation: (body: { installationId: number; accountLogin: string; accountType?: string; repoScope?: string }) =>
     request<{ success: boolean }>('/v1/github/installations/sync', {
       method: 'POST',
@@ -352,6 +360,11 @@ export const billing = {
     request<{ url: string; sessionId: string }>('/v1/billing/subscription/create-checkout', {
       method: 'POST',
       body: JSON.stringify({ planId, successUrl, cancelUrl }),
+    }),
+  portal: (returnUrl?: string) =>
+    request<{ url: string }>('/v1/billing/subscription/portal', {
+      method: 'POST',
+      body: JSON.stringify({ returnUrl }),
     }),
 };
 
@@ -410,7 +423,7 @@ export const settings = {
       maxConcurrent: number;
       sandboxPoolSize: number;
       auditLogEnabled: boolean;
-    }>('/settings', opts),
+    }>('/v1/me/settings', opts),
   update: (body: {
     label: string;
     model: string;
@@ -418,7 +431,7 @@ export const settings = {
     sandboxPoolSize: number;
     auditLogEnabled: boolean;
   }) =>
-    request<{ success: boolean }>('/settings', {
+    request<{ success: boolean }>('/v1/me/settings', {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
@@ -457,6 +470,11 @@ export const configApi = {
     }),
   testInfrastructure: (provider: string) =>
     request<{ status: string }>(`/v1/config/infrastructure/${provider}/test`, { method: 'POST' }),
+  verifyService: (service: string, apiKey: string) =>
+    request<{ connected: boolean; name?: string; error?: string }>('/v1/config/verify', {
+      method: 'POST',
+      body: JSON.stringify({ service, apiKey }),
+    }),
 };
 
 export const sla = {

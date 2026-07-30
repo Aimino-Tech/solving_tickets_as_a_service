@@ -192,7 +192,7 @@ export async function getUptime(): Promise<number> {
     const result = await queryWithRetry(
       `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'healthy') AS healthy
        FROM health_checks
-       WHERE created_at > NOW() - INTERVAL '30 days'`,
+               WHERE checked_at > NOW() - INTERVAL '30 days'`,
     );
     const row = result.rows[0];
     const total = Number(row?.total ?? 0);

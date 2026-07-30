@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { repos, github, type GitHubInstallation } from '@/api/client';
 import type { Repo } from '@/api/types';
 import { formatRelativeTime } from '@/utils/format';
+// import { supabase } from '@/lib/supabase';
 
 export default function Repos() {
   const [repoList, setRepoList] = useState<Repo[]>([]);
   const [installations, setInstallations] = useState<GitHubInstallation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; githubLogin?: string }>({ connected: false });
   const [showInstallations, setShowInstallations] = useState(false);
   const [togglingRepo, setTogglingRepo] = useState<string | null>(null);
@@ -15,6 +17,7 @@ export default function Repos() {
   async function loadAll(signal?: AbortSignal) {
     setLoading(true);
     setError(null);
+    setWarning(null);
     try {
       const [status, repoData] = await Promise.all([
         github.getStatus({ signal }).catch(() => ({ connected: false })),
@@ -24,8 +27,16 @@ export default function Repos() {
       setRepoList(repoData);
 
       if (status.connected) {
-        const instData = await github.listInstallations({ signal }).catch(() => ({ installations: [] }));
-        setInstallations(instData.installations);
+        try {
+          const instData = await github.listInstallations({ signal });
+          setInstallations(instData.installations);
+          if (instData.error) {
+            setWarning(instData.error);
+          }
+        } catch (listErr) {
+          setInstallations([]);
+          setError(listErr instanceof Error ? listErr.message : 'Failed to load GitHub installations');
+        }
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
@@ -42,30 +53,26 @@ export default function Repos() {
     return () => ac.abort();
   }, []);
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const oauthCode = urlParams.get('code');
+  // Handle OAuth redirect back
   useEffect(() => {
-    if (oauthCode) {
-      const ac = new AbortController();
-      github.handleCallback(oauthCode, { signal: ac.signal }).then(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code) {
+      github.handleCallback(code).then(() => {
         window.history.replaceState({}, '', window.location.pathname);
-        loadAll(ac.signal);
-      }).catch((err) => {
-        if (err.name !== 'AbortError') {
-          setError(err instanceof Error ? err.message : 'Failed to complete OAuth');
-        }
+        loadAll();
+      }).catch(() => {
         window.history.replaceState({}, '', window.location.pathname);
       });
-      return () => ac.abort();
     }
-  }, [oauthCode]);
+  }, []);
 
   async function handleConnectGitHub() {
     try {
       const { url } = await github.getOAuthUrl();
       window.location.href = url;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to get OAuth URL');
+      setError(err instanceof Error ? err.message : 'Failed to connect GitHub');
     }
   }
 
@@ -124,9 +131,15 @@ export default function Repos() {
       {error && (
         <div className="card border-red-200 dark:border-red-800">
           <p className="text-red-600 dark:text-red-400">{error}</p>
-          <button onClick={loadAll} className="mt-2 text-sm font-medium text-brand-600 dark:text-brand-400 min-h-[44px] min-w-[44px]">
+          <button onClick={() => loadAll()} className="mt-2 text-sm font-medium text-brand-600 dark:text-brand-400 min-h-[44px] min-w-[44px]">
             Retry
           </button>
+        </div>
+      )}
+
+      {warning && !error && (
+        <div className="card border-amber-200 dark:border-amber-800">
+          <p className="text-amber-600 dark:text-amber-400">{warning}</p>
         </div>
       )}
 
@@ -182,7 +195,11 @@ export default function Repos() {
                     </p>
                   </div>
                   <button
-                    onClick={() => github.removeInstallation(inst.installationId).then(loadAll)}
+                    onClick={() => {
+                      github.removeInstallation(inst.installationId)
+                        .then(() => loadAll())
+                        .catch((err) => setError(err instanceof Error ? err.message : 'Failed to remove installation'));
+                    }}
                     className="btn-danger text-xs"
                   >
                     Remove

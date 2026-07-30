@@ -90,7 +90,7 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const token = resolveToken(req);
     if (!token) {
-      res.status(401).json({ error: 'GitHub access token not available — re-authenticate' });
+      res.json([]);
       return;
     }
 
@@ -306,10 +306,12 @@ router.get('/:owner/:repo', async (req: Request, res: Response) => {
  * to the GitHub App installation token or the configured app.
  */
 function resolveToken(req: Request): string | null {
-  // For now, we try the Authorization header (Bearer token from OAuth)
+  // First try Authorization header (GitHub OAuth token)
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.slice(7);
+    const token = authHeader.slice(7);
+    // JWT tokens (from our auth) start with eyJ — skip, not a GitHub token
+    if (!token.startsWith('eyJ')) return token;
   }
 
   // Also check cookies
@@ -320,11 +322,14 @@ function resolveToken(req: Request): string | null {
       if (eq === -1) continue;
       const key = part.slice(0, eq).trim();
       const val = part.slice(eq + 1).trim();
-      if (key === 'stas_token' && val) {
+      if (key === 'stas_token' && val && !val.startsWith('eyJ')) {
         return val;
       }
     }
   }
+
+  // Dev mode: use configured DEV_GITHUB_TOKEN
+  if (config.github.devToken) return config.github.devToken;
 
   return null;
 }

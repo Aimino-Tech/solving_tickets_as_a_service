@@ -21,6 +21,7 @@ import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { captureEvent } from '../analytics/tracker.js';
 import { queryWithRetry } from '../db/connection.js';
+import { getSupabaseAdmin } from '../auth/supabase.js';
 import { getPlanByPriceId } from './plans.js';
 import type { PlanId } from './plans.js';
 
@@ -138,6 +139,103 @@ export function createBillingWebhookHandler(): (req: Request, res: Response) => 
 }
 
 // ---------------------------------------------------------------------------
+// Plan sync helpers — propagate Stripe subscription state to users table
+// and Supabase Auth metadata (best-effort, non-blocking on error).
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve the local `user_id` for a given account from the accounts table.
+ * Returns `null` for legacy GitHub-only accounts that have no user link.
+ */
+async function resolveUserIdFromAccount(accountId: number): Promise<string | null> {
+  try {
+    const result = await queryWithRetry<{ user_id: string }>(
+      'SELECT user_id FROM accounts WHERE id = $1 AND user_id IS NOT NULL LIMIT 1',
+      [accountId],
+    );
+    return result.rows[0]?.user_id ?? null;
+  } catch (err) {
+    log.error({ err: String(err), accountId }, 'Failed to resolve user_id from account');
+    return null;
+  }
+}
+
+/**
+ * Sync subscription changes to the local `users` table.
+ * Resolves the user via `resolveUserIdFromAccount`; no-op if the account has no linked user.
+ * Errors are logged but not thrown (non-blocking).
+ */
+async function syncPlanToUser(
+  accountId: number,
+  planId: PlanId,
+  subscriptionId: string | null,
+  customerId: string,
+  status: string,
+  currentPeriodStart: Date,
+  currentPeriodEnd: Date,
+): Promise<void> {
+  try {
+    const userId = await resolveUserIdFromAccount(accountId);
+    if (!userId) {
+      log.debug({ accountId }, 'No user linked to account — skipping users table sync');
+      return;
+    }
+
+    await queryWithRetry(
+      `UPDATE users
+       SET plan = $1,
+           subscription_status = $2,
+           subscription_id = $3,
+           stripe_customer_id = $4,
+           trial_start = $5,
+           trial_end = $6,
+           updated_at = NOW()
+       WHERE id = $7::uuid`,
+      [planId, status, subscriptionId, customerId, currentPeriodStart.toISOString(), currentPeriodEnd.toISOString(), userId],
+    );
+
+    log.info({ accountId, userId, planId, status }, 'Synced plan to users table');
+  } catch (err) {
+    log.error({ err: String(err), accountId, planId }, 'Failed to sync plan to users table');
+  }
+}
+
+/**
+ * Sync the user's plan into Supabase Auth `raw_app_meta_data` so JWT tokens
+ * carry the plan claim. Best-effort — errors are logged but not thrown.
+ *
+ * 1. Looks up `supabase_uid` from the local `users` table.
+ * 2. Calls Supabase Auth Admin API to merge `{"plan": "..."}` into `app_metadata`.
+ */
+async function syncPlanToAuthMetadata(userId: string, plan: string): Promise<void> {
+  try {
+    const userResult = await queryWithRetry<{ supabase_uid: string | null }>(
+      'SELECT supabase_uid FROM users WHERE id = $1::uuid',
+      [userId],
+    );
+    const supabaseUid = userResult.rows[0]?.supabase_uid;
+    if (!supabaseUid) {
+      log.debug({ userId }, 'No supabase_uid found for user — skipping auth metadata sync');
+      return;
+    }
+
+    const admin = getSupabaseAdmin();
+    const { error } = await admin.auth.admin.updateUserById(supabaseUid, {
+      app_metadata: { plan },
+    });
+
+    if (error) {
+      log.error({ err: String(error), userId, supabaseUid }, 'Failed to update auth metadata');
+      return;
+    }
+
+    log.info({ userId, plan }, 'Synced plan to auth metadata');
+  } catch (err) {
+    log.error({ err: String(err), userId, plan }, 'Failed to sync plan to auth metadata');
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Event handlers
 // ---------------------------------------------------------------------------
 
@@ -212,6 +310,21 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
       currentPeriodEnd.toISOString(),
     ],
   );
+
+  // Sync plan to users table and auth metadata (best-effort)
+  const checkoutUserId = await resolveUserIdFromAccount(Number(accountId));
+  await syncPlanToUser(
+    Number(accountId),
+    planId,
+    subscriptionId,
+    customerId,
+    'active',
+    currentPeriodStart,
+    currentPeriodEnd,
+  );
+  if (checkoutUserId) {
+    await syncPlanToAuthMetadata(checkoutUserId, planId);
+  }
 
   // Track user conversion in PostHog
   try {
@@ -308,6 +421,28 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
      WHERE stripe_subscription_id = $5`,
     [planId, status, currentPeriodStart.toISOString(), currentPeriodEnd.toISOString(), subscriptionId],
   );
+
+  // Sync plan to users table and auth metadata (best-effort)
+  const updateBillingRow = await queryWithRetry<{ account_id: number }>(
+    'SELECT account_id FROM billing WHERE stripe_subscription_id = $1 LIMIT 1',
+    [subscriptionId],
+  );
+  const updateAccountId = updateBillingRow.rows[0]?.account_id;
+  if (updateAccountId) {
+    const updateUserId = await resolveUserIdFromAccount(updateAccountId);
+    await syncPlanToUser(
+      updateAccountId,
+      planId,
+      subscriptionId,
+      customerId,
+      status,
+      currentPeriodStart,
+      currentPeriodEnd,
+    );
+    if (updateUserId) {
+      await syncPlanToAuthMetadata(updateUserId, planId);
+    }
+  }
 }
 
 /**
@@ -329,6 +464,29 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Pro
      WHERE stripe_subscription_id = $1`,
     [subscriptionId],
   );
+
+  // Sync plan to users table and auth metadata (best-effort)
+  const deletedBillingRow = await queryWithRetry<{ account_id: number }>(
+    'SELECT account_id FROM billing WHERE stripe_subscription_id = $1 LIMIT 1',
+    [subscriptionId],
+  );
+  const deleteAccountId = deletedBillingRow.rows[0]?.account_id;
+  if (deleteAccountId) {
+    const deleteUserId = await resolveUserIdFromAccount(deleteAccountId);
+    const deleteSubWithPeriod = subscription as StripeSubscriptionWithPeriod;
+    await syncPlanToUser(
+      deleteAccountId,
+      'free' as PlanId,
+      null,
+      subscription.customer?.toString() ?? '',
+      'canceled',
+      new Date(deleteSubWithPeriod.current_period_start * 1000),
+      new Date(deleteSubWithPeriod.current_period_end * 1000),
+    );
+    if (deleteUserId) {
+      await syncPlanToAuthMetadata(deleteUserId, 'free');
+    }
+  }
 
   // Track user cancellation in PostHog
   try {

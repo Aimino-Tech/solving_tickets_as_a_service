@@ -9,12 +9,17 @@
  *   - Edge cases (unlimited tiers, missing data, etc.)
  */
 
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from 'vitest';
 import express from 'express';
 import { tiers, getTierConfig, UNLIMITED, type TierName } from '../config/tiers.js';
 import { UsageTracker } from '../core/usage-tracker.js';
 import { createTierGate, closeDefaultTracker } from '../middleware/tier-gate.js';
 import { usageRouter } from '../api/routes/usage.js';
+
+// Mock the DB connection so tier-gate plan resolution is a no-op in tests
+vi.mock('../db/connection.js', () => ({
+  queryWithRetry: vi.fn().mockResolvedValue({ rows: [] }),
+}));
 
 // ---------------------------------------------------------------------------
 // Tests: Tier configuration
@@ -164,6 +169,10 @@ describe('TierGate middleware', () => {
     tracker = new UsageTracker();
   });
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterAll(() => {
     tracker.close();
     vi.unstubAllEnvs();
@@ -175,7 +184,7 @@ describe('TierGate middleware', () => {
     const res = { setHeader: vi.fn(), status: vi.fn(), json: vi.fn() } as any;
     let nextCalled = false;
 
-    middleware(req, res, () => { nextCalled = true; });
+    await middleware(req, res, () => { nextCalled = true; });
 
     expect(nextCalled).toBe(true);
     expect(res.status).not.toHaveBeenCalled();
@@ -187,7 +196,7 @@ describe('TierGate middleware', () => {
     const res = { setHeader: vi.fn(), status: vi.fn(), json: vi.fn() } as any;
     let nextCalled = false;
 
-    middleware(req, res, () => { nextCalled = true; });
+    await middleware(req, res, () => { nextCalled = true; });
 
     expect(nextCalled).toBe(true);
   });
@@ -220,7 +229,7 @@ describe('TierGate middleware', () => {
     } as any;
 
     let nextCalled = false;
-    middleware(req, res, () => { nextCalled = true; });
+    await middleware(req, res, () => { nextCalled = true; });
 
     expect(statusCode).toBe(402);
     expect(jsonBody.error).toBe('Payment Required');
@@ -253,7 +262,7 @@ describe('TierGate middleware', () => {
     } as any;
 
     let nextCalled = false;
-    middleware(req, res, () => { nextCalled = true; });
+    await middleware(req, res, () => { nextCalled = true; });
 
     expect(nextCalled).toBe(true);
     expect(headers.has('X-Stas-Usage-Remaining')).toBe(true);

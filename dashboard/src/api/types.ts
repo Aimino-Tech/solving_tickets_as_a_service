@@ -4,7 +4,8 @@ export interface User {
   name: string | null;
   username?: string;
   avatarUrl?: string;
-  createdAt: string;
+  plan?: string;
+  createdAt?: string;
 }
 
 export interface Run {

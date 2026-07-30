@@ -233,7 +233,7 @@ export async function consumeQueue(
   options?: amqplib.Options.Consume,
 ): Promise<string> {
   const ch = getChannel();
-  await ch.assertQueue(queueName, { durable: true });
+  await ch.assertQueue(queueName, { durable: true, arguments: { "x-message-ttl": 600000, "x-dead-letter-exchange": "stas.dlx" } });
   const consumerTag = await ch.consume(
     queueName,
     async (msg) => {

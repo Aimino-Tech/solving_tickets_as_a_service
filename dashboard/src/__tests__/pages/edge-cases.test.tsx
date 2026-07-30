@@ -1,0 +1,240 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '@/__tests__/test-utils';
+
+const {
+  mockBillingPlan, mockBillingPortal, mockRunsList, mockStatsGet,
+  mockAuditList, mockSettingsGet, mockSettingsUpdate, mockConfigApiGet,
+  mockRequest, mockLitellmUsage,
+} = vi.hoisted(() => ({
+  mockBillingPlan: vi.fn(),
+  mockBillingPortal: vi.fn(),
+  mockRunsList: vi.fn(),
+  mockStatsGet: vi.fn(),
+  mockAuditList: vi.fn(),
+  mockSettingsGet: vi.fn(),
+  mockSettingsUpdate: vi.fn(),
+  mockConfigApiGet: vi.fn(),
+  mockRequest: vi.fn(),
+  mockLitellmUsage: vi.fn(),
+}));
+
+vi.mock('@/api/client', () => ({
+  billing: { plan: mockBillingPlan, portal: mockBillingPortal },
+  runs: { list: mockRunsList },
+  stats: { get: mockStatsGet },
+  audit: { list: mockAuditList },
+  settings: { get: mockSettingsGet, update: mockSettingsUpdate },
+  configApi: { get: mockConfigApiGet, updateEnv: vi.fn() },
+  request: mockRequest,
+  litellm: { usage: mockLitellmUsage },
+}));
+
+const mockFetchPreferences = vi.hoisted(() => vi.fn());
+vi.mock('@/services/notificationService', () => ({
+  fetchPreferences: mockFetchPreferences,
+  upsertPreference: vi.fn(),
+}));
+
+const mockUseAuth = vi.hoisted(() => vi.fn());
+vi.mock('@/context/AuthContext', () => ({
+  useAuth: () => mockUseAuth(),
+}));
+
+vi.mock('recharts', () => ({
+  ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
+  LineChart: ({ children }: any) => <div>{children}</div>,
+  Line: () => null,
+  BarChart: ({ children }: any) => <div>{children}</div>,
+  Bar: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
+  CartesianGrid: () => null,
+  Tooltip: () => null,
+  Legend: () => null,
+}));
+
+function setupDefaultAuth(overrides?: Record<string, unknown>) {
+  mockUseAuth.mockReturnValue({
+    user: { id: '1', email: 'test@test.com', name: 'Test User', plan: 'free', ...overrides },
+    isAuthenticated: true,
+    isLoading: false,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  });
+}
+
+function setupEmptyMocks() {
+  mockBillingPlan.mockResolvedValue({ id: 'free', name: 'Free', monthlyFixLimit: 10 });
+  mockRunsList.mockResolvedValue({ data: [], total: 0, page: 1, perPage: 20, totalPages: 0 });
+  mockStatsGet.mockResolvedValue({ totalRuns: 0, passRate: 0, avgDurationSeconds: 0, activeRepos: 0, runsByDay: [], costByDay: [], fixRateByWeek: [] });
+  mockAuditList.mockResolvedValue({ data: [], total: 0, page: 1, perPage: 30, totalPages: 0 });
+  mockSettingsGet.mockResolvedValue({ label: 'stas:fix', model: 'claude-sonnet-4-20250514', maxConcurrent: 3, sandboxPoolSize: 2, auditLogEnabled: true });
+  mockConfigApiGet.mockResolvedValue({ env: {}, rateLimits: [], tokens: [], integrations: [], infrastructure: {}, symphonies: [], subscriptions: [], warnings: [] });
+  mockLitellmUsage.mockResolvedValue({ totalSpend: 0, maxBudget: 0, spendPerModel: [], rpmLimit: null, tpmLimit: null });
+}
+
+function setupRateLimitMocks() {
+  const rateLimitError = new Error('Too Many Requests');
+  mockBillingPlan.mockRejectedValue(rateLimitError);
+  mockRunsList.mockRejectedValue(rateLimitError);
+  mockStatsGet.mockRejectedValue(rateLimitError);
+  mockAuditList.mockRejectedValue(rateLimitError);
+  mockSettingsGet.mockRejectedValue(rateLimitError);
+  mockLitellmUsage.mockRejectedValue(rateLimitError);
+}
+
+describe('Rate limiting (429 error handling)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupDefaultAuth();
+    setupRateLimitMocks();
+  });
+
+  it('DashboardHome does not crash on 429', async () => {
+    const DashboardHome = (await import('@/pages/DashboardHome')).default;
+    renderWithProviders(<DashboardHome />);
+
+    // Individual API rejections are caught by .catch() handlers,
+    // so the component renders with default/fallback values instead of an error state
+    await waitFor(() => {
+      expect(screen.getByText('Current Plan')).toBeInTheDocument();
+    });
+  });
+
+  it('RunsHistory does not crash on 429', async () => {
+    const RunsHistory = (await import('@/pages/RunsHistory')).default;
+    renderWithProviders(<RunsHistory />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/too many requests/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('Billing does not crash on 429', async () => {
+    const Billing = (await import('@/pages/Billing')).default;
+    renderWithProviders(<Billing />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Billing')).toBeInTheDocument();
+    });
+  });
+
+  it('AuditLog does not crash on 429', async () => {
+    const AuditLog = (await import('@/pages/AuditLog')).default;
+    renderWithProviders(<AuditLog />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/too many requests/i)).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Empty state handling across all pages', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupDefaultAuth();
+    setupEmptyMocks();
+  });
+
+  it('DashboardHome renders without data', async () => {
+    const DashboardHome = (await import('@/pages/DashboardHome')).default;
+    renderWithProviders(<DashboardHome />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Current Plan')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Free')).toBeInTheDocument();
+    expect(screen.getByText(/no fixes yet/i)).toBeInTheDocument();
+  });
+
+  it('RunsHistory renders without data', async () => {
+    const RunsHistory = (await import('@/pages/RunsHistory')).default;
+    renderWithProviders(<RunsHistory />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/no runs found/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('Billing renders without data (all APIs empty)', async () => {
+    const Billing = (await import('@/pages/Billing')).default;
+    renderWithProviders(<Billing />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Billing')).toBeInTheDocument();
+    });
+  });
+
+  it('AuditLog renders without entries', async () => {
+    const AuditLog = (await import('@/pages/AuditLog')).default;
+    renderWithProviders(<AuditLog />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/no audit entries yet/i)).toBeInTheDocument();
+    });
+  });
+
+  it('Settings renders without crashing', async () => {
+    const Settings = (await import('@/pages/Settings')).default;
+    renderWithProviders(<Settings />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Settings')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Auth context - unauthenticated user', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupEmptyMocks();
+    mockUseAuth.mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    });
+  });
+
+  it('DashboardHome renders with unauthenticated user', async () => {
+    const DashboardHome = (await import('@/pages/DashboardHome')).default;
+    renderWithProviders(<DashboardHome />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Current Plan')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Free')).toBeInTheDocument();
+  });
+
+  it('Settings renders with unauthenticated user', async () => {
+    const Settings = (await import('@/pages/Settings')).default;
+    renderWithProviders(<Settings />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Settings')).toBeInTheDocument();
+    });
+  });
+
+  it('RunsHistory renders with unauthenticated user', async () => {
+    const RunsHistory = (await import('@/pages/RunsHistory')).default;
+    renderWithProviders(<RunsHistory />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/no runs found/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('AuditLog renders with unauthenticated user', async () => {
+    const AuditLog = (await import('@/pages/AuditLog')).default;
+    renderWithProviders(<AuditLog />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/no audit entries yet/i)).toBeInTheDocument();
+    });
+  });
+});

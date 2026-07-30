@@ -8,6 +8,7 @@ import { getSupabaseAdmin } from '../auth/supabase.js';
 import { gitHubOAuthRepository } from '../db/repositories/GitHubOAuthRepository.js';
 import { encrypt } from '../utils/encryption.js';
 import { rootLogger } from '../utils/logger.js';
+import { auditLog } from '../audit/middleware.js';
 
 const log = rootLogger.child({ module: 'github-oauth' });
 const router: Router = Router();
@@ -18,6 +19,11 @@ router.post('/url', async (_req: Request, res: Response) => {
   try {
     const clientId = config.github.oauthClientId;
     if (!clientId) {
+      // Dev mode: use configured DEV_GITHUB_TOKEN directly
+      if (config.github.devToken) {
+        res.json({ url: '', devMode: true, message: 'Using DEV_GITHUB_TOKEN' });
+        return;
+      }
       res.status(501).json({ error: 'GitHub OAuth not configured — set GITHUB_OAUTH_CLIENT_ID' });
       return;
     }
@@ -27,6 +33,47 @@ router.post('/url', async (_req: Request, res: Response) => {
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to generate GitHub OAuth URL');
     res.status(500).json({ error: 'Failed to generate OAuth URL' });
+  }
+});
+
+// GET /callback — Handle GitHub OAuth callback (GitHub GET redirect)
+router.get('/callback', async (req: Request, res: Response) => {
+  const code = req.query.code as string;
+  const state = req.query.state as string;
+  if (code) {
+    const frontendUrl = config.publicUrl || `http://localhost:5173`;
+    res.redirect(`${frontendUrl}/repos?code=${encodeURIComponent(code)}${state ? `&state=${encodeURIComponent(state)}` : ''}`);
+  } else {
+    res.status(400).json({ error: 'Missing authorization code' });
+  }
+});
+
+// POST /token — Receive and store a GitHub provider token from Supabase OAuth
+router.post('/token', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { providerToken } = req.body;
+    if (!providerToken) { res.status(400).json({ error: 'providerToken required' }); return; }
+
+    // Fetch GitHub user info
+    const ur = await fetch('https://api.github.com/user', {
+      headers: { Authorization: 'Bearer ' + providerToken, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' }
+    });
+    if (!ur.ok) { res.status(502).json({ error: 'Failed to fetch GitHub user' }); return; }
+    const gu = await ur.json();
+
+    // Store the token
+    await gitHubOAuthRepository.upsert({
+      userId: req.user!.id,
+      accessTokenEncrypted: encrypt(providerToken),
+      githubLogin: gu.login,
+      githubUserId: gu.id,
+      scope: 'repo,user',
+    });
+
+    res.json({ success: true, githubLogin: gu.login, githubUserId: gu.id });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to store GitHub token');
+    res.status(500).json({ error: 'Failed to store GitHub token' });
   }
 });
 
@@ -72,12 +119,20 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
   try {
     const t = await gitHubOAuthRepository.findByUserId(req.user!.id);
     if (!t) {
+      if (config.github.devToken) {
+        res.json({ connected: true, githubLogin: 'dev-user', devMode: true });
+        return;
+      }
       res.json({ connected: false });
       return;
     }
-    res.json({ connected: true, githubLogin: t.githubLogin, githubUserId: t.githubUserId });
+    res.json({ connected: true, githubLogin: (t as any).github_login ?? t.githubLogin, githubUserId: (t as any).github_user_id ?? t.githubUserId });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to check GitHub status');
+    if (config.github.devToken) {
+      res.json({ connected: true, githubLogin: 'dev-user', devMode: true });
+      return;
+    }
     res.json({ connected: false });
   }
 });
@@ -93,8 +148,20 @@ router.get('/profile', requireAuth, async (req: Request, res: Response) => {
 
 // DELETE /disconnect — Disconnect GitHub account
 router.delete('/disconnect', requireAuth, async (req: Request, res: Response) => {
-  try { await gitHubOAuthRepository.delete(req.user!.id); res.json({ success: true }); }
-  catch (err) { log.error({ err: String(err) }, 'Failed'); res.status(500).json({ error: 'Failed' }); }
+  try {
+    await gitHubOAuthRepository.delete(req.user!.id);
+    auditLog({
+      actorType: 'user',
+      actorId: req.user!.id,
+      action: 'settings.github.disconnect',
+      resourceType: 'github_oauth',
+      resourceId: req.user!.id,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    });
+    res.json({ success: true });
+  } catch (err) { log.error({ err: String(err) }, 'Failed'); res.status(500).json({ error: 'Failed' }); }
 });
 
 export { router as gitHubOAuthRouter };

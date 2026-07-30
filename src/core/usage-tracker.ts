@@ -103,9 +103,11 @@ export class UsageTracker {
   /**
    * Record a usage event and increment the monthly counter.
    * Does NOT enforce tier limits — use `checkQuota` before calling.
+   *
+   * @param tierOverride  Optional tier name to override env-based resolution (e.g. 'pro', 'team')
    */
-  record(record: UsageRecord): void {
-    const tierConfig = getTierConfigForRepo(record.repoId);
+  record(record: UsageRecord, tierOverride?: string): void {
+    const tierConfig = getTierConfigForRepo(record.repoId, tierOverride);
     const yearMonth = currentYearMonth();
 
     this.records.push({
@@ -145,9 +147,11 @@ export class UsageTracker {
 
   /**
    * Get the current usage summary for a user + repo.
+   *
+   * @param tierOverride  Optional tier name to override env-based resolution (e.g. 'pro', 'team')
    */
-  getUsage(userId: string, repoId: string): UsageSummary {
-    const tierConfig = getTierConfigForRepo(repoId);
+  getUsage(userId: string, repoId: string, tierOverride?: string): UsageSummary {
+    const tierConfig = getTierConfigForRepo(repoId, tierOverride);
     const currentMonthUsage = this.getCurrentMonthCount(userId, repoId);
 
     return {
@@ -162,18 +166,22 @@ export class UsageTracker {
 
   /**
    * Get the plan/display name for a repository.
+   *
+   * @param tierOverride  Optional tier name to override env-based resolution (e.g. 'pro', 'team')
    */
-  getPlan(repoId: string): string {
-    return getTierConfigForRepo(repoId).displayName;
+  getPlan(repoId: string, tierOverride?: string): string {
+    return getTierConfigForRepo(repoId, tierOverride).displayName;
   }
 
   /**
    * Check whether an action is allowed under the current tier's quota.
    * Returns both the boolean decision and contextual information for
    * constructing error responses.
+   *
+   * @param tierOverride  Optional tier name to override env-based resolution (e.g. 'pro', 'team')
    */
-  checkQuota(userId: string, repoId: string, action: string): QuotaCheck {
-    const tierConfig = getTierConfigForRepo(repoId);
+  checkQuota(userId: string, repoId: string, action: string, tierOverride?: string): QuotaCheck {
+    const tierConfig = getTierConfigForRepo(repoId, tierOverride);
 
     // Self-hosted and non-fix actions are always allowed
     if (action !== 'fix-run' || tierConfig.monthlyFixLimit === UNLIMITED) {
@@ -195,17 +203,21 @@ export class UsageTracker {
 
   /**
    * Check whether a feature is enabled for the repo's tier.
+   *
+   * @param tierOverride  Optional tier name to override env-based resolution (e.g. 'pro', 'team')
    */
-  hasFeature(repoId: string, feature: string): boolean {
-    const tierConfig = getTierConfigForRepo(repoId);
+  hasFeature(repoId: string, feature: string, tierOverride?: string): boolean {
+    const tierConfig = getTierConfigForRepo(repoId, tierOverride);
     return tierConfig.features.includes(feature);
   }
 
   /**
    * Get the raw tier configuration for a repo.
+   *
+   * @param tierOverride  Optional tier name to override env-based resolution (e.g. 'pro', 'team')
    */
-  getTierConfig(repoId: string): TierConfig {
-    return getTierConfigForRepo(repoId);
+  getTierConfig(repoId: string, tierOverride?: string): TierConfig {
+    return getTierConfigForRepo(repoId, tierOverride);
   }
 
   /**
@@ -263,13 +275,17 @@ export class UsageTracker {
  * config. In a hosted deployment this would look up the subscription plan
  * associated with the repository owner's account.
  */
-function getTierConfigForRepo(repoId: string): TierConfig {
+function getTierConfigForRepo(repoId: string, tierOverride?: string): TierConfig {
+  // If a specific tier is provided (e.g. from users.plan lookup), use it directly
+  if (tierOverride) {
+    return getTierConfig(tierOverride);
+  }
   // Use process.env for the tier mapping.
   // In production with a hosted deployment, this would query a subscription
   // service. For self-hosted OSS, we read from the environment variable.
-  const tierOverride = process.env[`STAS_TIER_${repoId.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`];
-  if (tierOverride) {
-    return getTierConfig(tierOverride);
+  const envTierOverride = process.env[`STAS_TIER_${repoId.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`];
+  if (envTierOverride) {
+    return getTierConfig(envTierOverride);
   }
 
   // Fallback to the default tier from env

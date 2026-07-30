@@ -1,0 +1,53 @@
+- generic [ref=f4e4]:
+  - complementary [ref=f4e5]:
+    - generic [ref=f4e6]:
+      - generic [ref=f4e7]: ⚡
+      - generic [ref=f4e8]:
+        - heading "STAS" [level=1] [ref=f4e9]
+        - paragraph [ref=f4e10]: Premium Dashboard
+    - navigation [ref=f4e11]:
+      - link "◉ Dashboard" [ref=f4e12] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f4e13]: ◉
+        - text: Dashboard
+      - link "↻ Runs" [ref=f4e14] [cursor=pointer]:
+        - /url: /runs
+        - generic [ref=f4e15]: ↻
+        - text: Runs
+      - link "⊞ Repos" [ref=f4e16] [cursor=pointer]:
+        - /url: /repos
+        - generic [ref=f4e17]: ⊞
+        - text: Repos
+      - link "▦ Billing" [ref=f4e18] [cursor=pointer]:
+        - /url: /billing
+        - generic [ref=f4e19]: ▦
+        - text: Billing
+      - link "☰ Audit Log" [ref=f4e20] [cursor=pointer]:
+        - /url: /audit
+        - generic [ref=f4e21]: ☰
+        - text: Audit Log
+      - link "⚙ Settings" [ref=f4e22] [cursor=pointer]:
+        - /url: /settings
+        - generic [ref=f4e23]: ⚙
+        - text: Settings
+    - generic [ref=f4e24]:
+      - generic [ref=f4e25]:
+        - generic [ref=f4e26]: D
+        - paragraph [ref=f4e28]: Dev User
+        - button "Log out" [ref=f4e29] [cursor=pointer]
+      - generic [ref=f4e32]:
+        - button "🇬🇧EN" [ref=f4e33] [cursor=pointer]
+        - button "🇩🇪DE" [ref=f4e34] [cursor=pointer]
+        - button "🇫🇷FR" [ref=f4e35] [cursor=pointer]
+        - button "🇪🇸ES" [ref=f4e36] [cursor=pointer]
+  - generic [ref=f4e37]:
+    - banner [ref=f4e38]:
+      - button [ref=f4e39] [cursor=pointer]
+      - heading "Repos" [level=2] [ref=f4e42]
+      - button "Notifications" [ref=f4e45] [cursor=pointer]
+    - main [ref=f4e48]:
+      - generic [ref=f4e50]:
+        - generic [ref=f4e51]:
+          - heading "GitHub Repositories" [level=2] [ref=f4e52]
+          - paragraph [ref=f4e53]: Connect your GitHub account to enable STAS
+        - button "Connect GitHub" [ref=f4e54] [cursor=pointer]

@@ -1,0 +1,7 @@
+BEGIN;
+
+DROP INDEX IF EXISTS idx_billing_user_id;
+ALTER TABLE billing DROP COLUMN IF EXISTS user_id;
+ALTER TABLE accounts DROP COLUMN IF EXISTS user_id;
+
+COMMIT;

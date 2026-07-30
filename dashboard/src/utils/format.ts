@@ -91,7 +91,8 @@ export function formatDurationSeconds(seconds: number): string {
 /**
  * Format a date as a relative time string (e.g., "3m ago", "just now").
  */
-export function formatRelativeTime(date: string | Date): string {
+export function formatRelativeTime(date: string | Date | null | undefined): string {
+  if (!date) return '';
   const d = typeof date === 'string' ? new Date(date) : date;
   const now = Date.now();
   const then = d.getTime();

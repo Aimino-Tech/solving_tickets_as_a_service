@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { runs } from '@/api/client';
 import type { Run } from '@/api/types';
 import { Link, useSearchParams } from 'react-router-dom';
 import { formatDateTime, formatDurationSeconds } from '@/utils/format';
 import { SkeletonTable, SkeletonCard } from '@/components/LoadingSkeleton';
+import SlideOver from '@/components/SlideOver';
+import RunDetailContent from '@/components/RunDetailContent';
 
 const STATUS_FILTERS = ['all', 'running', 'success', 'failed', 'queued', 'cancelled'] as const;
 
@@ -12,6 +14,17 @@ export default function RunsHistory() {
   const [data, setData] = useState<{ data: Run[]; total: number; page: number; totalPages: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRun, setSelectedRun] = useState<Run | null>(null);
+
+  const openSlideOver = useCallback((run: Run) => {
+    setSelectedRun(run);
+    window.location.hash = `detail-${run.id}`;
+  }, []);
+
+  const closeSlideOver = useCallback(() => {
+    setSelectedRun(null);
+    window.location.hash = '';
+  }, []);
 
   const page = Number(searchParams.get('page')) || 1;
   const statusFilter = searchParams.get('status') || '';
@@ -122,19 +135,16 @@ export default function RunsHistory() {
               </tr>
             ) : (
               data?.data.map((run) => (
-                <tr key={run.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                <tr key={run.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer" onClick={() => openSlideOver(run)}>
                   <td className="px-4 py-3">
-                    <Link
-                      to={`/runs/${run.id}`}
-                      className="font-mono text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
-                    >
-                      {run.id.slice(0, 8)}
-                    </Link>
+                    <span className="font-mono text-xs text-brand-600 dark:text-brand-400">
+                      {String(run.id).slice(0, 8)}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
-                    <Link to={`/runs/${run.id}`} className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-brand-600">
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {run.repoOwner}/{run.repoName}#{run.issueNumber}
-                    </Link>
+                    </span>
                     <p className="truncate max-w-xs text-xs text-gray-500 dark:text-gray-400">{run.issueTitle}</p>
                   </td>
                   <td className="px-4 py-3">
@@ -177,7 +187,7 @@ export default function RunsHistory() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-brand-600">{run.id.slice(0, 8)}</span>
+                  <span className="font-mono text-xs text-brand-600">{String(run.id).slice(0, 8)}</span>
                   <StatusBadge status={run.status} />
                 </div>
                 <span className="text-xs text-gray-400 dark:text-gray-500">{formatDuration(run.durationSeconds)}</span>
@@ -219,6 +229,15 @@ export default function RunsHistory() {
           </div>
         </div>
       )}
+
+      {/* Slide-over for run details */}
+      <SlideOver
+        isOpen={selectedRun !== null}
+        onClose={closeSlideOver}
+        title={selectedRun ? `Run ${String(selectedRun.id).slice(0, 8)}` : ''}
+      >
+        {selectedRun && <RunDetailContent run={selectedRun} />}
+      </SlideOver>
     </div>
   );
 }

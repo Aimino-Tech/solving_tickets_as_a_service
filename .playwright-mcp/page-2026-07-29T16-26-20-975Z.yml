@@ -1,0 +1,49 @@
+- generic [ref=f5e4]:
+  - complementary [ref=f5e5]:
+    - generic [ref=f5e6]:
+      - generic [ref=f5e7]: ⚡
+      - generic [ref=f5e8]:
+        - heading "STAS" [level=1] [ref=f5e9]
+        - paragraph [ref=f5e10]: Premium Dashboard
+    - navigation [ref=f5e11]:
+      - link "◉ Dashboard" [ref=f5e12] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f5e13]: ◉
+        - text: Dashboard
+      - link "↻ Runs" [ref=f5e14] [cursor=pointer]:
+        - /url: /runs
+        - generic [ref=f5e15]: ↻
+        - text: Runs
+      - link "⊞ Repos" [ref=f5e16] [cursor=pointer]:
+        - /url: /repos
+        - generic [ref=f5e17]: ⊞
+        - text: Repos
+      - link "▦ Billing" [ref=f5e18] [cursor=pointer]:
+        - /url: /billing
+        - generic [ref=f5e19]: ▦
+        - text: Billing
+      - link "☰ Audit Log" [ref=f5e20] [cursor=pointer]:
+        - /url: /audit
+        - generic [ref=f5e21]: ☰
+        - text: Audit Log
+      - link "⚙ Settings" [ref=f5e22] [cursor=pointer]:
+        - /url: /settings
+        - generic [ref=f5e23]: ⚙
+        - text: Settings
+    - generic [ref=f5e24]:
+      - generic [ref=f5e25]:
+        - generic [ref=f5e26]: D
+        - paragraph [ref=f5e28]: Dev User
+        - button "Log out" [ref=f5e29] [cursor=pointer]
+      - generic [ref=f5e32]:
+        - button "🇬🇧EN" [ref=f5e33] [cursor=pointer]
+        - button "🇩🇪DE" [ref=f5e34] [cursor=pointer]
+        - button "🇫🇷FR" [ref=f5e35] [cursor=pointer]
+        - button "🇪🇸ES" [ref=f5e36] [cursor=pointer]
+  - generic [ref=f5e37]:
+    - banner [ref=f5e38]:
+      - button [ref=f5e39] [cursor=pointer]
+      - heading "Audit Log" [level=2] [ref=f5e42]
+      - button "Notifications" [ref=f5e45] [cursor=pointer]
+    - main [ref=f5e48]:
+      - paragraph [ref=f5e51]: 0 total entries

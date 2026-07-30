@@ -1,0 +1,81 @@
+- generic [ref=f6e4]:
+  - complementary [ref=f6e5]:
+    - generic [ref=f6e6]:
+      - generic [ref=f6e7]: ⚡
+      - generic [ref=f6e8]:
+        - heading "STAS" [level=1] [ref=f6e9]
+        - paragraph [ref=f6e10]: Premium Dashboard
+    - navigation [ref=f6e11]:
+      - link "◉ Dashboard" [ref=f6e12] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f6e13]: ◉
+        - text: Dashboard
+      - link "↻ Runs" [ref=f6e14] [cursor=pointer]:
+        - /url: /runs
+        - generic [ref=f6e15]: ↻
+        - text: Runs
+      - link "⊞ Repos" [ref=f6e16] [cursor=pointer]:
+        - /url: /repos
+        - generic [ref=f6e17]: ⊞
+        - text: Repos
+      - link "▦ Billing" [ref=f6e18] [cursor=pointer]:
+        - /url: /billing
+        - generic [ref=f6e19]: ▦
+        - text: Billing
+      - link "☰ Audit Log" [ref=f6e20] [cursor=pointer]:
+        - /url: /audit
+        - generic [ref=f6e21]: ☰
+        - text: Audit Log
+      - link "⚙ Settings" [ref=f6e22] [cursor=pointer]:
+        - /url: /settings
+        - generic [ref=f6e23]: ⚙
+        - text: Settings
+    - generic [ref=f6e24]:
+      - generic [ref=f6e25]:
+        - generic [ref=f6e26]: D
+        - paragraph [ref=f6e28]: Dev User
+        - button "Log out" [ref=f6e29] [cursor=pointer]
+      - generic [ref=f6e32]:
+        - button "🇬🇧EN" [ref=f6e33] [cursor=pointer]
+        - button "🇩🇪DE" [ref=f6e34] [cursor=pointer]
+        - button "🇫🇷FR" [ref=f6e35] [cursor=pointer]
+        - button "🇪🇸ES" [ref=f6e36] [cursor=pointer]
+  - generic [ref=f6e37]:
+    - banner [ref=f6e38]:
+      - button [ref=f6e39] [cursor=pointer]
+      - heading "Settings" [level=2] [ref=f6e42]
+      - button "Notifications" [ref=f6e45] [cursor=pointer]
+    - main [ref=f6e48]:
+      - generic [ref=f6e49]:
+        - generic [ref=f6e50]:
+          - heading "Settings" [level=1] [ref=f6e51]
+          - paragraph [ref=f6e52]: Configure bot behavior, notifications, environment, and integrations
+        - generic [ref=f6e53]:
+          - button "🤖 Bot" [ref=f6e54] [cursor=pointer]:
+            - generic [ref=f6e55]: 🤖
+            - text: Bot
+          - button "🔔 Notifications" [ref=f6e56] [cursor=pointer]:
+            - generic [ref=f6e57]: 🔔
+            - text: Notifications
+          - button "🔐 Environment" [ref=f6e58] [cursor=pointer]:
+            - generic [ref=f6e59]: 🔐
+            - text: Environment
+          - button "🚦 Rate Limits" [ref=f6e60] [cursor=pointer]:
+            - generic [ref=f6e61]: 🚦
+            - text: Rate Limits
+          - button "🔑 Tokens" [ref=f6e62] [cursor=pointer]:
+            - generic [ref=f6e63]: 🔑
+            - text: Tokens
+          - button "🔌 Integrations" [ref=f6e64] [cursor=pointer]:
+            - generic [ref=f6e65]: 🔌
+            - text: Integrations
+          - button "🖥️ Infrastructure" [ref=f6e66] [cursor=pointer]:
+            - generic [ref=f6e67]: 🖥️
+            - text: Infrastructure
+          - button "🔒 Data & Privacy" [ref=f6e68] [cursor=pointer]:
+            - generic [ref=f6e69]: 🔒
+            - text: Data & Privacy
+        - generic [ref=f6e70]:
+          - heading "Bot Configuration" [level=2] [ref=f6e71]
+          - paragraph [ref=f6e72]: Configure how the STAS bot behaves on your repositories.
+          - paragraph [ref=f6e73]: Failed to load bot configuration.

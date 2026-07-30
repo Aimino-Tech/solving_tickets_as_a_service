@@ -11,8 +11,7 @@ import RunDetail from '@/pages/RunDetail';
 import Repos from '@/pages/Repos';
 import Credits from '@/pages/Credits';
 import Settings from '@/pages/Settings';
-import Configuration from '@/pages/Configuration';
-import Analytics from '@/pages/Analytics';
+import Billing from '@/pages/Billing';
 import AuditLog from '@/pages/AuditLog';
 import Security from '@/pages/Security';
 import Privacy from '@/pages/Privacy';
@@ -20,12 +19,9 @@ import Status from '@/pages/Status';
 import DPAPage from '@/pages/DPAPage';
 import Benchmarks from '@/pages/Benchmarks';
 import EnterprisePage from '@/pages/EnterprisePage';
-import KpiDashboard from '@/pages/KpiDashboard';
 import PricingPage from '@/pages/PricingPage';
 import VsPage from '@/pages/VsPage';
-import AdminRuns from '@/pages/AdminRuns';
 import LiveView from '@/pages/LiveView';
-import Monitoring from '@/pages/Monitoring';
 import NotFound from '@/pages/NotFound';
 import Error500 from '@/pages/Error500';
 import WizardContainer from '@/pages/onboarding/WizardContainer';
@@ -80,14 +76,10 @@ export default function App() {
           <Route path="runs/:id" element={<RunDetail />} />
           <Route path="repos" element={<Repos />} />
           <Route path="credits" element={<Credits />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="configuration" element={<Configuration />} />
-          <Route path="analytics" element={<Analytics />} />
+          <Route path="billing" element={<Billing />} />
           <Route path="audit" element={<AuditLog />} />
-          <Route path="admin/runs" element={<AdminRuns />} />
           <Route path="liveview" element={<LiveView />} />
-          <Route path="kpi" element={<KpiDashboard />} />
-          <Route path="monitoring" element={<Monitoring />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
         <Route path="/500" element={<Error500 />} />
         <Route path="*" element={<NotFound />} />

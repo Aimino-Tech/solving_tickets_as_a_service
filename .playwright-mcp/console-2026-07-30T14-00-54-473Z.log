@@ -1,0 +1,10 @@
+[     116ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=d4aafa4d:20102
+[     154ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/auth/me:0
+[     154ms] [WARNING] Failed to fetch user session, clearing token: Error: Internal Server Error
+    at request (http://localhost:5173/src/api/client.ts?t=1785419712835:81:11) @ http://localhost:5173/src/context/AuthContext.tsx?t=1785419712835:42
+[     155ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/auth/me:0
+[     155ms] [WARNING] Failed to fetch user session, clearing token: Error: Internal Server Error
+    at request (http://localhost:5173/src/api/client.ts?t=1785419712835:81:11) @ http://localhost:5173/src/context/AuthContext.tsx?t=1785419712835:42
+[     273ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/login:0
+[   15527ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/auth/login:0
+[   41768ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/auth/register:0

@@ -59,7 +59,7 @@ class AuditRepository {
    */
   async insert(entry: AuditLogEntry): Promise<AuditLogRow> {
     const result = await queryWithRetry<AuditLogRow>(
-      `INSERT INTO audit_logs (actor_type, actor_id, action, resource_type, resource_id, details, ip_address, user_agent, correlation_id)
+      `INSERT INTO audit_logs (actor_type, actor_id, action, resource_type, resource_id, details_jsonb, ip_address, user_agent, correlation_id)
        VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9)
        RETURNING *`,
       [

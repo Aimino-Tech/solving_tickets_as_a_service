@@ -4,6 +4,7 @@ import { requireAuth } from '../auth/middleware.js';
 import { notificationPreferencesRepository } from '../db/repositories/NotificationPreferencesRepository.js';
 import { notificationHistoryRepository } from '../db/repositories/NotificationHistoryRepository.js';
 import type { NewNotificationPreference } from '../db/types/notifications.js';
+import { auditMiddleware } from '../audit/middleware.js';
 
 const log = rootLogger.child({ module: 'notifications-api' });
 
@@ -23,7 +24,7 @@ router.get('/preferences', async (req: Request, res: Response) => {
   }
 });
 
-router.put('/preferences', async (req: Request, res: Response) => {
+router.put('/preferences', auditMiddleware({ action: 'settings.notifications.update', actorType: 'user' }), async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: 'Unauthorized' }); return; }

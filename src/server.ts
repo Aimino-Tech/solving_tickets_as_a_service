@@ -58,7 +58,7 @@ import { initAnalytics } from './analytics/tracker.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { badgeRouter } from './routes/badge.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
-import { dashboardRouter } from './routes/dashboard.js';
+import { dashboardRouter, configRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
 import healthRouter from './routes/health.js';
@@ -716,6 +716,9 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Dashboard API ──────────────────────────────────────
   app.use('/api/v1/me', dashboardRouter);
+
+  // ── Config API ──────────────────────────────────────────
+  app.use('/api/v1/config', configRouter);
 
   // ── Stats & Audit API ──────────────────────────────────
   const { statsRouter, auditRouter } = await import('./routes/statsAndAudit.js');

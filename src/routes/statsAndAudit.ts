@@ -52,20 +52,20 @@ statsRouter.get('/', async (req: Request, res: Response) => {
       `SELECT
         COUNT(*) as total,
         COUNT(*) FILTER (WHERE status = 'success') as passed,
-        AVG(EXTRACT(EPOCH FROM (COALESCE(updated_at, created_at) - created_at))) as avg_duration,
-        COUNT(DISTINCT repo_name) as active_repos
-      FROM runs WHERE account_id = $1`,
+        AVG(runs.duration_ms::float / 1000) as avg_duration,
+        COUNT(DISTINCT runs.repo_id) as active_repos
+      FROM runs WHERE runs.account_id = $1`,
       [accountId],
     );
     const row = runsResult.rows[0];
 
     const runsByDayResult = await queryWithRetry<{ date: string; count: number; passed: number }>(
       `SELECT
-        DATE(created_at) as date,
+        DATE(runs.created_at) as date,
         COUNT(*) as count,
-        COUNT(*) FILTER (WHERE status = 'success') as passed
-      FROM runs WHERE account_id = $1 AND created_at >= NOW() - INTERVAL '30 days'
-      GROUP BY DATE(created_at) ORDER BY date`,
+        COUNT(*) FILTER (WHERE runs.status = 'success') as passed
+      FROM runs WHERE runs.account_id = $1 AND runs.created_at >= NOW() - INTERVAL '30 days'
+      GROUP BY DATE(runs.created_at) ORDER BY date`,
       [accountId],
     );
 

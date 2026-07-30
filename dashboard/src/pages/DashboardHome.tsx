@@ -1,30 +1,69 @@
 import { useState, useEffect } from 'react';
-import type { Run } from '@/api/types';
-import { credits, runs, type CreditBalance } from '@/api/client';
+import type { Run, DashboardStats } from '@/api/types';
+import { billing, runs, stats, type BillingPlan } from '@/api/client';
 import { Link } from 'react-router-dom';
-import { Activity, Wallet, CheckCircle, Clock } from 'lucide-react';
+import { Activity, CheckCircle, Clock, Sparkles } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/i18n/I18nProvider';
 import { SkeletonCardGrid } from '@/components/LoadingSkeleton';
 
+const PLAN_LABELS: Record<string, string> = {
+  free: 'Free',
+  solo: 'Solo',
+  team: 'Team',
+  enterprise: 'Enterprise',
+  selfHosted: 'Self-Hosted',
+};
+
+const PLAN_LIMITS: Record<string, number> = {
+  free: 10,
+  solo: 500,
+  team: -1, // unlimited
+  enterprise: -1,
+  selfHosted: -1,
+};
+
 export default function DashboardHome() {
   const { t } = useI18n();
-  const [balance, setBalance] = useState<CreditBalance | null>(null);
+  const { user } = useAuth();
+  const [plan, setPlan] = useState<BillingPlan | null>(null);
   const [recentRuns, setRecentRuns] = useState<Run[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [portalError, setPortalError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const userPlan = user?.plan || plan?.id || 'free';
+  const planLabel = PLAN_LABELS[userPlan] || userPlan;
+  const monthlyLimit = PLAN_LIMITS[userPlan] ?? 10;
+  const isUnlimited = monthlyLimit === -1;
+
+  async function handleOpenPortal() {
+    setPortalError(null);
+    try {
+      const { url } = await billing.portal(window.location.href);
+      window.location.href = url;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to open billing portal';
+      if (message.toLowerCase().includes('billing record')) {
+        setPortalError('No subscription found. Subscribe first.');
+      } else {
+        setPortalError(message);
+      }
+    }
+  }
 
   useEffect(() => {
     const ac = new AbortController();
     Promise.all([
-      credits.balance({ signal: ac.signal }).catch(() => null),
+      billing.plan().catch(() => null),
       runs.list({ perPage: 5 }, { signal: ac.signal }).catch(() => ({ data: [] as import('@/api/types').Run[], total: 0, page: 1, perPage: 5, totalPages: 0 })),
+      stats.get().catch(() => null),
     ])
-      .then(([bal, runsData]) => {
-        setBalance(bal);
+      .then(([planData, runsData, statsData]) => {
+        setPlan(planData);
         setRecentRuns(runsData.data);
-        if (!bal && runsData.data.length === 0) {
-          setError('Failed to load dashboard data');
-        }
+        setDashboardStats(statsData);
       })
       .catch((err) => {
         if (err.name !== 'AbortError') setError(err.message);
@@ -54,11 +93,12 @@ export default function DashboardHome() {
 
   const cards = [
     {
-      label: 'Credit Balance',
-      value: balance ? `${balance.balance.toLocaleString('en-US')} credits` : '\u2014',
+      label: 'Current Plan',
+      value: planLabel,
+      sub: isUnlimited ? 'Unlimited fixes' : `${monthlyLimit} fixes/mo`,
       color: 'text-brand-600 dark:text-brand-400',
       bg: 'bg-brand-50 dark:bg-brand-900/50',
-      Icon: Wallet,
+      Icon: Sparkles,
     },
     {
       label: 'Total Fix Runs',
@@ -69,7 +109,7 @@ export default function DashboardHome() {
     },
     {
       label: 'Active Repos',
-      value: '\u2014',
+      value: dashboardStats ? String(dashboardStats.activeRepos) : '\u2014',
       color: 'text-amber-600 dark:text-amber-400',
       bg: 'bg-amber-50 dark:bg-amber-900/50',
       Icon: Activity,
@@ -86,26 +126,51 @@ export default function DashboardHome() {
             </div>
             <p className="mt-3 text-sm font-medium text-gray-500 dark:text-gray-400">{card.label}</p>
             <p className={`mt-1 text-3xl font-bold ${card.color}`}>{card.value}</p>
+            {card.sub && (
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{card.sub}</p>
+            )}
           </div>
         ))}
       </div>
 
-      {balance && (
+      {userPlan !== 'free' && userPlan !== 'selfHosted' && (
         <div className="card">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Credit Overview</h3>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Plan Overview</h3>
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Available Balance</p>
-              <p className="text-2xl font-bold text-brand-600 dark:text-brand-400">{balance.balance.toLocaleString('en-US')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Plan</p>
+              <p className="text-2xl font-bold text-brand-600 dark:text-brand-400">{planLabel}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Lifetime Credits</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{balance.lifetimeCredits.toLocaleString('en-US')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Fixes</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {isUnlimited ? 'Unlimited' : monthlyLimit.toLocaleString()}
+              </p>
             </div>
           </div>
           <div className="mt-4 flex gap-3">
-            <Link to="/credits" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
-              Buy Credits
+            <button
+              onClick={handleOpenPortal}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors"
+            >
+              Manage Subscription
+            </button>
+          </div>
+          {portalError && (
+            <p className="mt-2 text-sm text-red-600 dark:text-red-400">{portalError}</p>
+          )}
+        </div>
+      )}
+
+      {userPlan === 'free' && (
+        <div className="card">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Upgrade to Solo</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Get 500 fixes/mo, priority support, and more for just $49/mo.
+          </p>
+          <div className="mt-4 flex gap-3">
+            <Link to="/pricing" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
+              View Plans
             </Link>
           </div>
         </div>
@@ -158,7 +223,7 @@ export default function DashboardHome() {
           </div>
         ) : (
           <p className="mt-4 text-sm text-gray-400 dark:text-gray-500">
-            No fixes yet \u2014 label a GitHub issue with <code className="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-gray-800">stas:fix</code> to get started.
+            No fixes yet &mdash; label a GitHub issue with <code className="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-gray-800">stas:fix</code> to get started.
           </p>
         )}
       </div>
@@ -175,15 +240,15 @@ export default function DashboardHome() {
             Manage Repos &rarr;
           </span>
         </Link>
-        <Link to="/credits" className="card group hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-md transition-all">
+        <Link to="/settings" className="card group hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-md transition-all">
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-brand-600 dark:group-hover:text-brand-400">
-            Credits & Billing
+            Subscription & Billing
           </h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            View your credit balance, transaction history, and purchase more credits.
+            Manage your subscription plan, billing history, and usage.
           </p>
           <span className="mt-3 inline-block text-sm font-medium text-brand-600 dark:text-brand-400">
-            View Credits &rarr;
+            Manage Subscription &rarr;
           </span>
         </Link>
       </div>

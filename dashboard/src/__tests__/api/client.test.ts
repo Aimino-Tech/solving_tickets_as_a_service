@@ -147,6 +147,35 @@ describe('API client', () => {
       await expect(client.request('/v1/error')).rejects.toThrow('Service Unavailable');
     });
 
+    it('regression: body.error as object does NOT produce [object Object]', async () => {
+      (window.fetch as any).mockResolvedValue({
+        ok: false, status: 400,
+        json: () => Promise.resolve({ error: { message: 'Validation failed', code: 'INVALID' } }),
+      });
+
+      const err = await client.request('/v1/test').catch((e: Error) => e);
+      expect(err.message).toBe('Request failed: 400');
+      expect(err.message).not.toContain('[object Object]');
+    });
+
+    it('regression: body.error as null falls back to status code', async () => {
+      (window.fetch as any).mockResolvedValue({
+        ok: false, status: 422, statusText: 'Unprocessable',
+        json: () => Promise.resolve({ error: null }),
+      });
+
+      await expect(client.request('/v1/test')).rejects.toThrow('Request failed: 422');
+    });
+
+    it('regression: body.error as number falls back to status code', async () => {
+      (window.fetch as any).mockResolvedValue({
+        ok: false, status: 500, statusText: 'Server Error',
+        json: () => Promise.resolve({ error: 12345 }),
+      });
+
+      await expect(client.request('/v1/test')).rejects.toThrow('Request failed: 500');
+    });
+
     it('merges custom headers from options', async () => {
       localStorage.setItem('stas_token', 'tok');
       (window.fetch as any).mockResolvedValue({

@@ -1,0 +1,54 @@
+- generic [ref=f8e4]:
+  - complementary [ref=f8e5]:
+    - generic [ref=f8e6]:
+      - generic [ref=f8e7]: ⚡
+      - generic [ref=f8e8]:
+        - heading "STAS" [level=1] [ref=f8e9]
+        - paragraph [ref=f8e10]: Premium Dashboard
+    - navigation [ref=f8e11]:
+      - link "◉ Dashboard" [ref=f8e12] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f8e13]: ◉
+        - text: Dashboard
+      - link "↻ Runs" [ref=f8e14] [cursor=pointer]:
+        - /url: /runs
+        - generic [ref=f8e15]: ↻
+        - text: Runs
+      - link "⊞ Repos" [ref=f8e16] [cursor=pointer]:
+        - /url: /repos
+        - generic [ref=f8e17]: ⊞
+        - text: Repos
+      - link "▦ Billing" [ref=f8e18] [cursor=pointer]:
+        - /url: /billing
+        - generic [ref=f8e19]: ▦
+        - text: Billing
+      - link "☰ Audit Log" [ref=f8e20] [cursor=pointer]:
+        - /url: /audit
+        - generic [ref=f8e21]: ☰
+        - text: Audit Log
+      - link "⚙ Settings" [ref=f8e22] [cursor=pointer]:
+        - /url: /settings
+        - generic [ref=f8e23]: ⚙
+        - text: Settings
+    - generic [ref=f8e24]:
+      - generic [ref=f8e25]:
+        - generic [ref=f8e26]: D
+        - paragraph [ref=f8e28]: Dev User
+        - button "Log out" [ref=f8e29] [cursor=pointer]
+      - generic [ref=f8e32]:
+        - button "🇬🇧EN" [ref=f8e33] [cursor=pointer]
+        - button "🇩🇪DE" [ref=f8e34] [cursor=pointer]
+        - button "🇫🇷FR" [ref=f8e35] [cursor=pointer]
+        - button "🇪🇸ES" [ref=f8e36] [cursor=pointer]
+  - generic [ref=f8e37]:
+    - banner [ref=f8e38]:
+      - button [ref=f8e39] [cursor=pointer]
+      - heading "Billing" [level=2] [ref=f8e42]
+      - button "Notifications" [ref=f8e45] [cursor=pointer]
+    - main [ref=f8e48]:
+      - generic [ref=f8e49]:
+        - generic [ref=f8e50]:
+          - heading "Billing" [level=1] [ref=f8e51]
+          - paragraph [ref=f8e52]: Usage costs, budget tracking, and spending overview
+        - heading "LiteLLM Budget" [level=2] [ref=f8e71]
+        - heading "Cost Over Time" [level=2] [ref=f8e81]

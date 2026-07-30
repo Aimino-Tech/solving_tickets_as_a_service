@@ -1,388 +1,416 @@
 import { useState, useEffect, useRef } from 'react';
-import { request, settings } from '@/api/client';
+import { request, configApi } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import { fetchPreferences, upsertPreference, type NotificationPreference } from '@/services/notificationService';
+import {
+  Bell,
+  Mail,
+  MessageSquare,
+  Gamepad,
+  Link as LinkIcon,
+  Shield,
+  GitPullRequest,
+  GitBranch,
+  Key,
+  Pencil,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-const CHANNELS: { id: NotificationPreference['channel']; label: string; icon: string }[] = [
-  { id: 'in_app', label: 'In-App', icon: '🔔' },
-  { id: 'email', label: 'Email', icon: '📧' },
-  { id: 'slack', label: 'Slack', icon: '💬' },
-  { id: 'discord', label: 'Discord', icon: '🎮' },
-  { id: 'webhook', label: 'Webhook', icon: '🔗' },
+const CHANNELS: { id: NotificationPreference['channel']; label: string; icon: LucideIcon }[] = [
+  { id: 'in_app', label: 'In-App', icon: Bell },
+  { id: 'email', label: 'Email', icon: Mail },
+  { id: 'slack', label: 'Slack', icon: MessageSquare },
+  { id: 'discord', label: 'Discord', icon: Gamepad },
+  { id: 'webhook', label: 'Webhook', icon: LinkIcon },
 ];
 
 const EVENT_TYPES = [
-  'fix_started',
-  'pr_created',
-  'fix_completed',
-  'review_needed',
-  'rework_required',
-  'merge_completed',
-  'pipeline_failed',
-  'low_credits',
-  'payment_failed',
+  'fix_started', 'pr_created', 'fix_completed', 'review_needed',
+  'rework_required', 'merge_completed', 'pipeline_failed', 'low_credits', 'payment_failed',
 ];
 
+const API_KEYS = [
+  { id: 'linear_key', label: 'Linear API Key', key: 'LINEAR_API_KEY', icon: GitBranch, required: true, placeholder: 'lin_api_...', docUrl: 'https://linear.app/settings/api' },
+  { id: 'bitbucket_key', label: 'Bitbucket App Password', key: 'BITBUCKET_APP_PASSWORD', icon: LinkIcon, required: false, placeholder: 'Coming soon', docUrl: '', comingSoon: true },
+  { id: 'jira_token', label: 'Jira API Token', key: 'JIRA_API_TOKEN', icon: LinkIcon, required: false, placeholder: 'Coming soon', docUrl: '', comingSoon: true },
+];
+
+const TABS = [
+  { id: 'keys', label: 'API Keys', icon: Key },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'privacy', label: 'Data & Privacy', icon: Shield },
+] as const;
+
+type TabId = (typeof TABS)[number]['id'];
+
 export default function Settings() {
-  const [config, setConfig] = useState<{
-    label: string;
-    model: string;
-    maxConcurrent: number;
-    sandboxPoolSize: number;
-    auditLogEnabled: boolean;
-  } | null>(null);
-  const [form, setForm] = useState({
-    label: 'stas:fix',
-    model: '',
-    maxConcurrent: 3,
-    sandboxPoolSize: 10,
-    auditLogEnabled: true,
-  });
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<NotificationPreference[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [dataPrivacyLoading, setDataPrivacyLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>('keys');
+
+  const [sysConfig, setSysConfig] = useState<any>({ env: {}, rateLimits: [], tokens: [], integrations: [], infrastructure: {}, symphonies: [], subscriptions: [], warnings: [] });
+  const [envValues, setEnvValues] = useState<Record<string, string>>({});
+  const [sysLoading, setSysLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [deletionStatus, setDeletionStatus] = useState<{
-    activeRequest: {
-      id: number;
-      status: string;
-      scheduled_deletion_at: string;
-    } | null;
-    retentionDays: number;
-  } | null>(null);
-  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreference[]>([]);
-  const [notificationChannels, setNotificationChannels] = useState<Record<string, Record<string, boolean>>>({});
-  const [channelTargets, setChannelTargets] = useState<Record<string, string>>({});
-  const [savingNotif, setSavingNotif] = useState(false);
-  const successTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
-    return () => {
-      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
-    };
-  }, []);
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    config: true,
-    notifications: false,
-    privacy: false,
-    danger: false,
-  });
-  useAuth();
+    const ac = new AbortController();
+    if (activeTab === 'notifications') loadNotifications();
+    if (['env', 'rate-limits', 'tokens', 'integrations', 'infrastructure', 'keys'].includes(activeTab)) loadSysConfig(ac.signal);
+    return () => ac.abort();
+  }, [activeTab]);
 
-  function toggleSection(key: string) {
-    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  async function loadNotifications() {
+    setNotificationsLoading(true);
+    try { const prefs = await fetchPreferences(); setNotifications(prefs); }
+    catch (err) { setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to load notification preferences' }); }
+    finally { setNotificationsLoading(false); }
   }
 
-  useEffect(() => {
-    settings
-      .get()
-      .then((data: any) => {
-        setConfig(data);
-        setForm(data);
-      })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+  async function handleToggleNotif(channel: NotificationPreference['channel'], eventType: string, enabled: boolean) {
+    setMessage(null);
+    try {
+      await upsertPreference(channel, eventType, enabled, undefined);
+      setNotifications((prev) => prev.map((n) => (n.channel === channel && n.eventType === eventType ? { ...n, enabled } : n)));
+    } catch (err) { setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to update preference' }); }
+  }
 
-    fetchDeletionStatus();
-    loadNotificationPrefs();
-  }, []);
+  async function handleRequestDataDeletion() {
+    if (!window.confirm('Are you sure you want to request data deletion? This action will be reviewed by support.')) return;
+    setDataPrivacyLoading(true);
+    try { await request('/v1/data/deletion-request', { method: 'POST' }); setMessage({ type: 'success', text: 'Deletion request submitted.' }); }
+    catch (err) { setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to submit deletion request' }); }
+    finally { setDataPrivacyLoading(false); }
+  }
 
-  async function loadNotificationPrefs() {
-    const prefs = await fetchPreferences();
-    setNotificationPrefs(prefs);
-    const channels: Record<string, Record<string, boolean>> = {};
-    const targets: Record<string, string> = {};
-    for (const p of prefs) {
-      if (!channels[p.channel]) channels[p.channel] = {};
-      channels[p.channel][p.eventType] = p.enabled;
-      if (p.channelTarget) targets[p.channel] = p.channelTarget;
+  async function loadSysConfig(signal?: AbortSignal) {
+    setSysLoading(true);
+    try {
+      const data = await configApi.get({ signal });
+      setSysConfig(data);
+      setEnvValues(data.env || {});
+      const initialKeys: Record<string, string> = {};
+      API_KEYS.forEach((k) => { if (data.env?.[k.key]) initialKeys[k.id] = data.env[k.key]; });
+      setApiKeyValues((prev) => ({ ...prev, ...initialKeys }));
     }
-    setNotificationChannels(channels);
-    setChannelTargets(targets);
+    catch (err) { if ((err as Error).name !== 'AbortError') setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to load configuration' }); }
+    finally { setSysLoading(false); }
   }
 
-  async function handleTogglePref(channel: NotificationPreference['channel'], eventType: string, enabled: boolean) {
-    setSavingNotif(true);
-    await upsertPreference(channel, eventType, enabled, channelTargets[channel] || undefined);
-    await loadNotificationPrefs();
-    setSavingNotif(false);
+  async function handleSaveEnv() {
+    setSaving(true); setMessage(null);
+    try { await configApi.updateEnv(envValues); setMessage({ type: 'success', text: 'Environment variables updated.' }); setTimeout(() => setMessage(null), 3000); }
+    catch (err) { setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save' }); }
+    finally { setSaving(false); }
   }
 
-  async function handleChannelTargetChange(channel: string, target: string) {
-    setChannelTargets((prev) => ({ ...prev, [channel]: target }));
+  async function handleSaveRateLimits() {
+    setSaving(true); setMessage(null);
+    try { await configApi.updateRateLimits(sysConfig.rateLimits); setMessage({ type: 'success', text: 'Rate limits updated.' }); setTimeout(() => setMessage(null), 3000); }
+    catch (err) { setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save' }); }
+    finally { setSaving(false); }
   }
 
-  async function handleChannelTargetBlur(channel: NotificationPreference['channel']) {
-    const target = channelTargets[channel];
-    if (target) {
-      setSavingNotif(true);
-      await Promise.all(
-        EVENT_TYPES.map(async (eventType) => {
-          const current = notificationChannels[channel]?.[eventType];
-          if (current !== undefined) {
-            return upsertPreference(channel, eventType, current, target);
+  async function handleRegenerateToken(tokenId: string) {
+    if (!window.confirm('Regenerate this token? The old token will stop working immediately.')) return;
+    try { await configApi.regenerateToken(tokenId); setMessage({ type: 'success', text: 'Token regenerated.' }); loadSysConfig(); }
+    catch (err) { setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to regenerate token' }); }
+  }
+
+  async function handleRevokeToken(tokenId: string) {
+    if (!window.confirm('Revoke this token? This cannot be undone.')) return;
+    try { await configApi.revokeToken(tokenId); setMessage({ type: 'success', text: 'Token revoked.' }); loadSysConfig(); }
+    catch (err) { setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to revoke token' }); }
+  }
+
+  async function handleToggleIntegration(id: string) {
+    try { await configApi.toggleIntegration(id, !sysConfig.integrations.find((i: any) => i.id === id)?.connected); setMessage({ type: 'success', text: 'Integration updated.' }); loadSysConfig(); }
+    catch (err) { setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to update integration' }); }
+  }
+
+  async function handleTestInfra(provider: string) {
+    try { const result = await configApi.testInfrastructure(provider); setMessage({ type: 'success', text: `${provider}: ${result.status}` }); loadSysConfig(); }
+    catch (err) { setMessage({ type: 'error', text: err instanceof Error ? err.message : `Failed to connect to ${provider}` }); }
+  }
+
+  const [apiKeyValues, setApiKeyValues] = useState<Record<string, string>>({});
+  const [apiKeySaving, setApiKeySaving] = useState<Record<string, boolean>>({});
+  const [editMode, setEditMode] = useState<Record<string, boolean>>({});
+  const [verifying, setVerifying] = useState<Record<string, boolean>>({});
+
+  async function handleSaveApiKey(keyId: string) {
+    setApiKeySaving((prev) => ({ ...prev, [keyId]: true }));
+    setMessage(null);
+    try {
+      const apiKey = API_KEYS.find((k) => k.id === keyId)!;
+      await configApi.updateEnv({ [apiKey.key]: apiKeyValues[keyId] || '' });
+      setSysConfig((prev: any) => ({
+        ...prev,
+        env: { ...prev.env, [apiKey.key]: apiKeyValues[keyId] || '' },
+      }));
+      setEditMode((prev) => ({ ...prev, [keyId]: false }));
+      setMessage({ type: 'success', text: 'API key saved.' });
+      setTimeout(() => setMessage(null), 3000);
+      if (apiKey.id === 'linear_key' && apiKeyValues[keyId]) {
+        setVerifying((prev) => ({ ...prev, [keyId]: true }));
+        try {
+          const result = await configApi.verifyService('linear', apiKeyValues[keyId]);
+          if (result.connected) {
+            setSysConfig((prev: any) => ({
+              ...prev,
+              integrations: prev.integrations?.map((i: any) =>
+                i.id === 'linear' ? { ...i, connected: true } : i
+              ) || prev.integrations,
+            }));
+            setMessage({ type: 'success', text: 'Connected to Linear.' });
+          } else {
+            setMessage({ type: 'error', text: result.error || 'Failed to verify Linear API key' });
           }
-        }),
-      );
-      await loadNotificationPrefs();
-      setSavingNotif(false);
-    }
-  }
-
-  async function fetchDeletionStatus() {
-    try {
-      const data = await request<{ activeRequest: { requestedAt: string; status: string } | null; retentionDays: number }>('/v1/me/data/deletion-status');
-      setDeletionStatus(data);
-    } catch {
-      // Non-critical background fetch
-    }
-  }
-
-  async function handleRequestDeletion() {
-    if (!window.confirm('Are you sure you want to request data deletion? This will schedule all your data for permanent removal.')) return;
-    try {
-      await request('/v1/me/data/deletion-request', { method: 'POST' });
-      setError(null);
-      await fetchDeletionStatus();
+        } catch {
+          setMessage({ type: 'error', text: 'Could not verify Linear API key — connection test failed' });
+        } finally {
+          setVerifying((prev) => ({ ...prev, [keyId]: false }));
+        }
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to request deletion');
-    }
-  }
-
-  async function handleCancelDeletion() {
-    try {
-      await request('/v1/me/data/deletion-request/cancel', { method: 'POST' });
-      setError(null);
-      await fetchDeletionStatus();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel deletion request');
-    }
-  }
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      await settings.update(form);
-      setSuccess('Settings saved successfully.');
-      successTimeoutRef.current = setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save settings');
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save API key' });
     } finally {
-      setSaving(false);
+      setApiKeySaving((prev) => ({ ...prev, [keyId]: false }));
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="card animate-pulse space-y-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i}>
-            <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="mt-1 h-10 w-full rounded bg-gray-200 dark:bg-gray-700" />
-          </div>
-        ))}
-      </div>
-    );
   }
 
   return (
-    <div className="max-w-2xl space-y-4 lg:space-y-6">
-      {/* Bot Configuration */}
-      <div className="card">
-        <button
-          onClick={() => toggleSection('config')}
-          className="flex w-full items-center justify-between lg:cursor-default"
-        >
-          <div>
-            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Bot Configuration</h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 hidden lg:block">
-              Configure how the STAS bot behaves for your repositories.
-            </p>
-          </div>
-          <svg
-            className={`h-5 w-5 text-gray-400 transition-transform lg:hidden ${openSections.config ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
-        {openSections.config && (
-          <>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 lg:hidden">
-              Configure how the STAS bot behaves for your repositories.
-            </p>
-            <form onSubmit={handleSave} className="mt-6 space-y-5">
-              {/* Trigger label */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Trigger Label</label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Issue label that triggers the bot.</p>
-                <input
-                  type="text"
-                  value={form.label}
-                  onChange={(e) => setForm({ ...form, label: e.target.value })}
-                  className="input-field mt-1 max-w-xs min-h-[44px]"
-                />
-              </div>
-
-              {/* Model */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Model</label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">AI model used for fix runs.</p>
-                <input
-                  type="text"
-                  value={form.model}
-                  onChange={(e) => setForm({ ...form, model: e.target.value })}
-                  className="input-field mt-1 w-full max-w-md min-h-[44px]"
-                  placeholder="e.g. aimino/agi-v1"
-                />
-              </div>
-
-              {/* Max concurrent */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Max Concurrent Fixes</label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Maximum number of fixes running simultaneously.</p>
-                <input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={form.maxConcurrent}
-                  onChange={(e) => setForm({ ...form, maxConcurrent: Number(e.target.value) })}
-                  className="input-field mt-1 max-w-[120px] min-h-[44px]"
-                />
-              </div>
-
-              {/* Sandbox pool */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Sandbox Pool Size</label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Number of pre-warmed sandbox environments.</p>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={form.sandboxPoolSize}
-                  onChange={(e) => setForm({ ...form, sandboxPoolSize: Number(e.target.value) })}
-                  className="input-field mt-1 max-w-[120px] min-h-[44px]"
-                />
-              </div>
-
-              {/* Audit log toggle */}
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="auditLog"
-                  checked={form.auditLogEnabled}
-                  onChange={(e) => setForm({ ...form, auditLogEnabled: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                />
-                <label htmlFor="auditLog" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Enable audit logging
-                </label>
-              </div>
-
-              {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-              {success && <p className="text-sm text-green-600 dark:text-green-400">{success}</p>}
-
-              <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-                <button type="submit" disabled={saving} className="btn-primary">
-                  {saving ? 'Saving...' : 'Save Settings'}
-                </button>
-                {config && (
-                  <button
-                    type="button"
-                    onClick={() => setForm(config)}
-                    className="btn-secondary"
-                  >
-                    Reset
-                  </button>
-                )}
-              </div>
-            </form>
-          </>
-        )}
+    <div className="max-w-3xl space-y-10">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage API keys, notifications, and privacy settings</p>
       </div>
 
-      {/* Notification Preferences */}
-      <div className="card">
-        <button
-          onClick={() => toggleSection('notifications')}
-          className="flex w-full items-center justify-between lg:cursor-default"
-        >
-          <div>
-            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Notification Preferences</h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 hidden lg:block">
-              Choose which channels and events send you notifications.
-            </p>
-          </div>
-          <svg
-            className={`h-5 w-5 text-gray-400 transition-transform lg:hidden ${openSections.notifications ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
+      {message && (
+        <div className={`rounded-lg border p-4 text-sm ${
+          message.type === 'error'
+            ? 'border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+            : 'border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+        }`}>
+          {typeof message.text === 'string' ? message.text : 'An unexpected error occurred'}
+        </div>
+      )}
+
+      <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? 'border-brand-600 text-brand-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            }`}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
-        {openSections.notifications && (
-          <>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 lg:hidden">
-              Choose which channels and events send you notifications.
-            </p>
-            <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
-              Toggle individual event types per notification channel.
-            </p>
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-sm">
+            <tab.icon size={16} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'keys' && <section>
+        <div className="flex items-center gap-3 mb-4">
+          <Key size={20} className="text-brand-600" />
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">API Keys</h2>
+            <p className="text-sm text-gray-500">Connect external services via API keys</p>
+          </div>
+        </div>
+
+        {['github'].map((id) => {
+          const int = sysConfig?.integrations?.find((i: any) => i.id === id);
+          if (!int) return null;
+          const labels: Record<string, { icon: any; desc: string }> = {
+            github: { icon: GitPullRequest, desc: 'Connected via GitHub App' },
+          };
+          const meta = labels[id];
+          const Icon = meta?.icon || LinkIcon;
+          return (
+            <div key={id} className="card mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Icon size={20} className="text-gray-500" />
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {int.name || id.charAt(0).toUpperCase() + id.slice(1)}
+                    </h3>
+                    <p className="text-xs text-gray-500">{meta?.desc}</p>
+                  </div>
+                </div>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+                  int.connected
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${int.connected ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  {int.connected ? 'Connected' : 'Not Connected'}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+
+        <div className="space-y-4">
+          {API_KEYS.map((apiKey) => (
+            <div key={apiKey.id} className="card">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <apiKey.icon size={20} className="text-gray-500" />
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{apiKey.label}</h3>
+                    {apiKey.comingSoon && (
+                      <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">Coming soon</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!apiKey.comingSoon && apiKey.docUrl && (
+                    <a href={apiKey.docUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:text-brand-700">
+                      How to get?
+                    </a>
+                  )}
+                  {!apiKey.comingSoon && (
+                    <>
+                      {verifying[apiKey.id] ? (
+                        <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                          Connecting...
+                        </span>
+                      ) : (
+                        <>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            sysConfig.env?.[apiKey.key]
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                          }`}>
+                            {sysConfig.env?.[apiKey.key] ? 'Saved' : 'New'}
+                          </span>
+                          {apiKey.id === 'linear_key' && (() => {
+                            const li = sysConfig?.integrations?.find((i: any) => i.id === 'linear');
+                            return li ? (
+                              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                li.connected
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                              }`}>
+                                <span className={`h-1.5 w-1.5 rounded-full ${li.connected ? 'bg-green-500' : 'bg-gray-400'}`} />
+                                {li.connected ? 'Connected' : 'Not Connected'}
+                              </span>
+                            ) : null;
+                          })()}
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+              {!apiKey.comingSoon && (
+                <div className="mt-3">
+                    {editMode[apiKey.id] ? (
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="password"
+                          value={apiKeyValues[apiKey.id] || ''}
+                          onChange={(e) => setApiKeyValues((prev) => ({ ...prev, [apiKey.id]: e.target.value }))}
+                          placeholder={apiKey.placeholder}
+                          className="input-field w-full font-mono text-sm min-h-[44px]"
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleSaveApiKey(apiKey.id)}
+                        disabled={apiKeySaving[apiKey.id]}
+                        className="btn-primary min-h-[44px]"
+                      >
+                        {apiKeySaving[apiKey.id] ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={() => setEditMode((prev) => ({ ...prev, [apiKey.id]: false }))}
+                        className="btn-secondary min-h-[44px]"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2.5 border border-gray-200 dark:border-gray-700">
+                      {sysConfig.env?.[apiKey.key] ? (
+                        <span className="font-mono text-sm text-gray-400 select-all">
+                          {(() => {
+                            const v = sysConfig.env[apiKey.key];
+                            return v.length > 8 ? v.slice(0, 8) + '••••••••' : '••••••••••••••••';
+                          })()}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">Not configured</span>
+                      )}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            const kn = apiKey.key;
+                            if (kn && sysConfig.env?.[kn] && !apiKeyValues[apiKey.id]) {
+                              setApiKeyValues((prev) => ({ ...prev, [apiKey.id]: sysConfig.env[kn] }));
+                            }
+                            setEditMode((prev) => ({ ...prev, [apiKey.id]: true }));
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>}
+
+      {activeTab === 'notifications' && <section>
+        <div className="flex items-center gap-3 mb-4">
+          <Bell size={20} className="text-brand-600" />
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Notifications</h2>
+            <p className="text-sm text-gray-500">Choose how and when you receive notifications</p>
+          </div>
+        </div>
+        <div className="card">
+          {notificationsLoading ? (
+            <div className="space-y-4 animate-pulse">{[...Array(6)].map((_, i) => <div key={i} className="h-10 w-full rounded bg-gray-200 dark:bg-gray-700" />)}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+                Email notifications enabled. Slack and Telegram coming soon.
+              </p>
+              <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="py-2 pr-4 text-left font-medium text-gray-500 dark:text-gray-400">Channel</th>
-                    {EVENT_TYPES.map((et) => (
-                      <th key={et} className="px-2 py-2 text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                        {et.replace(/_/g, ' ')}
+                    <th className="py-3 pr-4 text-left font-medium text-gray-500 dark:text-gray-400">Event</th>
+                    {CHANNELS.map((ch) => (
+                      <th key={ch.id} className="px-3 py-3 text-center font-medium text-gray-500 dark:text-gray-400">
+                        <ch.icon size={16} className="inline-block mr-1" />
+                        {ch.label}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {CHANNELS.map((ch) => (
-                    <tr key={ch.id} className="border-b border-gray-100 dark:border-gray-800">
-                      <td className="py-3 pr-4">
-                        <span className="flex items-center gap-2 font-medium text-gray-700 dark:text-gray-300">
-                          <span>{ch.icon}</span>
-                          {ch.label}
-                        </span>
-                        {(ch.id === 'slack' || ch.id === 'discord' || ch.id === 'webhook') && (
-                          <input
-                            type="text"
-                            placeholder={`${ch.label} webhook URL...`}
-                            value={channelTargets[ch.id] || ''}
-                            onChange={(e) => handleChannelTargetChange(ch.id, e.target.value)}
-                            onBlur={() => handleChannelTargetBlur(ch.id)}
-                            className="mt-1 block w-full rounded border border-gray-200 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-700"
-                          />
-                        )}
-                        {ch.id === 'email' && (
-                          <input
-                            type="email"
-                            placeholder="Email address..."
-                            value={channelTargets[ch.id] || ''}
-                            onChange={(e) => handleChannelTargetChange(ch.id, e.target.value)}
-                            onBlur={() => handleChannelTargetBlur(ch.id)}
-                            className="mt-1 block w-full rounded border border-gray-200 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-700"
-                          />
-                        )}
-                      </td>
-                      {EVENT_TYPES.map((et) => {
-                        const enabled = notificationChannels[ch.id]?.[et] ?? (ch.id === 'in_app' ? true : false);
+                  {EVENT_TYPES.map((event) => (
+                    <tr key={event} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="py-3 pr-4 text-gray-900 dark:text-gray-100 font-medium capitalize">{event.replace(/_/g, ' ')}</td>
+                      {CHANNELS.map((ch) => {
+                        const pref = notifications.find((n) => n.channel === ch.id && n.eventType === event);
                         return (
-                          <td key={et} className="px-2 py-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={enabled}
-                              disabled={savingNotif || ch.id === 'in_app'}
-                              onChange={() => handleTogglePref(ch.id, et, !enabled)}
-                              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 disabled:opacity-50"
-                            />
+                          <td key={ch.id} className="px-3 py-3 text-center">
+                            <input type="checkbox" checked={pref?.enabled ?? false} onChange={(e) => handleToggleNotif(ch.id, event, e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
                           </td>
                         );
                       })}
@@ -391,108 +419,35 @@ export default function Settings() {
                 </tbody>
               </table>
             </div>
-            {savingNotif && (
-              <p className="mt-2 text-xs text-gray-400">Saving...</p>
-            )}
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      </section>}
 
-      {/* Data Privacy */}
-      <div className="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30 p-4 lg:p-6">
-        <button
-          onClick={() => toggleSection('privacy')}
-          className="flex w-full items-center justify-between lg:cursor-default"
-        >
+      {activeTab === 'privacy' && <section>
+        <div className="flex items-center gap-3 mb-4">
+          <Shield size={20} className="text-brand-600" />
           <div>
-            <h3 className="text-base font-semibold text-red-800 dark:text-red-200">Data Privacy</h3>
-            <p className="mt-1 text-sm text-red-600 dark:text-red-300 hidden lg:block">
-              Manage your data retention and deletion preferences.
-            </p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Data & Privacy</h2>
+            <p className="text-sm text-gray-500">Manage your data and privacy settings</p>
           </div>
-          <svg
-            className={`h-5 w-5 text-red-400 transition-transform lg:hidden ${openSections.privacy ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
-        {openSections.privacy && (
-          <>
-            <p className="mt-1 text-sm text-red-600 dark:text-red-300 lg:hidden">
-              Manage your data retention and deletion preferences.
-            </p>
-            {deletionStatus && (
-              <div className="mt-4 rounded-lg border border-red-200 bg-white dark:bg-gray-800 p-4">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {deletionStatus.activeRequest?.status === 'completed'
-                    ? 'Data deletion completed'
-                    : deletionStatus.activeRequest?.status === 'pending'
-                      ? 'Deletion requested'
-                      : 'No active deletion request'}
-                </p>
-                {deletionStatus.activeRequest?.status === 'pending' && (
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Scheduled for{' '}
-                    {new Date(deletionStatus.activeRequest.scheduled_deletion_at).toLocaleDateString()}
-                    {' '}({deletionStatus.retentionDays}-day retention policy)
-                  </p>
-                )}
-                <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-                  {deletionStatus.activeRequest?.status === 'pending' ? (
-                    <button onClick={handleCancelDeletion} className="btn-secondary text-xs">
-                      Cancel Deletion Request
-                    </button>
-                  ) : (
-                    <button onClick={handleRequestDeletion} className="btn-danger text-xs">
-                      Request Data Deletion
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-            <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-              Data is retained for {deletionStatus?.retentionDays ?? 30} days after cancellation,
-              then permanently purged. You can cancel a deletion request at any time before the
-              scheduled date.
-            </p>
-          </>
-        )}
-      </div>
-
-      {/* Danger zone */}
-      <div className="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30 p-4 lg:p-6">
-        <button
-          onClick={() => toggleSection('danger')}
-          className="flex w-full items-center justify-between lg:cursor-default"
-        >
-          <div>
-            <h3 className="text-base font-semibold text-red-800 dark:text-red-200">Danger Zone</h3>
-            <p className="mt-1 text-sm text-red-600 dark:text-red-300 hidden lg:block">
-              These actions are irreversible. Proceed with caution.
-            </p>
+        </div>
+        <div className="card">
+          <div className="space-y-4">
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Request Data Deletion</h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Submit a request to delete all your personal data.</p>
+              <button onClick={handleRequestDataDeletion} disabled={dataPrivacyLoading} className="btn-secondary mt-3 text-sm min-h-[44px]">
+                {dataPrivacyLoading ? 'Submitting...' : 'Request Deletion'}
+              </button>
+            </div>
+            <div className="rounded-lg border border-red-200 dark:border-red-800 p-4">
+              <h3 className="text-sm font-medium text-red-700 dark:text-red-400">Reset Configuration to Defaults</h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Reset all bot configuration, notification preferences, and settings.</p>
+              <button className="btn-danger mt-3 text-sm min-h-[44px]">Reset All Settings</button>
+            </div>
           </div>
-          <svg
-            className={`h-5 w-5 text-red-400 transition-transform lg:hidden ${openSections.danger ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
-        {openSections.danger && (
-          <div className="mt-4 flex">
-            <button onClick={() => {
-              if (window.confirm('Reset all settings to defaults?')) {
-                settings.update({ label: 'stas:fix', model: '', maxConcurrent: 3, sandboxPoolSize: 10, auditLogEnabled: true })
-                  .then(() => {
-                    setSuccess('Settings reset to defaults.');
-                    setTimeout(() => setSuccess(null), 3000);
-                  }).catch((err) => setError(err.message));
-              }
-            }} className="btn-danger text-xs">Reset All Settings</button>
-          </div>
-        )}
-      </div>
+        </div>
+      </section>}
     </div>
   );
 }

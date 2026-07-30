@@ -5,7 +5,7 @@ export class GitHubInstallationRepository {
   async findById(id: number): Promise<GitHubInstallation | undefined> {
     const result = await queryWithRetry<GitHubInstallation>(
       `SELECT id, user_id, installation_id, account_login, account_type,
-              repo_scope, avatar_url, created_at, updated_at
+              repo_scope, avatar_url, repos_json, created_at, updated_at
        FROM github_installations WHERE id = $1`,
       [id],
     );
@@ -15,7 +15,7 @@ export class GitHubInstallationRepository {
   async findByInstallationId(installationId: number): Promise<GitHubInstallation | undefined> {
     const result = await queryWithRetry<GitHubInstallation>(
       `SELECT id, user_id, installation_id, account_login, account_type,
-              repo_scope, avatar_url, created_at, updated_at
+              repo_scope, avatar_url, repos_json, created_at, updated_at
        FROM github_installations WHERE installation_id = $1`,
       [installationId],
     );
@@ -25,7 +25,7 @@ export class GitHubInstallationRepository {
   async findByUserId(userId: number): Promise<GitHubInstallation[]> {
     const result = await queryWithRetry<GitHubInstallation>(
       `SELECT id, user_id, installation_id, account_login, account_type,
-              repo_scope, avatar_url, created_at, updated_at
+              repo_scope, avatar_url, repos_json, created_at, updated_at
        FROM github_installations WHERE user_id = $1
        ORDER BY created_at DESC`,
       [userId],
@@ -34,15 +34,19 @@ export class GitHubInstallationRepository {
   }
 
   async create(data: NewGitHubInstallation): Promise<GitHubInstallation> {
+    const reposJson = data.reposJson ? JSON.stringify(data.reposJson) : '[]';
     const result = await queryWithRetry<GitHubInstallation>(
-      `INSERT INTO github_installations (user_id, installation_id, account_login, account_type, repo_scope, avatar_url)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO github_installations (user_id, installation_id, account_login, account_type, repo_scope, avatar_url, repos_json)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
        ON CONFLICT (installation_id)
-       DO UPDATE SET account_login = $3, account_type = $4, repo_scope = $5, avatar_url = COALESCE($6, github_installations.avatar_url), updated_at = NOW()
+       DO UPDATE SET account_login = $3, account_type = $4, repo_scope = $5,
+                     avatar_url = COALESCE($6, github_installations.avatar_url),
+                     repos_json = COALESCE($7::jsonb, github_installations.repos_json),
+                     updated_at = NOW()
        RETURNING id, user_id, installation_id, account_login, account_type,
-                 repo_scope, avatar_url, created_at, updated_at`,
+                 repo_scope, avatar_url, repos_json, created_at, updated_at`,
       [data.userId, data.installationId, data.accountLogin, data.accountType ?? 'User',
-       data.repoScope ?? 'selected', data.avatarUrl ?? null],
+       data.repoScope ?? 'selected', data.avatarUrl ?? null, reposJson],
     );
     return result.rows[0];
   }

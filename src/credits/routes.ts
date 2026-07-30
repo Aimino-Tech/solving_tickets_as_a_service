@@ -59,13 +59,16 @@ async function getAccountId(req: Request): Promise<number | null> {
     const id = Number(Array.isArray(header) ? header[0] : header);
     if (Number.isFinite(id) && id > 0 && Number.isInteger(id)) return id;
   }
-  if (req.user) {
-    const result = await queryWithRetry<{ id: number }>(
-      'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
-      [req.user.email],
-    );
-    if (result.rows.length > 0) return result.rows[0].id;
-
+    if (req.user) {
+    try {
+      const result = await queryWithRetry<{ id: number }>(
+        'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
+        [req.user.email],
+      );
+      if (result.rows.length > 0) return result.rows[0].id;
+    } catch {
+      // DB table may not exist — return null
+    }
     return null;
   }
   return null;
@@ -149,15 +152,20 @@ const UsageSchema = z.object({
  * ```
  */
 creditRouter.get('/credits/balance', async (req: Request, res: Response) => {
-  const accountId = await requireAccount(req, res);
-  if (!accountId) return;
+  const accountId = await getAccountId(req);
+
+  // Return zero balance if user is authenticated but has no account record yet
+  if (!accountId) {
+    res.json({ accountId: 0, balance: 0, lifetimeCredits: 0 });
+    return;
+  }
 
   try {
     const balance = await creditsRepository.getBalance(accountId);
     res.json({
-      accountId: balance.accountId,
+      accountId: balance.account_id ?? balance.accountId,
       balance: balance.balance,
-      lifetimeCredits: balance.lifetimeCredits,
+      lifetimeCredits: balance.lifetime_credits ?? balance.lifetimeCredits,
     });
   } catch (err) {
     log.error({ err: String(err), accountId }, 'Failed to fetch credit balance');
