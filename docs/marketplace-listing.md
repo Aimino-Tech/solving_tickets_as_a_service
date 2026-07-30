@@ -34,6 +34,10 @@ STAS is an AI senior architect that reads your entire codebase, plans the fix, a
 3. **You get a detailed plan** — root cause analysis and fix approach, posted as an issue comment
 4. **After approval, STAS writes the fix** — runs your tests, opens a draft PR with passing checks
 
+### Try It First
+
+Visit the [STAS Demo Repository](https://github.com/Aimino-Tech/stas-demo) — a public app with 15+ seeded bugs. Label any issue with `stas:fix` and see STAS create a PR in minutes. No installation required.
+
 ### Key Features
 
 - **Plan-first architecture** — see what STAS plans to do before it writes any code. Review the approach, approve or request changes, then watch it execute
