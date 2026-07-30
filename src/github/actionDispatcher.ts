@@ -26,6 +26,7 @@ import type { SandboxExecutor } from '../types/sandbox-types.js';
 import { rootLogger } from '../utils/logger.js';
 import { getOctokit } from './auth.js';
 import * as messages from '../platforms/messages.js';
+import { captureEvent } from '../analytics/tracker.js';
 import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
 import { config } from '../config.js';
 
@@ -180,6 +181,15 @@ export class ActionDispatcher {
           body: prBody,
         });
 
+        if (config.stas.poweredByFooter) {
+          captureEvent('powered_by_footer_shown', String(installationId), {
+            repo: `${repoOwner}/${repoName}`,
+            issueNumber,
+            prNumber: pr.data.number,
+            confidence: 'high',
+          });
+        }
+
         const body = messages.highConfidenceIssueComment(pr.data.number, agentResult);
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
 
@@ -220,6 +230,15 @@ export class ActionDispatcher {
           body: prBody,
           draft: true,
         });
+
+        if (config.stas.poweredByFooter) {
+          captureEvent('powered_by_footer_shown', String(installationId), {
+            repo: `${repoOwner}/${repoName}`,
+            issueNumber,
+            prNumber: pr.data.number,
+            confidence: 'medium',
+          });
+        }
 
         const body = messages.draftIssueComment(pr.data.number, agentResult);
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);

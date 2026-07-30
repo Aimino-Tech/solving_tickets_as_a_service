@@ -10,6 +10,7 @@
 
 import type { AgentResult, FixUnabledReason, QualityGateResult } from '../types/agent-types.js';
 import { QualityGateReporter } from '../core/quality-gate-reporter.js';
+import { captureEvent } from '../analytics/tracker.js';
 import { config } from '../config.js';
 
 const BOT_NAME = config.stas.botName;
@@ -620,7 +621,11 @@ export function buildPRBody(params: {
     '',
     '---',
     '',
-    `[![STAS](https://img.shields.io/badge/fix-powered_by_STAS-8250DF)](https://stas.aimino.ai?utm_source=github&utm_medium=pr-footer&utm_campaign=aim-4215) — [Add STAS to your repo](https://github.com/apps/${config.github.appId}/installations/new?utm_source=github&utm_medium=pr-footer&utm_campaign=aim-4215)`,
+    ...(config.stas.poweredByFooter
+      ? [
+          `[![STAS](https://img.shields.io/badge/fix-powered_by_STAS-8250DF)](https://stas.aimino.ai?utm_source=github&utm_medium=pr-footer&utm_campaign=aim-4215) — [Add STAS to your repo](https://github.com/apps/${config.github.appId}/installations/new?utm_source=github&utm_medium=pr-footer&utm_campaign=aim-4215)`,
+        ]
+      : []),
   ].join('\n');
 }
 
@@ -635,8 +640,12 @@ export function buildShareMessage(runUrl: string): string {
     `- [Share on Twitter](https://twitter.com/intent/tweet?text=${encodeURIComponent('My GitHub issue was automatically fixed by STAS! 🚀')}&url=${encodeURIComponent(runUrl)})`,
     `- [Share on LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(runUrl)})`,
     '',
-    `[![STAS](https://img.shields.io/badge/STAS-Solving_Tickets_As_A_Service-8250DF)](https://stas.aimino.ai)`,
-    `[Add STAS to your repo](https://github.com/apps/${config.github.appId}/installations/new)`,
+    ...(config.stas.poweredByFooter
+      ? [
+          `[![STAS](https://img.shields.io/badge/STAS-Solving_Tickets_As_A_Service-8250DF)](https://stas.aimino.ai)`,
+          `[Add STAS to your repo](https://github.com/apps/${config.github.appId}/installations/new)`,
+        ]
+      : []),
     '',
     BOT_SIGNATURE,
   ].join('\n');
