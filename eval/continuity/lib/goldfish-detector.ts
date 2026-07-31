@@ -44,6 +44,9 @@ const GOLDFISH_PATTERNS: GoldfishPattern[] = [
   { pattern: /\bwhat were we (discussing|talking about|working on)\b/i, reason: 'lost-thread' },
 ];
 
+/** Number of goldfish patterns. Guarded by tests so every pattern stays covered. */
+export const GOLDFISH_PATTERN_COUNT: number = GOLDFISH_PATTERNS.length;
+
 /** Detect goldfish behavior in an assistant reply. Pure function. */
 export function detectGoldfish(reply: string): GoldfishDetection {
   const trimmed = reply.trim();
