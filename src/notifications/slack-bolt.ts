@@ -362,75 +362,75 @@ export class SlackBoltApp {
         }
 
         const channelTarget = `${channelId}:${threadTs || ''}`;
-          const jobData = {
-            installationId: config.trackers.installationId || 0,
-            repoOwner,
-            repoName,
-            repoPrivate: false,
-            issueNumber: 0,
-            issueTitle,
-            issueBody: `Submitted via Slack by <@${userId}>\n\nDescription: ${issueTitle}`,
-            source: 'slack',
-            channel: 'slack',
-            channelTarget,
-          };
+        const jobData = {
+          installationId: config.trackers.installationId || 0,
+          repoOwner,
+          repoName,
+          repoPrivate: false,
+          issueNumber: 0,
+          issueTitle,
+          issueBody: `Submitted via Slack by <@${userId}>\n\nDescription: ${issueTitle}`,
+          source: 'slack',
+          channel: 'slack',
+          channelTarget,
+        };
 
-          let dispatchSuccess = false;
+        let dispatchSuccess = false;
 
-          try {
-            const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
+        try {
+          const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
+          if (!isConnected()) {
+            await rmqConnect();
             if (!isConnected()) {
-              await rmqConnect();
-              if (!isConnected()) {
-                throw new Error('Failed to establish RabbitMQ connection');
-              }
-            }
-            const messageId = `${jobData.installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
-            await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
-              ...jobData,
-              _meta: {
-                messageId,
-                enqueuedAt: new Date().toISOString(),
-                slackChannel: channelId,
-                slackThreadTs: threadTs || '',
-              },
-            });
-            dispatchSuccess = true;
-          } catch (rmqErr) {
-            log.warn({ err: String(rmqErr) }, 'RabbitMQ dispatch failed, trying HTTP fallback');
-          }
-
-          if (!dispatchSuccess) {
-            try {
-              const { dispatchToOpenSymphony } = await import('../dispatch/osDispatch.js');
-              const result = await dispatchToOpenSymphony(jobData);
-              if (!result.success) {
-                throw new Error(result.errors?.join(', ') || 'HTTP dispatch failed');
-              }
-              log.info({ runId: result.runId }, 'HTTP fallback dispatch succeeded');
-              dispatchSuccess = true;
-            } catch (httpErr) {
-              log.error({ err: String(httpErr) }, 'All dispatch paths failed');
-              await respond({
-                response_type: 'ephemeral',
-                text: `Error: ${String(httpErr).slice(0, 200)}`,
-              });
-              return;
+              throw new Error('Failed to establish RabbitMQ connection');
             }
           }
-
-          await respond({
-            response_type: 'in_channel',
-            text: `STAS is investigating: "${issueTitle}"\nI'll post progress updates in this thread.`,
+          const messageId = `${jobData.installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
+          await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+            ...jobData,
+            _meta: {
+              messageId,
+              enqueuedAt: new Date().toISOString(),
+              slackChannel: channelId,
+              slackThreadTs: threadTs || '',
+            },
           });
+          dispatchSuccess = true;
+        } catch (rmqErr) {
+          log.warn({ err: String(rmqErr) }, 'RabbitMQ dispatch failed, trying HTTP fallback');
+        }
 
-          if (threadTs) {
-            await client.chat.postMessage({
-              channel: channelId,
-              thread_ts: threadTs,
-              text: `:mag: *Phase: Investigating* — Run queued for "${issueTitle}"`,
+        if (!dispatchSuccess) {
+          try {
+            const { dispatchToOpenSymphony } = await import('../dispatch/osDispatch.js');
+            const result = await dispatchToOpenSymphony(jobData);
+            if (!result.success) {
+              throw new Error(result.errors?.join(', ') || 'HTTP dispatch failed');
+            }
+            log.info({ runId: result.runId }, 'HTTP fallback dispatch succeeded');
+            dispatchSuccess = true;
+          } catch (httpErr) {
+            log.error({ err: String(httpErr) }, 'All dispatch paths failed');
+            await respond({
+              response_type: 'ephemeral',
+              text: `Error: ${String(httpErr).slice(0, 200)}`,
             });
+            return;
           }
+        }
+
+        await respond({
+          response_type: 'in_channel',
+          text: `STAS is investigating: "${issueTitle}"\nI'll post progress updates in this thread.`,
+        });
+
+        if (threadTs) {
+          await client.chat.postMessage({
+            channel: channelId,
+            thread_ts: threadTs,
+            text: `:mag: *Phase: Investigating* — Run queued for "${issueTitle}"`,
+          });
+        }
         return;
       }
 
@@ -551,7 +551,9 @@ export class SlackBoltApp {
             channel: channelId,
             text: `:x: Failed to create ticket: ${String(err).slice(0, 500)}`,
           });
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     });
 
@@ -560,6 +562,10 @@ export class SlackBoltApp {
       if (msg.subtype === 'bot_message' || msg.channel_type !== 'im') return;
       const text = (msg.text || '').trim();
       if (!text) return;
+
+      // When the chat bridge is enabled, DMs are handled by the chat gateway
+      // (AIM-4442) instead of being treated as one-shot fix requests.
+      if (config.slack.chatEnabled) return;
 
       log.info({ text, userId: msg.user, channel: msg.channel }, 'Received DM to STAS');
 

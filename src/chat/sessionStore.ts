@@ -38,6 +38,7 @@ export interface ChatSessionStore {
   upsert(checkpoint: CheckpointInput): Promise<ChatSession>;
   setStatus(threadTs: string, status: SessionStatus): Promise<void>;
   listByUser(userId: string, limit?: number): Promise<ChatSession[]>;
+  listAll(limit?: number): Promise<ChatSession[]>;
   remove(threadTs: string): Promise<void>;
 }
 
@@ -98,6 +99,10 @@ export class MemoryChatSessionStore implements ChatSessionStore {
       .filter((s) => s.userId === userId)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .slice(0, limit);
+  }
+
+  async listAll(limit = 50): Promise<ChatSession[]> {
+    return [...this.sessions.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, limit);
   }
 
   async remove(threadTs: string): Promise<void> {
@@ -176,10 +181,7 @@ function parseAgentMemory(raw: unknown): AgentMemory {
 
 export class PostgresChatSessionStore implements ChatSessionStore {
   async get(threadTs: string): Promise<ChatSession | null> {
-    const result = await queryWithRetry<ChatSessionRow>(
-      'SELECT * FROM chat_sessions WHERE thread_ts = $1',
-      [threadTs],
-    );
+    const result = await queryWithRetry<ChatSessionRow>('SELECT * FROM chat_sessions WHERE thread_ts = $1', [threadTs]);
     return result.rows[0] ? fromRow(result.rows[0]) : null;
   }
 
@@ -210,16 +212,24 @@ export class PostgresChatSessionStore implements ChatSessionStore {
   }
 
   async setStatus(threadTs: string, status: SessionStatus): Promise<void> {
-    await queryWithRetry(
-      'UPDATE chat_sessions SET status = $2, updated_at = NOW() WHERE thread_ts = $1',
-      [threadTs, status],
-    );
+    await queryWithRetry('UPDATE chat_sessions SET status = $2, updated_at = NOW() WHERE thread_ts = $1', [
+      threadTs,
+      status,
+    ]);
   }
 
   async listByUser(userId: string, limit = 50): Promise<ChatSession[]> {
     const result = await queryWithRetry<ChatSessionRow>(
       'SELECT * FROM chat_sessions WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2',
       [userId, limit],
+    );
+    return result.rows.map(fromRow);
+  }
+
+  async listAll(limit = 50): Promise<ChatSession[]> {
+    const result = await queryWithRetry<ChatSessionRow>(
+      'SELECT * FROM chat_sessions ORDER BY updated_at DESC LIMIT $1',
+      [limit],
     );
     return result.rows.map(fromRow);
   }

@@ -37,13 +37,14 @@ import 'express-async-errors';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import cors from 'cors';
 import type { NextFunction, Request, Response } from 'express';
-import { Router } from 'express';
-import express from 'express';
+import express, { Router } from 'express';
 import helmet from 'helmet';
+import { initAnalytics } from './analytics/tracker.js';
 import previewRoutes from './api/routes/preview.js';
 import { trustRouter } from './api/routes/trust.js';
-
 import { streamAuditExportCsv, streamAuditExportJson } from './audit/export.js';
+import { authRouter } from './auth/index.js';
+import { billingRouter } from './billing/index.js';
 import { registerSlackMentionHandler } from './channels/slack/handler.js';
 import { config } from './config.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
@@ -59,31 +60,28 @@ import { adminRouter } from './routes/admin.js';
 import { adminAuditRouter } from './routes/admin_audit.js';
 import { adminRunsRouter } from './routes/adminRuns.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
-import { initAnalytics } from './analytics/tracker.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { badgeRouter } from './routes/badge.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
-import { dashboardRouter, configRouter } from './routes/dashboard.js';
+import { configRouter, dashboardRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
+import { gitHubOAuthRouter } from './routes/githubOAuth.js';
 import healthRouter from './routes/health.js';
 import { kpiRouter } from './routes/kpi.js';
+import { litellmUsageRouter } from './routes/litellmUsage.js';
 import n8nRouter from './routes/n8n.js';
-import { authRouter } from './auth/index.js';
-import { billingRouter } from './billing/index.js';
-import { onboardingRouter } from './routes/onboarding.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { onboardingRouter } from './routes/onboarding.js';
 import { pipelineRouter } from './routes/pipeline.js';
 import { plgRouter } from './routes/plg.js';
 import { pricingRouter } from './routes/pricing.js';
 import { proxyRouter } from './routes/proxy.js';
 import { qualityRouter } from './routes/quality.js';
 import { reposRouter } from './routes/repos.js';
-import { gitHubOAuthRouter } from './routes/githubOAuth.js';
+import { runFeedbackRouter } from './routes/runFeedback.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
-import { litellmUsageRouter } from './routes/litellmUsage.js';
-import { runFeedbackRouter } from './routes/runFeedback.js';
 import { slaRouter } from './routes/sla.js';
 import { viralRouter } from './routes/viral.js';
 import { workspaceRouter } from './routes/workspace.js';
@@ -94,8 +92,8 @@ import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { rootLogger } from './utils/logger.js';
-import type { IssueJobData } from './utils/types.js';
 import { extractOrGenerateTraceId, TRACE_HEADER } from './utils/trace.js';
+import type { IssueJobData } from './utils/types.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { logWebhookFailed, logWebhookProcessed, logWebhookReceived } from './webhooks/eventLogger.js';
 import { createGithubWebhooks } from './webhooks/github.js';
@@ -197,6 +195,18 @@ export async function createApp(): Promise<express.Application> {
 
   // Start Slack Socket Mode connection (no-op for HTTP mode)
   bolt.start().catch((err: unknown) => log.warn({ err: String(err) }, 'Slack Bolt start failed'));
+
+  // Start the gateway-side chat bridge (AIM-4442) when chat is enabled
+  if (config.slack.chatEnabled) {
+    const { startChatSlackBridge } = await import('./chat/slackChat.js');
+    try {
+      const chatBridge = startChatSlackBridge();
+      await chatBridge.rebuildRegistry();
+      log.info('Chat Slack bridge started with rebuilt registry');
+    } catch (err) {
+      log.warn({ err: String(err) }, 'Chat Slack bridge failed to start (non-fatal)');
+    }
+  }
 
   // -- Initialize trackers --------------------------------------------------
   initTrackers();
@@ -1208,17 +1218,10 @@ export async function createApp(): Promise<express.Application> {
 
 const MAX_PORT_RETRIES = 5;
 
-async function tryListen(
-  app: express.Application,
-  port: number,
-  attempt: number,
-): Promise<import('http').Server> {
+async function tryListen(app: express.Application, port: number, attempt: number): Promise<import('http').Server> {
   return new Promise((resolve, reject) => {
     const server = app.listen(port, '0.0.0.0', async () => {
-      log.info(
-        { port, label: config.stas.label, env: config.nodeEnv },
-        `STAS server listening on :${port}`,
-      );
+      log.info({ port, label: config.stas.label, env: config.nodeEnv }, `STAS server listening on :${port}`);
 
       // Start the RabbitMQ issue consumer — dispatches to OpenSymphony
       try {
