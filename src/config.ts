@@ -127,6 +127,12 @@ const envSchema = z.object({
   PROXY_API_KEY: z.string().default(''),
   PROXY_ALLOWED_ORGS: z.string().default(''),
 
+  // Governance proxy (AIM-4451); PROXY_DISPATCH_URL remains the legacy fallback.
+  GOVERNANCE_ENABLED: boolSchema(false),
+  GOVERNANCE_URL: z.string().default(''),
+  GOVERNANCE_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
+  GOVERNANCE_API_KEY: z.string().default(''),
+
   WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
   WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
 
@@ -780,6 +786,13 @@ function buildConfig(env: ParsedEnv) {
       allowedOrgs: env.PROXY_ALLOWED_ORGS.split(',')
         .map((s) => s.trim())
         .filter(Boolean),
+    },
+
+    governance: {
+      enabled: env.GOVERNANCE_ENABLED || env.PROXY_DISPATCH_URL !== '',
+      url: env.GOVERNANCE_URL || env.PROXY_DISPATCH_URL,
+      timeoutMs: env.GOVERNANCE_TIMEOUT_MS,
+      apiKey: env.GOVERNANCE_API_KEY || env.PROXY_API_KEY,
     },
 
     onboarding: {
