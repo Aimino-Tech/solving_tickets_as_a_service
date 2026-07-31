@@ -193,6 +193,15 @@ export async function declareTopology(): Promise<void> {
   });
   await ch.bindQueue('stas.pipeline.events', 'stas.topic', 'pipeline.event.*');
 
+  await ch.assertQueue('stas.chat.work', {
+    durable: true,
+    arguments: { 'x-message-ttl': config.queue.msgTtlMs },
+    deadLetterExchange: 'stas.dlx',
+    deadLetterRoutingKey: 'chat.work.dlq',
+    messageTtl: config.queue.msgTtlMs,
+  });
+  await ch.bindQueue('stas.chat.work', 'stas.direct', 'chat.work');
+
   await ch.assertQueue('stas.retry', {
     durable: true,
     arguments: { 'x-message-ttl': 600000 },
