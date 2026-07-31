@@ -80,6 +80,7 @@ import { proxyRouter } from './routes/proxy.js';
 import { qualityRouter } from './routes/quality.js';
 import { reposRouter } from './routes/repos.js';
 import { gitHubOAuthRouter } from './routes/githubOAuth.js';
+import mcpKeysRouter from './routes/mcpKeys.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
 import { litellmUsageRouter } from './routes/litellmUsage.js';
@@ -749,6 +750,9 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Config API ──────────────────────────────────────────
   app.use('/api/v1/config', configRouter);
+
+  // ── MCP API Keys (per-user agent keys) ─────────────────────
+  app.use('/api/v1/mcp-keys', mcpKeysRouter);
 
   // ── Stats & Audit API ──────────────────────────────────
   const { statsRouter, auditRouter } = await import('./routes/statsAndAudit.js');

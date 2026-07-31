@@ -15,15 +15,6 @@ vi.mock('@/api/client', () => ({
   request: mockRequest,
 }));
 
-const { mockFetchPreferences, mockUpsertPreference } = vi.hoisted(() => ({
-  mockFetchPreferences: vi.fn(),
-  mockUpsertPreference: vi.fn(),
-}));
-vi.mock('@/services/notificationService', () => ({
-  fetchPreferences: mockFetchPreferences,
-  upsertPreference: mockUpsertPreference,
-}));
-
 const mockUseAuth = vi.hoisted(() => vi.fn());
 vi.mock('@/context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -52,8 +43,6 @@ describe('Settings', () => {
       subscriptions: [],
       warnings: [],
     });
-
-    mockFetchPreferences.mockResolvedValue([]);
   });
 
   it('renders API Keys section with Linear key in display mode first, shows input on Edit', async () => {
@@ -87,19 +76,6 @@ describe('Settings', () => {
     const comingSoonBadges = screen.getAllByText('Coming soon');
     expect(comingSoonBadges.length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Jira API Token')).toBeInTheDocument();
-  });
-
-  it('renders Notifications tab and switches to its content', async () => {
-    renderWithProviders(<Settings />);
-
-    const notifTab = screen.getByText('Notifications');
-    expect(notifTab).toBeInTheDocument();
-
-    await userEvent.click(notifTab);
-
-    await waitFor(() => {
-      expect(screen.getByText('Choose how and when you receive notifications')).toBeInTheDocument();
-    });
   });
 
   it('renders Data & Privacy tab and its content', async () => {

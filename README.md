@@ -286,6 +286,60 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m stas_mcp.serve
 curl http://localhost:4095/health
 ```
 
+### MCP API Keys (per-user authentication)
+
+STAS supports **per-user MCP API keys** so every user (and their agents) authenticates
+individually against the MCP surfaces. This is the recommended way to give an AI agent
+access to your STAS account.
+
+#### Create a key
+
+1. Open the dashboard **Settings → API Keys** tab (`/settings`).
+2. In the **MCP API Keys** card, click **Create key**, give it a name (e.g. `my-agent`).
+3. The full key is shown **exactly once** — copy it immediately. Keys start with `sk-stas_`
+   and are stored only as a SHA-256 hash server-side, so they can never be recovered later.
+
+#### Use the key in your agent
+
+Keys authenticate **all three MCP surfaces**: the REST tools (`/mcp/*`), the JSON-RPC agent
+server (`/mcp/jsonrpc`), and the Python MCP server. The Python server forwards whatever
+value is in `STAS_API_KEY` as a `Bearer` token:
+
+```bash
+# Python MCP server (stdio/SSE) — point it at your per-user key
+STAS_API_KEY=sk-stas_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx python -m stas_mcp.server stdio
+```
+
+```json
+{
+  "mcpServers": {
+    "stas": {
+      "command": "python",
+      "args": ["-m", "stas_mcp.server", "stdio"],
+      "env": { "STAS_API_KEY": "sk-stas_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }
+    }
+  }
+}
+```
+
+For direct HTTP calls:
+
+```bash
+curl -X POST http://localhost:4096/mcp/submit_issue \
+  -H "Authorization: Bearer sk-stas_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{"repoOwner":"owner","repoName":"repo","issueTitle":"Fix the bug"}'
+```
+
+#### Manage keys
+
+- **List / rename / revoke** — same Settings → API Keys card. Revocation is immediate
+  (soft-delete); revoked keys return `401 Invalid or missing API key`.
+- **Legacy env fallback** — the instance-wide `MCP_API_KEY` env var still works when
+  `MCP_AUTH_ENABLED=true`. Per-user keys take precedence over the env key.
+- **Self-hosted** — if no `MCP_API_KEY` is set and no per-user keys exist, MCP routes
+  remain open (same as before).
+
 ### MCP Registry Publishing
 
 STAS MCP is published to the [MCP Registry](https://registry.mcp.ai) and [Smithery](https://smithery.ai) for automated agent discovery and one-click deployment.

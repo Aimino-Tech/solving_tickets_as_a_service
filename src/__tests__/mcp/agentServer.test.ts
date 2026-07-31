@@ -20,6 +20,7 @@ vi.mock('ioredis', () => ({ Redis: vi.fn(() => mockRedis) }));
 vi.mock('../../trackers/index.js', () => ({ getTracker: vi.fn() }));
 vi.mock('../../config.js', () => ({
   config: {
+    mcp: { authEnabled: false, apiKey: '' },
     slack: { botToken: 'xoxb-test-token' },
     queue: { redisUrl: 'redis://localhost:6379' },
     trackers: {

@@ -1,0 +1,32 @@
+name: Welcome to STAS
+description: First issue auto-created when STAS is installed on a repository
+title: "🎉 Welcome! STAS is ready to fix your issues"
+labels: [stas:fix, good-first-issue]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🎉 STAS is now active on this repository!
+
+        **Solving Tickets As A Service** is installed and ready to help.
+
+        ### How it works
+
+        1. **Create an issue** describing a bug or desired change
+        2. **Label it** with `stas:fix`
+        3. **STAS investigates**, generates a fix, runs tests, and opens a PR
+
+        ### Try it now
+
+        This issue is already labeled with `stas:fix`. Watch what happens next — STAS
+        should automatically investigate and open a pull request with a fix.
+
+        ### Tips for best results
+
+        - Be specific in your bug description (include error messages, steps to reproduce)
+        - Link to relevant code or files
+        - For feature requests, describe the expected behavior clearly
+
+        ---
+
+        > 🚀 **Powered by [STAS](https://stas.aimino.io?ref=welcome-issue)** — Label any issue with `stas:fix` and get an AI-generated PR.

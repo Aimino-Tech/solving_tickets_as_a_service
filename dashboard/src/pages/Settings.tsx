@@ -1,12 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { request, configApi, github as githubApi } from '@/api/client';
+import { request, configApi, github as githubApi, mcpKeysApi } from '@/api/client';
+import type { McpApiKey } from '@/api/types';
 import { useAuth } from '@/context/AuthContext';
-import { fetchPreferences, upsertPreference, type NotificationPreference } from '@/services/notificationService';
 import {
-  Bell,
-  Mail,
   MessageSquare,
-  Gamepad,
   Link as LinkIcon,
   Shield,
   GitPullRequest,
@@ -15,43 +12,12 @@ import {
   GitBranch,
   Key,
   Pencil,
-  Play,
-  CheckCircle,
-  RefreshCw,
-  GitMerge,
-  AlertTriangle,
-  CreditCard,
-  XCircle,
   ChevronRight,
-  Check,
-  X,
+  Bot,
+  Plus,
+  Copy,
+  Trash2,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-
-const CHANNELS: { id: NotificationPreference['channel']; label: string; icon: LucideIcon }[] = [
-  { id: 'in_app', label: 'In-App', icon: Bell },
-  { id: 'email', label: 'Email', icon: Mail },
-  { id: 'slack', label: 'Slack', icon: MessageSquare },
-  { id: 'discord', label: 'Discord', icon: Gamepad },
-  { id: 'webhook', label: 'Webhook', icon: LinkIcon },
-];
-
-const EVENT_TYPES = [
-  'fix_started', 'pr_created', 'fix_completed', 'review_needed',
-  'rework_required', 'merge_completed', 'pipeline_failed', 'low_credits', 'payment_failed',
-];
-
-const EVENT_ICONS: Record<string, LucideIcon> = {
-  fix_started: Play,
-  pr_created: GitPullRequest,
-  fix_completed: CheckCircle,
-  review_needed: Eye,
-  rework_required: RefreshCw,
-  merge_completed: GitMerge,
-  pipeline_failed: AlertTriangle,
-  low_credits: CreditCard,
-  payment_failed: XCircle,
-};
 
 const API_KEYS = [
   { id: 'bitbucket_key', label: 'Bitbucket App Password', key: 'BITBUCKET_APP_PASSWORD', icon: LinkIcon, required: false, placeholder: 'Coming soon', docUrl: '', comingSoon: true },
@@ -60,7 +26,6 @@ const API_KEYS = [
 
 const TABS = [
   { id: 'keys', label: 'API Keys', icon: Key },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'privacy', label: 'Data & Privacy', icon: Shield },
 ] as const;
 
@@ -68,8 +33,6 @@ type TabId = (typeof TABS)[number]['id'];
 
 export default function Settings() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<NotificationPreference[]>([]);
-  const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [dataPrivacyLoading, setDataPrivacyLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('keys');
@@ -81,25 +44,9 @@ export default function Settings() {
 
   useEffect(() => {
     const ac = new AbortController();
-    if (activeTab === 'notifications') loadNotifications();
     if (['env', 'rate-limits', 'tokens', 'integrations', 'infrastructure', 'keys'].includes(activeTab)) loadSysConfig(ac.signal);
     return () => ac.abort();
   }, [activeTab]);
-
-  async function loadNotifications() {
-    setNotificationsLoading(true);
-    try { const prefs = await fetchPreferences(); setNotifications(prefs); }
-    catch (err) { setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to load notification preferences' }); }
-    finally { setNotificationsLoading(false); }
-  }
-
-  async function handleToggleNotif(channel: NotificationPreference['channel'], eventType: string, enabled: boolean) {
-    setMessage(null);
-    try {
-      await upsertPreference(channel, eventType, enabled, undefined);
-      setNotifications((prev) => prev.map((n) => (n.channel === channel && n.eventType === eventType ? { ...n, enabled } : n)));
-    } catch (err) { setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to update preference' }); }
-  }
 
   async function handleRequestDataDeletion() {
     if (!window.confirm('Are you sure you want to request data deletion? This action will be reviewed by support.')) return;
@@ -170,6 +117,15 @@ export default function Settings() {
 const [slackExpanded, setSlackExpanded] = useState(false);
 const [linearExpanded, setLinearExpanded] = useState(false);
 const [slackConnected, setSlackConnected] = useState(false);
+const [mcpKeys, setMcpKeys] = useState<McpApiKey[]>([]);
+const [mcpKeysLoading, setMcpKeysLoading] = useState(false);
+const [showCreateKey, setShowCreateKey] = useState(false);
+const [newKeyName, setNewKeyName] = useState('');
+const [creatingKey, setCreatingKey] = useState(false);
+const [newlyCreatedKey, setNewlyCreatedKey] = useState<{ key: string; name: string } | null>(null);
+const [editingKeyId, setEditingKeyId] = useState<string | null>(null);
+const [editingKeyName, setEditingKeyName] = useState('');
+const [keyActionId, setKeyActionId] = useState<string | null>(null);
 
   async function handleSaveApiKey(keyId: string) {
     setApiKeySaving((prev) => ({ ...prev, [keyId]: true }));
@@ -192,11 +148,91 @@ const [slackConnected, setSlackConnected] = useState(false);
     }
   }
 
+  async function loadMcpKeys() {
+    setMcpKeysLoading(true);
+    try {
+      const data = await mcpKeysApi.list();
+      setMcpKeys(data.keys || []);
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to load MCP API keys' });
+    } finally {
+      setMcpKeysLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'keys') loadMcpKeys();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  async function handleCreateMcpKey() {
+    const name = newKeyName.trim();
+    if (!name) { setMessage({ type: 'error', text: 'Please enter a key name' }); return; }
+    setCreatingKey(true);
+    setMessage(null);
+    try {
+      const result = await mcpKeysApi.create(name);
+      setNewlyCreatedKey({ key: result.key, name: result.name });
+      setNewKeyName('');
+      setShowCreateKey(false);
+      await loadMcpKeys();
+      setMessage({ type: 'success', text: 'MCP API key created. Copy it now — it will not be shown again.' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to create MCP API key' });
+    } finally {
+      setCreatingKey(false);
+    }
+  }
+
+  async function handleRevokeMcpKey(keyId: string, keyName: string) {
+    if (!window.confirm(`Revoke MCP API key "${keyName}"? Agents using it will lose access immediately.`)) return;
+    setKeyActionId(keyId);
+    setMessage(null);
+    try {
+      await mcpKeysApi.revoke(keyId);
+      setMcpKeys((prev) => prev.filter((k) => k.id !== keyId));
+      setMessage({ type: 'success', text: 'MCP API key revoked.' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to revoke key' });
+    } finally {
+      setKeyActionId(null);
+    }
+  }
+
+  async function handleRenameMcpKey(keyId: string) {
+    const name = editingKeyName.trim();
+    if (!name) return;
+    setKeyActionId(keyId);
+    setMessage(null);
+    try {
+      const updated = await mcpKeysApi.rename(keyId, name);
+      setMcpKeys((prev) => prev.map((k) => (k.id === keyId ? updated : k)));
+      setEditingKeyId(null);
+      setMessage({ type: 'success', text: 'Key renamed.' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to rename key' });
+    } finally {
+      setKeyActionId(null);
+    }
+  }
+
+  async function handleCopyKey(key: string) {
+    try {
+      await navigator.clipboard.writeText(key);
+      setMessage({ type: 'success', text: 'Key copied to clipboard.' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage({ type: 'error', text: 'Could not copy key automatically — please copy it manually.' });
+    }
+  }
+
   return (
     <div className="max-w-3xl space-y-10">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage API keys, notifications, and privacy settings</p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage API keys and privacy settings</p>
       </div>
 
       {message && (
@@ -777,75 +813,135 @@ const [slackConnected, setSlackConnected] = useState(false);
             </div>
           ))}
         </div>
-      </section>}
 
-      {activeTab === 'notifications' && <section>
-        <div className="flex items-center gap-3 mb-4">
-          <Bell size={20} className="text-brand-600" />
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Notifications</h2>
-            <p className="text-sm text-gray-500">Choose how and when you receive notifications</p>
+        <div className="card mt-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Bot size={20} className="text-gray-500" />
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">MCP API Keys</h3>
+                <p className="text-xs text-gray-500">
+                  Keys for AI agents to connect to STAS via MCP (set as STAS_API_KEY in your agent)
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                {mcpKeys.length} active
+              </span>
+              <button
+                onClick={() => setShowCreateKey((prev) => !prev)}
+                className="btn-primary text-xs min-h-[32px] px-3"
+              >
+                <Plus size={14} className="inline mr-1" />
+                Create key
+              </button>
+            </div>
+          </div>
+
+          {showCreateKey && (
+            <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+              <div className="flex gap-2">
+                <input
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  placeholder="Key name (e.g. my-agent, claude-desktop)"
+                  className="input-field flex-1 font-mono text-sm min-h-[36px]"
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateMcpKey(); }}
+                />
+                <button onClick={handleCreateMcpKey} disabled={creatingKey} className="btn-primary text-xs min-h-[36px] px-3">
+                  {creatingKey ? '...' : 'Create'}
+                </button>
+                <button onClick={() => setShowCreateKey(false)} className="btn-secondary text-xs min-h-[36px] px-3">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {newlyCreatedKey && (
+            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/30 p-4 space-y-3">
+              <div>
+                <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                  Key "{newlyCreatedKey.name}" created — copy it now, it will not be shown again.
+                </p>
+                <p className="text-xs text-green-700 dark:text-green-400 mt-1">
+                  Use it as <code className="font-mono">STAS_API_KEY</code> when configuring your agent (Claude Desktop, Cursor, OpenCode...).
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded-lg bg-white dark:bg-gray-900 border border-green-300 dark:border-green-700 px-3 py-2 font-mono text-sm break-all select-all">
+                  {newlyCreatedKey.key}
+                </code>
+                <button onClick={() => handleCopyKey(newlyCreatedKey.key)} className="btn-secondary text-xs min-h-[36px] px-3">
+                  <Copy size={14} className="inline mr-1" />
+                  Copy
+                </button>
+                <button onClick={() => setNewlyCreatedKey(null)} className="btn-secondary text-xs min-h-[36px] px-3">
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 space-y-3">
+            {mcpKeysLoading ? (
+              <p className="text-sm text-gray-400">Loading keys...</p>
+            ) : mcpKeys.length === 0 ? (
+              <p className="text-sm text-gray-400">No MCP API keys yet. Create one to let your agents connect.</p>
+            ) : (
+              mcpKeys.map((k) => (
+                <div key={k.id} className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2.5 border border-gray-200 dark:border-gray-700">
+                  {editingKeyId === k.id ? (
+                    <div className="flex flex-1 items-center gap-2">
+                      <input
+                        value={editingKeyName}
+                        onChange={(e) => setEditingKeyName(e.target.value)}
+                        className="input-field flex-1 font-mono text-sm min-h-[32px]"
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleRenameMcpKey(k.id); if (e.key === 'Escape') setEditingKeyId(null); }}
+                      />
+                      <button onClick={() => handleRenameMcpKey(k.id)} disabled={keyActionId === k.id} className="btn-primary text-xs min-h-[32px] px-3">
+                        {keyActionId === k.id ? '...' : 'Save'}
+                      </button>
+                      <button onClick={() => setEditingKeyId(null)} className="btn-secondary text-xs min-h-[32px] px-3">Cancel</button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{k.name}</span>
+                          <button
+                            onClick={() => { setEditingKeyId(k.id); setEditingKeyName(k.name); }}
+                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                            title="Rename"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <code className="font-mono text-xs text-gray-400 select-all">{k.keyPrefix}••••••••</code>
+                          <span className="text-xs text-gray-400">
+                            Created {new Date(k.createdAt).toLocaleDateString()}
+                            {k.lastUsedAt ? ` · Used ${new Date(k.lastUsedAt).toLocaleDateString()}` : ' · Never used'}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRevokeMcpKey(k.id, k.name)}
+                        disabled={keyActionId === k.id}
+                        className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        title="Revoke key"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
-        {notificationsLoading ? (
-          <div className="space-y-3 animate-pulse">{[...Array(6)].map((_, i) => <div key={i} className="h-14 w-full rounded-lg bg-gray-200 dark:bg-gray-700" />)}</div>
-        ) : (
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="py-3 px-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                Configure Slack in the API Keys tab. Telegram notifications coming soon.
-              </p>
-            </div>
-            {EVENT_TYPES.map((event) => {
-              const EventIcon = EVENT_ICONS[event] || Bell;
-              return (
-                <div
-                  key={event}
-                  className="py-3 px-5 border-b border-gray-100 dark:border-gray-800 last:border-b-0 flex items-center justify-between gap-4 transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-gray-800/30"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="text-gray-400 dark:text-gray-500 flex-shrink-0 flex items-center justify-center">
-                      <EventIcon size={18} />
-                    </div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize truncate">
-                      {event.replace(/_/g, ' ')}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {CHANNELS.map((ch) => {
-                      const pref = notifications.find((n) => n.channel === ch.id && n.eventType === event);
-                      const enabled = pref?.enabled ?? false;
-                      return (
-                        <button
-                          key={ch.id}
-                          onClick={() => handleToggleNotif(ch.id, event, !enabled)}
-                          className={`inline-flex items-center gap-1 rounded-full border py-1 px-2 text-xs font-medium transition-colors ${
-                            enabled
-                              ? 'border-brand-400 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300 dark:border-brand-600 hover:bg-brand-100 dark:hover:bg-brand-900/30'
-                              : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                          title={`${ch.label}: ${enabled ? 'Enabled' : 'Disabled'}`}
-                        >
-                          {enabled ? (
-                            <span className="rounded-full bg-brand p-0.5">
-                              <Check size={10} className="text-white" />
-                            </span>
-                          ) : (
-                            <span className="text-gray-300 dark:text-gray-600">
-                              <X size={10} />
-                            </span>
-                          )}
-                          <span className="hidden sm:inline">{ch.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <ChevronRight size={16} className="text-gray-300 dark:text-gray-600 flex-shrink-0" />
-                </div>
-              );
-            })}
-          </div>
-        )}
       </section>}
 
       {activeTab === 'privacy' && <section>

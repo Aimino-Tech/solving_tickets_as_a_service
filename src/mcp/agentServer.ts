@@ -25,6 +25,7 @@ import { randomUUID } from 'node:crypto';
 import { type Request, type Response, Router } from 'express';
 import { Redis } from 'ioredis';
 import { config } from '../config.js';
+import { mcpKeyAuth } from './auth.js';
 import { captureError } from '../monitoring/sentry.js';
 import { captureEvent } from '../analytics/tracker.js';
 import type { McpJobStatus, McpRunHistoryEntry } from '../opencode-contract.js';
@@ -208,7 +209,7 @@ const router: Router = Router();
 // POST /mcp/jsonrpc — MCP JSON-RPC endpoint
 // ---------------------------------------------------------------------------
 
-router.post('/mcp/jsonrpc', async (req: Request, res: Response) => {
+router.post('/mcp/jsonrpc', mcpKeyAuth, async (req: Request, res: Response) => {
   const { jsonrpc, method, params, id } = req.body || {};
 
   if (jsonrpc !== '2.0' || !method || typeof method !== 'string') {

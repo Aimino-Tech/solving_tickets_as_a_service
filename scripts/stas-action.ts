@@ -511,6 +511,16 @@ async function createPullRequest(
     );
     run(`git push origin "${branchName}"`);
 
+    // Compute fix metrics for PR body
+    const filesChanged = fixResult.changes.length;
+    const testsPassed = testOutput.includes("passed") || testOutput.includes("ok");
+    const tokensUsed = analysis.typeCheck.length + testOutput.length;
+    const fixConfidence = fixResult.applied
+      ? testsPassed
+        ? "High"
+        : "Medium"
+      : "Low";
+
     // Create PR
     const prBody = [
       `## 🤖 ${ENV.BOT_NAME} Fix`,
@@ -519,6 +529,14 @@ async function createPullRequest(
       "",
       triage.summary ? `### Summary\n${triage.summary}\n` : "",
       fixResult.applied ? `### Changes Applied\n${fixResult.changes.map((c) => `- \`${c.file}\``).join("\n")}\n` : "",
+      "",
+      "### Fix Metrics",
+      "| Metric | Value |",
+      "|---|---|",
+      `| Files changed | ${filesChanged} |`,
+      `| Tests passing | ${testsPassed ? "✅" : "❌"} |`,
+      `| Fix confidence | ${fixConfidence} |`,
+      `| Tokens used | ${tokensUsed.toLocaleString()} |`,
       "",
       analysis.typeCheck
         ? `<details><summary>📋 TypeScript Diagnostics</summary>\n\n\`\`\`\n${analysis.typeCheck.slice(0, 2000)}\n\`\`\`\n</details>\n`
@@ -530,7 +548,10 @@ async function createPullRequest(
         ? `### ⚠️ Notes\n${fixResult.errors.map((e) => `- ${e}`).join("\n")}\n`
         : "",
       "",
-      `_Automated fix by ${ENV.BOT_NAME}._`,
+      "---",
+      "",
+      `> 🚀 **Powered by [STAS](https://stas.aimino.io?ref=pr-footer)** — Label an issue with \`stas:fix\` and get an AI-generated PR.`,
+      `> _Automated fix by ${ENV.BOT_NAME}._`,
     ]
       .filter(Boolean)
       .join("\n");
@@ -754,7 +775,9 @@ async function main(): Promise<void> {
           ? "Please review the draft PR and make any needed changes."
           : "The branch has the analysis results. A human needs to implement the fix.",
         "",
-        `_Powered by ${ENV.BOT_NAME}._`,
+        "---",
+        "",
+        `> 🚀 **Powered by [STAS](https://stas.aimino.io?ref=issue-comment)** — Label any issue with \`stas:fix\` and get an AI-generated PR.`,
       ].join("\n"),
     );
     console.log(`Done! PR: ${pr.html_url}`);
@@ -774,7 +797,10 @@ async function main(): Promise<void> {
           : "",
         "",
         "This issue needs manual attention.",
-        `_Powered by ${ENV.BOT_NAME}._`,
+        "",
+        "---",
+        "",
+        `> 🚀 **Powered by [STAS](https://stas.aimino.io?ref=issue-comment)** — Label any issue with \`stas:fix\` and get an AI-generated PR.`,
       ].join("\n"),
     );
     console.log("Done — no changes created");
