@@ -148,6 +148,18 @@ cp .env.example .env
 docker compose up -d
 ```
 
+### CLI Quickstart (interactive, ~60 seconds)
+
+The `npx stas quickstart` command walks you through the entire setup interactively:
+
+```bash
+npx stas quickstart
+```
+
+It handles GitHub authentication, app installation, test issue creation, and waits for the fix PR — all in one session.
+
+> 📖 See the [Quickstart CLI Guide](docs/quickstart.md) for detailed walkthrough, non-interactive mode, and troubleshooting.
+
 ### Try it without installing anything
 
 ```bash
@@ -556,6 +568,7 @@ STAS ships with comprehensive documentation:
 
 | Document | Description |
 |---|---|---|
+| [QUICKSTART.md](docs/quickstart.md) | Interactive CLI walkthrough — get a fix PR in under 60 seconds |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Deep-dive into the pipeline: webhooks, queue, agent, sandbox, security |
 | [SECURITY.md](docs/SECURITY.md) | Security model: webhook verification, sandbox isolation, prompt injection protection |
 | [SELF_HOSTING.md](docs/SELF_HOSTING.md) | Step-by-step self-hosting guide: Docker, Kubernetes, Railway, Fly.io |
