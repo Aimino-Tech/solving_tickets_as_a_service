@@ -97,15 +97,9 @@ export interface BridgeOptions {
 export class ChatLeadBridge {
   private readonly publisher: WorkPublisher | null;
   private readonly now: () => string;
-  private readonly statusListeners: Array<
-    (msg: Extract<BridgeMessage, { kind: 'status' }>) => void
-  > = [];
-  private readonly answerListeners: Array<
-    (msg: Extract<BridgeMessage, { kind: 'answer' }>) => void
-  > = [];
-  private readonly instructionListeners: Array<
-    (msg: Extract<BridgeMessage, { kind: 'instruction' }>) => void
-  > = [];
+  private readonly statusListeners: Array<(msg: Extract<BridgeMessage, { kind: 'status' }>) => void> = [];
+  private readonly answerListeners: Array<(msg: Extract<BridgeMessage, { kind: 'answer' }>) => void> = [];
+  private readonly instructionListeners: Array<(msg: Extract<BridgeMessage, { kind: 'instruction' }>) => void> = [];
 
   constructor(opts: BridgeOptions = {}) {
     this.publisher = opts.publisher ?? null;
@@ -117,9 +111,7 @@ export class ChatLeadBridge {
    * to end. When the publisher (RMQ) is configured and the work is long, the
    * item is written durably and the pipeline owns delivery.
    */
-  async handoff(
-    input: HandoffInput,
-  ): Promise<{ traceId: string; durable: boolean; message: BridgeMessage }> {
+  async handoff(input: HandoffInput): Promise<{ traceId: string; durable: boolean; message: BridgeMessage }> {
     const traceId = newTraceId();
     const workType = input.workType ?? defaultWorkType(input.instruction);
     const instruction: Extract<BridgeMessage, { kind: 'instruction' }> = {
@@ -138,7 +130,7 @@ export class ChatLeadBridge {
         instruction: input.instruction,
         threadRef: input.threadRef,
         userId: input.userId,
-        memorySnapshot: input.memorySnapshot,
+        memorySnapshot: input.memorySnapshot as unknown as Record<string, unknown>,
       } satisfies WorkItem);
       durable = res.accepted;
     }
