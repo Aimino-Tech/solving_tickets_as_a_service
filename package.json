@@ -86,7 +86,7 @@
     "test:e2e:smoke": "bash scripts/run-e2e-smoke-tests.sh",
     "test:e2e:smoke:verbose": "bash scripts/run-e2e-smoke-tests.sh --verbose",
     "test:e2e:smoke:list": "bash scripts/run-e2e-smoke-tests.sh --list",
-    "test:launch-readiness": "vitest run tests/launch-readiness.test.ts --config vitest.config.ts",
+    "test:launch-readiness": "vitest run --config vitest.launch.config.ts",
     "eval:continuity": "tsx eval/continuity/continuity.eval.ts",
     "eval:rehydrate": "tsx eval/continuity/rehydrate.eval.ts",
     "test:smoke:happy": "vitest run tests/e2e/happy-path.test.ts --config vitest.e2e.config.ts",

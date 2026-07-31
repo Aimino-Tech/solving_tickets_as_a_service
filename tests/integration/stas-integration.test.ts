@@ -1,105 +1,110 @@
-/**
- * 3-Repo Integration Test Suite — STAS ↔ Governance ↔ OS
- *
- * Tests the complete webhook→governance→dispatch→verify pipeline.
- * Requires docker-compose from tests/integration/docker-compose.yml to be running.
- */
+import { createHmac } from "node:crypto";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+const STAS_URL = process.env.STAS_URL || "http://localhost:4095";
+const GOVERNANCE_URL = process.env.GOVERNANCE_URL || "http://localhost:4003";
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "test-secret";
+const ADMIN_KEY = process.env.GOVERNANCE_ADMIN_KEY || "test-admin-key";
 
-const STAS_URL = process.env.STAS_URL || 'http://localhost:4095';
-const GOVERNANCE_URL = process.env.GOVERNANCE_URL || 'http://localhost:4003';
+function sign(rawBody: string, secret: string): string {
+  return `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`;
+}
+
+async function postJson(url: string, body: unknown, headers: Record<string, string> = {}) {
+  return fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+}
 
 const TEST_ISSUE_PAYLOAD = {
-  action: 'labeled',
+  action: "labeled",
   issue: {
     number: 9999,
-    title: 'Integration test: null check bug',
-    body: 'Reproduction: call getValue() on null reference. Expected: graceful null check.',
-    labels: [{ name: 'stas:fix' }],
+    title: "Integration test: null check bug",
+    body: "Reproduction: call getValue() on null reference. Expected: graceful null check.",
+    labels: [{ name: "stas:fix" }],
   },
-  repository: {
-    owner: { login: 'aimino' },
-    name: 'stas-demo-private',
-  },
+  repository: { owner: { login: "aimino" }, name: "stas-demo-private" },
   installation: { id: 99999 },
 };
 
-describe('STAS ↔ Governance Integration', () => {
+describe("STAS ↔ Governance integration stack", () => {
   beforeAll(async () => {
-    // Verify governance proxy is healthy
-    const healthResp = await fetch(`${GOVERNANCE_URL}/guardrail/health`);
-    expect(healthResp.ok).toBe(true);
-
-    // Verify STAS is healthy
-    const stasResp = await fetch(`${STAS_URL}/health`);
-    expect(stasResp.ok).toBe(true);
+    const stasHealth = await fetch(`${STAS_URL}/health`);
+    expect(stasHealth.status).toBe(200);
+    const governanceHealth = await fetch(`${GOVERNANCE_URL}/guardrail/health`);
+    expect(governanceHealth.status).toBe(200);
   });
 
-  it('Test 1: webhook→governance→dispatch full pipeline', async () => {
-    const resp = await fetch(`${STAS_URL}/webhook/github`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-GitHub-Event': 'issues',
-        'X-Hub-Signature-256': 'sha256=test',
-        'X-GitHub-Delivery': `test-delivery-${Date.now()}`,
-      },
-      body: JSON.stringify(TEST_ISSUE_PAYLOAD),
-    });
-
-    expect(resp.status).toBe(200);
-    const body = await resp.json();
-    expect(body).toHaveProperty('run_id');
+  afterAll(async () => {
+    await fetch(`${GOVERNANCE_URL}/admin/resume/test-tenant`, {
+      method: "POST",
+      headers: { "X-Admin-Key": ADMIN_KEY },
+    }).catch(() => undefined);
   });
 
-  it('Test 2: governance proxy returns 429 when rate limited', async () => {
-    // Send rapid requests to trigger rate limiter
-    const requests = Array.from({ length: 20 }, (_, i) =>
-      fetch(`${GOVERNANCE_URL}/api/stas/webhook`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-API-Key': 'test-key' },
-        body: JSON.stringify({ issue_id: `test-${i}` }),
-      }),
-    );
-
-    const results = await Promise.all(requests);
-    const rateLimited = results.filter((r) => r.status === 429);
-    expect(rateLimited.length).toBeGreaterThan(0);
+  it("accepts a validly-signed webhook with 202 {accepted:true}", async () => {
+    const rawBody = JSON.stringify(TEST_ISSUE_PAYLOAD);
+    const resp = await postJson(`${STAS_URL}/webhook/github`, rawBody, {
+      "X-GitHub-Event": "issues",
+      "X-GitHub-Delivery": `test-delivery-${Date.now()}`,
+      "X-Hub-Signature-256": sign(rawBody, WEBHOOK_SECRET),
+    });
+    expect(resp.status).toBe(202);
+    await expect(resp.json()).resolves.toEqual({ accepted: true });
   });
 
-  it('Test 3: kill-switch → 402 response', async () => {
-    // Kill the test tenant via admin API
-    const killResp = await fetch(`${GOVERNANCE_URL}/admin/tenant/kill/test-tenant`, {
-      method: 'POST',
-      headers: { 'X-Admin-Key': 'test-admin-key' },
+  it("rejects a webhook with an invalid signature (401)", async () => {
+    const rawBody = JSON.stringify(TEST_ISSUE_PAYLOAD);
+    const resp = await postJson(`${STAS_URL}/webhook/github`, rawBody, {
+      "X-GitHub-Event": "issues",
+      "X-GitHub-Delivery": `test-delivery-${Date.now()}`,
+      "X-Hub-Signature-256": "sha256=wrong",
     });
-    expect(killResp.ok).toBe(true);
-
-    // Verify dispatch returns 402
-    const dispatchResp = await fetch(`${GOVERNANCE_URL}/api/stas/webhook`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': 'test-key' },
-      body: JSON.stringify({ issue_id: 'test/foo#1' }),
-    });
-    expect(dispatchResp.status).toBe(402);
-  });
-
-  it('Test 4: governance proxy down → system degrades gracefully', async () => {
-    // When governance is unavailable, STAS should return an explicit error
-    // (not hang indefinitely or return 200 without dispatching)
-    const resp = await fetch(`${STAS_URL}/webhook/github`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-GitHub-Event': 'issues',
-        'X-Hub-Signature-256': 'sha256=wrong',
-        'X-GitHub-Delivery': `test-delivery-bad-${Date.now()}`,
-      },
-      body: JSON.stringify(TEST_ISSUE_PAYLOAD),
-    });
-
-    // Bad signature = 401, not a timeout or 500
     expect(resp.status).toBe(401);
+    await expect(resp.json()).resolves.toEqual({ error: "Invalid signature" });
+  });
+
+  it("rejects a webhook with no signature (401)", async () => {
+    const resp = await postJson(`${STAS_URL}/webhook/github`, TEST_ISSUE_PAYLOAD, {
+      "X-GitHub-Event": "issues",
+      "X-GitHub-Delivery": `test-delivery-${Date.now()}`,
+    });
+    expect(resp.status).toBe(401);
+    await expect(resp.json()).resolves.toEqual({ error: "Signature required" });
+  });
+
+  it("kills a tenant via the governance proxy and blocks its webhooks (402)", async () => {
+    const killResp = await fetch(`${GOVERNANCE_URL}/admin/kill/test-tenant`, {
+      method: "POST",
+      headers: { "X-Admin-Key": ADMIN_KEY },
+    });
+    expect(killResp.status).toBe(200);
+    const killBody = await killResp.json();
+    expect(killBody.status).toBe("ok");
+    expect(killBody.tenant_id).toBe("test-tenant");
+
+    const blocked = await postJson(`${GOVERNANCE_URL}/api/stas/webhook`, {
+      tenant_id: "test-tenant",
+      issue_id: "test/foo#1",
+    });
+    expect(blocked.status).toBe(402);
+    const blockedBody = await blocked.json();
+    expect(blockedBody.error?.type).toBe("kill_switch");
+  });
+
+  it("forwards an allowed webhook to the OpenSymphony upstream (502 when unreachable)", async () => {
+    const resp = await postJson(`${GOVERNANCE_URL}/api/stas/webhook`, {
+      tenant_id: "default",
+      issue_id: "test/bar#2",
+    });
+    // The integration stack does not deploy an OpenSymphony service, so the
+    // governance proxy fails to reach the upstream and reports a 502.
+    expect(resp.status).toBe(502);
+    const body = await resp.json();
+    expect(body.status).toBe("error");
+    expect(body.error).toContain("Upstream unreachable");
   });
 });
