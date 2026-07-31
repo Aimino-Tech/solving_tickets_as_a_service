@@ -28,6 +28,7 @@ import { getOctokit } from './auth.js';
 import * as messages from '../platforms/messages.js';
 import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
 import { config } from '../config.js';
+import { captureEvent } from '../analytics/tracker.js';
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
 
@@ -193,6 +194,8 @@ export class ActionDispatcher {
           confidence: 'high',
         });
 
+        this.trackFooterImpressions(issueNumber, repoOwner, repoName, installationId);
+
         return {
           action: 'pr_created',
           prUrl: pr.data.html_url,
@@ -234,6 +237,8 @@ export class ActionDispatcher {
           confidence: 'medium',
         });
 
+        this.trackFooterImpressions(issueNumber, repoOwner, repoName, installationId);
+
         return {
           action: 'draft_pr_created',
           prUrl: pr.data.html_url,
@@ -269,6 +274,22 @@ export class ActionDispatcher {
 
       return { action: 'error' };
     }
+  }
+
+  /**
+   * Track a `pr_footer_impression` PostHog event for each footer placement
+   * (PR body and issue comment) when the powered-by footer is enabled.
+   */
+  private trackFooterImpressions(
+    issueNumber: number,
+    repoOwner: string,
+    repoName: string,
+    installationId: number,
+  ): void {
+    if (!config.stas.poweredByFooterEnabled) return;
+    const props = { repoOwner, repoName, issueNumber };
+    captureEvent('pr_footer_impression', String(installationId), { ...props, placement: 'pr-body' });
+    captureEvent('pr_footer_impression', String(installationId), { ...props, placement: 'pr-comment' });
   }
 
   /**
