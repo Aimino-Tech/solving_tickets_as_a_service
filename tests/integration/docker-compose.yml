@@ -42,32 +42,43 @@ services:
     environment:
       NODE_ENV: test
       PORT: 4095
-      DATABASE_URL: postgres://stas:stas_test_pass@postgres:5432/stas_test
+      # GITHUB_WEBHOOK_SECRET is required by src/config.ts; the old WEBHOOK_SECRET name is ignored.
+      GITHUB_WEBHOOK_SECRET: test-secret
+      GITHUB_APP_ID: test-app-id
+      # src/config.ts reads SUPABASE_DATABASE_URL (DATABASE_URL alone is ignored).
+      SUPABASE_DATABASE_URL: postgres://stas:stas_test_pass@postgres:5432/stas_test
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       PROXY_DISPATCH_URL: http://governance:4002
-      GITHUB_APP_ID: test-app-id
       GITHUB_PRIVATE_KEY: test-key
-      WEBHOOK_SECRET: test-secret
+      # Default is 120s polling opencode health at boot; keep the stack fast.
+      OPENCODE_HEALTH_STARTUP_TIMEOUT_MS: "5000"
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
-      governance: { condition: service_started }
+      governance: { condition: service_healthy }
+    # node:22-alpine has no curl — healthcheck must use node fetch.
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4095/health"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4095/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 10s
       retries: 15
 
+  # Built from source: the ghcr.io/aimino-tech/llm-governance image is private and there is
+  # no publish workflow, so it cannot be pulled in public CI or by unauthenticated users.
+  # Context is ../../llm-governance relative to tests/integration/ — a sibling checkout of
+  # the llm-governance repo (CI checks it out at the workspace root).
   governance:
-    image: ghcr.io/aimino-tech/llm-governance:latest
+    build:
+      context: ../../llm-governance
+      dockerfile: Dockerfile
     ports:
       - "4003:4002"
     environment:
-      PROXY_CONFIG: /app/proxy_config.yaml
-      AUDIT_LOG_DATABASE_URL: postgres://stas:stas_test_pass@postgres:5432/stas_test
-      RATE_LIMIT_ENABLED: "true"
-      KILL_SWITCH_ENABLED: "true"
+      # Required by governance entrypoint.sh (envsubst template) — any non-empty value works.
+      OPENCODE_API_KEY: test-key
+      # Required by guardrail/admin_routes.py; without it all /admin endpoints 401.
+      GOVERNANCE_ADMIN_KEY: test-admin-key
     depends_on:
       postgres: { condition: service_healthy }
     healthcheck:
