@@ -5,7 +5,8 @@
   "license": "AGPL-3.0-only",
   "workspaces": [
     "packages/github-client",
-    "packages/stas-mcp"
+    "packages/stas-mcp",
+    "packages/stas-cli"
   ],
   "description": "Label a GitHub issue. Our bot investigates, fixes, and opens a PR. Backed by OpenCode.",
   "type": "module",
@@ -86,6 +87,8 @@
     "test:e2e:smoke:verbose": "bash scripts/run-e2e-smoke-tests.sh --verbose",
     "test:e2e:smoke:list": "bash scripts/run-e2e-smoke-tests.sh --list",
     "test:launch-readiness": "vitest run tests/launch-readiness.test.ts --config vitest.config.ts",
+    "eval:continuity": "tsx eval/continuity/continuity.eval.ts",
+    "eval:rehydrate": "tsx eval/continuity/rehydrate.eval.ts",
     "test:smoke:happy": "vitest run tests/e2e/happy-path.test.ts --config vitest.e2e.config.ts",
     "test:smoke:error": "vitest run tests/e2e/error-handling-path.test.ts --config vitest.e2e.config.ts",
     "test:smoke:auth": "vitest run tests/e2e/auth-path.test.ts --config vitest.e2e.config.ts",
@@ -100,7 +103,11 @@
     "test:automation:python": "cd tests/automation && python -m pytest -v",
     "test:automation:python:login": "cd tests/automation && python -m pytest test_login.py -v",
     "test:automation:python:api": "cd tests/automation && python -m pytest test_auth_api.py -v",
+<<<<<<< HEAD
     "eval:conversations": "tsx eval/conversations/run.ts"
+=======
+    "stas:quickstart": "tsx src/template/cli.ts quickstart"
+>>>>>>> 48a1193cfc0ef38e50152c775fdfe2da214a0e88
   },
   "dependencies": {
     "@linear/sdk": "^87.0.0",

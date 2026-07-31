@@ -12,20 +12,20 @@ import { rootLogger } from './utils/logger.js';
  * which breaks env vars like CI_MONITOR_ENABLED=false.
  */
 const boolSchema = (defaultVal: boolean) =>
-  z.preprocess(
-    (val) => {
-      if (val === 'true' || val === '1') return true;
-      if (val === 'false' || val === '0') return false;
-      return val;
-    },
-    z.boolean().default(defaultVal),
-  );
+  z.preprocess((val) => {
+    if (val === 'true' || val === '1') return true;
+    if (val === 'false' || val === '0') return false;
+    return val;
+  }, z.boolean().default(defaultVal));
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().max(65535).default(3000),
   RUN_MODE: z.enum(['api', 'worker', 'both']).default('both'),
 
   GITHUB_APP_ID: z.string().min(1, 'GITHUB_APP_ID is required'),
-  GITHUB_APP_PRIVATE_KEY: z.string().min(1, 'GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_PATH is required').optional(),
+  GITHUB_APP_PRIVATE_KEY: z
+    .string()
+    .min(1, 'GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_PATH is required')
+    .optional(),
   GITHUB_APP_PRIVATE_KEY_PATH: z.string().optional(),
   GITHUB_TOKEN: z.string().optional(),
   GITHUB_OAUTH_CLIENT_ID: z.string().optional(),
@@ -33,6 +33,10 @@ const envSchema = z.object({
   DEV_GITHUB_TOKEN: z.string().optional(),
   GITHUB_WEBHOOK_SECRET: z.string().min(1, 'GITHUB_WEBHOOK_SECRET is required'),
   GITHUB_WEBHOOK_PATH: z.string().default('/webhook'),
+  PR_QUALITY_GATE_ENABLED: boolSchema(true),
+  PR_AUTO_REQUEST_REVIEW: boolSchema(true),
+  PR_MERGE_QUEUE_ENABLED: boolSchema(false),
+  PR_REVIEWERS_COUNT: z.coerce.number().int().min(0).max(10).default(2),
 
   REDIS_URL: z.string().default('redis://localhost:6379'),
   RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672/stas'),
@@ -40,20 +44,21 @@ const envSchema = z.object({
 
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
   QUEUE_DEDUP_TTL_SECONDS: z.coerce.number().int().positive().default(120),
+  QUEUE_MSG_TTL_MS: z.coerce.number().int().positive().default(30_000),
   QUEUE_KEEP_COMPLETED: z.coerce.number().int().positive().default(200),
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
-  QUEUE_RETRY_DELAYS: z.string().default("30000,120000,300000,900000"),
+  QUEUE_RETRY_DELAYS: z.string().default('30000,120000,300000,900000'),
 
-  OPENCODE_URL: z.string().default("http://localhost:4096"),
-  OPENCODE_MODEL: z.string().default("anthropic/claude-sonnet-4-20250514"),
-  OPENAI_BASE_URL: z.string().default("http://litellm-proxy:4002/v1"),
-  FALLBACK_MODELS: z.string().default("gpt-4o,claude-haiku"),
+  OPENCODE_URL: z.string().default('http://localhost:4096'),
+  OPENCODE_MODEL: z.string().default('anthropic/claude-sonnet-4-20250514'),
+  OPENAI_BASE_URL: z.string().default('http://litellm-proxy:4002/v1'),
+  FALLBACK_MODELS: z.string().default('gpt-4o,claude-haiku'),
 
-  FREE_TIER_MODEL: z.string().default("free-tier"),
-  FREE_TIER_BASE_URL: z.string().default("http://localhost:4002"),
-  PAID_TIER_MODEL: z.string().default("deepseek-v4-flash"),
-  PAID_TIER_BASE_URL: z.string().default("http://localhost:4002"),
+  FREE_TIER_MODEL: z.string().default('free-tier'),
+  FREE_TIER_BASE_URL: z.string().default('http://localhost:4002'),
+  PAID_TIER_MODEL: z.string().default('deepseek-v4-flash'),
+  PAID_TIER_BASE_URL: z.string().default('http://localhost:4002'),
 
   FIX_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
   PHASE_TIMEOUT_TRIAGE_MS: z.coerce.number().int().positive().default(30_000),
@@ -67,14 +72,14 @@ const envSchema = z.object({
   E2B_TEMPLATE_ID: z.string().default('default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
-  STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
+  STAS_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
   STAS_MONTHLY_QUOTA_ENABLED: boolSchema(true),
   STAS_POWERED_BY_FOOTER: boolSchema(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
-	  STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
+  STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
   STAS_AI_DISABLED: boolSchema(false),
-	  STAS_LABEL: z.string().default('stas:fix'),
+  STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
@@ -100,7 +105,10 @@ const envSchema = z.object({
   REDIS_TTL_FREQUENT_ACCESS: z.coerce.number().int().positive().default(60),
   ADMIN_API_KEY: z.string().optional(),
 
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').default('change-me-to-a-random-secret-at-least-32-chars'),
+  JWT_SECRET: z
+    .string()
+    .min(32, 'JWT_SECRET must be at least 32 characters')
+    .default('change-me-to-a-random-secret-at-least-32-chars'),
   JWT_EXPIRES_IN: z.string().default('24h'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
 
@@ -162,7 +170,12 @@ const envSchema = z.object({
   POSTHOG_HOST: z.string().default('https://us.i.posthog.com'),
 
   DPA_VERSION: z.string().default('2026-06-01'),
-  DPA_REQUIRE_ACCEPTANCE: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(true),
+  DPA_REQUIRE_ACCEPTANCE: z
+    .preprocess((v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    }, z.boolean())
+    .default(true),
   DATA_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
 
   USAGE_CREDITS_FIX_RUN: z.coerce.number().int().positive().default(50),
@@ -219,13 +232,26 @@ const envSchema = z.object({
   SUPABASE_JWT_SECRET: z.string().default(''),
 
   DATABASE_URL: z.preprocess(
-    (v) => (typeof v === 'string' && v.trim() !== '' ? v : process.env.SUPABASE_DATABASE_URL || 'postgres://localhost:5432/stas'),
+    (v) =>
+      typeof v === 'string' && v.trim() !== ''
+        ? v
+        : process.env.SUPABASE_DATABASE_URL || 'postgres://localhost:5432/stas',
     z.string(),
   ),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).positive().default(10),
-  DATABASE_SSL: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(false),
-  DATABASE_ENABLE_AUDIT_PERSISTENCE: z.preprocess((v) => { if (typeof v === 'string') return v === 'true' || v === '1'; return v; }, z.boolean()).default(false),
+  DATABASE_SSL: z
+    .preprocess((v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    }, z.boolean())
+    .default(false),
+  DATABASE_ENABLE_AUDIT_PERSISTENCE: z
+    .preprocess((v) => {
+      if (typeof v === 'string') return v === 'true' || v === '1';
+      return v;
+    }, z.boolean())
+    .default(false),
 
   STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
   STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
@@ -233,13 +259,12 @@ const envSchema = z.object({
 
   // MCP Server Configuration
   MCP_API_KEY: z.string().optional(),
-  MCP_AUTH_ENABLED: z.preprocess(
-    (v) => {
+  MCP_AUTH_ENABLED: z
+    .preprocess((v) => {
       if (typeof v === 'string') return v === 'true' || v === '1';
       return v;
-    },
-    z.boolean(),
-  ).default(true),
+    }, z.boolean())
+    .default(true),
   STAS_MCP_SERVER_URL: z.string().default('http://localhost:4095'),
   STAS_MCP_PORT: z.coerce.number().int().positive().max(65535).default(4095),
   STAS_MCP_AUTO_START: boolSchema(true),
@@ -379,6 +404,10 @@ function buildConfig(env: ParsedEnv) {
       oauthClientId: env.GITHUB_OAUTH_CLIENT_ID ?? '',
       oauthClientSecret: env.GITHUB_OAUTH_CLIENT_SECRET ?? '',
       devToken: env.DEV_GITHUB_TOKEN ?? '',
+      prQualityGate: env.PR_QUALITY_GATE_ENABLED,
+      autoRequestReview: env.PR_AUTO_REQUEST_REVIEW,
+      mergeQueueEnabled: env.PR_MERGE_QUEUE_ENABLED,
+      reviewersCount: env.PR_REVIEWERS_COUNT,
     },
 
     queue: {
@@ -387,17 +416,21 @@ function buildConfig(env: ParsedEnv) {
       backend: env.QUEUE_BACKEND,
       workerConcurrency: env.WORKER_CONCURRENCY,
       dedupTtl: env.QUEUE_DEDUP_TTL_SECONDS,
+      msgTtlMs: env.QUEUE_MSG_TTL_MS,
       keepCompleted: env.QUEUE_KEEP_COMPLETED,
       keepFailed: env.QUEUE_KEEP_FAILED,
       maxRetries: env.QUEUE_MAX_RETRIES,
-      retryDelays: env.QUEUE_RETRY_DELAYS.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n)),
-
+      retryDelays: env.QUEUE_RETRY_DELAYS.split(',')
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => !Number.isNaN(n)),
     },
 
     opencode: {
       url: env.OPENCODE_URL,
       model: env.OPENCODE_MODEL,
-      fallbackModels: env.FALLBACK_MODELS.split(",").map((s) => s.trim()).filter(Boolean),
+      fallbackModels: env.FALLBACK_MODELS.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
       modelTier: {
         freeModel: env.FREE_TIER_MODEL,
         freeBaseUrl: env.FREE_TIER_BASE_URL,
@@ -424,7 +457,9 @@ function buildConfig(env: ParsedEnv) {
 
     ci: {
       monitorEnabled: env.CI_MONITOR_ENABLED,
-      repos: env.CI_REPOS.split(',').map((s) => s.trim()).filter(Boolean),
+      repos: env.CI_REPOS.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
       pollIntervalMs: env.CI_POLL_INTERVAL_MS,
       failureThreshold: env.CI_FAILURE_THRESHOLD,
     },
@@ -446,7 +481,9 @@ function buildConfig(env: ParsedEnv) {
       containerMemory: env.DOCKER_CONTAINER_MEMORY,
       containerCpu: env.DOCKER_CONTAINER_CPU,
       networkRestrict: env.DOCKER_NETWORK_RESTRICT,
-      allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',').map((s) => s.trim()).filter(Boolean),
+      allowedHosts: env.DOCKER_ALLOWED_HOSTS.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
       seccompProfile: env.DOCKER_SECCOMP_PROFILE ?? '',
       apparmorProfile: env.DOCKER_APPARMOR_PROFILE ?? '',
       gvisorEnabled: env.DOCKER_GVISOR_ENABLED,
@@ -538,10 +575,10 @@ function buildConfig(env: ParsedEnv) {
     },
 
     stas: {
-	      mode: env.STAS_MODE,
-	      aiMode: env.STAS_AI_MODE,
-	      aiDisabled: env.STAS_AI_DISABLED,
-	      label: env.STAS_LABEL,
+      mode: env.STAS_MODE,
+      aiMode: env.STAS_AI_MODE,
+      aiDisabled: env.STAS_AI_DISABLED,
+      label: env.STAS_LABEL,
       botName: env.BOT_NAME,
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
       maxAgentIterations: env.MAX_AGENT_ITERATIONS,
@@ -680,7 +717,9 @@ function buildConfig(env: ParsedEnv) {
 
       ipAllowlist: {
         enabled: env.IP_ALLOWLIST_ENABLED,
-        ips: env.IP_ALLOWLIST.split(',').map((s) => s.trim()).filter(Boolean),
+        ips: env.IP_ALLOWLIST.split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
       },
       sandbox: {
         privileged: env.SANDBOX_PRIVILEGED,
@@ -738,7 +777,9 @@ function buildConfig(env: ParsedEnv) {
       pat: env.PROXY_PAT,
       dispatchUrl: env.PROXY_DISPATCH_URL,
       apiKey: env.PROXY_API_KEY,
-      allowedOrgs: env.PROXY_ALLOWED_ORGS.split(',').map((s) => s.trim()).filter(Boolean),
+      allowedOrgs: env.PROXY_ALLOWED_ORGS.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
     },
 
     onboarding: {
@@ -782,7 +823,11 @@ export function requireConfig(): typeof config {
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
     const { fieldErrors } = result.error.flatten();
-    throw new Error('Invalid environment configuration: ' + Object.entries(fieldErrors).map(([k, v]) => `${k}: ${v?.join('; ')}`).join(', '));
+    throw new Error(
+      `Invalid environment configuration: ${Object.entries(fieldErrors)
+        .map(([k, v]) => `${k}: ${v?.join('; ')}`)
+        .join(', ')}`,
+    );
   }
   return buildConfig(result.data);
 }

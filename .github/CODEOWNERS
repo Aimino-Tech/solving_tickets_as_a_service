@@ -1,0 +1,18 @@
+# Global owners for the repository
+* @Aimino-Tech/core
+
+# GitHub Actions workflows and tooling
+/.github/ @Aimino-Tech/core
+
+# CLI and packages
+/packages/stas-cli/ @Aimino-Tech/core
+/packages/github-client/ @Aimino-Tech/core
+/packages/stas-mcp/ @Aimino-Tech/core
+
+# Documentation
+/docs/ @Aimino-Tech/core
+/website/ @Aimino-Tech/core
+
+# Security-sensitive paths
+/src/security/ @Aimino-Tech/core
+/src/webhooks/ @Aimino-Tech/core

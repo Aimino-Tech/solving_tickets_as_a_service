@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App — STAS Blog</title>
+  <meta name="description" content="A true-to-life STAS run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable." />
+  <meta name="keywords" content="STAS post-mortem, AI code review, race condition, Flask SQLite, automated bug fixing, GitHub bot" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://stas.aimino.io/blog/post-mortem-flask-todo-race" />
+  <meta property="og:title" content="Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App" />
+  <meta property="og:description" content="A true-to-life STAS run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable." />
+  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App" />
+  <meta name="twitter:description" content="A true-to-life STAS run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable." />
+  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App",
+    "datePublished": "2026-07-29",
+    "author": {
+      "@type": "Organization",
+      "name": "AImino Team",
+      "url": "https://aimino.io"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "AImino"
+    },
+    "description": "A true-to-life STAS run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable."
+  }
+  </script>
+
+  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+
+  <style>
+    .blog-post { max-width: 720px; margin: 0 auto; padding: 40px 24px 80px; }
+    .blog-post-header { margin-bottom: 40px; }
+    .blog-post-header .tags { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .blog-post-header h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 900; line-height: 1.15; margin-bottom: 16px; letter-spacing: -0.02em; }
+    .blog-post-header .meta { font-size: 14px; color: var(--text3); display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    .blog-post-header .meta .author { display: flex; align-items: center; gap: 8px; }
+    .blog-post-header .meta .author-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--gold); }
+    .blog-post-content h2 { font-size: 24px; font-weight: 700; margin: 40px 0 16px; }
+    .blog-post-content h3 { font-size: 18px; font-weight: 700; margin: 28px 0 12px; }
+    .blog-post-content p { font-size: 16px; color: var(--text2); line-height: 1.7; margin-bottom: 16px; }
+    .blog-post-content p strong { color: var(--text); }
+    .blog-post-content ul, .blog-post-content ol { font-size: 16px; color: var(--text2); line-height: 1.7; margin-bottom: 16px; padding-left: 24px; }
+    .blog-post-content li { margin-bottom: 8px; }
+    .blog-post-content code { font-family: var(--font-mono); font-size: 14px; background: rgba(255,255,255,0.04); padding: 2px 6px; border-radius: 4px; }
+    .blog-post-content pre { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; overflow-x: auto; margin-bottom: 20px; font-size: 13px; line-height: 1.5; font-family: var(--font-mono); }
+    .blog-post-content pre code { background: none; padding: 0; }
+    .blog-post-content .highlight-box { background: rgba(232,185,49,0.06); border-left: 3px solid var(--gold); padding: 20px 24px; border-radius: 0 10px 10px 0; margin-bottom: 20px; }
+    .blog-post-content .highlight-box p { margin-bottom: 0; font-size: 15px; }
+    .blog-post-nav { margin-top: 60px; padding-top: 32px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .blog-post-nav a { font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo"><span class="logo-icon">S</span> STAS</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/">Home</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/trust">Trust</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/blog">Blog</a></li>
+        <li><a href="/status">Status</a></li>
+        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta">Install App →</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- POST -->
+  <article class="blog-post">
+    <div class="blog-post-header">
+      <div class="tags">
+        <span class="tag tag-green">Engineering</span>
+        <span class="tag tag-amber">Case Study</span>
+      </div>
+      <h1>Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App</h1>
+      <div class="meta">
+        <span class="author">
+          <span class="author-avatar">AT</span>
+          AImino Team
+        </span>
+        <span>July 29, 2026</span>
+        <span>· 6 min read</span>
+      </div>
+    </div>
+
+    <div class="blog-post-content">
+
+      <p>Users of a small Flask todo app started reporting something odd: every so often, creating a todo returned a 500 error. Not a crash, not an obvious bug. Just an occasional <code>OperationalError: database is locked</code> that came and went under load. The maintainer reproduced it a couple of times, filed an issue, and, as a quick experiment, labeled it <code>stas:fix</code>. Three minutes later there was a pull request.</p>
+
+      <p>This is the story of that run — what STAS saw, what it changed, and why the fix holds up.</p>
+
+      <h2>The Timeline</h2>
+
+      <p>Here's the full run, from label to PR:</p>
+
+      <pre><code>Issue labeled stas:fix
+        │
+        ▼
+   Webhook Server
+        │
+        ├── Verify signature
+        ├── Post "working on it" comment
+        ├── Build prompt from issue context
+        │
+        ▼
+   Triage (cheap model)
+        │
+        ├── Classify: bug, medium difficulty
+        ├── Suggest files: app.py / models.py
+        │
+        ▼
+   Sandbox Boot
+        │
+        ├── Clone repo (shallow)
+        ├── pip install
+        ├── Baseline tests → green
+        │
+        ▼
+   Investigation
+        │
+        ├── Reproduce with concurrent requests
+        ├── Root cause: shared sqlite3 connection
+        └── + write contention without WAL
+        │
+        ▼
+   Fix + Regression Test
+        │
+        ├── flask.g per-request connection
+        ├── WAL journal mode + busy_timeout
+        └── Concurrent-write test → zero 500s
+        │
+        ▼
+   Verify (new + existing tests pass)
+        │
+        ▼
+   Draft PR (+28 / -10 lines)</code></pre>
+
+      <p><strong>3.2 minutes</strong> from label to PR. Roughly the same time it takes to brew a cup of coffee.</p>
+
+      <h2>Triage: A Bug, Not a Feature</h2>
+
+      <p>The first decision happened before any code was written. The triage model read the issue and classified it: genuine bug, medium difficulty, likely files <code>app.py</code> and <code>models.py</code>. That matters more than it sounds — roughly 60% of labeled issues turn out to be feature requests or questions that shouldn't trigger a fix run at all. Filtering them early saves money and noise. This one was a real bug, so the run continued.</p>
+
+      <h2>Sandbox: A Clean Room</h2>
+
+      <p>STAS cloned the repo into an isolated sandbox and installed dependencies. The baseline test suite passed. That's a deliberately unexciting step, and it's the reason the rest of the run is trustworthy: STAS knew the repo was healthy before touching it, so any later failure could be attributed to the fix rather than a broken checkout.</p>
+
+      <h2>Investigation: Reproducing the Sporadic</h2>
+
+      <p>This is the part that separates a fix from a guess. The issue described an intermittent failure, and intermittent failures are where naive agents fail — they patch the visible symptom and ship.</p>
+
+      <p>The agent reproduced the bug with a small concurrent load test: several threads creating todos at once. Under contention, SQLite raised <code>database is locked</code>. The root cause turned out to be classic Flask + SQLite misuse:</p>
+
+      <ul>
+        <li><strong>A single <code>sqlite3</code> connection created at module load</strong>, shared across all request threads. Python's <code>sqlite3</code> module isn't safe for concurrent writes on a shared connection — the connection object gets corrupted under contention.</li>
+        <li><strong>No WAL mode</strong>. The default <code>journal_mode</code> blocks readers during writes and serializes write transactions, making lock contention far more likely under load.</li>
+        <li><strong>No <code>busy_timeout</code></strong>, so when a lock was hit, SQLite failed fast instead of waiting for the contention to clear.</li>
+      </ul>
+
+      <p>Before touching any code, the agent confirmed the hypothesis by reading <code>app.py</code> and <code>models.py</code>. There it was: a single connection created at module import, passed into every request handler. The reproduction was deterministic once the concurrent load test existed, and the fix target was unambiguous. That's the pattern we look for in a healthy fix run: reproduce, read, confirm, then change.</p>
+
+      <p>Three compounding causes, one reproducible failure. The agent documented each one in the PR body — not as boilerplate, but as genuine root-cause analysis. This is also why STAS runs leave a useful artifact behind: the PR description reads like a small post-mortem, which is what makes AI-generated fixes auditable by humans.</p>
+
+      <h2>The Fix</h2>
+
+      <p>The fix addressed the mechanism, not the symptom:</p>
+
+      <ul>
+        <li><strong>Per-request connections via <code>flask.g</code></strong>: each request opens its own connection scoped to that request lifecycle, closed in <code>teardown_appcontext</code>. No more cross-thread sharing.</li>
+        <li><strong>WAL journal mode</strong>: <code>PRAGMA journal_mode=WAL</code> allows concurrent reads during writes and dramatically reduces lock contention.</li>
+        <li><strong><code>busy_timeout</code></strong>: <code>PRAGMA busy_timeout=5000</code> makes SQLite wait up to five seconds for a busy lock instead of erroring immediately.</li>
+      </ul>
+
+      <p>Plus a regression test that reproduces the original failure mode — a test that spawns a batch of concurrent write requests and asserts zero 500 responses. Without it, this fix would be unverifiable.</p>
+
+      <h2>Verification: The Point of No Shortcuts</h2>
+
+      <p>The agent ran the new test until it passed, then ran the entire existing suite. Everything green. STAS applies two gates to every run: the fix must solve the reported issue, and it must not break anything that was working. On this run, both held.</p>
+
+      <h2>The After</h2>
+
+      <ul>
+        <li><strong>3.2 minutes</strong> — label to draft PR</li>
+        <li><strong>+28 / -10 lines</strong> — a small, reviewable diff</li>
+        <li>The maintainer read the PR, confirmed the root-cause analysis matched their own read of the code, and merged after light review.</li>
+      </ul>
+
+      <p>The human review still happened. It was just fast, because the agent had already done the expensive part: figuring out <em>why</em>.</p>
+
+      <div class="highlight-box">
+        <p><strong>Key lesson:</strong> The most valuable thing STAS produces isn't the diff — it's the root-cause analysis. A fix that documents why the code was wrong is reviewable in minutes. A fix that only changes code is a guess wearing a patch's clothes. Connection-per-request, WAL, and <code>busy_timeout</code> are the SQLite trifecta for Flask apps, but the general rule applies everywhere: understand the mechanism, then change it.</p>
+      </div>
+
+      <h2>Why Post-Mortems Matter for AI Fixes</h2>
+
+      <p>There's a healthy skepticism about AI-generated code, and it's justified when the output is a blob of changes with no reasoning. STAS is built to fail that test differently: every fix run produces a narrative — triage, reproduction, root cause, change, verification — that a human can audit in minutes. The same discipline behind our <a href="/trust">trust and safety model</a> applies to the code itself: when the agent documents root cause rather than symptoms, the PR stops being "trust me, I ran the tests" and becomes evidence you can check.</p>
+
+      <p>That's what happened with the todo app. The bug was real, the fix was small, and the reasoning was on the record. The maintainer didn't have to reverse-engineer the diff to decide whether to merge it — the agent had already written the post-mortem.</p>
+
+    </div>
+
+    <div class="blog-post-nav">
+      <a href="/blog">← Back to Blog</a>
+      <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" data-track="post-cta">Install STAS →</a>
+    </div>
+  </article>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/docs">Documentation</a></li>
+          <li><a href="/trust">Trust & Security</a></li>
+          <li><a href="/status">Status</a></li>
+          <li><a href="/support">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="/blog">Blog</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
+          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="https://aimino.io">AImino</a></li>
+          <li><a href="https://opencode.ai">OpenCode</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/LICENSE">License</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 AImino. All rights reserved.</span>
+      <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">Open Source (MIT)</a>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

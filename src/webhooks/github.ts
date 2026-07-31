@@ -19,23 +19,23 @@
  */
 
 import { type EmitterWebhookEventName, Webhooks } from '@octokit/webhooks';
-
-import { config } from '../config.js';
-import { rootLogger } from '../utils/logger.js';
-import { generateTraceId } from '../utils/trace.js';
 import { captureEvent } from '../analytics/tracker.js';
-import type { BillingPlan, IssueJobData } from '../utils/types.js';
-import { rateLimiter } from '../ratelimit/limiter.js';
-import { getRateLimitForAccount } from '../ratelimit/tiers.js';
-import { getTierForAccount } from '../ratelimit/tiers.js';
-import { accountsRepository } from '../db/repositories/index.js';
+import * as auditService from '../audit/service.js';
+import { recordGovernanceFailure } from '../bridge/metrics.js';
+import { config } from '../config.js';
 import { gitHubInstallationRepository } from '../db/repositories/GitHubInstallationRepository.js';
 import { gitHubOAuthRepository } from '../db/repositories/GitHubOAuthRepository.js';
-import { dispatchIssueToOsy } from '../services/osyDispatch.js';
-import * as auditService from '../audit/service.js';
-import { dispatchThroughGovernance } from '../governance/client.js';
+import { accountsRepository } from '../db/repositories/index.js';
+import { handleCheckSuiteCompleted, handlePullRequestOpened } from '../github/prQualityGate.js';
 import { parseSlashCommand } from '../github/slashCommands.js';
-import { recordGovernanceFailure } from '../bridge/metrics.js';
+import { dispatchThroughGovernance } from '../governance/client.js';
+import type { AccountTier } from '../proxy/modelRouter.js';
+import { rateLimiter } from '../ratelimit/limiter.js';
+import { getTierForAccount, type Tier } from '../ratelimit/tiers.js';
+import { dispatchIssueToOsy } from '../services/osyDispatch.js';
+import { rootLogger } from '../utils/logger.js';
+import { generateTraceId } from '../utils/trace.js';
+import type { BillingPlan, IssueJobData } from '../utils/types.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
 
@@ -60,10 +60,7 @@ async function postIssueReceivedComment(
       issue_number: issueNumber,
       body: `### 📥 Issue Received\n\nThis issue has been received and queued for processing.\n\n> STAS is running in **AI-disabled mode**. No automated fix will be attempted.\n> An operator needs to claim and process this issue manually.\n\nIssue ID: #${issueNumber}`,
     });
-    log.info(
-      { repo: `${repoOwner}/${repoName}`, issueNumber },
-      'Posted "issue received" comment (AI-disabled mode)',
-    );
+    log.info({ repo: `${repoOwner}/${repoName}`, issueNumber }, 'Posted "issue received" comment (AI-disabled mode)');
   } catch (err) {
     log.warn(
       { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
@@ -91,10 +88,7 @@ async function postGovernanceFailureComment(
       issue_number: issueNumber,
       body: `### ⚠️ Governance Proxy Unavailable\n\nSTAS was unable to verify this issue through the governance proxy. Processing has been **blocked** to maintain security policy compliance.\n\n> The issue will not be processed until the governance service is restored. An administrator should investigate the governance proxy status.\n\nIssue ID: #${issueNumber}`,
     });
-    log.info(
-      { repo: `${repoOwner}/${repoName}`, issueNumber },
-      'Posted governance failure comment',
-    );
+    log.info({ repo: `${repoOwner}/${repoName}`, issueNumber }, 'Posted governance failure comment');
   } catch (err) {
     log.warn(
       { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
@@ -104,8 +98,88 @@ async function postGovernanceFailureComment(
 }
 
 /**
+ * Create a "Welcome to STAS" issue on a freshly installed repository.
+ *
+ * AIM-4408 (Phase 2 activation funnel): auto-creates a tutorial issue labeled
+ * `stas:fix` so the very first fix lands without any manual setup, and the
+ * activation funnel starts from the moment the app is installed.
+ *
+ * The label is ensured to exist first (GitHub rejects issue creation with a
+ * missing label). Failures are logged and swallowed — a welcome issue is a
+ * best-effort enhancement, never a reason to fail the installation event.
+ */
+async function createWelcomeIssue(installationId: number, repoOwner: string, repoName: string): Promise<void> {
+  try {
+    const { getOctokit } = await import('../github/auth.js');
+    const octokit = await getOctokit(installationId);
+
+    // Ensure the trigger label exists on the repo before referencing it.
+    try {
+      await octokit.issues.createLabel({
+        owner: repoOwner,
+        repo: repoName,
+        name: config.stas.label,
+        color: '0366d6',
+        description: 'Trigger a STAS AI fix for this issue',
+      });
+    } catch (labelErr: unknown) {
+      const status = (labelErr as { status?: number })?.status;
+      // 422 means the label already exists — that's fine.
+      if (status !== 422) {
+        log.warn({ err: String(labelErr), repo: `${repoOwner}/${repoName}` }, 'Could not ensure STAS label exists');
+      }
+    }
+
+    const welcomeBody = [
+      '## 👋 Welcome to STAS — Solving Tickets As A Service',
+      '',
+      'This issue was created automatically when the STAS GitHub App was installed.',
+      '',
+      '### What happens next',
+      '1. STAS investigates the codebase to understand the issue',
+      '2. An AI agent writes a fix plus a regression test',
+      '3. A pull request is opened for you to review',
+      '',
+      '### Try it yourself',
+      'Label **any** issue with `stas:fix` to trigger an automatic fix.',
+      '',
+      '### Demo issue',
+      'This issue is labeled `stas:fix`, so a fix PR should appear shortly. You can close this issue at any time.',
+      '',
+      '---',
+      '_Powered by STAS — AI bug fixes for your repo_',
+    ].join('\n');
+
+    const issue = await octokit.issues.create({
+      owner: repoOwner,
+      repo: repoName,
+      title: "Welcome to STAS — let's fix your first issue",
+      body: welcomeBody,
+      labels: [config.stas.label],
+    });
+
+    captureEvent('welcome_issue_created', String(installationId), {
+      repo: `${repoOwner}/${repoName}`,
+      issueNumber: issue.data.number,
+    });
+
+    log.info(
+      { repo: `${repoOwner}/${repoName}`, issueNumber: issue.data.number, installationId },
+      'Created welcome issue',
+    );
+  } catch (err) {
+    log.warn({ err: String(err), repo: `${repoOwner}/${repoName}`, installationId }, 'Failed to create welcome issue');
+  }
+}
+
+/**
  * Create the GitHub webhooks handler with all event listeners registered.
  */
+function normalizeAccountTier(tier: Tier | undefined): AccountTier | undefined {
+  if (!tier) return undefined;
+  return tier === 'team' ? 'pro' : tier;
+}
+
 export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
   const webhooks = new Webhooks({
     secret: config.github.webhookSecret,
@@ -214,7 +288,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           reposJson: (p.repositories ?? []).map((r) => ({
             name: r.name,
             owner: r.owner?.login ?? 'unknown',
-            fullName: (r.owner?.login ?? 'unknown') + '/' + r.name,
+            fullName: `${r.owner?.login ?? 'unknown'}/${r.name}`,
             private: false,
             stasInstalled: false,
           })),
@@ -222,6 +296,16 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         log.info({ installationId, accountLogin: inst.accountLogin, userId: inst.userId }, 'Saved installation to DB');
       } catch (dbErr) {
         log.error({ err: String(dbErr), installationId }, 'Failed to persist installation to DB');
+      }
+
+      // AIM-4408: create a welcome issue on each repo the app was just granted,
+      // so the first fix lands without any manual setup. Best-effort only.
+      for (const repo of p.repositories ?? []) {
+        const repoOwner = repo.owner?.login;
+        const repoName = repo.name;
+        if (repoOwner && repoName) {
+          await createWelcomeIssue(installationId, repoOwner, repoName);
+        }
       }
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to handle installation.created event');
@@ -244,6 +328,8 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       },
       'Received issues.labeled with target label',
     );
+
+    const traceId = generateTraceId();
 
     const installationId = payload.installation?.id ?? 0;
     const tier = getTierForAccount(installationId);
@@ -309,12 +395,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       }
 
       // Post "issue received" comment
-      await postIssueReceivedComment(
-        installationId || 0,
-        jobData.repoOwner,
-        jobData.repoName,
-        jobData.issueNumber,
-      );
+      await postIssueReceivedComment(installationId || 0, jobData.repoOwner, jobData.repoName, jobData.issueNumber);
 
       return; // Do not enqueue — skip OpenCode dispatch
     }
@@ -348,7 +429,11 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
 
     if (!accountLimitResult.allowed) {
       log.warn(
-        { installationId: jobData.installationId, current: accountLimitResult.current, limit: accountLimitResult.limit },
+        {
+          installationId: jobData.installationId,
+          current: accountLimitResult.current,
+          limit: accountLimitResult.limit,
+        },
         'Account rate limit exceeded — not dispatching',
       );
       return;
@@ -389,7 +474,8 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         issueTitle: jobData.issueTitle ?? '',
         issueBody: jobData.issueBody,
         labels: jobData.labels ?? [],
-        traceId,
+        traceId: traceId,
+        accountTier: normalizeAccountTier(tier),
       });
       if (!osyResult.success) {
         auditService.logFixJobEvent({
@@ -518,7 +604,11 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
 
         if (!accountLimitResult.allowed) {
           log.warn(
-            { installationId: jobData.installationId, current: accountLimitResult.current, limit: accountLimitResult.limit },
+            {
+              installationId: jobData.installationId,
+              current: accountLimitResult.current,
+              limit: accountLimitResult.limit,
+            },
             'Account rate limit exceeded — not enqueuing edited issue',
           );
           return;
@@ -555,7 +645,11 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         });
         if (!govResult.success) {
           log.error(
-            { err: govResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+            {
+              err: govResult.error,
+              repo: `${jobData.repoOwner}/${jobData.repoName}`,
+              issueNumber: jobData.issueNumber,
+            },
             'Governance proxy dispatch failed for edited issue — blocking (fail-closed)',
           );
           recordGovernanceFailure(`${jobData.repoOwner}/${jobData.repoName}`, govResult.error ?? 'unknown');
@@ -580,10 +674,15 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           issueBody: jobData.issueBody,
           labels: jobData.labels ?? [],
           traceId,
+          accountTier: normalizeAccountTier(tier),
         });
         if (!osyResult.success) {
           log.error(
-            { err: osyResult.error, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },
+            {
+              err: osyResult.error,
+              repo: `${jobData.repoOwner}/${jobData.repoName}`,
+              issueNumber: jobData.issueNumber,
+            },
             'OS dispatch failed for edited issue — OpenSymphony unavailable',
           );
           recordGovernanceFailure(`${jobData.repoOwner}/${jobData.repoName}`, osyResult.error ?? 'unknown');
@@ -728,10 +827,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
 
       const run = result.rows[0];
       if (!run) {
-        log.info(
-          { prUrl },
-          'No STAS run found for this PR — not posting badge',
-        );
+        log.info({ prUrl }, 'No STAS run found for this PR — not posting badge');
         return;
       }
 
@@ -769,10 +865,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         'Badge comment posted on merged PR issue',
       );
     } catch (err) {
-      log.error(
-        { err: String(err) },
-        'Failed to handle pull_request.closed event',
-      );
+      log.error({ err: String(err) }, 'Failed to handle pull_request.closed event');
     }
   });
 
@@ -829,10 +922,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         );
 
         if (!match) {
-          log.warn(
-            { repo: `${repoOwner}/${repoName}`, issueNumber },
-            'No pending approval found for approve command',
-          );
+          log.warn({ repo: `${repoOwner}/${repoName}`, issueNumber }, 'No pending approval found for approve command');
           // Post a reply indicating no pending approval
           const { getOctokit } = await import('../github/auth.js');
           const installationId = p.installation?.id ?? 0;
@@ -852,10 +942,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         });
 
         if (approved) {
-          log.info(
-            { approvalId: match.id, user: commentUser },
-            'Approval granted via slash command',
-          );
+          log.info({ approvalId: match.id, user: commentUser }, 'Approval granted via slash command');
         }
       } else if (parsed.command === 'stas:reject') {
         const { getPendingApprovals, rejectApproval } = await import('../middleware/approvalGate.js');
@@ -869,10 +956,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         );
 
         if (!match) {
-          log.warn(
-            { repo: `${repoOwner}/${repoName}`, issueNumber },
-            'No pending approval found for reject command',
-          );
+          log.warn({ repo: `${repoOwner}/${repoName}`, issueNumber }, 'No pending approval found for reject command');
           const { getOctokit } = await import('../github/auth.js');
           const installationId = p.installation?.id ?? 0;
           const octokit = await getOctokit(installationId);
@@ -893,19 +977,67 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         });
 
         if (rejected) {
-          log.info(
-            { approvalId: match.id, user: commentUser, reason },
-            'Rejection recorded via slash command',
-          );
+          log.info({ approvalId: match.id, user: commentUser, reason }, 'Rejection recorded via slash command');
         }
       } else {
         log.debug({ command: parsed.command }, 'Unknown slash command — ignoring');
       }
     } catch (err) {
-      log.error(
-        { err: String(err) },
-        'Failed to handle issue_comment.created event',
-      );
+      log.error({ err: String(err) }, 'Failed to handle issue_comment.created event');
+    }
+  });
+
+  webhooks.on('pull_request.opened' as EmitterWebhookEventName, async ({ payload }) => {
+    try {
+      const p = payload as unknown as {
+        action: string;
+        number: number;
+        pull_request: {
+          number: number;
+          html_url: string;
+          user?: { login: string };
+          head: { sha: string };
+          base: { ref: string };
+        };
+        repository: {
+          owner: { login: string };
+          name: string;
+        };
+        installation?: { id: number };
+      };
+
+      const installationId = p.installation?.id ?? 0;
+      const { getOctokit } = await import('../github/auth.js');
+      const octokit = await getOctokit(installationId);
+      await handlePullRequestOpened(octokit, p as never);
+    } catch (err) {
+      log.error({ err: String(err) }, 'pull_request.opened handler failed');
+    }
+  });
+
+  webhooks.on('check_suite.completed' as EmitterWebhookEventName, async ({ payload }) => {
+    try {
+      const p = payload as unknown as {
+        action: string;
+        check_suite?: {
+          status: string;
+          conclusion?: string | null;
+          head_sha: string;
+          pull_requests?: Array<{ number: number }>;
+        };
+        repository: {
+          owner: { login: string };
+          name: string;
+        };
+        installation?: { id: number };
+      };
+
+      const installationId = p.installation?.id ?? 0;
+      const { getOctokit } = await import('../github/auth.js');
+      const octokit = await getOctokit(installationId);
+      await handleCheckSuiteCompleted(octokit, p as never);
+    } catch (err) {
+      log.error({ err: String(err) }, 'check_suite.completed handler failed');
     }
   });
 
@@ -974,7 +1106,23 @@ export function suggestLabels(titleOrText: string, body?: string): string[] {
   }
 
   // Question indicators
-  const questionPatterns = ['how to', 'how do i', 'question', 'help', 'not sure', 'what is', 'how can', 'guide', 'is there', 'can i', 'what are', 'does this', 'where', 'why does', 'explain'];
+  const questionPatterns = [
+    'how to',
+    'how do i',
+    'question',
+    'help',
+    'not sure',
+    'what is',
+    'how can',
+    'guide',
+    'is there',
+    'can i',
+    'what are',
+    'does this',
+    'where',
+    'why does',
+    'explain',
+  ];
   if (questionPatterns.some((p) => text.includes(p))) {
     labels.push('question');
   }
@@ -986,13 +1134,35 @@ export function suggestLabels(titleOrText: string, body?: string): string[] {
   }
 
   // Security indicators
-  const securityPatterns = ['security', 'vulnerability', 'xss', 'csrf', 'injection', 'exploit', 'auth bypass', 'authentication bypass', 'authorization'];
+  const securityPatterns = [
+    'security',
+    'vulnerability',
+    'xss',
+    'csrf',
+    'injection',
+    'exploit',
+    'auth bypass',
+    'authentication bypass',
+    'authorization',
+  ];
   if (securityPatterns.some((p) => text.includes(p))) {
     labels.push('security');
   }
 
   // Performance indicators
-  const perfPatterns = ['slow', 'performance', 'latency', 'memory', 'leak', 'optimize', 'bottleneck', 'cpu', 'response time', 'throughput', 'degradation'];
+  const perfPatterns = [
+    'slow',
+    'performance',
+    'latency',
+    'memory',
+    'leak',
+    'optimize',
+    'bottleneck',
+    'cpu',
+    'response time',
+    'throughput',
+    'degradation',
+  ];
   if (perfPatterns.some((p) => text.includes(p))) {
     labels.push('performance');
   }
