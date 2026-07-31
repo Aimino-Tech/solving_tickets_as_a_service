@@ -27,6 +27,13 @@ export interface ContinuityScenario {
   seedTurns: number;
   /** Total turns in the conversation (must be > seedTurns). */
   totalTurns: number;
+  /**
+   * Facts/decisions established in turns 1..seedTurns. The fixture lint
+   * requires every fact to be seeded in the first turns and referenced again
+   * (user message or reply) in the follow-up turns, and requires each
+   * follow-up reply to be grounded in at least one of them.
+   */
+  facts: string[];
   turns: ContinuityTurn[];
 }
 
@@ -35,6 +42,7 @@ export const PROJECT_ONBOARDING: ContinuityScenario = {
   description: 'User introduces a project (name, stack, deadline, compliance) and later references those facts.',
   seedTurns: 3,
   totalTurns: 10,
+  facts: ['Aurora', 'Python', 'FastAPI', 'PostgreSQL', 'Kubernetes', 'October', 'PCI compliance', 'billing'],
   turns: [
     {
       turn: 1,
@@ -80,6 +88,7 @@ export const ISSUE_TRIAGE: ContinuityScenario = {
   description: 'User reports a production bug with symptoms, frequency, and a suspected integration, then follows up.',
   seedTurns: 3,
   totalTurns: 10,
+  facts: ['checkout', 'cart', 'production', 'blocking payments', 'Stripe', 'gateway timeout', 'payment provider'],
   turns: [
     {
       turn: 1,
@@ -133,6 +142,7 @@ export const PLAN_SESSION: ContinuityScenario = {
   description: 'User plans an auth migration and iterates on constraints the agent must carry across turns.',
   seedTurns: 3,
   totalTurns: 10,
+  facts: ['JWT', 'single sign-on', 'SSO', '15 minutes', 'zero-downtime', 'two weeks', 'session'],
   turns: [
     {
       turn: 1,
