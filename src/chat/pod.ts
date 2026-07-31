@@ -9,6 +9,8 @@
  */
 
 import type { SessionMemory } from '../agent/memory/types.js';
+import type { ChatLeadBridge } from './bridge.js';
+import { type ChatIntent, detectIntent } from './bridge.js';
 import {
   applyMemoryDelta,
   defaultExtractor,
@@ -44,6 +46,12 @@ export interface ChatPodDeps {
   executor: AgentExecutor;
   transport: PodTransport;
   memoryExtractor?: MemoryExtractor;
+  /** Optional bridge — when present, work intents are handed to the lead session. */
+  bridge?: ChatLeadBridge;
+  /** Lead-side executor for short work; streams status via the bridge. */
+  leadExecutor?: AgentExecutor;
+  /** Overridable intent classifier; defaults to detectIntent. */
+  intentDetector?: (text: string) => ChatIntent;
   userId: string;
   sessionId: string;
   threadTs: string;
@@ -60,6 +68,9 @@ export class ChatPod {
   private readonly executor: AgentExecutor;
   private readonly transport: PodTransport;
   private readonly memoryExtractor: MemoryExtractor;
+  private readonly bridge: ChatLeadBridge | null;
+  private readonly leadExecutor: AgentExecutor | null;
+  private readonly intentDetector: (text: string) => ChatIntent;
   private readonly now: () => string;
 
   private memory: SessionMemory = emptySessionMemory();
@@ -73,6 +84,9 @@ export class ChatPod {
     this.executor = deps.executor;
     this.transport = deps.transport;
     this.memoryExtractor = deps.memoryExtractor ?? defaultExtractor;
+    this.bridge = deps.bridge ?? null;
+    this.leadExecutor = deps.leadExecutor ?? null;
+    this.intentDetector = deps.intentDetector ?? detectIntent;
     this.userId = deps.userId;
     this.sessionId = deps.sessionId;
     this.threadTs = deps.threadTs;
@@ -108,6 +122,15 @@ export class ChatPod {
   /** Run one turn and checkpoint; returns the assistant reply. */
   async handleTurn(text: string): Promise<string> {
     const traceId = `tr_${this.sessionId}_${Date.now().toString(36)}`;
+    if (this.bridge) {
+      const intent = this.intentDetector(text);
+      if (intent === 'work') return this.handleWork(text, traceId);
+      if (intent === 'escalate') return this.handleEscalate(text, traceId);
+    }
+    return this.handleConversation(text, traceId);
+  }
+
+  private async handleConversation(text: string, traceId: string): Promise<string> {
     const transcript = this.transcript();
     const memoryBlock = renderSessionMemoryBlock(this.memory);
     const { reply } = await this.executor.run({
@@ -117,6 +140,53 @@ export class ChatPod {
       recentTranscript: transcript.slice(-5),
       traceId,
     });
+    await this.curateAndCheckpoint(text, reply, traceId);
+    return reply;
+  }
+
+  private async handleWork(text: string, traceId: string): Promise<string> {
+    if (!this.bridge) return this.handleConversation(text, traceId);
+    const { traceId: workTraceId, durable } = await this.bridge.handoff({
+      instruction: text,
+      memorySnapshot: this.memory,
+      threadRef: { threadTs: this.threadTs, channelId: this.channelId },
+      userId: this.userId,
+    });
+    if (durable) {
+      const reply = `On it — queued as ${workTraceId}. I'll post updates here.`;
+      await this.curateAndCheckpoint(text, reply, workTraceId);
+      return reply;
+    }
+    return this.runShortWork(text, workTraceId);
+  }
+
+  private async runShortWork(text: string, workTraceId: string): Promise<string> {
+    if (this.bridge) {
+      this.bridge.receive({ kind: 'status', traceId: workTraceId, progress: '_checking…_' });
+    }
+    if (this.leadExecutor) {
+      const transcript = this.transcript();
+      const memoryBlock = renderSessionMemoryBlock(this.memory);
+      const { reply } = await this.leadExecutor.run({
+        sessionId: this.sessionId,
+        userText: text,
+        memoryBlock,
+        recentTranscript: transcript.slice(-5),
+        traceId: workTraceId,
+      });
+      if (this.bridge) {
+        this.bridge.receive({ kind: 'answer', traceId: workTraceId, text: reply });
+      }
+      await this.curateAndCheckpoint(text, reply, workTraceId);
+      return reply;
+    }
+    const reply = `On it — ${workTraceId}.`;
+    await this.curateAndCheckpoint(text, reply, workTraceId);
+    return reply;
+  }
+
+  private async handleEscalate(text: string, traceId: string): Promise<string> {
+    const reply = 'Should I kick off a fix for that? Just say yes and I will.';
     await this.curateAndCheckpoint(text, reply, traceId);
     return reply;
   }
