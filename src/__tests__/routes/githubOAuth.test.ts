@@ -10,7 +10,6 @@ const mockConfig = vi.hoisted(() => ({
     oauthClientId: 'test-client-id',
     oauthClientSecret: 'test-client-secret',
   },
-  publicUrl: 'http://test.example.com',
   port: 3000,
 }));
 
@@ -136,9 +135,9 @@ const mockToken = {
 describe('githubOAuth routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.STAS_PUBLIC_URL = 'http://test.example.com';
     mockConfig.github.oauthClientId = 'test-client-id';
     mockConfig.github.oauthClientSecret = 'test-client-secret';
-    mockConfig.publicUrl = 'http://test.example.com';
     mockConfig.port = 3000;
   });
 
