@@ -103,6 +103,7 @@
     "test:automation:python": "cd tests/automation && python -m pytest -v",
     "test:automation:python:login": "cd tests/automation && python -m pytest test_login.py -v",
     "test:automation:python:api": "cd tests/automation && python -m pytest test_auth_api.py -v",
+    "eval:conversations": "tsx eval/conversations/run.ts",
     "stas:quickstart": "tsx src/template/cli.ts quickstart"
   },
   "dependencies": {
