@@ -63,7 +63,7 @@ function normalizeInstallationRow(s: Record<string, unknown>) {
 router.get('/installations', async (req: Request, res: Response) => {
   try {
     const token = await getGitHubToken(req);
-    const stored = await gitHubInstallationRepository.findByUserId(req.user!.id);
+    const stored = await gitHubInstallationRepository.findByUserId(Number(req.user!.id));
     const storedRows = (stored as unknown as Record<string, unknown>[]).map(normalizeInstallationRow);
 
     if (!token) {
@@ -106,7 +106,7 @@ router.get('/installations', async (req: Request, res: Response) => {
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to list installations');
     try {
-      const stored = await gitHubInstallationRepository.findByUserId(req.user!.id);
+      const stored = await gitHubInstallationRepository.findByUserId(Number(req.user!.id));
       const storedRows = (stored as unknown as Record<string, unknown>[]).map(normalizeInstallationRow);
       res.json({ installations: storedRows, error: 'Failed to list installations — showing saved installations only' });
     } catch {
