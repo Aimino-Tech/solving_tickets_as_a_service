@@ -51,10 +51,14 @@ export function renderMarkdown(report: ContinuityReport): string {
   return lines.join('\n');
 }
 
-export async function writeReport(report: ContinuityReport, filename = 'report'): Promise<string> {
-  await mkdir(RESULTS_DIR, { recursive: true });
-  const jsonPath = join(RESULTS_DIR, `${filename}.json`);
-  const mdPath = join(RESULTS_DIR, `${filename}.md`);
+export async function writeReport(
+  report: ContinuityReport,
+  filename = 'report',
+  resultsDir = RESULTS_DIR,
+): Promise<string> {
+  await mkdir(resultsDir, { recursive: true });
+  const jsonPath = join(resultsDir, `${filename}.json`);
+  const mdPath = join(resultsDir, `${filename}.md`);
   await writeFile(jsonPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   await writeFile(mdPath, renderMarkdown(report), 'utf8');
   return jsonPath;
