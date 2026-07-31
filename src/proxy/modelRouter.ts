@@ -87,31 +87,91 @@ export interface ModelSelectionResult {
 const DEFAULT_MODEL_REGISTRY: Record<TaskComplexity, Record<AccountTier, ModelOption[]>> = {
   triage: {
     free: [
+      {
+        id: 'claude-haiku-4-5-20251001',
+        name: 'Claude Haiku 4.5',
+        available: true,
+        costMultiplier: 0.1,
+        capabilities: ['fast', 'code', 'reasoning'],
+      },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini', available: true, costMultiplier: 0.3, capabilities: ['fast', 'code'] },
       { id: 'gpt-4o', name: 'GPT-4o', available: true, costMultiplier: 1.0, capabilities: ['code', 'reasoning'] },
     ],
     pro: [
+      {
+        id: 'claude-haiku-4-5-20251001',
+        name: 'Claude Haiku 4.5',
+        available: true,
+        costMultiplier: 0.1,
+        capabilities: ['fast', 'code', 'reasoning'],
+      },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini', available: true, costMultiplier: 0.3, capabilities: ['fast', 'code'] },
       { id: 'gpt-4o', name: 'GPT-4o', available: true, costMultiplier: 1.0, capabilities: ['code', 'reasoning'] },
     ],
     enterprise: [
+      {
+        id: 'claude-haiku-4-5-20251001',
+        name: 'Claude Haiku 4.5',
+        available: true,
+        costMultiplier: 0.1,
+        capabilities: ['fast', 'code', 'reasoning'],
+      },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini', available: true, costMultiplier: 0.3, capabilities: ['fast', 'code'] },
       { id: 'gpt-4o', name: 'GPT-4o', available: true, costMultiplier: 1.0, capabilities: ['code', 'reasoning'] },
     ],
   },
   fix: {
     free: [
+      {
+        id: 'claude-haiku-4-5-20251001',
+        name: 'Claude Haiku 4.5',
+        available: true,
+        costMultiplier: 0.1,
+        capabilities: ['fast', 'code', 'reasoning'],
+      },
       { id: 'gpt-4o', name: 'GPT-4o', available: true, costMultiplier: 1.0, capabilities: ['code', 'reasoning'] },
-      { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', available: true, costMultiplier: 1.5, capabilities: ['code', 'reasoning'] },
+      {
+        id: 'claude-sonnet-4-20250514',
+        name: 'Claude Sonnet 4',
+        available: true,
+        costMultiplier: 1.5,
+        capabilities: ['code', 'reasoning'],
+      },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini', available: true, costMultiplier: 0.3, capabilities: ['fast', 'code'] },
     ],
     pro: [
-      { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', available: true, costMultiplier: 1.5, capabilities: ['code', 'reasoning'] },
+      {
+        id: 'claude-haiku-4-5-20251001',
+        name: 'Claude Haiku 4.5',
+        available: true,
+        costMultiplier: 0.1,
+        capabilities: ['fast', 'code', 'reasoning'],
+      },
+      {
+        id: 'claude-sonnet-4-20250514',
+        name: 'Claude Sonnet 4',
+        available: true,
+        costMultiplier: 1.5,
+        capabilities: ['code', 'reasoning'],
+      },
       { id: 'gpt-4o', name: 'GPT-4o', available: true, costMultiplier: 1.0, capabilities: ['code', 'reasoning'] },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini', available: true, costMultiplier: 0.3, capabilities: ['fast', 'code'] },
     ],
     enterprise: [
-      { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', available: true, costMultiplier: 1.5, capabilities: ['code', 'reasoning'] },
+      {
+        id: 'claude-haiku-4-5-20251001',
+        name: 'Claude Haiku 4.5',
+        available: true,
+        costMultiplier: 0.1,
+        capabilities: ['fast', 'code', 'reasoning'],
+      },
+      {
+        id: 'claude-sonnet-4-20250514',
+        name: 'Claude Sonnet 4',
+        available: true,
+        costMultiplier: 1.5,
+        capabilities: ['code', 'reasoning'],
+      },
       { id: 'gpt-4o', name: 'GPT-4o', available: true, costMultiplier: 1.0, capabilities: ['code', 'reasoning'] },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini', available: true, costMultiplier: 0.3, capabilities: ['fast', 'code'] },
     ],
@@ -123,11 +183,23 @@ const DEFAULT_MODEL_REGISTRY: Record<TaskComplexity, Record<AccountTier, ModelOp
     ],
     pro: [
       { id: 'gpt-4o', name: 'GPT-4o', available: true, costMultiplier: 1.0, capabilities: ['code', 'reasoning'] },
-      { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', available: true, costMultiplier: 1.5, capabilities: ['code', 'reasoning'] },
+      {
+        id: 'claude-sonnet-4-20250514',
+        name: 'Claude Sonnet 4',
+        available: true,
+        costMultiplier: 1.5,
+        capabilities: ['code', 'reasoning'],
+      },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini', available: true, costMultiplier: 0.3, capabilities: ['fast', 'code'] },
     ],
     enterprise: [
-      { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', available: true, costMultiplier: 1.5, capabilities: ['code', 'reasoning'] },
+      {
+        id: 'claude-sonnet-4-20250514',
+        name: 'Claude Sonnet 4',
+        available: true,
+        costMultiplier: 1.5,
+        capabilities: ['code', 'reasoning'],
+      },
       { id: 'gpt-4o', name: 'GPT-4o', available: true, costMultiplier: 1.0, capabilities: ['code', 'reasoning'] },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini', available: true, costMultiplier: 0.3, capabilities: ['fast', 'code'] },
     ],
@@ -142,11 +214,9 @@ export class ModelRouter {
   private modelRegistry: Record<TaskComplexity, Record<AccountTier, ModelOption[]>>;
   private defaultModelId: string;
 
-  constructor(
-    registry?: Record<TaskComplexity, Record<AccountTier, ModelOption[]>>,
-  ) {
+  constructor(registry?: Record<TaskComplexity, Record<AccountTier, ModelOption[]>>) {
     this.modelRegistry = registry ?? structuredClone(DEFAULT_MODEL_REGISTRY);
-    this.defaultModelId = config.opencode.model || 'anthropic/claude-sonnet-4-20250514';
+    this.defaultModelId = config.opencode?.model || 'anthropic/claude-sonnet-4-20250514';
   }
 
   // ── Model selection ──────────────────────────────────────────────────────
@@ -167,7 +237,7 @@ export class ModelRouter {
       // 1. Preferred model override — check if it exists in the registry
       if (preferredModel) {
         fallbackChain.push(`preferred:${preferredModel}`);
-        const isAvailable = skipAvailabilityCheck || await this.checkAvailability(preferredModel);
+        const isAvailable = skipAvailabilityCheck || (await this.checkAvailability(preferredModel));
         if (isAvailable) {
           log.info({ model: preferredModel, complexity, tier }, 'Selected preferred model');
           return {
@@ -187,7 +257,7 @@ export class ModelRouter {
       if (tierModels && tierModels.length > 0) {
         for (const option of tierModels) {
           fallbackChain.push(option.id);
-          const isAvailable = skipAvailabilityCheck || await this.checkAvailability(option.id);
+          const isAvailable = skipAvailabilityCheck || (await this.checkAvailability(option.id));
           if (isAvailable) {
             log.info({ model: option.id, complexity, tier, name: option.name }, 'Selected model from registry');
             return {
@@ -245,7 +315,7 @@ export class ModelRouter {
       // Check all registry entries for the model
       for (const complexity of Object.keys(this.modelRegistry) as TaskComplexity[]) {
         for (const tier of Object.keys(this.modelRegistry[complexity]) as AccountTier[]) {
-          const found = this.modelRegistry[complexity][tier].find(m => m.id === modelId);
+          const found = this.modelRegistry[complexity][tier].find((m) => m.id === modelId);
           if (found) return found.available;
         }
       }
@@ -271,11 +341,7 @@ export class ModelRouter {
   /**
    * Update the model registry for a specific complexity and tier.
    */
-  setModels(
-    complexity: TaskComplexity,
-    tier: AccountTier,
-    models: ModelOption[],
-  ): void {
+  setModels(complexity: TaskComplexity, tier: AccountTier, models: ModelOption[]): void {
     this.modelRegistry[complexity] = {
       ...this.modelRegistry[complexity],
       [tier]: models,
@@ -289,7 +355,7 @@ export class ModelRouter {
   setModelAvailability(modelId: string, available: boolean): void {
     for (const complexity of Object.keys(this.modelRegistry) as TaskComplexity[]) {
       for (const tier of Object.keys(this.modelRegistry[complexity]) as AccountTier[]) {
-        const entry = this.modelRegistry[complexity][tier].find(m => m.id === modelId);
+        const entry = this.modelRegistry[complexity][tier].find((m) => m.id === modelId);
         if (entry) {
           entry.available = available;
         }

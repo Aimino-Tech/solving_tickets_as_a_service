@@ -86,7 +86,7 @@ function scheduleReconnect(): void {
     return;
   }
 
-  const delay = Math.min(RECONNECT_BASE_DELAY_MS * Math.pow(2, _connectAttempts - 1), 30_000);
+  const delay = Math.min(RECONNECT_BASE_DELAY_MS * 2 ** (_connectAttempts - 1), 30_000);
   log.info({ delayMs: delay, attempt: _connectAttempts + 1 }, 'Scheduling RabbitMQ reconnection');
 
   setTimeout(() => {
@@ -141,16 +141,16 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.issues.fix', {
     durable: true,
-      arguments: { "x-message-ttl": 600000 },
+    arguments: { 'x-message-ttl': config.queue.msgTtlMs },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'issue.fix.dlq',
-    messageTtl: 600_000,
+    messageTtl: config.queue.msgTtlMs,
   });
   await ch.bindQueue('stas.issues.fix', 'stas.direct', 'issue.fix');
 
   await ch.assertQueue('stas.issues.feature', {
     durable: true,
-      arguments: { "x-message-ttl": 600000 },
+    arguments: { 'x-message-ttl': 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'issue.feature.dlq',
     messageTtl: 600_000,
@@ -159,7 +159,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.issues.research', {
     durable: true,
-      arguments: { "x-message-ttl": 600000 },
+    arguments: { 'x-message-ttl': 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'issue.research.dlq',
     messageTtl: 300_000,
@@ -168,7 +168,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.webhooks.notifications', {
     durable: true,
-      arguments: { "x-message-ttl": 600000 },
+    arguments: { 'x-message-ttl': 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'webhook.notification.dlq',
     messageTtl: 300_000,
@@ -177,7 +177,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.analytics.ingestion', {
     durable: true,
-      arguments: { "x-message-ttl": 600000 },
+    arguments: { 'x-message-ttl': 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'analytics.ingestion.dlq',
     messageTtl: 120_000,
@@ -186,7 +186,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.pipeline.events', {
     durable: true,
-      arguments: { "x-message-ttl": 600000 },
+    arguments: { 'x-message-ttl': 600000 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'pipeline.event.dlq',
     messageTtl: 60_000,
@@ -195,7 +195,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.retry', {
     durable: true,
-      arguments: { "x-message-ttl": 600000 },
+    arguments: { 'x-message-ttl': 600000 },
     messageTtl: 30_000,
     deadLetterExchange: 'stas.direct',
     deadLetterRoutingKey: 'issue.fix',
@@ -203,7 +203,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.dlq', {
     durable: true,
-      arguments: { "x-message-ttl": 600000 },
+    arguments: { 'x-message-ttl': 600000 },
   });
   await ch.bindQueue('stas.dlq', 'stas.dlx', '#');
 
@@ -233,7 +233,10 @@ export async function consumeQueue(
   options?: amqplib.Options.Consume,
 ): Promise<string> {
   const ch = getChannel();
-  await ch.assertQueue(queueName, { durable: true, arguments: { "x-message-ttl": 600000, "x-dead-letter-exchange": "stas.dlx" } });
+  await ch.assertQueue(queueName, {
+    durable: true,
+    arguments: { 'x-message-ttl': 600000, 'x-dead-letter-exchange': 'stas.dlx' },
+  });
   const consumerTag = await ch.consume(
     queueName,
     async (msg) => {
