@@ -41,7 +41,7 @@ router.get('/callback', async (req: Request, res: Response) => {
   const code = req.query.code as string;
   const state = req.query.state as string;
   if (code) {
-    const frontendUrl = config.publicUrl || `http://localhost:5173`;
+    const frontendUrl = (config as any).publicUrl || `http://localhost:5173`;
     res.redirect(`${frontendUrl}/repos?code=${encodeURIComponent(code)}${state ? `&state=${encodeURIComponent(state)}` : ''}`);
   } else {
     res.status(400).json({ error: 'Missing authorization code' });

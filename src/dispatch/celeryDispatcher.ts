@@ -154,7 +154,7 @@ export async function dispatchFullPipeline(data: IssueJobData): Promise<{
 
   if (!published) {
     auditService.logFixJobEvent({
-      jobId: runId,
+      jobId: dedupId,
       event: 'failed',
       repo: `${ctx.repo_owner}/${ctx.repo_name}`,
       issueNumber: ctx.issue_number as number,
@@ -167,7 +167,7 @@ export async function dispatchFullPipeline(data: IssueJobData): Promise<{
   }
 
   auditService.logFixJobEvent({
-    jobId: runId,
+    jobId: dedupId,
     event: 'started',
     repo: `${ctx.repo_owner}/${ctx.repo_name}`,
     issueNumber: ctx.issue_number as number,
