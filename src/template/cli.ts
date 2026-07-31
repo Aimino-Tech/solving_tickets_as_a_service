@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * stas CLI — Template validation and dry-run tool.
+ * stas CLI — Template validation, dry-run, and quickstart onboarding tool.
  *
  * Commands:
  *   stas template validate              Validate all templates in .stas/templates/
@@ -8,8 +8,10 @@
  *   stas template validate --format json  Output as JSON (default: tty)
  *   stas template dry-run --input payload.json  Dry-run with placeholder data
  *   stas install-hook                   Install git pre-commit hook for templates
+ *   stas quickstart                     Interactive STAS onboarding (auth, install, demo issue)
+ *   stas quickstart --skip-prompts      Non-interactive quickstart (first repo, no prompts)
  *
- * Exit codes: 0 = valid, 1 = validation errors, 2 = other errors
+ * Exit codes: 0 = valid, 1 = validation errors / quickstart timeout, 2 = other errors
  */
 
 import { readFileSync, existsSync, readdirSync, writeFileSync, chmodSync } from "node:fs";
@@ -19,6 +21,7 @@ import { execSync } from "node:child_process";
 import * as yaml from "js-yaml";
 import { validateTemplateYaml, dryRunResolve, preflightValidate } from "./validator.js";
 import type { ValidationResult, ValidationError, TemplateYaml } from "./validator.js";
+import { runQuickstart } from "../quickstart/quickstart.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -324,12 +327,13 @@ function printHelp(): void {
   const b = (s: string) => style(STYLES.bold, s);
   const d = (s: string) => style(STYLES.dim, s);
   console.log(`
-${b("stas")} — Template validation and dry-run tool
+${b("stas")} — Template validation, dry-run, and quickstart onboarding tool
 
 ${b("USAGE")}
   stas template validate [options]
   stas template dry-run [options]
   stas install-hook
+  stas quickstart [--skip-prompts]
 
 ${b("COMMANDS")}
   ${b("template validate")}     Validate template YAML files
@@ -344,14 +348,34 @@ ${b("COMMANDS")}
 
   ${b("install-hook")}          Install git pre-commit hook for template validation
 
+  ${b("quickstart")}            Interactive STAS onboarding: auth, repo selection,
+                                app install, demo issue, and PR polling
+    ${d("--skip-prompts")}      Non-interactive: first repo, no confirmations
+
 ${b("EXIT CODES")}
-  0   All templates valid
-  1   Validation errors found
+  0   All templates valid / quickstart succeeded
+  1   Validation errors found / quickstart timed out waiting for a PR
   2   Runtime error (file not found, parse error, etc.)
 `);
 }
 
-function parseArgs(): void {
+function printQuickstartSuccess(prUrl: string, configPath: string): void {
+  console.log(style(STYLES.green, "✓ Quickstart complete!"));
+  console.log(`\nYour STAS fix PR: ${prUrl}`);
+  console.log(`Config saved to ${configPath}`);
+  console.log("\nPro tip: Label any issue with `stas:fix` to trigger a fix automatically.");
+}
+
+function printQuickstartTimeout(issueUrl: string): void {
+  console.log("\nSTAS didn't create a PR within the timeout period.");
+  console.log("\nPossible reasons:");
+  console.log("  - STAS app may not be installed on the selected repository");
+  console.log("  - The STAS backend may be processing a queue");
+  console.log(`  - Check the issue at ${issueUrl} for updates`);
+  console.log("\nRun `npx stas quickstart` again after installing the app.");
+}
+
+async function parseArgs(): Promise<void> {
   const args = process.argv.slice(2);
 
   if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
@@ -365,6 +389,17 @@ function parseArgs(): void {
     if (command === "install-hook") {
       installHook();
       return;
+    }
+
+    if (command === "quickstart") {
+      const skipPrompts = args.includes("--skip-prompts");
+      const result = await runQuickstart({ skipPrompts });
+      if (result.prUrl !== null) {
+        printQuickstartSuccess(result.prUrl, result.configPath);
+        process.exit(0);
+      }
+      printQuickstartTimeout(result.issueUrl);
+      process.exit(1);
     }
 
     if (command !== "template") {
@@ -445,5 +480,5 @@ const isMain =
     process.argv[1] === resolve(__filename));
 
 if (isMain) {
-  parseArgs();
+  void parseArgs();
 }
