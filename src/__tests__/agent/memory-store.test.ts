@@ -7,7 +7,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { MemoryStore } from '../../../src/agent/memory/memory-store.js';
 import { MEMORY_LIMITS } from '../../../src/agent/memory/types.js';
@@ -153,5 +153,59 @@ describe('MemoryStore', () => {
     expect(store.searchFacts('STACK', 'dev')).toHaveLength(1);
     expect(store.searchFacts('backend', 'dev')).toHaveLength(1);
     expect(store.searchFacts('nope', 'dev')).toHaveLength(0);
+  });
+
+  it('close() synchronously flushes pending debounced writes', () => {
+    const store = makeStore({ saveDebounceMs: 60_000 });
+    store.addFact({ key: 'flush_me', content: 'durable content', instance: 'dev', source: 'user', tags: [] });
+
+    store.close();
+
+    const file = readFileSync(join(store.dataDir, 'memory-store.json'), 'utf8');
+    expect(file).toContain('durable content');
+  });
+
+  it('close() is idempotent and clears the debounce timer', () => {
+    vi.useFakeTimers();
+    try {
+      const store = makeStore({ saveDebounceMs: 60_000 });
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+      store.addFact({ key: 'timer', content: 'timed content', instance: 'dev', source: 'user', tags: [] });
+      const scheduled = setTimeoutSpy.mock.results[0]?.value;
+
+      const clearSpy = vi.spyOn(global, 'clearTimeout');
+      store.close();
+      store.close();
+
+      expect(clearSpy).toHaveBeenCalledWith(scheduled);
+      expect(() => vi.runAllTimers()).not.toThrow();
+      const file = readFileSync(join(store.dataDir, 'memory-store.json'), 'utf8');
+      expect(file).toContain('timed content');
+    } finally {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    }
+  });
+
+  it('registerShutdownHooks wires process signals to close()', () => {
+    const store = makeStore({ saveDebounceMs: 60_000 });
+    store.addFact({ key: 'hook', content: 'hooked content', instance: 'dev', source: 'user', tags: [] });
+
+    const onSpy = vi.spyOn(process, 'on');
+    const before = process.listenerCount('SIGTERM');
+    const unsubscribe = store.registerShutdownHooks(['SIGINT', 'SIGTERM']);
+    expect(process.listenerCount('SIGTERM')).toBe(before + 1);
+
+    const call = onSpy.mock.calls.find(([event]) => event === 'SIGTERM');
+    expect(call).toBeDefined();
+    const handler = call?.[1] as () => void;
+    handler();
+
+    const file = readFileSync(join(store.dataDir, 'memory-store.json'), 'utf8');
+    expect(file).toContain('hooked content');
+
+    unsubscribe();
+    expect(process.listenerCount('SIGTERM')).toBe(before);
+    onSpy.mockRestore();
   });
 });

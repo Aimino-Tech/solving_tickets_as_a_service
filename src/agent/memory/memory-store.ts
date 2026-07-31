@@ -145,6 +145,38 @@ export class MemoryStore {
     this.dirty = false;
   }
 
+  /**
+   * Clear any pending debounce timer and synchronously flush pending state.
+   * Idempotent: safe to call multiple times or when nothing is pending.
+   */
+  close(): void {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = undefined;
+    }
+    this.flush();
+  }
+
+  /**
+   * Register process shutdown hooks that flush pending state on exit.
+   * Returns an unsubscribe function that removes the registered listeners.
+   */
+  registerShutdownHooks(
+    signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'beforeExit'] as NodeJS.Signals[],
+  ): () => void {
+    const handler = (): void => {
+      this.close();
+    };
+    for (const signal of signals) {
+      process.on(signal, handler);
+    }
+    return () => {
+      for (const signal of signals) {
+        process.off(signal, handler);
+      }
+    };
+  }
+
   // --------------------------------------------------------- conversations
 
   /** Record one side of an exchange (user or assistant turn). */
