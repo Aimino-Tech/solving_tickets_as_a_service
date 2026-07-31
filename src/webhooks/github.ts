@@ -34,7 +34,7 @@ import { rateLimiter } from '../ratelimit/limiter.js';
 import { getTierForAccount, type Tier } from '../ratelimit/tiers.js';
 import { dispatchIssueToOsy } from '../services/osyDispatch.js';
 import { rootLogger } from '../utils/logger.js';
-import { generateTraceId } from '../utils/trace.js';
+import { generateTraceId, getCurrentTraceId } from '../utils/trace.js';
 import type { BillingPlan, IssueJobData } from '../utils/types.js';
 
 const log = rootLogger.child({ module: 'webhooks-github' });
@@ -329,7 +329,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       'Received issues.labeled with target label',
     );
 
-    const traceId = generateTraceId();
+    const traceId = getCurrentTraceId() ?? generateTraceId();
 
     const installationId = payload.installation?.id ?? 0;
     const tier = getTierForAccount(installationId);
@@ -663,7 +663,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         await rateLimiter.increment('repo', repo);
       }
 
-      const traceId = generateTraceId();
+      const traceId = getCurrentTraceId() ?? generateTraceId();
       if (isGovernanceEnabled()) {
         log.info(
           { traceId, repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber },

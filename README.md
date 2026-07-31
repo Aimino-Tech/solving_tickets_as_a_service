@@ -695,7 +695,7 @@ Contributions are welcome! See [`CONTRIBUTING.md`](CONTRIBUTING.md) for developm
 
 ## License
 
-MIT — use it, modify it, ship it.
+Released under the GNU Affero General Public License v3.0 (AGPL-3.0) — use it, modify it, ship it. See [`LICENSE`](LICENSE) for the full terms.
 
 ## Agent Skill Ecosystem
 

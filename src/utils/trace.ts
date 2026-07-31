@@ -15,7 +15,11 @@
  * ────────────────────────────────────────────────────────────────────────
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
+
+/** Async context carrying the incoming trace ID for the current request. */
+const traceContext = new AsyncLocalStorage<string>();
 
 /** HTTP header name for trace ID propagation. */
 export const TRACE_HEADER = 'x-stas-trace-id';
@@ -28,6 +32,22 @@ export const TRACEPARENT_HEADER = 'traceparent';
  */
 export function generateTraceId(): string {
   return randomUUID();
+}
+
+/**
+ * Run a function within an async-local trace context so that code spawned
+ * during the request can read the incoming trace ID via getCurrentTraceId().
+ */
+export function runWithTraceId<T>(traceId: string, fn: () => T): T {
+  return traceContext.run(traceId, fn);
+}
+
+/**
+ * Return the incoming trace ID for the current request, if the caller is
+ * running inside a runWithTraceId() context.
+ */
+export function getCurrentTraceId(): string | undefined {
+  return traceContext.getStore();
 }
 
 /**
