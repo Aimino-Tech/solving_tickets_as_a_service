@@ -70,14 +70,12 @@ vi.mock('../../governance/client.js', () => ({
   isGovernanceEnabled: mockIsGovernanceEnabled,
 }));
 
-
-
 // ---------------------------------------------------------------------------
 // Imports (after mocks)
 // ---------------------------------------------------------------------------
 
-import { createGithubWebhooks, suggestLabels } from '../../webhooks/github.js';
 import { runWithTraceId } from '../../utils/trace.js';
+import { createGithubWebhooks, suggestLabels } from '../../webhooks/github.js';
 import { sampleIssueLabeledPayload, sampleIssueOpenedPayload, sampleMarketplacePayload } from '../fixtures.js';
 
 // ---------------------------------------------------------------------------
@@ -204,9 +202,7 @@ describe('createGithubWebhooks', () => {
 
       const govCall = mockDispatchThroughGovernance.mock.calls[0]?.[0] as { traceId?: string };
       expect(govCall?.traceId).toBeDefined();
-      expect(govCall?.traceId).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-      );
+      expect(govCall?.traceId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     });
   });
 
