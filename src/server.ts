@@ -96,7 +96,7 @@ import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.j
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { rootLogger } from './utils/logger.js';
 import type { IssueJobData } from './utils/types.js';
-import { extractOrGenerateTraceId, TRACE_HEADER } from './utils/trace.js';
+import { extractOrGenerateTraceId, runWithTraceId, TRACE_HEADER } from './utils/trace.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { logWebhookFailed, logWebhookProcessed, logWebhookReceived } from './webhooks/eventLogger.js';
 import { createGithubWebhooks } from './webhooks/github.js';
@@ -120,7 +120,7 @@ export async function createApp(): Promise<express.Application> {
     req.traceId = traceId;
     res.setHeader(TRACE_HEADER, traceId);
 
-    next();
+    runWithTraceId(traceId, () => next());
   });
 
   // -- Security headers (Helmet) -------------------------------------------
