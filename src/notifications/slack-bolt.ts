@@ -561,6 +561,10 @@ export class SlackBoltApp {
       const text = (msg.text || '').trim();
       if (!text) return;
 
+      // When the chat gateway is enabled, DMs route through it (AIM-4442)
+      // instead of the fix-queue path below.
+      if (config.slack.chatEnabled) return;
+
       log.info({ text, userId: msg.user, channel: msg.channel }, 'Received DM to STAS');
 
       await say(`:mag: *Investigating:* "${text}"\nProcessing your request...`);

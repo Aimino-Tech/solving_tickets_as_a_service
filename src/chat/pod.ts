@@ -105,6 +105,41 @@ export class ChatPod {
     this.transport.onGatewayMessage((msg) => this.onGatewayMessage(msg));
   }
 
+  /**
+   * Process user turns that arrived while no pod was live (delivered:false).
+   * Called right after boot on a rehydrated pod so a cold-start conversation
+   * answers everything the user sent, without any turn being lost.
+   */
+  async drainPending(): Promise<void> {
+    const pending = this.transcript().filter((t): t is TranscriptEntry => t.role === 'user' && t.delivered === false);
+    for (const turn of pending) {
+      if (this.closed) return;
+      await this.processDispatch({
+        kind: 'dispatch',
+        threadTs: this.threadTs,
+        channelId: this.channelId,
+        sessionId: this.sessionId,
+        text: turn.text,
+      });
+      await this.removePendingTurn(turn);
+    }
+  }
+
+  private async removePendingTurn(turn: TranscriptEntry): Promise<void> {
+    const transcript = this.transcript().filter(
+      (t) => !(t.role === 'user' && t.delivered === false && t.ts === turn.ts),
+    );
+    this.state = { ...this.state, transcript };
+    await this.store.upsert({
+      threadTs: this.threadTs,
+      channelId: this.channelId,
+      sessionId: this.sessionId,
+      userId: this.userId,
+      state: this.state,
+      agentMemory: this.memory,
+    });
+  }
+
   /** Run one turn and checkpoint; returns the assistant reply. */
   async handleTurn(text: string): Promise<string> {
     const traceId = `tr_${this.sessionId}_${Date.now().toString(36)}`;
@@ -145,6 +180,7 @@ export class ChatPod {
         userId: this.userId,
         sessionId: this.sessionId,
         threadTs: msg.threadTs,
+        channelId: msg.channelId,
         text: reply,
       });
     } finally {

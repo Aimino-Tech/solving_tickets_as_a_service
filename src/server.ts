@@ -196,6 +196,21 @@ export async function createApp(): Promise<express.Application> {
   bolt.mountOn(app);
   registerSlackMentionHandler(bolt.app);
 
+  // -- Slack chat gateway (AIM-4442) — route inbound DMs through it ----------
+  if (bolt.app && config.slack.chatEnabled) {
+    try {
+      const { registerSlackChatHandler } = await import('./channels/slack/chat.js');
+      const { ChatGateway } = await import('./chat/gateway.js');
+      const { createSessionStore } = await import('./chat/sessionStore.js');
+      registerSlackChatHandler(bolt.app, {
+        gateway: new ChatGateway(createSessionStore('postgres')),
+      });
+      log.info('Slack chat gateway enabled (SLACK_CHAT_ENABLED)');
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to initialize Slack chat gateway');
+    }
+  }
+
   // Start Slack Socket Mode connection (no-op for HTTP mode)
   bolt.start().catch((err: unknown) => log.warn({ err: String(err) }, 'Slack Bolt start failed'));
 
