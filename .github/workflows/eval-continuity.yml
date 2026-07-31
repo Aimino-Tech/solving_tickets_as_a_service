@@ -1,0 +1,54 @@
+# =============================================================================
+# Eval Continuity — conversation-continuity acceptance gate (AIM-4445)
+#
+# Proves the launch claim: the bot has a memory, it never needs the user to
+# re-explain. Runs the full matrix (10 runs x 10 follow-up messages per
+# scenario, >=3 scenarios) against the scripted memory SUT, asserts the
+# no-memory baseline FAILS, and runs the pod-death rehydrate variant.
+#
+# The driver exits non-zero when any scenario fails or the goldfish baseline
+# does not fail, so this workflow gates on memory behaving like memory.
+#
+# Triggers:
+#   - git push to any branch
+#
+# Expected runtime: <= 3 minutes (all scripted, no model calls)
+# =============================================================================
+
+name: Eval Continuity
+
+on: [push]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eval-continuity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests + acceptance gate (scripted SUT, N=10, no goldfish)
+        run: npx vitest run eval/continuity
+
+      - name: Continuity matrix (10 runs x 10 follow-ups, 3 scenarios)
+        run: npx tsx eval/continuity/continuity.eval.ts
+
+      - name: Rehydrate variant (3 mid-run pod kills)
+        run: npx tsx eval/continuity/rehydrate.eval.ts
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-continuity-results
+          path: eval/continuity/results

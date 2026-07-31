@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { MemoryExtractor } from '../../src/chat/memory-block.js';
+import type { MemoryExtractor } from '../../src/chat/memory.js';
 import type { AgentExecutor, AgentInput } from '../../src/chat/pod.js';
 import { ChatPod } from '../../src/chat/pod.js';
 import { MemoryChatSessionStore } from '../../src/chat/sessionStore.js';
@@ -43,7 +43,7 @@ function makeExtractor(): MemoryExtractor {
       facts: [
         {
           key: taught[1].toLowerCase(),
-          content: `The user's ${taught[1].toLowerCase()} is ${taught[2]}`,
+          value: `The user's ${taught[1].toLowerCase()} is ${taught[2]}`,
         },
       ],
     };

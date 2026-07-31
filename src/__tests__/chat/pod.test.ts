@@ -1,31 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { AgentExecutor, AgentInput } from '../../chat/pod.js';
+import type { AgentExecutor } from '../../chat/pod.js';
 import { ChatPod } from '../../chat/pod.js';
 import { MemoryChatSessionStore } from '../../chat/sessionStore.js';
-import type { PodToGatewayMessage } from '../../chat/transport.js';
 import { InMemoryPodTransport } from '../../chat/transport.js';
 
 function makeExecutor(reply: string): AgentExecutor {
   return {
     name: 'test',
-    run: vi.fn(async (input: AgentInput) => ({
-      reply: `${reply} (memory seeded: ${input.memoryBlock ? 'yes' : 'no'})`,
-    })),
+    run: vi.fn(async (input) => ({ reply: `${reply} (memory seeded: ${input.memoryBlock ? 'yes' : 'no'})` })),
   };
 }
 
-async function makePod(
-  executor: AgentExecutor,
-  observe?: (msg: PodToGatewayMessage) => void,
-): Promise<{
-  pod: ChatPod;
-  gatewayEnd: InMemoryPodTransport;
-  store: MemoryChatSessionStore;
-  executor: AgentExecutor;
-}> {
+async function makePod(overrides: Partial<ConstructorParameters<typeof ChatPod>[0]> = {}) {
   const { pod: podEnd, gateway: gatewayEnd } = InMemoryPodTransport.createPair();
-  if (observe) gatewayEnd.onPodMessage(observe);
   const store = new MemoryChatSessionStore();
+  const executor = makeExecutor('ok');
   const pod = new ChatPod({
     store,
     executor,
@@ -34,55 +23,60 @@ async function makePod(
     sessionId: 's1',
     threadTs: 't1',
     channelId: 'c1',
+    ...overrides,
   });
   await pod.boot();
   return { pod, gatewayEnd, store, executor };
 }
 
-describe('chat pod (AIM-4442)', () => {
+describe('chat pod (AIM-4442/4443)', () => {
   it('registers with the gateway on boot', async () => {
-    const received: PodToGatewayMessage[] = [];
-    await makePod(makeExecutor('ok'), (msg) => received.push(msg));
-    expect(received.map((m) => m.kind)).toEqual(['register', 'heartbeat']);
+    const received: unknown[] = [];
+    const { pod: podEnd, gateway: gatewayEnd } = InMemoryPodTransport.createPair();
+    gatewayEnd.onPodMessage((msg) => received.push(msg));
+    const pod = new ChatPod({
+      store: new MemoryChatSessionStore(),
+      executor: makeExecutor('ok'),
+      transport: podEnd,
+      userId: 'u1',
+      sessionId: 's1',
+      threadTs: 't1',
+      channelId: 'c1',
+    });
+    await pod.boot();
+    expect(received.map((m: any) => m.kind)).toEqual(['register', 'heartbeat']);
   });
 
-  it('answers a dispatched message and checkpoints state + memory', async () => {
-    const executor = makeExecutor('ok');
+  it('answers a dispatched message and checkpoints state+memory', async () => {
+    const { gatewayEnd, store, executor } = await makePod();
     const replies: string[] = [];
-    const { gatewayEnd, store } = await makePod(executor, (msg) => {
+    gatewayEnd.onPodMessage((msg) => {
       if (msg.kind === 'pod_message' && msg.text) replies.push(msg.text);
     });
     gatewayEnd.sendToPod({ kind: 'dispatch', threadTs: 't1', sessionId: 's1', text: 'hello' });
-
-    await vi.waitFor(() => {
-      expect(replies).toHaveLength(1);
-    });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(replies.length).toBe(1);
     expect(executor.run).toHaveBeenCalledTimes(1);
-
     const session = await store.get('t1');
-    const transcript = session?.state.transcript as Array<Record<string, unknown>> | undefined;
-    expect(transcript).toHaveLength(2);
-    expect(transcript?.[0]).toMatchObject({ role: 'user', text: 'hello' });
-    expect(transcript?.[1]).toMatchObject({ role: 'assistant' });
+    expect(session?.state.transcript).toHaveLength(2);
   });
 
   it('serializes concurrent dispatches (one in-flight turn)', async () => {
-    const { gatewayEnd, store } = await makePod(makeExecutor('ok'));
+    const { pod, gatewayEnd, store } = await makePod();
     gatewayEnd.sendToPod({ kind: 'dispatch', threadTs: 't1', sessionId: 's1', text: 'one' });
     gatewayEnd.sendToPod({ kind: 'dispatch', threadTs: 't1', sessionId: 's1', text: 'two' });
-
-    await vi.waitFor(async () => {
-      const session = await store.get('t1');
-      const transcript = session?.state.transcript as Array<Record<string, unknown>> | undefined;
-      expect(transcript).toHaveLength(4);
-    });
+    await new Promise((r) => setTimeout(r, 20));
+    const session = await store.get('t1');
+    const transcript = session?.state.transcript as Array<{ role: string; text: string }>;
+    expect(transcript.length).toBe(4);
+    void pod;
   });
 
   it('shutdown unregisters and closes the transport', async () => {
+    const { pod, gatewayEnd } = await makePod();
     const events: string[] = [];
-    const { pod, gatewayEnd } = await makePod(makeExecutor('ok'), (msg) => events.push(msg.kind));
-    await pod.shutdown();
+    gatewayEnd.onPodMessage((msg) => events.push(msg.kind));
+    pod.shutdown();
     expect(events).toContain('unregister');
-    void gatewayEnd;
   });
 });

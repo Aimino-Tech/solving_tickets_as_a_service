@@ -1,71 +1,81 @@
 /**
- * AIM-4442 — rehydrator.
+ * AIM-4443 — Rehydrator.
  *
- * After pod death, gateway restart or scale-to-zero, a fresh pod must continue
- * the same conversation from the durable store — the user never re-explains.
- * The rehydrator turns a `chat_sessions` row into everything a fresh session
- * needs to be seeded: the rendered agent-memory block, the recent transcript,
- * and any user turns that arrived while no pod was live. An optional Slack
- * thread fetch backfills turns the store has not seen yet.
+ * Pure read (Slack thread history + session row from the store) + seed a fresh
+ * session. On pod death / scale-to-zero / gateway restart, the rehydrator
+ * rebuilds a session from the durable store: it injects the maintained agent
+ * memory block and the recent transcript, so the conversation continues
+ * coherently — never as a cold start that makes the user re-explain.
  */
 
-import { renderSessionMemoryBlock } from './memory-block.js';
-import type { ChatSession, ChatSessionStore, TranscriptEntry } from './sessionStore.js';
+import { seedMemoryBlock } from './memory.js';
+import type { ChatSession, ChatSessionStore } from './sessionStore.js';
 
-export interface ThreadTurn {
-  ts: string;
+export interface RehydrateResult {
+  sessionId: string;
+  threadTs: string;
   userId: string;
-  text: string;
-}
-
-export interface ThreadFetcher {
-  fetchThread(threadTs: string): Promise<ThreadTurn[]>;
-}
-
-export interface RehydrationSeed {
-  session: ChatSession;
   memoryBlock: string;
-  recentTranscript: TranscriptEntry[];
-  pendingTurns: TranscriptEntry[];
-  rehydratedAt: string;
+  recentTranscript: Array<{ role: 'user' | 'assistant'; text: string }>;
+  seedPrompt: string;
 }
 
-export const noThreadFetcher: ThreadFetcher = {
-  fetchThread: async () => [],
-};
-
-function asTranscript(state: Record<string, unknown>): TranscriptEntry[] {
-  const raw = state.transcript;
-  return Array.isArray(raw) ? (raw as TranscriptEntry[]) : [];
+export interface RehydrateInput {
+  store: ChatSessionStore;
+  threadTs: string;
+  channelId: string;
+  userId: string;
+  sessionId?: string;
+  recentCount?: number;
 }
 
-export class ChatRehydrator {
-  private readonly store: ChatSessionStore;
-  private readonly threads: ThreadFetcher;
+export const RECENT_TRANSCRIPT_COUNT = 5;
 
-  constructor(store: ChatSessionStore, threads: ThreadFetcher = noThreadFetcher) {
-    this.store = store;
-    this.threads = threads;
+export function buildSeedPrompt(
+  memoryBlock: string,
+  recentTranscript: Array<{ role: 'user' | 'assistant'; text: string }>,
+): string {
+  const parts: string[] = [];
+  if (memoryBlock) parts.push(`[Memory]\n${memoryBlock}`);
+  if (recentTranscript.length > 0) {
+    parts.push(`[Recent Conversation History]\n${recentTranscript.map((t) => `${t.role}: ${t.text}`).join('\n')}`);
   }
+  parts.push('Continue the conversation. The user should never need to re-explain anything already established.');
+  return parts.join('\n\n');
+}
 
-  async rehydrate(threadTs: string): Promise<RehydrationSeed | undefined> {
-    const session = await this.store.get(threadTs);
-    if (!session) return undefined;
+export async function rehydrateSession(input: RehydrateInput): Promise<RehydrateResult> {
+  const { store, threadTs, channelId, userId, recentCount = RECENT_TRANSCRIPT_COUNT } = input;
 
-    const transcript = asTranscript(session.state);
-    const pendingTurns = transcript.filter((t) => t.role === 'user' && t.delivered === false);
-
-    const thread = await this.threads.fetchThread(threadTs);
-    const backfilled: TranscriptEntry[] = thread
-      .filter((turn) => !transcript.some((t) => t.ts === turn.ts))
-      .map((turn) => ({ role: 'user', text: turn.text, ts: turn.ts }));
-
-    return {
-      session,
-      memoryBlock: renderSessionMemoryBlock(session.agentMemory),
-      recentTranscript: [...transcript, ...backfilled].slice(-8),
-      pendingTurns: [...pendingTurns, ...backfilled],
-      rehydratedAt: new Date().toISOString(),
+  let session: ChatSession | null = await store.get(threadTs);
+  if (!session) {
+    const sessionId = input.sessionId ?? `sess_${userId}_${threadTs.replace(/[^\w-]/g, '_')}`;
+    const fresh: ChatSession = {
+      threadTs,
+      channelId,
+      sessionId,
+      userId,
+      state: { transcript: [] },
+      agentMemory: { facts: [], decisions: [], plan: null, preferences: {}, updatedAt: '' },
+      status: 'active',
+      updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
+    await store.upsert(fresh);
+    session = fresh;
   }
+
+  const rawTranscript = Array.isArray(session.state.transcript) ? session.state.transcript : [];
+  const transcript = rawTranscript as Array<{ role: 'user' | 'assistant'; text: string }>;
+  const recent = transcript.slice(-recentCount);
+  const memoryBlock = seedMemoryBlock(session.agentMemory);
+
+  return {
+    sessionId: session.sessionId,
+    threadTs: session.threadTs,
+    userId: session.userId,
+    memoryBlock,
+    recentTranscript: recent,
+    seedPrompt: buildSeedPrompt(memoryBlock, recent),
+  };
 }
