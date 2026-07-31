@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { request, configApi } from '@/api/client';
+import { request, configApi, github as githubApi } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import { fetchPreferences, upsertPreference, type NotificationPreference } from '@/services/notificationService';
 import {
@@ -54,7 +54,6 @@ const EVENT_ICONS: Record<string, LucideIcon> = {
 };
 
 const API_KEYS = [
-  { id: 'linear_key', label: 'Linear API Key', key: 'LINEAR_API_KEY', icon: GitBranch, required: true, placeholder: 'lin_api_...', docUrl: 'https://linear.app/settings/api' },
   { id: 'bitbucket_key', label: 'Bitbucket App Password', key: 'BITBUCKET_APP_PASSWORD', icon: LinkIcon, required: false, placeholder: 'Coming soon', docUrl: '', comingSoon: true },
   { id: 'jira_token', label: 'Jira API Token', key: 'JIRA_API_TOKEN', icon: LinkIcon, required: false, placeholder: 'Coming soon', docUrl: '', comingSoon: true },
 ];
@@ -118,7 +117,10 @@ export default function Settings() {
       setEnvValues(data.env || {});
       const initialKeys: Record<string, string> = {};
       API_KEYS.forEach((k) => { if (data.env?.[k.key]) initialKeys[k.id] = data.env[k.key]; });
+      if (data.env?.LINEAR_API_KEY) initialKeys['linear_key'] = data.env.LINEAR_API_KEY;
       setApiKeyValues((prev) => ({ ...prev, ...initialKeys }));
+      const slackInt = data.integrations?.find((i: any) => i.id === 'slack');
+      if (slackInt?.connected) setSlackConnected(true);
     }
     catch (err) { if ((err as Error).name !== 'AbortError') setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to load configuration' }); }
     finally { setSysLoading(false); }
@@ -165,6 +167,9 @@ export default function Settings() {
   const [editMode, setEditMode] = useState<Record<string, boolean>>({});
   const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({});
   const [verifying, setVerifying] = useState<Record<string, boolean>>({});
+const [slackExpanded, setSlackExpanded] = useState(false);
+const [linearExpanded, setLinearExpanded] = useState(false);
+const [slackConnected, setSlackConnected] = useState(false);
 
   async function handleSaveApiKey(keyId: string) {
     setApiKeySaving((prev) => ({ ...prev, [keyId]: true }));
@@ -179,27 +184,7 @@ export default function Settings() {
       setEditMode((prev) => ({ ...prev, [keyId]: false }));
       setMessage({ type: 'success', text: 'API key saved.' });
       setTimeout(() => setMessage(null), 3000);
-      if (apiKey.id === 'linear_key' && apiKeyValues[keyId]) {
-        setVerifying((prev) => ({ ...prev, [keyId]: true }));
-        try {
-          const result = await configApi.verifyService('linear', apiKeyValues[keyId]);
-          if (result.connected) {
-            setSysConfig((prev: any) => ({
-              ...prev,
-              integrations: prev.integrations?.map((i: any) =>
-                i.id === 'linear' ? { ...i, connected: true } : i
-              ) || prev.integrations,
-            }));
-            setMessage({ type: 'success', text: 'Connected to Linear.' });
-          } else {
-            setMessage({ type: 'error', text: result.error || 'Failed to verify Linear API key' });
-          }
-        } catch {
-          setMessage({ type: 'error', text: 'Could not verify Linear API key — connection test failed' });
-        } finally {
-          setVerifying((prev) => ({ ...prev, [keyId]: false }));
-        }
-      }
+
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save API key' });
     } finally {
@@ -250,6 +235,214 @@ export default function Settings() {
           </div>
         </div>
 
+        {(() => {
+          const env = sysConfig.env || {};
+          const li = sysConfig?.integrations?.find((i: any) => i.id === 'linear');
+          const hasLinearKey = !!env.LINEAR_API_KEY;
+          const linearConnected = li?.connected && hasLinearKey;
+          return (
+            <div className="card mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <GitBranch size={20} className="text-gray-500" />
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Linear API Key</h3>
+                    <p className="text-xs text-gray-500">
+                      {hasLinearKey ? 'API key configured' : 'Not configured'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+                    verifying['linear_key']
+                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                      : linearConnected
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${verifying['linear_key'] ? 'bg-yellow-500' : linearConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
+                    {verifying['linear_key'] ? 'Connecting' : linearConnected ? 'Connected' : 'Not Set'}
+                  </span>
+                  <button
+                    onClick={() => setLinearExpanded(!linearExpanded)}
+                    className={`p-1.5 rounded-md transition-colors ${
+                      linearExpanded
+                        ? 'text-brand-600 bg-brand-50 dark:bg-brand-900/20 hover:bg-brand-100 dark:hover:bg-brand-900/30'
+                        : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                    title={linearExpanded ? 'Collapse' : 'Edit'}
+                  >
+                    {linearExpanded ? <ChevronRight size={14} className="rotate-90" /> : <Pencil size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {linearExpanded && (
+                <div className="mt-4 space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className={`h-2 w-2 rounded-full ${hasLinearKey ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Linear API Key</span>
+                      <a href="https://linear.app/settings/api" target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:text-brand-700 ml-auto">
+                        How to get?
+                      </a>
+                    </div>
+                    {editMode['linear_key'] ? (
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <input
+                            type={showApiKey['linear_key'] ? 'text' : 'password'}
+                            value={apiKeyValues['linear_key'] || ''}
+                            onChange={(e) => setApiKeyValues(prev => ({ ...prev, linear_key: e.target.value }))}
+                            placeholder="lin_api_..."
+                            className="input-field w-full font-mono text-sm min-h-[36px] pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowApiKey((prev) => ({ ...prev, linear_key: !prev['linear_key'] }))}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                            tabIndex={-1}
+                          >
+                            {showApiKey['linear_key'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            setApiKeySaving(prev => ({ ...prev, linear_key: true }));
+                            setMessage(null);
+                            try {
+                              await configApi.updateEnv({ 'LINEAR_API_KEY': apiKeyValues['linear_key'] || '' });
+                              setSysConfig((prev: any) => ({
+                                ...prev,
+                                env: { ...prev.env, LINEAR_API_KEY: apiKeyValues['linear_key'] || '' },
+                              }));
+                              setEditMode(prev => ({ ...prev, linear_key: false }));
+                              setMessage({ type: 'success', text: 'Linear API key saved.' });
+                              setTimeout(() => setMessage(null), 3000);
+                              if (apiKeyValues['linear_key']) {
+                                setVerifying(prev => ({ ...prev, linear_key: true }));
+                                try {
+                                  const result = await configApi.verifyService('linear', apiKeyValues['linear_key']);
+                                  if (result.connected) {
+                                    setSysConfig((prev: any) => ({
+                                      ...prev,
+                                      integrations: prev.integrations?.map((i: any) =>
+                                        i.id === 'linear' ? { ...i, connected: true } : i
+                                      ) || prev.integrations,
+                                    }));
+                                    setMessage({ type: 'success', text: 'Connected to Linear.' });
+                                  } else {
+                                    setMessage({ type: 'error', text: result.error || 'Failed to verify Linear API key' });
+                                  }
+                                } catch {
+                                  setMessage({ type: 'error', text: 'Could not verify Linear API key — connection test failed' });
+                                } finally {
+                                  setVerifying(prev => ({ ...prev, linear_key: false }));
+                                }
+                              }
+                            } catch (err) {
+                              setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save' });
+                            } finally {
+                              setApiKeySaving(prev => ({ ...prev, linear_key: false }));
+                            }
+                          }}
+                          disabled={apiKeySaving['linear_key']}
+                          className="btn-primary text-xs min-h-[36px] px-3"
+                        >
+                          {apiKeySaving['linear_key'] ? '...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={() => setEditMode(prev => ({ ...prev, linear_key: false }))}
+                          className="btn-secondary text-xs min-h-[36px] px-3"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2 border border-gray-200 dark:border-gray-700">
+                        {hasLinearKey ? (
+                          <span className="font-mono text-sm text-gray-400 select-all">
+                            {(() => {
+                              const v = env.LINEAR_API_KEY;
+                              return v.length > 8 ? v.slice(0, 8) + '••••••••' : '••••••••••••••••';
+                            })()}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-400">Not configured</span>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (env.LINEAR_API_KEY && !apiKeyValues['linear_key']) {
+                              setApiKeyValues(prev => ({ ...prev, linear_key: env.LINEAR_API_KEY }));
+                            }
+                            setEditMode(prev => ({ ...prev, linear_key: true }));
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {li && (
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <span className="text-xs text-gray-500">Integration status</span>
+                      <div className="flex items-center gap-2">
+                        {verifying['linear_key'] ? (
+                          <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                            Connecting...
+                          </span>
+                        ) : (
+                          <>
+                            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+                              linearConnected
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                            }`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${linearConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
+                              {linearConnected ? 'Connected' : 'Not Connected'}
+                            </span>
+                            {hasLinearKey && (
+                              <button
+                                onClick={async () => {
+                                  setMessage(null);
+                                  try {
+                                    setVerifying(prev => ({ ...prev, linear_key: true }));
+                                    const result = await configApi.verifyService('linear', env.LINEAR_API_KEY);
+                                    if (result.connected) {
+                                      setSysConfig((prev: any) => ({
+                                        ...prev,
+                                        integrations: prev.integrations?.map((i: any) =>
+                                          i.id === 'linear' ? { ...i, connected: true } : i
+                                        ) || prev.integrations,
+                                      }));
+                                      setMessage({ type: 'success', text: 'Connected to Linear.' });
+                                    } else {
+                                      setMessage({ type: 'error', text: result.error || 'Failed to verify Linear API key' });
+                                    }
+                                  } catch {
+                                    setMessage({ type: 'error', text: 'Could not verify Linear API key — connection test failed' });
+                                  } finally {
+                                    setVerifying(prev => ({ ...prev, linear_key: false }));
+                                  }
+                                }}
+                                className="btn-secondary text-xs min-h-[36px] px-3"
+                              >
+                                Test Connection
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {['github'].map((id) => {
           const int = sysConfig?.integrations?.find((i: any) => i.id === id);
           if (!int) return null;
@@ -270,18 +463,209 @@ export default function Settings() {
                     <p className="text-xs text-gray-500">{meta?.desc}</p>
                   </div>
                 </div>
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-                  int.connected
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                }`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${int.connected ? 'bg-green-500' : 'bg-gray-400'}`} />
-                  {int.connected ? 'Connected' : 'Not Connected'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+                    int.connected
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${int.connected ? 'bg-green-500' : 'bg-gray-400'}`} />
+                    {int.connected ? 'Connected' : 'Not Connected'}
+                  </span>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const { url } = await githubApi.getOAuthUrl();
+                        window.location.href = url;
+                      } catch {
+                        setMessage({ type: 'error', text: 'Could not generate GitHub reconnection URL' });
+                      }
+                    }}
+                    className="p-1.5 rounded-md transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    title="Reconnect GitHub"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                </div>
               </div>
             </div>
           );
         })}
+
+        {(() => {
+          const env = sysConfig.env || {};
+          const slackFields = [
+            { id: 'slack_bot_token', key: 'SLACK_BOT_TOKEN', label: 'Bot Token', placeholder: 'xoxb-...', docUrl: 'https://api.slack.com/authentication/token-types#bot' },
+            { id: 'slack_app_token', key: 'SLACK_APP_TOKEN', label: 'App Token', placeholder: 'xapp-...', docUrl: 'https://api.slack.com/authentication/token-types#app' },
+          ];
+          const configuredCount = slackFields.filter(f => !!env[f.key]).length;
+          const allConfigured = configuredCount === slackFields.length;
+          return (
+            <div className="card mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MessageSquare size={20} className="text-gray-500" />
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Slack API Key</h3>
+                    <p className="text-xs text-gray-500">
+                      {configuredCount === 0 ? 'Not configured' : `${configuredCount}/${slackFields.length} fields configured`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+                    slackConnected
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : verifying['slack_bot_token']
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${slackConnected ? 'bg-green-500' : verifying['slack_bot_token'] ? 'bg-yellow-500' : 'bg-gray-400'}`} />
+                    {slackConnected ? 'Connected' : verifying['slack_bot_token'] ? 'Connecting' : 'Not Set'}
+                  </span>
+                  <button
+                    onClick={() => setSlackExpanded(!slackExpanded)}
+                    className={`p-1.5 rounded-md transition-colors ${
+                      slackExpanded
+                        ? 'text-brand-600 bg-brand-50 dark:bg-brand-900/20 hover:bg-brand-100 dark:hover:bg-brand-900/30'
+                        : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                    title={slackExpanded ? 'Collapse' : 'Edit'}
+                  >
+                    {slackExpanded ? <ChevronRight size={14} className="rotate-90" /> : <Pencil size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {slackExpanded && (
+                <div className="mt-4 space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4">
+                  {slackFields.map(field => {
+                    const isEditing = editMode[field.id];
+                    const val = apiKeyValues[field.id] !== undefined ? apiKeyValues[field.id] : '';
+                    return (
+                      <div key={field.id}>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className={`h-2 w-2 rounded-full ${!!env[field.key] ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{field.label}</span>
+                          {field.docUrl && (
+                            <a href={field.docUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:text-brand-700 ml-auto">
+                              How to get?
+                            </a>
+                          )}
+                        </div>
+                        {isEditing ? (
+                          <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={val}
+                              onChange={(e) => setApiKeyValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                              placeholder={field.placeholder}
+                              className="input-field flex-1 font-mono text-sm min-h-[36px]"
+                            />
+                            <button
+                              onClick={async () => {
+                                setApiKeySaving(prev => ({ ...prev, [field.id]: true }));
+                                setMessage(null);
+                                try {
+                                  await configApi.updateEnv({ [field.key]: val || '' });
+                                  setSysConfig((prev: any) => ({
+                                    ...prev,
+                                    env: { ...prev.env, [field.key]: val || '' },
+                                  }));
+                                  setEditMode(prev => ({ ...prev, [field.id]: false }));
+                                  setMessage({ type: 'success', text: `${field.label} saved.` });
+                                  setTimeout(() => setMessage(null), 3000);
+                                  if (field.id === 'slack_bot_token' && val) {
+                                    setVerifying(prev => ({ ...prev, [field.id]: true }));
+                                    try {
+                                      const result = await configApi.verifyService('slack', val);
+                                      if (result.connected) setSlackConnected(true);
+                                      setMessage({ type: result.connected ? 'success' : 'error', text: result.connected ? 'Slack connection verified!' : result.error || 'Verification failed' });
+                                    } catch {
+                                      setMessage({ type: 'error', text: 'Could not verify Slack connection' });
+                                    } finally {
+                                      setVerifying(prev => ({ ...prev, [field.id]: false }));
+                                    }
+                                  }
+                                } catch (err) {
+                                  setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save' });
+                                } finally {
+                                  setApiKeySaving(prev => ({ ...prev, [field.id]: false }));
+                                }
+                              }}
+                              disabled={apiKeySaving[field.id]}
+                              className="btn-primary text-xs min-h-[36px] px-3"
+                            >
+                              {apiKeySaving[field.id] ? '...' : 'Save'}
+                            </button>
+                            <button
+                              onClick={() => setEditMode(prev => ({ ...prev, [field.id]: false }))}
+                              className="btn-secondary text-xs min-h-[36px] px-3"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2 border border-gray-200 dark:border-gray-700">
+                            {env[field.key] ? (
+                              <span className="font-mono text-sm text-gray-400 select-all">
+                                {(() => {
+                                  const v = env[field.key];
+                                  return v.length > 8 ? v.slice(0, 8) + '••••••••' : '••••••••••••••••';
+                                })()}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-400">Not configured</span>
+                            )}
+                            <button
+                              onClick={() => {
+                                if (field.key && env[field.key] && !apiKeyValues[field.id]) {
+                                  setApiKeyValues(prev => ({ ...prev, [field.id]: env[field.key] }));
+                                }
+                                setEditMode(prev => ({ ...prev, [field.id]: true }));
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {allConfigured && (
+                    <div className="flex justify-end pt-3 border-t border-gray-200 dark:border-gray-700">
+                      {verifying['slack_bot_token'] ? (
+                        <span className="inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                          Connecting...
+                        </span>
+                      ) : (
+                        <button
+                          onClick={async () => {
+                            setMessage(null);
+                            setVerifying(prev => ({ ...prev, slack_bot_token: true }));
+                            try {
+                              const result = await configApi.verifyService('slack', env.SLACK_BOT_TOKEN);
+                              if (result.connected) setSlackConnected(true);
+                              setMessage({ type: result.connected ? 'success' : 'error', text: result.connected ? 'Slack connection verified!' : result.error || 'Verification failed' });
+                            } catch (err) {
+                              setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Could not verify Slack connection' });
+                            } finally {
+                              setVerifying(prev => ({ ...prev, slack_bot_token: false }));
+                            }
+                          }}
+                          className="btn-secondary text-xs min-h-[36px] px-3"
+                        >
+                          Test Connection
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         <div className="space-y-4">
           {API_KEYS.map((apiKey) => (
@@ -317,22 +701,7 @@ export default function Settings() {
                           }`}>
                             {sysConfig.env?.[apiKey.key] ? 'Saved' : 'New'}
                           </span>
-                          {apiKey.id === 'linear_key' && (() => {
-                            const li = sysConfig?.integrations?.find((i: any) => i.id === 'linear');
-                            const hasEnvVar = !!sysConfig.env?.[apiKey.key];
-                            if (!li) return null;
-                            const effectivelyConnected = li.connected && hasEnvVar;
-                            return (
-                              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                effectivelyConnected
-                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                  : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                              }`}>
-                                <span className={`h-1.5 w-1.5 rounded-full ${effectivelyConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
-                                {effectivelyConnected ? 'Connected' : 'Not Connected'}
-                              </span>
-                            );
-                          })()}
+
                         </>
                       )}
                     </>
@@ -424,7 +793,7 @@ export default function Settings() {
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="py-3 px-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                Email notifications enabled. Slack and Telegram coming soon.
+                Configure Slack in the API Keys tab. Telegram notifications coming soon.
               </p>
             </div>
             {EVENT_TYPES.map((event) => {

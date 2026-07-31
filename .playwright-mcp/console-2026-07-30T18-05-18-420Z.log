@@ -1,0 +1,49 @@
+[       4ms] [WARNING] Jul-30 20:05:18.423 Couldn't complete metrics measurement for start mark 'session_lifespan' @ https://a.slack-edge.com/bv1-13-br/modern.vendor.8794e31bb8903f0e.min.js:3720
+[       4ms] [WARNING] Jul-30 20:05:18.424 Couldn't complete metrics measurement for start mark 'session_lifespan' @ https://a.slack-edge.com/bv1-13-br/modern.vendor.8794e31bb8903f0e.min.js:3720
+[       5ms] [INFO] Jul-30 20:05:18.425 [WINDOW-UNLOADING] (T023EV54RR7) workspace handling window unloading event @ https://a.slack-edge.com/bv1-13-br/modern.vendor.8794e31bb8903f0e.min.js:3720
+[    1419ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:3000/favicon.ico:0
+[    3036ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f36e3302:20102
+[    3689ms] Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <MatchImpl matchId="/intellige...">
+      <MatchView router={{...}} matchId="/intellige..." resetKey={0} matchState={{routeId:"/...", ...}}>
+        <SafeFragment>
+          <SafeFragment fallback={null}>
+            <CatchBoundary getResetKey={function getResetKey} errorComponent={function DefaultErrorComponent} ...>
+              <CatchBoundaryImpl getResetKey={function getResetKey} onCatch={function onCatch}>
+                <SafeFragment fallback={function fallback}>
+                  <MatchInnerImpl matchId="/intellige...">
+                    <Lazy>
+                      <SplitComponent>
+                        <AppLayout>
+                          <div className="min-h-scre...">
+                            <aside>
+                            <div className="flex-1 min...">
+                              <header>
+                              <OfflineBanner>
++                             <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto">
+-                             <div
+-                               className="sticky top-16 z-50 flex items-center justify-center gap-2 bg-warning px-4 p..."
+-                             >
+          ...
+
+    at throwOnHydrationMismatch (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f36e3302:3920:13)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f36e3302:8694:196)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f36e3302:997:72)
+    at performUnitOfWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f36e3302:12561:98)
+    at workLoopConcurrentByScheduler (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f36e3302:12557:11)
+    at renderRootConcurrent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f36e3302:12539:71)
+    at performWorkOnRoot (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f36e3302:11766:152)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f36e3302:13505:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=f36e3302:36:50)

@@ -36,10 +36,10 @@ export async function dispatchToOpenSymphony(data: IssueJobData): Promise<Dispat
 
   const payload = {
     issue_id: data.trackerTicketId || `gh-${data.issueNumber}`,
-    repo: `${data.repoOwner}/${data.repoName}`,
+    repo_url: `${data.repoOwner}/${data.repoName}`,
     tenant,
     title: data.issueTitle,
-    body: data.issueBody,
+    description: data.issueBody,
     labels: data.labels,
     source: data.source || 'github',
     tracker_type: data.trackerType,
@@ -48,7 +48,7 @@ export async function dispatchToOpenSymphony(data: IssueJobData): Promise<Dispat
   };
 
   try {
-    log.info({ osUrl, repo: payload.repo, tenant, hasApiKey: !!apiKey }, 'Dispatching to OpenSymphony HTTP endpoint');
+    log.info({ osUrl, repo_url: payload.repo_url, tenant, hasApiKey: !!apiKey }, 'Dispatching to OpenSymphony HTTP endpoint');
     log.debug({ payload }, 'OpenSymphony dispatch payload');
     const response = await fetch(osUrl, {
       method: 'POST',
@@ -66,21 +66,21 @@ export async function dispatchToOpenSymphony(data: IssueJobData): Promise<Dispat
     }
 
     const result = (await response.json()) as Record<string, unknown>;
-    log.info({ runId: result.run_id, prUrl: result.pr_url }, 'OpenSymphony HTTP dispatch accepted');
+    const dispatchId = String(result.dispatch_id || result.run_id || '');
+    log.info({ dispatchId, prUrl: result.pr_url }, 'OpenSymphony HTTP dispatch accepted');
 
-    const runId = String(result.run_id || '');
     auditService.logFixJobEvent({
-      jobId: runId || `os-${data.repoOwner}-${data.repoName}-${data.issueNumber}`,
+      jobId: dispatchId || `os-${data.repoOwner}-${data.repoName}-${data.issueNumber}`,
       event: 'started',
       repo: `${data.repoOwner}/${data.repoName}`,
       issueNumber: data.issueNumber,
-      details: { dispatchTarget: 'opensymphony-http', runId },
+      details: { dispatchTarget: 'opensymphony-http', dispatchId },
     });
 
     return {
       success: true,
-      runId: runId || undefined,
-      summary: String(result.summary || 'Dispatched to OpenSymphony'),
+      runId: dispatchId || undefined,
+      summary: String(result.state || 'Dispatched to OpenSymphony'),
       prUrl: result.pr_url ? String(result.pr_url) : undefined,
     };
   } catch (err) {

@@ -1,0 +1,189 @@
+- generic [ref=f13e1]:
+  - banner [ref=f13e2]:
+    - generic [ref=f13e3]:
+      - text: 
+      - link [ref=f13e5] [cursor=pointer]:
+        - /url: https://api.slack.com/
+        - img "Slack API" [ref=f13e6]
+      - generic [ref=f13e8]:
+        - link "Changelog" [ref=f13e9] [cursor=pointer]:
+          - /url: https://docs.slack.dev/changelog
+        - link "Documentation" [ref=f13e10] [cursor=pointer]:
+          - /url: /#read_the_docs
+        - link "Tutorials" [ref=f13e11] [cursor=pointer]:
+          - /url: /tutorials
+        - link "Your Apps" [ref=f13e12] [cursor=pointer]:
+          - /url: /apps
+  - generic [ref=f13e16]:
+    - button "Create New App" [ref=f13e17] [cursor=pointer]
+    - heading "Your Apps" [level=1] [ref=f13e18]
+    - generic [ref=f13e19]:
+      - generic [ref=f13e20]: 
+      - textbox "Filter apps by name or workspace" [ref=f13e21]
+    - table [ref=f13e23]:
+      - rowgroup [ref=f13e24]:
+        - row [ref=f13e25]:
+          - columnheader "App Name" [ref=f13e26]
+          - columnheader "Workspace" [ref=f13e27]
+          - columnheader "App ID" [ref=f13e28]
+          - columnheader "App Type" [ref=f13e29]
+          - columnheader "Distribution Status" [ref=f13e30]
+        - row [ref=f13e31]:
+          - cell [ref=f13e32]:
+            - link "OC Slack" [ref=f13e33] [cursor=pointer]:
+              - /url: /apps/A0B5MQSHE65
+          - cell "Aimino" [ref=f13e35]
+          - cell "A0B5MQSHE65" [ref=f13e36]
+          - cell "Modern" [ref=f13e37]
+          - cell "Not distributed" [ref=f13e38]
+        - row [ref=f13e39]:
+          - cell [ref=f13e40]:
+            - link "Duc's Hermes" [ref=f13e41] [cursor=pointer]:
+              - /url: /apps/A0B9ZU3SJ7N
+          - cell "Aimino" [ref=f13e43]
+          - cell "A0B9ZU3SJ7N" [ref=f13e44]
+          - cell "Modern" [ref=f13e45]
+          - cell "Not distributed" [ref=f13e46]
+        - row [ref=f13e47]:
+          - cell [ref=f13e48]:
+            - link "STAS" [ref=f13e49] [cursor=pointer]:
+              - /url: /apps/A0BLHCTS1AT
+          - cell "Aimino" [ref=f13e51]
+          - cell "A0BLHCTS1AT" [ref=f13e52]
+          - cell "Modern" [ref=f13e53]
+          - cell "Not distributed" [ref=f13e54]
+        - row [ref=f13e55]:
+          - cell [ref=f13e56]:
+            - link "Tam's Hermes" [ref=f13e57] [cursor=pointer]:
+              - /url: /apps/A0B9SV8Q1GD
+          - cell "Aimino" [ref=f13e59]
+          - cell "A0B9SV8Q1GD" [ref=f13e60]
+          - cell "Modern" [ref=f13e61]
+          - cell "Not distributed" [ref=f13e62]
+        - row [ref=f13e63]:
+          - cell [ref=f13e64]:
+            - link "Fibi's Hermes" [ref=f13e65] [cursor=pointer]:
+              - /url: /apps/A0BA03FC5EY
+          - cell "Aimino" [ref=f13e67]
+          - cell "A0BA03FC5EY" [ref=f13e68]
+          - cell "Modern" [ref=f13e69]
+          - cell "Not distributed" [ref=f13e70]
+    - generic [ref=f13e73]:
+      - generic [ref=f13e74]:
+        - heading "Your App Configuration Tokens" [level=4] [ref=f13e75]
+        - link "Learn about tokens" [ref=f13e76] [cursor=pointer]:
+          - /url: https://docs.slack.dev/authentication/tokens
+      - button "Generate Token" [ref=f13e78] [cursor=pointer]
+    - paragraph [ref=f13e79]:
+      - text: Don't see an app you're looking for?
+      - link "Sign in to another workspace" [ref=f13e80] [cursor=pointer]:
+        - /url: https://slack.com/signin
+      - text: .
+  - contentinfo [ref=f13e81]:
+    - generic [ref=f13e83]:
+      - list [ref=f13e85]:
+        - listitem [ref=f13e86]: Using Slack
+        - listitem [ref=f13e87]:
+          - link "Product" [ref=f13e88] [cursor=pointer]:
+            - /url: https://slack.com/is
+        - listitem [ref=f13e89]:
+          - link "Enterprise" [ref=f13e90] [cursor=pointer]:
+            - /url: https://slack.com/enterprise
+        - listitem [ref=f13e91]:
+          - link "Pricing" [ref=f13e92] [cursor=pointer]:
+            - /url: https://slack.com/pricing?ui_step=28&ui_element=5
+        - listitem [ref=f13e93]:
+          - link "Support" [ref=f13e94] [cursor=pointer]:
+            - /url: https://get.slack.help/hc/en-us
+        - listitem [ref=f13e95]:
+          - link "Slack Guides" [ref=f13e96] [cursor=pointer]:
+            - /url: https://slack.com/guides
+        - listitem [ref=f13e97]:
+          - link "Slack Marketplace" [ref=f13e98] [cursor=pointer]:
+            - /url: https://slack.com/marketplace
+        - listitem [ref=f13e99]:
+          - link "API" [ref=f13e100] [cursor=pointer]:
+            - /url: https://api.slack.com/
+      - list [ref=f13e102]:
+        - listitem [ref=f13e103]:
+          - text: Slack
+          - generic [ref=f13e104]: 
+        - listitem [ref=f13e105]:
+          - link "Jobs" [ref=f13e106] [cursor=pointer]:
+            - /url: https://slack.com/careers
+        - listitem [ref=f13e107]:
+          - link "Customers" [ref=f13e108] [cursor=pointer]:
+            - /url: https://slack.com/customers
+        - listitem [ref=f13e109]:
+          - link "Developers" [ref=f13e110] [cursor=pointer]:
+            - /url: https://slack.com/developers
+        - listitem [ref=f13e111]:
+          - link "Events" [ref=f13e112] [cursor=pointer]:
+            - /url: https://slack.com/events
+        - listitem [ref=f13e113]:
+          - link "Blog" [ref=f13e114] [cursor=pointer]:
+            - /url: https://slackhq.com/
+      - list [ref=f13e116]:
+        - listitem [ref=f13e117]: Legal
+        - listitem [ref=f13e118]:
+          - link "Privacy" [ref=f13e119] [cursor=pointer]:
+            - /url: https://slack.com/privacy-policy
+        - listitem [ref=f13e120]:
+          - link "Security" [ref=f13e121] [cursor=pointer]:
+            - /url: https://slack.com/trust/security
+        - listitem [ref=f13e122]:
+          - link "Terms of Service" [ref=f13e123] [cursor=pointer]:
+            - /url: https://slack.com/terms-of-service
+        - listitem [ref=f13e124]:
+          - link "Policies" [ref=f13e125] [cursor=pointer]:
+            - /url: https://slack.com/legal
+      - list [ref=f13e127]:
+        - listitem [ref=f13e128]: Handy Links
+        - listitem [ref=f13e129]:
+          - link "Download desktop app" [ref=f13e130] [cursor=pointer]:
+            - /url: https://slack.com/downloads
+        - listitem [ref=f13e131]:
+          - link "Download mobile app" [ref=f13e132] [cursor=pointer]:
+            - /url: https://slack.com/downloads
+        - listitem [ref=f13e133]:
+          - link "Brand Guidelines" [ref=f13e134] [cursor=pointer]:
+            - /url: https://slack.com/brand-guidelines
+        - listitem [ref=f13e135]:
+          - link "Slack at Work" [ref=f13e136] [cursor=pointer]:
+            - /url: https://slackatwork.com
+        - listitem [ref=f13e137]:
+          - link "Status" [ref=f13e138] [cursor=pointer]:
+            - /url: https://slack-status.com
+    - generic [ref=f13e140]:
+      - link "Slack homepage" [ref=f13e141] [cursor=pointer]:
+        - /url: https://slack.com
+        - generic [ref=f13e142]: 
+      - list [ref=f13e143]:
+        - listitem [ref=f13e144]:
+          - link "Contact Us" [ref=f13e145] [cursor=pointer]:
+            - /url: https://slack.com/help/requests/new
+        - listitem [ref=f13e146]:
+          - link "Slack on Twitter" [ref=f13e147] [cursor=pointer]:
+            - /url: https://twitter.com/SlackHQ
+            - generic [ref=f13e148]: 
+        - listitem [ref=f13e149]:
+          - link "Slack on YouTube" [ref=f13e150] [cursor=pointer]:
+            - /url: https://www.youtube.com/channel/UCY3YECgeBcLCzIrFLP4gblw
+            - generic [ref=f13e151]: 
+  - dialog "Privacy" [ref=f13e153]:
+    - generic [ref=f13e155]:
+      - generic [ref=f13e158]:
+        - text: We use cookies to make your interactions with our website more meaningful. They help us better understand how our websites are used, so we can tailor content for you. For more information about the different cookies we are using, read the
+        - link "Privacy Statement" [ref=f13e159] [cursor=pointer]:
+          - /url: https://www.salesforce.com/company/privacy/full_privacy/
+        - text: . To change your cookie settings and preferences, click the Cookie Consent Manager button.
+      - generic [ref=f13e161]:
+        - button "Cookie Consent Manager, Opens the preference center dialog" [ref=f13e162] [cursor=pointer]: Cookie Consent Manager
+        - button "Reject All Cookies" [ref=f13e163] [cursor=pointer]
+        - button "Accept All Cookies" [active] [ref=f13e164] [cursor=pointer]
+  - generic [ref=f13e165]:
+    - alert [ref=f13e166]
+    - log [ref=f13e167]
+  - generic [ref=f13e168]:
+    - alert [ref=f13e169]
+    - log [ref=f13e170]

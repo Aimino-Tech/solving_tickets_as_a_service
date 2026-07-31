@@ -1,0 +1,53 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - application [ref=e6]
+    - toolbar "History Navigation" [ref=e8]:
+      - generic [ref=e10]:
+        - generic [ref=e13]:
+          - generic [ref=e14]:
+            - button "Back in history" [disabled] [ref=e15]
+            - button "Forward in history" [disabled] [ref=e18]
+          - button "Show history" [ref=e22] [cursor=pointer]
+        - button "Search" [ref=e27] [cursor=pointer]:
+          - generic [ref=e31]: Search Aimino
+        - generic [ref=e32]:
+          - button "Chat with Slackbot AI" [ref=e38] [cursor=pointer]
+          - button "Help" [ref=e44] [cursor=pointer]
+    - tabpanel "Aimino" [ref=e48]:
+      - generic [ref=e49]:
+        - button "Switch workspaces… (Aimino)" [ref=e52] [cursor=pointer]
+        - tablist "Aimino" [ref=e56]:
+          - tab "Home" [selected] [ref=e58] [cursor=pointer]:
+            - generic [ref=e59]:
+              - generic [ref=e65]: Home
+              - generic: "1"
+          - tab "DMs" [ref=e66] [cursor=pointer]:
+            - generic [ref=e67]:
+              - generic [ref=e72]: DMs
+              - generic: "2"
+          - tab "Activity" [ref=e73] [cursor=pointer]:
+            - generic [ref=e74]:
+              - generic [ref=e81]: Activity
+              - generic: "3"
+          - tab "Files" [ref=e82] [cursor=pointer]:
+            - generic [ref=e83]:
+              - generic [ref=e88]: Files
+              - generic: "4"
+          - tab "Later" [ref=e90] [cursor=pointer]:
+            - generic [ref=e91]:
+              - generic [ref=e96]: Later
+              - generic: "5"
+          - tab "More…" [ref=e97] [cursor=pointer]:
+            - generic [ref=e98]:
+              - generic [ref=e103]: More
+              - generic: "0"
+      - generic [ref=e107]:
+        - tabpanel "Home" [ref=e108]
+        - toolbar "Control strip" [ref=e120]:
+          - button "Create new" [ref=e121] [cursor=pointer]
+          - button "Turn on focus mode" [ref=e128] [cursor=pointer]
+          - 'button "User: Xuan-Duc" [ref=e137] [cursor=pointer]':
+            - img "Away" [ref=e144]
+  - generic [ref=e151]:
+    - alert [ref=e152]
+    - log [ref=e153]

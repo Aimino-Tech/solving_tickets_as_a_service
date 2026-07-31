@@ -1,0 +1,60 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e4]:
+    - application [ref=f2e6]
+    - toolbar "History Navigation" [ref=f2e8]:
+      - generic [ref=f2e10]:
+        - generic [ref=f2e13]:
+          - generic [ref=f2e14]:
+            - button "Back in history" [disabled] [ref=f2e15]
+            - button "Forward in history" [disabled] [ref=f2e18]
+          - button "Show history" [ref=f2e22] [cursor=pointer]
+        - button "Search" [ref=f2e27] [cursor=pointer]:
+          - generic [ref=f2e31]: Search Aimino
+        - generic [ref=f2e32]:
+          - button "Chat with Slackbot AI" [ref=f2e38] [cursor=pointer]
+          - button "Help" [ref=f2e44] [cursor=pointer]
+    - tabpanel "Aimino" [ref=f2e48]:
+      - generic [ref=f2e49]:
+        - button "Switch workspaces… (Aimino)" [ref=f2e52] [cursor=pointer]
+        - tablist "Aimino" [ref=f2e56]:
+          - tab "Home" [selected] [ref=f2e58] [cursor=pointer]:
+            - generic [ref=f2e59]:
+              - generic [ref=f2e65]: Home
+              - generic: "1"
+          - tab "DMs" [ref=f2e66] [cursor=pointer]:
+            - generic [ref=f2e67]:
+              - generic [ref=f2e72]: DMs
+              - generic: "2"
+          - tab "Activity" [ref=f2e73] [cursor=pointer]:
+            - generic [ref=f2e74]:
+              - generic [ref=f2e81]: Activity
+              - generic: "3"
+          - tab "Files" [ref=f2e82] [cursor=pointer]:
+            - generic [ref=f2e83]:
+              - generic [ref=f2e88]: Files
+              - generic: "4"
+          - tab "Later" [ref=f2e90] [cursor=pointer]:
+            - generic [ref=f2e91]:
+              - generic [ref=f2e96]: Later
+              - generic: "5"
+          - tab "More…" [ref=f2e97] [cursor=pointer]:
+            - generic [ref=f2e98]:
+              - generic [ref=f2e103]: More
+              - generic: "0"
+      - generic [ref=f2e107]:
+        - tabpanel "Home" [ref=f2e108]
+        - toolbar "Control strip" [ref=f2e120]:
+          - button "Create new" [ref=f2e121] [cursor=pointer]
+          - button "Turn on focus mode" [ref=f2e128] [cursor=pointer]
+          - 'button "User: Xuan-Duc" [ref=f2e137] [cursor=pointer]':
+            - img "Away" [ref=f2e144]
+      - dialog "Information" [ref=f2e151]:
+        - generic [ref=f2e153]:
+          - img "bell emoji" [ref=f2e155]
+          - generic [ref=f2e156]:
+            - text: Slack needs your permission to enable notifications.
+            - button "Enable notifications" [ref=f2e157] [cursor=pointer]
+        - button "Close" [ref=f2e158] [cursor=pointer]
+  - generic [ref=f2e164]:
+    - alert [ref=f2e165]
+    - log [ref=f2e166]

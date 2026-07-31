@@ -95,6 +95,7 @@ import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.j
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { rootLogger } from './utils/logger.js';
 import type { IssueJobData } from './utils/types.js';
+import { extractOrGenerateTraceId, TRACE_HEADER } from './utils/trace.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { logWebhookFailed, logWebhookProcessed, logWebhookReceived } from './webhooks/eventLogger.js';
 import { createGithubWebhooks } from './webhooks/github.js';
@@ -114,7 +115,6 @@ export async function createApp(): Promise<express.Application> {
     res.setHeader('x-request-id', requestId);
 
     // Generate or extract trace ID for cross-system correlation
-    const { extractOrGenerateTraceId, TRACE_HEADER } = require('./utils/trace.js');
     const traceId = extractOrGenerateTraceId(req.headers as Record<string, string | string[] | undefined>);
     req.traceId = traceId;
     res.setHeader(TRACE_HEADER, traceId);
@@ -194,6 +194,9 @@ export async function createApp(): Promise<express.Application> {
   const bolt = getSlackBoltApp();
   bolt.mountOn(app);
   registerSlackMentionHandler(bolt.app);
+
+  // Start Slack Socket Mode connection (no-op for HTTP mode)
+  bolt.start().catch((err: unknown) => log.warn({ err: String(err) }, 'Slack Bolt start failed'));
 
   // -- Initialize trackers --------------------------------------------------
   initTrackers();
@@ -1224,9 +1227,9 @@ async function tryListen(
         await consumeQueue(QUEUES.issuesFix.name, async (msg) => {
           if (!msg) return;
           const content = msg.content.toString();
-          let data: IssueJobData;
+          let data: IssueJobData & { _meta?: { slackChannel?: string; slackThreadTs?: string } };
           try {
-            data = JSON.parse(content) as IssueJobData;
+            data = JSON.parse(content);
           } catch {
             log.error({ content }, 'Failed to parse RabbitMQ message');
             return;
@@ -1237,6 +1240,24 @@ async function tryListen(
               log.error({ errors: result.errors }, 'OpenSymphony dispatch failed');
             } else {
               log.info({ runId: result.runId, prUrl: result.prUrl }, 'OpenSymphony dispatch completed');
+              // Post result back to Slack thread if the original request came from Slack
+              const slackMeta = data._meta;
+              if (slackMeta?.slackChannel) {
+                try {
+                  const bolt = getSlackBoltApp();
+                  if (bolt.app) {
+                    const statusEmoji = result.prUrl ? ':rocket:' : ':white_check_mark:';
+                    const prLine = result.prUrl ? `\nPR: ${result.prUrl}` : '';
+                    await bolt.app.client.chat.postMessage({
+                      channel: slackMeta.slackChannel,
+                      thread_ts: slackMeta.slackThreadTs,
+                      text: `${statusEmoji} *Fix ${result.prUrl ? 'created' : 'dispatched'}*${prLine}\n\`\`\`${result.summary || ''}\`\`\``,
+                    });
+                  }
+                } catch (slackErr) {
+                  log.warn({ err: String(slackErr) }, 'Failed to post dispatch result to Slack');
+                }
+              }
             }
           } catch (err) {
             log.error({ err: String(err) }, 'OpenSymphony dispatch error');

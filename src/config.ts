@@ -143,6 +143,7 @@ const envSchema = z.object({
   SLACK_CHANNEL: z.string().optional(),
   SLACK_BOT_TOKEN: z.string().optional(),
   SLACK_SIGNING_SECRET: z.string().optional(),
+  SLACK_APP_TOKEN: z.string().optional(),
   SLACK_TICKET_ENABLED: boolSchema(false),
   SLACK_INTERACTIONS_PATH: z.string().default('/slack/events'),
 
@@ -504,6 +505,7 @@ function buildConfig(env: ParsedEnv) {
       channel: env.SLACK_CHANNEL,
       botToken: env.SLACK_BOT_TOKEN,
       signingSecret: env.SLACK_SIGNING_SECRET,
+      appToken: env.SLACK_APP_TOKEN,
       ticketEnabled: env.SLACK_TICKET_ENABLED,
       interactionsPath: env.SLACK_INTERACTIONS_PATH,
     },

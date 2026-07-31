@@ -1,0 +1,232 @@
+- generic [ref=f23e1]:
+  - banner [ref=f23e2]:
+    - generic [ref=f23e3]:
+      - text: 
+      - link [ref=f23e5] [cursor=pointer]:
+        - /url: https://api.slack.com/
+        - img "Slack API" [ref=f23e6]
+      - generic [ref=f23e8]:
+        - link "Changelog" [ref=f23e9] [cursor=pointer]:
+          - /url: https://docs.slack.dev/changelog
+        - link "Documentation" [ref=f23e10] [cursor=pointer]:
+          - /url: /#read_the_docs
+        - link "Tutorials" [ref=f23e11] [cursor=pointer]:
+          - /url: /tutorials
+        - link "Your Apps" [ref=f23e12] [cursor=pointer]:
+          - /url: /apps
+  - generic [ref=f23e14]:
+    - generic:
+      - navigation [ref=f23e15]:
+        - generic [ref=f23e16] [cursor=pointer]:  OC Slack
+        - generic [ref=f23e18]:
+          - heading "Settings" [level=4] [ref=f23e19]
+          - list [ref=f23e20]:
+            - listitem [ref=f23e21]:
+              - link "Basic Information" [ref=f23e22] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/general?
+            - listitem [ref=f23e23]:
+              - link "Collaborators" [ref=f23e24] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0B5MQSHE65/collaborators
+            - listitem [ref=f23e25]:
+              - link "Socket Mode" [ref=f23e26] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0B5MQSHE65/socket-mode
+            - listitem [ref=f23e27]:
+              - link "Install App" [ref=f23e28] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/install-on-team?
+            - listitem [ref=f23e29]:
+              - link "Manage Distribution" [ref=f23e30] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0B5MQSHE65/distribute
+          - heading "Features" [level=4] [ref=f23e31]
+          - list [ref=f23e32]:
+            - listitem [ref=f23e33]:
+              - link "App Home" [ref=f23e34] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/app-home?
+            - listitem [ref=f23e35]:
+              - link "Agents" [ref=f23e36] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/app-assistant?
+            - listitem [ref=f23e37]:
+              - link "Work Object Previews New" [ref=f23e38] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/rich-previews?
+                - text: Work Object Previews
+                - generic [ref=f23e39]: New
+            - listitem [ref=f23e40]:
+              - link "Workflow Steps" [ref=f23e41] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0B5MQSHE65/functions
+            - listitem [ref=f23e42]:
+              - link "Org Level Apps" [ref=f23e43] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/org-level?
+            - listitem [ref=f23e44]:
+              - link "Incoming Webhooks" [ref=f23e45] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/incoming-webhooks?
+            - listitem [ref=f23e46]:
+              - link "Interactivity & Shortcuts" [ref=f23e47] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/interactive-messages?
+            - listitem [ref=f23e48]:
+              - link "Slash Commands" [ref=f23e49] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/slash-commands?
+            - listitem [ref=f23e50]:
+              - link "Steps from Apps LEGACY" [ref=f23e51] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/workflow-extensions?
+                - generic [ref=f23e52]:
+                  - text: Steps from Apps
+                  - generic [ref=f23e53]: LEGACY
+            - listitem [ref=f23e54]:
+              - link "OAuth & Permissions" [ref=f23e55] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/oauth?
+            - listitem [ref=f23e56]:
+              - link "MCP Servers New" [ref=f23e57] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0B5MQSHE65/mcp-servers
+                - text: MCP Servers
+                - generic [ref=f23e58]: New
+            - listitem [ref=f23e59]:
+              - link "Event Subscriptions" [ref=f23e60] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/event-subscriptions?
+            - listitem [ref=f23e61]:
+              - link "User ID Translation" [ref=f23e62] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/user-ids?
+            - listitem [ref=f23e63]:
+              - link "App Manifest" [ref=f23e64] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0B5MQSHE65/app-manifest
+            - listitem [ref=f23e65]:
+              - link "Beta Features" [ref=f23e66] [cursor=pointer]:
+                - /url: /apps/A0B5MQSHE65/developer-beta?
+          - heading "Submit to Slack Marketplace" [level=4] [ref=f23e67]
+          - list [ref=f23e68]:
+            - listitem [ref=f23e69]:
+              - link "Review & Submit" [ref=f23e70] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0B5MQSHE65/submission
+        - generic [ref=f23e71]:
+          - paragraph
+          - link "Give feedback" [ref=f23e73] [cursor=pointer]:
+            - /url: https://slack.com/help/requests/new?cu_web_tags=app_config_feedback
+          - paragraph
+          - paragraph [ref=f23e74]:
+            - text: Slack
+            - generic [ref=f23e75]: 
+          - list [ref=f23e76]:
+            - listitem [ref=f23e77]:
+              - link "Help" [ref=f23e78] [cursor=pointer]:
+                - /url: https://slack.com/help
+            - listitem [ref=f23e79]:
+              - link "Contact" [ref=f23e80] [cursor=pointer]:
+                - /url: https://slack.com/help/requests/new
+            - listitem [ref=f23e81]:
+              - link "Policies" [ref=f23e82] [cursor=pointer]:
+                - /url: https://slack.com/terms-of-service
+            - listitem [ref=f23e83]:
+              - link "Our Blog" [ref=f23e84] [cursor=pointer]:
+                - /url: https://slackhq.com/
+      - generic [ref=f23e85]:
+        - heading "Basic Information" [level=1] [ref=f23e86]
+        - generic [ref=f23e87]:
+          - heading "App Credentials" [level=2] [ref=f23e89]
+          - generic [ref=f23e90]:
+            - paragraph [ref=f23e91]: These credentials allow your app to access the Slack API. They are secret. Please don't share your app credentials with anyone, include them in public code repositories, or store them in insecure ways.
+            - generic [ref=f23e92]:
+              - generic [ref=f23e93]:
+                - generic [ref=f23e94]: App ID
+                - textbox "App ID" [ref=f23e95]: A0B5MQSHE65
+              - generic [ref=f23e96]:
+                - generic [ref=f23e97]: Date of App Creation
+                - textbox "Date of App Creation" [ref=f23e98]: May 22, 2026
+            - generic [ref=f23e99]: Client ID
+            - textbox "Client ID" [ref=f23e100]: "2116991161857.11191842592209"
+            - generic [ref=f23e101]:
+              - generic [ref=f23e102]: Client Secret
+              - textbox "Client Secret" [ref=f23e103]: "1234567890"
+              - generic [ref=f23e104]:
+                - button "Show" [ref=f23e105] [cursor=pointer]
+                - button "Regenerate" [ref=f23e106] [cursor=pointer]
+              - complementary [ref=f23e107]:
+                - text: You'll need to send this secret along with your client ID when making your
+                - link "oauth.v2.access" [ref=f23e108] [cursor=pointer]:
+                  - /url: https://api.slack.com/methods/oauth.v2.access
+                - text: request.
+            - generic [ref=f23e109]:
+              - generic [ref=f23e110]: Signing Secret
+              - textbox "Signing Secret" [ref=f23e111]: "1234567890"
+              - generic [ref=f23e112]:
+                - button "Show" [ref=f23e113] [cursor=pointer]
+                - button "Regenerate" [ref=f23e114] [cursor=pointer]
+              - complementary [ref=f23e115]: Slack signs the requests we send you using this secret. Confirm that each request comes from Slack by verifying its unique signature.
+            - generic [ref=f23e116]:
+              - generic [ref=f23e117]: Verification Token
+              - textbox "Verification Token" [ref=f23e119]:
+                - /placeholder: No Verification Token found
+                - text: e06xFNq5r4Rf9FsBp69j0WIa
+              - button "Regenerate" [ref=f23e121] [cursor=pointer]
+              - complementary [ref=f23e122]: This deprecated Verification Token can still be used to verify that requests come from Slack, but we strongly recommend using the above, more secure, signing secret instead.
+        - generic [ref=f23e125]:
+          - heading "App-Level Tokens" [level=2] [ref=f23e128]
+          - paragraph [ref=f23e129]:
+            - text: App-level tokens allow your app to use platform features that apply to multiple (or all) installations—for example, the
+            - link "API to list event authorizations" [ref=f23e130] [cursor=pointer]:
+              - /url: https://api.slack.com/apps/A0B5MQSHE65/event-subscriptions
+            - text: . Features have distinct scopes, so request only the scopes for the features you need. Each app can have a maximum of 10 app-level tokens at one time.
+          - button "Generate Token and Scopes" [ref=f23e137] [cursor=pointer]
+        - generic [ref=f23e139]:
+          - heading "Display Information" [level=2] [ref=f23e140]
+          - paragraph [ref=f23e141]:
+            - text: This information will be shown in the Slack Marketplace and in the Slack AppFor more information, view our
+            - link "App Detail Guidelines" [ref=f23e142] [cursor=pointer]:
+              - /url: https://api.slack.com/docs/slack-apps-guidelines
+            - text: .
+          - generic [ref=f23e143]:
+            - generic [ref=f23e144]:
+              - generic [ref=f23e145]: App name
+              - textbox "An app name..." [ref=f23e146]: OC Slack
+            - generic [ref=f23e147]:
+              - generic [ref=f23e148]: Short description
+              - textbox "Add a short description..." [ref=f23e149]: Bridge your OpenCode agents into Slack
+          - generic [ref=f23e150]:
+            - generic [ref=f23e151]:
+              - generic [ref=f23e152]: App icon & Preview
+              - generic [ref=f23e154]:
+                - generic [ref=f23e155] [cursor=pointer]:
+                  - button "+ Add App Icon" [ref=f23e156]
+                  - generic [ref=f23e157]: + Add App Icon
+                - generic [ref=f23e158]:
+                  - generic [ref=f23e159]:
+                    - generic [ref=f23e160]: OC Slack
+                    - generic [ref=f23e161]: APP
+                  - generic [ref=f23e162]: Bridge your OpenCode agents into Slack
+            - generic [ref=f23e163]:
+              - generic [ref=f23e164]: Background color
+              - textbox "#2C2D30" [ref=f23e167]
+          - generic [ref=f23e168]:
+            - generic [ref=f23e169]: Long description
+            - textbox "Add a long description that will show up on your App Detail page. You can format your description with bold text, lists and more." [ref=f23e170]
+        - generic [ref=f23e171]:
+          - heading "Delete App" [level=2] [ref=f23e172]
+          - paragraph [ref=f23e173]: If your app is listed in the Slack Marketplace, please communicate any plans to deprecate it to your users, and be prepared to respond to questions and support requests after deleting it. Your app has 0 authed users.
+          - paragraph [ref=f23e175]:
+            - button "Delete App" [ref=f23e176] [cursor=pointer]
+  - generic [ref=f23e179]:
+    - button "Discard Changes" [disabled]
+    - button "Save Changes" [disabled]
+  - generic [ref=f23e180]:
+    - alert [ref=f23e181]
+    - log [ref=f23e182]
+  - generic [ref=f23e183]:
+    - alert [ref=f23e184]
+    - log [ref=f23e185]
+  - generic [ref=f23e186]:
+    - alert [ref=f23e187]
+    - log [ref=f23e188]
+  - generic [ref=f23e189]:
+    - alert [ref=f23e190]
+    - log [ref=f23e191]
+  - generic [ref=f23e192]:
+    - alert [ref=f23e193]
+    - log [ref=f23e194]
+  - dialog "Privacy" [ref=f23e196]:
+    - generic [ref=f23e198]:
+      - generic [ref=f23e201]:
+        - text: We use cookies to make your interactions with our website more meaningful. They help us better understand how our websites are used, so we can tailor content for you. For more information about the different cookies we are using, read the
+        - link "Privacy Statement" [ref=f23e202] [cursor=pointer]:
+          - /url: https://www.salesforce.com/company/privacy/full_privacy/
+        - text: . To change your cookie settings and preferences, click the Cookie Consent Manager button.
+      - generic [ref=f23e204]:
+        - button "Cookie Consent Manager, Opens the preference center dialog" [ref=f23e205] [cursor=pointer]: Cookie Consent Manager
+        - button "Reject All Cookies" [ref=f23e206] [cursor=pointer]
+        - button "Accept All Cookies" [active] [ref=f23e207] [cursor=pointer]

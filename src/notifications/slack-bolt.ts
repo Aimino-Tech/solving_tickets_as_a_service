@@ -21,6 +21,9 @@ function isBoltConfigured(): boolean {
     log.warn('SLACK_BOT_TOKEN does not start with xoxb- — Slack integration disabled');
     return false;
   }
+  if (config.slack.appToken) {
+    return !!config.slack.botToken;
+  }
   return !!(config.slack.botToken && config.slack.signingSecret);
 }
 
@@ -191,24 +194,36 @@ export class SlackBoltApp {
       setName: () => {},
     };
 
-    this.receiver = new ExpressReceiver({
-      signingSecret: config.slack.signingSecret!,
-      logger: boltLogger,
-      endpoints: {
-        events: config.slack.interactionsPath,
-      },
-      processBeforeResponse: true,
-    });
+    const appToken = config.slack.appToken;
+    if (appToken) {
+      this.receiver = null;
+      this.app = new App({
+        token: config.slack.botToken,
+        appToken,
+        socketMode: true,
+        logger: boltLogger,
+      });
+      log.info('Slack Bolt app initialized in Socket Mode');
+    } else {
+      this.receiver = new ExpressReceiver({
+        signingSecret: config.slack.signingSecret!,
+        logger: boltLogger,
+        endpoints: {
+          events: config.slack.interactionsPath,
+        },
+        processBeforeResponse: true,
+      });
 
-    this.app = new App({
-      token: config.slack.botToken,
-      receiver: this.receiver,
-      logger: boltLogger,
-      processBeforeResponse: true,
-    });
+      this.app = new App({
+        token: config.slack.botToken,
+        receiver: this.receiver,
+        logger: boltLogger,
+        processBeforeResponse: true,
+      });
+      log.info('Slack Bolt app initialized');
+    }
 
     this.registerHandlers();
-    log.info('Slack Bolt app initialized');
   }
 
   private registerHandlers(): void {
@@ -222,7 +237,7 @@ export class SlackBoltApp {
       await ack();
     });
 
-    this.app.command('/stas', async ({ command, ack, respond, client }) => {
+    const stasCommandHandler = async ({ command, ack, respond, client }: any) => {
       await ack();
 
       const text = (command.text || '').trim();
@@ -346,12 +361,7 @@ export class SlackBoltApp {
           return;
         }
 
-        try {
-          const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
-          if (!isConnected()) {
-            await rmqConnect();
-          }
-          const channelTarget = `${channelId}:${threadTs || ''}`;
+        const channelTarget = `${channelId}:${threadTs || ''}`;
           const jobData = {
             installationId: config.trackers.installationId || 0,
             repoOwner,
@@ -364,16 +374,50 @@ export class SlackBoltApp {
             channel: 'slack',
             channelTarget,
           };
-          const messageId = `${jobData.installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
-          await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
-            ...jobData,
-            _meta: {
-              messageId,
-              enqueuedAt: new Date().toISOString(),
-              slackChannel: channelId,
-              slackThreadTs: threadTs || '',
-            },
-          });
+
+          let dispatchSuccess = false;
+
+          try {
+            const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
+            if (!isConnected()) {
+              await rmqConnect();
+              if (!isConnected()) {
+                throw new Error('Failed to establish RabbitMQ connection');
+              }
+            }
+            const messageId = `${jobData.installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
+            await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+              ...jobData,
+              _meta: {
+                messageId,
+                enqueuedAt: new Date().toISOString(),
+                slackChannel: channelId,
+                slackThreadTs: threadTs || '',
+              },
+            });
+            dispatchSuccess = true;
+          } catch (rmqErr) {
+            log.warn({ err: String(rmqErr) }, 'RabbitMQ dispatch failed, trying HTTP fallback');
+          }
+
+          if (!dispatchSuccess) {
+            try {
+              const { dispatchToOpenSymphony } = await import('../dispatch/osDispatch.js');
+              const result = await dispatchToOpenSymphony(jobData);
+              if (!result.success) {
+                throw new Error(result.errors?.join(', ') || 'HTTP dispatch failed');
+              }
+              log.info({ runId: result.runId }, 'HTTP fallback dispatch succeeded');
+              dispatchSuccess = true;
+            } catch (httpErr) {
+              log.error({ err: String(httpErr) }, 'All dispatch paths failed');
+              await respond({
+                response_type: 'ephemeral',
+                text: `Error: ${String(httpErr).slice(0, 200)}`,
+              });
+              return;
+            }
+          }
 
           await respond({
             response_type: 'in_channel',
@@ -387,13 +431,6 @@ export class SlackBoltApp {
               text: `:mag: *Phase: Investigating* — Run queued for "${issueTitle}"`,
             });
           }
-        } catch (err) {
-          log.error({ err: String(err) }, 'Failed to enqueue Slack fix request');
-          await respond({
-            response_type: 'ephemeral',
-            text: 'Error: Failed to submit fix request.',
-          });
-        }
         return;
       }
 
@@ -401,7 +438,10 @@ export class SlackBoltApp {
         response_type: 'ephemeral',
         text: `Unknown command: \`${text}\`. Try \`/stas help\` or \`/stas fix <description>\`.`,
       });
-    });
+    };
+
+    this.app.command('/stas', stasCommandHandler);
+    this.app.command('/STAS', stasCommandHandler);
 
     this.app.command('/stas-ticket', async ({ command, ack, client }) => {
       await ack();
@@ -514,6 +554,73 @@ export class SlackBoltApp {
         } catch { /* ignore */ }
       }
     });
+
+    this.app.message(async ({ message, say, client }) => {
+      const msg = message as any;
+      if (msg.subtype === 'bot_message' || msg.channel_type !== 'im') return;
+      const text = (msg.text || '').trim();
+      if (!text) return;
+
+      log.info({ text, userId: msg.user, channel: msg.channel }, 'Received DM to STAS');
+
+      await say(`:mag: *Investigating:* "${text}"\nProcessing your request...`);
+
+      const repoOwner = config.trackers.defaultRepoOwner;
+      const repoName = config.trackers.defaultRepoName;
+
+      if (!repoOwner || !repoName) {
+        await say('Error: No default repository configured. Use `/stas fix owner/repo <description>` in a channel.');
+        return;
+      }
+
+      try {
+        const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
+        if (!isConnected()) {
+          await rmqConnect().catch(() => {});
+        }
+        if (!isConnected()) {
+          await say('Error: Message queue not available. Please try again later.');
+          return;
+        }
+        const jobData = {
+          installationId: config.trackers.installationId || 0,
+          repoOwner,
+          repoName,
+          repoPrivate: false,
+          issueNumber: 0,
+          issueTitle: text,
+          issueBody: `Submitted via Slack DM by <@${msg.user}>\n\nDescription: ${text}`,
+          source: 'slack' as const,
+          channel: 'slack',
+          channelTarget: `${msg.channel}:${msg.ts || ''}`,
+        };
+        const messageId = `${jobData.installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
+        await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
+          ...jobData,
+          _meta: {
+            messageId,
+            enqueuedAt: new Date().toISOString(),
+            slackChannel: msg.channel,
+            slackThreadTs: msg.ts || '',
+          },
+        });
+        await client.chat.postMessage({
+          channel: msg.channel,
+          text: `:rocket: Your fix request has been queued: "${text}"`,
+        });
+      } catch (err) {
+        log.error({ err: String(err), text }, 'Failed to process DM fix request');
+        await say('Error: Failed to submit fix request.');
+      }
+    });
+  }
+
+  async start(): Promise<void> {
+    if (!this.app) return;
+    if (!this.receiver) {
+      await this.app.start();
+      log.info('Slack Bolt app started (Socket Mode)');
+    }
   }
 
   mountOn(app: Express): void {

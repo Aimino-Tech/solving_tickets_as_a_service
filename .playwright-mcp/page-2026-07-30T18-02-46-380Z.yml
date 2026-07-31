@@ -1,0 +1,190 @@
+- generic [ref=f41e1]:
+  - banner [ref=f41e2]:
+    - generic [ref=f41e3]:
+      - text: 
+      - link [ref=f41e5] [cursor=pointer]:
+        - /url: https://api.slack.com/
+        - img "Slack API" [ref=f41e6]
+      - generic [ref=f41e8]:
+        - link "Changelog" [ref=f41e9] [cursor=pointer]:
+          - /url: https://docs.slack.dev/changelog
+        - link "Documentation" [ref=f41e10] [cursor=pointer]:
+          - /url: /#read_the_docs
+        - link "Tutorials" [ref=f41e11] [cursor=pointer]:
+          - /url: /tutorials
+        - link "Your Apps" [ref=f41e12] [cursor=pointer]:
+          - /url: /apps
+  - generic [ref=f41e14]:
+    - generic:
+      - navigation [ref=f41e15]:
+        - generic [ref=f41e16] [cursor=pointer]:  STAS
+        - generic [ref=f41e18]:
+          - heading "Settings" [level=4] [ref=f41e19]
+          - list [ref=f41e20]:
+            - listitem [ref=f41e21]:
+              - link "Basic Information" [ref=f41e22] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/general?
+            - listitem [ref=f41e23]:
+              - link "Collaborators" [ref=f41e24] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/collaborators
+            - listitem [ref=f41e25]:
+              - link "Socket Mode" [ref=f41e26] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/socket-mode
+            - listitem [ref=f41e27]:
+              - link "Install App" [ref=f41e28] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/install-on-team?
+            - listitem [ref=f41e29]:
+              - link "Manage Distribution" [ref=f41e30] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/distribute
+          - heading "Features" [level=4] [ref=f41e31]
+          - list [ref=f41e32]:
+            - listitem [ref=f41e33]:
+              - link "App Home" [ref=f41e34] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/app-home?
+            - listitem [ref=f41e35]:
+              - link "Agents" [ref=f41e36] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/app-assistant?
+            - listitem [ref=f41e37]:
+              - link "Work Object Previews New" [ref=f41e38] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/rich-previews?
+                - text: Work Object Previews
+                - generic [ref=f41e39]: New
+            - listitem [ref=f41e40]:
+              - link "Workflow Steps" [ref=f41e41] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/functions
+            - listitem [ref=f41e42]:
+              - link "Org Level Apps" [ref=f41e43] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/org-level?
+            - listitem [ref=f41e44]:
+              - link "Incoming Webhooks" [ref=f41e45] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/incoming-webhooks?
+            - listitem [ref=f41e46]:
+              - link "Interactivity & Shortcuts" [ref=f41e47] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/interactive-messages?
+            - listitem [ref=f41e48]:
+              - link "Slash Commands" [ref=f41e49] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/slash-commands?
+            - listitem [ref=f41e50]:
+              - link "Steps from Apps LEGACY" [ref=f41e51] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/workflow-extensions?
+                - generic [ref=f41e52]:
+                  - text: Steps from Apps
+                  - generic [ref=f41e53]: LEGACY
+            - listitem [ref=f41e54]:
+              - link "OAuth & Permissions" [ref=f41e55] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/oauth?
+            - listitem [ref=f41e56]:
+              - link "MCP Servers New" [ref=f41e57] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/mcp-servers
+                - text: MCP Servers
+                - generic [ref=f41e58]: New
+            - listitem [ref=f41e59]:
+              - link "Event Subscriptions" [ref=f41e60] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/event-subscriptions?
+            - listitem [ref=f41e61]:
+              - link "User ID Translation" [ref=f41e62] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/user-ids?
+            - listitem [ref=f41e63]:
+              - link "App Manifest" [ref=f41e64] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/app-manifest
+            - listitem [ref=f41e65]:
+              - link "Beta Features" [ref=f41e66] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/developer-beta?
+          - heading "Submit to Slack Marketplace" [level=4] [ref=f41e67]
+          - list [ref=f41e68]:
+            - listitem [ref=f41e69]:
+              - link "Review & Submit" [ref=f41e70] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/submission
+        - generic [ref=f41e71]:
+          - paragraph
+          - link "Give feedback" [ref=f41e73] [cursor=pointer]:
+            - /url: https://slack.com/help/requests/new?cu_web_tags=app_config_feedback
+          - paragraph
+          - paragraph [ref=f41e74]:
+            - text: Slack
+            - generic [ref=f41e75]: 
+          - list [ref=f41e76]:
+            - listitem [ref=f41e77]:
+              - link "Help" [ref=f41e78] [cursor=pointer]:
+                - /url: https://slack.com/help
+            - listitem [ref=f41e79]:
+              - link "Contact" [ref=f41e80] [cursor=pointer]:
+                - /url: https://slack.com/help/requests/new
+            - listitem [ref=f41e81]:
+              - link "Policies" [ref=f41e82] [cursor=pointer]:
+                - /url: https://slack.com/terms-of-service
+            - listitem [ref=f41e83]:
+              - link "Our Blog" [ref=f41e84] [cursor=pointer]:
+                - /url: https://slackhq.com/
+      - generic [ref=f41e85]:
+        - heading "Slash Commands" [level=1] [ref=f41e86]
+        - generic [ref=f41e87]:
+          - paragraph [ref=f41e88]:
+            - text: Commands enable users to interact with your app from within Slack.
+            - link "Learn more." [ref=f41e89] [cursor=pointer]:
+              - /url: https://api.slack.com/slash-commands
+          - paragraph [ref=f41e90]:
+            - text: Adding commands requires a
+            - link "bot user" [ref=f41e91] [cursor=pointer]:
+              - /url: /apps/A0BLHCTS1AT/app-home
+            - text: . If your app doesn't have a bot user, we'll add one for you.
+          - table [ref=f41e93]:
+            - rowgroup [ref=f41e94]:
+              - row [ref=f41e95]:
+                - columnheader [ref=f41e96]:
+                  - paragraph [ref=f41e97]: Name
+                - columnheader [ref=f41e98]:
+                  - paragraph [ref=f41e99]: Description
+            - rowgroup [ref=f41e100]:
+              - row [ref=f41e101]:
+                - cell [ref=f41e102]:
+                  - paragraph [ref=f41e103]: /STAS
+                - cell [ref=f41e104]:
+                  - generic [ref=f41e105]:
+                    - generic [ref=f41e106]:
+                      - button "Edit" [ref=f41e107] [cursor=pointer]: 
+                      - button "Delete" [ref=f41e108] [cursor=pointer]: 
+                    - paragraph [ref=f41e109]: Send a message to STAS
+              - row [ref=f41e110]:
+                - cell [ref=f41e111]:
+                  - paragraph [ref=f41e112]: /instances
+                - cell [ref=f41e113]:
+                  - generic [ref=f41e114]:
+                    - generic [ref=f41e115]:
+                      - button "Edit" [ref=f41e116] [cursor=pointer]: 
+                      - button "Delete" [ref=f41e117] [cursor=pointer]: 
+                    - paragraph [ref=f41e118]: List configured STAS instances
+              - row [ref=f41e119]:
+                - cell [ref=f41e120]:
+                  - paragraph [ref=f41e121]: /new
+                - cell [ref=f41e122]:
+                  - generic [ref=f41e123]:
+                    - generic [ref=f41e124]:
+                      - button "Edit" [ref=f41e125] [cursor=pointer]: 
+                      - button "Delete" [ref=f41e126] [cursor=pointer]: 
+                    - paragraph [ref=f41e127]: Create a fresh session on an instance
+          - paragraph [ref=f41e128]:
+            - button "Create New Command" [ref=f41e129] [cursor=pointer]
+  - generic [ref=f41e130]:
+    - alert [ref=f41e131]
+    - log [ref=f41e132]
+  - generic [ref=f41e133]:
+    - alert [ref=f41e134]
+    - log [ref=f41e135]
+  - generic [ref=f41e136]:
+    - alert [ref=f41e137]
+    - log [ref=f41e138]
+  - generic [ref=f41e139]:
+    - alert [ref=f41e140]
+    - log [ref=f41e141]
+  - dialog "Privacy" [ref=f41e143]:
+    - generic [ref=f41e145]:
+      - generic [ref=f41e148]:
+        - text: We use cookies to make your interactions with our website more meaningful. They help us better understand how our websites are used, so we can tailor content for you. For more information about the different cookies we are using, read the
+        - link "Privacy Statement" [ref=f41e149] [cursor=pointer]:
+          - /url: https://www.salesforce.com/company/privacy/full_privacy/
+        - text: . To change your cookie settings and preferences, click the Cookie Consent Manager button.
+      - generic [ref=f41e151]:
+        - button "Cookie Consent Manager, Opens the preference center dialog" [ref=f41e152] [cursor=pointer]: Cookie Consent Manager
+        - button "Reject All Cookies" [ref=f41e153] [cursor=pointer]
+        - button "Accept All Cookies" [active] [ref=f41e154] [cursor=pointer]

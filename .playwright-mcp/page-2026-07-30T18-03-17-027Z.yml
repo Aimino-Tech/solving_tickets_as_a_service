@@ -1,0 +1,184 @@
+- generic [ref=f45e1]:
+  - banner [ref=f45e2]:
+    - generic [ref=f45e3]:
+      - text: 
+      - link [ref=f45e5] [cursor=pointer]:
+        - /url: https://api.slack.com/
+        - img "Slack API" [ref=f45e6]
+      - generic [ref=f45e8]:
+        - link "Changelog" [ref=f45e9] [cursor=pointer]:
+          - /url: https://docs.slack.dev/changelog
+        - link "Documentation" [ref=f45e10] [cursor=pointer]:
+          - /url: /#read_the_docs
+        - link "Tutorials" [ref=f45e11] [cursor=pointer]:
+          - /url: /tutorials
+        - link "Your Apps" [ref=f45e12] [cursor=pointer]:
+          - /url: /apps
+  - generic [ref=f45e14]:
+    - generic:
+      - navigation [ref=f45e15]:
+        - generic [ref=f45e16] [cursor=pointer]:  STAS
+        - generic [ref=f45e18]:
+          - heading "Settings" [level=4] [ref=f45e19]
+          - list [ref=f45e20]:
+            - listitem [ref=f45e21]:
+              - link "Basic Information" [ref=f45e22] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/general?
+            - listitem [ref=f45e23]:
+              - link "Collaborators" [ref=f45e24] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/collaborators
+            - listitem [ref=f45e25]:
+              - link "Socket Mode" [ref=f45e26] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/socket-mode
+            - listitem [ref=f45e27]:
+              - link "Install App" [ref=f45e28] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/install-on-team?
+            - listitem [ref=f45e29]:
+              - link "Manage Distribution" [ref=f45e30] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/distribute
+          - heading "Features" [level=4] [ref=f45e31]
+          - list [ref=f45e32]:
+            - listitem [ref=f45e33]:
+              - link "App Home" [ref=f45e34] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/app-home?
+            - listitem [ref=f45e35]:
+              - link "Agents" [ref=f45e36] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/app-assistant?
+            - listitem [ref=f45e37]:
+              - link "Work Object Previews New" [ref=f45e38] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/rich-previews?
+                - text: Work Object Previews
+                - generic [ref=f45e39]: New
+            - listitem [ref=f45e40]:
+              - link "Workflow Steps" [ref=f45e41] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/functions
+            - listitem [ref=f45e42]:
+              - link "Org Level Apps" [ref=f45e43] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/org-level?
+            - listitem [ref=f45e44]:
+              - link "Incoming Webhooks" [ref=f45e45] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/incoming-webhooks?
+            - listitem [ref=f45e46]:
+              - link "Interactivity & Shortcuts" [ref=f45e47] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/interactive-messages?
+            - listitem [ref=f45e48]:
+              - link "Slash Commands" [ref=f45e49] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/slash-commands?
+            - listitem [ref=f45e50]:
+              - link "Steps from Apps LEGACY" [ref=f45e51] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/workflow-extensions?
+                - generic [ref=f45e52]:
+                  - text: Steps from Apps
+                  - generic [ref=f45e53]: LEGACY
+            - listitem [ref=f45e54]:
+              - link "OAuth & Permissions" [ref=f45e55] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/oauth?
+            - listitem [ref=f45e56]:
+              - link "MCP Servers New" [ref=f45e57] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/mcp-servers
+                - text: MCP Servers
+                - generic [ref=f45e58]: New
+            - listitem [ref=f45e59]:
+              - link "Event Subscriptions" [ref=f45e60] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/event-subscriptions?
+            - listitem [ref=f45e61]:
+              - link "User ID Translation" [ref=f45e62] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/user-ids?
+            - listitem [ref=f45e63]:
+              - link "App Manifest" [ref=f45e64] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/app-manifest
+            - listitem [ref=f45e65]:
+              - link "Beta Features" [ref=f45e66] [cursor=pointer]:
+                - /url: /apps/A0BLHCTS1AT/developer-beta?
+          - heading "Submit to Slack Marketplace" [level=4] [ref=f45e67]
+          - list [ref=f45e68]:
+            - listitem [ref=f45e69]:
+              - link "Review & Submit" [ref=f45e70] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/submission
+        - generic [ref=f45e71]:
+          - paragraph
+          - link "Give feedback" [ref=f45e73] [cursor=pointer]:
+            - /url: https://slack.com/help/requests/new?cu_web_tags=app_config_feedback
+          - paragraph
+          - paragraph [ref=f45e74]:
+            - text: Slack
+            - generic [ref=f45e75]: 
+          - list [ref=f45e76]:
+            - listitem [ref=f45e77]:
+              - link "Help" [ref=f45e78] [cursor=pointer]:
+                - /url: https://slack.com/help
+            - listitem [ref=f45e79]:
+              - link "Contact" [ref=f45e80] [cursor=pointer]:
+                - /url: https://slack.com/help/requests/new
+            - listitem [ref=f45e81]:
+              - link "Policies" [ref=f45e82] [cursor=pointer]:
+                - /url: https://slack.com/terms-of-service
+            - listitem [ref=f45e83]:
+              - link "Our Blog" [ref=f45e84] [cursor=pointer]:
+                - /url: https://slackhq.com/
+      - generic [ref=f45e85]:
+        - heading "Event Subscriptions" [level=1] [ref=f45e86]
+        - generic [ref=f45e87]:
+          - generic [ref=f45e88]:
+            - heading "Enable Events" [level=3] [ref=f45e89]
+            - generic [ref=f45e90]: "On"
+            - paragraph [ref=f45e95]:
+              - text: Your app can subscribe to be notified of events in Slack (for example, when a user adds a reaction or creates a file) at a URL you choose.
+              - link "Learn more." [ref=f45e96] [cursor=pointer]:
+                - /url: http://api.slack.com/events-api
+          - generic [ref=f45e97]:
+            - generic [ref=f45e98]:
+              - generic [ref=f45e99]:
+                - text: Request URL
+                - generic [ref=f45e100]:
+                  - paragraph
+              - textbox "Request URL" [ref=f45e101]:
+                - /placeholder: https://my.app.com/slack/action-endpoint
+              - complementary [ref=f45e102]:
+                - text: We’ll send HTTP POST requests to this URL when events occur. As soon as you enter a URL, we’ll send a request with a
+                - code [ref=f45e103]: challenge
+                - text: parameter, and your endpoint must respond with the challenge value.
+                - link "Learn more." [ref=f45e104] [cursor=pointer]:
+                  - /url: /events/url_verification
+            - generic [ref=f45e106]:
+              - link "Socket Mode" [ref=f45e107] [cursor=pointer]:
+                - /url: https://app.slack.com/app-settings/T023EV54RR7/A0BLHCTS1AT/socket-mode
+              - text: is enabled. You won’t need to specify a Request URL.
+            - generic [ref=f45e108]:
+              - heading "Delayed Events" [level=4] [ref=f45e109]
+              - generic [ref=f45e110]:
+                - checkbox [ref=f45e111]
+                - generic [ref=f45e112]: "Off"
+              - paragraph [ref=f45e116]: If this feature is enabled, we will retry any missed event deliveries slowly over 24 hours. Enable this feature if you want to recover events that your app missed initially during downtime.
+            - separator [ref=f45e117]
+            - generic [ref=f45e118] [cursor=pointer]:
+              - heading "Subscribe to bot events " [level=3] [ref=f45e119]
+              - text:             
+            - heading "Subscribe to events on behalf of users " [level=3] [ref=f45e121] [cursor=pointer]
+            - heading "App unfurl domains " [level=3] [ref=f45e123] [cursor=pointer]
+  - generic [ref=f45e126]:
+    - button "Discard Changes" [disabled]
+    - button "Save Changes" [disabled]
+  - generic [ref=f45e127]:
+    - alert [ref=f45e128]
+    - log [ref=f45e129]
+  - generic [ref=f45e130]:
+    - alert [ref=f45e131]
+    - log [ref=f45e132]
+  - generic [ref=f45e133]:
+    - alert [ref=f45e134]
+    - log [ref=f45e135]
+  - generic [ref=f45e136]:
+    - alert [ref=f45e137]
+    - log [ref=f45e138]
+  - dialog "Privacy" [ref=f45e140]:
+    - generic [ref=f45e142]:
+      - generic [ref=f45e145]:
+        - text: We use cookies to make your interactions with our website more meaningful. They help us better understand how our websites are used, so we can tailor content for you. For more information about the different cookies we are using, read the
+        - link "Privacy Statement" [ref=f45e146] [cursor=pointer]:
+          - /url: https://www.salesforce.com/company/privacy/full_privacy/
+        - text: . To change your cookie settings and preferences, click the Cookie Consent Manager button.
+      - generic [ref=f45e148]:
+        - button "Cookie Consent Manager, Opens the preference center dialog" [ref=f45e149] [cursor=pointer]: Cookie Consent Manager
+        - button "Reject All Cookies" [ref=f45e150] [cursor=pointer]
+        - button "Accept All Cookies" [active] [ref=f45e151] [cursor=pointer]
