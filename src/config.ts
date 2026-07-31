@@ -19,6 +19,7 @@ const boolSchema = (defaultVal: boolean) =>
   }, z.boolean().default(defaultVal));
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().max(65535).default(3000),
+  PUBLIC_URL: z.string().default(''),
   RUN_MODE: z.enum(['api', 'worker', 'both']).default('both'),
 
   GITHUB_APP_ID: z.string().min(1, 'GITHUB_APP_ID is required'),
@@ -126,6 +127,11 @@ const envSchema = z.object({
   PROXY_DISPATCH_URL: z.string().default(''),
   PROXY_API_KEY: z.string().default(''),
   PROXY_ALLOWED_ORGS: z.string().default(''),
+
+  // ── Governance proxy ─────────────────────────────────────────────
+  GOVERNANCE_ENABLED: boolSchema(false),
+  GOVERNANCE_URL: z.string().default('http://llm-governance:4002'),
+  GOVERNANCE_TIMEOUT_MS: z.coerce.number().int().positive().max(120_000).default(10_000),
 
   WEBHOOK_RETRY_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
   WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().default(10),
@@ -390,6 +396,7 @@ function parseConcurrencyOverrides(raw: string): Record<string, number> {
 function buildConfig(env: ParsedEnv) {
   return {
     port: env.PORT,
+    publicUrl: env.PUBLIC_URL,
     runMode: env.RUN_MODE,
     logFile: env.STAS_LOG_FILE ?? '',
     logLevel: env.LOG_LEVEL,
@@ -780,6 +787,12 @@ function buildConfig(env: ParsedEnv) {
       allowedOrgs: env.PROXY_ALLOWED_ORGS.split(',')
         .map((s) => s.trim())
         .filter(Boolean),
+    },
+
+    governance: {
+      enabled: env.GOVERNANCE_ENABLED,
+      url: env.GOVERNANCE_URL,
+      timeoutMs: env.GOVERNANCE_TIMEOUT_MS,
     },
 
     onboarding: {

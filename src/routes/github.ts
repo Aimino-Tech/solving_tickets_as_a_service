@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { Octokit } from '@octokit/rest';
 import { config } from '../config.js';
 import { requireAuth } from '../auth/middleware.js';
+import { getInstallationToken } from '../github/auth.js';
 import { gitHubInstallationRepository } from '../db/repositories/GitHubInstallationRepository.js';
 import { gitHubWebhookRepository } from '../db/repositories/GitHubWebhookRepository.js';
 import { gitHubOAuthRepository } from '../db/repositories/GitHubOAuthRepository.js';
@@ -62,7 +63,7 @@ function normalizeInstallationRow(s: Record<string, unknown>) {
 router.get('/installations', async (req: Request, res: Response) => {
   try {
     const token = await getGitHubToken(req);
-    const stored = await gitHubInstallationRepository.findByUserId(req.user!.id);
+    const stored = await gitHubInstallationRepository.findByUserId(Number(req.user!.id));
     const storedRows = (stored as unknown as Record<string, unknown>[]).map(normalizeInstallationRow);
 
     if (!token) {
@@ -105,7 +106,7 @@ router.get('/installations', async (req: Request, res: Response) => {
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to list installations');
     try {
-      const stored = await gitHubInstallationRepository.findByUserId(req.user!.id);
+      const stored = await gitHubInstallationRepository.findByUserId(Number(req.user!.id));
       const storedRows = (stored as unknown as Record<string, unknown>[]).map(normalizeInstallationRow);
       res.json({ installations: storedRows, error: 'Failed to list installations — showing saved installations only' });
     } catch {

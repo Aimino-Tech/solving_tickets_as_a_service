@@ -27,7 +27,7 @@ router.post('/url', async (_req: Request, res: Response) => {
       res.status(501).json({ error: 'GitHub OAuth not configured — set GITHUB_OAUTH_CLIENT_ID' });
       return;
     }
-    const redirectUri = `${(config as any).publicUrl || `http://localhost:${config.port}`}/api/v1/auth/github/callback`;
+    const redirectUri = `${config.publicUrl || `http://localhost:${config.port}`}/api/v1/auth/github/callback`;
     const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user&state=${crypto.randomUUID()}`;
     res.json({ url });
   } catch (err) {

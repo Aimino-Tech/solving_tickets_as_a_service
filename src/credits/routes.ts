@@ -163,9 +163,9 @@ creditRouter.get('/credits/balance', async (req: Request, res: Response) => {
   try {
     const balance = await creditsRepository.getBalance(accountId);
     res.json({
-      accountId: balance.account_id ?? balance.accountId,
+      accountId: balance.accountId,
       balance: balance.balance,
-      lifetimeCredits: balance.lifetime_credits ?? balance.lifetimeCredits,
+      lifetimeCredits: balance.lifetimeCredits,
     });
   } catch (err) {
     log.error({ err: String(err), accountId }, 'Failed to fetch credit balance');

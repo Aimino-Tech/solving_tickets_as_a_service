@@ -57,10 +57,14 @@ vi.mock('../../config.js', () => ({
       rateLimitPerIpMax: 30,
       rateLimitPerUserMax: 10,
     },
+    governance: {
+      enabled: false,
+      url: 'http://llm-governance:4002',
+      timeoutMs: 10_000,
+    },
+    proxy: { dispatchUrl: '' },
   },
 }));
-
-
 
 // ---------------------------------------------------------------------------
 // Imports (after mocks)

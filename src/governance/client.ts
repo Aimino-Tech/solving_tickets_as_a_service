@@ -46,22 +46,32 @@ export interface GovernanceDispatchPayload {
 }
 
 /**
+ * Resolve the governance proxy base URL.
+ *
+ * Prefers `GOVERNANCE_URL` when the proxy is enabled; falls back to
+ * `PROXY_DISPATCH_URL` for backward compatibility with existing deployments.
+ */
+function resolveGovernanceBaseUrl(): string {
+  if (config.governance.enabled && config.governance.url) return config.governance.url;
+  return config.proxy.dispatchUrl || '';
+}
+
+/**
  * Dispatch an issue fix request through the governance proxy.
  *
  * The proxy applies all governance guardrails before forwarding to
  * OpenSymphony. If the proxy is unavailable, the dispatch fails closed
  * (no agent dispatch occurs without governance checks).
  */
-export async function dispatchThroughGovernance(
-  payload: GovernanceDispatchPayload,
-): Promise<GovernanceDispatchResult> {
-  const proxyUrl = config.proxy.dispatchUrl;
+export async function dispatchThroughGovernance(payload: GovernanceDispatchPayload): Promise<GovernanceDispatchResult> {
+  const proxyUrl = resolveGovernanceBaseUrl();
   if (!proxyUrl) {
-    log.warn('PROXY_DISPATCH_URL not configured — governance proxy unavailable');
-    return { success: false, error: 'Governance proxy URL not configured', status: 0 };
+    log.warn({ traceId: payload.traceId }, 'Governance proxy not configured — dispatch through governance skipped');
+    return { success: false, error: 'Governance proxy not configured', status: 0 };
   }
 
   const apiKey = config.proxy.apiKey;
+  const traceId = payload.traceId;
 
   const body = {
     issue_id: `${payload.repoOwner}/${payload.repoName}#${payload.issueNumber}`,
@@ -72,13 +82,16 @@ export async function dispatchThroughGovernance(
     labels: payload.labels,
     installation_id: payload.installationId,
     source: 'stas',
-    trace_id: payload.traceId,
+    trace_id: traceId,
   };
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), config.governance.timeoutMs);
 
   try {
     const url = `${proxyUrl.replace(/\/$/, '')}/api/stas/webhook`;
     log.info(
-      { url, repo: body.repo, issueNumber: payload.issueNumber },
+      { url, traceId, repo: body.repo, issueNumber: payload.issueNumber },
       'Dispatching through governance proxy',
     );
 
@@ -88,33 +101,34 @@ export async function dispatchThroughGovernance(
         'Content-Type': 'application/json',
         ...(apiKey ? { 'X-API-Key': apiKey } : {}),
         'X-Governance-Source': 'stas',
+        ...(traceId ? { 'x-trace-id': traceId } : {}),
       },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
 
     const status = response.status;
 
-    // Handle governance-specific status codes
     if (status === 429) {
       const text = await response.text().catch(() => 'Rate limited');
-      log.warn({ status, body: text }, 'Governance proxy rate limited the request');
+      log.warn({ status, traceId, body: text }, 'Governance proxy rate limited the request');
       return { success: false, error: `Rate limited: ${text}`, status };
     }
 
-    if (status === 402) {
-      const text = await response.text().catch(() => 'Payment required - tenant killed');
-      log.warn({ status, body: text }, 'Governance proxy rejected — tenant killed');
+    if (status === 402 || status === 503) {
+      const text = await response.text().catch(() => 'Tenant killed');
+      log.warn({ status, traceId, body: text }, 'Governance proxy rejected — kill-switch active');
       return { success: false, error: `Tenant killed: ${text}`, status };
     }
 
     if (!response.ok) {
       const text = await response.text().catch(() => 'unknown error');
-      log.error({ status, body: text }, 'Governance proxy dispatch failed');
+      log.error({ status, traceId, body: text }, 'Governance proxy dispatch failed');
       return { success: false, error: `HTTP ${status}: ${text}`, status };
     }
 
     const result = (await response.json()) as Record<string, unknown>;
-    log.info({ runId: result.run_id, status }, 'Governance proxy dispatch succeeded');
+    log.info({ runId: result.run_id, status, traceId }, 'Governance proxy dispatch succeeded');
 
     return {
       success: true,
@@ -122,8 +136,17 @@ export async function dispatchThroughGovernance(
       status,
     };
   } catch (err) {
-    log.error({ err: String(err) }, 'Governance proxy request failed — fail-closed');
-    return { success: false, error: `Governance proxy unreachable: ${String(err)}`, status: 0 };
+    const timedOut = controller.signal.aborted;
+    log.error({ traceId, err: String(err), timedOut }, 'Governance proxy request failed — fail-closed');
+    return {
+      success: false,
+      error: timedOut
+        ? `Governance proxy timeout after ${config.governance.timeoutMs}ms`
+        : `Governance proxy unreachable: ${String(err)}`,
+      status: 0,
+    };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -134,7 +157,7 @@ export async function checkGovernanceHealth(): Promise<{
   healthy: boolean;
   status: string;
 }> {
-  const proxyUrl = config.proxy.dispatchUrl;
+  const proxyUrl = resolveGovernanceBaseUrl();
   if (!proxyUrl) {
     return { healthy: false, status: 'not_configured' };
   }
