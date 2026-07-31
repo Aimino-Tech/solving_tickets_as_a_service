@@ -5,7 +5,7 @@ vi.mock('../../queue/rabbitmq.js', () => ({
   publishMessage: (...args: unknown[]) => publishMessageMock(...args),
 }));
 
-import type { WorkItem } from '../../chat/rmqPublisher.js';
+import type { WorkItem } from '../../chat/bridge.js';
 import {
   CHAT_WORK_EXCHANGE,
   CHAT_WORK_QUEUE,

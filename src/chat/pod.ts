@@ -1,22 +1,15 @@
 /**
- * AIM-4442 — disposable chat pod.
+ * AIM-4442 — Disposable chat pod.
  *
- * The pod owns exactly one conversation: it dials out to the gateway, loads or
- * creates the session, seeds the curated memory, answers turns through an agent
- * executor, and checkpoints state + memory after every completed turn (one
- * upsert, so the crash window is at most one in-flight turn). Pods are
- * disposable — a rehydrated pod rebuilds the same session from the store.
+ * The pod is the runtime that owns one conversation: it dials out to the
+ * gateway, loads (or creates) the session, seeds agent memory, answers turns,
+ * maintains memory after every completed turn, and checkpoints state + memory
+ * to the store in a single upsert. The pod is disposable — if it dies, the
+ * rehydrator rebuilds a fresh one from the store.
  */
 
-import type { SessionMemory } from '../agent/memory/types.js';
-import {
-  applyMemoryDelta,
-  defaultExtractor,
-  emptySessionMemory,
-  type MemoryDelta,
-  type MemoryExtractor,
-  renderSessionMemoryBlock,
-} from './memory-block.js';
+import type { AgentMemory, MemoryDelta, MemoryExtractor } from './memory.js';
+import { applyMemoryDelta, seedMemoryBlock } from './memory.js';
 import type { ChatSessionStore, TranscriptEntry } from './sessionStore.js';
 import type { GatewayToPodMessage, PodTransport } from './transport.js';
 
@@ -24,7 +17,7 @@ export interface AgentInput {
   sessionId: string;
   userText: string;
   memoryBlock: string;
-  recentTranscript: TranscriptEntry[];
+  recentTranscript: Array<TranscriptEntry>;
   traceId: string;
 }
 
@@ -51,19 +44,22 @@ export interface ChatPodDeps {
   now?: () => string;
 }
 
+const EMPTY_MEMORY: AgentMemory = { facts: [], decisions: [], plan: null, preferences: {}, updatedAt: '' };
+
 export class ChatPod {
-  readonly userId: string;
-  readonly sessionId: string;
-  private readonly threadTs: string;
-  private readonly channelId: string;
   private readonly store: ChatSessionStore;
   private readonly executor: AgentExecutor;
   private readonly transport: PodTransport;
   private readonly memoryExtractor: MemoryExtractor;
+  readonly userId: string;
+  readonly sessionId: string;
+  private readonly threadTs: string;
+  private readonly channelId: string;
   private readonly now: () => string;
 
-  private memory: SessionMemory = emptySessionMemory();
+  private memory: AgentMemory = EMPTY_MEMORY;
   private state: Record<string, unknown> = { transcript: [] };
+  /** Serialize turns: one in-flight turn per conversation. */
   private processing = false;
   private readonly pending: GatewayToPodMessage[] = [];
   private closed = false;
@@ -80,11 +76,11 @@ export class ChatPod {
     this.now = deps.now ?? (() => new Date().toISOString());
   }
 
-  /** Load the session + memory from the store, then dial out to the gateway. */
+  /** Load session + memory; register with gateway via the transport. */
   async boot(): Promise<void> {
     const existing = await this.store.get(this.threadTs);
     if (existing) {
-      this.memory = existing.agentMemory ?? emptySessionMemory();
+      this.memory = existing.agentMemory ?? EMPTY_MEMORY;
       this.state = existing.state ?? { transcript: [] };
     } else {
       await this.store.upsert({
@@ -96,55 +92,15 @@ export class ChatPod {
         agentMemory: this.memory,
       });
     }
-    this.transport.sendToGateway({
-      kind: 'register',
-      userId: this.userId,
-      sessionId: this.sessionId,
-    });
+    this.transport.sendToGateway({ kind: 'register', userId: this.userId, sessionId: this.sessionId });
     this.transport.sendToGateway({ kind: 'heartbeat', userId: this.userId });
     this.transport.onGatewayMessage((msg) => this.onGatewayMessage(msg));
   }
 
-  /**
-   * Process user turns that arrived while no pod was live (delivered:false).
-   * Called right after boot on a rehydrated pod so a cold-start conversation
-   * answers everything the user sent, without any turn being lost.
-   */
-  async drainPending(): Promise<void> {
-    const pending = this.transcript().filter((t): t is TranscriptEntry => t.role === 'user' && t.delivered === false);
-    for (const turn of pending) {
-      if (this.closed) return;
-      await this.processDispatch({
-        kind: 'dispatch',
-        threadTs: this.threadTs,
-        channelId: this.channelId,
-        sessionId: this.sessionId,
-        text: turn.text,
-      });
-      await this.removePendingTurn(turn);
-    }
-  }
-
-  private async removePendingTurn(turn: TranscriptEntry): Promise<void> {
-    const transcript = this.transcript().filter(
-      (t) => !(t.role === 'user' && t.delivered === false && t.ts === turn.ts),
-    );
-    this.state = { ...this.state, transcript };
-    await this.store.upsert({
-      threadTs: this.threadTs,
-      channelId: this.channelId,
-      sessionId: this.sessionId,
-      userId: this.userId,
-      state: this.state,
-      agentMemory: this.memory,
-    });
-  }
-
-  /** Run one turn and checkpoint; returns the assistant reply. */
   async handleTurn(text: string): Promise<string> {
     const traceId = `tr_${this.sessionId}_${Date.now().toString(36)}`;
     const transcript = this.transcript();
-    const memoryBlock = renderSessionMemoryBlock(this.memory);
+    const memoryBlock = seedMemoryBlock(this.memory);
     const { reply } = await this.executor.run({
       sessionId: this.sessionId,
       userText: text,
@@ -162,25 +118,26 @@ export class ChatPod {
       this.closed = true;
       return;
     }
-    if (msg.kind !== 'dispatch') return;
-    if (this.processing) {
-      this.pending.push(msg);
-      return;
+    if (msg.kind === 'dispatch') {
+      if (this.processing) {
+        this.pending.push(msg);
+      } else {
+        void this.processDispatch(msg);
+      }
     }
-    void this.processDispatch(msg);
   }
 
   private async processDispatch(msg: GatewayToPodMessage): Promise<void> {
     this.processing = true;
     try {
       const reply = await this.handleTurn(msg.text);
-      // Reply is posted back to the thread by the caller (ProgressSender / ack).
+      // Result is posted back to the thread by the caller (ProgressSender / ack).
       this.transport.sendToGateway({
         kind: 'pod_message',
         userId: this.userId,
         sessionId: this.sessionId,
         threadTs: msg.threadTs,
-        channelId: msg.channelId,
+        channelId: this.channelId,
         text: reply,
       });
     } finally {
@@ -192,7 +149,7 @@ export class ChatPod {
 
   private async curateAndCheckpoint(userText: string, reply: string, traceId: string): Promise<void> {
     const delta = this.memoryExtractor(this.memory, userText, reply);
-    this.memory = applyMemoryDelta(this.memory, delta, this.sessionId, this.now());
+    this.memory = applyMemoryDelta(this.memory, delta);
     const transcript = this.transcript();
     transcript.push({ role: 'user', text: userText, ts: traceId });
     transcript.push({ role: 'assistant', text: reply, ts: traceId });
@@ -212,13 +169,18 @@ export class ChatPod {
     return Array.isArray(raw) ? (raw as TranscriptEntry[]) : [];
   }
 
-  memorySnapshot(): SessionMemory {
+  memorySnapshot(): AgentMemory {
     return this.memory;
   }
 
-  async shutdown(): Promise<void> {
+  shutdown(): void {
     this.closed = true;
     this.transport.sendToGateway({ kind: 'unregister', userId: this.userId });
     this.transport.close();
   }
+}
+
+function defaultExtractor(_prev: AgentMemory, _user: string, _reply: string): MemoryDelta {
+  const delta: MemoryDelta = { facts: [], decisions: [], preferences: {} };
+  return delta;
 }

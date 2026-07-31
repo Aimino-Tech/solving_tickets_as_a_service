@@ -156,7 +156,7 @@ describe('registerSlackChatHandler (AIM-4442)', () => {
     });
 
     expect(client.chat.postMessage).not.toHaveBeenCalled();
-    expect(await store.get('t1')).toBeUndefined();
-    expect(await store.get('t2')).toBeUndefined();
+    expect(await store.get('t1')).toBeNull();
+    expect(await store.get('t2')).toBeNull();
   });
 });

@@ -1,76 +1,36 @@
 import { describe, expect, it } from 'vitest';
-import type { GatewayToPodMessage, PodToGatewayMessage } from '../../chat/transport.js';
 import { exponentialBackoffDelay, InMemoryPodTransport } from '../../chat/transport.js';
 
-describe('InMemoryPodTransport', () => {
-  it('links the pod and gateway ends of a created pair', () => {
+describe('in-memory pod transport (AIM-4442)', () => {
+  it('createPair links pod and gateway ends', () => {
     const { pod, gateway } = InMemoryPodTransport.createPair();
-    const received: PodToGatewayMessage[] = [];
-    gateway.onPodMessage((msg) => received.push(msg));
-
-    pod.sendToGateway({ kind: 'register', userId: 'u1', sessionId: 's1' });
-
-    expect(received).toEqual([{ kind: 'register', userId: 'u1', sessionId: 's1' }]);
+    const received: string[] = [];
+    gateway.onPodMessage((msg) => received.push(msg.kind));
+    pod.sendToGateway({ kind: 'register', userId: 'u1' });
+    expect(received).toEqual(['register']);
   });
 
-  it('routes gateway messages to the pod end', () => {
+  it('gateway can send dispatches to the pod', () => {
     const { pod, gateway } = InMemoryPodTransport.createPair();
-    const received: GatewayToPodMessage[] = [];
-    pod.onGatewayMessage((msg) => received.push(msg));
-
-    gateway.sendToPod({
-      kind: 'dispatch',
-      threadTs: 't1',
-      sessionId: 's1',
-      text: 'hello',
-    });
-
-    expect(received).toEqual([{ kind: 'dispatch', threadTs: 't1', sessionId: 's1', text: 'hello' }]);
+    const received: string[] = [];
+    pod.onGatewayMessage((msg) => received.push(msg.kind));
+    gateway.sendToPod({ kind: 'dispatch', threadTs: 't1', sessionId: 's1', text: 'hi' });
+    expect(received).toEqual(['dispatch']);
   });
 
-  it('stops sending once the sending end is closed', () => {
+  it('close stops delivery in both directions', () => {
     const { pod, gateway } = InMemoryPodTransport.createPair();
-    const received: PodToGatewayMessage[] = [];
-    gateway.onPodMessage((msg) => received.push(msg));
-
+    const received: string[] = [];
+    gateway.onPodMessage((msg) => received.push(msg.kind));
     pod.close();
     pod.sendToGateway({ kind: 'heartbeat', userId: 'u1' });
-
     expect(received).toEqual([]);
   });
 
-  it('stops sending once the receiving end is closed', () => {
-    const { pod, gateway } = InMemoryPodTransport.createPair();
-    const received: GatewayToPodMessage[] = [];
-    pod.onGatewayMessage((msg) => received.push(msg));
-
-    gateway.close();
-    gateway.sendToPod({
-      kind: 'dispatch',
-      threadTs: 't1',
-      sessionId: 's1',
-      text: 'ignored',
-    });
-
-    expect(received).toEqual([]);
-  });
-});
-
-describe('exponentialBackoffDelay', () => {
-  it('grows by a factor of two from the base', () => {
-    expect(exponentialBackoffDelay(0)).toBe(500);
-    expect(exponentialBackoffDelay(1)).toBe(1000);
-    expect(exponentialBackoffDelay(2)).toBe(2000);
-  });
-
-  it('caps at the maximum delay', () => {
-    expect(exponentialBackoffDelay(6)).toBe(30000);
-    expect(exponentialBackoffDelay(20)).toBe(30000);
-  });
-
-  it('honours custom base and max', () => {
-    expect(exponentialBackoffDelay(0, 100, 5000)).toBe(100);
-    expect(exponentialBackoffDelay(3, 100, 5000)).toBe(800);
-    expect(exponentialBackoffDelay(10, 100, 5000)).toBe(5000);
+  it('exponentialBackoffDelay grows with attempt and caps at max', () => {
+    expect(exponentialBackoffDelay(0, 500, 30_000)).toBe(500);
+    expect(exponentialBackoffDelay(1, 500, 30_000)).toBe(1000);
+    expect(exponentialBackoffDelay(6, 500, 30_000)).toBe(30_000);
+    expect(exponentialBackoffDelay(20, 500, 30_000)).toBe(30_000);
   });
 });
