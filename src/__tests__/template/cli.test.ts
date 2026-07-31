@@ -2,13 +2,25 @@
  * Tests for src/template/cli.ts — template validation CLI
  */
 
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi, type MockInstance } from "vitest";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 // We import the functions directly (not via child_process) for unit testing
-import { validateAction, dryRunAction } from "../../template/cli.js";
+import { validateAction, dryRunAction, parseArgs } from "../../template/cli.js";
+
+// Mock the quickstart module so quickstart routing never touches the real
+// interactive flow (readline prompts on stdin). The mock makes the run resolve
+// immediately, so tests cannot hang on a TTY.
+vi.mock("../../quickstart/quickstart.js", () => ({
+  runQuickstart: vi.fn(),
+  resolveGitHubToken: vi.fn(),
+  selectRepositories: vi.fn(),
+  installApp: vi.fn(),
+}));
+
+import { runQuickstart, resolveGitHubToken, selectRepositories, installApp } from "../../quickstart/quickstart.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -325,5 +337,85 @@ describe("validateAction tty output", () => {
     expect(results).toHaveLength(2);
     expect(results.filter((r) => r.valid)).toHaveLength(1);
     expect(results.filter((r) => !r.valid)).toHaveLength(1);
+  });
+});
+
+describe("quickstart routing (--skip-prompts)", () => {
+  let tempDir: string;
+  let backupArgv: string[];
+  let exitSpy: MockInstance;
+
+  beforeEach(() => {
+    tempDir = createTempDir();
+    backupArgv = process.argv;
+    process.env.NODE_ENV = "test";
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    // Trap process.exit so parseArgs can't kill the test runner.
+    exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {}) as never);
+    process.argv = ["node", "cli.ts", "quickstart", "--skip-prompts"];
+    vi.mocked(runQuickstart).mockResolvedValue({
+      prUrl: "https://github.com/alice/awesome-project/pull/42",
+      configPath: join(tempDir, "config.json"),
+      owner: "alice",
+      repo: "awesome-project",
+      issueNumber: 7,
+      issueUrl: "https://github.com/alice/awesome-project/issues/7",
+    });
+  });
+
+  afterEach(() => {
+    process.argv = backupArgv;
+    vi.restoreAllMocks();
+  });
+
+  it("routes quickstart --skip-prompts to the non-interactive path and exits 0", async () => {
+    await parseArgs();
+
+    // Routing hands off to runQuickstart with skipPrompts=true and never runs
+    // the interactive prompt layer (token prompt, repo selection, install ask).
+    expect(runQuickstart).toHaveBeenCalledTimes(1);
+    expect(runQuickstart).toHaveBeenCalledWith({ skipPrompts: true });
+    expect(resolveGitHubToken).not.toHaveBeenCalled();
+    expect(selectRepositories).not.toHaveBeenCalled();
+    expect(installApp).not.toHaveBeenCalled();
+    expect(exitSpy).toHaveBeenCalledWith(0);
+  });
+
+  it("routes quickstart without the flag to skipPrompts=false", async () => {
+    process.argv = ["node", "cli.ts", "quickstart"];
+
+    await parseArgs();
+
+    expect(runQuickstart).toHaveBeenCalledWith({ skipPrompts: false });
+    expect(exitSpy).toHaveBeenCalledWith(0);
+  });
+
+  it("exits 2 when quickstart fails under --skip-prompts (e.g. missing token)", async () => {
+    vi.mocked(runQuickstart).mockRejectedValue(
+      new Error("No GitHub token found. Set GITHUB_TOKEN or run `gh auth login` first."),
+    );
+
+    await parseArgs();
+
+    expect(runQuickstart).toHaveBeenCalledWith({ skipPrompts: true });
+    expect(console.error).toHaveBeenCalled();
+    expect(exitSpy).toHaveBeenCalledWith(2);
+  });
+
+  it("exits 1 when quickstart times out waiting for a PR under --skip-prompts", async () => {
+    vi.mocked(runQuickstart).mockResolvedValue({
+      prUrl: null,
+      configPath: join(tempDir, "config.json"),
+      owner: "alice",
+      repo: "awesome-project",
+      issueNumber: 7,
+      issueUrl: "https://github.com/alice/awesome-project/issues/7",
+    });
+
+    await parseArgs();
+
+    expect(runQuickstart).toHaveBeenCalledWith({ skipPrompts: true });
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 });
