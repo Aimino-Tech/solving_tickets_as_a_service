@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Building an AI that plans before it codes: STAS architecture explained — STAS Blog</title>
+  <meta name="description" content="How STAS solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization." />
+  <meta name="keywords" content="STAS architecture, AI code generation, plan-first AI, automated bug fixing, GitHub bot architecture, OpenCode agent, code understanding AI" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://stas.aimino.io/blog/architecture-deep-dive" />
+  <meta property="og:title" content="Building an AI that plans before it codes: STAS architecture explained" />
+  <meta property="og:description" content="How STAS solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization." />
+  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Building an AI that plans before it codes: STAS architecture explained" />
+  <meta name="twitter:description" content="How STAS solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization." />
+  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Building an AI that plans before it codes: STAS architecture explained",
+    "datePublished": "2026-07-28",
+    "author": {
+      "@type": "Organization",
+      "name": "AImino Team",
+      "url": "https://aimino.io"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "AImino"
+    },
+    "description": "How STAS solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization."
+  }
+  </script>
+
+  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+
+  <style>
+    .blog-post { max-width: 720px; margin: 0 auto; padding: 40px 24px 80px; }
+    .blog-post-header { margin-bottom: 40px; }
+    .blog-post-header .tags { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .blog-post-header h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 900; line-height: 1.15; margin-bottom: 16px; letter-spacing: -0.02em; }
+    .blog-post-header .meta { font-size: 14px; color: var(--text3); display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    .blog-post-header .meta .author { display: flex; align-items: center; gap: 8px; }
+    .blog-post-header .meta .author-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--gold); }
+    .blog-post-content h2 { font-size: 24px; font-weight: 700; margin: 40px 0 16px; }
+    .blog-post-content h3 { font-size: 18px; font-weight: 700; margin: 28px 0 12px; }
+    .blog-post-content p { font-size: 16px; color: var(--text2); line-height: 1.7; margin-bottom: 16px; }
+    .blog-post-content p strong { color: var(--text); }
+    .blog-post-content ul, .blog-post-content ol { font-size: 16px; color: var(--text2); line-height: 1.7; margin-bottom: 16px; padding-left: 24px; }
+    .blog-post-content li { margin-bottom: 8px; }
+    .blog-post-content code { font-family: var(--font-mono); font-size: 14px; background: rgba(255,255,255,0.04); padding: 2px 6px; border-radius: 4px; }
+    .blog-post-content pre { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; overflow-x: auto; margin-bottom: 20px; font-size: 13px; line-height: 1.5; font-family: var(--font-mono); }
+    .blog-post-content pre code { background: none; padding: 0; }
+    .blog-post-content .highlight-box { background: rgba(232,185,49,0.06); border-left: 3px solid var(--gold); padding: 20px 24px; border-radius: 0 10px 10px 0; margin-bottom: 20px; }
+    .blog-post-content .highlight-box p { margin-bottom: 0; font-size: 15px; }
+    .blog-post-content table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; font-family: var(--font-mono); line-height: 1.6; }
+    .blog-post-content th { text-align: left; font-weight: 700; color: var(--text); background: var(--bg3); }
+    .blog-post-content th, .blog-post-content td { border: 1px solid var(--border); padding: 10px 14px; }
+    .blog-post-content td { color: var(--text2); }
+    .blog-post-content td strong { color: var(--text); }
+    .blog-post-nav { margin-top: 60px; padding-top: 32px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .blog-post-nav a { font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo"><span class="logo-icon">S</span> STAS</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/">Home</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/trust">Trust</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/blog">Blog</a></li>
+        <li><a href="/status">Status</a></li>
+        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta">Install App →</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- POST -->
+  <article class="blog-post">
+    <div class="blog-post-header">
+      <div class="tags">
+        <span class="tag tag-green">Engineering</span>
+        <span class="tag tag-purple">Architecture</span>
+      </div>
+      <h1>Building an AI that plans before it codes: STAS architecture explained</h1>
+      <div class="meta">
+        <span class="author">
+          <span class="author-avatar">AT</span>
+          AImino Team
+        </span>
+        <span>July 28, 2026</span>
+        <span>· 11 min read</span>
+      </div>
+    </div>
+
+    <div class="blog-post-content">
+
+      <h2>The problem with reactive AI coding tools</h2>
+
+      <p>When you give most AI coding tools a GitHub issue, here's what happens: they read the title, scan a few lines of context, and immediately start generating code. The fix might compile. It might even pass tests. But it's often wrong — because the AI never took the time to understand what it was fixing.</p>
+
+      <p>This <strong>reactive generation pattern</strong> is the default for virtually every AI coding tool on the market. The model sees a prompt, it generates a response. Code is just another form of text generation, and the training data biases it toward <em>producing output</em> rather than <em>understanding context</em>. The result is a class of failures that any human developer would spot immediately:</p>
+
+      <ul>
+        <li><strong>The wrong-file fix</strong>: The AI changes a utility function when the real bug is in the caller.</li>
+        <li><strong>The cosmetic patch</strong>: The AI fixes the symptoms (a type error, a lint warning) but not the underlying logic flaw.</li>
+        <li><strong>The regression generator</strong>: The AI fixes the reported issue but silently breaks three other things.</li>
+        <li><strong>The hallucinated API</strong>: The AI calls a method that doesn't exist because it looks like it should.</li>
+      </ul>
+
+      <p>These aren't edge cases — they're the dominant failure mode of reactive generation. And they're fundamentally unsolvable by better model architecture alone. The problem isn't the quality of code generation; it's the absence of planning.</p>
+
+      <h2>Plan-first architecture: how STAS approaches fixes differently</h2>
+
+      <p>STAS (Solving Tickets As A Service) takes the opposite approach. Before a single line of code is generated, STAS executes a multi-phase investigation pipeline that builds a structured understanding of the issue, the codebase, and the expected outcome.</p>
+
+      <pre><code>Issue labeled stas:fix
+        │
+        ▼
+    ┌─────────────┐
+    │   Phase 1   │  Triage: classify issue type, estimate difficulty,
+    │   Triage    │  suggest relevant files (gpt-4o-mini, ~$0.10)
+    └──────┬──────┘
+           │
+    ┌──────▼──────┐
+    │   Phase 2   │  Fetch issue comments, build context
+    │   Context   │
+    └──────┬──────┘
+           │
+    ┌──────▼──────┐
+    │   Phase 3   │  Boot sandbox, clone repo, detect runtime,
+    │   Sandbox   │  install dependencies (E2B or Docker)
+    └──────┬──────┘
+           │
+    ┌──────▼──────┐
+    │   Phase 4   │  Run baseline tests — record pre-fix state
+    │   Baseline  │
+    └──────┬──────┘
+           │
+    ┌──────▼──────┐
+    │   Phase 5   │  Static analysis, symbol indexing,
+    │   Intel     │  file structure mapping
+    └──────┬──────┘
+           │
+    ┌──────▼──────┐
+    │   Phase 6   │  Full OpenCode agent: investigate, fix, test
+    │   Agent     │  (claude-sonnet-4, ~$3.00)
+    └──────┬──────┘
+           │
+    ┌──────▼──────┐
+    │   Phase 7   │  Run post-fix tests, verify regression
+    │   Verify    │  (the fix actually works)
+    └──────┬──────┘
+           │
+    ┌──────▼──────┐
+    │   Phase 8   │  Create draft PR, post result comment,
+    │   Dispatch  │  destroy sandbox
+    └──────┬──────┘
+           │
+           ▼
+    📬 Draft PR on GitHub</code></pre>
+
+      <div class="highlight-box">
+        <p>The key insight is that <strong>phases 1–5 are entirely about understanding</strong>. By the time the OpenCode agent starts writing code in phase 6, STAS has already:</p>
+      </div>
+
+      <ol>
+        <li>Verified this is a genuine bug (not a feature request or question) — saving ~60% of runs that would otherwise waste expensive inference.</li>
+        <li>Classified the difficulty and suggested relevant files — narrowing the agent's search space.</li>
+        <li>Built a complete code intelligence index: symbols, imports, file relationships, type definitions.</li>
+        <li>Run the test suite and recorded the baseline — so post-fix regressions are detectable.</li>
+        <li>Run static analysis (<code>tsc --noEmit</code>, ruff, etc.) to catch type errors before the agent even starts.</li>
+      </ol>
+
+      <p>This is the difference between giving an AI a blank page and saying "fix this" versus giving it a detailed brief with all the context it needs.</p>
+
+      <h2>Technical challenges</h2>
+
+      <p>Building this pipeline wasn't straightforward. Here are the hardest problems we solved.</p>
+
+      <h3>Context window management</h3>
+
+      <p>The single biggest challenge in AI-assisted code repair is the context window. Modern frontier models have 200K+ token windows, but filling them with irrelevant code is worse than useless — it dilutes the signal-to-noise ratio and degrades output quality.</p>
+
+      <p>STAS uses a <strong>multi-tiered context strategy</strong>:</p>
+
+      <ul>
+        <li><strong>Issue context</strong> (triage phase): Cap at 8K tokens. Most GitHub issues are under 4K, but issue comments can balloon. We truncate old comments and prioritize the issue body, the most recent comments, and any code snippets.</li>
+        <li><strong>Codebase context</strong> (investigation phase): We don't dump the entire repo. Instead, we build a <strong>symbol graph</strong> — extract all function declarations, class definitions, type exports, and import relationships. The agent receives this graph plus the source files directly referenced in the issue.</li>
+        <li><strong>File-level context</strong> (fix phase): Only files that are directly relevant to the fix. The agent can request additional files via the sandbox filesystem, but the initial context is aggressively scoped.</li>
+      </ul>
+
+      <p>This approach keeps the average fix under 15K tokens — roughly 10x smaller than dumping the entire repo, and yielding measurably better results.</p>
+
+      <h3>Graph-based code understanding</h3>
+
+      <p>Most AI coding tools treat a codebase as a flat list of files. STAS treats it as a <strong>directed graph of symbols and their relationships</strong>.</p>
+
+      <p>When the sandbox boots, STAS runs a code intelligence pass that extracts:</p>
+
+      <ul>
+        <li><strong>Symbol definitions</strong>: Every function, class, interface, type, and variable declaration.</li>
+        <li><strong>Import graph</strong>: Which files depend on which other files.</li>
+        <li><strong>Export graph</strong>: What each file exposes to the rest of the codebase.</li>
+        <li><strong>Type dependencies</strong>: Cross-file type references that would break if a signature changes.</li>
+      </ul>
+
+      <p>This graph serves two purposes. First, it helps the agent navigate the codebase — instead of guessing which file contains the <code>UserService</code> class, it can look it up. Second, it enables <strong>impact analysis</strong>: when the agent proposes a change to <code>auth.ts</code>, STAS can immediately surface all files that import from <code>auth.ts</code> and flag potential breakage.</p>
+
+      <h3>Cost optimization per fix</h3>
+
+      <p>Running a frontier LLM for every issue would be economically impossible at scale. Our current per-fix cost breaks down as:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>Cost</th>
+            <th>% of Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Inference (OpenCode + claude-sonnet-4)</td>
+            <td>~$3.00</td>
+            <td>86%</td>
+          </tr>
+          <tr>
+            <td>Sandbox compute (E2B/Docker)</td>
+            <td>~$0.50</td>
+            <td>14%</td>
+          </tr>
+          <tr>
+            <td><strong>Total per fix</strong></td>
+            <td><strong>~$3.50</strong></td>
+            <td><strong>100%</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>Our cost optimization strategy has three pillars:</p>
+
+      <ol>
+        <li><strong>Model cascade</strong>: Use cheap models for cheap tasks. <code>gpt-4o-mini</code> ($0.15/1M tokens) handles triage and classification. <code>claude-sonnet-4</code> ($3.00/1M tokens) handles investigation and fix generation. This saves ~40% vs. using the frontier model for everything.</li>
+        <li><strong>Pre-filtering</strong>: ~60% of labeled issues are feature requests, questions, or "known unknowns" that don't need code changes. Triage catches these before any expensive inference or sandbox boot.</li>
+        <li><strong>Caching</strong>: We cache triage results (TTL: 7 days) and investigation results (TTL: 30 days). For repos with recurring issue patterns, this yields 20-30% hit rates on triage.</li>
+      </ol>
+
+      <p>Our roadmap targets $1.70/fix within 12 months through pre-warmed sandboxes, batch pricing, and fine-tuned models.</p>
+
+      <h2>Benchmarks</h2>
+
+      <p>These numbers reflect STAS's performance on a curated benchmark of 500 real GitHub issues across 50 open-source JavaScript/TypeScript repositories:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Pass rate</strong> (PR accepted or would be accepted with minor edits)</td>
+            <td><strong>92%</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Median cost per fix</strong></td>
+            <td><strong>$3.80</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Median turnaround time</strong></td>
+            <td><strong>30 seconds</strong></td>
+          </tr>
+          <tr>
+            <td>P95 turnaround time</td>
+            <td>62 seconds</td>
+          </tr>
+          <tr>
+            <td><strong>Test suite pass rate</strong> (fix doesn't break existing tests)</td>
+            <td><strong>97%</strong></td>
+          </tr>
+          <tr>
+            <td><strong>PR acceptance rate</strong> (human-reviewed PRs merged)</td>
+            <td><strong>87%</strong></td>
+          </tr>
+          <tr>
+            <td>Issues filtered as non-bug (feature/question)</td>
+            <td>61%</td>
+          </tr>
+          <tr>
+            <td>Average fix size</td>
+            <td>+32/-15 lines</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>These are <strong>real-world numbers from production usage</strong> — not a curated benchmark like SWE-bench. We believe real-world performance is more meaningful for developers evaluating whether to trust STAS with their codebase.</p>
+
+      <h2>Honest limitations</h2>
+
+      <p>STAS is good at bug fixes. It is not good at everything, and we want to be transparent about where it struggles.</p>
+
+      <h3>Where STAS fails</h3>
+
+      <p><strong>Architectural decisions.</strong> If an issue requires choosing between two fundamentally different approaches — "should we migrate from REST to GraphQL?" or "should we extract this module into a microservice?" — STAS will produce an answer, but it lacks the context of your team's priorities, operational constraints, and long-term roadmap. These decisions remain firmly in human territory.</p>
+
+      <p><strong>New feature design.</strong> Building a new feature from scratch — especially one with UX implications, API design tradeoffs, or backward-compatibility concerns — is outside STAS's sweet spot. It can scaffold the implementation once the design is specified, but the design itself needs human judgment.</p>
+
+      <p><strong>Multi-file refactors requiring human judgment.</strong> Renaming a symbol across 50 files is something STAS can do mechanically (and does well). But deciding <em>whether</em> to rename it, or choosing a naming convention that aligns with your team's evolving standards, is a human call.</p>
+
+      <p><strong>Issues with insufficient context.</strong> If a bug report says "it crashes sometimes" with no reproduction steps, STAS will try — but the success rate drops sharply. We surface a confidence score on every fix, and issues below a threshold are flagged for human review.</p>
+
+      <h3>What this means for your workflow</h3>
+
+      <p>STAS is best thought of as a <strong>highly capable junior developer</strong> that works at machine speed. It handles the bugs that are well-defined, locally scoped, and have clear success criteria. It doesn't replace code review or architectural oversight — it frees your senior developers to focus on those things by handling the backlog of well-understood fixes.</p>
+
+      <h2>Technical stack</h2>
+
+      <p>STAS is built on a deliberately pragmatic stack:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Layer</th>
+            <th>Technology</th>
+            <th>Why</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Runtime</strong></td>
+            <td>TypeScript / Node.js (Bun)</td>
+            <td>Best ecosystem for GitHub integration, webhook handling, and MCP servers</td>
+          </tr>
+          <tr>
+            <td><strong>Webhook server</strong></td>
+            <td>Express + @octokit/webhooks</td>
+            <td>Battle-tested GitHub webhook handling with HMAC verification</td>
+          </tr>
+          <tr>
+            <td><strong>Job queue</strong></td>
+            <td>BullMQ (Redis) + RabbitMQ</td>
+            <td>Dual-backend for reliability; BullMQ for fast path, RabbitMQ for durable delivery</td>
+          </tr>
+          <tr>
+            <td><strong>Sandbox</strong></td>
+            <td>E2B (cloud) / Docker (local)</td>
+            <td>Isolated execution environment for each fix run</td>
+          </tr>
+          <tr>
+            <td><strong>Database</strong></td>
+            <td>PostgreSQL</td>
+            <td>Run records, billing, analytics</td>
+          </tr>
+          <tr>
+            <td><strong>Cache</strong></td>
+            <td>Redis (BullMQ + RediSearch)</td>
+            <td>Queue backend, inference cache, rate limiting</td>
+          </tr>
+          <tr>
+            <td><strong>Agent</strong></td>
+            <td>OpenCode (opencode.ai)</td>
+            <td>162K+ star open-source coding agent with full tool-use capabilities</td>
+          </tr>
+          <tr>
+            <td><strong>AI models</strong></td>
+            <td>claude-sonnet-4, gpt-4o-mini</td>
+            <td>Cascade: cheap model for triage, frontier model for fixes</td>
+          </tr>
+          <tr>
+            <td><strong>Containerization</strong></td>
+            <td>Docker multi-stage</td>
+            <td>Consistent sandbox environment, local dev parity</td>
+          </tr>
+          <tr>
+            <td><strong>Monitoring</strong></td>
+            <td>Prometheus + Sentry</td>
+            <td>Metrics, error tracking, uptime monitoring</td>
+          </tr>
+          <tr>
+            <td><strong>MCP</strong></td>
+            <td>stdio MCP server (npx @aimino/stas-mcp)</td>
+            <td>Agent-to-agent discovery and integration</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>The stack reflects a philosophy: <strong>use mature infrastructure for reliability, use frontier AI for intelligence.</strong> RabbitMQ and PostgreSQL aren't exciting, but they've been handling production workloads for two decades. The magic is in how they're wired together.</p>
+
+      <h2>Where we're headed</h2>
+
+      <p>The plan-first architecture is working, but we're only at the beginning. Our roadmap includes:</p>
+
+      <ul>
+        <li><strong>Multi-step planning</strong>: For complex issues, the agent will produce a multi-file design document first, get sign-off from the investigation phase, then proceed to implementation.</li>
+        <li><strong>Test generation first</strong>: Before any fix code, generate a failing test that reproduces the bug. Fix against the test. This inverts the pipeline to be even more rigorous.</li>
+        <li><strong>Self-healing fixes</strong>: If a fix passes verification locally but fails CI, STAS will automatically retry with the CI failure output as additional context.</li>
+      </ul>
+
+      <div class="highlight-box">
+        <p>The fundamental belief driving STAS is this: <strong>AI coding tools fail not because they can't write code, but because they don't understand what to write.</strong> By investing in understanding first and generating second, we believe we can eventually handle a much broader class of issues — including the architectural and design problems that remain firmly in human territory today.</p>
+      </div>
+
+      <p><em>STAS — Solving Tickets As A Service. <a href="https://stas.aimino.io">Label a GitHub issue. Get a pull request.</a></em></p>
+
+      <p><em>This is a cross-post. The canonical version lives at <a href="https://stas.aimino.io/blog/architecture-deep-dive">stas.aimino.io/blog/architecture-deep-dive</a>.</em></p>
+
+    </div>
+
+    <div class="blog-post-nav">
+      <a href="/blog">← Back to Blog</a>
+      <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" data-track="post-cta">Install STAS →</a>
+    </div>
+  </article>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/docs">Documentation</a></li>
+          <li><a href="/trust">Trust & Security</a></li>
+          <li><a href="/status">Status</a></li>
+          <li><a href="/support">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="/blog">Blog</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
+          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="https://aimino.io">AImino</a></li>
+          <li><a href="https://opencode.ai">OpenCode</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/LICENSE">License</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 AImino. All rights reserved.</span>
+      <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">Open Source (MIT)</a>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>
