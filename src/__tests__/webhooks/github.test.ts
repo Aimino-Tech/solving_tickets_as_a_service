@@ -60,6 +60,16 @@ vi.mock('../../config.js', () => ({
   },
 }));
 
+const { mockDispatchThroughGovernance, mockIsGovernanceEnabled } = vi.hoisted(() => ({
+  mockDispatchThroughGovernance: vi.fn().mockResolvedValue({ success: true, runId: 'gov-run-1', status: 200 }),
+  mockIsGovernanceEnabled: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('../../governance/client.js', () => ({
+  dispatchThroughGovernance: mockDispatchThroughGovernance,
+  isGovernanceEnabled: mockIsGovernanceEnabled,
+}));
+
 
 
 // ---------------------------------------------------------------------------
@@ -67,6 +77,7 @@ vi.mock('../../config.js', () => ({
 // ---------------------------------------------------------------------------
 
 import { createGithubWebhooks, suggestLabels } from '../../webhooks/github.js';
+import { runWithTraceId } from '../../utils/trace.js';
 import { sampleIssueLabeledPayload, sampleIssueOpenedPayload, sampleMarketplacePayload } from '../fixtures.js';
 
 // ---------------------------------------------------------------------------
@@ -84,6 +95,7 @@ describe('createGithubWebhooks', () => {
     vi.clearAllMocks();
     mockEnqueue.mockClear();
     mockEnqueue.mockResolvedValue('job-mock-id');
+    mockIsGovernanceEnabled.mockReturnValue(false);
   });
 
   describe('issues.labeled' as any, () => {
@@ -145,6 +157,55 @@ describe('createGithubWebhooks', () => {
           issueNumber: 42,
         }),
         'No installation ID and no GITHUB_TOKEN — cannot process',
+      );
+    });
+
+    it('propagates the incoming trace id from async context into governance dispatch', async () => {
+      const webhooks = createGithubWebhooks(mockEnqueue);
+      const payload = sampleIssueLabeledPayload();
+
+      mockIsGovernanceEnabled.mockReturnValue(true);
+
+      await runWithTraceId('incoming-trace-abc', () =>
+        webhooks.receive({
+          id: 'test-trace-1',
+          name: 'issues.labeled' as any,
+          payload: payload as any,
+        }),
+      );
+
+      expect(mockEnqueue).not.toHaveBeenCalled();
+      expect(mockDispatchThroughGovernance).toHaveBeenCalledTimes(1);
+      expect(mockDispatchThroughGovernance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          traceId: 'incoming-trace-abc',
+          repoOwner: 'owner',
+          repoName: 'test-repo',
+          issueNumber: 42,
+        }),
+      );
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({ traceId: 'incoming-trace-abc' }),
+        'Dispatching labeled issue through governance proxy',
+      );
+    });
+
+    it('generates a fresh trace id when no trace context is present', async () => {
+      const webhooks = createGithubWebhooks(mockEnqueue);
+      const payload = sampleIssueLabeledPayload();
+
+      mockIsGovernanceEnabled.mockReturnValue(true);
+
+      await webhooks.receive({
+        id: 'test-trace-2',
+        name: 'issues.labeled' as any,
+        payload: payload as any,
+      });
+
+      const govCall = mockDispatchThroughGovernance.mock.calls[0]?.[0] as { traceId?: string };
+      expect(govCall?.traceId).toBeDefined();
+      expect(govCall?.traceId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
       );
     });
   });

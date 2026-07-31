@@ -93,7 +93,7 @@ vi.mock('../config.js', () => ({
       privateKeyPath: undefined,
       privateKeyEnv: '-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----',
     },
-    gitlab: { url: 'https://gitlab.com', token: '', webhookSecret: '' },
+    gitlab: { url: 'https://gitlab.com', token: '', webhookSecret: 'test-secret' },
     bitbucket: { username: '', appPassword: '', webhookSecret: '' },
     stas: {
       label: 'stas:fix',
@@ -102,6 +102,15 @@ vi.mock('../config.js', () => ({
       rateLimit: { windowMs: 60000, max: 30 },
 
       maxIssueComments: 15,
+    },
+    auth: {
+      jwtSecret: 'test-secret',
+      jwtExpiresIn: '1h',
+      jwtRefreshExpiresIn: '7d',
+      rateLimitWindowMs: 60000,
+      loginRateLimitMax: 100,
+      registerRateLimitMax: 50,
+      refreshRateLimitMax: 100,
     },
     queue: {
       redisUrl: 'redis://localhost:6379',
@@ -198,6 +207,7 @@ vi.mock('../webhooks/github.js', () => ({
 
 vi.mock('../webhooks/gitlab.js', () => ({
   createGitlabWebhooks: mockCreateGitlabWebhooks,
+  gitlabWebhook: { verify: vi.fn().mockReturnValue(true) },
 }));
 
 vi.mock('../webhooks/bitbucket.js', () => ({
@@ -261,6 +271,7 @@ vi.mock('../routes/admin.js', () => ({
 }));
 vi.mock('../routes/dashboard.js', () => ({
   dashboardRouter: vi.fn(),
+  configRouter: vi.fn(),
 }));
 vi.mock('../routes/adminDashboard.js', () => ({
   adminDashboardRouter: vi.fn(),
@@ -335,6 +346,7 @@ describe('server', () => {
     mockCreateStripeWebhookHandler.mockReturnValue(mockStripeHandler);
     mockGetSlackBoltApp.mockReturnValue({
       mountOn: vi.fn(),
+      start: vi.fn().mockResolvedValue(undefined),
       client: { conversations: { open: vi.fn(), invite: vi.fn() } },
     });
     mockGetTracker.mockReturnValue(null);
@@ -435,6 +447,7 @@ describe('server', () => {
         headers: {
           'Content-Type': 'application/json',
           'x-github-event': 'issues.labeled',
+          'x-hub-signature-256': 'sha256=test',
         },
         body: JSON.stringify({
           action: 'labeled',
@@ -460,6 +473,7 @@ describe('server', () => {
           'Content-Type': 'application/json',
           'x-github-event': 'issues.labeled',
           'x-github-delivery': 'test-delivery',
+          'x-hub-signature-256': 'sha256=test',
         },
         body: JSON.stringify({
           action: 'labeled',
@@ -471,6 +485,32 @@ describe('server', () => {
       });
 
       expect(response.status).toBe(202);
+    });
+
+    it('carries the incoming x-stas-trace-id into the webhook handler context', async () => {
+      const { createApp } = await import('../server.js');
+      const { getCurrentTraceId } = await import('../utils/trace.js');
+      app = await createApp();
+
+      let capturedTraceId: string | undefined;
+      mockVerifyAndReceive.mockImplementationOnce(async () => {
+        capturedTraceId = getCurrentTraceId();
+      });
+
+      const response = await fetchApp(app, '/webhook/github', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-github-event': 'issues.labeled',
+          'x-github-delivery': 'test-delivery',
+          'x-hub-signature-256': 'sha256=test',
+          'x-stas-trace-id': 'incoming-trace-xyz',
+        },
+        body: JSON.stringify({ action: 'labeled' }),
+      });
+
+      expect(response.status).toBe(202);
+      expect(capturedTraceId).toBe('incoming-trace-xyz');
     });
   });
 
@@ -584,7 +624,7 @@ describe('server', () => {
       const { createApp } = await import('../server.js');
       app = await createApp();
 
-      const response = await fetchApp(app, '/unknown-route');
+      const response = await fetchApp(app, '/api/unknown-route');
       expect(response.status).toBe(404);
     });
 
@@ -623,13 +663,9 @@ describe('server', () => {
       const server = await startServer();
 
       expect(server).toBeDefined();
+      expect(server.listening).toBe(true);
 
-      await new Promise<void>((resolve) => {
-        server.on('listening', () => {
-          expect(server.listening).toBe(true);
-          server.close(() => resolve());
-        });
-      });
+      await new Promise<void>((resolve) => server.close(() => resolve()));
     });
   });
 });
