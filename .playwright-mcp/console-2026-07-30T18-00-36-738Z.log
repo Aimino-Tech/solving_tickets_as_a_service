@@ -1,0 +1,9 @@
+[       8ms] [WARNING] Jul-30 20:00:36.746 Couldn't complete metrics measurement for start mark 'session_lifespan' @ https://a.slack-edge.com/bv1-13-br/get-started.1c8b810be8aeecc2.primer.min.js:157
+[     633ms] [LOG] JQMIGRATE: Migrate is installed with logging active, version 3.4.0 @ https://a.slack-edge.com/bv1-13-br/rollup-core_required_libs.74a908cd0c361a51.min.js:128
+[    2877ms] [INFO] Jul-30 20:00:39.583 [BOOT] booted! pri:0 version:1785429186 start_ms:1785434437193 (2390ms ago) @ https://a.slack-edge.com/bv1-13-br/modern.vendor.8794e31bb8903f0e.min.js:3720
+[    2894ms] [WARNING] Jul-30 20:00:39.620 (T00000000) Clogger context could not be determined, using empty context @ https://a.slack-edge.com/bv1-13-br/modern.vendor.8794e31bb8903f0e.min.js:3720
+[    2898ms] [INFO] Jul-30 20:00:39.632 [TRACER] Tracing is not sampled by default for this session. @ https://a.slack-edge.com/bv1-13-br/modern.vendor.8794e31bb8903f0e.min.js:3720
+[    2925ms] [WARNING] Jul-30 20:00:39.662 TELEMETRY You tried to get a team-specific telemeter but didn’t provide enough context and are getting the generic telemeter instead which is likely not what you want. @ https://a.slack-edge.com/bv1-13-br/modern.vendor.8794e31bb8903f0e.min.js:3720
+[    2942ms] [INFO] Jul-30 20:00:39.680 [INFO] running without a user @ https://a.slack-edge.com/bv1-13-br/modern.vendor.8794e31bb8903f0e.min.js:3720
+[    2950ms] [WARNING] Jul-30 20:00:39.687 TELEMETRY You tried to get a team-specific telemeter but didn’t provide enough context and are getting the generic telemeter instead which is likely not what you want. @ https://a.slack-edge.com/bv1-13-br/modern.vendor.8794e31bb8903f0e.min.js:3720
+[    2955ms] [WARNING] Jul-30 20:00:39.693 TELEMETRY You tried to get a team-specific telemeter but didn’t provide enough context and are getting the generic telemeter instead which is likely not what you want. @ https://a.slack-edge.com/bv1-13-br/modern.vendor.8794e31bb8903f0e.min.js:3720

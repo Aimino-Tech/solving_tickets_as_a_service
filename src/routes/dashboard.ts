@@ -153,8 +153,43 @@ router.get('/transactions', async (req: Request, res: Response) => {
 // In-memory overrides for runtime settings. Defaults come from env/config.
 const settingsStore: Record<string, string | number | boolean> = {};
 
-// In-memory overrides for config/env — runtime env var overrides (not persisted to .env)
+// In-memory overrides for config/env — also persisted to .env on write
+import { readFileSync, writeFileSync } from 'fs';
+import { resolve } from 'path';
 const envOverrides: Record<string, string> = {};
+
+function persistEnvOverrides(): void {
+  try {
+    const envPath = resolve(process.cwd(), '.env');
+    let content = '';
+    try { content = readFileSync(envPath, 'utf8'); } catch { /* file may not exist */ }
+    const lines = content.split('\n');
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const line of lines) {
+      const eqIdx = line.indexOf('=');
+      if (eqIdx > 0) {
+        const k = line.slice(0, eqIdx).trim();
+        seen.add(k);
+        if (k in envOverrides) {
+          out.push(`${k}=${envOverrides[k]}`);
+        } else {
+          out.push(line);
+        }
+      } else {
+        out.push(line);
+      }
+    }
+    for (const [k, v] of Object.entries(envOverrides)) {
+      if (!seen.has(k)) {
+        out.push(`${k}=${v}`);
+      }
+    }
+    writeFileSync(envPath, out.join('\n') + '\n', 'utf8');
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to persist .env');
+  }
+}
 
 router.get('/settings', (_req: Request, res: Response) => {
   const { config } = require('../config.js');
@@ -431,7 +466,7 @@ const configRouter: Router = Router();
 configRouter.get('/', (_req: Request, res: Response) => {
   try {
     const env: Record<string, string> = {};
-    const trackedKeys = ['LINEAR_API_KEY', 'BITBUCKET_APP_PASSWORD', 'JIRA_API_TOKEN', 'GITHUB_TOKEN'];
+    const trackedKeys = ['LINEAR_API_KEY', 'BITBUCKET_APP_PASSWORD', 'JIRA_API_TOKEN', 'GITHUB_TOKEN', 'SLACK_BOT_TOKEN', 'SLACK_APP_TOKEN'];
     for (const key of trackedKeys) {
       const val = key in envOverrides && envOverrides[key]
         ? envOverrides[key]
@@ -455,6 +490,13 @@ configRouter.get('/', (_req: Request, res: Response) => {
         icon: 'linear',
         connected: !!(process.env.LINEAR_API_KEY || envOverrides.LINEAR_API_KEY),
         configUrl: 'https://linear.app/settings/api',
+      },
+      {
+        id: 'slack',
+        name: 'Slack',
+        icon: 'slack',
+        connected: !!(process.env.SLACK_BOT_TOKEN || envOverrides.SLACK_BOT_TOKEN),
+        configUrl: '',
       },
     ];
 
@@ -485,6 +527,7 @@ configRouter.put('/env', (req: Request, res: Response) => {
       }
     }
     log.info({ keys: Object.keys(updates) }, 'Config env overrides updated');
+    persistEnvOverrides();
     res.json({ success: true });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to update config env');
@@ -507,6 +550,19 @@ configRouter.post('/verify', async (req: Request, res: Response) => {
         res.json({ connected: true, name: viewer.name || viewer.displayName || null });
       } else {
         res.json({ connected: false, error: 'Invalid API key — could not authenticate with Linear' });
+      }
+    } else if (service === 'slack') {
+      if (!apiKey.startsWith('xoxb-')) {
+        res.json({ connected: false, error: 'Invalid bot token format — must start with xoxb-' });
+        return;
+      }
+      const { WebClient } = await import('@slack/web-api');
+      const client = new WebClient(apiKey);
+      const auth = await client.auth.test();
+      if (auth.ok && auth.url) {
+        res.json({ connected: true, name: auth.team || null });
+      } else {
+        res.json({ connected: false, error: 'Invalid bot token — could not authenticate with Slack' });
       }
     } else {
       res.status(400).json({ connected: false, error: `Unknown service: ${service}` });

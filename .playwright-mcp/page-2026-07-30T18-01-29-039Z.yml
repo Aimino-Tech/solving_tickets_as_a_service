@@ -1,0 +1,20 @@
+- generic [active] [ref=f31e1]:
+  - banner [ref=f31e4]:
+    - generic [ref=f31e5]:
+      - link [ref=f31e7] [cursor=pointer]:
+        - /url: https://api.slack.com
+        - img "Slack API" [ref=f31e8]
+      - search [ref=f31e9]:
+        - generic [ref=f31e11]:
+          - generic [ref=f31e12]: 
+          - textbox "Search" [ref=f31e13]
+      - generic [ref=f31e14]:
+        - link "Documentation" [ref=f31e15] [cursor=pointer]:
+          - /url: https://api.slack.com/#read_the_docs
+        - link "Tutorials" [ref=f31e16] [cursor=pointer]:
+          - /url: https://api.slack.com/tutorials
+        - link "Your Apps" [ref=f31e17] [cursor=pointer]:
+          - /url: https://api.slack.com/apps
+  - generic [ref=f31e25]:
+    - alert [ref=f31e26]
+    - log [ref=f31e27]

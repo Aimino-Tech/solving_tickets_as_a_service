@@ -19,7 +19,7 @@ export function setConnected(connected: boolean): void {
 }
 
 export function isConnected(): boolean {
-  return _connected;
+  return _connected && _channel !== null;
 }
 
 export async function ensureConnected(): Promise<boolean> {
@@ -233,7 +233,11 @@ export async function consumeQueue(
   options?: amqplib.Options.Consume,
 ): Promise<string> {
   const ch = getChannel();
-  await ch.assertQueue(queueName, { durable: true, arguments: { "x-message-ttl": 600000, "x-dead-letter-exchange": "stas.dlx" } });
+  try {
+    await ch.checkQueue(queueName);
+  } catch {
+    await ch.assertQueue(queueName, { durable: true });
+  }
   const consumerTag = await ch.consume(
     queueName,
     async (msg) => {

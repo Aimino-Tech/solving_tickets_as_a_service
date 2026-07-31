@@ -1,0 +1,41 @@
+- generic [active] [ref=f49e1]:
+  - generic [ref=f49e2]:
+    - complementary [ref=f49e3]:
+      - generic [ref=f49e8]:
+        - generic [ref=f49e9]: Lead Intelligence
+        - generic [ref=f49e10]: Medtronic · Client View
+      - navigation [ref=f49e11]:
+        - link "Projects" [ref=f49e12] [cursor=pointer]:
+          - /url: /projects
+        - link "Leads Table" [ref=f49e16] [cursor=pointer]:
+          - /url: /leads
+        - link "Intelligence View" [ref=f49e23] [cursor=pointer]:
+          - /url: /intelligence
+      - generic [ref=f49e28]: v1.0 · Live market intelligence
+    - generic [ref=f49e29]:
+      - banner [ref=f49e30]:
+        - generic [ref=f49e31]:
+          - textbox "Search leads, cities, specialties…" [ref=f49e36]
+          - button "Presenter" [ref=f49e37]
+          - button [ref=f49e38]
+          - button [ref=f49e41]
+          - generic [ref=f49e45]: MT
+      - generic [ref=f49e46]: You are offline. Some features may be unavailable.
+      - main [ref=f49e54]:
+        - generic [ref=f49e55]:
+          - generic [ref=f49e57]:
+            - heading "Intelligence View" [level=1] [ref=f49e58]
+            - paragraph [ref=f49e59]: Demographics, ROI scoring, sales cards, buying signals & CRM sync.
+          - generic [ref=f49e60]:
+            - tablist [ref=f49e61]:
+              - tab "Demographics" [selected] [ref=f49e62]
+              - tab "Sales Card" [ref=f49e63]
+              - tab "Activity Feed" [ref=f49e64]
+              - tab "CRM Sync" [ref=f49e65]
+            - tabpanel "Demographics" [ref=f49e66]:
+              - generic [ref=f49e67]:
+                - generic [ref=f49e68]:
+                  - heading "Demographic Intelligence" [level=2] [ref=f49e69]
+                  - paragraph [ref=f49e70]: Distribution analysis across 0 leads — specialty, region, and coverage gaps.
+                - paragraph [ref=f49e74]: Loading demographics...
+  - region "Notifications alt+T"
