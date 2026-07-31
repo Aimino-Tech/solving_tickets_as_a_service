@@ -1,26 +1,26 @@
-import { describe, expect, it, vi } from "vitest";
-import { ChatPod } from "../../src/chat/pod.js";
-import type { AgentExecutor, AgentInput } from "../../src/chat/pod.js";
-import type { MemoryExtractor } from "../../src/chat/memory-block.js";
-import { MemoryChatSessionStore } from "../../src/chat/sessionStore.js";
-import { InMemoryPodTransport } from "../../src/chat/transport.js";
+import { describe, expect, it, vi } from 'vitest';
+import type { MemoryExtractor } from '../../src/chat/memory-block.js';
+import type { AgentExecutor, AgentInput } from '../../src/chat/pod.js';
+import { ChatPod } from '../../src/chat/pod.js';
+import { MemoryChatSessionStore } from '../../src/chat/sessionStore.js';
+import { InMemoryPodTransport } from '../../src/chat/transport.js';
 
 function makePod(store: MemoryChatSessionStore, threadTs: string) {
   return new ChatPod({
     store,
     executor: makeExecutor(),
     transport: InMemoryPodTransport.createPair().pod,
-    userId: "u1",
-    sessionId: "s1",
+    userId: 'u1',
+    sessionId: 's1',
     threadTs,
-    channelId: "c1",
+    channelId: 'c1',
     memoryExtractor: makeExtractor(),
   });
 }
 
 function makeExecutor(): AgentExecutor {
   return {
-    name: "memory-aware",
+    name: 'memory-aware',
     run: vi.fn(async (input: AgentInput) => {
       const taught = /remember\s+(\w+)\s+is\s+(.+)/i.exec(input.userText);
       if (taught) {
@@ -50,22 +50,22 @@ function makeExtractor(): MemoryExtractor {
   };
 }
 
-describe("pod resume after death (US3)", () => {
-  it("continues from the sessions row without the user re-explaining", async () => {
+describe('pod resume after death (US3)', () => {
+  it('continues from the sessions row without the user re-explaining', async () => {
     const store = new MemoryChatSessionStore();
 
-    const pod1 = makePod(store, "t1");
+    const pod1 = makePod(store, 't1');
     await pod1.boot();
-    const taught = await pod1.handleTurn("remember stack is TypeScript");
-    expect(taught).toContain("TypeScript");
+    const taught = await pod1.handleTurn('remember stack is TypeScript');
+    expect(taught).toContain('TypeScript');
     await pod1.shutdown();
 
-    const pod2 = makePod(store, "t1");
+    const pod2 = makePod(store, 't1');
     await pod2.boot();
 
-    const reply = await pod2.handleTurn("what is my stack?");
+    const reply = await pod2.handleTurn('what is my stack?');
 
-    expect(reply).toBe("From memory: your stack is TypeScript.");
-    expect(pod2.memorySnapshot().facts[0]?.key).toBe("stack");
+    expect(reply).toBe('From memory: your stack is TypeScript.');
+    expect(pod2.memorySnapshot().facts[0]?.key).toBe('stack');
   });
 });
