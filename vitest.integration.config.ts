@@ -2,9 +2,10 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    // Include the root-level tests/ directory for integration tests
-    dir: "tests",
-    include: ["tests/**/*.test.ts"],
+    // Only the 3-repo integration suite lives under tests/integration/.
+    // The default vitest.config.ts include covers src/__tests__ + eval and
+    // excludes this directory, so it needs its own config.
+    include: ["tests/integration/**/*.test.ts"],
 
     // Node environment for backend integration testing
     environment: "node",
