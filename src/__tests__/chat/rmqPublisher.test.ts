@@ -5,14 +5,14 @@ vi.mock('../../queue/rabbitmq.js', () => ({
   publishMessage: (...args: unknown[]) => publishMessageMock(...args),
 }));
 
+import type { WorkItem } from '../../chat/rmqPublisher.js';
 import {
   CHAT_WORK_EXCHANGE,
   CHAT_WORK_QUEUE,
   CHAT_WORK_ROUTING_KEY,
-  RmqWorkPublisher,
   createRmqWorkPublisher,
+  RmqWorkPublisher,
 } from '../../chat/rmqPublisher.js';
-import type { WorkItem } from '../../chat/bridge.js';
 
 const item: WorkItem = {
   traceId: 'tr_abc_123456',
@@ -44,7 +44,9 @@ describe('RmqWorkPublisher', () => {
   });
 
   it('reports accepted=false when publish fails', async () => {
-    publishMessageMock.mockImplementation(async () => { throw new Error('connection lost'); });
+    publishMessageMock.mockImplementation(async () => {
+      throw new Error('connection lost');
+    });
     const publisher = new RmqWorkPublisher();
     const result = await publisher.publish(item);
     expect(result.accepted).toBe(false);

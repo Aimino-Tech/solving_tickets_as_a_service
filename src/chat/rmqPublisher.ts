@@ -10,13 +10,32 @@
  */
 
 import { publishMessage } from '../queue/rabbitmq.js';
-import type { WorkItem, WorkPublisher } from './bridge.js';
 
 export interface RmqWorkPublisherOptions {
   /** Queue to publish long-work items into. Defaults to the chat work queue. */
   queue?: string;
   exchange?: string;
   routingKey?: string;
+}
+
+/** Identifies the Slack thread a work item originates from. */
+export interface ThreadRef {
+  threadTs: string;
+  channelId: string;
+}
+
+/** A long-work handoff from the chat session to the lead OS session. */
+export interface WorkItem {
+  traceId: string;
+  instruction: string;
+  threadRef: ThreadRef;
+  userId: string;
+  /** Hermes-style memory snapshot carried so the worker resumes coherently. */
+  memorySnapshot: Record<string, unknown>;
+}
+
+export interface WorkPublisher {
+  publish(item: WorkItem): Promise<{ accepted: boolean }>;
 }
 
 export const CHAT_WORK_QUEUE = 'stas.chat.work';
