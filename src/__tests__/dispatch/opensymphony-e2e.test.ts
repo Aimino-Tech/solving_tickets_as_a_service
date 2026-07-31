@@ -67,10 +67,10 @@ describe('OpenSymphony dispatch E2E', () => {
     const body = JSON.parse((global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
     expect(body).toEqual({
       issue_id: 'GH-42',
-      repo: 'test-owner/test-repo',
+      repo_url: 'test-owner/test-repo',
       tenant: 'test-tenant',
       title: 'Test issue',
-      body: 'Test body',
+      description: 'Test body',
       labels: ['bug'],
       source: 'github',
       tracker_type: 'github',

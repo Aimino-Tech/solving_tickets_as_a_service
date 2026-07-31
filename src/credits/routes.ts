@@ -154,6 +154,15 @@ const UsageSchema = z.object({
 creditRouter.get('/credits/balance', async (req: Request, res: Response) => {
   const accountId = await getAccountId(req);
 
+  // Not authenticated at all → 401
+  if (!accountId && !req.user) {
+    res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Authentication required. Provide x-account-id header or valid JWT token.',
+    });
+    return;
+  }
+
   // Return zero balance if user is authenticated but has no account record yet
   if (!accountId) {
     res.json({ accountId: 0, balance: 0, lifetimeCredits: 0 });

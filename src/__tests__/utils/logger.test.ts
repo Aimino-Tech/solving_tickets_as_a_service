@@ -110,7 +110,9 @@ describe('logger', () => {
 
       const options = mockPino.mock.calls[0][0];
       expect(options.transport).toBeDefined();
-      expect(options.transport.target).toBe('pino-pretty');
+      expect(options.transport.targets).toEqual(
+        expect.arrayContaining([expect.objectContaining({ target: 'pino-pretty' })]),
+      );
     });
 
     it("omits transport when NODE_ENV is 'production'", async () => {

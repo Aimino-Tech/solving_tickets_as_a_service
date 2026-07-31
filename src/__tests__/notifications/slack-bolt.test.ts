@@ -8,6 +8,8 @@ vi.mock('@slack/bolt', () => ({
     this.client = { chat: { postMessage: vi.fn() } };
     this.action = vi.fn();
     this.command = vi.fn();
+    this.view = vi.fn();
+    this.message = vi.fn();
   }),
   ExpressReceiver: vi.fn(function () {
     this.router = { post: vi.fn() };
@@ -18,7 +20,7 @@ vi.mock('@slack/bolt', () => ({
 const mockConfig: any = {
   config: {
     stas: { botName: 'STAS' },
-    slack: { botToken: '', signingSecret: '', channel: '#stas-test', interactionsPath: '/slack/events' },
+    slack: { ticketEnabled: true, botToken: '', signingSecret: '', channel: '#stas-test', interactionsPath: '/slack/events' },
   },
 };
 
