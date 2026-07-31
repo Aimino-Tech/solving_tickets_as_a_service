@@ -125,6 +125,10 @@ describe('config', () => {
       expect(configModule.config.queue.retryDelays).toEqual([30000, 120000, 300000, 900000]);
     });
 
+    it("defaults QUEUE_MSG_TTL_MS to 30000", () => {
+      expect(configModule.config.queue.msgTtlMs).toBe(30_000);
+    });
+
     it("defaults DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY to false", () => {
       expect(configModule.config.stas.devSkipWebhookVerify).toBe(false);
     });
