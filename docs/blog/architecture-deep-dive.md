@@ -1,7 +1,7 @@
 ---
 title: "Building an AI that plans before it codes: STAS architecture explained"
 description: "How STAS solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization."
-status: draft
+status: published
 date: 2026-07-28
 canonical: https://stas.aimino.io/blog/architecture-deep-dive
 keywords:
