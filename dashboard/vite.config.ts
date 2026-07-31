@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      host: true,
       port: 5173,
       proxy: {
         '/api/v1/auth': {
@@ -22,6 +23,14 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
         '/api': {
+          target: `http://localhost:${apiPort}`,
+          changeOrigin: true,
+        },
+        '/mcp': {
+          target: `http://localhost:${apiPort}`,
+          changeOrigin: true,
+        },
+        '/discovery': {
           target: `http://localhost:${apiPort}`,
           changeOrigin: true,
         },

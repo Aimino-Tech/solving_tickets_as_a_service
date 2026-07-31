@@ -1,6 +1,6 @@
 import type {
   Run, DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice,
-  KpiResponse, PricingData, CostCalculation, VsComparisonData,
+  KpiResponse, PricingData, CostCalculation, VsComparisonData, McpApiKey,
 } from '@/api/types';
 
 export type { DashboardStats };
@@ -476,6 +476,21 @@ export const configApi = {
       method: 'POST',
       body: JSON.stringify({ service, apiKey }),
     }),
+};
+
+export const mcpKeysApi = {
+  list: () => request<{ keys: McpApiKey[] }>('/v1/mcp-keys'),
+  create: (name: string) =>
+    request<{ id: string; name: string; keyPrefix: string; key: string; createdAt: string }>('/v1/mcp-keys', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+  rename: (keyId: string, name: string) =>
+    request<McpApiKey>(`/v1/mcp-keys/${keyId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    }),
+  revoke: (keyId: string) => request<{ success: boolean }>(`/v1/mcp-keys/${keyId}`, { method: 'DELETE' }),
 };
 
 export const sla = {

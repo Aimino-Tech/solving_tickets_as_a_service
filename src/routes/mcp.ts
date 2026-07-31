@@ -5,6 +5,7 @@ import { config } from '../config.js';
 import type { McpJobStatus, McpRunHistoryEntry, McpSubmitIssueResponse } from '../opencode-contract.js';
 import { mcpSubmitIssueRequestSchema } from '../opencode-contract.js';
 import { mcpRateLimitMiddleware } from '../ratelimit/mcpRateLimit.js';
+import { mcpKeyAuth } from '../mcp/auth.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'mcp-routes' });
@@ -35,29 +36,6 @@ const JOB_TTL = 7 * 86_400;
 
 function redisKey(...parts: string[]): string {
   return parts.join(':');
-}
-
-function mcpAuth(req: Request, res: Response, next: () => void): void {
-  if (!config.mcp.authEnabled) {
-    next();
-    return;
-  }
-  const apiKey = config.mcp.apiKey;
-  if (!apiKey) {
-    next();
-    return;
-  }
-  const authHeader = req.headers['authorization'];
-  if (!authHeader) {
-    res.status(401).json({ error: 'Missing authorization header' });
-    return;
-  }
-  const [scheme, token] = authHeader.split(' ');
-  if (scheme?.toLowerCase() !== 'bearer' || token !== apiKey) {
-    res.status(401).json({ error: 'Invalid authorization' });
-    return;
-  }
-  next();
 }
 
 async function saveJob(client: Redis, runId: string, data: McpJobStatus): Promise<void> {
@@ -91,7 +69,7 @@ async function getHistory(client: Redis, limit: number): Promise<McpRunHistoryEn
 const router: Router = Router();
 
 // Apply authentication to all /mcp routes
-router.use('/mcp', mcpAuth);
+router.use('/mcp', mcpKeyAuth);
 
 // Apply rate limiting to MCP API tools (submit_issue, status, history, etc.)
 router.use('/mcp', mcpRateLimitMiddleware);

@@ -176,6 +176,15 @@ export interface PricingData {
   competitors: CompetitorPrice[];
 }
 
+export interface McpApiKey {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+}
+
 export interface VsComparisonData {
   competitor: string;
   competitorName: string;
