@@ -7,6 +7,26 @@
 import { getPool, queryWithRetry } from '../connection.js';
 import type { CreditBalance } from '../types/index.js';
 
+type CreditBalanceRow = {
+  id: number;
+  account_id: number;
+  balance: number;
+  lifetime_credits: number;
+  created_at: Date;
+  updated_at: Date;
+};
+
+function mapBalanceRow(row: CreditBalanceRow): CreditBalance {
+  return {
+    id: row.id,
+    accountId: row.account_id,
+    balance: row.balance,
+    lifetimeCredits: row.lifetime_credits,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 export class CreditsRepository {
   // -----------------------------------------------------------------------
   // Balance
@@ -17,19 +37,19 @@ export class CreditsRepository {
    * Returns a zero balance if no row exists yet.
    */
   async getBalance(accountId: number): Promise<CreditBalance> {
-    const result = await queryWithRetry<CreditBalance>('SELECT * FROM credit_balances WHERE account_id = $1', [
+    const result = await queryWithRetry<CreditBalanceRow>('SELECT * FROM credit_balances WHERE account_id = $1', [
       accountId,
     ]);
-    if (result.rows[0]) return result.rows[0];
+    if (result.rows[0]) return mapBalanceRow(result.rows[0]);
 
     // Create an initial zero-balance row
-    const inserted = await queryWithRetry<CreditBalance>(
+    const inserted = await queryWithRetry<CreditBalanceRow>(
       `INSERT INTO credit_balances (account_id, balance, lifetime_credits)
        VALUES ($1, 0, 0)
        RETURNING *`,
       [accountId],
     );
-    return inserted.rows[0];
+    return mapBalanceRow(inserted.rows[0]);
   }
 
   // -----------------------------------------------------------------------

@@ -3,8 +3,8 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const mockQuery = vi.fn();
-vi.mock('../../db/connection.js', () => ({ queryWithRetry: mockQuery }));
+const { mockQuery, mockClosePool } = vi.hoisted(() => ({ mockQuery: vi.fn(), mockClosePool: vi.fn() }));
+vi.mock('../../db/connection.js', () => ({ queryWithRetry: mockQuery, closePool: mockClosePool }));
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
@@ -83,14 +83,9 @@ describe('storage/postgres', () => {
   });
 
   it('closes the pool', async () => {
-    vi.mock('../../db/connection.js', () => ({
-      queryWithRetry: mockQuery,
-      closePool: vi.fn(),
-    }));
     const mod = await import('../../storage/postgres/index.js');
     const storage = new mod.PostgresStorage();
     await storage.close();
-    const { closePool } = await import('../../db/connection.js');
-    expect(closePool).toHaveBeenCalled();
+    expect(mockClosePool).toHaveBeenCalled();
   });
 });

@@ -11,10 +11,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { sampleAgentResult } from '../fixtures.js';
 
 // Mutable mock config so tests can flip the footer toggle at runtime.
-// The factory may only reference variables prefixed with `mock`.
-const mockConfig = {
-  stas: { botName: 'STAS', poweredByFooterEnabled: true },
-};
+// vi.hoisted keeps the object available inside the hoisted vi.mock factory.
+const { mockConfig } = vi.hoisted(() => ({
+  mockConfig: {
+    stas: { botName: 'STAS', poweredByFooterEnabled: true },
+  },
+}));
 
 vi.mock('../../config.js', () => ({
   config: mockConfig,

@@ -9,6 +9,7 @@ import { gitHubWebhookRepository } from '../db/repositories/GitHubWebhookReposit
 import { gitHubOAuthRepository } from '../db/repositories/GitHubOAuthRepository.js';
 import { decrypt } from '../utils/encryption.js';
 import { rootLogger } from '../utils/logger.js';
+import { getInstallationToken } from '../github/auth.js';
 
 const log = rootLogger.child({ module: 'github-routes' });
 const router: Router = Router();

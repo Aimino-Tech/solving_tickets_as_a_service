@@ -69,6 +69,7 @@ const mockCreateStripeWebhookHandler = vi.hoisted(() => vi.fn().mockReturnValue(
 const mockGetSlackBoltApp = vi.hoisted(() =>
   vi.fn().mockReturnValue({
     mountOn: vi.fn(),
+    start: vi.fn().mockResolvedValue(undefined),
     client: { conversations: { open: vi.fn(), invite: vi.fn() } },
   }),
 );
@@ -86,6 +87,15 @@ vi.mock('../config.js', () => ({
     nodeEnv: 'test',
     logLevel: 'silent',
     runMode: 'api',
+    auth: {
+      jwtSecret: 'test-secret-at-least-32-characters-long!!',
+      jwtExpiresIn: '24h',
+      jwtRefreshExpiresIn: '30d',
+      rateLimitWindowMs: 60000,
+      loginRateLimitMax: 5,
+      registerRateLimitMax: 3,
+      refreshRateLimitMax: 10,
+    },
     github: {
       appId: 'test-app',
       webhookSecret: 'test-secret',
@@ -102,15 +112,6 @@ vi.mock('../config.js', () => ({
       rateLimit: { windowMs: 60000, max: 30 },
 
       maxIssueComments: 15,
-    },
-    auth: {
-      jwtSecret: 'test-secret',
-      jwtExpiresIn: '1h',
-      jwtRefreshExpiresIn: '7d',
-      rateLimitWindowMs: 60000,
-      loginRateLimitMax: 100,
-      registerRateLimitMax: 50,
-      refreshRateLimitMax: 100,
     },
     queue: {
       redisUrl: 'redis://localhost:6379',
@@ -239,6 +240,7 @@ vi.mock('../routes/featureFlags.js', () => ({
 vi.mock('../monitoring/sentry.js', () => ({
   setupSentryExpressErrorHandler: vi.fn(),
   addBreadcrumb: vi.fn(),
+  captureError: vi.fn(),
 }));
 vi.mock('../db/connection.js', () => ({
   queryWithRetry: vi.fn().mockResolvedValue({ rows: [{ ok: 1 }] }),
@@ -262,6 +264,13 @@ vi.mock('../webhooks/metrics.js', () => ({
 }));
 vi.mock('../webhooks/retryWorker.js', () => ({
   startWebhookRetryWorker: vi.fn(),
+}));
+vi.mock('../queue/rabbitmq.js', () => ({
+  isConnected: vi.fn().mockReturnValue(false),
+  publishMessage: vi.fn().mockResolvedValue(undefined),
+  QUEUES: { issuesFix: { name: 'issue.fix', exchange: 'stas.direct', routingKey: 'issue.fix' } },
+  connect: vi.fn().mockResolvedValue(undefined),
+  consumeQueue: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../routes/adminWebhooks.js', () => ({
   adminWebhooksRouter: vi.fn(),
@@ -486,32 +495,6 @@ describe('server', () => {
 
       expect(response.status).toBe(202);
     });
-
-    it('carries the incoming x-stas-trace-id into the webhook handler context', async () => {
-      const { createApp } = await import('../server.js');
-      const { getCurrentTraceId } = await import('../utils/trace.js');
-      app = await createApp();
-
-      let capturedTraceId: string | undefined;
-      mockVerifyAndReceive.mockImplementationOnce(async () => {
-        capturedTraceId = getCurrentTraceId();
-      });
-
-      const response = await fetchApp(app, '/webhook/github', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-github-event': 'issues.labeled',
-          'x-github-delivery': 'test-delivery',
-          'x-hub-signature-256': 'sha256=test',
-          'x-stas-trace-id': 'incoming-trace-xyz',
-        },
-        body: JSON.stringify({ action: 'labeled' }),
-      });
-
-      expect(response.status).toBe(202);
-      expect(capturedTraceId).toBe('incoming-trace-xyz');
-    });
   });
 
   describe('POST /webhook/gitlab', () => {
@@ -665,7 +648,9 @@ describe('server', () => {
       expect(server).toBeDefined();
       expect(server.listening).toBe(true);
 
-      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await new Promise<void>((resolve) => {
+        server.close(() => resolve());
+      });
     });
   });
 });

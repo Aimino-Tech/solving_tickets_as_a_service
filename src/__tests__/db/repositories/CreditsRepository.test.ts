@@ -51,8 +51,9 @@ describe('CreditsRepository', () => {
 
   describe('getBalance', () => {
     it('returns existing balance when row found', async () => {
-      const expected = { id: 1, accountId: 42, balance: 500, lifetimeCredits: 1000, createdAt: new Date(), updatedAt: new Date() };
-      mockQueryWithRetry.mockResolvedValue({ rows: [expected] });
+      const row = { id: 1, account_id: 42, balance: 500, lifetime_credits: 1000, created_at: new Date(), updated_at: new Date() };
+      const expected = { id: 1, accountId: 42, balance: 500, lifetimeCredits: 1000, createdAt: row.created_at, updatedAt: row.updated_at };
+      mockQueryWithRetry.mockResolvedValue({ rows: [row] });
 
       const result = await repo.getBalance(42);
       expect(result).toEqual(expected);
@@ -63,11 +64,10 @@ describe('CreditsRepository', () => {
     });
 
     it('creates zero-balance row when none exists', async () => {
+      const row = { id: 1, account_id: 42, balance: 0, lifetime_credits: 0, created_at: new Date(), updated_at: new Date() };
       mockQueryWithRetry
         .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [{ id: 1, accountId: 42, balance: 0, lifetimeCredits: 0, createdAt: new Date(), updatedAt: new Date() }],
-        });
+        .mockResolvedValueOnce({ rows: [row] });
 
       const result = await repo.getBalance(42);
       expect(result.balance).toBe(0);

@@ -7,6 +7,14 @@ vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
 
+vi.mock('../../config.js', () => ({
+  config: {
+    trackers: {
+      linear: { apiKey: 'lin_api_test', webhookSecret: 'secret', teamId: 'TEAM' },
+    },
+  },
+}));
+
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 

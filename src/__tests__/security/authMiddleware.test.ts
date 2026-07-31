@@ -78,7 +78,7 @@ describe('security/authMiddleware', () => {
       auth.requireAuth(req, res, next);
       expect(next).toHaveBeenCalled();
       expect(req.user).toBeDefined();
-      expect(req.user!.id).toBe(1);
+      expect(req.user!.id).toBe('1');
       expect(req.user!.email).toBe('test@test.com');
     });
   });

@@ -208,7 +208,8 @@ describe('migration file integrity', () => {
 // 2. Database-backed migration lifecycle tests
 // ---------------------------------------------------------------------------
 
-describe('migration lifecycle (database)', () => {
+// Database-backed lifecycle tests need a real PostgreSQL instance via DATABASE_URL.
+describe.skipIf(!process.env.DATABASE_URL)('migration lifecycle (database)', () => {
   beforeAll(async () => {
     testDb = await createTestDb();
   });

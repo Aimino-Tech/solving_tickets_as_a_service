@@ -154,6 +154,15 @@ const UsageSchema = z.object({
 creditRouter.get('/credits/balance', async (req: Request, res: Response) => {
   const accountId = await getAccountId(req);
 
+  // Not authenticated at all → 401
+  if (!accountId && !req.user) {
+    res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Authentication required. Provide x-account-id header or valid JWT token.',
+    });
+    return;
+  }
+
   // Return zero balance if user is authenticated but has no account record yet
   if (!accountId) {
     res.json({ accountId: 0, balance: 0, lifetimeCredits: 0 });
@@ -163,9 +172,9 @@ creditRouter.get('/credits/balance', async (req: Request, res: Response) => {
   try {
     const balance = await creditsRepository.getBalance(accountId);
     res.json({
-      accountId: balance.account_id ?? balance.accountId,
+      accountId: balance.accountId,
       balance: balance.balance,
-      lifetimeCredits: balance.lifetime_credits ?? balance.lifetimeCredits,
+      lifetimeCredits: balance.lifetimeCredits,
     });
   } catch (err) {
     log.error({ err: String(err), accountId }, 'Failed to fetch credit balance');

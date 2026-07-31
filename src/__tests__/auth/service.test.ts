@@ -52,12 +52,12 @@ describe('AuthService', () => {
       expect(mockCreateUser).toHaveBeenCalledWith({
         email: 'test@test.com',
         password: 'ValidP@ss1',
-        email_confirm: true,
-        user_metadata: { name: 'Test' },
+        email_confirm: false,
+        user_metadata: { name: 'Test', email_verified: false },
       });
       expect(result.token).toBe('access-token');
       expect(result.refreshToken).toBe('access-token');
-      expect(result.user).toEqual({ id: 'user-1', email: 'test@test.com', name: 'Test' });
+      expect(result.user).toEqual({ id: 'user-1', email: 'test@test.com', emailVerified: false, name: 'Test' });
     });
 
     it('creates user without name and returns tokens', async () => {
@@ -108,7 +108,7 @@ describe('AuthService', () => {
       const result = await service.login('test@test.com', 'ValidP@ss1');
 
       expect(mockSignInWithPassword).toHaveBeenCalledWith({ email: 'test@test.com', password: 'ValidP@ss1' });
-      expect(result.user).toEqual({ id: 'user-1', email: 'test@test.com', name: 'Test' });
+      expect(result.user).toEqual({ id: 'user-1', email: 'test@test.com', emailVerified: false, name: 'Test' });
     });
 
     it('returns user with null name when no user_metadata name', async () => {
@@ -216,7 +216,7 @@ describe('AuthService', () => {
       expect(jwtSign).toHaveBeenCalledTimes(2);
       expect(result.token).toBe('access-token');
       expect(result.refreshToken).toBe('refresh-token');
-      expect(result.user).toEqual({ id: 'user-1', email: 'test@test.com', name: 'Test' });
+      expect(result.user).toEqual({ id: 'user-1', email: 'test@test.com', emailVerified: false, name: 'Test' });
     });
 
     it('uses correct JWT payload', () => {

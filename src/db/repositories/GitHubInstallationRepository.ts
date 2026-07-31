@@ -22,7 +22,7 @@ export class GitHubInstallationRepository {
     return result.rows[0];
   }
 
-  async findByUserId(userId: number): Promise<GitHubInstallation[]> {
+  async findByUserId(userId: string): Promise<GitHubInstallation[]> {
     const result = await queryWithRetry<GitHubInstallation>(
       `SELECT id, user_id, installation_id, account_login, account_type,
               repo_scope, avatar_url, repos_json, created_at, updated_at

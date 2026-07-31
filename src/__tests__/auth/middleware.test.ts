@@ -21,7 +21,7 @@ describe('auth/middleware', () => {
       const next = vi.fn();
       mod.requireAuth(req, res, next);
       expect(mockVerifyToken).toHaveBeenCalledWith('valid.jwt.token');
-      expect(req.user).toEqual({ id: 42, email: 'test@test.com' });
+      expect(req.user).toEqual({ id: '42', email: 'test@test.com' });
       expect(next).toHaveBeenCalled();
     });
 
@@ -45,6 +45,7 @@ describe('auth/middleware', () => {
     });
 
     it('returns 401 when Bearer token is empty', () => {
+      mockVerifyToken.mockImplementation(() => { throw new Error('invalid token'); });
       const req = { headers: { authorization: 'Bearer ' } } as any;
       const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
       const next = vi.fn();
@@ -91,7 +92,7 @@ describe('auth/middleware', () => {
       const res = {} as any;
       const next = vi.fn();
       mod.optionalAuth(req, res, next);
-      expect(req.user).toEqual({ id: 7, email: 'user@test.com' });
+      expect(req.user).toEqual({ id: '7', email: 'user@test.com' });
       expect(next).toHaveBeenCalled();
     });
 

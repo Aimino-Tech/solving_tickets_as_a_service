@@ -23,7 +23,7 @@
     "dev": "tsx watch src/index.ts",
     "dev:api": "RUN_MODE=api tsx watch src/index.ts",
     "dev:worker": "RUN_MODE=worker tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "npm run build -w @stas/github-client && tsc",
     "start": "node dist/src/index.js",
     "start:api": "RUN_MODE=api node dist/src/index.js",
     "start:worker": "RUN_MODE=worker node dist/src/index.js",
