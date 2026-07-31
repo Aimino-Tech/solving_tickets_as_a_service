@@ -76,6 +76,7 @@ export class ChatPod {
   private memory: SessionMemory = emptySessionMemory();
   private state: Record<string, unknown> = { transcript: [] };
   private processing = false;
+  private replyStreamed = false;
   private readonly pending: GatewayToPodMessage[] = [];
   private closed = false;
 
@@ -92,6 +93,10 @@ export class ChatPod {
     this.threadTs = deps.threadTs;
     this.channelId = deps.channelId;
     this.now = deps.now ?? (() => new Date().toISOString());
+    if (this.bridge) {
+      this.bridge.onStatus((m) => this.postToThread(m.progress, m.traceId));
+      this.bridge.onAnswer((m) => this.postToThread(m.text, m.traceId));
+    }
   }
 
   /** Load the session + memory from the store, then dial out to the gateway. */
@@ -176,6 +181,7 @@ export class ChatPod {
       });
       if (this.bridge) {
         this.bridge.receive({ kind: 'answer', traceId: workTraceId, text: reply });
+        this.replyStreamed = true;
       }
       await this.curateAndCheckpoint(text, reply, workTraceId);
       return reply;
@@ -209,19 +215,34 @@ export class ChatPod {
     this.processing = true;
     try {
       const reply = await this.handleTurn(msg.text);
-      // Reply is posted back to the thread by the caller (ProgressSender / ack).
-      this.transport.sendToGateway({
-        kind: 'pod_message',
-        userId: this.userId,
-        sessionId: this.sessionId,
-        threadTs: msg.threadTs,
-        text: reply,
-      });
+      // Streamed bridge replies are already posted by the status/answer listeners.
+      if (!this.replyStreamed) {
+        this.transport.sendToGateway({
+          kind: 'pod_message',
+          userId: this.userId,
+          sessionId: this.sessionId,
+          threadTs: msg.threadTs,
+          text: reply,
+        });
+      }
     } finally {
       this.processing = false;
+      this.replyStreamed = false;
       const next = this.pending.shift();
       if (next) await this.processDispatch(next);
     }
+  }
+
+  /** Forward a streamed bridge event to the thread as a pod_message. */
+  private postToThread(text: string, ts?: string): void {
+    this.transport.sendToGateway({
+      kind: 'pod_message',
+      userId: this.userId,
+      sessionId: this.sessionId,
+      threadTs: this.threadTs,
+      text,
+      ts,
+    });
   }
 
   private async curateAndCheckpoint(userText: string, reply: string, traceId: string): Promise<void> {
