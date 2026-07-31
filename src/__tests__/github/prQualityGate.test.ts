@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Hoisted mocks
 // ---------------------------------------------------------------------------
 
-const { mockOctokitInstance, mockLoggerChild, mockConfig } = vi.hoisted(() => {
+const { mockOctokitInstance, mockLoggerChild, mockConfig, resetMocks } = vi.hoisted(() => {
   const logger = {
     child: vi.fn(),
     info: vi.fn(),
@@ -41,6 +41,44 @@ const { mockOctokitInstance, mockLoggerChild, mockConfig } = vi.hoisted(() => {
     },
   };
 
+  const collaborators = {
+    data: [
+      { login: 'alice', permissions: { push: true } },
+      { login: 'bob', permissions: { push: true } },
+      { login: 'carol', permissions: { push: false } },
+    ],
+  };
+
+  const octokit = {
+    pulls: {
+      get: vi.fn().mockResolvedValue(stasPr),
+      listReviewComments: vi.fn().mockResolvedValue({ data: [] }),
+      requestReviewers: vi.fn().mockResolvedValue({}),
+    },
+    issues: {
+      createComment: vi.fn().mockResolvedValue({ data: { id: 1 } }),
+    },
+    repos: {
+      listCollaborators: vi.fn().mockResolvedValue(collaborators),
+    },
+    graphql: vi.fn().mockResolvedValue({}),
+  };
+
+  function resetMocks() {
+    octokit.pulls.get.mockReset();
+    octokit.pulls.get.mockResolvedValue(stasPr);
+    octokit.pulls.listReviewComments.mockReset();
+    octokit.pulls.listReviewComments.mockResolvedValue({ data: [] });
+    octokit.pulls.requestReviewers.mockReset();
+    octokit.pulls.requestReviewers.mockResolvedValue({});
+    octokit.issues.createComment.mockReset();
+    octokit.issues.createComment.mockResolvedValue({ data: { id: 1 } });
+    octokit.repos.listCollaborators.mockReset();
+    octokit.repos.listCollaborators.mockResolvedValue(collaborators);
+    octokit.graphql.mockReset();
+    octokit.graphql.mockResolvedValue({});
+  }
+
   return {
     mockConfig: {
       github: {
@@ -51,27 +89,9 @@ const { mockOctokitInstance, mockLoggerChild, mockConfig } = vi.hoisted(() => {
       },
       stas: { label: 'stas:fix' },
     },
-    mockOctokitInstance: {
-      pulls: {
-        get: vi.fn().mockResolvedValue(stasPr),
-        listReviewComments: vi.fn().mockResolvedValue({ data: [] }),
-        requestReviewers: vi.fn().mockResolvedValue({}),
-      },
-      issues: {
-        createComment: vi.fn().mockResolvedValue({ data: { id: 1 } }),
-      },
-      repos: {
-        listCollaborators: vi.fn().mockResolvedValue({
-          data: [
-            { login: 'alice', permissions: { push: true } },
-            { login: 'bob', permissions: { push: true } },
-            { login: 'carol', permissions: { push: false } },
-          ],
-        }),
-      },
-      graphql: vi.fn().mockResolvedValue({}),
-    },
+    mockOctokitInstance: octokit,
     mockLoggerChild: logger,
+    resetMocks,
   };
 });
 
@@ -137,9 +157,21 @@ function checkSuiteCompletedPayload(overrides?: Record<string, unknown>) {
 // Suite
 // ---------------------------------------------------------------------------
 
+const defaultConfig = {
+  github: {
+    autoRequestReview: true,
+    reviewersCount: 2,
+    prQualityGate: true,
+    mergeQueueEnabled: true,
+  },
+  stas: { label: 'stas:fix' },
+};
+
 describe('prQualityGate', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetMocks();
+    Object.assign(mockConfig.github, defaultConfig.github);
+    Object.assign(mockConfig.stas, defaultConfig.stas);
   });
 
   describe('handlePullRequestOpened', () => {
@@ -152,7 +184,12 @@ describe('prQualityGate', () => {
 
     it('does nothing for a non-STAS PR', async () => {
       mockOctokitInstance.pulls.get.mockResolvedValue({
-        data: { body: 'a human-authored PR', state: 'open', user: { login: 'human' }, head: { repo: { owner: { login: 'human' } } } },
+        data: {
+          body: 'a human-authored PR',
+          state: 'open',
+          user: { login: 'human' },
+          head: { repo: { owner: { login: 'another-org' } } },
+        },
       });
 
       await handlePullRequestOpened(mockOctokitInstance as never, prOpenedPayload() as never);
@@ -182,8 +219,8 @@ describe('prQualityGate', () => {
 
       await handlePullRequestOpened(mockOctokitInstance as never, prOpenedPayload() as never);
 
-      const waitingComment = mockOctokitInstance.issues.createComment.mock.calls.find(
-        (c: any[]) => c[0]?.body?.includes?.('waiting for CI checks'),
+      const waitingComment = mockOctokitInstance.issues.createComment.mock.calls.find((c: any[]) =>
+        c[0]?.body?.includes?.('waiting for CI checks'),
       );
       expect(waitingComment).toBeUndefined();
       expect(mockOctokitInstance.pulls.requestReviewers).toHaveBeenCalled();
@@ -238,7 +275,7 @@ describe('prQualityGate', () => {
 
     it('does not re-request when a review comment already exists', async () => {
       mockOctokitInstance.pulls.listReviewComments.mockResolvedValue({
-        data: [{ body: '🔄 **STAS** requested review from: @alice' }],
+        data: [{ body: '🔄 **STAS** Requested review from: @alice' }],
       });
 
       await requestReviewFromCollaborators(mockOctokitInstance as never, 'owner', 'test-repo', 42);
@@ -268,13 +305,19 @@ describe('prQualityGate', () => {
 
   describe('handleCheckSuiteCompleted', () => {
     it('does nothing when check_suite is missing', async () => {
-      await handleCheckSuiteCompleted(mockOctokitInstance as never, checkSuiteCompletedPayload({ check_suite: undefined }) as never);
+      await handleCheckSuiteCompleted(
+        mockOctokitInstance as never,
+        checkSuiteCompletedPayload({ check_suite: undefined }) as never,
+      );
 
       expect(mockOctokitInstance.issues.createComment).not.toHaveBeenCalled();
     });
 
     it('does nothing for non-completed actions', async () => {
-      await handleCheckSuiteCompleted(mockOctokitInstance as never, checkSuiteCompletedPayload({ action: 'requested' }) as never);
+      await handleCheckSuiteCompleted(
+        mockOctokitInstance as never,
+        checkSuiteCompletedPayload({ action: 'requested' }) as never,
+      );
 
       expect(mockOctokitInstance.issues.createComment).not.toHaveBeenCalled();
     });
@@ -282,7 +325,9 @@ describe('prQualityGate', () => {
     it('does nothing when the suite has no pull requests', async () => {
       await handleCheckSuiteCompleted(
         mockOctokitInstance as never,
-        checkSuiteCompletedPayload({ check_suite: { status: 'completed', conclusion: 'success', head_sha: 'abc', pull_requests: [] } }) as never,
+        checkSuiteCompletedPayload({
+          check_suite: { status: 'completed', conclusion: 'success', head_sha: 'abc', pull_requests: [] },
+        }) as never,
       );
 
       expect(mockOctokitInstance.pulls.get).not.toHaveBeenCalled();
@@ -290,7 +335,13 @@ describe('prQualityGate', () => {
 
     it('skips non-STAS PRs', async () => {
       mockOctokitInstance.pulls.get.mockResolvedValue({
-        data: { body: 'human PR', state: 'open', merged: false, user: { login: 'human' }, head: { repo: { owner: { login: 'human' } } } },
+        data: {
+          body: 'human PR',
+          state: 'open',
+          merged: false,
+          user: { login: 'human' },
+          head: { repo: { owner: { login: 'another-org' } } },
+        },
       });
 
       await handleCheckSuiteCompleted(mockOctokitInstance as never, checkSuiteCompletedPayload() as never);
@@ -300,7 +351,13 @@ describe('prQualityGate', () => {
 
     it('skips merged or closed PRs', async () => {
       mockOctokitInstance.pulls.get.mockResolvedValue({
-        data: { body: 'Powered by STAS', state: 'merged', merged: true, user: { login: 'stas-bot' }, head: { repo: { owner: { login: 'stas-bot' } } } },
+        data: {
+          body: 'Powered by STAS',
+          state: 'merged',
+          merged: true,
+          user: { login: 'stas-bot' },
+          head: { repo: { owner: { login: 'stas-bot' } } },
+        },
       });
 
       await handleCheckSuiteCompleted(mockOctokitInstance as never, checkSuiteCompletedPayload() as never);
@@ -335,7 +392,9 @@ describe('prQualityGate', () => {
     it('posts a failed comment on non-success conclusion', async () => {
       await handleCheckSuiteCompleted(
         mockOctokitInstance as never,
-        checkSuiteCompletedPayload({ check_suite: { status: 'completed', conclusion: 'failure', head_sha: 'abc', pull_requests: [{ number: 42 }] } }) as never,
+        checkSuiteCompletedPayload({
+          check_suite: { status: 'completed', conclusion: 'failure', head_sha: 'abc', pull_requests: [{ number: 42 }] },
+        }) as never,
       );
 
       expect(mockOctokitInstance.issues.createComment).toHaveBeenCalledWith(
@@ -353,7 +412,9 @@ describe('prQualityGate', () => {
 
       await handleCheckSuiteCompleted(
         mockOctokitInstance as never,
-        checkSuiteCompletedPayload({ check_suite: { status: 'completed', conclusion: 'failure', head_sha: 'abc', pull_requests: [{ number: 42 }] } }) as never,
+        checkSuiteCompletedPayload({
+          check_suite: { status: 'completed', conclusion: 'failure', head_sha: 'abc', pull_requests: [{ number: 42 }] },
+        }) as never,
       );
 
       expect(mockOctokitInstance.issues.createComment).not.toHaveBeenCalled();
@@ -372,14 +433,27 @@ describe('prQualityGate', () => {
 
     it('continues to the next PR when one PR lookup fails', async () => {
       mockOctokitInstance.pulls.get.mockResolvedValueOnce({
-        data: { body: 'Powered by STAS', state: 'open', merged: false, user: { login: 'stas-bot' }, head: { repo: { owner: { login: 'stas-bot' } } } },
+        data: {
+          body: 'Powered by STAS',
+          state: 'open',
+          merged: false,
+          user: { login: 'stas-bot' },
+          head: { repo: { owner: { login: 'stas-bot' } } },
+        },
       });
       mockOctokitInstance.pulls.listReviewComments.mockRejectedValueOnce(new Error('comments failed'));
 
       await expect(
         handleCheckSuiteCompleted(
           mockOctokitInstance as never,
-          checkSuiteCompletedPayload({ check_suite: { status: 'completed', conclusion: 'success', head_sha: 'abc', pull_requests: [{ number: 42 }, { number: 43 }] } }) as never,
+          checkSuiteCompletedPayload({
+            check_suite: {
+              status: 'completed',
+              conclusion: 'success',
+              head_sha: 'abc',
+              pull_requests: [{ number: 42 }, { number: 43 }],
+            },
+          }) as never,
         ),
       ).resolves.toBeUndefined();
       expect(mockLoggerChild.warn).toHaveBeenCalled();
