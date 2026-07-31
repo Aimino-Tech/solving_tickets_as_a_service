@@ -26,7 +26,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Mocks — hoisted before imports by vitest
 // ---------------------------------------------------------------------------
 
-const { mockLogger } = vi.hoisted(() => {
+const {
+  mockLogger,
+  mockLogWebhookReceived,
+  mockCaptureEvent,
+  mockFindByGithubUserId,
+  mockInstallCreate,
+  mockGetOctokit,
+  mockOctokitInstance,
+} = vi.hoisted(() => {
   const logger = {
     child: vi.fn(),
     info: vi.fn(),
@@ -39,7 +47,20 @@ const { mockLogger } = vi.hoisted(() => {
     level: 'silent',
   };
   logger.child = vi.fn(() => logger);
-  return { mockLogger: logger };
+  return {
+    mockLogger: logger,
+    mockLogWebhookReceived: vi.fn(),
+    mockCaptureEvent: vi.fn(),
+    mockFindByGithubUserId: vi.fn(),
+    mockInstallCreate: vi.fn(),
+    mockGetOctokit: vi.fn(),
+    mockOctokitInstance: {
+      issues: {
+        createLabel: vi.fn(),
+        create: vi.fn(),
+      },
+    },
+  };
 });
 
 vi.mock('../../utils/logger.js', () => ({
@@ -49,6 +70,7 @@ vi.mock('../../utils/logger.js', () => ({
 vi.mock('../../config.js', () => ({
   config: {
     github: { webhookSecret: 'test-secret' },
+    proxy: { dispatchUrl: '' },
     stas: {
       label: 'stas:fix',
       rateLimitWindowMs: 60_000,
@@ -60,7 +82,33 @@ vi.mock('../../config.js', () => ({
   },
 }));
 
+vi.mock(import('../../audit/service.js'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...(actual as object),
+    logWebhookReceived: mockLogWebhookReceived,
+  };
+});
 
+vi.mock('../../analytics/tracker.js', () => ({
+  captureEvent: mockCaptureEvent,
+}));
+
+vi.mock('../../db/repositories/GitHubOAuthRepository.js', () => ({
+  gitHubOAuthRepository: {
+    findByGithubUserId: mockFindByGithubUserId,
+  },
+}));
+
+vi.mock('../../db/repositories/GitHubInstallationRepository.js', () => ({
+  gitHubInstallationRepository: {
+    create: mockInstallCreate,
+  },
+}));
+
+vi.mock('../../github/auth.js', () => ({
+  getOctokit: mockGetOctokit,
+}));
 
 // ---------------------------------------------------------------------------
 // Imports (after mocks)
@@ -84,6 +132,18 @@ describe('createGithubWebhooks', () => {
     vi.clearAllMocks();
     mockEnqueue.mockClear();
     mockEnqueue.mockResolvedValue('job-mock-id');
+    mockLogWebhookReceived.mockResolvedValue(undefined);
+    mockCaptureEvent.mockResolvedValue(undefined);
+    mockFindByGithubUserId.mockResolvedValue({ userId: 'oauth-user-1' });
+    mockInstallCreate.mockResolvedValue({
+      userId: 'oauth-user-1',
+      installationId: 555,
+      accountLogin: 'acme-corp',
+      accountType: 'Organization',
+    });
+    mockGetOctokit.mockResolvedValue(mockOctokitInstance);
+    mockOctokitInstance.issues.createLabel.mockResolvedValue({ data: {} });
+    mockOctokitInstance.issues.create.mockResolvedValue({ data: { number: 123 } });
   });
 
   describe('issues.labeled' as any, () => {
@@ -471,6 +531,130 @@ describe('createGithubWebhooks', () => {
         2,
         expect.objectContaining({ installationId: 555, repoOwner: 'owner', repoName: 'test-repo', issueNumber: 42 }),
       );
+    });
+  });
+
+  describe('installation.created' as any, () => {
+    const installationCreatedPayload = {
+      installation: { id: 555, account: { login: 'acme-corp', type: 'Organization' } },
+      repositories: [
+        { name: 'repo-a', owner: { login: 'acme-corp' } },
+        { name: 'repo-b', owner: { login: 'acme-corp' } },
+      ],
+      sender: { id: 12345, login: 'testuser' },
+    };
+
+    it('creates a welcome issue for each repository in the installation', async () => {
+      const webhooks = createGithubWebhooks(mockEnqueue);
+
+      await webhooks.receive({
+        id: 'test-14',
+        name: 'installation.created' as any,
+        payload: installationCreatedPayload as any,
+      });
+
+      expect(mockGetOctokit).toHaveBeenCalledTimes(2);
+      expect(mockGetOctokit).toHaveBeenCalledWith(555);
+      expect(mockOctokitInstance.issues.createLabel).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: 'acme-corp',
+          repo: 'repo-a',
+          name: 'stas:fix',
+          color: '0366d6',
+        }),
+      );
+      expect(mockOctokitInstance.issues.create).toHaveBeenCalledTimes(2);
+      expect(mockOctokitInstance.issues.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: 'acme-corp',
+          repo: 'repo-a',
+          title: "Welcome to STAS — let's fix your first issue",
+          labels: ['stas:fix'],
+        }),
+      );
+      expect(mockCaptureEvent).toHaveBeenCalledWith(
+        'welcome_issue_created',
+        '555',
+        expect.objectContaining({ repo: 'acme-corp/repo-a', issueNumber: 123 }),
+      );
+    });
+
+    it('persists the installation and links the OAuth user', async () => {
+      const webhooks = createGithubWebhooks(mockEnqueue);
+
+      await webhooks.receive({
+        id: 'test-15',
+        name: 'installation.created' as any,
+        payload: installationCreatedPayload as any,
+      });
+
+      expect(mockFindByGithubUserId).toHaveBeenCalledWith(12345);
+      expect(mockInstallCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'oauth-user-1',
+          installationId: 555,
+          accountLogin: 'acme-corp',
+          accountType: 'Organization',
+          repoScope: 'selected',
+        }),
+      );
+      expect(mockInstallCreate.mock.calls[0]?.[0]).toEqual(
+        expect.objectContaining({
+          reposJson: [
+            { name: 'repo-a', owner: 'acme-corp', fullName: 'acme-corp/repo-a', private: false, stasInstalled: false },
+            { name: 'repo-b', owner: 'acme-corp', fullName: 'acme-corp/repo-b', private: false, stasInstalled: false },
+          ],
+        }),
+      );
+    });
+
+    it('logs a warning and returns early when installation id is missing', async () => {
+      const webhooks = createGithubWebhooks(mockEnqueue);
+
+      await webhooks.receive({
+        id: 'test-16',
+        name: 'installation.created' as any,
+        payload: { repositories: [], sender: { id: 1, login: 'x' } } as any,
+      });
+
+      expect(mockLogger.warn).toHaveBeenCalledWith('Installation created event without installation ID');
+      expect(mockGetOctokit).not.toHaveBeenCalled();
+      expect(mockInstallCreate).not.toHaveBeenCalled();
+    });
+
+    it('swallows 422 when ensuring the STAS label and still creates the issue', async () => {
+      const webhooks = createGithubWebhooks(mockEnqueue);
+      const labelErr = Object.assign(new Error('already exists'), { status: 422 });
+      mockOctokitInstance.issues.createLabel.mockRejectedValueOnce(labelErr);
+
+      await webhooks.receive({
+        id: 'test-17',
+        name: 'installation.created' as any,
+        payload: installationCreatedPayload as any,
+      });
+
+      expect(mockOctokitInstance.issues.create).toHaveBeenCalledTimes(2);
+      expect(mockLogger.warn).not.toHaveBeenCalledWith(
+        expect.objectContaining({ err: 'Error: already exists' }),
+        'Could not ensure STAS label exists',
+      );
+    });
+
+    it('treats a welcome issue failure as non-fatal and keeps the installation', async () => {
+      const webhooks = createGithubWebhooks(mockEnqueue);
+      mockOctokitInstance.issues.create.mockRejectedValueOnce(new Error('boom'));
+
+      await webhooks.receive({
+        id: 'test-18',
+        name: 'installation.created' as any,
+        payload: installationCreatedPayload as any,
+      });
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ err: 'Error: boom' }),
+        'Failed to create welcome issue',
+      );
+      expect(mockInstallCreate).toHaveBeenCalledTimes(1);
     });
   });
 });
