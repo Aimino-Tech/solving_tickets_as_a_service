@@ -214,11 +214,14 @@ Before submitting to Marketplace, ensure the following URLs are live and linked 
 - **Privacy policy URL:** `https://stas.aimino.io/privacy`
 - **Terms of service URL:** `https://stas.aimino.io/terms`
 
-> ✅ Privacy policy and ToS pages are now created at `website/privacy.html` and `website/terms.html`. Deploy the website to make them live at `stas.aimino.io/privacy` and `stas.aimino.io/terms`.
+> ✅ Privacy policy and ToS pages are now created at `website/privacy.html` and `website/terms.html`.
+> ⚠️ **Not yet live** — the website has never deployed (`stas.aimino.io` currently returns NXDOMAIN, the `FLY_API_TOKEN` repo secret is missing, and GitHub org billing blocks Actions). Follow [docs/marketplace/submission-runbook.md](docs/marketplace/submission-runbook.md) **Phase A** to unblock, then verify with `bash scripts/check-marketplace-live.sh`.
 
 ---
 
 ## Submission Checklist
+
+> Execution order and owners for the open items: [docs/marketplace/submission-runbook.md](docs/marketplace/submission-runbook.md).
 
 - [x] App name and short description written (≤180 chars)
 - [x] Full description written and reviewed (≤1,000 chars)
@@ -227,7 +230,7 @@ Before submitting to Marketplace, ensure the following URLs are live and linked 
 - [ ] Screenshot(s) prepared (1280×640 PNG, ≤2MB)
 - [ ] Demo GIF recorded (optional, 30-45s, ≤10MB)
 - [ ] Pricing plan configured in GitHub Marketplace billing UI
-- [x] Privacy policy URL configured (https://stas.aimino.io/privacy)
-- [x] Terms of service URL configured (https://stas.aimino.io/terms)
-- [ ] Verified Publisher badge obtained (see [GitHub docs](https://docs.github.com/en/apps/github-marketplace/github-marketplace-overview/applying-for-publisher-verification-for-your-organization))
+- [ ] Privacy policy URL live at `https://stas.aimino.io/privacy` (see runbook Phase A, verify with `scripts/check-marketplace-live.sh`)
+- [ ] Terms of service URL live at `https://stas.aimino.io/terms` (see runbook Phase A, verify with `scripts/check-marketplace-live.sh`)
+- [ ] Verified Publisher badge obtained (see [GitHub docs](https://docs.github.com/en/apps/github-marketplace/github-marketplace-overview/applying-for-publisher-verification-for-your-organization)) and [verified-publisher-guide.md](docs/marketplace/verified-publisher-guide.md)
 - [ ] App public page reviewed at `https://github.com/marketplace` after publishing
