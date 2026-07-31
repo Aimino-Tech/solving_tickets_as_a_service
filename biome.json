@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.1/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
   "files": {
     "includes": ["**", "!**/node_modules", "!**/dist", "!**/build", "!**/plugin"]
   },
@@ -13,16 +13,21 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended",
+      "a11y": {
+        "recommended": true
+      },
       "style": {
+        "recommended": true,
         "noNonNullAssertion": "off",
         "useConst": "error"
       },
       "complexity": {
+        "recommended": true,
         "noBannedTypes": "off",
         "noForEach": "off"
       },
       "suspicious": {
+        "recommended": true,
         "noExplicitAny": "error",
         "noConsole": {
           "level": "off",
@@ -32,7 +37,14 @@
         }
       },
       "correctness": {
+        "recommended": true,
         "noUnusedVariables": "error"
+      },
+      "performance": {
+        "recommended": true
+      },
+      "security": {
+        "recommended": true
       }
     }
   },
