@@ -23,7 +23,7 @@ For the app listing copy and visual asset preparation, see [docs/marketplace-lis
   - [ ] Screenshot of the action running in a workflow
   - [ ] Dashboard screenshot (if available)
 - [ ] **Files required by Marketplace**:
-  - [ ] `LICENSE` — MIT License included
+  - [ ] `LICENSE` — GNU Affero General Public License v3.0 (AGPL-3.0) included
   - [ ] `CODE_OF_CONDUCT.md` — Contributor Covenant
   - [ ] `CONTRIBUTING.md` — Contribution guidelines
 - [ ] **Action metadata**: `action.yml` with branding, inputs, outputs
