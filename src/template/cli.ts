@@ -332,6 +332,7 @@ ${b("stas")} — Template validation, dry-run, and quickstart onboarding tool
 ${b("USAGE")}
   stas template validate [options]
   stas template dry-run [options]
+  stas quickstart
   stas install-hook
   stas quickstart [--skip-prompts]
 
@@ -345,6 +346,8 @@ ${b("COMMANDS")}
     ${d("--input <path>")}      JSON payload file (use "-" for stdin)
     ${d("--dir <path>")}        Template directory (default: .stas/templates/)
     ${d("--format <type>")}     Output format: tty (default) | json
+
+  ${b("quickstart")}            Show the fastest way to install STAS for your env
 
   ${b("install-hook")}          Install git pre-commit hook for template validation
 
