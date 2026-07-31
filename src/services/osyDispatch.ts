@@ -1,4 +1,6 @@
 import { config } from '../config.js';
+import type { AccountTier, TaskComplexity } from '../proxy/modelRouter.js';
+import { modelRouter } from '../proxy/modelRouter.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'osy-dispatch' });
@@ -19,6 +21,10 @@ export interface IssueDispatchPayload {
   labels: string[];
   /** Optional trace ID for cross-system log correlation. */
   traceId?: string;
+  /** Account tier for model routing (two-phase Haiku/Sonnet model). */
+  accountTier?: AccountTier;
+  /** Task complexity for model routing. */
+  complexity?: TaskComplexity;
 }
 
 function getDispatchUrl(): string | undefined {
@@ -40,7 +46,19 @@ export async function dispatchIssueToOsy(payload: IssueDispatchPayload): Promise
     };
     if (payload.traceId) {
       headers['x-stas-trace-id'] = payload.traceId;
-      headers['traceparent'] = `00-${payload.traceId.replace(/-/g, '')}-${payload.traceId.slice(0, 16)}-01`;
+      headers.traceparent = `00-${payload.traceId.replace(/-/g, '')}-${payload.traceId.slice(0, 16)}-01`;
+    }
+    let model: string | undefined;
+    if (config.proxy?.modelRouterEnabled) {
+      try {
+        const selection = await modelRouter.selectModel({
+          complexity: payload.complexity ?? 'fix',
+          accountTier: payload.accountTier ?? 'free',
+        });
+        model = selection.model;
+      } catch (err) {
+        log.warn({ err: String(err) }, 'Model router selection failed — using default model');
+      }
     }
     const response = await fetch(url, {
       method: 'POST',
@@ -53,6 +71,7 @@ export async function dispatchIssueToOsy(payload: IssueDispatchPayload): Promise
         body: payload.issueBody,
         labels: payload.labels,
         installation_id: payload.installationId,
+        model,
       }),
     });
 
@@ -62,7 +81,7 @@ export async function dispatchIssueToOsy(payload: IssueDispatchPayload): Promise
       return { success: false, error: `HTTP ${response.status}: ${text}` };
     }
 
-    const result = await response.json() as { run_id?: string };
+    const result = (await response.json()) as { run_id?: string };
     log.info({ runId: result.run_id }, 'OS dispatch succeeded');
     return { success: true, runId: result.run_id };
   } catch (err) {
@@ -83,7 +102,7 @@ export async function getRunStatus(runId: string): Promise<{ status: string; prU
     });
 
     if (!response.ok) return null;
-    return await response.json() as { status: string; prUrl?: string };
+    return (await response.json()) as { status: string; prUrl?: string };
   } catch {
     return null;
   }
