@@ -16,6 +16,22 @@ const BOT_NAME = config.stas.botName;
 export const BOT_SIGNATURE = `> — ${BOT_NAME} 🤖`;
 
 /**
+ * Render the "Powered by STAS" footer with a trackable source ref.
+ *
+ * Gated behind the `STAS_POWERED_BY_FOOTER` config toggle so white-label /
+ * enterprise deployments can opt out. The `?ref=` query param (not a full
+ * UTM string) attributes visits to a placement — e.g. `pr-footer` for PR
+ * bodies, `pr-comment` for issue comments — and feeds PostHog link tracking.
+ *
+ * @param ref Placement source used in the tracking link (`?ref=<ref>`)
+ * @returns Markdown footer, or an empty string when disabled
+ */
+export function poweredByFooter(ref: string): string {
+  if (!config.stas.poweredByFooterEnabled) return '';
+  return `---\n\n_Powered by [STAS](https://stas.aimino.io/?ref=${ref}) — AI code review & fix automation_`;
+}
+
+/**
  * High-confidence fix — PR is ready for review (non-draft).
  *
  * @param prUrl   Platform-specific URL to the PR/MR
@@ -40,6 +56,8 @@ export function highConfidenceIssueComment(prNumber: number, result: AgentResult
     '',
     'Please review and merge at your convenience.',
     BOT_SIGNATURE,
+    '',
+    poweredByFooter('pr-comment'),
   ]
     .filter(Boolean)
     .join('\n');
@@ -64,6 +82,8 @@ export function draftIssueComment(prNumber: number, result: AgentResult): string
     '',
     'Please review the draft, make any needed changes, and mark it ready for review.',
     BOT_SIGNATURE,
+    '',
+    poweredByFooter('pr-comment'),
   ]
     .filter(Boolean)
     .join('\n');
@@ -617,10 +637,7 @@ export function buildPRBody(params: {
         ]
       : []),
     `_🤖 Automated fix by ${BOT_NAME}_`,
-    '',
-    '---',
-    '',
-    `[![STAS](https://img.shields.io/badge/fix-powered_by_STAS-8250DF)](https://stas.aimino.ai?utm_source=github&utm_medium=pr-footer&utm_campaign=aim-4215) — [Add STAS to your repo](https://github.com/apps/${config.github.appId}/installations/new?utm_source=github&utm_medium=pr-footer&utm_campaign=aim-4215)`,
+    ...(poweredByFooter('pr-footer') ? ['', poweredByFooter('pr-footer')] : []),
   ].join('\n');
 }
 

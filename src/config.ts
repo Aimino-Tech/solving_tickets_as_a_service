@@ -69,6 +69,7 @@ const envSchema = z.object({
 
   STAS_DEFAULT_TIER: z.enum(["free", "pro", "enterprise"]).default("free"),
   STAS_MONTHLY_QUOTA_ENABLED: boolSchema(true),
+  STAS_POWERED_BY_FOOTER: boolSchema(true),
   STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
 	  STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
@@ -555,6 +556,7 @@ function buildConfig(env: ParsedEnv) {
       queueDlqNotifyAt: env.QUEUE_DLQ_NOTIFY_AT,
       defaultTier: env.STAS_DEFAULT_TIER,
       monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
+      poweredByFooterEnabled: env.STAS_POWERED_BY_FOOTER,
     },
 
     postgres: {
