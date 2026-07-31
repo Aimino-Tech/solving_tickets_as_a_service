@@ -10,91 +10,7 @@ RUN rm -f /etc/nginx/conf.d/default.conf && \
     rm -rf /usr/share/nginx/html/*
 
 # Custom nginx configuration
-COPY <<'NGINX' /etc/nginx/nginx.conf
-user nginx;
-worker_processes auto;
-error_log /var/log/nginx/error.log warn;
-pid /var/run/nginx.pid;
-
-events {
-  worker_connections 1024;
-  multi_accept on;
-}
-
-http {
-  include       /etc/nginx/mime.types;
-  default_type  application/octet-stream;
-
-  # Security headers
-  add_header X-Content-Type-Options "nosniff" always;
-  add_header X-Frame-Options "DENY" always;
-  add_header X-XSS-Protection "1; mode=block" always;
-  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-  add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
-
-  # Remove nginx version
-  server_tokens off;
-
-  # Performance
-  sendfile on;
-  tcp_nopush on;
-  tcp_nodelay on;
-  keepalive_timeout 65;
-
-  # Gzip
-  gzip on;
-  gzip_vary on;
-  gzip_proxied any;
-  gzip_comp_level 6;
-  gzip_min_length 256;
-  gzip_types
-    text/plain
-    text/css
-    text/javascript
-    application/javascript
-    application/json
-    image/svg+xml
-    image/x-icon;
-
-  # Rate limiting
-  limit_req_zone $binary_remote_addr zone=website:10m rate=30r/s;
-
-  server {
-    listen 80;
-    server_name _;
-    root /usr/share/nginx/html;
-    index index.html;
-
-    # HSTS
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
-    # Rate limit
-    limit_req zone=website burst=50 nodelay;
-
-    # Main route — try .html extension, fallback to index
-    location / {
-      try_files $uri $uri/ $uri.html /404.html;
-      add_header Cache-Control "public, max-age=0, must-revalidate";
-    }
-
-    # Static assets with long cache
-    location /css/ { expires 1y; add_header Cache-Control "public, immutable"; }
-    location /js/  { expires 1y; add_header Cache-Control "public, immutable"; }
-    location /img/ { expires 1y; add_header Cache-Control "public, immutable"; }
-
-    # SEO files
-    location = /robots.txt  { expires 1d; add_header Cache-Control "public, must-revalidate"; }
-    location = /sitemap.xml { expires 1d; add_header Cache-Control "public, must-revalidate"; }
-
-    # Deny hidden files
-    location ~ /\. { deny all; access_log off; log_not_found off; }
-
-    # Error pages
-    error_page 404 /404.html;
-    error_page 500 502 503 504 /50x.html;
-  }
-}
-NGINX
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy website files
 COPY . /usr/share/nginx/html/
@@ -108,7 +24,7 @@ EXPOSE 80
 STOPSIGNAL SIGTERM
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -qO- http://localhost:80/ || exit 1
+  CMD wget -qO- http://127.0.0.1:80/ || exit 1
 
 LABEL maintainer="STAS Team"
 LABEL description="STAS Production Website — stas.aimino.io"
