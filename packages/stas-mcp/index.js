@@ -1,23 +1,28 @@
 #!/usr/bin/env node
+import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// Resolve the Python module: vendored copy ships inside the npm tarball;
+// fall back to the monorepo checkout when running from the repo directly.
+const projectRoot = resolve(__dirname, '../..');
+const vendoredRoot = __dirname;
+const serverPath = resolve(vendoredRoot, 'stas_mcp/server.py');
+const pythonRoot = existsSync(serverPath) ? vendoredRoot : projectRoot;
+
 function main() {
   const args = process.argv.slice(2);
   const mode = args[0] || 'stdio';
 
-  const projectRoot = resolve(__dirname, '../..');
-  const serverPath = resolve(projectRoot, 'stas_mcp/server.py');
-
   const child = spawn('python3', ['-m', 'stas_mcp.server', mode], {
-    cwd: projectRoot,
+    cwd: pythonRoot,
     stdio: ['inherit', 'inherit', 'inherit'],
     env: {
       ...process.env,
-      PYTHONPATH: projectRoot,
+      PYTHONPATH: pythonRoot,
       STAS_MCP_PORT: process.env.STAS_MCP_PORT || '4095',
     },
   });

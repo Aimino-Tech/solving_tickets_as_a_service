@@ -1,12 +1,19 @@
 {
   "name": "@aimino/stas-mcp",
-  "version": "1.0.0",
-  "description": "MCP server for STAS — Solving Tickets As A Service. Label a GitHub issue and get an automated fix PR.",
+  "version": "1.1.0",
+  "description": "MCP server for STAS — Solving Tickets As A Service. Let agents (opencode, Claude, ...) dispatch fixes, check Linear tickets, read/write agent memory, post to Slack, and resume sessions.",
   "license": "AGPL-3.0-only",
   "type": "module",
   "bin": {
     "stas-mcp": "./index.js"
   },
+  "files": [
+    "index.js",
+    "stas_mcp/",
+    "workers/",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=18"
   },
@@ -21,11 +28,14 @@
   "keywords": [
     "stas",
     "mcp",
+    "model-context-protocol",
     "github-bot",
     "issue-fixer",
     "automated-fix",
     "opencode",
     "agent",
-    "ai"
+    "ai",
+    "linear",
+    "slack"
   ]
 }
