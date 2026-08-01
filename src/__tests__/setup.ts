@@ -11,8 +11,6 @@ vi.stubEnv('GITHUB_APP_PRIVATE_KEY', 'test-private-key');
 vi.stubEnv('NODE_ENV', 'test');
 vi.stubEnv('OPENCODE_API_KEY', 'test-opencode-key');
 
-vi.mock('tsarch', () => ({}));
-
 vi.mock('tsarch', () => {
   const chainable = {
     matchingPattern: () => chainable,
