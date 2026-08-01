@@ -13,7 +13,7 @@
 [![Smithery](https://img.shields.io/badge/Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/stas-mcp)
 [![MCP Agent](https://img.shields.io/badge/MCP_Agent-8250DF?logo=modelcontextprotocol&logoColor=white)](https://github.com/Aimino-Tech/solving_tickets_as_a_service)
 [![OpenCode](https://img.shields.io/badge/OpenCode_Skill-7C3AED?logo=opencode&logoColor=white)](https://opencode.ai/skills/stas)
-[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-2088FF?logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/stas-eval)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-2088FF?logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/stas-fix)
 [![Star History](https://api.star-history.com/svg?repos=Aimino-Tech/solving_tickets_as_a_service&type=Date)](https://star-history.com/#Aimino-Tech/solving_tickets_as_a_service&Date)
 [![Uptime](https://img.shields.io/badge/Uptime-100%25-brightgreen)](https://stas.betteruptime.com)
 [![Status Page](https://img.shields.io/badge/Status_Page-0055FF)](https://stas.betteruptime.com)
@@ -549,7 +549,7 @@ For day-2 operations (scaling, monitoring, incident response), see the [Producti
 
 ### GitHub Marketplace
 
-STAS is listed on [GitHub Marketplace](https://github.com/marketplace/actions/stas-eval). The listing copy, visual asset specs, and submission checklist are in [docs/marketplace-listing.md](docs/marketplace-listing.md).
+STAS is listed on [GitHub Marketplace](https://github.com/marketplace/actions/stas-fix). The listing copy, visual asset specs, and submission checklist are in [docs/marketplace-listing.md](docs/marketplace-listing.md).
 
 ### One-Click Deploy
 
@@ -634,6 +634,15 @@ STAS ships with comprehensive documentation:
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Local development and deployment guide |
 | [ops/runbook.md](ops/runbook.md) | Production deployment runbook — service mgmt, scaling, monitoring, failures |
 | [ops/playbook.md](ops/playbook.md) | Alert response playbooks for common incidents |
+
+### Branch hygiene
+
+The stale local branch `d65d741` (10 tsc errors / 32 test failures) is **abandoned**.
+It predates the AIM-4481 green-build fixes; the canonical integration state is
+`aimino/main @ 4392aca` (merge of AIM-4481 PR #743) plus the current integration
+compose work. Do not rebase, force-update, or merge it. See
+[docs/adr/aim-4491-opensymphony-integration-compose.md](docs/adr/aim-4491-opensymphony-integration-compose.md)
+for the full note.
 
 ## Multi-Platform
 
@@ -795,7 +804,7 @@ STAS is listed in the [Claude Plugin Marketplace](.claude-plugin/marketplace.jso
 | **Claude Plugin Marketplace** | `.claude-plugin/marketplace.json` |
 | **npm** | `npx stas install-mcp` — one-command install for all agents |
 | **Smithery** | `@aimino/stas-mcp` — hosted MCP server |
-| **GitHub Marketplace** | GitHub Action for STAS eval |
+| **GitHub Marketplace** | GitHub Action for STAS auto-fix (`stas-fix`) |
 | **RapidAPI** | Payable STAS API endpoint |
 
 ### Verify Installation

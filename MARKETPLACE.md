@@ -2,81 +2,130 @@
 
 > Two listings on GitHub Marketplace:
 > 1. **STAS App** — The full GitHub App (install on repos, label issues with `stas:fix`)
-> 2. **STAS Eval Action** — CI action for running STAS evaluations in workflows
+> 2. **STAS Fix Action** — Composite GitHub Action that fixes a labeled issue from CI (no webhook server needed)
 
 For the app listing copy and visual asset preparation, see [docs/marketplace-listing.md](docs/marketplace-listing.md).
 
 ---
 
-# STAS Eval Pipeline — GitHub Marketplace Action
+# STAS Fix Action — GitHub Marketplace Action
+
+`stas-fix` is the composite action shipped in **this repository** at
+[`.github/actions/stas-fix`](.github/actions/stas-fix). When an issue is labeled
+`stas:fix`, it posts a "STAS is on it" comment, then runs the fix agent
+(`scripts/stas-action.ts`) inside the workflow: it investigates the checked-out
+codebase, writes a fix with a regression test, runs your test suite, pushes a
+branch, and opens a draft PR.
+
+It is the "pure GitHub Action" approach — no webhook server, no STAS account, no
+separate infrastructure. The checked-out repository is the sandbox and the
+workflow token is the auth.
 
 ## Prerequisites
 
-1. **STAS API Key** — Get one by subscribing on the [STAS website](https://stas.aimino.io)
-2. **Verified Publisher** — Complete [GitHub Marketplace publisher verification](https://docs.github.com/en/apps/github-marketplace/github-marketplace-overview/applying-for-publisher-verification-for-your-organization)
-
-## Marketplace Checklist
-
-- [ ] **Verified Publisher badge**: Apply at https://github.com/marketplace/new
-- [ ] **Screenshots required**:
-  - [ ] Screenshot of a PR check annotation showing pass rate
-  - [ ] Screenshot of the action running in a workflow
-  - [ ] Dashboard screenshot (if available)
-- [ ] **Files required by Marketplace**:
-  - [ ] `LICENSE` — GNU Affero General Public License v3.0 (AGPL-3.0) included
-  - [ ] `CODE_OF_CONDUCT.md` — Contributor Covenant
-  - [ ] `CONTRIBUTING.md` — Contribution guidelines
-- [ ] **Action metadata**: `action.yml` with branding, inputs, outputs
+1. A GitHub token (or GitHub App token) with **`contents: write`**, **`issues: write`**,
+   and **`pull-requests: write`** permissions on the target repository.
+2. An LLM backend for the fix agent — either:
+   - an [OpenCode](https://opencode.ai) server (`opencode-url` + `opencode-api-key`,
+     optionally `opencode-model`), or
+   - an OpenAI-compatible API key (`openai-api-key`).
+   With neither configured the agent reports the missing dependency instead of fixing.
 
 ## Quick Start
 
-Add to your workflow:
+Add this workflow to your repo at `.github/workflows/stas.yml`:
 
 ```yaml
-- name: Run STAS Eval
-  uses: Aimino-Tech/stas-eval-action@v1
-  with:
-    api-key: ${{ secrets.STAS_API_KEY }}
-    eval-suite: smoke
+name: STAS Auto-Fix
+on:
+  issues:
+    types: [labeled]
+jobs:
+  fix:
+    if: github.event.label.name == 'stas:fix'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.STAS_BOT_APP_ID }}
+          private-key: ${{ secrets.STAS_BOT_PRIVATE_KEY }}
+      - uses: Aimino-Tech/solving_tickets_as_a_service/.github/actions/stas-fix@v1
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          opencode-url: http://localhost:4096
+          opencode-api-key: ${{ secrets.OPENCODE_API_KEY }}
 ```
+
+Inside this repository (or a fork) the action can also be referenced locally as
+`uses: ./.github/actions/stas-fix`.
 
 ## Inputs
 
 | Input | Required | Default | Description |
 |---|---|---|---|
-| `api-key` | Yes | — | STAS API key |
-| `eval-suite` | No | `smoke` | `smoke`, `standard`, or `full` |
-| `langfuse-public-key` | No | — | LangFuse public key |
-| `langfuse-secret-key` | No | — | LangFuse secret key |
-| `stas-api-url` | No | `https://api.stas.aimino.io` | STAS API base URL |
+| `github-token` | Yes | — | Token with `contents:write`, `issues:write`, `pull_requests:write` permissions |
+| `opencode-url` | No | `http://localhost:4096` | OpenCode Serve URL |
+| `opencode-api-key` | No | — | OpenCode API key |
+| `opencode-model` | No | `anthropic/claude-sonnet-4-20250514` | OpenCode model used by the fix agent |
+| `openai-api-key` | No | — | OpenAI API key (fallback if OpenCode is not configured) |
+| `bot-name` | No | `STAS` | Bot name used in comments |
 
 ## Outputs
 
-| Output | Description |
-|---|---|
-| `pass-rate` | Overall pass rate percentage |
-| `pass-rate-delta` | Change vs baseline (↑/↓/→) |
-| `langfuse-trace-url` | LangFuse trace URL |
-| `regression-detected` | Whether regression was found |
-| `status` | `passed`, `failed`, or `error` |
+None. The action reports progress through issue comments and delivers the result
+as a draft pull request.
 
 ## Example Workflow
 
 ```yaml
-name: Eval
-on: [pull_request]
+name: STAS Auto-Fix
+on:
+  issues:
+    types: [labeled]
 jobs:
-  eval:
+  fix:
+    if: github.event.label.name == 'stas:fix'
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: Aimino-Tech/stas-eval-action@v1
+      - uses: Aimino-Tech/solving_tickets_as_a_service/.github/actions/stas-fix@v1
         with:
-          api-key: ${{ secrets.STAS_API_KEY }}
-          eval-suite: standard
-          langfuse-public-key: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
-          langfuse-secret-key: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
 ```
+
+## Security & Privacy
+
+- **Token handling** — the action never logs or persists the token; it is passed
+  via `inputs.github-token` and only used for issue comments, branch pushes, and PR
+  creation on the triggering repository. Use a fine-grained GitHub App token with
+  the three permissions above rather than a PAT where possible.
+- **Dependencies** — dependencies are installed with `npm ci --ignore-scripts` so
+  no install-time scripts from the dependency tree run inside your workflow.
+- **AI data flow** — the issue title, body, and repository contents are sent to the
+  LLM backend you configure (`opencode-url` or `openai-api-key`) to produce the fix.
+  No repository data is sent to Aimino-hosted services. If you require a private
+  model, point `opencode-url` at a server you control.
+- **Workflow sandbox** — the fix agent runs directly on the workflow runner against
+  the checked-out repository, using the token's own permissions. Review the
+  permissions you grant the token accordingly.
+
+## Terms of Service
+
+Using this action in a workflow is subject to the [GitHub Actions Terms of
+Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service)
+and the [GitHub Marketplace Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-marketplace-terms-of-service).
+LLM API usage is billed by your model provider, not by this action. This action is
+provided under the AGPL-3.0 license (see [LICENSE](LICENSE)).
 
 ## Publishing Steps
 
@@ -85,5 +134,20 @@ jobs:
    git tag marketplace-v1.0.0
    git push origin marketplace-v1.0.0
    ```
-2. The `publish-marketplace.yml` workflow builds and publishes automatically
-3. Verify the listing on [GitHub Marketplace](https://github.com/marketplace)
+2. The `publish-marketplace.yml` workflow validates `action.yml` and creates a
+   GitHub release automatically.
+3. Verify the listing on [GitHub Marketplace](https://github.com/marketplace).
+
+## Marketplace Checklist
+
+- [ ] **Verified Publisher badge**: Apply at https://github.com/marketplace/new
+- [ ] **Screenshots required**:
+  - [ ] Screenshot of the action running in a workflow
+  - [ ] Screenshot of a draft PR created by the action
+- [ ] **Files required by Marketplace**:
+  - [x] `LICENSE` — GNU Affero General Public License v3.0 (AGPL-3.0) included
+  - [x] `CODE_OF_CONDUCT.md` — Contributor Covenant
+  - [x] `CONTRIBUTING.md` — Contribution guidelines
+- [x] **Action metadata**: `action.yml` with branding and inputs
+- [x] **Marketplace README**: this document describes the shipped `stas-fix` action
+      (not `stas-eval-action`)
