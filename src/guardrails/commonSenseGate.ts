@@ -1,9 +1,180 @@
 import type { Platform } from '../platforms/interface.js';
+import type { IssueJobData } from '../utils/types.js';
 
 export interface ValidationResult {
   valid: boolean;
   normalized?: { owner: string; repo: string };
   error?: string;
+}
+
+// ── Hard file guardrails (AIM-4496) ────────────────────────────────────────
+// Paths that an agent may never delete or modify. Changes touching these are
+// rejected before the pipeline is allowed to create a PR.
+
+/** Files that must never be deleted or renamed by an automated fix. */
+export const PROTECTED_MANIFEST_FILES = [
+  'package.json',
+  'package-lock.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+  'bun.lock',
+  'bun.lockb',
+  'Cargo.lock',
+  'go.sum',
+  'pom.xml',
+  'build.gradle',
+  'build.gradle.kts',
+  'settings.gradle',
+  'settings.gradle.kts',
+  'requirements.txt',
+  'pyproject.toml',
+  'Pipfile',
+  'Pipfile.lock',
+  'Gemfile',
+  'Gemfile.lock',
+  'composer.json',
+  'composer.lock',
+  'mix.lock',
+  'pubspec.lock',
+  'poetry.lock',
+];
+
+/**
+ * Directory prefixes that are off-limits for automated fixes.
+ * `workflows/` is a hard guardrail — CI/CD definitions must never be changed
+ * by the agent (AIM-4496). Other entries cover security-sensitive paths.
+ */
+export const PROTECTED_DIR_PREFIXES = [
+  'workflows/',
+  '.github/workflows/',
+  '.gitlab-ci.yml',
+  'azure-pipelines.yml',
+  'Jenkinsfile',
+  'Dockerfile',
+  'docker-compose.yml',
+  '.env',
+  'secrets/',
+];
+
+export interface FileChange {
+  path: string;
+  status: 'added' | 'modified' | 'removed' | 'renamed';
+}
+
+/**
+ * Validate a set of proposed file changes against the hard guardrails.
+ * Rejects deletion of package manifests and any change under protected
+ * paths (never modify `workflows/`, `.github/workflows/`, CI definitions).
+ */
+export function validateFileChanges(changes: FileChange[]): CommonSenseGateResult {
+  const checks: CommonSenseGateResult['checks'] = [];
+  if (!changes || changes.length === 0) {
+    checks.push({ check: 'file_changes', valid: true });
+    return { passed: true, checks };
+  }
+
+  for (const change of changes) {
+    const path = change.path || '';
+
+    if (change.status === 'removed' && PROTECTED_MANIFEST_FILES.includes(path)) {
+      checks.push({
+        check: 'manifest_deletion',
+        valid: false,
+        error: `Deleting "${path}" is not allowed — it defines the project's dependency graph`,
+      });
+    }
+
+    const matchesProtected = PROTECTED_DIR_PREFIXES.some(
+      (p) => path === p || path.startsWith(p) || path.endsWith(`/${p}`) || path === p.replace(/\/$/, ''),
+    );
+    if (matchesProtected) {
+      checks.push({
+        check: 'protected_path',
+        valid: false,
+        error: `Modifying "${path}" is not allowed — protected by Common Sense Gate hard guardrail`,
+      });
+    }
+
+    if (path.startsWith('/') || path.includes('../') || path.includes('..\\')) {
+      checks.push({
+        check: 'path_traversal',
+        valid: false,
+        error: `Path "${path}" is outside the repository root`,
+      });
+    }
+  }
+
+  const failed = checks.filter((c) => !c.valid);
+  return {
+    passed: failed.length === 0,
+    checks,
+  };
+}
+
+// ── Cost-benefit analysis (AIM-4496) ───────────────────────────────────────
+
+export interface CostBenefitEstimate {
+  estimatedCostCents: number;
+  estimatedValueCents: number;
+  roi: number;
+  recommended: boolean;
+  reasons: string[];
+}
+
+/**
+ * Deterministic cost-benefit estimate for a proposed fix run.
+ * Heuristics only — used to decide whether dispatching an issue is worth the
+ * agent cost, and to surface obviously wasteful runs (e.g. a "fix" for an
+ * empty body, or a repo name that is clearly a placeholder).
+ */
+export function analyzeCostBenefit(
+  input: CommonSenseInput & {
+    issueTitle?: string | null;
+    issueBody?: string | null;
+    labels?: string[];
+  },
+): CostBenefitEstimate {
+  const reasons: string[] = [];
+
+  const title = input.issueTitle?.trim() ?? '';
+  const body = input.issueBody?.trim() ?? '';
+  const text = `${title}\n${body}`.toLowerCase();
+
+  let estimatedCostCents = 50;
+  const hasFrontierLabels = (input.labels ?? []).some(
+    (l) => /feature|enhancement|performance|security|refactor|research/i.test(l),
+  );
+  if (hasFrontierLabels) estimatedCostCents = 120;
+  if (text.length > 4000) estimatedCostCents = 150;
+
+  let estimatedValueCents = 0;
+  const severitySignals = [
+    /bug|crash|broken|error|fail|exception|panic|corrupt|regression/i,
+    /security|vulnerab|injection|xss|csrf|auth|leak|expos/i,
+    /performance|slow|latency|memory leak|timeout|hang/i,
+    /data loss|corrupt|delete|missing|unreachable/i,
+  ];
+  for (const pattern of severitySignals) {
+    if (pattern.test(text)) estimatedValueCents += 100;
+  }
+
+  if (hasFrontierLabels) estimatedValueCents += 50;
+  if (title.length >= 15) estimatedValueCents += 30;
+  if (body.length >= 120) estimatedValueCents += 40;
+  if (estimatedValueCents === 0) {
+    reasons.push('No clear severity or scope signals in issue text');
+  }
+
+  const roi = estimatedCostCents > 0 ? (estimatedValueCents - estimatedCostCents) / estimatedCostCents : 0;
+  const recommended = estimatedValueCents >= estimatedCostCents;
+
+  if (recommended) {
+    reasons.push(`Expected value (${estimatedValueCents}c) covers estimated cost (${estimatedCostCents}c)`);
+  } else {
+    reasons.push(`Estimated cost (${estimatedCostCents}c) exceeds expected value (${estimatedValueCents}c)`);
+  }
+
+  return { estimatedCostCents, estimatedValueCents, roi: Math.round(roi * 100) / 100, recommended, reasons };
 }
 
 // ── Platform registry ────────────────────────────────────────────────────────
@@ -131,5 +302,39 @@ export function runCommonSenseGate(input: CommonSenseInput): CommonSenseGateResu
     const r = validateRepoName(input.repoName);
     checks.push({ check: 'repo_name', valid: r.valid, error: r.error });
   }
+  return { passed: checks.every((c) => c.valid), checks };
+}
+
+/**
+ * Common Sense Gate for a normalised webhook job: input validators + hard file
+ * guardrails, evaluated before the job reaches the agent pipeline.
+ */
+export function runCommonSenseGateOnJob(
+  job: IssueJobData,
+  options?: {
+    fileChanges?: FileChange[];
+    source?: Platform;
+    url?: string;
+  },
+): CommonSenseGateResult {
+  const source = options?.source ?? (job.source as Platform | undefined);
+  const url = options?.url;
+
+  const input: CommonSenseInput = {
+    platform: source ?? 'github',
+    url,
+    issueNumber: job.issueNumber > 0 ? job.issueNumber : undefined,
+    repoOwner: job.repoOwner,
+    repoName: job.repoName,
+  };
+
+  const base = runCommonSenseGate(input);
+  const checks = [...base.checks];
+
+  if (options?.fileChanges && options.fileChanges.length > 0) {
+    const fileResult = validateFileChanges(options.fileChanges);
+    checks.push(...fileResult.checks);
+  }
+
   return { passed: checks.every((c) => c.valid), checks };
 }

@@ -140,17 +140,85 @@ export class ActionDispatcher {
       await sandbox.pushBranch(branchName);
 
       let changedFiles: string[] = [];
+      let changedFileStatuses: Array<{ path: string; status: 'added' | 'modified' | 'removed' | 'renamed' }> = [];
       try {
         const diffResult = await sandbox.exec(
           // biome-ignore lint/suspicious/noExplicitAny: private field access needed
-          `git -C ${(sandbox as { repoDir?: string }).repoDir || `/home/user/${repoName}`} diff --name-only origin/${baseBranch}...${branchName} 2>/dev/null || true`,
+          `git -C ${(sandbox as { repoDir?: string }).repoDir || `/home/user/${repoName}`} diff --name-status origin/${baseBranch}...${branchName} 2>/dev/null || true`,
         );
         changedFiles = diffResult.stdout.split('\n').filter(Boolean);
+        changedFileStatuses = changedFiles
+          .map((line) => {
+            const match = /^([AMDR])\s+(.+)$/.exec(line.trim());
+            if (!match) return null;
+            const statusMap: Record<string, 'added' | 'modified' | 'removed' | 'renamed'> = {
+              A: 'added',
+              M: 'modified',
+              D: 'removed',
+              R: 'renamed',
+            };
+            return { path: match[2].trim(), status: statusMap[match[1]] ?? 'modified' };
+          })
+          .filter((x): x is { path: string; status: 'added' | 'modified' | 'removed' | 'renamed' } => x !== null);
       } catch (err) {
         log.warn(
           { err: String(err), repoOwner, repoName, issueNumber },
           'Failed to gather changed files for PR body (non-fatal)',
         );
+      }
+
+      // 5a. Common Sense Gate hard file guardrails — block PR creation on
+      // protected manifest deletion / protected path changes (AIM-4496).
+      if (changedFileStatuses.length > 0) {
+        const { runCommonSenseGateOnJob, validateFileChanges } = await import('../guardrails/commonSenseGate.js');
+        const fileGate = validateFileChanges(changedFileStatuses);
+        const jobGate = runCommonSenseGateOnJob({
+          issueNumber,
+          repoOwner,
+          repoName,
+          installationId,
+          issueTitle: params.issueTitle,
+          source: 'github',
+        });
+        if (!fileGate.passed) {
+          const reasons = fileGate.checks.filter((c) => !c.valid).map((c) => c.error ?? c.check);
+          log.warn(
+            { issueNumber, reasons, changedFiles: changedFileStatuses },
+            'Common Sense Gate blocked PR — protected file change detected',
+          );
+          const body = messages.qualityGatesBlockComment(
+            reasons.map((reason) => ({
+              gate: 'anti-liar' as const,
+              passed: false,
+              ossTool: 'common-sense-gate/file-guardrail',
+              command: 'validateFileChanges',
+              stdout: '',
+              stderr: '',
+              details: [reason],
+            })),
+            agentResult.summary,
+          );
+          await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
+          return { action: 'comment_posted', commentBody: body };
+        }
+        if (!jobGate.passed) {
+          const reasons = jobGate.checks.filter((c) => !c.valid).map((c) => c.error ?? c.check);
+          log.warn({ issueNumber, reasons }, 'Common Sense Gate blocked PR — invalid job fields');
+          const body = messages.qualityGatesBlockComment(
+            reasons.map((reason) => ({
+              gate: 'anti-liar' as const,
+              passed: false,
+              ossTool: 'common-sense-gate/input-validator',
+              command: 'runCommonSenseGate',
+              stdout: '',
+              stderr: '',
+              details: [reason],
+            })),
+            agentResult.summary,
+          );
+          await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
+          return { action: 'comment_posted', commentBody: body };
+        }
       }
 
       // 6a. Pre-existing tests regressed — block PR creation, branch already pushed

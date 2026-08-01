@@ -77,6 +77,9 @@ export class WebhookRouter {
   /**
    * Route an incoming event to all matching handlers.
    *
+   * Runs the Common Sense Gate first — if the event's repo/issue fields are
+   * hallucinated or malformed, no handler is invoked (rejected pre-pipeline).
+   *
    * @param event  The normalised webhook event
    */
   async route(event: WebhookRouterEvent): Promise<void> {
@@ -86,6 +89,21 @@ export class WebhookRouter {
 
     if (!handlers || handlers.length === 0) {
       log.debug({ platform, rawEventType }, 'No handlers registered for event — skipping');
+      return;
+    }
+
+    const gate = runCommonSenseGate({
+      platform,
+      issueNumber: event.issue.number,
+      repoOwner: event.issue.repoOwner,
+      repoName: event.issue.repoName,
+    });
+    if (!gate.passed) {
+      const reasons = gate.checks.filter((c) => !c.valid).map((c) => c.error ?? c.check);
+      log.warn(
+        { platform, rawEventType, repo: `${event.issue.repoOwner}/${event.issue.repoName}`, reasons },
+        'Common Sense Gate rejected webhook event — skipping handlers',
+      );
       return;
     }
 

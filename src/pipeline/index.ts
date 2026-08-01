@@ -75,14 +75,19 @@ export type {
 export {
   isValidPlatform,
   runCommonSenseGate,
+  runCommonSenseGateOnJob,
+  validateFileChanges,
   validateIssueReference,
   validatePlatformUrl,
   validateRepoName,
+  analyzeCostBenefit,
 } from '../guardrails/commonSenseGate.js';
 export type {
   CommonSenseGateResult,
   CommonSenseInput,
   ValidationResult,
+  FileChange,
+  CostBenefitEstimate,
 } from '../guardrails/commonSenseGate.js';
 
 // ── Platform Validator ────────────────────────────────────────────────────

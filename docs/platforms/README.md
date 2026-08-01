@@ -8,20 +8,27 @@ STAS supports multiple Git hosting platforms. Below is the current status.
 | GitLab     | 🚧 Beta     | ✅      | ✅ W8-T2      | ✅ W8-T3       | ✅   |
 | Bitbucket  | 🚧 Beta     | ✅      | ✅ W9-T1      | ✅ W9-T2       | ✅   |
 
-## Common Sense Gate (AIM-3182)
+## Common Sense Gate (AIM-3182 / AIM-4496)
 
-The **Common Sense Gate** is a set of guardrail validators that reject
-hallucinated or malformed inputs before they reach the agent pipeline.
+The **Common Sense Gate** rejects hallucinated, malformed, or dangerous inputs
+before they reach the agent pipeline.
+
+**Wiring (AIM-4496):** `runCommonSenseGateOnJob` runs inside the webhook
+dispatch choke point (`enqueueIssue` in `src/server.ts`), so every webhook
+(GitHub, GitLab, Bitbucket, Linear, Jira) is gated before dispatch. The hard
+file guardrails also block PR creation in `src/github/actionDispatcher.ts` when
+the proposed diff deletes a protected manifest or touches a protected path.
 
 | Check | What it validates |
 |-------|-------------------|
 | **Platform URL** | Hostname matches expected platform. Extracts owner/repo. |
 | **Issue Reference** | Number is positive integer <= 1,000,000. |
 | **Repo Name** | Alphanumeric + `._-`, no path traversal, no placeholders. |
-| **Branch Name** | Git ref rules: no `..`, `@{`, space, control chars. |
-| **Webhook URL** | Path matches expected per platform. |
+| **Manifest Deletion** | Never delete `package.json`, lockfiles, etc. |
+| **Protected Paths** | Never modify `workflows/`, CI definitions, `.env`, secrets. |
+| **Cost-Benefit** | Heuristic ROI estimate to surface wasteful runs. |
 
-Source: `src/guardrails/` (52 tests in `src/__tests__/guardrails/`)
+Source: `src/guardrails/` (tests in `src/__tests__/guardrails/`)
 
 ## Platform Guides
 

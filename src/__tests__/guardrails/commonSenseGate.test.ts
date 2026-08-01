@@ -3,6 +3,9 @@ import {
   validatePlatformUrl,
   validateIssueReference,
   validateRepoName,
+  validateFileChanges,
+  runCommonSenseGateOnJob,
+  analyzeCostBenefit,
 } from '../../guardrails/commonSenseGate.js';
 import {
   validateRepoIdentifier,
@@ -198,4 +201,147 @@ describe('Common Sense Gate integration scenarios', () => {
     expect(validateRepoName('nonexistent-repo-that-does-not-exist-12345').valid).toBe(true);
   });
   it('rejects impossible issue number', () => { expect(validateIssueReference(Number.MAX_SAFE_INTEGER).valid).toBe(false); });
+});
+
+describe('validateFileChanges (AIM-4496 hard guardrails)', () => {
+  it('passes a normal fix diff touching source + test files', () => {
+    const result = validateFileChanges([
+      { path: 'src/index.ts', status: 'modified' },
+      { path: 'src/__tests__/index.test.ts', status: 'added' },
+    ]);
+    expect(result.passed).toBe(true);
+  });
+
+  it('rejects deleting package.json', () => {
+    const result = validateFileChanges([{ path: 'package.json', status: 'removed' }]);
+    expect(result.passed).toBe(false);
+    expect(result.checks.some((c) => c.check === 'manifest_deletion')).toBe(true);
+  });
+
+  it('rejects deleting lockfiles', () => {
+    const result = validateFileChanges([
+      { path: 'package-lock.json', status: 'removed' },
+      { path: 'yarn.lock', status: 'removed' },
+    ]);
+    expect(result.passed).toBe(false);
+  });
+
+  it('rejects any change under workflows/', () => {
+    for (const status of ['added', 'modified', 'removed'] as const) {
+      const result = validateFileChanges([{ path: 'workflows/release.yml', status }]);
+      expect(result.passed).toBe(false);
+      expect(result.checks.some((c) => c.check === 'protected_path')).toBe(true);
+    }
+  });
+
+  it('rejects changes to .github/workflows/', () => {
+    const result = validateFileChanges([{ path: '.github/workflows/ci.yml', status: 'modified' }]);
+    expect(result.passed).toBe(false);
+  });
+
+  it('rejects changes to CI definitions and .env', () => {
+    expect(validateFileChanges([{ path: '.gitlab-ci.yml', status: 'modified' }]).passed).toBe(false);
+    expect(validateFileChanges([{ path: '.env', status: 'modified' }]).passed).toBe(false);
+    expect(validateFileChanges([{ path: 'Dockerfile', status: 'modified' }]).passed).toBe(false);
+  });
+
+  it('rejects path traversal', () => {
+    const result = validateFileChanges([{ path: '../secret', status: 'modified' }]);
+    expect(result.passed).toBe(false);
+    expect(result.checks.some((c) => c.check === 'path_traversal')).toBe(true);
+  });
+
+  it('passes when no changes provided', () => {
+    expect(validateFileChanges([]).passed).toBe(true);
+  });
+});
+
+describe('runCommonSenseGateOnJob (AIM-4496 pre-pipeline gate)', () => {
+  it('passes a valid GitHub job', () => {
+    const result = runCommonSenseGateOnJob({
+      installationId: 1,
+      repoOwner: 'facebook',
+      repoName: 'react',
+      repoPrivate: false,
+      issueNumber: 42,
+      issueTitle: 'Fix crash on login',
+      issueBody: 'The app crashes when a user logs in with a broken session token.',
+      source: 'github',
+    });
+    expect(result.passed).toBe(true);
+  });
+
+  it('rejects a hallucinated repo name', () => {
+    const result = runCommonSenseGateOnJob({
+      installationId: 1,
+      repoOwner: 'your-org',
+      repoName: 'your-repo-name',
+      repoPrivate: false,
+      issueNumber: 1,
+      issueTitle: 'Fix it',
+      issueBody: 'Please fix.',
+      source: 'github',
+    });
+    expect(result.passed).toBe(false);
+    expect(result.checks.some((c) => c.check === 'repo_name' && !c.valid)).toBe(true);
+  });
+
+  it('rejects an impossible issue number', () => {
+    const result = runCommonSenseGateOnJob({
+      installationId: 1,
+      repoOwner: 'owner',
+      repoName: 'repo',
+      repoPrivate: false,
+      issueNumber: 50_000_000,
+      issueTitle: 'Fix it',
+      issueBody: 'Please fix.',
+      source: 'github',
+    });
+    expect(result.passed).toBe(false);
+    expect(result.checks.some((c) => c.check === 'issue_number' && !c.valid)).toBe(true);
+  });
+
+  it('rejects a job whose diff deletes package.json — pre-pipeline rejection', () => {
+    const result = runCommonSenseGateOnJob(
+      {
+        installationId: 1,
+        repoOwner: 'owner',
+        repoName: 'repo',
+        repoPrivate: false,
+        issueNumber: 7,
+        issueTitle: 'Remove dependency',
+        issueBody: 'Delete package.json to slim the repo.',
+        source: 'github',
+      },
+      { fileChanges: [{ path: 'package.json', status: 'removed' }] },
+    );
+    expect(result.passed).toBe(false);
+    expect(result.checks.some((c) => c.check === 'manifest_deletion' && !c.valid)).toBe(true);
+  });
+});
+
+describe('analyzeCostBenefit (AIM-4496)', () => {
+  it('recommends running a clear bug fix', () => {
+    const estimate = analyzeCostBenefit({
+      platform: 'github',
+      repoOwner: 'owner',
+      repoName: 'repo',
+      issueTitle: 'Fix: app crashes on login with invalid token',
+      issueBody: 'Users report the login endpoint throws an uncaught exception.',
+    });
+    expect(estimate.recommended).toBe(true);
+    expect(estimate.estimatedValueCents).toBeGreaterThan(0);
+  });
+
+  it('flags a low-value / low-signal issue as not recommended', () => {
+    const estimate = analyzeCostBenefit({
+      platform: 'github',
+      repoOwner: 'owner',
+      repoName: 'repo',
+      issueTitle: '',
+      issueBody: '',
+    });
+    expect(estimate.estimatedValueCents).toBe(0);
+    expect(estimate.recommended).toBe(false);
+  });
 });

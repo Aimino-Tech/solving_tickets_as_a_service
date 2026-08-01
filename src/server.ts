@@ -103,6 +103,7 @@ import { createGithubWebhooks } from './webhooks/github.js';
 import { createGitlabWebhooks } from './webhooks/gitlab.js';
 import { recordWebhookDuration } from './webhooks/metrics.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
+import { runCommonSenseGateOnJob } from './guardrails/commonSenseGate.js';
 
 const log = rootLogger.child({ module: 'server' });
 
@@ -238,8 +239,24 @@ export async function createApp(): Promise<express.Application> {
   }
 
   // ── Webhook receiver ─────────────────────────────────────────────
-  // OpenSymphony dispatch function for webhook handlers
+  // Wrapped in the Common Sense Gate — gate-failing jobs are rejected before
+  // reaching the agent pipeline (AIM-4496).
   async function enqueueIssue(data: IssueJobData): Promise<string | undefined> {
+    const gate = runCommonSenseGateOnJob(data);
+    if (!gate.passed) {
+      const reasons = gate.checks.filter((c) => !c.valid).map((c) => c.error ?? c.check);
+      log.warn(
+        {
+          repo: `${data.repoOwner}/${data.repoName}`,
+          issueNumber: data.issueNumber,
+          reasons,
+          checks: gate.checks,
+        },
+        'Common Sense Gate rejected webhook job — not dispatching',
+      );
+      return undefined;
+    }
+
     const { dispatchToOpenSymphony } = await import('./dispatch/osDispatch.js');
     const result = await dispatchToOpenSymphony(data);
     if (result.success) {
