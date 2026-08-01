@@ -221,6 +221,44 @@ export class ActionDispatcher {
         }
       }
 
+      // 5b. Repo-side quality gates (AIM-4496) — the 6 deterministic gates from
+      // scripts/quality-gates.sh, enforced here against the agent's actual
+      // output before a PR is created (not just agent-supplied verification).
+      if (config.github.prQualityGate) {
+        const repoDir = (sandbox as { repoDir?: string }).repoDir || `/home/user/${repoName}`;
+        const { runRepoQualityGates } = await import('../pipeline/repoQualityGates.js');
+        const execFn = async (
+          cmd: string,
+          timeout?: number,
+        ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
+          const r = await sandbox.exec(cmd, timeout);
+          return { stdout: r.stdout ?? '', stderr: r.stderr ?? '', exitCode: r.exitCode ?? 0 };
+        };
+        const report = await runRepoQualityGates({ execFn, repoDir, timeoutMs: 300_000 });
+        if (!report.passed) {
+          const failedGates = report.gates.filter((g) => !g.passed);
+          log.warn(
+            { issueNumber, failedGates: failedGates.map((g) => g.gate) },
+            `Repo quality gates blocked PR: ${failedGates.length} gate(s) failed`,
+          );
+          const body = messages.qualityGatesBlockComment(
+            failedGates.map((g) => ({
+              gate: 'anti-liar' as const,
+              passed: false,
+              ossTool: `repo-quality-gate/${g.gate}`,
+              command: g.gate,
+              stdout: g.stdout.slice(0, 1000),
+              stderr: g.stderr.slice(0, 1000),
+              details: g.details,
+            })),
+            agentResult.summary,
+          );
+          await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
+          return { action: 'comment_posted', commentBody: body };
+        }
+        log.info({ issueNumber, summary: report.summary }, 'Repo quality gates passed');
+      }
+
       // 6a. Pre-existing tests regressed — block PR creation, branch already pushed
       if (agentResult.verification?.preExistingTestsRegressed) {
         const body = messages.regressionBlockComment(agentResult);

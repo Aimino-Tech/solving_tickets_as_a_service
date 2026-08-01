@@ -58,6 +58,17 @@ export type {
   RunGatesOptions,
 } from './quality-gates.js';
 
+// ── Repo-side Quality Gates (AIM-4496) ─────────────────────────────────────
+export {
+  runRepoQualityGates,
+} from './repoQualityGates.js';
+export type {
+  RepoGateName,
+  RepoGateResult,
+  RepoQualityGateReport,
+  RunRepoGatesOptions,
+} from './repoQualityGates.js';
+
 // ── Compliance ────────────────────────────────────────────────────────────
 export {
   runComplianceChecks,
