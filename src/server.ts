@@ -742,22 +742,8 @@ export async function createApp(): Promise<express.Application> {
   // ── Monitoring Loop Status ────────────────────────────────────────
   // GET /api/monitoring/status — Monitoring loop stats (JSON)
   // GET /monitoring           — Monitoring dashboard (HTML)
-  app.get('/api/monitoring/status', async (_req: Request, res: Response) => {
-    try {
-      const mod = await import('./loops/monitoringLoop.js');
-      const stats = mod.monitoringLoop?.getStats();
-      if (!stats) {
-        res.json({ status: 'not_started' });
-        return;
-      }
-      res.json({
-        status: stats.enabled ? (stats.running ? 'running' : 'idle') : 'disabled',
-        ...stats,
-      });
-    } catch {
-      res.json({ status: 'error', message: 'Monitoring loop module not available' });
-    }
-  });
+  const { monitoringStatusRouter } = await import('./routes/monitoringStatus.js');
+  app.use('/api', monitoringStatusRouter);
   app.get('/monitoring', async (_req: Request, res: Response) => {
     try {
       const mod = await import('./routes/monitoringUi.js');
@@ -1129,6 +1115,10 @@ export async function createApp(): Promise<express.Application> {
   // ── Runs API (authenticated, paginated fix history) ────────────
   app.use('/api/v1/runs', runsApiRouter);
   app.use('/api/v1/runs', runFeedbackRouter);
+
+  // ── Legacy API router (mounts previously-dead routes/api.ts) ────
+  const { apiRouter } = await import('./routes/api.js');
+  app.use('/api/v1/legacy', apiRouter);
 
   // SAML 2.0 SSO routes (optional)
   try {
