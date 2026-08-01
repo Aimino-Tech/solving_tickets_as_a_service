@@ -158,6 +158,84 @@ router.post('/refresh', refreshLimiter, async (req: Request, res: Response) => {
   }
 });
 
+// ── Magic-link / passwordless auth (AIM-4496) ──────────────────────────────
+
+const magicLinkRequestSchema = z.object({
+  email: z.string().email(),
+});
+
+const magicLinkVerifySchema = z.object({
+  token: z.string().min(1),
+});
+
+// POST /api/v1/auth/magic-link/request — issue a magic link and "send" it
+// (mock mail transport in dev). Always returns 200 to avoid email enumeration.
+router.post('/magic-link/request', async (req: Request, res: Response) => {
+  const parsed = magicLinkRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0].message });
+    return;
+  }
+
+  try {
+    const { token, loginUrl } = await authService.issueMagicLink(parsed.data.email);
+    const { sendMail } = await import('./mailTransport.js');
+    await sendMail({
+      to: parsed.data.email,
+      subject: 'Your STAS magic sign-in link',
+      text: `Click to sign in: ${loginUrl}`,
+      linkUrl: loginUrl,
+    });
+
+    auditLog({
+      actorType: 'user',
+      action: 'auth.magic_link.request',
+      resourceType: 'account',
+      details: { email: parsed.data.email },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    });
+
+    res.json({ message: 'Magic link sent' });
+  } catch (err) {
+    log.error({ err, email: parsed.data.email }, 'Failed to issue magic link');
+    res.status(500).json({ error: 'Failed to issue magic link' });
+  }
+});
+
+// POST /api/v1/auth/magic-link/verify — exchange a magic link token for a session
+router.post('/magic-link/verify', async (req: Request, res: Response) => {
+  const parsed = magicLinkVerifySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0].message });
+    return;
+  }
+
+  try {
+    const result = await authService.validateMagicLink(parsed.data.token);
+    auditLog({
+      actorType: 'user',
+      actorId: result.user.id,
+      action: 'auth.magic_link.verify',
+      resourceType: 'account',
+      resourceId: result.user.id,
+      details: { email: result.user.email },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    });
+    res.json(result);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      res.status(err.statusCode).json({ error: err.message });
+      return;
+    }
+    log.error({ err }, 'Magic link validation failed');
+    res.status(500).json({ error: 'Failed to validate magic link' });
+  }
+});
+
 router.post('/logout', requireAuth, (req: Request, res: Response) => {
   auditLog({
     actorType: 'user',

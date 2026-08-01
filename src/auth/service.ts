@@ -142,6 +142,60 @@ export class AuthService {
     }
   }
 
+  /**
+   * Issue a magic-link token for passwordless login. Returns the token and a
+   * login URL; the caller sends the URL via email (mock transport in dev).
+   */
+  async issueMagicLink(email: string): Promise<{ token: string; loginUrl: string }> {
+    const baseUrl = process.env.STAS_PUBLIC_URL || `http://localhost:${config.port}`;
+    const token = jwt.sign(
+      { email, purpose: 'magic_link' },
+      config.auth.jwtSecret as string,
+      { expiresIn: '15m' },
+    );
+    const loginUrl = `${baseUrl}/api/v1/auth/magic-link/verify?token=${encodeURIComponent(token)}`;
+    log.info({ email, loginUrl }, 'Magic link issued');
+    return { token, loginUrl };
+  }
+
+  /**
+   * Validate a magic-link token and establish a session. Creates the user on
+   * first sign-in (passwordless auto-registration).
+   */
+  async validateMagicLink(token: string): Promise<AuthResult> {
+    let payload: { email: string; purpose?: string };
+    try {
+      payload = jwt.verify(token, config.auth.jwtSecret) as { email: string; purpose?: string };
+      if (payload.purpose !== 'magic_link') {
+        throw new AuthError('Invalid magic link token', 400);
+      }
+    } catch {
+      throw new AuthError('Invalid or expired magic link', 401);
+    }
+
+    const email = payload.email.toLowerCase();
+    const { data, error } = await getSupabaseAdmin().auth.admin.listUsers();
+    if (error) {
+      throw new AuthError('Failed to look up user', 500);
+    }
+
+    let user = (data.users ?? []).find((u) => u.email?.toLowerCase() === email);
+    if (!user) {
+      const created = await getSupabaseAdmin().auth.admin.createUser({
+        email,
+        email_confirm: true,
+        user_metadata: { email_verified: true, auth_provider: 'magic-link' },
+      });
+      if (created.error) {
+        throw new AuthError('Failed to create user', 500);
+      }
+      user = created.data.user;
+    }
+
+    log.info({ userId: user.id, email }, 'Magic link validated — session established');
+    return this.generateTokens(user.id, user.email!, null);
+  }
+
   async createPasswordResetToken(email: string): Promise<void> {
     try {
       const { data: { users }, error: listError } = await getSupabaseAdmin().auth.admin.listUsers();

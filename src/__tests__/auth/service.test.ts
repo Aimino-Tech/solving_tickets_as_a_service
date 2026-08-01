@@ -13,12 +13,14 @@ vi.mock('jsonwebtoken', () => {
 
 const mockCreateUser = vi.fn();
 const mockSignInWithPassword = vi.fn();
+const mockListUsers = vi.fn();
 
 vi.mock('../../auth/supabase.js', () => ({
   getSupabaseAdmin: vi.fn(() => ({
     auth: {
       admin: {
         createUser: mockCreateUser,
+        listUsers: mockListUsers,
       },
     },
   })),
@@ -237,6 +239,52 @@ describe('AuthService', () => {
       const result = service.generateTokens('user-1', 'test@test.com');
 
       expect(result.user.name).toBeNull();
+    });
+  });
+
+  describe('magic-link (AIM-4496)', () => {
+    it('issueMagicLink returns a login URL with the token', async () => {
+      jwtSign.mockReturnValue('magic-token');
+      const result = await service.issueMagicLink('alice@example.com');
+      expect(result.token).toBe('magic-token');
+      expect(result.loginUrl).toContain('/api/v1/auth/magic-link/verify');
+      expect(jwtSign).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'alice@example.com', purpose: 'magic_link' }),
+        expect.any(String),
+        expect.objectContaining({ expiresIn: '15m' }),
+      );
+    });
+
+    it('validateMagicLink signs in an existing user', async () => {
+      jwtVerify.mockImplementation(() => ({ email: 'alice@example.com', purpose: 'magic_link' }));
+      jwtSign.mockReturnValue('access-token');
+      mockListUsers.mockResolvedValue({
+        data: { users: [{ id: 'u1', email: 'alice@example.com' }] },
+        error: null,
+      });
+      const result = await service.validateMagicLink('magic-token');
+      expect(result.user.email).toBe('alice@example.com');
+      expect(mockCreateUser).not.toHaveBeenCalled();
+    });
+
+    it('validateMagicLink auto-registers a new user', async () => {
+      jwtVerify.mockImplementation(() => ({ email: 'new@example.com', purpose: 'magic_link' }));
+      jwtSign.mockReturnValue('access-token');
+      mockListUsers.mockResolvedValue({ data: { users: [] }, error: null });
+      mockCreateUser.mockResolvedValue({
+        data: { user: { id: 'u2', email: 'new@example.com' } },
+        error: null,
+      });
+      const result = await service.validateMagicLink('magic-token');
+      expect(result.user.email).toBe('new@example.com');
+      expect(mockCreateUser).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'new@example.com', email_confirm: true }),
+      );
+    });
+
+    it('validateMagicLink rejects a token with wrong purpose', async () => {
+      jwtVerify.mockImplementation(() => ({ email: 'a@b.c', purpose: 'email_verify' }));
+      await expect(service.validateMagicLink('bad-token')).rejects.toThrow(AuthError);
     });
   });
 });
