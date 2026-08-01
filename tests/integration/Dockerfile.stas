@@ -20,6 +20,10 @@ COPY dashboard/package.json dashboard/package-lock.json ./dashboard/
 COPY dashboard/ ./dashboard/
 RUN cd dashboard && npm install --legacy-peer-deps --ignore-scripts && npm run build
 RUN npm prune --production --legacy-peer-deps
+# pino-pretty is a devDependency, but src/utils/logger.ts loads it whenever
+# NODE_ENV != "production" (the integration stack runs NODE_ENV=test). It would
+# be removed by the prune above, so reinstall it in the runtime stage.
+RUN npm install --legacy-peer-deps --no-save --ignore-scripts pino-pretty@^13.1.3
 
 # Stage 2: Runtime
 FROM node:22-alpine
@@ -28,6 +32,10 @@ SHELL ["/bin/sh", "-o", "pipefail", "-c"]
 RUN addgroup -S stas && adduser -S stas -G stas
 WORKDIR /app
 COPY --from=build --chown=stas:stas /app/dist ./dist
+# Migration SQL is not emitted by tsc (only .ts→.js). The STAS /health endpoint
+# queries the health_checks table, so the integration stack runs
+# `node dist/src/db/migrate.js` (wait-for-health.sh) — the SQL must be present.
+COPY --from=build --chown=stas:stas /app/src/db/migrations ./dist/src/db/migrations
 COPY --from=build --chown=stas:stas /app/node_modules ./node_modules
 COPY --from=build --chown=stas:stas /app/package.json ./
 COPY --from=build --chown=stas:stas /app/package-lock.json ./

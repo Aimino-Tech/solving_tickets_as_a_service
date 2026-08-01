@@ -49,3 +49,25 @@ checked out.
   health, and all existing tests are untouched.
 - OpenSymphony boots with synthetic secrets (`LINEAR_API_KEY`, etc.) only to keep
   the HTTP server alive; it performs no real work in the integration stack.
+
+## Two pre-existing integration-stack fixes folded in
+
+While bringing the stack up it was broken in two pre-existing ways (both unrelated
+to OpenSymphony, and both hidden because the `e2e-verify.yml` integration job had
+been skipped on recent main runs):
+
+1. **STAS container crashed at boot** — `src/utils/logger.ts` loads `pino-pretty`
+   whenever `NODE_ENV != "production"` (the stack runs `NODE_ENV=test`), but
+   `tests/integration/Dockerfile.stas` ran `npm prune --production` which removed
+   the devDependency. Fix: reinstall `pino-pretty@^13.1.3` (`--no-save`) in the
+   runtime stage.
+2. **STAS `/health` returned 503** — tsc emits only `.ts → .js`, so the migration
+   SQL never made it into the image and `health_checks` (queried by `/health`)
+   never existed. Fix: copy `src/db/migrations` into `dist/src/db/migrations` in
+   the runtime stage, and run `node dist/src/db/migrate.js` from
+   `wait-for-health.sh` before waiting for STAS.
+
+A third blocker lives in the **llm-governance repo** (governance proxy crashed at
+boot on `_redact_sensitive` `%.2f % None` and a uvicorn `log_level` `KeyError`) —
+tracked separately as AIM-4492; it is fixed in the local build-context checkout
+only for this verification and must land in llm-governance.
