@@ -1,14 +1,14 @@
 {
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/main/schemas/mcp-publisher.json",
   "server": {
-    "name": "@aimino/stas-mcp",
-    "mcpName": "stas-agent-discovery",
+    "name": "@aimino/syntaro-mcp",
+    "mcpName": "syntaro-agent-discovery",
     "version": "1.0.0",
     "description": "MCP server for STAS — Solving Tickets As A Service"
   },
   "publish": {
     "registry": "https://registry.mcp.ai",
-    "npmPackage": "@aimino/stas-mcp",
+    "npmPackage": "@aimino/syntaro-mcp",
     "access": "public"
   },
   "deployment": {

@@ -12,7 +12,7 @@ should have access to the best tooling, including AI-powered issue resolution.
 
 ## Why Free for OSS
 
-Every PR STAS generates includes a "Powered by STAS" footer. This is our
+Every PR STAS generates includes a "Powered by Syntaro" footer. This is our
 viral loop: great fixes on OSS repos → developers see STAS → more installs →
 more fixes. It works because STAS is valuable enough that developers want
 to share it.

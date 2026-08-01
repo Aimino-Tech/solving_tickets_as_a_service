@@ -127,7 +127,7 @@ Install from GitHub Marketplace (free tier: 50 fixes/month), label any issue wit
 | 0:12–0:22 | **Plan appears** | Issue auto-refreshes. STAS comment appears with: bug reproduction steps, root cause analysis (expandable), fix approach with file-by-file breakdown |
 | 0:22–0:25 | **Approval** | User types `/stas approve` as a comment. STAS replies "Approved! Starting implementation..." |
 | 0:25–0:35 | **PR created** | Cut to PR view. STAS has created a draft PR with: commit message following conventional commits, code changes shown in diff view (3 files), CI checks running and passing |
-| 0:35–0:42 | **Outro** | Zoom-out to dashboard: fix history, success rate (92%), recent fixes list. Overlay: "STAS — Label. Fix. Ship." + URL `stas.aimino.io` |
+| 0:35–0:42 | **Outro** | Zoom-out to dashboard: fix history, success rate (92%), recent fixes list. Overlay: "STAS — Label. Fix. Ship." + URL `syntaro.io` |
 
 **Recording recommendations:**
 - Use [Screen Studio](https://www.screen.studio/) (macOS) or [Kap](https://getkap.co/) (free) for recording
@@ -263,11 +263,11 @@ The right hunter can dramatically amplify reach. Options:
 - [ ] Maker avatar/profile linked to Aimino team member
 - [ ] All links in description working:
   - [ ] GitHub Marketplace install: `https://github.com/marketplace/stas`
-  - [ ] Website: `https://stas.aimino.io`
+  - [ ] Website: `https://syntaro.io`
   - [ ] GitHub repo: `https://github.com/Aimino-Tech/stas`
-  - [ ] Documentation: `https://stas.aimino.io/docs`
+  - [ ] Documentation: `https://syntaro.io/docs`
   - [ ] Discord community: `https://discord.gg/aimino`
-  - [ ] Pricing page: `https://stas.aimino.io/pricing`
+  - [ ] Pricing page: `https://syntaro.io/pricing`
 - [ ] Images render correctly (hero, logo, GIF)
 - [ ] Demo GIF plays in preview (check PH GIF auto-play behavior)
 - [ ] Maker comment posts as first comment (not lost in thread)

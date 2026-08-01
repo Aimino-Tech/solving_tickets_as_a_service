@@ -21,7 +21,7 @@ inputs:
     required: false
   stas-api-url:
     description: 'STAS API base URL'
-    default: 'https://api.stas.aimino.io'
+    default: 'https://api.syntaro.io'
     required: false
 
 outputs:

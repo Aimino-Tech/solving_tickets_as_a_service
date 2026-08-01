@@ -10,7 +10,7 @@ npm install → server launch → tool discovery → tool execution.
 - Node.js >= 18 (for npm/npx)
 - Python >= 3.10 (for the MCP server)
 - Internet access to npm registry
-- A GitHub personal access token with `repo` scope (for `stas_label_issue` / `stas_run_fix`)
+- A GitHub personal access token with `repo` scope (for `syntaro_label_issue` / `syntaro_run_fix`)
 
 ## Test 1: npm Package Install
 
@@ -19,19 +19,19 @@ npm install → server launch → tool discovery → tool execution.
 ```bash
 cd $(mktemp -d)
 npm init -y
-npm install @aimino/stas-mcp
+npm install @aimino/syntaro-mcp
 ```
 
 **Expected**: Exit code 0, no warnings. **Timing**: < 10s
 
-**Verification**: `ls node_modules/@aimino/stas-mcp/` should show `index.js` and `package.json`.
+**Verification**: `ls node_modules/@aimino/syntaro-mcp/` should show `index.js` and `package.json`.
 
 ## Test 2: Stdio Transport
 
 **Objective**: MCP server launches and responds to `initialize` request.
 
 ```bash
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke-test","version":"1.0.0"}}}' | npx -y @aimino/stas-mcp stdio
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke-test","version":"1.0.0"}}}' | npx -y @aimino/syntaro-mcp stdio
 ```
 
 **Expected**: JSON-RPC response with `result.serverInfo.name`. **Timing**: < 5s
@@ -39,15 +39,15 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 ## Test 3: Tool Discovery (list_tools)
 
 ```bash
-echo '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | npx -y @aimino/stas-mcp stdio | head -c 2000
+echo '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | npx -y @aimino/syntaro-mcp stdio | head -c 2000
 ```
 
-**Expected**: Response contains `stas_label_issue`, `stas_run_fix`, `stas_check_status`, `stas_get_pr`, `list_issues`, `search_codebase`. **Timing**: < 3s
+**Expected**: Response contains `syntaro_label_issue`, `syntaro_run_fix`, `syntaro_check_status`, `syntaro_get_pr`, `list_issues`, `search_codebase`. **Timing**: < 3s
 
 ## Test 4: SSE Transport
 
 ```bash
-npx -y @aimino/stas-mcp sse &
+npx -y @aimino/syntaro-mcp sse &
 sleep 2
 curl -N http://localhost:4095/sse
 ```
@@ -57,7 +57,7 @@ curl -N http://localhost:4095/sse
 ## Test 5: Streamable HTTP Transport
 
 ```bash
-npx -y @aimino/stas-mcp streamable-http &
+npx -y @aimino/syntaro-mcp streamable-http &
 sleep 2
 curl -X POST http://localhost:4095/mcp \
   -H "Content-Type: application/json" \
@@ -68,14 +68,14 @@ curl -X POST http://localhost:4095/mcp \
 
 ## Test 6: Claude Desktop Discovery
 
-1. Install the package: `npm install -g @aimino/stas-mcp`
+1. Install the package: `npm install -g @aimino/syntaro-mcp`
 2. Add to Claude Desktop config:
    ```json
    {
      "mcpServers": {
        "stas": {
          "command": "npx",
-         "args": ["-y", "@aimino/stas-mcp", "stdio"]
+         "args": ["-y", "@aimino/syntaro-mcp", "stdio"]
        }
      }
    }
@@ -91,7 +91,7 @@ curl -X POST http://localhost:4095/mcp \
      "mcpServers": {
        "stas": {
          "command": "npx",
-         "args": ["-y", "@aimino/stas-mcp", "stdio"]
+         "args": ["-y", "@aimino/syntaro-mcp", "stdio"]
        }
      }
    }

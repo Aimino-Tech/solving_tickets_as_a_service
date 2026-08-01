@@ -8,9 +8,9 @@
 
 [![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/aimino)
 [![RapidAPI](https://img.shields.io/badge/RapidAPI-0055FF?logo=rapidapi&logoColor=white)](https://rapidapi.com/aimino/api/stas-api?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
-[![MCP](https://img.shields.io/badge/MCP_Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/stas-mcp?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
-[![MCP Registry](https://img.shields.io/badge/MCP_Registry-8250DF?logo=modelcontextprotocol&logoColor=white)](https://registry.mcp.ai/servers/@aimino/stas-mcp)
-[![Smithery](https://img.shields.io/badge/Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/stas-mcp)
+[![MCP](https://img.shields.io/badge/MCP_Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/syntaro-mcp?utm_source=github&utm_medium=readme&utm_campaign=aim-2090)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-8250DF?logo=modelcontextprotocol&logoColor=white)](https://registry.mcp.ai/servers/@aimino/syntaro-mcp)
+[![Smithery](https://img.shields.io/badge/Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/syntaro-mcp)
 [![MCP Agent](https://img.shields.io/badge/MCP_Agent-8250DF?logo=modelcontextprotocol&logoColor=white)](https://github.com/Aimino-Tech/solving_tickets_as_a_service)
 [![OpenCode](https://img.shields.io/badge/OpenCode_Skill-7C3AED?logo=opencode&logoColor=white)](https://opencode.ai/skills/stas)
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-2088FF?logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/stas-eval)
@@ -47,18 +47,18 @@ flowchart TD
 | Agent | Command / Config |
 |---|---|
 | **OpenCode** | `npx skills add Aimino-Tech/solving_tickets_as_a_service` |
-| **Claude Desktop** | Add to `claude_desktop_config.json`: `{ "mcpServers": { "stas": { "command": "npx", "args": ["-y", "@aimino/stas-mcp"] } } }` |
+| **Claude Desktop** | Add to `claude_desktop_config.json`: `{ "mcpServers": { "stas": { "command": "npx", "args": ["-y", "@aimino/syntaro-mcp"] } } }` |
 | **Cursor** | Add to `.cursor/mcp.json`: same as Claude config |
-| **Codex CLI** | `npx -y @aimino/stas-mcp` |
-| **Any MCP client** | `npx -y @aimino/stas-mcp` |
+| **Codex CLI** | `npx -y @aimino/syntaro-mcp` |
+| **Any MCP client** | `npx -y @aimino/syntaro-mcp` |
 
 ### Install badges
 
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-8250DF)](https://github.com/modelcontextprotocol/servers)
-[![Smithery](https://img.shields.io/badge/Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/stas-mcp)
+[![Smithery](https://img.shields.io/badge/Smithery-000?logo=modelcontextprotocol&logoColor=white)](https://smithery.ai/server/@aimino/syntaro-mcp)
 [![skills.sh](https://img.shields.io/badge/skills.sh-7C3AED)](https://opencode.ai/skills/stas)
-[![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/@aimino/stas-mcp)
-[![Agent Found STAS](https://img.shields.io/badge/Agent_Found-STAS-8250DF)](https://stas.aimino.io/agents.html)
+[![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/@aimino/syntaro-mcp)
+[![Agent Found STAS](https://img.shields.io/badge/Agent_Found-STAS-8250DF)](https://syntaro.io/agents.html)
 
 ### Add STAS to your agent
 
@@ -67,7 +67,7 @@ flowchart TD
 npx skills add Aimino-Tech/solving_tickets_as_a_service
 
 # Any MCP-compatible agent (npx)
-npx -y @aimino/stas-mcp
+npx -y @aimino/syntaro-mcp
 ```
 
 > See [STAS for AI Agents](website/agents.html) and [All Integrations](website/integrations.html) for complete documentation.
@@ -84,7 +84,7 @@ Visit **[Aimino-Tech/stas-demo](https://github.com/Aimino-Tech/stas-demo)** — 
 
 ```bash
 # Quick test: query the demo repo's fixable issues
-curl https://api.stas.aimino.io/api/v1/preview \
+curl https://api.syntaro.io/api/v1/preview \
   -H "Content-Type: application/json" \
   -d '{"repoUrl": "https://github.com/Aimino-Tech/stas-demo"}'
 ```
@@ -137,7 +137,7 @@ jobs:
 
 ### Cloud (one-click, ~2 minutes)
 
-Visit [stas.aimino.io](https://stas.aimino.io), install the GitHub App, label an issue. No servers to manage.
+Visit [syntaro.io](https://syntaro.io), install the GitHub App, label an issue. No servers to manage.
 
 ### Self-hosted (Docker, ~10 minutes)
 
@@ -163,7 +163,7 @@ It handles GitHub authentication, app installation, test issue creation, and wai
 ### Try it without installing anything
 
 ```bash
-curl -X POST https://api.stas.aimino.io/api/v1/preview \
+curl -X POST https://api.syntaro.io/api/v1/preview \
   -H "Content-Type: application/json" \
   -d '{"repoUrl": "https://github.com/owner/repo"}'
 ```
@@ -188,10 +188,10 @@ This returns a standard MCP manifest with all available tools, resources, and tr
 
 | Tool | Description |
 |---|---|
-| `stas_label_issue` | Label a GitHub issue with the STAS fix label |
-| `stas_run_fix` | Trigger the fix pipeline for a GitHub issue URL |
-| `stas_check_status` | Poll fix run status by run_id |
-| `stas_get_pr` | Get PR details for a completed fix run |
+| `syntaro_label_issue` | Label a GitHub issue with the STAS fix label |
+| `syntaro_run_fix` | Trigger the fix pipeline for a GitHub issue URL |
+| `syntaro_check_status` | Poll fix run status by run_id |
+| `syntaro_get_pr` | Get PR details for a completed fix run |
 | `list_issues` | List tracked issues with optional status/repo filters |
 | `search_codebase` | Search across tracked fix runs and issues |
 
@@ -199,10 +199,10 @@ This returns a standard MCP manifest with all available tools, resources, and tr
 
 | Resource URI | Description |
 |---|---|
-| `stas://runs/{run_id}` | Real-time fix run status and PR link |
-| `stas://issues/{issue_id}` | Issue details with fix status and run history |
-| `stas://status` | Server health and capability overview |
-| `stas://queue` | Current fix queue depth and status |
+| `syntaro://runs/{run_id}` | Real-time fix run status and PR link |
+| `syntaro://issues/{issue_id}` | Issue details with fix status and run history |
+| `syntaro://status` | Server health and capability overview |
+| `syntaro://queue` | Current fix queue depth and status |
 
 ### Transport Protocols
 
@@ -222,10 +222,10 @@ Add to your `opencode.json`:
 
 ```json
 {
-  "name": "stas-agent-discovery",
+  "name": "syntaro-agent-discovery",
   "transport": "stdio",
   "command": "python",
-  "args": ["-m", "stas_mcp.server", "stdio"]
+  "args": ["-m", "syntaro_mcp.server", "stdio"]
 }
 ```
 
@@ -238,7 +238,7 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "stas": {
       "command": "python",
-      "args": ["-m", "stas_mcp.server", "stdio"]
+      "args": ["-m", "syntaro_mcp.server", "stdio"]
     }
   }
 }
@@ -250,10 +250,10 @@ Add to Cursor MCP configuration:
 
 ```json
 {
-  "name": "stas-agent-discovery",
+  "name": "syntaro-agent-discovery",
   "type": "mcp",
   "command": "python",
-  "args": ["-m", "stas_mcp.server", "stdio"]
+  "args": ["-m", "syntaro_mcp.server", "stdio"]
 }
 ```
 
@@ -265,13 +265,13 @@ To run manually:
 
 ```bash
 # SSE mode (HTTP, for remote access)
-python -m stas_mcp.server sse --port 4095
+python -m syntaro_mcp.server sse --port 4095
 
 # stdio mode (for local AI tools)
-python -m stas_mcp.server stdio
+python -m syntaro_mcp.server stdio
 
 # With SSL/TLS
-python -m stas_mcp.server sse --port 4095 \
+python -m syntaro_mcp.server sse --port 4095 \
   --ssl-keyfile /path/to/key.pem \
   --ssl-certfile /path/to/cert.pem
 ```
@@ -280,7 +280,7 @@ python -m stas_mcp.server sse --port 4095 \
 
 ```bash
 # List available tools (stdio mode)
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m stas_mcp.server stdio
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m syntaro_mcp.server stdio
 
 # Check SSE server is running
 curl http://localhost:4095/health
@@ -307,7 +307,7 @@ value is in `STAS_API_KEY` as a `Bearer` token:
 
 ```bash
 # Python MCP server (stdio/SSE) — point it at your per-user key
-STAS_API_KEY=sk-stas_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx python -m stas_mcp.server stdio
+STAS_API_KEY=sk-stas_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx python -m syntaro_mcp.server stdio
 ```
 
 ```json
@@ -315,7 +315,7 @@ STAS_API_KEY=sk-stas_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx python -m stas_mcp.server 
   "mcpServers": {
     "stas": {
       "command": "python",
-      "args": ["-m", "stas_mcp.server", "stdio"],
+      "args": ["-m", "syntaro_mcp.server", "stdio"],
       "env": { "STAS_API_KEY": "sk-stas_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }
     }
   }
@@ -346,8 +346,8 @@ STAS MCP is published to the [MCP Registry](https://registry.mcp.ai) and [Smithe
 
 | Channel | URL | Description |
 |---|---|---|
-| **MCP Registry** | `https://registry.mcp.ai/servers/@aimino/stas-mcp` | Central MCP server registry |
-| **Smithery** | `https://smithery.ai/server/@aimino/stas-mcp` | One-click Docker deployment |
+| **MCP Registry** | `https://registry.mcp.ai/servers/@aimino/syntaro-mcp` | Central MCP server registry |
+| **Smithery** | `https://smithery.ai/server/@aimino/syntaro-mcp` | One-click Docker deployment |
 
 To publish a new version:
 
@@ -710,7 +710,7 @@ Add to `opencode.json` (project root or `~/.config/opencode/opencode.json`):
   "mcpServers": {
     "stas": {
       "command": "python3",
-      "args": ["-m", "stas_mcp.server", "stdio"]
+      "args": ["-m", "syntaro_mcp.server", "stdio"]
     }
   }
 }
@@ -719,7 +719,7 @@ Add to `opencode.json` (project root or `~/.config/opencode/opencode.json`):
 Or use the install script:
 ```bash
 # From the project root
-bash stas_mcp/install.sh --opencode
+bash syntaro_mcp/install.sh --opencode
 
 # Or via npm
 npx stas install-mcp --opencode
@@ -734,7 +734,7 @@ Add to `claude_desktop_config.json` (`~/.config/Claude/claude_desktop_config.jso
   "mcpServers": {
     "stas": {
       "command": "python3",
-      "args": ["-m", "stas_mcp.server", "stdio"]
+      "args": ["-m", "syntaro_mcp.server", "stdio"]
     }
   }
 }
@@ -752,7 +752,7 @@ npx stas install-mcp --claude
 3. Fill in:
    - **Name:** `stas`
    - **Type:** `command`
-   - **Command:** `python3 -m stas_mcp.server stdio`
+   - **Command:** `python3 -m syntaro_mcp.server stdio`
 4. Click **Save**
 
 Or add to `~/.cursor/mcp.json`:
@@ -762,7 +762,7 @@ Or add to `~/.cursor/mcp.json`:
   "mcpServers": {
     "stas": {
       "command": "python3",
-      "args": ["-m", "stas_mcp.server", "stdio"]
+      "args": ["-m", "syntaro_mcp.server", "stdio"]
     }
   }
 }
@@ -777,7 +777,7 @@ Add to `.codex/config.json` in your project root:
   "mcpServers": {
     "stas": {
       "command": "python3",
-      "args": ["-m", "stas_mcp.server", "stdio"]
+      "args": ["-m", "syntaro_mcp.server", "stdio"]
     }
   }
 }
@@ -794,7 +794,7 @@ STAS is listed in the [Claude Plugin Marketplace](.claude-plugin/marketplace.jso
 | **skills.sh** | `skills/stas/SKILL.md` |
 | **Claude Plugin Marketplace** | `.claude-plugin/marketplace.json` |
 | **npm** | `npx stas install-mcp` — one-command install for all agents |
-| **Smithery** | `@aimino/stas-mcp` — hosted MCP server |
+| **Smithery** | `@aimino/syntaro-mcp` — hosted MCP server |
 | **GitHub Marketplace** | GitHub Action for STAS eval |
 | **RapidAPI** | Payable STAS API endpoint |
 
@@ -804,9 +804,9 @@ After installing the skill, verify the MCP server responds:
 
 ```bash
 # List available tools via stdio
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m stas_mcp.server stdio
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m syntaro_mcp.server stdio
 
 # Or start SSE mode and curl health
-python -m stas_mcp.server sse &
+python -m syntaro_mcp.server sse &
 curl http://localhost:4095/health
 ```

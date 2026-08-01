@@ -4,8 +4,8 @@
   "apiVersion": "1.0.0",
   "description": "STAS (Solving Tickets As A Service) is an AI-powered GitHub bot that automatically fixes issues. Submit a GitHub issue URL, and STAS investigates your codebase, writes a fix, runs regression tests, and opens a PR — fully automated.",
   "tagline": "Label a GitHub issue. Get a pull request — automatically.",
-  "logo": "https://stas.aimino.io/logo.png",
-  "website": "https://stas.aimino.io",
+  "logo": "https://syntaro.io/logo.png",
+  "website": "https://syntaro.io",
   "documentationUrl": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
   "supportUrl": "https://github.com/tamnguyen08/solving_tickets_as_a_service/issues",
   "sourceCodeUrl": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
@@ -122,7 +122,7 @@
   ],
   "changelog": "https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/CHANGELOG.md",
   "termsOfService": "https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/LICENSE",
-  "privacyPolicy": "https://stas.aimino.io/privacy",
+  "privacyPolicy": "https://syntaro.io/privacy",
   "sdk": {
     "curl": {
       "example": "curl -X POST https://stas-rapidapi.p.rapidapi.com/api/fix -H \"Content-Type: application/json\" -H \"X-RapidAPI-Key: your-rapidapi-key\" -H \"X-RapidAPI-Proxy-Secret: your-proxy-secret\" -d '{\"repoUrl\":\"https://github.com/owner/repo\",\"issueTitle\":\"Fix login bug\",\"issueBody\":\"Login returns 500\"}'"

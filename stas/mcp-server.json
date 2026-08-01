@@ -1,11 +1,11 @@
 {
-  "name": "@aimino/stas-mcp",
+  "name": "@aimino/syntaro-mcp",
   "description": "MCP server for STAS — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs via OpenCode agents.",
   "version": "1.0.0",
   "author": {
     "name": "Aimino Tech",
     "email": "team@aimino.io",
-    "url": "https://stas.aimino.io"
+    "url": "https://syntaro.io"
   },
   "license": "MIT",
   "homepage": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
@@ -19,7 +19,7 @@
   "command": "npx",
   "args": [
     "-y",
-    "@aimino/stas-mcp"
+    "@aimino/syntaro-mcp"
   ],
   "env": {
     "STAS_API_KEY": {
@@ -28,9 +28,9 @@
       "secret": true
     },
     "STAS_API_URL": {
-      "description": "STAS API base URL (default: https://api.stas.aimino.io)",
+      "description": "STAS API base URL (default: https://api.syntaro.io)",
       "required": false,
-      "default": "https://api.stas.aimino.io"
+      "default": "https://api.syntaro.io"
     },
     "GITHUB_TOKEN": {
       "description": "GitHub personal access token for PR creation",
@@ -40,7 +40,7 @@
   },
   "capabilities": {
     "tools": {
-      "stas_submit_fix": {
+      "syntaro_submit_fix": {
         "description": "Submit a GitHub issue URL to STAS for automated fix generation",
         "inputSchema": {
           "type": "object",
@@ -65,20 +65,20 @@
           "required": ["repoUrl"]
         }
       },
-      "stas_poll_job": {
+      "syntaro_poll_job": {
         "description": "Poll a STAS fix job for status updates and results",
         "inputSchema": {
           "type": "object",
           "properties": {
             "jobId": {
               "type": "string",
-              "description": "Job ID returned from stas_submit_fix"
+              "description": "Job ID returned from syntaro_submit_fix"
             }
           },
           "required": ["jobId"]
         }
       },
-      "stas_list_jobs": {
+      "syntaro_list_jobs": {
         "description": "List recent STAS fix jobs and their statuses",
         "inputSchema": {
           "type": "object",
@@ -95,7 +95,7 @@
           }
         }
       },
-      "stas_get_eval_results": {
+      "syntaro_get_eval_results": {
         "description": "Get public STAS benchmark eval results",
         "inputSchema": {
           "type": "object",
@@ -104,13 +104,13 @@
       }
     },
     "resources": {
-      "stas://jobs/{jobId}": {
+      "syntaro://jobs/{jobId}": {
         "description": "Detailed job result including PR URL, diff summary, and test results"
       },
-      "stas://eval/latest": {
+      "syntaro://eval/latest": {
         "description": "Latest STAS benchmark evaluation results"
       },
-      "stas://eval/history": {
+      "syntaro://eval/history": {
         "description": "Historical STAS eval performance data"
       }
     }
@@ -128,7 +128,7 @@
   "smithery": {
     "displayName": "STAS — Auto-Fix GitHub Issues",
     "category": "Developer Tools",
-    "icon": "https://stas.aimino.io/logo.png",
+    "icon": "https://syntaro.io/logo.png",
     "description": "Submit a GitHub issue URL and STAS investigates your codebase, writes a fix, runs tests, and opens a PR — fully automated."
   }
 }

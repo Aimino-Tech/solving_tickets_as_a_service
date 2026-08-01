@@ -36,7 +36,7 @@ export interface CheckSuiteCompletedPayload {
   installation?: { id: number };
 }
 
-const STAS_PR_MARKER = 'Powered by STAS';
+const STAS_PR_MARKER = 'Powered by Syntaro';
 
 function isStasPr(body?: string | null, headRepoLogin?: string | null, appLogin?: string): boolean {
   if (body?.includes(STAS_PR_MARKER)) {
@@ -103,7 +103,7 @@ export async function requestReviewFromCollaborators(
       owner,
       repo,
       issue_number: pullNumber,
-      body: `🔄 **STAS** requested review from: ${reviewers.map((r) => `@${r}`).join(', ')}`,
+      body: `🔄 **Syntaro** requested review from: ${reviewers.map((r) => `@${r}`).join(', ')}`,
     });
     log.info({ owner, repo, pullNumber, reviewers }, 'Requested review from collaborators');
   } catch (err) {
@@ -159,7 +159,7 @@ export async function handlePullRequestOpened(octokit: Octokit, payload: PrOpene
 
   log.info(
     { owner, repo, pullNumber, prUrl: payload.pull_request.html_url },
-    'STAS-created PR opened — running quality gate',
+    'Syntaro-created PR opened — running quality gate',
   );
 
   if (config.github.prQualityGate) {
@@ -167,7 +167,7 @@ export async function handlePullRequestOpened(octokit: Octokit, payload: PrOpene
       owner,
       repo,
       issue_number: pullNumber,
-      body: '🔄 **STAS quality gate**: waiting for CI checks to pass before marking this PR ready to merge…',
+      body: '🔄 **Syntaro quality gate**: waiting for CI checks to pass before marking this PR ready to merge…',
     });
   }
 
@@ -200,8 +200,8 @@ export async function handleCheckSuiteCompleted(octokit: Octokit, payload: Check
       }
 
       const existing = await listExistingComments(octokit, owner, repo, pullNumber);
-      const gatePassed = existing.some((c) => c.includes('STAS quality gate passed'));
-      const gateFailed = existing.some((c) => c.includes('STAS quality gate failed'));
+      const gatePassed = existing.some((c) => c.includes('Syntaro quality gate passed'));
+      const gateFailed = existing.some((c) => c.includes('Syntaro quality gate failed'));
 
       const conclusion = suite.conclusion ?? null;
       if (conclusion === 'success' && !gatePassed) {
@@ -209,7 +209,7 @@ export async function handleCheckSuiteCompleted(octokit: Octokit, payload: Check
           owner,
           repo,
           issue_number: pullNumber,
-          body: `✅ **STAS quality gate passed** — all CI checks are green. This PR is ready to merge.`,
+          body: `✅ **Syntaro quality gate passed** — all CI checks are green. This PR is ready to merge.`,
         });
         await enableMergeQueue(octokit, owner, repo, pullNumber);
       } else if (conclusion !== 'success' && !gateFailed) {
@@ -217,7 +217,7 @@ export async function handleCheckSuiteCompleted(octokit: Octokit, payload: Check
           owner,
           repo,
           issue_number: pullNumber,
-          body: `❌ **STAS quality gate failed** — CI check suite concluded with \`${conclusion ?? 'pending'}\`. Review the checks before merging.`,
+          body: `❌ **Syntaro quality gate failed** — CI check suite concluded with \`${conclusion ?? 'pending'}\`. Review the checks before merging.`,
         });
       }
     } catch (err) {

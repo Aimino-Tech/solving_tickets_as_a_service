@@ -3,7 +3,7 @@ title: "Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo A
 description: "A true-to-life STAS run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable."
 status: published
 date: 2026-07-29
-canonical: https://stas.aimino.io/blog/post-mortem-flask-todo-race
+canonical: https://syntaro.io/blog/post-mortem-flask-todo-race
 keywords:
   - STAS post-mortem
   - AI code review
@@ -15,9 +15,9 @@ featured_image: /images/blog/post-mortem-flask-todo-race.png
 featured_image_description: "Timeline of a STAS fix run: issue labeled stas:fix → webhook → triage → sandbox → investigation → fix → verify → draft PR"
 cross_post:
   devto:
-    canonical: https://stas.aimino.io/blog/post-mortem-flask-todo-race
+    canonical: https://syntaro.io/blog/post-mortem-flask-todo-race
   medium:
-    canonical: https://stas.aimino.io/blog/post-mortem-flask-todo-race
+    canonical: https://syntaro.io/blog/post-mortem-flask-todo-race
 ---
 
 # Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App
@@ -136,6 +136,6 @@ That's what happened with the todo app. The bug was real, the fix was small, and
 
 ---
 
-*STAS — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://stas.aimino.io)*
+*STAS — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
 
-*This is a cross-post. The canonical version lives at [stas.aimino.io/blog/post-mortem-flask-todo-race](https://stas.aimino.io/blog/post-mortem-flask-todo-race).*
+*This is a cross-post. The canonical version lives at [syntaro.io/blog/post-mortem-flask-todo-race](https://syntaro.io/blog/post-mortem-flask-todo-race).*

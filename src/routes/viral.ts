@@ -10,8 +10,8 @@
  *   GET /discovery           — Human-readable discovery landing page (HTML)
  *
  * Resource URIs:
- *   stas://runs/{run_id}     — Real-time status + PR link for a fix run
- *   stas://issues/{issue_id} — Issue details with fix status and run history
+ *   syntaro://runs/{run_id}     — Real-time status + PR link for a fix run
+ *   syntaro://issues/{issue_id} — Issue details with fix status and run history
  *
  * @module routes/viral
  */
@@ -57,7 +57,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
   return {
     schemaVersion: '2024-11-05',
     server: {
-      name: 'stas-agent-discovery',
+      name: 'syntaro-agent-discovery',
       version: '1.0.0',
       description:
         'STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
@@ -78,13 +78,13 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
       {
         type: 'stdio',
         command: 'python',
-        args: ['-m', 'stas_mcp.server', 'stdio'],
+        args: ['-m', 'syntaro_mcp.server', 'stdio'],
         description: 'Stdio transport for tools like Claude Desktop, Cursor, and other MCP clients',
       },
     ],
     tools: [
       {
-        name: 'stas_label_issue',
+        name: 'syntaro_label_issue',
         description: 'Label a GitHub issue with the STAS fix label (or custom label). Triggers the fix pipeline.',
         inputSchema: {
           type: 'object',
@@ -98,7 +98,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
         },
       },
       {
-        name: 'stas_run_fix',
+        name: 'syntaro_run_fix',
         description:
           'Trigger the STAS fix pipeline for a GitHub issue URL. Returns a run_id for polling.',
         inputSchema: {
@@ -110,23 +110,23 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
         },
       },
       {
-        name: 'stas_check_status',
+        name: 'syntaro_check_status',
         description: 'Check the current status of a STAS fix run by run_id.',
         inputSchema: {
           type: 'object',
           properties: {
-            run_id: { type: 'string', description: 'Run ID from stas_run_fix (e.g. stas-abc123)' },
+            run_id: { type: 'string', description: 'Run ID from syntaro_run_fix (e.g. stas-abc123)' },
           },
           required: ['run_id'],
         },
       },
       {
-        name: 'stas_get_pr',
+        name: 'syntaro_get_pr',
         description: 'Get the pull request URL and details for a completed STAS fix run.',
         inputSchema: {
           type: 'object',
           properties: {
-            run_id: { type: 'string', description: 'Run ID from stas_run_fix' },
+            run_id: { type: 'string', description: 'Run ID from syntaro_run_fix' },
           },
           required: ['run_id'],
         },
@@ -159,25 +159,25 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
     ],
     resources: [
       {
-        uri: 'stas://runs/{run_id}',
+        uri: 'syntaro://runs/{run_id}',
         name: 'Fix Run Status',
         description: 'Real-time status and PR link for a STAS fix run. Replace {run_id} with the actual run ID.',
         mimeType: 'application/json',
       },
       {
-        uri: 'stas://issues/{issue_id}',
+        uri: 'syntaro://issues/{issue_id}',
         name: 'Issue Fix Status',
         description: 'Issue details including current fix status, run history, and linked PRs. The issue_id can be a GitHub issue URL or an issue number.',
         mimeType: 'application/json',
       },
       {
-        uri: 'stas://status',
+        uri: 'syntaro://status',
         name: 'Server Health',
         description: 'STAS server health and capability overview.',
         mimeType: 'application/json',
       },
       {
-        uri: 'stas://queue',
+        uri: 'syntaro://queue',
         name: 'Fix Queue',
         description: 'Current fix queue depth and status.',
         mimeType: 'application/json',
@@ -186,28 +186,28 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
     install: {
       opencode: {
         config: {
-          name: 'stas-agent-discovery',
+          name: 'syntaro-agent-discovery',
           transport: 'stdio',
           command: 'python',
-          args: ['-m', 'stas_mcp.server', 'stdio'],
+          args: ['-m', 'syntaro_mcp.server', 'stdio'],
         },
       },
       claudeDesktop: {
         config: {
           mcpServers: {
-            stas: {
+            syntaro: {
               command: 'python',
-              args: ['-m', 'stas_mcp.server', 'stdio'],
+              args: ['-m', 'syntaro_mcp.server', 'stdio'],
             },
           },
         },
       },
       cursor: {
         config: {
-          name: 'stas-agent-discovery',
+          name: 'syntaro-agent-discovery',
           type: 'mcp',
           command: 'python',
-          args: ['-m', 'stas_mcp.server', 'stdio'],
+          args: ['-m', 'syntaro_mcp.server', 'stdio'],
         },
       },
     },
@@ -275,17 +275,17 @@ export function renderDiscoveryPage(baseUrl: string): string {
       <h2>MCP Discovery Manifest</h2>
       <p>The <code>/discovery/mcp.json</code> endpoint lets any MCP-compatible agent discover STAS's capabilities.</p>
       <div class="endpoint"><span class="method get">GET</span> <code>${baseUrl}/discovery/mcp.json</code></div>
-      <p style="margin-top:0.75rem">Connect via <code>stas://discovery/mcp.json</code> from any MCP client.</p>
+      <p style="margin-top:0.75rem">Connect via <code>syntaro://discovery/mcp.json</code> from any MCP client.</p>
       <a href="${baseUrl}/discovery/mcp.json" class="btn">View Manifest</a>
     </div>
 
     <div class="card">
       <h2>Available Tools</h2>
       <ul>
-        <li><code>stas_label_issue</code> — Label a GitHub issue to trigger the fix pipeline</li>
-        <li><code>stas_run_fix</code> — Submit a GitHub issue URL for automated fixing</li>
-        <li><code>stas_check_status</code> — Poll fix run status by run_id</li>
-        <li><code>stas_get_pr</code> — Retrieve PR details for a completed fix</li>
+        <li><code>syntaro_label_issue</code> — Label a GitHub issue to trigger the fix pipeline</li>
+        <li><code>syntaro_run_fix</code> — Submit a GitHub issue URL for automated fixing</li>
+        <li><code>syntaro_check_status</code> — Poll fix run status by run_id</li>
+        <li><code>syntaro_get_pr</code> — Retrieve PR details for a completed fix</li>
         <li><code>list_issues</code> — List tracked issues with optional status/repo filters</li>
         <li><code>search_codebase</code> — Search across tracked fix runs and issues</li>
       </ul>
@@ -294,10 +294,10 @@ export function renderDiscoveryPage(baseUrl: string): string {
     <div class="card">
       <h2>MCP Resources</h2>
       <ul>
-        <li><code>stas://runs/{run_id}</code> — Fix run status and PR link</li>
-        <li><code>stas://issues/{issue_id}</code> — Issue details with fix status and run history</li>
-        <li><code>stas://status</code> — Server health and capability overview</li>
-        <li><code>stas://queue</code> — Current fix queue depth</li>
+        <li><code>syntaro://runs/{run_id}</code> — Fix run status and PR link</li>
+        <li><code>syntaro://issues/{issue_id}</code> — Issue details with fix status and run history</li>
+        <li><code>syntaro://status</code> — Server health and capability overview</li>
+        <li><code>syntaro://queue</code> — Current fix queue depth</li>
       </ul>
     </div>
 
@@ -315,26 +315,26 @@ export function renderDiscoveryPage(baseUrl: string): string {
       <h2>Installation</h2>
       <p><strong>MCP Client</strong> — Add to your MCP client config:</p>
       <pre style="background:#0d1117;padding:0.75rem;border-radius:6px;margin-top:0.5rem;font-size:0.8rem;overflow-x:auto"><code>{
-  "name": "stas-agent-discovery",
+  "name": "syntaro-agent-discovery",
   "transport": "stdio",
   "command": "python",
-  "args": ["-m", "stas_mcp.server", "stdio"]
+  "args": ["-m", "syntaro_mcp.server", "stdio"]
 }</code></pre>
       <p style="margin-top:1rem"><strong>Claude Desktop</strong> — Add to <code>claude_desktop_config.json</code>:</p>
       <pre style="background:#0d1117;padding:0.75rem;border-radius:6px;margin-top:0.5rem;font-size:0.8rem;overflow-x:auto"><code>{
   "mcpServers": {
-    "stas": {
+    "syntaro": {
       "command": "python",
-      "args": ["-m", "stas_mcp.server", "stdio"]
+      "args": ["-m", "syntaro_mcp.server", "stdio"]
     }
   }
 }</code></pre>
       <p style="margin-top:1rem"><strong>Cursor</strong> — Add to Cursor MCP config:</p>
       <pre style="background:#0d1117;padding:0.75rem;border-radius:6px;margin-top:0.5rem;font-size:0.8rem;overflow-x:auto"><code>{
-  "name": "stas-agent-discovery",
+  "name": "syntaro-agent-discovery",
   "type": "mcp",
   "command": "python",
-  "args": ["-m", "stas_mcp.server", "stdio"]
+  "args": ["-m", "syntaro_mcp.server", "stdio"]
 }</code></pre>
     </div>
 

@@ -1,6 +1,6 @@
 # Smithery configuration for STAS MCP server
 # https://smithery.ai/docs/deploy
-name: "@aimino/stas-mcp"
+name: "@aimino/syntaro-mcp"
 description: "STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source bot backed by OpenCode."
 version: "1.0.0"
 author: "Aimino"
@@ -37,11 +37,11 @@ env:
 
 # MCP server definition
 mcpServers:
-  stas-agent-discovery:
+  syntaro-agent-discovery:
     command: python
     args:
       - "-m"
-      - "stas_mcp.server"
+      - "syntaro_mcp.server"
       - "sse"
       - "--host"
       - "0.0.0.0"
@@ -70,7 +70,7 @@ deployment:
   run:
     - "python"
     - "-m"
-    - "stas_mcp.server"
+    - "syntaro_mcp.server"
     - "sse"
     - "--host"
     - "0.0.0.0"

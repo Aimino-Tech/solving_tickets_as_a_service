@@ -34,15 +34,15 @@ capabilities:
     - list_repos
     - poll_job
   resources:
-    - stas://runs/{run_id}
-    - stas://issues/{issue_id}
-    - stas://jobs/{job_id}
+    - syntaro://runs/{run_id}
+    - syntaro://issues/{issue_id}
+    - syntaro://jobs/{job_id}
   mcp:
     transport: stdio
     command: python3
     args:
       - -m
-      - stas_mcp.server
+      - syntaro_mcp.server
       - stdio
 ---
 
@@ -59,7 +59,7 @@ Add to `opencode.json`:
   "mcpServers": {
     "stas": {
       "command": "python3",
-      "args": ["-m", "stas_mcp.server", "stdio"]
+      "args": ["-m", "syntaro_mcp.server", "stdio"]
     }
   }
 }
@@ -67,7 +67,7 @@ Add to `opencode.json`:
 
 Or run:
 ```bash
-bash stas_mcp/install.sh --opencode
+bash syntaro_mcp/install.sh --opencode
 ```
 
 ### Claude Code
@@ -78,7 +78,7 @@ npx stas install-mcp --claude
 ### Cursor
 1. Open Cursor Settings → Features → MCP Servers
 2. Click **+ Add New MCP Server**
-3. Name: `stas`, Type: `command`, Command: `python3 -m stas_mcp.server stdio`
+3. Name: `stas`, Type: `command`, Command: `python3 -m syntaro_mcp.server stdio`
 
 ### Codex CLI
 Add to `.codex/config.json`:
@@ -87,7 +87,7 @@ Add to `.codex/config.json`:
   "mcpServers": {
     "stas": {
       "command": "python3",
-      "args": ["-m", "stas_mcp.server", "stdio"]
+      "args": ["-m", "syntaro_mcp.server", "stdio"]
     }
   }
 }
@@ -259,8 +259,8 @@ STAS exposes MCP resources for agent consumption:
 
 | Resource URI | Description |
 |---|---|
-| `stas://runs/{run_id}` | Full run details: status, timestamps, issue info, PR link |
-| `stas://issues/{issue_id}` | Issue details with current fix status and run history |
+| `syntaro://runs/{run_id}` | Full run details: status, timestamps, issue info, PR link |
+| `syntaro://issues/{issue_id}` | Issue details with current fix status and run history |
 
 ## Authentication
 
@@ -321,22 +321,22 @@ The STAS MCP server supports two transport modes:
 ### stdio (default, for local agents)
 
 ```bash
-python -m stas_mcp.server stdio
+python -m syntaro_mcp.server stdio
 ```
 
 ### SSE (for remote/network agents)
 
 ```bash
-python -m stas_mcp.server sse --port 4095 --host 0.0.0.0
+python -m syntaro_mcp.server sse --port 4095 --host 0.0.0.0
 ```
 
 ## Verify Installation
 
 ```bash
 # List available MCP tools
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m stas_mcp.server stdio
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m syntaro_mcp.server stdio
 
 # Or via HTTP (SSE mode)
-python -m stas_mcp.server sse &
+python -m syntaro_mcp.server sse &
 curl http://localhost:4095/health
 ```

@@ -17,7 +17,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def reset_registry():
     """Reset the fix registry before each test."""
-    from stas_mcp.handlers import _reset_registry
+    from syntaro_mcp.handlers import _reset_registry
 
     _reset_registry()
     yield
@@ -40,12 +40,12 @@ def temp_registry_path():
 # ===========================================================================
 
 class TestLabelIssue:
-    """stas_label_issue handler tests."""
+    """syntaro_label_issue handler tests."""
 
     @pytest.mark.asyncio
-    @patch("stas_mcp.handlers.httpx.AsyncClient")
+    @patch("syntaro_mcp.handlers.httpx.AsyncClient")
     async def test_success(self, mock_client_cls):
-        from stas_mcp.handlers import label_issue
+        from syntaro_mcp.handlers import label_issue
 
         mock_client = AsyncMock()
         mock_client_cls.return_value.__aenter__.return_value = mock_client
@@ -64,9 +64,9 @@ class TestLabelIssue:
         assert "applied" in result["message"].lower()
 
     @pytest.mark.asyncio
-    @patch("stas_mcp.handlers.httpx.AsyncClient")
+    @patch("syntaro_mcp.handlers.httpx.AsyncClient")
     async def test_404(self, mock_client_cls):
-        from stas_mcp.handlers import label_issue
+        from syntaro_mcp.handlers import label_issue
 
         mock_client = AsyncMock()
         mock_client_cls.return_value.__aenter__.return_value = mock_client
@@ -82,7 +82,7 @@ class TestLabelIssue:
 
     @pytest.mark.asyncio
     async def test_no_token(self):
-        from stas_mcp.handlers import label_issue
+        from syntaro_mcp.handlers import label_issue
 
         with patch.dict(os.environ, clear=True):
             result = await label_issue("owner", "repo", 1, "stas:fix")
@@ -92,7 +92,7 @@ class TestLabelIssue:
 
     @pytest.mark.asyncio
     async def test_missing_args(self):
-        from stas_mcp.handlers import label_issue
+        from syntaro_mcp.handlers import label_issue
 
         result = await label_issue("", "", 0, "")
         assert result["success"] is False
@@ -100,11 +100,11 @@ class TestLabelIssue:
 
 
 class TestRunFix:
-    """stas_run_fix handler tests."""
+    """syntaro_run_fix handler tests."""
 
     @pytest.mark.asyncio
     async def test_success(self, temp_registry_path):
-        from stas_mcp.handlers import run_fix
+        from syntaro_mcp.handlers import run_fix
 
         result = await run_fix("https://github.com/owner/repo/issues/42")
 
@@ -115,7 +115,7 @@ class TestRunFix:
 
     @pytest.mark.asyncio
     async def test_invalid_url(self):
-        from stas_mcp.handlers import run_fix
+        from syntaro_mcp.handlers import run_fix
 
         result = await run_fix("not-a-url")
         assert result["success"] is False
@@ -123,7 +123,7 @@ class TestRunFix:
 
     @pytest.mark.asyncio
     async def test_empty_url(self):
-        from stas_mcp.handlers import run_fix
+        from syntaro_mcp.handlers import run_fix
 
         result = await run_fix("")
         assert result["success"] is False
@@ -131,7 +131,7 @@ class TestRunFix:
 
     @pytest.mark.asyncio
     async def test_persistence(self, temp_registry_path):
-        from stas_mcp.handlers import run_fix, check_status
+        from syntaro_mcp.handlers import run_fix, check_status
 
         run_result = await run_fix("https://github.com/a/b/issues/7")
         run_id = run_result["run_id"]
@@ -143,7 +143,7 @@ class TestRunFix:
 
     @pytest.mark.asyncio
     async def test_enqueue_offline(self, temp_registry_path):
-        from stas_mcp.handlers import run_fix
+        from syntaro_mcp.handlers import run_fix
 
         result = await run_fix("https://github.com/owner/repo/issues/1")
         assert result["success"] is True
@@ -151,11 +151,11 @@ class TestRunFix:
 
 
 class TestCheckStatus:
-    """stas_check_status handler tests."""
+    """syntaro_check_status handler tests."""
 
     @pytest.mark.asyncio
     async def test_not_found(self):
-        from stas_mcp.handlers import check_status
+        from syntaro_mcp.handlers import check_status
 
         result = await check_status("non-existent-run")
         assert result["success"] is False
@@ -163,14 +163,14 @@ class TestCheckStatus:
 
     @pytest.mark.asyncio
     async def test_empty(self):
-        from stas_mcp.handlers import check_status
+        from syntaro_mcp.handlers import check_status
 
         result = await check_status("")
         assert result["success"] is False
 
     @pytest.mark.asyncio
     async def test_found(self, temp_registry_path):
-        from stas_mcp.handlers import check_status, run_fix
+        from syntaro_mcp.handlers import check_status, run_fix
 
         run = await run_fix("https://github.com/x/y/issues/3")
         result = await check_status(run["run_id"])
@@ -179,18 +179,18 @@ class TestCheckStatus:
 
 
 class TestGetPR:
-    """stas_get_pr handler tests."""
+    """syntaro_get_pr handler tests."""
 
     @pytest.mark.asyncio
     async def test_not_found(self):
-        from stas_mcp.handlers import get_pr
+        from syntaro_mcp.handlers import get_pr
 
         result = await get_pr("missing-run")
         assert result["success"] is False
 
     @pytest.mark.asyncio
     async def test_no_pr_yet(self, temp_registry_path):
-        from stas_mcp.handlers import get_pr, run_fix
+        from syntaro_mcp.handlers import get_pr, run_fix
 
         run = await run_fix("https://github.com/o/r/issues/5")
         result = await get_pr(run["run_id"])
@@ -208,59 +208,59 @@ class TestFastMCPServer:
 
     def test_server_imports(self):
         """Server module imports without error."""
-        from stas_mcp.server import mcp, SERVER_NAME
+        from syntaro_mcp.server import mcp, SERVER_NAME
 
         assert mcp is not None
-        assert SERVER_NAME == "stas-agent-discovery"
+        assert SERVER_NAME == "syntaro-agent-discovery"
 
     def test_tools_registered(self):
         """All four tools are registered with correct names."""
-        from stas_mcp.server import mcp
+        from syntaro_mcp.server import mcp
 
         tool_names = [t.name for t in mcp._tool_manager.list_tools()]
-        assert "stas_label_issue" in tool_names
-        assert "stas_run_fix" in tool_names
-        assert "stas_check_status" in tool_names
-        assert "stas_get_pr" in tool_names
+        assert "syntaro_label_issue" in tool_names
+        assert "syntaro_run_fix" in tool_names
+        assert "syntaro_check_status" in tool_names
+        assert "syntaro_get_pr" in tool_names
 
     def test_resource_template_registered(self):
         """Resource template is registered."""
-        from stas_mcp.server import mcp
+        from syntaro_mcp.server import mcp
 
         templates = list(mcp._resource_manager._templates.keys())
-        assert "stas://runs/{run_id}" in templates
+        assert "syntaro://runs/{run_id}" in templates
 
     def test_resource_template_params(self):
         """Resource template has correct parameter."""
-        from stas_mcp.server import mcp
+        from syntaro_mcp.server import mcp
 
-        tmpl = mcp._resource_manager._templates["stas://runs/{run_id}"]
+        tmpl = mcp._resource_manager._templates["syntaro://runs/{run_id}"]
         assert tmpl.name == "Fix Run Status"
         assert "run_id" in tmpl.parameters.get("required", [])
 
     @pytest.mark.asyncio
     async def test_tool_listing(self):
         """list_tools() returns all four tools."""
-        from stas_mcp.server import mcp
+        from syntaro_mcp.server import mcp
 
         tools = await mcp.list_tools()
         names = [t.name for t in tools]
         assert len(names) == 6
-        assert "stas_label_issue" in names
-        assert "stas_run_fix" in names
-        assert "stas_check_status" in names
-        assert "stas_get_pr" in names
+        assert "syntaro_label_issue" in names
+        assert "syntaro_run_fix" in names
+        assert "syntaro_check_status" in names
+        assert "syntaro_get_pr" in names
         assert "list_issues" in names
         assert "search_codebase" in names
 
     @pytest.mark.asyncio
     async def test_resource_template_listing(self):
         """list_resource_templates() returns the run resource."""
-        from stas_mcp.server import mcp
+        from syntaro_mcp.server import mcp
 
         templates = await mcp.list_resource_templates()
         uris = [t.uriTemplate for t in templates]
-        assert "stas://runs/{run_id}" in uris
+        assert "syntaro://runs/{run_id}" in uris
 
 
 # ===========================================================================
@@ -269,19 +269,19 @@ class TestFastMCPServer:
 
 class TestUrlParsing:
     def test_valid_github_url(self):
-        from stas_mcp.handlers import _parse_github_issue_url
+        from syntaro_mcp.handlers import _parse_github_issue_url
 
         result = _parse_github_issue_url("https://github.com/owner/repo/issues/123")
         assert result == {"owner": "owner", "repo": "repo", "issue_number": 123}
 
     def test_https_variants(self):
-        from stas_mcp.handlers import _parse_github_issue_url
+        from syntaro_mcp.handlers import _parse_github_issue_url
 
         assert _parse_github_issue_url("http://github.com/a/b/issues/1") is not None
         assert _parse_github_issue_url("https://github.com/a/b/issues/999")["issue_number"] == 999
 
     def test_invalid_urls(self):
-        from stas_mcp.handlers import _parse_github_issue_url
+        from syntaro_mcp.handlers import _parse_github_issue_url
 
         assert _parse_github_issue_url("") is None
         assert _parse_github_issue_url("not-a-url") is None

@@ -54,4 +54,4 @@ curl -X POST https://stas-rapidapi.p.rapidapi.com/api/fix \
 
 - **Source Code**: https://github.com/tamnguyen08/solving_tickets_as_a_service
 - **Documentation**: https://github.com/tamnguyen08/solving_tickets_as_a_service#readme
-- **Website**: https://stas.aimino.io
+- **Website**: https://syntaro.io

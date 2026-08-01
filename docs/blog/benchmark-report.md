@@ -3,7 +3,7 @@ title: "STAS vs Copilot Workspace vs OpenHands: fix rate, cost, and speed compar
 description: "Head-to-head benchmark: STAS achieves 92% pass rate at $3.80/fix in 30s median vs Copilot Workspace and OpenHands. Full methodology, honest limitations, and when to choose each tool."
 status: draft
 date: 2026-07-28
-canonical: https://stas.aimino.io/blog/benchmark-report
+canonical: https://syntaro.io/blog/benchmark-report
 keywords:
   - STAS benchmark
   - Copilot Workspace comparison
@@ -16,9 +16,9 @@ featured_image: /images/blog/benchmark-report.png
 featured_image_description: "Bar chart comparing STAS (92% pass rate, $3.80/fix, 30s) against Copilot Workspace and OpenHands across pass rate, cost, and speed metrics"
 cross_post:
   devto:
-    canonical: https://stas.aimino.io/blog/benchmark-report
+    canonical: https://syntaro.io/blog/benchmark-report
   medium:
-    canonical: https://stas.aimino.io/blog/benchmark-report
+    canonical: https://syntaro.io/blog/benchmark-report
 ---
 
 # STAS vs Copilot Workspace vs OpenHands: fix rate, cost, and speed comparison
@@ -208,6 +208,6 @@ All 500 issues are drawn from the following repositories: Next.js, React, TypeSc
 
 ---
 
-*STAS — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://stas.aimino.io)*
+*STAS — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
 
-*This is a cross-post. The canonical version lives at [stas.aimino.io/blog/benchmark-report](https://stas.aimino.io/blog/benchmark-report). Raw benchmark data available at [github.com/Aimino-Tech/solving_tickets_as_a_service/tree/main/eval/benchmarks](https://github.com/Aimino-Tech/solving_tickets_as_a_service/tree/main/eval/benchmarks).*
+*This is a cross-post. The canonical version lives at [syntaro.io/blog/benchmark-report](https://syntaro.io/blog/benchmark-report). Raw benchmark data available at [github.com/Aimino-Tech/solving_tickets_as_a_service/tree/main/eval/benchmarks](https://github.com/Aimino-Tech/solving_tickets_as_a_service/tree/main/eval/benchmarks).*

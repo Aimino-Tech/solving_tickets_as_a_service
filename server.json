@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/main/schemas/server.json",
-  "name": "@aimino/stas-mcp",
-  "mcpName": "stas-agent-discovery",
+  "name": "@aimino/syntaro-mcp",
+  "mcpName": "syntaro-agent-discovery",
   "version": "1.0.0",
   "description": "MCP server for STAS — Solving Tickets As A Service. Submit GitHub issues, list runs, search codebase, and get automated fix PRs via OpenCode agents.",
   "author": {
@@ -18,8 +18,8 @@
   "tags": ["github", "issues", "automation", "fix", "pr", "mcp", "agent"],
   "capabilities": {
     "tools": {
-      "stas_label_issue": {
-        "name": "stas_label_issue",
+      "syntaro_label_issue": {
+        "name": "syntaro_label_issue",
         "description": "Label a GitHub issue with the STAS fix label (or custom label).",
         "inputSchema": {
           "type": "object",
@@ -32,8 +32,8 @@
           "required": ["owner", "repo", "issue_number"]
         }
       },
-      "stas_run_fix": {
-        "name": "stas_run_fix",
+      "syntaro_run_fix": {
+        "name": "syntaro_run_fix",
         "description": "Trigger the STAS fix pipeline for a GitHub issue URL.",
         "inputSchema": {
           "type": "object",
@@ -43,24 +43,24 @@
           "required": ["issue_url"]
         }
       },
-      "stas_check_status": {
-        "name": "stas_check_status",
+      "syntaro_check_status": {
+        "name": "syntaro_check_status",
         "description": "Check the current status of a STAS fix run by run_id.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "run_id": { "type": "string", "description": "Run ID from stas_run_fix" }
+            "run_id": { "type": "string", "description": "Run ID from syntaro_run_fix" }
           },
           "required": ["run_id"]
         }
       },
-      "stas_get_pr": {
-        "name": "stas_get_pr",
+      "syntaro_get_pr": {
+        "name": "syntaro_get_pr",
         "description": "Get the pull request URL and details for a completed STAS fix run.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "run_id": { "type": "string", "description": "Run ID from stas_run_fix" }
+            "run_id": { "type": "string", "description": "Run ID from syntaro_run_fix" }
           },
           "required": ["run_id"]
         }
@@ -92,12 +92,12 @@
       }
     },
     "resources": {
-      "stas://runs/{run_id}": {
+      "syntaro://runs/{run_id}": {
         "name": "Fix Run Status",
         "description": "Real-time status and PR link for a STAS fix run.",
         "mimeType": "application/json"
       },
-      "stas://issues/{issue_id}": {
+      "syntaro://issues/{issue_id}": {
         "name": "Issue Fix Status",
         "description": "Issue details including current fix status, run history, and linked PRs.",
         "mimeType": "application/json"
@@ -105,7 +105,7 @@
     }
   },
   "command": "python",
-  "args": ["-m", "stas_mcp.server", "stdio"],
+  "args": ["-m", "syntaro_mcp.server", "stdio"],
   "env": {
     "STAS_MCP_SERVER_URL": {
       "description": "URL of the STAS MCP server",
@@ -123,7 +123,7 @@
   "transport": {
     "stdio": {
       "command": "python",
-      "args": ["-m", "stas_mcp.server", "stdio"],
+      "args": ["-m", "syntaro_mcp.server", "stdio"],
       "description": "Stdio transport for tools like OpenCode and Claude Desktop"
     },
     "sse": {
@@ -139,6 +139,6 @@
     "type": "python",
     "dependencies": ["mcp>=1.0.0", "httpx"],
     "installCommand": "pip install mcp>=1.0.0 httpx",
-    "runCommand": "python -m stas_mcp.server"
+    "runCommand": "python -m syntaro_mcp.server"
   }
 }

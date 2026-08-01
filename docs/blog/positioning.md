@@ -3,7 +3,7 @@ title: "The most important skill for AI coding tools isn't writing code — it's
 description: "Why STAS founder built an AI that plans before coding. The bottleneck isn't code generation — it's understanding the problem. Async workflow: label an issue, get a PR, stay in flow."
 status: draft
 date: 2026-07-28
-canonical: https://stas.aimino.io/blog/positioning
+canonical: https://syntaro.io/blog/positioning
 keywords:
   - AI coding tools
   - automated bug fixing
@@ -16,9 +16,9 @@ featured_image: /images/blog/positioning.png
 featured_image_description: "Developer on a laptop, seamless flow state with code on screen and a STAS PR notification arriving in the background — no context switch"
 cross_post:
   devto:
-    canonical: https://stas.aimino.io/blog/positioning
+    canonical: https://syntaro.io/blog/positioning
   medium:
-    canonical: https://stas.aimino.io/blog/positioning
+    canonical: https://syntaro.io/blog/positioning
 ---
 
 # The most important skill for AI coding tools isn't writing code — it's knowing what to write
@@ -145,6 +145,6 @@ The thread connecting all of these is the same: **better understanding leads to 
 
 ---
 
-*STAS — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://stas.aimino.io)*
+*STAS — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
 
-*This is a cross-post. The canonical version lives at [stas.aimino.io/blog/positioning](https://stas.aimino.io/blog/positioning).*
+*This is a cross-post. The canonical version lives at [syntaro.io/blog/positioning](https://syntaro.io/blog/positioning).*

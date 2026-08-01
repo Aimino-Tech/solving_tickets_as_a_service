@@ -10,7 +10,7 @@
  *   npx stas install-mcp --codex      # Codex CLI only
  *   npx stas install-mcp --uninstall  # Remove from all agents
  *
- * This script resolves the project root and delegates to stas_mcp/install.sh.
+ * This script resolves the project root and delegates to syntaro_mcp/install.sh.
  */
 
 import { execFileSync } from "node:child_process";
@@ -22,7 +22,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = resolve(__dirname, "..");
 
-const installScript = resolve(PROJECT_ROOT, "stas_mcp", "install.sh");
+const installScript = resolve(PROJECT_ROOT, "syntaro_mcp", "install.sh");
 
 if (!existsSync(installScript)) {
   console.error(`Error: install.sh not found at ${installScript}`);

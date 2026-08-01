@@ -142,9 +142,9 @@ def handle_list_tools() -> list[dict]:
 
 def handle_list_resources() -> list[dict]:
     return [
-        {"uri": "stas://status", "name": "Pipeline Status", "description": "Real OpenSymphony pipeline system health"},
-        {"uri": "stas://fixes/{fix_id}", "name": "Fix Details", "description": "Full pipeline details for a specific fix"},
-        {"uri": "stas://queue", "name": "Fix Queue", "description": "Pipeline dispatch queue overview"},
+        {"uri": "syntaro://status", "name": "Pipeline Status", "description": "Real OpenSymphony pipeline system health"},
+        {"uri": "syntaro://fixes/{fix_id}", "name": "Fix Details", "description": "Full pipeline details for a specific fix"},
+        {"uri": "syntaro://queue", "name": "Fix Queue", "description": "Pipeline dispatch queue overview"},
     ]
 
 
@@ -156,8 +156,8 @@ TOOL_HANDLERS = {
 }
 
 RESOURCE_HANDLERS = {
-    "stas://status": lambda: handle_resource_status(),
-    "stas://queue": lambda: handle_resource_queue(),
+    "syntaro://status": lambda: handle_resource_status(),
+    "syntaro://queue": lambda: handle_resource_queue(),
 }
 
 
@@ -186,14 +186,14 @@ def run_stdio_server():
                     response = {"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32601, "message": f"Unknown tool: {tool_name}"}}
             elif method == "resources/read":
                 uri = params.get("uri", "")
-                if uri.startswith("stas://status"):
+                if uri.startswith("syntaro://status"):
                     result = handle_resource_status()
                     response = {"jsonrpc": "2.0", "id": msg_id, "result": {"contents": [{"uri": uri, "mimeType": "application/json", "text": json.dumps(result, indent=2)}]}}
-                elif uri.startswith("stas://fixes/"):
-                    fix_id = uri.replace("stas://fixes/", "")
+                elif uri.startswith("syntaro://fixes/"):
+                    fix_id = uri.replace("syntaro://fixes/", "")
                     result = handle_resource_fix(fix_id)
                     response = {"jsonrpc": "2.0", "id": msg_id, "result": {"contents": [{"uri": uri, "mimeType": "application/json", "text": json.dumps(result, indent=2)}]}}
-                elif uri == "stas://queue":
+                elif uri == "syntaro://queue":
                     result = handle_resource_queue()
                     response = {"jsonrpc": "2.0", "id": msg_id, "result": {"contents": [{"uri": uri, "mimeType": "application/json", "text": json.dumps(result, indent=2)}]}}
                 else:

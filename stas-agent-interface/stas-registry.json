@@ -3,7 +3,7 @@
   "package_name": "stas-agent-interface",
   "package_version": "0.1.0",
   "description": "Unified Agent Interface Layer - MCP SDK + Discovery + Auth for STAS",
-  "protocols": {"mcp": {"version":"2024-11-05","transport":"sse","default_port":4094,"stdio_command":"stas-mcp --stdio"},"rest": {"version":"1.0.0","transport":"http","default_port":8090,"health_endpoint":"/health"}},
+  "protocols": {"mcp": {"version":"2024-11-05","transport":"sse","default_port":4094,"stdio_command":"syntaro-mcp --stdio"},"rest": {"version":"1.0.0","transport":"http","default_port":8090,"health_endpoint":"/health"}},
   "capabilities": [
     {"name":"list_capabilities","description":"Auto-discover all STAS capabilities","scope":"read","mcp_tool":true,"rest_endpoint":"GET /capabilities"},
     {"name":"submit_issue","description":"Submit a GitHub issue to the STAS fix pipeline","scope":"write","mcp_tool":true,"rest_endpoint":"POST /issue"},

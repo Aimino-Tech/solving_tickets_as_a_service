@@ -147,39 +147,39 @@ Request:
 {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
 ```
 
-Response includes: `stas_fix_issue`, `stas_check_status`, `stas_list_runs`, `stas_get_run`.
+Response includes: `syntaro_fix_issue`, `syntaro_check_status`, `syntaro_list_runs`, `syntaro_get_run`.
 
 #### `tools/call` — Invoke a tool
 
-**stas_fix_issue**: Dispatch a fix run for a GitHub issue.
+**syntaro_fix_issue**: Dispatch a fix run for a GitHub issue.
 ```json
 {
   "jsonrpc": "2.0", "id": 1, "method": "tools/call",
-  "params": { "name": "stas_fix_issue", "arguments": { "repoOwner": "owner", "repoName": "repo", "issueNumber": 42 } }
+  "params": { "name": "syntaro_fix_issue", "arguments": { "repoOwner": "owner", "repoName": "repo", "issueNumber": 42 } }
 }
 ```
 
-**stas_check_status**: Check fix run status by runId.
+**syntaro_check_status**: Check fix run status by runId.
 ```json
 {
   "jsonrpc": "2.0", "id": 1, "method": "tools/call",
-  "params": { "name": "stas_check_status", "arguments": { "runId": "uuid" } }
+  "params": { "name": "syntaro_check_status", "arguments": { "runId": "uuid" } }
 }
 ```
 
-**stas_list_runs**: List recent fix runs with optional status filter.
+**syntaro_list_runs**: List recent fix runs with optional status filter.
 ```json
 {
   "jsonrpc": "2.0", "id": 1, "method": "tools/call",
-  "params": { "name": "stas_list_runs", "arguments": { "limit": 20, "status": "completed" } }
+  "params": { "name": "syntaro_list_runs", "arguments": { "limit": 20, "status": "completed" } }
 }
 ```
 
-**stas_get_run**: Get full details for a fix run.
+**syntaro_get_run**: Get full details for a fix run.
 ```json
 {
   "jsonrpc": "2.0", "id": 1, "method": "tools/call",
-  "params": { "name": "stas_get_run", "arguments": { "runId": "uuid" } }
+  "params": { "name": "syntaro_get_run", "arguments": { "runId": "uuid" } }
 }
 ```
 
@@ -190,14 +190,14 @@ Request:
 {"jsonrpc": "2.0", "id": 1, "method": "resources/list"}
 ```
 
-Resources: `stas://runs/{runId}`, `stas://issues/{issueId}`.
+Resources: `syntaro://runs/{runId}`, `syntaro://issues/{issueId}`.
 
 #### `resources/read` — Read a resource
 
 ```json
 {
   "jsonrpc": "2.0", "id": 1, "method": "resources/read",
-  "params": { "uri": "stas://runs/some-uuid" }
+  "params": { "uri": "syntaro://runs/some-uuid" }
 }
 ```
 
@@ -216,11 +216,11 @@ The MCP agent server (`src/mcp/agentServer.ts`) is an Express router mounted at 
 AI Agent
   │
   ├─ POST /mcp/jsonrpc { method: "tools/list" }
-  │     → Discovers stas_fix_issue, stas_check_status, etc.
+  │     → Discovers syntaro_fix_issue, syntaro_check_status, etc.
   │
-  ├─ POST /mcp/jsonrpc { method: "tools/call", name: "stas_fix_issue", args: {...} }
+  ├─ POST /mcp/jsonrpc { method: "tools/call", name: "syntaro_fix_issue", args: {...} }
   │     → Run created, dispatched to RabbitMQ pipeline
   │
-  └─ POST /mcp/jsonrpc { method: "tools/call", name: "stas_check_status", args: { runId } }
+  └─ POST /mcp/jsonrpc { method: "tools/call", name: "syntaro_check_status", args: { runId } }
         → Returns current status (queued → investigating → fixing → ... → completed/failed)
 ```

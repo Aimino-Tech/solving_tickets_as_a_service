@@ -166,7 +166,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*🌐 STAS website deployed*\nRepository: `${{ github.repository }}`\nCommit: <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|`${{ github.sha }}`>\nSite: https://stas.aimino.io"
+                    "text": "*🌐 STAS website deployed*\nRepository: `${{ github.repository }}`\nCommit: <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|`${{ github.sha }}`>\nSite: https://syntaro.io"
                   }
                 }
               ]
@@ -176,6 +176,6 @@ jobs:
         run: |
           echo '### 🌐 STAS Website Deployed' >> "$GITHUB_STEP_SUMMARY"
           echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo '- **Site:** https://stas.aimino.io' >> "$GITHUB_STEP_SUMMARY"
+          echo '- **Site:** https://syntaro.io' >> "$GITHUB_STEP_SUMMARY"
           echo "- **Commit:** ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> "$GITHUB_STEP_SUMMARY"

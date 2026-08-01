@@ -15,20 +15,20 @@
       "platforms": ["opencode", "openclaw", "claude-code"],
       "capabilities": {
         "tools": ["submit_issue", "check_status", "get_run_history", "list_repos", "poll_job"],
-        "resources": ["stas://runs/{run_id}", "stas://issues/{issue_id}", "stas://jobs/{job_id}"],
+        "resources": ["syntaro://runs/{run_id}", "syntaro://issues/{issue_id}", "syntaro://jobs/{job_id}"],
         "mcp": {
           "transport": "stdio",
           "command": "python3",
-          "args": ["-m", "stas_mcp.server", "stdio"]
+          "args": ["-m", "syntaro_mcp.server", "stdio"]
         }
       },
       "mcpServers": {
         "stas": {
           "command": "python3",
-          "args": ["-m", "stas_mcp.server", "stdio"],
+          "args": ["-m", "syntaro_mcp.server", "stdio"],
           "env": {
             "STAS_API_KEY": { "description": "STAS API key for authentication", "required": true, "secret": true },
-            "STAS_API_URL": { "description": "STAS API base URL", "required": false, "default": "https://api.stas.aimino.io" },
+            "STAS_API_URL": { "description": "STAS API base URL", "required": false, "default": "https://api.syntaro.io" },
             "GITHUB_TOKEN": { "description": "GitHub personal access token", "required": false, "secret": true }
           }
         }

@@ -37,6 +37,6 @@ STAS is a GitHub App that automatically responds to labeled issues with fully te
 
 ## Links
 
-- **Website**: https://stas.aimino.io
+- **Website**: https://syntaro.io
 - **Source**: https://github.com/tamnguyen08/solving_tickets_as_a_service
 - **Docs**: https://github.com/tamnguyen08/solving_tickets_as_a_service#readme

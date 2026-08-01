@@ -68,22 +68,22 @@ A repeatable seven-stage pipeline. Every post, thread, and sponsor placement pas
 
 **Workstream 2: engineering blog (done).** `docs/blog/architecture-deep-dive.md` explains the plan-first architecture: 8-phase pipeline, gpt-4o-mini triage (~$0.10) + claude-sonnet-4 fix (~$3.00) model cascade, ~61% of labeled issues filtered as non-bug, benchmark numbers (92% pass rate, median $3.80/fix, median 30s turnaround, 97% test-suite pass, 87% PR acceptance, avg fix +32/-15 lines). Published as `website/blog/architecture-deep-dive.html`, indexed and sitemapped.
 
-**Workstream 3: newsletter sponsorships (drafted).** `docs/distribution/newsletter-sponsorships.md` carries copy, budget mixes, and UTM conventions for TLDR AI (~800K subscribers, ~$4,500/run, ~$0.56 CPC est.), Python Weekly (~500K, ~$2,500, ~$0.50 est.), and ByteSized (~100K, ~$1,000, ~$1.00 est.). The recommended plan is Mix C: a negotiated 3-issue Python Weekly package plus one ByteSized copy test, ~$7,300/month at a blended CPC of ~$0.47 (estimate). No mix hits under $0.50 at sticker prices, so a multi-issue discount (typical 10 to 20%) is the lever. Every placement links `https://stas.aimino.io?utm_source=<pub>&utm_medium=newsletter&utm_campaign=sponsor`.
+**Workstream 3: newsletter sponsorships (drafted).** `docs/distribution/newsletter-sponsorships.md` carries copy, budget mixes, and UTM conventions for TLDR AI (~800K subscribers, ~$4,500/run, ~$0.56 CPC est.), Python Weekly (~500K, ~$2,500, ~$0.50 est.), and ByteSized (~100K, ~$1,000, ~$1.00 est.). The recommended plan is Mix C: a negotiated 3-issue Python Weekly package plus one ByteSized copy test, ~$7,300/month at a blended CPC of ~$0.47 (estimate). No mix hits under $0.50 at sticker prices, so a multi-issue discount (typical 10 to 20%) is the lever. Every placement links `https://syntaro.io?utm_source=<pub>&utm_medium=newsletter&utm_campaign=sponsor`.
 
 **Workstream 4: tweet threads (drafted).** `docs/distribution/tweet-threads.md` provides ready-to-post before/after threads: the bug, the STAS fix diff (+32/-15 lines average), time saved (median 30s turnaround vs. hours of triage), and competitor contrast from `website/data/benchmark.json` (Plip.io 46%, TaskBounty 48%, KintsugiBot 40%, Open SWE 38% pass rates). Two threads per week, each ending in a UTM-tagged link.
 
-**Workstream 5: guest posts (drafted).** `docs/distribution/guest-posts.md` covers dev.to, HackerNoon, and InfoQ. Policy is canonical-first: every cross-post points `canonical` at `https://stas.aimino.io/blog/{slug}` (the frontmatter `cross_post` block already declares dev.to and Medium canonicals) so search equity returns to the site.
+**Workstream 5: guest posts (drafted).** `docs/distribution/guest-posts.md` covers dev.to, HackerNoon, and InfoQ. Policy is canonical-first: every cross-post points `canonical` at `https://syntaro.io/blog/{slug}` (the frontmatter `cross_post` block already declares dev.to and Medium canonicals) so search equity returns to the site.
 
 ---
 
 ## Distribution Stack
 
-- **Site**: static website at `stas.aimino.io`; published posts live as HTML in `website/blog/`; the index at `website/blog.html` renders one card per post.
-- **Analytics**: Plausible, `data-domain="stas.aimino.io"` on every page. This is the source of truth for organic visits/week.
+- **Site**: static website at `syntaro.io`; published posts live as HTML in `website/blog/`; the index at `website/blog.html` renders one card per post.
+- **Analytics**: Plausible, `data-domain="syntaro.io"` on every page. This is the source of truth for organic visits/week.
 - **Sitemap**: `website/sitemap.xml` carries the blog index and every post URL (`/blog/post-mortem-flask-todo-race`, `/blog/architecture-deep-dive`, `/blog/stas-v1-launch`, `/blog/opencode-integration`); `website/robots.txt` allows all paths and points crawlers at the sitemap.
 - **UTM convention**: every outbound link carries `utm_source` (channel: `tldr`, `twitter`, `devto`), `utm_medium` (`newsletter`, `social`, `email`), `utm_campaign` (post slug or `sponsor`). Examples in the repo: `utm_source=tldr&utm_medium=newsletter&utm_campaign=sponsor`.
-- **Canonical cross-posting**: the canonical version always lives at `stas.aimino.io`; syndicated copies declare the canonical via frontmatter and `<link rel="canonical">`.
-- **SEO checklist per post** (enforced by `tests/content-engine.test.ts`): `<title>` with the "STAS Blog" suffix (the test matches the literal `— STAS Blog</title>` format used by published pages); meta description and keywords; `og:type="article"`, `og:url`, `og:title`, `og:description`, `og:image` (`https://stas.aimino.io/img/og-image.png`, 1200x630); `twitter:card="summary_large_image"`; JSON-LD `BlogPosting` with `datePublished`, `author`, `publisher`; Plausible script.
+- **Canonical cross-posting**: the canonical version always lives at `syntaro.io`; syndicated copies declare the canonical via frontmatter and `<link rel="canonical">`.
+- **SEO checklist per post** (enforced by `tests/content-engine.test.ts`): `<title>` with the "STAS Blog" suffix (the test matches the literal `— STAS Blog</title>` format used by published pages); meta description and keywords; `og:type="article"`, `og:url`, `og:title`, `og:description`, `og:image` (`https://syntaro.io/img/og-image.png`, 1200x630); `twitter:card="summary_large_image"`; JSON-LD `BlogPosting` with `datePublished`, `author`, `publisher`; Plausible script.
 
 ---
 
@@ -112,7 +112,7 @@ A monthly review, run by the content lead against Plausible and the newsletter p
 
 - **Organic visits/week**: Plausible site overview, trended; the 5,000/week target is measured on a rolling 4-week average to absorb launch spikes.
 - **CPC per newsletter placement**: clicks per placement divided by spend per placement (from the `docs/distribution/newsletter-sponsorships.md` ledger); blended CPC is the parent target, with Mix A's ~$0.54 (estimate) tracked explicitly as an exception during launch windows.
-- **Installs per channel**: attributed via UTM, install links on `stas.aimino.io` and all distribution assets carry `utm_campaign`; Plausible goal completions per campaign assign installs to the channel that drove them. (The PR-footer loop is tracked separately via PostHog `ref=pr-footer`.)
+- **Installs per channel**: attributed via UTM, install links on `syntaro.io` and all distribution assets carry `utm_campaign`; Plausible goal completions per campaign assign installs to the channel that drove them. (The PR-footer loop is tracked separately via PostHog `ref=pr-footer`.)
 - **Supporting metrics**: newsletter subscribers, GitHub followers, posts published, per the table in Purpose & Success Metrics.
 
 The monthly report feeds stage 1 of the engine: posts that performed move up the backlog, placements that missed the CPC target get re-quoted or swapped, and thread angles that earned clicks become blog posts.

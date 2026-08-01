@@ -5,16 +5,16 @@
  * with tools and resources that AI agents can discover and call.
  *
  * Tools:
- *   - stas_fix_issue      — Dispatch a fix run for a GitHub issue
- *   - stas_check_status   — Check status of a fix run by runId
- *   - stas_list_runs      — List recent fix runs with optional filters
- *   - stas_get_run        — Full run details by runId
- *   - stas_slack_send     — Send a message to a Slack channel
- *   - stas_slack_ticket   — Create a Linear ticket from Slack
+ *   - syntaro_fix_issue      — Dispatch a fix run for a GitHub issue
+ *   - syntaro_check_status   — Check status of a fix run by runId
+ *   - syntaro_list_runs      — List recent fix runs with optional filters
+ *   - syntaro_get_run        — Full run details by runId
+ *   - syntaro_slack_send     — Send a message to a Slack channel
+ *   - syntaro_slack_ticket   — Create a Linear ticket from Slack
  *
  * Resources:
- *   - stas://runs/{runId}    — Full run details
- *   - stas://issues/{issueId} — Issue details with fix status
+ *   - syntaro://runs/{runId}    — Full run details
+ *   - syntaro://issues/{issueId} — Issue details with fix status
  *
  * Protocol: JSON-RPC 2.0 over HTTP POST
  *   - tools/list, tools/call
@@ -107,8 +107,8 @@ interface McpTextResourceContents {
 
 const tools: McpTool[] = [
   {
-    name: 'stas_fix_issue',
-    description: 'Submit a GitHub issue to the STAS pipeline for automated investigation and PR creation. Use this when you have identified a fixable bug or feature request with a clear scope. Returns a runId that you can poll with stas_check_status to track progress through investigation, fixing, testing, and PR stages.',
+    name: 'syntaro_fix_issue',
+    description: 'Submit a GitHub issue to the STAS pipeline for automated investigation and PR creation. Use this when you have identified a fixable bug or feature request with a clear scope. Returns a runId that you can poll with syntaro_check_status to track progress through investigation, fixing, testing, and PR stages.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -121,18 +121,18 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: 'stas_check_status',
-    description: 'Poll the progress of an active fix run by runId. Use this after submitting a fix with stas_fix_issue to check whether it completed, failed, or is still being worked on. Returns the current stage (queued, investigating, fixing, testing, committing, completed, or failed) along with timestamps and any error messages.',
+    name: 'syntaro_check_status',
+    description: 'Poll the progress of an active fix run by runId. Use this after submitting a fix with syntaro_fix_issue to check whether it completed, failed, or is still being worked on. Returns the current stage (queued, investigating, fixing, testing, committing, completed, or failed) along with timestamps and any error messages.',
     inputSchema: {
       type: 'object',
       properties: {
-        runId: { type: 'string', description: 'Run ID returned by stas_fix_issue' },
+        runId: { type: 'string', description: 'Run ID returned by syntaro_fix_issue' },
       },
       required: ['runId'],
     },
   },
   {
-    name: 'stas_list_runs',
+    name: 'syntaro_list_runs',
     description: 'Browse recent fix runs with optional status filtering. Use this to review the history of submitted fixes, monitor overall activity, or locate a specific runId for further inspection. Returns a list of runs with repository context, current status, and creation timestamps.',
     inputSchema: {
       type: 'object',
@@ -146,18 +146,18 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: 'stas_get_run',
+    name: 'syntaro_get_run',
     description: 'Retrieve comprehensive details for a specific fix run by runId. Use this when you need the full picture including repository context, issue title, confidence score, and PR link. Returns the complete run record with all available metadata beyond the basic status fields.',
     inputSchema: {
       type: 'object',
       properties: {
-        runId: { type: 'string', description: 'Run ID returned by stas_fix_issue' },
+        runId: { type: 'string', description: 'Run ID returned by syntaro_fix_issue' },
       },
       required: ['runId'],
     },
   },
   {
-    name: 'stas_slack_send',
+    name: 'syntaro_slack_send',
     description: 'Post a message to a Slack channel for notifications and status updates. Use this to alert team members about fix results, deployment notices, or other operational events. Returns confirmation with the channel ID and Slack message timestamp.',
     inputSchema: {
       type: 'object',
@@ -169,7 +169,7 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: 'stas_slack_ticket',
+    name: 'syntaro_slack_ticket',
     description: 'Create a Linear issue to formally track work that needs attention. Use this when a bug, feature request, or task has been identified and should be tracked in the project management system. Returns the created ticket details including Linear URL, with an optional Slack notification to the specified channel.',
     inputSchema: {
       type: 'object',
@@ -186,13 +186,13 @@ const tools: McpTool[] = [
 
 const resources: McpResource[] = [
   {
-    uri: 'stas://runs/{runId}',
+    uri: 'syntaro://runs/{runId}',
     name: 'Fix Run Details',
     description: 'Full details for a STAS fix run, including status, timestamps, progress, and PR link.',
     mimeType: 'application/json',
   },
   {
-    uri: 'stas://issues/{issueId}',
+    uri: 'syntaro://issues/{issueId}',
     name: 'Issue Fix Details',
     description: 'Issue details with fix status, run history, and linked PRs.',
     mimeType: 'application/json',
@@ -261,22 +261,22 @@ async function handleToolCall(id: unknown, params: unknown, res: Response): Prom
   }
 
   switch (name) {
-    case 'stas_fix_issue':
+    case 'syntaro_fix_issue':
       await handleFixIssue(id, args, res);
       break;
-    case 'stas_check_status':
+    case 'syntaro_check_status':
       await handleCheckStatus(id, args, res);
       break;
-    case 'stas_list_runs':
+    case 'syntaro_list_runs':
       await handleListRuns(id, args, res);
       break;
-    case 'stas_get_run':
+    case 'syntaro_get_run':
       await handleGetRun(id, args, res);
       break;
-    case 'stas_slack_send':
+    case 'syntaro_slack_send':
       await handleSlackSend(id, args, res);
       break;
-    case 'stas_slack_ticket':
+    case 'syntaro_slack_ticket':
       await handleSlackTicket(id, args, res);
       break;
     default:
@@ -289,7 +289,7 @@ async function handleToolCall(id: unknown, params: unknown, res: Response): Prom
 // ---------------------------------------------------------------------------
 
 /**
- * stas_fix_issue: params = { repoOwner, repoName, issueNumber, model? }
+ * syntaro_fix_issue: params = { repoOwner, repoName, issueNumber, model? }
  * Dispatches a fix run via RabbitMQ pipeline and returns a runId for polling.
  */
 async function handleFixIssue(id: unknown, args: Record<string, unknown> | undefined, res: Response): Promise<void> {
@@ -370,7 +370,7 @@ async function handleFixIssue(id: unknown, args: Record<string, unknown> | undef
       log.error({ err: String(queueErr), runId }, 'Failed to enqueue fix to RabbitMQ (non-fatal, run created)');
     }
 
-    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'stas_fix_issue', repoOwner, repoName, issueNumber }); } catch { /* ignore */ }
+    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'syntaro_fix_issue', repoOwner, repoName, issueNumber }); } catch { /* ignore */ }
     res.json(
       jsonRpcResult(id, {
         runId,
@@ -386,7 +386,7 @@ async function handleFixIssue(id: unknown, args: Record<string, unknown> | undef
 }
 
 /**
- * stas_check_status: params = { runId }
+ * syntaro_check_status: params = { runId }
  * Returns the current status of a fix run.
  */
 async function handleCheckStatus(id: unknown, args: Record<string, unknown> | undefined, res: Response): Promise<void> {
@@ -404,7 +404,7 @@ async function handleCheckStatus(id: unknown, args: Record<string, unknown> | un
       res.json(jsonRpcError(id, -32000, `Run not found: ${runId}`));
       return;
     }
-    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'stas_check_status', runId }); } catch { /* ignore */ }
+    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'syntaro_check_status', runId }); } catch { /* ignore */ }
     res.json(jsonRpcResult(id, JSON.parse(raw)));
   } catch (err) {
     log.error({ err: String(err), runId }, 'Failed to check run status');
@@ -413,7 +413,7 @@ async function handleCheckStatus(id: unknown, args: Record<string, unknown> | un
 }
 
 /**
- * stas_list_runs: params = { limit?, status? }
+ * syntaro_list_runs: params = { limit?, status? }
  * Lists recent fix runs with optional filters.
  */
 async function handleListRuns(id: unknown, args: Record<string, unknown> | undefined, res: Response): Promise<void> {
@@ -430,7 +430,7 @@ async function handleListRuns(id: unknown, args: Record<string, unknown> | undef
       runs = runs.filter((r) => r.status.toLowerCase() === statusFilter.toLowerCase());
     }
 
-    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'stas_list_runs', limit: args?.limit || 20 }); } catch { /* ignore */ }
+    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'syntaro_list_runs', limit: args?.limit || 20 }); } catch { /* ignore */ }
     res.json(jsonRpcResult(id, { runs, total: runs.length }));
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to list runs');
@@ -439,7 +439,7 @@ async function handleListRuns(id: unknown, args: Record<string, unknown> | undef
 }
 
 /**
- * stas_get_run: params = { runId }
+ * syntaro_get_run: params = { runId }
  * Returns full run details including job status and history context.
  */
 async function handleGetRun(id: unknown, args: Record<string, unknown> | undefined, res: Response): Promise<void> {
@@ -467,7 +467,7 @@ async function handleGetRun(id: unknown, args: Record<string, unknown> | undefin
     const allHistory: McpRunHistoryEntry[] = historyRaw.map((r) => JSON.parse(r));
     const historyEntry = allHistory.find((h) => h.runId === runId);
 
-    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'stas_get_run', runId }); } catch { /* ignore */ }
+    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'syntaro_get_run', runId }); } catch { /* ignore */ }
     res.json(
       jsonRpcResult(id, {
         ...job,
@@ -490,8 +490,8 @@ async function handleGetRun(id: unknown, args: Record<string, unknown> | undefin
 /**
  * Reads an MCP resource by URI.
  * Supports:
- *   - stas://runs/{runId}
- *   - stas://issues/{issueId}
+ *   - syntaro://runs/{runId}
+ *   - syntaro://issues/{issueId}
  */
 async function handleResourceRead(id: unknown, params: unknown, res: Response): Promise<void> {
   const { uri } = (params || {}) as { uri?: string };
@@ -505,7 +505,7 @@ async function handleResourceRead(id: unknown, params: unknown, res: Response): 
     const client = await getRedis();
     const contents: McpTextResourceContents[] = [];
 
-    // stas://runs/{runId}
+    // syntaro://runs/{runId}
     const runsMatch = uri.match(/^stas:\/\/runs\/(.+)$/);
     if (runsMatch) {
       const runId = runsMatch[1];
@@ -519,7 +519,7 @@ async function handleResourceRead(id: unknown, params: unknown, res: Response): 
       }
     }
 
-    // stas://issues/{issueId} — issueId can be "owner/repo#number" or a plain issue URL
+    // syntaro://issues/{issueId} — issueId can be "owner/repo#number" or a plain issue URL
     const issuesMatch = uri.match(/^stas:\/\/issues\/(.+)$/);
     if (issuesMatch) {
       const issueId = issuesMatch[1];
@@ -595,7 +595,7 @@ export async function handleSlackSend(id: unknown, args: Record<string, unknown>
       return;
     }
 
-    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'stas_slack_send', channel: args?.channel }); } catch { /* ignore */ }
+    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'syntaro_slack_send', channel: args?.channel }); } catch { /* ignore */ }
     res.json(jsonRpcResult(id, { ok: true, channel: body.channel, ts: body.ts }));
   } catch (err) {
     log.error({ err: String(err), channel }, 'Slack API call failed');
@@ -688,7 +688,7 @@ export async function handleSlackTicket(id: unknown, args: Record<string, unknow
       }
     }
 
-    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'stas_slack_ticket', title: args?.title }); } catch { /* ignore */ }
+    try { captureEvent('mcp_tool_invoked', 'mcp-agent', { tool: 'syntaro_slack_ticket', title: args?.title }); } catch { /* ignore */ }
     res.json(
       jsonRpcResult(id, {
         ok: true,

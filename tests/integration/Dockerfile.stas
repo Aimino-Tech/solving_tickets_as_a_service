@@ -6,12 +6,12 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY packages/github-client/package.json ./packages/github-client/
-COPY packages/stas-mcp/package.json ./packages/stas-mcp/
+COPY packages/syntaro-mcp/package.json ./packages/syntaro-mcp/
 COPY package.json package-lock.json ./
 RUN npm install --legacy-peer-deps --ignore-scripts
 RUN node -e "const lock = require('./package-lock.json'); const pkgs = Object.keys(lock.packages || {}); const missing = pkgs.filter(p => { const meta = lock.packages[p]; return meta && !meta.link && !meta.dev && !meta.peer && !meta.bundled && !meta.integrity; }); if (missing.length > 0) { console.warn('WARNING: ' + missing.length + ' packages missing integrity hashes — proceeding anyway'); } else { console.log('Lockfile integrity verified: ' + pkgs.length + ' packages have integrity hashes'); }"
 COPY packages/github-client/ ./packages/github-client/
-COPY packages/stas-mcp/ ./packages/stas-mcp/
+COPY packages/syntaro-mcp/ ./packages/syntaro-mcp/
 RUN cd packages/github-client && npx tsc
 COPY tsconfig.json ./
 COPY src/ ./src/

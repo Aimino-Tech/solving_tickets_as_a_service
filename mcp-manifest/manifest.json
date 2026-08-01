@@ -1,6 +1,6 @@
 {
-  "name": "@aimino/stas-mcp",
-  "mcpName": "stas-agent-discovery",
+  "name": "@aimino/syntaro-mcp",
+  "mcpName": "syntaro-agent-discovery",
   "description": "MCP server for STAS — Solving Tickets As A Service. AI-powered automated code review and bug fixing for GitHub issues. Submit issues, list runs, search codebase, and get automated fix PRs via OpenCode agents that improve code quality.",
   "version": "1.0.0",
   "agent": {
@@ -9,23 +9,23 @@
     "protocolVersion": "2024-11-05",
     "capabilities": {
       "tools": {
-        "stas_label_issue": {"description": "Label a GitHub issue with the STAS fix label (or custom label) to trigger automated investigation and PR generation. Use this when you want to start the fix pipeline for an issue. Returns the label operation result.", "inputSchema": {"type": "object", "properties": {"owner": {"type": "string"}, "repo": {"type": "string"}, "issue_number": {"type": "integer"}, "label": {"type": "string"}}, "required": ["owner", "repo", "issue_number"]}},
-        "stas_run_fix": {"description": "Trigger the STAS automated fix pipeline for a GitHub issue URL. Use this to launch AI-powered code analysis, fix generation, test verification, and PR creation. Returns a run_id for status polling.", "inputSchema": {"type": "object", "properties": {"issue_url": {"type": "string"}}, "required": ["issue_url"]}},
-        "stas_check_status": {"description": "Poll the current status of a STAS fix run by run_id. Use this to track progress through investigation, fixing, testing, and PR creation phases. Returns the current phase and any results or errors.", "inputSchema": {"type": "object", "properties": {"run_id": {"type": "string"}}, "required": ["run_id"]}},
-        "stas_get_pr": {"description": "Retrieve the pull request URL and details for a completed STAS fix run. Use this to access the generated PR after a fix run succeeds. Returns PR URL, title, and status.", "inputSchema": {"type": "object", "properties": {"run_id": {"type": "string"}}, "required": ["run_id"]}},
+        "syntaro_label_issue": {"description": "Label a GitHub issue with the STAS fix label (or custom label) to trigger automated investigation and PR generation. Use this when you want to start the fix pipeline for an issue. Returns the label operation result.", "inputSchema": {"type": "object", "properties": {"owner": {"type": "string"}, "repo": {"type": "string"}, "issue_number": {"type": "integer"}, "label": {"type": "string"}}, "required": ["owner", "repo", "issue_number"]}},
+        "syntaro_run_fix": {"description": "Trigger the STAS automated fix pipeline for a GitHub issue URL. Use this to launch AI-powered code analysis, fix generation, test verification, and PR creation. Returns a run_id for status polling.", "inputSchema": {"type": "object", "properties": {"issue_url": {"type": "string"}}, "required": ["issue_url"]}},
+        "syntaro_check_status": {"description": "Poll the current status of a STAS fix run by run_id. Use this to track progress through investigation, fixing, testing, and PR creation phases. Returns the current phase and any results or errors.", "inputSchema": {"type": "object", "properties": {"run_id": {"type": "string"}}, "required": ["run_id"]}},
+        "syntaro_get_pr": {"description": "Retrieve the pull request URL and details for a completed STAS fix run. Use this to access the generated PR after a fix run succeeds. Returns PR URL, title, and status.", "inputSchema": {"type": "object", "properties": {"run_id": {"type": "string"}}, "required": ["run_id"]}},
         "list_issues": {"description": "List tracked GitHub issues with their STAS fix status and optional filters. Use this to monitor which issues are being handled by the automated pipeline. Returns issue metadata with status indicators.", "inputSchema": {"type": "object", "properties": {"status": {"type": "string"}, "repo": {"type": "string"}, "limit": {"type": "integer"}}}},
         "search_codebase": {"description": "Search the STAS codebase for symbols, files, or patterns. Use this to find relevant code context during investigation or debugging. Returns matching files and their locations.", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}, "repo": {"type": "string"}, "max_results": {"type": "integer"}}, "required": ["query"]}}
       },
       "resources": {
-        "stas://runs/{run_id}": {"description": "Full run details including status, timestamps, issue info, and PR link."},
-        "stas://issues/{issue_id}": {"description": "Issue details with fix status, run history, and linked PRs."}
+        "syntaro://runs/{run_id}": {"description": "Full run details including status, timestamps, issue info, and PR link."},
+        "syntaro://issues/{issue_id}": {"description": "Issue details with fix status, run history, and linked PRs."}
       }
     }
   },
   "command": "python",
-  "args": ["-m", "stas_mcp.server", "stdio"],
+  "args": ["-m", "syntaro_mcp.server", "stdio"],
   "transport": {
-    "stdio": {"command": "python", "args": ["-m", "stas_mcp.server", "stdio"], "description": "Stdio transport for local tools like OpenCode and Claude Desktop"},
+    "stdio": {"command": "python", "args": ["-m", "syntaro_mcp.server", "stdio"], "description": "Stdio transport for local tools like OpenCode and Claude Desktop"},
     "sse": {"url": "http://localhost:4095/sse", "description": "Server-Sent Events transport for remote MCP communication"},
     "streamable-http": {"url": "http://localhost:4095/mcp", "description": "Streamable HTTP transport for JSON-RPC over HTTP"}
   }

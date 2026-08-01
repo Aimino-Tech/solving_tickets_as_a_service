@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy workspace package manifests first (needed by npm workspaces for symlink resolution)
 COPY packages/github-client/package.json ./packages/github-client/
-COPY packages/stas-mcp/package.json ./packages/stas-mcp/
+COPY packages/syntaro-mcp/package.json ./packages/syntaro-mcp/
 COPY package.json package-lock.json ./
 
 # Install dependencies (layer caching — only invalidated when lockfile or workspace manifests change)
@@ -23,7 +23,7 @@ RUN node -e "const lock = require('./package-lock.json'); const pkgs = Object.ke
 
 # Copy workspace package source and build
 COPY packages/github-client/ ./packages/github-client/
-COPY packages/stas-mcp/ ./packages/stas-mcp/
+COPY packages/syntaro-mcp/ ./packages/syntaro-mcp/
 RUN cd packages/github-client && npx tsc
 
 # Build TypeScript

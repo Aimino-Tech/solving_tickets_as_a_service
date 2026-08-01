@@ -57,7 +57,7 @@ export function startMcpServer(): ChildProcess | null {
   log.info({ port, host, projectRoot }, 'Auto-starting MCP server...');
 
   try {
-    mcpProcess = spawn('python3', ['-m', 'stas_mcp.server', 'sse', '--host', host, '--port', port], {
+    mcpProcess = spawn('python3', ['-m', 'syntaro_mcp.server', 'sse', '--host', host, '--port', port], {
       cwd: projectRoot,
       stdio: ['ignore', 'pipe', 'pipe'],
       env: {
@@ -99,14 +99,14 @@ export function startMcpServer(): ChildProcess | null {
         log.info({ port, pid: mcpProcess.pid }, `MCP server started on :${port} (SSE mode)`);
       } else {
         log.warn({ port }, 'MCP server failed to start — continuing without it');
-        log.info('Run manually: python -m stas_mcp.server sse --port ' + port);
+        log.info('Run manually: python -m syntaro_mcp.server sse --port ' + port);
       }
     }, 2000);
 
     return mcpProcess;
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to spawn MCP server process');
-    log.info('Run manually: python -m stas_mcp.server sse --port ' + port);
+    log.info('Run manually: python -m syntaro_mcp.server sse --port ' + port);
     return null;
   }
 }

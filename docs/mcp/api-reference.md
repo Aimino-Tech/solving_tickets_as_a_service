@@ -7,14 +7,14 @@ STAS (Solving Tickets As A Service) exposes an MCP (Model Context Protocol) serv
 ## Installation
 
 ```bash
-npx -y @aimino/stas-mcp
+npx -y @aimino/syntaro-mcp
 ```
 
 Or install globally:
 
 ```bash
-npm install -g @aimino/stas-mcp
-stas-mcp
+npm install -g @aimino/syntaro-mcp
+syntaro-mcp
 ```
 
 ## Transport Modes
@@ -28,19 +28,19 @@ stas-mcp
 ### Stdio Mode
 
 ```bash
-npx -y @aimino/stas-mcp stdio
+npx -y @aimino/syntaro-mcp stdio
 ```
 
 ### SSE Mode
 
 ```bash
-npx -y @aimino/stas-mcp sse
+npx -y @aimino/syntaro-mcp sse
 ```
 
 ### Streamable HTTP Mode
 
 ```bash
-npx -y @aimino/stas-mcp streamable-http
+npx -y @aimino/syntaro-mcp streamable-http
 ```
 
 ## Environment Variables
@@ -53,7 +53,7 @@ npx -y @aimino/stas-mcp streamable-http
 
 ## Tools
 
-### stas_label_issue
+### syntaro_label_issue
 
 Label a GitHub issue with the STAS fix label.
 
@@ -63,21 +63,21 @@ Label a GitHub issue with the STAS fix label.
 - `issue_number` (integer, required) — Issue number to label
 - `label` (string, optional, default: `stas:fix`) — Label name
 
-### stas_run_fix
+### syntaro_run_fix
 
 Trigger the STAS fix pipeline for a GitHub issue URL.
 
 **Parameters:**
 - `issue_url` (string, required) — Full GitHub issue URL
 
-### stas_check_status
+### syntaro_check_status
 
 Check the current status of a STAS fix run by run_id.
 
 **Parameters:**
-- `run_id` (string, required) — Run identifier from stas_run_fix
+- `run_id` (string, required) — Run identifier from syntaro_run_fix
 
-### stas_get_pr
+### syntaro_get_pr
 
 Get the PR URL and details for a completed STAS fix run.
 
@@ -121,7 +121,7 @@ When connecting to the SSE or Streamable HTTP transport, include the API key:
   "mcpServers": {
     "stas": {
       "command": "npx",
-      "args": ["-y", "@aimino/stas-mcp", "stdio"]
+      "args": ["-y", "@aimino/syntaro-mcp", "stdio"]
     }
   }
 }
@@ -134,7 +134,7 @@ When connecting to the SSE or Streamable HTTP transport, include the API key:
   "mcpServers": {
     "stas": {
       "command": "npx",
-      "args": ["-y", "@aimino/stas-mcp", "stdio"]
+      "args": ["-y", "@aimino/syntaro-mcp", "stdio"]
     }
   }
 }
@@ -147,7 +147,7 @@ When connecting to the SSE or Streamable HTTP transport, include the API key:
   "mcpServers": {
     "stas": {
       "command": "npx",
-      "args": ["-y", "@aimino/stas-mcp", "stdio"]
+      "args": ["-y", "@aimino/syntaro-mcp", "stdio"]
     }
   }
 }

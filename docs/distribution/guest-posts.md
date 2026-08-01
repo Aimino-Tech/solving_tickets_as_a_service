@@ -1,6 +1,6 @@
 # STAS Guest Post Program
 
-Three guest post plans, one per platform, each with a working title, angle, outline, and the target facts to include. All copy leads with evidence and stays honest about STAS's limits, matching the voice used on stas.aimino.io.
+Three guest post plans, one per platform, each with a working title, angle, outline, and the target facts to include. All copy leads with evidence and stays honest about STAS's limits, matching the voice used on syntaro.io.
 
 UTM convention for every CTA link in every post: `utm_source=devto|hackernoon|infoq&utm_medium=guest-post&utm_campaign=<slug>`.
 
@@ -14,7 +14,7 @@ UTM convention for every CTA link in every post: `utm_source=devto|hackernoon|in
 | HackerNoon | Draft at draft.hackernoon.com, goes through editorial review | ~2 to 4 weeks in the editorial queue | Yes, canonical link allowed | Narrative plus data posts do well; readers tolerate long-form |
 | InfoQ | Contact editors with a pitch first; no self-serve publishing | Weeks, editor-dependent | Does not accept already-published content | Editor-curated, 2 to 5K word technical articles; needs an adapted, original variant |
 
-Rule of thumb: dev.to and HackerNoon get syndicated copies of the canonical post on stas.aimino.io. InfoQ gets an original, deeper technical article that has never been published anywhere else.
+Rule of thumb: dev.to and HackerNoon get syndicated copies of the canonical post on syntaro.io. InfoQ gets an original, deeper technical article that has never been published anywhere else.
 
 ---
 
@@ -38,7 +38,7 @@ Rule of thumb: dev.to and HackerNoon get syndicated copies of the canonical post
 
 **Target facts:** 92% pass rate on real issues, median $3.80 per fix, ~4 minutes label to PR, 6 quality gates, +32/-15 average fix size, 97% test-suite pass rate, model cascade (gpt-4o-mini + claude-sonnet-4).
 
-**CTA:** https://stas.aimino.io?utm_source=devto&utm_medium=guest-post&utm_campaign=race-condition-debug
+**CTA:** https://syntaro.io?utm_source=devto&utm_medium=guest-post&utm_campaign=race-condition-debug
 
 ---
 
@@ -62,7 +62,7 @@ Rule of thumb: dev.to and HackerNoon get syndicated copies of the canonical post
 
 **Target facts:** 92% pass rate, median $3.80 per fix, 30s median / 62s P95 turnaround, 97% test-suite pass rate, 87% PR acceptance, 61% of issues filtered as non-bug, model cascade costs, honest limitations.
 
-**CTA:** https://stas.aimino.io?utm_source=hackernoon&utm_medium=guest-post&utm_campaign=month-of-automated-fixes
+**CTA:** https://syntaro.io?utm_source=hackernoon&utm_medium=guest-post&utm_campaign=month-of-automated-fixes
 
 ---
 
@@ -86,19 +86,19 @@ Rule of thumb: dev.to and HackerNoon get syndicated copies of the canonical post
 
 **Target facts:** 8-phase pipeline, model cascade (gpt-4o-mini ~$0.10 + claude-sonnet-4 ~$3.00, ~$3.50-3.80 total), 8K context cap / 15K average fix, symbol graph and impact analysis, E2B sandboxing, anti-injection, 6 gates, 92% pass rate, 97% test-suite pass rate, 87% PR acceptance.
 
-**CTA:** https://stas.aimino.io?utm_source=infoq&utm_medium=guest-post&utm_campaign=plan-first-architecture
+**CTA:** https://syntaro.io?utm_source=infoq&utm_medium=guest-post&utm_campaign=plan-first-architecture
 
 ---
 
 ## Republishing Policy
 
-The canonical version of every post lives on stas.aimino.io (see the blog posts at /blog, for example the architecture deep dive). Syndicated copies on dev.to and HackerNoon are republished versions of that canonical post, and must link back to it:
+The canonical version of every post lives on syntaro.io (see the blog posts at /blog, for example the architecture deep dive). Syndicated copies on dev.to and HackerNoon are republished versions of that canonical post, and must link back to it:
 
-- **dev.to:** set `canonical_url` in the YAML frontmatter to the stas.aimino.io URL of the post.
+- **dev.to:** set `canonical_url` in the YAML frontmatter to the syntaro.io URL of the post.
 - **HackerNoon:** add the canonical link to the original in the editor; HackerNoon applies `rel=canonical` to the syndicated copy.
-- **InfoQ:** never publish a syndicated copy. The InfoQ article is original content written for InfoQ, and the canonical relationship is that InfoQ hosts the primary published version of that particular article. If the same material later appears on stas.aimino.io, point the site version at the InfoQ original.
+- **InfoQ:** never publish a syndicated copy. The InfoQ article is original content written for InfoQ, and the canonical relationship is that InfoQ hosts the primary published version of that particular article. If the same material later appears on syntaro.io, point the site version at the InfoQ original.
 
-Order of operations: publish the canonical post on stas.aimino.io first, wait at least 2 weeks, then publish the syndicated copies with canonical links. Update the original only, never the syndicated copies, when facts change.
+Order of operations: publish the canonical post on syntaro.io first, wait at least 2 weeks, then publish the syndicated copies with canonical links. Update the original only, never the syndicated copies, when facts change.
 
 ## Submission Checklist
 

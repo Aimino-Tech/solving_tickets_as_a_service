@@ -171,7 +171,7 @@ export async function quickstart(options: { skipPrompts: boolean }): Promise<voi
     '3. A PR will be created',
     '',
     '---',
-    '_Powered by STAS — AI bug fixes for your repo_',
+    '_Powered by Syntaro — AI bug fixes for your repo_',
   ].join('\n');
 
   let issue: { number: number; html_url: string };

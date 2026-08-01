@@ -32,7 +32,7 @@ const { mockOctokitInstance, mockLoggerChild, mockConfig, resetMocks } = vi.hois
     data: {
       number: 42,
       title: 'Fix: broken login',
-      body: 'Powered by STAS — AI bug fixes for your repo',
+      body: 'Powered by Syntaro — AI bug fixes for your repo',
       state: 'open',
       merged: false,
       node_id: 'PR_node_42',
@@ -275,7 +275,7 @@ describe('prQualityGate', () => {
 
     it('does not re-request when a review comment already exists', async () => {
       mockOctokitInstance.pulls.listReviewComments.mockResolvedValue({
-        data: [{ body: '🔄 **STAS** Requested review from: @alice' }],
+        data: [{ body: '🔄 **Syntaro** Requested review from: @alice' }],
       });
 
       await requestReviewFromCollaborators(mockOctokitInstance as never, 'owner', 'test-repo', 42);
@@ -288,7 +288,7 @@ describe('prQualityGate', () => {
 
       expect(mockOctokitInstance.issues.createComment).toHaveBeenCalledWith(
         expect.objectContaining({
-          body: '🔄 **STAS** requested review from: @alice, @bob',
+          body: '🔄 **Syntaro** requested review from: @alice, @bob',
         }),
       );
     });
@@ -352,7 +352,7 @@ describe('prQualityGate', () => {
     it('skips merged or closed PRs', async () => {
       mockOctokitInstance.pulls.get.mockResolvedValue({
         data: {
-          body: 'Powered by STAS',
+          body: 'Powered by Syntaro',
           state: 'merged',
           merged: true,
           user: { login: 'stas-bot' },
@@ -381,7 +381,7 @@ describe('prQualityGate', () => {
 
     it('does not post a duplicate passed comment', async () => {
       mockOctokitInstance.pulls.listReviewComments.mockResolvedValue({
-        data: [{ body: '✅ **STAS quality gate passed** — all CI checks are green.' }],
+        data: [{ body: '✅ **Syntaro quality gate passed** — all CI checks are green.' }],
       });
 
       await handleCheckSuiteCompleted(mockOctokitInstance as never, checkSuiteCompletedPayload() as never);
@@ -407,7 +407,7 @@ describe('prQualityGate', () => {
 
     it('does not post a duplicate failed comment', async () => {
       mockOctokitInstance.pulls.listReviewComments.mockResolvedValue({
-        data: [{ body: '❌ **STAS quality gate failed** — CI check suite concluded with `failure`.' }],
+        data: [{ body: '❌ **Syntaro quality gate failed** — CI check suite concluded with `failure`.' }],
       });
 
       await handleCheckSuiteCompleted(
@@ -434,7 +434,7 @@ describe('prQualityGate', () => {
     it('continues to the next PR when one PR lookup fails', async () => {
       mockOctokitInstance.pulls.get.mockResolvedValueOnce({
         data: {
-          body: 'Powered by STAS',
+          body: 'Powered by Syntaro',
           state: 'open',
           merged: false,
           user: { login: 'stas-bot' },

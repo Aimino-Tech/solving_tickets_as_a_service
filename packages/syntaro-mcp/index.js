@@ -10,14 +10,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // fall back to the monorepo checkout when running from the repo directly.
 const projectRoot = resolve(__dirname, '../..');
 const vendoredRoot = __dirname;
-const serverPath = resolve(vendoredRoot, 'stas_mcp/server.py');
+const serverPath = resolve(vendoredRoot, 'syntaro_mcp/server.py');
 const pythonRoot = existsSync(serverPath) ? vendoredRoot : projectRoot;
 
 function main() {
   const args = process.argv.slice(2);
   const mode = args[0] || 'stdio';
 
-  const child = spawn('python3', ['-m', 'stas_mcp.server', mode], {
+  const child = spawn('python3', ['-m', 'syntaro_mcp.server', mode], {
     cwd: pythonRoot,
     stdio: ['inherit', 'inherit', 'inherit'],
     env: {

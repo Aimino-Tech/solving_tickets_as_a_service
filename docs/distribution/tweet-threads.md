@@ -38,7 +38,7 @@ The math: 3 hours × $150/h = $450 of my time. The fix cost $3.80. Same outcome,
 
 **Tweet 6:**
 
-It's open source and free to self-host. Label a GitHub issue, get a pull request. https://stas.aimino.io?utm_source=twitter&utm_medium=thread&utm_campaign=race-condition
+It's open source and free to self-host. Label a GitHub issue, get a pull request. https://syntaro.io?utm_source=twitter&utm_medium=thread&utm_campaign=race-condition
 
 ---
 
@@ -71,7 +71,7 @@ The fix: cap the pool. The regression test: 50 concurrent connections, assert th
 
 **Tweet 6:**
 
-The tool was STAS: open source, 92% pass rate on real issues, ~$3.80/fix. The hunt that cost us 2 days takes it minutes. https://stas.aimino.io?utm_source=twitter&utm_medium=thread&utm_campaign=ci-flake
+The tool was STAS: open source, 92% pass rate on real issues, ~$3.80/fix. The hunt that cost us 2 days takes it minutes. https://syntaro.io?utm_source=twitter&utm_medium=thread&utm_campaign=ci-flake
 
 ---
 
@@ -104,7 +104,7 @@ Result: one PR, suite green. My 5-hour upgrade day became a 5-minute review of a
 
 **Tweet 6:**
 
-Open source, free to self-host, backed by OpenCode. Label an issue, get a pull request. https://stas.aimino.io?utm_source=twitter&utm_medium=thread&utm_campaign=dep-upgrade
+Open source, free to self-host, backed by OpenCode. Label an issue, get a pull request. https://syntaro.io?utm_source=twitter&utm_medium=thread&utm_campaign=dep-upgrade
 
 ---
 
@@ -141,7 +141,7 @@ The calculus of shipping quality: spend ~$179 and an afternoon reviewing, or kee
 
 **Tweet 7:**
 
-Label a GitHub issue. Get a pull request. https://stas.aimino.io?utm_source=twitter&utm_medium=thread&utm_campaign=backlog-math
+Label a GitHub issue. Get a pull request. https://syntaro.io?utm_source=twitter&utm_medium=thread&utm_campaign=backlog-math
 
 ---
 

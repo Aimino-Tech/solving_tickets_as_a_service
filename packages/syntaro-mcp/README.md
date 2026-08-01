@@ -6,10 +6,10 @@ Expose STAS / OpenSymphony as agent infrastructure — so external agents (OpenC
 
 | Tool | Description |
 |------|-------------|
-| `stas_label_issue` | Label a GitHub issue (`stas:fix` or custom) |
-| `stas_run_fix` | Trigger the STAS fix pipeline for a GitHub issue URL |
-| `stas_check_status` | Poll the status of a fix run by `run_id` |
-| `stas_get_pr` | Get the PR URL/details for a completed run |
+| `syntaro_label_issue` | Label a GitHub issue (`stas:fix` or custom) |
+| `syntaro_run_fix` | Trigger the STAS fix pipeline for a GitHub issue URL |
+| `syntaro_check_status` | Poll the status of a fix run by `run_id` |
+| `syntaro_get_pr` | Get the PR URL/details for a completed run |
 | `list_issues` | List tracked issues with fix status |
 | `search_codebase` | Search the STAS codebase for symbols/patterns |
 | `linear_ticket` | Check whether a Linear ticket exists (e.g. `AIM-4477`) |
@@ -19,28 +19,28 @@ Expose STAS / OpenSymphony as agent infrastructure — so external agents (OpenC
 | `slack_send` | Post a message to a Slack channel/thread (STAS bot token) |
 | `session_resume` | Return a conversation workspace's maintained `MEMORY.md` |
 
-Resources: `stas://runs/{run_id}` (run details) and `stas://issues/{issue_id}` (issue + fix status).
+Resources: `syntaro://runs/{run_id}` (run details) and `syntaro://issues/{issue_id}` (issue + fix status).
 
 ## Install
 
 ```bash
 pip install mcp  # FastMCP runtime
 # or via the npm wrapper:
-npm install @aimino/stas-mcp
-npx stas-mcp stdio
+npm install @aimino/syntaro-mcp
+npx syntaro-mcp stdio
 ```
 
 ## Run
 
 ```bash
 # stdio (OpenCode / Claude Desktop integration)
-python -m stas_mcp.server stdio
+python -m syntaro_mcp.server stdio
 
 # SSE (remote agents)
-python -m stas_mcp.server sse --host 0.0.0.0 --port 4095
+python -m syntaro_mcp.server sse --host 0.0.0.0 --port 4095
 
 # SSE over TLS
-python -m stas_mcp.server sse --ssl-keyfile key.pem --ssl-certfile cert.pem
+python -m syntaro_mcp.server sse --ssl-keyfile key.pem --ssl-certfile cert.pem
 ```
 
 Set `PYTHONPATH` to the repo root so `workers.pipeline_client` resolves.
@@ -62,7 +62,7 @@ Set `PYTHONPATH` to the repo root so `workers.pipeline_client` resolves.
   "mcp": {
     "stas": {
       "type": "local",
-      "command": ["python3", "-m", "stas_mcp.server", "stdio"],
+      "command": ["python3", "-m", "syntaro_mcp.server", "stdio"],
       "environment": { "PYTHONPATH": "/path/to/solving_tickets_as_a_service" }
     }
   }

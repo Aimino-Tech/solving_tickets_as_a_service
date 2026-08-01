@@ -33,7 +33,7 @@ def _api_headers() -> dict[str, str]:
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "User-Agent": "stas-mcp-server",
+        "User-Agent": "syntaro-mcp-server",
     }
     if STAS_API_KEY:
         headers["Authorization"] = f"Bearer {STAS_API_KEY}"
@@ -91,7 +91,7 @@ async def label_issue(
                     headers={
                         "Authorization": f"Bearer {gh_token}",
                         "Accept": "application/vnd.github.v3+json",
-                        "User-Agent": "stas-mcp-server",
+                        "User-Agent": "syntaro-mcp-server",
                     },
                     json={"labels": [label]},
                     timeout=15,

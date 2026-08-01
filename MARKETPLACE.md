@@ -12,7 +12,7 @@ For the app listing copy and visual asset preparation, see [docs/marketplace-lis
 
 ## Prerequisites
 
-1. **STAS API Key** — Get one by subscribing on the [STAS website](https://stas.aimino.io)
+1. **STAS API Key** — Get one by subscribing on the [STAS website](https://syntaro.io)
 2. **Verified Publisher** — Complete [GitHub Marketplace publisher verification](https://docs.github.com/en/apps/github-marketplace/github-marketplace-overview/applying-for-publisher-verification-for-your-organization)
 
 ## Marketplace Checklist
@@ -48,7 +48,7 @@ Add to your workflow:
 | `eval-suite` | No | `smoke` | `smoke`, `standard`, or `full` |
 | `langfuse-public-key` | No | — | LangFuse public key |
 | `langfuse-secret-key` | No | — | LangFuse secret key |
-| `stas-api-url` | No | `https://api.stas.aimino.io` | STAS API base URL |
+| `stas-api-url` | No | `https://api.syntaro.io` | STAS API base URL |
 
 ## Outputs
 

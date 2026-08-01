@@ -293,10 +293,10 @@ STAS uses [Better Uptime](https://betteruptime.com) for external uptime monitori
 
 | Endpoint | Interval | Regions | Purpose |
 |----------|----------|---------|---------|
-| `https://api.stas.aimino.io/health` | 30s | us-east-1, eu-west-1, ap-southeast-1 | Core liveness |
-| `https://api.stas.aimino.io/health/queue` | 60s | us-east-1, eu-west-1 | Queue health |
-| `https://api.stas.aimino.io/api/pricing` | 5 min | us-east-1, eu-west-1 | Pricing API |
-| `https://stas.aimino.io/` | 5 min | us-east-1, eu-west-1, ap-southeast-1 | Website |
+| `https://api.syntaro.io/health` | 30s | us-east-1, eu-west-1, ap-southeast-1 | Core liveness |
+| `https://api.syntaro.io/health/queue` | 60s | us-east-1, eu-west-1 | Queue health |
+| `https://api.syntaro.io/api/pricing` | 5 min | us-east-1, eu-west-1 | Pricing API |
+| `https://syntaro.io/` | 5 min | us-east-1, eu-west-1, ap-southeast-1 | Website |
 | Synthetic E2E | 5 min | us-east-1 | Pipeline check |
 
 #### Setup

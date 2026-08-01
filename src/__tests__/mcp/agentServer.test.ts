@@ -67,15 +67,15 @@ async function dispatch(body: unknown): Promise<unknown> {
 describe('mcp/agentServer -- tools/list', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('includes stas_slack_send and stas_slack_ticket', async () => {
+  it('includes syntaro_slack_send and syntaro_slack_ticket', async () => {
     const data = await dispatch({ jsonrpc: '2.0', method: 'tools/list', id: 1 }) as { result?: { tools?: Array<{ name: string }> } };
     const tools = data?.result?.tools ?? [];
-    expect(tools.some((t) => t.name === 'stas_slack_send')).toBe(true);
-    expect(tools.some((t) => t.name === 'stas_slack_ticket')).toBe(true);
+    expect(tools.some((t) => t.name === 'syntaro_slack_send')).toBe(true);
+    expect(tools.some((t) => t.name === 'syntaro_slack_ticket')).toBe(true);
   });
 });
 
-describe('mcp/agentServer -- stas_slack_send', () => {
+describe('mcp/agentServer -- syntaro_slack_send', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('sends a message and returns success', async () => {
@@ -86,7 +86,7 @@ describe('mcp/agentServer -- stas_slack_send', () => {
 
     const data = await dispatch({
       jsonrpc: '2.0', method: 'tools/call', id: 1,
-      params: { name: 'stas_slack_send', arguments: { channel: 'C12345', text: 'Hello' } },
+      params: { name: 'syntaro_slack_send', arguments: { channel: 'C12345', text: 'Hello' } },
     }) as { result?: { ok: boolean } };
 
     expect(mockFetch).toHaveBeenCalledWith('https://slack.com/api/chat.postMessage', {
@@ -105,7 +105,7 @@ describe('mcp/agentServer -- stas_slack_send', () => {
 
     const data = await dispatch({
       jsonrpc: '2.0', method: 'tools/call', id: 1,
-      params: { name: 'stas_slack_send', arguments: { channel: 'C12345', text: 'Hello' } },
+      params: { name: 'syntaro_slack_send', arguments: { channel: 'C12345', text: 'Hello' } },
     }) as { error?: { code: number } };
 
     expect(data?.error?.code).toBe(-32000);
@@ -114,14 +114,14 @@ describe('mcp/agentServer -- stas_slack_send', () => {
   it('returns error when channel is missing', async () => {
     const data = await dispatch({
       jsonrpc: '2.0', method: 'tools/call', id: 1,
-      params: { name: 'stas_slack_send', arguments: { text: 'Hello' } },
+      params: { name: 'syntaro_slack_send', arguments: { text: 'Hello' } },
     }) as { error?: { code: number } };
 
     expect(data?.error?.code).toBe(-32602);
   });
 });
 
-describe('mcp/agentServer -- stas_slack_ticket', () => {
+describe('mcp/agentServer -- syntaro_slack_ticket', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('creates a ticket with Slack notification', async () => {
@@ -140,7 +140,7 @@ describe('mcp/agentServer -- stas_slack_ticket', () => {
     const data = await dispatch({
       jsonrpc: '2.0', method: 'tools/call', id: 1,
       params: {
-        name: 'stas_slack_ticket',
+        name: 'syntaro_slack_ticket',
         arguments: { title: 'Test Ticket', description: 'Test description', priority: 2, channel: 'C12345' },
       },
     }) as { result?: { ticket: { id: string } } };
@@ -159,7 +159,7 @@ describe('mcp/agentServer -- stas_slack_ticket', () => {
     const data = await dispatch({
       jsonrpc: '2.0', method: 'tools/call', id: 1,
       params: {
-        name: 'stas_slack_ticket',
+        name: 'syntaro_slack_ticket',
         arguments: { title: 'Silent Ticket', description: 'Silent' },
       },
     }) as { result?: { ticket: { id: string } } };
@@ -171,7 +171,7 @@ describe('mcp/agentServer -- stas_slack_ticket', () => {
     const data = await dispatch({
       jsonrpc: '2.0', method: 'tools/call', id: 1,
       params: {
-        name: 'stas_slack_ticket',
+        name: 'syntaro_slack_ticket',
         arguments: { description: 'Test' },
       },
     }) as { error?: { code: number } };

@@ -61,15 +61,15 @@
       "name": "Model Context Protocol (MCP) Registry",
       "url": "https://github.com/modelcontextprotocol/servers?utm_source=stas-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=mcp",
       "listing_type": "MCP Server",
-      "server_name": "@aimino/stas-mcp",
-      "install_command": "npx -y @aimino/stas-mcp",
+      "server_name": "@aimino/syntaro-mcp",
+      "install_command": "npx -y @aimino/syntaro-mcp",
       "status": "live"
     },
     "smithery": {
       "name": "Smithery.ai",
-      "url": "https://smithery.ai/server/@aimino/stas-mcp?utm_source=stas-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=smithery",
+      "url": "https://smithery.ai/server/@aimino/syntaro-mcp?utm_source=stas-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=smithery",
       "listing_type": "MCP Server",
-      "one_click_install": "npx -y @aimino/stas-mcp",
+      "one_click_install": "npx -y @aimino/syntaro-mcp",
       "status": "live"
     },
     "github_marketplace": {
@@ -100,7 +100,7 @@
     },
     "links": {
       "rapidapi": "https://rapidapi.com/aimino/api/stas-api?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=rapidapi",
-      "smithery": "https://smithery.ai/server/@aimino/stas-mcp?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=smithery",
+      "smithery": "https://smithery.ai/server/@aimino/syntaro-mcp?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=smithery",
       "opencode": "https://opencode.ai/skills/stas?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=opencode",
       "github_marketplace": "https://github.com/marketplace/actions/stas-eval?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=github-marketplace",
       "mcp_registry": "https://github.com/modelcontextprotocol/servers?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=mcp"
@@ -122,7 +122,7 @@
       "name": "STAS MCP Server",
       "type": "MCP Server",
       "description": "Use STAS tools from any MCP-compatible client (Claude, Cursor, Windsurf)",
-      "install": "npx -y @aimino/stas-mcp",
+      "install": "npx -y @aimino/syntaro-mcp",
       "config_file": "./mcp-server.json"
     },
     "opencode_skill": {
@@ -142,7 +142,7 @@
     "documentation": "https://github.com/tamnguyen08/solving_tickets_as_a_service#readme",
     "source_code": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
     "issues": "https://github.com/tamnguyen08/solving_tickets_as_a_service/issues",
-    "website": "https://stas.aimino.io",
+    "website": "https://syntaro.io",
     "changelog": "https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/CHANGELOG.md",
     "license": "https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/LICENSE",
     "roadmap": "https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/ROADMAP.md"

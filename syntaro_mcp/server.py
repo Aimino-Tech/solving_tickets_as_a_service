@@ -2,10 +2,10 @@
 FastMCP server — expose STAS as auto-discoverable agent infrastructure.
 
 Tools:
-  - stas_label_issue   — Label a GitHub issue.
-  - stas_run_fix       — Trigger a fix pipeline for a GitHub issue.
-  - stas_check_status  — Check the status of a fix run.
-  - stas_get_pr        — Get PR details for a completed fix run.
+  - syntaro_label_issue   — Label a GitHub issue.
+  - syntaro_run_fix       — Trigger a fix pipeline for a GitHub issue.
+  - syntaro_check_status  — Check the status of a fix run.
+  - syntaro_get_pr        — Get PR details for a completed fix run.
   - list_issues        — List tracked issues and their fix status.
   - search_codebase    — Search the STAS codebase for symbols or patterns.
   - linear_ticket      — Check whether a Linear ticket exists and its details.
@@ -16,15 +16,15 @@ Tools:
   - session_resume     — Return a conversation's maintained MEMORY.md.
 
 Resources:
-  - stas://runs/{run_id}    — Real-time status + PR link for a fix run.
-  - stas://issues/{issue_id} — Issue details with fix status.
+  - syntaro://runs/{run_id}    — Real-time status + PR link for a fix run.
+  - syntaro://issues/{issue_id} — Issue details with fix status.
 
 Run modes:
-  - python -m stas_mcp.server         (SSE mode, default port 4095)
-  - python -m stas_mcp.server stdio   (stdio mode for OpenCode integration)
+  - python -m syntaro_mcp.server         (SSE mode, default port 4095)
+  - python -m syntaro_mcp.server stdio   (stdio mode for OpenCode integration)
 
 SSL/TLS:
-  - python -m stas_mcp.server sse --ssl-keyfile key.pem --ssl-certfile cert.pem
+  - python -m syntaro_mcp.server sse --ssl-keyfile key.pem --ssl-certfile cert.pem
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ import argparse, json, logging, os, sys
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from workers.pipeline_client import get_client
-from stas_mcp.agent_handlers import (
+from syntaro_mcp.agent_handlers import (
     linear_create_ticket,
     linear_ticket,
     memory_read,
@@ -40,7 +40,7 @@ from stas_mcp.agent_handlers import (
     session_resume,
     slack_send,
 )
-from stas_mcp.handlers import _parse_github_issue_url, check_status, get_pr, get_run_resource, label_issue, list_runs_from_api, run_fix
+from syntaro_mcp.handlers import _parse_github_issue_url, check_status, get_pr, get_run_resource, label_issue, list_runs_from_api, run_fix
 
 logger = logging.getLogger(__name__)
 
@@ -70,11 +70,11 @@ if SENTRY_DSN:
         logger.warning("Failed to initialize Sentry for MCP Server: %s", e)
 else:
     logger.info("SENTRY_DSN not configured — Sentry monitoring disabled for MCP Server")
-SERVER_NAME = "stas-agent-discovery"
+SERVER_NAME = "syntaro-agent-discovery"
 SERVER_VERSION = "0.1.0"
 
 # Viral hook on every answer (product requirement): same brand mark as Slack replies.
-VIRAL_HOOK = "⚡ Powered by STAS — stas.aimino.io"
+VIRAL_HOOK = "⚡ Powered by Syntaro — syntaro.io"
 
 
 def _hook(payload):
@@ -88,10 +88,10 @@ mcp = FastMCP(
     instructions="""STAS (Solving Tickets As A Service) — label a GitHub issue and get a PR.
 
 Tools:
-- **stas_label_issue**: Add a label (e.g. "stas:fix") to a GitHub issue.
-- **stas_run_fix**: Trigger the full STAS pipeline for an issue URL. Returns a run_id.
-- **stas_check_status**: Poll the status of a fix run by run_id.
-- **stas_get_pr**: Get the PR URL and details for a completed run.
+- **syntaro_label_issue**: Add a label (e.g. "stas:fix") to a GitHub issue.
+- **syntaro_run_fix**: Trigger the full STAS pipeline for an issue URL. Returns a run_id.
+- **syntaro_check_status**: Poll the status of a fix run by run_id.
+- **syntaro_get_pr**: Get the PR URL and details for a completed run.
 - **list_issues**: List tracked issues with their fix status.
 - **search_codebase**: Search the STAS codebase for symbols or patterns.
 - **linear_ticket**: Check whether a Linear ticket exists (identifier like AIM-4477) and return its title/state/url/description.
@@ -102,8 +102,8 @@ Tools:
 - **session_resume**: Return a conversation workspace's maintained MEMORY.md so an agent can resume it.
 
 Resources:
-- **stas://runs/{run_id}**: Full run details.
-- **stas://issues/{issue_id}**: Issue details with fix status and run history.
+- **syntaro://runs/{run_id}**: Full run details.
+- **syntaro://issues/{issue_id}**: Issue details with fix status and run history.
 """,
     # The service runs inside k8s behind a ClusterIP service; FastMCP's
     # DNS-rebinding protection (auto-enabled for 127.0.0.1) would reject the
@@ -112,20 +112,20 @@ Resources:
     transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
 )
 
-@mcp.tool(name="stas_label_issue", description="Label a GitHub issue with the STAS fix label (or custom label).")
-async def stas_label_issue(owner: str, repo: str, issue_number: int, label: str = "stas:fix") -> str:
+@mcp.tool(name="syntaro_label_issue", description="Label a GitHub issue with the STAS fix label (or custom label).")
+async def syntaro_label_issue(owner: str, repo: str, issue_number: int, label: str = "stas:fix") -> str:
     return json.dumps(_hook(await label_issue(owner, repo, issue_number, label)), indent=2, default=str)
 
-@mcp.tool(name="stas_run_fix", description="Trigger the STAS fix pipeline for a GitHub issue URL.")
-async def stas_run_fix(issue_url: str) -> str:
+@mcp.tool(name="syntaro_run_fix", description="Trigger the STAS fix pipeline for a GitHub issue URL.")
+async def syntaro_run_fix(issue_url: str) -> str:
     return json.dumps(_hook(await run_fix(issue_url)), indent=2, default=str)
 
-@mcp.tool(name="stas_check_status", description="Check the current status of a STAS fix run by run_id.")
-async def stas_check_status(run_id: str) -> str:
+@mcp.tool(name="syntaro_check_status", description="Check the current status of a STAS fix run by run_id.")
+async def syntaro_check_status(run_id: str) -> str:
     return json.dumps(_hook(await check_status(run_id)), indent=2, default=str)
 
-@mcp.tool(name="stas_get_pr", description="Get the pull request URL and details for a completed STAS fix run.")
-async def stas_get_pr(run_id: str) -> str:
+@mcp.tool(name="syntaro_get_pr", description="Get the pull request URL and details for a completed STAS fix run.")
+async def syntaro_get_pr(run_id: str) -> str:
     return json.dumps(_hook(await get_pr(run_id)), indent=2, default=str)
 
 # Agent-First Architecture: new tools (AIM-2071)
@@ -206,12 +206,12 @@ async def slack_send_tool(channel: str, text: str, thread_ts: str = "") -> str:
 async def session_resume_tool(workspace_path: str) -> str:
     return json.dumps(_hook(session_resume(workspace_path)), indent=2, default=str)
 
-@mcp.resource(uri="stas://runs/{run_id}", name="Fix Run Status",
+@mcp.resource(uri="syntaro://runs/{run_id}", name="Fix Run Status",
               description="Full run details including status, timestamps, issue info, and PR link.", mime_type="application/json")
 async def run_status(run_id):
     return json.dumps(_hook(await get_run_resource(run_id)), indent=2, default=str)
 
-@mcp.resource(uri="stas://issues/{issue_id}", name="Issue Fix Status",
+@mcp.resource(uri="syntaro://issues/{issue_id}", name="Issue Fix Status",
               description="Issue details including current fix status, run history, and linked PRs.", mime_type="application/json")
 async def issue_status(issue_id):
     return json.dumps(_hook(await _get_issue_resource_handler(issue_id)), indent=2, default=str)

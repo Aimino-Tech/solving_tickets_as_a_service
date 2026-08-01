@@ -154,7 +154,7 @@ Three options — pick one or all:
 **Option 2: Dashboard (Cloud Users)**
 *Shows fix history and metrics.*
 
-- Navigate to the STAS dashboard at `https://stas.aimino.io`
+- Navigate to the STAS dashboard at `https://syntaro.io`
 - Capture the main analytics view showing:
   - Fix success rate
   - Recent fix history
@@ -211,10 +211,10 @@ Three options — pick one or all:
 
 Before submitting to Marketplace, ensure the following URLs are live and linked in the GitHub App settings:
 
-- **Privacy policy URL:** `https://stas.aimino.io/privacy`
-- **Terms of service URL:** `https://stas.aimino.io/terms`
+- **Privacy policy URL:** `https://syntaro.io/privacy`
+- **Terms of service URL:** `https://syntaro.io/terms`
 
-> ✅ Privacy policy and ToS pages are now created at `website/privacy.html` and `website/terms.html`. Deploy the website to make them live at `stas.aimino.io/privacy` and `stas.aimino.io/terms`.
+> ✅ Privacy policy and ToS pages are now created at `website/privacy.html` and `website/terms.html`. Deploy the website to make them live at `syntaro.io/privacy` and `syntaro.io/terms`.
 
 ---
 
@@ -227,7 +227,7 @@ Before submitting to Marketplace, ensure the following URLs are live and linked 
 - [ ] Screenshot(s) prepared (1280×640 PNG, ≤2MB)
 - [ ] Demo GIF recorded (optional, 30-45s, ≤10MB)
 - [ ] Pricing plan configured in GitHub Marketplace billing UI
-- [x] Privacy policy URL configured (https://stas.aimino.io/privacy)
-- [x] Terms of service URL configured (https://stas.aimino.io/terms)
+- [x] Privacy policy URL configured (https://syntaro.io/privacy)
+- [x] Terms of service URL configured (https://syntaro.io/terms)
 - [ ] Verified Publisher badge obtained (see [GitHub docs](https://docs.github.com/en/apps/github-marketplace/github-marketplace-overview/applying-for-publisher-verification-for-your-organization))
 - [ ] App public page reviewed at `https://github.com/marketplace` after publishing

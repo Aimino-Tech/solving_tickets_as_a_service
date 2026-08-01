@@ -29,7 +29,7 @@ on:
           - smithery
 
 env:
-  MCP_SERVER_NAME: stas-agent-discovery
+  MCP_SERVER_NAME: syntaro-agent-discovery
   MCP_SERVER_VERSION: 1.0.0
 
 jobs:
@@ -73,7 +73,7 @@ jobs:
             python3 -c "
 import json
 m = json.load(open('mcp-manifest/manifest.json'))
-assert m.get('name') == '@aimino/stas-mcp'
+assert m.get('name') == '@aimino/syntaro-mcp'
 assert m.get('command') == 'python'
 print('   ✓ manifest valid')
 "
@@ -93,8 +93,8 @@ print('   ✓ manifest valid')
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Publish @aimino/stas-mcp to npm
-        working-directory: packages/stas-mcp
+      - name: Publish @aimino/syntaro-mcp to npm
+        working-directory: packages/syntaro-mcp
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -103,7 +103,7 @@ print('   ✓ manifest valid')
           else
             echo "NPM_TOKEN not set — skipping npm publish."
             echo "To publish manually:"
-            echo "  cd packages/stas-mcp"
+            echo "  cd packages/syntaro-mcp"
             echo "  npm publish --access public"
           fi
 
@@ -190,11 +190,11 @@ print('   ✓ manifest valid')
           echo "Server name: $MCP_SERVER_NAME"
           echo "Version: $MCP_SERVER_VERSION"
           echo ""
-          echo "Registry: https://registry.mcp.ai/servers/@aimino/stas-mcp"
-          echo "Smithery: https://smithery.ai/server/@aimino/stas-mcp"
+          echo "Registry: https://registry.mcp.ai/servers/@aimino/syntaro-mcp"
+          echo "Smithery: https://smithery.ai/server/@aimino/syntaro-mcp"
           echo ""
           echo "Install via OpenCode:"
-          echo '  python -m stas_mcp.server stdio'
+          echo '  python -m syntaro_mcp.server stdio'
           echo ""
           echo "Connect via SSE:"
-          echo "  python -m stas_mcp.server sse --port 4095"
+          echo "  python -m syntaro_mcp.server sse --port 4095"

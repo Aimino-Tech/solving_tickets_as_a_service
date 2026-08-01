@@ -80,32 +80,32 @@ class TestMcpDiscoveryManifestContract:
     SAMPLE_MANIFEST = {
         "schemaVersion": "2024-11-05",
         "server": {
-            "name": "stas-agent-discovery",
+            "name": "syntaro-agent-discovery",
             "version": "1.0.0",
             "description": "STAS — automated bug fixing.",
             "homepage": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
         },
         "transports": [{"type": "stdio", "command": "python",
-                        "args": ["-m", "stas_mcp.server", "stdio"],
+                        "args": ["-m", "syntaro_mcp.server", "stdio"],
                         "description": "Stdio transport"}],
         "tools": [
-            {"name": "stas_label_issue", "description": "Label a GitHub issue.",
+            {"name": "syntaro_label_issue", "description": "Label a GitHub issue.",
              "inputSchema": {"type": "object", "properties": {},
                              "required": ["owner", "repo", "issue_number"]}},
-            {"name": "stas_run_fix", "description": "Trigger fix pipeline.",
+            {"name": "syntaro_run_fix", "description": "Trigger fix pipeline.",
              "inputSchema": {"type": "object", "properties": {},
                              "required": ["issue_url"]}},
-            {"name": "stas_check_status", "description": "Check run status.",
+            {"name": "syntaro_check_status", "description": "Check run status.",
              "inputSchema": {"type": "object", "properties": {},
                              "required": ["run_id"]}},
-            {"name": "stas_get_pr", "description": "Get PR for run.",
+            {"name": "syntaro_get_pr", "description": "Get PR for run.",
              "inputSchema": {"type": "object", "properties": {},
                              "required": ["run_id"]}},
         ],
         "resources": [
-            {"uri": "stas://runs/{run_id}", "name": "Fix Run Status", "mimeType": "application/json"},
-            {"uri": "stas://status", "name": "Server Health", "mimeType": "application/json"},
-            {"uri": "stas://queue", "name": "Fix Queue", "mimeType": "application/json"},
+            {"uri": "syntaro://runs/{run_id}", "name": "Fix Run Status", "mimeType": "application/json"},
+            {"uri": "syntaro://status", "name": "Server Health", "mimeType": "application/json"},
+            {"uri": "syntaro://queue", "name": "Fix Queue", "mimeType": "application/json"},
         ],
     }
 
@@ -122,10 +122,10 @@ class TestMcpDiscoveryManifestContract:
     def test_all_four_tools(self):
         names = [t["name"] for t in self.SAMPLE_MANIFEST["tools"]]
         assert len(names) == 4
-        assert "stas_label_issue" in names
-        assert "stas_run_fix" in names
-        assert "stas_check_status" in names
-        assert "stas_get_pr" in names
+        assert "syntaro_label_issue" in names
+        assert "syntaro_run_fix" in names
+        assert "syntaro_check_status" in names
+        assert "syntaro_get_pr" in names
 
     def test_each_tool_has_schema(self):
         for tool in self.SAMPLE_MANIFEST["tools"]:
@@ -134,9 +134,9 @@ class TestMcpDiscoveryManifestContract:
 
     def test_resources_include_runs_status_queue(self):
         uris = [r["uri"] for r in self.SAMPLE_MANIFEST["resources"]]
-        assert "stas://runs/{run_id}" in uris
-        assert "stas://status" in uris
-        assert "stas://queue" in uris
+        assert "syntaro://runs/{run_id}" in uris
+        assert "syntaro://status" in uris
+        assert "syntaro://queue" in uris
 
     def test_serialisable_json(self):
         s = json.dumps(self.SAMPLE_MANIFEST)
@@ -172,7 +172,7 @@ class TestPrFooterContract:
         "\U0001f6e0 **Fixed by STAS** \u2014 [View run](/runs/123)\n"
         "\n"
         "STAS exposes an MCP server for agent-to-agent discovery. "
-        "Connect via `stas://discovery/mcp.json` to inspect runs, submit new issues, "
+        "Connect via `syntaro://discovery/mcp.json` to inspect runs, submit new issues, "
         "and check fix status programmatically.\n"
         "\n"
         "_\U0001f916 Automated fix by STAS_"
@@ -186,7 +186,7 @@ class TestPrFooterContract:
         "(https://github.com/tamnguyen08/solving_tickets_as_a_service)\n"
         "\n"
         "STAS exposes an MCP server for agent-to-agent discovery. "
-        "Connect via `stas://discovery/mcp.json` to inspect runs, submit new issues, "
+        "Connect via `syntaro://discovery/mcp.json` to inspect runs, submit new issues, "
         "and check fix status programmatically.\n"
         "\n"
         "_\U0001f916 Automated fix by STAS_"
@@ -196,7 +196,7 @@ class TestPrFooterContract:
         assert "Fixed by STAS" in self.FOOTER_WITH_RUN
 
     def test_footer_contains_mcp_discovery(self):
-        assert "stas://discovery/mcp.json" in self.FOOTER_WITH_RUN
+        assert "syntaro://discovery/mcp.json" in self.FOOTER_WITH_RUN
         assert "agent-to-agent" in self.FOOTER_WITH_RUN
         assert "MCP" in self.FOOTER_WITH_RUN
 

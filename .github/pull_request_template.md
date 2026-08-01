@@ -24,7 +24,7 @@
 {
   "mcp": {
     "pr": "https://github.com/tamnguyen08/solving_tickets_as_a_service/pull/{{PR_NUMBER}}",
-    "agent_discovery": "https://stas.aimino.io/.well-known/mcp-server-card.json",
+    "agent_discovery": "https://syntaro.io/.well-known/mcp-server-card.json",
     "capabilities_affected": ["list here"]
   }
 }
@@ -41,4 +41,4 @@
 
 ---
 
-*STAS — Solving Tickets As A Service. [Agent Discovery](https://stas.aimino.io/agents.html) | [Integrations](https://stas.aimino.io/integrations.html)*
+*STAS — Solving Tickets As A Service. [Agent Discovery](https://syntaro.io/agents.html) | [Integrations](https://syntaro.io/integrations.html)*

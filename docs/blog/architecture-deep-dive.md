@@ -3,7 +3,7 @@ title: "Building an AI that plans before it codes: STAS architecture explained"
 description: "How STAS solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization."
 status: published
 date: 2026-07-28
-canonical: https://stas.aimino.io/blog/architecture-deep-dive
+canonical: https://syntaro.io/blog/architecture-deep-dive
 keywords:
   - STAS architecture
   - AI code generation
@@ -16,9 +16,9 @@ featured_image: /images/blog/architecture-deep-dive.png
 featured_image_description: "Diagram showing STAS pipeline flow: issue label → webhook → queue → sandbox → code investigation → fix → verification → PR"
 cross_post:
   devto:
-    canonical: https://stas.aimino.io/blog/architecture-deep-dive
+    canonical: https://syntaro.io/blog/architecture-deep-dive
   medium:
-    canonical: https://stas.aimino.io/blog/architecture-deep-dive
+    canonical: https://syntaro.io/blog/architecture-deep-dive
 ---
 
 # Building an AI that plans before it codes: STAS architecture explained
@@ -202,7 +202,7 @@ STAS is built on a deliberately pragmatic stack:
 | **AI models** | claude-sonnet-4, gpt-4o-mini | Cascade: cheap model for triage, frontier model for fixes |
 | **Containerization** | Docker multi-stage | Consistent sandbox environment, local dev parity |
 | **Monitoring** | Prometheus + Sentry | Metrics, error tracking, uptime monitoring |
-| **MCP** | stdio MCP server (npx @aimino/stas-mcp) | Agent-to-agent discovery and integration |
+| **MCP** | stdio MCP server (npx @aimino/syntaro-mcp) | Agent-to-agent discovery and integration |
 
 The stack reflects a philosophy: **use mature infrastructure for reliability, use frontier AI for intelligence.** RabbitMQ and PostgreSQL aren't exciting, but they've been handling production workloads for two decades. The magic is in how they're wired together.
 
@@ -218,6 +218,6 @@ The fundamental belief driving STAS is this: **AI coding tools fail not because 
 
 ---
 
-*STAS — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://stas.aimino.io)*
+*STAS — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
 
-*This is a cross-post. The canonical version lives at [stas.aimino.io/blog/architecture-deep-dive](https://stas.aimino.io/blog/architecture-deep-dive).*
+*This is a cross-post. The canonical version lives at [syntaro.io/blog/architecture-deep-dive](https://syntaro.io/blog/architecture-deep-dive).*

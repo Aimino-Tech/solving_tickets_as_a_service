@@ -21,7 +21,7 @@ export async function run(): Promise<void> {
     const evalSuite = validateSuite(core.getInput('eval-suite') || 'smoke');
     const langfusePublicKey = core.getInput('langfuse-public-key');
     const langfuseSecretKey = core.getInput('langfuse-secret-key');
-    const stasApiUrl = core.getInput('stas-api-url') || 'https://api.stas.aimino.io';
+    const stasApiUrl = core.getInput('stas-api-url') || 'https://api.syntaro.io';
 
     core.info(`STAS Eval Pipeline — suite: ${evalSuite}`);
     core.info(`API URL: ${stasApiUrl}`);

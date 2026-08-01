@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy MCP server code
-COPY stas_mcp/ ./stas_mcp/
+COPY syntaro_mcp/ ./syntaro_mcp/
 COPY mcp-manifest/ ./mcp-manifest/
 
 # Install Python dependencies
@@ -19,4 +19,4 @@ RUN pip install --no-cache-dir "mcp>=1.0.0" httpx
 EXPOSE 4095
 
 # Default: run in SSE mode
-CMD ["python", "-m", "stas_mcp.server", "sse", "--host", "0.0.0.0", "--port", "4095"]
+CMD ["python", "-m", "syntaro_mcp.server", "sse", "--host", "0.0.0.0", "--port", "4095"]

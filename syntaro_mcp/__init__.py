@@ -5,8 +5,8 @@ Exposes STAS pipeline as MCP tools and resources so any MCP-compatible
 client (OpenCode, Claude Desktop, Cursor, etc.) can discover and invoke STAS.
 
 Published to:
-  - MCP Registry: https://registry.mcp.ai/servers/@aimino/stas-mcp
-  - Smithery:     https://smithery.ai/server/@aimino/stas-mcp
+  - MCP Registry: https://registry.mcp.ai/servers/@aimino/syntaro-mcp
+  - Smithery:     https://smithery.ai/server/@aimino/syntaro-mcp
 """
 
 __version__ = "1.0.0"

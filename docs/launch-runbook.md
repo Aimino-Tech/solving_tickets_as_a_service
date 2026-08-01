@@ -287,7 +287,7 @@ done
 
 ### Step 8: Advertise Availability
 
-- [ ] Update status page (stas.aimino.io)
+- [ ] Update status page (syntaro.io)
 - [ ] Post to team Slack/Discord channels
 - [ ] Enable GitHub Marketplace listing
 - [ ] Announce to beta users

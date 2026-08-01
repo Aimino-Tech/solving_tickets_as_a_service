@@ -93,16 +93,16 @@ describe('published blog posts carry SEO metadata', () => {
       expect(html).toContain(`<meta name="description"`);
       expect(html).toContain(`<meta name="keywords"`);
       expect(html).toContain(`<meta property="og:type" content="article"`);
-      expect(html).toContain(`https://stas.aimino.io/blog/${slug}`);
+      expect(html).toContain(`https://syntaro.io/blog/${slug}`);
       expect(html).toContain(`<meta property="og:title"`);
       expect(html).toContain(`<meta property="og:description"`);
-      expect(html).toContain(`https://stas.aimino.io/img/og-image.png`);
+      expect(html).toContain(`https://syntaro.io/img/og-image.png`);
       expect(html).toContain(`<meta name="twitter:card" content="summary_large_image"`);
       expect(html).toMatch(/"@type"\s*:\s*"BlogPosting"/);
       expect(html).toMatch(/"datePublished"/);
       expect(html).toContain(`"author"`);
       expect(html).toContain(`"publisher"`);
-      expect(html).toContain(`data-domain="stas.aimino.io"`);
+      expect(html).toContain(`data-domain="syntaro.io"`);
     });
   }
 });
@@ -118,7 +118,7 @@ describe('canonical blog markdown sources carry frontmatter', () => {
       expect(fm.description).toBeTruthy();
       expect(fm.status).toBeTruthy();
       expect(fm.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(fm.canonical).toBe(`https://stas.aimino.io/blog/${post}`);
+      expect(fm.canonical).toBe(`https://syntaro.io/blog/${post}`);
       expect(fm.keywords).toBeTruthy();
       expect(fm.featured_image).toBeTruthy();
       expect(fm.cross_post).toBeTruthy();
@@ -137,13 +137,13 @@ describe('sitemap covers the blog', () => {
   const sitemap = readFile('website', 'sitemap.xml');
 
   it('includes the blog index', () => {
-    expect(sitemap).toContain('https://stas.aimino.io/blog</loc>');
+    expect(sitemap).toContain('https://syntaro.io/blog</loc>');
   });
 
   it('includes every blog card slug', () => {
     const blogHtml = readFile('website', 'blog.html');
     for (const slug of extractBlogSlugs(blogHtml)) {
-      expect(sitemap, `sitemap missing /blog/${slug}`).toContain(`https://stas.aimino.io/blog/${slug}`);
+      expect(sitemap, `sitemap missing /blog/${slug}`).toContain(`https://syntaro.io/blog/${slug}`);
     }
   });
 });

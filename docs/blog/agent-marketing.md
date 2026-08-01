@@ -28,14 +28,14 @@ Any MCP-compatible agent (Claude Desktop, Cursor, Windsurf, etc.) that encounter
 
 ### 2. Smithery.ai
 
-Smithery is the app store for MCP servers. STAS is listed at [smithery.ai/server/@aimino/stas-mcp](https://smithery.ai/server/@aimino/stas-mcp) with one-click install. Agents browsing Smithery can add STAS without any manual configuration.
+Smithery is the app store for MCP servers. STAS is listed at [smithery.ai/server/@aimino/syntaro-mcp](https://smithery.ai/server/@aimino/syntaro-mcp) with one-click install. Agents browsing Smithery can add STAS without any manual configuration.
 
 ### 3. npm Registry
 
-STAS is published as `@aimino/stas-mcp` on npm. Any agent with npm access can install and run STAS as a stdio MCP server:
+STAS is published as `@aimino/syntaro-mcp` on npm. Any agent with npm access can install and run STAS as a stdio MCP server:
 
 ```bash
-npx -y @aimino/stas-mcp
+npx -y @aimino/syntaro-mcp
 ```
 
 ### 4. skills.sh / OpenCode Skills
@@ -65,7 +65,7 @@ Or add to `opencode.json`:
   "name": "stas-agent",
   "transport": "stdio",
   "command": "python",
-  "args": ["-m", "mcp.stas_mcp", "stdio"]
+  "args": ["-m", "mcp.syntaro_mcp", "stdio"]
 }
 ```
 
@@ -78,7 +78,7 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "stas": {
       "command": "npx",
-      "args": ["-y", "@aimino/stas-mcp"]
+      "args": ["-y", "@aimino/syntaro-mcp"]
     }
   }
 }
@@ -93,7 +93,7 @@ Add to `.cursor/mcp.json`:
   "mcpServers": {
     "stas": {
       "command": "npx",
-      "args": ["-y", "@aimino/stas-mcp"]
+      "args": ["-y", "@aimino/syntaro-mcp"]
     }
   }
 }
@@ -102,7 +102,7 @@ Add to `.cursor/mcp.json`:
 ### Codex CLI
 
 ```bash
-npx -y @aimino/stas-mcp
+npx -y @aimino/syntaro-mcp
 ```
 
 ---
@@ -129,10 +129,10 @@ Once connected, agents can use these tools:
 
 | Tool | Description |
 |---|---|
-| `stas_label_issue` | Label a GitHub issue with `stas:fix` to trigger the pipeline |
-| `stas_run_fix` | Submit a GitHub issue URL for automated fixing |
-| `stas_check_status` | Poll fix run status by `run_id` |
-| `stas_get_pr` | Retrieve PR details for a completed fix |
+| `syntaro_label_issue` | Label a GitHub issue with `stas:fix` to trigger the pipeline |
+| `syntaro_run_fix` | Submit a GitHub issue URL for automated fixing |
+| `syntaro_check_status` | Poll fix run status by `run_id` |
+| `syntaro_get_pr` | Retrieve PR details for a completed fix |
 | `list_issues` | List tracked issues and their STAS fix status |
 | `search_codebase` | Search the STAS codebase for symbols/patterns |
 
@@ -143,7 +143,7 @@ Once connected, agents can use these tools:
 Every repo that uses STAS can add the "Agent Found STAS" badge to its README:
 
 ```markdown
-[![Agent Found STAS](https://img.shields.io/badge/Agent_Found-STAS-8250DF)](https://stas.aimino.io/agents.html)
+[![Agent Found STAS](https://img.shields.io/badge/Agent_Found-STAS-8250DF)](https://syntaro.io/agents.html)
 ```
 
 This badge tells other agents (and humans) that the repo is STAS-enabled, creating a visible network effect.
@@ -172,10 +172,10 @@ To add STAS to your agent:
 npx skills add Aimino-Tech/solving_tickets_as_a_service
 
 # Any MCP-compatible agent
-npx -y @aimino/stas-mcp
+npx -y @aimino/syntaro-mcp
 ```
 
-Or visit [stas.aimino.io/agents.html](https://stas.aimino.io/agents.html) for the full guide.
+Or visit [syntaro.io/agents.html](https://syntaro.io/agents.html) for the full guide.
 
 ---
 

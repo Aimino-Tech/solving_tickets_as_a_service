@@ -42,16 +42,16 @@
     "stas": {
       "description": "STAS MCP server — submit fix requests, check status, list repos",
       "command": "python3",
-      "args": ["-m", "stas_mcp.server", "stdio"]
+      "args": ["-m", "syntaro_mcp.server", "stdio"]
     }
   },
   "resources": {
-    "stas://runs/{run_id}": {
+    "syntaro://runs/{run_id}": {
       "name": "Fix Run Status",
       "description": "Full run details including status, timestamps, issue info, and PR link",
       "mimeType": "application/json"
     },
-    "stas://issues/{issue_id}": {
+    "syntaro://issues/{issue_id}": {
       "name": "Issue Fix Status",
       "description": "Issue details with current fix status, run history, and linked PRs",
       "mimeType": "application/json"
@@ -87,7 +87,7 @@
       "type": "command",
       "config": {
         "name": "stas",
-        "command": "python3 -m stas_mcp.server stdio"
+        "command": "python3 -m syntaro_mcp.server stdio"
       }
     }
   }

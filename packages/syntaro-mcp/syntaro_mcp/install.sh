@@ -42,7 +42,7 @@ if [ -z "$PYTHON_BIN" ]; then
     echo "ERROR: Python 3 not found. Install Python 3.11+ and try again."
     exit 1
 fi
-MCP_MODULE="stas_mcp.server"
+MCP_MODULE="syntaro_mcp.server"
 
 INSTALL_OPENCODE=true
 INSTALL_CLAUDE=true
@@ -68,7 +68,7 @@ ensure_deps() {
         echo "Installing MCP SDK..."
         pip install "mcp>=1.0.0" httpx
     fi
-    if ! python3 -c "import stas_mcp.server" 2>/dev/null; then
+    if ! python3 -c "import syntaro_mcp.server" 2>/dev/null; then
         export PYTHONPATH="$PROJECT_DIR:${PYTHONPATH:-}"
     fi
 }

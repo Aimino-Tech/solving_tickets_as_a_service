@@ -66,7 +66,7 @@ STAS is an open-source GitHub bot that turns labeled issues into tested pull req
 
 CTA:
 
-Try it: label one issue and watch the PR arrive. → https://stas.aimino.io?utm_source=tldr&utm_medium=newsletter&utm_campaign=sponsor
+Try it: label one issue and watch the PR arrive. → https://syntaro.io?utm_source=tldr&utm_medium=newsletter&utm_campaign=sponsor
 
 ### Python Weekly
 
@@ -78,7 +78,7 @@ STAS is a free, open-source bot that fixes GitHub issues for you. Label an issue
 
 CTA:
 
-Label an issue, get a pull request. → https://stas.aimino.io?utm_source=pythonweekly&utm_medium=newsletter&utm_campaign=sponsor
+Label an issue, get a pull request. → https://syntaro.io?utm_source=pythonweekly&utm_medium=newsletter&utm_campaign=sponsor
 
 ### ByteSized
 
@@ -90,7 +90,7 @@ STAS (Solving Tickets As A Service) is a free, open-source GitHub bot. Add the `
 
 CTA:
 
-Label a GitHub issue. Get a pull request. → https://stas.aimino.io?utm_source=bytesized&utm_medium=newsletter&utm_campaign=sponsor
+Label a GitHub issue. Get a pull request. → https://syntaro.io?utm_source=bytesized&utm_medium=newsletter&utm_campaign=sponsor
 
 ## Ops Checklist
 
@@ -99,7 +99,7 @@ Run this for every sponsorship:
 - [ ] Reserve the slot 2 to 3 weeks ahead (TLDR AI in particular books out early).
 - [ ] Confirm the publication accepts UTM parameters in sponsor links; paste the pre-tagged URL from the copy block.
 - [ ] Create a link-shortener code per campaign (for example `stas-tldr-jul`) in addition to the UTM URL, so clicks are measurable even if the publication strips parameters.
-- [ ] Verify click tracking works before publish: Plausible is already installed on stas.aimino.io, so confirm the campaign shows up in the dashboard as a goal or outbound link.
+- [ ] Verify click tracking works before publish: Plausible is already installed on syntaro.io, so confirm the campaign shows up in the dashboard as a goal or outbound link.
 - [ ] Log baseline metrics before the run: current weekly installs and signups, so the campaign lift is visible.
 - [ ] After publish, log per campaign: impressions, clicks, click-through rate, CPC (paid / clicks), GitHub App installs, and signups.
 - [ ] Save the invoice and the publication's reported delivery stats; reconcile against Plausible within 3 days.

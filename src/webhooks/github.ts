@@ -4,7 +4,7 @@
  * Receives webhook events from GitHub and routes them to the appropriate
  * handlers. Primary handler is issues.labeled with the "stas:fix" label.
  * Also handles marketplace_purchase for billing plan changes,
- * pull_request.closed for the "STAS fixed this" badge, and
+ * pull_request.closed for the "Syntaro fixed this" badge, and
  * issue_comment.created for the approval slash commands (/stas approve, /stas reject).
  *
  * ── Error Handling Audit ────────────────────────────────────────────
@@ -58,7 +58,7 @@ async function postIssueReceivedComment(
       owner: repoOwner,
       repo: repoName,
       issue_number: issueNumber,
-      body: `### 📥 Issue Received\n\nThis issue has been received and queued for processing.\n\n> STAS is running in **AI-disabled mode**. No automated fix will be attempted.\n> An operator needs to claim and process this issue manually.\n\nIssue ID: #${issueNumber}`,
+      body: `### 📥 Issue Received\n\nThis issue has been received and queued for processing.\n\n> Syntaro is running in **AI-disabled mode**. No automated fix will be attempted.\n> An operator needs to claim and process this issue manually.\n\nIssue ID: #${issueNumber}`,
     });
     log.info({ repo: `${repoOwner}/${repoName}`, issueNumber }, 'Posted "issue received" comment (AI-disabled mode)');
   } catch (err) {
@@ -86,7 +86,7 @@ async function postGovernanceFailureComment(
       owner: repoOwner,
       repo: repoName,
       issue_number: issueNumber,
-      body: `### ⚠️ Governance Proxy Unavailable\n\nSTAS was unable to verify this issue through the governance proxy. Processing has been **blocked** to maintain security policy compliance.\n\n> The issue will not be processed until the governance service is restored. An administrator should investigate the governance proxy status.\n\nIssue ID: #${issueNumber}`,
+      body: `### ⚠️ Governance Proxy Unavailable\n\nSyntaro was unable to verify this issue through the governance proxy. Processing has been **blocked** to maintain security policy compliance.\n\n> The issue will not be processed until the governance service is restored. An administrator should investigate the governance proxy status.\n\nIssue ID: #${issueNumber}`,
     });
     log.info({ repo: `${repoOwner}/${repoName}`, issueNumber }, 'Posted governance failure comment');
   } catch (err) {
@@ -98,7 +98,7 @@ async function postGovernanceFailureComment(
 }
 
 /**
- * Create a "Welcome to STAS" issue on a freshly installed repository.
+ * Create a "Welcome to Syntaro" issue on a freshly installed repository.
  *
  * AIM-4408 (Phase 2 activation funnel): auto-creates a tutorial issue labeled
  * `stas:fix` so the very first fix lands without any manual setup, and the
@@ -120,7 +120,7 @@ async function createWelcomeIssue(installationId: number, repoOwner: string, rep
         repo: repoName,
         name: config.stas.label,
         color: '0366d6',
-        description: 'Trigger a STAS AI fix for this issue',
+        description: 'Trigger a Syntaro AI fix for this issue',
       });
     } catch (labelErr: unknown) {
       const status = (labelErr as { status?: number })?.status;
@@ -131,12 +131,12 @@ async function createWelcomeIssue(installationId: number, repoOwner: string, rep
     }
 
     const welcomeBody = [
-      '## 👋 Welcome to STAS — Solving Tickets As A Service',
+      '## 👋 Welcome to Syntaro — Solving Tickets As A Service',
       '',
-      'This issue was created automatically when the STAS GitHub App was installed.',
+      'This issue was created automatically when the Syntaro GitHub App was installed.',
       '',
       '### What happens next',
-      '1. STAS investigates the codebase to understand the issue',
+      '1. Syntaro investigates the codebase to understand the issue',
       '2. An AI agent writes a fix plus a regression test',
       '3. A pull request is opened for you to review',
       '',
@@ -147,13 +147,13 @@ async function createWelcomeIssue(installationId: number, repoOwner: string, rep
       'This issue is labeled `stas:fix`, so a fix PR should appear shortly. You can close this issue at any time.',
       '',
       '---',
-      '_Powered by STAS — AI bug fixes for your repo_',
+      '_Powered by Syntaro — AI bug fixes for your repo_',
     ].join('\n');
 
     const issue = await octokit.issues.create({
       owner: repoOwner,
       repo: repoName,
-      title: "Welcome to STAS — let's fix your first issue",
+      title: "Welcome to Syntaro — let's fix your first issue",
       body: welcomeBody,
       labels: [config.stas.label],
     });
@@ -809,7 +809,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
   });
 
   // ── pull_request.closed ──────────────────────────────────────────
-  // When a PR that STAS created gets merged, post a "STAS fixed this" badge comment.
+  // When a PR that Syntaro created gets merged, post a "Syntaro fixed this" badge comment.
   webhooks.on('pull_request.closed' as EmitterWebhookEventName, async ({ payload }) => {
     try {
       const p = payload as unknown as {
@@ -843,10 +843,10 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           prNumber,
           prUrl,
         },
-        'PR merged — checking if this was a STAS-created PR',
+        'PR merged — checking if this was a Syntaro-created PR',
       );
 
-      // Look up the STAS run by PR URL in the database
+      // Look up the Syntaro run by PR URL in the database
       const { queryWithRetry } = await import('../db/connection.js');
       const result = await queryWithRetry<{
         id: number;
@@ -864,7 +864,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
 
       const run = result.rows[0];
       if (!run) {
-        log.info({ prUrl }, 'No STAS run found for this PR — not posting badge');
+        log.info({ prUrl }, 'No Syntaro run found for this PR — not posting badge');
         return;
       }
 
@@ -874,10 +874,10 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           issueNumber: run.issue_number,
           repo: `${repoOwner}/${repoName}`,
         },
-        'Found STAS run for merged PR — posting badge comment',
+        'Found Syntaro run for merged PR — posting badge comment',
       );
 
-      // Post the "STAS fixed this" badge comment
+      // Post the "Syntaro fixed this" badge comment
       const { getOctokit } = await import('../github/auth.js');
       const octokit = await getOctokit(installationId || run.installation_id);
       await octokit.issues.createComment({
@@ -885,11 +885,11 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         repo: repoName,
         issue_number: run.issue_number,
         body: [
-          '![STAS Fixed This](https://stas.aimino.io/badge/stas-fixed-this.svg)',
+          '![Syntaro Fixed This](https://syntaro.io/badge/stas-fixed-this.svg)',
           '',
-          '🤖 This PR was fixed by **STAS** — automated bug fixing for your GitHub issues.',
+          '🤖 This PR was fixed by **Syntaro** — automated bug fixing for your GitHub issues.',
           '',
-          '[Add STAS to your repo](https://github.com/apps/stas-app/installations/new?utm_source=github&utm_medium=pr-badge&utm_campaign=aim-4215) | [View Dashboard](https://stas.aimino.io/dashboard)',
+          '[Add Syntaro to your repo](https://github.com/apps/stas-app/installations/new?utm_source=github&utm_medium=pr-badge&utm_campaign=aim-4215) | [View Dashboard](https://syntaro.io/dashboard)',
         ].join('\n'),
       });
 

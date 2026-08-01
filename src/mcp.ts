@@ -6,13 +6,13 @@
  *   GET  /mcp/discovery    -- MCP server capabilities + tool/resource listing
  *   POST /mcp/label        -- Label a GitHub issue (REST shortcut)
  *   POST /mcp/run          -- Trigger a fix run (REST shortcut)
- *   GET  /mcp/runs/:runId  -- Run status (matches stas://runs/{run_id} resource)
+ *   GET  /mcp/runs/:runId  -- Run status (matches syntaro://runs/{run_id} resource)
  *   GET  /mcp/issues       -- List issues (bridge to list_issues tool)
  *   POST /mcp/search       -- Search codebase (bridge to search_codebase tool)
- *   GET  /mcp/issues/:id   -- Issue resource (matches stas://issues/{issue_id} resource)
+ *   GET  /mcp/issues/:id   -- Issue resource (matches syntaro://issues/{issue_id} resource)
  *
  * The full MCP protocol (tools/call, resources/read) is handled by the
- * standalone FastMCP Python server (stas_mcp/server.py) in SSE or stdio mode.
+ * standalone FastMCP Python server (syntaro_mcp/server.py) in SSE or stdio mode.
  * This router provides REST-compatible shortcuts + agent discovery metadata.
  */
 
@@ -35,7 +35,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
 
   res.json({
     server: {
-      name: 'stas-agent-discovery',
+      name: 'syntaro-agent-discovery',
       version: '1.0.0',
       protocolVersion: '2024-11-05',
       description: 'STAS (Solving Tickets As A Service) -- label a GitHub issue and get a PR.',
@@ -54,13 +54,13 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
       {
         type: 'stdio',
         command: 'python',
-        args: ['-m', 'stas_mcp.server', 'stdio'],
+        args: ['-m', 'syntaro_mcp.server', 'stdio'],
         description: 'Stdio transport for tools like Claude Desktop, Cursor, and other MCP clients',
       },
     ],
     tools: [
       {
-        name: 'stas_label_issue',
+        name: 'syntaro_label_issue',
         description: 'Label a GitHub issue with the STAS fix label (or custom label).',
         inputSchema: {
           type: 'object',
@@ -74,7 +74,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
         },
       },
       {
-        name: 'stas_run_fix',
+        name: 'syntaro_run_fix',
         description: 'Trigger the STAS fix pipeline for a GitHub issue URL. Returns a run_id for polling.',
         inputSchema: {
           type: 'object',
@@ -85,23 +85,23 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
         },
       },
       {
-        name: 'stas_check_status',
+        name: 'syntaro_check_status',
         description: 'Check the current status of a STAS fix run by run_id.',
         inputSchema: {
           type: 'object',
           properties: {
-            run_id: { type: 'string', description: 'Run ID from stas_run_fix' },
+            run_id: { type: 'string', description: 'Run ID from syntaro_run_fix' },
           },
           required: ['run_id'],
         },
       },
       {
-        name: 'stas_get_pr',
+        name: 'syntaro_get_pr',
         description: 'Get the pull request URL and details for a completed STAS fix run.',
         inputSchema: {
           type: 'object',
           properties: {
-            run_id: { type: 'string', description: 'Run ID from stas_run_fix' },
+            run_id: { type: 'string', description: 'Run ID from syntaro_run_fix' },
           },
           required: ['run_id'],
         },
@@ -134,13 +134,13 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
     ],
     resources: [
       {
-        uri: 'stas://runs/{run_id}',
+        uri: 'syntaro://runs/{run_id}',
         name: 'Fix Run Status',
         description: 'Real-time status and PR link for a STAS fix run.',
         mimeType: 'application/json',
       },
       {
-        uri: 'stas://issues/{issue_id}',
+        uri: 'syntaro://issues/{issue_id}',
         name: 'Issue Fix Status',
         description: 'Issue details including current fix status, run history, and linked PRs.',
         mimeType: 'application/json',
@@ -149,18 +149,18 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
     install: {
       opencode: {
         config: {
-          name: 'stas-agent-discovery',
+          name: 'syntaro-agent-discovery',
           transport: 'stdio',
           command: 'python',
-          args: ['-m', 'mcp.stas_mcp', 'stdio'],
+          args: ['-m', 'mcp.syntaro_mcp', 'stdio'],
         },
       },
       claudeDesktop: {
         config: {
           mcpServers: {
-            stas: {
+            syntaro: {
               command: 'python',
-              args: ['-m', 'mcp.stas_mcp', 'stdio'],
+              args: ['-m', 'mcp.syntaro_mcp', 'stdio'],
             },
           },
         },
@@ -182,7 +182,7 @@ router.post('/mcp/label', async (req: Request, res: Response) => {
 
   try {
     log.info({ owner, repo, issue_number, label }, 'Label issue via MCP shortcut');
-    const result = await forwardToMCP('stas_label_issue', {
+    const result = await forwardToMCP('syntaro_label_issue', {
       owner,
       repo,
       issue_number,
@@ -208,7 +208,7 @@ router.post('/mcp/run', async (req: Request, res: Response) => {
 
   try {
     log.info({ issue_url }, 'Trigger fix run via MCP shortcut');
-    const result = await forwardToMCP('stas_run_fix', { issue_url });
+    const result = await forwardToMCP('syntaro_run_fix', { issue_url });
     res.json(result);
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to trigger fix run');
@@ -217,7 +217,7 @@ router.post('/mcp/run', async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// REST shortcut: get run status (matches stas://runs/{run_id} resource)
+// REST shortcut: get run status (matches syntaro://runs/{run_id} resource)
 // ---------------------------------------------------------------------------
 
 router.get('/mcp/runs/:runId', async (req: Request, res: Response) => {
@@ -225,7 +225,7 @@ router.get('/mcp/runs/:runId', async (req: Request, res: Response) => {
 
   try {
     log.info({ runId }, 'Get run status via MCP shortcut');
-    const result = await forwardToMCP('stas_check_status', { run_id: runId });
+    const result = await forwardToMCP('syntaro_check_status', { run_id: runId });
     res.json(result);
   } catch (err) {
     log.error({ err: String(err), runId }, 'Failed to get run status');

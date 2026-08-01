@@ -910,18 +910,18 @@ export async function createApp(): Promise<express.Application> {
     const card = {
       schemaVersion: '2024-11-05',
       server: {
-        name: '@aimino/stas-mcp',
+        name: '@aimino/syntaro-mcp',
         version: '1.0.0',
         description:
           'STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
         homepage: 'https://github.com/tamnguyen08/solving_tickets_as_a_service',
         documentation: 'https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md',
         license: 'MIT',
-        author: { name: 'Aimino Tech', email: 'team@aimino.io', url: 'https://stas.aimino.io' },
+        author: { name: 'Aimino Tech', email: 'team@aimino.io', url: 'https://syntaro.io' },
       },
       capabilities: {
         tools: {
-          stas_label_issue: {
+          syntaro_label_issue: {
             description: 'Label a GitHub issue with the STAS fix label. Triggers the fix pipeline.',
             inputSchema: {
               type: 'object',
@@ -934,7 +934,7 @@ export async function createApp(): Promise<express.Application> {
               required: ['owner', 'repo', 'issue_number'],
             },
           },
-          stas_run_fix: {
+          syntaro_run_fix: {
             description: 'Trigger the STAS fix pipeline for a GitHub issue URL.',
             inputSchema: {
               type: 'object',
@@ -942,28 +942,28 @@ export async function createApp(): Promise<express.Application> {
               required: ['issue_url'],
             },
           },
-          stas_check_status: {
+          syntaro_check_status: {
             description: 'Check status of a STAS fix run by run_id.',
             inputSchema: {
               type: 'object',
-              properties: { run_id: { type: 'string', description: 'Run ID from stas_run_fix' } },
+              properties: { run_id: { type: 'string', description: 'Run ID from syntaro_run_fix' } },
               required: ['run_id'],
             },
           },
-          stas_get_pr: {
+          syntaro_get_pr: {
             description: 'Get PR URL and details for a completed fix run.',
             inputSchema: {
               type: 'object',
-              properties: { run_id: { type: 'string', description: 'Run ID from stas_run_fix' } },
+              properties: { run_id: { type: 'string', description: 'Run ID from syntaro_run_fix' } },
               required: ['run_id'],
             },
           },
         },
         resources: {
-          'stas://runs/{run_id}': { description: 'Full run details with status, PR link, and test results.' },
-          'stas://issues/{issue_id}': { description: 'Issue details with fix status, run history, and linked PRs.' },
-          'stas://status': { description: 'Server health and capability overview.' },
-          'stas://queue': { description: 'Current fix queue depth and status.' },
+          'syntaro://runs/{run_id}': { description: 'Full run details with status, PR link, and test results.' },
+          'syntaro://issues/{issue_id}': { description: 'Issue details with fix status, run history, and linked PRs.' },
+          'syntaro://status': { description: 'Server health and capability overview.' },
+          'syntaro://queue': { description: 'Current fix queue depth and status.' },
         },
       },
       transports: [
@@ -972,19 +972,19 @@ export async function createApp(): Promise<express.Application> {
         {
           type: 'stdio',
           command: 'npx',
-          args: ['-y', '@aimino/stas-mcp'],
+          args: ['-y', '@aimino/syntaro-mcp'],
           description: 'Stdio transport via npx',
         },
       ],
       install: {
         opencode: {
-          config: { name: 'stas-agent', transport: 'stdio', command: 'npx', args: ['-y', '@aimino/stas-mcp'] },
+          config: { name: 'stas-agent', transport: 'stdio', command: 'npx', args: ['-y', '@aimino/syntaro-mcp'] },
         },
         claudeDesktop: {
-          config: { mcpServers: { stas: { command: 'npx', args: ['-y', '@aimino/stas-mcp'] } } },
+          config: { mcpServers: { syntaro: { command: 'npx', args: ['-y', '@aimino/syntaro-mcp'] } } },
         },
         cursor: {
-          config: { mcpServers: { stas: { command: 'npx', args: ['-y', '@aimino/stas-mcp'] } } },
+          config: { mcpServers: { syntaro: { command: 'npx', args: ['-y', '@aimino/syntaro-mcp'] } } },
         },
       },
       keywords: [

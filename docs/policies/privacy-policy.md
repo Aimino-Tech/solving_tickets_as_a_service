@@ -351,7 +351,7 @@ We may update this Privacy Policy from time to time. We will notify you of mater
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2026-07-28 | Initial draft |
-| 1.0.1 | 2026-07-30 | Finalized for GitHub Marketplace — published at stas.aimino.io/privacy |
+| 1.0.1 | 2026-07-30 | Finalized for GitHub Marketplace — published at syntaro.io/privacy |
 
 We recommend that you review this Privacy Policy periodically. Your continued use of the Service after changes take effect constitutes acceptance of the updated policy.
 

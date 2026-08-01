@@ -9,7 +9,7 @@ describe('buildDiscoveryManifest', () => {
   it('includes server metadata', async () => {
     const { buildDiscoveryManifest } = await import('../../routes/viral.js');
     const m = buildDiscoveryManifest('http://localhost:3000');
-    expect(m.server.name).toContain('stas-agent-discovery');
+    expect(m.server.name).toContain('syntaro-agent-discovery');
     expect(m.server.version).toBeDefined();
     expect(m.server.homepage).toMatch(/^https:\/\/github\.com/);
   });
@@ -23,10 +23,10 @@ describe('buildDiscoveryManifest', () => {
     const { buildDiscoveryManifest } = await import('../../routes/viral.js');
     const m = buildDiscoveryManifest('http://localhost:3000');
     const names = m.tools.map(t => t.name);
-    expect(names).toContain('stas_label_issue');
-    expect(names).toContain('stas_run_fix');
-    expect(names).toContain('stas_check_status');
-    expect(names).toContain('stas_get_pr');
+    expect(names).toContain('syntaro_label_issue');
+    expect(names).toContain('syntaro_run_fix');
+    expect(names).toContain('syntaro_check_status');
+    expect(names).toContain('syntaro_get_pr');
     expect(names).toContain('list_issues');
     expect(names).toContain('search_codebase');
     expect(m.tools.length).toBe(6);
@@ -43,10 +43,10 @@ describe('buildDiscoveryManifest', () => {
     const { buildDiscoveryManifest } = await import('../../routes/viral.js');
     const m = buildDiscoveryManifest('http://localhost:3000');
     const uris = m.resources.map(r => r.uri);
-    expect(uris).toContain('stas://runs/{run_id}');
-    expect(uris).toContain('stas://issues/{issue_id}');
-    expect(uris).toContain('stas://status');
-    expect(uris).toContain('stas://queue');
+    expect(uris).toContain('syntaro://runs/{run_id}');
+    expect(uris).toContain('syntaro://issues/{issue_id}');
+    expect(uris).toContain('syntaro://status');
+    expect(uris).toContain('syntaro://queue');
     expect(m.resources.length).toBe(4);
   });
   it('includes install configs', async () => {
@@ -85,7 +85,7 @@ describe('renderDiscoveryPage', () => {
     const { renderDiscoveryPage } = await import('../../routes/viral.js');
     const html = renderDiscoveryPage('http://localhost:3000');
     expect(html).toContain('discovery/mcp.json');
-    expect(html).toContain('stas://');
+    expect(html).toContain('syntaro://');
   });
   it('injects base URL', async () => {
     const { renderDiscoveryPage } = await import('../../routes/viral.js');

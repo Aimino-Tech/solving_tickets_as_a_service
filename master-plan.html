@@ -448,7 +448,7 @@
         <p>Self-serve onboarding, Stripe billing, viral mechanics, MCP distribution. Major refactor: replaced monolithic agent system with modular dispatch/classifier/tracker pipeline.</p>
         <ul style="margin-top:6px;font-size:12px;color:var(--dim);">
           <li>✅ Agent system replaced — classifier + OS dispatch + service layer + trackers</li>
-          <li>✅ MCP server at <code>/mcp/jsonrpc</code> with 6 tools (stas_fix_issue, stas_label_issue, etc.)</li>
+          <li>✅ MCP server at <code>/mcp/jsonrpc</code> with 6 tools (syntaro_fix_issue, syntaro_label_issue, etc.)</li>
           <li>✅ n8n workflow engine — 12 workflows (billing, monitoring, slack, telegram, WhatsApp, Crisp)</li>
           <li>✅ Marketing site deployed — pages for Agents, Benchmark, Blog, Pricing, Trust, Integrations</li>
           <li>✅ Python STAS project (FastAPI + Celery + PostgreSQL + RabbitMQ)</li>
@@ -528,7 +528,7 @@
     <div class="card loop">
       <h3>Loop 3: MCP Agent Distribution</h3>
       <div class="coeff">k = 0.05–0.10</div>
-      <p class="mt-16">STAS exposes an MCP tool (<code>stas_fix_issue</code>) registered in the MCP Registry (backed by Anthropic/GitHub/Microsoft, 97M monthly SDK downloads). AI agents discover and invoke STAS autonomously — each invocation is an acquisition.</p>
+      <p class="mt-16">STAS exposes an MCP tool (<code>syntaro_fix_issue</code>) registered in the MCP Registry (backed by Anthropic/GitHub/Microsoft, 97M monthly SDK downloads). AI agents discover and invoke STAS autonomously — each invocation is an acquisition.</p>
       <div class="mt-16">
         <span class="tag tag-mcp">MCP</span>
       </div>
@@ -1078,7 +1078,7 @@
       <div class="theme">"Why MCP is the next distribution frontier for AI tools"</div>
       <ul>
         <li>Thought leadership post about agent-to-agent economics</li>
-        <li>Technical walkthrough: calling stas_fix_issue from Claude</li>
+        <li>Technical walkthrough: calling syntaro_fix_issue from Claude</li>
         <li>Target: AI/ML newsletters (The Batch, TLDR AI, etc.)</li>
       </ul>
     </div>
@@ -1904,17 +1904,17 @@
       <p>STAS exposes <strong>two</strong> MCP endpoints:</p>
       <p class="mt-16"><strong>1. MCP Discovery</strong> (<code>/mcp/discovery</code>) — REST + tool listing with 6 tools:</p>
       <ul>
-        <li><code>stas_label_issue</code> — Label a GitHub issue for fixing</li>
-        <li><code>stas_run_fix</code> — Trigger the fix pipeline from an issue URL</li>
-        <li><code>stas_check_status</code> — Poll fix run status by run_id</li>
-        <li><code>stas_get_pr</code> — Get PR details for a completed fix run</li>
+        <li><code>syntaro_label_issue</code> — Label a GitHub issue for fixing</li>
+        <li><code>syntaro_run_fix</code> — Trigger the fix pipeline from an issue URL</li>
+        <li><code>syntaro_check_status</code> — Poll fix run status by run_id</li>
+        <li><code>syntaro_get_pr</code> — Get PR details for a completed fix run</li>
         <li><code>list_issues</code> — List tracked issues with status filters</li>
         <li><code>search_codebase</code> — Search across fix runs and issues</li>
       </ul>
       <p class="mt-16"><strong>2. MCP Agent Server</strong> (<code>/mcp/jsonrpc</code>) — JSON-RPC 2.0 with 4 tools:</p>
       <ul>
-        <li><code>stas_fix_issue</code> — Dispatch a fix run (params: repoOwner, repoName, issueNumber)</li>
-        <li><code>stas_check_status</code> — Check status by runId</li>
+        <li><code>syntaro_fix_issue</code> — Dispatch a fix run (params: repoOwner, repoName, issueNumber)</li>
+        <li><code>syntaro_check_status</code> — Check status by runId</li>
         <li><code>stas_list_runs</code> — List recent runs (limit, status filter)</li>
         <li><code>stas_get_run</code> — Full run details by runId</li>
       </ul>

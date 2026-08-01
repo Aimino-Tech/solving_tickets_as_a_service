@@ -29,14 +29,14 @@ import {
   poweredByFooter,
 } from '../../platforms/messages.js';
 
-const FOOTER_URL = 'https://stas.aimino.io/?ref=';
+const FOOTER_URL = 'https://syntaro.io/?ref=';
 const FOOTER_TEXT = 'AI code review & fix automation';
 
 describe('poweredByFooter', () => {
   it('returns the tracked footer with the given ref when enabled', () => {
     const footer = poweredByFooter('pr-footer');
     expect(footer).toContain('---');
-    expect(footer).toContain(`_Powered by [STAS](${FOOTER_URL}pr-footer) — ${FOOTER_TEXT}_`);
+    expect(footer).toContain(`_Powered by [Syntaro](${FOOTER_URL}pr-footer) — ${FOOTER_TEXT}_`);
   });
 
   it('uses the ref passed for the placement (pr-comment)', () => {
@@ -64,16 +64,16 @@ describe('buildPRBody', () => {
 
   it('appends the powered-by footer to the PR body when enabled', () => {
     const body = buildPRBody(params);
-    expect(body).toContain(`_Powered by [STAS](${FOOTER_URL}pr-footer) — ${FOOTER_TEXT}_`);
+    expect(body).toContain(`_Powered by [Syntaro](${FOOTER_URL}pr-footer) — ${FOOTER_TEXT}_`);
     // Footer sits after the bot signature line.
-    expect(body.indexOf('_Powered by [STAS]')).toBeGreaterThan(body.indexOf('Automated fix by STAS'));
+    expect(body.indexOf('_Powered by [Syntaro]')).toBeGreaterThan(body.indexOf('Automated fix by Syntaro'));
   });
 
   it('omits the footer when the toggle is disabled', () => {
     mockConfig.stas.poweredByFooterEnabled = false;
     try {
       const body = buildPRBody(params);
-      expect(body).not.toContain('Powered by [STAS]');
+      expect(body).not.toContain('Powered by [Syntaro]');
       expect(body).not.toContain(FOOTER_URL);
       // No dangling separator left behind either.
       expect(body.trimEnd()).not.toMatch(/---$/);
@@ -88,19 +88,19 @@ describe('issue comment footers', () => {
 
   it('highConfidenceIssueComment includes the pr-comment footer when enabled', () => {
     const comment = highConfidenceIssueComment(42, result);
-    expect(comment).toContain(`_Powered by [STAS](${FOOTER_URL}pr-comment) — ${FOOTER_TEXT}_`);
+    expect(comment).toContain(`_Powered by [Syntaro](${FOOTER_URL}pr-comment) — ${FOOTER_TEXT}_`);
   });
 
   it('draftIssueComment includes the pr-comment footer when enabled', () => {
     const comment = draftIssueComment(42, result);
-    expect(comment).toContain(`_Powered by [STAS](${FOOTER_URL}pr-comment) — ${FOOTER_TEXT}_`);
+    expect(comment).toContain(`_Powered by [Syntaro](${FOOTER_URL}pr-comment) — ${FOOTER_TEXT}_`);
   });
 
   it('omits the footer from both comments when the toggle is disabled', () => {
     mockConfig.stas.poweredByFooterEnabled = false;
     try {
-      expect(highConfidenceIssueComment(42, result)).not.toContain('Powered by [STAS]');
-      expect(draftIssueComment(42, result)).not.toContain('Powered by [STAS]');
+      expect(highConfidenceIssueComment(42, result)).not.toContain('Powered by [Syntaro]');
+      expect(draftIssueComment(42, result)).not.toContain('Powered by [Syntaro]');
     } finally {
       mockConfig.stas.poweredByFooterEnabled = true;
     }

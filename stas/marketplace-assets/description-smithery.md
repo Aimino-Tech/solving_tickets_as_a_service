@@ -10,7 +10,7 @@ STAS (Solving Tickets As A Service) is an open-source GitHub bot that investigat
 
 This server exposes four tools through the Model Context Protocol:
 
-### `stas_submit_fix`
+### `syntaro_submit_fix`
 Submit a GitHub issue URL for automated fix generation. STAS will:
 1. Clone the repository
 2. Investigate the root cause
@@ -20,13 +20,13 @@ Submit a GitHub issue URL for automated fix generation. STAS will:
 6. Commit and push to a new branch
 7. Open a draft PR
 
-### `stas_poll_job`
+### `syntaro_poll_job`
 Poll a running fix job for status updates and final results including the PR URL and test results.
 
-### `stas_list_jobs`
+### `syntaro_list_jobs`
 List recent fix jobs and their statuses across your account.
 
-### `stas_get_eval_results`
+### `syntaro_get_eval_results`
 Get public STAS benchmark evaluation results showing pass rates.
 
 ## Getting Started

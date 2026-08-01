@@ -10,10 +10,10 @@ This PR verifies the implementation of AIM-4209 (Viral & Engagement Features), w
 - **Webhook handler** (`src/webhooks/github.ts`) — `issue_comment.created` handler routes comments to approve/reject
 
 ### 2. Viral PR Footer
-- **UTM-tracked links** in `stas.aimino.io` in PR footer (`src/platforms/messages.ts`)
+- **UTM-tracked links** in `syntaro.io` in PR footer (`src/platforms/messages.ts`)
 - **Fix stats** displayed in each PR: files changed, time to fix
 
-### 3. "STAS Fixed This" Badge
+### 3. "Syntaro Fixed This" Badge
 - **Merge detection** in `src/webhooks/github.ts` — `pull_request.closed` handler posts badge comment on merged PRs
 
 ## Testing

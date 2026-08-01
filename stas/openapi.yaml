@@ -32,7 +32,7 @@ info:
   contact:
     name: Aimino Tech
     email: team@aimino.io
-    url: https://stas.aimino.io
+    url: https://syntaro.io
   license:
     name: MIT
     url: https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/LICENSE
@@ -40,7 +40,7 @@ info:
 servers:
   - url: https://stas-rapidapi.p.rapidapi.com
     description: RapidAPI production endpoint
-  - url: https://api.stas.aimino.io
+  - url: https://api.syntaro.io
     description: Direct API endpoint (self-hosted)
 
 tags:

@@ -423,14 +423,14 @@ docker compose -f docker-compose.prod.yml exec stas-webhook npm run db:migrate
 |---------|-------|
 | **GitHub Issues** | [github.com/Aimino-Tech/solving_tickets_as_a_service/issues](https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues) |
 | **Discord** | [discord.gg/aimino](https://discord.gg/aimino) |
-| **Documentation** | [docs.stas.aimino.io](https://docs.stas.aimino.io) |
+| **Documentation** | [docs.syntaro.io](https://docs.syntaro.io) |
 | **Email** | support@aimino.io |
 
 ---
 
 ## Next Steps
 
-- [Explore the Dashboard](https://stas.aimino.io) (cloud users)
+- [Explore the Dashboard](https://syntaro.io) (cloud users)
 - [Review the Architecture](../ARCHITECTURE.md)
 - [Learn about Customization](../CUSTOMIZATION.md)
 - [Self-Hosting Deep Dive](../SELF_HOSTING.md)

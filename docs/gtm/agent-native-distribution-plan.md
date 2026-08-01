@@ -49,7 +49,7 @@ Agents discover MCP servers through four channels:
 - Flow: Zero-code install — the marketplace handles config and setup
 
 **Channel 4 — Runtime discovery (emerging)**
-- Smithery: `npx @smithery/cli install @aimino/stas-mcp`
+- Smithery: `npx @smithery/cli install @aimino/syntaro-mcp`
 - MCP.Directory: Links + install instructions per client
 - Flow: Agent fetches tool definitions at runtime, user approves
 
@@ -83,7 +83,7 @@ Agents discover MCP servers through four channels:
 | **Cline Marketplace** | ~200+ | Manual review | In-extension browsing | Direct integration with Cline. One-click install. |
 | **Devin Marketplace** | ~100+ | Devin-managed | Settings → MCP servers | Integrated with Devin session workflow. |
 
-**STAS current status**: Listed on Smithery (`@aimino/stas-mcp`). Needs listing on Cline Marketplace, Devin Marketplace, MCP.Directory, and PulseMCP.
+**STAS current status**: Listed on Smithery (`@aimino/syntaro-mcp`). Needs listing on Cline Marketplace, Devin Marketplace, MCP.Directory, and PulseMCP.
 
 ### 1.5 Most Popular MCP Servers (by install count)
 
@@ -218,7 +218,7 @@ Do NOT lead with DACH — it narrows the addressable market too much. Lead with 
 
 | Dimension | Current (GitHub Label/Webhook) | Agent-Native (MCP) |
 |-----------|-------------------------------|-------------------|
-| **Trigger** | User labels issue `stas:fix` | Agent discovers STAS via `tools/list` and calls `stas_fix_issue` |
+| **Trigger** | User labels issue `stas:fix` | Agent discovers STAS via `tools/list` and calls `syntaro_fix_issue` |
 | **Setup** | Install GitHub App, add label | Add STAS MCP server config (one-time per agent) |
 | **User** | Developer browsing GitHub | AI agent (Claude Code, Cursor, Cline, Codex CLI) |
 | **Distribution** | GitHub App Marketplace, word of mouth | Agent marketplaces, MCP directories, smithery |
@@ -231,7 +231,7 @@ Do NOT lead with DACH — it narrows the addressable market too much. Lead with 
 The MCP distribution model creates a compound virality loop that the webhook model cannot match:
 
 ```
-Agent calls stas_fix_issue → fix succeeds → PR created
+Agent calls syntaro_fix_issue → fix succeeds → PR created
                                           ↓
                               Agent reports success to user
                                           ↓
@@ -262,7 +262,7 @@ Agent calls stas_fix_issue → fix succeeds → PR created
 | **Cursor Marketplace** | Agent marketplace | Medium — submit | High (dominant AI IDE) | **HIGH — Submit now** |
 | **Claude Code recommended list** | Anthropic | Unknown — partnership | Very High (all Claude Code users) | Medium (requires partnership) |
 | **MCP.so** | MCP directory | Low — add listing | Low-medium | Low |
-| **npm registry** | Package registry | ✅ Already published (`@aimino/stas-mcp`) | Discovery via npm search | Maintain |
+| **npm registry** | Package registry | ✅ Already published (`@aimino/syntaro-mcp`) | Discovery via npm search | Maintain |
 
 ### 4.4 Bundled vs On-Demand Distribution
 
@@ -307,10 +307,10 @@ STAS already has a mature MCP surface in production at `POST /mcp/jsonrpc`:
 **Tools:**
 | Tool | Description | Maturity |
 |------|-------------|----------|
-| `stas_fix_issue` | Dispatch a fix run for a GitHub issue | ✅ Live |
-| `stas_check_status` | Check fix run status by runId | ✅ Live |
-| `stas_list_runs` | List recent fix runs with optional filters | ✅ Live |
-| `stas_get_run` | Full run details by runId | ✅ Live |
+| `syntaro_fix_issue` | Dispatch a fix run for a GitHub issue | ✅ Live |
+| `syntaro_check_status` | Check fix run status by runId | ✅ Live |
+| `syntaro_list_runs` | List recent fix runs with optional filters | ✅ Live |
+| `syntaro_get_run` | Full run details by runId | ✅ Live |
 | `stas_batch_fix` | Fix multiple issues in one invocation | ✅ Live |
 | `stas_triage` | Score which issues in a repo are fixable | ✅ Live |
 | `stas_estimate` | Complexity, effort, risk analysis for an issue | ✅ Live |
@@ -318,10 +318,10 @@ STAS already has a mature MCP surface in production at `POST /mcp/jsonrpc`:
 **Resources:**
 | Resource | Description | Maturity |
 |----------|-------------|----------|
-| `stas://runs/{runId}` | Full run details | ✅ Live |
-| `stas://issues/{issueId}` | Issue details with fix status | ✅ Live |
-| `stas://issues/{issueId}/context` | Full context bundle for an issue | ✅ Live |
-| `stas://repos/{repo}/heuristics` | Repository fix heuristics | ✅ Live |
+| `syntaro://runs/{runId}` | Full run details | ✅ Live |
+| `syntaro://issues/{issueId}` | Issue details with fix status | ✅ Live |
+| `syntaro://issues/{issueId}/context` | Full context bundle for an issue | ✅ Live |
+| `syntaro://repos/{repo}/heuristics` | Repository fix heuristics | ✅ Live |
 
 **Prompts:**
 | Prompt | Description | Maturity |
@@ -333,8 +333,8 @@ STAS already has a mature MCP surface in production at `POST /mcp/jsonrpc`:
 
 The current surface is already **viable for launch**. The MVP for agent adoption:
 
-- `stas_fix_issue` — single issue fix (the core value proposition)
-- `stas_check_status` — polling (essential for async workflow)
+- `syntaro_fix_issue` — single issue fix (the core value proposition)
+- `syntaro_check_status` — polling (essential for async workflow)
 - `stas_triage` — read-only adoption driver (agents discover triage first, then fix)
 - `stas_estimate` — information tool (agents estimate before committing to fix)
 
@@ -356,19 +356,19 @@ The current surface is already **viable for launch**. The MVP for agent adoption
 
 | Enhancement | Tool | Value |
 |-------------|------|-------|
-| Confidence score (0-100) | `stas_fix_issue` response | Agent decides whether to trust the fix |
-| Cost estimate ($) | `stas_estimate`, `stas_fix_issue` response | Agent budget-awareness |
-| Estimated time | `stas_fix_issue` response | Agent decides async vs sync |
-| Alternative approaches | `stas_fix_issue` response | Agent chooses strategy |
+| Confidence score (0-100) | `syntaro_fix_issue` response | Agent decides whether to trust the fix |
+| Cost estimate ($) | `stas_estimate`, `syntaro_fix_issue` response | Agent budget-awareness |
+| Estimated time | `syntaro_fix_issue` response | Agent decides async vs sync |
+| Alternative approaches | `syntaro_fix_issue` response | Agent chooses strategy |
 | Risk classification | `stas_estimate` | Agent flags high-risk fixes for human review |
 
 ### 5.4 Multi-Platform Surface (Phase 3 — 3-6 months)
 
 Current tools assume GitHub issues. Multi-platform support requires:
 
-- **`issueTracker` parameter** on `stas_fix_issue`, `stas_triage`, `stas_estimate` — accepts `github`, `gitlab`, `jira`, `linear`
+- **`issueTracker` parameter** on `syntaro_fix_issue`, `stas_triage`, `stas_estimate` — accepts `github`, `gitlab`, `jira`, `linear`
 - **Abstract issue reference** — `{ platform, projectId, issueId }` instead of `{ repoOwner, repoName, issueNumber }`
-- **Platform-specific resource URIs** — `stas://github/{owner}/{repo}/issues/{number}`, `stas://gitlab/{projectId}/issues/{iid}`
+- **Platform-specific resource URIs** — `syntaro://github/{owner}/{repo}/issues/{number}`, `syntaro://gitlab/{projectId}/issues/{iid}`
 
 ### 5.5 What Makes STAS the Default Choice
 
@@ -381,9 +381,9 @@ For an agent to choose STAS over alternatives (including doing nothing), the MCP
 5. **Fail gracefully** — Clear error messages with suggestions. "This issue is out of scope because..." is better than "500 Internal Server Error."
 
 **The minimum surface that achieves "default choice" status:**
-- 1 write tool (`stas_fix_issue`)
+- 1 write tool (`syntaro_fix_issue`)
 - 2 read tools (`stas_triage`, `stas_estimate`)
-- 1 polling tool (`stas_check_status`)
+- 1 polling tool (`syntaro_check_status`)
 - Rich return metadata (confidence, cost, time)
 
 **STAS already has all of these.**
@@ -460,7 +460,7 @@ For an agent to choose STAS over alternatives (including doing nothing), the MCP
 
 3. **The existing MCP surface is already launch-ready** — 7 tools, 4 resources, 2 prompts. Focus on ecosystem presence, not surface expansion.
 
-4. **Build read-before-write as the adoption funnel** — `stas_triage` and `stas_estimate` are adoption drivers. Agents discover these first, trust the results, then graduate to `stas_fix_issue`.
+4. **Build read-before-write as the adoption funnel** — `stas_triage` and `stas_estimate` are adoption drivers. Agents discover these first, trust the results, then graduate to `syntaro_fix_issue`.
 
 5. **Rich returns are the differentiator** — confidence scores, cost estimates, and time estimates let agents make intelligent decisions. No other MCP fix server does this.
 
@@ -492,7 +492,7 @@ For an agent to choose STAS over alternatives (including doing nothing), the MCP
 
 1. **AIM-3362** — Submit STAS MCP server to Cline Marketplace and Devin Marketplace
 2. **AIM-3363** — Add `stas_analyze_pr` tool to MCP surface
-3. **AIM-3364** — Add confidence score and cost estimate returns to `stas_fix_issue` and `stas_estimate`
+3. **AIM-3364** — Add confidence score and cost estimate returns to `syntaro_fix_issue` and `stas_estimate`
 4. **AIM-3365** — Abstract issue reference model for multi-platform support (GitLab, Jira, Linear)
 5. **AIM-3366** — Update Smithery listing with richer description, screenshots, and usage examples
 6. **AIM-3367** — Write MCP-specific onboarding guide for agent developers

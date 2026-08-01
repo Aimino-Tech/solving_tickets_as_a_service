@@ -9,7 +9,7 @@
   },
   "topbarCtaButton": {
     "name": "Get Started",
-    "url": "https://stas.aimino.io"
+    "url": "https://syntaro.io"
   },
   "anchors": [
     { "name": "API Reference", "icon": "code", "url": "api-reference" },

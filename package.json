@@ -5,7 +5,7 @@
   "license": "AGPL-3.0-only",
   "workspaces": [
     "packages/github-client",
-    "packages/stas-mcp",
+    "packages/syntaro-mcp",
     "packages/stas-cli"
   ],
   "description": "Label a GitHub issue. Our bot investigates, fixes, and opens a PR. Backed by OpenCode.",
@@ -200,5 +200,5 @@
       "tree-sitter-rust"
     ]
   },
-  "mcpName": "stas-agent-discovery"
+  "mcpName": "syntaro-agent-discovery"
 }

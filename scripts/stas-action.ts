@@ -550,7 +550,7 @@ async function createPullRequest(
       "",
       "---",
       "",
-      `> 🚀 **Powered by [STAS](https://stas.aimino.io?ref=pr-footer)** — Label an issue with \`stas:fix\` and get an AI-generated PR.`,
+      `> 🚀 **Powered by [STAS](https://syntaro.io?ref=pr-footer)** — Label an issue with \`stas:fix\` and get an AI-generated PR.`,
       `> _Automated fix by ${ENV.BOT_NAME}._`,
     ]
       .filter(Boolean)
@@ -777,7 +777,7 @@ async function main(): Promise<void> {
         "",
         "---",
         "",
-        `> 🚀 **Powered by [STAS](https://stas.aimino.io?ref=issue-comment)** — Label any issue with \`stas:fix\` and get an AI-generated PR.`,
+        `> 🚀 **Powered by [STAS](https://syntaro.io?ref=issue-comment)** — Label any issue with \`stas:fix\` and get an AI-generated PR.`,
       ].join("\n"),
     );
     console.log(`Done! PR: ${pr.html_url}`);
@@ -800,7 +800,7 @@ async function main(): Promise<void> {
         "",
         "---",
         "",
-        `> 🚀 **Powered by [STAS](https://stas.aimino.io?ref=issue-comment)** — Label any issue with \`stas:fix\` and get an AI-generated PR.`,
+        `> 🚀 **Powered by [STAS](https://syntaro.io?ref=issue-comment)** — Label any issue with \`stas:fix\` and get an AI-generated PR.`,
       ].join("\n"),
     );
     console.log("Done — no changes created");
