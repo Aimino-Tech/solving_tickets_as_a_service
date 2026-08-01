@@ -135,6 +135,36 @@ jobs:
 
 **3 steps**: Add workflow file → Set 2 secrets (`STAS_BOT_APP_ID`, `STAS_BOT_PRIVATE_KEY`) → Label an issue. Done.
 
+#### Using the STAS GitHub Action directly
+
+The action ships in this repo at `.github/actions/stas-fix/action.yml` (published to the
+[GitHub Marketplace](https://github.com/marketplace/actions/stas-fix)). It posts a status
+comment, runs the STAS fix agent, and opens a pull request. Reference it with `uses:` —
+no `npx` needed:
+
+```yaml
+name: STAS Fix
+on:
+  issues:
+    types: [labeled]
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    if: github.event.label.name == 'stas:fix'
+    permissions:
+      issues: write
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: Aimino-Tech/solving_tickets_as_a_service/.github/actions/stas-fix@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Inputs: `github-token` (required), `opencode-url` (default `http://localhost:4096`),
+`opencode-api-key`, `opencode-model`, `openai-api-key`, `bot-name` (default `STAS`).
+See [MARKETPLACE.md](MARKETPLACE.md) for the full reference and publishing steps.
+
 ### Cloud (one-click, ~2 minutes)
 
 Visit [stas.aimino.io](https://stas.aimino.io), install the GitHub App, label an issue. No servers to manage.
