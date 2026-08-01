@@ -49,6 +49,8 @@ const envSchema = z.object({
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default('30000,120000,300000,900000'),
+  QUEUE_MAX_PRIORITY: z.coerce.number().int().positive().default(10),
+  QUEUE_MAX_CONCURRENT_PER_ACCOUNT: z.coerce.number().int().positive().default(2),
 
   OPENCODE_URL: z.string().default('http://localhost:4096'),
   OPENCODE_MODEL: z.string().default('anthropic/claude-sonnet-4-20250514'),
@@ -458,6 +460,8 @@ function buildConfig(env: ParsedEnv) {
       keepCompleted: env.QUEUE_KEEP_COMPLETED,
       keepFailed: env.QUEUE_KEEP_FAILED,
       maxRetries: env.QUEUE_MAX_RETRIES,
+      maxPriority: env.QUEUE_MAX_PRIORITY,
+      maxConcurrentPerAccount: env.QUEUE_MAX_CONCURRENT_PER_ACCOUNT,
       retryDelays: env.QUEUE_RETRY_DELAYS.split(',')
         .map((s) => parseInt(s.trim(), 10))
         .filter((n) => !Number.isNaN(n)),

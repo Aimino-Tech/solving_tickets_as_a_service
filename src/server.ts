@@ -1251,8 +1251,9 @@ async function tryListen(app: express.Application, port: number, attempt: number
 
       // Start the RabbitMQ issue consumer — dispatches to OpenSymphony
       try {
-        const { consumeQueue } = await import('./queue/rabbitmq.js');
+        const { consumeQueue, getChannel } = await import('./queue/rabbitmq.js');
         const { dispatchToOpenSymphony } = await import('./dispatch/osDispatch.js');
+        const { perAccountConcurrency } = await import('./queue/concurrencyLimiter.js');
         await consumeQueue(QUEUES.issuesFix.name, async (msg) => {
           if (!msg) return;
           const content = msg.content.toString();
@@ -1263,6 +1264,7 @@ async function tryListen(app: express.Application, port: number, attempt: number
             log.error({ content }, 'Failed to parse RabbitMQ message');
             return;
           }
+          const accountKey = String(data.installationId ?? 0) || data.repoOwner;
           try {
             const { guardIssueJobData } = await import('./guardrails/commonSenseGate.js');
             const gate = guardIssueJobData(data);
@@ -1275,6 +1277,19 @@ async function tryListen(app: express.Application, port: number, attempt: number
                 { repo: `${data.repoOwner}/${data.repoName}`, issueNumber: data.issueNumber, detail },
                 'Common-sense gate rejected queued issue — not dispatching',
               );
+              return;
+            }
+            if (!perAccountConcurrency.acquire(accountKey, config.queue.maxConcurrentPerAccount)) {
+              log.warn(
+                {
+                  accountKey,
+                  max: config.queue.maxConcurrentPerAccount,
+                  repo: `${data.repoOwner}/${data.repoName}`,
+                  issueNumber: data.issueNumber,
+                },
+                'Per-account concurrency limit reached — requeueing',
+              );
+              getChannel().nack(msg, false, true);
               return;
             }
             const result = await dispatchToOpenSymphony(data);
@@ -1303,6 +1318,8 @@ async function tryListen(app: express.Application, port: number, attempt: number
             }
           } catch (err) {
             log.error({ err: String(err) }, 'OpenSymphony dispatch error');
+          } finally {
+            perAccountConcurrency.release(accountKey);
           }
         });
         log.info('RabbitMQ issue consumer started — dispatching to OpenSymphony');
