@@ -49,6 +49,8 @@ const envSchema = z.object({
   QUEUE_KEEP_FAILED: z.coerce.number().int().positive().default(100),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().max(10).default(4),
   QUEUE_RETRY_DELAYS: z.string().default('30000,120000,300000,900000'),
+  QUEUE_MAX_PRIORITY: z.coerce.number().int().positive().default(10),
+  QUEUE_MAX_CONCURRENT_PER_ACCOUNT: z.coerce.number().int().positive().default(2),
 
   OPENCODE_URL: z.string().default('http://localhost:4096'),
   OPENCODE_MODEL: z.string().default('anthropic/claude-sonnet-4-20250514'),
@@ -82,6 +84,7 @@ const envSchema = z.object({
   STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
+  MAINTENANCE_MODE: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   // Rate limiting — calibrated for 500-user scale
@@ -90,6 +93,20 @@ const envSchema = z.object({
   STAS_RATE_LIMIT_PER_REPO_MAX: z.coerce.number().int().positive().default(20),
   STAS_RATE_LIMIT_PER_IP_MAX: z.coerce.number().int().positive().default(60),
   STAS_RATE_LIMIT_PER_USER_MAX: z.coerce.number().int().positive().default(100),
+
+  // SAML SSO (enterprise) — optional; a default tenant is registered when SAML_TENANT_ID is set
+  SAML_TENANT_ID: z.string().optional(),
+  SAML_TENANT_NAME: z.string().optional(),
+  SAML_SP_ENTITY_ID: z.string().optional(),
+  SAML_SP_ACS_URL: z.string().optional(),
+  SAML_IDP_ISSUER: z.string().optional(),
+  SAML_IDP_SSO_URL: z.string().optional(),
+  SAML_IDP_CERT: z.string().optional(),
+  SAML_DASHBOARD_URL: z.string().optional(),
+
+  // Linear OAuth (enterprise connection) — optional
+  LINEAR_OAUTH_CLIENT_ID: z.string().optional(),
+  LINEAR_OAUTH_CLIENT_SECRET: z.string().optional(),
 
   // Queue depth limits
   QUEUE_MAX_PENDING_PER_REPO: z.coerce.number().int().positive().default(10),
@@ -418,6 +435,22 @@ function buildConfig(env: ParsedEnv) {
       reviewersCount: env.PR_REVIEWERS_COUNT,
     },
 
+    saml: {
+      tenantId: env.SAML_TENANT_ID ?? '',
+      tenantName: env.SAML_TENANT_NAME ?? 'Enterprise',
+      spEntityId: env.SAML_SP_ENTITY_ID ?? '',
+      spAcsUrl: env.SAML_SP_ACS_URL ?? '',
+      idpIssuer: env.SAML_IDP_ISSUER ?? '',
+      idpSsoUrl: env.SAML_IDP_SSO_URL ?? '',
+      idpCert: env.SAML_IDP_CERT ?? '',
+      dashboardUrl: env.SAML_DASHBOARD_URL ?? '',
+    },
+
+    linearOauth: {
+      clientId: env.LINEAR_OAUTH_CLIENT_ID ?? '',
+      clientSecret: env.LINEAR_OAUTH_CLIENT_SECRET ?? '',
+    },
+
     queue: {
       redisUrl: env.REDIS_URL,
       rabbitmqUrl: env.RABBITMQ_URL,
@@ -428,6 +461,8 @@ function buildConfig(env: ParsedEnv) {
       keepCompleted: env.QUEUE_KEEP_COMPLETED,
       keepFailed: env.QUEUE_KEEP_FAILED,
       maxRetries: env.QUEUE_MAX_RETRIES,
+      maxPriority: env.QUEUE_MAX_PRIORITY,
+      maxConcurrentPerAccount: env.QUEUE_MAX_CONCURRENT_PER_ACCOUNT,
       retryDelays: env.QUEUE_RETRY_DELAYS.split(',')
         .map((s) => parseInt(s.trim(), 10))
         .filter((n) => !Number.isNaN(n)),
@@ -573,6 +608,8 @@ function buildConfig(env: ParsedEnv) {
       projectId: env.MONITORING_LOOP_PROJECT_ID,
       defaultAccountId: env.MONITORING_LOOP_DEFAULT_ACCOUNT_ID,
     },
+
+    maintenanceMode: env.MAINTENANCE_MODE,
 
     alerting: {
       slackChannel: env.ALERT_SLACK_CHANNEL,

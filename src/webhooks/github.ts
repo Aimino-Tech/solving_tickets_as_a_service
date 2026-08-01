@@ -98,6 +98,37 @@ async function postGovernanceFailureComment(
 }
 
 /**
+ * Post a comment when the common-sense gate rejects an issue.
+ * The issue is not processed — it never reaches the agent pipeline.
+ */
+async function postGateRejectionComment(
+  installationId: number,
+  repoOwner: string,
+  repoName: string,
+  issueNumber: number,
+  checks: Array<{ check: string; valid: boolean; error?: string }>,
+): Promise<void> {
+  try {
+    const { getOctokit } = await import('../github/auth.js');
+    const octokit = await getOctokit(installationId);
+    const failed = checks.filter((c) => !c.valid);
+    const lines = failed.map((c) => `- **${c.check}**: ${c.error ?? 'invalid'}`).join('\n');
+    await octokit.issues.createComment({
+      owner: repoOwner,
+      repo: repoName,
+      issue_number: issueNumber,
+      body: `### ⚠️ Issue Rejected by Common-Sense Gate\n\nSyntaro's common-sense gate rejected this issue before processing. No agent run was started.\n\n${lines}\n\n> If this is a legitimate request, rephrase the issue (avoid destructive instructions such as deleting \`package.json\` or CI workflow files, force pushing, or deleting the repository) and re-label it.`,
+    });
+    log.info({ repo: `${repoOwner}/${repoName}`, issueNumber }, 'Posted common-sense gate rejection comment');
+  } catch (err) {
+    log.warn(
+      { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
+      'Failed to post common-sense gate rejection comment',
+    );
+  }
+}
+
+/**
  * Create a "Welcome to Syntaro" issue on a freshly installed repository.
  *
  * AIM-4408 (Phase 2 activation funnel): auto-creates a tutorial issue labeled
@@ -365,6 +396,39 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       }
     }
 
+    // ── Common-sense gate ─────────────────────────────────────────
+    // Reject hallucinated or destructive requests before any agent spend,
+    // rate-limit accounting, or dispatch to the pipeline.
+    const { guardIssueJobData } = await import('../guardrails/commonSenseGate.js');
+    const gate = guardIssueJobData(jobData);
+    if (!gate.passed) {
+      const detail = gate.checks
+        .filter((c) => !c.valid)
+        .map((c) => `${c.check}: ${c.error ?? 'invalid'}`)
+        .join('; ');
+      log.warn(
+        { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber, detail },
+        'Common-sense gate rejected issue — not dispatching',
+      );
+      const { logFixJobEvent } = await import('../audit/service.js');
+      await logFixJobEvent({
+        jobId: `gh-${jobData.repoOwner}-${jobData.repoName}-${jobData.issueNumber}`,
+        event: 'failed',
+        accountId: String(installationId),
+        repo: `${jobData.repoOwner}/${jobData.repoName}`,
+        issueNumber: jobData.issueNumber,
+        error: detail,
+      });
+      await postGateRejectionComment(
+        installationId || 0,
+        jobData.repoOwner,
+        jobData.repoName,
+        jobData.issueNumber,
+        gate.checks,
+      );
+      return;
+    }
+
     // ── AI-Disabled Mode ────────────────────────────────────────
     // When STAS_AI_DISABLED=true, the issue is stored as pending without
     // dispatching to OpenCode. An operator must claim and complete it manually.
@@ -589,6 +653,38 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         billingPlan: tier as 'free' | 'pro' | 'enterprise' | undefined,
         priority: priorityMap[tier] ?? 30,
       };
+
+      // ── Common-sense gate (edits) ─────────────────────────────
+      // Reject hallucinated or destructive requests before any dispatch.
+      const { guardIssueJobData } = await import('../guardrails/commonSenseGate.js');
+      const gate = guardIssueJobData(jobData);
+      if (!gate.passed) {
+        const detail = gate.checks
+          .filter((c) => !c.valid)
+          .map((c) => `${c.check}: ${c.error ?? 'invalid'}`)
+          .join('; ');
+        log.warn(
+          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber, detail },
+          'Common-sense gate rejected edited issue — not dispatching',
+        );
+        const { logFixJobEvent } = await import('../audit/service.js');
+        await logFixJobEvent({
+          jobId: `gh-${jobData.repoOwner}-${jobData.repoName}-${jobData.issueNumber}`,
+          event: 'failed',
+          accountId: String(installationId),
+          repo: `${jobData.repoOwner}/${jobData.repoName}`,
+          issueNumber: jobData.issueNumber,
+          error: detail,
+        });
+        await postGateRejectionComment(
+          installationId || 0,
+          jobData.repoOwner,
+          jobData.repoName,
+          jobData.issueNumber,
+          gate.checks,
+        );
+        return;
+      }
 
       // ── AI-Disabled Mode (also for edits) ─────────────────────
       if (config.stas.aiDisabled) {

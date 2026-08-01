@@ -82,8 +82,8 @@ vi.mock('../../sandbox/executor.js', () => ({
 // Imports under test
 // ---------------------------------------------------------------------------
 
-import { ActionDispatcher } from '../../github/actionDispatcher.js';
 import type { AgentResult } from '../../agent/types.js';
+import { ActionDispatcher } from '../../github/actionDispatcher.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -185,9 +185,7 @@ describe('ActionDispatcher', () => {
       await dispatcher.dispatch(params);
 
       expect(mockCreateComment).toHaveBeenCalled();
-      const commentCall = mockCreateComment.mock.calls.find(
-        (c: any[]) => c[0].issue_number === 42,
-      );
+      const commentCall = mockCreateComment.mock.calls.find((c: any[]) => c[0].issue_number === 42);
       expect(commentCall).toBeDefined();
     });
 
@@ -195,9 +193,7 @@ describe('ActionDispatcher', () => {
       const params = createDispatchParams({ confidence: 'high' });
       await dispatcher.dispatch(params);
 
-      expect(params.sandbox.pushBranch).toHaveBeenCalledWith(
-        expect.stringContaining('stas/fix-'),
-      );
+      expect(params.sandbox.pushBranch).toHaveBeenCalledWith(expect.stringContaining('stas/fix-'));
     });
   });
 
@@ -216,9 +212,7 @@ describe('ActionDispatcher', () => {
       const params = createDispatchParams({ confidence: 'medium' });
       await dispatcher.dispatch(params);
 
-      expect(mockPullsCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ draft: true }),
-      );
+      expect(mockPullsCreate).toHaveBeenCalledWith(expect.objectContaining({ draft: true }));
     });
 
     it('prefixes PR title with [WIP]', async () => {
@@ -323,9 +317,7 @@ describe('ActionDispatcher', () => {
         fixReady: false,
         confidence: 'low',
         noFixReason: 'Cannot reproduce',
-        relevantPRs: [
-          { url: 'https://github.com/pulls/1', title: 'Related fix', state: 'merged' },
-        ],
+        relevantPRs: [{ url: 'https://github.com/pulls/1', title: 'Related fix', state: 'merged' }],
       });
       await dispatcher.dispatch(params);
 
@@ -466,8 +458,8 @@ describe('ActionDispatcher', () => {
       });
       await dispatcher.dispatch(params);
 
-      const receiptBlockComment = mockCreateComment.mock.calls.find(
-        (c: any[]) => c[0]?.body?.includes?.('Receipt Gate Blocked'),
+      const receiptBlockComment = mockCreateComment.mock.calls.find((c: any[]) =>
+        c[0]?.body?.includes?.('Receipt Gate Blocked'),
       );
       expect(receiptBlockComment).toBeUndefined();
     });
@@ -495,9 +487,7 @@ describe('ActionDispatcher', () => {
 
       await dispatcher.dispatch(params);
 
-      expect(mockPullsCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ base: 'main' }),
-      );
+      expect(mockPullsCreate).toHaveBeenCalledWith(expect.objectContaining({ base: 'main' }));
     });
 
     it('uses custom repoDefaultBranch when provided', async () => {
@@ -506,9 +496,7 @@ describe('ActionDispatcher', () => {
 
       await dispatcher.dispatch(params);
 
-      expect(mockPullsCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ base: 'develop' }),
-      );
+      expect(mockPullsCreate).toHaveBeenCalledWith(expect.objectContaining({ base: 'develop' }));
     });
   });
 
@@ -581,6 +569,80 @@ describe('ActionDispatcher', () => {
       params.issueNumber = 0;
       const result = await dispatcher.dispatch(params);
       expect(result.action).toBe('pr_created');
+    });
+  });
+
+  // ── Repo-side quality gate enforcement ───────────────────────────
+
+  describe('repo-side quality gate enforcement', () => {
+    it('blocks PR creation when repo-side gates fail', async () => {
+      const sandbox = createMockSandbox();
+      sandbox.pushBranch.mockResolvedValue(undefined);
+      sandbox.exec.mockImplementation((cmd: string) => {
+        if (cmd.includes('tsconfig.json')) {
+          return Promise.resolve({ stdout: 'ts', stderr: '', exitCode: 0 });
+        }
+        if (cmd.includes('tsc')) {
+          return Promise.resolve({ stdout: 'error TS2322: type mismatch', stderr: '', exitCode: 0 });
+        }
+        return Promise.resolve({ stdout: '', stderr: '', exitCode: 0 });
+      });
+
+      const params = createDispatchParams({ confidence: 'high' });
+      params.sandbox = sandbox;
+
+      const result = await dispatcher.dispatch(params);
+      expect(result.action).toBe('comment_posted');
+      expect(mockPullsCreate).not.toHaveBeenCalled();
+      const comments = mockCreateComment.mock.calls.map((call) => call[0].body as string);
+      expect(comments.some((body) => body.includes('Quality Gates Blocked'))).toBe(true);
+    });
+
+    it('creates PR when repo-side gates pass', async () => {
+      const sandbox = createMockSandbox();
+      sandbox.pushBranch.mockResolvedValue(undefined);
+      sandbox.exec.mockImplementation((cmd: string) => {
+        if (cmd.includes('tsconfig.json')) {
+          return Promise.resolve({ stdout: 'ts', stderr: '', exitCode: 0 });
+        }
+        return Promise.resolve({ stdout: '', stderr: '', exitCode: 0 });
+      });
+
+      const params = createDispatchParams({ confidence: 'high' });
+      params.sandbox = sandbox;
+
+      const result = await dispatcher.dispatch(params);
+      expect(result.action).toBe('pr_created');
+      expect(mockPullsCreate).toHaveBeenCalled();
+    });
+
+    it('does not block when gates error (infra failure, fail open)', async () => {
+      const sandbox = createMockSandbox();
+      sandbox.pushBranch.mockResolvedValue(undefined);
+      sandbox.exec.mockRejectedValue(new Error('sandbox down'));
+
+      const params = createDispatchParams({ confidence: 'high' });
+      params.sandbox = sandbox;
+
+      const result = await dispatcher.dispatch(params);
+      expect(result.action).toBe('pr_created');
+    });
+
+    it('runs repo-side gates even when agent supplies none', async () => {
+      const sandbox = createMockSandbox();
+      sandbox.pushBranch.mockResolvedValue(undefined);
+      sandbox.exec.mockImplementation((cmd: string) => {
+        if (cmd.includes('tsconfig.json')) {
+          return Promise.resolve({ stdout: 'ts', stderr: '', exitCode: 0 });
+        }
+        return Promise.resolve({ stdout: '', stderr: '', exitCode: 0 });
+      });
+
+      const params = createDispatchParams({ confidence: 'high' });
+      params.sandbox = sandbox;
+
+      await dispatcher.dispatch(params);
+      expect(sandbox.exec).toHaveBeenCalledWith(expect.stringContaining('tsc'), expect.anything());
     });
   });
 });

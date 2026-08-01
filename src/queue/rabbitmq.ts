@@ -141,7 +141,10 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.issues.fix', {
     durable: true,
-    arguments: { 'x-message-ttl': config.queue.msgTtlMs },
+    arguments: {
+      'x-message-ttl': config.queue.msgTtlMs,
+      'x-max-priority': config.queue.maxPriority,
+    },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'issue.fix.dlq',
     messageTtl: config.queue.msgTtlMs,

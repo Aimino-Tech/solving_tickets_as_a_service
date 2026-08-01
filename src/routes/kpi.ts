@@ -1,12 +1,11 @@
-import { Router, type Request, type Response } from 'express';
+import { type Request, type Response, Router } from 'express';
 import { queryWithRetry } from '../db/connection.js';
-import { rootLogger } from '../utils/logger.js';
 import type { KpiMetrics } from '../db/types/kpiMetrics.js';
+import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'kpi-api' });
 
 const router: Router = Router();
-
 
 async function checkAdmin(req: Request, res: Response): Promise<boolean> {
   const { config } = await import('../config.js');
@@ -74,6 +73,52 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+const PLAN_MONTHLY_PRICE_CENTS: Record<string, number> = {
+  free: 0,
+  solo: 1900,
+  team: 9900,
+  enterprise: 49900,
+};
+
+const AVG_LIFETIME_MONTHS = 12;
+
+/**
+ * Live MRR/LTV (Linear 2989). Computes monthly recurring revenue from active
+ * accounts and an LTV estimate (MRR × average lifetime) — complements the
+ * snapshot-based kpi_metrics data.
+ */
+router.get('/revenue', async (req: Request, res: Response) => {
+  if (!(await checkAdmin(req, res))) return;
+
+  try {
+    const result = await queryWithRetry<{ plan: string }>(
+      `SELECT plan FROM accounts WHERE subscription_status = 'active'`,
+    );
+    const plans = result.rows.map((row) => row.plan);
+
+    let mrrCents = 0;
+    let activePaidAccounts = 0;
+    for (const plan of plans) {
+      const priceCents = PLAN_MONTHLY_PRICE_CENTS[plan] ?? 0;
+      mrrCents += priceCents;
+      if (priceCents > 0) activePaidAccounts += 1;
+    }
+
+    const mrr = mrrCents / 100;
+    const ltv = mrr * AVG_LIFETIME_MONTHS;
+
+    res.json({
+      mrr,
+      ltv,
+      activePaidAccounts,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to compute MRR/LTV');
+    res.status(500).json({ error: 'Failed to compute MRR/LTV' });
+  }
+});
+
 router.get('/export', async (req: Request, res: Response) => {
   if (!(await checkAdmin(req, res))) return;
 
@@ -111,13 +156,14 @@ router.get('/export', async (req: Request, res: Response) => {
     ];
 
     const csvHeader = headers.join(',');
-    const csvRows = rows.map((row: Record<string, unknown>) =>
-      headers.map((h) => String(row[h] ?? '')).join(','),
-    );
+    const csvRows = rows.map((row: Record<string, unknown>) => headers.map((h) => String(row[h] ?? '')).join(','));
     const csv = `${csvHeader}\n${csvRows.join('\n')}\n`;
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="kpi_metrics_${new Date().toISOString().split('T')[0]}.csv"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="kpi_metrics_${new Date().toISOString().split('T')[0]}.csv"`,
+    );
     res.send(csv);
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to export KPI metrics');
