@@ -91,6 +91,16 @@ const envSchema = z.object({
   STAS_RATE_LIMIT_PER_IP_MAX: z.coerce.number().int().positive().default(60),
   STAS_RATE_LIMIT_PER_USER_MAX: z.coerce.number().int().positive().default(100),
 
+  // SAML SSO (enterprise) — optional; a default tenant is registered when SAML_TENANT_ID is set
+  SAML_TENANT_ID: z.string().optional(),
+  SAML_TENANT_NAME: z.string().optional(),
+  SAML_SP_ENTITY_ID: z.string().optional(),
+  SAML_SP_ACS_URL: z.string().optional(),
+  SAML_IDP_ISSUER: z.string().optional(),
+  SAML_IDP_SSO_URL: z.string().optional(),
+  SAML_IDP_CERT: z.string().optional(),
+  SAML_DASHBOARD_URL: z.string().optional(),
+
   // Queue depth limits
   QUEUE_MAX_PENDING_PER_REPO: z.coerce.number().int().positive().default(10),
   QUEUE_DLQ_MAX_SIZE: z.coerce.number().int().positive().default(50),
@@ -416,6 +426,17 @@ function buildConfig(env: ParsedEnv) {
       autoRequestReview: env.PR_AUTO_REQUEST_REVIEW,
       mergeQueueEnabled: env.PR_MERGE_QUEUE_ENABLED,
       reviewersCount: env.PR_REVIEWERS_COUNT,
+    },
+
+    saml: {
+      tenantId: env.SAML_TENANT_ID ?? '',
+      tenantName: env.SAML_TENANT_NAME ?? 'Enterprise',
+      spEntityId: env.SAML_SP_ENTITY_ID ?? '',
+      spAcsUrl: env.SAML_SP_ACS_URL ?? '',
+      idpIssuer: env.SAML_IDP_ISSUER ?? '',
+      idpSsoUrl: env.SAML_IDP_SSO_URL ?? '',
+      idpCert: env.SAML_IDP_CERT ?? '',
+      dashboardUrl: env.SAML_DASHBOARD_URL ?? '',
     },
 
     queue: {
