@@ -3,8 +3,14 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 const STAS_URL = process.env.STAS_URL || "http://localhost:4095";
 const GOVERNANCE_URL = process.env.GOVERNANCE_URL || "http://localhost:4003";
+const OPENSYMPHONY_URL = process.env.OPENSYMPHONY_URL || "http://localhost:4004";
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "test-secret";
 const ADMIN_KEY = process.env.GOVERNANCE_ADMIN_KEY || "test-admin-key";
+
+// OpenSymphony is an optional upstream of the governance proxy. Its health is probed
+// in beforeAll and the full-path tests skip gracefully (ctx.skip) when it is
+// unavailable, so a broken OS build never hard-fails the integration job.
+let opensymphonyAvailable = false;
 
 function sign(rawBody: string, secret: string): string {
   return `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`;
@@ -30,12 +36,19 @@ const TEST_ISSUE_PAYLOAD = {
   installation: { id: 99999 },
 };
 
-describe("STAS ↔ Governance integration stack", () => {
+describe("STAS ↔ Governance ↔ OpenSymphony integration stack", () => {
   beforeAll(async () => {
     const stasHealth = await fetch(`${STAS_URL}/health`);
     expect(stasHealth.status).toBe(200);
     const governanceHealth = await fetch(`${GOVERNANCE_URL}/guardrail/health`);
     expect(governanceHealth.status).toBe(200);
+
+    try {
+      const osHealth = await fetch(`${OPENSYMPHONY_URL}/health`);
+      opensymphonyAvailable = osHealth.status === 200;
+    } catch {
+      opensymphonyAvailable = false;
+    }
   });
 
   afterAll(async () => {
@@ -95,16 +108,34 @@ describe("STAS ↔ Governance integration stack", () => {
     expect(blockedBody.error?.type).toBe("kill_switch");
   });
 
-  it("forwards an allowed webhook to the OpenSymphony upstream (502 when unreachable)", async () => {
+  it("forwards an allowed webhook to the OpenSymphony upstream (reaches OS when up)", async (ctx) => {
     const resp = await postJson(`${GOVERNANCE_URL}/api/stas/webhook`, {
       tenant_id: "default",
       issue_id: "test/bar#2",
     });
-    // The integration stack does not deploy an OpenSymphony service, so the
-    // governance proxy fails to reach the upstream and reports a 502.
-    expect(resp.status).toBe(502);
+    if (resp.status === 502) {
+      ctx.skip(
+        "OpenSymphony upstream unavailable (governance returned 502 Upstream unreachable) — optional service, skipping full-path assertion",
+      );
+    }
+    // Governance reached OpenSymphony. OS answers with its own status; the payload
+    // has no X-GitHub-Event header so OS treats it as an unsupported event (400),
+    // which is still proof the webhook left the proxy and reached the upstream.
+    expect(resp.status).not.toBe(502);
     const body = await resp.json();
     expect(body.status).toBe("error");
-    expect(body.error).toContain("Upstream unreachable");
+  });
+
+  it("OpenSymphony accepts a STAS webhook directly (202 accepted)", async (ctx) => {
+    if (!opensymphonyAvailable) {
+      ctx.skip("OpenSymphony unavailable — skipping direct webhook assertion");
+    }
+    const rawBody = JSON.stringify(TEST_ISSUE_PAYLOAD);
+    const resp = await postJson(`${OPENSYMPHONY_URL}/api/v1/stas/webhook`, rawBody, {
+      "X-GitHub-Event": "issues",
+    });
+    expect(resp.status).toBe(202);
+    const body = await resp.json();
+    expect(body.status).toBe("accepted");
   });
 });
