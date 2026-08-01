@@ -157,6 +157,8 @@ const envSchema = z.object({
   LINEAR_API_KEY: z.string().optional(),
   LINEAR_WEBHOOK_SECRET: z.string().optional(),
   LINEAR_TEAM_ID: z.string().optional(),
+  LINEAR_OAUTH_CLIENT_ID: z.string().optional(),
+  LINEAR_OAUTH_CLIENT_SECRET: z.string().optional(),
 
   JIRA_URL: z.string().optional(),
   JIRA_EMAIL: z.string().optional(),
@@ -681,6 +683,8 @@ function buildConfig(env: ParsedEnv) {
             apiKey: env.LINEAR_API_KEY,
             webhookSecret: env.LINEAR_WEBHOOK_SECRET,
             teamId: env.LINEAR_TEAM_ID,
+            oauthClientId: env.LINEAR_OAUTH_CLIENT_ID,
+            oauthClientSecret: env.LINEAR_OAUTH_CLIENT_SECRET,
           }
         : undefined,
       jira:

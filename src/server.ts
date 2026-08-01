@@ -80,6 +80,7 @@ import { proxyRouter } from './routes/proxy.js';
 import { qualityRouter } from './routes/quality.js';
 import { reposRouter } from './routes/repos.js';
 import { gitHubOAuthRouter } from './routes/githubOAuth.js';
+import { linearOAuthRouter } from './routes/linearOAuth.js';
 import mcpKeysRouter from './routes/mcpKeys.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
@@ -788,6 +789,9 @@ export async function createApp(): Promise<express.Application> {
 
   // GitHub OAuth — before /api/v1 catch-all to avoid requireAuth conflict
   app.use('/api/v1/auth/github', gitHubOAuthRouter);
+
+  // Linear OAuth — same pattern as GitHub OAuth
+  app.use('/api/v1/auth/linear', linearOAuthRouter);
 
   app.use('/api/v1', slaRouter);
 
