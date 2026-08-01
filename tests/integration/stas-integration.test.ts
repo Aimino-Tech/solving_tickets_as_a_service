@@ -108,7 +108,7 @@ describe("STAS ↔ Governance ↔ OpenSymphony integration stack", () => {
     expect(blockedBody.error?.type).toBe("kill_switch");
   });
 
-  it("forwards an allowed webhook to the OpenSymphony upstream (202 when OS is up)", async (ctx) => {
+  it("forwards an allowed webhook to the OpenSymphony upstream (reaches OS when up)", async (ctx) => {
     const resp = await postJson(`${GOVERNANCE_URL}/api/stas/webhook`, {
       tenant_id: "default",
       issue_id: "test/bar#2",

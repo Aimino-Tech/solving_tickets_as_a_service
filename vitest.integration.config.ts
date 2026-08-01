@@ -2,9 +2,11 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    // Include the root-level tests/ directory for integration tests
-    dir: "tests",
-    include: ["tests/**/*.test.ts"],
+    // Integration tests live under tests/integration/ and run against the compose
+    // stack. Vitest 4 resolves `include` relative to `dir`, so keep dir at the
+    // project root and scope the glob to the integration suite.
+    dir: ".",
+    include: ["tests/integration/**/*.test.ts"],
 
     // Node environment for backend integration testing
     environment: "node",

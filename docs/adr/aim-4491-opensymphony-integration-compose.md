@@ -71,3 +71,23 @@ A third blocker lives in the **llm-governance repo** (governance proxy crashed a
 boot on `_redact_sensitive` `%.2f % None` and a uvicorn `log_level` `KeyError`) —
 tracked separately as AIM-4492; it is fixed in the local build-context checkout
 only for this verification and must land in llm-governance.
+
+A fourth llm-governance bug, also tracked in AIM-4492: `forward_webhook`
+(`guardrail/webhook_utils.py`) catches `URLError` before `HTTPError` (its
+subclass), so any non-2xx upstream response was reported as `502 Upstream
+unreachable`. With OpenSymphony in the stack, OS answering `400 unsupported_event`
+looked identical to "OS down". Fixed (local build-context checkout) by handling
+`HTTPError` first and propagating the real upstream status/body.
+
+## STAS service runtime tweaks (integration image)
+
+The integration stack runs no real opencode server, so two STAS-side settings were
+needed for the stack to become healthy:
+
+- `STAS_AI_MODE: static` in the compose — `opencodeHealth` reports `healthy` in
+  static mode, so STAS `/health` returns 200 (it otherwise 503s on the degraded
+  opencode check and the compose healthcheck never passes).
+- `vitest.integration.config.ts` — Vitest 4 resolves `include` relative to `dir`,
+  so `dir: "tests"` + `include: ["tests/**/*.test.ts"]` matched nothing. Changed to
+  `dir: "."` + `include: ["tests/integration/**/*.test.ts"]` so the compose-based
+  integration suite actually runs.
