@@ -29,6 +29,7 @@ import * as messages from '../platforms/messages.js';
 import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
 import { config } from '../config.js';
 import { captureEvent } from '../analytics/tracker.js';
+import { runAllGates, type QualityGateReport } from '../pipeline/quality-gates.js';
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
 
@@ -151,6 +152,44 @@ export class ActionDispatcher {
           { err: String(err), repoOwner, repoName, issueNumber },
           'Failed to gather changed files for PR body (non-fatal)',
         );
+      }
+
+      // 6. Repo-side quality gates — enforce the 6 deterministic gates on the
+      // actual branch diff before any PR is created. This complements (and is
+      // independent of) the agent-supplied verification.qualityGates check above.
+      if (config.stas.mode !== 'oss') {
+        let repoGateReport: QualityGateReport | undefined;
+        try {
+          const repoDir = (sandbox as { repoDir?: string }).repoDir || `/home/user/${repoName}`;
+          const fullDiff = await sandbox.exec(
+            `git -C ${repoDir} diff origin/${baseBranch}...${branchName} 2>/dev/null || true`,
+          );
+          repoGateReport = await runAllGates({
+            sandbox,
+            diff: fullDiff.stdout,
+            execFn: async (cmd: string, timeout?: number) => {
+              const r = await sandbox.exec(cmd, timeout);
+              return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode };
+            },
+          });
+        } catch (err) {
+          log.warn(
+            { err: String(err), issueNumber, repoOwner, repoName },
+            'Repo-side quality gates could not run (non-fatal) — proceeding',
+          );
+        }
+
+        if (repoGateReport && !repoGateReport.passed) {
+          const failedGates = repoGateReport.gates.filter((g) => !g.passed);
+          log.warn(
+            { issueNumber, failedGates: failedGates.map((g) => g.gate) },
+            `Repo-side quality gates blocked: ${failedGates.length} gate(s) failed`,
+          );
+          const body = messages.qualityGatesBlockComment(failedGates, repoGateReport.summary);
+          await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
+          return { action: 'comment_posted', commentBody: body };
+        }
+        log.info({ issueNumber }, 'Repo-side quality gates passed');
       }
 
       // 6a. Pre-existing tests regressed — block PR creation, branch already pushed

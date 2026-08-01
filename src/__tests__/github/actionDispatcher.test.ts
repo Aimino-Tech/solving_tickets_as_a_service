@@ -16,11 +16,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Hoisted mocks
 // ---------------------------------------------------------------------------
 
-const { mockCreateComment, mockPullsCreate, mockOctokitInstance, mockLoggerChild } = vi.hoisted(() => {
+const { mockCreateComment, mockPullsCreate, mockOctokitInstance, mockLoggerChild, mockConfig } = vi.hoisted(() => {
   const createComment = vi.fn().mockResolvedValue({ data: { id: 1 } });
   const pullsCreate = vi.fn().mockResolvedValue({
     data: { id: 100, number: 42, html_url: 'https://github.com/owner/repo/pull/42' },
   });
+
+  const config = {
+    stas: { mode: 'oss', botName: 'STAS', label: 'stas:fix' },
+    sentry: { dsn: undefined },
+    github: {
+      appId: 'test-app',
+      webhookSecret: 'test-secret',
+      webhookPath: '/webhook',
+      privateKeyPath: undefined as string | undefined,
+      privateKeyEnv: '-----BEGIN PRIVATE KEY-----\nMOCKKEY\n-----END PRIVATE KEY-----',
+    },
+  };
 
   const logger = {
     child: vi.fn(),
@@ -45,6 +57,7 @@ const { mockCreateComment, mockPullsCreate, mockOctokitInstance, mockLoggerChild
       repos: { getContent: vi.fn() },
     },
     mockLoggerChild: logger,
+    mockConfig: config,
   };
 });
 
@@ -61,29 +74,24 @@ vi.mock('../../github/auth.js', () => ({
 }));
 
 vi.mock('../../config.js', () => ({
-  config: {
-    stas: { mode: 'oss', botName: 'STAS', label: 'stas:fix' },
-    sentry: { dsn: undefined },
-    github: {
-      appId: 'test-app',
-      webhookSecret: 'test-secret',
-      webhookPath: '/webhook',
-      privateKeyPath: undefined as string | undefined,
-      privateKeyEnv: '-----BEGIN PRIVATE KEY-----\nMOCKKEY\n-----END PRIVATE KEY-----',
-    },
-  },
+  config: mockConfig,
 }));
 
 vi.mock('../../sandbox/executor.js', () => ({
   SandboxExecutor: vi.fn(),
 }));
 
+vi.mock('../../pipeline/quality-gates.js', () => ({
+  runAllGates: vi.fn(),
+}));
+
 // ---------------------------------------------------------------------------
 // Imports under test
 // ---------------------------------------------------------------------------
 
-import { ActionDispatcher } from '../../github/actionDispatcher.js';
 import type { AgentResult } from '../../agent/types.js';
+import { ActionDispatcher } from '../../github/actionDispatcher.js';
+import { runAllGates } from '../../pipeline/quality-gates.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -185,9 +193,7 @@ describe('ActionDispatcher', () => {
       await dispatcher.dispatch(params);
 
       expect(mockCreateComment).toHaveBeenCalled();
-      const commentCall = mockCreateComment.mock.calls.find(
-        (c: any[]) => c[0].issue_number === 42,
-      );
+      const commentCall = mockCreateComment.mock.calls.find((c: any[]) => c[0].issue_number === 42);
       expect(commentCall).toBeDefined();
     });
 
@@ -195,9 +201,7 @@ describe('ActionDispatcher', () => {
       const params = createDispatchParams({ confidence: 'high' });
       await dispatcher.dispatch(params);
 
-      expect(params.sandbox.pushBranch).toHaveBeenCalledWith(
-        expect.stringContaining('stas/fix-'),
-      );
+      expect(params.sandbox.pushBranch).toHaveBeenCalledWith(expect.stringContaining('stas/fix-'));
     });
   });
 
@@ -216,9 +220,7 @@ describe('ActionDispatcher', () => {
       const params = createDispatchParams({ confidence: 'medium' });
       await dispatcher.dispatch(params);
 
-      expect(mockPullsCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ draft: true }),
-      );
+      expect(mockPullsCreate).toHaveBeenCalledWith(expect.objectContaining({ draft: true }));
     });
 
     it('prefixes PR title with [WIP]', async () => {
@@ -323,9 +325,7 @@ describe('ActionDispatcher', () => {
         fixReady: false,
         confidence: 'low',
         noFixReason: 'Cannot reproduce',
-        relevantPRs: [
-          { url: 'https://github.com/pulls/1', title: 'Related fix', state: 'merged' },
-        ],
+        relevantPRs: [{ url: 'https://github.com/pulls/1', title: 'Related fix', state: 'merged' }],
       });
       await dispatcher.dispatch(params);
 
@@ -466,8 +466,8 @@ describe('ActionDispatcher', () => {
       });
       await dispatcher.dispatch(params);
 
-      const receiptBlockComment = mockCreateComment.mock.calls.find(
-        (c: any[]) => c[0]?.body?.includes?.('Receipt Gate Blocked'),
+      const receiptBlockComment = mockCreateComment.mock.calls.find((c: any[]) =>
+        c[0]?.body?.includes?.('Receipt Gate Blocked'),
       );
       expect(receiptBlockComment).toBeUndefined();
     });
@@ -495,9 +495,7 @@ describe('ActionDispatcher', () => {
 
       await dispatcher.dispatch(params);
 
-      expect(mockPullsCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ base: 'main' }),
-      );
+      expect(mockPullsCreate).toHaveBeenCalledWith(expect.objectContaining({ base: 'main' }));
     });
 
     it('uses custom repoDefaultBranch when provided', async () => {
@@ -506,9 +504,7 @@ describe('ActionDispatcher', () => {
 
       await dispatcher.dispatch(params);
 
-      expect(mockPullsCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ base: 'develop' }),
-      );
+      expect(mockPullsCreate).toHaveBeenCalledWith(expect.objectContaining({ base: 'develop' }));
     });
   });
 
@@ -542,6 +538,87 @@ describe('ActionDispatcher', () => {
 
       const result = await dispatcher.dispatch(params);
       expect(result.action).toBe('pr_created');
+    });
+  });
+
+  // ── Repo-side quality gates (hosted mode) ────────────────────────
+
+  describe('repo-side quality gates (hosted mode)', () => {
+    const failedReport = {
+      passed: false,
+      gates: [
+        {
+          gate: 'build',
+          passed: false,
+          ossTool: 'npm run build',
+          command: 'npm run build',
+          stdout: 'error TS2304: Cannot find name foo',
+          stderr: 'build failed',
+          durationMs: 1200,
+          details: ['Compilation error'],
+        },
+      ],
+      totalDurationMs: 1200,
+      summary: '1 of 1 gates passed',
+    };
+    const passedReport = {
+      passed: true,
+      gates: [
+        {
+          gate: 'build',
+          passed: true,
+          ossTool: 'npm run build',
+          command: 'npm run build',
+          stdout: 'Done in 1.2s',
+          stderr: '',
+          durationMs: 1200,
+          details: [],
+        },
+      ],
+      totalDurationMs: 1200,
+      summary: '1 of 1 gates passed',
+    };
+
+    beforeEach(() => {
+      mockConfig.stas.mode = 'hosted';
+    });
+
+    afterEach(() => {
+      mockConfig.stas.mode = 'oss';
+    });
+
+    it('blocks PR creation when repo-side gates fail', async () => {
+      vi.mocked(runAllGates).mockResolvedValue(failedReport as any);
+      const params = createDispatchParams({ confidence: 'high' });
+
+      const result = await dispatcher.dispatch(params);
+
+      expect(result.action).toBe('comment_posted');
+      expect(mockPullsCreate).not.toHaveBeenCalled();
+      const blockComment = mockCreateComment.mock.calls.find((c: any[]) =>
+        c[0]?.body?.includes?.('Quality Gates Blocked'),
+      );
+      expect(blockComment).toBeDefined();
+    });
+
+    it('creates the PR when repo-side gates pass', async () => {
+      vi.mocked(runAllGates).mockResolvedValue(passedReport as any);
+      const params = createDispatchParams({ confidence: 'high' });
+
+      const result = await dispatcher.dispatch(params);
+
+      expect(result.action).toBe('pr_created');
+      expect(mockPullsCreate).toHaveBeenCalled();
+    });
+
+    it('does not run repo-side gates in OSS mode', async () => {
+      mockConfig.stas.mode = 'oss';
+      const params = createDispatchParams({ confidence: 'high' });
+
+      await dispatcher.dispatch(params);
+
+      expect(runAllGates).not.toHaveBeenCalled();
+      expect(mockPullsCreate).toHaveBeenCalled();
     });
   });
 
