@@ -41,6 +41,13 @@ wait_for_optional() {
   echo "OK: $name is healthy"
 }
 
+COMPOSE_FILE="tests/integration/docker-compose.yml"
+
+# STAS's /health endpoint queries the health_checks table, so migrations must run
+# before the stack can be considered healthy.
+echo "Running STAS database migrations..."
+docker compose -f "$COMPOSE_FILE" exec -T stas node dist/src/db/migrate.js
+
 wait_for "STAS API" "http://localhost:4095/health"
 wait_for "Governance Proxy" "http://localhost:4003/guardrail/health"
 wait_for_optional "OpenSymphony API" "http://localhost:4004/health"
