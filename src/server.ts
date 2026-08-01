@@ -69,6 +69,7 @@ import { featureFlagsRouter } from './routes/featureFlags.js';
 import { gitHubOAuthRouter } from './routes/githubOAuth.js';
 import healthRouter from './routes/health.js';
 import { kpiRouter } from './routes/kpi.js';
+import { linearOAuthRouter } from './routes/linearOAuth.js';
 import { litellmUsageRouter } from './routes/litellmUsage.js';
 import mcpKeysRouter from './routes/mcpKeys.js';
 import n8nRouter from './routes/n8n.js';
@@ -795,6 +796,7 @@ export async function createApp(): Promise<express.Application> {
 
   // GitHub OAuth — before /api/v1 catch-all to avoid requireAuth conflict
   app.use('/api/v1/auth/github', gitHubOAuthRouter);
+  app.use('/api/v1/auth/linear', linearOAuthRouter);
 
   // Privacy API (GDPR: erasure, portability, consent, anonymization)
   const { default: privacyRouter } = await import('./routes/privacy.js');

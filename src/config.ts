@@ -101,6 +101,10 @@ const envSchema = z.object({
   SAML_IDP_CERT: z.string().optional(),
   SAML_DASHBOARD_URL: z.string().optional(),
 
+  // Linear OAuth (enterprise connection) — optional
+  LINEAR_OAUTH_CLIENT_ID: z.string().optional(),
+  LINEAR_OAUTH_CLIENT_SECRET: z.string().optional(),
+
   // Queue depth limits
   QUEUE_MAX_PENDING_PER_REPO: z.coerce.number().int().positive().default(10),
   QUEUE_DLQ_MAX_SIZE: z.coerce.number().int().positive().default(50),
@@ -437,6 +441,11 @@ function buildConfig(env: ParsedEnv) {
       idpSsoUrl: env.SAML_IDP_SSO_URL ?? '',
       idpCert: env.SAML_IDP_CERT ?? '',
       dashboardUrl: env.SAML_DASHBOARD_URL ?? '',
+    },
+
+    linearOauth: {
+      clientId: env.LINEAR_OAUTH_CLIENT_ID ?? '',
+      clientSecret: env.LINEAR_OAUTH_CLIENT_SECRET ?? '',
     },
 
     queue: {
