@@ -90,6 +90,7 @@ import { slaRouter } from './routes/sla.js';
 import { viralRouter } from './routes/viral.js';
 import { workspaceRouter } from './routes/workspace.js';
 import { privacyRouter } from './routes/privacy.js';
+import { opsRouter } from './routes/ops.js';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
 import { teamRouter } from './team/routes.js';
@@ -130,6 +131,12 @@ export async function createApp(): Promise<express.Application> {
   // Sets various HTTP headers for security: CSP, X-Frame-Options,
   // X-Content-Type-Options, Strict-Transport-Security, etc.
   app.use(helmet());
+
+  // -- Maintenance mode (503) -----------------------------------------------
+  // When enabled, all routes except /health and privacy return 503. Admin can
+  // toggle via PUT /api/v1/ops/maintenance.
+  const { maintenanceMiddleware } = await import('./monitoring/maintenance.js');
+  app.use(maintenanceMiddleware);
 
   // -- CORS -----------------------------------------------------------------
   app.use(
@@ -799,6 +806,9 @@ export async function createApp(): Promise<express.Application> {
 
   // ── GDPR / Privacy API (right to erasure, portability, consent) ───────
   app.use('/api/v1/privacy', privacyRouter);
+
+  // ── Ops API (maintenance mode, log tailing, tenant usage) ─────────────
+  app.use('/api/v1/ops', opsRouter);
 
   // ── Credits API ──────────────────────────────────────────
   // GET  /api/v1/credits/balance
