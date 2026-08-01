@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
-import { getSupabaseAdmin, getSupabaseAnon } from './supabase.js';
 import { rootLogger } from '../utils/logger.js';
+import { getSupabaseAdmin, getSupabaseAnon } from './supabase.js';
 
 const log = rootLogger.child({ module: 'auth-service' });
 
@@ -33,27 +33,31 @@ export class AuthService {
       user_metadata: { ...(name ? { name } : {}), email_verified: false },
     });
     if (error) {
-      const status = error.code === 'email_exists' || error.message?.toLowerCase().includes('already registered') || error.message?.toLowerCase().includes('duplicate')
-        ? 409
-        : 400;
+      const status =
+        error.code === 'email_exists' ||
+        error.message?.toLowerCase().includes('already registered') ||
+        error.message?.toLowerCase().includes('duplicate')
+          ? 409
+          : 400;
       throw new AuthError(error.message, status);
     }
 
     const user = data.user;
     const verificationToken = this.generateVerificationToken(user.id, user.email!);
 
-    log.info({ userId: user.id, email: user.email, verificationToken }, 'User registered — email verification required');
+    log.info(
+      { userId: user.id, email: user.email, verificationToken },
+      'User registered — email verification required',
+    );
 
     const tokens = this.generateTokens(user.id, user.email!, name ?? null);
     return { ...tokens, user: { ...tokens.user, emailVerified: false }, verificationToken };
   }
 
   generateVerificationToken(userId: string, email: string): string {
-    return jwt.sign(
-      { sub: userId, email, purpose: 'email_verify' },
-      config.auth.jwtSecret as string,
-      { expiresIn: VERIFICATION_TOKEN_EXPIRY },
-    );
+    return jwt.sign({ sub: userId, email, purpose: 'email_verify' }, config.auth.jwtSecret as string, {
+      expiresIn: VERIFICATION_TOKEN_EXPIRY,
+    });
   }
 
   async verifyEmail(token: string): Promise<{ email: string }> {
@@ -77,10 +81,10 @@ export class AuthService {
       throw new AuthError('Email already verified', 400);
     }
 
-    const { error: updateError } = await getSupabaseAdmin().auth.admin.updateUserById(
-      payload.sub,
-      { email_confirm: true, user_metadata: { ...data.user.user_metadata, email_verified: true } },
-    );
+    const { error: updateError } = await getSupabaseAdmin().auth.admin.updateUserById(payload.sub, {
+      email_confirm: true,
+      user_metadata: { ...data.user.user_metadata, email_verified: true },
+    });
     if (updateError) {
       throw new AuthError('Failed to verify email', 500);
     }
@@ -90,7 +94,10 @@ export class AuthService {
   }
 
   async resendVerification(email: string): Promise<{ verificationToken: string }> {
-    const { data: { users }, error: listError } = await getSupabaseAdmin().auth.admin.listUsers();
+    const {
+      data: { users },
+      error: listError,
+    } = await getSupabaseAdmin().auth.admin.listUsers();
     if (listError) {
       throw new AuthError('Failed to find user', 500);
     }
@@ -111,6 +118,48 @@ export class AuthService {
     return { verificationToken };
   }
 
+  generateMagicLinkToken(userId: string, email: string): string {
+    return jwt.sign({ sub: userId, email, purpose: 'magic_link' }, config.auth.jwtSecret as string, {
+      expiresIn: '15m',
+    });
+  }
+
+  async issueMagicLink(email: string): Promise<string | null> {
+    try {
+      const {
+        data: { users },
+        error: listError,
+      } = await getSupabaseAdmin().auth.admin.listUsers();
+      if (listError || !users) return null;
+      const user = users.find((u) => u.email === email);
+      if (!user) return null;
+
+      const token = this.generateMagicLinkToken(user.id, user.email!);
+      log.info(
+        { userId: user.id, email, magicLinkUrl: `/auth/magic-link?token=${token}` },
+        'Magic link issued — log-in based delivery (no email provider configured)',
+      );
+      return token;
+    } catch (err) {
+      log.error({ err }, 'Failed to issue magic link');
+      return null;
+    }
+  }
+
+  verifyMagicLinkToken(token: string): { sub: string; email: string } {
+    let payload: { sub: string; email: string; purpose?: string };
+    try {
+      payload = jwt.verify(token, config.auth.jwtSecret as string) as { sub: string; email: string; purpose?: string };
+      if (payload.purpose !== 'magic_link') {
+        throw new AuthError('Invalid magic link', 400);
+      }
+    } catch (err) {
+      if (err instanceof AuthError) throw err;
+      throw new AuthError('Invalid or expired magic link', 401);
+    }
+    return { sub: payload.sub, email: payload.email };
+  }
+
   async login(email: string, password: string): Promise<AuthResult> {
     const { data: signInData, error: signInError } = await getSupabaseAnon().auth.signInWithPassword({
       email,
@@ -126,7 +175,12 @@ export class AuthService {
 
   refreshToken(refreshToken: string): AuthResult | never {
     try {
-      const decoded = jwt.verify(refreshToken, config.auth.jwtSecret) as { sub: string; email: string; iat?: number; exp?: number };
+      const decoded = jwt.verify(refreshToken, config.auth.jwtSecret) as {
+        sub: string;
+        email: string;
+        iat?: number;
+        exp?: number;
+      };
       return this.generateTokens(decoded.sub, decoded.email);
     } catch {
       throw new AuthError('Invalid or expired refresh token', 401);
@@ -135,7 +189,12 @@ export class AuthService {
 
   verifyToken(token: string): TokenPayload {
     try {
-      const decoded = jwt.verify(token, config.auth.jwtSecret) as { sub: string; email: string; iat?: number; exp?: number };
+      const decoded = jwt.verify(token, config.auth.jwtSecret) as {
+        sub: string;
+        email: string;
+        iat?: number;
+        exp?: number;
+      };
       return { sub: decoded.sub, email: decoded.email };
     } catch {
       throw new AuthError('Invalid or expired token', 401);
@@ -144,7 +203,10 @@ export class AuthService {
 
   async createPasswordResetToken(email: string): Promise<void> {
     try {
-      const { data: { users }, error: listError } = await getSupabaseAdmin().auth.admin.listUsers();
+      const {
+        data: { users },
+        error: listError,
+      } = await getSupabaseAdmin().auth.admin.listUsers();
       if (listError || !users) return;
       const user = users.find((u) => u.email === email);
       if (!user) return;
@@ -177,10 +239,9 @@ export class AuthService {
       throw new AuthError('Invalid or expired reset token', 400);
     }
 
-    const { error: updateError } = await getSupabaseAdmin().auth.admin.updateUserById(
-      payload.sub,
-      { password: newPassword },
-    );
+    const { error: updateError } = await getSupabaseAdmin().auth.admin.updateUserById(payload.sub, {
+      password: newPassword,
+    });
     if (updateError) {
       throw new AuthError('Failed to reset password', 500);
     }

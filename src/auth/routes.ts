@@ -1,13 +1,13 @@
-import { Router, type Request, type Response } from 'express';
+import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
-import { getSupabaseAdmin } from './supabase.js';
-import { rootLogger } from '../utils/logger.js';
 import { captureEvent } from '../analytics/tracker.js';
-import { requireAuth } from './middleware.js';
-import { loginLimiter, registerLimiter, refreshLimiter } from './rateLimit.js';
-import { AuthError, authService } from './service.js';
-import { queryWithRetry } from '../db/connection.js';
 import { auditLog } from '../audit/middleware.js';
+import { queryWithRetry } from '../db/connection.js';
+import { rootLogger } from '../utils/logger.js';
+import { requireAuth } from './middleware.js';
+import { loginLimiter, refreshLimiter, registerLimiter } from './rateLimit.js';
+import { AuthError, authService } from './service.js';
+import { getSupabaseAdmin } from './supabase.js';
 
 const log = rootLogger.child({ module: 'auth-routes' });
 
@@ -26,6 +26,14 @@ const loginSchema = z.object({
 
 const refreshSchema = z.object({
   refreshToken: z.string().min(1),
+});
+
+const magicLinkSchema = z.object({
+  email: z.string().email(),
+});
+
+const magicLinkVerifySchema = z.object({
+  token: z.string().min(1),
 });
 
 router.post('/register', registerLimiter, async (req: Request, res: Response) => {
@@ -158,6 +166,74 @@ router.post('/refresh', refreshLimiter, async (req: Request, res: Response) => {
   }
 });
 
+router.post('/magic-link', loginLimiter, async (req: Request, res: Response) => {
+  const parsed = magicLinkSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0].message });
+    return;
+  }
+
+  try {
+    // Always resolve — even for unknown emails (anti-enumeration).
+    await authService.issueMagicLink(parsed.data.email);
+    auditLog({
+      actorType: 'user',
+      action: 'auth.magic_link.request',
+      resourceType: 'account',
+      details: { email: parsed.data.email },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    });
+    res.json({ ok: true, message: 'If an account exists for this email, a sign-in link has been issued.' });
+  } catch (err) {
+    log.error({ err }, 'Magic link request failed');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/magic-link/verify', async (req: Request, res: Response) => {
+  const parsed = magicLinkVerifySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0].message });
+    return;
+  }
+
+  try {
+    const { sub: userId, email } = authService.verifyMagicLinkToken(parsed.data.token);
+
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (error || !data?.user) {
+      throw new AuthError('Invalid or expired magic link', 401);
+    }
+
+    const name = (data.user.user_metadata?.name as string | undefined) ?? null;
+    const result = authService.generateTokens(userId, email, name);
+
+    auditLog({
+      actorType: 'user',
+      actorId: userId,
+      action: 'auth.magic_link.verify',
+      resourceType: 'account',
+      resourceId: userId,
+      details: { email },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    });
+
+    res.json(result);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      res.status(err.statusCode).json({ error: err.message });
+      return;
+    }
+    log.error({ err }, 'Magic link verification failed');
+    res.status(401).json({ error: 'Invalid or expired magic link' });
+  }
+});
+
 router.post('/logout', requireAuth, (req: Request, res: Response) => {
   auditLog({
     actorType: 'user',
@@ -176,7 +252,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
   try {
     const email = req.user!.email ?? '';
     let plan: string = 'free';
-    let userId: string = req.user!.id;
+    const userId: string = req.user!.id;
     let name: string | null = null;
     let createdAt: string = new Date().toISOString();
 
