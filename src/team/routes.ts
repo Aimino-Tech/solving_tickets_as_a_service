@@ -175,6 +175,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 /**
  * Invite a user to join a team.
  * Body: { accountId: number, role?: 'admin' | 'member' | 'viewer' }
+ *   or  { email: string, role?: 'admin' | 'member' | 'viewer' } (AIM-4496)
  */
 router.post('/:id/invite', async (req: Request, res: Response) => {
   try {
@@ -190,21 +191,35 @@ router.post('/:id/invite', async (req: Request, res: Response) => {
       return;
     }
 
-    const { accountId: targetAccountId, role } = req.body as {
+    const { accountId: targetAccountId, email, role } = req.body as {
       accountId?: number;
+      email?: string;
       role?: string;
     };
-
-    if (!targetAccountId || typeof targetAccountId !== 'number') {
-      res.status(400).json({ error: 'accountId is required and must be a number' });
-      return;
-    }
 
     // Validate role if provided
     if (role && !['admin', 'member', 'viewer'].includes(role)) {
       res.status(400).json({
         error: 'Invalid role. Valid roles: admin, member, viewer',
       });
+      return;
+    }
+
+    if (email !== undefined) {
+      const { inviteByEmail } = await import('./index.js');
+      const result = await inviteByEmail({
+        teamId,
+        email,
+        role: role as TeamRole | undefined,
+        invitedByAccountId: accountId,
+        correlationId: req.requestId,
+      });
+      res.status(201).json({ success: true, ...result });
+      return;
+    }
+
+    if (!targetAccountId || typeof targetAccountId !== 'number') {
+      res.status(400).json({ error: 'accountId or email is required' });
       return;
     }
 

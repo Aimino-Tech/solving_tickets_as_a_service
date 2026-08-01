@@ -11,6 +11,7 @@
  * @module team
  */
 
+import { randomBytes } from 'node:crypto';
 import { teamsRepository } from '../db/repositories/index.js';
 import type { Team, TeamMember } from '../db/types/index.js';
 import { rootLogger } from '../utils/logger.js';
@@ -38,6 +39,17 @@ export interface InviteResult {
   teamId: number;
   accountId: number;
   role: TeamRole;
+}
+
+export interface EmailInviteResult {
+  teamId: number;
+  email: string;
+  role: TeamRole;
+  /** Set when the email matched an existing account that was added directly. */
+  accountId?: number;
+  /** Set when no account exists yet and a pending invite was created. */
+  inviteId?: number;
+  inviteToken?: string;
 }
 
 export interface RoleChangeResult {
@@ -267,10 +279,100 @@ export async function inviteMember(params: {
 }
 
 /**
+ * Invite a team member by email (AIM-4496). If an account already exists with
+ * that email, it is added directly. Otherwise a pending invite is created so
+ * the email address is added when they register.
+ */
+export async function inviteByEmail(params: {
+  teamId: number;
+  email: string;
+  role?: TeamRole;
+  invitedByAccountId: number;
+  correlationId?: string;
+}): Promise<EmailInviteResult> {
+  const role = params.role ?? 'member';
+  const email = params.email.trim().toLowerCase();
+
+  if (!isValidRole(role)) {
+    throw new Error(`Invalid role "${role}". Valid roles: ${VALID_ROLES.join(', ')}`);
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    throw new Error('A valid email address is required');
+  }
+
+  const team = await teamsRepository.findById(params.teamId);
+  if (!team) {
+    throw new Error(`Team not found: ${params.teamId}`);
+  }
+
+  const actorMembership = await getMemberRole(params.teamId, params.invitedByAccountId);
+  if (!actorMembership) {
+    throw new Error('You are not a member of this team');
+  }
+  if (actorMembership !== 'admin') {
+    throw new Error('Only admins can invite members');
+  }
+
+  const { queryWithRetry } = await import('../db/connection.js');
+  const accountResult = await queryWithRetry<{ id: number }>(
+    'SELECT id FROM accounts WHERE LOWER(email) = $1 LIMIT 1',
+    [email],
+  );
+  const existingAccountId = accountResult.rows[0]?.id;
+
+  if (existingAccountId !== undefined) {
+    await inviteMember({
+      teamId: params.teamId,
+      accountId: existingAccountId,
+      role,
+      invitedByAccountId: params.invitedByAccountId,
+      correlationId: params.correlationId,
+    });
+    await safeAuditLog({
+      actorType: 'user',
+      actorId: String(params.invitedByAccountId),
+      action: 'team.member.invited_by_email',
+      resourceType: 'team',
+      resourceId: String(params.teamId),
+      details: { email, accountId: existingAccountId, role },
+      correlationId: params.correlationId,
+    });
+    return { teamId: params.teamId, email, role, accountId: existingAccountId };
+  }
+
+  const token = cryptoRandomToken();
+  const inviteResult = await queryWithRetry<{ id: number }>(
+    `INSERT INTO team_invites (team_id, email, role, token, invited_by, created_at)
+     VALUES ($1, $2, $3, $4, $5, NOW())
+     ON CONFLICT (team_id, email) WHERE status = 'pending'
+     DO UPDATE SET role = $3, token = $4, created_at = NOW()
+     RETURNING id`,
+    [params.teamId, email, role, token, params.invitedByAccountId],
+  );
+  const inviteId = inviteResult.rows[0]?.id;
+
+  await safeAuditLog({
+    actorType: 'user',
+    actorId: String(params.invitedByAccountId),
+    action: 'team.invite.created',
+    resourceType: 'team',
+    resourceId: String(params.teamId),
+    details: { email, role, inviteId },
+    correlationId: params.correlationId,
+  });
+
+  log.info({ teamId: params.teamId, email, role, inviteId }, 'Pending team invite created');
+  return { teamId: params.teamId, email, role, inviteId, inviteToken: token };
+}
+
+function cryptoRandomToken(): string {
+  return randomBytes(24).toString('hex');
+}
+
+/**
  * Change a member's role within a team.
  */
-export async function changeMemberRole(params: {
-  teamId: number;
+export async function changeMemberRole(params: {  teamId: number;
   targetAccountId: number;
   newRole: TeamRole;
   changedByAccountId: number;

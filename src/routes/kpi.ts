@@ -74,9 +74,56 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/export', async (req: Request, res: Response) => {
+router.get('/mrr-ltv', async (req: Request, res: Response) => {
   if (!(await checkAdmin(req, res))) return;
 
+  try {
+    const planPrices: Record<string, number> = { solo: 4900, team: 14900, pro: 4900, enterprise: 14900 };
+    const result = await queryWithRetry<Record<string, unknown>>(
+      `SELECT plan, COUNT(*)::int AS account_count
+       FROM accounts
+       WHERE plan IN ('solo', 'team', 'pro', 'enterprise') AND tier <> 'free'
+       GROUP BY plan`,
+    );
+
+    let mrrCents = 0;
+    let paidAccounts = 0;
+    const breakdown: Array<Record<string, unknown>> = [];
+    for (const row of result.rows) {
+      const plan = String(row.plan);
+      const count = Number(row.account_count ?? 0);
+      const price = planPrices[plan] ?? 0;
+      mrrCents += price * count;
+      paidAccounts += count;
+      breakdown.push({ plan, accountCount: count, priceCents: price, mrrCents: price * count });
+    }
+
+    // LTV = MRR per account * gross margin * average lifetime (48 months).
+    const grossMargin = 0.8;
+    const avgLifetimeMonths = 48;
+    const arpaCents = paidAccounts > 0 ? mrrCents / paidAccounts : 0;
+    const ltvCents = arpaCents * grossMargin * avgLifetimeMonths;
+
+    res.json({
+      mrrCents,
+      mrrUsd: mrrCents / 100,
+      paidAccounts,
+      arpaCents,
+      ltvCents,
+      ltvUsd: ltvCents / 100,
+      grossMargin,
+      avgLifetimeMonths,
+      breakdown,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to compute MRR/LTV');
+    res.status(500).json({ error: 'Failed to compute MRR/LTV' });
+  }
+});
+
+router.get('/export', async (req: Request, res: Response) => {
+  if (!(await checkAdmin(req, res))) return;
   try {
     const days = Math.min(Math.abs(Number(req.query.days) || 90), 365);
 
