@@ -30,6 +30,7 @@ SSL/TLS:
 from __future__ import annotations
 import argparse, json, logging, os, sys
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from workers.pipeline_client import get_client
 from stas_mcp.agent_handlers import (
     linear_create_ticket,
@@ -72,7 +73,9 @@ else:
 SERVER_NAME = "stas-agent-discovery"
 SERVER_VERSION = "0.1.0"
 
-mcp = FastMCP(SERVER_NAME, instructions="""STAS (Solving Tickets As A Service) — label a GitHub issue and get a PR.
+mcp = FastMCP(
+    SERVER_NAME,
+    instructions="""STAS (Solving Tickets As A Service) — label a GitHub issue and get a PR.
 
 Tools:
 - **stas_label_issue**: Add a label (e.g. "stas:fix") to a GitHub issue.
@@ -91,7 +94,13 @@ Tools:
 Resources:
 - **stas://runs/{run_id}**: Full run details.
 - **stas://issues/{issue_id}**: Issue details with fix status and run history.
-""")
+""",
+    # The service runs inside k8s behind a ClusterIP service; FastMCP's
+    # DNS-rebinding protection (auto-enabled for 127.0.0.1) would reject the
+    # in-cluster Host header (symphony-mcp.symphony.svc.cluster.local:4095)
+    # with 421. Disable it; the service is cluster-internal only.
+    transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
+)
 
 @mcp.tool(name="stas_label_issue", description="Label a GitHub issue with the STAS fix label (or custom label).")
 async def stas_label_issue(owner: str, repo: str, issue_number: int, label: str = "stas:fix") -> str:
