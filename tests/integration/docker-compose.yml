@@ -53,6 +53,10 @@ services:
       GITHUB_PRIVATE_KEY: test-key
       # Default is 120s polling opencode health at boot; keep the stack fast.
       OPENCODE_HEALTH_STARTUP_TIMEOUT_MS: "5000"
+      # No real opencode server runs in the integration stack. Static mode makes
+      # opencodeHealth report "healthy" so STAS /health returns 200 and the compose
+      # healthcheck (and the integration test beforeAll) can pass.
+      STAS_AI_MODE: static
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
