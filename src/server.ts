@@ -808,6 +808,10 @@ export async function createApp(): Promise<express.Application> {
   const { default: privacyRouter } = await import('./routes/privacy.js');
   app.use('/api/v1/privacy', privacyRouter);
 
+  // Invites API (invite-by-email)
+  const { inviteRouter } = await import('./routes/invites.js');
+  app.use('/api/v1/invites', inviteRouter);
+
   app.use('/api/v1', slaRouter);
 
   // ── Credits API ──────────────────────────────────────────
