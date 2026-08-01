@@ -60,3 +60,8 @@ Thumbs.db
 .worktrees/
 worktrees/
 .mypy_cache/
+
+# Local sibling checkouts used only by the integration compose build contexts
+# (CI checks these out at the workspace root; never commit symlinks)
+/OpenSymphony
+/llm-governance
