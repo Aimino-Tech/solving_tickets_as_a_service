@@ -29,6 +29,7 @@ import { accountsRepository } from '../db/repositories/index.js';
 import { handleCheckSuiteCompleted, handlePullRequestOpened } from '../github/prQualityGate.js';
 import { parseSlashCommand } from '../github/slashCommands.js';
 import { dispatchThroughGovernance, isGovernanceEnabled } from '../governance/client.js';
+import { runCommonSenseGate } from '../guardrails/commonSenseGate.js';
 import type { AccountTier } from '../proxy/modelRouter.js';
 import { rateLimiter } from '../ratelimit/limiter.js';
 import { getTierForAccount, type Tier } from '../ratelimit/tiers.js';
@@ -93,6 +94,41 @@ async function postGovernanceFailureComment(
     log.warn(
       { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
       'Failed to post governance failure comment',
+    );
+  }
+}
+
+/**
+ * Post a comment when the Common Sense Gate rejects an issue.
+ * Fail-closed: rejected issues are never dispatched to the agent pipeline.
+ */
+async function postCommonSenseGateBlockComment(
+  installationId: number,
+  repoOwner: string,
+  repoName: string,
+  issueNumber: number,
+  reasons: string[],
+): Promise<void> {
+  try {
+    const { getOctokit } = await import('../github/auth.js');
+    const octokit = await getOctokit(installationId);
+    const detailList = reasons.map((r) => `- ${r}`).join('\n');
+    await octokit.issues.createComment({
+      owner: repoOwner,
+      repo: repoName,
+      issue_number: issueNumber,
+      body:
+        `### 🛑 Common Sense Gate Blocked\n\n` +
+        `This issue failed the Common Sense Gate and was **rejected before reaching the agent pipeline**.\n\n` +
+        `Rejected checks:\n\n${detailList}\n\n` +
+        `If you believe this is a mistake, adjust the issue description and re-trigger with \`stas:fix\`.\n\n` +
+        `Issue ID: #${issueNumber}`,
+    });
+    log.info({ repo: `${repoOwner}/${repoName}`, issueNumber }, 'Posted Common Sense Gate block comment');
+  } catch (err) {
+    log.warn(
+      { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
+      'Failed to post Common Sense Gate block comment',
     );
   }
 }
@@ -363,6 +399,52 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         );
         return;
       }
+    }
+
+    // ── Common Sense Gate ────────────────────────────────────────────
+    // Reject hallucinated / malformed / invariant-violating inputs BEFORE
+    // they reach the agent pipeline (fail-closed).
+    const gateResult = runCommonSenseGate({
+      platform: 'github',
+      repoOwner: jobData.repoOwner,
+      repoName: jobData.repoName,
+      issueNumber: jobData.issueNumber,
+      title: payload.issue.title,
+      body: payload.issue.body,
+    });
+    if (!gateResult.passed) {
+      const reasons = gateResult.checks.filter((c) => !c.valid).map((c) => `${c.check}: ${c.error}`);
+      log.warn(
+        {
+          repo: `${jobData.repoOwner}/${jobData.repoName}`,
+          issueNumber: jobData.issueNumber,
+          reasons,
+        },
+        'Common Sense Gate rejected issue — not dispatching',
+      );
+      try {
+        const { createStorage } = await import('../storage/index.js');
+        const storage = await createStorage();
+        if (storage) {
+          await storage.saveRun({
+            installationId: jobData.installationId,
+            repoOwner: jobData.repoOwner,
+            repoName: jobData.repoName,
+            issueNumber: jobData.issueNumber,
+            status: 'blocked',
+          });
+        }
+      } catch (storageErr) {
+        log.warn({ err: String(storageErr) }, 'Failed to save blocked RunRecord');
+      }
+      await postCommonSenseGateBlockComment(
+        jobData.installationId,
+        jobData.repoOwner,
+        jobData.repoName,
+        jobData.issueNumber,
+        reasons,
+      );
+      return;
     }
 
     // ── AI-Disabled Mode ────────────────────────────────────────

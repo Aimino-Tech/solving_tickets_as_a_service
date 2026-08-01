@@ -46,10 +46,7 @@ export const HALLUCINATED_REPO_PATTERNS = [
   /^test-repo-\d+$/i,
 ];
 
-export function validatePlatformUrl(
-  platform: Platform,
-  url: string,
-): ValidationResult {
+export function validatePlatformUrl(platform: Platform, url: string): ValidationResult {
   if (!url || typeof url !== 'string' || url.trim().length === 0) {
     return { valid: false, error: 'URL is empty or undefined' };
   }
@@ -59,7 +56,10 @@ export function validatePlatformUrl(
   try {
     const parsed = new URL(url.trim());
     if (parsed.hostname !== host) {
-      return { valid: false, error: `URL host "${parsed.hostname}" does not appear to be a ${platform} URL (expected "${host}")` };
+      return {
+        valid: false,
+        error: `URL host "${parsed.hostname}" does not appear to be a ${platform} URL (expected "${host}")`,
+      };
     }
     normalized = parsed.pathname.replace(/\.git$/, '').replace(/\/$/, '');
   } catch {
@@ -81,10 +81,12 @@ export function validatePlatformUrl(
 }
 
 export function validateIssueReference(issueNumber: number): ValidationResult {
-  if (typeof issueNumber !== 'number' || Number.isNaN(issueNumber)) return { valid: false, error: 'Issue number must be a number' };
+  if (typeof issueNumber !== 'number' || Number.isNaN(issueNumber))
+    return { valid: false, error: 'Issue number must be a number' };
   if (!Number.isInteger(issueNumber)) return { valid: false, error: 'Issue number must be an integer' };
   if (issueNumber <= 0) return { valid: false, error: 'Issue number must be greater than 0' };
-  if (issueNumber > MAX_ISSUE_NUMBER) return { valid: false, error: `Issue number ${issueNumber} is suspiciously large (max: ${MAX_ISSUE_NUMBER})` };
+  if (issueNumber > MAX_ISSUE_NUMBER)
+    return { valid: false, error: `Issue number ${issueNumber} is suspiciously large (max: ${MAX_ISSUE_NUMBER})` };
   return { valid: true };
 }
 
@@ -93,9 +95,11 @@ export function validateRepoName(name: string): ValidationResult {
   const trimmed = name.trim();
   if (trimmed.length === 0) return { valid: false, error: 'Repo name is empty' };
   if (trimmed.length > 100) return { valid: false, error: 'Repo name exceeds 100 characters' };
-  if (!REPO_NAME_RE.test(trimmed)) return { valid: false, error: `Repo name "${trimmed}" contains invalid characters or starts with a dot` };
+  if (!REPO_NAME_RE.test(trimmed))
+    return { valid: false, error: `Repo name "${trimmed}" contains invalid characters or starts with a dot` };
   for (const pattern of HALLUCINATED_REPO_PATTERNS) {
-    if (pattern.test(trimmed)) return { valid: false, error: `Repo name "${trimmed}" appears to be a placeholder or hallucination` };
+    if (pattern.test(trimmed))
+      return { valid: false, error: `Repo name "${trimmed}" appears to be a placeholder or hallucination` };
   }
   return { valid: true };
 }
@@ -106,11 +110,114 @@ export interface CommonSenseInput {
   issueNumber?: number;
   repoOwner?: string;
   repoName?: string;
+  title?: string;
+  body?: string | null;
 }
 
 export interface CommonSenseGateResult {
   passed: boolean;
   checks: Array<{ check: string; valid: boolean; error?: string }>;
+}
+
+// ── Issue-content sanity / invariant checks (AIM-4496) ─────────────────
+
+/**
+ * Files that must never be deleted or replaced by a fix. Removing the
+ * manifest or a lockfile breaks dependency resolution for the whole repo.
+ */
+const PROTECTED_MANIFEST_FILES = [
+  'package.json',
+  'package-lock.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+  'composer.json',
+  'Cargo.toml',
+  'go.mod',
+];
+
+/**
+ * Paths that the bot must never modify. CI/CD workflow definitions are
+ * operational configuration and out of scope for issue fixes.
+ */
+const PROTECTED_WORKFLOW_PATHS = ['.github/workflows/', 'workflows/', '.gitlab-ci.yml', '.circleci/config.yml'];
+
+/** Regex matching an explicit request to delete a protected manifest file. */
+const DELETE_MANIFEST_RE =
+  /(?:delete|remove|rm\b|drop|erase|wipe)\s+(?:the\s+)?(?:file\s+)?(?:`)?(?:\.\/)?(?:package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|composer\.json|Cargo\.toml|go\.mod)/i;
+
+const PROTECTED_WORKFLOW_FILES_RE = PROTECTED_WORKFLOW_PATHS.map((p) =>
+  p.replace(/\./g, '\\.').replace(/\//g, '\\/'),
+).join('|');
+
+/** Regex matching an explicit request to modify a protected workflow path. */
+const MODIFY_WORKFLOWS_RE = new RegExp(
+  `(?:modify|edit|change|update|rewrite|delete|remove|rm\\b|add|create|recreate)\\s+(?:the\\s+)?(?:\\\`)?(?:\\\\.\\\\/)?(?:${PROTECTED_WORKFLOW_FILES_RE})`,
+  'i',
+);
+
+/**
+ * Content sanity check: reject issues that explicitly instruct the bot to
+ * delete a protected manifest/lockfile or to modify workflow definitions.
+ * These are invariant violations that must never reach the agent pipeline.
+ */
+export function validateIssueContent(title: string | undefined, body: string | null | undefined): ValidationResult {
+  const text = [title, body].filter((t): t is string => typeof t === 'string' && t.length > 0).join('\n');
+  if (!text) return { valid: true };
+
+  const lower = text.toLowerCase();
+  if (DELETE_MANIFEST_RE.test(lower)) {
+    const matched = PROTECTED_MANIFEST_FILES.find((f) => lower.includes(f.toLowerCase()));
+    return {
+      valid: false,
+      error: `Issue requests deletion of a protected manifest/lockfile${matched ? ` (${matched})` : ''} — refusing`,
+    };
+  }
+  if (MODIFY_WORKFLOWS_RE.test(lower)) {
+    return {
+      valid: false,
+      error: 'Issue requests modifying workflow definitions — off-limits for STAS fixes',
+    };
+  }
+
+  // Path traversal / absolute-path mutations are always suspicious.
+  if (/(?:delete|remove|rm\b)\s+\.\.\/|(?:delete|remove|rm\b)\s+\//.test(lower)) {
+    return { valid: false, error: 'Issue references deleting paths outside the repo (../ or /) — refusing' };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Cost-benefit gate: reject issues that would burn agent budget on work
+ * that is unactionable, unbounded, or destructive. This is a lightweight
+ * heuristic applied BEFORE the (expensive) agent pipeline.
+ */
+export function validateCostBenefit(title: string | undefined, body: string | null | undefined): ValidationResult {
+  const text = [title, body]
+    .filter((t): t is string => typeof t === 'string' && t.length > 0)
+    .join(' ')
+    .trim();
+  if (!text) {
+    return { valid: false, error: 'Issue has no actionable content (empty title and body)' };
+  }
+  if (text.length < 10) {
+    return { valid: false, error: 'Issue is too short to contain an actionable fix request' };
+  }
+
+  const lower = text.toLowerCase();
+  // Unbounded / impossible requests are never worth the agent cost.
+  const unbounded =
+    /(?:fix|solve|resolve)\s+(?:everything|all (?:the )?bugs|all tests|the entire (?:codebase|project|repo|system))/i.test(
+      lower,
+    ) ||
+    /(?:rewrite|rearchitect|rebuild|refactor)\s+(?:the )?(?:entire|whole)\s+(?:codebase|project|repo|system)/i.test(
+      lower,
+    );
+  if (unbounded) {
+    return { valid: false, error: 'Request is unbounded in scope — expected cost exceeds likely benefit' };
+  }
+
+  return { valid: true };
 }
 
 export function runCommonSenseGate(input: CommonSenseInput): CommonSenseGateResult {
@@ -130,6 +237,12 @@ export function runCommonSenseGate(input: CommonSenseInput): CommonSenseGateResu
   if (input.repoName) {
     const r = validateRepoName(input.repoName);
     checks.push({ check: 'repo_name', valid: r.valid, error: r.error });
+  }
+  if (input.title !== undefined || input.body !== undefined) {
+    const content = validateIssueContent(input.title, input.body);
+    checks.push({ check: 'issue_content', valid: content.valid, error: content.error });
+    const costBenefit = validateCostBenefit(input.title, input.body);
+    checks.push({ check: 'cost_benefit', valid: costBenefit.valid, error: costBenefit.error });
   }
   return { passed: checks.every((c) => c.valid), checks };
 }
