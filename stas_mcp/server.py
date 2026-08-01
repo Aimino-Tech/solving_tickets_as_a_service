@@ -8,6 +8,12 @@ Tools:
   - stas_get_pr        — Get PR details for a completed fix run.
   - list_issues        — List tracked issues and their fix status.
   - search_codebase    — Search the STAS codebase for symbols or patterns.
+  - linear_ticket      — Check whether a Linear ticket exists and its details.
+  - linear_create_ticket — Create a Linear ticket in the workspace.
+  - memory_read        — Read a Hermes-style agent memory file.
+  - memory_write       — Write a Hermes-style agent memory file.
+  - slack_send         — Post a message to a Slack channel/thread.
+  - session_resume     — Return a conversation's maintained MEMORY.md.
 
 Resources:
   - stas://runs/{run_id}    — Real-time status + PR link for a fix run.
@@ -25,6 +31,14 @@ from __future__ import annotations
 import argparse, json, logging, os, sys
 from mcp.server.fastmcp import FastMCP
 from workers.pipeline_client import get_client
+from stas_mcp.agent_handlers import (
+    linear_create_ticket,
+    linear_ticket,
+    memory_read,
+    memory_write,
+    session_resume,
+    slack_send,
+)
 from stas_mcp.handlers import _parse_github_issue_url, check_status, get_pr, get_run_resource, label_issue, list_runs_from_api, run_fix
 
 logger = logging.getLogger(__name__)
@@ -67,6 +81,12 @@ Tools:
 - **stas_get_pr**: Get the PR URL and details for a completed run.
 - **list_issues**: List tracked issues with their fix status.
 - **search_codebase**: Search the STAS codebase for symbols or patterns.
+- **linear_ticket**: Check whether a Linear ticket exists (identifier like AIM-4477) and return its title/state/url/description.
+- **linear_create_ticket**: Create a Linear ticket in the workspace (title, description, priority).
+- **memory_read**: Read a Hermes-style agent memory file by name.
+- **memory_write**: Write a Hermes-style agent memory file by name (facts/decisions/preferences/plan in markdown).
+- **slack_send**: Post a message to a Slack channel or thread with the STAS bot token.
+- **session_resume**: Return a conversation workspace's maintained MEMORY.md so an agent can resume it.
 
 Resources:
 - **stas://runs/{run_id}**: Full run details.
@@ -142,6 +162,30 @@ async def list_issues_tool(status=None, repo=None, limit=20):
 @mcp.tool(name="search_codebase", description="Search the STAS codebase for symbols, files, or patterns.")
 async def search_codebase_tool(query, repo=None, max_results=10):
     return json.dumps(await _search_codebase_handler(query=query, repo=repo, max_results=max_results), indent=2, default=str)
+
+@mcp.tool(name="linear_ticket", description="Check whether a Linear ticket exists (identifier like AIM-4477) and return its details.")
+async def linear_ticket_tool(identifier: str) -> str:
+    return json.dumps(await linear_ticket(identifier), indent=2, default=str)
+
+@mcp.tool(name="linear_create_ticket", description="Create a Linear ticket in the workspace (title required, description and priority optional, team_key like 'AIM' optional).")
+async def linear_create_ticket_tool(title: str, description: str = "", priority: int | None = None, team_key: str = "") -> str:
+    return json.dumps(await linear_create_ticket(title, description or None, priority, team_key or None), indent=2, default=str)
+
+@mcp.tool(name="memory_read", description="Read a Hermes-style agent memory file by name (default 'user').")
+async def memory_read_tool(name: str = "user") -> str:
+    return json.dumps(memory_read(name), indent=2, default=str)
+
+@mcp.tool(name="memory_write", description="Write a Hermes-style agent memory file by name (facts/decisions/preferences/plan in markdown).")
+async def memory_write_tool(name: str, content: str) -> str:
+    return json.dumps(memory_write(name, content), indent=2, default=str)
+
+@mcp.tool(name="slack_send", description="Post a message to a Slack channel or thread using the STAS bot token.")
+async def slack_send_tool(channel: str, text: str, thread_ts: str = "") -> str:
+    return json.dumps(await slack_send(channel, text, thread_ts or None), indent=2, default=str)
+
+@mcp.tool(name="session_resume", description="Return a conversation workspace's maintained MEMORY.md so an agent can resume the conversation.")
+async def session_resume_tool(workspace_path: str) -> str:
+    return json.dumps(session_resume(workspace_path), indent=2, default=str)
 
 @mcp.resource(uri="stas://runs/{run_id}", name="Fix Run Status",
               description="Full run details including status, timestamps, issue info, and PR link.", mime_type="application/json")

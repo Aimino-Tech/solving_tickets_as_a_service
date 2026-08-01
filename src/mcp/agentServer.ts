@@ -642,7 +642,7 @@ export async function handleSlackTicket(id: unknown, args: Record<string, unknow
     const response = await fetch('https://api.linear.app/graphql', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ query, variables: { title, description, priority } }),
