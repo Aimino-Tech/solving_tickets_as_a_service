@@ -51,6 +51,7 @@ import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import { de } from './i18n/de.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import { approvalRouter, configureApprovalGate } from './middleware/approvalGate.js';
+import { maintenanceMode } from './middleware/maintenance.js';
 import { captureError, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { initWizardStore } from './onboarding/wizard.js';
@@ -729,6 +730,11 @@ export async function createApp(): Promise<express.Application> {
     agentServerRouter = Router();
   }
   app.use(agentServerRouter);
+
+  // -- Maintenance mode gate ----------------------------------------------------
+  // Returns 503 while maintenance mode is enabled; health, auth and webhook
+  // paths stay open so checks and event ingestion keep working.
+  app.use(maintenanceMode);
 
   // -- Health check endpoints --------------------------------------------------
   app.use(healthRouter);

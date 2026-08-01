@@ -84,6 +84,7 @@ const envSchema = z.object({
   STAS_LABEL: z.string().default('stas:fix'),
   BOT_NAME: z.string().default('STAS'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
+  MAINTENANCE_MODE: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   // Rate limiting — calibrated for 500-user scale
@@ -607,6 +608,8 @@ function buildConfig(env: ParsedEnv) {
       projectId: env.MONITORING_LOOP_PROJECT_ID,
       defaultAccountId: env.MONITORING_LOOP_DEFAULT_ACCOUNT_ID,
     },
+
+    maintenanceMode: env.MAINTENANCE_MODE,
 
     alerting: {
       slackChannel: env.ALERT_SLACK_CHANNEL,
