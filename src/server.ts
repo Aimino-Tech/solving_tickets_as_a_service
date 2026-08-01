@@ -88,6 +88,7 @@ import { runFeedbackRouter } from './routes/runFeedback.js';
 import { slaRouter } from './routes/sla.js';
 import { viralRouter } from './routes/viral.js';
 import { workspaceRouter } from './routes/workspace.js';
+import { privacyRouter } from './routes/privacy.js';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
 import { createStripeWebhookHandler } from './stripe/index.js';
 import { teamRouter } from './team/routes.js';
@@ -803,6 +804,9 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/v1/auth/github', gitHubOAuthRouter);
 
   app.use('/api/v1', slaRouter);
+
+  // ── GDPR / Privacy API (right to erasure, portability, consent) ───────
+  app.use('/api/v1/privacy', privacyRouter);
 
   // ── Credits API ──────────────────────────────────────────
   // GET  /api/v1/credits/balance
