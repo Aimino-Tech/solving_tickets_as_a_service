@@ -525,6 +525,26 @@ export const audit = {
     }>(`/v1/audit?page=${params.page}&perPage=${params.perPage}`, opts),
 };
 
+// -- GDPR API --
+
+export const gdpr = {
+  eraseMe: () => request<void>('/v1/gdpr/me', { method: 'DELETE' }),
+  exportData: () => request<Record<string, unknown>>('/v1/gdpr/export'),
+  getCookiePreferences: () => request<Record<string, boolean>>('/v1/gdpr/cookie-preferences'),
+  setCookiePreferences: (preferences: Record<string, boolean>) =>
+    request<Record<string, boolean>>('/v1/gdpr/cookie-preferences', {
+      method: 'PUT',
+      body: JSON.stringify(preferences),
+    }),
+  consentConfig: () =>
+    request<{
+      required: boolean;
+      version: string;
+      text: string;
+      categories: Array<{ id: string; required: boolean; label: string; description: string }>;
+    }>('/v1/gdpr/consent-config'),
+};
+
 // -- Benchmarks API --
 
 export const benchmarks = {
