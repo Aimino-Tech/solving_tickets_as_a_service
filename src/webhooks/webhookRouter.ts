@@ -7,10 +7,10 @@
  * know which platform API to call.
  */
 
-import type { IssueJobData } from '../utils/types.js';
+import { CommonSenseGateError, runCommonSenseGate } from '../guardrails/commonSenseGate.js';
 import type { Platform } from '../platforms/interface.js';
 import { rootLogger } from '../utils/logger.js';
-import { runCommonSenseGate } from '../guardrails/commonSenseGate.js';
+import type { IssueJobData } from '../utils/types.js';
 
 const log = rootLogger.child({ module: 'webhook-router' });
 
@@ -93,10 +93,7 @@ export class WebhookRouter {
       try {
         await handler(event);
       } catch (err) {
-        log.error(
-          { err: String(err), platform, rawEventType },
-          'Webhook handler failed',
-        );
+        log.error({ err: String(err), platform, rawEventType }, 'Webhook handler failed');
       }
     }
   }
@@ -127,6 +124,25 @@ export class WebhookRouter {
    * @param event  The normalised webhook event
    */
   async enqueue(event: WebhookRouterEvent): Promise<void> {
+    const gate = runCommonSenseGate({
+      platform: event.platform,
+      issueNumber: event.issue.number,
+      repoOwner: event.issue.repoOwner,
+      repoName: event.issue.repoName,
+      body: event.issue.body ?? undefined,
+    });
+    if (!gate.passed) {
+      const detail = gate.checks
+        .filter((c) => !c.valid)
+        .map((c) => `${c.check}: ${c.error ?? 'invalid'}`)
+        .join('; ');
+      log.warn(
+        { platform: event.platform, repo: `${event.issue.repoOwner}/${event.issue.repoName}`, detail },
+        'Common-sense gate rejected webhook event — not enqueueing',
+      );
+      throw new CommonSenseGateError(gate);
+    }
+
     const jobData = this.buildJobData(event);
 
     try {
