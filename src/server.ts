@@ -260,7 +260,9 @@ export async function createApp(): Promise<express.Application> {
     }
 
     const { dispatchToOpenSymphony } = await import('./dispatch/osDispatch.js');
-    const result = await dispatchToOpenSymphony(data);
+    const { accountConcurrencyLimiter } = await import('./queue/accountConcurrency.js');
+    const accountId = String(data.installationId || 'default');
+    const result = await accountConcurrencyLimiter.withSlot(accountId, () => dispatchToOpenSymphony(data));
     if (result.success) {
       log.info({ runId: result.runId }, 'Dispatched issue to OpenSymphony');
       return result.runId;
@@ -1269,7 +1271,11 @@ async function tryListen(
             return;
           }
           try {
-            const result = await dispatchToOpenSymphony(data);
+            const { accountConcurrencyLimiter } = await import('./queue/accountConcurrency.js');
+            const accountId = String(data.installationId || 'default');
+            const result = await accountConcurrencyLimiter.withSlot(accountId, () =>
+              dispatchToOpenSymphony(data),
+            );
             if (!result.success) {
               log.error({ errors: result.errors }, 'OpenSymphony dispatch failed');
             } else {

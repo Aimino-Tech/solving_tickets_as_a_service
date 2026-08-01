@@ -266,6 +266,8 @@ const envSchema = z.object({
   STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
   STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
   STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
+  STAS_PER_ACCOUNT_CONCURRENCY: z.coerce.number().int().positive().default(2),
+  STAS_PER_ACCOUNT_CONCURRENCY_OVERRIDES: z.string().default(''),
 
   // MCP Server Configuration
   MCP_API_KEY: z.string().optional(),

@@ -141,7 +141,7 @@ export async function declareTopology(): Promise<void> {
 
   await ch.assertQueue('stas.issues.fix', {
     durable: true,
-    arguments: { 'x-message-ttl': config.queue.msgTtlMs },
+    arguments: { 'x-message-ttl': config.queue.msgTtlMs, 'x-max-priority': 100 },
     deadLetterExchange: 'stas.dlx',
     deadLetterRoutingKey: 'issue.fix.dlq',
     messageTtl: config.queue.msgTtlMs,
@@ -227,10 +227,12 @@ export async function publishMessage(
 ): Promise<boolean> {
   const ch = getChannel();
   const buffer = Buffer.from(JSON.stringify(content));
+  const jobPriority = (content as { priority?: number })?.priority;
   const result = ch.publish(exchange, routingKey, buffer, {
     persistent: true,
     contentType: 'application/json',
     timestamp: Date.now(),
+    ...(jobPriority !== undefined ? { priority: jobPriority } : {}),
     ...options,
   });
   return result;
