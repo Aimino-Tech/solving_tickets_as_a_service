@@ -16,8 +16,9 @@
 import type { App } from '@slack/bolt';
 import { config } from '../../config.js';
 import { rootLogger } from '../../utils/logger.js';
-import { parseIssueRefs } from './issueParser.js';
 import type { IssueJobData } from '../../utils/types.js';
+import { parseIssueRefs } from './issueParser.js';
+import { handleTicketWorkRequest } from './ticketWork.js';
 
 const log = rootLogger.child({ module: 'slack-handler' });
 
@@ -66,12 +67,14 @@ export function registerSlackMentionHandler(boltApp: App | null): void {
         return;
       }
 
+      // Linear ticket references take priority over GitHub refs / freeform:
+      // "fix [AIM-1234](...)" → confirm the ticket, then dispatch work per ticket.
+      if (await handleTicketWorkRequest({ text, threadTs, channelId, userId, say })) {
+        return;
+      }
+
       // Parse issue references from the mention text
-      const refs = parseIssueRefs(
-        text,
-        config.trackers.defaultRepoOwner,
-        config.trackers.defaultRepoName,
-      );
+      const refs = parseIssueRefs(text, config.trackers.defaultRepoOwner, config.trackers.defaultRepoName);
 
       if (refs.length === 0) {
         // No issue reference found — try treating the full text as a title
@@ -89,9 +92,7 @@ export function registerSlackMentionHandler(boltApp: App | null): void {
       });
 
       // Enqueue the fix job
-      const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import(
-        '../../queue/rabbitmq.js'
-      );
+      const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../../queue/rabbitmq.js');
       if (!isConnected()) {
         await rmqConnect();
       }
@@ -254,11 +255,15 @@ async function handleCreateIssuesRequest(
     const items =
       titles.length > 0
         ? titles
-        : [text.replace(CREATE_ISSUES_RE, '').replace(/\bon\s+(?:linear|gitlab|jira)\b/i, '').replace(/<@[A-Z0-9]+>/gi, '').trim() || `Urgent request from Slack conversation <#${channelId}>`];
+        : [
+            text
+              .replace(CREATE_ISSUES_RE, '')
+              .replace(/\bon\s+(?:linear|gitlab|jira)\b/i, '')
+              .replace(/<@[A-Z0-9]+>/gi, '')
+              .trim() || `Urgent request from Slack conversation <#${channelId}>`,
+          ];
 
-    const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import(
-      '../../queue/rabbitmq.js'
-    );
+    const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../../queue/rabbitmq.js');
     if (!isConnected()) {
       await rmqConnect();
     }
@@ -270,7 +275,7 @@ async function handleCreateIssuesRequest(
           teamId,
           title: title.slice(0, 200),
           description,
-          priority: urgent ? TRACKER_PRIORITY[trackerName] ?? 1 : 2,
+          priority: urgent ? (TRACKER_PRIORITY[trackerName] ?? 1) : 2,
           labels: urgent ? ['urgent', 'stas:fix'] : ['stas:fix'],
         });
         created.push({ title: ticket.title, url: ticket.url });
@@ -309,7 +314,14 @@ async function handleCreateIssuesRequest(
       });
     } else {
       await say({
-        text: `:x: Could not create any issues.${errors.length ? `\n${errors.map((e) => `• ${e}`).join('\n').slice(0, 800)}` : ''}`,
+        text: `:x: Could not create any issues.${
+          errors.length
+            ? `\n${errors
+                .map((e) => `• ${e}`)
+                .join('\n')
+                .slice(0, 800)}`
+            : ''
+        }`,
         thread_ts: threadTs,
       });
     }
@@ -361,9 +373,7 @@ async function handleFreeformRequest(
   });
 
   try {
-    const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import(
-      '../../queue/rabbitmq.js'
-    );
+    const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../../queue/rabbitmq.js');
     if (!isConnected()) {
       await rmqConnect();
     }
