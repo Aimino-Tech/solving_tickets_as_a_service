@@ -12,6 +12,7 @@ import type { App } from '@slack/bolt';
 import type { ChatGateway } from '../../chat/gateway.js';
 import type { PodTransport } from '../../chat/transport.js';
 import { rootLogger } from '../../utils/logger.js';
+import { truncateForSlack } from './truncate.js';
 
 const log = rootLogger.child({ module: 'slack-chat' });
 
@@ -40,7 +41,7 @@ export function registerSlackChatHandler(boltApp: App | null, deps: SlackChatWir
         deps.postReply?.({
           channelId: msg.channelId ?? '',
           threadTs: msg.threadTs,
-          text: msg.text,
+          text: truncateForSlack(msg.text),
         }) ?? Promise.resolve()
       ).catch((err: unknown) => {
         log.error({ err: String(err), threadTs: msg.threadTs }, 'Failed to post pod reply');
