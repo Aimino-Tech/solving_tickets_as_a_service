@@ -24,6 +24,12 @@ export interface RealSUTOptions {
   apiKey?: string;
   /** Workspace directory for the sessions this SUT opens. */
   directory?: string;
+  /**
+   * Agent to run the conversation (default: server default). Set to a
+   * chat-friendly agent (e.g. "build") so the eval session answers without
+   * firing blocking clarifying questions or long tool chains.
+   */
+  agent?: string;
   /** Per-request timeout in ms (default 5 minutes — model turns can be slow). */
   timeoutMs?: number;
   /** Injectable fetch for tests. */
@@ -48,6 +54,7 @@ export class RealSUT implements ChatSUT {
   private readonly baseUrl: string;
   private readonly apiKey: string;
   private readonly directory: string;
+  private readonly agent: string | undefined;
   private readonly timeoutMs: number;
   private readonly fetchFn: FetchLike;
   private session: SessionInfo | null = null;
@@ -56,6 +63,7 @@ export class RealSUT implements ChatSUT {
     this.baseUrl = (options.baseUrl ?? process.env.OPENCODE_URL ?? 'http://127.0.0.1:20888').replace(/\/+$/, '');
     this.apiKey = options.apiKey ?? process.env.OPENCODE_API_KEY ?? '';
     this.directory = options.directory ?? '/tmp/opencode/eval-sut';
+    this.agent = options.agent ?? process.env.OPENCODE_AGENT ?? undefined;
     this.timeoutMs = options.timeoutMs ?? 300_000;
     this.fetchFn = options.fetchFn ?? globalThis.fetch;
     this.name = `opencode-serve:${this.baseUrl}`;
@@ -118,7 +126,7 @@ export class RealSUT implements ChatSUT {
     }
     const response = await this.request('/session', {
       method: 'POST',
-      body: JSON.stringify({ workspace_dir: this.directory }),
+      body: JSON.stringify(this.agent ? { workspace_dir: this.directory, agent: this.agent } : { workspace_dir: this.directory }),
     });
     const payload = this.requireObject(response, 'session create');
     const id = payload.id;
