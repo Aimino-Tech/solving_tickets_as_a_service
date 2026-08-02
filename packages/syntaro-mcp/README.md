@@ -1,4 +1,4 @@
-# STAS MCP Server
+# Syntaro MCP Server
 
 Expose STAS / OpenSymphony as agent infrastructure — so external agents (OpenCode, Claude, Cursor, etc.) can drive our software through the [Model Context Protocol](https://modelcontextprotocol.io).
 
@@ -7,17 +7,17 @@ Expose STAS / OpenSymphony as agent infrastructure — so external agents (OpenC
 | Tool | Description |
 |------|-------------|
 | `syntaro_label_issue` | Label a GitHub issue (`stas:fix` or custom) |
-| `syntaro_run_fix` | Trigger the STAS fix pipeline for a GitHub issue URL |
+| `syntaro_run_fix` | Trigger the Syntaro fix pipeline for a GitHub issue URL |
 | `syntaro_check_status` | Poll the status of a fix run by `run_id` |
 | `syntaro_get_pr` | Get the PR URL/details for a completed run |
-| `list_issues` | List tracked issues with fix status |
-| `search_codebase` | Search the STAS codebase for symbols/patterns |
-| `linear_ticket` | Check whether a Linear ticket exists (e.g. `AIM-4477`) |
-| `linear_create_ticket` | Create a Linear ticket (title, description, priority, team key) |
-| `memory_read` | Read a Hermes-style agent memory file by name |
-| `memory_write` | Write a Hermes-style agent memory file by name |
-| `slack_send` | Post a message to a Slack channel/thread (STAS bot token) |
-| `session_resume` | Return a conversation workspace's maintained `MEMORY.md` |
+| `syntaro_list_issues` | List tracked issues with fix status |
+| `syntaro_search_codebase` | Search the Syntaro codebase for symbols/patterns |
+| `syntaro_linear_ticket` | Check whether a Linear ticket exists (e.g. `AIM-4477`) |
+| `syntaro_linear_create_ticket` | Create a Linear ticket (title, description, priority, team key) |
+| `syntaro_memory_read` | Read a Hermes-style agent memory file by name |
+| `syntaro_memory_write` | Write a Hermes-style agent memory file by name |
+| `syntaro_slack_send` | Post a message to a Slack channel/thread (Syntaro bot token) |
+| `syntaro_session_resume` | Return a conversation workspace's maintained `MEMORY.md` |
 
 Resources: `syntaro://runs/{run_id}` (run details) and `syntaro://issues/{issue_id}` (issue + fix status).
 
@@ -51,16 +51,16 @@ Set `PYTHONPATH` to the repo root so `workers.pipeline_client` resolves.
 |----------|---------|
 | `SYMPHONY_LINEAR_API_KEY` / `LINEAR_API_KEY` | Linear API key (raw value — Linear rejects a `Bearer ` prefix) |
 | `SLACK_BOT_TOKEN` | Slack bot token for `slack_send` |
-| `MEMORY_DIR` | Directory for `memory_read`/`memory_write` files (default `/tmp/symphony-workspaces/memory`) |
+| `MEMORY_DIR` | Directory for `syntaro_memory_read`/`syntaro_memory_write` files (default `/tmp/symphony-workspaces/memory`) |
 | `GITHUB_TOKEN` / `GITHUB_APP_PRIVATE_KEY` | GitHub auth for labeling issues |
-| `STAS_API_URL`, `STAS_API_KEY` | STAS backend fallback for fix runs |
+| `STAS_API_URL`, `STAS_API_KEY` | Syntaro backend fallback for fix runs |
 
 ## OpenCode integration
 
 ```json
 {
   "mcp": {
-    "stas": {
+    "syntaro": {
       "type": "local",
       "command": ["python3", "-m", "syntaro_mcp.server", "stdio"],
       "environment": { "PYTHONPATH": "/path/to/solving_tickets_as_a_service" }
@@ -71,4 +71,4 @@ Set `PYTHONPATH` to the repo root so `workers.pipeline_client` resolves.
 
 ## License
 
-AGPL-3.0-only — free for public/open-source use; part of the STAS traction play.
+AGPL-3.0-only — free for public/open-source use; part of the Syntaro traction play.

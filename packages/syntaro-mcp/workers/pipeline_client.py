@@ -138,6 +138,20 @@ class PipelineClient:
             return self._http_call("check_status", issue_id=issue_id_or_run_id)
         return {"success": False, "error": "Pipeline engine unavailable"}
 
+    def get_run_history(self, repo: str = "", limit: int = 20) -> dict[str, Any]:
+        """List fix runs, optionally filtered by repo. Returns {"success", "runs", "total"}."""
+        engine = self._get_engine()
+        if engine and not self._api_url:
+            try:
+                runs = engine.list_runs(repo=repo, limit=limit)
+                return {"success": True, "runs": runs, "total": len(runs)}
+            except Exception as exc:
+                logger.error("Run history failed for repo=%s: %s", repo, exc)
+                return {"success": False, "runs": [], "error": str(exc)}
+        if self._api_url:
+            return self._http_call("get_run_history", repo=repo, limit=limit)
+        return {"success": False, "runs": [], "error": "Pipeline engine unavailable"}
+
     def get_events(self, issue_id: str, limit: int = 20) -> dict[str, Any]:
         engine = self._get_engine()
         if engine and not self._api_url:
