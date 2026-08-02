@@ -802,6 +802,15 @@ export async function createApp(): Promise<express.Application> {
   // Linear OAuth — same pattern as GitHub OAuth
   app.use('/api/v1/auth/linear', linearOAuthRouter);
 
+  // SAML 2.0 SSO routes (mounted before the /api/v1 creditRouter catch-all,
+  // which applies requireAuth to every later /api/v1 path)
+  try {
+    const { default: samlRouter } = await import('./routes/saml.js');
+    app.use('/api/v1/saml', samlRouter);
+  } catch (err) {
+    log.warn({ err: String(err) }, 'SAML routes not available — skipping');
+  }
+
   app.use('/api/v1', slaRouter);
 
   // ── GDPR / Privacy API (right to erasure, portability, consent) ───────
@@ -1135,14 +1144,6 @@ export async function createApp(): Promise<express.Application> {
   // ── Legacy API router (mounts previously-dead routes/api.ts) ────
   const { apiRouter } = await import('./routes/api.js');
   app.use('/api/v1/legacy', apiRouter);
-
-  // SAML 2.0 SSO routes (optional)
-  try {
-    const { default: samlRouter } = await import('./routes/saml.js');
-    app.use('/api/v1/saml', samlRouter);
-  } catch (err) {
-    log.warn({ err: String(err) }, 'SAML routes not available — skipping');
-  }
 
   // Enterprise routes (optional)
   try {

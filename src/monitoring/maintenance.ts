@@ -31,7 +31,8 @@ export function maintenanceMiddleware(
     return;
   }
   const isHealth = req.path.startsWith('/health') || req.path.startsWith('/api/v1/privacy');
-  if (isHealth) {
+  const isOps = req.path.startsWith('/api/v1/ops');
+  if (isHealth || isOps) {
     next();
     return;
   }
