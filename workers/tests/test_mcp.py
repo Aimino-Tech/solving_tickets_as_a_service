@@ -1,38 +1,11 @@
-"""Tests for STAS MCP server -- handlers, tools, and resources (AIM-2072)."""
+"""Tests for Syntaro MCP server -- handlers, tools, and resources (AIM-2072, AIM-4477)."""
 
 from __future__ import annotations
 
-import json
 import os
-import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-
-# ===========================================================================
-# Fixtures
-# ===========================================================================
-
-@pytest.fixture(autouse=True)
-def reset_registry():
-    """Reset the fix registry before each test."""
-    from syntaro_mcp.handlers import _reset_registry
-
-    _reset_registry()
-    yield
-    _reset_registry()
-
-
-@pytest.fixture
-def temp_registry_path():
-    """Use a temp file for the fix registry."""
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
-        path = f.name
-    os.environ["STAS_FIX_REGISTRY_PATH"] = path
-    yield path
-    os.unlink(path)
-    os.environ.pop("STAS_FIX_REGISTRY_PATH", None)
 
 
 # ===========================================================================
@@ -103,14 +76,14 @@ class TestRunFix:
     """syntaro_run_fix handler tests."""
 
     @pytest.mark.asyncio
-    async def test_success(self, temp_registry_path):
+    async def test_success(self, fake_pipeline):
         from syntaro_mcp.handlers import run_fix
 
         result = await run_fix("https://github.com/owner/repo/issues/42")
 
         assert result["success"] is True
         assert result["status"] == "queued"
-        assert result["run_id"].startswith("stas-")
+        assert result["run_id"].startswith("stas-fake")
         assert result["issue_url"] == "https://github.com/owner/repo/issues/42"
 
     @pytest.mark.asyncio
@@ -130,23 +103,44 @@ class TestRunFix:
         assert "required" in result["error"].lower()
 
     @pytest.mark.asyncio
-    async def test_persistence(self, temp_registry_path):
-        from syntaro_mcp.handlers import run_fix, check_status
-
-        run_result = await run_fix("https://github.com/a/b/issues/7")
-        run_id = run_result["run_id"]
-
-        status = await check_status(run_id)
-        assert status["success"] is True
-        assert status["status"] == "queued"
-        assert status["issue_url"] == "https://github.com/a/b/issues/7"
-
-    @pytest.mark.asyncio
-    async def test_enqueue_offline(self, temp_registry_path):
+    async def test_offline_reports_unavailable(self, monkeypatch):
+        """Without a pipeline engine or API URL, run_fix reports unavailable (AIM-4477)."""
         from syntaro_mcp.handlers import run_fix
 
+        class OfflinePipeline:
+            def submit_fix(self, **kwargs):
+                return {
+                    "success": False,
+                    "run_id": "stas-offline",
+                    "status": "unavailable",
+                    "error": "No pipeline engine or API URL configured",
+                }
+
+        monkeypatch.setattr("syntaro_mcp.handlers._pipeline", OfflinePipeline())
         result = await run_fix("https://github.com/owner/repo/issues/1")
+        assert result["success"] is False
+        assert result["status"] == "unavailable"
+
+    @pytest.mark.asyncio
+    async def test_api_fallback(self, monkeypatch):
+        """When the pipeline client fails, run_fix falls back to the STAS API (AIM-4477)."""
+        from syntaro_mcp.handlers import run_fix
+
+        class FailingPipeline:
+            def submit_fix(self, **kwargs):
+                return {"success": False, "error": "engine down"}
+
+        monkeypatch.setattr("syntaro_mcp.handlers._pipeline", FailingPipeline())
+
+        async def fake_api(method, path, json_body=None):
+            assert method == "POST"
+            assert path == "/mcp/submit_issue"
+            return {"runId": "api-run-1"}
+
+        monkeypatch.setattr("syntaro_mcp.handlers._call_api", fake_api)
+        result = await run_fix("https://github.com/owner/repo/issues/42")
         assert result["success"] is True
+        assert result["run_id"] == "api-run-1"
         assert result["status"] == "queued"
 
 
@@ -154,12 +148,12 @@ class TestCheckStatus:
     """syntaro_check_status handler tests."""
 
     @pytest.mark.asyncio
-    async def test_not_found(self):
+    async def test_not_found(self, fake_pipeline):
         from syntaro_mcp.handlers import check_status
 
         result = await check_status("non-existent-run")
         assert result["success"] is False
-        assert "not found" in result["error"]
+        assert "unavailable" in result["error"]
 
     @pytest.mark.asyncio
     async def test_empty(self):
@@ -167,9 +161,10 @@ class TestCheckStatus:
 
         result = await check_status("")
         assert result["success"] is False
+        assert "required" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_found(self, temp_registry_path):
+    async def test_found(self, fake_pipeline):
         from syntaro_mcp.handlers import check_status, run_fix
 
         run = await run_fix("https://github.com/x/y/issues/3")
@@ -182,14 +177,17 @@ class TestGetPR:
     """syntaro_get_pr handler tests."""
 
     @pytest.mark.asyncio
-    async def test_not_found(self):
+    async def test_not_found(self, fake_pipeline):
+        """Unknown run: no PR yet, not an error."""
         from syntaro_mcp.handlers import get_pr
 
         result = await get_pr("missing-run")
-        assert result["success"] is False
+        assert result["success"] is True
+        assert result["pr_url"] is None
+        assert "No PR" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_no_pr_yet(self, temp_registry_path):
+    async def test_no_pr_yet(self, fake_pipeline):
         from syntaro_mcp.handlers import get_pr, run_fix
 
         run = await run_fix("https://github.com/o/r/issues/5")
@@ -197,6 +195,22 @@ class TestGetPR:
         assert result["success"] is True
         assert result["pr_url"] is None
         assert "No PR" in result["message"]
+
+    @pytest.mark.asyncio
+    async def test_with_pr(self, fake_pipeline):
+        from syntaro_mcp.handlers import get_pr
+
+        fake_pipeline.add_run(
+            "r1",
+            status="completed",
+            issue_url="https://github.com/o/r/issues/9",
+            pr_url="https://github.com/o/r/pull/9",
+            pr_number=9,
+        )
+        result = await get_pr("r1")
+        assert result["success"] is True
+        assert result["pr_url"] == "https://github.com/o/r/pull/9"
+        assert result["pr_number"] == 9
 
 
 # ===========================================================================
@@ -214,7 +228,7 @@ class TestFastMCPServer:
         assert SERVER_NAME == "syntaro-agent-discovery"
 
     def test_tools_registered(self):
-        """All four tools are registered with correct names."""
+        """Fix-pipeline tools are registered with correct names."""
         from syntaro_mcp.server import mcp
 
         tool_names = [t.name for t in mcp._tool_manager.list_tools()]
@@ -240,18 +254,27 @@ class TestFastMCPServer:
 
     @pytest.mark.asyncio
     async def test_tool_listing(self):
-        """list_tools() returns all four tools."""
+        """list_tools() returns all 12 tools (AIM-4477)."""
         from syntaro_mcp.server import mcp
 
         tools = await mcp.list_tools()
         names = [t.name for t in tools]
-        assert len(names) == 6
-        assert "syntaro_label_issue" in names
-        assert "syntaro_run_fix" in names
-        assert "syntaro_check_status" in names
-        assert "syntaro_get_pr" in names
-        assert "list_issues" in names
-        assert "search_codebase" in names
+        assert len(names) == 12
+        for expected in (
+            "syntaro_label_issue",
+            "syntaro_run_fix",
+            "syntaro_check_status",
+            "syntaro_get_pr",
+            "list_issues",
+            "search_codebase",
+            "linear_ticket",
+            "linear_create_ticket",
+            "memory_read",
+            "memory_write",
+            "slack_send",
+            "session_resume",
+        ):
+            assert expected in names
 
     @pytest.mark.asyncio
     async def test_resource_template_listing(self):

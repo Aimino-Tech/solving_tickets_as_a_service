@@ -166,6 +166,31 @@ class PipelineClient:
             return self._http_call("cancel_fix", issue_id=issue_id)
         return {"success": False, "error": "Pipeline engine unavailable"}
 
+    def get_run_history(self, repo: str | None = None, limit: int = 10) -> dict[str, Any]:
+        """Return recent fix runs, optionally filtered by repository.
+
+        Used by the ``list_issues`` / ``search_codebase`` MCP tools and the
+        JSON-RPC ``handle_get_fix_history`` bridge. Mirrors the engine/HTTP
+        fallback pattern of the other client methods.
+        """
+        engine = self._get_engine()
+        if engine and not self._api_url and hasattr(engine, "get_run_history"):
+            try:
+                result = engine.get_run_history(repo=repo, limit=limit)
+                if isinstance(result, list):
+                    runs = result
+                elif isinstance(result, dict):
+                    runs = result.get("runs", [])
+                else:
+                    runs = getattr(result, "runs", [])
+                return {"success": True, "runs": runs, "total": len(runs)}
+            except Exception as exc:
+                logger.error("Run history fetch failed: %s", exc)
+                return {"success": False, "runs": [], "error": str(exc)}
+        if self._api_url:
+            return self._http_call("get_run_history", repo=repo, limit=limit)
+        return {"success": False, "runs": [], "error": "Pipeline engine unavailable"}
+
 
 _client: PipelineClient | None = None
 
