@@ -1,11 +1,13 @@
 /**
  * MCP API key service — per-user API keys for agent access via MCP.
  *
- * Keys are generated as `sk-stas_<32 hex>` and stored only as a SHA-256 hash.
- * The plaintext key is shown exactly once at creation.
+ * Keys are generated as `sk-stas_<32 hex>` and stored as a SHA-256 hash
+ * (key_hash, for lookup) plus an AES-256-GCM encrypted copy (key_encrypted,
+ * so the Settings UI can reveal the full key on demand).
  */
 
-import { createHash, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync } from 'node:crypto';
+import { config } from '../config.js';
 import { queryWithRetry } from '../db/connection.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -21,6 +23,8 @@ export interface McpApiKeyRecord {
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
+  /** true when the full key can be revealed (created after encrypted storage was added). */
+  revealable: boolean;
 }
 
 interface DbKeyRow {
@@ -31,6 +35,7 @@ interface DbKeyRow {
   created_at: string;
   last_used_at: string | null;
   revoked_at: string | null;
+  key_encrypted: string | null;
 }
 
 function rowToRecord(row: DbKeyRow): McpApiKeyRecord {
@@ -42,6 +47,7 @@ function rowToRecord(row: DbKeyRow): McpApiKeyRecord {
     createdAt: row.created_at,
     lastUsedAt: row.last_used_at,
     revokedAt: row.revoked_at,
+    revealable: !!row.key_encrypted,
   };
 }
 
@@ -51,19 +57,51 @@ export function generateKey(): { key: string; prefix: string } {
   return { key, prefix: key.slice(0, MCP_KEY_PREFIX.length + 8) };
 }
 
-/** SHA-256 hash of a key — the only thing persisted. */
+/** SHA-256 hash of a key — used for lookup (never reversible). */
 export function hashKey(key: string): string {
   return createHash('sha256').update(key).digest('hex');
+}
+
+/** AES-256-GCM key derived from the server JWT secret (stable, 32 bytes). */
+function deriveEncryptionKey(): Buffer {
+  return scryptSync(config.auth.jwtSecret, 'stas-mcp-key-encryption', 32);
+}
+
+/** Encrypt a key at rest. Returns `${ivBase64}:${authTag+ciphertextBase64}`. */
+function encryptKey(key: string): string {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', deriveEncryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(key, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return `${iv.toString('base64')}:${Buffer.concat([authTag, encrypted]).toString('base64')}`;
+}
+
+/** Decrypt a key previously stored by encryptKey. Returns null on failure. */
+function decryptKey(payload: string): string | null {
+  try {
+    const [ivB64, dataB64] = payload.split(':');
+    if (!ivB64 || !dataB64) return null;
+    const iv = Buffer.from(ivB64, 'base64');
+    const data = Buffer.from(dataB64, 'base64');
+    const authTag = data.subarray(0, 16);
+    const ciphertext = data.subarray(16);
+    const decipher = createDecipheriv('aes-256-gcm', deriveEncryptionKey(), iv);
+    decipher.setAuthTag(authTag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+  } catch {
+    return null;
+  }
 }
 
 export async function createMcpKey(userId: string, name: string): Promise<{ record: McpApiKeyRecord; key: string }> {
   const { key, prefix } = generateKey();
   const keyHash = hashKey(key);
+  const keyEncrypted = encryptKey(key);
   const result = await queryWithRetry<DbKeyRow>(
-    `INSERT INTO mcp_api_keys (user_id, name, key_hash, key_prefix)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO mcp_api_keys (user_id, name, key_hash, key_prefix, key_encrypted)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [userId, name, keyHash, prefix],
+    [userId, name, keyHash, prefix, keyEncrypted],
   );
   const record = rowToRecord(result.rows[0]);
   log.info({ keyId: record.id, userId }, 'MCP API key created');
@@ -72,9 +110,9 @@ export async function createMcpKey(userId: string, name: string): Promise<{ reco
 
 export async function listMcpKeys(userId: string): Promise<McpApiKeyRecord[]> {
   const result = await queryWithRetry<DbKeyRow>(
-    `SELECT id, user_id, name, key_prefix, created_at, last_used_at, revoked_at
+    `SELECT id, user_id, name, key_prefix, created_at, last_used_at, revoked_at, key_encrypted
      FROM mcp_api_keys
-     WHERE user_id = $1
+     WHERE user_id = $1 AND revoked_at IS NULL
      ORDER BY created_at DESC`,
     [userId],
   );
@@ -103,6 +141,23 @@ export async function revokeMcpKey(userId: string, keyId: string): Promise<boole
   );
   if (result.rows[0]) log.info({ keyId, userId }, 'MCP API key revoked');
   return result.rows.length > 0;
+}
+
+/**
+ * Reveal the plaintext of a key owned by the user. Returns null when the key
+ * is not found, belongs to another user, is revoked, or predates encrypted
+ * storage (legacy rows have no key_encrypted and cannot be revealed).
+ */
+export async function getMcpKeyPlaintext(userId: string, keyId: string): Promise<string | null> {
+  const result = await queryWithRetry<{ key_encrypted: string | null }>(
+    `SELECT key_encrypted
+     FROM mcp_api_keys
+     WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL`,
+    [keyId, userId],
+  );
+  const row = result.rows[0];
+  if (!row?.key_encrypted) return null;
+  return decryptKey(row.key_encrypted);
 }
 
 /**

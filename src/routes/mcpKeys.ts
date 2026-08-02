@@ -4,6 +4,7 @@
  * Authenticated with the dashboard JWT (requireAuth). Serves:
  *   GET    /api/v1/mcp-keys        — list my keys
  *   POST   /api/v1/mcp-keys        — create a key (full key returned once)
+ *   GET    /api/v1/mcp-keys/:id    — reveal the full key (show/hide in UI)
  *   PATCH  /api/v1/mcp-keys/:id    — rename a key
  *   DELETE /api/v1/mcp-keys/:id    — revoke (soft-delete) a key
  */
@@ -11,7 +12,7 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../auth/middleware.js';
-import { createMcpKey, listMcpKeys, renameMcpKey, revokeMcpKey } from '../services/mcpKeys.js';
+import { createMcpKey, getMcpKeyPlaintext, listMcpKeys, renameMcpKey, revokeMcpKey } from '../services/mcpKeys.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'mcp-keys-routes' });
@@ -53,6 +54,21 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to create MCP key');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /:id — reveal the full key (show/hide in the Settings UI)
+router.get('/:id', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const key = await getMcpKeyPlaintext(req.user!.id, req.params.id);
+    if (!key) {
+      res.status(404).json({ error: 'This key was created before secure reveal was enabled, so it cannot be shown again. Create a new key to view and copy it.' });
+      return;
+    }
+    res.json({ key });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to reveal MCP key');
     res.status(500).json({ error: 'Internal server error' });
   }
 });

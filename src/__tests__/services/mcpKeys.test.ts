@@ -106,6 +106,7 @@ describe('mcpKeys service', () => {
         createdAt: '2026-07-31T00:00:00.000Z',
         lastUsedAt: null,
         revokedAt: null,
+        revealable: false,
       });
     });
   });
