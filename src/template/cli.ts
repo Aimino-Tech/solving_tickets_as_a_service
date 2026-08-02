@@ -395,6 +395,13 @@ export async function parseArgs(): Promise<void> {
     }
 
     if (command === "quickstart") {
+      const unknownFlags = args.slice(1).filter((f) => f !== "--skip-prompts");
+      if (unknownFlags.length > 0) {
+        console.error(`Unknown flag for quickstart: ${unknownFlags.join(", ")}`);
+        console.error("Run 'stas --help' for usage.");
+        process.exit(2);
+      }
+
       const skipPrompts = args.includes("--skip-prompts");
       const result = await runQuickstart({ skipPrompts });
       if (result.prUrl !== null) {

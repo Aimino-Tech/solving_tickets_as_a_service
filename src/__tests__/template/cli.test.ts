@@ -418,4 +418,18 @@ describe("quickstart routing (--skip-prompts)", () => {
     expect(runQuickstart).toHaveBeenCalledWith({ skipPrompts: true });
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
+
+  it("exits 2 on an unknown quickstart flag instead of invoking runQuickstart", async () => {
+    process.argv = ["node", "cli.ts", "quickstart", "--bogus"];
+    // The shared exit spy is a no-op, which would let execution fall through
+    // the guard; throwing mimics a real process halting at process.exit.
+    exitSpy.mockImplementation(((code) => {
+      throw new Error(`exit ${code}`);
+    }) as never);
+
+    await expect(parseArgs()).rejects.toThrow("exit 2");
+
+    expect(runQuickstart).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("Unknown flag for quickstart"));
+  });
 });
