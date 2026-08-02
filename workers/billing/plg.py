@@ -684,7 +684,7 @@ def get_dashboard_data(tenant_id: str, limit: int = 10) -> dict[str, Any]:
     try:
         import httpx as _httpx
 
-        stas_api_url = os.getenv("STAS_API_URL", "http://localhost:3000")
+        stas_api_url = os.getenv("STAS_API_URL", "https://api.stas.aimino.io")
         runs_resp = _httpx.get(
             f"{stas_api_url}/api/runs",
             params={"limit": limit, "tenantId": tenant_id},

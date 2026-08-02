@@ -25,7 +25,7 @@ STAS_PLANS: list[PlanEntry] = [
 
 class STASEngine:
     def __init__(self, api_url: Optional[str] = None, api_key: Optional[str] = None):
-        self._api_url = (api_url or os.getenv("STAS_API_URL", "http://localhost:3000")).rstrip("/")
+        self._api_url = (api_url or os.getenv("STAS_API_URL", "https://api.stas.aimino.io")).rstrip("/")
         self._api_key = api_key or os.getenv("STAS_API_KEY", "")
         self._http: Optional[httpx.AsyncClient] = None
     async def _get_http(self) -> httpx.AsyncClient:

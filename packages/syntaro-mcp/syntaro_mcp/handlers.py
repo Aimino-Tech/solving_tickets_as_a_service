@@ -23,7 +23,7 @@ from workers.pipeline_client import get_client
 logger = logging.getLogger(__name__)
 
 GITHUB_API_BASE = os.getenv("GITHUB_API_BASE", "https://api.github.com")
-STAS_API_URL = os.getenv("STAS_API_URL", "http://localhost:3000")
+STAS_API_URL = os.getenv("STAS_API_URL", "https://api.stas.aimino.io")
 STAS_API_KEY = os.getenv("STAS_API_KEY", "")
 
 _pipeline = get_client()

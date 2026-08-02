@@ -48,7 +48,7 @@ npx -y @aimino/syntaro-mcp streamable-http
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `STAS_MCP_PORT` | `4095` | Port for SSE/HTTP transport |
-| `STAS_API_URL` | `http://localhost:3000` | STAS API backend URL |
+| `STAS_API_URL` | `https://api.stas.aimino.io` | STAS API backend URL |
 | `STAS_API_KEY` | — | API key for STAS backend authentication |
 
 ## Tools
