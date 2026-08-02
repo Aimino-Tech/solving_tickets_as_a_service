@@ -500,6 +500,11 @@ configRouter.get('/', (_req: Request, res: Response) => {
       },
     ];
 
+    // SaaS base URL for MCP clients — must never fall back to a localhost dev URL.
+    const publicUrl = process.env.STAS_PUBLIC_URL || 'https://api.stas.aimino.io';
+    const mcpApiUrl = process.env.STAS_API_URL || 'https://api.stas.aimino.io';
+    const mcpServerUrl = process.env.STAS_MCP_SERVER_URL || '';
+
     res.json({
       env,
       rateLimits: [
@@ -511,6 +516,11 @@ configRouter.get('/', (_req: Request, res: Response) => {
       warnings: [],
       integrations,
       infrastructure: {},
+      publicUrl,
+      mcp: {
+        apiUrl: mcpApiUrl,
+        serverUrl: mcpServerUrl,
+      },
     });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to get config');

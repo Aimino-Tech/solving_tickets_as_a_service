@@ -449,6 +449,8 @@ export const configApi = {
       warnings: Array<{ id: string; type: 'rate_limit' | 'quota' | 'token_expiry' | 'system'; message: string; severity: 'info' | 'warning' | 'critical'; dismissed: boolean; createdAt: string }>;
       integrations: Array<{ id: string; name: string; icon: string; connected: boolean; configUrl?: string }>;
       infrastructure: Record<string, { provider: string; host: string; port: number; status: 'connected' | 'disconnected' | 'error' }>;
+      publicUrl?: string;
+      mcp?: { apiUrl: string; serverUrl: string };
     }>('/v1/config', opts),
   updateEnv: (env: Record<string, string>) =>
     request<{ success: boolean }>('/v1/config/env', {
@@ -490,6 +492,7 @@ export const mcpKeysApi = {
       method: 'PATCH',
       body: JSON.stringify({ name }),
     }),
+  get: (keyId: string) => request<{ key: string }>(`/v1/mcp-keys/${keyId}`),
   revoke: (keyId: string) => request<{ success: boolean }>(`/v1/mcp-keys/${keyId}`, { method: 'DELETE' }),
 };
 
