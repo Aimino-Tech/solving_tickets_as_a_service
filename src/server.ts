@@ -133,7 +133,7 @@ export async function createApp(): Promise<express.Application> {
     cors({
       origin: config.security.corsOrigin === '*' ? '*' : config.security.corsOrigin.split(',').map((s) => s.trim()),
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-request-id'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-api-key', 'x-request-id'],
       exposedHeaders: ['x-request-id'],
     }),
   );
