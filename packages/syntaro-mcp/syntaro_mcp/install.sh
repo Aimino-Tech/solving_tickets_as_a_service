@@ -18,6 +18,8 @@
 #   bash install.sh --mode sse         # Use SSE transport (default: stdio)
 #   bash install.sh --port 4095        # SSE port (default: 4095)
 #   bash install.sh --host 0.0.0.0     # SSE bind host (default: 0.0.0.0)
+#   bash install.sh --url https://api.stas.aimino.io   # Register REMOTE SSE server pointing at the SaaS URL
+#                                                     # (falls back to STAS_API_URL env; auth header from STAS_API_KEY)
 # ============================================================================
 
 set -euo pipefail
@@ -29,6 +31,7 @@ MCP_SERVER_NAME="stas-agent-discovery"
 MCP_TRANSPORT="${STAS_MCP_TRANSPORT:-stdio}"
 MCP_PORT="${STAS_MCP_PORT:-4095}"
 MCP_HOST="${STAS_MCP_HOST:-0.0.0.0}"
+MCP_URL="${STAS_API_URL:-}"
 
 # Config directories
 OPENCODE_CONFIG_DIR="${OPENCODE_CONFIG_DIR:-$HOME/.config/opencode}"
@@ -60,6 +63,7 @@ for arg in "$@"; do
         --mode) shift; MCP_TRANSPORT="$1" ;;
         --port) shift; MCP_PORT="$1" ;;
         --host) shift; MCP_HOST="$1" ;;
+        --url) shift; MCP_URL="$1" ;;
     esac
 done
 
@@ -87,7 +91,19 @@ install_opencode() {
     fi
 
     local server_config
-    if [ "$MCP_TRANSPORT" = "sse" ]; then
+    if [ -n "$MCP_URL" ]; then
+        server_config=$(cat <<EOF
+{
+  "name": "$MCP_SERVER_NAME",
+  "transport": "sse",
+  "url": "$MCP_URL/sse",
+  "headers": {
+    "Authorization": "Bearer ${STAS_API_KEY:-}"
+  }
+}
+EOF
+)
+    elif [ "$MCP_TRANSPORT" = "sse" ]; then
         server_config=$(cat <<EOF
 {
   "name": "$MCP_SERVER_NAME",
@@ -165,7 +181,18 @@ install_claude() {
     local config_file="$CLAUDE_CONFIG_DIR/claude_desktop_config.json"
     mkdir -p "$CLAUDE_CONFIG_DIR"
     local server_config
-    if [ "$MCP_TRANSPORT" = "sse" ]; then
+    if [ -n "$MCP_URL" ]; then
+        server_config=$(cat <<EOF
+{
+  "type": "sse",
+  "url": "$MCP_URL/sse",
+  "headers": {
+    "Authorization": "Bearer ${STAS_API_KEY:-}"
+  }
+}
+EOF
+)
+    elif [ "$MCP_TRANSPORT" = "sse" ]; then
         server_config=$(cat <<EOF
 {
   "command": "$PYTHON_BIN",
@@ -205,7 +232,19 @@ install_cursor() {
     local config_file="$HOME/.cursor/mcp.json"
     mkdir -p "$HOME/.cursor"
     local server_config
-    if [ "$MCP_TRANSPORT" = "sse" ]; then
+    if [ -n "$MCP_URL" ]; then
+        server_config=$(cat <<EOF
+{
+  "name": "stas",
+  "transport": "sse",
+  "url": "$MCP_URL/sse",
+  "headers": {
+    "Authorization": "Bearer ${STAS_API_KEY:-}"
+  }
+}
+EOF
+)
+    elif [ "$MCP_TRANSPORT" = "sse" ]; then
         server_config=$(cat <<EOF
 {
   "name": "stas",
@@ -248,7 +287,18 @@ install_codex() {
     local config_file="$CODEX_CONFIG_DIR/config.json"
     mkdir -p "$CODEX_CONFIG_DIR"
     local server_config
-    if [ "$MCP_TRANSPORT" = "sse" ]; then
+    if [ -n "$MCP_URL" ]; then
+        server_config=$(cat <<EOF
+{
+  "transport": "sse",
+  "url": "$MCP_URL/sse",
+  "headers": {
+    "Authorization": "Bearer ${STAS_API_KEY:-}"
+  }
+}
+EOF
+)
+    elif [ "$MCP_TRANSPORT" = "sse" ]; then
         server_config=$(cat <<EOF
 {
   "transport": "sse",
@@ -391,6 +441,9 @@ echo "  python -m $MCP_MODULE stdio"
 echo ""
 echo "  # Run in SSE mode (for remote discovery):"
 echo "  python -m $MCP_MODULE sse --port $MCP_PORT"
+echo ""
+echo "  # Register a remote SaaS MCP server (agent connects over the internet):"
+echo "  bash install.sh --claude --url https://api.stas.aimino.io"
 echo ""
 echo "  # Verify:"
 echo "  python -m $MCP_MODULE stdio <<< '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'"

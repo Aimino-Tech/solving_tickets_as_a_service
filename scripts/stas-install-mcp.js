@@ -9,6 +9,7 @@
  *   npx stas install-mcp --cursor     # Cursor only
  *   npx stas install-mcp --codex      # Codex CLI only
  *   npx stas install-mcp --uninstall  # Remove from all agents
+ *   npx stas install-mcp --claude --url https://api.stas.aimino.io   # Remote SaaS MCP server
  *
  * This script resolves the project root and delegates to syntaro_mcp/install.sh.
  */

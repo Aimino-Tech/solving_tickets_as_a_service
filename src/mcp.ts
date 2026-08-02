@@ -30,7 +30,10 @@ const router: Router = Router();
 // ---------------------------------------------------------------------------
 
 router.get('/mcp/discovery', (_req: Request, res: Response) => {
-  const mcpServerUrl = config.mcp.serverUrl || `http://localhost:${config.mcp.port}`;
+  const mcpServerUrl = process.env.STAS_MCP_SERVER_URL
+    || process.env.STAS_API_URL
+    || process.env.STAS_PUBLIC_URL
+    || `http://localhost:${config.mcp.port}`;
   const protocol = config.mcp.ssl.enabled ? 'https' : 'http';
 
   res.json({
