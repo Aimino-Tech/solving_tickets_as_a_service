@@ -29,8 +29,8 @@ export class AuthService {
     const { data, error } = await getSupabaseAdmin().auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
-      user_metadata: { ...(name ? { name } : {}), email_verified: false },
+      email_confirm: true,
+      user_metadata: { ...(name ? { name } : {}), email_verified: true },
     });
     if (error) {
       const status =
@@ -51,7 +51,7 @@ export class AuthService {
     );
 
     const tokens = this.generateTokens(user.id, user.email!, name ?? null);
-    return { ...tokens, user: { ...tokens.user, emailVerified: false }, verificationToken };
+    return { ...tokens, user: { ...tokens.user, emailVerified: true }, verificationToken };
   }
 
   generateVerificationToken(userId: string, email: string): string {
