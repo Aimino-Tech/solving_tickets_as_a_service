@@ -3,7 +3,7 @@ import { detectLocale, createT, type Locale, type I18nContextValue } from './i18
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-const LOCALE_KEY = 'stas-locale';
+const LOCALE_KEY = 'syntaro-locale';
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const detected = detectLocale();

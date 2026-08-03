@@ -90,7 +90,7 @@ def _post_injection_comment(issue_id: str, result: InjectionGuardResult, config:
         if severity in ("critical", "high"):
             body = (
                 f"### 🚨 Prompt Injection Detected\n\n"
-                f"**STAS** has detected a potential prompt injection attempt "
+                f"**SYNTARO** has detected a potential prompt injection attempt "
                 f"in this issue.\n\n"
                 f"- **Severity**: {severity}\n"
                 f"- **Score**: {score:.2f}\n"
@@ -101,7 +101,7 @@ def _post_injection_comment(issue_id: str, result: InjectionGuardResult, config:
         else:
             body = (
                 f"### ⚠️ Potential Prompt Injection\n\n"
-                f"**STAS** has flagged a possible prompt injection pattern.\n\n"
+                f"**SYNTARO** has flagged a possible prompt injection pattern.\n\n"
                 f"- **Severity**: {severity}\n"
                 f"- **Score**: {score:.2f}\n"
                 f"- **Patterns**: `{patterns_str}`\n\n"

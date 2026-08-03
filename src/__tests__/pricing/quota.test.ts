@@ -16,7 +16,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 vi.mock('../../config.js', () => ({
   config: {
     queue: { redisUrl: 'redis://localhost:6379' },
-    stas: { monthlyQuotaEnabled: true },
+    syntaro: { monthlyQuotaEnabled: true },
   },
 }));
 
@@ -76,17 +76,17 @@ import {
 describe('buildQuotaKey', () => {
   it('returns correct key format for a given date', () => {
     const date = new Date('2026-06-05T12:00:00Z');
-    expect(buildQuotaKey(12345, date)).toBe('stas:quotas:12345:2026-06');
+    expect(buildQuotaKey(12345, date)).toBe('syntaro:quotas:12345:2026-06');
   });
 
   it('pads month to two digits', () => {
     const date = new Date('2026-01-15T00:00:00Z');
-    expect(buildQuotaKey(1, date)).toBe('stas:quotas:1:2026-01');
+    expect(buildQuotaKey(1, date)).toBe('syntaro:quotas:1:2026-01');
   });
 
   it('uses current date when no date provided', () => {
     const key = buildQuotaKey(999);
-    expect(key).toMatch(/^stas:quotas:999:\d{4}-\d{2}$/);
+    expect(key).toMatch(/^syntaro:quotas:999:\d{4}-\d{2}$/);
   });
 });
 
@@ -198,11 +198,11 @@ describe('resetMonthlyQuotas', () => {
 
   it('scans and deletes all quota keys', async () => {
     mockRedisClient.scan
-      .mockResolvedValueOnce(['0', ['stas:quotas:12345:2026-06', 'stas:quotas:67890:2026-06']]);
+      .mockResolvedValueOnce(['0', ['syntaro:quotas:12345:2026-06', 'syntaro:quotas:67890:2026-06']]);
     mockRedisClient.del.mockResolvedValue(2);
 
     await expect(resetMonthlyQuotas()).resolves.toBeUndefined();
-    expect(mockRedisClient.del).toHaveBeenCalledWith('stas:quotas:12345:2026-06', 'stas:quotas:67890:2026-06');
+    expect(mockRedisClient.del).toHaveBeenCalledWith('syntaro:quotas:12345:2026-06', 'syntaro:quotas:67890:2026-06');
   });
 
   it('handles empty scan result', async () => {
@@ -224,7 +224,7 @@ describe('getGlobalMonthlyUsage', () => {
   });
 
   it('sums usage across all accounts', async () => {
-    mockRedisClient.scan.mockResolvedValueOnce(['0', ['stas:quotas:1:2026-06', 'stas:quotas:2:2026-06']]);
+    mockRedisClient.scan.mockResolvedValueOnce(['0', ['syntaro:quotas:1:2026-06', 'syntaro:quotas:2:2026-06']]);
     mockRedisClient.zcard.mockResolvedValueOnce(5).mockResolvedValueOnce(3);
 
     const total = await getGlobalMonthlyUsage();

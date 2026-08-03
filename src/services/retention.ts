@@ -166,7 +166,7 @@ async function archiveToS3Staging(
 ): Promise<string> {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `archive-${table}-${cutoffDate.toISOString().slice(0, 10)}-${timestamp}.json`;
-  const archiveDir = process.env.BACKUP_DIR || '/tmp/stas-archives';
+  const archiveDir = process.env.BACKUP_DIR || '/tmp/syntaro-archives';
 
   const { mkdirSync } = await import('node:fs');
   mkdirSync(archiveDir, { recursive: true });

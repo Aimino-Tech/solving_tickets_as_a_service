@@ -40,7 +40,7 @@ def _move_pending_to_hold(app: Any) -> dict[str, int]:
         "CELERY_BROKER_URL",
         os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672//"),
     )
-    exchange = Exchange("stas", type="direct")
+    exchange = Exchange("syntaro", type="direct")
     moved: dict[str, int] = {}
 
     try:

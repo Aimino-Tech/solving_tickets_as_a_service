@@ -24,14 +24,14 @@ export default function Complete({ progress }: Props) {
           <h3 className="font-semibold text-gray-900">1. Label an issue</h3>
           <p className="mt-1 text-sm text-gray-500">
             Go to any GitHub issue in your connected repository and add the label{' '}
-            <code className="rounded bg-gray-200 px-1 py-0.5 text-sm font-semibold text-brand-600">stas:fix</code>.
+            <code className="rounded bg-gray-200 px-1 py-0.5 text-sm font-semibold text-brand-600">syntaro:fix</code>.
           </p>
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
           <h3 className="font-semibold text-gray-900">2. Watch the magic happen</h3>
           <p className="mt-1 text-sm text-gray-500">
-            STAS will automatically investigate the issue, write a fix, run tests, and open a pull request.
+            SYNTARO will automatically investigate the issue, write a fix, run tests, and open a pull request.
           </p>
         </div>
 

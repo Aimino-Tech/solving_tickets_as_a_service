@@ -1,4 +1,4 @@
-# STAS Business Strategy
+# SYNTARO Business Strategy
 
 > **Resolved model: Option 1 — Keep both OSS self-host and SaaS, but gate.**
 >
@@ -11,20 +11,20 @@
 
 **Every competitor wraps Claude/GPT.** Plip, TaskBounty, KintsugiBot, Open SWE, OpenRonin — all are prompt engineering around frontier models anyone can rent.
 
-STAS differentiates on **execution quality, not model exclusivity**. Powered by OpenCode's battle-tested agent harness with frontier models (claude-sonnet-4, GPT-4o), we deliver:
+SYNTARO differentiates on **execution quality, not model exclusivity**. Powered by OpenCode's battle-tested agent harness with frontier models (claude-sonnet-4, GPT-4o), we deliver:
 
 - **Turnkey deployment** — one-click GitHub App install vs DIY agent setup
 - **Higher pass rate** through better prompt engineering and multi-phase verification
 - **Lower total cost** through model cascade routing and caching
 - **Open-source trust** — fully MIT-licensed, self-hostable, no vendor lock-in
 
-The moat is the **integrated pipeline**: webhook → triage → sandbox → agent → verification → PR. Every competitor builds pieces; STAS delivers the complete, production-ready system.
+The moat is the **integrated pipeline**: webhook → triage → sandbox → agent → verification → PR. Every competitor builds pieces; SYNTARO delivers the complete, production-ready system.
 
 ---
 
 ## Resolved Business Model: Option 1
 
-After evaluating three options, STAS adopts **Option 1 — keep both OSS self-host and SaaS, but gate each path to paid plans.**
+After evaluating three options, SYNTARO adopts **Option 1 — keep both OSS self-host and SaaS, but gate each path to paid plans.**
 
 ### Why Option 1?
 
@@ -38,7 +38,7 @@ After evaluating three options, STAS adopts **Option 1 — keep both OSS self-ho
 
 ```
                     ┌──────────────────────────────────┐
-                    │      DISCOVER STAS               │
+                    │      DISCOVER SYNTARO               │
                     │  GitHub / HN / Reddit / Word of   │
                     │  mouth                            │
                     └──────────┬───────────────────────┘
@@ -124,9 +124,9 @@ After evaluating three options, STAS adopts **Option 1 — keep both OSS self-ho
 | BugStack | ❌ | $79/mo | $499/mo | Runtime error focused |
 | Debugger.ai | Limited scans | $19/mo | $4,999/mo | Scan focused, not agentic |
 | KintsugiBot | ✅ (self-host) | — | — | OSS only, no SaaS |
-| **STAS** | **✅ Self-host unlimited + Cloud 10/mo** | **$49/mo** | **$149/mo** | **Best value — OpenCode + frontier models** |
+| **SYNTARO** | **✅ Self-host unlimited + Cloud 10/mo** | **$49/mo** | **$149/mo** | **Best value — OpenCode + frontier models** |
 
-STAS is the **only option** with both a free self-host (unlimited) and a free cloud tier.
+SYNTARO is the **only option** with both a free self-host (unlimited) and a free cloud tier.
 
 ---
 
@@ -139,9 +139,9 @@ From XOR benchmark (real API costs, not estimates):
 | Claude Opus 4.5 (direct API) | $2.64 | 45.7% | $2.64 |
 | GPT-5.5 (DeepSWE) | $5.80 | 70.0% | $8.29 |
 | OpenCode + Opus 4.6 | $51.88 | 47.5% | $109.22 |
-| **STAS (OpenCode + claude-sonnet-4)** | **$3.80** | **92%** | **$3.80** |
+| **SYNTARO (OpenCode + claude-sonnet-4)** | **$3.80** | **92%** | **$3.80** |
 
-STAS achieves 92% pass rate at $3.80/fix by combining OpenCode's agent harness with effective model routing and prompt optimization.
+SYNTARO achieves 92% pass rate at $3.80/fix by combining OpenCode's agent harness with effective model routing and prompt optimization.
 
 ---
 
@@ -156,7 +156,7 @@ STAS achieves 92% pass rate at $3.80/fix by combining OpenCode's agent harness w
                                │
                     ┌──────────▼──────────┐
                     │  LANDING            │
-                    │  stas.dev           │
+                    │  syntaro.dev           │
                     │  See "Self-Host vs  │
                     │  Cloud Free vs Paid"│
                     └──────────┬──────────┘
@@ -207,14 +207,14 @@ STAS achieves 92% pass rate at $3.80/fix by combining OpenCode's agent harness w
 - Ship open-source bot to GitHub (MIT)
 - Post on Hacker News: "I built a bot that fixes GitHub issues with AI"
 - Reddit r/programming, r/MachineLearning
-- Built-in spread: every PR says "Fixed by STAS" at the bottom
+- Built-in spread: every PR says "Fixed by SYNTARO" at the bottom
 - DevRel: written guides, architecture breakdowns
 
 ### Phase 2 — Organic growth
 - Open-source installs drive awareness
 - Word of mouth from "it fixed my bug overnight"
 - Hacker News launch when OSS hits 500+ stars
-- Benchmark comparisons showing STAS performance
+- Benchmark comparisons showing SYNTARO performance
 - Cloud Free (10 fixes/mo) is low-friction trial — no credit card required
 
 ### Phase 3 — Paid conversion
@@ -260,9 +260,9 @@ Standard SaaS unit economics — subsidize acquisition with Free/Solo, monetize 
 
 | Threat | Defense |
 |---|---|
-| Competitors improve | Moat is integrated pipeline quality, not model exclusivity. STAS's multi-phase verification, sandbox isolation, and testing gate are production-hardened. |
+| Competitors improve | Moat is integrated pipeline quality, not model exclusivity. SYNTARO's multi-phase verification, sandbox isolation, and testing gate are production-hardened. |
 | GitHub builds this natively | They own the platform. But we build for agent quality; they build for platform breadth. Open-source trust matters. |
-| OpenCode alternative | People can use opencode CLI directly. STAS adds the trigger, sandbox, status UI, PR pipeline, and hosted option — a complete product. |
+| OpenCode alternative | People can use opencode CLI directly. SYNTARO adds the trigger, sandbox, status UI, PR pipeline, and hosted option — a complete product. |
 | Price war | We can match any price because our cost structure is transparent and optimizable. Open source means no ransom. |
 | Copycats | Code is OSS. The moat is the pipeline quality, not the connector code. Enterprises pay for trust, SLAs, and support. |
 | Self-host users never convert | Option 1 addresses this: no dashboard, no audit log, community-only support are real pain points at scale. |

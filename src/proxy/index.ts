@@ -1,5 +1,5 @@
 /**
- * STAS Proxy Module — wires together rate limiting, model routing,
+ * SYNTARO Proxy Module — wires together rate limiting, model routing,
  * and GitHub Actions dispatch into a cohesive proxy layer.
  *
  * ── Features ─────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ import { rateLimitMiddleware } from '../ratelimit/middleware.js';
 import { ModelRouter, modelRouter } from './modelRouter.js';
 import { GitHubActionsDispatcher, githubActionsDispatcher } from './githubActionsDispatcher.js';
 
-const log = rootLogger.child({ module: 'stas-proxy' });
+const log = rootLogger.child({ module: 'syntaro-proxy' });
 
 // ---------------------------------------------------------------------------
 // Proxy interface
@@ -86,7 +86,7 @@ function initializeProxy(): ProxyModule {
       githubActionsDispatchEnabled,
       hasPat,
     },
-    'STAS Proxy module initializing',
+    'SYNTARO Proxy module initializing',
   );
 
   if (!modelRouterEnabled) {

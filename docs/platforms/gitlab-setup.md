@@ -4,19 +4,19 @@
 
 - A GitLab project (self-hosted or GitLab.com)
 - Maintainer or Owner access to the project
-- STAS instance running (see [DEVELOPMENT.md](../../DEVELOPMENT.md))
+- SYNTARO instance running (see [DEVELOPMENT.md](../../DEVELOPMENT.md))
 
 ## Step 1: Create a Project Access Token
 
 1. Go to **Settings → Access Tokens** in your GitLab project
 2. Create a token with scopes: `api`, `read_api`, `read_repository`, `write_repository`
-3. Name it `stas-bot` and set an expiration date
+3. Name it `syntaro-bot` and set an expiration date
 4. Copy the token value immediately
 
 ## Step 2: Configure Webhooks
 
 1. Go to **Settings → Webhooks** in your GitLab project
-2. Add a webhook with URL: `https://your-stas-instance.com/webhook/gitlab`
+2. Add a webhook with URL: `https://your-syntaro-instance.com/webhook/gitlab`
 3. Select triggers:
    - Merge request events
    - Issue events
@@ -26,7 +26,7 @@
 
 ### Webhook Verification
 
-GitLab uses HMAC-SHA256 verification with the secret token sent in the `X-Gitlab-Token` header. STAS verifies this token on every incoming webhook.
+GitLab uses HMAC-SHA256 verification with the secret token sent in the `X-Gitlab-Token` header. SYNTARO verifies this token on every incoming webhook.
 
 ## Step 3: Configure CI Variables
 
@@ -34,7 +34,7 @@ Add these variables to **Settings → CI/CD → Variables**:
 
 | Variable | Value |
 |----------|-------|
-| `STAS_API_KEY` | Your STAS API key |
+| `SYNTARO_API_KEY` | Your SYNTARO API key |
 | `GITLAB_TOKEN` | The project access token from Step 1 |
 
 ## Step 4: Runner Requirements

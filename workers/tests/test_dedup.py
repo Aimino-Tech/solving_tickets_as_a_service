@@ -82,7 +82,7 @@ class TestDedupManager:
         with patch.object(dm._get_client(), "set", side_effect=tracking_set) as mock_set:
             dm.acquire("issue-ttl", ttl=7200)
             mock_set.assert_called_once_with(
-                "stas:dedup:issue-ttl", "1", nx=True, ex=7200
+                "syntaro:dedup:issue-ttl", "1", nx=True, ex=7200
             )
 
     def test_acquire_fails_open_on_redis_error(self, dm):
@@ -104,7 +104,7 @@ class TestDedupManager:
         with patch.object(dm._get_client(), "set", return_value=True) as mock_set:
             dm.acquire("my-issue")
             mock_set.assert_called_once_with(
-                "stas:dedup:my-issue", "1", nx=True, ex=3600
+                "syntaro:dedup:my-issue", "1", nx=True, ex=3600
             )
 
     def test_dedup_manager_singleton(self):

@@ -13,35 +13,35 @@ from typing import Any
 # ── Scoring weights (must sum to 100) ──────────────────────────────────────
 
 SCORER_WEIGHT_TEST_INTEGRITY: float = float(
-    os.getenv("STAS_SCORER_WEIGHT_TEST_INTEGRITY", "25.0"),
+    os.getenv("SYNTARO_SCORER_WEIGHT_TEST_INTEGRITY", "25.0"),
 )
 """Weight for the test integrity dimension (0-100 contribution)."""
 
 SCORER_WEIGHT_HALLUCINATION_RISK: float = float(
-    os.getenv("STAS_SCORER_WEIGHT_HALLUCINATION_RISK", "25.0"),
+    os.getenv("SYNTARO_SCORER_WEIGHT_HALLUCINATION_RISK", "25.0"),
 )
 """Weight for hallucination/stub risk dimension."""
 
 SCORER_WEIGHT_DIFF_QUALITY: float = float(
-    os.getenv("STAS_SCORER_WEIGHT_DIFF_QUALITY", "25.0"),
+    os.getenv("SYNTARO_SCORER_WEIGHT_DIFF_QUALITY", "25.0"),
 )
 """Weight for diff cleanliness and structure dimension."""
 
 SCORER_WEIGHT_REGRESSION_SAFETY: float = float(
-    os.getenv("STAS_SCORER_WEIGHT_REGRESSION_SAFETY", "25.0"),
+    os.getenv("SYNTARO_SCORER_WEIGHT_REGRESSION_SAFETY", "25.0"),
 )
 """Weight for regression safety dimension."""
 
 
 # ── Quality thresholds ─────────────────────────────────────────────────────
 
-SCORER_PASS_THRESHOLD: float = float(os.getenv("STAS_SCORER_PASS_THRESHOLD", "70.0"))
+SCORER_PASS_THRESHOLD: float = float(os.getenv("SYNTARO_SCORER_PASS_THRESHOLD", "70.0"))
 """Score above which a fix is considered passing quality."""
 
-SCORER_WARN_THRESHOLD: float = float(os.getenv("STAS_SCORER_WARN_THRESHOLD", "50.0"))
+SCORER_WARN_THRESHOLD: float = float(os.getenv("SYNTARO_SCORER_WARN_THRESHOLD", "50.0"))
 """Score above which a fix passes but should be flagged for review."""
 
-SCORER_FAIL_THRESHOLD: float = float(os.getenv("STAS_SCORER_FAIL_THRESHOLD", "30.0"))
+SCORER_FAIL_THRESHOLD: float = float(os.getenv("SYNTARO_SCORER_FAIL_THRESHOLD", "30.0"))
 """Score below which a fix is rejected outright."""
 
 

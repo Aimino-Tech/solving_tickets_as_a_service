@@ -1,13 +1,13 @@
 {
   "meta": {
-    "title": "STAS Competitive Benchmark",
+    "title": "SYNTARO Competitive Benchmark",
     "description": "Head-to-head comparison of issue-to-PR automation tools across quality gates, cost, pass rates, and deployment options.",
     "lastUpdated": "2026-07-13",
     "source": "XOR benchmark, Gartner, internal evaluations, competitor public data"
   },
   "competitors": [
     {
-      "name": "STAS",
+      "name": "SYNTARO",
       "website": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
       "openSource": true,
       "selfHost": true,
@@ -91,8 +91,8 @@
   ],
   "methodology": {
     "benchmark": "XOR / DeepSWE benchmark suite — 500+ real-world GitHub issues across Python, TypeScript, Rust, and Go repositories. Each fix is scored on correctness, test pass rate, and code quality.",
-    "costModel": "STAS cost assumes hosted tier at projected pricing ($3–4/fix). Competitor costs from published pricing pages and community reports. BYO API costs exclude developer time and infrastructure overhead.",
-    "qualityGates": "STAS runs 6 deterministic gates before any PR is created. Other tools are assessed based on published documentation and codebase analysis.",
+    "costModel": "SYNTARO cost assumes hosted tier at projected pricing ($3–4/fix). Competitor costs from published pricing pages and community reports. BYO API costs exclude developer time and infrastructure overhead.",
+    "qualityGates": "SYNTARO runs 6 deterministic gates before any PR is created. Other tools are assessed based on published documentation and codebase analysis.",
     "date": "2026-07-13"
   }
 }

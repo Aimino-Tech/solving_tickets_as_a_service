@@ -85,7 +85,7 @@ export class PipelineExecutor {
 
     // If this is a pipeline template, resolve config from the issue body
     // and create a versioned PipelineConfigRun (AIM-2537).
-    if (this.templateName === 'stas:pipeline' || this.job.labels?.some((l) => l.startsWith('pipeline:') || l.startsWith('stas:pipeline'))) {
+    if (this.templateName === 'syntaro:pipeline' || this.job.labels?.some((l) => l.startsWith('pipeline:') || l.startsWith('syntaro:pipeline'))) {
       this.pipelineRun = this.resolvePipelineConfig();
       Object.assign(this.context, buildPipelineContext(this.pipelineRun));
     }

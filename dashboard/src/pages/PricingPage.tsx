@@ -77,7 +77,7 @@ export default function PricingPage() {
 
       <div className="card border-gray-200">
         <h3 className="text-xl font-bold text-gray-900">Cost Calculator</h3>
-        <p className="mt-1 text-sm text-gray-500">See how STAS compares to competitors.</p>
+        <p className="mt-1 text-sm text-gray-500">See how SYNTARO compares to competitors.</p>
         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
           <div className="space-y-6">
             <div>
@@ -128,7 +128,7 @@ export default function PricingPage() {
 
       {competitors.length > 0 && (
         <div>
-          <h3 className="text-xl font-bold text-gray-900">STAS vs Competitors</h3>
+          <h3 className="text-xl font-bold text-gray-900">SYNTARO vs Competitors</h3>
           <p className="mt-1 text-sm text-gray-500">Real benchmark data from XOR results.</p>
           <div className="mt-6 overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -144,14 +144,14 @@ export default function PricingPage() {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {competitors.map((c) => {
-                  const isStas = c.competitor.startsWith('STAS');
+                  const isSyntaro = c.competitor.startsWith('SYNTARO');
                   return (
-                    <tr key={c.competitor} className={isStas ? 'bg-brand-50' : 'hover:bg-gray-50'}>
+                    <tr key={c.competitor} className={isSyntaro ? 'bg-brand-50' : 'hover:bg-gray-50'}>
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
                         {c.competitor}
-                        {isStas && <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">Best</span>}
+                        {isSyntaro && <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">Best</span>}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600"><span className={`font-medium ${isStas ? 'text-green-600' : ''}`}>{(c.passRate * 100).toFixed(1)}%</span></td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600"><span className={`font-medium ${isSyntaro ? 'text-green-600' : ''}`}>{(c.passRate * 100).toFixed(1)}%</span></td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">${(c.costPerFixCents / 100).toFixed(2)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">${(c.monthlyCostCents / 100).toFixed(0)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">{c.selfHosted ? <span className="text-green-600">Yes</span> : <span className="text-gray-400">No</span>}</td>
@@ -169,15 +169,15 @@ export default function PricingPage() {
         <h3 className="text-lg font-semibold text-gray-900">See How We Stack Up</h3>
         <p className="mt-1 text-sm text-gray-600">Head-to-head comparisons against leading competitors.</p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link to="/vs/copilot" className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-brand-200 hover:text-brand-600">STAS vs GitHub Copilot &rarr;</Link>
-          <Link to="/vs/devin" className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-brand-200 hover:text-brand-600">STAS vs Devin &rarr;</Link>
-          <Link to="/vs/plip" className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-brand-200 hover:text-brand-600">STAS vs Plip &rarr;</Link>
+          <Link to="/vs/copilot" className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-brand-200 hover:text-brand-600">SYNTARO vs GitHub Copilot &rarr;</Link>
+          <Link to="/vs/devin" className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-brand-200 hover:text-brand-600">SYNTARO vs Devin &rarr;</Link>
+          <Link to="/vs/plip" className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-brand-200 hover:text-brand-600">SYNTARO vs Plip &rarr;</Link>
         </div>
       </div>
 
       <div className="card border-gray-200 bg-gray-50 text-center">
         <h3 className="text-base font-semibold text-gray-900">Prefer Self-Hosted?</h3>
-        <p className="mt-2 text-sm text-gray-600">STAS is fully open-source under the MIT license.</p>
+        <p className="mt-2 text-sm text-gray-600">SYNTARO is fully open-source under the MIT license.</p>
         <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service" target="_blank" rel="noopener noreferrer"
           className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand-600 hover:text-brand-700">
           View on GitHub</a>

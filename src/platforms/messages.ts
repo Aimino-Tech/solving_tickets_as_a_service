@@ -12,13 +12,13 @@ import type { AgentResult, FixUnabledReason, QualityGateResult } from '../types/
 import { QualityGateReporter } from '../core/quality-gate-reporter.js';
 import { config } from '../config.js';
 
-const BOT_NAME = config.stas.botName;
+const BOT_NAME = config.syntaro.botName;
 export const BOT_SIGNATURE = `> — ${BOT_NAME} 🤖`;
 
 /**
  * Render the "Powered by Syntaro" footer with a trackable source ref.
  *
- * Gated behind the `STAS_POWERED_BY_FOOTER` config toggle so white-label /
+ * Gated behind the `SYNTARO_POWERED_BY_FOOTER` config toggle so white-label /
  * enterprise deployments can opt out. The `?ref=` query param (not a full
  * UTM string) attributes visits to a placement — e.g. `pr-footer` for PR
  * bodies, `pr-comment` for issue comments — and feeds PostHog link tracking.
@@ -27,7 +27,7 @@ export const BOT_SIGNATURE = `> — ${BOT_NAME} 🤖`;
  * @returns Markdown footer, or an empty string when disabled
  */
 export function poweredByFooter(ref: string): string {
-  if (!config.stas.poweredByFooterEnabled) return '';
+  if (!config.syntaro.poweredByFooterEnabled) return '';
   return `---\n\n_Powered by [Syntaro](https://syntaro.io/?ref=${ref}) — AI code review & fix automation_`;
 }
 
@@ -442,7 +442,7 @@ export function qualityGatesBlockComment(failedGates: QualityGateResult[], summa
   }
 
   sections.push(
-    '**Retry with fix**: Address each failed gate above and re-label the issue with `stas:fix` to trigger a new attempt.',
+    '**Retry with fix**: Address each failed gate above and re-label the issue with `syntaro:fix` to trigger a new attempt.',
     '',
     BOT_SIGNATURE,
   );
@@ -652,7 +652,7 @@ export function buildShareMessage(runUrl: string): string {
     `- [Share on Twitter](https://twitter.com/intent/tweet?text=${encodeURIComponent('My GitHub issue was automatically fixed by Syntaro! 🚀')}&url=${encodeURIComponent(runUrl)})`,
     `- [Share on LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(runUrl)})`,
     '',
-    `[![Syntaro](https://img.shields.io/badge/Syntaro-Solving_Tickets_As_A_Service-8250DF)](https://stas.aimino.ai)`,
+    `[![Syntaro](https://img.shields.io/badge/Syntaro-Solving_Tickets_As_A_Service-8250DF)](https://syntaro.io)`,
     `[Add Syntaro to your repo](https://github.com/apps/${config.github.appId}/installations/new)`,
     '',
     BOT_SIGNATURE,

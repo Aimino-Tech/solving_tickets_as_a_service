@@ -5,7 +5,7 @@ Works like a distributed mutex: the first worker to ``claim()`` an issue
 gets exclusive rights to process it.  Subsequent workers see ``False``
 and should back off (the Celery task_prerun middleware raises ``Ignore``).
 
-Key format: ``stas:claim:{issue_id}``
+Key format: ``syntaro:claim:{issue_id}``
 Value: ``worker_id`` (identifies who holds the claim)
 Default TTL: 300 seconds (configurable via ``CLAIM_TTL`` env var).
 """
@@ -22,7 +22,7 @@ from celery.exceptions import Ignore
 logger = logging.getLogger(__name__)
 
 DEFAULT_CLAIM_TTL = int(os.getenv("CLAIM_TTL", "300"))
-_REDIS_KEY_TPL = "stas:claim:{issue_id}"
+_REDIS_KEY_TPL = "syntaro:claim:{issue_id}"
 
 # ── Task routing ───────────────────────────────────────────────────────
 # Same agent-dispatch task set used by pause_middleware and runaway guard.

@@ -20,7 +20,7 @@ MOCK_RUN = {
     "confidence": "high",
     "summary": "Fixed the login redirect loop by checking the origin header.",
     "prUrl": "https://github.com/owner/repo/pull/42",
-    "branchName": "stas/fix/123-abc12345",
+    "branchName": "syntaro/fix/123-abc12345",
     "diff": "--- a/src/auth.ts\n+++ b/src/auth.ts\n@@ -1,5 +1,6 @@\n+if (!origin) return res.status(400);",
     "testOutput": "PASS src/tests/auth.test.ts (8 tests)",
     "error": None,
@@ -162,14 +162,14 @@ class TestPublicRunResponse:
             "confidence": "high",
             "summary": "Fixed it",
             "prUrl": "https://github.com/o/r/pull/1",
-            "branchName": "stas/fix/1",
+            "branchName": "syntaro/fix/1",
             "error": None,
             "durationMs": 1000,
             "modelUsed": "test",
             "createdAt": "2026-06-25T00:00:00Z",
         }
         html = renderRunPage(run)
-        assert "Get STAS for your repo" in html
+        assert "Get SYNTARO for your repo" in html
         assert "solving_tickets_as_a_service" in html
 
     def test_render_run_page_shows_error(self):
@@ -233,7 +233,7 @@ class TestPublicRunResponse:
             "diff": "--- a/src/test.ts\n+++ b/src/test.ts\n@@ -1 +1 @@\n-old\n+new",
             "testOutput": None,
             "prUrl": "https://github.com/o/r/pull/1",
-            "branchName": "stas/fix/1",
+            "branchName": "syntaro/fix/1",
             "error": None,
             "durationMs": 1000,
             "modelUsed": "test",
@@ -258,7 +258,7 @@ class TestPublicRunResponse:
             "diff": None,
             "testOutput": "PASS tests/test.test.ts\nPASS tests/other.test.ts",
             "prUrl": "https://github.com/o/r/pull/1",
-            "branchName": "stas/fix/1",
+            "branchName": "syntaro/fix/1",
             "error": None,
             "durationMs": 1000,
             "modelUsed": "test",

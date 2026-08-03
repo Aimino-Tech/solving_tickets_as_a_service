@@ -73,7 +73,7 @@ describe('TokenBucketRateLimiter', () => {
   it('uses correct Redis key prefix', async () => {
     await limiter.check('github:user-1', 5, 30000);
     expect(mockRedis.evalsha).toHaveBeenCalledWith(
-      LUA_SHA, 1, 'stas:ratelimit:github:user-1', '5', '30000', expect.any(String),
+      LUA_SHA, 1, 'syntaro:ratelimit:github:user-1', '5', '30000', expect.any(String),
     );
   });
 

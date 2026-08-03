@@ -1,5 +1,5 @@
 # =============================================================================
-# STAS Website — Static Site Dockerfile
+# SYNTARO Website — Static Site Dockerfile
 # Serves the production website via Nginx (~20MB final image)
 # =============================================================================
 
@@ -110,8 +110,8 @@ STOPSIGNAL SIGTERM
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget -qO- http://localhost:80/ || exit 1
 
-LABEL maintainer="STAS Team"
-LABEL description="STAS Production Website — stas.aimino.io"
+LABEL maintainer="SYNTARO Team"
+LABEL description="SYNTARO Production Website — syntaro.aimino.io"
 LABEL org.opencontainers.image.source="https://github.com/Aimino-Tech/solving_tickets_as_a_service"
-LABEL org.opencontainers.image.title="STAS Website"
+LABEL org.opencontainers.image.title="SYNTARO Website"
 LABEL org.opencontainers.image.licenses="MIT"

@@ -84,7 +84,7 @@ export const WORKSPACE_PLANS: WorkspacePlan[] = [
       'Everything in Free +',
       'Private repositories',
       'Priority support',
-      'Slack @stas mentions',
+      'Slack @syntaro mentions',
       'Basic MCP discovery',
     ],
     limits: {

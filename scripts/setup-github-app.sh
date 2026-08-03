@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eu
 
-# setup-github-app.sh — Create a GitHub App for STAS
+# setup-github-app.sh — Create a GitHub App for SYNTARO
 #
 # This script:
 #   1. Generates the GitHub App private key and webhook secret
@@ -12,14 +12,14 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="$ROOT/.env"
 
 echo "╔══════════════════════════════════════════════╗"
-echo "║     STAS — GitHub App Setup                 ║"
+echo "║     SYNTARO — GitHub App Setup                 ║"
 echo "╚══════════════════════════════════════════════╝"
 echo ""
 
 # ── Generate secrets ──────────────────────────────────────────────────────────
 
 WEBHOOK_SECRET=$(openssl rand -hex 32)
-KEY_FILE="$ROOT/.stas-private-key.pem"
+KEY_FILE="$ROOT/.syntaro-private-key.pem"
 
 if [ ! -f "$KEY_FILE" ]; then
   echo "Generating RSA private key..."
@@ -34,11 +34,11 @@ fi
 
 MANIFEST=$(cat << 'MANIFEST_JSON'
 {
-  "name": "STAS-bot",
+  "name": "SYNTARO-bot",
   "url": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
   "description": "Solving Tickets As A Service — automated fix bot",
   "hook_attributes": {
-    "url": "https://smee.io/stas-bot"
+    "url": "https://smee.io/syntaro-bot"
   },
   "public": false,
   "default_events": ["issues", "issue_comment", "pull_request", "marketplace_purchase"],
@@ -101,8 +101,8 @@ OPENCODE_MODEL=anthropic/claude-sonnet-4-20250514
 # E2B_API_KEY=...
 
 # === Bot Settings ===
-STAS_LABEL=stas:fix
-BOT_NAME=STAS
+SYNTARO_LABEL=syntaro:fix
+BOT_NAME=SYNTARO
 PORT=3000
 ENVEOF
 
@@ -111,7 +111,7 @@ echo "── Step 2: Configure your GitHub App ──"
 echo ""
 echo "In your GitHub App settings (https://github.com/settings/apps):"
 echo "  1. Set Webhook URL to your smee.io URL or your server URL"
-echo "     For local dev: use https://smee.io/stas-bot (see step 2b)"
+echo "     For local dev: use https://smee.io/syntaro-bot (see step 2b)"
 echo "  2. Generate a private key and download it (or use the one we generated)"
 echo "  3. Install the app on a repo"
 echo ""
@@ -135,5 +135,5 @@ echo ""
 echo "  1. redis-server &                  # Start Redis"
 echo "  2. opencode serve --port 4096 &   # Start OpenCode"
 echo "  3. (dev only) npx tsx scripts/smee.ts --url <smee-url>"
-echo "  4. npm run dev                     # Start STAS"
-echo "  5. Label an issue with 'stas:fix'  # Trigger a fix"
+echo "  4. npm run dev                     # Start SYNTARO"
+echo "  5. Label an issue with 'syntaro:fix'  # Trigger a fix"

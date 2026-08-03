@@ -3,7 +3,7 @@
   "name": "@aimino/syntaro-mcp",
   "mcpName": "syntaro-agent-discovery",
   "version": "1.0.0",
-  "description": "MCP server for STAS — Solving Tickets As A Service. Submit GitHub issues, list runs, search codebase, and get automated fix PRs via OpenCode agents.",
+  "description": "MCP server for SYNTARO — Solving Tickets As A Service. Submit GitHub issues, list runs, search codebase, and get automated fix PRs via OpenCode agents.",
   "author": {
     "name": "Aimino",
     "url": "https://github.com/Aimino-Tech"
@@ -20,21 +20,21 @@
     "tools": {
       "syntaro_label_issue": {
         "name": "syntaro_label_issue",
-        "description": "Label a GitHub issue with the STAS fix label (or custom label).",
+        "description": "Label a GitHub issue with the SYNTARO fix label (or custom label).",
         "inputSchema": {
           "type": "object",
           "properties": {
             "owner": { "type": "string", "description": "Repository owner (user or org)" },
             "repo": { "type": "string", "description": "Repository name" },
             "issue_number": { "type": "integer", "description": "Issue number" },
-            "label": { "type": "string", "description": "Label to apply (default: stas:fix)" }
+            "label": { "type": "string", "description": "Label to apply (default: syntaro:fix)" }
           },
           "required": ["owner", "repo", "issue_number"]
         }
       },
       "syntaro_run_fix": {
         "name": "syntaro_run_fix",
-        "description": "Trigger the STAS fix pipeline for a GitHub issue URL.",
+        "description": "Trigger the SYNTARO fix pipeline for a GitHub issue URL.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -45,7 +45,7 @@
       },
       "syntaro_check_status": {
         "name": "syntaro_check_status",
-        "description": "Check the current status of a STAS fix run by run_id.",
+        "description": "Check the current status of a SYNTARO fix run by run_id.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -56,7 +56,7 @@
       },
       "syntaro_get_pr": {
         "name": "syntaro_get_pr",
-        "description": "Get the pull request URL and details for a completed STAS fix run.",
+        "description": "Get the pull request URL and details for a completed SYNTARO fix run.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -67,7 +67,7 @@
       },
       "list_issues": {
         "name": "list_issues",
-        "description": "List tracked issues with their STAS fix status, with optional filters.",
+        "description": "List tracked issues with their SYNTARO fix status, with optional filters.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -79,7 +79,7 @@
       },
       "search_codebase": {
         "name": "search_codebase",
-        "description": "Search the STAS codebase for symbols, files, or patterns.",
+        "description": "Search the SYNTARO codebase for symbols, files, or patterns.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -94,7 +94,7 @@
     "resources": {
       "syntaro://runs/{run_id}": {
         "name": "Fix Run Status",
-        "description": "Real-time status and PR link for a STAS fix run.",
+        "description": "Real-time status and PR link for a SYNTARO fix run.",
         "mimeType": "application/json"
       },
       "syntaro://issues/{issue_id}": {
@@ -107,11 +107,11 @@
   "command": "python",
   "args": ["-m", "syntaro_mcp.server", "stdio"],
   "env": {
-    "STAS_MCP_SERVER_URL": {
-      "description": "URL of the STAS MCP server",
+    "SYNTARO_MCP_SERVER_URL": {
+      "description": "URL of the SYNTARO MCP server",
       "default": "http://localhost:4095"
     },
-    "STAS_MCP_PORT": {
+    "SYNTARO_MCP_PORT": {
       "description": "Port for the MCP SSE server",
       "default": "4095"
     },

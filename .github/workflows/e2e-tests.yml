@@ -1,7 +1,7 @@
 # =============================================================================
 # AIM-3210: E2E Tests — Comprehensive Smoke Test Suite
 #
-# Runs the full E2E smoke test suite for STAS launch verification.
+# Runs the full E2E smoke test suite for SYNTARO launch verification.
 # This workflow is triggered on PRs to main and can be manually dispatched.
 #
 # Test Categories:
@@ -78,7 +78,7 @@ jobs:
       - name: Wait for Redis
         run: |
           for i in $(seq 1 30); do
-            docker exec stas-e2e-redis redis-cli ping && break
+            docker exec syntaro-e2e-redis redis-cli ping && break
             sleep 1
           done
 

@@ -2,7 +2,7 @@
 Visual verification gate — uses oc-vision (MCP or CLI) or Playwright to capture
 screenshots of affected frontend routes and compare them against baselines.
 
-Queued on ``stas.verification``.
+Queued on ``syntaro.verification``.
 
 Flow:
   1. Detect available vision engine: oc-vision MCP -> oc-vision CLI -> Playwright.

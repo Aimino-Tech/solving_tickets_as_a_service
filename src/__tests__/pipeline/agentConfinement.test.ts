@@ -19,7 +19,7 @@ const mockJob: IssueJobData = {
   issueNumber: 42,
   issueTitle: 'Fix login bug',
   issueBody: 'The login page crashes on submit',
-  labels: ['stas:fix', 'bug'],
+  labels: ['syntaro:fix', 'bug'],
 };
 
 const mockJobTwo: IssueJobData = {
@@ -30,7 +30,7 @@ const mockJobTwo: IssueJobData = {
   issueNumber: 99,
   issueTitle: 'Another issue',
   issueBody: 'Description',
-  labels: ['stas:fix'],
+  labels: ['syntaro:fix'],
 };
 
 function scanAndGetIssuedId(first: PhaseStepResult): string {
@@ -56,7 +56,7 @@ describe('Agent Confinement — Cost Budget', () => {
   it('marks phase BUDGET_EXHAUSTED when cumulative token cost exceeds maxTokens', async () => {
     scanTemplatesDirectory();
 
-    const executor = new PipelineExecutor(mockJob, 'stas:fix');
+    const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
     const first = await executor.start();
     const sessionId = scanAndGetIssuedId(first);
 
@@ -80,14 +80,14 @@ describe('Agent Confinement — Cost Budget', () => {
   it('allows phase to proceed when cumulative cost is within budget', async () => {
     scanTemplatesDirectory();
 
-    const executor = new PipelineExecutor(mockJob, 'stas:fix');
+    const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
     const first = await executor.start();
     const sessionId = scanAndGetIssuedId(first);
 
     // Advance through all pre steps with small token costs
     let result: PhaseStepResult = first;
     const totalSteps = ALL_PHASES.reduce(
-      (sum, p) => sum + (scanTemplatesDirectory().find(t => t.name === 'stas:fix')?.phases[p]?.length ?? 0),
+      (sum, p) => sum + (scanTemplatesDirectory().find(t => t.name === 'syntaro:fix')?.phases[p]?.length ?? 0),
       0,
     );
 
@@ -111,7 +111,7 @@ describe('Agent Confinement — Loop Detection', () => {
   it('marks phase STUCK when OpenCode output is identical to previous phase output', async () => {
     scanTemplatesDirectory();
 
-    const executor = new PipelineExecutor(mockJob, 'stas:fix');
+    const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
     const first = await executor.start();
     const sessionId = scanAndGetIssuedId(first);
 
@@ -146,14 +146,14 @@ describe('Agent Confinement — Loop Detection', () => {
     sessionStore.clear();
     scanTemplatesDirectory();
 
-    const executor = new PipelineExecutor(mockJob, 'stas:fix');
+    const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
     const first = await executor.start();
     const sessionId = scanAndGetIssuedId(first);
 
     // Advance through all steps with distinct outputs
     let result: PhaseStepResult = first;
     const totalSteps = ALL_PHASES.reduce(
-      (sum, p) => sum + (scanTemplatesDirectory().find(t => t.name === 'stas:fix')?.phases[p]?.length ?? 0),
+      (sum, p) => sum + (scanTemplatesDirectory().find(t => t.name === 'syntaro:fix')?.phases[p]?.length ?? 0),
       0,
     );
 
@@ -190,7 +190,7 @@ describe('Agent Confinement — Tool Allowlist', () => {
       },
     };
 
-    const executor = new PipelineExecutor(mockJob, 'stas:fix', confinement);
+    const executor = new PipelineExecutor(mockJob, 'syntaro:fix', confinement);
     const result = await executor.start();
 
     expect(result.success).toBe(true);
@@ -213,7 +213,7 @@ describe('Agent Confinement — Tool Allowlist', () => {
       },
     };
 
-    const executor = new PipelineExecutor(mockJob, 'stas:fix', confinement);
+    const executor = new PipelineExecutor(mockJob, 'syntaro:fix', confinement);
     const result = await executor.start();
     expect(result.success).toBe(true);
   });
@@ -235,13 +235,13 @@ describe('Agent Confinement — Dead-End Detection', () => {
     };
 
     // First run: fails with a specific error
-    const executor1 = new PipelineExecutor(mockJob, 'stas:fix', deadEndConfig);
+    const executor1 = new PipelineExecutor(mockJob, 'syntaro:fix', deadEndConfig);
     const first1 = await executor1.start();
     const sid1 = scanAndGetIssuedId(first1);
     await executor1.advance(sid1, { success: false, error: 'Connection timeout to OpenCode API' });
 
     // Second run for the same issue with matching error — dead-end should trigger
-    const executor2 = new PipelineExecutor(mockJob, 'stas:fix', deadEndConfig);
+    const executor2 = new PipelineExecutor(mockJob, 'syntaro:fix', deadEndConfig);
     const first2 = await executor2.start();
     const sid2 = scanAndGetIssuedId(first2);
     const result2 = await executor2.advance(sid2, { success: false, error: 'Connection timeout to OpenCode API' });
@@ -262,13 +262,13 @@ describe('Agent Confinement — Dead-End Detection', () => {
     };
 
     // Run 1: fails with error A
-    const executor1 = new PipelineExecutor(mockJobTwo, 'stas:fix', deadEndConfig);
+    const executor1 = new PipelineExecutor(mockJobTwo, 'syntaro:fix', deadEndConfig);
     const first1 = await executor1.start();
     const sid1 = scanAndGetIssuedId(first1);
     await executor1.advance(sid1, { success: false, error: 'Timeout' });
 
     // Run 2: fails with error B — should not trigger dead-end
-    const executor2 = new PipelineExecutor(mockJobTwo, 'stas:fix', deadEndConfig);
+    const executor2 = new PipelineExecutor(mockJobTwo, 'syntaro:fix', deadEndConfig);
     const first2 = await executor2.start();
     const sid2 = scanAndGetIssuedId(first2);
     const result2 = await executor2.advance(sid2, { success: false, error: 'Invalid response format' });

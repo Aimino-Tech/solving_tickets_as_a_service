@@ -29,13 +29,13 @@ class PipelineClient:
     """Client for the real OpenSymphony pipeline.
 
     In-process mode (default): calls ``PipelineEngine`` directly.
-    HTTP mode (``STAS_PIPELINE_API_URL`` env): calls a remote pipeline API.
+    HTTP mode (``SYNTARO_PIPELINE_API_URL`` env): calls a remote pipeline API.
     """
 
     def __init__(self) -> None:
         self._engine_ref = None
         self._engine_init = False
-        self._api_url = os.getenv("STAS_PIPELINE_API_URL", "")
+        self._api_url = os.getenv("SYNTARO_PIPELINE_API_URL", "")
 
     def _get_engine(self):
         if not self._engine_init:
@@ -65,13 +65,13 @@ class PipelineClient:
         repo: str,
         issue_number: int,
         issue_url: str = "",
-        pipeline_name: str = "stas:fix",
+        pipeline_name: str = "syntaro:fix",
     ) -> dict[str, Any]:
         if not issue_url:
             issue_url = f"https://github.com/{owner}/{repo}/issues/{issue_number}"
 
         issue_id = f"{owner}/{repo}#{issue_number}"
-        run_id = f"stas-{uuid.uuid4().hex[:12]}"
+        run_id = f"syntaro-{uuid.uuid4().hex[:12]}"
         created_at = datetime.now(timezone.utc).isoformat()
 
         engine = self._get_engine()
@@ -138,6 +138,20 @@ class PipelineClient:
             return self._http_call("check_status", issue_id=issue_id_or_run_id)
         return {"success": False, "error": "Pipeline engine unavailable"}
 
+    def get_run_history(self, repo: str = "", limit: int = 20) -> dict[str, Any]:
+        """List fix runs, optionally filtered by repo. Returns {"success", "runs", "total"}."""
+        engine = self._get_engine()
+        if engine and not self._api_url:
+            try:
+                runs = engine.list_runs(repo=repo, limit=limit)
+                return {"success": True, "runs": runs, "total": len(runs)}
+            except Exception as exc:
+                logger.error("Run history failed for repo=%s: %s", repo, exc)
+                return {"success": False, "runs": [], "error": str(exc)}
+        if self._api_url:
+            return self._http_call("get_run_history", repo=repo, limit=limit)
+        return {"success": False, "runs": [], "error": "Pipeline engine unavailable"}
+
     def get_events(self, issue_id: str, limit: int = 20) -> dict[str, Any]:
         engine = self._get_engine()
         if engine and not self._api_url:
@@ -165,6 +179,31 @@ class PipelineClient:
         if self._api_url:
             return self._http_call("cancel_fix", issue_id=issue_id)
         return {"success": False, "error": "Pipeline engine unavailable"}
+
+    def get_run_history(self, repo: str | None = None, limit: int = 10) -> dict[str, Any]:
+        """Return recent fix runs, optionally filtered by repository.
+
+        Used by the ``list_issues`` / ``search_codebase`` MCP tools and the
+        JSON-RPC ``handle_get_fix_history`` bridge. Mirrors the engine/HTTP
+        fallback pattern of the other client methods.
+        """
+        engine = self._get_engine()
+        if engine and not self._api_url and hasattr(engine, "get_run_history"):
+            try:
+                result = engine.get_run_history(repo=repo, limit=limit)
+                if isinstance(result, list):
+                    runs = result
+                elif isinstance(result, dict):
+                    runs = result.get("runs", [])
+                else:
+                    runs = getattr(result, "runs", [])
+                return {"success": True, "runs": runs, "total": len(runs)}
+            except Exception as exc:
+                logger.error("Run history fetch failed: %s", exc)
+                return {"success": False, "runs": [], "error": str(exc)}
+        if self._api_url:
+            return self._http_call("get_run_history", repo=repo, limit=limit)
+        return {"success": False, "runs": [], "error": "Pipeline engine unavailable"}
 
 
 _client: PipelineClient | None = None

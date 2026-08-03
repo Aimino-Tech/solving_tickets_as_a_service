@@ -23,7 +23,7 @@ _TIER_LIMITS: dict[str, int] = {
     "pro": COMMENT_RATE_LIMIT_PRO,
     "enterprise": COMMENT_RATE_LIMIT_ENTERPRISE,
 }
-_REDIS_PREFIX = "stas:comment_rate:"
+_REDIS_PREFIX = "syntaro:comment_rate:"
 _REDIS_CLIENT: Optional[Any] = None
 
 def _get_redis() -> Optional[Any]:

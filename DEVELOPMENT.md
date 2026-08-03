@@ -36,7 +36,7 @@ The `doctor` script validates your full environment:
 
 ## Overview
 
-STAS can be deployed in several ways depending on your needs:
+SYNTARO can be deployed in several ways depending on your needs:
 
 - **Local development** — Docker Compose with Redis + hot-reload
 - **Railway** — one-click deploy with managed Redis
@@ -85,27 +85,27 @@ The bot starts on `http://localhost:3000`. Health check: `GET /health`.
 
 ### OpenCode plugin
 
-STAS ships with a plugin for OpenCode that provides dev tooling:
+SYNTARO ships with a plugin for OpenCode that provides dev tooling:
 
 ```bash
 # Start full dev environment
-npm run stas:dev
+npm run syntaro:dev
 
 # Send a test webhook
-npm run stas:webhook
+npm run syntaro:webhook
 
 # Validate config
-npm run stas:config
+npm run syntaro:config
 
 # Check status
-npm run stas:status
+npm run syntaro:status
 ```
 
 ### Docker Compose
 
 The `docker-compose.yml` starts:
-- `stas-redis` — Redis 7 (persistent, healthchecked)
-- `stas-bot` — the STAS bot with hot-reload
+- `syntaro-redis` — Redis 7 (persistent, healthchecked)
+- `syntaro-bot` — the SYNTARO bot with hot-reload
 
 ```bash
 # Start everything
@@ -167,7 +167,7 @@ curl -L https://fly.io/install.sh | sh
 fly auth login
 ```
 
-### Deploy STAS
+### Deploy SYNTARO
 
 ```bash
 # Launch the app (creates fly.toml if it doesn't exist)
@@ -230,7 +230,7 @@ for single-host production deployments and can scale horizontally.
 docker compose -f docker-compose.prod.yml up -d
 
 # Scale workers horizontally (e.g., 4 worker replicas)
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=4
 
 # View logs
 docker compose -f docker-compose.prod.yml logs -f
@@ -241,22 +241,22 @@ docker compose -f docker-compose.prod.yml down
 
 ### Service Overview
 
-The production stack consists of 12 services, all connected via `stas-prod-net` bridge network:
+The production stack consists of 12 services, all connected via `syntaro-prod-net` bridge network:
 
 | Service | Container | Image | Purpose |
 |---|---|---|---|
-| `postgres` | `stas-postgres` | `postgres:16-alpine` | Primary database (hosted service) |
-| `redis` | `stas-redis` | `redis:7-alpine` | Celery backend + BullMQ queue + caching |
-| `rabbitmq` | `stas-rabbitmq` | `rabbitmq:4-management-alpine` | Message broker for Celery |
-| `stas-webhook` | `stas-webhook` | `stas-webhook:latest` | Express.js API server (scalable) |
-| `stas-worker` | `stas-worker` | `stas-worker:latest` | Celery worker pool (scalable) |
-| `celery-beat` | `stas-celery-beat` | `stas-worker:latest` | Periodic task scheduler |
-| `flower` | `stas-flower` | `mher/flower:latest` | Celery monitoring dashboard |
-| `nginx` | `stas-nginx` | `nginx:alpine` | Reverse proxy with TLS + load balancing |
-| `stas-dashboard` | `stas-dashboard` | `stas-dashboard:latest` | React/Vite frontend |
-| `certbot` | `stas-certbot` | `certbot/certbot:latest` | Let's Encrypt TLS auto-renewal |
-| `stas-backup` | `stas-backup` | `stas-webhook:latest` | Scheduled database backups |
-| `nginx-setup` | `stas-nginx-setup` | `nginx:alpine` | One-time htpasswd generator |
+| `postgres` | `syntaro-postgres` | `postgres:16-alpine` | Primary database (hosted service) |
+| `redis` | `syntaro-redis` | `redis:7-alpine` | Celery backend + BullMQ queue + caching |
+| `rabbitmq` | `syntaro-rabbitmq` | `rabbitmq:4-management-alpine` | Message broker for Celery |
+| `syntaro-webhook` | `syntaro-webhook` | `syntaro-webhook:latest` | Express.js API server (scalable) |
+| `syntaro-worker` | `syntaro-worker` | `syntaro-worker:latest` | Celery worker pool (scalable) |
+| `celery-beat` | `syntaro-celery-beat` | `syntaro-worker:latest` | Periodic task scheduler |
+| `flower` | `syntaro-flower` | `mher/flower:latest` | Celery monitoring dashboard |
+| `nginx` | `syntaro-nginx` | `nginx:alpine` | Reverse proxy with TLS + load balancing |
+| `syntaro-dashboard` | `syntaro-dashboard` | `syntaro-dashboard:latest` | React/Vite frontend |
+| `certbot` | `syntaro-certbot` | `certbot/certbot:latest` | Let's Encrypt TLS auto-renewal |
+| `syntaro-backup` | `syntaro-backup` | `syntaro-webhook:latest` | Scheduled database backups |
+| `nginx-setup` | `syntaro-nginx-setup` | `nginx:alpine` | One-time htpasswd generator |
 
 ### Core Data Services
 
@@ -267,7 +267,7 @@ Persistent SQL database for the hosted service's application data.
 - **Image**: `postgres:16-alpine`
 - **Port**: `5432` (host) -> `5432` (container)
 - **Volume**: `postgres-data` at `/var/lib/postgresql/data`
-- **Health check**: `pg_isready -U stas -d stas` (every 10s)
+- **Health check**: `pg_isready -U syntaro -d syntaro` (every 10s)
 - **Resource limits**: 256MB memory, 0.2 CPU
 - **Restart**: disabled (manual restart via Docker)
 
@@ -275,9 +275,9 @@ Environment variables (via `.env`):
 
 | Variable | Default | Description |
 |---|---|---|
-| `POSTGRES_USER` | `stas` | Database user |
-| `POSTGRES_PASSWORD` | `stas-password` | Database password |
-| `POSTGRES_DB` | `stas` | Database name |
+| `POSTGRES_USER` | `syntaro` | Database user |
+| `POSTGRES_PASSWORD` | `syntaro-password` | Database password |
+| `POSTGRES_DB` | `syntaro` | Database name |
 
 #### Redis 7 (`redis`)
 
@@ -300,7 +300,7 @@ no data loss on restart:
   by 100% of the previous size (i.e., doubles)
 - **`--auto-aof-rewrite-min-size 64mb`** --- minimum AOF file size before rewrite starts
 
-Redis RDB snapshots are also taken via the `stas-backup` service (see [Backups](#backups)).
+Redis RDB snapshots are also taken via the `syntaro-backup` service (see [Backups](#backups)).
 
 #### RabbitMQ 4 (`rabbitmq`)
 
@@ -314,13 +314,13 @@ Environment variables (via `.env`):
 
 | Variable | Default | Description |
 |---|---|---|
-| `RABBITMQ_USER` | `stas-app` | RabbitMQ username |
-| `RABBITMQ_PASSWORD` | `stas-app-password` | RabbitMQ password |
-| `RABBITMQ_VHOST` | `/stas` | RabbitMQ virtual host |
+| `RABBITMQ_USER` | `syntaro-app` | RabbitMQ username |
+| `RABBITMQ_PASSWORD` | `syntaro-app-password` | RabbitMQ password |
+| `RABBITMQ_VHOST` | `/syntaro` | RabbitMQ virtual host |
 
 ### Application Services
 
-#### STAS Webhook (`stas-webhook`)
+#### SYNTARO Webhook (`syntaro-webhook`)
 
 Express.js API server that receives GitHub webhooks and enqueues jobs. Built from
 the project root `Dockerfile` with `RUN_MODE=api`.
@@ -332,24 +332,24 @@ the project root `Dockerfile` with `RUN_MODE=api`.
 - **Scalable**: horizontally by adding more replicas
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --scale stas-webhook=3
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-webhook=3
 ```
 
 Nginx load-balances across replicas using `least_conn` strategy (see [Nginx](#nginx)).
 
-#### STAS Worker (`stas-worker`)
+#### SYNTARO Worker (`syntaro-worker`)
 
 Celery worker pool that processes job queues. Built from `workers/Dockerfile`.
 
-- **Command**: `celery -A workers.celery_app worker -l info -Q stas.agents.* --concurrency=4`
-- **Queues**: `stas.agents.triage`, `stas.agents.dispatch`, `stas.agents.sandbox`,
-  `stas.agents.verification`, `stas.agents.pr_creation`, `stas.agents.notifications`
+- **Command**: `celery -A workers.celery_app worker -l info -Q syntaro.agents.* --concurrency=4`
+- **Queues**: `syntaro.agents.triage`, `syntaro.agents.dispatch`, `syntaro.agents.sandbox`,
+  `syntaro.agents.verification`, `syntaro.agents.pr_creation`, `syntaro.agents.notifications`
 - **Graceful shutdown**: 60s timeout for running tasks to complete
 - **Resource limits**: 1GB memory, 1 CPU
 - **Scalable**: add replicas for more throughput
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=8
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=8
 ```
 
 #### Celery Beat (`celery-beat`)
@@ -373,16 +373,16 @@ and task history at port `5555`.
 In production, Flower is accessed through Nginx at the `/flower/` path with
 HTTP Basic Authentication. See [Flower Auth](#flower-auth-htpasswd) below.
 
-#### STAS Dashboard (`stas-dashboard`)
+#### SYNTARO Dashboard (`syntaro-dashboard`)
 
 React/Vite frontend for run history and analytics. Built from `dashboard/Dockerfile`
 and served by Nginx on port `5173`.
 
-- **Image**: `stas-dashboard:latest` (builds from `./dashboard`)
+- **Image**: `syntaro-dashboard:latest` (builds from `./dashboard`)
 - **Port**: `5173` (host) -> `80` (container)
 - **Health check**: `GET /healthz` (every 30s)
 - **Resource limits**: 256MB memory, 0.2 CPU
-- **Environment**: `VITE_API_URL=http://stas-webhook:3000`
+- **Environment**: `VITE_API_URL=http://syntaro-webhook:3000`
 
 The build is a two-stage Dockerfile:
 1. **Builder stage**: `node:20-alpine` compiles the Vite app to `dist/`
@@ -404,9 +404,9 @@ for all web-facing services.
 **Upstream load balancing**:
 
 ```nginx
-upstream stas-webhook-upstream {
+upstream syntaro-webhook-upstream {
     least_conn;
-    server stas-webhook:3000 max_fails=3 fail_timeout=30s;
+    server syntaro-webhook:3000 max_fails=3 fail_timeout=30s;
 }
 ```
 
@@ -422,13 +422,13 @@ upstream stas-webhook-upstream {
 
 | Path | Upstream | Notes |
 |---|---|---|
-| `/health`, `/health/ready` | `stas-webhook-upstream` | Not cached |
-| `/webhook` | `stas-webhook-upstream` | 32MB body limit, 60s timeout, no buffering |
-| `/api/` | `stas-webhook-upstream` | 4MB body limit, 30s timeout |
-| `/slack/` | `stas-webhook-upstream` | Rate-limited |
-| `/flower/` | `stas-flower:5555` | HTTP Basic Auth required |
-| `/assets/` | `stas-webhook-upstream` | Aggressively cached (1 year, immutable) |
-| `/` (catch-all) | `stas-webhook-upstream` | General traffic |
+| `/health`, `/health/ready` | `syntaro-webhook-upstream` | Not cached |
+| `/webhook` | `syntaro-webhook-upstream` | 32MB body limit, 60s timeout, no buffering |
+| `/api/` | `syntaro-webhook-upstream` | 4MB body limit, 30s timeout |
+| `/slack/` | `syntaro-webhook-upstream` | Rate-limited |
+| `/flower/` | `syntaro-flower:5555` | HTTP Basic Auth required |
+| `/assets/` | `syntaro-webhook-upstream` | Aggressively cached (1 year, immutable) |
+| `/` (catch-all) | `syntaro-webhook-upstream` | General traffic |
 
 **Security headers** applied to all responses:
 
@@ -495,7 +495,7 @@ The container installs `apache2-utils` and runs `htpasswd` to create
 the credentials file:
 
 ```bash
-htpasswd -b -c /etc/nginx/.htpasswd '${FLOWER_USER:-admin}' '${FLOWER_PASSWORD:-stas-flower-admin}'
+htpasswd -b -c /etc/nginx/.htpasswd '${FLOWER_USER:-admin}' '${FLOWER_PASSWORD:-syntaro-flower-admin}'
 ```
 
 **Environment variables** (via `.env`):
@@ -503,7 +503,7 @@ htpasswd -b -c /etc/nginx/.htpasswd '${FLOWER_USER:-admin}' '${FLOWER_PASSWORD:-
 | Variable | Default | Description |
 |---|---|---|
 | `FLOWER_USER` | `admin` | Username for Flower dashboard login |
-| `FLOWER_PASSWORD` | `stas-flower-admin` | Password for Flower dashboard login |
+| `FLOWER_PASSWORD` | `syntaro-flower-admin` | Password for Flower dashboard login |
 
 The generated `/etc/nginx/.htpasswd` file is shared with the Nginx container
 via the `htpasswd-data` volume. Nginx enforces `auth_basic` on the `/flower/`
@@ -513,14 +513,14 @@ location:
 location /flower/ {
     auth_basic "Celery Monitor";
     auth_basic_user_file /etc/nginx/.htpasswd;
-    proxy_pass http://stas-flower:5555/;
+    proxy_pass http://syntaro-flower:5555/;
 }
 ```
 
 ### Backups
 
-The `stas-backup` service runs scheduled backups for all three data stores using
-cron jobs inside the container. It reuses the `stas-webhook` image (which contains
+The `syntaro-backup` service runs scheduled backups for all three data stores using
+cron jobs inside the container. It reuses the `syntaro-webhook` image (which contains
 the backup scripts in `/app/scripts/`).
 
 **Cron schedule**:
@@ -582,8 +582,8 @@ The production stack defines shared resource profiles via YAML anchors:
 
 | Profile | Memory | CPU | Applied To |
 |---|---|---|---|
-| `resources-webhook` | 512MB | 0.5 | `stas-webhook` |
-| `resources-worker` | 1GB | 1.0 | `stas-worker` |
+| `resources-webhook` | 512MB | 0.5 | `syntaro-webhook` |
+| `resources-worker` | 1GB | 1.0 | `syntaro-worker` |
 | `resources-light` | 256MB | 0.2 | All other services |
 
 ### Logging
@@ -618,12 +618,12 @@ Each service has a health check appropriate to its role:
 
 | Service | Check | Interval | Start Period | Retries |
 |---|---|---|---|---|
-| `postgres` | `pg_isready -U stas -d stas` | 10s | 15s | 5 |
+| `postgres` | `pg_isready -U syntaro -d syntaro` | 10s | 15s | 5 |
 | `redis` | `redis-cli ping` | 5s | 10s | 5 |
 | `rabbitmq` | `rabbitmq-diagnostics check_port_connectivity` | 10s | 15s | 5 |
-| `stas-webhook` | `GET /health/ready` | 30s | 15s | 3 |
-| `stas-worker` | `python3 /app/workers/health.py --check` | 30s | 30s | 3 |
-| `stas-dashboard` | `wget --spider http://localhost:80/healthz` | 30s | 15s | 3 |
+| `syntaro-webhook` | `GET /health/ready` | 30s | 15s | 3 |
+| `syntaro-worker` | `python3 /app/workers/health.py --check` | 30s | 30s | 3 |
+| `syntaro-dashboard` | `wget --spider http://localhost:80/healthz` | 30s | 15s | 3 |
 
 ### Adding Production-Specific Variables to .env
 
@@ -631,14 +631,14 @@ For the production stack, add these variables to your `.env` file:
 
 ```bash
 # PostgreSQL
-POSTGRES_USER=stas
+POSTGRES_USER=syntaro
 POSTGRES_PASSWORD=<generate-a-strong-password>
-POSTGRES_DB=stas
+POSTGRES_DB=syntaro
 
 # RabbitMQ
-RABBITMQ_USER=stas-app
+RABBITMQ_USER=syntaro-app
 RABBITMQ_PASSWORD=<generate-a-strong-password>
-RABBITMQ_VHOST=/stas
+RABBITMQ_VHOST=/syntaro
 
 # Flower auth
 FLOWER_USER=admin
@@ -647,7 +647,7 @@ FLOWER_PASSWORD=<generate-a-strong-password>
 # Backups (optional --- without S3 config, backups are local-only)
 BACKUP_DIR=/backups
 BACKUP_GPG_PASSPHRASE=<generate-a-strong-passphrase>
-# BACKUP_S3_BUCKET=stas-backups
+# BACKUP_S3_BUCKET=syntaro-backups
 # BACKUP_S3_ENDPOINT=https://s3.amazonaws.com
 # BACKUP_S3_ACCESS_KEY=...
 # BACKUP_S3_SECRET_KEY=...
@@ -668,8 +668,8 @@ BACKUP_GPG_PASSPHRASE=<generate-a-strong-passphrase>
 | `NODE_ENV` | No | `development` | Environment name |
 | `RUN_MODE` | No | `both` | `api`, `worker`, or `both` |
 | `LOG_LEVEL` | No | `info` | Log verbosity |
-| `STAS_LABEL` | No | `stas:fix` | Trigger issue label |
-| `BOT_NAME` | No | `STAS` | Bot display name |
+| `SYNTARO_LABEL` | No | `syntaro:fix` | Trigger issue label |
+| `BOT_NAME` | No | `SYNTARO` | Bot display name |
 | `MAX_AGENT_ITERATIONS` | No | `40` | Max agent tool calls |
 | `MAX_ISSUE_COMMENTS` | No | `15` | Max issue comments per run |
 | `E2B_API_KEY` | No | — | E2B sandbox API key |
@@ -683,7 +683,7 @@ BACKUP_GPG_PASSPHRASE=<generate-a-strong-passphrase>
 ## Architecture Notes
 
 ```
-GitHub Issue (labeled "stas:fix")
+GitHub Issue (labeled "syntaro:fix")
        │
        ▼
   Webhook Server (Express, :3000)
@@ -722,7 +722,7 @@ In production, you can run both in a single container (`RUN_MODE=both`) or scale
 
 ## Dashboard Deployment
 
-STAS includes a React/Vite dashboard for run history and analytics. In production, the dashboard is built and served by the same Express server.
+SYNTARO includes a React/Vite dashboard for run history and analytics. In production, the dashboard is built and served by the same Express server.
 
 ### Local Development
 

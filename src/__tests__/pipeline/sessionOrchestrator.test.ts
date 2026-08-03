@@ -11,22 +11,22 @@ describe('sessionOrchestrator', () => {
   });
 
   it('creates a session', () => {
-    const session = createSession('issue-1', 'stas:fix');
+    const session = createSession('issue-1', 'syntaro:fix');
     expect(session.sessionId).toBeDefined();
     expect(session.issueId).toBe('issue-1');
-    expect(session.pipelineName).toBe('stas:fix');
+    expect(session.pipelineName).toBe('syntaro:fix');
     expect(session.status).toBe('queued');
   });
 
   it('retrieves a session by ID', () => {
-    const session = createSession('issue-1', 'stas:fix');
+    const session = createSession('issue-1', 'syntaro:fix');
     const retrieved = getSession(session.sessionId);
     expect(retrieved).toBeDefined();
     expect(retrieved!.sessionId).toBe(session.sessionId);
   });
 
   it('advances a session through stages', () => {
-    const session = createSession('issue-1', 'stas:fix');
+    const session = createSession('issue-1', 'syntaro:fix');
     const triage = advanceSession(session.sessionId, 'triage');
     expect(triage!.currentStage).toBe('triage');
     expect(triage!.status).toBe('running');
@@ -39,20 +39,20 @@ describe('sessionOrchestrator', () => {
   });
 
   it('fails a session', () => {
-    const session = createSession('issue-1', 'stas:fix');
+    const session = createSession('issue-1', 'syntaro:fix');
     const failed = failSession(session.sessionId, 'Test error');
     expect(failed!.status).toBe('failed');
     expect(failed!.error).toBe('Test error');
   });
 
   it('cancels a session', () => {
-    const session = createSession('issue-1', 'stas:fix');
+    const session = createSession('issue-1', 'syntaro:fix');
     const cancelled = cancelSession(session.sessionId);
     expect(cancelled!.status).toBe('cancelled');
   });
 
   it('retries a failed session', () => {
-    const session = createSession('issue-1', 'stas:fix', 3);
+    const session = createSession('issue-1', 'syntaro:fix', 3);
     advanceSession(session.sessionId, 'agent');
     failSession(session.sessionId, 'error');
     const retried = retrySession(session.sessionId);
@@ -61,14 +61,14 @@ describe('sessionOrchestrator', () => {
   });
 
   it('lists sessions with filters', () => {
-    createSession('issue-1', 'stas:fix');
-    createSession('issue-2', 'stas:feature');
+    createSession('issue-1', 'syntaro:fix');
+    createSession('issue-2', 'syntaro:feature');
     expect(listSessions().length).toBe(2);
     expect(listSessions({ issueId: 'issue-1' }).length).toBe(1);
   });
 
   it('records session events', () => {
-    const session = createSession('issue-1', 'stas:fix');
+    const session = createSession('issue-1', 'syntaro:fix');
     advanceSession(session.sessionId, 'triage');
     const events = getSessionEvents(session.sessionId);
     expect(events.length).toBeGreaterThanOrEqual(1);

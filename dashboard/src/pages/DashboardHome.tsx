@@ -229,7 +229,7 @@ export default function DashboardHome() {
           </div>
         ) : (
           <p className="mt-4 text-sm text-gray-400 dark:text-gray-500">
-            No fixes yet &mdash; label a GitHub issue with <code className="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-gray-800">stas:fix</code> to get started.
+            No fixes yet &mdash; label a GitHub issue with <code className="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-gray-800">syntaro:fix</code> to get started.
           </p>
         )}
       </div>

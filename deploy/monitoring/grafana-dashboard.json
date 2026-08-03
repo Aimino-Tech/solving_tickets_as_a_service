@@ -1,19 +1,19 @@
 {
   "__inputs": [{ "name": "DS_PROMETHEUS", "label": "Prometheus", "description": "", "type": "datasource", "pluginId": "prometheus", "pluginName": "Prometheus" }],
   "__requires": [{ "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.4.0" }, { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }],
-  "title": "STAS Production Overview",
-  "uid": "stas-prod-overview",
+  "title": "SYNTARO Production Overview",
+  "uid": "syntaro-prod-overview",
   "version": 1,
   "timezone": "browser",
   "panels": [
-    { "title": "Queue Depth", "type": "graph", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 }, "targets": [{ "expr": "stas_queue_depth", "legendFormat": "depth" }] },
-    { "title": "Fix Success Rate", "type": "graph", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 }, "targets": [{ "expr": "stas_fix_success_rate", "legendFormat": "rate" }] },
-    { "title": "Webhook Latency p99", "type": "graph", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 }, "targets": [{ "expr": "stas_webhook_latency_p99", "legendFormat": "p99" }] },
-    { "title": "Active Workers", "type": "graph", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 }, "targets": [{ "expr": "stas_active_workers", "legendFormat": "workers" }] },
-    { "title": "SLO Compliance", "type": "stat", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 }, "targets": [{ "expr": "stas_slo_overall_status", "legendFormat": "SLO" }] },
-    { "title": "Error Rate", "type": "graph", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 }, "targets": [{ "expr": "rate(stas_errors_total[5m])", "legendFormat": "errors/s" }] },
-    { "title": "Queue Depth Anomaly", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }, "targets": [{ "expr": "stas_anomaly_score{type=\"queue_depth\"}", "legendFormat": "anomaly" }] },
-    { "title": "Anomaly Detections", "type": "table", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }, "targets": [{ "expr": "stas_anomaly_detections_total", "legendFormat": "detections" }] }
+    { "title": "Queue Depth", "type": "graph", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 }, "targets": [{ "expr": "syntaro_queue_depth", "legendFormat": "depth" }] },
+    { "title": "Fix Success Rate", "type": "graph", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 }, "targets": [{ "expr": "syntaro_fix_success_rate", "legendFormat": "rate" }] },
+    { "title": "Webhook Latency p99", "type": "graph", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 }, "targets": [{ "expr": "syntaro_webhook_latency_p99", "legendFormat": "p99" }] },
+    { "title": "Active Workers", "type": "graph", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 }, "targets": [{ "expr": "syntaro_active_workers", "legendFormat": "workers" }] },
+    { "title": "SLO Compliance", "type": "stat", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 }, "targets": [{ "expr": "syntaro_slo_overall_status", "legendFormat": "SLO" }] },
+    { "title": "Error Rate", "type": "graph", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 }, "targets": [{ "expr": "rate(syntaro_errors_total[5m])", "legendFormat": "errors/s" }] },
+    { "title": "Queue Depth Anomaly", "type": "graph", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }, "targets": [{ "expr": "syntaro_anomaly_score{type=\"queue_depth\"}", "legendFormat": "anomaly" }] },
+    { "title": "Anomaly Detections", "type": "table", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }, "targets": [{ "expr": "syntaro_anomaly_detections_total", "legendFormat": "detections" }] }
   ],
   "schemaVersion": 39
 }

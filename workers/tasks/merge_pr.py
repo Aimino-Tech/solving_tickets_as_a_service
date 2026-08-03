@@ -1,7 +1,7 @@
 """
 Merge a GitHub Pull Request and mark the Linear ticket as Done.
 
-This is the final step in the STAS pipeline:
+This is the final step in the SYNTARO pipeline:
 1. Wait for PR checks (optional, configurable)
 2. Merge the PR using GitHub API
 3. Transition the Linear ticket to "Done"
@@ -76,8 +76,8 @@ def merge_pull_request(self, pr_result: dict, repo_info: dict) -> dict:
             "PUT",
             f"/repos/{repo_full}/pulls/{pr_number}/merge",
             json_body={
-                "commit_title": f"STAS: Automated fix for #{pr_number}",
-                "commit_message": f"Automated merge via STAS pipeline.\n\nPR: #{pr_number}",
+                "commit_title": f"SYNTARO: Automated fix for #{pr_number}",
+                "commit_message": f"Automated merge via SYNTARO pipeline.\n\nPR: #{pr_number}",
                 "merge_method": "squash",
             },
         )

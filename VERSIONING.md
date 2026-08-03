@@ -1,6 +1,6 @@
 # Versioning Strategy
 
-This document defines how STAS (Solving Tickets As A Service) is versioned. The project follows **Semantic Versioning 2.0.0** with a pre-release convention.
+This document defines how SYNTARO (Solving Tickets As A Service) is versioned. The project follows **Semantic Versioning 2.0.0** with a pre-release convention.
 
 ---
 

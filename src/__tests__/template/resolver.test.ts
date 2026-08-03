@@ -7,29 +7,29 @@ import { join } from 'node:path';
 import { rmSync } from 'node:fs';
 
 describe('classifyByLabel', () => {
-  it('classifies stas:fix as bug', () => {
-    const result = classifyByLabel(['stas:fix']);
+  it('classifies syntaro:fix as bug', () => {
+    const result = classifyByLabel(['syntaro:fix']);
     expect(result.type).toBe('bug');
     expect(result.confidence).toBeGreaterThan(0.9);
   });
 
-  it('classifies stas:bugfix as bug', () => {
-    const result = classifyByLabel(['stas:bugfix']);
+  it('classifies syntaro:bugfix as bug', () => {
+    const result = classifyByLabel(['syntaro:bugfix']);
     expect(result.type).toBe('bug');
   });
 
-  it('classifies stas:feature as feature', () => {
-    const result = classifyByLabel(['stas:feature']);
+  it('classifies syntaro:feature as feature', () => {
+    const result = classifyByLabel(['syntaro:feature']);
     expect(result.type).toBe('feature');
   });
 
-  it('classifies stas:plan as planning', () => {
-    const result = classifyByLabel(['stas:plan']);
+  it('classifies syntaro:plan as planning', () => {
+    const result = classifyByLabel(['syntaro:plan']);
     expect(result.type).toBe('planning');
   });
 
-  it('classifies stas:research as research', () => {
-    const result = classifyByLabel(['stas:research']);
+  it('classifies syntaro:research as research', () => {
+    const result = classifyByLabel(['syntaro:research']);
     expect(result.type).toBe('research');
   });
 
@@ -44,8 +44,8 @@ describe('classifyByLabel', () => {
     expect(result.confidence).toBeLessThan(0.5);
   });
 
-  it('uses first matching stas: label', () => {
-    const result = classifyByLabel(['not-matching', 'stas:fix']);
+  it('uses first matching syntaro: label', () => {
+    const result = classifyByLabel(['not-matching', 'syntaro:fix']);
     expect(result.type).toBe('bug');
   });
 });
@@ -54,14 +54,14 @@ describe('resolveTemplate', () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = mkdtempSync(join(tmpdir(), 'stas-resolver-'));
+    tempDir = mkdtempSync(join(tmpdir(), 'syntaro-resolver-'));
     clearLoadedTemplates();
-    const templatesDir = join(tempDir, '.stas', 'templates');
+    const templatesDir = join(tempDir, '.syntaro', 'templates');
     mkdirSync(templatesDir, { recursive: true });
 
     writeFileSync(join(templatesDir, 'fix.yaml'), `
-name: stas:fix
-labels: [stas:fix, stas:bugfix]
+name: syntaro:fix
+labels: [syntaro:fix, syntaro:bugfix]
 phases:
   pre:
     - command: "opencode plan"
@@ -78,8 +78,8 @@ phases:
 `);
 
     writeFileSync(join(templatesDir, 'plan.yaml'), `
-name: stas:plan
-labels: [stas:plan]
+name: syntaro:plan
+labels: [syntaro:plan]
 phases:
   pre:
     - command: "opencode research"
@@ -106,26 +106,26 @@ phases:
   });
 
   it('resolves by exact label match', () => {
-    const classification = classifyByLabel(['stas:fix']);
-    const match = resolveTemplate(classification, ['stas:fix']);
+    const classification = classifyByLabel(['syntaro:fix']);
+    const match = resolveTemplate(classification, ['syntaro:fix']);
 
     expect(match.matchStrategy).toBe('exact');
-    expect(match.template.name).toBe('stas:fix');
+    expect(match.template.name).toBe('syntaro:fix');
     expect(match.confidence).toBe(1.0);
   });
 
   it('resolves by prefix match', () => {
-    const classification = classifyByLabel(['stas:fix:urgent']);
-    const match = resolveTemplate(classification, ['stas:fix:urgent']);
+    const classification = classifyByLabel(['syntaro:fix:urgent']);
+    const match = resolveTemplate(classification, ['syntaro:fix:urgent']);
 
-    expect(match.template.name).toBe('stas:fix');
+    expect(match.template.name).toBe('syntaro:fix');
   });
 
   it('resolves by type inference when no label match', () => {
     const classification = classifyByLabel(['bug']);
     const match = resolveTemplate(classification, ['bug']);
 
-    expect(match.template.name).toBe('stas:fix');
+    expect(match.template.name).toBe('syntaro:fix');
   });
 
   it('falls back to default when nothing matches', () => {

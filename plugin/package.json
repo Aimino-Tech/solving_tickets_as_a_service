@@ -1,7 +1,7 @@
 {
-  "name": "@tarquinen/stas-plugin",
+  "name": "@tarquinen/syntaro-plugin",
   "version": "0.1.0",
-  "description": "OpenCode plugin for STAS — local dev, test webhooks, and status checks for the Solving Tickets As A Service GitHub bot",
+  "description": "OpenCode plugin for SYNTARO — local dev, test webhooks, and status checks for the Solving Tickets As A Service GitHub bot",
   "type": "module",
   "license": "MIT",
   "publishConfig": {
@@ -18,7 +18,7 @@
   "keywords": [
     "opencode",
     "opencode-plugin",
-    "stas",
+    "syntaro",
     "github",
     "automation",
     "dev-tools",

@@ -1,5 +1,5 @@
 # =============================================================================
-# Promtail Configuration — STAS Log Aggregation
+# Promtail Configuration — SYNTARO Log Aggregation
 # =============================================================================
 server:
   http_listen_port: 9080
@@ -20,7 +20,7 @@ scrape_configs:
         filters:
           - name: label
             values:
-              - com.docker.compose.project=stas
+              - com.docker.compose.project=syntaro
     relabel_configs:
       - source_labels: ["__meta_docker_container_name"]
         regex: "/(.+)"

@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import Error500 from '@/pages/Error500';
 // Eager: Login is the first paint on mobile — never block it.
 import Login from '@/pages/Login';
+import Logout from '@/pages/Logout';
 import NotFound from '@/pages/NotFound';
 
 // Lazy: heavy pages (recharts via Billing, large trees) load on demand.
@@ -50,6 +51,7 @@ export default function App() {
       <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
+          <Route path="/logout" element={<Logout />} />
           <Route element={<PublicLayout />}>
             <Route path="/security" element={<Security />} />
             <Route path="/privacy" element={<Privacy />} />

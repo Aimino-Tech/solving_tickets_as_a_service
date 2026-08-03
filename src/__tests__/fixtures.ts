@@ -1,5 +1,5 @@
 /**
- * Test fixtures — reusable sample data for STAS tests.
+ * Test fixtures — reusable sample data for SYNTARO tests.
  *
  * Every fixture returns a fresh copy so tests can safely mutate as needed.
  */
@@ -10,7 +10,7 @@ import type { AgentResult, VerificationResult } from "../agent/types.js";
 // ── Webhook Payloads ───────────────────────────────────────────────────────
 
 /**
- * Complete `issues.labeled` webhook payload for a "stas:fix" label event.
+ * Complete `issues.labeled` webhook payload for a "syntaro:fix" label event.
  * Based on the GitHub webhook payload shape consumed by the webhooks handler.
  */
 export function sampleIssueLabeledPayload() {
@@ -21,7 +21,7 @@ export function sampleIssueLabeledPayload() {
       title: 'Fix broken user login',
       body: 'Users are unable to log in when the password contains special characters.',
       state: 'open',
-      labels: [{ name: 'stas:fix', color: 'fc2929' }],
+      labels: [{ name: 'syntaro:fix', color: 'fc2929' }],
       created_at: '2025-05-01T10:00:00Z',
       updated_at: '2025-05-01T12:00:00Z',
       html_url: 'https://github.com/owner/repo/issues/42',
@@ -49,7 +49,7 @@ export function sampleIssueLabeledPayload() {
       },
       state_reason: null,
     },
-    label: { name: 'stas:fix', color: 'fc2929', default: false, description: 'Trigger STAS fix' },
+    label: { name: 'syntaro:fix', color: 'fc2929', default: false, description: 'Trigger SYNTARO fix' },
     repository: {
       id: 100,
       name: 'test-repo',
@@ -157,7 +157,7 @@ export function sampleMarketplacePayload() {
       plan: {
         id: 1,
         name: 'Pro Plan',
-        description: 'Pro plan for STAS',
+        description: 'Pro plan for SYNTARO',
         monthly_price_in_cents: 4900,
         yearly_price_in_cents: 49000,
         price_model: 'flat',
@@ -235,7 +235,7 @@ export function sampleAgentResult(_overrides?: Partial<AgentResult>): AgentResul
     confidence: 'high',
     fixReady: true,
     prUrl: 'https://github.com/owner/test-repo/pull/42',
-    branchName: 'stas/fix-42-mock',
+    branchName: 'syntaro/fix-42-mock',
     diff: 'diff --git a/src/login.ts b/src/login.ts\nindex abc..def 100644\n--- a/src/login.ts\n+++ b/src/login.ts\n@@ -10,3 +10,5 @@\n+  // Sanitize input\n+  const sanitized = escapeSpecialChars(input);',
     testOutput:
       'PASS tests/login.test.ts (42ms)\n  ✓ handles special characters in password\n  ✓ rejects empty password\n\nTests: 2 passed, 2 total',

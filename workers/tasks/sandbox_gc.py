@@ -20,7 +20,7 @@ def sandbox_gc(self) -> dict:
     """
     import httpx
 
-    gc_url = os.getenv("STAS_GC_SWEEP_URL", "http://localhost:3000/admin/gc/sweep")
+    gc_url = os.getenv("SYNTARO_GC_SWEEP_URL", "http://localhost:3000/admin/gc/sweep")
     admin_key = os.getenv("ADMIN_API_KEY", "")
     logger.info("Running sandbox GC sweep — url=%s", gc_url)
 

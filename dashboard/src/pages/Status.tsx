@@ -49,7 +49,7 @@ export default function Status() {
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="text-center">
         <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-5xl">System Status</h1>
-        <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">Real-time status of STAS services.</p>
+        <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">Real-time status of SYNTARO services.</p>
       </div>
 
       <div className={`mt-8 rounded-2xl border p-8 text-center ${
@@ -141,7 +141,7 @@ export default function Status() {
         <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Status History</h3>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
           For full incident history visit{' '}
-          <a href="https://status.stas.aimino.ai" className="text-brand-600 underline" target="_blank" rel="noopener noreferrer">status.stas.aimino.ai</a>.
+          <a href="https://status.syntaro.io" className="text-brand-600 underline" target="_blank" rel="noopener noreferrer">status.syntaro.io</a>.
         </p>
       </div>
     </div>

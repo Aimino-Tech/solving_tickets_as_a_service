@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const runOsE2e = process.env.STAS_RUN_OS_E2E === '1';
+const runOsE2e = process.env.SYNTARO_RUN_OS_E2E === '1';
 
 describe.runIf(runOsE2e)('OpenSymphony dispatch E2E', () => {
   it('sends issue to OpenSymphony and gets accepted', async () => {

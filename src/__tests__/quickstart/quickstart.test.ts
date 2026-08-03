@@ -59,25 +59,25 @@ let tempDir: string;
 let savedEnv: Record<string, string | undefined>;
 
 beforeEach(() => {
-  tempDir = mkdtempSync(join(tmpdir(), 'stas-quickstart-test-'));
+  tempDir = mkdtempSync(join(tmpdir(), 'syntaro-quickstart-test-'));
   savedEnv = {
     GITHUB_TOKEN: process.env.GITHUB_TOKEN,
     GH_TOKEN: process.env.GH_TOKEN,
-    STAS_CONFIG_DIR: process.env.STAS_CONFIG_DIR,
-    STAS_OPEN_BROWSER: process.env.STAS_OPEN_BROWSER,
-    STAS_TIMEOUT_MS: process.env.STAS_TIMEOUT_MS,
-    STAS_POLL_INTERVAL_MS: process.env.STAS_POLL_INTERVAL_MS,
-    STAS_INSTALL_WAIT_MS: process.env.STAS_INSTALL_WAIT_MS,
+    SYNTARO_CONFIG_DIR: process.env.SYNTARO_CONFIG_DIR,
+    SYNTARO_OPEN_BROWSER: process.env.SYNTARO_OPEN_BROWSER,
+    SYNTARO_TIMEOUT_MS: process.env.SYNTARO_TIMEOUT_MS,
+    SYNTARO_POLL_INTERVAL_MS: process.env.SYNTARO_POLL_INTERVAL_MS,
+    SYNTARO_INSTALL_WAIT_MS: process.env.SYNTARO_INSTALL_WAIT_MS,
     GITHUB_API_URL: process.env.GITHUB_API_URL,
   };
   delete process.env.GITHUB_TOKEN;
   delete process.env.GH_TOKEN;
   delete process.env.GITHUB_API_URL;
-  process.env.STAS_CONFIG_DIR = join(tempDir, 'config');
-  process.env.STAS_OPEN_BROWSER = '0';
-  process.env.STAS_TIMEOUT_MS = '50';
-  process.env.STAS_POLL_INTERVAL_MS = '5';
-  process.env.STAS_INSTALL_WAIT_MS = '0';
+  process.env.SYNTARO_CONFIG_DIR = join(tempDir, 'config');
+  process.env.SYNTARO_OPEN_BROWSER = '0';
+  process.env.SYNTARO_TIMEOUT_MS = '50';
+  process.env.SYNTARO_POLL_INTERVAL_MS = '5';
+  process.env.SYNTARO_INSTALL_WAIT_MS = '0';
 });
 
 afterEach(() => {
@@ -151,7 +151,7 @@ describe('resolveGitHubToken', () => {
 });
 
 describe('createTestIssue', () => {
-  it('creates the demo issue with the stas:fix label', async () => {
+  it('creates the demo issue with the syntaro:fix label', async () => {
     const fake = makeFakeOctokit();
     const result = await createTestIssue(asOctokit(fake), 'alice', 'awesome-project');
 
@@ -186,7 +186,7 @@ describe('pollForPrUrl', () => {
   it('returns the PR URL from an issue comment', async () => {
     const fake = makeFakeOctokit();
     fake.rest.issues.listComments.mockResolvedValue({
-      data: [{ body: 'STAS opened https://github.com/alice/awesome-project/pull/42 to fix this' }],
+      data: [{ body: 'SYNTARO opened https://github.com/alice/awesome-project/pull/42 to fix this' }],
     });
 
     const url = await pollForPrUrl(asOctokit(fake), 'alice', 'awesome-project', 3, {
@@ -262,7 +262,7 @@ describe('createTestIssue body', () => {
     const fake = makeFakeOctokit();
     await createTestIssue(asOctokit(fake), 'alice', 'awesome-project');
     const body = fake.rest.issues.create.mock.calls[0][0].body as string;
-    expect(body).toContain('This issue was created automatically by `npx stas quickstart`');
+    expect(body).toContain('This issue was created automatically by `npx syntaro quickstart`');
     expect(body).toContain(POWERED_BY);
   });
 });

@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-# Matches Jira issue keys like PROJ-123, STAS-42, TEAM_NAME-7
+# Matches Jira issue keys like PROJ-123, SYNTARO-42, TEAM_NAME-7
 JIRA_ISSUE_KEY_PATTERN = re.compile(r"\b[A-Z][A-Z0-9_]+-\d+\b")
 
 # Env-var defaults -- override via environment

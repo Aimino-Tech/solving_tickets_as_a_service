@@ -123,7 +123,7 @@ export async function handleWhatsAppWebhook(payload: Record<string, unknown>): P
           });
           await callWhatsApp({
             messaging_product: 'whatsapp', to: from, type: 'text',
-            text: { body: `STAS is investigating: "${issueTitle}"\nI'll post progress updates here.` },
+            text: { body: `SYNTARO is investigating: "${issueTitle}"\nI'll post progress updates here.` },
           });
         } catch (err) {
           log.error({ err: String(err) }, 'Failed to enqueue WhatsApp fix request');

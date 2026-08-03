@@ -19,8 +19,8 @@ vi.mock('../../config.js', () => ({
       defaultRepoName: 'test-repo',
       installationId: 123,
     },
-    stas: {
-      label: 'stas:fix',
+    syntaro: {
+      label: 'syntaro:fix',
     },
   },
 }));
@@ -28,7 +28,7 @@ vi.mock('../../config.js', () => ({
 // Mock the RabbitMQ module
 const mockPublishMessage = vi.fn().mockResolvedValue(true);
 vi.mock('../../queue/rabbitmq.js', () => ({
-  QUEUES: { issuesFix: { name: 'stas.issues.fix', exchange: 'stas.direct', routingKey: 'issue.fix' } },
+  QUEUES: { issuesFix: { name: 'syntaro.issues.fix', exchange: 'syntaro.direct', routingKey: 'issue.fix' } },
   publishMessage: mockPublishMessage,
   connect: vi.fn().mockResolvedValue(undefined),
   isConnected: vi.fn().mockReturnValue(true),
@@ -137,7 +137,7 @@ describe('tracker/linearWebhookHandler', () => {
         priority: 2,
         url: 'https://linear.app/team/issue/LIN-123',
         source: 'linear',
-        labels: ['bug', 'stas:fix'],
+        labels: ['bug', 'syntaro:fix'],
         createdAt: '2025-01-01T00:00:00Z',
         updatedAt: '2025-01-02T00:00:00Z',
       });
@@ -147,7 +147,7 @@ describe('tracker/linearWebhookHandler', () => {
       expect(context!.ticketId).toBe('lin_123');
       expect(context!.title).toBe('Test Issue');
       expect(context!.status).toBe('In Progress');
-      expect(context!.labels).toContain('stas:fix');
+      expect(context!.labels).toContain('syntaro:fix');
     });
 
     it('returns null when tracker is not available', async () => {

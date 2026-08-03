@@ -1,9 +1,9 @@
 import { expect } from '@playwright/test';
-import { test } from '../../fixtures/stas-fixtures.js';
+import { test } from '../../fixtures/syntaro-fixtures.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 
 function getBaseURL(): string {
-  return process.env.STAS_URL || 'http://localhost:3000';
+  return process.env.SYNTARO_URL || 'http://localhost:3000';
 }
 
 test.describe('Login Page - UI Tests', () => {

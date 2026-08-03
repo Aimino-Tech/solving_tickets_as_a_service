@@ -45,7 +45,7 @@ export default function Login() {
       <div className="hidden flex-1 flex-col justify-between bg-gradient-to-br from-brand-600 to-brand-900 p-12 text-white lg:flex">
         <div>
           <div className="flex items-center gap-3">
-            <span className="text-3xl font-bold">STAS</span>
+            <span className="text-3xl font-bold">SYNTARO</span>
           </div>
         </div>
 
@@ -82,7 +82,7 @@ export default function Login() {
         </div>
 
         <p className="text-sm text-brand-200">
-          &copy; {new Date().getFullYear()} STAS. All rights reserved.
+          &copy; {new Date().getFullYear()} SYNTARO. All rights reserved.
         </p>
       </div>
 
@@ -90,7 +90,7 @@ export default function Login() {
         <div className="w-full max-w-sm">
           <div className="mb-8 text-center lg:hidden">
             <div className="flex items-center justify-center gap-2">
-              <span className="text-2xl font-bold text-gray-900">STAS</span>
+              <span className="text-2xl font-bold text-gray-900">SYNTARO</span>
             </div>
             <p className="mt-1 text-sm text-gray-500">Solving Tickets As A Service</p>
           </div>
@@ -182,12 +182,12 @@ export default function Login() {
 
           <p className="mt-4 text-center text-sm text-gray-500">
             <Link to="/onboarding" className="font-medium text-brand-600 hover:text-brand-500">
-              New to STAS? Learn more
+              New to SYNTARO? Learn more
             </Link>
           </p>
 
           <p className="mt-4 text-center text-xs text-gray-400 lg:hidden">
-            &copy; {new Date().getFullYear()} STAS. All rights reserved.
+            &copy; {new Date().getFullYear()} SYNTARO. All rights reserved.
           </p>
         </div>
       </div>

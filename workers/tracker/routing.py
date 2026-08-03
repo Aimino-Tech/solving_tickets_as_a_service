@@ -1,7 +1,7 @@
 """
 Label-based pipeline routing for Linear issues.
 
-Maps Linear issue labels to STAS pipeline names.  When a polled issue
+Maps Linear issue labels to SYNTARO pipeline names.  When a polled issue
 has one of the defined labels, it is dispatched to the corresponding
 pipeline.
 
@@ -23,9 +23,9 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 
 PIPELINE_ROUTES: dict[str, str] = {
-    "stas:fix": "default",
-    "stas:feature": "feature",
-    "stas:research": "research",
+    "syntaro:fix": "default",
+    "syntaro:feature": "feature",
+    "syntaro:research": "research",
 }
 
 # ---- Pipeline metadata --------------------------------------------------

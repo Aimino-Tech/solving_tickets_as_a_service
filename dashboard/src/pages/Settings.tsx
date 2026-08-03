@@ -31,6 +31,39 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id'];
 
+function JsonCode({ json }: { json: string }) {
+  const lines = json.split('\n').map((line, i) => {
+    const tokens: { text: string; cls: string }[] = [];
+    const re = /("(?:[^"\\]|\\.)*"|[{}\[\],:]|\btrue\b|\bfalse\b|\bnull\b)/g;
+    let last = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(line)) !== null) {
+      if (m.index > last) tokens.push({ text: line.slice(last, m.index), cls: 'text-gray-500 dark:text-gray-400' });
+      const t = m[0];
+      if (t === ':' || t === ',' || t === '{' || t === '}' || t === '[' || t === ']') {
+        tokens.push({ text: t, cls: 'text-gray-400' });
+      } else if (t === 'true' || t === 'false' || t === 'null') {
+        tokens.push({ text: t, cls: 'text-purple-600 dark:text-purple-400' });
+      } else if (t.startsWith('"') && t.endsWith('"')) {
+        const isKey = /^"[\w\s]+"\s*:/.test(line.slice(m.index));
+        tokens.push({ text: t, cls: isKey ? 'text-sky-600 dark:text-sky-400' : 'text-emerald-600 dark:text-emerald-400' });
+      } else {
+        tokens.push({ text: t, cls: 'text-gray-500 dark:text-gray-400' });
+      }
+      last = m.index + t.length;
+    }
+    if (last < line.length) tokens.push({ text: line.slice(last), cls: 'text-gray-500 dark:text-gray-400' });
+    return (
+      <span key={i} className="block">
+        {tokens.map((t, j) => (
+          <span key={j} className={t.cls}>{t.text}</span>
+        ))}
+      </span>
+    );
+  });
+  return <code className="font-mono text-xs leading-relaxed whitespace-pre">{lines}</code>;
+}
+
 export default function Settings() {
   const { user } = useAuth();
   const [dataPrivacyLoading, setDataPrivacyLoading] = useState(false);
@@ -41,6 +74,8 @@ export default function Settings() {
   const [envValues, setEnvValues] = useState<Record<string, string>>({});
   const [sysLoading, setSysLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [mcpApiUrl, setMcpApiUrl] = useState('https://api.syntaro.io');
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -62,6 +97,8 @@ export default function Settings() {
       const data = await configApi.get({ signal });
       setSysConfig(data);
       setEnvValues(data.env || {});
+      if (data.mcp?.apiUrl) setMcpApiUrl(data.mcp.apiUrl);
+      else if (data.publicUrl) setMcpApiUrl(data.publicUrl);
       const initialKeys: Record<string, string> = {};
       API_KEYS.forEach((k) => { if (data.env?.[k.key]) initialKeys[k.id] = data.env[k.key]; });
       if (data.env?.LINEAR_API_KEY) initialKeys['linear_key'] = data.env.LINEAR_API_KEY;
@@ -126,6 +163,14 @@ const [newlyCreatedKey, setNewlyCreatedKey] = useState<{ key: string; name: stri
 const [editingKeyId, setEditingKeyId] = useState<string | null>(null);
 const [editingKeyName, setEditingKeyName] = useState('');
 const [keyActionId, setKeyActionId] = useState<string | null>(null);
+const [revealedKeys, setRevealedKeys] = useState<Record<string, string>>({});
+const [lastRevealedKey, setLastRevealedKey] = useState<string | null>(null);
+  const [guideKeyId, setGuideKeyId] = useState<string | null>(null);
+
+  // The key currently shown in the guide JSON — only a key whose row is revealed
+  // (present in revealedKeys) is used, so hiding a key also removes it from the JSON.
+  const guideJsonKey = (guideKeyId && revealedKeys[guideKeyId]) || Object.values(revealedKeys)[0] || '';
+
 
   async function handleSaveApiKey(keyId: string) {
     setApiKeySaving((prev) => ({ ...prev, [keyId]: true }));
@@ -164,6 +209,15 @@ const [keyActionId, setKeyActionId] = useState<string | null>(null);
     if (activeTab === 'keys') loadMcpKeys();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!showSetupGuide || lastRevealedKey) return;
+    const revealable = mcpKeys.find((k) => k.revealable !== false);
+    if (revealable && !revealedKeys[revealable.id]) {
+      handleGuideKeySelect(revealable.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSetupGuide, mcpKeys, lastRevealedKey]);
 
   async function handleCreateMcpKey() {
     const name = newKeyName.trim();
@@ -225,6 +279,67 @@ const [keyActionId, setKeyActionId] = useState<string | null>(null);
       setTimeout(() => setMessage(null), 3000);
     } catch {
       setMessage({ type: 'error', text: 'Could not copy key automatically — please copy it manually.' });
+    }
+  }
+
+  async function handleLegacyKeyCreate(k: McpApiKey) {
+    setKeyActionId(k.id);
+    setMessage(null);
+    try {
+      const result = await mcpKeysApi.create(k.name ? `${k.name} (new)` : 'my-agent');
+      setNewlyCreatedKey({ key: result.key, name: result.name });
+      setRevealedKeys((prev) => ({ ...prev, [result.id]: result.key }));
+      setLastRevealedKey(result.key);
+      setGuideKeyId(result.id);
+      await loadMcpKeys();
+      setMessage({ type: 'success', text: 'New key created — copy it now and configure your agent.' });
+      setTimeout(() => setMessage(null), 5000);
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to create a new key' });
+    } finally {
+      setKeyActionId(null);
+    }
+  }
+
+  async function handleRevealMcpKey(keyId: string) {
+    if (revealedKeys[keyId]) {
+      setRevealedKeys((prev) => {
+        const next = { ...prev };
+        delete next[keyId];
+        return next;
+      });
+      return;
+    }
+    setKeyActionId(keyId);
+    setMessage(null);
+    try {
+      const data = await mcpKeysApi.get(keyId);
+      setRevealedKeys((prev) => ({ ...prev, [keyId]: data.key }));
+      setLastRevealedKey(data.key);
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to reveal key' });
+    } finally {
+      setKeyActionId(null);
+    }
+  }
+
+  async function handleGuideKeySelect(keyId: string) {
+    const key = mcpKeys.find((k) => k.id === keyId);
+    if (!key || key.revealable === false) {
+      setMessage({ type: 'error', text: 'This key was created before secure reveal was enabled, so it cannot be shown. Create a new key to view and copy it.' });
+      return;
+    }
+    setKeyActionId(keyId);
+    setMessage(null);
+    try {
+      const data = await mcpKeysApi.get(keyId);
+      setRevealedKeys((prev) => ({ ...prev, [keyId]: data.key }));
+      setLastRevealedKey(data.key);
+      setGuideKeyId(keyId);
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to reveal key' });
+    } finally {
+      setKeyActionId(null);
     }
   }
 
@@ -821,7 +936,7 @@ const [keyActionId, setKeyActionId] = useState<string | null>(null);
               <div>
                 <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">MCP API Keys</h3>
                 <p className="text-xs text-gray-500">
-                  Keys for AI agents to connect to STAS via MCP (set as STAS_API_KEY in your agent)
+                  Keys for AI agents to connect to SYNTARO via MCP (set as SYNTARO_API_KEY in your agent)
                 </p>
               </div>
             </div>
@@ -866,7 +981,7 @@ const [keyActionId, setKeyActionId] = useState<string | null>(null);
                   Key "{newlyCreatedKey.name}" created — copy it now, it will not be shown again.
                 </p>
                 <p className="text-xs text-green-700 dark:text-green-400 mt-1">
-                  Use it as <code className="font-mono">STAS_API_KEY</code> when configuring your agent (Claude Desktop, Cursor, OpenCode...).
+                  Use it as <code className="font-mono">SYNTARO_API_KEY</code> with <code className="font-mono">SYNTARO_API_URL={mcpApiUrl}</code> when configuring your agent (Claude Desktop, Cursor, OpenCode...).
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -920,7 +1035,48 @@ const [keyActionId, setKeyActionId] = useState<string | null>(null);
                           </button>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <code className="font-mono text-xs text-gray-400 select-all">{k.keyPrefix}••••••••</code>
+                          {revealedKeys[k.id] ? (
+                            <button
+                              onClick={() => handleRevealMcpKey(k.id)}
+                              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                              title="Hide key"
+                            >
+                              <EyeOff size={12} />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (k.revealable === false) {
+                                  handleLegacyKeyCreate(k);
+                                } else {
+                                  handleRevealMcpKey(k.id);
+                                }
+                              }}
+                              disabled={keyActionId === k.id}
+                              className={k.revealable === false
+                                ? 'p-1 text-gray-300 dark:text-gray-600 hover:text-brand-600 dark:hover:text-brand-400 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors'
+                                : 'p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors'}
+                              title={k.revealable === false ? 'This key was created before secure reveal was enabled, so it cannot be shown. Click to create a new key you can copy.' : 'Show key'}
+                            >
+                              <Eye size={12} />
+                            </button>
+                          )}
+                          {revealedKeys[k.id] ? (
+                            <>
+                              <code className="font-mono text-xs text-gray-700 dark:text-gray-300 break-all select-all">
+                                {revealedKeys[k.id]}
+                              </code>
+                              <button
+                                onClick={() => handleCopyKey(revealedKeys[k.id])}
+                                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                title="Copy key"
+                              >
+                                <Copy size={12} />
+                              </button>
+                            </>
+                          ) : (
+                            <code className="font-mono text-xs text-gray-400 select-all">{k.keyPrefix}••••••••</code>
+                          )}
                           <span className="text-xs text-gray-400">
                             Created {new Date(k.createdAt).toLocaleDateString()}
                             {k.lastUsedAt ? ` · Used ${new Date(k.lastUsedAt).toLocaleDateString()}` : ' · Never used'}
@@ -939,6 +1095,126 @@ const [keyActionId, setKeyActionId] = useState<string | null>(null);
                   )}
                 </div>
               ))
+            )}
+          </div>
+
+          <div className="mt-6 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                How to connect your AI agent
+              </h4>
+              <button
+                onClick={() => setShowSetupGuide((prev) => !prev)}
+                className="text-xs text-brand-600 hover:text-brand-700 dark:text-brand-400 font-medium"
+              >
+                {showSetupGuide ? 'Hide' : 'Show'} guide
+              </button>
+            </div>
+
+            {showSetupGuide && (
+              <div className="space-y-4 text-sm">
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-3 space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">1. Create an API key and copy it</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Click <span className="font-medium">Create key</span>, give it a name (e.g. <code className="font-mono">claude-desktop</code>), then copy the key shown. It is displayed only once.
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-3 space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">2. Configure the Remote MCP Server for your agent</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Your SYNTARO API URL is:
+                  </p>
+                  <code className="block rounded-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 font-mono text-xs break-all select-all">
+                    {mcpApiUrl}
+                  </code>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Option A — CLI (recommended). Register the remote MCP server for your agent:
+                  </p>
+                  <code className="block rounded-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 font-mono text-xs break-all select-all">
+                    npx syntaro install-mcp --claude --url {mcpApiUrl}
+                  </code>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Use <code className="font-mono">--cursor</code> or <code className="font-mono">--opencode</code> for those agents, then restart the agent.
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Option B — manual JSON. Add a remote SSE server to your agent's MCP config (<code className="font-mono">claude_desktop_config.json</code>, <code className="font-mono">.cursor/mcp.json</code>, or <code className="font-mono">opencode.json</code>):
+                  </p>
+                  {mcpKeys.filter((k) => k.revealable !== false).length > 1 && (
+                    <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                      Key to use in this config:
+                      <select
+                        value={guideKeyId || ''}
+                        onChange={(e) => handleGuideKeySelect(e.target.value)}
+                        className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1 font-mono text-xs text-gray-700 dark:text-gray-300"
+                      >
+                        <option value="">Select a key…</option>
+                        {mcpKeys.map((k) => (
+                          <option key={k.id} value={k.id} disabled={k.revealable === false}>
+                            {k.name} ({k.keyPrefix}••••{k.revealable === false ? ' — cannot reveal' : ''})
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        const key = guideJsonKey || '<SYNTARO_API_KEY>';
+                        handleCopyKey(JSON.stringify({
+                          mcpServers: {
+                            syntaro: {
+                              type: 'sse',
+                              url: `${mcpApiUrl}/sse`,
+                              headers: { Authorization: `Bearer ${key}` },
+                            },
+                          },
+                        }, null, 2));
+                      }}
+                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                      title="Copy JSON config"
+                    >
+                      <Copy size={12} />
+                    </button>
+                    <div className="rounded-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 break-all select-all">
+                      <JsonCode
+                        json={JSON.stringify({
+                          mcpServers: {
+                            syntaro: {
+                              type: 'sse',
+                              url: `${mcpApiUrl}/sse`,
+                              headers: { Authorization: `Bearer ${guideJsonKey || '<SYNTARO_API_KEY>'}` },
+                            },
+                          },
+                        }, null, 2)}
+                      />
+                    </div>
+                    {guideJsonKey ? (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                        Your revealed key is already filled in — copy this JSON as-is.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <code className="font-mono">&lt;SYNTARO_API_KEY&gt;</code> is a placeholder — pick a key above to fill it in automatically, or click the 👁 eye icon on a key to reveal it.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-3 space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">3. Set the SYNTARO API key</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Set the key you created as <code className="font-mono">SYNTARO_API_KEY</code> in your agent configuration — it is sent as <code className="font-mono">Authorization: Bearer &lt;key&gt;</code>.
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-3 space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">4. Start using it</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    In your agent, ask something like: <span className="italic">"fix these tickets"</span> or <span className="italic">"is there a ticket for X?"</span>. The agent will check existing tickets and create new ones if needed.
+                  </p>
+                </div>
+              </div>
             )}
           </div>
         </div>

@@ -1,6 +1,6 @@
 # Disaster Recovery Runbook
 
-> STAS — Solving Tickets As A Service
+> SYNTARO — Solving Tickets As A Service
 > Last updated: 2026-06-08
 
 ## Table of Contents
@@ -77,7 +77,7 @@ RPO Achieved: < 1 minute (WAL archiving at 5-min intervals)
 | PostgreSQL | `/var/backups/postgres/` | `s3://<bucket>/postgres/` |
 | Redis | `/var/backups/redis/` | `s3://<bucket>/redis/` |
 | RabbitMQ definitions | `/var/backups/rabbitmq/` | `s3://<bucket>/rabbitmq/` |
-| Retention archives | `/tmp/stas-archives/` | `s3://<bucket>/archives/` |
+| Retention archives | `/tmp/syntaro-archives/` | `s3://<bucket>/archives/` |
 
 ### Backup scripts
 
@@ -126,22 +126,22 @@ RPO Achieved: < 1 minute (WAL archiving at 5-min intervals)
 
 ```bash
 # 1. Check logs for root cause
-docker logs --tail=100 stas-webhook
+docker logs --tail=100 syntaro-webhook
 
 # 2. Restart the service
-docker compose -f docker-compose.prod.yml up -d stas-webhook
+docker compose -f docker-compose.prod.yml up -d syntaro-webhook
 
 # 3. Verify health
 curl -f http://localhost:3000/health
 
 # 4. Check worker pool
-docker compose -f docker-compose.prod.yml ps stas-worker
+docker compose -f docker-compose.prod.yml ps syntaro-worker
 ```
 
 ### Worker crash
 ```bash
 # Workers are stateless — safe to restart any
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=4
 ```
 
 ### Celery Beat crash
@@ -204,10 +204,10 @@ Bug in migration, manual SQL gone wrong, or storage layer corruption.
 
 ```bash
 # 1. Identify the corruption point from logs
-grep -i 'error\|corrupt\|constraint\|null' /var/log/stas/webhook.log
+grep -i 'error\|corrupt\|constraint\|null' /var/log/syntaro/webhook.log
 
 # 2. Stop the application (prevent further writes)
-docker compose -f docker-compose.prod.yml stop stas-webhook stas-worker celery-beat
+docker compose -f docker-compose.prod.yml stop syntaro-webhook syntaro-worker celery-beat
 
 # 3. Restore to pre-corruption point
 #    Choose the last known-good backup
@@ -263,8 +263,8 @@ pg_restore --dbname="$DATABASE_URL" \
 
 ```bash
 # 1. Drop and recreate database
-dropdb --if-exists stas_production
-createdb stas_production
+dropdb --if-exists syntaro_production
+createdb syntaro_production
 
 # 2. Apply schema migrations (from known-good state)
 npx tsx src/db/migrate.ts
@@ -314,7 +314,7 @@ docker compose -f docker-compose.prod.yml up -d rabbitmq
 curl -u guest:guest http://localhost:15672/api/queues | jq '.[].name'
 
 # 4. Restart workers to re-connect
-docker compose -f docker-compose.prod.yml restart stas-worker celery-beat
+docker compose -f docker-compose.prod.yml restart syntaro-worker celery-beat
 
 # 5. Re-enqueue any lost jobs from run_history
 psql "$DATABASE_URL" -c "
@@ -358,7 +358,7 @@ docker compose -f docker-compose.prod.yml up -d redis
 redis-cli INFO keyspace
 
 # 4. Restart affected services
-docker compose -f docker-compose.prod.yml restart stas-webhook stas-worker celery-beat
+docker compose -f docker-compose.prod.yml restart syntaro-webhook syntaro-worker celery-beat
 ```
 
 ### Notes
@@ -543,7 +543,7 @@ pg_restore --dbname="$DATABASE_URL" \
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                      STAS DR Quick Ref                      │
+│                      SYNTARO DR Quick Ref                      │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  Service Crash    → docker compose restart <service>        │

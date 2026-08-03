@@ -37,23 +37,23 @@ class TestQueueForTier:
     """``queue_for_tier()`` returns the correct Celery queue per tier."""
 
     @pytest.mark.parametrize("tier,expected", [
-        ("enterprise", "stas.sla.enterprise"),
-        ("team", "stas.sla.team"),
-        ("solo", "stas.sla.solo"),
-        ("free", "stas.sla.free"),
+        ("enterprise", "syntaro.sla.enterprise"),
+        ("team", "syntaro.sla.team"),
+        ("solo", "syntaro.sla.solo"),
+        ("free", "syntaro.sla.free"),
     ])
     def test_known_tier(self, tier: str, expected: str) -> None:
         assert queue_for_tier(tier) == expected
 
     def test_unknown_tier_falls_back_to_free(self) -> None:
-        assert queue_for_tier("platinum") == "stas.sla.free"
+        assert queue_for_tier("platinum") == "syntaro.sla.free"
 
     def test_case_insensitive(self) -> None:
-        assert queue_for_tier("ENTERPRISE") == "stas.sla.enterprise"
-        assert queue_for_tier("Team") == "stas.sla.team"
+        assert queue_for_tier("ENTERPRISE") == "syntaro.sla.enterprise"
+        assert queue_for_tier("Team") == "syntaro.sla.team"
 
     def test_whitespace_stripped(self) -> None:
-        assert queue_for_tier("  free  ") == "stas.sla.free"
+        assert queue_for_tier("  free  ") == "syntaro.sla.free"
 
 
 # ===========================================================================
@@ -92,16 +92,16 @@ class TestTierForQueue:
     """``tier_for_queue()`` reverse-maps queue → tier."""
 
     @pytest.mark.parametrize("queue_name,expected", [
-        ("stas.sla.enterprise", "enterprise"),
-        ("stas.sla.team", "team"),
-        ("stas.sla.solo", "solo"),
-        ("stas.sla.free", "free"),
+        ("syntaro.sla.enterprise", "enterprise"),
+        ("syntaro.sla.team", "team"),
+        ("syntaro.sla.solo", "solo"),
+        ("syntaro.sla.free", "free"),
     ])
     def test_known_queue(self, queue_name: str, expected: str) -> None:
         assert tier_for_queue(queue_name) == expected
 
     def test_unknown_queue(self) -> None:
-        assert tier_for_queue("stas.agents.triage") is None
+        assert tier_for_queue("syntaro.agents.triage") is None
 
 
 # ===========================================================================
@@ -129,10 +129,10 @@ class TestResolveQueue:
     """``resolve_queue()`` combines tier resolution + queue lookup."""
 
     def test_with_tier(self) -> None:
-        assert resolve_queue("tenant-1", "enterprise") == "stas.sla.enterprise"
+        assert resolve_queue("tenant-1", "enterprise") == "syntaro.sla.enterprise"
 
     def test_without_tier_defaults_free(self) -> None:
-        assert resolve_queue("tenant-1") == "stas.sla.free"
+        assert resolve_queue("tenant-1") == "syntaro.sla.free"
 
 
 # ===========================================================================
@@ -147,8 +147,8 @@ class TestConvenienceMaps:
         assert set(SLA_TIER_QUEUE_MAP.keys()) == {"enterprise", "team", "solo", "free"}
 
     def test_queue_map_values(self) -> None:
-        assert SLA_TIER_QUEUE_MAP["enterprise"] == "stas.sla.enterprise"
-        assert SLA_TIER_QUEUE_MAP["free"] == "stas.sla.free"
+        assert SLA_TIER_QUEUE_MAP["enterprise"] == "syntaro.sla.enterprise"
+        assert SLA_TIER_QUEUE_MAP["free"] == "syntaro.sla.free"
 
     def test_priority_map_keys(self) -> None:
         assert set(SLA_TIER_PRIORITY_MAP.keys()) == {"enterprise", "team", "solo", "free"}
@@ -177,10 +177,10 @@ class TestTierQueues:
     def test_queue_names(self) -> None:
         names = {q.name for q in TIER_QUEUES}
         assert names == {
-            "stas.sla.enterprise",
-            "stas.sla.team",
-            "stas.sla.solo",
-            "stas.sla.free",
+            "syntaro.sla.enterprise",
+            "syntaro.sla.team",
+            "syntaro.sla.solo",
+            "syntaro.sla.free",
         }
 
     def test_routing_keys(self) -> None:
@@ -196,7 +196,7 @@ class TestTierRoutes:
 
     def test_agent_tasks_route_to_free_default(self) -> None:
         assert "workers.tasks.agent.*" in TIER_ROUTES
-        assert TIER_ROUTES["workers.tasks.agent.*"]["queue"] == "stas.sla.free"
+        assert TIER_ROUTES["workers.tasks.agent.*"]["queue"] == "syntaro.sla.free"
 
 
 # ===========================================================================
@@ -227,7 +227,7 @@ class TestSlaPriorityRouter:
             "workers.tasks.agent.fix", (), {"tier": "enterprise"}, {},
         )
         assert result is not None
-        assert result["queue"] == "stas.sla.enterprise"
+        assert result["queue"] == "syntaro.sla.enterprise"
         assert result["priority"] == 9
 
     def test_free_tier(self) -> None:
@@ -235,7 +235,7 @@ class TestSlaPriorityRouter:
             "workers.tasks.agent.fix", (), {"tier": "free"}, {},
         )
         assert result is not None
-        assert result["queue"] == "stas.sla.free"
+        assert result["queue"] == "syntaro.sla.free"
         assert result["priority"] == 0
 
     def test_unknown_tier_falls_back(self) -> None:
@@ -243,7 +243,7 @@ class TestSlaPriorityRouter:
             "workers.tasks.agent.fix", (), {"tier": "platinum"}, {},
         )
         assert result is not None
-        assert result["queue"] == "stas.sla.free"
+        assert result["queue"] == "syntaro.sla.free"
         assert result["priority"] == 0
 
     def test_non_string_tier_ignored(self) -> None:
@@ -269,7 +269,7 @@ class TestApplySlaPriority:
 
         mock_task.apply_async.assert_called_once()
         _call_kwargs = mock_task.apply_async.call_args.kwargs
-        assert _call_kwargs.get("queue") == "stas.sla.enterprise"
+        assert _call_kwargs.get("queue") == "syntaro.sla.enterprise"
         assert _call_kwargs.get("priority") == 9
         assert _call_kwargs.get("args") == ("issue-1",)
         assert result == "async_result"
@@ -281,7 +281,7 @@ class TestApplySlaPriority:
 
         mock_task.apply_async.assert_called_once()
         _call_kwargs = mock_task.apply_async.call_args.kwargs
-        assert _call_kwargs.get("queue") == "stas.sla.free"
+        assert _call_kwargs.get("queue") == "syntaro.sla.free"
         assert _call_kwargs.get("priority") == 0
 
     def test_unknown_tier_defaults_free(self) -> None:
@@ -291,7 +291,7 @@ class TestApplySlaPriority:
 
         mock_task.apply_async.assert_called_once()
         _call_kwargs = mock_task.apply_async.call_args.kwargs
-        assert _call_kwargs.get("queue") == "stas.sla.free"
+        assert _call_kwargs.get("queue") == "syntaro.sla.free"
         assert _call_kwargs.get("priority") == 0
 
     @staticmethod

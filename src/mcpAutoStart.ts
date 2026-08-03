@@ -1,15 +1,15 @@
 /**
  * MCP Server Auto-Start — spawns the Python FastMCP server as a child process
- * alongside the main STAS Express app.
+ * alongside the main SYNTARO Express app.
  *
  * The MCP server can run in two modes:
- *   - SSE (default): Exposes MCP via HTTP SSE at STAS_MCP_PORT
+ *   - SSE (default): Exposes MCP via HTTP SSE at SYNTARO_MCP_PORT
  *   - stdio: For local tools like OpenCode and Claude Desktop (not auto-started)
  *
  * Environment variables:
- *   STAS_MCP_AUTO_START  — Set to "false" to disable auto-start (default: true)
- *   STAS_MCP_PORT        — Port for the SSE server (default: 4095)
- *   STAS_MCP_SERVER_URL  — Public URL for the MCP server (default: http://localhost:4095)
+ *   SYNTARO_MCP_AUTO_START  — Set to "false" to disable auto-start (default: true)
+ *   SYNTARO_MCP_PORT        — Port for the SSE server (default: 4095)
+ *   SYNTARO_MCP_SERVER_URL  — Public URL for the MCP server (default: http://localhost:4095)
  *   MCP_API_KEY          — API key for MCP auth
  */
 
@@ -39,10 +39,10 @@ function checkPythonDeps(): boolean {
  * Returns the child process reference, or null if auto-start is disabled.
  */
 export function startMcpServer(): ChildProcess | null {
-  const autoStart = process.env.STAS_MCP_AUTO_START !== 'false';
+  const autoStart = process.env.SYNTARO_MCP_AUTO_START !== 'false';
 
   if (!autoStart) {
-    log.info('MCP server auto-start disabled via STAS_MCP_AUTO_START=false');
+    log.info('MCP server auto-start disabled via SYNTARO_MCP_AUTO_START=false');
     return null;
   }
 
@@ -50,7 +50,7 @@ export function startMcpServer(): ChildProcess | null {
     return null;
   }
 
-  const port = process.env.STAS_MCP_PORT || '4095';
+  const port = process.env.SYNTARO_MCP_PORT || '4095';
   const host = '0.0.0.0';
   const projectRoot = path.resolve(import.meta.dirname ?? process.cwd(), '..');
 
@@ -63,7 +63,7 @@ export function startMcpServer(): ChildProcess | null {
       env: {
         ...process.env,
         PYTHONPATH: `${projectRoot}:${process.env.PYTHONPATH || ''}`,
-        STAS_MCP_PORT: port,
+        SYNTARO_MCP_PORT: port,
         MCP_API_KEY: process.env.MCP_API_KEY || '',
       },
     });

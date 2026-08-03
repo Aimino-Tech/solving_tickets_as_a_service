@@ -283,7 +283,7 @@ async function main(): Promise<void> {
   }
 
   // Step 2: Database tests
-  const dbUrl = process.env.DATABASE_URL ?? 'postgres://localhost:5432/stas';
+  const dbUrl = process.env.DATABASE_URL ?? 'postgres://localhost:5432/syntaro';
   info(`Using database: ${dbUrl.replace(/\/\/.*@/, '//***@')}`);
 
   try {

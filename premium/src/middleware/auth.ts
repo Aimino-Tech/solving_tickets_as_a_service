@@ -27,7 +27,7 @@ const JWT_SECRET: string =
   })();
 
 const JWT_ALGORITHM = 'HS256';
-const JWT_ISSUER = 'stas-premium';
+const JWT_ISSUER = 'syntaro-premium';
 const JWT_EXPIRY_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 export interface JwtPayload {

@@ -1,4 +1,4 @@
-# STAS Auth — UX Flow Documentation
+# SYNTARO Auth — UX Flow Documentation
 
 > Last updated: 2026-07-29
 > Auth backend: `src/auth/` · Auth dashboard: `dashboard/src/context/AuthContext.tsx` · Login page: `dashboard/src/pages/Login.tsx`
@@ -83,7 +83,7 @@ The login page uses a **split layout**: left panel (brand/features) + right pane
 │  ┌────────────────────────┐  ┌────────────────────┐ │
 │  │  Brand Panel (50%)     │  │  Form Panel (50%)  │ │
 │  │                        │  │                    │ │
-│  │  STAS                  │  │  [Sign In|Register]│ │
+│  │  SYNTARO                  │  │  [Sign In|Register]│ │
 │  │  "Solving Tickets..."  │  │  ────────toggle─── │ │
 │  │                        │  │                    │ │
 │  │  ✓ We Never Train...   │  │  Name*             │ │
@@ -94,7 +94,7 @@ The login page uses a **split layout**: left panel (brand/features) + right pane
 │  │  ✓ Audit log           │  │                    │ │
 │  │  ✓ Team collaboration  │  │  Password*         │ │
 │  │                        │  │  [____________]    │ │
-│  │  © 2026 STAS           │  │                    │ │
+│  │  © 2026 SYNTARO           │  │                    │ │
 │  │                        │  │  [Sign In]         │ │
 │  │                        │  │  ✗ Error message   │ │
 │  │                        │  │                    │ │
@@ -159,8 +159,8 @@ When authenticated, the app loads `Layout.tsx` which shows:
 ┌─────────────────────────────────────────────────────┐
 │  ┌──────────┐  ┌──────────────────────────────────┐│
 │  │ Sidebar  │  │  Top Bar                         ││
-│  │          │  │  [≡] STAS Premium Dashboard  🔔  ││
-│  │ ⚡ STAS  │  ├──────────────────────────────────┤│
+│  │          │  │  [≡] SYNTARO Premium Dashboard  🔔  ││
+│  │ ⚡ SYNTARO  │  ├──────────────────────────────────┤│
 │  │          │  │                                  ││
 │  │ ◉ Dash   │  │  Page Content (Outlet)           ││
 │  │ ↻ Runs   │  │                                  ││
@@ -336,8 +336,8 @@ Response `200`:
 
 | Token | Storage | Key |
 |-------|---------|-----|
-| Access Token | `localStorage` | `stas_token` |
-| Refresh Token | `localStorage` | `stas_refresh_token` |
+| Access Token | `localStorage` | `syntaro_token` |
+| Refresh Token | `localStorage` | `syntaro_refresh_token` |
 
 **Auto-refresh flow** (`dashboard/src/api/client.ts:64`):
 
@@ -377,7 +377,7 @@ Auth middleware (`src/auth/middleware.ts`) validates `Authorization: Bearer <tok
 
 ```
 ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
-│ Dashboard │     │  STAS    │     │  GitHub  │     │ Supabase │
+│ Dashboard │     │  SYNTARO    │     │  GitHub  │     │ Supabase │
 │ (Browser) │     │  Backend │     │          │     │ (Auth)   │
 └─────┬─────┘     └─────┬────┘     └─────┬────┘     └─────┬────┘
       │                  │                │                │

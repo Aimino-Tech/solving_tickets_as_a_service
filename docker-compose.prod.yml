@@ -1,9 +1,9 @@
 # =============================================================================
-# STAS — Production Docker Compose Stack
+# SYNTARO — Production Docker Compose Stack
 #
 # Usage:
 #   docker compose -f docker-compose.prod.yml up -d
-#   docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
+#   docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=4
 #
 # Requires a .env file with all required environment variables.
 # See .env.example for the full list.
@@ -54,7 +54,7 @@ x-healthcheck-rabbitmq: &healthcheck-rabbitmq
 
 x-healthcheck-postgres: &healthcheck-postgres
   healthcheck:
-    test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stas} -d ${POSTGRES_DB:-stas}"]
+    test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-syntaro} -d ${POSTGRES_DB:-syntaro}"]
     interval: 10s
     timeout: 5s
     retries: 5
@@ -67,28 +67,28 @@ services:
   # ---------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
-    container_name: stas-postgres
+    container_name: syntaro-postgres
     <<: *default-restart
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-stas}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stas-password}
-      POSTGRES_DB: ${POSTGRES_DB:-stas}
+      POSTGRES_USER: ${POSTGRES_USER:-syntaro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-syntaro-password}
+      POSTGRES_DB: ${POSTGRES_DB:-syntaro}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     <<: *healthcheck-postgres
     <<: *resources-light
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   # ---------------------------------------------------------------------------
   # Redis — Celery backend + caching + BullMQ job queue
   # ---------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
-    container_name: stas-redis
+    container_name: syntaro-redis
     <<: *default-restart
     ports:
       - "6379:6379"
@@ -99,39 +99,39 @@ services:
     <<: *resources-light
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   # ---------------------------------------------------------------------------
   # RabbitMQ — message broker for Celery workers and cross-service bridge
   # ---------------------------------------------------------------------------
   rabbitmq:
     image: rabbitmq:4-management-alpine
-    container_name: stas-rabbitmq
+    container_name: syntaro-rabbitmq
     <<: *default-restart
     ports:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-stas-app}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-stas-app-password}
-      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/stas}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-syntaro-app}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-syntaro-app-password}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/syntaro}
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     <<: *healthcheck-rabbitmq
     <<: *resources-light
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   # ---------------------------------------------------------------------------
-  # STAS Webhook — Express.js API server (scalable horizontally)
+  # SYNTARO Webhook — Express.js API server (scalable horizontally)
   # ---------------------------------------------------------------------------
-  stas-webhook:
+  syntaro-webhook:
     build:
       context: .
       dockerfile: Dockerfile
-    image: stas-webhook:latest
-    container_name: stas-webhook
+    image: syntaro-webhook:latest
+    container_name: syntaro-webhook
     <<: *default-restart
     ports:
       - "3000:3000"
@@ -139,9 +139,9 @@ services:
     environment:
       - NODE_ENV=production
       - RUN_MODE=api
-      - REDIS_URL=redis://stas-redis:6379
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
-      - DATABASE_URL=postgres://${POSTGRES_USER:-stas}:${POSTGRES_PASSWORD:-stas-password}@stas-postgres:5432/${POSTGRES_DB:-stas}
+      - REDIS_URL=redis://syntaro-redis:6379
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-syntaro-app}:${RABBITMQ_PASSWORD:-syntaro-app-password}@syntaro-rabbitmq:5672${RABBITMQ_VHOST:-/syntaro}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-syntaro}:${POSTGRES_PASSWORD:-syntaro-password}@syntaro-postgres:5432/${POSTGRES_DB:-syntaro}
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
       - SENTRY_RELEASE=${SENTRY_RELEASE}
@@ -164,28 +164,28 @@ services:
     <<: *resources-webhook
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   # ---------------------------------------------------------------------------
-  # STAS Worker — Celery worker that processes issue queues (scalable)
+  # SYNTARO Worker — Celery worker that processes issue queues (scalable)
   # ---------------------------------------------------------------------------
-  stas-worker:
+  syntaro-worker:
     build:
       context: ./workers
       dockerfile: Dockerfile
-    image: stas-worker:latest
-    container_name: stas-worker
+    image: syntaro-worker:latest
+    container_name: syntaro-worker
     <<: *default-restart
-    command: celery -A workers.celery_app worker -l info -Q stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications --concurrency=4
+    command: celery -A workers.celery_app worker -l info -Q syntaro.agents.triage,syntaro.agents.dispatch,syntaro.agents.sandbox,syntaro.agents.verification,syntaro.agents.pr_creation,syntaro.agents.notifications --concurrency=4
     env_file: .env
     environment:
-      - REDIS_URL=redis://stas-redis:6379
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
-      - DATABASE_URL=postgres://${POSTGRES_USER:-stas}:${POSTGRES_PASSWORD:-stas-password}@stas-postgres:5432/${POSTGRES_DB:-stas}
+      - REDIS_URL=redis://syntaro-redis:6379
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-syntaro-app}:${RABBITMQ_PASSWORD:-syntaro-app-password}@syntaro-rabbitmq:5672${RABBITMQ_VHOST:-/syntaro}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-syntaro}:${POSTGRES_PASSWORD:-syntaro-password}@syntaro-postgres:5432/${POSTGRES_DB:-syntaro}
       - PGPoolSize=50
       - PGMAXClientConnections=75
-      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
-      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-syntaro-app}:${RABBITMQ_PASSWORD:-syntaro-app-password}@syntaro-rabbitmq:5672${RABBITMQ_VHOST:-/syntaro}
+      - CELERY_RESULT_BACKEND=redis://syntaro-redis:6379/0
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
       - SENTRY_RELEASE=${SENTRY_RELEASE}
@@ -206,22 +206,22 @@ services:
     <<: *resources-worker
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   # ---------------------------------------------------------------------------
   # Celery Beat — periodic task scheduler
   # ---------------------------------------------------------------------------
   celery-beat:
-    image: stas-worker:latest
-    container_name: stas-celery-beat
+    image: syntaro-worker:latest
+    container_name: syntaro-celery-beat
     <<: *default-restart
     command: celery -A workers.celery_app beat -l info
     env_file: .env
     environment:
-      - REDIS_URL=redis://stas-redis:6379
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
-      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
-      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+      - REDIS_URL=redis://syntaro-redis:6379
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-syntaro-app}:${RABBITMQ_PASSWORD:-syntaro-app-password}@syntaro-rabbitmq:5672${RABBITMQ_VHOST:-/syntaro}
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-syntaro-app}:${RABBITMQ_PASSWORD:-syntaro-app-password}@syntaro-rabbitmq:5672${RABBITMQ_VHOST:-/syntaro}
+      - CELERY_RESULT_BACKEND=redis://syntaro-redis:6379/0
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
       - SENTRY_RELEASE=${SENTRY_RELEASE}
@@ -236,21 +236,21 @@ services:
     <<: *resources-light
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   # ---------------------------------------------------------------------------
   # Flower — Celery monitoring dashboard
   # ---------------------------------------------------------------------------
   flower:
     image: mher/flower:latest
-    container_name: stas-flower
+    container_name: syntaro-flower
     <<: *default-restart
     ports:
       - "5555:5555"
-    command: flower --port=5555 --broker=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
+    command: flower --port=5555 --broker=amqp://${RABBITMQ_USER:-syntaro-app}:${RABBITMQ_PASSWORD:-syntaro-app-password}@syntaro-rabbitmq:5672${RABBITMQ_VHOST:-/syntaro}
     environment:
-      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-stas-app}:${RABBITMQ_PASSWORD:-stas-app-password}@stas-rabbitmq:5672${RABBITMQ_VHOST:-/stas}
-      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-syntaro-app}:${RABBITMQ_PASSWORD:-syntaro-app-password}@syntaro-rabbitmq:5672${RABBITMQ_VHOST:-/syntaro}
+      - CELERY_RESULT_BACKEND=redis://syntaro-redis:6379/0
       - FLOWER_PORT=5555
     depends_on:
       redis:
@@ -260,14 +260,14 @@ services:
     <<: *resources-light
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   # ---------------------------------------------------------------------------
   # Nginx — reverse proxy with TLS termination and load balancing
   # ---------------------------------------------------------------------------
   nginx:
     image: nginx:alpine
-    container_name: stas-nginx
+    container_name: syntaro-nginx
     <<: *default-restart
     ports:
       - "80:80"
@@ -277,7 +277,7 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - htpasswd-data:/etc/nginx/.htpasswd:ro
     depends_on:
-      stas-webhook:
+      syntaro-webhook:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/healthz"]
@@ -288,26 +288,26 @@ services:
     <<: *resources-light
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   # ---------------------------------------------------------------------------
-  # STAS Dashboard — React/Vite frontend for the hosted service
+  # SYNTARO Dashboard — React/Vite frontend for the hosted service
   # ---------------------------------------------------------------------------
-  stas-dashboard:
+  syntaro-dashboard:
     build:
       context: ./dashboard
       dockerfile: Dockerfile
-    image: stas-dashboard:latest
-    container_name: stas-dashboard
+    image: syntaro-dashboard:latest
+    container_name: syntaro-dashboard
     <<: *default-restart
     ports:
       - "5173:80"
     env_file: .env
     environment:
-      - VITE_API_URL=http://stas-webhook:3000
+      - VITE_API_URL=http://syntaro-webhook:3000
       - NODE_ENV=production
     depends_on:
-      stas-webhook:
+      syntaro-webhook:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/healthz"]
@@ -318,14 +318,14 @@ services:
     <<: *resources-light
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   # ---------------------------------------------------------------------------
   # Certbot — automatic TLS certificate provisioning with Let's Encrypt
   # ---------------------------------------------------------------------------
   certbot:
     image: certbot/certbot:latest
-    container_name: stas-certbot
+    container_name: syntaro-certbot
     <<: *default-restart
     entrypoint: ""
     command: >
@@ -343,14 +343,14 @@ services:
       - nginx
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   # ---------------------------------------------------------------------------
   # Backup Cron — scheduled database and queue backups
   # ---------------------------------------------------------------------------
-  stas-backup:
-    image: stas-webhook:latest
-    container_name: stas-backup
+  syntaro-backup:
+    image: syntaro-webhook:latest
+    container_name: syntaro-backup
     <<: *default-restart
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -361,8 +361,8 @@ services:
         crond -f -l 2
     env_file: .env
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER:-stas}:${POSTGRES_PASSWORD:-stas-password}@stas-postgres:5432/${POSTGRES_DB:-stas}
-      - REDIS_URL=redis://stas-redis:6379
+      - DATABASE_URL=postgres://${POSTGRES_USER:-syntaro}:${POSTGRES_PASSWORD:-syntaro-password}@syntaro-postgres:5432/${POSTGRES_DB:-syntaro}
+      - REDIS_URL=redis://syntaro-redis:6379
       - BACKUP_DIR=/backups
     volumes:
       - backup-data:/backups
@@ -372,44 +372,44 @@ services:
     <<: *resources-light
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   # ---------------------------------------------------------------------------
   # Nginx Setup — generates htpasswd file for Flower auth
   # ---------------------------------------------------------------------------
   nginx-setup:
     image: nginx:alpine
-    container_name: stas-nginx-setup
+    container_name: syntaro-nginx-setup
     restart: "no"
     entrypoint: >
       sh -c "
         apk add --no-cache apache2-utils &&
-        htpasswd -b -c /etc/nginx/.htpasswd '${FLOWER_USER:-admin}' '${FLOWER_PASSWORD:-stas-flower-admin}' &&
+        htpasswd -b -c /etc/nginx/.htpasswd '${FLOWER_USER:-admin}' '${FLOWER_PASSWORD:-syntaro-flower-admin}' &&
         echo 'htpasswd generated'
       "
     volumes:
       - htpasswd-data:/etc/nginx
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   # ---------------------------------------------------------------------------
-  # STAS Egress Proxy — Squid-based zero-trust egress proxy for sandbox isolation
+  # SYNTARO Egress Proxy — Squid-based zero-trust egress proxy for sandbox isolation
   # ---------------------------------------------------------------------------
-  stas-egress-proxy:
+  syntaro-egress-proxy:
     build:
       context: ./docker/squid
       dockerfile: Dockerfile
-    image: stas-egress-proxy:latest
-    container_name: stas-egress-proxy
+    image: syntaro-egress-proxy:latest
+    container_name: syntaro-egress-proxy
     <<: *default-restart
     ports:
       - "3128:3128"
     environment:
       ALLOWED_DOMAINS: ${DOCKER_ALLOWED_HOSTS:-api.github.com,github.com,raw.githubusercontent.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,proxy.golang.org,index.crates.io,crates.io}
     networks:
-      - stas-net
-      - stas_agent-net
+      - syntaro-net
+      - syntaro_agent-net
     healthcheck:
       test: ["CMD", "squidclient", "-h", "127.0.0.1", "http://localhost:3128"]
       interval: 10s
@@ -422,7 +422,7 @@ services:
 
   loki:
     image: grafana/loki:3.0.0
-    container_name: stas-loki
+    container_name: syntaro-loki
     <<: *default-restart
     ports:
       - "3100:3100"
@@ -440,11 +440,11 @@ services:
     <<: *resources-light
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
   promtail:
     image: grafana/promtail:3.0.0
-    container_name: stas-promtail
+    container_name: syntaro-promtail
     <<: *default-restart
     volumes:
       - ./deploy/monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
@@ -457,7 +457,7 @@ services:
     <<: *resources-light
     logging: *default-logging
     networks:
-      - stas-net
+      - syntaro-net
 
 volumes:
   postgres-data:
@@ -478,10 +478,10 @@ volumes:
     driver: local
 
 networks:
-  stas-net:
+  syntaro-net:
     driver: bridge
-    name: stas-prod-net
-  stas_agent-net:
+    name: syntaro-prod-net
+  syntaro_agent-net:
     driver: bridge
     internal: false
-    name: stas_agent-net
+    name: syntaro_agent-net

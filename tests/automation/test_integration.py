@@ -5,7 +5,7 @@ from playwright.sync_api import Page, expect
 from pages.login_page import LoginPage
 
 
-STAS_URL = os.environ.get("STAS_URL", "http://localhost:3099")
+SYNTARO_URL = os.environ.get("SYNTARO_URL", "http://localhost:3099")
 OSY_URL = os.environ.get("OSY_URL", "http://localhost:4096")
 
 
@@ -26,9 +26,9 @@ pytestmark = pytest.mark.skipif(
 
 class TestFEPlusBEIntegration:
     def test_login_page_loads(self, page: Page):
-        login_page = LoginPage(page, STAS_URL)
+        login_page = LoginPage(page, SYNTARO_URL)
         login_page.goto()
-        expect(page).to_have_title(re.compile(r"STAS Dashboard"))
+        expect(page).to_have_title(re.compile(r"SYNTARO Dashboard"))
 
     def test_be_health_reachable(self, page: Page):
         if not be_alive():
@@ -45,8 +45,8 @@ class TestFEPlusBEIntegration:
         assert resp.status in (200, 405, 404, 401, 400)
 
     def test_cross_service_health_both_alive(self, page: Page):
-        fe_resp = page.request.get(f"{STAS_URL}/health")
-        assert fe_resp.ok, "STAS FE not healthy"
+        fe_resp = page.request.get(f"{SYNTARO_URL}/health")
+        assert fe_resp.ok, "SYNTARO FE not healthy"
         if not be_alive():
             pytest.skip("OpenSymphony (BE) not running")
         osy_resp = page.request.get(f"{OSY_URL}/health", timeout=5000)

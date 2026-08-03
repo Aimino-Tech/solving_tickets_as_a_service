@@ -19,7 +19,7 @@ DEFAULT_WEB_TIMEOUT = 10.0
 DEFAULT_WEB_SEARCH_URL_TEMPLATE = (
     "https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1"
 )
-USER_AGENT = "STAS-ResearchEngine/1.0"
+USER_AGENT = "SYNTARO-ResearchEngine/1.0"
 CONTEXT_LINES = 2
 
 
@@ -65,7 +65,7 @@ def search_web(
     max_results: int = 5,
     timeout: float = DEFAULT_WEB_TIMEOUT,
 ) -> list[dict[str, Any]]:
-    url_template = os.getenv("STAS_WEB_SEARCH_URL", DEFAULT_WEB_SEARCH_URL_TEMPLATE)
+    url_template = os.getenv("SYNTARO_WEB_SEARCH_URL", DEFAULT_WEB_SEARCH_URL_TEMPLATE)
     url = url_template.format(query=urllib.parse.quote_plus(query))
     headers = {"User-Agent": USER_AGENT}
     try:

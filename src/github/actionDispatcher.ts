@@ -1,6 +1,8 @@
 // @ts-nocheck
-import type { ReceiptManifest } from "../types.js";
-import type { Octokit } from "@octokit/rest";
+
+import type { Octokit } from '@octokit/rest';
+import type { ReceiptManifest } from '../types.js';
+
 /**
  * ActionDispatcher — decides what action to take based on agent results.
  *
@@ -21,14 +23,15 @@ import type { Octokit } from "@octokit/rest";
  * ────────────────────────────────────────────────────────────────────
  */
 
+import { captureEvent } from '../analytics/tracker.js';
+import { config } from '../config.js';
+import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
+import type { QualityGateReport } from '../pipeline/quality-gates.js';
+import * as messages from '../platforms/messages.js';
 import type { AgentResult, QualityGateResult } from '../types/agent-types.js';
 import type { SandboxExecutor } from '../types/sandbox-types.js';
 import { rootLogger } from '../utils/logger.js';
 import { getOctokit } from './auth.js';
-import * as messages from '../platforms/messages.js';
-import { addBreadcrumb, setUserContext } from '../monitoring/sentry.js';
-import { config } from '../config.js';
-import { captureEvent } from '../analytics/tracker.js';
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
 
@@ -90,11 +93,8 @@ export class ActionDispatcher {
       }
 
       if (params.receiptManifest) {
-        if (config.stas.mode === 'oss') {
-          log.info(
-            { issueNumber, mode: config.stas.mode },
-            'OSS mode — skipping receipt verification gate',
-          );
+        if (config.syntaro.mode === 'oss') {
+          log.info({ issueNumber, mode: config.syntaro.mode }, 'OSS mode — skipping receipt verification gate');
         } else {
           const receiptCheck = verifyAllReceipts(params.receiptManifest);
           if (!receiptCheck.valid) {
@@ -122,10 +122,10 @@ export class ActionDispatcher {
 
       const qualityGates = agentResult.verification?.qualityGates;
       if (qualityGates && qualityGates.length > 0) {
-        const failedGates = qualityGates.filter(g => !g.passed);
+        const failedGates = qualityGates.filter((g) => !g.passed);
         if (failedGates.length > 0) {
           log.warn(
-            { issueNumber, failedGates: failedGates.map(g => ({ gate: g.gate, tool: g.ossTool })) },
+            { issueNumber, failedGates: failedGates.map((g) => ({ gate: g.gate, tool: g.ossTool })) },
             `Quality gates blocked: ${failedGates.length} gate(s) failed`,
           );
           const body = messages.qualityGatesBlockComment(failedGates, agentResult.summary);
@@ -136,16 +136,24 @@ export class ActionDispatcher {
       }
 
       // 5. Push branch and gather changed files
-      const branchName = `stas/fix-${issueNumber}-${Date.now().toString(36)}`;
+      const branchName = `syntaro/fix-${issueNumber}-${Date.now().toString(36)}`;
       await sandbox.pushBranch(branchName);
 
       let changedFiles: string[] = [];
+      let diffOutput = '';
       try {
         const diffResult = await sandbox.exec(
           // biome-ignore lint/suspicious/noExplicitAny: private field access needed
-          `git -C ${(sandbox as { repoDir?: string }).repoDir || `/home/user/${repoName}`} diff --name-only origin/${baseBranch}...${branchName} 2>/dev/null || true`,
+          `git -C ${(sandbox as { repoDir?: string }).repoDir || `/home/user/${repoName}`} diff origin/${baseBranch}...${branchName} 2>/dev/null || true`,
         );
-        changedFiles = diffResult.stdout.split('\n').filter(Boolean);
+        diffOutput = diffResult.stdout;
+        changedFiles = diffOutput
+          .split('\n')
+          .filter(Boolean)
+          .map((line) => line.trim())
+          .filter((line) => !line.startsWith('diff --git'))
+          .map((line) => line.replace(/^[+-]/, '').split('\t')[0])
+          .filter(Boolean);
       } catch (err) {
         log.warn(
           { err: String(err), repoOwner, repoName, issueNumber },
@@ -153,14 +161,65 @@ export class ActionDispatcher {
         );
       }
 
-      // 6a. Pre-existing tests regressed — block PR creation, branch already pushed
+      // 6a. Repo-side quality gate enforcement — block PR creation when repo-side gates fail
+      let repoGateReport: QualityGateReport | null = null;
+      try {
+        const { runAllGates } = await import('../pipeline/quality-gates.js');
+        repoGateReport = await runAllGates({
+          sandbox,
+          diff: diffOutput,
+          execFn: (cmd: string, timeoutMs?: number) => sandbox.exec(cmd, timeoutMs),
+        });
+      } catch (err) {
+        log.warn({ err: String(err), repoOwner, repoName, issueNumber }, 'Repo-side quality gates errored (non-fatal)');
+      }
+
+      if (repoGateReport && !repoGateReport.passed) {
+        const failed = repoGateReport.gates.filter((g) => !g.passed);
+        // Infra errors (empty stdout, 'Error' stderr) fail open; real gate failures carry output and fail closed.
+        const infraFailures = failed.filter(
+          (g) => g.stdout.trim() === '' && (g.stderr ?? '').trim().startsWith('Error'),
+        );
+        const realFailures = failed.filter((g) => !infraFailures.includes(g));
+
+        if (realFailures.length === 0) {
+          if (infraFailures.length > 0) {
+            log.warn(
+              { issueNumber, infraFailures: infraFailures.map((g) => g.gate) },
+              'Repo-side quality gates unavailable (infra error) — proceeding',
+            );
+          }
+        } else {
+          const failedGates = realFailures.map((g) => ({
+            gate: g.gate,
+            passed: false,
+            ossTool: g.error || 'repo-side',
+            command: g.gate,
+            stdout: g.stdout,
+            stderr: g.stderr,
+            details: g.details,
+          }));
+          log.warn(
+            {
+              issueNumber,
+              failedGates: failedGates.map((g) => g.gate),
+            },
+            `Repo-side quality gates blocked: ${failedGates.length} gate(s) failed`,
+          );
+          const body = messages.qualityGatesBlockComment(failedGates, agentResult.summary);
+          await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
+          return { action: 'comment_posted', commentBody: body };
+        }
+      }
+
+      // 7a. Pre-existing tests regressed — block PR creation, branch already pushed
       if (agentResult.verification?.preExistingTestsRegressed) {
         const body = messages.regressionBlockComment(agentResult);
         await this.postComment(octokit, repoOwner, repoName, issueNumber, body);
         return { action: 'comment_posted', commentBody: body };
       }
 
-      // 6b. Create PR based on confidence
+      // 7b. Create PR based on confidence
       if (agentResult.confidence === 'high') {
         // Create a non-draft PR
         const prBody = messages.buildPRBody({
@@ -286,7 +345,7 @@ export class ActionDispatcher {
     repoName: string,
     installationId: number,
   ): void {
-    if (!config.stas.poweredByFooterEnabled) return;
+    if (!config.syntaro.poweredByFooterEnabled) return;
     const props = { repoOwner, repoName, issueNumber };
     captureEvent('pr_footer_impression', String(installationId), { ...props, placement: 'pr-body' });
     captureEvent('pr_footer_impression', String(installationId), { ...props, placement: 'pr-comment' });

@@ -1,7 +1,7 @@
 # =============================================================================
 # publish-mcp.yml — Automated MCP Registry & Smithery Publishing
 #
-# Pushes the STAS MCP server to:
+# Pushes the SYNTARO MCP server to:
 #   1. MCP Registry (https://registry.mcp.ai) — for agent discovery
 #   2. Smithery (https://smithery.ai) — for one-click deployment
 #

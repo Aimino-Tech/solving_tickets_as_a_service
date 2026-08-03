@@ -47,9 +47,9 @@
       "version": "1.0.0"
     }
   ],
-  "title": "STAS — Tenant Health Overview",
+  "title": "SYNTARO — Tenant Health Overview",
   "description": "Per-tenant health monitoring dashboard: status, throughput, errors, and resource usage",
-  "tags": ["stas", "tenants", "health", "prometheus"],
+  "tags": ["syntaro", "tenants", "health", "prometheus"],
   "timezone": "browser",
   "schemaVersion": 38,
   "version": 1,
@@ -564,7 +564,7 @@
     {
       "title": "Celery & Queue Monitoring",
       "type": "link",
-      "url": "/d/STAS-celery/STAS-celery-queue-monitoring",
+      "url": "/d/SYNTARO-celery/SYNTARO-celery-queue-monitoring",
       "targetBlank": true
     }
   ],

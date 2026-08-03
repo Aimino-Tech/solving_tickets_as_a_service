@@ -1,6 +1,6 @@
 # Setup Guide
 
-> **Get STAS running in your environment — from zero to your first automated fix.**
+> **Get SYNTARO running in your environment — from zero to your first automated fix.**
 
 ---
 
@@ -31,7 +31,7 @@ Before you begin, make sure you have:
 | **OpenCode CLI** | Latest | Agent runtime — install via `npm install -g @opencode/cli` |
 | **Python** (optional) | >= 3.12 | Only if running Celery workers on bare metal |
 
-Docker Compose is the recommended way to run STAS — it provisions Redis automatically.
+Docker Compose is the recommended way to run SYNTARO — it provisions Redis automatically.
 
 ---
 
@@ -53,7 +53,7 @@ npm run dev
 
 # 5. Verify it's running
 curl http://localhost:3000/health
-# Expected: {"status":"ok","service":"stas-bot","version":"0.1.0"}
+# Expected: {"status":"ok","service":"syntaro-bot","version":"0.1.0"}
 ```
 
 > **Note:** The `npm run setup` script handles dependency installation, environment file creation, and database seeding. If you prefer manual control, follow the step-by-step instructions below.
@@ -64,11 +64,11 @@ curl http://localhost:3000/health
 
 ### 1. Create a GitHub App
 
-STAS operates as a GitHub App. You need one to receive webhooks and interact with repositories.
+SYNTARO operates as a GitHub App. You need one to receive webhooks and interact with repositories.
 
 1. Go to **GitHub Settings → Developer settings → GitHub Apps → New GitHub App**
 2. Fill in the required fields:
-   - **GitHub App name**: `stas-bot` (or your preference)
+   - **GitHub App name**: `syntaro-bot` (or your preference)
    - **Homepage URL**: `https://github.com/tamnguyen08/solving_tickets_as_a_service`
    - **Webhook URL**: `https://your-domain.com/webhook/github` (use a tunneling service like `ngrok` for local dev)
    - **Webhook secret**: Generate a strong secret — save this for `.env`
@@ -104,9 +104,9 @@ OPENCODE_URL=http://localhost:4096
 OPENCODE_MODEL=anthropic/claude-sonnet-4-20250514
 
 # Optional tweaks
-STAS_LABEL=stas:fix
-STAS_PORT=3000
-STAS_MAX_CONCURRENT=3
+SYNTARO_LABEL=syntaro:fix
+SYNTARO_PORT=3000
+SYNTARO_MAX_CONCURRENT=3
 ```
 
 | Variable | Required | Default | Description |
@@ -117,9 +117,9 @@ STAS_MAX_CONCURRENT=3
 | `OPENCODE_URL` | ✅ | `http://localhost:4096` | OpenCode serve endpoint |
 | `OPENCODE_MODEL` | | `anthropic/claude-sonnet-4-20250514` | Primary fix agent model |
 | `OPENAI_CHEAP_MODEL` | | `gpt-4o-mini` | Triage model |
-| `STAS_LABEL` | | `stas:fix` | Issue label that triggers fixes |
-| `STAS_PORT` | | `3000` | Webhook server port |
-| `STAS_MAX_CONCURRENT` | | `3` | Max concurrent fix runs |
+| `SYNTARO_LABEL` | | `syntaro:fix` | Issue label that triggers fixes |
+| `SYNTARO_PORT` | | `3000` | Webhook server port |
+| `SYNTARO_MAX_CONCURRENT` | | `3` | Max concurrent fix runs |
 | `FALLBACK_MODELS` | | — | Comma-separated fallback models |
 
 ### 3. Start the Backend Services
@@ -160,20 +160,20 @@ This starts PostgreSQL, Redis, RabbitMQ, the webhook server, Celery workers, and
 curl http://localhost:3000/health
 
 # Expected response:
-# {"status":"ok","service":"stas-bot","version":"0.1.0","uptime":42}
+# {"status":"ok","service":"syntaro-bot","version":"0.1.0","uptime":42}
 
 # Check worker status
 curl http://localhost:3000/api/health/workers
 
 # Simulate a webhook (using the OpenCode plugin)
-bash plugin/tools/stas-webhook-test.sh issues.labeled
+bash plugin/tools/syntaro-webhook-test.sh issues.labeled
 ```
 
 ---
 
 ## Platform-Specific Guides
 
-STAS supports multiple Git hosting platforms. See the following guides:
+SYNTARO supports multiple Git hosting platforms. See the following guides:
 
 | Platform | Status | Guide |
 |---|---|---|
@@ -187,18 +187,18 @@ STAS supports multiple Git hosting platforms. See the following guides:
 
 ## Next Steps
 
-Once STAS is running:
+Once SYNTARO is running:
 
 1. **Install the GitHub App** on a repository you want to auto-fix
-2. **Label an issue** with `stas:fix` (or your custom label)
-3. **Watch** STAS post a "working on it" comment, then open a draft PR
-4. **Review** the PR — STAS includes the fix, regression tests, and an evidence report
+2. **Label an issue** with `syntaro:fix` (or your custom label)
+3. **Watch** SYNTARO post a "working on it" comment, then open a draft PR
+4. **Review** the PR — SYNTARO includes the fix, regression tests, and an evidence report
 
 For production deployment, see:
 
 - [`docs/SELF_HOSTING.md`](../SELF_HOSTING.md) — comprehensive deployment options
 - [`ops/runbook.md`](../ops/runbook.md) — day-2 operations
-- [`docs/CUSTOMIZATION.md`](../CUSTOMIZATION.md) — adapting STAS to your workflow
+- [`docs/CUSTOMIZATION.md`](../CUSTOMIZATION.md) — adapting SYNTARO to your workflow
 - [`docs/SECURITY.md`](../SECURITY.md) — security model and hardening
 
 For troubleshooting, see [`FAQ.md`](FAQ.md) in this directory.

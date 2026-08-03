@@ -1,4 +1,4 @@
-# STAS Eval Pipeline
+# SYNTARO Eval Pipeline
 
 Measure agent fix success rate, detect regressions, and drive the OSS→paid conversion funnel.
 
@@ -39,7 +39,7 @@ eval/
 ├── tsconfig.json             # TypeScript config (extends root)
 ├── langfuse-config.ts        # LangFuse client initialization
 ├── providers/
-│   └── stas-agent.ts         # Custom provider for STAS agent (to be implemented)
+│   └── syntaro-agent.ts         # Custom provider for SYNTARO agent (to be implemented)
 ├── test-cases/               # Test case YAML files
 ├── results/                  # Eval output (gitignored)
 └── README.md                 # This file

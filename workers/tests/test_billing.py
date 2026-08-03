@@ -40,10 +40,10 @@ class TestUsageCounter:
         result = increment_usage("tenant-1")
 
         assert result == 1
-        fake_redis.hincrby.assert_called_once_with("stas:billing:usage:tenant-1", "count", 1)
+        fake_redis.hincrby.assert_called_once_with("syntaro:billing:usage:tenant-1", "count", 1)
         # Should set period_start on first call
         fake_redis.hsetnx.assert_called_once()
-        assert fake_redis.hsetnx.call_args[0][0] == "stas:billing:usage:tenant-1"
+        assert fake_redis.hsetnx.call_args[0][0] == "syntaro:billing:usage:tenant-1"
         assert fake_redis.hsetnx.call_args[0][1] == "period_start"
 
     def test_increment_usage_atomic(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -96,14 +96,14 @@ class TestUsageCounter:
 
         reset_usage("tenant-1")
 
-        fake_redis.delete.assert_called_once_with("stas:billing:usage:tenant-1")
+        fake_redis.delete.assert_called_once_with("syntaro:billing:usage:tenant-1")
 
     def test_get_all_usage_scans_keys(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """get_all_usage should scan and return all tenant usage records."""
         fake_redis = MagicMock()
         # Simulate SCAN returning two keys, then done
         fake_redis.scan.side_effect = [
-            (0, ["stas:billing:usage:tenant-a", "stas:billing:usage:tenant-b"]),
+            (0, ["syntaro:billing:usage:tenant-a", "syntaro:billing:usage:tenant-b"]),
         ]
         fake_redis.hgetall.side_effect = [
             {"count": "3", "period_start": "2026-06-01T00:00:00"},

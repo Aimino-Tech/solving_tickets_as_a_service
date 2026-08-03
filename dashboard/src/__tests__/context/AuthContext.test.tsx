@@ -54,7 +54,7 @@ describe('AuthContext', () => {
   });
 
   it('starts in loading state when token exists in localStorage', () => {
-    localStorage.setItem('stas_token', 'existing-token');
+    localStorage.setItem('syntaro_token', 'existing-token');
     (auth.me as any).mockResolvedValue({
       id: '1', email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: '', createdAt: '2024-01-01',
     });
@@ -64,7 +64,7 @@ describe('AuthContext', () => {
   });
 
   it('loads user when a valid token exists', async () => {
-    localStorage.setItem('stas_token', 'valid-token');
+    localStorage.setItem('syntaro_token', 'valid-token');
     (auth.me as any).mockResolvedValue({
       id: '1', email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: 'https://example.com/avatar.png', createdAt: '2024-01-01',
     });
@@ -79,7 +79,7 @@ describe('AuthContext', () => {
   });
 
   it('clears token and remains unauthenticated when /me fails', async () => {
-    localStorage.setItem('stas_token', 'invalid-token');
+    localStorage.setItem('syntaro_token', 'invalid-token');
     (auth.me as any).mockRejectedValue(new Error('Unauthorized'));
 
     renderWithProvider(<TestConsumer />);
@@ -125,7 +125,7 @@ describe('AuthContext', () => {
   });
 
   it('calls logout and clears state when logout() is invoked', async () => {
-    localStorage.setItem('stas_token', 'valid-token');
+    localStorage.setItem('syntaro_token', 'valid-token');
     (auth.me as any).mockResolvedValue({
       id: '1', email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: '', createdAt: '2024-01-01',
     });
@@ -157,7 +157,7 @@ describe('AuthContext', () => {
 
     // Make setToken actually store the token so localStorage flow works
     (setToken as any).mockImplementation((token: string) => {
-      localStorage.setItem('stas_token', token);
+      localStorage.setItem('syntaro_token', token);
     });
 
     (auth.me as any).mockResolvedValue({

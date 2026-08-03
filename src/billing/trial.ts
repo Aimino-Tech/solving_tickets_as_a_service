@@ -1,5 +1,5 @@
 /**
- * Free trial management for STAS billing.
+ * Free trial management for SYNTARO billing.
  *
  * Every new account gets a 14-day free trial with 5 fix runs.
  * During the trial period, accounts have access to Solo plan features.
@@ -71,7 +71,7 @@ function getTrialRedisClient(): Redis {
 }
 
 function buildTrialKey(accountId: number): string {
-  return `stas:billing:trial:${accountId}`;
+  return `syntaro:billing:trial:${accountId}`;
 }
 
 /**
@@ -129,7 +129,7 @@ export async function resetTrialUsage(accountId: number): Promise<void> {
  * Start a trial for an account. Sets trial_start and trial_end in the database.
  * Idempotent — if a trial is already active, returns the existing trial dates.
  *
- * @param accountId - Internal STAS account ID
+ * @param accountId - Internal SYNTARO account ID
  * @param trialDays - Trial duration in days (default: 14)
  *
  * @returns The trial start and end dates
@@ -255,7 +255,7 @@ export async function canUseTrial(
     if (!status.isActive) {
       return {
         allowed: false,
-        reason: 'Your free trial has ended. Please subscribe to continue using STAS.',
+        reason: 'Your free trial has ended. Please subscribe to continue using SYNTARO.',
       };
     }
 

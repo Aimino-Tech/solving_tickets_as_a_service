@@ -11,9 +11,9 @@
  * test execution, and either closes (success) or re-opens (failure).
  *
  * Redis Keys:
- *   stas:circuit:{taskType}:state         - CLOSED | OPEN | HALF_OPEN
- *   stas:circuit:{taskType}:failure_count - integer
- *   stas:circuit:{taskType}:opened_at     - Unix timestamp (seconds)
+ *   syntaro:circuit:{taskType}:state         - CLOSED | OPEN | HALF_OPEN
+ *   syntaro:circuit:{taskType}:failure_count - integer
+ *   syntaro:circuit:{taskType}:opened_at     - Unix timestamp (seconds)
  */
 
 import { Redis } from 'ioredis';
@@ -29,7 +29,7 @@ const log = rootLogger.child({ module: 'circuit-breaker' });
 const THRESHOLD = Number(process.env.CIRCUIT_BREAKER_THRESHOLD) || 5;
 const OPEN_SECONDS = Number(process.env.CIRCUIT_BREAKER_OPEN_SECONDS) || 60;
 const HALF_OPEN_MAX = Number(process.env.CIRCUIT_BREAKER_HALF_OPEN_MAX) || 1;
-const REDIS_PREFIX = 'stas:circuit:';
+const REDIS_PREFIX = 'syntaro:circuit:';
 
 // ---------------------------------------------------------------------------
 // Types

@@ -6,8 +6,8 @@
  */
 
 export interface TestHarnessOptions {
-  /** Port for the STAS Express server (0 = random) */
-  stasPort?: number;
+  /** Port for the SYNTARO Express server (0 = random) */
+  syntaroPort?: number;
   /** Port for the mock GitHub API server (0 = random) */
   githubApiPort?: number;
   /** Port for the mock OpenCode server (0 = random) */
@@ -20,14 +20,14 @@ export interface TestHarnessOptions {
 
 /**
  * Set up environment variables for E2E testing.
- * Call BEFORE importing any STAS modules.
+ * Call BEFORE importing any SYNTARO modules.
  */
 export function setupTestEnvironment(options?: TestHarnessOptions): void {
   process.env.TEST = 'true';
   process.env.NODE_ENV = 'test';
   process.env.LOG_LEVEL = options?.verbose ? 'debug' : 'fatal';
   process.env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY = 'true';
-  process.env.STAS_LABEL = 'stas:fix';
+  process.env.SYNTARO_LABEL = 'syntaro:fix';
   process.env.GITHUB_APP_ID = '999999';
   process.env.GITHUB_WEBHOOK_SECRET = 'test-secret';
   process.env.GITHUB_APP_PRIVATE_KEY = 'mock-private-key';
@@ -51,10 +51,10 @@ export function setupTestEnvironment(options?: TestHarnessOptions): void {
   process.env.DATA_RETENTION_DAYS = '30';
   process.env.OPENSYMPHONY_ENABLED = 'false';
   process.env.RABBITMQ_URL = 'amqp://guest:guest@localhost:5672';
-  process.env.DATABASE_URL = 'postgres://localhost:5432/stas_test';
-  process.env.STAS_MCP_AUTO_START = 'false';
+  process.env.DATABASE_URL = 'postgres://localhost:5432/syntaro_test';
+  process.env.SYNTARO_MCP_AUTO_START = 'false';
   process.env.CI_MONITOR_ENABLED = 'false';
-  process.env.STAS_AI_DISABLED = 'true';
+  process.env.SYNTARO_AI_DISABLED = 'true';
 
   // Override with any custom env vars
   if (options?.env) {

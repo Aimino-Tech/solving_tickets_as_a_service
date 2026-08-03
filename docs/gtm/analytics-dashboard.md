@@ -1,4 +1,4 @@
-# STAS Usage Analytics Dashboard
+# SYNTARO Usage Analytics Dashboard
 
 **Purpose:** Track growth metrics (WAR, fix count, conversion) internally, and provide usage insights to customers on Pro/Team tiers.
 
@@ -95,7 +95,7 @@ Visitors → Installs → First Fix → Weekly Active → Paid
 | Event | Properties | Trigger | PII? |
 |-------|-----------|---------|------|
 | `app_installed` | `installation_id`, `repo_count`, `account_type` | GitHub app installed | No |
-| `issue_labeled` | `installation_id`, `repo`, `issue_number`, `language` | Issue labeled `stas:fix` | No |
+| `issue_labeled` | `installation_id`, `repo`, `issue_number`, `language` | Issue labeled `syntaro:fix` | No |
 | `plan_generated` | `installation_id`, `fix_id`, `plan_length`, `language` | Plan posted to issue | No |
 | `plan_approved` | `installation_id`, `fix_id`, `approval_time_seconds` | User approved plan | No |
 | `plan_rejected` | `installation_id`, `fix_id`, `rejection_reason` | User rejected plan | No |
@@ -159,7 +159,7 @@ Events (GitHub App / API)
 - **No PII in analytics events** — all tracking uses anonymous `installation_id` or `distinct_id`
 - **Email stored only as SHA-256 hash** — cannot recover original email from analytics
 - **IP anonymization** — PostHog configured to drop IP addresses
-- **Opt-out mechanism** — users can disable analytics via `/stas analytics disable` or dashboard setting
+- **Opt-out mechanism** — users can disable analytics via `/syntaro analytics disable` or dashboard setting
 - **Data retention** — raw events: 90 days, aggregated: 24 months
 - **GDPR compliant** — no personal data leaves the EU region (self-hosted or EU-cloud PostHog)
 - **Data Processing Agreement** — available for enterprise customers

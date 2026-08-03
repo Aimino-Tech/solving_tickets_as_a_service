@@ -1,6 +1,6 @@
 import type { FullConfig } from '@playwright/test';
 
-const STAS_URL = process.env.STAS_URL || 'http://localhost:3000';
+const SYNTARO_URL = process.env.SYNTARO_URL || 'http://localhost:3000';
 const OSY_URL = process.env.OSY_URL || 'http://localhost:4096';
 
 async function checkService(url: string, name: string, maxRetries = 10): Promise<boolean> {
@@ -20,21 +20,21 @@ async function checkService(url: string, name: string, maxRetries = 10): Promise
 }
 
 async function globalSetup(_config: FullConfig): Promise<void> {
-  console.log('\n[SETUP] Checking STAS (FE) and OpenSymphony (BE) connectivity...\n');
+  console.log('\n[SETUP] Checking SYNTARO (FE) and OpenSymphony (BE) connectivity...\n');
 
-  const stasAlive = await checkService(`${STAS_URL}/health`, 'STAS');
+  const syntaroAlive = await checkService(`${SYNTARO_URL}/health`, 'SYNTARO');
   const osyAlive = await checkService(`${OSY_URL}/healthz`, 'OpenSymphony');
 
-  process.env.__STAS_ALIVE__ = String(stasAlive);
+  process.env.__SYNTARO_ALIVE__ = String(syntaroAlive);
   process.env.__OSY_ALIVE__ = String(osyAlive);
 
-  console.log(`[SETUP] STAS (${STAS_URL}): ${stasAlive ? 'alive' : 'unreachable'}`);
+  console.log(`[SETUP] SYNTARO (${SYNTARO_URL}): ${syntaroAlive ? 'alive' : 'unreachable'}`);
   console.log(`[SETUP] OpenSymphony (${OSY_URL}): ${osyAlive ? 'alive' : 'unreachable'}`);
 
-  if (!stasAlive) {
-    console.warn('[SETUP] WARNING: STAS is not running. FE tests will fail.');
+  if (!syntaroAlive) {
+    console.warn('[SETUP] WARNING: SYNTARO is not running. FE tests will fail.');
   }
-  if (stasAlive && osyAlive) {
+  if (syntaroAlive && osyAlive) {
     console.log('[SETUP] Both FE and BE are connected and operational!\n');
   } else {
     console.log('[SETUP] Some services are unavailable. Integration tests will be skipped.\n');

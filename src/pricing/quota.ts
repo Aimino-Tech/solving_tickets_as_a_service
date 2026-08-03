@@ -5,7 +5,7 @@
  * Redis sorted sets. Each fix execution appends a member with a Unix-millisecond
  * score, allowing O(log N) count queries within the current month window.
  *
- * Key format: `stas:quotas:{accountId}:{YYYY-MM}`
+ * Key format: `syntaro:quotas:{accountId}:{YYYY-MM}`
  *   - accountId: GitHub installation ID
  *   - YYYY-MM:   billing period (e.g. "2026-06")
  *
@@ -82,12 +82,12 @@ export async function closeQuotaRedisClient(): Promise<void> {
  *
  * @example
  *   buildQuotaKey(12345, new Date('2026-06-05'))
- *   // => "stas:quotas:12345:2026-06"
+ *   // => "syntaro:quotas:12345:2026-06"
  */
 export function buildQuotaKey(accountId: number, date: Date = new Date()): string {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  return `stas:quotas:${accountId}:${year}-${month}`;
+  return `syntaro:quotas:${accountId}:${year}-${month}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -187,7 +187,7 @@ export async function resetAccountQuota(accountId: number): Promise<void> {
 /**
  * Reset monthly quotas for all accounts (cron/CLI utility).
  *
- * Scans for all keys matching the `stas:quotas:*` pattern and deletes them.
+ * Scans for all keys matching the `syntaro:quotas:*` pattern and deletes them.
  * This is called by a scheduled job at the start of each billing period.
  *
  * Uses SCAN (not KEYS) to avoid blocking Redis on large datasets.
@@ -199,7 +199,7 @@ export async function resetMonthlyQuotas(): Promise<void> {
     let deletedCount = 0;
 
     do {
-      const result = await client.scan(cursor, 'MATCH', 'stas:quotas:*', 'COUNT', 100);
+      const result = await client.scan(cursor, 'MATCH', 'syntaro:quotas:*', 'COUNT', 100);
       cursor = result[0];
       const keys = result[1];
 
@@ -226,7 +226,7 @@ export async function getGlobalMonthlyUsage(): Promise<number> {
     let total = 0;
 
     do {
-      const result = await client.scan(cursor, 'MATCH', 'stas:quotas:*', 'COUNT', 100);
+      const result = await client.scan(cursor, 'MATCH', 'syntaro:quotas:*', 'COUNT', 100);
       cursor = result[0];
       const keys = result[1];
 

@@ -1,5 +1,5 @@
 /**
- * UsageTracker — Usage tracking service for STAS.
+ * UsageTracker — Usage tracking service for SYNTARO.
  *
  * Provides:
  *   - Recording usage events with tier gating
@@ -193,7 +193,7 @@ export class UsageTracker {
     if (currentMonthUsage >= tierConfig.monthlyFixLimit) {
       return {
         allowed: false,
-        reason: `Monthly fix limit of ${tierConfig.monthlyFixLimit} reached. Upgrade at https://stas.ai/pricing`,
+        reason: `Monthly fix limit of ${tierConfig.monthlyFixLimit} reached. Upgrade at https://syntaro.ai/pricing`,
         statusCode: 402,
       };
     }
@@ -283,13 +283,13 @@ function getTierConfigForRepo(repoId: string, tierOverride?: string): TierConfig
   // Use process.env for the tier mapping.
   // In production with a hosted deployment, this would query a subscription
   // service. For self-hosted OSS, we read from the environment variable.
-  const envTierOverride = process.env[`STAS_TIER_${repoId.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`];
+  const envTierOverride = process.env[`SYNTARO_TIER_${repoId.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`];
   if (envTierOverride) {
     return getTierConfig(envTierOverride);
   }
 
   // Fallback to the default tier from env
-  const defaultTier = process.env.STAS_DEFAULT_TIER ?? 'cloud-free';
+  const defaultTier = process.env.SYNTARO_DEFAULT_TIER ?? 'cloud-free';
   return getTierConfig(defaultTier);
 }
 

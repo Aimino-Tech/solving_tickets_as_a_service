@@ -17,7 +17,7 @@ export function slackFixStartedNotification() {
       repoName: 'test-repo',
       issueNumber: 42,
       issueTitle: 'Fix broken user login',
-      botName: 'STAS',
+      botName: 'SYNTARO',
     },
   };
 }
@@ -33,7 +33,7 @@ export function slackPrCreatedNotification() {
       repoName: 'test-repo',
       issueNumber: 42,
       issueTitle: 'Fix broken user login',
-      botName: 'STAS',
+      botName: 'SYNTARO',
       prUrl: 'https://github.com/owner/test-repo/pull/123',
     },
   };
@@ -50,7 +50,7 @@ export function slackFixFailedNotification() {
       repoName: 'test-repo',
       issueNumber: 42,
       issueTitle: 'Fix broken user login',
-      botName: 'STAS',
+      botName: 'SYNTARO',
       reason: 'Could not reproduce the issue in sandbox',
     },
   };
@@ -67,7 +67,7 @@ export function slackVerificationFailedNotification() {
       repoName: 'test-repo',
       issueNumber: 42,
       issueTitle: 'Fix broken user login',
-      botName: 'STAS',
+      botName: 'SYNTARO',
       reason: 'Tests failed after fix was applied',
     },
   };
@@ -84,7 +84,7 @@ export function slackErrorNotification() {
       repoName: 'test-repo',
       issueNumber: 42,
       issueTitle: 'Fix broken user login',
-      botName: 'STAS',
+      botName: 'SYNTARO',
       errorMessage: 'OpenCode agent timed out after 600s',
     },
   };
@@ -96,7 +96,7 @@ export function slackErrorNotification() {
 export function expectedSlackFixStartedText() {
   return {
     text: [
-      ':mag: *STAS* is investigating <https://github.com/owner/test-repo/issues/42|#42>',
+      ':mag: *SYNTARO* is investigating <https://github.com/owner/test-repo/issues/42|#42>',
       '> Fix broken user login',
       '> Repo: <https://github.com/owner/test-repo|owner/test-repo>',
     ].join('\n'),
@@ -109,7 +109,7 @@ export function expectedSlackFixStartedText() {
 export function expectedSlackPrCreatedText() {
   return {
     text: [
-      ':rocket: *STAS* opened a PR for <https://github.com/owner/test-repo/issues/42|#42>',
+      ':rocket: *SYNTARO* opened a PR for <https://github.com/owner/test-repo/issues/42|#42>',
       '> Fix broken user login',
       '> Repo: <https://github.com/owner/test-repo|owner/test-repo>',
       '> PR: <https://github.com/owner/test-repo/pull/123|#123>',

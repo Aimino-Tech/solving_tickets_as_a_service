@@ -3,7 +3,7 @@
  *
  * Provides:
  *   - Creating Stripe Checkout Sessions for subscription purchases
- *   - Managing Stripe Customer objects linked to STAS accounts
+ *   - Managing Stripe Customer objects linked to SYNTARO accounts
  *   - Generating billing portal links
  *   - Creating products and prices in Stripe (dev helper)
  *
@@ -12,8 +12,8 @@
  *   const { url } = await createSubscriptionCheckoutSession({
  *     accountId: 42,
  *     planId: 'solo',
- *     successUrl: 'https://app.stas.ai/billing/success',
- *     cancelUrl: 'https://app.stas.ai/billing/cancel',
+ *     successUrl: 'https://app.syntaro.ai/billing/success',
+ *     cancelUrl: 'https://app.syntaro.ai/billing/cancel',
  *   });
  *   // redirect user to `url`
  * ──────────────────────────────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ export function resetStripeClient(): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Find or create a Stripe Customer for a STAS account.
+ * Find or create a Stripe Customer for a SYNTARO account.
  *
  * If the account already has a stripeCustomerId, returns the existing customer.
  * Otherwise, creates a new customer in Stripe and returns it.
@@ -115,7 +115,7 @@ export async function getCustomer(customerId: string): Promise<Stripe.Customer> 
  * If the account has a Stripe customer ID, it is reused. Otherwise, a new
  * customer is created during the Checkout flow.
  *
- * @param opts.accountId   - Internal STAS account ID
+ * @param opts.accountId   - Internal SYNTARO account ID
  * @param opts.planId      - Plan ID ('solo' | 'team')
  * @param opts.successUrl  - Redirect URL on successful payment
  * @param opts.cancelUrl   - Redirect URL if user cancels

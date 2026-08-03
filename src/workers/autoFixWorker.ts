@@ -27,7 +27,7 @@ export async function startAutoFixConsumer(): Promise<void> {
     await rmqConnect();
   }
 
-  await consumeQueue('stas-auto-fix', async (msg) => {
+  await consumeQueue('syntaro-auto-fix', async (msg) => {
     if (!msg) return;
     const content = msg.content.toString();
     let data: AutoFixJobData;
@@ -67,7 +67,7 @@ export async function startAutoFixConsumer(): Promise<void> {
         '',
         'The fix pipeline has been triggered. The agent will investigate the failure and push a fix commit.',
         '',
-        `> — ${config.stas.botName} 🤖`,
+        `> — ${config.syntaro.botName} 🤖`,
       ].join('\n'),
     });
 

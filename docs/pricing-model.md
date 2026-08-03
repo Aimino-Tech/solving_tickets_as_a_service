@@ -1,8 +1,8 @@
-# STAS Business Model & Pricing
+# SYNTARO Business Model & Pricing
 
 ## Open Core + Cloud
 
-STAS follows an **open-core model** with three paths, all pointing to paid plans for full features:
+SYNTARO follows an **open-core model** with three paths, all pointing to paid plans for full features:
 
 | | Self-Hosted (OSS) | Cloud Free | Cloud Paid |
 |---|---|---|---|
@@ -70,7 +70,7 @@ STAS follows an **open-core model** with three paths, all pointing to paid plans
 | GPT-5.2 Codex | $5.30 | 62.7% |
 | GPT-5.5 (DeepSWE) | $5.80 | 70.0% |
 | OpenCode + Opus 4.6 | $51.88 | 47.5% |
-| **STAS (our AGI, projected)** | **~$3.00** | **90%+** |
+| **SYNTARO (our AGI, projected)** | **~$3.00** | **90%+** |
 
 Our AGI projects ~$3-4/fix at 90%+ pass rate — 3x better value than alternatives.
 
@@ -78,7 +78,7 @@ Our AGI projects ~$3-4/fix at 90%+ pass rate — 3x better value than alternativ
 
 | Product | Entry Price | Fixes Included | Self-Host |
 |---|---|---|---|
-| STAS | Free (OSS) / $49 (Cloud) | 10–500/mo | Yes (MIT) |
+| SYNTARO | Free (OSS) / $49 (Cloud) | 10–500/mo | Yes (MIT) |
 | Plip.io | $39/mo | 25 fixes/mo | No |
 | TaskBounty | $2-5/fix | Per-fix pricing | No |
 | KintsugiBot | BYO API key | Unlimited | Yes |

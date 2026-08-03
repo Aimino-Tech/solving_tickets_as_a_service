@@ -46,10 +46,10 @@ describe('mcpKeys service', () => {
   });
 
   describe('generateKey', () => {
-    it('returns a key with sk-stas_ prefix and 32 hex chars', () => {
+    it('returns a key with sk-syntaro_ prefix and 32 hex chars', () => {
       const { key, prefix } = mod.generateKey();
-      expect(key).toMatch(/^sk-stas_[0-9a-f]{32}$/);
-      // prefix = 'sk-stas_' + first 8 chars of the hex portion
+      expect(key).toMatch(/^sk-syntaro_[0-9a-f]{32}$/);
+      // prefix = 'sk-syntaro_' + first 8 chars of the hex portion
       const hexStart = mod.MCP_KEY_PREFIX.length;
       expect(prefix).toBe(mod.MCP_KEY_PREFIX + key.slice(hexStart, hexStart + 8));
       expect(key.startsWith(prefix)).toBe(true);
@@ -64,16 +64,16 @@ describe('mcpKeys service', () => {
 
   describe('hashKey', () => {
     it('returns a 64-char sha256 hex digest', () => {
-      const hash = mod.hashKey('sk-stas_abcdef');
+      const hash = mod.hashKey('sk-syntaro_abcdef');
       expect(hash).toMatch(/^[0-9a-f]{64}$/);
     });
 
     it('is deterministic', () => {
-      expect(mod.hashKey('sk-stas_xyz')).toBe(mod.hashKey('sk-stas_xyz'));
+      expect(mod.hashKey('sk-syntaro_xyz')).toBe(mod.hashKey('sk-syntaro_xyz'));
     });
 
     it('never returns the plaintext', () => {
-      const key = 'sk-stas_secret123';
+      const key = 'sk-syntaro_secret123';
       expect(mod.hashKey(key)).not.toContain('secret123');
     });
   });
@@ -84,7 +84,7 @@ describe('mcpKeys service', () => {
         id: 'k-1',
         user_id: '42',
         name: 'agent',
-        key_prefix: 'sk-stas_12345678',
+        key_prefix: 'sk-syntaro_12345678',
         created_at: '2026-07-31T00:00:00.000Z',
         last_used_at: null,
         revoked_at: null,
@@ -93,7 +93,7 @@ describe('mcpKeys service', () => {
 
       const { record, key } = await mod.createMcpKey('42', 'agent');
 
-      expect(key).toMatch(/^sk-stas_/);
+      expect(key).toMatch(/^sk-syntaro_/);
       // The INSERTed hash must be sha256(key), not the raw key
       const insertedParams = mockQueryWithRetry.mock.calls[0][1];
       expect(insertedParams[2]).toBe(mod.hashKey(key));
@@ -102,10 +102,11 @@ describe('mcpKeys service', () => {
         id: 'k-1',
         userId: '42',
         name: 'agent',
-        keyPrefix: 'sk-stas_12345678',
+        keyPrefix: 'sk-syntaro_12345678',
         createdAt: '2026-07-31T00:00:00.000Z',
         lastUsedAt: null,
         revokedAt: null,
+        revealable: false,
       });
     });
   });
@@ -114,8 +115,8 @@ describe('mcpKeys service', () => {
     it('maps db rows to records ordered by created_at desc', async () => {
       mockQueryWithRetry.mockResolvedValue({
         rows: [
-          { id: 'k2', user_id: '1', name: 'b', key_prefix: 'sk-stas_bbbbbbbb', created_at: '2026-07-31T01:00:00Z', last_used_at: null, revoked_at: null },
-          { id: 'k1', user_id: '1', name: 'a', key_prefix: 'sk-stas_aaaaaaaa', created_at: '2026-07-31T00:00:00Z', last_used_at: '2026-07-30T00:00:00Z', revoked_at: null },
+          { id: 'k2', user_id: '1', name: 'b', key_prefix: 'sk-syntaro_bbbbbbbb', created_at: '2026-07-31T01:00:00Z', last_used_at: null, revoked_at: null },
+          { id: 'k1', user_id: '1', name: 'a', key_prefix: 'sk-syntaro_aaaaaaaa', created_at: '2026-07-31T00:00:00Z', last_used_at: '2026-07-30T00:00:00Z', revoked_at: null },
         ],
       });
 
@@ -138,7 +139,7 @@ describe('mcpKeys service', () => {
   describe('renameMcpKey', () => {
     it('updates the name and returns the record', async () => {
       mockQueryWithRetry.mockResolvedValue({
-        rows: [{ id: 'k1', user_id: '1', name: 'renamed', key_prefix: 'sk-stas_aaaaaaaa', created_at: '2026-07-31T00:00:00Z', last_used_at: null, revoked_at: null }],
+        rows: [{ id: 'k1', user_id: '1', name: 'renamed', key_prefix: 'sk-syntaro_aaaaaaaa', created_at: '2026-07-31T00:00:00Z', last_used_at: null, revoked_at: null }],
       });
       const record = await mod.renameMcpKey('1', 'k1', 'renamed');
       expect(record?.name).toBe('renamed');
@@ -174,14 +175,14 @@ describe('mcpKeys service', () => {
       mockQueryWithRetry.mockResolvedValue({
         rows: [{ id: 'k1', user_id: '7', name: 'agent' }],
       });
-      const found = await mod.findUserByMcpKey('sk-stas_abc');
-      expect(mockQueryWithRetry.mock.calls[0][1]).toEqual([mod.hashKey('sk-stas_abc')]);
+      const found = await mod.findUserByMcpKey('sk-syntaro_abc');
+      expect(mockQueryWithRetry.mock.calls[0][1]).toEqual([mod.hashKey('sk-syntaro_abc')]);
       expect(found).toEqual({ userId: '7', keyId: 'k1', name: 'agent' });
     });
 
     it('returns null for unknown/revoked keys (no row)', async () => {
       mockQueryWithRetry.mockResolvedValue({ rows: [] });
-      const found = await mod.findUserByMcpKey('sk-stas_unknown');
+      const found = await mod.findUserByMcpKey('sk-syntaro_unknown');
       expect(found).toBeNull();
     });
   });

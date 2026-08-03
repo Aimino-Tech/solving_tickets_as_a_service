@@ -12,7 +12,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from './harness/index.js';
-import { githubIssuesLabeledStasFix, githubIssuesLabeledOther } from './fixtures/webhooks/github.js';
+import { githubIssuesLabeledSyntaroFix, githubIssuesLabeledOther } from './fixtures/webhooks/github.js';
 import type { TestHarness } from './harness/index.js';
 
 let harness: TestHarness;
@@ -35,7 +35,7 @@ describe('AI-Disabled Path: Label → Webhook → Pending → Admin Claim → Ad
     expect(res.body).toEqual({ accepted: true });
 
     // No jobs should have been created against the GitHub API mock
-    // because the label doesn't match stas:fix
+    // because the label doesn't match syntaro:fix
     await new Promise((r) => setTimeout(r, 500));
 
     // The GitHub mock may or may not have received requests depending on
@@ -73,7 +73,7 @@ describe('AI-Disabled Path: Label → Webhook → Pending → Admin Claim → Ad
     await harness.sendWebhook('/webhook', githubIssuesLabeledOther());
 
     // Then a target label — should still work
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
     const res = await harness.sendWebhook('/webhook', payload);
 
     expect(res.status).toBe(202);
@@ -82,9 +82,9 @@ describe('AI-Disabled Path: Label → Webhook → Pending → Admin Claim → Ad
 
   it('Server handles rapid alternating target/non-target webhooks', async () => {
     const webhooks = [
-      githubIssuesLabeledStasFix(),
+      githubIssuesLabeledSyntaroFix(),
       githubIssuesLabeledOther(),
-      githubIssuesLabeledStasFix(),
+      githubIssuesLabeledSyntaroFix(),
       githubIssuesLabeledOther(),
     ];
 

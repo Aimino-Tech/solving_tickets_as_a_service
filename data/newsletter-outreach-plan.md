@@ -1,7 +1,7 @@
-# STAS Newsletter Outreach Plan
+# SYNTARO Newsletter Outreach Plan
 
 > Launch date: TBD | Outreach starts: T-3 weeks
-> Prepared for STAS (Solving Tickets As A Service) by AImino
+> Prepared for SYNTARO (Solving Tickets As A Service) by AImino
 
 ---
 
@@ -25,7 +25,7 @@ High effort, high impact. Pitch requires personalized outreach and compelling st
 |---|-----------|-------------|-------------|---------|-------|
 | 1 | **TLDR AI** | 500K+ | New open-source AI dev tool that fixes GitHub issues automatically | sponsors@tldr.tech | Most cost-effective per-visit. Accepts sponsorships ($750-2K). Also pitch guest post. |
 | 2 | **The Batch (Andrew Ng)** | 800K+ | AI that plans before it codes — architectural approach | thebatch@deeplearning.ai | Reaches 800K+ ML engineers. Single mention = meaningful traffic for months. |
-| 3 | **JavaScript Weekly** | 200K+ | STAS: AI senior architect for JS/TS repos. Auto-fix issues. | javascript@cooperpress.com | JS Weekly has highest dev-to-SaaS conversion. Strong JS/TS angle. |
+| 3 | **JavaScript Weekly** | 200K+ | SYNTARO: AI senior architect for JS/TS repos. Auto-fix issues. | javascript@cooperpress.com | JS Weekly has highest dev-to-SaaS conversion. Strong JS/TS angle. |
 | 4 | **Python Weekly** | 100K+ | AI that fixes GitHub issues automatically (Python support) | editor@pythonweekly.com | Python community is very active. Emphasize OSS angle. |
 | 5 | **TLDR DevOps** | 150K+ | Open-source GitHub bot that auto-fixes issues | sponsors@tldr.tech | Cross-promo with TLDR AI. DevOps angle — reduce backlog. |
 
@@ -35,13 +35,13 @@ Good effort-good return. More personal relationships possible.
 
 | # | Newsletter | Subscribers | Pitch Angle | Contact | Notes |
 |---|-----------|-------------|-------------|---------|-------|
-| 6 | **DevTools Weekly** | 30K | STAS: open-source AI senior architect for GitHub | adrian@devtoolsweekly.com | Highest install-to-visitor conversion. Targeted devtools audience. |
+| 6 | **DevTools Weekly** | 30K | SYNTARO: open-source AI senior architect for GitHub | adrian@devtoolsweekly.com | Highest install-to-visitor conversion. Targeted devtools audience. |
 | 7 | **Bytes (Swyx)** | 40K | Plan-first AI for issue resolution (open source AGPL) | swyx@swyx.io | Swyx is influential in devtools space. Personalize heavily. |
 | 8 | **Node Weekly** | 80K+ | Auto-fix Node.js issues with AI (open source) | node@cooperpress.com | Strong Node.js angle. Part of Cooper Press network. |
 | 9 | **Frontend Focus** | 60K+ | AI that fixes frontend bugs automatically | frontend@cooperpress.com | Growing frontend bug market. Good for Post 3 angle. |
 | 10 | **Go Weekly** | 25K | Open-source AI code fix for Go repositories | editor@goweekly.com | Go community is small but engaged. Good for niche positioning. |
 | 11 | **Rust Weekly** | 30K+ | AI-assisted debugging for Rust — open source | editors@rust-weekly.com | Rust devs are curious about AI. Honest angle (still improving). |
-| 12 | **Ruby Weekly** | 50K+ | STAS: AI senior architect for Ruby repos | ruby@cooperpress.com | Ruby community loves OSS. Pitch open source + "it fixes your backlog". |
+| 12 | **Ruby Weekly** | 50K+ | SYNTARO: AI senior architect for Ruby repos | ruby@cooperpress.com | Ruby community loves OSS. Pitch open source + "it fixes your backlog". |
 
 ## Tier 3: Niche & Emerging (5-20K subscribers)
 
@@ -51,8 +51,8 @@ Low effort but high relevance. Good for testing messaging.
 |---|-----------|-------------|-------------|---------|-------|
 | 13 | **Engineering Leadership** | 15K | Give your team an AI senior architect — without the hiring budget | greger@engineeringleadership.com | Tech lead audience. Pitch productivity angle. |
 | 14 | **Open Source Startup Podcast** | 12K | Building an AGPL-licensed AI devtool in public | podcast@ossstartup.com | Podcast interview opportunity. Long-form reach. |
-| 15 | **AI Tool Report** | 15K | STAS: open-source AI that fixes GitHub issues | hi@aitoolreport.com | Curated AI tools list. Easy inclusion. |
-| 16 | **Console.dev** | 12K | STAS: plan-first AI for automated issue resolution | hello@console.dev | Devtools-curated newsletter. Quality audience. |
+| 15 | **AI Tool Report** | 15K | SYNTARO: open-source AI that fixes GitHub issues | hi@aitoolreport.com | Curated AI tools list. Easy inclusion. |
+| 16 | **Console.dev** | 12K | SYNTARO: plan-first AI for automated issue resolution | hello@console.dev | Devtools-curated newsletter. Quality audience. |
 | 17 | **Hacker Newsletter** | 10K | Open-source GitHub bot: label an issue, get a PR | kai@hackernewsletter.com | HN curation. Drives thoughtful traffic. |
 | 18 | **Changelog Weekly** | 18K | Open-source dev tool for automated code review | editors@changelog.com | Developer podcast + newsletter. Good for founder interview. |
 
@@ -62,20 +62,20 @@ Low effort but high relevance. Good for testing messaging.
 
 ### Template A: Tier 1 (TLDR AI / The Batch / Major Weekly)
 
-**Subject:** STAS: open-source AI that fixes GitHub issues (plans first, then codes)
+**Subject:** SYNTARO: open-source AI that fixes GitHub issues (plans first, then codes)
 
 Hi [Editor Name],
 
 I'm reaching out because
 
-I think your readers would find STAS interesting.
+I think your readers would find SYNTARO interesting.
 
-**What is STAS?** An open-source (AGPL v3) GitHub bot. You label an issue with `stas:fix`, and it
+**What is SYNTARO?** An open-source (AGPL v3) GitHub bot. You label an issue with `syntaro:fix`, and it
 investigates your entire codebase, writes a fix, runs your tests, and opens a pull request. Think
 "senior architect as a service" for teams that can't afford one.
 
 **Why it's different:** Most AI coding tools (Copilot, Cursor) are reactive — they suggest code when
-you type. STAS is proactive — it reads the full repository context (AST + dependency graph + git
+you type. SYNTARO is proactive — it reads the full repository context (AST + dependency graph + git
 history), produces a root-cause analysis plan, and only generates code after you approve the
 approach.
 
@@ -95,16 +95,16 @@ Thanks,
 
 ### Template B: Tier 2 (DevTools Weekly, Bytes, Cooper Press network)
 
-**Subject:** STAS — open-source AI senior architect for GitHub. Label an issue. Get a PR.
+**Subject:** SYNTARO — open-source AI senior architect for GitHub. Label an issue. Get a PR.
 
 Hi [Editor Name],
 
 I've been reading [newsletter] for a while and thought this might resonate with your audience.
 
-We built STAS because we noticed a gap in AI dev tools: they help IF you know exactly what code to
+We built SYNTARO because we noticed a gap in AI dev tools: they help IF you know exactly what code to
 write. But most dev time is spent figuring out WHAT to write, not writing it.
 
-STAS fills that gap — it reads the full repo, identifies root causes, plans the fix, then
+SYNTARO fills that gap — it reads the full repo, identifies root causes, plans the fix, then
 implements it. All open source (AGPL v3).
 
 A few highlights:
@@ -131,7 +131,7 @@ Hi [Name],
 
 Loved [recent issue / episode / post about specific topic].
 
-I'm building STAS — an open-source GitHub bot that auto-fixes issues using AI. Label a bug, get a
+I'm building SYNTARO — an open-source GitHub bot that auto-fixes issues using AI. Label a bug, get a
 PR. We're different from Copilot/Cursor because we plan first, code second (full repo analysis →
 root cause → plan → fix).
 
@@ -161,7 +161,7 @@ understand new architectures.
 
 **Title:** Automating JavaScript bug fixes with AI — what works, what doesn't
 
-**Angle:** Honest comparison of STAS vs Copilot Workspace vs OpenHands for JS/TS projects.
+**Angle:** Honest comparison of SYNTARO vs Copilot Workspace vs OpenHands for JS/TS projects.
 What each tool does well, where they fail, and the economics of automated fixing.
 
 **Why it works for this outlet:** JS Weekly readers are evaluating tools. Comparison content
@@ -255,10 +255,10 @@ stories. HN readers upvote opinion pieces with strong technical grounding.
 
 1. **Personalize every email.** Reference a recent issue of their newsletter. Generic pitches
    get ignored.
-2. **Lead with value.** Explain why their readers will benefit. Not why STAS is great.
+2. **Lead with value.** Explain why their readers will benefit. Not why SYNTARO is great.
 3. **Make it easy for them.** Provide pre-written copy, screenshots, and bullet points they
    can use directly.
-4. **Canonical URLs matter.** Cross-posts on dev.to/Medium should link back to the STAS blog
+4. **Canonical URLs matter.** Cross-posts on dev.to/Medium should link back to the SYNTARO blog
    for SEO credit.
 5. **Most newsletters book 2-4 weeks ahead.** Start outreach early.
 6. **Editors change frequently.** Verify contact info before sending.

@@ -70,7 +70,7 @@ function setupEmptyMocks() {
   mockRunsList.mockResolvedValue({ data: [], total: 0, page: 1, perPage: 20, totalPages: 0 });
   mockStatsGet.mockResolvedValue({ totalRuns: 0, passRate: 0, avgDurationSeconds: 0, activeRepos: 0, runsByDay: [], costByDay: [], fixRateByWeek: [] });
   mockAuditList.mockResolvedValue({ data: [], total: 0, page: 1, perPage: 30, totalPages: 0 });
-  mockSettingsGet.mockResolvedValue({ label: 'stas:fix', model: 'claude-sonnet-4-20250514', maxConcurrent: 3, sandboxPoolSize: 2, auditLogEnabled: true });
+  mockSettingsGet.mockResolvedValue({ label: 'syntaro:fix', model: 'claude-sonnet-4-20250514', maxConcurrent: 3, sandboxPoolSize: 2, auditLogEnabled: true });
   mockConfigApiGet.mockResolvedValue({ env: {}, rateLimits: [], tokens: [], integrations: [], infrastructure: {}, symphonies: [], subscriptions: [], warnings: [] });
   mockLitellmUsage.mockResolvedValue({ totalSpend: 0, maxBudget: 0, spendPerModel: [], rpmLimit: null, tpmLimit: null });
 }

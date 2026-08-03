@@ -5,10 +5,10 @@ Maps customer plan tiers to dedicated Celery queues with distinct priority
 levels so higher-tier tenants enjoy faster task processing.
 
 Tier hierarchy (highest → lowest priority):
-    enterprise  → queue: stas.sla.enterprise  (priority 9)
-    team        → queue: stas.sla.team        (priority 6)
-    solo        → queue: stas.sla.solo        (priority 3)
-    free        → queue: stas.sla.free        (priority 0)
+    enterprise  → queue: syntaro.sla.enterprise  (priority 9)
+    team        → queue: syntaro.sla.team        (priority 6)
+    solo        → queue: syntaro.sla.solo        (priority 3)
+    free        → queue: syntaro.sla.free        (priority 0)
 
 Celery Queue Priority
 ---------------------
@@ -72,19 +72,19 @@ logger = logging.getLogger(__name__)
 _TIER_CONFIG: dict[str, dict[str, Any]] = {
     "enterprise": {
         "priority": int(os.getenv("SLA_PRIORITY_ENTERPRISE", "9")),
-        "queue": os.getenv("SLA_QUEUE_ENTERPRISE", "stas.sla.enterprise"),
+        "queue": os.getenv("SLA_QUEUE_ENTERPRISE", "syntaro.sla.enterprise"),
     },
     "team": {
         "priority": int(os.getenv("SLA_PRIORITY_TEAM", "6")),
-        "queue": os.getenv("SLA_QUEUE_TEAM", "stas.sla.team"),
+        "queue": os.getenv("SLA_QUEUE_TEAM", "syntaro.sla.team"),
     },
     "solo": {
         "priority": int(os.getenv("SLA_PRIORITY_SOLO", "3")),
-        "queue": os.getenv("SLA_QUEUE_SOLO", "stas.sla.solo"),
+        "queue": os.getenv("SLA_QUEUE_SOLO", "syntaro.sla.solo"),
     },
     "free": {
         "priority": int(os.getenv("SLA_PRIORITY_FREE", "0")),
-        "queue": os.getenv("SLA_QUEUE_FREE", "stas.sla.free"),
+        "queue": os.getenv("SLA_QUEUE_FREE", "syntaro.sla.free"),
     },
 }
 
@@ -92,7 +92,7 @@ _TIER_NAMES: frozenset[str] = frozenset(_TIER_CONFIG)
 _DEFAULT_TIER: str = "free"
 
 # Shared exchange used by all SLA queues
-_SLA_EXCHANGE = Exchange("stas.sla", type="direct", durable=True)
+_SLA_EXCHANGE = Exchange("syntaro.sla", type="direct", durable=True)
 
 # ---------------------------------------------------------------------------
 # Public: queue / priority resolution

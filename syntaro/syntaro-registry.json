@@ -1,0 +1,168 @@
+{
+  "$schema": "https://raw.githubusercontent.com/aimino/syntaro-registry/main/schemas/registry-v1.json",
+  "name": "SYNTARO — Solving Tickets As A Service",
+  "version": "1.0.0",
+  "description": "SYNTARO (Solving Tickets As A Service) is an AI-powered GitHub bot that automatically fixes bugs and implements features. Label an issue, get a pull request.",
+  "tagline": "Label a GitHub issue. Get a pull request — automatically.",
+  "capabilities": {
+    "fix_generation": {
+      "description": "Automatically investigate codebases, write fixes, add regression tests, and open PRs",
+      "input": {
+        "type": "GitHub issue or issue description",
+        "formats": ["issue_number", "title+body", "repo_url"]
+      },
+      "output": {
+        "type": "Pull request with fix + tests",
+        "includes": ["fix implementation", "regression tests", "test suite execution", "PR description"]
+      },
+      "supported_platforms": ["GitHub", "GitLab (beta)", "Bitbucket (beta)"]
+    },
+    "job_polling": {
+      "description": "Poll fix job status and retrieve detailed results including PR URL and test metrics",
+      "polling_method": "REST API with job ID"
+    },
+    "eval_results": {
+      "description": "Public benchmark evaluation results showing pass rates across SWE-bench, HumanEval, XOR, and custom benchmarks",
+      "access": "Public (no auth required)"
+    },
+    "health_monitoring": {
+      "description": "Service health checks for uptime monitoring and dependency status",
+      "endpoint": "/api/health"
+    }
+  },
+  "marketplaces": {
+    "rapidapi": {
+      "name": "RapidAPI Marketplace",
+      "url": "https://rapidapi.com/aimino/api/syntaro-api?utm_source=syntaro-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=rapidapi",
+      "listing_type": "REST API",
+      "plans": [
+        {
+          "name": "Free",
+          "price": 0,
+          "requests_per_day": 10,
+          "description": "Try SYNTARO with limited daily usage"
+        },
+        {
+          "name": "Pro",
+          "price": 49,
+          "requests_per_day": 100,
+          "description": "For active development teams"
+        },
+        {
+          "name": "Enterprise",
+          "price": 199,
+          "requests_per_day": 1000,
+          "description": "For high-volume teams and organizations"
+        }
+      ],
+      "status": "live"
+    },
+    "mcp_registry": {
+      "name": "Model Context Protocol (MCP) Registry",
+      "url": "https://github.com/modelcontextprotocol/servers?utm_source=syntaro-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=mcp",
+      "listing_type": "MCP Server",
+      "server_name": "@aimino/syntaro-mcp",
+      "install_command": "npx -y @aimino/syntaro-mcp",
+      "status": "live"
+    },
+    "smithery": {
+      "name": "Smithery.ai",
+      "url": "https://smithery.ai/server/@aimino/syntaro-mcp?utm_source=syntaro-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=smithery",
+      "listing_type": "MCP Server",
+      "one_click_install": "npx -y @aimino/syntaro-mcp",
+      "status": "live"
+    },
+    "github_marketplace": {
+      "name": "GitHub Marketplace",
+      "url": "https://github.com/marketplace/actions/syntaro-eval?utm_source=syntaro-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=github-marketplace",
+      "listing_type": "GitHub Action",
+      "action_name": "Aimino-Tech/syntaro-eval-action",
+      "status": "pending_verification"
+    },
+    "opencode_skills": {
+      "name": "OpenCode/OpenClaw Skill Registry",
+      "url": "https://opencode.ai/skills/syntaro?utm_source=syntaro-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=opencode",
+      "listing_type": "Agent Skill",
+      "skill_name": "syntaro",
+      "install": "Add to your opencode.json or OpenClaw agent config",
+      "status": "live"
+    }
+  },
+  "utm_tracking": {
+    "campaign": "aim-2090",
+    "source": "syntaro-registry",
+    "medium": "referral",
+    "params": {
+      "utm_source": "Identifies which registry/referrer sent the traffic",
+      "utm_medium": "Always 'referral' for marketplace links",
+      "utm_campaign": "Always 'aim-2090' for this marketplace launch",
+      "utm_content": "Identifies specific marketplace (rapidapi, mcp, smithery, github-marketplace, opencode)"
+    },
+    "links": {
+      "rapidapi": "https://rapidapi.com/aimino/api/syntaro-api?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=rapidapi",
+      "smithery": "https://smithery.ai/server/@aimino/syntaro-mcp?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=smithery",
+      "opencode": "https://opencode.ai/skills/syntaro?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=opencode",
+      "github_marketplace": "https://github.com/marketplace/actions/syntaro-eval?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=github-marketplace",
+      "mcp_registry": "https://github.com/modelcontextprotocol/servers?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=mcp"
+    }
+  },
+  "integrations": {
+    "github_app": {
+      "name": "SYNTARO GitHub App",
+      "type": "GitHub App",
+      "description": "Install the app on your repo, label issues with syntaro:fix, get PRs"
+    },
+    "rest_api": {
+      "name": "SYNTARO REST API",
+      "type": "REST API",
+      "description": "Programmatic access via RapidAPI or direct endpoint",
+      "docs_url": "https://github.com/tamnguyen08/solving_tickets_as_a_service#rapidapi-marketplace"
+    },
+    "mcp_server": {
+      "name": "SYNTARO MCP Server",
+      "type": "MCP Server",
+      "description": "Use SYNTARO tools from any MCP-compatible client (Claude, Cursor, Windsurf)",
+      "install": "npx -y @aimino/syntaro-mcp",
+      "config_file": "./mcp-server.json"
+    },
+    "opencode_skill": {
+      "name": "SYNTARO OpenCode Skill",
+      "type": "Agent Skill",
+      "description": "OpenCode/OpenClaw agents can invoke SYNTARO tools directly",
+      "skill_file": "./skill.md"
+    },
+    "github_action": {
+      "name": "SYNTARO Eval Action",
+      "type": "GitHub Action",
+      "description": "Run SYNTARO eval suites in your CI pipeline",
+      "action_ref": "Aimino-Tech/syntaro-eval-action@v1"
+    }
+  },
+  "quick_links": {
+    "documentation": "https://github.com/tamnguyen08/solving_tickets_as_a_service#readme",
+    "source_code": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
+    "issues": "https://github.com/tamnguyen08/solving_tickets_as_a_service/issues",
+    "website": "https://syntaro.io",
+    "changelog": "https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/CHANGELOG.md",
+    "license": "https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/LICENSE",
+    "roadmap": "https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/ROADMAP.md"
+  },
+  "keywords": [
+    "syntaro",
+    "github-bot",
+    "issue-fixer",
+    "automated-fix",
+    "opencode",
+    "openclaw",
+    "mcp",
+    "smithery",
+    "rapidapi",
+    "github-marketplace",
+    "ai",
+    "bug-fixing",
+    "pull-request",
+    "automation",
+    "developer-tools",
+    "aimino"
+  ]
+}

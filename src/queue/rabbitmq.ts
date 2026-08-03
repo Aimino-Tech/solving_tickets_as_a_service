@@ -12,7 +12,7 @@ let _connectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 10;
 const RECONNECT_BASE_DELAY_MS = 1000;
 
-const RABBITMQ_URL = config.queue.rabbitmqUrl || 'amqp://guest:guest@localhost:5672/stas';
+const RABBITMQ_URL = config.queue.rabbitmqUrl || 'amqp://guest:guest@localhost:5672/syntaro';
 
 export function setConnected(connected: boolean): void {
   _connected = connected;
@@ -133,88 +133,91 @@ export function getConnection(): ChannelModel {
 export async function declareTopology(): Promise<void> {
   const ch = getChannel();
 
-  await ch.assertExchange('stas.direct', 'direct', { durable: true });
-  await ch.assertExchange('stas.topic', 'topic', { durable: true });
-  await ch.assertExchange('stas.fanout', 'fanout', { durable: true });
-  await ch.assertExchange('stas.dlx', 'direct', { durable: true });
-  await ch.assertExchange('stas.retry', 'direct', { durable: true });
+  await ch.assertExchange('syntaro.direct', 'direct', { durable: true });
+  await ch.assertExchange('syntaro.topic', 'topic', { durable: true });
+  await ch.assertExchange('syntaro.fanout', 'fanout', { durable: true });
+  await ch.assertExchange('syntaro.dlx', 'direct', { durable: true });
+  await ch.assertExchange('syntaro.retry', 'direct', { durable: true });
 
-  await ch.assertQueue('stas.issues.fix', {
+  await ch.assertQueue('syntaro.issues.fix', {
     durable: true,
-    arguments: { 'x-message-ttl': config.queue.msgTtlMs },
-    deadLetterExchange: 'stas.dlx',
+    arguments: {
+      'x-message-ttl': config.queue.msgTtlMs,
+      'x-max-priority': config.queue.maxPriority,
+    },
+    deadLetterExchange: 'syntaro.dlx',
     deadLetterRoutingKey: 'issue.fix.dlq',
     messageTtl: config.queue.msgTtlMs,
   });
-  await ch.bindQueue('stas.issues.fix', 'stas.direct', 'issue.fix');
+  await ch.bindQueue('syntaro.issues.fix', 'syntaro.direct', 'issue.fix');
 
-  await ch.assertQueue('stas.issues.feature', {
+  await ch.assertQueue('syntaro.issues.feature', {
     durable: true,
     arguments: { 'x-message-ttl': 600000 },
-    deadLetterExchange: 'stas.dlx',
+    deadLetterExchange: 'syntaro.dlx',
     deadLetterRoutingKey: 'issue.feature.dlq',
     messageTtl: 600_000,
   });
-  await ch.bindQueue('stas.issues.feature', 'stas.direct', 'issue.feature');
+  await ch.bindQueue('syntaro.issues.feature', 'syntaro.direct', 'issue.feature');
 
-  await ch.assertQueue('stas.issues.research', {
+  await ch.assertQueue('syntaro.issues.research', {
     durable: true,
     arguments: { 'x-message-ttl': 600000 },
-    deadLetterExchange: 'stas.dlx',
+    deadLetterExchange: 'syntaro.dlx',
     deadLetterRoutingKey: 'issue.research.dlq',
     messageTtl: 300_000,
   });
-  await ch.bindQueue('stas.issues.research', 'stas.direct', 'issue.research');
+  await ch.bindQueue('syntaro.issues.research', 'syntaro.direct', 'issue.research');
 
-  await ch.assertQueue('stas.webhooks.notifications', {
+  await ch.assertQueue('syntaro.webhooks.notifications', {
     durable: true,
     arguments: { 'x-message-ttl': 600000 },
-    deadLetterExchange: 'stas.dlx',
+    deadLetterExchange: 'syntaro.dlx',
     deadLetterRoutingKey: 'webhook.notification.dlq',
     messageTtl: 300_000,
   });
-  await ch.bindQueue('stas.webhooks.notifications', 'stas.topic', 'webhook.notification.*');
+  await ch.bindQueue('syntaro.webhooks.notifications', 'syntaro.topic', 'webhook.notification.*');
 
-  await ch.assertQueue('stas.analytics.ingestion', {
+  await ch.assertQueue('syntaro.analytics.ingestion', {
     durable: true,
     arguments: { 'x-message-ttl': 600000 },
-    deadLetterExchange: 'stas.dlx',
+    deadLetterExchange: 'syntaro.dlx',
     deadLetterRoutingKey: 'analytics.ingestion.dlq',
     messageTtl: 120_000,
   });
-  await ch.bindQueue('stas.analytics.ingestion', 'stas.topic', 'analytics.ingestion.*');
+  await ch.bindQueue('syntaro.analytics.ingestion', 'syntaro.topic', 'analytics.ingestion.*');
 
-  await ch.assertQueue('stas.pipeline.events', {
+  await ch.assertQueue('syntaro.pipeline.events', {
     durable: true,
     arguments: { 'x-message-ttl': 600000 },
-    deadLetterExchange: 'stas.dlx',
+    deadLetterExchange: 'syntaro.dlx',
     deadLetterRoutingKey: 'pipeline.event.dlq',
     messageTtl: 60_000,
   });
-  await ch.bindQueue('stas.pipeline.events', 'stas.topic', 'pipeline.event.*');
+  await ch.bindQueue('syntaro.pipeline.events', 'syntaro.topic', 'pipeline.event.*');
 
-  await ch.assertQueue('stas.chat.work', {
+  await ch.assertQueue('syntaro.chat.work', {
     durable: true,
     arguments: { 'x-message-ttl': config.queue.msgTtlMs },
-    deadLetterExchange: 'stas.dlx',
+    deadLetterExchange: 'syntaro.dlx',
     deadLetterRoutingKey: 'chat.work.dlq',
     messageTtl: config.queue.msgTtlMs,
   });
-  await ch.bindQueue('stas.chat.work', 'stas.direct', 'chat.work');
+  await ch.bindQueue('syntaro.chat.work', 'syntaro.direct', 'chat.work');
 
-  await ch.assertQueue('stas.retry', {
+  await ch.assertQueue('syntaro.retry', {
     durable: true,
     arguments: { 'x-message-ttl': 600000 },
     messageTtl: 30_000,
-    deadLetterExchange: 'stas.direct',
+    deadLetterExchange: 'syntaro.direct',
     deadLetterRoutingKey: 'issue.fix',
   });
 
-  await ch.assertQueue('stas.dlq', {
+  await ch.assertQueue('syntaro.dlq', {
     durable: true,
     arguments: { 'x-message-ttl': 600000 },
   });
-  await ch.bindQueue('stas.dlq', 'stas.dlx', '#');
+  await ch.bindQueue('syntaro.dlq', 'syntaro.dlx', '#');
 
   log.info('RabbitMQ topology declared successfully');
 }
@@ -284,14 +287,14 @@ export interface QueueDefinition {
 }
 
 export const QUEUES: Record<string, QueueDefinition> = {
-  issuesFix: { name: 'stas.issues.fix', exchange: 'stas.direct', routingKey: 'issue.fix' },
-  issuesFeature: { name: 'stas.issues.feature', exchange: 'stas.direct', routingKey: 'issue.feature' },
-  issuesResearch: { name: 'stas.issues.research', exchange: 'stas.direct', routingKey: 'issue.research' },
-  webhooks: { name: 'stas.webhooks.notifications', exchange: 'stas.topic', routingKey: 'webhook.notification.*' },
-  analytics: { name: 'stas.analytics.ingestion', exchange: 'stas.topic', routingKey: 'analytics.ingestion.*' },
-  pipelineEvents: { name: 'stas.pipeline.events', exchange: 'stas.topic', routingKey: 'pipeline.event.*' },
-  retry: { name: 'stas.retry', exchange: 'stas.direct', routingKey: 'issue.fix' },
-  dlq: { name: 'stas.dlq', exchange: 'stas.dlx', routingKey: '#' },
+  issuesFix: { name: 'syntaro.issues.fix', exchange: 'syntaro.direct', routingKey: 'issue.fix' },
+  issuesFeature: { name: 'syntaro.issues.feature', exchange: 'syntaro.direct', routingKey: 'issue.feature' },
+  issuesResearch: { name: 'syntaro.issues.research', exchange: 'syntaro.direct', routingKey: 'issue.research' },
+  webhooks: { name: 'syntaro.webhooks.notifications', exchange: 'syntaro.topic', routingKey: 'webhook.notification.*' },
+  analytics: { name: 'syntaro.analytics.ingestion', exchange: 'syntaro.topic', routingKey: 'analytics.ingestion.*' },
+  pipelineEvents: { name: 'syntaro.pipeline.events', exchange: 'syntaro.topic', routingKey: 'pipeline.event.*' },
+  retry: { name: 'syntaro.retry', exchange: 'syntaro.direct', routingKey: 'issue.fix' },
+  dlq: { name: 'syntaro.dlq', exchange: 'syntaro.dlx', routingKey: '#' },
 };
 
 export function getPublishChannel(): Channel {

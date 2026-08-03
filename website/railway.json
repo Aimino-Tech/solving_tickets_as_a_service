@@ -13,7 +13,7 @@
   },
   "services": [
     {
-      "name": "stas-website",
+      "name": "syntaro-website",
       "build": {
         "builder": "DOCKERFILE",
         "dockerfilePath": "website/Dockerfile"

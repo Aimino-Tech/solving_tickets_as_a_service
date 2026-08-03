@@ -3,7 +3,7 @@
  *
  * A drop-in replacement for OpenCode's HTTP serve protocol.
  * Implements the `/api/run` and `/api/health` endpoints that
- * STAS's `dispatchToOpenCode()` calls, backed by the OpenSymphony
+ * SYNTARO's `dispatchToOpenCode()` calls, backed by the OpenSymphony
  * pipeline (intent → plan → execute → collect → taste).
  *
  * ## Usage
@@ -11,7 +11,7 @@
  * ```ts
  * const adapter = new OpenSymphonyAdapter({ port: 4097 });
  * adapter.start();
- * // STAS now points OPENCODE_URL=http://localhost:4097
+ * // SYNTARO now points OPENCODE_URL=http://localhost:4097
  * ```
  *
  * ## Pipeline Architecture
@@ -23,8 +23,8 @@
  *
  * ## Backwards Compatibility
  *
- * STAS sets `config.opencode.url` via `OPENCODE_URL` env var.
- * Pointing it at this adapter requires zero code changes in STAS.
+ * SYNTARO sets `config.opencode.url` via `OPENCODE_URL` env var.
+ * Pointing it at this adapter requires zero code changes in SYNTARO.
  * The adapter speaks the exact OpenCode contract defined in
  * `src/opencode-contract.ts`.
  *
@@ -161,7 +161,7 @@ export class IntentStage implements PipelineStage {
           titleLine,
           promptLength,
           estimatedIssue: titleLine.replace(/^\*{0,2}#?\d*:?\s*\*{0,2}/, ''),
-          type: 'bug_fix', // heuristic — STAS issues are usually bug fixes
+          type: 'bug_fix', // heuristic — SYNTARO issues are usually bug fixes
         },
         durationMs: Date.now() - start,
       };
@@ -307,7 +307,7 @@ export class CollectionStage implements PipelineStage {
         output: {
           diff,
           testOutput,
-          branch: 'stas/opensymphony-placeholder',
+          branch: 'syntaro/opensymphony-placeholder',
         },
         durationMs: Date.now() - start,
       };
@@ -596,7 +596,7 @@ export class OpenSymphonyAdapter {
     req: http.IncomingMessage,
     res: http.ServerResponse,
   ): Promise<void> {
-    // CORS headers (required for health checks from the STAS dashboard)
+    // CORS headers (required for health checks from the SYNTARO dashboard)
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -635,8 +635,8 @@ export class OpenSymphonyAdapter {
    * Health check endpoint.
    *
    * Called by:
-   * - STAS's `OpenCodeHealthClient.poll()` at `{opencode.url}/api/health`
-   * - The STAS health status / circuit breaker
+   * - SYNTARO's `OpenCodeHealthClient.poll()` at `{opencode.url}/api/health`
+   * - The SYNTARO health status / circuit breaker
    *
    * Returns the same shape as OpenCode serve for transparent compatibility:
    * ```json

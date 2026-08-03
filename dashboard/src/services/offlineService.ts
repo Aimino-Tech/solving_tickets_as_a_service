@@ -1,5 +1,5 @@
-const CACHE_PREFIX = 'stas_cache_';
-const RETRY_QUEUE_KEY = 'stas_retry_queue';
+const CACHE_PREFIX = 'syntaro_cache_';
+const RETRY_QUEUE_KEY = 'syntaro_retry_queue';
 const DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 interface CacheEntry<T> {

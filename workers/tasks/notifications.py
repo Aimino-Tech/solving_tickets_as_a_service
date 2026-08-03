@@ -1,5 +1,5 @@
 """
-Send notifications for completed STAS runs.
+Send notifications for completed SYNTARO runs.
 
 Supports:
   - GitHub issue comments (via installation token)
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def _get_github_token(installation_id: int) -> str:
-    """Get a GitHub installation token by calling the Express stas-bot helper.
+    """Get a GitHub installation token by calling the Express syntaro-bot helper.
 
     Fallback: try to construct directly if GITHUB_APP_ID/private-key available.
     """
@@ -40,7 +40,7 @@ def _post_issue_comment(
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "STAS-Bot",
+        "User-Agent": "SYNTARO-Bot",
     }
     with httpx.Client() as client:
         resp = client.post(url, headers=headers, json={"body": body})
@@ -164,7 +164,7 @@ def process_webhook(self, event_type: str, payload: dict) -> dict:
 
         if event_type == "issues.labeled":
             label = (payload.get("label") or {}).get("name", "")
-            if label == os.getenv("STAS_LABEL", "stas:fix"):
+            if label == os.getenv("SYNTARO_LABEL", "syntaro:fix"):
                 logger.info("Matched target label=%s, handler=start_pipeline", label)
                 result["handlers"].append("start_pipeline")
                 # In practice, the Django webhook view already starts the pipeline.
@@ -234,10 +234,10 @@ def _post_linear_deliverable(payload: dict[str, Any]) -> bool:
 
     emoji = "\u2705" if event_type in ("fix_completed", "merge_completed") else "\u2139\ufe0f"
     body = (
-        f"{emoji} **STAS Deliverables Summary**\n\n"
+        f"{emoji} **SYNTARO Deliverables Summary**\n\n"
         f"{summary}"
         f"{pr_section}"
-        f"\n\n---\n_Posted automatically by STAS_"
+        f"\n\n---\n_Posted automatically by SYNTARO_"
     )
 
     try:

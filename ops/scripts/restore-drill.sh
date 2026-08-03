@@ -33,8 +33,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups}"
 STAGING_COMPOSE="${STAGING_COMPOSE:-docker-compose.staging.yml}"
-STAGING_DB_URL="${STAGING_DB_URL:-postgres://stas:stas@localhost:5433/stas_staging}"
-DRILL_LOG="${DRILL_LOG:-/var/log/stas-restore-drill.log}"
+STAGING_DB_URL="${STAGING_DB_URL:-postgres://syntaro:syntaro@localhost:5433/syntaro_staging}"
+DRILL_LOG="${DRILL_LOG:-/var/log/syntaro-restore-drill.log}"
 TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # Services to check
@@ -427,7 +427,7 @@ main() {
 
   echo ""
   echo "═══════════════════════════════════════════════════════"
-  echo "        STAS RESTORE DRILL — $(date -u +%Y-%m-%d)"
+  echo "        SYNTARO RESTORE DRILL — $(date -u +%Y-%m-%d)"
   echo "═══════════════════════════════════════════════════════"
   echo "  Mode: $mode"
   echo "  Backup dir: $BACKUP_DIR"

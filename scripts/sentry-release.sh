@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# sentry-release.sh — Create and finalize a Sentry release for STAS.
+# sentry-release.sh — Create and finalize a Sentry release for SYNTARO.
 #
 # Usage:
 #   SENTRY_AUTH_TOKEN=xxx SENTRY_ORG=xxx SENTRY_PROJECT=xxx \
@@ -17,7 +17,7 @@ SENTRY_ORG="${SENTRY_ORG:?SENTRY_ORG is required}"
 SENTRY_PROJECT="${SENTRY_PROJECT:?SENTRY_PROJECT is required}"
 COMMIT_SHA="${GIT_COMMIT:-$(git rev-parse HEAD 2>/dev/null || echo 'unknown')}"
 ENVIRONMENT="${SENTRY_ENVIRONMENT:-production}"
-RELEASE="stas@${COMMIT_SHA:0:12}"
+RELEASE="syntaro@${COMMIT_SHA:0:12}"
 
 sentry_cli() {
     if command -v sentry-cli &>/dev/null; then

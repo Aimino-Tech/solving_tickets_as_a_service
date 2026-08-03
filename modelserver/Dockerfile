@@ -36,7 +36,7 @@ EXPOSE 8090
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')" || exit 1
 
-LABEL maintainer="STAS Team"
+LABEL maintainer="SYNTARO Team"
 LABEL description="TabICL Model Server — FastAPI-based inference service"
 LABEL org.opencontainers.image.source="https://github.com/tamnguyen08/solving_tickets_as_a_service"
 

@@ -2,7 +2,7 @@
  * FixabilityScorer — Estimates how fixable a GitHub issue is without
  * running the full agent pipeline.
  *
- * Used by the preview API to give users a sense of which issues STAS
+ * Used by the preview API to give users a sense of which issues SYNTARO
  * can handle and why, before they install or subscribe.
  */
 

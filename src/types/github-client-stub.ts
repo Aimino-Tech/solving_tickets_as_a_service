@@ -1,5 +1,5 @@
 /**
- * Stub declarations for @stas/github-client package.
+ * Stub declarations for @syntaro/github-client package.
  * Re-exports from the actual package at runtime.
  */
 

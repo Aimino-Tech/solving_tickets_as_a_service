@@ -1,6 +1,6 @@
 /**
  * Preview API — One-click demo endpoint that lets prospective users see
- * what STAS would fix without installing the bot.
+ * what SYNTARO would fix without installing the bot.
  *
  * POST /api/v1/preview
  *   Body: { repoUrl: "https://github.com/owner/repo" }
@@ -55,7 +55,7 @@ interface SimulatedIssue {
 
 /**
  * Generate a realistic set of simulated issues for a given repository.
- * These mimic common open-source issues to demonstrate STAS's fixability
+ * These mimic common open-source issues to demonstrate SYNTARO's fixability
  * scoring without requiring GitHub API credentials.
  */
 function generateDemoIssues(owner: string, repo: string): SimulatedIssue[] {
@@ -301,11 +301,11 @@ const router: Router = Router();
 /**
  * POST /api/v1/preview
  *
- * Analyzes a GitHub repository and returns a preview of which issues STAS
+ * Analyzes a GitHub repository and returns a preview of which issues SYNTARO
  * would be able to fix, with estimated fix times and confidence scores.
  *
  * This is a demo endpoint — it generates simulated issue data to show
- * prospective users STAS's value without requiring installation.
+ * prospective users SYNTARO's value without requiring installation.
  */
 router.post('/', previewRateLimit, async (req: Request, res: Response) => {
   // Validate request body

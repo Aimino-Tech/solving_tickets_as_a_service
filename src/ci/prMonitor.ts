@@ -1,8 +1,8 @@
 /**
- * PR CI Monitor — watches CI status on STAS-created PRs and auto-fixes
+ * PR CI Monitor — watches CI status on SYNTARO-created PRs and auto-fixes
  * when checks fail.
  *
- * After STAS creates a PR, this monitor polls its check suite status.
+ * After SYNTARO creates a PR, this monitor polls its check suite status.
  * If CI checks fail, it posts a comment and attempts an auto-fix iteration
  * by re-triggering the agent loop.
  *
@@ -61,7 +61,7 @@ let running = false;
 // ---------------------------------------------------------------------------
 
 /**
- * Start tracking a PR's CI status after STAS creates it.
+ * Start tracking a PR's CI status after SYNTARO creates it.
  *
  * @param repoOwner - Repository owner
  * @param repoName - Repository name
@@ -249,7 +249,7 @@ async function checkPR(tracked: TrackedPR): Promise<void> {
     try {
       const commentBody = failedChecks.length > 0
         ? messages.ciFailureComment(prNumber, failedChecks)
-        : `### 👀 Monitoring CI\n\nCI checks are running on PR #${prNumber}. I'll monitor the results and attempt auto-fixes if anything fails.\n\n> — ${config.stas.botName} 🤖`;
+        : `### 👀 Monitoring CI\n\nCI checks are running on PR #${prNumber}. I'll monitor the results and attempt auto-fixes if anything fails.\n\n> — ${config.syntaro.botName} 🤖`;
 
       await octokit.issues.createComment({
         owner: repoOwner,
@@ -329,7 +329,7 @@ async function handleCIFailure(
           '',
           'Manual intervention is required to resolve the remaining issues.',
           '',
-          `> — ${config.stas.botName} 🤖`,
+          `> — ${config.syntaro.botName} 🤖`,
         ].join('\n'),
       });
     } catch {
@@ -376,7 +376,7 @@ async function attemptAutoFix(
         '',
         'Pushing potential fixes to the PR branch...',
         '',
-        `> — ${config.stas.botName} 🤖`,
+        `> — ${config.syntaro.botName} 🤖`,
       ].join('\n'),
     });
   } catch {
@@ -440,7 +440,7 @@ async function attemptAutoFix(
           '',
           `**Failed checks**: ${failedCheckNames.join(', ')}`,
           '',
-          `> — ${config.stas.botName} 🤖`,
+          `> — ${config.syntaro.botName} 🤖`,
         ].join('\n'),
       });
     } catch {

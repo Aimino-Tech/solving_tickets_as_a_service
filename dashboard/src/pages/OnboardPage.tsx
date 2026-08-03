@@ -6,19 +6,19 @@ const STEPS = [
   {
     number: 1,
     title: 'Connect with GitHub',
-    description: 'Authorize STAS to access your repositories.',
+    description: 'Authorize SYNTARO to access your repositories.',
     action: 'Connect',
   },
   {
     number: 2,
     title: 'Install the GitHub App',
-    description: 'Install STAS on the repositories you want automated fixes for.',
+    description: 'Install SYNTARO on the repositories you want automated fixes for.',
     action: 'Install',
   },
   {
     number: 3,
     title: 'Label an issue',
-    description: 'Add the label <code>stas:fix</code> to any issue. STAS will investigate, fix, and open a PR.',
+    description: 'Add the label <code>syntaro:fix</code> to any issue. SYNTARO will investigate, fix, and open a PR.',
     action: 'Label',
   },
 ];
@@ -60,7 +60,7 @@ export default function OnboardPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <span className="text-2xl">⚡</span>
-            <span className="text-xl font-bold text-gray-900">STAS</span>
+            <span className="text-xl font-bold text-gray-900">SYNTARO</span>
             <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700">
               Solving Tickets As A Service
             </span>
@@ -86,7 +86,7 @@ export default function OnboardPage() {
               Automated fixes for your GitHub issues
             </h1>
             <p className="mt-4 text-lg text-gray-500">
-              Label an issue with <code className="rounded bg-gray-100 px-2 py-0.5 text-sm font-semibold text-brand-600">stas:fix</code>. STAS investigates your codebase, writes a fix, runs your tests, and opens a PR.
+              Label an issue with <code className="rounded bg-gray-100 px-2 py-0.5 text-sm font-semibold text-brand-600">syntaro:fix</code>. SYNTARO investigates your codebase, writes a fix, runs your tests, and opens a PR.
             </p>
           </div>
 
@@ -152,7 +152,7 @@ export default function OnboardPage() {
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-400">
-              &copy; {new Date().getFullYear()} STAS. Open source.
+              &copy; {new Date().getFullYear()} SYNTARO. Open source.
             </p>
             <div className="flex gap-6">
               <a href="/security" className="text-sm text-gray-400 hover:text-gray-600">

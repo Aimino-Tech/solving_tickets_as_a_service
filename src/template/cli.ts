@@ -1,15 +1,15 @@
 #!/usr/bin/env tsx
 /**
- * stas CLI — Template validation, dry-run, and quickstart onboarding tool.
+ * syntaro CLI — Template validation, dry-run, and quickstart onboarding tool.
  *
  * Commands:
- *   stas template validate              Validate all templates in .stas/templates/
- *   stas template validate --file x.yaml  Validate a single template file
- *   stas template validate --format json  Output as JSON (default: tty)
- *   stas template dry-run --input payload.json  Dry-run with placeholder data
- *   stas install-hook                   Install git pre-commit hook for templates
- *   stas quickstart                     Interactive STAS onboarding (auth, install, demo issue)
- *   stas quickstart --skip-prompts      Non-interactive quickstart (first repo, no prompts)
+ *   syntaro template validate              Validate all templates in .syntaro/templates/
+ *   syntaro template validate --file x.yaml  Validate a single template file
+ *   syntaro template validate --format json  Output as JSON (default: tty)
+ *   syntaro template dry-run --input payload.json  Dry-run with placeholder data
+ *   syntaro install-hook                   Install git pre-commit hook for templates
+ *   syntaro quickstart                     Interactive SYNTARO onboarding (auth, install, demo issue)
+ *   syntaro quickstart --skip-prompts      Non-interactive quickstart (first repo, no prompts)
  *
  * Exit codes: 0 = valid, 1 = validation errors / quickstart timeout, 2 = other errors
  */
@@ -277,39 +277,39 @@ export function installHook(): void {
   }
 
   const hookContent = `#!/bin/sh
-# STAS template pre-commit hook
-# Validates .stas/templates/*.yaml files before commit
-# Installed by: stas install-hook
+# SYNTARO template pre-commit hook
+# Validates .syntaro/templates/*.yaml files before commit
+# Installed by: syntaro install-hook
 
 set -e
 
-CHANGED_TEMPLATES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^\\.stas/templates/.+\\.(yaml|yml)$' || true)
+CHANGED_TEMPLATES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^\\.syntaro/templates/.+\\.(yaml|yml)$' || true)
 
 if [ -z "$CHANGED_TEMPLATES" ]; then
   exit 0
 fi
 
-echo "STAS: Validating changed template files..."
+echo "SYNTARO: Validating changed template files..."
 
 HAS_ERRORS=0
 for file in $CHANGED_TEMPLATES; do
   if [ -f "$file" ]; then
     if ! npx tsx "$(dirname "$0")/../../src/template/cli.ts" template validate --file "$file" --format json > /dev/null 2>&1; then
-      echo "STAS: ✗ Validation failed for $file"
+      echo "SYNTARO: ✗ Validation failed for $file"
       npx tsx "$(dirname "$0")/../../src/template/cli.ts" template validate --file "$file"
       HAS_ERRORS=1
     else
-      echo "STAS: ✓ $file is valid"
+      echo "SYNTARO: ✓ $file is valid"
     fi
   fi
 done
 
 if [ "$HAS_ERRORS" -ne 0 ]; then
-  echo "STAS: Template validation failed. Commit blocked."
+  echo "SYNTARO: Template validation failed. Commit blocked."
   exit 1
 fi
 
-echo "STAS: All templates valid."
+echo "SYNTARO: All templates valid."
 `;
 
   const hookPath = join(hooksDir, "pre-commit");
@@ -327,31 +327,31 @@ function printHelp(): void {
   const b = (s: string) => style(STYLES.bold, s);
   const d = (s: string) => style(STYLES.dim, s);
   console.log(`
-${b("stas")} — Template validation, dry-run, and quickstart onboarding tool
+${b("syntaro")} — Template validation, dry-run, and quickstart onboarding tool
 
 ${b("USAGE")}
-  stas template validate [options]
-  stas template dry-run [options]
-  stas quickstart
-  stas install-hook
-  stas quickstart [--skip-prompts]
+  syntaro template validate [options]
+  syntaro template dry-run [options]
+  syntaro quickstart
+  syntaro install-hook
+  syntaro quickstart [--skip-prompts]
 
 ${b("COMMANDS")}
   ${b("template validate")}     Validate template YAML files
     ${d("--file <path>")}       Validate a single file
-    ${d("--dir <path>")}        Template directory (default: .stas/templates/)
+    ${d("--dir <path>")}        Template directory (default: .syntaro/templates/)
     ${d("--format <type>")}     Output format: tty (default) | json
 
   ${b("template dry-run")}      Resolve placeholders and show commands
     ${d("--input <path>")}      JSON payload file (use "-" for stdin)
-    ${d("--dir <path>")}        Template directory (default: .stas/templates/)
+    ${d("--dir <path>")}        Template directory (default: .syntaro/templates/)
     ${d("--format <type>")}     Output format: tty (default) | json
 
-  ${b("quickstart")}            Show the fastest way to install STAS for your env
+  ${b("quickstart")}            Show the fastest way to install SYNTARO for your env
 
   ${b("install-hook")}          Install git pre-commit hook for template validation
 
-  ${b("quickstart")}            Interactive STAS onboarding: auth, repo selection,
+  ${b("quickstart")}            Interactive SYNTARO onboarding: auth, repo selection,
                                 app install, demo issue, and PR polling
     ${d("--skip-prompts")}      Non-interactive: first repo, no confirmations
 
@@ -364,18 +364,18 @@ ${b("EXIT CODES")}
 
 function printQuickstartSuccess(prUrl: string, configPath: string): void {
   console.log(style(STYLES.green, "✓ Quickstart complete!"));
-  console.log(`\nYour STAS fix PR: ${prUrl}`);
+  console.log(`\nYour SYNTARO fix PR: ${prUrl}`);
   console.log(`Config saved to ${configPath}`);
-  console.log("\nPro tip: Label any issue with `stas:fix` to trigger a fix automatically.");
+  console.log("\nPro tip: Label any issue with `syntaro:fix` to trigger a fix automatically.");
 }
 
 function printQuickstartTimeout(issueUrl: string): void {
-  console.log("\nSTAS didn't create a PR within the timeout period.");
+  console.log("\nSYNTARO didn't create a PR within the timeout period.");
   console.log("\nPossible reasons:");
-  console.log("  - STAS app may not be installed on the selected repository");
-  console.log("  - The STAS backend may be processing a queue");
+  console.log("  - SYNTARO app may not be installed on the selected repository");
+  console.log("  - The SYNTARO backend may be processing a queue");
   console.log(`  - Check the issue at ${issueUrl} for updates`);
-  console.log("\nRun `npx stas quickstart` again after installing the app.");
+  console.log("\nRun `npx syntaro quickstart` again after installing the app.");
 }
 
 export async function parseArgs(): Promise<void> {
@@ -395,6 +395,13 @@ export async function parseArgs(): Promise<void> {
     }
 
     if (command === "quickstart") {
+      const unknownFlags = args.slice(1).filter((f) => f !== "--skip-prompts");
+      if (unknownFlags.length > 0) {
+        console.error(`Unknown flag for quickstart: ${unknownFlags.join(", ")}`);
+        console.error("Run 'syntaro --help' for usage.");
+        process.exit(2);
+      }
+
       const skipPrompts = args.includes("--skip-prompts");
       const result = await runQuickstart({ skipPrompts });
       if (result.prUrl !== null) {
@@ -407,7 +414,7 @@ export async function parseArgs(): Promise<void> {
 
     if (command !== "template") {
       console.error(`Unknown command: ${command}`);
-      console.error("Run 'stas --help' for usage.");
+      console.error("Run 'syntaro --help' for usage.");
       process.exit(2);
     }
 
@@ -415,7 +422,7 @@ export async function parseArgs(): Promise<void> {
 
     if (!subcommand || (subcommand !== "validate" && subcommand !== "dry-run")) {
       console.error(`Unknown subcommand: ${subcommand}`);
-      console.error("Run 'stas --help' for usage.");
+      console.error("Run 'syntaro --help' for usage.");
       process.exit(2);
     }
 
@@ -435,7 +442,7 @@ export async function parseArgs(): Promise<void> {
       }
     }
 
-    const templateDir = options.dir ?? ".stas/templates";
+    const templateDir = options.dir ?? ".syntaro/templates";
     const format = (options.format as "tty" | "json") ?? "tty";
 
     if (subcommand === "validate") {

@@ -1,4 +1,4 @@
-# STAS Benchmark Results
+# SYNTARO Benchmark Results
 
 > **PUBLICATION TEMPLATE — Only fill out when the publication gate criteria are met.**
 > See [Benchmarking Strategy](./benchmarking-strategy.md) for the gate conditions.
@@ -17,7 +17,7 @@
 
 ## Results Summary
 
-| Benchmark | STAS Score | Industry Best | Position |
+| Benchmark | SYNTARO Score | Industry Best | Position |
 |-----------|-----------|---------------|----------|
 | SWE-bench Verified | — | — | — |
 | PlanBench | — | — | — |
@@ -30,7 +30,7 @@
 ### Setup
 
 - **Model**: Claude Sonnet 4 (default), GPT-4o (comparison)
-- **Agent**: STAS plan-first architecture
+- **Agent**: SYNTARO plan-first architecture
 - **Sandbox**: E2B isolated environment
 - **Temperature**: 0 (deterministic)
 - **Retries**: 2 per instance

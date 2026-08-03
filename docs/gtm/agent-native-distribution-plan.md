@@ -1,6 +1,6 @@
-# STAS Agent-Native Distribution Plan
+# SYNTARO Agent-Native Distribution Plan
 
-> **Strategic document**: How STAS becomes the undisputed best MCP server for any AI agent solving SWE tickets, and what niche makes this defensible.
+> **Strategic document**: How SYNTARO becomes the undisputed best MCP server for any AI agent solving SWE tickets, and what niche makes this defensible.
 
 ---
 
@@ -53,13 +53,13 @@ Agents discover MCP servers through four channels:
 - MCP.Directory: Links + install instructions per client
 - Flow: Agent fetches tool definitions at runtime, user approves
 
-**Key insight for STAS**: Marketplaces (Channel 3) are the highest-leverage distribution channel. Once listed in Cline Marketplace, Devin Marketplace, or Smithery, STAS becomes discoverable by millions of agents with zero extra effort per user.
+**Key insight for SYNTARO**: Marketplaces (Channel 3) are the highest-leverage distribution channel. Once listed in Cline Marketplace, Devin Marketplace, or Smithery, SYNTARO becomes discoverable by millions of agents with zero extra effort per user.
 
 ### 1.3 MCP Protocol Roadmap
 
-| Milestone | Status | Impact on STAS |
+| Milestone | Status | Impact on SYNTARO |
 |-----------|--------|----------------|
-| MCP 2024-11-05 (initial spec) | Stable | STAS is built on this. JSON-RPC 2.0 over HTTP. |
+| MCP 2024-11-05 (initial spec) | Stable | SYNTARO is built on this. JSON-RPC 2.0 over HTTP. |
 | Streamable HTTP transport | Stable (2025) | Moving from SSE to Streamable HTTP for lower latency. |
 | OAuth 2.0 support | Stable | Enables enterprise SSO flows. |
 | Federated registry | In proposal | Analogous to npm — one registry to rule them all. |
@@ -74,7 +74,7 @@ Agents discover MCP servers through four channels:
 
 | Marketplace | Servers | Security Audit | Discovery Mechanism | Unique Value |
 |-------------|---------|----------------|---------------------|--------------|
-| **Smithery** | 3,000+ | None | CLI install (`npx @smithery/cli`) | Largest curated catalog. Easy install. STAS **already listed**. |
+| **Smithery** | 3,000+ | None | CLI install (`npx @smithery/cli`) | Largest curated catalog. Easy install. SYNTARO **already listed**. |
 | **PulseMCP** | 21,000+ | None | Web search, categories | Largest raw catalog (aggregated from multiple sources). |
 | **MCP.Directory** | 2,300+ | None | Web search, one-click install per client | Best client-specific install instructions. |
 | **Glama** | 2,000+ | Algorithmic quality scores | GitHub activity scoring | Quality signals (stars, maintenance). |
@@ -83,7 +83,7 @@ Agents discover MCP servers through four channels:
 | **Cline Marketplace** | ~200+ | Manual review | In-extension browsing | Direct integration with Cline. One-click install. |
 | **Devin Marketplace** | ~100+ | Devin-managed | Settings → MCP servers | Integrated with Devin session workflow. |
 
-**STAS current status**: Listed on Smithery (`@aimino/syntaro-mcp`). Needs listing on Cline Marketplace, Devin Marketplace, MCP.Directory, and PulseMCP.
+**SYNTARO current status**: Listed on Smithery (`@aimino/syntaro-mcp`). Needs listing on Cline Marketplace, Devin Marketplace, MCP.Directory, and PulseMCP.
 
 ### 1.5 Most Popular MCP Servers (by install count)
 
@@ -102,7 +102,7 @@ From Smithery's January 2026 telemetry:
 
 **Enterprise MCP servers** (shipped Oct 2025–Mar 2026): Salesforce, ServiceNow, Workday, Snowflake, Databricks, SAP, Microsoft, HashiCorp, Atlassian.
 
-**Key observation**: No MCP server for automated ticket fixing exists in the top ranks. STAS has a **first-mover opportunity** in a category that doesn't yet exist in the MCP ecosystem.
+**Key observation**: No MCP server for automated ticket fixing exists in the top ranks. SYNTARO has a **first-mover opportunity** in a category that doesn't yet exist in the MCP ecosystem.
 
 ---
 
@@ -120,11 +120,11 @@ From Smithery's January 2026 telemetry:
 | **Sweep AI** | ❌ | ❌ | Pivoted to JetBrains. No MCP server. |
 | **mcp-contributor** | ✅ Community | ⚠️ Auto-contribute via opencode | Experimental, not production-ready. Uses opencode CLI as backend. No enterprise features. |
 | **Generic GitHub MCP** | ✅ Multiple | ❌ Git operations only | Servers like mcp-github-api, github-mcp-pro provide PR creation, code review — but NOT investigation, root cause analysis, or verification. They're wrappers around the GitHub API. |
-| **STAS** | ✅ Live | ✅ Full pipeline | The **only** MCP server that offers: investigate → diagnose → fix → test → PR in one tool call. |
+| **SYNTARO** | ✅ Live | ✅ Full pipeline | The **only** MCP server that offers: investigate → diagnose → fix → test → PR in one tool call. |
 
 ### 2.2 The Quality Gap
 
-The opportunity isn't just "STAS exists as MCP" — it's **quality of result**. Generic GitHub MCP servers give agents the ability to create PRs, but the agent must:
+The opportunity isn't just "SYNTARO exists as MCP" — it's **quality of result**. Generic GitHub MCP servers give agents the ability to create PRs, but the agent must:
 
 1. Clone the repo
 2. Understand the codebase
@@ -133,28 +133,28 @@ The opportunity isn't just "STAS exists as MCP" — it's **quality of result**. 
 5. Run tests
 6. Create the PR
 
-With STAS, the agent does ONE tool call and gets back a verified PR. The quality gap:
+With SYNTARO, the agent does ONE tool call and gets back a verified PR. The quality gap:
 
-| Dimension | Agent + GitHub MCP only | Agent + STAS MCP |
+| Dimension | Agent + GitHub MCP only | Agent + SYNTARO MCP |
 |-----------|------------------------|------------------|
-| Codebase understanding | Agent must clone & explore (tokens, time) | STAS handles investigation (parallelized) |
-| Root cause diagnosis | Agent reasoning (variable quality) | STAS 2-phase triage (cheap model scopes, expensive model fixes) |
+| Codebase understanding | Agent must clone & explore (tokens, time) | SYNTARO handles investigation (parallelized) |
+| Root cause diagnosis | Agent reasoning (variable quality) | SYNTARO 2-phase triage (cheap model scopes, expensive model fixes) |
 | Fix quality | Agent-dependent, no verification gate | Multi-phase verification, regression tests required |
-| Test execution | Agent must run tests manually | STAS runs suite + new regression tests |
+| Test execution | Agent must run tests manually | SYNTARO runs suite + new regression tests |
 | Multi-platform | GitHub only | GitHub + planned GitLab/Jira/Linear |
 | DACH compliance | None | EU data residency, German output (planned) |
 | Confidence | No score | Confidence, effort, risk estimates |
 
 ### 2.3 Competitive MCP Defensibility Matrix
 
-| Dimension | STAS | Devin MCP | mcp-contributor | GitHub MCPs |
+| Dimension | SYNTARO | Devin MCP | mcp-contributor | GitHub MCPs |
 |-----------|------|-----------|-----------------|-------------|
 | Issue→PR pipeline | ✅ Complete | ❌ Session mgmt only | ⚠️ Experimental | ❌ Git ops only |
 | Multi-platform | 🔲 Planned (GitLab, Jira, Linear) | ✅ GitHub, GitLab, Bitbucket, Linear, Jira | ❌ GitHub only | ⚠️ GitHub only |
 | Agent-discoverable tools | ✅ 7 tools (fix, batch, triage, estimate, check, list, get) | ✅ 10+ tools (session CRUD, search, events, schedules) | ✅ 9 tools | ✅ 11-18 tools |
 | Self-host option | ✅ Full | ❌ SaaS only | ✅ | ⚠️ Varies |
 | Verification gate | ✅ Tests must pass | ❌ | ⚠️ Quality gate (based on syntax, not tests) | ❌ |
-| Confidence/risk scoring | ✅ stas_triage, stas_estimate | ❌ | ⚠️ Quality score (0-100) | ❌ |
+| Confidence/risk scoring | ✅ syntaro_triage, syntaro_estimate | ❌ | ⚠️ Quality score (0-100) | ❌ |
 | Async delegation | ✅ Fire-and-forget with polling | ✅ Session-based | ✅ Pipeline-based | ❌ Synchronous |
 | DACH compliance | 🔲 Planned | ❌ | ❌ | ❌ |
 | Open source | ✅ MIT | ❌ Proprietary | ✅ | ✅ Varies |
@@ -178,10 +178,10 @@ This is narrower and more defensible than "AI code fixer" or "MCP for GitHub." I
 
 | Defensibility Factor | Assessment |
 |----------------------|------------|
-| **Multi-platform coverage** | HIGH — No fix service covers all four (GitHub + GitLab + Jira + Linear). Devin covers GitHub+Jira, but requires Devin subscription. STAS open-source can cover all four. |
-| **Pipeline integration** | HIGH — The pipeline (webhook → triage → investigate → fix → test → PR) is STAS's core moat. Competitors would need to rebuild this. |
-| **Agent-discovery** | MEDIUM — Once STAS is listed in agent marketplaces, switching costs increase. Agents recommend tools they've used. |
-| **Safety & verification** | HIGH — Trust is the #1 barrier to autonomous code fixing. STAS's verification gate, confidence scoring, and approval workflow build institutional trust. |
+| **Multi-platform coverage** | HIGH — No fix service covers all four (GitHub + GitLab + Jira + Linear). Devin covers GitHub+Jira, but requires Devin subscription. SYNTARO open-source can cover all four. |
+| **Pipeline integration** | HIGH — The pipeline (webhook → triage → investigate → fix → test → PR) is SYNTARO's core moat. Competitors would need to rebuild this. |
+| **Agent-discovery** | MEDIUM — Once SYNTARO is listed in agent marketplaces, switching costs increase. Agents recommend tools they've used. |
+| **Safety & verification** | HIGH — Trust is the #1 barrier to autonomous code fixing. SYNTARO's verification gate, confidence scoring, and approval workflow build institutional trust. |
 | **DACH compliance** | HIGH — No competitor offers EU data residency, German output, audit logs, and approval gates. This is a defensible regional moat. |
 
 ### 3.3 Niche Intersection
@@ -208,7 +208,7 @@ Do NOT lead with DACH — it narrows the addressable market too much. Lead with 
 
 ### 3.4 Niche Positioning Statement
 
-> **"STAS is the MCP server that turns any issue from any tracker into a verified PR — discovered and called by any AI agent, trusted with production code."**
+> **"SYNTARO is the MCP server that turns any issue from any tracker into a verified PR — discovered and called by any AI agent, trusted with production code."**
 
 ---
 
@@ -218,12 +218,12 @@ Do NOT lead with DACH — it narrows the addressable market too much. Lead with 
 
 | Dimension | Current (GitHub Label/Webhook) | Agent-Native (MCP) |
 |-----------|-------------------------------|-------------------|
-| **Trigger** | User labels issue `stas:fix` | Agent discovers STAS via `tools/list` and calls `syntaro_fix_issue` |
-| **Setup** | Install GitHub App, add label | Add STAS MCP server config (one-time per agent) |
+| **Trigger** | User labels issue `syntaro:fix` | Agent discovers SYNTARO via `tools/list` and calls `syntaro_fix_issue` |
+| **Setup** | Install GitHub App, add label | Add SYNTARO MCP server config (one-time per agent) |
 | **User** | Developer browsing GitHub | AI agent (Claude Code, Cursor, Cline, Codex CLI) |
 | **Distribution** | GitHub App Marketplace, word of mouth | Agent marketplaces, MCP directories, smithery |
 | **Conversion** | Self-host → Cloud Paid | MCP adoption → need more fixes → Cloud Paid |
-| **Virality** | "Fixed by STAS" in PR | Agent recommends STAS in output → more agents use it |
+| **Virality** | "Fixed by SYNTARO" in PR | Agent recommends SYNTARO in output → more agents use it |
 | **Limitation** | Requires human to label the issue | No human in loop — agent calls directly |
 
 ### 4.2 Agent Discovery Virality Loop
@@ -235,20 +235,20 @@ Agent calls syntaro_fix_issue → fix succeeds → PR created
                                           ↓
                               Agent reports success to user
                                           ↓
-                         "This issue was fixed by STAS"
+                         "This issue was fixed by SYNTARO"
                           (appears in PR, agent output)
                                           ↓
                               User (or another agent)
-                              discovers STAS via mention
+                              discovers SYNTARO via mention
                                           ↓
-                              Installs STAS MCP server
+                              Installs SYNTARO MCP server
                                           ↓
-                              Their agents discover STAS
+                              Their agents discover SYNTARO
                                           ↓
                               The loop repeats
 ```
 
-**Key difference from webhook model**: In the webhook model, virality is human-to-human ("I use this GitHub App"). In the agent-native model, virality is **agent-to-agent** — one agent's successful fix output exposes STAS to another agent that reads the PR.
+**Key difference from webhook model**: In the webhook model, virality is human-to-human ("I use this GitHub App"). In the agent-native model, virality is **agent-to-agent** — one agent's successful fix output exposes SYNTARO to another agent that reads the PR.
 
 ### 4.3 Distribution Channels (Prioritized)
 
@@ -267,18 +267,18 @@ Agent calls syntaro_fix_issue → fix succeeds → PR created
 ### 4.4 Bundled vs On-Demand Distribution
 
 **Bundled distribution** (pre-installed in agent platforms):
-- **When**: Agent ships with STAS MCP server pre-configured
-- **How**: Partnership with agent platform (e.g., "STAS is one of Cline's recommended MCPs")
+- **When**: Agent ships with SYNTARO MCP server pre-configured
+- **How**: Partnership with agent platform (e.g., "SYNTARO is one of Cline's recommended MCPs")
 - **Pros**: Zero-friction adoption, default choice
 - **Cons**: Requires platform partnerships, ongoing maintenance
 - **Strategy**: Pursue 1-2 bundled deals (Cline, Cursor marketplaces) for baseline distribution
 
 **On-demand discovery** (agent fetches tools at runtime):
 - **When**: Agent calls `tools/list` on Smithery or MCP directory
-- **How**: STAS appears in search results, gets installed per-session
+- **How**: SYNTARO appears in search results, gets installed per-session
 - **Pros**: No partnership needed, organic growth
 - **Cons**: Higher friction, lost if not discoverable
-- **Strategy**: Ensure STAS ranks high in all MCP directories (Smithery, MCP.Directory, PulseMCP)
+- **Strategy**: Ensure SYNTARO ranks high in all MCP directories (Smithery, MCP.Directory, PulseMCP)
 
 **Recommendation**: Both paths. 60% effort on marketplace listings (bundled-like), 40% on directory SEO (on-demand).
 
@@ -286,13 +286,13 @@ Agent calls syntaro_fix_issue → fix succeeds → PR created
 
 How did successful MCP servers gain adoption?
 
-| Server | Adoption Path | Analogy for STAS |
+| Server | Adoption Path | Analogy for SYNTARO |
 |--------|---------------|------------------|
-| **Playwright** | Microsoft-maintained, solves a universal need (browser), clear docs | STAS maintains the pipeline, solves a universal dev need (bug fixing) |
-| **Atlassian (Jira+Confluence)** | Official enterprise vendor, solves authenticated access | STAS should become the official way agents fix issues, vendor-agnostic |
-| **Context7** | Solves a single clear pain point (outdated docs), zero config | STAS solves a single clear pain point (fixing bugs), zero config |
-| **Memory** | Anthropic reference, protocol definition | STAS benefits from being the reference MCP for issue fixing |
-| **Filesystem** | Universal, works everywhere, zero dependencies | STAS should be the default "fix this" tool for any agent |
+| **Playwright** | Microsoft-maintained, solves a universal need (browser), clear docs | SYNTARO maintains the pipeline, solves a universal dev need (bug fixing) |
+| **Atlassian (Jira+Confluence)** | Official enterprise vendor, solves authenticated access | SYNTARO should become the official way agents fix issues, vendor-agnostic |
+| **Context7** | Solves a single clear pain point (outdated docs), zero config | SYNTARO solves a single clear pain point (fixing bugs), zero config |
+| **Memory** | Anthropic reference, protocol definition | SYNTARO benefits from being the reference MCP for issue fixing |
+| **Filesystem** | Universal, works everywhere, zero dependencies | SYNTARO should be the default "fix this" tool for any agent |
 
 **Pattern**: Successful MCP servers solve one problem perfectly, are zero-config to install, and are either vendor-backed or community-viral.
 
@@ -302,7 +302,7 @@ How did successful MCP servers gain adoption?
 
 ### 5.1 Current MCP Surface (Already Live)
 
-STAS already has a mature MCP surface in production at `POST /mcp/jsonrpc`:
+SYNTARO already has a mature MCP surface in production at `POST /mcp/jsonrpc`:
 
 **Tools:**
 | Tool | Description | Maturity |
@@ -311,9 +311,9 @@ STAS already has a mature MCP surface in production at `POST /mcp/jsonrpc`:
 | `syntaro_check_status` | Check fix run status by runId | ✅ Live |
 | `syntaro_list_runs` | List recent fix runs with optional filters | ✅ Live |
 | `syntaro_get_run` | Full run details by runId | ✅ Live |
-| `stas_batch_fix` | Fix multiple issues in one invocation | ✅ Live |
-| `stas_triage` | Score which issues in a repo are fixable | ✅ Live |
-| `stas_estimate` | Complexity, effort, risk analysis for an issue | ✅ Live |
+| `syntaro_batch_fix` | Fix multiple issues in one invocation | ✅ Live |
+| `syntaro_triage` | Score which issues in a repo are fixable | ✅ Live |
+| `syntaro_estimate` | Complexity, effort, risk analysis for an issue | ✅ Live |
 
 **Resources:**
 | Resource | Description | Maturity |
@@ -326,8 +326,8 @@ STAS already has a mature MCP surface in production at `POST /mcp/jsonrpc`:
 **Prompts:**
 | Prompt | Description | Maturity |
 |--------|-------------|----------|
-| `stas_fix_pattern` | Template for common fix patterns | ✅ Live |
-| `stas_triage_pattern` | Template for triage analysis | ✅ Live |
+| `syntaro_fix_pattern` | Template for common fix patterns | ✅ Live |
+| `syntaro_triage_pattern` | Template for triage analysis | ✅ Live |
 
 ### 5.2 Minimum Viable MCP Surface (Phase 1 — Now)
 
@@ -335,10 +335,10 @@ The current surface is already **viable for launch**. The MVP for agent adoption
 
 - `syntaro_fix_issue` — single issue fix (the core value proposition)
 - `syntaro_check_status` — polling (essential for async workflow)
-- `stas_triage` — read-only adoption driver (agents discover triage first, then fix)
-- `stas_estimate` — information tool (agents estimate before committing to fix)
+- `syntaro_triage` — read-only adoption driver (agents discover triage first, then fix)
+- `syntaro_estimate` — information tool (agents estimate before committing to fix)
 
-**These four tools are sufficient for STAS to be the default choice** for agents needing issue-to-PR capability.
+**These four tools are sufficient for SYNTARO to be the default choice** for agents needing issue-to-PR capability.
 
 ### 5.3 Extended MCP Surface (Phase 2 — 1-3 months)
 
@@ -346,33 +346,33 @@ The current surface is already **viable for launch**. The MVP for agent adoption
 
 | Tool | Purpose | Priority |
 |------|---------|----------|
-| `stas_analyze_pr` | Review an existing PR for quality, risk, and suggestions | High |
-| `stas_explain_issue` | Explain an issue in natural language with root cause hypothesis | High |
-| `stas_suggest_approaches` | Propose 2-3 fix approaches with trade-offs before committing | Medium |
-| `stas_list_supported_platforms` | List which issue platforms STAS supports (GitHub, GitLab, etc.) | Medium |
-| `stas_get_capabilities` | Return STAS's full capabilities, limits, and current load | Low |
+| `syntaro_analyze_pr` | Review an existing PR for quality, risk, and suggestions | High |
+| `syntaro_explain_issue` | Explain an issue in natural language with root cause hypothesis | High |
+| `syntaro_suggest_approaches` | Propose 2-3 fix approaches with trade-offs before committing | Medium |
+| `syntaro_list_supported_platforms` | List which issue platforms SYNTARO supports (GitHub, GitLab, etc.) | Medium |
+| `syntaro_get_capabilities` | Return SYNTARO's full capabilities, limits, and current load | Low |
 
 **Enhanced tool returns** (modify existing tools to return richer data):
 
 | Enhancement | Tool | Value |
 |-------------|------|-------|
 | Confidence score (0-100) | `syntaro_fix_issue` response | Agent decides whether to trust the fix |
-| Cost estimate ($) | `stas_estimate`, `syntaro_fix_issue` response | Agent budget-awareness |
+| Cost estimate ($) | `syntaro_estimate`, `syntaro_fix_issue` response | Agent budget-awareness |
 | Estimated time | `syntaro_fix_issue` response | Agent decides async vs sync |
 | Alternative approaches | `syntaro_fix_issue` response | Agent chooses strategy |
-| Risk classification | `stas_estimate` | Agent flags high-risk fixes for human review |
+| Risk classification | `syntaro_estimate` | Agent flags high-risk fixes for human review |
 
 ### 5.4 Multi-Platform Surface (Phase 3 — 3-6 months)
 
 Current tools assume GitHub issues. Multi-platform support requires:
 
-- **`issueTracker` parameter** on `syntaro_fix_issue`, `stas_triage`, `stas_estimate` — accepts `github`, `gitlab`, `jira`, `linear`
+- **`issueTracker` parameter** on `syntaro_fix_issue`, `syntaro_triage`, `syntaro_estimate` — accepts `github`, `gitlab`, `jira`, `linear`
 - **Abstract issue reference** — `{ platform, projectId, issueId }` instead of `{ repoOwner, repoName, issueNumber }`
 - **Platform-specific resource URIs** — `syntaro://github/{owner}/{repo}/issues/{number}`, `syntaro://gitlab/{projectId}/issues/{iid}`
 
-### 5.5 What Makes STAS the Default Choice
+### 5.5 What Makes SYNTARO the Default Choice
 
-For an agent to choose STAS over alternatives (including doing nothing), the MCP surface must:
+For an agent to choose SYNTARO over alternatives (including doing nothing), the MCP surface must:
 
 1. **Be discoverable** — `tools/list` returns a clear, well-described tool set. Agents read descriptions to decide.
 2. **Return actionable data** — Not just "fix submitted", but confidence score, estimated time, cost, and alternatives.
@@ -382,11 +382,11 @@ For an agent to choose STAS over alternatives (including doing nothing), the MCP
 
 **The minimum surface that achieves "default choice" status:**
 - 1 write tool (`syntaro_fix_issue`)
-- 2 read tools (`stas_triage`, `stas_estimate`)
+- 2 read tools (`syntaro_triage`, `syntaro_estimate`)
 - 1 polling tool (`syntaro_check_status`)
 - Rich return metadata (confidence, cost, time)
 
-**STAS already has all of these.**
+**SYNTARO already has all of these.**
 
 ---
 
@@ -396,19 +396,19 @@ For an agent to choose STAS over alternatives (including doing nothing), the MCP
 
 | Scenario | Likelihood | Impact | Mitigation |
 |----------|------------|--------|------------|
-| Claude Code improves fix rate to 80%+ | Medium | High | STAS differentiates on multi-platform + verification + DACH |
-| Cursor ships built-in issue fixing | Medium | Medium | Cursor is IDE-bound, not async. STAS is platform-agnostic. |
-| Copilot Agent matures issue→PR | Medium-High | High | Copilot is GitHub-only. STAS covers GitLab, Jira, Linear. |
-| Devin adds MCP fix tools | Medium | Medium | Devin SaaS-only. STAS open-source self-host is differentiator. |
+| Claude Code improves fix rate to 80%+ | Medium | High | SYNTARO differentiates on multi-platform + verification + DACH |
+| Cursor ships built-in issue fixing | Medium | Medium | Cursor is IDE-bound, not async. SYNTARO is platform-agnostic. |
+| Copilot Agent matures issue→PR | Medium-High | High | Copilot is GitHub-only. SYNTARO covers GitLab, Jira, Linear. |
+| Devin adds MCP fix tools | Medium | Medium | Devin SaaS-only. SYNTARO open-source self-host is differentiator. |
 
-**Strategic response**: Speed to multi-platform + DACH is critical. Once STAS owns the "fix issues from any tracker" position, agent platforms compete with STAS rather than replacing it.
+**Strategic response**: Speed to multi-platform + DACH is critical. Once SYNTARO owns the "fix issues from any tracker" position, agent platforms compete with SYNTARO rather than replacing it.
 
 ### 6.2 Risk: MCP Fails to Become Standard
 
 | Scenario | Likelihood | Impact | Mitigation |
 |----------|------------|--------|------------|
-| Anthropic/OpenAI diverge on protocol | Low | High | STAS MCP is JSON-RPC 2.0 over HTTP — transport-agnostic. REST API fallback exists. |
-| Agent platforms build proprietary tool APIs | Low | Medium | STAS already has REST API + webhook trigger. MCP is additive, not the only path. |
+| Anthropic/OpenAI diverge on protocol | Low | High | SYNTARO MCP is JSON-RPC 2.0 over HTTP — transport-agnostic. REST API fallback exists. |
+| Agent platforms build proprietary tool APIs | Low | Medium | SYNTARO already has REST API + webhook trigger. MCP is additive, not the only path. |
 | MCP adoption plateaus at current level | Low | Medium | Current adoption is already sufficient for distribution. 10+ major platforms support it. |
 
 **Assessment**: MCP failure risk is low. Too many major players are invested. Even if MCP is replaced, the JSON-RPC 2.0 substrate maps trivially to any successor protocol.
@@ -418,22 +418,22 @@ For an agent to choose STAS over alternatives (including doing nothing), the MCP
 | Platform Dependency | Risk | Mitigation |
 |--------------------|------|------------|
 | Claude Code API changes | Medium | Implement against stable MCP spec, not Claude Code extensions |
-| Cline marketplace policies | Low | STAS is open-source — no single gatekeeper |
+| Cline marketplace policies | Low | SYNTARO is open-source — no single gatekeeper |
 | Smithery directory changes | Low | Diversify across 3+ directories |
-| GitHub API rate limiting | Low | STAS can use PAT or GitHub App authentication |
+| GitHub API rate limiting | Low | SYNTARO can use PAT or GitHub App authentication |
 
 **Strategy**: Support ALL agent platforms equally. Being "the MCP server for Cline" is risky. Being "the MCP server for issue fixing" is not.
 
 ### 6.4 Risk: Competitors Claim MCP Space
 
-| Competitor | Timeline | Threat Level | STAS Response |
+| Competitor | Timeline | Threat Level | SYNTARO Response |
 |-----------|----------|-------------|---------------|
 | Devin adds issue-to-PR MCP tools | 2026–2027 | HIGH | Move fast on multi-platform + self-host. Devin is SaaS-only and expensive. |
 | OpenHands ships fix-as-service MCP | 2026 | MEDIUM | OpenHands is agent framework, not turnkey fix service. Pipeline quality gap. |
-| New startup "MCP-first fix server" | 2026 | MEDIUM | First-mover advantage + OSS community. STAS already has the pipeline, benchmarks, and listings. |
+| New startup "MCP-first fix server" | 2026 | MEDIUM | First-mover advantage + OSS community. SYNTARO already has the pipeline, benchmarks, and listings. |
 | GitHub Actions-based MCP server | 2026 | MEDIUM | Actions are CI, not agent-native. Different use case. |
 
-**Window of opportunity**: 12–18 months before significant competition emerges in MCP issue-fixing. STAS should establish:
+**Window of opportunity**: 12–18 months before significant competition emerges in MCP issue-fixing. SYNTARO should establish:
 1. MCP ecosystem presence (marketplaces, directories) — 0-3 months
 2. Multi-platform support (GitLab, Jira) — 3-6 months
 3. DACH compliance features — 6-12 months
@@ -454,13 +454,13 @@ For an agent to choose STAS over alternatives (including doing nothing), the MCP
 
 ### 7.1 Strategic Direction
 
-1. **Lead with "multi-platform issue-to-PR for agents"** — this is the widest defensible niche. Every agent on every platform needs to fix issues. STAS is the pipeline that makes it happen.
+1. **Lead with "multi-platform issue-to-PR for agents"** — this is the widest defensible niche. Every agent on every platform needs to fix issues. SYNTARO is the pipeline that makes it happen.
 
 2. **Submit to all MCP marketplaces immediately** — Cline Marketplace, Devin Marketplace, Cursor Marketplace, MCP.Directory, PulseMCP. Listing is zero-code and compounds over time.
 
 3. **The existing MCP surface is already launch-ready** — 7 tools, 4 resources, 2 prompts. Focus on ecosystem presence, not surface expansion.
 
-4. **Build read-before-write as the adoption funnel** — `stas_triage` and `stas_estimate` are adoption drivers. Agents discover these first, trust the results, then graduate to `syntaro_fix_issue`.
+4. **Build read-before-write as the adoption funnel** — `syntaro_triage` and `syntaro_estimate` are adoption drivers. Agents discover these first, trust the results, then graduate to `syntaro_fix_issue`.
 
 5. **Rich returns are the differentiator** — confidence scores, cost estimates, and time estimates let agents make intelligent decisions. No other MCP fix server does this.
 
@@ -490,9 +490,9 @@ For an agent to choose STAS over alternatives (including doing nothing), the MCP
 
 ### 7.4 Immediate Next Steps (Execution Tickets)
 
-1. **AIM-3362** — Submit STAS MCP server to Cline Marketplace and Devin Marketplace
-2. **AIM-3363** — Add `stas_analyze_pr` tool to MCP surface
-3. **AIM-3364** — Add confidence score and cost estimate returns to `syntaro_fix_issue` and `stas_estimate`
+1. **AIM-3362** — Submit SYNTARO MCP server to Cline Marketplace and Devin Marketplace
+2. **AIM-3363** — Add `syntaro_analyze_pr` tool to MCP surface
+3. **AIM-3364** — Add confidence score and cost estimate returns to `syntaro_fix_issue` and `syntaro_estimate`
 4. **AIM-3365** — Abstract issue reference model for multi-platform support (GitLab, Jira, Linear)
 5. **AIM-3366** — Update Smithery listing with richer description, screenshots, and usage examples
 6. **AIM-3367** — Write MCP-specific onboarding guide for agent developers
@@ -501,9 +501,9 @@ For an agent to choose STAS over alternatives (including doing nothing), the MCP
 
 ## References
 
-- STAS MCP Agent Server: `src/mcp/agentServer.ts` — 7 tools, 4 resources, 2 prompts over JSON-RPC 2.0
-- MCP Server JSON: `stas/mcp-server.json` — Smithery listing manifest
-- STAS Registry: `stas/stas-registry.json` — marketplace presence across 5 channels
+- SYNTARO MCP Agent Server: `src/mcp/agentServer.ts` — 7 tools, 4 resources, 2 prompts over JSON-RPC 2.0
+- MCP Server JSON: `syntaro/mcp-server.json` — Smithery listing manifest
+- SYNTARO Registry: `syntaro/syntaro-registry.json` — marketplace presence across 5 channels
 - Existing distribution plan: `docs/gtm/mcp-distribution-plan.md`
 - Competitor research: `docs/gtm/competitor-research.md`
 - DACH market analysis: `docs/gtm/germany-eu-taas-market-analysis.md`

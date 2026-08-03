@@ -26,3 +26,5 @@ export type { NotificationPreference, NewNotificationPreference } from './notifi
 export type { NotificationHistory, NewNotificationHistory } from './notificationHistory.js';
 export type { RunFeedback, NewRunFeedback } from './runFeedback.js';
 export type { RefreshToken, NewRefreshToken, RefreshTokenRepository } from './refreshTokens.js';
+
+export type { LinearOAuthToken, NewLinearOAuthToken } from './linearOAuth.js';

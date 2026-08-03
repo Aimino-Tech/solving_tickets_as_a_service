@@ -15,7 +15,7 @@ vi.mock('node:child_process', () => ({
 }));
 
 vi.mock('node:fs', () => ({
-  mkdtempSync: vi.fn(() => '/tmp/stas-sandbox-pool-test-xxxxxx'),
+  mkdtempSync: vi.fn(() => '/tmp/syntaro-sandbox-pool-test-xxxxxx'),
   existsSync: vi.fn(() => true),
   rmSync: vi.fn(),
 }));

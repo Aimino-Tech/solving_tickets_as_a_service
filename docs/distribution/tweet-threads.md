@@ -1,4 +1,4 @@
-# STAS Tweet Thread Program
+# SYNTARO Tweet Thread Program
 
 Four ready-to-post threads. Each is a before/after comparison: the developer time and pain of fixing something by hand, versus labeling an issue and getting a PR back. All tweet text is final and within Twitter's 280-character limit. UTM convention for every link: `utm_source=twitter&utm_medium=thread&utm_campaign=<slug>`.
 
@@ -13,8 +13,8 @@ Program rules (2 lines):
 
 **Slug:** `race-condition`
 
-**Image:** screenshot of a GitHub issue labeled `stas:fix` with a STAS comment showing it is investigating.
-**Alt text:** "GitHub issue labeled stas:fix, with a bot comment saying STAS is investigating and will open a pull request."
+**Image:** screenshot of a GitHub issue labeled `syntaro:fix` with a SYNTARO comment showing it is investigating.
+**Alt text:** "GitHub issue labeled syntaro:fix, with a bot comment saying SYNTARO is investigating and will open a pull request."
 
 **Hook (tweet 1):**
 
@@ -26,7 +26,7 @@ The bug was a Promise.all where one rejection got swallowed. Classic. I re-read 
 
 **Tweet 3:**
 
-The after: I wrote the bug report in two sentences, added one label (stas:fix), and closed my laptop. The bot cloned the repo into a sandbox and started investigating.
+The after: I wrote the bug report in two sentences, added one label (syntaro:fix), and closed my laptop. The bot cloned the repo into a sandbox and started investigating.
 
 **Tweet 4:**
 
@@ -71,7 +71,7 @@ The fix: cap the pool. The regression test: 50 concurrent connections, assert th
 
 **Tweet 6:**
 
-The tool was STAS: open source, 92% pass rate on real issues, ~$3.80/fix. The hunt that cost us 2 days takes it minutes. https://syntaro.io?utm_source=twitter&utm_medium=thread&utm_campaign=ci-flake
+The tool was SYNTARO: open source, 92% pass rate on real issues, ~$3.80/fix. The hunt that cost us 2 days takes it minutes. https://syntaro.io?utm_source=twitter&utm_medium=thread&utm_campaign=ci-flake
 
 ---
 
@@ -92,7 +92,7 @@ The before: bump the package, watch type errors cascade, fix them one by one, ru
 
 **Tweet 3:**
 
-The after: I opened the upgrade as an issue and labeled it stas:fix. The bot did the bump, fixed every broken test, and ran the full suite in a sandbox.
+The after: I opened the upgrade as an issue and labeled it syntaro:fix. The bot did the bump, fixed every broken test, and ran the full suite in a sandbox.
 
 **Tweet 4:**
 
@@ -133,7 +133,7 @@ I'm not saying the bot replaces review. It doesn't. But reviewing a well-scoped,
 
 **Tweet 5:**
 
-Honest limits: STAS is a highly capable junior developer at machine speed. Architecture calls and feature design stay human. The well-defined bugs leave the backlog.
+Honest limits: SYNTARO is a highly capable junior developer at machine speed. Architecture calls and feature design stay human. The well-defined bugs leave the backlog.
 
 **Tweet 6:**
 
@@ -149,4 +149,4 @@ Label a GitHub issue. Get a pull request. https://syntaro.io?utm_source=twitter&
 
 Best posting times for all threads: Tuesday and Thursday around 17:00 UTC. Favor Thread 2 (CI flake) and Thread 4 (backlog math) for developer audiences that have been burned by flaky pipelines and growing backlogs; save Thread 1 (race condition) for a week with low engagement so the story arc can carry it.
 
-Every fact in these threads comes from measured STAS data: 92% pass rate on real issues, median cost $3.80 per fix, ~4 minutes from label to PR, 6 quality gates, 97% test-suite pass rate, and an average fix size of +32/-15 lines. Do not add performance claims beyond these numbers.
+Every fact in these threads comes from measured SYNTARO data: 92% pass rate on real issues, median cost $3.80 per fix, ~4 minutes from label to PR, 6 quality gates, 97% test-suite pass rate, and an average fix size of +32/-15 lines. Do not add performance claims beyond these numbers.

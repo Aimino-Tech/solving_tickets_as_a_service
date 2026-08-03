@@ -1,0 +1,21 @@
+name: syntaro:fix
+labels: [syntaro:fix, syntaro:bugfix]
+phases:
+  pre:
+    - command: "opencode grep-memory --query {issue.title}"
+      session: reuse
+    - command: "opencode plan --issue {issue.number}"
+      session: new
+  main:
+    - command: "opencode agent --full-cycle --issue {issue.number}"
+      session: new
+  post:
+    - command: "opencode remove-anti-slop --since origin/main"
+      session: new
+    - command: "opencode release-preview --diff-only"
+      session: new
+  final:
+    - command: "opencode agent --tool write-memory --key fix:{issue.number}"
+      session: new
+    - command: "opencode agent --mode create-pr"
+      session: new

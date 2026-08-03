@@ -76,8 +76,8 @@ async function sendLowBalanceAlert(accountId: number, balance: number, level: 'w
       ? 'Critical: Credit balance is very low'
       : 'Warning: Credit balance running low';
     const body = level === 'critical'
-      ? `Your STAS credit balance is ${balance} credits. Top up to avoid service interruption.`
-      : `Your STAS credit balance is ${balance} credits. Consider purchasing more credits soon.`;
+      ? `Your SYNTARO credit balance is ${balance} credits. Top up to avoid service interruption.`
+      : `Your SYNTARO credit balance is ${balance} credits. Consider purchasing more credits soon.`;
 
     await notificationHistoryRepository.create({
       userId: String(accountId),

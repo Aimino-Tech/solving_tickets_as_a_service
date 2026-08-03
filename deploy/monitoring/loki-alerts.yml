@@ -1,15 +1,15 @@
 # =============================================================================
-# Loki Log-Based Alert Rules — STAS
+# Loki Log-Based Alert Rules — SYNTARO
 # =============================================================================
 groups:
-  - name: stas-log-alerts
+  - name: syntaro-log-alerts
     interval: 1m
     limit: 10
 
     rules:
       - alert: HighWebhookErrorRate
         expr: |
-          sum(count_over_time({compose_service="stas-webhook"}
+          sum(count_over_time({compose_service="syntaro-webhook"}
             |~ "status=(5[0-9][0-9]|500|502|503|504)"
             [5m])) > 5
         for: 2m
@@ -19,12 +19,12 @@ groups:
         annotations:
           summary: "Webhook 5xx error rate spike"
           description: |
-            stas-webhook logged {{ $value }} 5xx responses in the last 5 minutes.
+            syntaro-webhook logged {{ $value }} 5xx responses in the last 5 minutes.
           runbook: "ops/playbook.md#webhook-5xx"
 
       - alert: WorkerTaskFailures
         expr: |
-          sum(count_over_time({compose_service=~"stas-worker|celery-beat"}
+          sum(count_over_time({compose_service=~"syntaro-worker|celery-beat"}
             |~ "\\b(ERROR|CRITICAL)\\b"
             |~ "\\b(task|exception|traceback)\\b"
             [10m])) > 3
@@ -40,7 +40,7 @@ groups:
 
       - alert: ServiceHealthCheckFailure
         expr: |
-          sum(count_over_time({compose_project="stas"}
+          sum(count_over_time({compose_project="syntaro"}
             |~ "\\bhealth\\s*check\\b.*\\b(fail|unhealthy|timeout)\\b"
             [5m])) > 5
         for: 2m

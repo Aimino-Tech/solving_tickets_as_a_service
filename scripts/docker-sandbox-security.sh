@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# STAS Docker Sandbox Security Setup
+# SYNTARO Docker Sandbox Security Setup
 #
 # Installs and configures seccomp + AppArmor profiles for Docker sandbox
 # containers.  Must be run as root on the Docker host.
@@ -15,7 +15,7 @@
 #   2. Writes the seccomp profile to /etc/docker/seccomp/ so it can be
 #      referenced via --security-opt seccomp=/etc/docker/...
 #   3. Loads the AppArmor profile into the kernel (if AppArmor is present)
-#      so it can be referenced via --security-opt apparmor=stas-sandbox.
+#      so it can be referenced via --security-opt apparmor=syntaro-sandbox.
 #   4. Prints a docker run example that uses both profiles.
 
 set -euo pipefail
@@ -24,14 +24,14 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 SECDST="/etc/docker/seccomp"
-APPARMOR_SRC="${PROJECT_DIR}/docker/apparmor/stas-sandbox"
-APPARMOR_DST="/etc/apparmor.d/stas-sandbox"
-PROFILE_NAME="stas-sandbox"
+APPARMOR_SRC="${PROJECT_DIR}/docker/apparmor/syntaro-sandbox"
+APPARMOR_DST="/etc/apparmor.d/syntaro-sandbox"
+PROFILE_NAME="syntaro-sandbox"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 usage() {
-  sed -n '/^# STAS/,/^$/ { s/^# //; p; }' "$0"
+  sed -n '/^# SYNTARO/,/^$/ { s/^# //; p; }' "$0"
   exit 0
 }
 

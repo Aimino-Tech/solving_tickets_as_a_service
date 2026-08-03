@@ -48,15 +48,15 @@ export async function closeRedis(): Promise<void> {
 
 function cacheKey(accountId: number | null, flag: string): string {
   const scope = accountId ? `account:${accountId}` : 'global';
-  return `stas:flags:${scope}:${flag}`;
+  return `syntaro:flags:${scope}:${flag}`;
 }
 
 function callsKey(flag: string): string {
-  return `stas:flags:metrics:${flag}:calls`;
+  return `syntaro:flags:metrics:${flag}:calls`;
 }
 
 function errorsKey(flag: string): string {
-  return `stas:flags:metrics:${flag}:errors`;
+  return `syntaro:flags:metrics:${flag}:errors`;
 }
 
 // ── Consistent hashing for percentage rollout ────────────────────────────────

@@ -23,10 +23,10 @@ export default function NotFound() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4">
       <div className="w-full max-w-md text-center">
-        {/* STAS Logo */}
+        {/* SYNTARO Logo */}
         <div className="mb-8">
           <Link to="/" className="inline-flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
-            <span className="text-brand-600 dark:text-brand-400">STAS</span>
+            <span className="text-brand-600 dark:text-brand-400">SYNTARO</span>
             <span className="text-gray-400 dark:text-gray-500">/</span>
             <span>Dashboard</span>
           </Link>

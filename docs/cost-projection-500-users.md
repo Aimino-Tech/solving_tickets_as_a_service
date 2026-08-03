@@ -1,4 +1,4 @@
-# STAS Cost Projection — 500 Users
+# SYNTARO Cost Projection — 500 Users
 
 ## Assumptions
 - 500 users, 5 issues/week each = 2,500 issues/week

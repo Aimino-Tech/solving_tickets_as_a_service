@@ -4,13 +4,13 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: stas_test
-      POSTGRES_USER: stas
-      POSTGRES_PASSWORD: stas_test_pass
+      POSTGRES_DB: syntaro_test
+      POSTGRES_USER: syntaro
+      POSTGRES_PASSWORD: syntaro_test_pass
     ports:
       - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U stas -d stas_test"]
+      test: ["CMD-SHELL", "pg_isready -U syntaro -d syntaro_test"]
       interval: 5s
       retries: 10
 
@@ -33,10 +33,10 @@ services:
       interval: 10s
       retries: 10
 
-  stas:
+  syntaro:
     build:
       context: ../..
-      dockerfile: tests/integration/Dockerfile.stas
+      dockerfile: tests/integration/Dockerfile.syntaro
     ports:
       - "4095:4095"
     environment:
@@ -46,7 +46,7 @@ services:
       GITHUB_WEBHOOK_SECRET: test-secret
       GITHUB_APP_ID: test-app-id
       # src/config.ts reads SUPABASE_DATABASE_URL (DATABASE_URL alone is ignored).
-      SUPABASE_DATABASE_URL: postgres://stas:stas_test_pass@postgres:5432/stas_test
+      SUPABASE_DATABASE_URL: postgres://syntaro:syntaro_test_pass@postgres:5432/syntaro_test
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       PROXY_DISPATCH_URL: http://governance:4002
@@ -54,17 +54,17 @@ services:
       # Default is 120s polling opencode health at boot; keep the stack fast.
       OPENCODE_HEALTH_STARTUP_TIMEOUT_MS: "5000"
       # No real opencode server runs in the integration stack. Static mode makes
-      # opencodeHealth report "healthy" so STAS /health returns 200 and the compose
+      # opencodeHealth report "healthy" so SYNTARO /health returns 200 and the compose
       # healthcheck (and the integration test beforeAll) can pass.
-      STAS_AI_MODE: static
+      SYNTARO_AI_MODE: static
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
       governance: { condition: service_healthy }
-    # NOTE: STAS deliberately does NOT depend on opensymphony. OpenSymphony is an
+    # NOTE: SYNTARO deliberately does NOT depend on opensymphony. OpenSymphony is an
     # optional upstream of the governance proxy; a broken/unavailable OS build must
-    # never take the STAS webhook path down. The integration tests probe OS health
+    # never take the SYNTARO webhook path down. The integration tests probe OS health
     # and skip the full-path assertion when it is unavailable.
     # node:22-alpine has no curl — healthcheck must use node fetch.
     healthcheck:
@@ -87,10 +87,10 @@ services:
       OPENCODE_API_KEY: test-key
       # Required by guardrail/admin_routes.py; without it all /admin endpoints 401.
       GOVERNANCE_ADMIN_KEY: test-admin-key
-      # Forward allowed STAS webhooks to OpenSymphony. Read by
+      # Forward allowed SYNTARO webhooks to OpenSymphony. Read by
       # guardrail/webhook_routes.py (OPENSYMPHONY_WEBHOOK_URL); the shipped default
       # http://opensymphony:4000/api/webhook is NOT an OpenSymphony route, so point it
-      # at the real STAS webhook controller (POST /api/v1/stas/webhook → 202 accepted).
+      # at the real webhook controller OpenSymphony exposes (POST /api/v1/stas/webhook → 202).
       OPENSYMPHONY_WEBHOOK_URL: http://opensymphony:4000/api/v1/stas/webhook
     depends_on:
       postgres: { condition: service_healthy }
@@ -118,10 +118,10 @@ services:
       # Required by Config.Validator (elixir/lib/symphony_elixir/config/validator.ex) —
       # synthetic value, OpenSymphony does no real Linear work in the integration stack.
       LINEAR_API_KEY: test-key
-      DATABASE_URL: postgres://stas:stas_test_pass@postgres:5432/stas_test
+      DATABASE_URL: postgres://syntaro:syntaro_test_pass@postgres:5432/syntaro_test
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       SYMPHONY_ROLE: worker
-      # Skip DB migrations at boot — the shared stas_test database belongs to STAS, and
+      # Skip DB migrations at boot — the shared syntaro_test database belongs to SYNTARO, and
       # the webhook/health path under test does not require OS tables.
       RUN_MIGRATIONS: "false"
     depends_on:

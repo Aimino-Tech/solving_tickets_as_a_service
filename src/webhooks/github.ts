@@ -2,10 +2,10 @@
  * GitHub webhook event handlers.
  *
  * Receives webhook events from GitHub and routes them to the appropriate
- * handlers. Primary handler is issues.labeled with the "stas:fix" label.
+ * handlers. Primary handler is issues.labeled with the "syntaro:fix" label.
  * Also handles marketplace_purchase for billing plan changes,
  * pull_request.closed for the "Syntaro fixed this" badge, and
- * issue_comment.created for the approval slash commands (/stas approve, /stas reject).
+ * issue_comment.created for the approval slash commands (/syntaro approve, /syntaro reject).
  *
  * ── Error Handling Audit ────────────────────────────────────────────
  * ✅ issues.labeled handler catches enqueue failures with context
@@ -98,10 +98,41 @@ async function postGovernanceFailureComment(
 }
 
 /**
+ * Post a comment when the common-sense gate rejects an issue.
+ * The issue is not processed — it never reaches the agent pipeline.
+ */
+async function postGateRejectionComment(
+  installationId: number,
+  repoOwner: string,
+  repoName: string,
+  issueNumber: number,
+  checks: Array<{ check: string; valid: boolean; error?: string }>,
+): Promise<void> {
+  try {
+    const { getOctokit } = await import('../github/auth.js');
+    const octokit = await getOctokit(installationId);
+    const failed = checks.filter((c) => !c.valid);
+    const lines = failed.map((c) => `- **${c.check}**: ${c.error ?? 'invalid'}`).join('\n');
+    await octokit.issues.createComment({
+      owner: repoOwner,
+      repo: repoName,
+      issue_number: issueNumber,
+      body: `### ⚠️ Issue Rejected by Common-Sense Gate\n\nSyntaro's common-sense gate rejected this issue before processing. No agent run was started.\n\n${lines}\n\n> If this is a legitimate request, rephrase the issue (avoid destructive instructions such as deleting \`package.json\` or CI workflow files, force pushing, or deleting the repository) and re-label it.`,
+    });
+    log.info({ repo: `${repoOwner}/${repoName}`, issueNumber }, 'Posted common-sense gate rejection comment');
+  } catch (err) {
+    log.warn(
+      { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
+      'Failed to post common-sense gate rejection comment',
+    );
+  }
+}
+
+/**
  * Create a "Welcome to Syntaro" issue on a freshly installed repository.
  *
  * AIM-4408 (Phase 2 activation funnel): auto-creates a tutorial issue labeled
- * `stas:fix` so the very first fix lands without any manual setup, and the
+ * `syntaro:fix` so the very first fix lands without any manual setup, and the
  * activation funnel starts from the moment the app is installed.
  *
  * The label is ensured to exist first (GitHub rejects issue creation with a
@@ -118,7 +149,7 @@ async function createWelcomeIssue(installationId: number, repoOwner: string, rep
       await octokit.issues.createLabel({
         owner: repoOwner,
         repo: repoName,
-        name: config.stas.label,
+        name: config.syntaro.label,
         color: '0366d6',
         description: 'Trigger a Syntaro AI fix for this issue',
       });
@@ -126,7 +157,7 @@ async function createWelcomeIssue(installationId: number, repoOwner: string, rep
       const status = (labelErr as { status?: number })?.status;
       // 422 means the label already exists — that's fine.
       if (status !== 422) {
-        log.warn({ err: String(labelErr), repo: `${repoOwner}/${repoName}` }, 'Could not ensure STAS label exists');
+        log.warn({ err: String(labelErr), repo: `${repoOwner}/${repoName}` }, 'Could not ensure SYNTARO label exists');
       }
     }
 
@@ -141,10 +172,10 @@ async function createWelcomeIssue(installationId: number, repoOwner: string, rep
       '3. A pull request is opened for you to review',
       '',
       '### Try it yourself',
-      'Label **any** issue with `stas:fix` to trigger an automatic fix.',
+      'Label **any** issue with `syntaro:fix` to trigger an automatic fix.',
       '',
       '### Demo issue',
-      'This issue is labeled `stas:fix`, so a fix PR should appear shortly. You can close this issue at any time.',
+      'This issue is labeled `syntaro:fix`, so a fix PR should appear shortly. You can close this issue at any time.',
       '',
       '---',
       '_Powered by Syntaro — AI bug fixes for your repo_',
@@ -155,7 +186,7 @@ async function createWelcomeIssue(installationId: number, repoOwner: string, rep
       repo: repoName,
       title: "Welcome to Syntaro — let's fix your first issue",
       body: welcomeBody,
-      labels: [config.stas.label],
+      labels: [config.syntaro.label],
     });
 
     captureEvent('welcome_issue_created', String(installationId), {
@@ -290,7 +321,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
             owner: r.owner?.login ?? 'unknown',
             fullName: `${r.owner?.login ?? 'unknown'}/${r.name}`,
             private: false,
-            stasInstalled: false,
+            syntaroInstalled: false,
           })),
         });
         log.info({ installationId, accountLogin: inst.accountLogin, userId: inst.userId }, 'Saved installation to DB');
@@ -315,8 +346,8 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
   // ── issues.labeled ──────────────────────────────────────────────
   webhooks.on('issues.labeled', async ({ payload }) => {
     const label = payload.label?.name;
-    if (label !== config.stas.label) {
-      log.debug({ label, expected: config.stas.label }, 'Ignoring non-target label');
+    if (label !== config.syntaro.label) {
+      log.debug({ label, expected: config.syntaro.label }, 'Ignoring non-target label');
       return;
     }
 
@@ -365,10 +396,43 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
       }
     }
 
+    // ── Common-sense gate ─────────────────────────────────────────
+    // Reject hallucinated or destructive requests before any agent spend,
+    // rate-limit accounting, or dispatch to the pipeline.
+    const { guardIssueJobData } = await import('../guardrails/commonSenseGate.js');
+    const gate = guardIssueJobData(jobData);
+    if (!gate.passed) {
+      const detail = gate.checks
+        .filter((c) => !c.valid)
+        .map((c) => `${c.check}: ${c.error ?? 'invalid'}`)
+        .join('; ');
+      log.warn(
+        { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber, detail },
+        'Common-sense gate rejected issue — not dispatching',
+      );
+      const { logFixJobEvent } = await import('../audit/service.js');
+      await logFixJobEvent({
+        jobId: `gh-${jobData.repoOwner}-${jobData.repoName}-${jobData.issueNumber}`,
+        event: 'failed',
+        accountId: String(installationId),
+        repo: `${jobData.repoOwner}/${jobData.repoName}`,
+        issueNumber: jobData.issueNumber,
+        error: detail,
+      });
+      await postGateRejectionComment(
+        installationId || 0,
+        jobData.repoOwner,
+        jobData.repoName,
+        jobData.issueNumber,
+        gate.checks,
+      );
+      return;
+    }
+
     // ── AI-Disabled Mode ────────────────────────────────────────
-    // When STAS_AI_DISABLED=true, the issue is stored as pending without
+    // When SYNTARO_AI_DISABLED=true, the issue is stored as pending without
     // dispatching to OpenCode. An operator must claim and complete it manually.
-    if (config.stas.aiDisabled) {
+    if (config.syntaro.aiDisabled) {
       log.info(
         {
           repo: `${jobData.repoOwner}/${jobData.repoName}`,
@@ -558,11 +622,11 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
   webhooks.on('issues.edited', async ({ payload }) => {
     // If the issue already has the label and was edited, we could re-process
     const labels = payload.issue.labels ?? [];
-    const hasStasLabel = labels.some(
-      (l: { name?: string } | string) => (typeof l === 'string' ? l : l.name) === config.stas.label,
+    const hasSyntaroLabel = labels.some(
+      (l: { name?: string } | string) => (typeof l === 'string' ? l : l.name) === config.syntaro.label,
     );
 
-    if (hasStasLabel) {
+    if (hasSyntaroLabel) {
       log.info(
         {
           repo: `${payload.repository.owner.login}/${payload.repository.name}`,
@@ -590,8 +654,40 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         priority: priorityMap[tier] ?? 30,
       };
 
+      // ── Common-sense gate (edits) ─────────────────────────────
+      // Reject hallucinated or destructive requests before any dispatch.
+      const { guardIssueJobData } = await import('../guardrails/commonSenseGate.js');
+      const gate = guardIssueJobData(jobData);
+      if (!gate.passed) {
+        const detail = gate.checks
+          .filter((c) => !c.valid)
+          .map((c) => `${c.check}: ${c.error ?? 'invalid'}`)
+          .join('; ');
+        log.warn(
+          { repo: `${jobData.repoOwner}/${jobData.repoName}`, issueNumber: jobData.issueNumber, detail },
+          'Common-sense gate rejected edited issue — not dispatching',
+        );
+        const { logFixJobEvent } = await import('../audit/service.js');
+        await logFixJobEvent({
+          jobId: `gh-${jobData.repoOwner}-${jobData.repoName}-${jobData.issueNumber}`,
+          event: 'failed',
+          accountId: String(installationId),
+          repo: `${jobData.repoOwner}/${jobData.repoName}`,
+          issueNumber: jobData.issueNumber,
+          error: detail,
+        });
+        await postGateRejectionComment(
+          installationId || 0,
+          jobData.repoOwner,
+          jobData.repoName,
+          jobData.issueNumber,
+          gate.checks,
+        );
+        return;
+      }
+
       // ── AI-Disabled Mode (also for edits) ─────────────────────
-      if (config.stas.aiDisabled) {
+      if (config.syntaro.aiDisabled) {
         log.info(
           {
             repo: `${jobData.repoOwner}/${jobData.repoName}`,
@@ -885,11 +981,11 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         repo: repoName,
         issue_number: run.issue_number,
         body: [
-          '![Syntaro Fixed This](https://syntaro.io/badge/stas-fixed-this.svg)',
+          '![Syntaro Fixed This](https://syntaro.io/badge/syntaro-fixed-this.svg)',
           '',
           '🤖 This PR was fixed by **Syntaro** — automated bug fixing for your GitHub issues.',
           '',
-          '[Add Syntaro to your repo](https://github.com/apps/stas-app/installations/new?utm_source=github&utm_medium=pr-badge&utm_campaign=aim-4215) | [View Dashboard](https://syntaro.io/dashboard)',
+          '[Add Syntaro to your repo](https://github.com/apps/syntaro-app/installations/new?utm_source=github&utm_medium=pr-badge&utm_campaign=aim-4215) | [View Dashboard](https://syntaro.io/dashboard)',
         ].join('\n'),
       });
 
@@ -907,7 +1003,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
   });
 
   // ── issue_comment.created ───────────────────────────────────────
-  // Parse slash commands (/stas approve, /stas reject) and wire to approval gate.
+  // Parse slash commands (/syntaro approve, /syntaro reject) and wire to approval gate.
   webhooks.on('issue_comment.created' as EmitterWebhookEventName, async ({ payload }) => {
     try {
       const p = payload as unknown as {
@@ -946,7 +1042,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         'Slash command received',
       );
 
-      if (parsed.command === 'stas:approve') {
+      if (parsed.command === 'syntaro:approve') {
         // Find pending approvals for this issue
         const { getPendingApprovals, approveApproval } = await import('../middleware/approvalGate.js');
         const pending = getPendingApprovals();
@@ -981,7 +1077,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         if (approved) {
           log.info({ approvalId: match.id, user: commentUser }, 'Approval granted via slash command');
         }
-      } else if (parsed.command === 'stas:reject') {
+      } else if (parsed.command === 'syntaro:reject') {
         const { getPendingApprovals, rejectApproval } = await import('../middleware/approvalGate.js');
         const pending = getPendingApprovals();
         const match = pending.find(

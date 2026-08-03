@@ -47,15 +47,15 @@ export async function publishMessage(
 
 export async function publishJob(
   payload: Record<string, unknown>,
-  exchange = 'stas.direct',
-  routingKey = 'stas.job.pipeline',
+  exchange = 'syntaro.direct',
+  routingKey = 'syntaro.job.pipeline',
 ): Promise<boolean> {
   const messageId = crypto.randomUUID();
   const content = {
     version: 1,
     messageId,
     timestamp: new Date().toISOString(),
-    source: 'stas-bot',
+    source: 'syntaro-bot',
     type: 'job',
     payload,
     _meta: {
@@ -72,12 +72,12 @@ export async function publishPhase(
   phase: string,
   payload: Record<string, unknown>,
 ): Promise<boolean> {
-  const routingKey = `stas.job.phase.${phase}`;
-  return publishMessage('stas.direct', routingKey, {
+  const routingKey = `syntaro.job.phase.${phase}`;
+  return publishMessage('syntaro.direct', routingKey, {
     version: 1,
     messageId: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
-    source: 'stas-bot',
+    source: 'syntaro-bot',
     type: 'phase',
     payload: { ...payload, jobId, phase },
     _meta: { jobId, phase },
@@ -93,7 +93,7 @@ export async function publishToRetry(
 ): Promise<boolean> {
   const delays = [30_000, 120_000, 300_000, 900_000];
   const delayIndex = Math.min(retryCount, delays.length - 1);
-  const retryQueue = ['stas.retry.30s', 'stas.retry.2m', 'stas.retry.5m', 'stas.retry.15m'][delayIndex];
+  const retryQueue = ['syntaro.retry.30s', 'syntaro.retry.2m', 'syntaro.retry.5m', 'syntaro.retry.15m'][delayIndex];
 
   const envelope = {
     originalExchange,
@@ -103,7 +103,7 @@ export async function publishToRetry(
     error,
   };
 
-  return publishMessage('stas.retry', retryQueue, envelope, {
+  return publishMessage('syntaro.retry', retryQueue, envelope, {
     expiration: String(delays[delayIndex]),
     headers: { 'x-retry-count': String(retryCount) },
   });

@@ -1,5 +1,5 @@
 {
-  "name": "Telegram Notifications — OS events → STAS Telegram bot",
+  "name": "Telegram Notifications — OS events → SYNTARO Telegram bot",
   "nodes": [
     {
       "id": "webhook-tg",

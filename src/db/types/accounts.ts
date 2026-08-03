@@ -1,7 +1,7 @@
 /**
  * Accounts types — GitHub App installations and their owners.
  *
- * Each account represents a GitHub user or org that has authorized the STAS app.
+ * Each account represents a GitHub user or org that has authorized the SYNTARO app.
  * The plan field determines credit pricing and rate limits for the hosted service.
  */
 

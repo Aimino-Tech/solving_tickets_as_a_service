@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STAS Integrations — All Supported Agent Platforms</title>
-  <meta name="description" content="STAS integrates with every major AI agent platform: OpenCode, Claude, Cursor, Codex, Windsurf, and more." />
+  <title>SYNTARO Integrations — All Supported Agent Platforms</title>
+  <meta name="description" content="SYNTARO integrates with every major AI agent platform: OpenCode, Claude, Cursor, Codex, Windsurf, and more." />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
@@ -39,8 +39,8 @@
 </head>
 <body>
   <div class="container">
-    <h1><span>STAS</span> Integrations</h1>
-    <p class="subtitle">All supported agent platforms and how to connect. STAS is designed to work with every major AI coding agent.</p>
+    <h1><span>SYNTARO</span> Integrations</h1>
+    <p class="subtitle">All supported agent platforms and how to connect. SYNTARO is designed to work with every major AI coding agent.</p>
 
     <div class="badge-row">
       <a href="https://img.shields.io/badge/OpenCode-7C3AED"><img src="https://img.shields.io/badge/OpenCode-7C3AED" alt="OpenCode" /></a>
@@ -56,10 +56,10 @@
       <div class="integration-icon" style="background:#7c3aed33;color:#a78bfa;">OC</div>
       <div class="integration-body">
         <h3>OpenCode <span class="status status-live">Live</span></h3>
-        <p>STAS is built on OpenCode. Add it as a skill or plugin for seamless integration.</p>
+        <p>SYNTARO is built on OpenCode. Add it as a skill or plugin for seamless integration.</p>
         <pre><code>npx skills add Aimino-Tech/solving_tickets_as_a_service</code></pre>
         <div class="links">
-          <a href="https://opencode.ai/skills/stas">OpenCode Skills →</a>
+          <a href="https://opencode.ai/skills/syntaro">OpenCode Skills →</a>
           <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/AGENTS.md">AGENTS.md →</a>
         </div>
       </div>
@@ -69,10 +69,10 @@
       <div class="integration-icon" style="background:#d9770633;color:#fbbf24;">CD</div>
       <div class="integration-body">
         <h3>Claude Desktop <span class="status status-live">Live</span></h3>
-        <p>Configure STAS as an MCP server in Claude Desktop for interactive issue fixing.</p>
+        <p>Configure SYNTARO as an MCP server in Claude Desktop for interactive issue fixing.</p>
         <pre><code>{
   "mcpServers": {
-    "stas": {
+    "syntaro": {
       "command": "npx",
       "args": ["-y", "@aimino/syntaro-mcp"]
     }
@@ -89,11 +89,11 @@
       <div class="integration-icon" style="background:#05966933;color:#34d399;">CR</div>
       <div class="integration-body">
         <h3>Cursor <span class="status status-live">Live</span></h3>
-        <p>Add STAS as an MCP server in Cursor's config for AI-powered issue resolution.</p>
+        <p>Add SYNTARO as an MCP server in Cursor's config for AI-powered issue resolution.</p>
         <pre><code>// .cursor/mcp.json
 {
   "mcpServers": {
-    "stas": {
+    "syntaro": {
       "command": "npx",
       "args": ["-y", "@aimino/syntaro-mcp"]
     }
@@ -106,10 +106,10 @@
       <div class="integration-icon" style="background:#2563eb33;color:#60a5fa;">CX</div>
       <div class="integration-body">
         <h3>Codex CLI <span class="status status-live">Live</span></h3>
-        <p>Run STAS directly from the command line using npx. Ideal for Codex CLI and agentic workflows.</p>
+        <p>Run SYNTARO directly from the command line using npx. Ideal for Codex CLI and agentic workflows.</p>
         <pre><code>npx -y @aimino/syntaro-mcp</code></pre>
         <div class="links">
-          <a href="https://github.com/marketplace/actions/stas-eval">GitHub Action →</a>
+          <a href="https://github.com/marketplace/actions/syntaro-eval">GitHub Action →</a>
         </div>
       </div>
     </div>
@@ -130,9 +130,9 @@ curl http://localhost:4095/sse</code></pre>
       <div class="integration-icon" style="background:#fff;color:#000;">GH</div>
       <div class="integration-body">
         <h3>GitHub <span class="status status-live">Live</span></h3>
-        <p>Install the STAS GitHub App on your repo. Label issues with <code>stas:fix</code> and get automated PRs.</p>
+        <p>Install the SYNTARO GitHub App on your repo. Label issues with <code>syntaro:fix</code> and get automated PRs.</p>
         <div class="links">
-          <a href="https://github.com/marketplace/actions/stas-eval">Marketplace →</a>
+          <a href="https://github.com/marketplace/actions/syntaro-eval">Marketplace →</a>
           <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service#readme">Docs →</a>
         </div>
       </div>
@@ -142,7 +142,7 @@ curl http://localhost:4095/sse</code></pre>
       <div class="integration-icon" style="background:#fc6d2633;color:#fc6d26;">GL</div>
       <div class="integration-body">
         <h3>GitLab <span class="status status-beta">Beta</span></h3>
-        <p>STAS supports GitLab.com and self-hosted GitLab via webhook integration.</p>
+        <p>SYNTARO supports GitLab.com and self-hosted GitLab via webhook integration.</p>
       </div>
     </div>
 
@@ -160,7 +160,7 @@ curl http://localhost:4095/sse</code></pre>
       <div class="integration-icon" style="background:#8250df33;color:#a78bfa;">MCP</div>
       <div class="integration-body">
         <h3>MCP Registry <span class="status status-live">Live</span></h3>
-        <p>Published to the Model Context Protocol registry. Any MCP-compatible agent can discover STAS.</p>
+        <p>Published to the Model Context Protocol registry. Any MCP-compatible agent can discover SYNTARO.</p>
         <pre><code># Discover via MCP endpoint
 GET /.well-known/mcp-server-card.json</code></pre>
         <div class="links">
@@ -205,9 +205,9 @@ GET /.well-known/mcp-server-card.json</code></pre>
       <div class="integration-icon" style="background:#2088ff33;color:#2088ff;">GA</div>
       <div class="integration-body">
         <h3>GitHub Marketplace <span class="status status-beta">Pending</span></h3>
-        <p>Available as a GitHub Action for CI/CD pipelines. Run STAS eval suites on every push.</p>
+        <p>Available as a GitHub Action for CI/CD pipelines. Run SYNTARO eval suites on every push.</p>
         <div class="links">
-          <a href="https://github.com/marketplace/actions/stas-eval">Marketplace →</a>
+          <a href="https://github.com/marketplace/actions/syntaro-eval">Marketplace →</a>
         </div>
       </div>
     </div>
@@ -216,16 +216,16 @@ GET /.well-known/mcp-server-card.json</code></pre>
       <div class="integration-icon" style="background:#0055ff33;color:#0055ff;">RA</div>
       <div class="integration-body">
         <h3>RapidAPI <span class="status status-live">Live</span></h3>
-        <p>STAS is available as a payable REST API on the RapidAPI Marketplace.</p>
+        <p>SYNTARO is available as a payable REST API on the RapidAPI Marketplace.</p>
         <div class="links">
-          <a href="https://rapidapi.com/aimino/api/stas-api">RapidAPI →</a>
+          <a href="https://rapidapi.com/aimino/api/syntaro-api">RapidAPI →</a>
         </div>
       </div>
     </div>
 
     <hr />
     <div class="footer">
-      <p><a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">STAS</a> — Solving Tickets As A Service &mdash; <a href="agents.html">STAS for AI Agents</a> &mdash; MIT License</p>
+      <p><a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">SYNTARO</a> — Solving Tickets As A Service &mdash; <a href="agents.html">SYNTARO for AI Agents</a> &mdash; MIT License</p>
     </div>
   </div>
 </body>

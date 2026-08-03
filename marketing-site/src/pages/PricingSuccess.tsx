@@ -33,9 +33,9 @@ export default function PricingSuccess() {
         <>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
           <h2>Subscription Active!</h2>
-          <p className="sub">Your STAS subscription is now active. Install the GitHub App to get started.</p>
+          <p className="sub">Your SYNTARO subscription is now active. Install the GitHub App to get started.</p>
           <div className="btn-group" style={{ justifyContent: 'center', marginTop: 32 }}>
-            <a href="https://github.com/apps/stasgithub1/installations/new" className="btn btn-primary btn-lg">Install GitHub App →</a>
+            <a href="https://github.com/apps/syntarogithub1/installations/new" className="btn btn-primary btn-lg">Install GitHub App →</a>
             <Link to="/docs" className="btn btn-secondary">Read the Docs</Link>
           </div>
         </>

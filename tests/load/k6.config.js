@@ -8,7 +8,7 @@
  *   k6 run --config tests/load/k6.config.js tests/load/webhook-load-test.js
  *
  * Environment variables:
- *   TARGET_URL        — Base URL of the STAS instance under test
+ *   TARGET_URL        — Base URL of the SYNTARO instance under test
  *   K6_OUT            — Output destination (e.g., influxdb, json, cloud)
  *   K6_PROMETHEUS_RW_SERVER_URL — Prometheus remote write URL
  */
@@ -45,7 +45,7 @@ export const baseOptions = {
 
   // Tag all requests with the test suite name
   tags: {
-    suite: 'stas-load-test',
+    suite: 'syntaro-load-test',
   },
 
   // Graceful stop on threshold failure

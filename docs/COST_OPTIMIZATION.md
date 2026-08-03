@@ -13,7 +13,7 @@
 ## 1. Inference Caching Strategy
 
 ### 1.1 Prompt/Response Cache (Redis)
-- **Cache key**: `stas:cache:inference:{model}:{prompt-hash}`
+- **Cache key**: `syntaro:cache:inference:{model}:{prompt-hash}`
 - **TTL**: 7 days (frequently repeated triage patterns)
 - **Hit rate target**: 20-30% for triage phase
 - **Implementation**: Wrap all OpenCode calls with a cache-aside pattern

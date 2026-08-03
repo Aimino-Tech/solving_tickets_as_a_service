@@ -12,8 +12,8 @@
  *   processing of the same issue while a pipeline is active.
  *
  * ── Key format ───────────────────────────────────────────────────────
- *   stas:dedup:delivery:{deliveryId}   → "1" (24h TTL)
- *   stas:dedup:issue:{owner}:{name}:{issueNumber} → "1" (pipeline duration TTL)
+ *   syntaro:dedup:delivery:{deliveryId}   → "1" (24h TTL)
+ *   syntaro:dedup:issue:{owner}:{name}:{issueNumber} → "1" (pipeline duration TTL)
  * ─────────────────────────────────────────────────────────────────────
  */
 
@@ -67,7 +67,7 @@ export class DedupEngine {
   async checkDelivery(deliveryId: string): Promise<boolean> {
     try {
       await this.ensureConnected();
-      const key = `stas:dedup:delivery:${deliveryId}`;
+      const key = `syntaro:dedup:delivery:${deliveryId}`;
       const result = await this.redis.set(key, '1', 'PX', DELIVERY_TTL_MS, 'NX');
       return result === 'OK';
     } catch (err) {
@@ -96,7 +96,7 @@ export class DedupEngine {
   ): Promise<boolean> {
     try {
       await this.ensureConnected();
-      const key = `stas:dedup:issue:${owner}:${name}:${issueNumber}`;
+      const key = `syntaro:dedup:issue:${owner}:${name}:${issueNumber}`;
       const result = await this.redis.set(key, '1', 'PX', pipelineDurationMs, 'NX');
       return result === 'OK';
     } catch (err) {
@@ -111,7 +111,7 @@ export class DedupEngine {
   async releaseIssue(owner: string, name: string, issueNumber: number): Promise<void> {
     try {
       await this.ensureConnected();
-      const key = `stas:dedup:issue:${owner}:${name}:${issueNumber}`;
+      const key = `syntaro:dedup:issue:${owner}:${name}:${issueNumber}`;
       await this.redis.del(key);
     } catch (err) {
       log.warn({ err: String(err), owner, name, issueNumber }, 'Issue dedup release failed');

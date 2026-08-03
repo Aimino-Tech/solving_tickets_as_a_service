@@ -87,7 +87,7 @@ class GitHubClient:
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "STAS-Bot",
+            "User-Agent": "SYNTARO-Bot",
         }
         with httpx.Client() as client:
             resp = client.request(method, url, headers=headers, json=json_body)

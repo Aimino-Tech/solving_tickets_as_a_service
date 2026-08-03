@@ -125,7 +125,7 @@ describe('Bitbucket PlatformClient', () => {
         repoOwner: 'owner',
         repoName: 'test-repo',
         title: 'Fix: login bug',
-        head: 'stas/fix-42',
+        head: 'syntaro/fix-42',
         base: 'main',
         body: 'This PR fixes the login bug',
       });
@@ -144,7 +144,7 @@ describe('Bitbucket PlatformClient', () => {
           body: JSON.stringify({
             title: 'Fix: login bug',
             description: 'This PR fixes the login bug',
-            source: { branch: { name: 'stas/fix-42' } },
+            source: { branch: { name: 'syntaro/fix-42' } },
             destination: { branch: { name: 'main' } },
           }),
         }),
@@ -158,7 +158,7 @@ describe('Bitbucket PlatformClient', () => {
         repoOwner: 'owner',
         repoName: 'test-repo',
         title: 'Fix: login bug',
-        head: 'stas/fix-42',
+        head: 'syntaro/fix-42',
         base: 'main',
         body: 'Fix',
       })).rejects.toThrow('Bitbucket API');

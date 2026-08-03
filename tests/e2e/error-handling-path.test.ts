@@ -87,8 +87,8 @@ describe('Error Handling Path: Invalid Webhook → 400 → Logged → No Crash',
     });
 
     // Now send a valid webhook — should still work
-    const { githubIssuesLabeledStasFix } = await import('./fixtures/webhooks/github.js');
-    const payload = githubIssuesLabeledStasFix();
+    const { githubIssuesLabeledSyntaroFix } = await import('./fixtures/webhooks/github.js');
+    const payload = githubIssuesLabeledSyntaroFix();
     const res = await harness.sendWebhook('/webhook', payload);
 
     expect(res.status).toBe(202);

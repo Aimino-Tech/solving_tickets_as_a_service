@@ -16,8 +16,8 @@ export interface SyntheticCheckConfig {
 
 function getConfig(): SyntheticCheckConfig {
   return {
-    syntheticRepo: process.env.STAS_SYNTHETIC_REPO ?? 'stas-bot/synthetic-test',
-    syntheticIssue: Number(process.env.STAS_SYNTHETIC_ISSUE) || 1,
+    syntheticRepo: process.env.SYNTARO_SYNTHETIC_REPO ?? 'syntaro-bot/synthetic-test',
+    syntheticIssue: Number(process.env.SYNTARO_SYNTHETIC_ISSUE) || 1,
     githubToken: process.env.GITHUB_TOKEN ?? '',
     heartbeatUrl: process.env.HEARTBEAT_URL,
     heartbeatFailUrl: process.env.HEARTBEAT_FAIL_URL,
@@ -34,7 +34,7 @@ export async function runSyntheticE2ECheck(partial?: Partial<SyntheticCheckConfi
   const h = { Authorization: 'Bearer ' + cfg.githubToken, Accept: 'application/vnd.github.v3+json' };
   try {
     const r = await fetch('https://api.github.com/repos/' + cfg.syntheticRepo + '/issues/' + cfg.syntheticIssue + '/labels',
-      { method: 'POST', headers: h, body: JSON.stringify({ labels: ['stas:fix'] }) });
+      { method: 'POST', headers: h, body: JSON.stringify({ labels: ['syntaro:fix'] }) });
     if (![200, 201, 422].includes(r.status)) throw new Error('Label: ' + r.status);
   } catch (e: any) { return { passed: false, durationMs: Date.now() - start, errorSummary: e.message }; }
   try {

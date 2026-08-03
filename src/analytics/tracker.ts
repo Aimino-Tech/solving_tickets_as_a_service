@@ -24,7 +24,7 @@ export function captureEvent(event: string, distinctId: string, properties?: Rec
     client.capture({
       distinctId,
       event,
-      properties: { ...properties, source: 'stas' },
+      properties: { ...properties, source: 'syntaro' },
     });
   } catch (err) {
     log.error({ err: String(err), event }, 'Failed to capture analytics event');

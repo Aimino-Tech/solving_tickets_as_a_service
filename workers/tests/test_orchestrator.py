@@ -37,9 +37,9 @@ class TestPipelineDefinitions:
     """Pipeline builder functions return correct Celery canvas structures."""
 
     def test_pipelines_registry_keys(self):
-        assert "stas:fix" in PIPELINES
-        assert "stas:feature" in PIPELINES
-        assert "stas:research" in PIPELINES
+        assert "syntaro:fix" in PIPELINES
+        assert "syntaro:feature" in PIPELINES
+        assert "syntaro:research" in PIPELINES
 
     def test_pipelines_builders_are_callable(self):
         for name, builder in PIPELINES.items():
@@ -47,10 +47,10 @@ class TestPipelineDefinitions:
 
     def test_get_pipeline_unknown(self):
         with pytest.raises(ValueError, match="Unknown pipeline"):
-            get_pipeline("stas:nonexistent")
+            get_pipeline("syntaro:nonexistent")
 
     def test_get_pipeline_known(self):
-        builder = get_pipeline("stas:fix")
+        builder = get_pipeline("syntaro:fix")
         assert callable(builder)
 
     def test_task_names_are_strings(self):
@@ -133,7 +133,7 @@ class TestWorkspaceTasks:
         )
         assert result["status"] == "created"
         assert "workspace_path" in result
-        assert result["branch"].startswith("stas/bot/")
+        assert result["branch"].startswith("syntaro/bot/")
         assert result["repo_url"] == "https://github.com/test/repo.git"
         assert result["issue_id"] == "42"
 
@@ -165,18 +165,18 @@ class TestWorkspaceTasks:
     def test_cleanup_workspace_success(self, mock_isdir, mock_rmtree):
         mock_isdir.return_value = True
         result = cleanup_workspace.run(
-            "/tmp/stas-workspaces/ws-42"
+            "/tmp/syntaro-workspaces/ws-42"
         )
         assert result["status"] == "cleaned"
-        assert result["workspace_path"] == "/tmp/stas-workspaces/ws-42"
+        assert result["workspace_path"] == "/tmp/syntaro-workspaces/ws-42"
         mock_rmtree.assert_called_once_with(
-            "/tmp/stas-workspaces/ws-42", ignore_errors=False
+            "/tmp/syntaro-workspaces/ws-42", ignore_errors=False
         )
 
     @patch("workers.orchestrator.workspace.os.path.isdir")
     def test_cleanup_workspace_not_found(self, mock_isdir):
         mock_isdir.return_value = False
-        result = cleanup_workspace.run("/tmp/stas-workspaces/ws-42")
+        result = cleanup_workspace.run("/tmp/syntaro-workspaces/ws-42")
         assert result["status"] == "not_found"
 
     def test_cleanup_workspace_empty_path(self):
@@ -295,7 +295,7 @@ class TestAgentConcurrencyLimiter:
     def test_prune_stale_slots(self, mock_get_redis):
         mock_client = MagicMock()
         old_time = time.time() - 3600  # 1 hour ago
-        mock_client.smembers.return_value = {"stas:agent:slot:stale-issue"}
+        mock_client.smembers.return_value = {"syntaro:agent:slot:stale-issue"}
         mock_client.hget.return_value = str(old_time)
         mock_get_redis.return_value = mock_client
 
@@ -324,7 +324,7 @@ class TestPipelineEngine:
     def test_start_pipeline_unknown_pipeline(self):
         engine = PipelineEngine()
         with pytest.raises(ValueError, match="Unknown pipeline"):
-            engine.start_pipeline("issue-1", "stas:unknown", {})
+            engine.start_pipeline("issue-1", "syntaro:unknown", {})
 
     @patch("workers.orchestrator.engine._get_redis")
     @patch("workers.orchestrator.engine.AgentConcurrencyLimiter")
@@ -341,7 +341,7 @@ class TestPipelineEngine:
         engine = PipelineEngine()
         pipeline_id = engine.start_pipeline(
             "issue-1",
-            "stas:fix",
+            "syntaro:fix",
             {"repo_url": "https://github.com/test/repo.git"},
         )
         assert pipeline_id is not None
@@ -350,7 +350,7 @@ class TestPipelineEngine:
         # Should map issue -> pipeline
         assert mock_client.set.call_count >= 2
 
-    @patch("workers.orchestrator.engine.PIPELINES", {"stas:fix": MagicMock()})
+    @patch("workers.orchestrator.engine.PIPELINES", {"syntaro:fix": MagicMock()})
     @patch("workers.orchestrator.engine._get_redis")
     @patch("workers.orchestrator.engine.AgentConcurrencyLimiter")
     def test_start_pipeline_dispatch_failure(
@@ -370,13 +370,13 @@ class TestPipelineEngine:
 
         with patch(
             "workers.orchestrator.engine.PIPELINES",
-            {"stas:fix": broken_builder},
+            {"syntaro:fix": broken_builder},
         ):
             engine = PipelineEngine()
             with pytest.raises(RuntimeError, match="Dispatch failed"):
                 engine.start_pipeline(
                     "issue-1",
-                    "stas:fix",
+                    "syntaro:fix",
                     {"repo_url": "https://example.com/repo.git"},
                 )
 
@@ -406,7 +406,7 @@ class TestPipelineEngine:
         pipeline_id = "pipeline-uuid-123"
         state = {
             "pipeline_id": pipeline_id,
-            "pipeline_name": "stas:fix",
+            "pipeline_name": "syntaro:fix",
             "status": "running",
             "current_stage": "step_2_of_9",
             "progress": 0.22,
@@ -427,7 +427,7 @@ class TestPipelineEngine:
         assert status["current_stage"] == "step_2_of_9"
         assert status["progress"] == 0.22
         assert status["attempt"] == 1
-        assert status["pipeline_name"] == "stas:fix"
+        assert status["pipeline_name"] == "syntaro:fix"
 
     @patch("workers.orchestrator.engine._get_redis")
     def test_get_status_redis_unavailable(self, mock_get_redis):
@@ -536,7 +536,7 @@ class TestRework:
 
         result = self.engine.rework_pipeline(
             "issue-42",
-            "stas:fix",
+            "syntaro:fix",
             {"repo_url": "https://github.com/test/repo.git"},
             {"failures": ["still failing"]},
         )
@@ -550,7 +550,7 @@ class TestRework:
 
         result = self.engine.rework_pipeline(
             "nonexistent",
-            "stas:fix",
+            "syntaro:fix",
             {},
             {"failures": ["failure"]},
         )
@@ -627,7 +627,7 @@ class TestOrchestratorTask:
 
         result = orchestrate_pipeline.run(
             issue_id="issue-42",
-            pipeline_name="stas:fix",
+            pipeline_name="syntaro:fix",
             ctx={},
             attempt=3,  # max_attempts is 3, so attempt >= 3 means exceeded
         )
@@ -644,14 +644,14 @@ class TestOrchestratorTask:
 
         result = orchestrate_pipeline.run(
             issue_id="issue-42",
-            pipeline_name="stas:fix",
+            pipeline_name="syntaro:fix",
             ctx={"repo_url": "https://github.com/test/repo.git"},
             attempt=0,
         )
         assert result["status"] == "started"
         assert result["pipeline_id"] == "pipeline-uuid-abc"
         assert result["attempt"] == 1
-        assert result["pipeline_name"] == "stas:fix"
+        assert result["pipeline_name"] == "syntaro:fix"
 
     @patch("workers.tasks.pipeline_orchestrator.get_engine")
     def test_orchestrate_with_rework_feedback(self, mock_get_engine):
@@ -663,7 +663,7 @@ class TestOrchestratorTask:
 
         result = orchestrate_pipeline.run(
             issue_id="issue-42",
-            pipeline_name="stas:fix",
+            pipeline_name="syntaro:fix",
             ctx={
                 "repo_url": "https://github.com/test/repo.git",
                 "_rework_feedback": {

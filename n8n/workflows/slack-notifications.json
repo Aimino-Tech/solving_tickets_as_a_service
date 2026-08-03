@@ -43,11 +43,11 @@
       "parameters": {
         "values": {
           "string": [
-            { "name": "channel", "value": "={{ $json.channel || '#stas-notifications' }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-notifications' }}" },
             { "name": "color", "value": "#3498DB" },
             { "name": "emoji", "value": ":mag:" },
             { "name": "title", "value": "Investigation Started" },
-            { "name": "text", "value": "={{ $json.bot_name || 'STAS' }} is investigating {{ '#' + $json.issue_number }} — {{ $json.issue_title }} in {{ $json.repo_owner + '/' + $json.repo_name }}" }
+            { "name": "text", "value": "={{ $json.bot_name || 'SYNTARO' }} is investigating {{ '#' + $json.issue_number }} — {{ $json.issue_title }} in {{ $json.repo_owner + '/' + $json.repo_name }}" }
           ]
         }
       }
@@ -61,11 +61,11 @@
       "parameters": {
         "values": {
           "string": [
-            { "name": "channel", "value": "={{ $json.channel || '#stas-notifications' }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-notifications' }}" },
             { "name": "color", "value": "#2ECC71" },
             { "name": "emoji", "value": ":rocket:" },
             { "name": "title", "value": "PR Opened" },
-            { "name": "text", "value": "={{ $json.bot_name || 'STAS' }} opened a PR for {{ '#' + $json.issue_number }} — {{ $json.issue_title }} in {{ $json.repo_owner + '/' + $json.repo_name }}" },
+            { "name": "text", "value": "={{ $json.bot_name || 'SYNTARO' }} opened a PR for {{ '#' + $json.issue_number }} — {{ $json.issue_title }} in {{ $json.repo_owner + '/' + $json.repo_name }}" },
             { "name": "pr_url", "value": "={{ $json.pr_url }}" }
           ]
         }
@@ -80,11 +80,11 @@
       "parameters": {
         "values": {
           "string": [
-            { "name": "channel", "value": "={{ $json.channel || '#stas-notifications' }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-notifications' }}" },
             { "name": "color", "value": "#E74C3C" },
             { "name": "emoji", "value": ":x:" },
             { "name": "title", "value": "Fix Failed" },
-            { "name": "text", "value": "={{ $json.bot_name || 'STAS' }} couldn't fix {{ '#' + $json.issue_number }} — {{ $json.issue_title }} in {{ $json.repo_owner + '/' + $json.repo_name }}" },
+            { "name": "text", "value": "={{ $json.bot_name || 'SYNTARO' }} couldn't fix {{ '#' + $json.issue_number }} — {{ $json.issue_title }} in {{ $json.repo_owner + '/' + $json.repo_name }}" },
             { "name": "reason", "value": "={{ $json.reason || 'No reason provided' }}" }
           ]
         }
@@ -99,11 +99,11 @@
       "parameters": {
         "values": {
           "string": [
-            { "name": "channel", "value": "={{ $json.channel || '#stas-notifications' }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-notifications' }}" },
             { "name": "color", "value": "#F39C12" },
             { "name": "emoji", "value": ":warning:" },
             { "name": "title", "value": "Verification Failed" },
-            { "name": "text", "value": "={{ $json.bot_name || 'STAS' }} fix for {{ '#' + $json.issue_number }} — {{ $json.issue_title }} failed verification in {{ $json.repo_owner + '/' + $json.repo_name }}" },
+            { "name": "text", "value": "={{ $json.bot_name || 'SYNTARO' }} fix for {{ '#' + $json.issue_number }} — {{ $json.issue_title }} failed verification in {{ $json.repo_owner + '/' + $json.repo_name }}" },
             { "name": "reason", "value": "={{ $json.reason || 'No reason provided' }}" }
           ]
         }
@@ -118,11 +118,11 @@
       "parameters": {
         "values": {
           "string": [
-            { "name": "channel", "value": "={{ $json.channel || '#stas-notifications' }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-notifications' }}" },
             { "name": "color", "value": "#E74C3C" },
             { "name": "emoji", "value": ":fire:" },
             { "name": "title", "value": "Error" },
-            { "name": "text", "value": "={{ $json.bot_name || 'STAS' }} encountered an error on {{ '#' + $json.issue_number }} — {{ $json.issue_title }} in {{ $json.repo_owner + '/' + $json.repo_name }}" },
+            { "name": "text", "value": "={{ $json.bot_name || 'SYNTARO' }} encountered an error on {{ '#' + $json.issue_number }} — {{ $json.issue_title }} in {{ $json.repo_owner + '/' + $json.repo_name }}" },
             { "name": "error_message", "value": "={{ $json.error_message || 'Unknown error' }}" }
           ]
         }
@@ -137,7 +137,7 @@
       "parameters": {
         "values": {
           "string": [
-            { "name": "channel", "value": "={{ $json.channel || '#stas-billing' }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-billing' }}" },
             { "name": "color", "value": "#E74C3C" },
             { "name": "emoji", "value": ":credit_card:" },
             { "name": "title", "value": "Payment Failed" },
@@ -158,7 +158,7 @@
       "parameters": {
         "values": {
           "string": [
-            { "name": "channel", "value": "={{ $json.channel || '#stas-billing' }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-billing' }}" },
             { "name": "color", "value": "#2ECC71" },
             { "name": "emoji", "value": ":white_check_mark:" },
             { "name": "title", "value": "Payment Recovered" },
@@ -178,7 +178,7 @@
       "parameters": {
         "values": {
           "string": [
-            { "name": "channel", "value": "={{ $json.channel || '#stas-notifications' }}" },
+            { "name": "channel", "value": "={{ $json.channel || '#syntaro-notifications' }}" },
             { "name": "color", "value": "#95A5A6" },
             { "name": "emoji", "value": ":grey_question:" },
             { "name": "title", "value": "Unknown Notification Event" },

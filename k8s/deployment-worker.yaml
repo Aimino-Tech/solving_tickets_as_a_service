@@ -1,10 +1,10 @@
 # ---------------------------------------------------------------------------
-# STAS Worker Deployment — Celery worker (horizontally scalable per queue)
+# SYNTARO Worker Deployment — Celery worker (horizontally scalable per queue)
 #
 # Note: This deployment uses the Python Celery worker image built from
 # workers/Dockerfile. Build and push it separately:
-#   docker build -t ghcr.io/tamnguyen08/stas-worker:latest ./workers
-#   docker push ghcr.io/tamnguyen08/stas-worker:latest
+#   docker build -t ghcr.io/tamnguyen08/syntaro-worker:latest ./workers
+#   docker push ghcr.io/tamnguyen08/syntaro-worker:latest
 #
 # Probes use exec (not HTTP) because the Celery worker process does not
 # serve HTTP natively. The health.py script checks broker and backend
@@ -13,9 +13,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stas-worker
+  name: syntaro-worker
   labels:
-    app: stas-worker
+    app: syntaro-worker
     tier: worker
     component: queue-processor
 spec:
@@ -30,18 +30,18 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      app: stas-worker
+      app: syntaro-worker
   template:
     metadata:
       labels:
-        app: stas-worker
+        app: syntaro-worker
         tier: worker
         component: queue-processor
     spec:
       terminationGracePeriodSeconds: 360
       containers:
         - name: worker
-          image: ghcr.io/tamnguyen08/stas-worker:latest
+          image: ghcr.io/tamnguyen08/syntaro-worker:latest
           imagePullPolicy: Always
           command:
             - celery
@@ -51,13 +51,13 @@ spec:
             - -l
             - info
             - -Q
-            - stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications
+            - syntaro.agents.triage,syntaro.agents.dispatch,syntaro.agents.sandbox,syntaro.agents.verification,syntaro.agents.pr_creation,syntaro.agents.notifications
             - --concurrency=4
           envFrom:
             - configMapRef:
-                name: stas-config
+                name: syntaro-config
             - secretRef:
-                name: stas-secrets
+                name: syntaro-secrets
           env:
             - name: RUN_MODE
               value: "worker"

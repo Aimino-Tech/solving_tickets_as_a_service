@@ -57,10 +57,10 @@ describe('buildDiscoveryManifest', () => {
   });
   it('injects base URL', async () => {
     const { buildDiscoveryManifest } = await import('../../routes/viral.js');
-    const m = buildDiscoveryManifest('https://stas.example.com');
+    const m = buildDiscoveryManifest('https://syntaro.example.com');
     for (const t of m.transports) {
       if ('url' in t && t.url) {
-        expect(t.url).toMatch(/^https:\/\/stas\.example\.com/);
+        expect(t.url).toMatch(/^https:\/\/syntaro\.example\.com/);
       }
     }
   });
@@ -89,7 +89,7 @@ describe('renderDiscoveryPage', () => {
   });
   it('injects base URL', async () => {
     const { renderDiscoveryPage } = await import('../../routes/viral.js');
-    const html = renderDiscoveryPage('https://stas.example.com');
-    expect(html).toContain('https://stas.example.com');
+    const html = renderDiscoveryPage('https://syntaro.example.com');
+    expect(html).toContain('https://syntaro.example.com');
   });
 });

@@ -19,13 +19,13 @@ The underlying OSS stack follows the KintsugiBot-inspired architecture: **Expres
           │
 ┌─────────▼────────────┐
 │   Dashboard          │  Vite/React app
-│   (dashboard.stas.)  │  (pino logging)
+│   (dashboard.syntaro.)  │  (pino logging)
 └─────────┬────────────┘
           │
 ┌─────────▼────────────┐
 │   Express Webhook    │  Same core stack as OSS,
 │   Server + API       │  with premium middleware
-│   (api.stas.dev)     │  (pino logging)
+│   (api.syntaro.dev)     │  (pino logging)
 └─────────┬────────────┘
           │
 ┌─────────▼────────────┐
@@ -35,7 +35,7 @@ The underlying OSS stack follows the KintsugiBot-inspired architecture: **Expres
           │
 ┌─────────▼────────────┐
 │   claude-sonnet-4     │  Frontier model, OpenAI-compatible API
-│   (agi.stas.dev)     │  50% better than GPT-5.5 on DeepSWE
+│   (agi.syntaro.dev)     │  50% better than GPT-5.5 on DeepSWE
 └─────────┬────────────┘
           │
 ┌─────────▼────────────┐

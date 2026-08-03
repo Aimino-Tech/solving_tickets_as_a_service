@@ -1,5 +1,5 @@
 """
-Agent-facing MCP handlers — expose OpenSymphony/STAS capabilities to external agents.
+Agent-facing MCP handlers — expose OpenSymphony/SYNTARO capabilities to external agents.
 
 Covers the viral user-story matrix that the first-generation server did not:
   - Linear ticket check + create        (agents verify/create tickets in our tracker)
@@ -198,7 +198,7 @@ def memory_write(name: str, content: str) -> dict[str, Any]:
 
 
 async def slack_send(channel: str, text: str, thread_ts: str | None = None) -> dict[str, Any]:
-    """Post a message to a Slack channel/thread using the STAS bot token."""
+    """Post a message to a Slack channel/thread using the SYNTARO bot token."""
     if not channel or not text:
         return {"success": False, "error": "channel and text are required"}
     if not SLACK_BOT_TOKEN:

@@ -5,7 +5,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 vi.mock('../../config.js', () => ({
   config: {
-    queue: { rabbitmqUrl: 'amqp://localhost:5672/stas' },
+    queue: { rabbitmqUrl: 'amqp://localhost:5672/syntaro' },
     monitoring: { queueDepthWarnThreshold: 50, queueDepthCritThreshold: 200, dlqRetentionDays: 7, queueDepthAlertMinutes: 5 },
   },
 }));

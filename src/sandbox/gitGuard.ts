@@ -1,7 +1,7 @@
 /**
  * GitGuard — Block destructive git operations in agent sandboxes.
  *
- * STAS auto-creates PRs from agent outputs. If the agent runs
+ * SYNTARO auto-creates PRs from agent outputs. If the agent runs
  * `git push --force`, `git branch -D`, or `git reset --hard`,
  * it can destroy branch history and corrupt the PR.
  *

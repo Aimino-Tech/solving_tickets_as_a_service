@@ -10,7 +10,7 @@ from workers.audit.trail import append_event
 
 logger = logging.getLogger(__name__)
 
-AUDIT_TENANT_ID = os.getenv("AUDIT_TENANT_ID", "stas-default")
+AUDIT_TENANT_ID = os.getenv("AUDIT_TENANT_ID", "syntaro-default")
 
 
 def _extract_tenant(args: tuple, kwargs: dict) -> str:

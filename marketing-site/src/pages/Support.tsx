@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 export default function Support() {
-  useEffect(() => { document.title = 'Support — STAS'; }, []);
+  useEffect(() => { document.title = 'Support — SYNTARO'; }, []);
   return (
     <section className="section" style={{ paddingTop: 120 }}>
       <div className="section-header">

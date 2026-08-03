@@ -354,7 +354,7 @@ async function main() {
   const updateBaseline = args.includes('--update-baseline');
   const ciMode = args.includes('--ci');
 
-  console.log('🔬 STAS Performance Benchmark Runner\n');
+  console.log('🔬 SYNTARO Performance Benchmark Runner\n');
 
   let result: BenchmarkResult | null = null;
 

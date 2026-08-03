@@ -135,7 +135,7 @@ const mockToken = {
 describe('githubOAuth routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.STAS_PUBLIC_URL = 'http://test.example.com';
+    process.env.SYNTARO_PUBLIC_URL = 'http://test.example.com';
     mockConfig.github.oauthClientId = 'test-client-id';
     mockConfig.github.oauthClientSecret = 'test-client-secret';
     mockConfig.port = 3000;

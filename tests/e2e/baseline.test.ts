@@ -1,17 +1,17 @@
 /**
- * Baseline E2E tests for STAS.
+ * Baseline E2E tests for SYNTARO.
  *
  * These tests verify the basic infrastructure works:
  * 1. Health endpoint returns 200
- * 2. Webhook with stas:fix label is accepted (202)
- * 3. Webhook without stas:fix label is still accepted (202) but doesn't trigger
+ * 2. Webhook with syntaro:fix label is accepted (202)
+ * 3. Webhook without syntaro:fix label is still accepted (202) but doesn't trigger
  * 4. Unknown route returns 404
  * 5. Mock servers are reachable
  */
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from './harness/index.js';
-import { githubIssuesLabeledStasFix, githubIssuesOpened } from './fixtures/webhooks/github.js';
+import { githubIssuesLabeledSyntaroFix, githubIssuesOpened } from './fixtures/webhooks/github.js';
 import type { TestHarness } from './harness/index.js';
 
 let harness: TestHarness;
@@ -35,7 +35,7 @@ describe('Health endpoint', () => {
 
     const body = await res.json() as any;
     expect(['ok', 'degraded']).toContain(body.status);
-    expect(body).toHaveProperty('label', 'stas:fix');
+    expect(body).toHaveProperty('label', 'syntaro:fix');
     expect(body).toHaveProperty('uptime');
     expect(typeof body.uptime).toBe('number');
     expect(body).toHaveProperty('timestamp');
@@ -43,12 +43,12 @@ describe('Health endpoint', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test 2: Webhook with stas:fix label is accepted (202)
+// Test 2: Webhook with syntaro:fix label is accepted (202)
 // ---------------------------------------------------------------------------
 
-describe('GitHub webhook — issues.labeled with stas:fix', () => {
+describe('GitHub webhook — issues.labeled with syntaro:fix', () => {
   it('should respond 202 Accepted when target label is present', async () => {
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
     const res = await harness.sendWebhook('/webhook', payload);
 
     expect(res.status).toBe(202);
@@ -57,7 +57,7 @@ describe('GitHub webhook — issues.labeled with stas:fix', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test 3: Webhook without stas:fix label is still accepted
+// Test 3: Webhook without syntaro:fix label is still accepted
 // ---------------------------------------------------------------------------
 
 describe('GitHub webhook — issues.opened (no target label)', () => {
@@ -101,7 +101,7 @@ describe('Mock servers', () => {
 
   it('should track requests received by mock GitHub API', async () => {
     // Send a webhook and verify the mock GitHub API receives requests
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
 
     // Reset request tracking
     harness.githubApi.receivedRequests.length = 0;
@@ -126,7 +126,7 @@ describe('Mock servers', () => {
 
 describe('GitHub webhook routing', () => {
   it('should handle /webhook/github endpoint', async () => {
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
     const bodyStr = JSON.stringify(payload);
 
     const res = await fetch(`${harness.baseUrl}/webhook/github`, {

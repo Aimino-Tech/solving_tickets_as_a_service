@@ -16,7 +16,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 vi.mock("../../config.js", () => ({
   config: {
     queue: { redisUrl: "redis://localhost:6379" },
-    stas: { monthlyQuotaEnabled: true, defaultTier: "free", rateLimitWindowMs: 60000, rateLimitMax: 30 },
+    syntaro: { monthlyQuotaEnabled: true, defaultTier: "free", rateLimitWindowMs: 60000, rateLimitMax: 30 },
   },
 }));
 
@@ -133,7 +133,7 @@ describe('quotaMiddleware', () => {
       expect.objectContaining({
         error: 'Monthly fix quota exhausted',
         remaining: 0,
-        upgradeUrl: 'https://stas.ai/pricing',
+        upgradeUrl: 'https://syntaro.ai/pricing',
       }),
     );
   });

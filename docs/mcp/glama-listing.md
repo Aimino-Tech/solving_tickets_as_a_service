@@ -25,7 +25,7 @@ Use the following values exactly:
 | Field | Value |
 |-------|-------|
 | Name | `@aimino/syntaro-mcp` |
-| Description | STAS (Solving Tickets As A Service) — label a GitHub issue and get an automated fix PR. Open-source AI bot backed by OpenCode. |
+| Description | SYNTARO (Solving Tickets As A Service) — label a GitHub issue and get an automated fix PR. Open-source AI bot backed by OpenCode. |
 | Homepage | https://github.com/Aimino-Tech/solving_tickets_as_a_service |
 | License | AGPL-3.0 |
 | Categories | Developer Tools, Code Quality, Automation |
@@ -37,7 +37,7 @@ Use the following values exactly:
 ```json
 {
   "mcpServers": {
-    "stas": {
+    "syntaro": {
       "command": "npx",
       "args": ["-y", "@aimino/syntaro-mcp", "stdio"]
     }
@@ -50,8 +50,8 @@ Use the following values exactly:
 ```json
 {
   "mcpServers": {
-    "stas": {
-      "url": "https://your-stas-instance.example.com/sse"
+    "syntaro": {
+      "url": "https://your-syntaro-instance.example.com/sse"
     }
   }
 }
@@ -63,8 +63,8 @@ Glama will auto-discover tools from the server, but you can pre-populate:
 
 | Tool | Description |
 |------|-------------|
-| `syntaro_label_issue` | Label a GitHub issue with the STAS fix label |
-| `syntaro_run_fix` | Trigger the STAS fix pipeline for a GitHub issue |
+| `syntaro_label_issue` | Label a GitHub issue with the SYNTARO fix label |
+| `syntaro_run_fix` | Trigger the SYNTARO fix pipeline for a GitHub issue |
 | `syntaro_check_status` | Check fix run status |
 | `syntaro_get_pr` | Get PR URL and details |
 | `list_issues` | List tracked issues |
@@ -76,7 +76,7 @@ Click "Submit" and wait for Glama approval (typically 1-3 business days).
 
 ## Verification
 
-1. Search for "stas" or "@aimino/syntaro-mcp" on Glama
+1. Search for "syntaro" or "@aimino/syntaro-mcp" on Glama
 2. Verify listing shows correct description, tools, and install instructions
 3. Test the "Try it" button if available
 

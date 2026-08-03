@@ -78,8 +78,8 @@ describe('config', () => {
       expect(configModule.config.queue.workerConcurrency).toBe(2);
     });
 
-    it("defaults STAS_LABEL to 'stas:fix'", () => {
-      expect(configModule.config.stas.label).toBe('stas:fix');
+    it("defaults SYNTARO_LABEL to 'syntaro:fix'", () => {
+      expect(configModule.config.syntaro.label).toBe('syntaro:fix');
     });
 
     it("defaults LOG_LEVEL to 'info'", () => {
@@ -126,11 +126,11 @@ describe('config', () => {
     });
 
     it("defaults DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY to false", () => {
-      expect(configModule.config.stas.devSkipWebhookVerify).toBe(false);
+      expect(configModule.config.syntaro.devSkipWebhookVerify).toBe(false);
     });
 
-    it("defaults BOT_NAME to 'STAS'", () => {
-      expect(configModule.config.stas.botName).toBe('STAS');
+    it("defaults BOT_NAME to 'SYNTARO'", () => {
+      expect(configModule.config.syntaro.botName).toBe('SYNTARO');
     });
   });
 
@@ -155,7 +155,7 @@ describe('config', () => {
       const cfg = configModule.requireConfig();
       expect(cfg.github.appId).toBe('test-app-123');
       expect(cfg.github.webhookSecret).toBe('test-webhook-secret-456');
-      expect(cfg.stas.label).toBe('stas:fix');
+      expect(cfg.syntaro.label).toBe('syntaro:fix');
     });
 
     it('throws when GITHUB_APP_ID is empty', () => {
@@ -196,15 +196,15 @@ describe('config', () => {
       expect(cfg.queue.workerConcurrency).toBe(5);
     });
 
-    it("defaults STAS_LABEL to 'stas:fix' when not set", () => {
+    it("defaults SYNTARO_LABEL to 'syntaro:fix' when not set", () => {
       const cfg = configModule.requireConfig();
-      expect(cfg.stas.label).toBe('stas:fix');
+      expect(cfg.syntaro.label).toBe('syntaro:fix');
     });
 
-    it('accepts custom STAS_LABEL', () => {
-      vi.stubEnv('STAS_LABEL', 'custom:label');
+    it('accepts custom SYNTARO_LABEL', () => {
+      vi.stubEnv('SYNTARO_LABEL', 'custom:label');
       const cfg = configModule.requireConfig();
-      expect(cfg.stas.label).toBe('custom:label');
+      expect(cfg.syntaro.label).toBe('custom:label');
     });
 
     it("defaults LOG_LEVEL to 'info' when not set", () => {
@@ -254,25 +254,25 @@ describe('config', () => {
     it("coerces DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY from string 'true'", () => {
       vi.stubEnv('DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY', 'true');
       const cfg = configModule.requireConfig();
-      expect(cfg.stas.devSkipWebhookVerify).toBe(true);
+      expect(cfg.syntaro.devSkipWebhookVerify).toBe(true);
     });
 
     it('coerces DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY — string "false" is correctly false', () => {
       vi.stubEnv('DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY', 'false');
       const cfg = configModule.requireConfig();
-      expect(cfg.stas.devSkipWebhookVerify).toBe(false);
+      expect(cfg.syntaro.devSkipWebhookVerify).toBe(false);
     });
 
     it('coerces DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY — string "0" is correctly false', () => {
       vi.stubEnv('DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY', '0');
       const cfg = configModule.requireConfig();
-      expect(cfg.stas.devSkipWebhookVerify).toBe(false);
+      expect(cfg.syntaro.devSkipWebhookVerify).toBe(false);
     });
 
     it('coerces DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY — string "1" is correctly true', () => {
       vi.stubEnv('DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY', '1');
       const cfg = configModule.requireConfig();
-      expect(cfg.stas.devSkipWebhookVerify).toBe(true);
+      expect(cfg.syntaro.devSkipWebhookVerify).toBe(true);
     });
 
     it('coerces boolean env vars correctly — DATABASE_SSL=false stays false', () => {
@@ -287,16 +287,16 @@ describe('config', () => {
       expect(cfg.database.ssl).toBe(true);
     });
 
-    it('coerces boolean env vars correctly — STAS_MONTHLY_QUOTA_ENABLED=false stays false', () => {
-      vi.stubEnv('STAS_MONTHLY_QUOTA_ENABLED', 'false');
+    it('coerces boolean env vars correctly — SYNTARO_MONTHLY_QUOTA_ENABLED=false stays false', () => {
+      vi.stubEnv('SYNTARO_MONTHLY_QUOTA_ENABLED', 'false');
       const cfg = configModule.requireConfig();
-      expect(cfg.stas.monthlyQuotaEnabled).toBe(false);
+      expect(cfg.syntaro.monthlyQuotaEnabled).toBe(false);
     });
 
-    it('coerces boolean env vars correctly — STAS_MONTHLY_QUOTA_ENABLED=true', () => {
-      vi.stubEnv('STAS_MONTHLY_QUOTA_ENABLED', 'true');
+    it('coerces boolean env vars correctly — SYNTARO_MONTHLY_QUOTA_ENABLED=true', () => {
+      vi.stubEnv('SYNTARO_MONTHLY_QUOTA_ENABLED', 'true');
       const cfg = configModule.requireConfig();
-      expect(cfg.stas.monthlyQuotaEnabled).toBe(true);
+      expect(cfg.syntaro.monthlyQuotaEnabled).toBe(true);
     });
 
     it('throws with a descriptive error message listing all failures', () => {
@@ -353,7 +353,7 @@ describe('config', () => {
       expect(cfg).toHaveProperty("queue");
       expect(cfg).toHaveProperty("opencode");
       expect(cfg).toHaveProperty("e2b");
-      expect(cfg).toHaveProperty("stas");
+      expect(cfg).toHaveProperty("syntaro");
       expect(cfg).toHaveProperty("fixTimeoutMs");
       expect(cfg).toHaveProperty("phaseTimeouts");
 
@@ -368,8 +368,8 @@ describe('config', () => {
       expect(cfg.opencode).toHaveProperty("model");
       expect(cfg.opencode).toHaveProperty("fallbackModels");
       expect(cfg.e2b).toHaveProperty("sandboxTimeoutMs");
-      expect(cfg.stas).toHaveProperty("rateLimitMax");
-      expect(cfg.stas).toHaveProperty("rateLimitWindowMs");
+      expect(cfg.syntaro).toHaveProperty("rateLimitMax");
+      expect(cfg.syntaro).toHaveProperty("rateLimitWindowMs");
       expect(cfg.phaseTimeouts).toHaveProperty("triage");
       expect(cfg.phaseTimeouts).toHaveProperty("sandboxBoot");
       expect(cfg.phaseTimeouts).toHaveProperty("openCodeAgent");

@@ -9,7 +9,7 @@ This PR verifies the implementation of AIM-4207 (Quality Assurance & Reliability
 - **Test scenarios**: Happy path, no-fix fallback, PR creation, comment posting
 - **Mocked Octokit** — no real GitHub API calls needed
 - **Coverage**: 16 test cases covering:
-  - Issue labeled stas:fix → webhook → enqueue → PR created
+  - Issue labeled syntaro:fix → webhook → enqueue → PR created
   - PR created with correct params (title, head, base, body)
   - Issue comment posted with PR URL
   - No-fix path: agent returns fixReady: false → noFixComment posted

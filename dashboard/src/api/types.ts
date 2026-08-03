@@ -183,6 +183,7 @@ export interface McpApiKey {
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
+  revealable?: boolean;
 }
 
 export interface VsComparisonData {

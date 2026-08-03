@@ -1,5 +1,5 @@
 /**
- * Tier limit configuration for STAS usage-based pricing.
+ * Tier limit configuration for SYNTARO usage-based pricing.
  *
  * Each tier defines:
  *   - monthlyFixLimit: Max fixes per month (Infinity for self-hosted)

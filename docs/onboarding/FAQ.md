@@ -1,6 +1,6 @@
 # Onboarding FAQ
 
-> **Common questions about setting up and running STAS for the first time.**
+> **Common questions about setting up and running SYNTARO for the first time.**
 
 ---
 
@@ -18,15 +18,15 @@
 
 ## General
 
-### What is STAS?
+### What is SYNTARO?
 
-STAS (Solving Tickets As A Service) is an open-source GitHub bot that turns labeled issues into pull requests. When you label an issue with `stas:fix`, STAS investigates your codebase, writes a fix, runs your tests, and opens a PR — all autonomously.
+SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that turns labeled issues into pull requests. When you label an issue with `syntaro:fix`, SYNTARO investigates your codebase, writes a fix, runs your tests, and opens a PR — all autonomously.
 
 ### How does it work end-to-end?
 
 ```mermaid
 flowchart LR
-    A[Label issue with stas:fix] --> B[Webhook received]
+    A[Label issue with syntaro:fix] --> B[Webhook received]
     B --> C[Triage: classify issue type]
     C --> D[OpenCode agent investigates]
     D --> E[Write fix + regression test]
@@ -35,11 +35,11 @@ flowchart LR
     G --> H[Post result comment]
 ```
 
-Each step is monitored. If any step fails, STAS retries up to 3 times before escalating.
+Each step is monitored. If any step fails, SYNTARO retries up to 3 times before escalating.
 
-### Do I need to be on a paid plan to try STAS?
+### Do I need to be on a paid plan to try SYNTARO?
 
-**No.** The self-hosted (OSS) version is free and unlimited. The Cloud Free tier gives you 10 fixes per month without hosting anything. Both are great ways to try STAS.
+**No.** The self-hosted (OSS) version is free and unlimited. The Cloud Free tier gives you 10 fixes per month without hosting anything. Both are great ways to try SYNTARO.
 
 ---
 
@@ -82,17 +82,17 @@ See the [Setup Guide](SETUP.md#1-create-a-github-app) for a walkthrough. The cri
 
 ### Can I use a different trigger label?
 
-Yes. Set `STAS_LABEL` in your `.env`:
+Yes. Set `SYNTARO_LABEL` in your `.env`:
 
 ```bash
-STAS_LABEL=ai:fix
+SYNTARO_LABEL=ai:fix
 # or
-STAS_LABEL=🤖:fix
+SYNTARO_LABEL=🤖:fix
 ```
 
 ### Do I need Docker?
 
-**Only if you want sandbox isolation.** STAS runs fix agents in ephemeral Docker containers to prevent malicious code from affecting your host. If you're testing locally and trust the code, you can disable the sandbox by setting `SANDBOX_ENABLED=false`.
+**Only if you want sandbox isolation.** SYNTARO runs fix agents in ephemeral Docker containers to prevent malicious code from affecting your host. If you're testing locally and trust the code, you can disable the sandbox by setting `SANDBOX_ENABLED=false`.
 
 In production, sandbox isolation is strongly recommended.
 
@@ -116,7 +116,7 @@ redis-cli ping
 
 ## Configuration
 
-### What model does STAS use for fixing issues?
+### What model does SYNTARO use for fixing issues?
 
 The default is `anthropic/claude-sonnet-4-20250514`. You can change it via `OPENCODE_MODEL`:
 
@@ -124,7 +124,7 @@ The default is `anthropic/claude-sonnet-4-20250514`. You can change it via `OPEN
 OPENCODE_MODEL=openai/gpt-4o
 ```
 
-STAS supports any model that OpenCode Serve supports — Claude, GPT, DeepSeek, Gemini, and any OpenAI-compatible API.
+SYNTARO supports any model that OpenCode Serve supports — Claude, GPT, DeepSeek, Gemini, and any OpenAI-compatible API.
 
 ### How do I add fallback models?
 
@@ -134,11 +134,11 @@ Set `FALLBACK_MODELS` as a comma-separated list:
 FALLBACK_MODELS=openai/gpt-4o,anthropic/claude-haiku-3-20240307
 ```
 
-If the primary model fails (timeout, rate limit, internal error), STAS tries fallbacks in order.
+If the primary model fails (timeout, rate limit, internal error), SYNTARO tries fallbacks in order.
 
 ### Can I customize the PR template?
 
-Yes. Create a `.github/stas-pr-template.md` in your repository with the template you want. STAS will use it when creating PR descriptions. See [`docs/CUSTOMIZATION.md`](../CUSTOMIZATION.md#customizing-pr-templates) for details.
+Yes. Create a `.github/syntaro-pr-template.md` in your repository with the template you want. SYNTARO will use it when creating PR descriptions. See [`docs/CUSTOMIZATION.md`](../CUSTOMIZATION.md#customizing-pr-templates) for details.
 
 ### How do I change the sandbox timeout?
 
@@ -150,11 +150,11 @@ SANDBOX_TIMEOUT=300  # seconds (default: 120)
 
 ## Troubleshooting
 
-### STAS received the webhook but didn't do anything
+### SYNTARO received the webhook but didn't do anything
 
 Check the following:
 
-1. **Is the label correct?** By default STAS looks for `stas:fix`. Verify your issue has the exact label.
+1. **Is the label correct?** By default SYNTARO looks for `syntaro:fix`. Verify your issue has the exact label.
 2. **Is OpenCode running?** Run `curl http://localhost:4096/health` — if it fails, start OpenCode: `opencode serve --port 4096`
 3. **Check the logs:**
    ```bash
@@ -166,7 +166,7 @@ Check the following:
    ```
 4. **Simulate a webhook locally:**
    ```bash
-   bash plugin/tools/stas-webhook-test.sh issues.labeled
+   bash plugin/tools/syntaro-webhook-test.sh issues.labeled
    ```
 
 ### I see "E2B_API_KEY not configured" errors
@@ -190,7 +190,7 @@ Common causes:
 
 ### The PR was created but tests fail
 
-STAS writes regression tests alongside fixes. If tests fail in CI:
+SYNTARO writes regression tests alongside fixes. If tests fail in CI:
 
 1. The PR will be marked as draft with a warning
 2. Check the PR comments for the test output and evidence report
@@ -208,13 +208,13 @@ curl -X DELETE http://localhost:3000/api/onboarding/reset \
 
 ## Security
 
-### Can STAS access my private code?
+### Can SYNTARO access my private code?
 
-STAS only clones repositories that the GitHub App is installed on. The clone happens in an ephemeral sandbox that is destroyed after each run. Your code is never stored or transmitted anywhere beyond the sandbox.
+SYNTARO only clones repositories that the GitHub App is installed on. The clone happens in an ephemeral sandbox that is destroyed after each run. Your code is never stored or transmitted anywhere beyond the sandbox.
 
 ### Is the sandbox secure?
 
-Yes. STAS uses [E2B](https://e2b.dev) sandboxes with:
+Yes. SYNTARO uses [E2B](https://e2b.dev) sandboxes with:
 
 - Network isolation (no outbound access except to GitHub/your registry)
 - Ephemeral filesystems (destroyed after each run)
@@ -223,7 +223,7 @@ Yes. STAS uses [E2B](https://e2b.dev) sandboxes with:
 
 ### How is the webhook verified?
 
-Every webhook request includes an HMAC-SHA256 signature in the `X-Hub-Signature-256` header. STAS verifies this signature against the `GITHUB_WEBHOOK_SECRET` before processing. Requests with invalid signatures are rejected with a 400 response.
+Every webhook request includes an HMAC-SHA256 signature in the `X-Hub-Signature-256` header. SYNTARO verifies this signature against the `GITHUB_WEBHOOK_SECRET` before processing. Requests with invalid signatures are rejected with a 400 response.
 
 ---
 
@@ -240,11 +240,11 @@ Most fixes complete in **30 seconds to 5 minutes**, depending on:
 
 ### How many concurrent fixes can run?
 
-Default max is 3, controlled by `STAS_MAX_CONCURRENT`. You can increase it, but watch your model API rate limits and infrastructure capacity.
+Default max is 3, controlled by `SYNTARO_MAX_CONCURRENT`. You can increase it, but watch your model API rate limits and infrastructure capacity.
 
-### Will STAS overwhelm my CI?
+### Will SYNTARO overwhelm my CI?
 
-STAS runs the test suite **before opening the PR**, so CI only runs once. If the test suite takes >10 minutes, consider using the `STAS_TEST_TIMEOUT` setting to limit verification time.
+SYNTARO runs the test suite **before opening the PR**, so CI only runs once. If the test suite takes >10 minutes, consider using the `SYNTARO_TEST_TIMEOUT` setting to limit verification time.
 
 ---
 
@@ -265,4 +265,4 @@ There's no catch. The OSS version gives you unlimited fixes without any artifici
 
 ### Can I use my own API key with the cloud version?
 
-The cloud version uses STAS's own AGI. If you want to use your own model API keys, self-host instead.
+The cloud version uses SYNTARO's own AGI. If you want to use your own model API keys, self-host instead.

@@ -1,7 +1,7 @@
 /**
  * Load Test: Webhook Endpoint Throughput
  *
- * Measures max webhooks/sec a single STAS API instance can handle.
+ * Measures max webhooks/sec a single SYNTARO API instance can handle.
  * Sends realistic GitHub webhook payloads to POST /webhook.
  *
  * Stages:
@@ -46,7 +46,7 @@ const webhookLatency = new Trend('webhook_latency_ms');
 //
 // Webhook signature verification
 // ──────────────────────────────
-// STAS verifies X-Hub-Signature-256 by default. Load tests send random
+// SYNTARO verifies X-Hub-Signature-256 by default. Load tests send random
 // payloads, so the signature will never match. To bypass, either:
 //
 //   (a) Set DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY=true when running k6:
@@ -96,7 +96,7 @@ function generateWebhookPayload(size) {
       number: Math.floor(Math.random() * 10000) + 1,
       title: 'X'.repeat(s.titleLen),
       body: 'X'.repeat(s.bodyLen),
-      labels: [{ name: 'stas:fix' }],
+      labels: [{ name: 'syntaro:fix' }],
       state: 'open',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

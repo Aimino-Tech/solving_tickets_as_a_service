@@ -43,7 +43,7 @@ const { mockCreateAppAuth, mockAuthFn, mockOctokitConstructor, mockReadFileSync,
           webhookPath: '/webhook',
           token: '',
         },
-        stas: { botName: 'STAS' },
+        syntaro: { botName: 'SYNTARO' },
       },
     };
   });
@@ -53,7 +53,7 @@ const { mockCreateAppAuth, mockAuthFn, mockOctokitConstructor, mockReadFileSync,
 // a dynamic require("node:crypto") inside convertPkcs1ToPkcs8 which
 // vi.mock cannot intercept.
 vi.mock('node:fs', () => ({ readFileSync: mockReadFileSync }));
-vi.mock('@stas/github-client', () => {
+vi.mock('@syntaro/github-client', () => {
   const convertPkcs1ToPkcs8 = (pkcs1Pem: string) => { throw new Error(`Failed to convert PKCS#1 private key to PKCS#8: simulated`); };
   const loadPrivateKey = (config: { privateKey: string }, options?: { readFileSync?: (path: string) => string }) => {
     if (options?.readFileSync) return options.readFileSync(config.privateKey);

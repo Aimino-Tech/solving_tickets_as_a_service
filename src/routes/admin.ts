@@ -426,7 +426,7 @@ router.post('/webhooks/:id/replay', async (req: Request, res: Response) => {
         const { connect: rmqConnect, isConnected } = await import('../queue/amqp/connection.js');
         if (!isConnected()) await rmqConnect();
         const messageId = `${data.installationId}:${data.repoOwner}/${data.repoName}#${data.issueNumber}-${Date.now()}`;
-        await publishMessage('stas.direct', 'issue.fix', {
+        await publishMessage('syntaro.direct', 'issue.fix', {
           ...data,
           _meta: { messageId, enqueuedAt: new Date().toISOString() },
         });
@@ -506,8 +506,8 @@ router.post('/gc/sweep', async (_req: Request, res: Response) => {
 router.get('/ai-mode', async (_req: Request, res: Response) => {
   res.json({
     mode: mockResponses.getEffectiveMode(),
-    configMode: config.stas.aiMode,
-    runtimeOverride: mockResponses.getEffectiveMode() !== config.stas.aiMode,
+    configMode: config.syntaro.aiMode,
+    runtimeOverride: mockResponses.getEffectiveMode() !== config.syntaro.aiMode,
     description: mockResponses.isStaticMode()
       ? 'Static mode — all AI responses are deterministic placeholders'
       : 'Live mode — AI agent is active',
@@ -551,7 +551,7 @@ router.post('/ai-mode', async (req: Request, res: Response) => {
     } else if (mode === null || mode === 'default') {
       mockResponses.setMode(null);
       log.info('[ADMIN] AI mode reset to config default');
-      res.json({ mode: config.stas.aiMode, status: 'reset', message: 'AI mode reverted to env config' });
+      res.json({ mode: config.syntaro.aiMode, status: 'reset', message: 'AI mode reverted to env config' });
     } else {
       res.status(400).json({ error: 'Invalid mode. Use "ai", "static", or null to reset.' });
     }

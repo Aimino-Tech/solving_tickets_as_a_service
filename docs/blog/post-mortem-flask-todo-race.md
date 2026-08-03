@@ -1,18 +1,18 @@
 ---
-title: "Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App"
-description: "A true-to-life STAS run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable."
+title: "Post-Mortem: How SYNTARO Found and Fixed a Race Condition in a Flask Todo App"
+description: "A true-to-life SYNTARO run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable."
 status: published
 date: 2026-07-29
 canonical: https://syntaro.io/blog/post-mortem-flask-todo-race
 keywords:
-  - STAS post-mortem
+  - SYNTARO post-mortem
   - AI code review
   - race condition
   - Flask SQLite
   - automated bug fixing
   - GitHub bot
 featured_image: /images/blog/post-mortem-flask-todo-race.png
-featured_image_description: "Timeline of a STAS fix run: issue labeled stas:fix → webhook → triage → sandbox → investigation → fix → verify → draft PR"
+featured_image_description: "Timeline of a SYNTARO fix run: issue labeled syntaro:fix → webhook → triage → sandbox → investigation → fix → verify → draft PR"
 cross_post:
   devto:
     canonical: https://syntaro.io/blog/post-mortem-flask-todo-race
@@ -20,7 +20,7 @@ cross_post:
     canonical: https://syntaro.io/blog/post-mortem-flask-todo-race
 ---
 
-# Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App
+# Post-Mortem: How SYNTARO Found and Fixed a Race Condition in a Flask Todo App
 
 *July 29, 2026 · 6 min read*
 
@@ -28,16 +28,16 @@ cross_post:
 
 ## The incident
 
-Users of a small Flask todo app started reporting something odd: every so often, creating a todo returned a 500 error. Not a crash, not an obvious bug. Just an occasional `OperationalError: database is locked` that came and went under load. The maintainer reproduced it a couple of times, filed an issue, and, as a quick experiment, labeled it `stas:fix`. Three minutes later there was a pull request.
+Users of a small Flask todo app started reporting something odd: every so often, creating a todo returned a 500 error. Not a crash, not an obvious bug. Just an occasional `OperationalError: database is locked` that came and went under load. The maintainer reproduced it a couple of times, filed an issue, and, as a quick experiment, labeled it `syntaro:fix`. Three minutes later there was a pull request.
 
-This is the story of that run — what STAS saw, what it changed, and why the fix holds up.
+This is the story of that run — what SYNTARO saw, what it changed, and why the fix holds up.
 
 ## The timeline
 
 Here's the full run, from label to PR:
 
 ```
-Issue labeled stas:fix
+Issue labeled syntaro:fix
         │
         ▼
    Webhook Server
@@ -88,7 +88,7 @@ The first decision happened before any code was written. The triage model read t
 
 ## Sandbox: a clean room
 
-STAS cloned the repo into an isolated sandbox and installed dependencies. The baseline test suite passed. That's a deliberately unexciting step, and it's the reason the rest of the run is trustworthy: STAS knew the repo was healthy before touching it, so any later failure could be attributed to the fix rather than a broken checkout.
+SYNTARO cloned the repo into an isolated sandbox and installed dependencies. The baseline test suite passed. That's a deliberately unexciting step, and it's the reason the rest of the run is trustworthy: SYNTARO knew the repo was healthy before touching it, so any later failure could be attributed to the fix rather than a broken checkout.
 
 ## Investigation: reproducing the sporadic
 
@@ -102,7 +102,7 @@ The agent reproduced the bug with a small concurrent load test: several threads 
 
 Before touching any code, the agent confirmed the hypothesis by reading `app.py` and `models.py`. There it was: a single connection created at module import, passed into every request handler. The reproduction was deterministic once the concurrent load test existed, and the fix target was unambiguous. That's the pattern we look for in a healthy fix run: reproduce, read, confirm, then change.
 
-Three compounding causes, one reproducible failure. The agent documented each one in the PR body — not as boilerplate, but as genuine root-cause analysis. This is also why STAS runs leave a useful artifact behind: the PR description reads like a small post-mortem, which is what makes AI-generated fixes auditable by humans.
+Three compounding causes, one reproducible failure. The agent documented each one in the PR body — not as boilerplate, but as genuine root-cause analysis. This is also why SYNTARO runs leave a useful artifact behind: the PR description reads like a small post-mortem, which is what makes AI-generated fixes auditable by humans.
 
 ## The fix
 
@@ -116,7 +116,7 @@ Plus a regression test that reproduces the original failure mode — a test that
 
 ## Verification: the point of no shortcuts
 
-The agent ran the new test until it passed, then ran the entire existing suite. Everything green. STAS applies two gates to every run: the fix must solve the reported issue, and it must not break anything that was working. On this run, both held.
+The agent ran the new test until it passed, then ran the entire existing suite. Everything green. SYNTARO applies two gates to every run: the fix must solve the reported issue, and it must not break anything that was working. On this run, both held.
 
 ## The after
 
@@ -126,16 +126,16 @@ The agent ran the new test until it passed, then ran the entire existing suite. 
 
 The human review still happened. It was just fast, because the agent had already done the expensive part: figuring out *why*.
 
-> **Key lesson:** The most valuable thing STAS produces isn't the diff — it's the root-cause analysis. A fix that documents why the code was wrong is reviewable in minutes. A fix that only changes code is a guess wearing a patch's clothes. Connection-per-request, WAL, and `busy_timeout` are the SQLite trifecta for Flask apps, but the general rule applies everywhere: understand the mechanism, then change it.
+> **Key lesson:** The most valuable thing SYNTARO produces isn't the diff — it's the root-cause analysis. A fix that documents why the code was wrong is reviewable in minutes. A fix that only changes code is a guess wearing a patch's clothes. Connection-per-request, WAL, and `busy_timeout` are the SQLite trifecta for Flask apps, but the general rule applies everywhere: understand the mechanism, then change it.
 
 ## Why post-mortems matter for AI fixes
 
-There's a healthy skepticism about AI-generated code, and it's justified when the output is a blob of changes with no reasoning. STAS is built to fail that test differently: every fix run produces a narrative — triage, reproduction, root cause, change, verification — that a human can audit in minutes. When the agent documents root cause rather than symptoms, the PR stops being "trust me, I ran the tests" and becomes evidence you can check.
+There's a healthy skepticism about AI-generated code, and it's justified when the output is a blob of changes with no reasoning. SYNTARO is built to fail that test differently: every fix run produces a narrative — triage, reproduction, root cause, change, verification — that a human can audit in minutes. When the agent documents root cause rather than symptoms, the PR stops being "trust me, I ran the tests" and becomes evidence you can check.
 
 That's what happened with the todo app. The bug was real, the fix was small, and the reasoning was on the record. The maintainer didn't have to reverse-engineer the diff to decide whether to merge it — the agent had already written the post-mortem.
 
 ---
 
-*STAS — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
+*SYNTARO — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
 
 *This is a cross-post. The canonical version lives at [syntaro.io/blog/post-mortem-flask-todo-race](https://syntaro.io/blog/post-mortem-flask-todo-race).*

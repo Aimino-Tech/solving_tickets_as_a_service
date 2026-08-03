@@ -26,7 +26,7 @@ REVIEW_STATES = {"Human Review", "In Review", "In Review"}
 FIX_STATES = {"Backlog", "Todo", "In Progress"}
 
 
-@app.task(bind=True, queue="stas.agents.default", max_retries=3, default_retry_delay=30)
+@app.task(bind=True, queue="syntaro.agents.default", max_retries=3, default_retry_delay=30)
 def run_full_pipeline(self, ctx: dict[str, Any]) -> dict[str, Any]:
     issue_id = ctx.get("issue_id", "")
     identifier = ctx.get("issue_identifier", issue_id)
@@ -41,19 +41,19 @@ def run_full_pipeline(self, ctx: dict[str, Any]) -> dict[str, Any]:
 
 def _run_fix_mode(issue_id: str, identifier: str, ctx: dict) -> dict:
     logger.info("FIX mode for %s", identifier)
-    _post_linear_comment(issue_id, "**STAS**: Implementing ticket requirements...")
+    _post_linear_comment(issue_id, "**SYNTARO**: Implementing ticket requirements...")
 
     try:
         result = _implement_ticket(ctx)
     except Exception as exc:
         logger.error("Implementation failed for %s: %s", identifier, exc)
-        _post_linear_comment(issue_id, f"❌ **STAS**: Implementation failed — {exc}")
+        _post_linear_comment(issue_id, f"❌ **SYNTARO**: Implementation failed — {exc}")
         raise
 
     owner = ctx.get("repo_owner", "")
     repo = ctx.get("repo_name", "")
     branch = result.get("branch_name", "")
-    summary = result.get("summary", "STAS implementation")
+    summary = result.get("summary", "SYNTARO implementation")
     commit_sha = result.get("commit_sha", "")
     changes = result.get("changes", [])
 
@@ -71,17 +71,17 @@ def _run_fix_mode(issue_id: str, identifier: str, ctx: dict) -> dict:
         pr_url = pr_result.get("html_url", "")
         pr_number = pr_result.get("number", "?")
         logger.info("PR created: #%s — %s", pr_number, pr_url)
-        _post_linear_comment(issue_id, f"✅ **STAS**: PR created — {pr_url}")
+        _post_linear_comment(issue_id, f"✅ **SYNTARO**: PR created — {pr_url}")
 
         if pr_url:
             try:
                 from workers.linear import client_sync as linear
-                linear.link_attachment_url(issue_id, pr_url, f"STAS: Implementation PR #{pr_number}")
+                linear.link_attachment_url(issue_id, pr_url, f"SYNTARO: Implementation PR #{pr_number}")
             except Exception as e:
                 logger.warning("Failed to attach PR link: %s", e)
     except Exception as exc:
         logger.error("PR creation failed for %s: %s", identifier, exc)
-        _post_linear_comment(issue_id, f"❌ **STAS**: PR creation failed — {exc}")
+        _post_linear_comment(issue_id, f"❌ **SYNTARO**: PR creation failed — {exc}")
         raise
 
     try:
@@ -89,7 +89,7 @@ def _run_fix_mode(issue_id: str, identifier: str, ctx: dict) -> dict:
         if merge_result.get("merged"):
             merge_sha = merge_result.get("sha", "")[:8]
             logger.info("PR merged: sha=%s", merge_sha)
-            _post_linear_comment(issue_id, f"✅ **STAS**: PR merged — `{merge_sha}`")
+            _post_linear_comment(issue_id, f"✅ **SYNTARO**: PR merged — `{merge_sha}`")
 
             # Deduct credits for the completed fix
             try:
@@ -106,7 +106,7 @@ def _run_fix_mode(issue_id: str, identifier: str, ctx: dict) -> dict:
                 logger.warning("Credit deduction failed (non-fatal): %s", e)
     except Exception as exc:
         logger.warning("Merge failed for %s: %s", identifier, exc)
-        _post_linear_comment(issue_id, f"⚠️ **STAS**: Merge issue — {exc}")
+        _post_linear_comment(issue_id, f"⚠️ **SYNTARO**: Merge issue — {exc}")
 
     _mark_done(issue_id)
 
@@ -117,36 +117,36 @@ def _run_fix_mode(issue_id: str, identifier: str, ctx: dict) -> dict:
 
 def _run_review_mode(issue_id: str, identifier: str, ctx: dict) -> dict:
     logger.info("REVIEW mode for %s", identifier)
-    _post_linear_comment(issue_id, "**STAS**: Reviewing and merging PR...")
+    _post_linear_comment(issue_id, "**SYNTARO**: Reviewing and merging PR...")
 
     owner = ctx.get("repo_owner", "")
     repo = ctx.get("repo_name", "")
 
     pr_url = _find_pr_url(issue_id)
     if not pr_url:
-        _post_linear_comment(issue_id, "❌ **STAS**: No PR found attached to this ticket")
+        _post_linear_comment(issue_id, "❌ **SYNTARO**: No PR found attached to this ticket")
         return {"status": "no_pr_found", "mode": "review"}
 
     pr_number = int(pr_url.rstrip("/").split("/")[-1])
     logger.info("Found PR #%s for %s", pr_number, identifier)
 
     try:
-        _post_linear_comment(issue_id, f"**STAS**: Merging PR #{pr_number}...")
+        _post_linear_comment(issue_id, f"**SYNTARO**: Merging PR #{pr_number}...")
         merge_result = _merge_pr(owner, repo, pr_number)
         if merge_result.get("merged"):
             logger.info("PR #%s merged: %s", pr_number, merge_result.get("sha", ""))
-            _post_linear_comment(issue_id, f"✅ **STAS**: PR #{pr_number} merged — {merge_result.get('sha', '')[:8]}")
+            _post_linear_comment(issue_id, f"✅ **SYNTARO**: PR #{pr_number} merged — {merge_result.get('sha', '')[:8]}")
         elif merge_result.get("status") == "merge_conflict":
             logger.warning("PR #%s has merge conflicts", pr_number)
-            _post_linear_comment(issue_id, f"⚠️ **STAS**: PR #{pr_number} has merge conflicts, resolving...")
+            _post_linear_comment(issue_id, f"⚠️ **SYNTARO**: PR #{pr_number} has merge conflicts, resolving...")
             resolved = _resolve_conflicts(owner, repo, pr_number, ctx)
             if resolved:
                 merge_result = _merge_pr(owner, repo, pr_number)
                 if merge_result.get("merged"):
-                    _post_linear_comment(issue_id, f"✅ **STAS**: PR #{pr_number} merged after conflict resolution")
+                    _post_linear_comment(issue_id, f"✅ **SYNTARO**: PR #{pr_number} merged after conflict resolution")
     except Exception as exc:
         logger.error("Review/merge failed for %s: %s", identifier, exc)
-        _post_linear_comment(issue_id, f"❌ **STAS**: Review/merge failed — {exc}")
+        _post_linear_comment(issue_id, f"❌ **SYNTARO**: Review/merge failed — {exc}")
         raise
 
     _mark_done(issue_id)
@@ -216,7 +216,7 @@ def _resolve_conflicts(owner: str, repo: str, pr_number: int, ctx: dict) -> bool
     gh_token = os.getenv("GITHUB_TOKEN", "")
     repo_full = f"{owner}/{repo}"
 
-    with tempfile.TemporaryDirectory(prefix="stas-merge-") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="syntaro-merge-") as tmpdir:
         clone_url = f"https://x-access-token:{gh_token}@github.com/{repo_full}.git"
         subprocess.run(["git", "clone", clone_url, tmpdir], check=True, capture_output=True, text=True)
 
@@ -237,7 +237,7 @@ def _resolve_conflicts(owner: str, repo: str, pr_number: int, ctx: dict) -> bool
         if merge_result.returncode != 0:
             ownername = ctx.get("repo_owner", owner)
             subprocess.run(
-                ["git", "-c", f"user.name=STAS Bot", "-c", f"user.email=stas@aimino.de",
+                ["git", "-c", f"user.name=SYNTARO Bot", "-c", f"user.email=syntaro@aimino.de",
                  "commit", "--allow-empty", "-m", f"Merge branch '{base_ref}' into {head_ref}"],
                 cwd=tmpdir, check=True, capture_output=True, text=True,
             )
@@ -301,7 +301,7 @@ def _build_deliverable_summary(
     lines.extend([
         "",
         "---",
-        "_🤖 STAS — Automated Implementation_",
+        "_🤖 SYNTARO — Automated Implementation_",
     ])
     return "\n".join(lines)
 

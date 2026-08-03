@@ -1,7 +1,7 @@
 /**
  * MockResponseProvider — deterministic placeholder responses for AI-disabled mode.
  *
- * When STAS_AI_MODE=static, all AI agent calls return pre-defined static data
+ * When SYNTARO_AI_MODE=static, all AI agent calls return pre-defined static data
  * instead of hitting real AI APIs. This allows testing the full application
  * flow (webhooks → queue → dispatch → PR creation) without burning tokens.
  *
@@ -35,7 +35,7 @@ class MockResponseProvider {
     if (this.runtimeAiModeOverride !== null) {
       return this.runtimeAiModeOverride === 'static';
     }
-    return config.stas.aiMode === 'static';
+    return config.syntaro.aiMode === 'static';
   }
 
   /**
@@ -82,7 +82,7 @@ class MockResponseProvider {
       success: true,
       summary: `[STATIC MODE] Mock agent run #${this.callCount}. In static mode, AI agent is disabled. No actual fix was attempted.`,
       confidence: 'medium',
-      branchName: `stas/static-test-branch-${this.callCount}`,
+      branchName: `syntaro/static-test-branch-${this.callCount}`,
       diff: `diff --git a/README.md b/README.md\nindex abc..def 100644\n--- a/README.md\n+++ b/README.md\n@@ -1 +1 @@\n-This is a static placeholder diff\n+[STATIC MODE] No changes were made`,
       testOutput: `[STATIC MODE] Test run skipped — AI agent is disabled.\nTests: 0 passed, 0 failed, 0 skipped.`,
       errors: [],

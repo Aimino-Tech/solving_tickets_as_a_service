@@ -36,10 +36,10 @@ export interface CheckSuiteCompletedPayload {
   installation?: { id: number };
 }
 
-const STAS_PR_MARKER = 'Powered by Syntaro';
+const SYNTARO_PR_MARKER = 'Powered by Syntaro';
 
-function isStasPr(body?: string | null, headRepoLogin?: string | null, appLogin?: string): boolean {
-  if (body?.includes(STAS_PR_MARKER)) {
+function isSyntaroPr(body?: string | null, headRepoLogin?: string | null, appLogin?: string): boolean {
+  if (body?.includes(SYNTARO_PR_MARKER)) {
     return true;
   }
   if (appLogin && headRepoLogin === appLogin) {
@@ -153,7 +153,7 @@ export async function handlePullRequestOpened(octokit: Octokit, payload: PrOpene
 
   const { data: pr } = await octokit.pulls.get({ owner, repo, pull_number: pullNumber });
 
-  if (!isStasPr(pr.body, pr.head?.repo?.owner?.login, pr.user?.login)) {
+  if (!isSyntaroPr(pr.body, pr.head?.repo?.owner?.login, pr.user?.login)) {
     return;
   }
 
@@ -192,7 +192,7 @@ export async function handleCheckSuiteCompleted(octokit: Octokit, payload: Check
     try {
       const { data: pr } = await octokit.pulls.get({ owner, repo, pull_number: pullNumber });
 
-      if (!isStasPr(pr.body, pr.head?.repo?.owner?.login, pr.user?.login)) {
+      if (!isSyntaroPr(pr.body, pr.head?.repo?.owner?.login, pr.user?.login)) {
         continue;
       }
       if (await isPrMerged(octokit, owner, repo, pullNumber)) {

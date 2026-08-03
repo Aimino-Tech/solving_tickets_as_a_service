@@ -185,7 +185,7 @@ router.get('/mcp/repos', (_req: Request, res: Response) => {
 // MCP Bridge: list_issues proxy
 router.get('/mcp/issues', async (req: Request, res: Response) => {
   try {
-    const mcpUrl = process.env.STAS_MCP_SERVER_URL || 'http://localhost:4095';
+    const mcpUrl = process.env.SYNTARO_MCP_SERVER_URL || 'http://localhost:4095';
     const resp = await fetch(`${mcpUrl}/mcp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -225,7 +225,7 @@ router.get('/mcp/issues', async (req: Request, res: Response) => {
 // MCP Bridge: search_codebase proxy
 router.post('/mcp/search', async (req: Request, res: Response) => {
   try {
-    const mcpUrl = process.env.STAS_MCP_SERVER_URL || 'http://localhost:4095';
+    const mcpUrl = process.env.SYNTARO_MCP_SERVER_URL || 'http://localhost:4095';
     const resp = await fetch(`${mcpUrl}/mcp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# STAS Load Test Runner
+# SYNTARO Load Test Runner
 #
-# Runs all load test scenarios against a target STAS instance and generates
+# Runs all load test scenarios against a target SYNTARO instance and generates
 # a consolidated report.
 #
 # Usage:
@@ -10,8 +10,8 @@
 #
 # Examples:
 #   ./tests/load/load-test-runner.sh http://localhost:3000
-#   TARGET_URL=https://staging.stas.dev ./tests/load/load-test-runner.sh
-#   ./tests/load/load-test-runner.sh https://stas.example.com
+#   TARGET_URL=https://staging.syntaro.dev ./tests/load/load-test-runner.sh
+#   ./tests/load/load-test-runner.sh https://syntaro.example.com
 # =============================================================================
 
 set -euo pipefail
@@ -29,7 +29,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo -e "${BLUE}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║           STAS Load Test Runner                           ║${NC}"
+echo -e "${BLUE}║           SYNTARO Load Test Runner                           ║${NC}"
 echo -e "${BLUE}╠══════════════════════════════════════════════════════════════╣${NC}"
 echo -e "${BLUE}║ Target: ${TARGET}${NC}"
 echo -e "${BLUE}║ Time:   $(date)${NC}"
@@ -58,7 +58,7 @@ mkdir -p "${RESULTS_DIR}"
 echo -e "${YELLOW}Pre-flight check...${NC}"
 if ! curl -sf "${TARGET}/health/live" > /dev/null 2>&1; then
   echo -e "${RED}Error: Target ${TARGET} is not reachable or not healthy${NC}"
-  echo "Make sure STAS is running and accessible at ${TARGET}"
+  echo "Make sure SYNTARO is running and accessible at ${TARGET}"
   exit 1
 fi
 echo -e "${GREEN}Target is healthy ✓${NC}"
@@ -97,7 +97,7 @@ run_test "mixed-workload" "tests/load/mixed-workload-test.js" "Test 4: Mixed Pro
 echo -e "${YELLOW}Generating consolidated report...${NC}"
 
 cat > "${SUMMARY_FILE}" << EOF
-# STAS Load Test Report
+# SYNTARO Load Test Report
 
 **Date:** $(date)
 **Target:** ${TARGET}

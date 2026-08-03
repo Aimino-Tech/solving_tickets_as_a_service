@@ -66,7 +66,7 @@ export interface ExtractedIssueContext {
   labels: string[];
   /** Linear issue URL. */
   url: string;
-  /** Team key (e.g. 'STAS', 'ENG'). */
+  /** Team key (e.g. 'SYNTARO', 'ENG'). */
   teamKey: string | null;
   /** Project name, if any. */
   projectName: string | null;
@@ -223,15 +223,15 @@ async function processLinearIssue(
       return;
     }
 
-    // Check if issue has STAS label
-    const hasStasLabel = ticket.labels.some(
-      (l) => l.toLowerCase() === (config.stas.label || 'stas:fix').toLowerCase(),
+    // Check if issue has SYNTARO label
+    const hasSyntaroLabel = ticket.labels.some(
+      (l) => l.toLowerCase() === (config.syntaro.label || 'syntaro:fix').toLowerCase(),
     );
 
-    if (!hasStasLabel) {
+    if (!hasSyntaroLabel) {
       log.info(
         { ticketId, labels: ticket.labels },
-        'Linear issue does not have STAS label — skipping',
+        'Linear issue does not have SYNTARO label — skipping',
       );
       return;
     }

@@ -97,8 +97,8 @@ describe('registerDefaultTemplates', () => {
 
     const fixTemplate = templateRegistry.getJobTemplate('issue-fix');
     expect(fixTemplate).toBeDefined();
-    expect(fixTemplate?.queueName).toBe('stas.issues.fix');
-    expect(fixTemplate?.exchangeName).toBe('stas.direct');
+    expect(fixTemplate?.queueName).toBe('syntaro.issues.fix');
+    expect(fixTemplate?.exchangeName).toBe('syntaro.direct');
     expect(fixTemplate?.routingKey).toBe('issue.fix');
     expect(fixTemplate?.retryConfig.maxRetries).toBe(4);
   });

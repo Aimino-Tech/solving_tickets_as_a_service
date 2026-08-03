@@ -70,7 +70,7 @@ router.get('/callback', async (req, res) => {
             headers: {
                 Authorization: `Bearer ${tokenData.access_token}`,
                 Accept: 'application/vnd.github.v3+json',
-                'User-Agent': 'stas-premium',
+                'User-Agent': 'syntaro-premium',
             },
         });
         if (!userResponse.ok) {

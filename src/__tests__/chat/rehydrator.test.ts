@@ -19,7 +19,7 @@ describe('rehydrator (AIM-4443)', () => {
   it('seeds memory and recent transcript from the stored session', async () => {
     const store = new MemoryChatSessionStore();
     const memory = emptyMemory();
-    memory.facts.push({ key: 'project', value: 'stas', updatedAt: memory.updatedAt });
+    memory.facts.push({ key: 'project', value: 'syntaro', updatedAt: memory.updatedAt });
     await store.upsert({
       threadTs: 't1',
       channelId: 'c1',
@@ -34,13 +34,13 @@ describe('rehydrator (AIM-4443)', () => {
       agentMemory: memory,
     });
     const res = await rehydrateSession({ store, threadTs: 't1', channelId: 'c1', userId: 'u1' });
-    expect(res.memoryBlock).toContain('stas');
+    expect(res.memoryBlock).toContain('syntaro');
     expect(res.recentTranscript.length).toBe(2);
     expect(res.seedPrompt).toContain('Continue the conversation');
   });
 
   it('buildSeedPrompt composes memory + history', () => {
-    const prompt = buildSeedPrompt('[Memory]\nproject: stas', [{ role: 'user', text: 'hi' }]);
+    const prompt = buildSeedPrompt('[Memory]\nproject: syntaro', [{ role: 'user', text: 'hi' }]);
     expect(prompt).toContain('[Memory]');
     expect(prompt).toContain('[Recent Conversation History]');
   });

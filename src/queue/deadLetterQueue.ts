@@ -210,7 +210,7 @@ export async function dispatchDlqAlert(entry: DeadLetterEntry): Promise<void> {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: message,
-          channel: config.alerting.slackChannel || '#stas-alerts',
+          channel: config.alerting.slackChannel || '#syntaro-alerts',
         }),
       });
 

@@ -6,7 +6,7 @@
  */
 
 /**
- * GitLab Issue Hook — issue created with a "stas:fix" label.
+ * GitLab Issue Hook — issue created with a "syntaro:fix" label.
  */
 export function gitlabIssueHookLabeled() {
   return {
@@ -42,7 +42,7 @@ export function gitlabIssueHookLabeled() {
       title: 'Fix broken user login',
       description: 'Users are unable to log in when the password contains special characters.',
       state: 'opened',
-      labels: [{ id: 400, title: 'stas:fix', color: '#fc2929', project_id: 200, created_at: '2025-05-01T10:00:00Z', updated_at: '2025-05-01T10:00:00Z', template: false, description: 'Trigger STAS fix', type: 'ProjectLabel', priority: null }],
+      labels: [{ id: 400, title: 'syntaro:fix', color: '#fc2929', project_id: 200, created_at: '2025-05-01T10:00:00Z', updated_at: '2025-05-01T10:00:00Z', template: false, description: 'Trigger SYNTARO fix', type: 'ProjectLabel', priority: null }],
       milestone_id: null,
       assignee_id: null,
       author_id: 1000,
@@ -50,11 +50,11 @@ export function gitlabIssueHookLabeled() {
       updated_at: '2025-05-01T12:00:00Z',
       action: 'update',
     },
-    labels: [{ id: 400, title: 'stas:fix', color: '#fc2929', project_id: 200, created_at: '2025-05-01T10:00:00Z', updated_at: '2025-05-01T10:00:00Z', template: false, description: 'Trigger STAS fix', type: 'ProjectLabel', priority: null }],
+    labels: [{ id: 400, title: 'syntaro:fix', color: '#fc2929', project_id: 200, created_at: '2025-05-01T10:00:00Z', updated_at: '2025-05-01T10:00:00Z', template: false, description: 'Trigger SYNTARO fix', type: 'ProjectLabel', priority: null }],
     changes: {
       labels: {
         previous: [],
-        current: [{ id: 400, title: 'stas:fix', color: '#fc2929', project_id: 200, created_at: '2025-05-01T10:00:00Z', updated_at: '2025-05-01T10:00:00Z', template: false, description: 'Trigger STAS fix', type: 'ProjectLabel', priority: null }],
+        current: [{ id: 400, title: 'syntaro:fix', color: '#fc2929', project_id: 200, created_at: '2025-05-01T10:00:00Z', updated_at: '2025-05-01T10:00:00Z', template: false, description: 'Trigger SYNTARO fix', type: 'ProjectLabel', priority: null }],
       },
     },
     repository: {
@@ -106,7 +106,7 @@ export function gitlabNoteHook() {
     issue: {
       id: 300,
       title: 'Fix broken user login',
-      labels: [{ id: 400, title: 'stas:fix', color: '#fc2929' }],
+      labels: [{ id: 400, title: 'syntaro:fix', color: '#fc2929' }],
     },
   };
 }

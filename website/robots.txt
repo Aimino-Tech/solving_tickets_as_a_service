@@ -1,5 +1,5 @@
-# STAS — Production Website
-# https://stas.aimino.io
+# SYNTARO — Production Website
+# https://syntaro.aimino.io
 
 User-agent: *
 Allow: /
@@ -8,4 +8,4 @@ Allow: /trust
 Allow: /docs
 Allow: /status
 
-Sitemap: https://stas.aimino.io/sitemap.xml
+Sitemap: https://syntaro.aimino.io/sitemap.xml

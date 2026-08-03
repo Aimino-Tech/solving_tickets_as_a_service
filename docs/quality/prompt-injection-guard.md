@@ -1,6 +1,6 @@
 # Prompt Injection Guard — OSS Tool Integration
 
-STAS ships with a two-tier prompt injection protection system:
+SYNTARO ships with a two-tier prompt injection protection system:
 
 1. **Tier 1 — Built-in regex guard** (`InjectionGuard` in `workers/gates/injection_guard.py`)
    - Pure regex scanner, < 100ms, zero dependencies
@@ -38,7 +38,7 @@ canonicalization tricks, and a separate LLM-as-judge heuristic.
 ### [garak](https://github.com/leondz/garak) (deep probe)
 
 LLM vulnerability scanner — runs a battery of adversarial probes designed
-to test model robustness. In STAS, garak is used as a secondary scan for
+to test model robustness. In SYNTARO, garak is used as a secondary scan for
 high-risk inputs flagged by other guards.
 
 - **Detection method**: 100+ plug-in probe modules
@@ -75,11 +75,11 @@ Set environment variables to control which tools are used:
 
 | Variable | Default | Description |
 |---|---|---|
-| `STAS_OSS_GUARD_ENABLED` | `false` | Enable OSS tool integration |
-| `STAS_OSS_GUARD_TOOLS` | `llm_guard,rebuff` | Comma-separated list of OSS tools |
-| `STAS_OSS_GUARD_TIMEOUT` | `5.0` | Per-tool timeout in seconds |
+| `SYNTARO_OSS_GUARD_ENABLED` | `false` | Enable OSS tool integration |
+| `SYNTARO_OSS_GUARD_TOOLS` | `llm_guard,rebuff` | Comma-separated list of OSS tools |
+| `SYNTARO_OSS_GUARD_TIMEOUT` | `5.0` | Per-tool timeout in seconds |
 
-The OSS guard is **opt-in** by default. Set `STAS_OSS_GUARD_ENABLED=true`
+The OSS guard is **opt-in** by default. Set `SYNTARO_OSS_GUARD_ENABLED=true`
 to activate it alongside the existing regex guard.
 
 ---

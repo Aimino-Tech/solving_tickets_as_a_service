@@ -22,7 +22,7 @@ export function linearIssueCreate() {
       state: { id: 'state-id-1', name: 'Todo', type: 'unstarted' },
       assignee: { id: 'user-id-1', name: 'Test User', email: 'testuser@example.com' },
       team: { id: 'team-id-1', name: 'Engineering', key: 'PROJ' },
-      labels: [{ id: 'label-id-1', name: 'stas:fix', color: '#fc2929' }],
+      labels: [{ id: 'label-id-1', name: 'syntaro:fix', color: '#fc2929' }],
       createdAt: '2025-05-01T10:00:00.000Z',
       updatedAt: '2025-05-01T10:00:00.000Z',
       url: 'https://linear.app/team/PROJ-42',
@@ -47,7 +47,7 @@ export function linearIssueUpdate() {
 }
 
 /**
- * Linear Issue Create — without the stas:fix label (no trigger).
+ * Linear Issue Create — without the syntaro:fix label (no trigger).
  */
 export function linearIssueCreateOtherLabel() {
   const payload = linearIssueCreate() as any;

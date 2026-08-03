@@ -1,5 +1,5 @@
 """
-FastMCP server — expose STAS as auto-discoverable agent infrastructure.
+FastMCP server — expose Syntaro as auto-discoverable agent infrastructure.
 
 Tools:
   - syntaro_label_issue   — Label a GitHub issue.
@@ -7,7 +7,7 @@ Tools:
   - syntaro_check_status  — Check the status of a fix run.
   - syntaro_get_pr        — Get PR details for a completed fix run.
   - list_issues        — List tracked issues and their fix status.
-  - search_codebase    — Search the STAS codebase for symbols or patterns.
+  - search_codebase    — Search the Syntaro codebase for symbols or patterns.
   - linear_ticket      — Check whether a Linear ticket exists and its details.
   - linear_create_ticket — Create a Linear ticket in the workspace.
   - memory_read        — Read a Hermes-style agent memory file.
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 SENTRY_ENV = os.getenv("SENTRY_ENVIRONMENT", os.getenv("NODE_ENV", "development"))
-SENTRY_RELEASE = os.getenv("SENTRY_RELEASE", "stas@unknown")
+SENTRY_RELEASE = os.getenv("SENTRY_RELEASE", "syntaro@unknown")
 
 if SENTRY_DSN:
     try:
@@ -85,20 +85,20 @@ def _hook(payload):
 
 mcp = FastMCP(
     SERVER_NAME,
-    instructions="""STAS (Solving Tickets As A Service) — label a GitHub issue and get a PR.
+    instructions="""Syntaro (Solving Tickets As A Service) — label a GitHub issue and get a PR.
 
 Tools:
-- **syntaro_label_issue**: Add a label (e.g. "stas:fix") to a GitHub issue.
-- **syntaro_run_fix**: Trigger the full STAS pipeline for an issue URL. Returns a run_id.
+- **syntaro_label_issue**: Add a label (e.g. "syntaro:fix") to a GitHub issue.
+- **syntaro_run_fix**: Trigger the full Syntaro pipeline for an issue URL. Returns a run_id.
 - **syntaro_check_status**: Poll the status of a fix run by run_id.
 - **syntaro_get_pr**: Get the PR URL and details for a completed run.
 - **list_issues**: List tracked issues with their fix status.
-- **search_codebase**: Search the STAS codebase for symbols or patterns.
+- **search_codebase**: Search the Syntaro codebase for symbols or patterns.
 - **linear_ticket**: Check whether a Linear ticket exists (identifier like AIM-4477) and return its title/state/url/description.
 - **linear_create_ticket**: Create a Linear ticket in the workspace (title, description, priority).
 - **memory_read**: Read a Hermes-style agent memory file by name.
 - **memory_write**: Write a Hermes-style agent memory file by name (facts/decisions/preferences/plan in markdown).
-- **slack_send**: Post a message to a Slack channel or thread with the STAS bot token.
+- **slack_send**: Post a message to a Slack channel or thread with the Syntaro bot token.
 - **session_resume**: Return a conversation workspace's maintained MEMORY.md so an agent can resume it.
 
 Resources:
@@ -112,19 +112,19 @@ Resources:
     transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
 )
 
-@mcp.tool(name="syntaro_label_issue", description="Label a GitHub issue with the STAS fix label (or custom label).")
-async def syntaro_label_issue(owner: str, repo: str, issue_number: int, label: str = "stas:fix") -> str:
+@mcp.tool(name="syntaro_label_issue", description="Label a GitHub issue with the Syntaro fix label (or custom label).")
+async def syntaro_label_issue(owner: str, repo: str, issue_number: int, label: str = "syntaro:fix") -> str:
     return json.dumps(_hook(await label_issue(owner, repo, issue_number, label)), indent=2, default=str)
 
-@mcp.tool(name="syntaro_run_fix", description="Trigger the STAS fix pipeline for a GitHub issue URL.")
+@mcp.tool(name="syntaro_run_fix", description="Trigger the Syntaro fix pipeline for a GitHub issue URL.")
 async def syntaro_run_fix(issue_url: str) -> str:
     return json.dumps(_hook(await run_fix(issue_url)), indent=2, default=str)
 
-@mcp.tool(name="syntaro_check_status", description="Check the current status of a STAS fix run by run_id.")
+@mcp.tool(name="syntaro_check_status", description="Check the current status of a Syntaro fix run by run_id.")
 async def syntaro_check_status(run_id: str) -> str:
     return json.dumps(_hook(await check_status(run_id)), indent=2, default=str)
 
-@mcp.tool(name="syntaro_get_pr", description="Get the pull request URL and details for a completed STAS fix run.")
+@mcp.tool(name="syntaro_get_pr", description="Get the pull request URL and details for a completed Syntaro fix run.")
 async def syntaro_get_pr(run_id: str) -> str:
     return json.dumps(_hook(await get_pr(run_id)), indent=2, default=str)
 
@@ -174,35 +174,35 @@ async def _get_issue_resource_handler(issue_id):
     return {"issue_id": issue_id, "owner": owner, "repo": repo, "issue_number": number,
             "total_runs": 1, "runs": [result]}
 
-@mcp.tool(name="list_issues", description="List tracked issues with their STAS fix status, with optional filters.")
+@mcp.tool(name="syntaro_list_issues", description="List tracked issues with their Syntaro fix status, with optional filters.")
 async def list_issues_tool(status=None, repo=None, limit=20):
     return json.dumps(_hook(await _list_issues_handler(status=status, repo=repo, limit=limit)), indent=2, default=str)
 
-@mcp.tool(name="search_codebase", description="Search the STAS codebase for symbols, files, or patterns.")
+@mcp.tool(name="syntaro_search_codebase", description="Search the Syntaro codebase for symbols, files, or patterns.")
 async def search_codebase_tool(query, repo=None, max_results=10):
     return json.dumps(_hook(await _search_codebase_handler(query=query, repo=repo, max_results=max_results)), indent=2, default=str)
 
-@mcp.tool(name="linear_ticket", description="Check whether a Linear ticket exists (identifier like AIM-4477) and return its details.")
+@mcp.tool(name="syntaro_linear_ticket", description="Check whether a Linear ticket exists (identifier like AIM-4477) and return its details.")
 async def linear_ticket_tool(identifier: str) -> str:
     return json.dumps(_hook(await linear_ticket(identifier)), indent=2, default=str)
 
-@mcp.tool(name="linear_create_ticket", description="Create a Linear ticket in the workspace (title required, description and priority optional, team_key like 'AIM' optional).")
+@mcp.tool(name="syntaro_linear_create_ticket", description="Create a Linear ticket in the workspace (title required, description and priority optional, team_key like 'AIM' optional).")
 async def linear_create_ticket_tool(title: str, description: str = "", priority: int | None = None, team_key: str = "") -> str:
     return json.dumps(_hook(await linear_create_ticket(title, description or None, priority, team_key or None)), indent=2, default=str)
 
-@mcp.tool(name="memory_read", description="Read a Hermes-style agent memory file by name (default 'user').")
+@mcp.tool(name="syntaro_memory_read", description="Read a Hermes-style agent memory file by name (default 'user').")
 async def memory_read_tool(name: str = "user") -> str:
     return json.dumps(_hook(memory_read(name)), indent=2, default=str)
 
-@mcp.tool(name="memory_write", description="Write a Hermes-style agent memory file by name (facts/decisions/preferences/plan in markdown).")
+@mcp.tool(name="syntaro_memory_write", description="Write a Hermes-style agent memory file by name (facts/decisions/preferences/plan in markdown).")
 async def memory_write_tool(name: str, content: str) -> str:
     return json.dumps(_hook(memory_write(name, content)), indent=2, default=str)
 
-@mcp.tool(name="slack_send", description="Post a message to a Slack channel or thread using the STAS bot token.")
+@mcp.tool(name="syntaro_slack_send", description="Post a message to a Slack channel or thread using the Syntaro bot token.")
 async def slack_send_tool(channel: str, text: str, thread_ts: str = "") -> str:
     return json.dumps(_hook(await slack_send(channel, text, thread_ts or None)), indent=2, default=str)
 
-@mcp.tool(name="session_resume", description="Return a conversation workspace's maintained MEMORY.md so an agent can resume the conversation.")
+@mcp.tool(name="syntaro_session_resume", description="Return a conversation workspace's maintained MEMORY.md so an agent can resume the conversation.")
 async def session_resume_tool(workspace_path: str) -> str:
     return json.dumps(_hook(session_resume(workspace_path)), indent=2, default=str)
 
@@ -243,9 +243,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", nargs="?", default="sse", choices=["sse", "stdio"], help="Transport mode")
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=int(os.getenv("STAS_MCP_PORT", "4095")))
-    parser.add_argument("--ssl-keyfile", default=os.getenv("STAS_MCP_SSL_KEY_PATH"), help="SSL key file path")
-    parser.add_argument("--ssl-certfile", default=os.getenv("STAS_MCP_SSL_CERT_PATH"), help="SSL cert file path")
+    parser.add_argument("--port", type=int, default=int(os.getenv("SYNTARO_MCP_PORT", "4095")))
+    parser.add_argument("--ssl-keyfile", default=os.getenv("SYNTARO_MCP_SSL_KEY_PATH"), help="SSL key file path")
+    parser.add_argument("--ssl-certfile", default=os.getenv("SYNTARO_MCP_SSL_CERT_PATH"), help="SSL cert file path")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 

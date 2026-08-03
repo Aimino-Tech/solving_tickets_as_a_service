@@ -1,6 +1,6 @@
 # Adding a New Platform
 
-This guide describes how to add support for a new Git hosting platform to STAS.
+This guide describes how to add support for a new Git hosting platform to SYNTARO.
 
 ## Step-by-Step
 

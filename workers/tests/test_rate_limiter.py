@@ -247,11 +247,11 @@ class TestKeyFormat:
 
     def test_tokens_key_format(self):
         key = TenantRateLimiter._tokens_key("tenant-42")
-        assert key == "stas:rate_limiter:tenant-42:tokens"
+        assert key == "syntaro:rate_limiter:tenant-42:tokens"
 
     def test_timestamp_key_format(self):
         key = TenantRateLimiter._timestamp_key("tenant-42")
-        assert key == "stas:rate_limiter:tenant-42:ts"
+        assert key == "syntaro:rate_limiter:tenant-42:ts"
 
 
 class TestRefill:

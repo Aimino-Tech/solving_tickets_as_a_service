@@ -4,9 +4,9 @@ status: active
 last-updated: 2026-07-28
 ---
 
-# STAS Status Page Templates
+# SYNTARO Status Page Templates
 
-> Templates for communicating incidents to users via the public [status page](https://stas.betteruptime.com).
+> Templates for communicating incidents to users via the public [status page](https://syntaro.betteruptime.com).
 > Solving Tickets As A Service — Customer Communication Guide
 
 ---
@@ -100,7 +100,7 @@ Investigating ──→ Identified ──→ Monitoring ──→ Resolved
 
 | Severity | Tone | Example |
 |---|---|---|
-| SEV-1 (Down) | Direct, urgent, empathetic | "STAS is currently unable to process new issues. We understand this is disruptive and are working urgently to restore service." |
+| SEV-1 (Down) | Direct, urgent, empathetic | "SYNTARO is currently unable to process new issues. We understand this is disruptive and are working urgently to restore service." |
 | SEV-2 (Broken) | Clear, informative | "Issue processing is delayed for some repositories. Our workers are experiencing higher than normal latency." |
 | SEV-3 (Degraded) | Informative, reassuring | "Some users may see slower-than-normal response times. No data has been lost." |
 | SEV-4 (Cosmetic) | Brief, light | "The dashboard is showing stale data for some users. We are refreshing the cache." |
@@ -186,7 +186,7 @@ Current Status:
 - Root cause (one line)
 - Link to post-mortem (when published)
 
-### Post to `#stas-incidents` (internal):
+### Post to `#syntaro-incidents` (internal):
 
 ```
 Incident: INC-NNNN resolved.

@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The Ticket/Tasks-as-a-Service (TaaS) market in Germany and the broader EU represents a significant and growing opportunity. This analysis covers popular tools, market dynamics, GTM strategies, and actionable recommendations for STAS positioning in the DACH/EU market.
+The Ticket/Tasks-as-a-Service (TaaS) market in Germany and the broader EU represents a significant and growing opportunity. This analysis covers popular tools, market dynamics, GTM strategies, and actionable recommendations for SYNTARO positioning in the DACH/EU market.
 
 > **Key Finding**: The DACH enterprise SaaS market is a €24B+ market growing 12.2% annually. However, ~60% of international SaaS expansions fail in their first two years due to cultural, regulatory, and sales-cycle mismatches.
 
@@ -52,7 +52,7 @@ The Ticket/Tasks-as-a-Service (TaaS) market in Germany and the broader EU repres
 | **Jobticket+ (AllRide)** | Deutschlandticket SaaS | DACH | Tax-optimized job tickets, 50+ HR integrations |
 | **highQ** | Public transit ticketing | Germany | VDV-KA compliant SaaS ticketing |
 
-**Note**: No major DACH-specific AI SWE ticket-fixing tool was identified — this market gap is STAS's opportunity.
+**Note**: No major DACH-specific AI SWE ticket-fixing tool was identified — this market gap is SYNTARO's opportunity.
 
 ---
 
@@ -121,7 +121,7 @@ Business Sponsor (initiates)
 
 ---
 
-## 5. Market Gaps & Opportunities for STAS
+## 5. Market Gaps & Opportunities for SYNTARO
 
 ### Open Opportunities
 
@@ -142,14 +142,14 @@ Business Sponsor (initiates)
 
 ---
 
-## 6. Recommendations for STAS Positioning
+## 6. Recommendations for SYNTARO Positioning
 
 ### Immediate (0–3 months)
 
 - [ ] Produce German-language case studies
 - [ ] Prepare DACH-enterprise-ready DPA/AVV template
 - [ ] Create German-language landing page with EU pricing
-- [ ] Add `STAS_MODE=hosted` with EU data residency option
+- [ ] Add `SYNTARO_MODE=hosted` with EU data residency option
 - [ ] Document compliance posture (ISO 27001, SOC 2)
 
 ### Short-term (3–6 months)
@@ -170,7 +170,7 @@ Business Sponsor (initiates)
 
 ### Positioning Statement
 
-> **"STAS is your AI developer for European teams — works where you work (GitLab, Jira, Slack), speaks your language, and meets your compliance standards."**
+> **"SYNTARO is your AI developer for European teams — works where you work (GitLab, Jira, Slack), speaks your language, and meets your compliance standards."**
 
 ---
 

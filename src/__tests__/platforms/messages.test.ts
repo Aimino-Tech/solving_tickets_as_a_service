@@ -14,7 +14,7 @@ import { sampleAgentResult } from '../fixtures.js';
 // vi.hoisted keeps the object available inside the hoisted vi.mock factory.
 const { mockConfig } = vi.hoisted(() => ({
   mockConfig: {
-    stas: { botName: 'STAS', poweredByFooterEnabled: true },
+    syntaro: { botName: 'SYNTARO', poweredByFooterEnabled: true },
   },
 }));
 
@@ -44,11 +44,11 @@ describe('poweredByFooter', () => {
   });
 
   it('returns an empty string when the toggle is disabled', () => {
-    mockConfig.stas.poweredByFooterEnabled = false;
+    mockConfig.syntaro.poweredByFooterEnabled = false;
     try {
       expect(poweredByFooter('pr-footer')).toBe('');
     } finally {
-      mockConfig.stas.poweredByFooterEnabled = true;
+      mockConfig.syntaro.poweredByFooterEnabled = true;
     }
   });
 });
@@ -59,7 +59,7 @@ describe('buildPRBody', () => {
     result: sampleAgentResult(),
     fileLinks: ['src/login.ts'],
     isDraft: false,
-    branchName: 'stas/fix-42',
+    branchName: 'syntaro/fix-42',
   };
 
   it('appends the powered-by footer to the PR body when enabled', () => {
@@ -70,7 +70,7 @@ describe('buildPRBody', () => {
   });
 
   it('omits the footer when the toggle is disabled', () => {
-    mockConfig.stas.poweredByFooterEnabled = false;
+    mockConfig.syntaro.poweredByFooterEnabled = false;
     try {
       const body = buildPRBody(params);
       expect(body).not.toContain('Powered by [Syntaro]');
@@ -78,7 +78,7 @@ describe('buildPRBody', () => {
       // No dangling separator left behind either.
       expect(body.trimEnd()).not.toMatch(/---$/);
     } finally {
-      mockConfig.stas.poweredByFooterEnabled = true;
+      mockConfig.syntaro.poweredByFooterEnabled = true;
     }
   });
 });
@@ -97,12 +97,12 @@ describe('issue comment footers', () => {
   });
 
   it('omits the footer from both comments when the toggle is disabled', () => {
-    mockConfig.stas.poweredByFooterEnabled = false;
+    mockConfig.syntaro.poweredByFooterEnabled = false;
     try {
       expect(highConfidenceIssueComment(42, result)).not.toContain('Powered by [Syntaro]');
       expect(draftIssueComment(42, result)).not.toContain('Powered by [Syntaro]');
     } finally {
-      mockConfig.stas.poweredByFooterEnabled = true;
+      mockConfig.syntaro.poweredByFooterEnabled = true;
     }
   });
 });

@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Building an AI that plans before it codes: STAS architecture explained — STAS Blog</title>
-  <meta name="description" content="How STAS solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization." />
-  <meta name="keywords" content="STAS architecture, AI code generation, plan-first AI, automated bug fixing, GitHub bot architecture, OpenCode agent, code understanding AI" />
+  <title>Building an AI that plans before it codes: SYNTARO architecture explained — SYNTARO Blog</title>
+  <meta name="description" content="How SYNTARO solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization." />
+  <meta name="keywords" content="SYNTARO architecture, AI code generation, plan-first AI, automated bug fixing, GitHub bot architecture, OpenCode agent, code understanding AI" />
 
   <meta property="og:type" content="article" />
-  <meta property="og:url" content="https://stas.aimino.io/blog/architecture-deep-dive" />
-  <meta property="og:title" content="Building an AI that plans before it codes: STAS architecture explained" />
-  <meta property="og:description" content="How STAS solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization." />
-  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta property="og:url" content="https://syntaro.aimino.io/blog/architecture-deep-dive" />
+  <meta property="og:title" content="Building an AI that plans before it codes: SYNTARO architecture explained" />
+  <meta property="og:description" content="How SYNTARO solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization." />
+  <meta property="og:image" content="https://syntaro.aimino.io/img/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Building an AI that plans before it codes: STAS architecture explained" />
-  <meta name="twitter:description" content="How STAS solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization." />
-  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta name="twitter:title" content="Building an AI that plans before it codes: SYNTARO architecture explained" />
+  <meta name="twitter:description" content="How SYNTARO solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization." />
+  <meta name="twitter:image" content="https://syntaro.aimino.io/img/og-image.png" />
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
-    "headline": "Building an AI that plans before it codes: STAS architecture explained",
+    "headline": "Building an AI that plans before it codes: SYNTARO architecture explained",
     "datePublished": "2026-07-28",
     "author": {
       "@type": "Organization",
@@ -35,11 +35,11 @@
       "@type": "Organization",
       "name": "AImino"
     },
-    "description": "How STAS solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization."
+    "description": "How SYNTARO solves GitHub issues with a plan-first architecture — triage, sandbox, investigate, verify, PR. Deep dive into context management, graph-based code understanding, and cost optimization."
   }
   </script>
 
-  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+  <script defer data-domain="syntaro.aimino.io" src="https://plausible.io/js/script.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -80,7 +80,7 @@
   <!-- NAV -->
   <nav class="nav" role="navigation" aria-label="Main navigation">
     <div class="nav-inner">
-      <a href="/" class="nav-logo"><span class="logo-icon">S</span> STAS</a>
+      <a href="/" class="nav-logo"><span class="logo-icon">S</span> SYNTARO</a>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
       <ul class="nav-links" id="navLinks">
         <li><a href="/">Home</a></li>
@@ -89,7 +89,7 @@
         <li><a href="/docs">Docs</a></li>
         <li><a href="/blog">Blog</a></li>
         <li><a href="/status">Status</a></li>
-        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta">Install App →</a></li>
+        <li><a href="https://github.com/apps/syntaro-app/installations/new" class="nav-cta">Install App →</a></li>
       </ul>
     </div>
   </nav>
@@ -101,7 +101,7 @@
         <span class="tag tag-green">Engineering</span>
         <span class="tag tag-purple">Architecture</span>
       </div>
-      <h1>Building an AI that plans before it codes: STAS architecture explained</h1>
+      <h1>Building an AI that plans before it codes: SYNTARO architecture explained</h1>
       <div class="meta">
         <span class="author">
           <span class="author-avatar">AT</span>
@@ -129,11 +129,11 @@
 
       <p>These aren't edge cases — they're the dominant failure mode of reactive generation. And they're fundamentally unsolvable by better model architecture alone. The problem isn't the quality of code generation; it's the absence of planning.</p>
 
-      <h2>Plan-first architecture: how STAS approaches fixes differently</h2>
+      <h2>Plan-first architecture: how SYNTARO approaches fixes differently</h2>
 
-      <p>STAS (Solving Tickets As A Service) takes the opposite approach. Before a single line of code is generated, STAS executes a multi-phase investigation pipeline that builds a structured understanding of the issue, the codebase, and the expected outcome.</p>
+      <p>SYNTARO (Solving Tickets As A Service) takes the opposite approach. Before a single line of code is generated, SYNTARO executes a multi-phase investigation pipeline that builds a structured understanding of the issue, the codebase, and the expected outcome.</p>
 
-      <pre><code>Issue labeled stas:fix
+      <pre><code>Issue labeled syntaro:fix
         │
         ▼
     ┌─────────────┐
@@ -180,7 +180,7 @@
     📬 Draft PR on GitHub</code></pre>
 
       <div class="highlight-box">
-        <p>The key insight is that <strong>phases 1–5 are entirely about understanding</strong>. By the time the OpenCode agent starts writing code in phase 6, STAS has already:</p>
+        <p>The key insight is that <strong>phases 1–5 are entirely about understanding</strong>. By the time the OpenCode agent starts writing code in phase 6, SYNTARO has already:</p>
       </div>
 
       <ol>
@@ -201,7 +201,7 @@
 
       <p>The single biggest challenge in AI-assisted code repair is the context window. Modern frontier models have 200K+ token windows, but filling them with irrelevant code is worse than useless — it dilutes the signal-to-noise ratio and degrades output quality.</p>
 
-      <p>STAS uses a <strong>multi-tiered context strategy</strong>:</p>
+      <p>SYNTARO uses a <strong>multi-tiered context strategy</strong>:</p>
 
       <ul>
         <li><strong>Issue context</strong> (triage phase): Cap at 8K tokens. Most GitHub issues are under 4K, but issue comments can balloon. We truncate old comments and prioritize the issue body, the most recent comments, and any code snippets.</li>
@@ -213,9 +213,9 @@
 
       <h3>Graph-based code understanding</h3>
 
-      <p>Most AI coding tools treat a codebase as a flat list of files. STAS treats it as a <strong>directed graph of symbols and their relationships</strong>.</p>
+      <p>Most AI coding tools treat a codebase as a flat list of files. SYNTARO treats it as a <strong>directed graph of symbols and their relationships</strong>.</p>
 
-      <p>When the sandbox boots, STAS runs a code intelligence pass that extracts:</p>
+      <p>When the sandbox boots, SYNTARO runs a code intelligence pass that extracts:</p>
 
       <ul>
         <li><strong>Symbol definitions</strong>: Every function, class, interface, type, and variable declaration.</li>
@@ -224,7 +224,7 @@
         <li><strong>Type dependencies</strong>: Cross-file type references that would break if a signature changes.</li>
       </ul>
 
-      <p>This graph serves two purposes. First, it helps the agent navigate the codebase — instead of guessing which file contains the <code>UserService</code> class, it can look it up. Second, it enables <strong>impact analysis</strong>: when the agent proposes a change to <code>auth.ts</code>, STAS can immediately surface all files that import from <code>auth.ts</code> and flag potential breakage.</p>
+      <p>This graph serves two purposes. First, it helps the agent navigate the codebase — instead of guessing which file contains the <code>UserService</code> class, it can look it up. Second, it enables <strong>impact analysis</strong>: when the agent proposes a change to <code>auth.ts</code>, SYNTARO can immediately surface all files that import from <code>auth.ts</code> and flag potential breakage.</p>
 
       <h3>Cost optimization per fix</h3>
 
@@ -269,7 +269,7 @@
 
       <h2>Benchmarks</h2>
 
-      <p>These numbers reflect STAS's performance on a curated benchmark of 500 real GitHub issues across 50 open-source JavaScript/TypeScript repositories:</p>
+      <p>These numbers reflect SYNTARO's performance on a curated benchmark of 500 real GitHub issues across 50 open-source JavaScript/TypeScript repositories:</p>
 
       <table>
         <thead>
@@ -314,29 +314,29 @@
         </tbody>
       </table>
 
-      <p>These are <strong>real-world numbers from production usage</strong> — not a curated benchmark like SWE-bench. We believe real-world performance is more meaningful for developers evaluating whether to trust STAS with their codebase.</p>
+      <p>These are <strong>real-world numbers from production usage</strong> — not a curated benchmark like SWE-bench. We believe real-world performance is more meaningful for developers evaluating whether to trust SYNTARO with their codebase.</p>
 
       <h2>Honest limitations</h2>
 
-      <p>STAS is good at bug fixes. It is not good at everything, and we want to be transparent about where it struggles.</p>
+      <p>SYNTARO is good at bug fixes. It is not good at everything, and we want to be transparent about where it struggles.</p>
 
-      <h3>Where STAS fails</h3>
+      <h3>Where SYNTARO fails</h3>
 
-      <p><strong>Architectural decisions.</strong> If an issue requires choosing between two fundamentally different approaches — "should we migrate from REST to GraphQL?" or "should we extract this module into a microservice?" — STAS will produce an answer, but it lacks the context of your team's priorities, operational constraints, and long-term roadmap. These decisions remain firmly in human territory.</p>
+      <p><strong>Architectural decisions.</strong> If an issue requires choosing between two fundamentally different approaches — "should we migrate from REST to GraphQL?" or "should we extract this module into a microservice?" — SYNTARO will produce an answer, but it lacks the context of your team's priorities, operational constraints, and long-term roadmap. These decisions remain firmly in human territory.</p>
 
-      <p><strong>New feature design.</strong> Building a new feature from scratch — especially one with UX implications, API design tradeoffs, or backward-compatibility concerns — is outside STAS's sweet spot. It can scaffold the implementation once the design is specified, but the design itself needs human judgment.</p>
+      <p><strong>New feature design.</strong> Building a new feature from scratch — especially one with UX implications, API design tradeoffs, or backward-compatibility concerns — is outside SYNTARO's sweet spot. It can scaffold the implementation once the design is specified, but the design itself needs human judgment.</p>
 
-      <p><strong>Multi-file refactors requiring human judgment.</strong> Renaming a symbol across 50 files is something STAS can do mechanically (and does well). But deciding <em>whether</em> to rename it, or choosing a naming convention that aligns with your team's evolving standards, is a human call.</p>
+      <p><strong>Multi-file refactors requiring human judgment.</strong> Renaming a symbol across 50 files is something SYNTARO can do mechanically (and does well). But deciding <em>whether</em> to rename it, or choosing a naming convention that aligns with your team's evolving standards, is a human call.</p>
 
-      <p><strong>Issues with insufficient context.</strong> If a bug report says "it crashes sometimes" with no reproduction steps, STAS will try — but the success rate drops sharply. We surface a confidence score on every fix, and issues below a threshold are flagged for human review.</p>
+      <p><strong>Issues with insufficient context.</strong> If a bug report says "it crashes sometimes" with no reproduction steps, SYNTARO will try — but the success rate drops sharply. We surface a confidence score on every fix, and issues below a threshold are flagged for human review.</p>
 
       <h3>What this means for your workflow</h3>
 
-      <p>STAS is best thought of as a <strong>highly capable junior developer</strong> that works at machine speed. It handles the bugs that are well-defined, locally scoped, and have clear success criteria. It doesn't replace code review or architectural oversight — it frees your senior developers to focus on those things by handling the backlog of well-understood fixes.</p>
+      <p>SYNTARO is best thought of as a <strong>highly capable junior developer</strong> that works at machine speed. It handles the bugs that are well-defined, locally scoped, and have clear success criteria. It doesn't replace code review or architectural oversight — it frees your senior developers to focus on those things by handling the backlog of well-understood fixes.</p>
 
       <h2>Technical stack</h2>
 
-      <p>STAS is built on a deliberately pragmatic stack:</p>
+      <p>SYNTARO is built on a deliberately pragmatic stack:</p>
 
       <table>
         <thead>
@@ -414,22 +414,22 @@
       <ul>
         <li><strong>Multi-step planning</strong>: For complex issues, the agent will produce a multi-file design document first, get sign-off from the investigation phase, then proceed to implementation.</li>
         <li><strong>Test generation first</strong>: Before any fix code, generate a failing test that reproduces the bug. Fix against the test. This inverts the pipeline to be even more rigorous.</li>
-        <li><strong>Self-healing fixes</strong>: If a fix passes verification locally but fails CI, STAS will automatically retry with the CI failure output as additional context.</li>
+        <li><strong>Self-healing fixes</strong>: If a fix passes verification locally but fails CI, SYNTARO will automatically retry with the CI failure output as additional context.</li>
       </ul>
 
       <div class="highlight-box">
-        <p>The fundamental belief driving STAS is this: <strong>AI coding tools fail not because they can't write code, but because they don't understand what to write.</strong> By investing in understanding first and generating second, we believe we can eventually handle a much broader class of issues — including the architectural and design problems that remain firmly in human territory today.</p>
+        <p>The fundamental belief driving SYNTARO is this: <strong>AI coding tools fail not because they can't write code, but because they don't understand what to write.</strong> By investing in understanding first and generating second, we believe we can eventually handle a much broader class of issues — including the architectural and design problems that remain firmly in human territory today.</p>
       </div>
 
-      <p><em>STAS — Solving Tickets As A Service. <a href="https://stas.aimino.io">Label a GitHub issue. Get a pull request.</a></em></p>
+      <p><em>SYNTARO — Solving Tickets As A Service. <a href="https://syntaro.aimino.io">Label a GitHub issue. Get a pull request.</a></em></p>
 
-      <p><em>This is a cross-post. The canonical version lives at <a href="https://stas.aimino.io/blog/architecture-deep-dive">stas.aimino.io/blog/architecture-deep-dive</a>.</em></p>
+      <p><em>This is a cross-post. The canonical version lives at <a href="https://syntaro.aimino.io/blog/architecture-deep-dive">syntaro.aimino.io/blog/architecture-deep-dive</a>.</em></p>
 
     </div>
 
     <div class="blog-post-nav">
       <a href="/blog">← Back to Blog</a>
-      <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" data-track="post-cta">Install STAS →</a>
+      <a href="https://github.com/apps/syntaro-app/installations/new" class="btn btn-primary" data-track="post-cta">Install SYNTARO →</a>
     </div>
   </article>
 
@@ -437,7 +437,7 @@
   <footer class="footer">
     <div class="footer-inner">
       <div class="footer-brand">
-        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> SYNTARO</a>
         <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
       </div>
       <div>
@@ -456,7 +456,7 @@
           <li><a href="/blog">Blog</a></li>
           <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
           <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
-          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+          <li><a href="https://github.com/marketplace/actions/syntaro-eval">Marketplace</a></li>
         </ul>
       </div>
       <div>

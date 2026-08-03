@@ -6,7 +6,7 @@
 # Run: litellm --config proxy_config.yaml
 #
 # How it works:
-#   1. OpenCode/STAS agent sends a request to LiteLLM proxy
+#   1. OpenCode/SYNTARO agent sends a request to LiteLLM proxy
 #   2. LiteLLM forwards to the LLM (deepseek, anthropic, openai)
 #   3. LLM responds with content + reasoning/thinking traces
 #   4. SlopIntentGuardrail inspects ALL of the above for slop patterns

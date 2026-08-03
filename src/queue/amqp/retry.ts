@@ -13,7 +13,7 @@ export interface RetryConfig {
 export const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 4,
   delaysMs: [30_000, 120_000, 300_000, 900_000],
-  deadLetterExchange: 'stas.dlx',
+  deadLetterExchange: 'syntaro.dlx',
 };
 
 export function getDelayForRetry(retryCount: number): number {
@@ -22,7 +22,7 @@ export function getDelayForRetry(retryCount: number): number {
 }
 
 export function getRetryQueueName(retryCount: number): string {
-  const names = ['stas.retry.30s', 'stas.retry.2m', 'stas.retry.5m', 'stas.retry.15m'];
+  const names = ['syntaro.retry.30s', 'syntaro.retry.2m', 'syntaro.retry.5m', 'syntaro.retry.15m'];
   return names[Math.min(retryCount, names.length - 1)] ?? names[names.length - 1];
 }
 

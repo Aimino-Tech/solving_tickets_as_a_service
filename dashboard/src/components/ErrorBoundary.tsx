@@ -28,7 +28,7 @@ function logError(error: Error, errorInfo: ErrorInfo): void {
 
   // Persist to localStorage for offline debugging
   try {
-    const LOG_KEY = 'stas:error-boundary-log';
+    const LOG_KEY = 'syntaro:error-boundary-log';
     const existing: unknown[] = JSON.parse(localStorage.getItem(LOG_KEY) ?? '[]');
     existing.push(entry);
     // Keep last 20 entries

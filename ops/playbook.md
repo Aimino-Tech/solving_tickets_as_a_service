@@ -1,4 +1,4 @@
-# STAS Alert Response Playbooks
+# SYNTARO Alert Response Playbooks
 
 > Solving Tickets As A Service — Incident Response
 > Last updated: 2026-06-08
@@ -19,7 +19,7 @@
 
 ### Alert Condition
 
-`stas_queue_depth > 100` for > 5 minutes
+`syntaro_queue_depth > 100` for > 5 minutes
 
 ### Severity
 
@@ -44,22 +44,22 @@ curl -u guest:guest http://localhost:15672/api/queues \
 #### Step 1: Scale Workers (1 min)
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=8 stas-worker
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=8 syntaro-worker
 ```
 
 #### Step 2: Identify Bottleneck (3 min)
 
 ```bash
 # Check if workers are processing or stuck
-docker compose -f docker-compose.prod.yml logs --tail=30 stas-worker
+docker compose -f docker-compose.prod.yml logs --tail=30 syntaro-worker
 
 # Check for error patterns
-docker compose -f docker-compose.prod.yml logs stas-worker \
+docker compose -f docker-compose.prod.yml logs syntaro-worker \
   | grep -E "error|Error|ERROR|exception|Exception" \
   | tail -20
 
 # Check recent job failures
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   SELECT status, count(*) as count,
          round(avg(extract(epoch from (completed_at - started_at)))::numeric, 1) as avg_duration_s
   FROM run_history
@@ -85,7 +85,7 @@ watch -n 5 'curl -s -u guest:guest http://localhost:15672/api/queues | jq ".[] |
 
 ```bash
 # When queue is below 20
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4 stas-worker
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=4 syntaro-worker
 ```
 
 ### Prevention
@@ -110,7 +110,7 @@ docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4 stas-worke
 
 ```bash
 # Check recent agent runs
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   SELECT status, count(*) as count
   FROM run_history
   WHERE created_at > NOW() - INTERVAL '24 hours'
@@ -118,7 +118,7 @@ docker compose exec stas-postgres psql -U stas -c "
 "
 
 # Check failed runs
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   SELECT issue_title, error_message, created_at
   FROM run_history
   WHERE status = 'failed'
@@ -177,7 +177,7 @@ git log --oneline -10
 
 ### Alert Condition
 
-`stas_webhooks_failed_total` increases rapidly
+`syntaro_webhooks_failed_total` increases rapidly
 
 ### Severity
 
@@ -187,7 +187,7 @@ git log --oneline -10
 
 ```bash
 # Check recent webhook deliveries
-docker compose -f docker-compose.prod.yml logs --tail=50 stas-webhook | grep -i "webhook"
+docker compose -f docker-compose.prod.yml logs --tail=50 syntaro-webhook | grep -i "webhook"
 
 # Check GitHub App webhook dashboard
 # https://github.com/settings/apps/<app-name>/advanced
@@ -215,14 +215,14 @@ grep GITHUB_WEBHOOK_SECRET .env
 #### Step 2: Check Recent Failures (2 min)
 
 ```bash
-docker compose -f docker-compose.prod.yml logs --tail=100 stas-webhook | grep -E "error|Error|fail|status: [45]"
+docker compose -f docker-compose.prod.yml logs --tail=100 syntaro-webhook | grep -E "error|Error|fail|status: [45]"
 ```
 
 #### Step 3: Test Webhook Delivery (2 min)
 
 ```bash
 # Simulate a webhook (if smee or test tool available)
-bash plugin/tools/stas-webhook-test.sh issues.labeled
+bash plugin/tools/syntaro-webhook-test.sh issues.labeled
 ```
 
 #### Step 4: Redeliver Failed Webhooks (1 min)
@@ -245,7 +245,7 @@ bash plugin/tools/stas-webhook-test.sh issues.labeled
 
 ### Alert Condition
 
-`stas_worker_count == 0` for > 2 minutes
+`syntaro_worker_count == 0` for > 2 minutes
 
 ### Severity
 
@@ -255,10 +255,10 @@ bash plugin/tools/stas-webhook-test.sh issues.labeled
 
 ```bash
 # Check if workers are running
-docker compose -f docker-compose.prod.yml ps stas-worker
+docker compose -f docker-compose.prod.yml ps syntaro-worker
 
 # Check worker logs
-docker compose -f docker-compose.prod.yml logs --tail=30 stas-worker
+docker compose -f docker-compose.prod.yml logs --tail=30 syntaro-worker
 ```
 
 ### Remediation
@@ -266,17 +266,17 @@ docker compose -f docker-compose.prod.yml logs --tail=30 stas-worker
 #### Step 1: Restart Workers (1 min)
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4 stas-worker
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=4 syntaro-worker
 ```
 
 #### Step 2: Check for Crashes (2 min)
 
 ```bash
 # Check exit codes
-docker ps -a --filter "name=stas-worker" --format "table {{.Names}}\t{{.Status}}\t{{.ExitCode}}"
+docker ps -a --filter "name=syntaro-worker" --format "table {{.Names}}\t{{.Status}}\t{{.ExitCode}}"
 
 # Check OOM kills
-docker compose -f docker-compose.prod.yml logs stas-worker | grep -i "killed\|OOM\|exit code 137"
+docker compose -f docker-compose.prod.yml logs syntaro-worker | grep -i "killed\|OOM\|exit code 137"
 ```
 
 #### Step 3: Check RabbitMQ Connection (1 min)
@@ -297,7 +297,7 @@ docker compose -f docker-compose.prod.yml exec rabbitmq rabbitmq-diagnostics che
 
 ### Alert Condition
 
-`stas_rate_limit_remaining == 0` for any tier
+`syntaro_rate_limit_remaining == 0` for any tier
 
 ### Severity
 
@@ -311,7 +311,7 @@ curl -H "Authorization: Bearer $GITHUB_TOKEN" \
   https://api.github.com/rate_limit | jq '.resources.core'
 
 # Check per-tier limits
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   SELECT account_tier, count(*) as accounts, sum(rate_limit) as total_capacity
   FROM accounts
   GROUP BY account_tier;
@@ -324,11 +324,11 @@ docker compose exec stas-postgres psql -U stas -c "
 
 ```bash
 # Check recent webhook volume
-docker compose -f docker-compose.prod.yml logs --tail=200 stas-webhook \
+docker compose -f docker-compose.prod.yml logs --tail=200 syntaro-webhook \
   | grep "webhook received" | wc -l
 
 # Check per-repo distribution
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   SELECT repo_name, count(*) as webhook_count
   FROM webhook_events
   WHERE created_at > NOW() - INTERVAL '1 hour'
@@ -342,7 +342,7 @@ docker compose exec stas-postgres psql -U stas -c "
 
 ```bash
 # For urgent cases, temporarily increase tier limits
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   UPDATE accounts SET rate_limit = rate_limit * 2
   WHERE account_tier = 'pro' AND rate_limit < 100;
 "
@@ -352,7 +352,7 @@ docker compose exec stas-postgres psql -U stas -c "
 
 ```bash
 # If counters are stuck, restart rate limit service
-docker compose -f docker-compose.prod.yml restart stas-webhook
+docker compose -f docker-compose.prod.yml restart syntaro-webhook
 ```
 
 ### Prevention
@@ -433,14 +433,14 @@ PostgreSQL connections > 80% of `max_connections`
 
 ```bash
 # Check connection count
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   SELECT state, count(*) as connections
   FROM pg_stat_activity
   GROUP BY state;
 "
 
 # Check long-running queries
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   SELECT pid, now() - pg_stat_activity.query_start AS duration,
          query, state
   FROM pg_stat_activity
@@ -455,7 +455,7 @@ docker compose exec stas-postgres psql -U stas -c "
 #### Step 1: Kill Idle Connections (1 min)
 
 ```bash
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   SELECT pg_terminate_backend(pid)
   FROM pg_stat_activity
   WHERE state = 'idle'
@@ -467,9 +467,9 @@ docker compose exec stas-postgres psql -U stas -c "
 
 ```bash
 # Update docker-compose.prod.yml or restart with env var
-docker compose -f docker-compose.prod.yml stop stas-webhook stas-worker
-docker compose -f docker-compose.prod.yml run -e PGPoolSize=50 -d stas-webhook
-docker compose -f docker-compose.prod.yml up -d stas-worker
+docker compose -f docker-compose.prod.yml stop syntaro-webhook syntaro-worker
+docker compose -f docker-compose.prod.yml run -e PGPoolSize=50 -d syntaro-webhook
+docker compose -f docker-compose.prod.yml up -d syntaro-worker
 ```
 
 #### Step 3: Add PgBouncer (permanent fix)
@@ -479,7 +479,7 @@ docker compose -f docker-compose.prod.yml up -d stas-worker
 pgbouncer:
   image: edoburu/pgbouncer:latest
   environment:
-    - DATABASE_URL=postgres://stas:password@stas-postgres:5432/stas
+    - DATABASE_URL=postgres://syntaro:password@syntaro-postgres:5432/syntaro
     - POOL_MODE=transaction
     - MAX_CLIENT_CONN=200
     - DEFAULT_POOL_SIZE=20
@@ -507,10 +507,10 @@ pgbouncer:
 
 ```bash
 # Check DLQ contents
-docker compose exec redis redis-cli LRANGE "bullq:stas-issues-dlq" 0 -1 | head -20
+docker compose exec redis redis-cli LRANGE "bullq:syntaro-issues-dlq" 0 -1 | head -20
 
 # Check recent failed jobs
-docker compose exec postgres psql -U stas -c "
+docker compose exec postgres psql -U syntaro -c "
   SELECT id, type, error_message, created_at
   FROM run_history
   WHERE status = 'failed'
@@ -526,17 +526,17 @@ docker compose exec postgres psql -U stas -c "
 
 ```bash
 # Check if failures are from same queue
-docker compose logs stas-worker --tail 100 | grep "DLQ\|DeadLetter\|dead_letter"
+docker compose logs syntaro-worker --tail 100 | grep "DLQ\|DeadLetter\|dead_letter"
 
 # Check for recurring errors
-docker compose logs stas-worker --tail 200 | grep -oP "Error:.*" | sort | uniq -c | sort -rn
+docker compose logs syntaro-worker --tail 200 | grep -oP "Error:.*" | sort | uniq -c | sort -rn
 ```
 
 #### Step 2: Drain DLQ (2 min)
 
 ```bash
 # Re-queue DLQ messages
-docker compose exec redis redis-cli LMOVE "bullq:stas-issues-dlq" "bullq:stas-issues" LEFT RIGHT
+docker compose exec redis redis-cli LMOVE "bullq:syntaro-issues-dlq" "bullq:syntaro-issues" LEFT RIGHT
 ```
 
 #### Step 3: Monitor Re-processing (1 min)
@@ -583,10 +583,10 @@ curl -s http://localhost:9464/metrics | grep "api_requests_total" | sort -t} -k2
 
 ```bash
 # Check if cost spike correlates with fix rate
-docker compose logs stas-webhook --tail 50 | grep "fix\|opencode\|inference"
+docker compose logs syntaro-webhook --tail 50 | grep "fix\|opencode\|inference"
 
 # Check if specific model is more expensive
-docker compose exec postgres psql -U stas -c "
+docker compose exec postgres psql -U syntaro -c "
   SELECT model, count(*) as fixes, round(avg(cost)::numeric, 4) as avg_cost
   FROM run_history
   WHERE created_at > NOW() - INTERVAL '24 hours'

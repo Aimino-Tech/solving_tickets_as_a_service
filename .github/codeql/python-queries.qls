@@ -1,4 +1,4 @@
-- description: STAS Python Security Suite
+- description: SYNTARO Python Security Suite
 - warnOn: all
 - include:
     kind: [problem, path-problem, alert, path-alert]

@@ -8,7 +8,7 @@ router.get('/monitoring', (_req: Request, res: Response) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>STAS Monitoring</title>
+  <title>SYNTARO Monitoring</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
@@ -19,7 +19,7 @@ router.get('/monitoring', (_req: Request, res: Response) => {
   <nav class="border-b border-gray-800 px-6 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <span class="text-lg">⚡</span>
-      <h1 class="text-lg font-bold">STAS Monitoring</h1>
+      <h1 class="text-lg font-bold">SYNTARO Monitoring</h1>
       <span id="liveBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs bg-green-900/50 text-green-400 border border-green-800">
         <span class="live-dot w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span>
         LIVE
@@ -215,7 +215,7 @@ export const html = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>STAS Monitoring</title>
+  <title>SYNTARO Monitoring</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
@@ -226,7 +226,7 @@ export const html = `<!DOCTYPE html>
   <nav class="border-b border-gray-800 px-6 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <span class="text-lg">⚡</span>
-      <h1 class="text-lg font-bold">STAS Monitoring</h1>
+      <h1 class="text-lg font-bold">SYNTARO Monitoring</h1>
       <span id="liveBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs bg-green-900/50 text-green-400 border border-green-800">
         <span class="live-dot w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span>
         LIVE

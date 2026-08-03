@@ -70,7 +70,7 @@ class TestCostPersistence:
 
         assert result is True
         fake_redis.set.assert_called_once()
-        assert "stas:cost:run-010" in fake_redis.set.call_args[0][0]
+        assert "syntaro:cost:run-010" in fake_redis.set.call_args[0][0]
         saved = json.loads(fake_redis.set.call_args[0][1])
         assert saved["total_cost_cents"] == 250
 
@@ -126,7 +126,7 @@ class TestCostPersistence:
 
     def test_get_all_costs_scans_keys(self, monkeypatch: pytest.MonkeyPatch) -> None:
         fake_redis = MagicMock()
-        fake_redis.scan.return_value = (0, ["stas:cost:run-020", "stas:cost:run-021"])
+        fake_redis.scan.return_value = (0, ["syntaro:cost:run-020", "syntaro:cost:run-021"])
         fake_redis.get.side_effect = [
             json.dumps({"run_id": "run-020", "model_name": "test",
                         "total_cost_cents": 100, "duration_seconds": 30,
@@ -157,8 +157,8 @@ class TestCostPersistence:
                           total_cost_cents=250)
         result = record_cost(entry)
         assert result is True
-        fake_redis.hincrby.assert_any_call("stas:cost:aggregate", "total_runs", 1)
-        fake_redis.hincrby.assert_any_call("stas:cost:aggregate", "total_cost_cents", 250)
+        fake_redis.hincrby.assert_any_call("syntaro:cost:aggregate", "total_runs", 1)
+        fake_redis.hincrby.assert_any_call("syntaro:cost:aggregate", "total_cost_cents", 250)
 
 
 class TestFormatting:

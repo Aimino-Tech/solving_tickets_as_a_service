@@ -15,30 +15,30 @@ describe('API client', () => {
   describe('token management', () => {
     it('setToken stores token in localStorage', () => {
       client.setToken('my-token');
-      expect(localStorage.getItem('stas_token')).toBe('my-token');
+      expect(localStorage.getItem('syntaro_token')).toBe('my-token');
     });
 
     it('getRefreshToken returns refresh token from localStorage', () => {
-      localStorage.setItem('stas_refresh_token', 'my-refresh');
+      localStorage.setItem('syntaro_refresh_token', 'my-refresh');
       expect(client.getRefreshToken()).toBe('my-refresh');
     });
 
     it('clearToken removes both tokens', () => {
-      localStorage.setItem('stas_token', 't');
-      localStorage.setItem('stas_refresh_token', 'rt');
+      localStorage.setItem('syntaro_token', 't');
+      localStorage.setItem('syntaro_refresh_token', 'rt');
       client.clearToken();
-      expect(localStorage.getItem('stas_token')).toBeNull();
-      expect(localStorage.getItem('stas_refresh_token')).toBeNull();
+      expect(localStorage.getItem('syntaro_token')).toBeNull();
+      expect(localStorage.getItem('syntaro_refresh_token')).toBeNull();
     });
 
     it('getToken returns null when no token', () => {
-      expect(localStorage.getItem('stas_token')).toBeNull();
+      expect(localStorage.getItem('syntaro_token')).toBeNull();
     });
   });
 
   describe('request', () => {
     it('includes Authorization header when token exists', async () => {
-      localStorage.setItem('stas_token', 'test-jwt');
+      localStorage.setItem('syntaro_token', 'test-jwt');
       (window.fetch as any).mockResolvedValue({
         ok: true, status: 200,
         json: () => Promise.resolve({ data: 'ok' }),
@@ -75,14 +75,14 @@ describe('API client', () => {
     });
 
     it('throws on 401 without refresh token and clears token for auth endpoints', async () => {
-      localStorage.setItem('stas_token', 'expired');
+      localStorage.setItem('syntaro_token', 'expired');
       (window.fetch as any).mockResolvedValue({
         ok: false, status: 401,
         json: () => Promise.resolve({ error: 'Unauthorized' }),
       });
 
       await expect(client.request('/v1/auth/me')).rejects.toThrow('Unauthorized');
-      expect(localStorage.getItem('stas_token')).toBeNull();
+      expect(localStorage.getItem('syntaro_token')).toBeNull();
     });
 
     it('throws on 401 for login with proper message', async () => {
@@ -100,8 +100,8 @@ describe('API client', () => {
     });
 
     it('tries refresh token on 401 and retries successfully', async () => {
-      localStorage.setItem('stas_token', 'expired');
-      localStorage.setItem('stas_refresh_token', 'valid-refresh');
+      localStorage.setItem('syntaro_token', 'expired');
+      localStorage.setItem('syntaro_refresh_token', 'valid-refresh');
 
       let callCount = 0;
       (window.fetch as any).mockImplementation(async (_url: string, opts?: RequestInit) => {
@@ -177,7 +177,7 @@ describe('API client', () => {
     });
 
     it('merges custom headers from options', async () => {
-      localStorage.setItem('stas_token', 'tok');
+      localStorage.setItem('syntaro_token', 'tok');
       (window.fetch as any).mockResolvedValue({
         ok: true, status: 200,
         json: () => Promise.resolve({}),
@@ -192,7 +192,7 @@ describe('API client', () => {
     });
 
     it('401 on non-auth endpoint redirects to /login when no refresh token', async () => {
-      localStorage.setItem('stas_token', 'expired');
+      localStorage.setItem('syntaro_token', 'expired');
       (window.fetch as any).mockResolvedValue({
         ok: false, status: 401,
         json: () => Promise.resolve({ error: 'Unauthorized' }),
@@ -200,12 +200,12 @@ describe('API client', () => {
 
       await expect(client.request('/v1/credits/balance')).rejects.toThrow('Unauthorized');
       expect(window.location.href).toBe('/login');
-      expect(localStorage.getItem('stas_token')).toBeNull();
+      expect(localStorage.getItem('syntaro_token')).toBeNull();
     });
 
     it('401 on non-auth endpoint redirects to /login when refresh fails', async () => {
-      localStorage.setItem('stas_token', 'expired');
-      localStorage.setItem('stas_refresh_token', 'expired-refresh');
+      localStorage.setItem('syntaro_token', 'expired');
+      localStorage.setItem('syntaro_refresh_token', 'expired-refresh');
       (window.fetch as any).mockImplementation(async (url: string) => {
         if (url.includes('/auth/refresh')) {
           return { ok: false, status: 401, json: () => Promise.resolve({}) };
@@ -218,7 +218,7 @@ describe('API client', () => {
     });
 
     it('401 on /auth/login does NOT redirect', async () => {
-      localStorage.setItem('stas_token', 'some-token');
+      localStorage.setItem('syntaro_token', 'some-token');
       (window.fetch as any).mockResolvedValue({
         ok: false, status: 401,
         json: () => Promise.resolve({ error: 'Invalid credentials' }),
@@ -231,11 +231,11 @@ describe('API client', () => {
 
       expect(err.message).toBe('Invalid login credentials');
       expect(window.location.href).toBe('');
-      expect(localStorage.getItem('stas_token')).toBe('some-token');
+      expect(localStorage.getItem('syntaro_token')).toBe('some-token');
     });
 
     it('401 on /auth/register does NOT redirect', async () => {
-      localStorage.setItem('stas_token', 'some-token');
+      localStorage.setItem('syntaro_token', 'some-token');
       (window.fetch as any).mockResolvedValue({
         ok: false, status: 401,
         json: () => Promise.resolve({ error: 'Invalid credentials' }),
@@ -248,12 +248,12 @@ describe('API client', () => {
 
       expect(err.message).toBe('Invalid login credentials');
       expect(window.location.href).toBe('');
-      expect(localStorage.getItem('stas_token')).toBe('some-token');
+      expect(localStorage.getItem('syntaro_token')).toBe('some-token');
     });
 
     it('regression: 401 with successful refresh and retry returns data', async () => {
-      localStorage.setItem('stas_token', 'expired');
-      localStorage.setItem('stas_refresh_token', 'valid-refresh');
+      localStorage.setItem('syntaro_token', 'expired');
+      localStorage.setItem('syntaro_refresh_token', 'valid-refresh');
       let callCount = 0;
       (window.fetch as any).mockImplementation(async (url: string, _opts?: RequestInit) => {
         callCount++;

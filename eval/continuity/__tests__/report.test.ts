@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { HarnessSummary } from '../lib/runner.js';
 import { buildReport, renderMarkdown, writeReport } from '../report.js';
 

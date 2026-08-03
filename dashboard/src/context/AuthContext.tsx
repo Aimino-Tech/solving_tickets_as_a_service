@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const token = (() => {
-      try { return localStorage.getItem('stas_token'); } catch { return null; }
+      try { return localStorage.getItem('syntaro_token'); } catch { return null; }
     })();
     if (token) {
       auth

@@ -10,7 +10,7 @@ const repoRoot = resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 const tsxCli = join(repoRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 const cliEntry = join(repoRoot, 'src', 'template', 'cli.ts');
 
-const ISSUE_TITLE = 'STAS Quickstart Demo — Fix Me';
+const ISSUE_TITLE = 'SYNTARO Quickstart Demo — Fix Me';
 const PR_URL = 'https://github.com/alice/awesome-project/pull/42';
 
 interface ApiCall {
@@ -19,7 +19,7 @@ interface ApiCall {
   body?: unknown;
 }
 
-describe('stas quickstart --skip-prompts end-to-end (fresh environment)', () => {
+describe('syntaro quickstart --skip-prompts end-to-end (fresh environment)', () => {
   let server: Server;
   let port: number;
   let tempHome: string;
@@ -68,7 +68,7 @@ describe('stas quickstart --skip-prompts end-to-end (fresh environment)', () => 
         }
         if (req.method === 'GET' && url.pathname === '/repos/alice/awesome-project/issues/7/comments') {
           commentCalls += 1;
-          const body = commentCalls === 1 ? [] : [{ body: `STAS opened ${PR_URL} to fix this` }];
+          const body = commentCalls === 1 ? [] : [{ body: `SYNTARO opened ${PR_URL} to fix this` }];
           res.end(JSON.stringify(body));
           return;
         }
@@ -91,7 +91,7 @@ describe('stas quickstart --skip-prompts end-to-end (fresh environment)', () => 
   beforeEach(async () => {
     calls = [];
     commentCalls = 0;
-    tempHome = mkdtempSync(join(tmpdir(), 'stas-quickstart-e2e-'));
+    tempHome = mkdtempSync(join(tmpdir(), 'syntaro-quickstart-e2e-'));
     await listen();
   });
 
@@ -101,17 +101,17 @@ describe('stas quickstart --skip-prompts end-to-end (fresh environment)', () => 
   });
 
   it('runs the full quickstart flow against a fresh environment and saves the config', async () => {
-    const configDir = join(tempHome, '.config', 'stas');
+    const configDir = join(tempHome, '.config', 'syntaro');
     const env = {
       ...process.env,
       HOME: tempHome,
       GITHUB_TOKEN: 'ghp_fresh',
       GITHUB_API_URL: `http://127.0.0.1:${port}`,
-      STAS_CONFIG_DIR: configDir,
-      STAS_OPEN_BROWSER: '0',
-      STAS_INSTALL_WAIT_MS: '0',
-      STAS_POLL_INTERVAL_MS: '50',
-      STAS_TIMEOUT_MS: '5000',
+      SYNTARO_CONFIG_DIR: configDir,
+      SYNTARO_OPEN_BROWSER: '0',
+      SYNTARO_INSTALL_WAIT_MS: '0',
+      SYNTARO_POLL_INTERVAL_MS: '50',
+      SYNTARO_TIMEOUT_MS: '5000',
     };
 
     const { stdout, code } = await new Promise<{ stdout: string; stderr: string; code: number | null }>(
@@ -129,15 +129,15 @@ describe('stas quickstart --skip-prompts end-to-end (fresh environment)', () => 
 
     expect(code).toBe(0);
     expect(stdout).toContain('Quickstart complete');
-    expect(stdout).toContain(`Your STAS fix PR: ${PR_URL}`);
+    expect(stdout).toContain(`Your SYNTARO fix PR: ${PR_URL}`);
     expect(stdout).toContain(`Config saved to ${join(configDir, 'config.json')}`);
 
     const configPath = join(configDir, 'config.json');
     expect(existsSync(configPath)).toBe(true);
     const config = JSON.parse(readFileSync(configPath, 'utf8')) as Record<string, string>;
     expect(config.githubToken).toBe('ghp_fresh');
-    expect(config.installUrl).toBe('https://github.com/apps/stas/installations/new');
-    expect(config.poweredBy).toBe('STAS — AI bug fixes for your repo');
+    expect(config.installUrl).toBe('https://github.com/apps/syntaro/installations/new');
+    expect(config.poweredBy).toBe('SYNTARO — AI bug fixes for your repo');
 
     const createCall = calls.find(
       (call) => call.method === 'POST' && call.url === '/repos/alice/awesome-project/issues',
@@ -145,11 +145,11 @@ describe('stas quickstart --skip-prompts end-to-end (fresh environment)', () => 
     expect(createCall).toBeDefined();
     const issueBody = createCall?.body as { title?: string; body?: string; labels?: unknown };
     expect(issueBody.title).toBe(ISSUE_TITLE);
-    expect(issueBody.body).toContain('STAS — AI bug fixes for your repo');
+    expect(issueBody.body).toContain('SYNTARO — AI bug fixes for your repo');
 
     const labelCall = calls.find(
       (call) => call.method === 'POST' && call.url === '/repos/alice/awesome-project/issues/7/labels',
     );
-    expect((labelCall?.body as { labels?: string[] }).labels).toEqual(['stas:fix']);
+    expect((labelCall?.body as { labels?: string[] }).labels).toEqual(['syntaro:fix']);
   }, 30_000);
 });

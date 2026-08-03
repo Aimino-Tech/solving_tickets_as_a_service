@@ -1,5 +1,5 @@
 /**
- * Real-time statistical anomaly detection for STAS (AIM-3228).
+ * Real-time statistical anomaly detection for SYNTARO (AIM-3228).
  */
 
 import { rootLogger } from '../utils/logger.js';

@@ -19,7 +19,7 @@ export function buildTextMessage(
   event: NotificationEvent,
   data: NotificationData,
 ): string {
-  const bot = data.botName ?? config.stas.botName;
+  const bot = data.botName ?? config.syntaro.botName;
   const issueLink = data.issueNumber > 0
     ? `<${ISSUE_URL(data.repoOwner, data.repoName, data.issueNumber)}|#${data.issueNumber}>`
     : '';
@@ -120,8 +120,8 @@ async function sendToN8n(
   try {
     const payload = {
       event,
-      channel: data.channel || '#stas-notifications',
-      bot_name: data.botName || config.stas.botName,
+      channel: data.channel || '#syntaro-notifications',
+      bot_name: data.botName || config.syntaro.botName,
       issue_number: data.issueNumber,
       issue_title: data.issueTitle,
       repo_owner: data.repoOwner,

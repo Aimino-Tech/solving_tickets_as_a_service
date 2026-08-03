@@ -45,7 +45,7 @@ export async function dispatchIssueToOsy(payload: IssueDispatchPayload): Promise
       'X-API-Key': config.osy?.apiKey ?? '',
     };
     if (payload.traceId) {
-      headers['x-stas-trace-id'] = payload.traceId;
+      headers['x-syntaro-trace-id'] = payload.traceId;
       headers.traceparent = `00-${payload.traceId.replace(/-/g, '')}-${payload.traceId.slice(0, 16)}-01`;
     }
     let model: string | undefined;

@@ -3,7 +3,7 @@ services:
   # ── In-Memory Data Store ──────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    container_name: stas-redis
+    container_name: syntaro-redis
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
@@ -27,12 +27,12 @@ services:
     cpus: 0.5
     pids_limit: 256
     networks:
-      - stas-net
+      - syntaro-net
 
   # ── Message Broker ────────────────────────────────────────────────────
   rabbitmq:
     image: rabbitmq:4-management-alpine
-    container_name: stas-rabbitmq
+    container_name: syntaro-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -49,33 +49,33 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - stas-net
+      - syntaro-net
 
   # ── PostgreSQL ────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
-    container_name: stas-postgres
+    container_name: syntaro-postgres
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: stas
-      POSTGRES_PASSWORD: stas
-      POSTGRES_DB: stas
+      POSTGRES_USER: syntaro
+      POSTGRES_PASSWORD: syntaro
+      POSTGRES_DB: syntaro
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "stas"]
+      test: ["CMD", "pg_isready", "-U", "syntaro"]
       interval: 5s
       timeout: 3s
       retries: 5
     restart: unless-stopped
     networks:
-      - stas-net
+      - syntaro-net
 
   # ── Express Bot (existing) ────────────────────────────────────────────
   bot:
     build: .
-    container_name: stas-bot
+    container_name: syntaro-bot
     ports:
       - "3000:3000"
     env_file: .env
@@ -85,12 +85,12 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - REDIS_URL=redis://stas-redis:6379
-      - DATABASE_URL=postgres://stas:stas@stas-postgres:5432/stas
+      - REDIS_URL=redis://syntaro-redis:6379
+      - DATABASE_URL=postgres://syntaro:syntaro@syntaro-postgres:5432/syntaro
       - NODE_ENV=development
       - RUN_MODE=api
-      - STAS_RATE_LIMIT_WINDOW_MS=60000
-      - STAS_RATE_LIMIT_MAX=150
+      - SYNTARO_RATE_LIMIT_WINDOW_MS=60000
+      - SYNTARO_RATE_LIMIT_MAX=150
       - POSTGRES_POOL_MAX=25
       - WORKER_CONCURRENCY=4
       - OPEN_SYMPHONY_DISPATCH_URL=http://symphony-orchestrator:4001/api/v1/events/github
@@ -102,15 +102,15 @@ services:
     volumes:
       - ./src:/app/src
     networks:
-      - stas-net
+      - syntaro-net
     restart: unless-stopped
 
   # ── Django Web App ────────────────────────────────────────────────────
   django:
     build:
       context: .
-      dockerfile: stas_project/Dockerfile
-    container_name: stas-django
+      dockerfile: syntaro_project/Dockerfile
+    container_name: syntaro-django
     ports:
       - "8000:8000"
     env_file: .env
@@ -122,19 +122,19 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - CELERY_BROKER_URL=amqp://guest:guest@stas-rabbitmq:5672//
-      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
-      - DATABASE_URL=postgres://stas:stas@stas-postgres:5432/stas
+      - CELERY_BROKER_URL=amqp://guest:guest@syntaro-rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://syntaro-redis:6379/0
+      - DATABASE_URL=postgres://syntaro:syntaro@syntaro-postgres:5432/syntaro
       - DJANGO_DEBUG=true
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
       - SENTRY_RELEASE=${SENTRY_RELEASE}
       - SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     volumes:
-      - ./stas_project:/app/stas_project
+      - ./syntaro_project:/app/syntaro_project
       - ./workers:/app/workers
     networks:
-      - stas-net
+      - syntaro-net
     restart: unless-stopped
 
   # ── Celery Worker ─────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ services:
     build:
       context: .
       dockerfile: workers/Dockerfile
-    container_name: stas-worker
+    container_name: syntaro-worker
     env_file: .env
     depends_on:
       redis:
@@ -152,20 +152,20 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - CELERY_BROKER_URL=amqp://guest:guest@stas-rabbitmq:5672//
-      - CELERY_RESULT_BACKEND=redis://stas-redis:6379/0
-      - DATABASE_URL=postgres://stas:stas@stas-postgres:5432/stas
-      - DJANGO_SETTINGS_MODULE=stas.settings
+      - CELERY_BROKER_URL=amqp://guest:guest@syntaro-rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://syntaro-redis:6379/0
+      - DATABASE_URL=postgres://syntaro:syntaro@syntaro-postgres:5432/syntaro
+      - DJANGO_SETTINGS_MODULE=syntaro.settings
       - CELERY_WORKER_CONCURRENCY=4
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
       - SENTRY_RELEASE=${SENTRY_RELEASE}
       - SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     volumes:
-      - ./stas_project:/app/stas_project
+      - ./syntaro_project:/app/syntaro_project
       - ./workers:/app/workers
     networks:
-      - stas-net
+      - syntaro-net
     restart: unless-stopped
     deploy:
       resources:
@@ -176,23 +176,23 @@ services:
   # ── Flower (Celery Monitor) ────────────────────────────────────────────
   flower:
     image: mher/flower:2.0
-    container_name: stas-flower
+    container_name: syntaro-flower
     ports:
       - "5555:5555"
     depends_on:
       rabbitmq:
         condition: service_healthy
     environment:
-      - CELERY_BROKER_URL=amqp://guest:guest@stas-rabbitmq:5672//
+      - CELERY_BROKER_URL=amqp://guest:guest@syntaro-rabbitmq:5672//
       - FLOWER_PORT=5555
     networks:
-      - stas-net
+      - syntaro-net
     restart: unless-stopped
 
   # ── n8n Workflow Automation ────────────────────────────────────────────
   n8n:
     image: n8nio/n8n:latest
-    container_name: stas-n8n
+    container_name: syntaro-n8n
     ports:
       - "5678:5678"
     environment:
@@ -213,7 +213,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - stas-net
+      - syntaro-net
 
 volumes:
   redis-data:
@@ -222,5 +222,5 @@ volumes:
   n8n_data:
 
 networks:
-  stas-net:
+  syntaro-net:
     driver: bridge

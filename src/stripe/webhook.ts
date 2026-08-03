@@ -319,7 +319,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void
       issueTitle: 'Stripe Payment Failed',
       reason: `Invoice ${invoice.id} for ${(invoice.amount_due / 100).toFixed(2)} ${invoice.currency.toUpperCase()} failed after ${invoice.attempt_count} attempt(s).`,
       email: account?.email ?? undefined,
-      botName: config.stas.botName,
+      botName: config.syntaro.botName,
       metadata,
     });
 
@@ -338,7 +338,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void
 /**
  * Handle `customer.subscription.updated` - sync billing plan in the database.
  *
- * Maps the Stripe subscription's price ID to the corresponding STAS plan
+ * Maps the Stripe subscription's price ID to the corresponding SYNTARO plan
  * and updates the billing record for the account.
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
@@ -376,7 +376,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
       return;
     }
 
-    // Map Stripe price ID to STAS plan ID
+    // Map Stripe price ID to SYNTARO plan ID
     let planId: string;
     if (priceId === config.stripe.soloPriceId) {
       planId = 'solo';

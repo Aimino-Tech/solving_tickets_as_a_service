@@ -145,7 +145,7 @@ def verify_agent_output(
             test_command=test_command,
             capture_json=True,
             capture_xml=True,
-            container_name=f"stas-verify-{issue_id[:16]}" if issue_id else "",
+            container_name=f"syntaro-verify-{issue_id[:16]}" if issue_id else "",
         )
 
     except SandboxTimeoutError:

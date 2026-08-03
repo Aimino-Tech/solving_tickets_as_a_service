@@ -1,5 +1,5 @@
 /**
- * Dashboard API routes for the STAS premium hosted service.
+ * Dashboard API routes for the SYNTARO premium hosted service.
  *
  * These routes provide the data backing for the React dashboard.
  * All routes (except /stats) require JWT authentication.

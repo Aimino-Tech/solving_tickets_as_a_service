@@ -35,9 +35,9 @@
       "version": "1.0.0"
     }
   ],
-  "title": "STAS — Production Monitoring (500-User Scale)",
-  "description": "Production monitoring for STAS at 500-user scale — queue monitoring, cost tracking, per-tenant metrics, rate limits, and infrastructure health",
-  "tags": ["stas", "production", "cost", "scaling", "500-users"],
+  "title": "SYNTARO — Production Monitoring (500-User Scale)",
+  "description": "Production monitoring for SYNTARO at 500-user scale — queue monitoring, cost tracking, per-tenant metrics, rate limits, and infrastructure health",
+  "tags": ["syntaro", "production", "cost", "scaling", "500-users"],
   "timezone": "browser",
   "schemaVersion": 38,
   "version": 1,
@@ -50,7 +50,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "queue_depth{queue=~\"stas\\\\.(issues|agents|events)\\\\.*\"}",
+          "expr": "queue_depth{queue=~\"syntaro\\\\.(issues|agents|events)\\\\.*\"}",
           "legendFormat": "{{queue}} ({{type}})",
           "interval": "15s"
         }

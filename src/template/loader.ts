@@ -19,7 +19,7 @@ export interface LoadedTemplate {
 const loadedTemplates: Map<string, LoadedTemplate> = new Map();
 
 export function scanTemplatesDirectory(basePath?: string): LoadedTemplate[] {
-  const templatesDir = resolve(basePath ?? process.cwd(), '.stas/templates');
+  const templatesDir = resolve(basePath ?? process.cwd(), '.syntaro/templates');
   const results: LoadedTemplate[] = [];
 
   if (!existsSync(templatesDir)) {
@@ -89,14 +89,14 @@ export function clearLoadedTemplates(): void {
 export function buildJobTemplateFromLoaded(template: LoadedTemplate): JobTemplate {
   return {
     templateId: template.name,
-    queueName: `stas.${template.name}`,
-    exchangeName: 'stas.direct',
-    routingKey: `stas.job.${template.name}`,
+    queueName: `syntaro.${template.name}`,
+    exchangeName: 'syntaro.direct',
+    routingKey: `syntaro.job.${template.name}`,
     priority: 5,
     retryConfig: {
       maxRetries: 4,
       retryDelaysMs: DEFAULT_RETRY_DELAYS,
-      deadLetterExchange: 'stas.dlx',
+      deadLetterExchange: 'syntaro.dlx',
     },
     ttl: 600_000,
     dedupTtl: 120,

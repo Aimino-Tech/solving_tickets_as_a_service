@@ -1,11 +1,11 @@
-# STAS Premium
+# SYNTARO Premium
 
 > **This directory is NOT part of the MIT open-source license.**
 > It describes the proprietary hosted service and contains placeholder/private code.
 
 The OSS repo (`src/`, `plugin/`) is the self-hostable GitHub bot. This directory documents everything that makes the paid version worth paying for.
 
-> **Note**: STAS has three tiers — Self-Host (OSS, unlimited, DIY), Cloud Free (10 fixes/mo, frontier models, hosted), and Cloud Paid ($49–$149/mo, full features). This file covers the Cloud Paid tier.
+> **Note**: SYNTARO has three tiers — Self-Host (OSS, unlimited, DIY), Cloud Free (10 fixes/mo, frontier models, hosted), and Cloud Paid ($49–$149/mo, full features). This file covers the Cloud Paid tier.
 
 ## What Premium Adds
 
@@ -28,7 +28,7 @@ The OSS codebase is built on a KintsugiBot-inspired stack: **Express** webhooks 
 
 ```
 ┌─────────────────────────────────────────────┐
-│          STAS Premium Hosted                │
+│          SYNTARO Premium Hosted                │
 ├─────────────────────────────────────────────┤
 │                                             │
 │  ┌─────────────┐   ┌─────────────────────┐  │
@@ -82,15 +82,15 @@ The premium code lives in a **private repository**. This directory contains:
 
 The OSS repo communicates with premium services via:
 - **Environment variables** — swap `OPENCODE_URL` for the hosted model endpoint
-- **Feature flags** — `STAS_PREMIUM=true` enables premium features
+- **Feature flags** — `SYNTARO_PREMIUM=true` enables premium features
 - **API contract** — premium services implement the same OpenCode-compatible API
 
 ## Switching from OSS to Premium
 
 ```bash
 # In your .env, change:
-OPENCODE_URL=https://api.stas.dev/v1  # Hosted model endpoint
-STAS_PREMIUM=true                       # Enable premium features
+OPENCODE_URL=https://api.syntaro.dev/v1  # Hosted model endpoint
+SYNTARO_PREMIUM=true                       # Enable premium features
 ```
 
 No code changes needed. The bot works the same way — just with a better model behind it.

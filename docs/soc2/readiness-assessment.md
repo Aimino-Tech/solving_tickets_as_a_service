@@ -1,11 +1,11 @@
-# SOC 2 Readiness Assessment — STAS
+# SOC 2 Readiness Assessment — SYNTARO
 
 > **Status**: Readiness assessment only (not certified)
 > **Last updated**: 2026-06-25
 
 ## 1. Executive Summary
 
-STAS (Solving Tickets As A Service) is an open-source GitHub bot that autonomously investigates, fixes, and opens pull requests for labeled issues. This document assesses STAS's readiness for SOC 2 Type I certification against the Security, Availability, and Confidentiality trust services criteria.
+SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that autonomously investigates, fixes, and opens pull requests for labeled issues. This document assesses SYNTARO's readiness for SOC 2 Type I certification against the Security, Availability, and Confidentiality trust services criteria.
 
 ## 2. Trust Services Criteria Mapping
 

@@ -87,8 +87,8 @@ class TestConfigHelpers:
     """Config resolution, env var substitution, validation."""
 
     def test_resolve_env_ref_known(self):
-        with patch.dict(os.environ, {"STAS_TEST_VAL": "resolved"}):
-            assert _resolve_env_ref("$STAS_TEST_VAL") == "resolved"
+        with patch.dict(os.environ, {"SYNTARO_TEST_VAL": "resolved"}):
+            assert _resolve_env_ref("$SYNTARO_TEST_VAL") == "resolved"
 
     def test_resolve_env_ref_unknown(self):
         result = _resolve_env_ref("$MISSING_VAR_XYZ")
@@ -122,17 +122,17 @@ class TestConfigHelpers:
 
     def test_load_config_from_env_valid_json(self):
         cfg = {"fix_completed": [{"type": "slack", "url": "http://example.com"}]}
-        with patch.dict(os.environ, {"STAS_WEBHOOK_CONFIG": json.dumps(cfg)}):
+        with patch.dict(os.environ, {"SYNTARO_WEBHOOK_CONFIG": json.dumps(cfg)}):
             loaded = _load_config_from_env()
             assert loaded == cfg
 
     def test_load_config_from_env_invalid_json(self):
-        with patch.dict(os.environ, {"STAS_WEBHOOK_CONFIG": "not-json"}):
+        with patch.dict(os.environ, {"SYNTARO_WEBHOOK_CONFIG": "not-json"}):
             loaded = _load_config_from_env()
             assert loaded == {}
 
     def test_load_config_from_env_empty(self):
-        with patch.dict(os.environ, {"STAS_WEBHOOK_CONFIG": ""}):
+        with patch.dict(os.environ, {"SYNTARO_WEBHOOK_CONFIG": ""}):
             loaded = _load_config_from_env()
             assert loaded == {}
 
@@ -150,7 +150,7 @@ class TestConfigHelpers:
 
     def test_validate_notifier_entry_email_valid(self):
         entry = {"type": "email", "to": "user@example.com"}
-        with patch.dict(os.environ, {"STAS_SMTP_HOST": "smtp.example.com"}):
+        with patch.dict(os.environ, {"SYNTARO_SMTP_HOST": "smtp.example.com"}):
             assert _validate_notifier_entry(entry, "fix_completed") is True
 
     def test_validate_notifier_entry_email_no_smtp_no_sendgrid(self):
@@ -160,7 +160,7 @@ class TestConfigHelpers:
 
     def test_validate_notifier_entry_email_no_recipient(self):
         entry = {"type": "email", "to": ""}
-        with patch.dict(os.environ, {"STAS_SMTP_HOST": "smtp.example.com"}):
+        with patch.dict(os.environ, {"SYNTARO_SMTP_HOST": "smtp.example.com"}):
             assert _validate_notifier_entry(entry, "fix_completed") is False
 
     def test_validate_notifier_entry_unknown_type(self):
@@ -218,7 +218,7 @@ class TestDispatchToWebhooks:
     def test_dispatch_email_success(self, mock_notify):
         mock_notify.return_value = {"status": "sent"}
         config = {"fix_completed": [{"type": "email", "to": "user@example.com"}]}
-        with patch.dict(os.environ, {"STAS_SMTP_HOST": "smtp.example.com"}):
+        with patch.dict(os.environ, {"SYNTARO_SMTP_HOST": "smtp.example.com"}):
             results = dispatch_to_webhooks("fix_completed", SAMPLE_PAYLOAD, config)
         assert len(results) == 1
         assert results[0]["status"] == "sent"
@@ -375,11 +375,11 @@ class TestSlackNotifier:
         mock_response.status_code = 200
         mock_client.post.return_value = mock_response
 
-        result = notify_slack(SAMPLE_PAYLOAD, "http://hooks.slack.com/abc", channel="#stas-alerts")
+        result = notify_slack(SAMPLE_PAYLOAD, "http://hooks.slack.com/abc", channel="#syntaro-alerts")
         assert result["status"] == "sent"
         # Verify channel was passed
         call_kwargs = mock_client.post.call_args[1]
-        assert call_kwargs["json"].get("channel") == "#stas-alerts"
+        assert call_kwargs["json"].get("channel") == "#syntaro-alerts"
 
     @patch("workers.notifications.notifiers.slack.time.sleep")
     @patch("workers.notifications.notifiers.slack.httpx.Client")
@@ -536,7 +536,7 @@ class TestEmailNotifier:
         result = notify_email(
             SAMPLE_PAYLOAD,
             to="user@example.com",
-            from_addr="stas@example.com",
+            from_addr="syntaro@example.com",
             smtp_host="smtp.example.com",
             smtp_port=587,
             smtp_user="user",
@@ -553,11 +553,11 @@ class TestEmailNotifier:
         mock_response.status_code = 202
         mock_client.post.return_value = mock_response
 
-        with patch.dict(os.environ, {"STAS_SENDGRID_API_KEY": "SG.test.key"}):
+        with patch.dict(os.environ, {"SYNTARO_SENDGRID_API_KEY": "SG.test.key"}):
             result = notify_email(
                 SAMPLE_PAYLOAD,
                 to="user@example.com",
-                from_addr="stas@example.com",
+                from_addr="syntaro@example.com",
                 use_sendgrid=True,
             )
         assert result["status"] == "sent"
@@ -566,17 +566,17 @@ class TestEmailNotifier:
         result = notify_email(
             SAMPLE_PAYLOAD,
             to="user@example.com",
-            from_addr="stas@example.com",
+            from_addr="syntaro@example.com",
             use_sendgrid=True,
         )
         assert result["status"] == "error"
-        assert "STAS_SENDGRID_API_KEY" in result["error"]
+        assert "SYNTARO_SENDGRID_API_KEY" in result["error"]
 
     def test_notify_email_no_smtp_host(self):
         result = notify_email(
             SAMPLE_PAYLOAD,
             to="user@example.com",
-            from_addr="stas@example.com",
+            from_addr="syntaro@example.com",
             smtp_host="",
         )
         assert result["status"] == "error"
@@ -589,7 +589,7 @@ class TestEmailNotifier:
         result = notify_email(
             SAMPLE_PAYLOAD,
             to="user@example.com",
-            from_addr="stas@example.com",
+            from_addr="syntaro@example.com",
             smtp_host="smtp.example.com",
             smtp_port=587,
             smtp_user="user",
@@ -606,7 +606,7 @@ class TestEmailNotifier:
             result = notify_email(
                 SAMPLE_PAYLOAD,
                 to="user@example.com",
-                from_addr="stas@example.com",
+                from_addr="syntaro@example.com",
                 subject_prefix="[CUSTOM]",
                 smtp_host="smtp.example.com",
             )
@@ -724,7 +724,7 @@ class TestPipelineIntegration:
         return steps
 
     def test_fix_pipeline_has_notification_steps(self):
-        task_names = self._parse_steps_for_pipeline("stas:fix")
+        task_names = self._parse_steps_for_pipeline("syntaro:fix")
 
         assert "workers.tasks.notifications.dispatch_webhook_event" in task_names
 
@@ -733,9 +733,9 @@ class TestPipelineIntegration:
         assert notify_idx > pr_creation_idx
 
     def test_feature_pipeline_has_notification_steps(self):
-        task_names = self._parse_steps_for_pipeline("stas:feature")
+        task_names = self._parse_steps_for_pipeline("syntaro:feature")
         assert "workers.tasks.notifications.dispatch_webhook_event" in task_names
 
     def test_research_pipeline_has_notification_step(self):
-        task_names = self._parse_steps_for_pipeline("stas:research")
+        task_names = self._parse_steps_for_pipeline("syntaro:research")
         assert "workers.tasks.notifications.dispatch_webhook_event" in task_names

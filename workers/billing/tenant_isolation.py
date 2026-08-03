@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 _BROKER_URL = os.getenv(
     "CELERY_BROKER_URL",
-    os.getenv("BROKER_URL", "amqp://guest:guest@localhost:5672/stas"),
+    os.getenv("BROKER_URL", "amqp://guest:guest@localhost:5672/syntaro"),
 )
 
 _WORKSPACE_ROOT = os.getenv("WORKSPACE_ROOT", "/workspaces")
@@ -24,11 +24,11 @@ _TENANT_CONCURRENCY_ENTERPRISE = int(os.getenv("TENANT_CONCURRENCY_ENTERPRISE", 
 _RATE_LIMIT_WINDOW_S = int(os.getenv("TENANT_RATE_LIMIT_WINDOW_S", "60"))
 _RATE_LIMIT_MAX_REQUESTS = int(os.getenv("TENANT_RATE_LIMIT_MAX_REQUESTS", "100"))
 
-_TENANT_EXCHANGE_NAME = "stas"
+_TENANT_EXCHANGE_NAME = "syntaro"
 _TENANT_BINDING_KEY_PREFIX = "tenant_"
 
-_REDIS_AGENT_SLOTS_PREFIX = "stas:tenant:agents:"
-_REDIS_RATE_LIMIT_PREFIX = "stas:tenant:ratelimit:"
+_REDIS_AGENT_SLOTS_PREFIX = "syntaro:tenant:agents:"
+_REDIS_RATE_LIMIT_PREFIX = "syntaro:tenant:ratelimit:"
 
 _REDIS_CLIENT: Optional[Any] = None
 
@@ -71,7 +71,7 @@ class TenantIsolationManager:
     @staticmethod
     def queue_name(tenant_id: str) -> str:
         sanitized = tenant_id.replace("-", "_").replace(".", "_")[:64]
-        return f"stas.agents.tenant.{sanitized}"
+        return f"syntaro.agents.tenant.{sanitized}"
 
     @staticmethod
     def binding_key(tenant_id: str) -> str:

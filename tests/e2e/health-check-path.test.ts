@@ -13,7 +13,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from './harness/index.js';
-import { githubIssuesLabeledStasFix } from './fixtures/webhooks/github.js';
+import { githubIssuesLabeledSyntaroFix } from './fixtures/webhooks/github.js';
 import type { TestHarness } from './harness/index.js';
 
 let harness: TestHarness;
@@ -35,10 +35,10 @@ describe('Health Check Path: GET /health → All Dependencies Green', () => {
     expect(['ok', 'degraded']).toContain(body.status);
   });
 
-  it('Response contains the stas:fix label', async () => {
+  it('Response contains the syntaro:fix label', async () => {
     const res = await fetch(`${harness.baseUrl}/health`);
     const body = await res.json() as any;
-    expect(body).toHaveProperty('label', 'stas:fix');
+    expect(body).toHaveProperty('label', 'syntaro:fix');
   });
 
   it('Response contains uptime as a number', async () => {
@@ -103,7 +103,7 @@ describe('Health Check Path: GET /health → All Dependencies Green', () => {
 
   it('Health still returns ok after processing webhooks', async () => {
     // Process a webhook
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
     await harness.sendWebhook('/webhook', payload);
 
     // Then check health

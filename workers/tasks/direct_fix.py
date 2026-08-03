@@ -45,12 +45,12 @@ def create_fix(self, ctx: dict) -> dict:
         raise ValueError(f"Missing repo_owner/repo_name in ctx: {ctx}")
 
     repo_full = f"{owner}/{repo}"
-    branch_name = f"stas/fix-{issue_id.lower().replace('_', '-')[:40]}"
+    branch_name = f"syntaro/fix-{issue_id.lower().replace('_', '-')[:40]}"
 
     logger.info("Implementing %s — repo=%s branch=%s", issue_id, repo_full, branch_name)
     logger.info("Ticket title: %s", issue_title)
 
-    with tempfile.TemporaryDirectory(prefix="stas-fix-") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="syntaro-fix-") as tmpdir:
         clone_url = f"https://x-access-token:{os.environ['GH_TOKEN']}@github.com/{repo_full}.git"
         subprocess.run(["git", "clone", clone_url, tmpdir], check=True, capture_output=True, text=True, cwd="/tmp")
         subprocess.run(["git", "checkout", "-b", branch_name], check=True, capture_output=True, text=True, cwd=tmpdir)
@@ -97,7 +97,7 @@ def create_fix(self, ctx: dict) -> dict:
         "issue_id": issue_id,
         "issue_title": issue_title,
         "changes": changes,
-        "summary": f"STAS implementation for {issue_id}: {issue_title[:80]}",
+        "summary": f"SYNTARO implementation for {issue_id}: {issue_title[:80]}",
     }
 
 
@@ -235,7 +235,7 @@ def _scanner_name_to_class(name: str) -> str:
 
 def _make_tracking_change(tmpdir: str, issue_id: str, title: str) -> None:
     """Fallback: add a tracking entry when no specific implementation was detected."""
-    tracking_dir = os.path.join(tmpdir, ".stas")
+    tracking_dir = os.path.join(tmpdir, ".syntaro")
     os.makedirs(tracking_dir, exist_ok=True)
     tracking_file = os.path.join(tracking_dir, "fixes.log")
     with open(tracking_file, "a") as f:

@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 CONFLICT_LABEL = "conflict"
 MERGE_QUEUE_LABEL = "merge-queue"
-DEFAULT_LEDGER_PATH = os.getenv("MERGE_QUEUE_LEDGER_PATH", str(Path.home() / ".stas" / "merge_queue.json"))
+DEFAULT_LEDGER_PATH = os.getenv("MERGE_QUEUE_LEDGER_PATH", str(Path.home() / ".syntaro" / "merge_queue.json"))
 CI_POLL_INTERVAL = int(os.getenv("MERGE_QUEUE_CI_POLL_INTERVAL", "30"))
 CI_POLL_MAX_RETRIES = int(os.getenv("MERGE_QUEUE_CI_MAX_RETRIES", "20"))
 DEFAULT_MERGE_STRATEGY = os.getenv("MERGE_QUEUE_STRATEGY", "squash")

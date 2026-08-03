@@ -13,7 +13,7 @@ export type I18nContextValue = {
   t: (key: string, params?: Record<string, string | number>) => string;
 };
 
-const LOCALE_KEY = 'stas-locale' as const;
+const LOCALE_KEY = 'syntaro-locale' as const;
 const DEFAULT_LOCALE: Locale = 'en';
 
 export function detectLocale(): Locale {

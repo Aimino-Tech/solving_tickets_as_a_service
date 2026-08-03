@@ -50,7 +50,7 @@ export default function Benchmarks() {
       <div className="card border-brand-200 bg-gradient-to-br from-brand-50 to-white">
         <h2 className="text-2xl font-bold text-gray-900">Competitive Benchmarks</h2>
         <p className="mt-2 text-gray-600">
-          STAS outperforms every competitor on pass rate while maintaining competitive per-fix costs.
+          SYNTARO outperforms every competitor on pass rate while maintaining competitive per-fix costs.
         </p>
       </div>
 
@@ -71,18 +71,18 @@ export default function Benchmarks() {
             </thead>
             <tbody>
               {data.map((entry) => {
-                const isStas = entry.agent.startsWith('STAS');
+                const isSyntaro = entry.agent.startsWith('SYNTARO');
                 return (
                   <tr
                     key={entry.agent}
                     className={`border-b border-gray-100 transition-colors hover:bg-gray-50 ${
-                      isStas ? 'bg-brand-50/50' : ''
+                      isSyntaro ? 'bg-brand-50/50' : ''
                     }`}
                   >
                     <td className="py-3 pr-4">
-                      <span className={`font-medium ${isStas ? 'text-brand-700' : 'text-gray-900'}`}>
+                      <span className={`font-medium ${isSyntaro ? 'text-brand-700' : 'text-gray-900'}`}>
                         {entry.agent}
-                        {isStas && (
+                        {isSyntaro && (
                           <span className="ml-2 inline-flex items-center rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
                             Best
                           </span>
@@ -156,12 +156,12 @@ export default function Benchmarks() {
               </thead>
               <tbody>
                 {prices.map((p) => {
-                  const isStas = p.agent.startsWith('STAS');
+                  const isSyntaro = p.agent.startsWith('SYNTARO');
                   return (
                     <tr
                       key={p.agent}
                       className={`border-b border-gray-100 transition-colors hover:bg-gray-50 ${
-                        isStas ? 'bg-brand-50/50' : ''
+                        isSyntaro ? 'bg-brand-50/50' : ''
                       }`}
                     >
                       <td className="py-3 pr-4 font-medium text-gray-900">{p.agent}</td>
@@ -194,13 +194,13 @@ export default function Benchmarks() {
         <div className="card border-green-200 bg-green-50/30">
           <h4 className="text-base font-semibold text-green-800">Highest Pass Rate</h4>
           <p className="mt-1 text-sm text-green-700">
-            STAS achieves <strong>92% pass rate</strong> on XOR.
+            SYNTARO achieves <strong>92% pass rate</strong> on XOR.
           </p>
         </div>
         <div className="card border-brand-200 bg-brand-50/30">
           <h4 className="text-base font-semibold text-brand-800">Lowest Cost for Quality</h4>
           <p className="mt-1 text-sm text-brand-700">
-            At $3.80/fix, STAS is <strong>60% cheaper</strong> than Devin.
+            At $3.80/fix, SYNTARO is <strong>60% cheaper</strong> than Devin.
           </p>
         </div>
         <div className="card border-amber-200 bg-amber-50/30">

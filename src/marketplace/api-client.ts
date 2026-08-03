@@ -17,7 +17,7 @@ export interface EvalRunResponse {
 const RETRY_DELAY_MS = 5_000;
 const MAX_RETRIES = 5;
 
-export class StasApiClient {
+export class SyntaroApiClient {
   private baseUrl: string;
   private apiKey: string;
 
@@ -38,7 +38,7 @@ export class StasApiClient {
 
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`STAS API error (${res.status}): ${body}`);
+      throw new Error(`SYNTARO API error (${res.status}): ${body}`);
     }
 
     return res.json() as Promise<EvalRunResponse>;
@@ -54,7 +54,7 @@ export class StasApiClient {
 
       if (!res.ok) {
         const body = await res.text();
-        throw new Error(`STAS API error (${res.status}): ${body}`);
+        throw new Error(`SYNTARO API error (${res.status}): ${body}`);
       }
 
       const data = (await res.json()) as EvalRunResponse;

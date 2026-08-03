@@ -2,13 +2,13 @@
 # Custom RabbitMQ image with automatic initialization.
 #
 # Extends rabbitmq:4-management-alpine with:
-#   1. The init script (scripts/init-rabbitmq.sh) that creates stas-monitor
-#      user, /stas-dev vhost, and sets permissions
+#   1. The init script (scripts/init-rabbitmq.sh) that creates syntaro-monitor
+#      user, /syntaro-dev vhost, and sets permissions
 #   2. An entrypoint wrapper that runs the init script after the server
 #      is ready, then hands over to RabbitMQ
 #
 # Build:
-#   docker build -t stas-rabbitmq -f docker/rabbitmq/Dockerfile .
+#   docker build -t syntaro-rabbitmq -f docker/rabbitmq/Dockerfile .
 #
 # Or used directly in docker-compose.yml via the build context.
 # =============================================================================
@@ -28,5 +28,5 @@ RUN chmod +x /opt/rabbitmq/entrypoint-wrapper.sh
 ENTRYPOINT ["/opt/rabbitmq/entrypoint-wrapper.sh"]
 CMD ["rabbitmq-server"]
 
-LABEL org.opencontainers.image.description="STAS custom RabbitMQ image with automatic init"
+LABEL org.opencontainers.image.description="SYNTARO custom RabbitMQ image with automatic init"
 LABEL org.opencontainers.image.source="https://github.com/tamnguyen08/solving_tickets_as_a_service"

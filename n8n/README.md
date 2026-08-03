@@ -1,4 +1,4 @@
-# n8n Workflows for STAS / OpenSymphony
+# n8n Workflows for SYNTARO / OpenSymphony
 
 This directory contains n8n workflow JSON exports for integrating external services.
 
@@ -8,7 +8,7 @@ This directory contains n8n workflow JSON exports for integrating external servi
 Service (Crisp, GitHub, OS) → POST /webhook/{id} → n8n workflow → action (Slack, email, etc.)
 ```
 
-n8n runs as a Docker container alongside STAS, sharing the `postgres` database and `stas-net` network. Workflows are created via the n8n REST API (`POST /rest/workflows`) and can be activated/deactivated programmatically.
+n8n runs as a Docker container alongside SYNTARO, sharing the `postgres` database and `syntaro-net` network. Workflows are created via the n8n REST API (`POST /rest/workflows`) and can be activated/deactivated programmatically.
 
 **Setup:**
 1. `docker compose up -d n8n` — starts n8n on port 5678
@@ -56,7 +56,7 @@ Receives webhook events from OpenSymphony and posts formatted alerts to the `#sy
   "issue_title": "Fix login bug",
   "issue_url": "https://github.com/org/repo/issues/42",
   "repo": "org/repo",
-  "agent": "stas-agent"
+  "agent": "syntaro-agent"
 }
 ```
 
@@ -169,7 +169,7 @@ GitHub Actions webhook (workflow_run.completed)
 
 **File:** `workflows/telegram-notifications.json`
 
-Receives progress update messages from the STAS Telegram channel and sends them to users via n8n's built-in Telegram node. Replaces the direct `telegram.sendMessage` calls in `src/channels/telegram.ts`.
+Receives progress update messages from the SYNTARO Telegram channel and sends them to users via n8n's built-in Telegram node. Replaces the direct `telegram.sendMessage` calls in `src/channels/telegram.ts`.
 
 **Flow:**
 
@@ -190,7 +190,7 @@ OS progress update → POST /webhook/telegram-notification → n8n
    ```
    https://<your-n8n>/webhook/telegram-notification
    ```
-4. Set environment variable in STAS:
+4. Set environment variable in SYNTARO:
    ```env
    N8N_TELEGRAM_WEBHOOK_URL=https://<your-n8n>/webhook/telegram-notification
    ```
@@ -217,7 +217,7 @@ OS progress update → POST /webhook/telegram-notification → n8n
 
 **File:** `workflows/whatsapp-notifications.json`
 
-Receives progress update messages from the STAS WhatsApp channel and sends them to users via n8n's built-in WhatsApp Business node. Replaces the direct WhatsApp Cloud API calls in `src/channels/whatsapp.ts`.
+Receives progress update messages from the SYNTARO WhatsApp channel and sends them to users via n8n's built-in WhatsApp Business node. Replaces the direct WhatsApp Cloud API calls in `src/channels/whatsapp.ts`.
 
 **Flow:**
 
@@ -238,7 +238,7 @@ OS progress update → POST /webhook/whatsapp-notification → n8n
    ```
    https://<your-n8n>/webhook/whatsapp-notification
    ```
-4. Set environment variable in STAS:
+4. Set environment variable in SYNTARO:
    ```env
    N8N_WHATSAPP_WEBHOOK_URL=https://<your-n8n>/webhook/whatsapp-notification
    ```
@@ -349,7 +349,7 @@ Stripe webhook → n8n HTTP node (verify signature via Stripe library)
 
 **Expected webhook payload (raw Stripe event):**
 
-The workflow receives the raw Stripe webhook payload and verifies the signature using the Stripe library. No proxying through the STAS backend is needed.
+The workflow receives the raw Stripe webhook payload and verifies the signature using the Stripe library. No proxying through the SYNTARO backend is needed.
 
 **Behavior:**
 
@@ -419,7 +419,7 @@ Each metric shows the current value plus a week-over-week trend percentage.
 
 **File:** `workflows/health-checks.json`
 
-Polls the STAS health endpoints every 5 minutes and posts a Slack alert to `#syntaro-alerts` when any endpoint returns a non-200 status. Uses n8n's workflow static data to track the last known state and only sends messages on status transitions (healthy → down, down → healthy) — no alert spam.
+Polls the SYNTARO health endpoints every 5 minutes and posts a Slack alert to `#syntaro-alerts` when any endpoint returns a non-200 status. Uses n8n's workflow static data to track the last known state and only sends messages on status transitions (healthy → down, down → healthy) — no alert spam.
 
 **Flow:**
 
@@ -430,7 +430,7 @@ Schedule (every 5 min) → Check all health endpoints in parallel
     → No  → Exit silently (no duplicate alerts)
 ```
 
-**Endpoints checked** (loaded from `STAS_PUBLIC_URL` env var, defaults to `http://localhost:3000`):
+**Endpoints checked** (loaded from `SYNTARO_PUBLIC_URL` env var, defaults to `http://localhost:3000`):
 
 | Endpoint | Returns |
 |----------|---------|
@@ -446,10 +446,10 @@ Schedule (every 5 min) → Check all health endpoints in parallel
 4. Set environment variable in n8n:
 
    ```env
-   STAS_PUBLIC_URL=http://localhost:3000
+   SYNTARO_PUBLIC_URL=http://localhost:3000
    ```
 
-   If running in Docker Compose, this should match the internal service URL (e.g., `http://stas-api:3000`).
+   If running in Docker Compose, this should match the internal service URL (e.g., `http://syntaro-api:3000`).
 
 **Deduplication logic:**
 
@@ -462,14 +462,14 @@ The workflow uses `$getWorkflowStaticData('global').lastOverallStatus` to rememb
 
 | Status | Color | Header | Fields |
 |--------|-------|--------|--------|
-| ✅ All Healthy | Green (`#2ECC71`) | ✅ STAS Health Checks Pass | Per-endpoint status + latency |
-| 🚨 Service Down | Red (`#E74C3C`) | 🚨 STAS Health Check FAILED | Failed endpoints + HTTP status/timeout + latency |
+| ✅ All Healthy | Green (`#2ECC71`) | ✅ SYNTARO Health Checks Pass | Per-endpoint status + latency |
+| 🚨 Service Down | Red (`#E74C3C`) | 🚨 SYNTARO Health Check FAILED | Failed endpoints + HTTP status/timeout + latency |
 
 **Environment variables used by this workflow:**
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STAS_PUBLIC_URL` | `http://localhost:3000` | Base URL of the STAS API health endpoints |
+| `SYNTARO_PUBLIC_URL` | `http://localhost:3000` | Base URL of the SYNTARO API health endpoints |
 
 
 ### 8. Onboarding Emails — Signup → Welcome + Credits (AIM-3336)
@@ -504,7 +504,7 @@ Onboarding completion event → n8n HTTP endpoint
    LOOPS_API_CREDENTIAL_ID=<your-loops-credential-id-in-n8n>
    ```
 
-6. Configure OpenSymphony/STAS to POST to this webhook on onboarding completion (done automatically — see `workers/billing/onboarding.py`)
+6. Configure OpenSymphony/SYNTARO to POST to this webhook on onboarding completion (done automatically — see `workers/billing/onboarding.py`)
 
 **Expected webhook payload:**
 

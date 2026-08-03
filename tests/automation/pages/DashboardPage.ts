@@ -42,7 +42,7 @@ export class DashboardPage extends BasePage {
 
   async expectDashboardLoaded(): Promise<void> {
     await expect(this.sidebar).toBeVisible({ timeout: 15000 });
-    await expect(this.page).toHaveTitle(/STAS Dashboard|Dashboard/);
+    await expect(this.page).toHaveTitle(/SYNTARO Dashboard|Dashboard/);
   }
 
   async navigateToRuns(): Promise<void> {

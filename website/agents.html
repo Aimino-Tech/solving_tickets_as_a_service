@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STAS for AI Agents — Agent-to-Agent Marketing</title>
-  <meta name="description" content="STAS (Solving Tickets As A Service) is discoverable and installable by AI agents via MCP registries, Smithery, skills.sh, and npm." />
+  <title>SYNTARO for AI Agents — Agent-to-Agent Marketing</title>
+  <meta name="description" content="SYNTARO (Solving Tickets As A Service) is discoverable and installable by AI agents via MCP registries, Smithery, skills.sh, and npm." />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
@@ -53,8 +53,8 @@
 </head>
 <body>
   <div class="container">
-    <h1><span>STAS</span> for AI Agents</h1>
-    <p class="subtitle">Solving Tickets As A Service — now fully discoverable and installable by AI agents. Integrate STAS into any agent's toolchain in seconds.</p>
+    <h1><span>SYNTARO</span> for AI Agents</h1>
+    <p class="subtitle">Solving Tickets As A Service — now fully discoverable and installable by AI agents. Integrate SYNTARO into any agent's toolchain in seconds.</p>
 
     <div class="badge-row">
       <a href="https://img.shields.io/badge/MCP-Registry-8250DF" class="badge-link"><img src="https://img.shields.io/badge/MCP-Registry-8250DF" alt="MCP Registry" /></a>
@@ -66,7 +66,7 @@
     <!-- Agent-to-Agent Loop Diagram -->
     <h2>Agent-to-Agent Discovery Loop</h2>
     <div class="diagram-container">
-      <svg viewBox="0 0 860 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="STAS Agent-to-Agent Discovery Loop Diagram">
+      <svg viewBox="0 0 860 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SYNTARO Agent-to-Agent Discovery Loop Diagram">
         <defs>
           <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0,0 L10,5 L0,10 Z" fill="#58a6ff" />
@@ -95,10 +95,10 @@
         <text x="380" y="60" text-anchor="middle" fill="#2ea043" font-weight="700" font-size="13" font-family="system-ui">AI Agent</text>
         <text x="380" y="80" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui">OpenCode / Claude / Cursor</text>
 
-        <!-- Node 3: Agent installs STAS -->
+        <!-- Node 3: Agent installs SYNTARO -->
         <rect x="570" y="30" width="180" height="70" rx="10" fill="#1f2937" stroke="#d97706" stroke-width="2" filter="url(#shadow)" />
         <text x="660" y="60" text-anchor="middle" fill="#d97706" font-weight="700" font-size="13" font-family="system-ui">Agent Installs</text>
-        <text x="660" y="80" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui">npx skills add STAS</text>
+        <text x="660" y="80" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui">npx skills add SYNTARO</text>
 
         <!-- Node 4: Fix Pipeline -->
         <rect x="290" y="170" width="180" height="70" rx="10" fill="#1f2937" stroke="#f0f6fc" stroke-width="2" filter="url(#shadow)" />
@@ -136,11 +136,11 @@
     <div class="install-grid">
       <div class="install-card">
         <span class="agent-badge agent-opencode">OpenCode</span>
-        <p style="font-size:0.85rem;color:#8b949e;margin-bottom:0.5rem;">Add STAS as an OpenCode skill:</p>
+        <p style="font-size:0.85rem;color:#8b949e;margin-bottom:0.5rem;">Add SYNTARO as an OpenCode skill:</p>
         <pre><code>npx skills add Aimino-Tech/solving_tickets_as_a_service</code></pre>
         <p style="font-size:0.8rem;color:#8b949e;margin-top:0.25rem;">Or add to <code>opencode.json</code>:</p>
         <pre><code>{
-  "name": "stas-agent",
+  "name": "syntaro-agent",
   "transport": "stdio",
   "command": "python",
   "args": ["-m", "mcp.syntaro_mcp", "stdio"]
@@ -151,7 +151,7 @@
         <p style="font-size:0.85rem;color:#8b949e;margin-bottom:0.5rem;">Add MCP server to Claude:</p>
         <pre><code>{
   "mcpServers": {
-    "stas": {
+    "syntaro": {
       "command": "npx",
       "args": ["-y", "@aimino/syntaro-mcp"]
     }
@@ -164,7 +164,7 @@
         <p style="font-size:0.85rem;color:#8b949e;margin-bottom:0.5rem;">Configure in <code>.cursor/mcp.json</code>:</p>
         <pre><code>{
   "mcpServers": {
-    "stas": {
+    "syntaro": {
       "command": "npx",
       "args": ["-y", "@aimino/syntaro-mcp"]
     }
@@ -175,7 +175,7 @@
         <span class="agent-badge agent-codex">Codex CLI</span>
         <p style="font-size:0.85rem;color:#8b949e;margin-bottom:0.5rem;">Use via npm/npx:</p>
         <pre><code>npx -y @aimino/syntaro-mcp</code></pre>
-        <p style="font-size:0.8rem;color:#8b949e;margin-top:0.25rem;">Or add as a <a href="https://github.com/marketplace/actions/stas-eval" style="color:#58a6ff;">GitHub Action</a>.</p>
+        <p style="font-size:0.8rem;color:#8b949e;margin-top:0.25rem;">Or add as a <a href="https://github.com/marketplace/actions/syntaro-eval" style="color:#58a6ff;">GitHub Action</a>.</p>
       </div>
     </div>
 
@@ -183,11 +183,11 @@
     <div class="feature-list">
       <div class="feature-item">
         <h4>MCP Registry</h4>
-        <p>Published to the Model Context Protocol registry. Any MCP-compatible agent can discover STAS via <code>.well-known/mcp/server-card.json</code>.</p>
+        <p>Published to the Model Context Protocol registry. Any MCP-compatible agent can discover SYNTARO via <code>.well-known/mcp/server-card.json</code>.</p>
       </div>
       <div class="feature-item">
         <h4>Smithery.ai</h4>
-        <p>One-click install from Smithery. Agent discovers → clicks install → STAS is active. No config files needed.</p>
+        <p>One-click install from Smithery. Agent discovers → clicks install → SYNTARO is active. No config files needed.</p>
       </div>
       <div class="feature-item">
         <h4>skills.sh</h4>
@@ -195,21 +195,21 @@
       </div>
       <div class="feature-item">
         <h4>npm Registry</h4>
-        <p>Published as <code>@aimino/syntaro-mcp</code>. Any agent with npm access can install and run STAS as a stdio MCP server.</p>
+        <p>Published as <code>@aimino/syntaro-mcp</code>. Any agent with npm access can install and run SYNTARO as a stdio MCP server.</p>
       </div>
       <div class="feature-item">
         <h4>Well-Known Discovery</h4>
-        <p>STAS serves <code>/.well-known/mcp-server-card.json</code> for automatic agent detection across the web.</p>
+        <p>SYNTARO serves <code>/.well-known/mcp-server-card.json</code> for automatic agent detection across the web.</p>
       </div>
       <div class="feature-item">
         <h4>Agent Badge</h4>
-        <p>Repos using STAS can display the "Agent Found STAS" badge, creating a viral discovery loop.</p>
+        <p>Repos using SYNTARO can display the "Agent Found SYNTARO" badge, creating a viral discovery loop.</p>
       </div>
     </div>
 
     <hr />
     <div class="footer">
-      <p><a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">STAS</a> — Solving Tickets As A Service &mdash; <a href="integrations.html">View All Integrations</a> &mdash; MIT License</p>
+      <p><a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">SYNTARO</a> — Solving Tickets As A Service &mdash; <a href="integrations.html">View All Integrations</a> &mdash; MIT License</p>
     </div>
   </div>
 </body>

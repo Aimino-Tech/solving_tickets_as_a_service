@@ -7,7 +7,7 @@ export default function PublicLayout() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
             <span className="text-2xl">⚡</span>
-            <span className="text-xl font-bold text-gray-900">STAS</span>
+            <span className="text-xl font-bold text-gray-900">SYNTARO</span>
           </Link>
           <nav className="flex items-center gap-6">
             <Link to="/benchmarks" className="text-sm font-medium text-gray-600 hover:text-brand-600">Benchmarks</Link>
@@ -24,7 +24,7 @@ export default function PublicLayout() {
       <footer className="border-t border-gray-200 bg-gray-50">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-            <div className="flex items-center gap-2 text-sm text-gray-500"><span className="text-lg">⚡</span><span>STAS — Solving Tickets As A Service</span></div>
+            <div className="flex items-center gap-2 text-sm text-gray-500"><span className="text-lg">⚡</span><span>SYNTARO — Solving Tickets As A Service</span></div>
             <div className="flex items-center gap-6 text-sm text-gray-500">
               <Link to="/benchmarks" className="hover:text-brand-600">Benchmarks</Link>
               <Link to="/pricing" className="hover:text-brand-600">Pricing</Link>
@@ -34,7 +34,7 @@ export default function PublicLayout() {
               <Link to="/enterprise" className="hover:text-brand-600">Enterprise</Link>
               <Link to="/status" className="hover:text-brand-600">Status</Link>
             </div>
-            <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} STAS. All rights reserved.</p>
+            <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} SYNTARO. All rights reserved.</p>
           </div>
         </div>
       </footer>

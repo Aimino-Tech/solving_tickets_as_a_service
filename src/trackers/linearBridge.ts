@@ -50,7 +50,7 @@ export async function bridgeLinearTicket(linearTicketId: string): Promise<number
     repo: repoName,
     title: ticketTitle,
     body,
-    labels: [config.stas.label],
+    labels: [config.syntaro.label],
   });
 
   const mapping: LinearIssueMapping = {

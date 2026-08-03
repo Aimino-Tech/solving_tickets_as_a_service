@@ -1,5 +1,5 @@
 """
-STAS Pipeline Orchestrator — manages agent pipelines, concurrency, rework,
+SYNTARO Pipeline Orchestrator — manages agent pipelines, concurrency, rework,
 and self-healing infrastructure (AIM-2022).
 
 Modules

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 export default function Trust() {
-  useEffect(() => { document.title = 'Trust & Security — STAS'; }, []);
+  useEffect(() => { document.title = 'Trust & Security — SYNTARO'; }, []);
   return (
     <section className="section" style={{ paddingTop: 120 }}>
       <div className="section-header">

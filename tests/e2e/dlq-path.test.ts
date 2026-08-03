@@ -46,7 +46,7 @@ describe('DLQ Path: Failed Message → Retries → DLQ → Alert', () => {
     const entry = await recordDeadLetter(
       mockJobData as any,
       'Test error after max retries',
-      'stas-issues',
+      'syntaro-issues',
       'Error: Test error\n    at Object.<anonymous> (test.ts:1:1)',
     );
 
@@ -55,7 +55,7 @@ describe('DLQ Path: Failed Message → Retries → DLQ → Alert', () => {
     expect(entry.timestamp).toBeTruthy();
     expect(entry.error).toBe('Test error after max retries');
     expect(entry.retryCount).toBe(4);
-    expect(entry.sourceQueue).toBe('stas-issues');
+    expect(entry.sourceQueue).toBe('syntaro-issues');
     expect(entry.acknowledged).toBe(false);
     expect(entry.jobData).toBeDefined();
     expect(entry.jobData.issueNumber).toBe(42);
@@ -81,7 +81,7 @@ describe('DLQ Path: Failed Message → Retries → DLQ → Alert', () => {
         retryCount: 2,
       } as any,
       'Store error',
-      'stas-issues',
+      'syntaro-issues',
     );
 
     // Verify it's in the store
@@ -117,7 +117,7 @@ describe('DLQ Path: Failed Message → Retries → DLQ → Alert', () => {
         retryCount: 3,
       } as any,
       'Ack test error',
-      'stas-issues',
+      'syntaro-issues',
     );
 
     // Acknowledge the entry
@@ -148,7 +148,7 @@ describe('DLQ Path: Failed Message → Retries → DLQ → Alert', () => {
         retryCount: 1,
       } as any,
       'Replay error',
-      'stas-issues',
+      'syntaro-issues',
     );
 
     // Acknowledge first
@@ -175,7 +175,7 @@ describe('DLQ Path: Failed Message → Retries → DLQ → Alert', () => {
         retryCount: 0,
       } as any,
       'Format error',
-      'stas-issues',
+      'syntaro-issues',
     );
 
     const formatted = formatDeadLetterEntry(entry);

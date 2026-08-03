@@ -61,7 +61,7 @@ function createDockerSandbox(): DockerSandbox {
     123,
     getToken,
   );
-  (sandbox as any).tempDir = '/tmp/stas-sandbox-test';
+  (sandbox as any).tempDir = '/tmp/syntaro-sandbox-test';
   return sandbox;
 }
 
@@ -141,13 +141,13 @@ describe('DockerSandbox', () => {
       expect(args[wdIndex + 1]).toBe(CONTAINER_WORKDIR);
     });
 
-    it('includes stas-sandbox=true label', () => {
+    it('includes syntaro-sandbox=true label', () => {
       const sandbox = createDockerSandbox();
       const args = (sandbox as any).buildCreateArgs('node:22-alpine', 'test-container');
 
       const labelIndex = args.indexOf('--label');
       expect(labelIndex).not.toBe(-1);
-      expect(args[labelIndex + 1]).toBe('stas-sandbox=true');
+      expect(args[labelIndex + 1]).toBe('syntaro-sandbox=true');
     });
   });
 });

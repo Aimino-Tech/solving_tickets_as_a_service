@@ -5,10 +5,10 @@
  * Required with upgrade information if the monthly limit has been exceeded.
  *
  * Response headers:
- *   X-Stas-Usage-Remaining — Remaining fixes this month
- *   X-Stas-Usage-Limit     — Monthly fix limit
- *   X-Stas-Plan            — Current plan name
- *   X-Stas-Usage-Reset     — ISO timestamp of next reset
+ *   X-Syntaro-Usage-Remaining — Remaining fixes this month
+ *   X-Syntaro-Usage-Limit     — Monthly fix limit
+ *   X-Syntaro-Plan            — Current plan name
+ *   X-Syntaro-Usage-Reset     — ISO timestamp of next reset
  */
 
 import type { Request, Response, NextFunction } from 'express';
@@ -62,7 +62,7 @@ function getDefaultTracker(): UsageTracker {
  */
 export function createTierGate(options: TierGateOptions = {}) {
   const tracker = options.tracker ?? getDefaultTracker();
-  const upgradeUrl = options.upgradeUrl ?? 'https://stas.ai/pricing';
+  const upgradeUrl = options.upgradeUrl ?? 'https://syntaro.ai/pricing';
   const skip = options.skipEnforcement ?? false;
 
   return async function tierGate(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -108,13 +108,13 @@ export function createTierGate(options: TierGateOptions = {}) {
 
     // Set usage-related response headers
     if (usage.unlimited) {
-      res.setHeader('X-Stas-Usage-Remaining', 'Unlimited');
+      res.setHeader('X-Syntaro-Usage-Remaining', 'Unlimited');
     } else {
-      res.setHeader('X-Stas-Usage-Remaining', String(usage.remaining));
+      res.setHeader('X-Syntaro-Usage-Remaining', String(usage.remaining));
     }
-    res.setHeader('X-Stas-Usage-Limit', String(usage.monthlyLimit));
-    res.setHeader('X-Stas-Plan', usage.plan);
-    res.setHeader('X-Stas-Usage-Reset', usage.resetAt);
+    res.setHeader('X-Syntaro-Usage-Limit', String(usage.monthlyLimit));
+    res.setHeader('X-Syntaro-Plan', usage.plan);
+    res.setHeader('X-Syntaro-Usage-Reset', usage.resetAt);
 
     if (!quota.allowed) {
       log.warn(
@@ -158,7 +158,7 @@ function resolveUserId(req: Request): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const reqAny = req as any;
   const userId: string | undefined =
-    reqAny.userId ?? reqAny.githubUserId ?? req.headers['x-stas-user-id'] as string | undefined;
+    reqAny.userId ?? reqAny.githubUserId ?? req.headers['x-syntaro-user-id'] as string | undefined;
 
   return userId ?? req.ip ?? 'anonymous';
 }
@@ -176,7 +176,7 @@ function resolveRepoId(req: Request): string | null {
   if (repoQuery) return repoQuery;
 
   // Check header
-  const repoHeader = req.headers['x-stas-repo-id'] as string | undefined;
+  const repoHeader = req.headers['x-syntaro-repo-id'] as string | undefined;
   if (repoHeader) return repoHeader;
 
   // Check body

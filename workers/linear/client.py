@@ -1,5 +1,5 @@
 """
-Linear GraphQL API client for STAS worker processes.
+Linear GraphQL API client for SYNTARO worker processes.
 
 Provides cached, rate-limited access to the Linear API:
 - ``get_issues_by_state(states)`` — fetch issues in the given workflow states

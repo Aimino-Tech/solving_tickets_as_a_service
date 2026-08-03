@@ -62,7 +62,7 @@ export async function postNonCodeResult(result: NonCodeTicketResult): Promise<vo
     detailsSection,
     evidenceSection,
     ``,
-    `> Automated result posting by STAS`,
+    `> Automated result posting by SYNTARO`,
   ].join('\n');
 
   try {

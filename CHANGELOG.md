@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to STAS (Solving Tickets As A Service) are documented in this file.
+All notable changes to SYNTARO (Solving Tickets As A Service) are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -201,7 +201,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - Earlier
 
 ### Added
-- Initial commit — STAS bot proof of concept
+- Initial commit — SYNTARO bot proof of concept
 - Basic issue label detection
 - GitHub API client setup
 - Project README and license

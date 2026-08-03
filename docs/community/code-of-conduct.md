@@ -1,18 +1,18 @@
 ---
-title: "STAS Community Code of Conduct"
+title: "SYNTARO Community Code of Conduct"
 status: "draft"
 last-updated: "2026-07-28"
 ---
 
-# STAS Community Code of Conduct
+# SYNTARO Community Code of Conduct
 
 ## Our Pledge
 
-We as members, contributors, and leaders of the STAS community pledge to make participation in our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, caste, color, religion, or sexual identity and orientation.
+We as members, contributors, and leaders of the SYNTARO community pledge to make participation in our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, caste, color, religion, or sexual identity and orientation.
 
 We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community.
 
-STAS is an AI-powered tool for fixing GitHub issues. Our community exists to help developers use and extend STAS effectively. We are committed to providing a space where everyone — from first-time open-source contributors to experienced engineers — can learn, teach, and collaborate without fear of harassment or discrimination.
+SYNTARO is an AI-powered tool for fixing GitHub issues. Our community exists to help developers use and extend SYNTARO effectively. We are committed to providing a space where everyone — from first-time open-source contributors to experienced engineers — can learn, teach, and collaborate without fear of harassment or discrimination.
 
 ---
 
@@ -25,7 +25,7 @@ Examples of behavior that contributes to a positive environment:
 - **Respectful communication** — Use welcoming and inclusive language. Be respectful of differing viewpoints and experiences. Disagreement is healthy; personal attacks are not.
 - **Constructive feedback** — Provide and accept gracefully constructive criticism. Feedback should be specific, actionable, and focused on the work, not the person. Instead of "this is broken," say "this approach doesn't handle X case — consider Y."
 - **Empathy and kindness** — Show empathy toward other community members. Many users are learning. Assume good intent.
-- **Collaboration** — Focus on what is best for the community and the STAS project as a whole. Give credit where it is due and acknowledge others' contributions.
+- **Collaboration** — Focus on what is best for the community and the SYNTARO project as a whole. Give credit where it is due and acknowledge others' contributions.
 - **Professionalism** — Maintain a professional tone in all community spaces. Remember that text-based communication lacks tone and context — choose your words carefully.
 - **Respect for boundaries** — Respect others' time, attention, and personal boundaries. Do not @mention people unnecessarily or spam threads.
 - **Search first** — Before asking a question, search existing documentation, threads, and issues. This respects contributors' time and keeps the community focused.
@@ -40,7 +40,7 @@ Examples of behavior that will not be tolerated:
 - **Spam and self-promotion** — Unsolicited advertising, link dropping, recruitment, or commercial promotion outside of designated channels (#showcase, #feedback per their rules).
 - **Publishing private information** — Sharing others' private information (real names, addresses, emails, API keys, security credentials) without explicit permission. This includes posting content that violates others' privacy.
 - **NSFW content** — Sexually explicit or violent material, including avatars, profile pictures, or messages.
-- **Misinformation** — Knowingly spreading false or misleading information about STAS, its capabilities, or its security.
+- **Misinformation** — Knowingly spreading false or misleading information about SYNTARO, its capabilities, or its security.
 - **Circumventing moderation** — Creating alternate accounts to evade bans, re-posting removed content, or encouraging others to violate this Code of Conduct.
 
 ---
@@ -65,7 +65,7 @@ Moderators are expected to:
 - Maintain confidentiality — do not discuss moderation actions with non-moderators.
 - Recuse themselves if they have a personal conflict with the reported individual.
 
-### Project Maintainers (STAS Core Team)
+### Project Maintainers (SYNTARO Core Team)
 
 Project maintainers have additional responsibilities:
 
@@ -84,8 +84,8 @@ Project maintainers have additional responsibilities:
 If you experience or witness behavior that violates this Code of Conduct:
 
 1. **DM a moderator** — Send a direct message to any `@moderator` in the Slack workspace.
-2. **Email** — Send a report to `conduct@stas.ai`. This address is monitored by the STAS core team.
-3. **Report via GitHub** — For violations in GitHub repositories (issues, PRs, discussions), use GitHub's built-in report functionality or email `conduct@stas.ai`.
+2. **Email** — Send a report to `conduct@syntaro.ai`. This address is monitored by the SYNTARO core team.
+3. **Report via GitHub** — For violations in GitHub repositories (issues, PRs, discussions), use GitHub's built-in report functionality or email `conduct@syntaro.ai`.
 
 ### What to Include in a Report
 
@@ -120,7 +120,7 @@ All reports are treated as confidential. We will not share your identity with th
 
 **Duration**: Warning is noted in internal logs. Expires after 90 days of good behavior.
 
-**Appeal**: The individual may appeal to conduct@stas.ai within 7 days.
+**Appeal**: The individual may appeal to conduct@syntaro.ai within 7 days.
 
 ### 2. Temporary Ban
 
@@ -142,7 +142,7 @@ The moderator team notifies the individual via email with:
 
 **Conditions for return**: The individual must acknowledge the violation, commit to following the Code of Conduct, and complete any corrective actions specified by the moderator team.
 
-**Appeal**: The individual may appeal to conduct@stas.ai within 14 days. Appeals are reviewed by a maintainer who was not involved in the original decision.
+**Appeal**: The individual may appeal to conduct@syntaro.ai within 14 days. Appeals are reviewed by a maintainer who was not involved in the original decision.
 
 ### 3. Permanent Ban
 
@@ -150,19 +150,19 @@ The moderator team notifies the individual via email with:
 - Egregious violations (e.g., threats of violence, doxxing, hate speech, sexual assault)
 - Persistent violations after multiple temporary bans (3+ temporary bans)
 - Attempting to circumvent a temporary or permanent ban (e.g., creating alternate accounts)
-- Conduct that poses a legal liability for STAS or its community
+- Conduct that poses a legal liability for SYNTARO or its community
 
-**Action**: The individual is permanently removed from all STAS community spaces:
+**Action**: The individual is permanently removed from all SYNTARO community spaces:
 - Slack workspace (blocked from re-joining)
 - GitHub repositories (blocked from issues, PRs, discussions)
-- Any other official STAS community spaces
+- Any other official SYNTARO community spaces
 
 The maintainer team notifies the individual via email with:
 - The reason for the permanent ban
 - The evidence considered
 - The appeal process
 
-**Appeal**: The individual may appeal to conduct@stas.ai within 30 days. Appeals are reviewed by the full STAS core team. Permanent bans are reversed only in exceptional circumstances.
+**Appeal**: The individual may appeal to conduct@syntaro.ai within 30 days. Appeals are reviewed by the full SYNTARO core team. Permanent bans are reversed only in exceptional circumstances.
 
 ---
 
@@ -204,16 +204,16 @@ The maintainer team notifies the individual via email with:
 
 ## Scope
 
-This Code of Conduct applies to all STAS community spaces, including:
+This Code of Conduct applies to all SYNTARO community spaces, including:
 
-- **Slack workspace** (`stas-community`) — all channels, DMs between community members, threads, and posts.
-- **GitHub repositories** under the Aimino-Tech organization that relate to STAS — issues, pull requests, discussions, code reviews, wiki pages.
-- **Documentation** — comments, suggestions, and contributions to STAS documentation.
-- **Community events** — meetups, AMAs, hackathons, office hours, and any other events organized by or on behalf of the STAS community.
-- **Social media** — official STAS accounts and hashtags where the community interacts.
-- **Other communication channels** — official STAS mailing lists, forums, or chat platforms.
+- **Slack workspace** (`syntaro-community`) — all channels, DMs between community members, threads, and posts.
+- **GitHub repositories** under the Aimino-Tech organization that relate to SYNTARO — issues, pull requests, discussions, code reviews, wiki pages.
+- **Documentation** — comments, suggestions, and contributions to SYNTARO documentation.
+- **Community events** — meetups, AMAs, hackathons, office hours, and any other events organized by or on behalf of the SYNTARO community.
+- **Social media** — official SYNTARO accounts and hashtags where the community interacts.
+- **Other communication channels** — official SYNTARO mailing lists, forums, or chat platforms.
 
-This Code of Conduct also applies when an individual is representing the STAS community in public spaces. Examples include using an official project email address, posting via an official social media account, or acting as an appointed representative at an online or offline event.
+This Code of Conduct also applies when an individual is representing the SYNTARO community in public spaces. Examples include using an official project email address, posting via an official social media account, or acting as an appointed representative at an online or offline event.
 
 ---
 
@@ -231,6 +231,6 @@ For answers to common questions about this code of conduct, see the FAQ at https
 
 ## Contact
 
-- **Moderators**: DM any `@moderator` in the STAS Slack workspace
-- **Email**: conduct@stas.ai
-- **GitHub**: https://github.com/Aimino-Tech/stas (file an issue in the `.github` repository)
+- **Moderators**: DM any `@moderator` in the SYNTARO Slack workspace
+- **Email**: conduct@syntaro.ai
+- **GitHub**: https://github.com/Aimino-Tech/syntaro (file an issue in the `.github` repository)

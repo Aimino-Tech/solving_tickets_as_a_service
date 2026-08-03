@@ -1,6 +1,6 @@
 #!/bin/sh
-# STAS Sandbox Network Setup
-# Creates the stas_agent-net bridge and applies host iptables rules
+# SYNTARO Sandbox Network Setup
+# Creates the syntaro_agent-net bridge and applies host iptables rules
 # to prevent Squid bypass (DNS tunneling, direct IP connections).
 #
 # Run once at daemon/container start. Idempotent.
@@ -11,8 +11,8 @@
 
 set -e
 
-NETWORK_NAME="stas_agent-net"
-BRIDGE_NAME="br-stas_agent-net"
+NETWORK_NAME="syntaro_agent-net"
+BRIDGE_NAME="br-syntaro_agent-net"
 DNS_PRIMARY="1.1.1.1"
 DNS_SECONDARY="8.8.8.8"
 PROXY_PORT="3128"

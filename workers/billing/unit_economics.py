@@ -40,7 +40,7 @@ MODEL_COST_TABLE: dict[str, tuple[float, float]] = {
     "gpt-5.5-deepswe": (2.0, 8.0),
     "claude-opus-4-20250514": (1.5, 7.5),
     "claude-opus-4.5": (3.0, 15.0),
-    "stas-agi": (0.5, 2.0),
+    "syntaro-agi": (0.5, 2.0),
 }
 
 
@@ -214,7 +214,7 @@ DEFAULT_AVG_COST_PER_FIX_CENTS: dict[str, float] = {
     "gpt-5.5-deepswe": 580.0,
     "claude-opus-4-20250514": 264.0,
     "claude-opus-4.5": 264.0,
-    "stas-agi": 350.0,
+    "syntaro-agi": 350.0,
 }
 
 REBALANCED_TIERS_FIXES: dict[str, dict[str, Any]] = {
@@ -274,7 +274,7 @@ def analyze_tier_economics(tier: str, avg_cost_per_fix_cents: float | None = Non
     fixes = cfg["fixes_per_month"]
     if fixes < 0:
         fixes = 0
-    avg_cost = avg_cost_per_fix_cents or DEFAULT_AVG_COST_PER_FIX_CENTS.get("stas-agi", 350.0)
+    avg_cost = avg_cost_per_fix_cents or DEFAULT_AVG_COST_PER_FIX_CENTS.get("syntaro-agi", 350.0)
 
     return TierEconomics(
         tier_name=tier,
@@ -305,7 +305,7 @@ def recommend_pricing(target_margin_pct: float = 70.0) -> dict[str, dict[str, An
             }
             continue
 
-        cost_per_fix = DEFAULT_AVG_COST_PER_FIX_CENTS.get("stas-agi", 350.0)
+        cost_per_fix = DEFAULT_AVG_COST_PER_FIX_CENTS.get("syntaro-agi", 350.0)
         margin_multiplier = 100.0 / (100.0 - target_margin_pct)
         min_revenue_per_fix = round(cost_per_fix * margin_multiplier, 2)
         min_monthly_price = round(min_revenue_per_fix * fixes)

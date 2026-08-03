@@ -1,5 +1,5 @@
 /**
- * Mock factories for STAS external dependencies.
+ * Mock factories for SYNTARO external dependencies.
  *
  * Each factory returns a fully mocked instance of the corresponding dependency,
  * with all commonly-used methods stubbed as vi.fn() returning sensible defaults.
@@ -33,7 +33,7 @@ export interface MockOctokitInstance {
 }
 
 /**
- * Create a mocked Octokit instance with all methods used by STAS.
+ * Create a mocked Octokit instance with all methods used by SYNTARO.
  */
 export function mockOctokit(): MockOctokitInstance {
   return {

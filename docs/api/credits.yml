@@ -1,17 +1,17 @@
 openapi: 3.0.3
 info:
-  title: STAS Credit System API
+  title: SYNTARO Credit System API
   description: |
-    Credit management endpoints for the STAS platform. Users purchase credit
+    Credit management endpoints for the SYNTARO platform. Users purchase credit
     packs via Stripe Checkout, and each automated fix run deducts credits
     from their balance.
   version: 1.0.0
   contact:
-    name: STAS Team
+    name: SYNTARO Team
     url: https://github.com/Aimino-Tech/solving_tickets_as_a_service
 
 servers:
-  - url: https://stas.dev/api/v1
+  - url: https://syntaro.dev/api/v1
     description: Production server
   - url: http://localhost:3000/api/v1
     description: Local development
@@ -164,12 +164,12 @@ paths:
                   type: string
                   format: uri
                   description: Redirect URL on successful payment
-                  example: https://dashboard.stas.dev/credits/success
+                  example: https://dashboard.syntaro.dev/credits/success
                 cancelUrl:
                   type: string
                   format: uri
                   description: Redirect URL if user cancels
-                  example: https://dashboard.stas.dev/credits
+                  example: https://dashboard.syntaro.dev/credits
       responses:
         '200':
           description: Checkout session created

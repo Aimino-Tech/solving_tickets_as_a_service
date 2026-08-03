@@ -60,8 +60,8 @@ export class SandboxPool {
 
   private async createContainer(): Promise<WarmContainer> {
     const image = config.docker.image;
-    const tempDir = mkdtempSync(join(tmpdir(), 'stas-sandbox-pool-'));
-    const containerName = `stas-sandbox-pool-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const tempDir = mkdtempSync(join(tmpdir(), 'syntaro-sandbox-pool-'));
+    const containerName = `syntaro-sandbox-pool-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
     const args: string[] = [
       'create', '--init', '--rm',
@@ -76,7 +76,7 @@ export class SandboxPool {
     const cpu = config.docker.containerCpu;
     if (cpu) args.push('--cpus', String(cpu));
 
-    args.push('--label', 'stas-sandbox=true');
+    args.push('--label', 'syntaro-sandbox=true');
     args.push('--security-opt', 'no-new-privileges:true');
     args.push('--cap-drop', 'ALL');
     args.push('--cap-add', 'NET_ADMIN');

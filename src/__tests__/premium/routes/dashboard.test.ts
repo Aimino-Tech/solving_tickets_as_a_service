@@ -274,14 +274,14 @@ describe.skip('premium dashboard routes', () => {
       expect(body).toHaveProperty('auditLogEnabled');
     });
 
-    it('reads STAS_LABEL from environment', async () => {
-      process.env.STAS_LABEL = 'custom:label';
+    it('reads SYNTARO_LABEL from environment', async () => {
+      process.env.SYNTARO_LABEL = 'custom:label';
       const { req, res } = mockReqRes('GET', '/settings');
       await invokeRoute(router, 'get', '/settings', req, res);
 
       const body = JSON.parse(res._body);
       expect(body.label).toBe('custom:label');
-      delete process.env.STAS_LABEL;
+      delete process.env.SYNTARO_LABEL;
     });
   });
 

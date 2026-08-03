@@ -1,12 +1,12 @@
 openapi: 3.1.0
 info:
-  title: STAS API — Solving Tickets As A Service
+  title: SYNTARO API — Solving Tickets As A Service
   description: |
-    STAS is an open-source GitHub bot that turns labeled issues into pull requests.
+    SYNTARO is an open-source GitHub bot that turns labeled issues into pull requests.
 
     ## RapidAPI Marketplace
     
-    STAS is also available as a payable API on the [RapidAPI Marketplace](https://rapidapi.com/).
+    SYNTARO is also available as a payable API on the [RapidAPI Marketplace](https://rapidapi.com/).
     Subscribe to a plan to get an API key and start submitting fix jobs programmatically.
     
     Endpoints marked with the `RapidAPI` tag require a valid RapidAPI subscription.
@@ -29,14 +29,14 @@ info:
     
     ```bash
     # Submit a fix job
-    curl -X POST https://stas-rapidapi.p.rapidapi.com/api/fix \
+    curl -X POST https://syntaro-rapidapi.p.rapidapi.com/api/fix \
       -H "Content-Type: application/json" \
       -H "X-RapidAPI-Key: your-rapidapi-key" \
       -H "X-RapidAPI-Proxy-Secret: your-proxy-secret" \
       -d '{"repoUrl": "https://github.com/owner/repo", "issueTitle": "Fix login bug", "issueBody": "Login returns 500 for special chars"}'
     
     # Poll job status
-    curl https://stas-rapidapi.p.rapidapi.com/api/fix/<jobId> \
+    curl https://syntaro-rapidapi.p.rapidapi.com/api/fix/<jobId> \
       -H "X-RapidAPI-Key: your-rapidapi-key" \
       -H "X-RapidAPI-Proxy-Secret: your-proxy-secret"
     ```
@@ -71,14 +71,14 @@ info:
     When exceeded, the API returns `429 Too Many Requests` with a `Retry-After` header.
   version: "0.1.0"
   contact:
-    name: STAS Team
+    name: SYNTARO Team
     url: https://github.com/tamnguyen08/solving_tickets_as_a_service
   license:
     name: MIT
     identifier: MIT
 
 servers:
-  - url: https://api.stas.ai
+  - url: https://api.syntaro.ai
     description: Production server
   - url: http://localhost:3000
     description: Local development
@@ -87,7 +87,7 @@ tags:
   - name: RapidAPI
     description: RapidAPI Marketplace endpoints (requires subscription)
   - name: Eval
-    description: Public eval results for STAS benchmark performance
+    description: Public eval results for SYNTARO benchmark performance
   - name: Health
     description: Health check endpoints
   - name: Webhooks
@@ -112,7 +112,7 @@ paths:
       tags:
         - Health
       summary: Health check
-      description: Returns the current health status of the STAS API server.
+      description: Returns the current health status of the SYNTARO API server.
       operationId: getHealth
       responses:
         "200":
@@ -123,7 +123,7 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
               example:
                 status: "ok"
-                label: "stas:fix"
+                label: "syntaro:fix"
                 uptime: 12345.67
                 timestamp: "2026-06-05T20:00:00.000Z"
         "500":
@@ -270,7 +270,7 @@ paths:
                     title: "Fix login bug"
                     body: "The login endpoint returns 500 when the email contains special characters."
                     labels:
-                      - name: "stas:fix"
+                      - name: "syntaro:fix"
                   repository:
                     full_name: "owner/repo"
                     owner:
@@ -764,8 +764,8 @@ paths:
                 summary: Purchase 100 credits
                 value:
                   price_id: price_100credits
-                  success_url: "https://app.stas.ai/credits/success"
-                  cancel_url: "https://app.stas.ai/credits"
+                  success_url: "https://app.syntaro.ai/credits/success"
+                  cancel_url: "https://app.syntaro.ai/credits"
       responses:
         "200":
           description: Checkout session created
@@ -1586,7 +1586,7 @@ paths:
               example:
                 jobId: "550e8400-e29b-41d4-a716-446655440000"
                 status: "queued"
-                pollUrl: "https://stas-rapidapi.p.rapidapi.com/api/fix/550e8400-e29b-41d4-a716-446655440000"
+                pollUrl: "https://syntaro-rapidapi.p.rapidapi.com/api/fix/550e8400-e29b-41d4-a716-446655440000"
                 createdAt: "2026-06-12T12:00:00.000Z"
         "400":
           $ref: "#/components/responses/BadRequest"
@@ -1670,8 +1670,8 @@ paths:
         - Eval
       summary: Aggregate eval results
       description: |
-        Returns aggregate benchmark results for STAS across all supported
-        languages. No authentication required — use this to evaluate STAS
+        Returns aggregate benchmark results for SYNTARO across all supported
+        languages. No authentication required — use this to evaluate SYNTARO
         performance before subscribing.
         
         Results include overall pass rate, per-category scores, and trend data.
@@ -1762,7 +1762,7 @@ paths:
                 $ref: "#/components/schemas/RapidApiHealthResponse"
               example:
                 status: "ok"
-                service: "STAS RapidAPI"
+                service: "SYNTARO RapidAPI"
                 timestamp: "2026-06-12T12:00:00.000Z"
 
 components:
@@ -1807,8 +1807,8 @@ components:
           example: "ok"
         label:
           type: string
-          description: The configured issue label that triggers STAS
-          example: "stas:fix"
+          description: The configured issue label that triggers SYNTARO
+          example: "syntaro:fix"
         uptime:
           type: number
           description: Server uptime in seconds
@@ -2152,12 +2152,12 @@ components:
           type: string
           format: uri
           description: Redirect URL on successful payment
-          example: "https://app.stas.ai/credits/success"
+          example: "https://app.syntaro.ai/credits/success"
         cancel_url:
           type: string
           format: uri
           description: Redirect URL if the user cancels
-          example: "https://app.stas.ai/credits"
+          example: "https://app.syntaro.ai/credits"
 
     CreditTopUpResponse:
       type: object
@@ -2496,7 +2496,7 @@ components:
           example: "ok"
         service:
           type: string
-          example: "STAS RapidAPI"
+          example: "SYNTARO RapidAPI"
         timestamp:
           type: string
           format: date-time

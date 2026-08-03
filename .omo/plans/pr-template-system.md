@@ -1,4 +1,4 @@
-# STAS PR Workflow Template System
+# SYNTARO PR Workflow Template System
 
 Generated: 2026-06-29 | Status: Plan
 Team: feasibility-scrutineer, systems-architect, edge-case-hunter, innovation-designer
@@ -28,7 +28,7 @@ Level 2 — At phase execution (worker):
 RabbitMQ just routes opaque messages. It does NOT know about ticket types, templates, or phases. The intelligence lives in:
 
 1. **Classifier service** — resolves label → request type → template
-2. **Template store** — `.stas/templates/*.yaml` definitions + dynamic command resolution
+2. **Template store** — `.syntaro/templates/*.yaml` definitions + dynamic command resolution
 3. **Workers** — receive injected payload, resolve commands at execution time
 
 ---
@@ -36,7 +36,7 @@ RabbitMQ just routes opaque messages. It does NOT know about ticket types, templ
 ## Flow
 
 ```
-GitHub Issue labeled "stas:fix"
+GitHub Issue labeled "syntaro:fix"
        │
        ▼
   Webhook Handler
@@ -70,17 +70,17 @@ GitHub Issue labeled "stas:fix"
     "number": 42,
     "title": "Fix login race condition",
     "body": "...",
-    "labels": ["stas:fix", "bug"],
+    "labels": ["syntaro:fix", "bug"],
     "repo": "owner/repo"
   },
   "template": {
-    "name": "stas:fix",
+    "name": "syntaro:fix",
     "version": 3,
     "phases": ["pre", "main", "post", "final"]
   },
   "classification": {
     "type": "bug",
-    "label": "stas:fix",
+    "label": "syntaro:fix",
     "confidence": 0.92
   }
 }
@@ -96,11 +96,11 @@ The worker does simple string replacement:
 - `{issue.body}` → "When user logs in..."
 - `{repo.owner}` → "tamnguyen08"
 - `{repo.name}` → "solving_tickets_as_a_service"
-- `{issue.labels}` → "stas:fix,bug"
-- `{template.name}` → "stas:fix"
+- `{issue.labels}` → "syntaro:fix,bug"
+- `{template.name}` → "syntaro:fix"
 - `{phase.name}` → "pre"
 
-**Users manually customize commands** by editing `.stas/templates/*.yaml`. The template is just a YAML file with command strings and placeholder slots. No expression evaluation. No conditional logic. No branching. The worker finds `{...}` tokens and replaces them with context values — nothing more sophisticated.
+**Users manually customize commands** by editing `.syntaro/templates/*.yaml`. The template is just a YAML file with command strings and placeholder slots. No expression evaluation. No conditional logic. No branching. The worker finds `{...}` tokens and replaces them with context values — nothing more sophisticated.
 
 This keeps the system predictable, debuggable, and safe from injection-like complexity.
 
@@ -108,7 +108,7 @@ This keeps the system predictable, debuggable, and safe from injection-like comp
 
 At execution time, the worker:
 1. Reads `template.name` from payload
-2. Fetches latest template from `.stas/templates/{name}.yaml` / Redis / DB
+2. Fetches latest template from `.syntaro/templates/{name}.yaml` / Redis / DB
 3. Resolves CI commands for current phase
 4. Replaces `{placeholders}` with context values
 5. Executes each step
@@ -116,7 +116,7 @@ At execution time, the worker:
 Commands are defined per phase in the template YAML:
 
 ```yaml
-# .stas/templates/fix.yaml
+# .syntaro/templates/fix.yaml
 phases:
   pre:
     - command: "opencode grep-memory --query {issue.title}"
@@ -144,11 +144,11 @@ phases:
 
 | Label Pattern | Request Type | Template | Session Model |
 |---|---|---|---|
-| `stas:fix` | coding/fix | `fix.yaml` | new for each phase |
-| `stas:fix:urgent` | coding/fix | `fix-urgent.yaml` | parallel sessions |
-| `stas:plan` | planning | `plan.yaml` | investigation only |
-| `stas:research` | open-ended | `research.yaml` | single session |
-| any `stas:*` bug | bug | `bug-fix.yaml` | new per phase |
+| `syntaro:fix` | coding/fix | `fix.yaml` | new for each phase |
+| `syntaro:fix:urgent` | coding/fix | `fix-urgent.yaml` | parallel sessions |
+| `syntaro:plan` | planning | `plan.yaml` | investigation only |
+| `syntaro:research` | open-ended | `research.yaml` | single session |
+| any `syntaro:*` bug | bug | `bug-fix.yaml` | new per phase |
 | unknown | fallback | `default.yaml` | single session |
 
 ---
@@ -156,15 +156,15 @@ phases:
 ## RabbitMQ Topology (Simplified)
 
 ```
-Exchange: stas.direct (direct, durable)
-  ├── Queue: stas.job.pipeline          RK: stas.job.pipeline
-  ├── Queue: stas.job.phase.{phase}     RK: stas.job.phase.{phase}
-  └── Queue: stas.job.dlq               RK: stas.job.dlq
+Exchange: syntaro.direct (direct, durable)
+  ├── Queue: syntaro.job.pipeline          RK: syntaro.job.pipeline
+  ├── Queue: syntaro.job.phase.{phase}     RK: syntaro.job.phase.{phase}
+  └── Queue: syntaro.job.dlq               RK: syntaro.job.dlq
 
 Retry via DLX:
-  stas.retry.30s (TTL=30000ms)
-  stas.retry.2m  (TTL=120000ms)
-  stas.retry.5m  (TTL=300000ms)
+  syntaro.retry.30s (TTL=30000ms)
+  syntaro.retry.2m  (TTL=120000ms)
+  syntaro.retry.5m  (TTL=300000ms)
 ```
 
 RabbitMQ is a thin pipe — it routes opaque messages. No routing per request type or template.
@@ -190,7 +190,7 @@ RabbitMQ is a thin pipe — it routes opaque messages. No routing per request ty
 10. **E2E tests** — full flow integration tests
 
 ### Wave 4: Validation
-11. **Template validation CLI** — `stas template validate` with placeholder registry, dry-run, git hook
+11. **Template validation CLI** — `syntaro template validate` with placeholder registry, dry-run, git hook
 12. **Placeholder registry** — known placeholder audit, typo detection ("Did you mean?")
 13. **Worker pre-flight guard** — validate resolved commands before execution
 
@@ -198,11 +198,11 @@ RabbitMQ is a thin pipe — it routes opaque messages. No routing per request ty
 
 ## Template Validation Safety Net
 
-Every `.stas/templates/*.yaml` must pass validation before acceptance.
+Every `.syntaro/templates/*.yaml` must pass validation before acceptance.
 
 **Validation points:**
 - **Loader-time** — rejects invalid templates before caching
-- **CLI** — `stas template validate` for manual/CI validation
+- **CLI** — `syntaro template validate` for manual/CI validation
 - **Worker pre-flight** — validates resolved command before executing
 - **Git pre-commit hook** — catches errors before commit
 
@@ -211,7 +211,7 @@ Every `.stas/templates/*.yaml` must pass validation before acceptance.
 - Schema — required fields, valid session modes
 - Placeholder registry — every `{placeholder}` checked against known list, typos flagged with "Did you mean?"
 - Command completeness — non-empty commands
-- Dry-run — `stas template validate --dry-run --input payload.json` shows resolved commands
+- Dry-run — `syntaro template validate --dry-run --input payload.json` shows resolved commands
 
 ---
 
@@ -222,5 +222,5 @@ Every `.stas/templates/*.yaml` must pass validation before acceptance.
 | Queue intelligence | RabbitMQ routes opaque messages | Simpler topology, decoupled from ticket types |
 | Variable injection | Pure `{placeholder}` substitution | No expressions, no conditionals, no branching |
 | Session model | One session per phase by default | Isolation, no state collision |
-| Template storage | `.stas/templates/` in repo | Contributed like code, versioned with repo |
-| Validation safety net | `stas template validate` | Catches errors at edit time, not execution |
+| Template storage | `.syntaro/templates/` in repo | Contributed like code, versioned with repo |
+| Validation safety net | `syntaro template validate` | Catches errors at edit time, not execution |

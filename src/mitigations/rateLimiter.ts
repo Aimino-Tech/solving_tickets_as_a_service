@@ -104,7 +104,7 @@ export class TokenBucketRateLimiter {
   ): Promise<RateLimitResult> {
     try {
       await this.ensureConnected();
-      const redisKey = `stas:ratelimit:${key}`;
+      const redisKey = `syntaro:ratelimit:${key}`;
       const sha = await this.getCheckSha();
       const now = Date.now();
 

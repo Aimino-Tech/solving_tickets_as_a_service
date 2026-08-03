@@ -37,19 +37,21 @@ import 'express-async-errors';
 import type { EmitterWebhookEventName } from '@octokit/webhooks';
 import cors from 'cors';
 import type { NextFunction, Request, Response } from 'express';
-import { Router } from 'express';
-import express from 'express';
+import express, { Router } from 'express';
 import helmet from 'helmet';
+import { initAnalytics } from './analytics/tracker.js';
 import previewRoutes from './api/routes/preview.js';
 import { trustRouter } from './api/routes/trust.js';
-
 import { streamAuditExportCsv, streamAuditExportJson } from './audit/export.js';
+import { authRouter } from './auth/index.js';
+import { billingRouter } from './billing/index.js';
 import { registerSlackMentionHandler } from './channels/slack/handler.js';
 import { config } from './config.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
 import { de } from './i18n/de.js';
 import { initMetering, usageRouter } from './metering/index.js';
 import { approvalRouter, configureApprovalGate } from './middleware/approvalGate.js';
+import { maintenanceMode } from './middleware/maintenance.js';
 import { captureError, setupSentryExpressErrorHandler } from './monitoring/sentry.js';
 import { getSlackBoltApp } from './notifications/slack-bolt.js';
 import { initWizardStore } from './onboarding/wizard.js';
@@ -59,32 +61,30 @@ import { adminRouter } from './routes/admin.js';
 import { adminAuditRouter } from './routes/admin_audit.js';
 import { adminRunsRouter } from './routes/adminRuns.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
-import { initAnalytics } from './analytics/tracker.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { badgeRouter } from './routes/badge.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
-import { dashboardRouter, configRouter } from './routes/dashboard.js';
+import { configRouter, dashboardRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
+import { gitHubOAuthRouter } from './routes/githubOAuth.js';
 import healthRouter from './routes/health.js';
 import { kpiRouter } from './routes/kpi.js';
+import { linearOAuthRouter } from './routes/linearOAuth.js';
+import { litellmUsageRouter } from './routes/litellmUsage.js';
+import mcpKeysRouter from './routes/mcpKeys.js';
 import n8nRouter from './routes/n8n.js';
-import { authRouter } from './auth/index.js';
-import { billingRouter } from './billing/index.js';
-import { onboardingRouter } from './routes/onboarding.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { onboardingRouter } from './routes/onboarding.js';
 import { pipelineRouter } from './routes/pipeline.js';
 import { plgRouter } from './routes/plg.js';
 import { pricingRouter } from './routes/pricing.js';
 import { proxyRouter } from './routes/proxy.js';
 import { qualityRouter } from './routes/quality.js';
 import { reposRouter } from './routes/repos.js';
-import { gitHubOAuthRouter } from './routes/githubOAuth.js';
-import mcpKeysRouter from './routes/mcpKeys.js';
+import { runFeedbackRouter } from './routes/runFeedback.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
-import { litellmUsageRouter } from './routes/litellmUsage.js';
-import { runFeedbackRouter } from './routes/runFeedback.js';
 import { slaRouter } from './routes/sla.js';
 import { viralRouter } from './routes/viral.js';
 import { workspaceRouter } from './routes/workspace.js';
@@ -95,8 +95,8 @@ import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
 import { rootLogger } from './utils/logger.js';
-import type { IssueJobData } from './utils/types.js';
 import { extractOrGenerateTraceId, runWithTraceId, TRACE_HEADER } from './utils/trace.js';
+import type { IssueJobData } from './utils/types.js';
 import { createBitbucketWebhooks } from './webhooks/bitbucket.js';
 import { logWebhookFailed, logWebhookProcessed, logWebhookReceived } from './webhooks/eventLogger.js';
 import { createGithubWebhooks } from './webhooks/github.js';
@@ -133,7 +133,7 @@ export async function createApp(): Promise<express.Application> {
     cors({
       origin: config.security.corsOrigin === '*' ? '*' : config.security.corsOrigin.split(',').map((s) => s.trim()),
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-request-id'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-api-key', 'x-request-id'],
       exposedHeaders: ['x-request-id'],
     }),
   );
@@ -240,6 +240,19 @@ export async function createApp(): Promise<express.Application> {
   // ── Webhook receiver ─────────────────────────────────────────────
   // OpenSymphony dispatch function for webhook handlers
   async function enqueueIssue(data: IssueJobData): Promise<string | undefined> {
+    const { guardIssueJobData } = await import('./guardrails/commonSenseGate.js');
+    const gate = guardIssueJobData(data);
+    if (!gate.passed) {
+      const detail = gate.checks
+        .filter((c) => !c.valid)
+        .map((c) => `${c.check}: ${c.error ?? 'invalid'}`)
+        .join('; ');
+      log.warn(
+        { repo: `${data.repoOwner}/${data.repoName}`, issueNumber: data.issueNumber, detail },
+        'Common-sense gate rejected issue — not dispatching',
+      );
+      return undefined;
+    }
     const { dispatchToOpenSymphony } = await import('./dispatch/osDispatch.js');
     const result = await dispatchToOpenSymphony(data);
     if (result.success) {
@@ -718,6 +731,11 @@ export async function createApp(): Promise<express.Application> {
   }
   app.use(agentServerRouter);
 
+  // -- Maintenance mode gate ----------------------------------------------------
+  // Returns 503 while maintenance mode is enabled; health, auth and webhook
+  // paths stay open so checks and event ingestion keep working.
+  app.use(maintenanceMode);
+
   // -- Health check endpoints --------------------------------------------------
   app.use(healthRouter);
 
@@ -784,6 +802,15 @@ export async function createApp(): Promise<express.Application> {
 
   // GitHub OAuth — before /api/v1 catch-all to avoid requireAuth conflict
   app.use('/api/v1/auth/github', gitHubOAuthRouter);
+  app.use('/api/v1/auth/linear', linearOAuthRouter);
+
+  // Privacy API (GDPR: erasure, portability, consent, anonymization)
+  const { default: privacyRouter } = await import('./routes/privacy.js');
+  app.use('/api/v1/privacy', privacyRouter);
+
+  // Invites API (invite-by-email)
+  const { inviteRouter } = await import('./routes/invites.js');
+  app.use('/api/v1/invites', inviteRouter);
 
   app.use('/api/v1', slaRouter);
 
@@ -848,7 +875,13 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Dashboard SPA (served from built dist/) ───────────────────────
   // Served at root `/` — all routes except /api/* and /health go to dashboard
-  const dashboardDist = path.join(__dirname, '../dashboard/dist');
+  // Resolve dashboard/dist robustly: local tsc emits to <repo>/dist (so
+  // __dirname = <repo>/dist), while Vercel's @vercel/node places included
+  // files at the function root (__dirname = <repo>).
+  const dashboardDist =
+    [path.join(__dirname, '../dashboard/dist'), path.join(__dirname, 'dashboard/dist')].find((p) =>
+      fs.existsSync(path.join(p, 'index.html')),
+    ) ?? path.join(__dirname, '../dashboard/dist');
   const viteDevUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
   if (fs.existsSync(path.join(dashboardDist, 'index.html'))) {
     app.use(express.static(dashboardDist));
@@ -901,11 +934,11 @@ export async function createApp(): Promise<express.Application> {
   // ── MCP Well-Known Discovery (agent detection) ────────────────────
   // GET /.well-known/mcp-server-card.json — AI agent auto-discovery card
   // GET /.well-known/mcp/server-card.json — Alternative path
-  // Serves the MCP server card so AI agents can discover STAS autonomously.
+  // Serves the MCP server card so AI agents can discover SYNTARO autonomously.
   app.get('/.well-known/mcp-server-card.json', (_req: Request, res: Response) => {
-    const baseUrl = process.env.STAS_PUBLIC_URL || `${_req.protocol}://${_req.get('host')}`;
-    const sseUrl = process.env.STAS_MCP_SERVER_URL ? `${process.env.STAS_MCP_SERVER_URL}/sse` : `${baseUrl}/sse`;
-    const mcpUrl = process.env.STAS_MCP_SERVER_URL ? `${process.env.STAS_MCP_SERVER_URL}/mcp` : `${baseUrl}/mcp`;
+    const baseUrl = process.env.SYNTARO_PUBLIC_URL || `${_req.protocol}://${_req.get('host')}`;
+    const sseUrl = process.env.SYNTARO_MCP_SERVER_URL ? `${process.env.SYNTARO_MCP_SERVER_URL}/sse` : `${baseUrl}/sse`;
+    const mcpUrl = process.env.SYNTARO_MCP_SERVER_URL ? `${process.env.SYNTARO_MCP_SERVER_URL}/mcp` : `${baseUrl}/mcp`;
 
     const card = {
       schemaVersion: '2024-11-05',
@@ -913,7 +946,7 @@ export async function createApp(): Promise<express.Application> {
         name: '@aimino/syntaro-mcp',
         version: '1.0.0',
         description:
-          'STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
+          'SYNTARO (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
         homepage: 'https://github.com/tamnguyen08/solving_tickets_as_a_service',
         documentation: 'https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md',
         license: 'MIT',
@@ -922,20 +955,20 @@ export async function createApp(): Promise<express.Application> {
       capabilities: {
         tools: {
           syntaro_label_issue: {
-            description: 'Label a GitHub issue with the STAS fix label. Triggers the fix pipeline.',
+            description: 'Label a GitHub issue with the SYNTARO fix label. Triggers the fix pipeline.',
             inputSchema: {
               type: 'object',
               properties: {
                 owner: { type: 'string', description: 'Repository owner' },
                 repo: { type: 'string', description: 'Repository name' },
                 issue_number: { type: 'integer', description: 'Issue number' },
-                label: { type: 'string', description: 'Label to apply (default: stas:fix)' },
+                label: { type: 'string', description: 'Label to apply (default: syntaro:fix)' },
               },
               required: ['owner', 'repo', 'issue_number'],
             },
           },
           syntaro_run_fix: {
-            description: 'Trigger the STAS fix pipeline for a GitHub issue URL.',
+            description: 'Trigger the SYNTARO fix pipeline for a GitHub issue URL.',
             inputSchema: {
               type: 'object',
               properties: { issue_url: { type: 'string', description: 'Full GitHub issue URL' } },
@@ -943,7 +976,7 @@ export async function createApp(): Promise<express.Application> {
             },
           },
           syntaro_check_status: {
-            description: 'Check status of a STAS fix run by run_id.',
+            description: 'Check status of a SYNTARO fix run by run_id.',
             inputSchema: {
               type: 'object',
               properties: { run_id: { type: 'string', description: 'Run ID from syntaro_run_fix' } },
@@ -978,7 +1011,7 @@ export async function createApp(): Promise<express.Application> {
       ],
       install: {
         opencode: {
-          config: { name: 'stas-agent', transport: 'stdio', command: 'npx', args: ['-y', '@aimino/syntaro-mcp'] },
+          config: { name: 'syntaro-agent', transport: 'stdio', command: 'npx', args: ['-y', '@aimino/syntaro-mcp'] },
         },
         claudeDesktop: {
           config: { mcpServers: { syntaro: { command: 'npx', args: ['-y', '@aimino/syntaro-mcp'] } } },
@@ -988,7 +1021,7 @@ export async function createApp(): Promise<express.Application> {
         },
       },
       keywords: [
-        'stas',
+        'syntaro',
         'github-bot',
         'issue-fixer',
         'automated-fix',
@@ -1012,10 +1045,10 @@ export async function createApp(): Promise<express.Application> {
     res.redirect(301, '/.well-known/mcp-server-card.json');
   });
 
-  // GET /badge/agent-found.svg — "Agent Found STAS" badge for repo READMEs
+  // GET /badge/agent-found.svg — "Agent Found SYNTARO" badge for repo READMEs
   app.get('/badge/agent-found.svg', (_req: Request, res: Response) => {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="138" height="20" role="img" aria-label="Agent Found: STAS">
-  <title>Agent Found: STAS</title>
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="138" height="20" role="img" aria-label="Agent Found: SYNTARO">
+  <title>Agent Found: SYNTARO</title>
   <linearGradient id="s" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
     <stop offset="1" stop-opacity=".1"/>
@@ -1031,8 +1064,8 @@ export async function createApp(): Promise<express.Application> {
   <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
     <text x="45" y="15" fill="#010101" fill-opacity=".3">Agent Found</text>
     <text x="45" y="14">Agent Found</text>
-    <text x="114" y="15" fill="#010101" fill-opacity=".3">STAS</text>
-    <text x="114" y="14">STAS</text>
+    <text x="114" y="15" fill="#010101" fill-opacity=".3">SYNTARO</text>
+    <text x="114" y="14">SYNTARO</text>
   </g>
 </svg>`;
     res.setHeader('Content-Type', 'image/svg+xml');
@@ -1162,7 +1195,7 @@ export async function createApp(): Promise<express.Application> {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
-    triggerLabels: (process.env.APPROVAL_TRIGGER_LABELS || 'production,stas:fix:approval')
+    triggerLabels: (process.env.APPROVAL_TRIGGER_LABELS || 'production,syntaro:fix:approval')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
@@ -1227,22 +1260,16 @@ export async function createApp(): Promise<express.Application> {
 
 const MAX_PORT_RETRIES = 5;
 
-async function tryListen(
-  app: express.Application,
-  port: number,
-  attempt: number,
-): Promise<import('http').Server> {
+async function tryListen(app: express.Application, port: number, attempt: number): Promise<import('http').Server> {
   return new Promise((resolve, reject) => {
     const server = app.listen(port, '0.0.0.0', async () => {
-      log.info(
-        { port, label: config.stas.label, env: config.nodeEnv },
-        `STAS server listening on :${port}`,
-      );
+      log.info({ port, label: config.syntaro.label, env: config.nodeEnv }, `SYNTARO server listening on :${port}`);
 
       // Start the RabbitMQ issue consumer — dispatches to OpenSymphony
       try {
-        const { consumeQueue } = await import('./queue/rabbitmq.js');
+        const { consumeQueue, getChannel } = await import('./queue/rabbitmq.js');
         const { dispatchToOpenSymphony } = await import('./dispatch/osDispatch.js');
+        const { perAccountConcurrency } = await import('./queue/concurrencyLimiter.js');
         await consumeQueue(QUEUES.issuesFix.name, async (msg) => {
           if (!msg) return;
           const content = msg.content.toString();
@@ -1253,7 +1280,34 @@ async function tryListen(
             log.error({ content }, 'Failed to parse RabbitMQ message');
             return;
           }
+          const accountKey = String(data.installationId ?? 0) || data.repoOwner;
           try {
+            const { guardIssueJobData } = await import('./guardrails/commonSenseGate.js');
+            const gate = guardIssueJobData(data);
+            if (!gate.passed) {
+              const detail = gate.checks
+                .filter((c) => !c.valid)
+                .map((c) => `${c.check}: ${c.error ?? 'invalid'}`)
+                .join('; ');
+              log.warn(
+                { repo: `${data.repoOwner}/${data.repoName}`, issueNumber: data.issueNumber, detail },
+                'Common-sense gate rejected queued issue — not dispatching',
+              );
+              return;
+            }
+            if (!perAccountConcurrency.acquire(accountKey, config.queue.maxConcurrentPerAccount)) {
+              log.warn(
+                {
+                  accountKey,
+                  max: config.queue.maxConcurrentPerAccount,
+                  repo: `${data.repoOwner}/${data.repoName}`,
+                  issueNumber: data.issueNumber,
+                },
+                'Per-account concurrency limit reached — requeueing',
+              );
+              getChannel().nack(msg, false, true);
+              return;
+            }
             const result = await dispatchToOpenSymphony(data);
             if (!result.success) {
               log.error({ errors: result.errors }, 'OpenSymphony dispatch failed');
@@ -1280,6 +1334,8 @@ async function tryListen(
             }
           } catch (err) {
             log.error({ err: String(err) }, 'OpenSymphony dispatch error');
+          } finally {
+            perAccountConcurrency.release(accountKey);
           }
         });
         log.info('RabbitMQ issue consumer started — dispatching to OpenSymphony');

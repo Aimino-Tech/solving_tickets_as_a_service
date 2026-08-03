@@ -22,9 +22,9 @@
     { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" },
     { "type": "datasource", "id": "postgres", "name": "PostgreSQL", "version": "1.0.0" }
   ],
-  "title": "STAS Capacity Planning",
+  "title": "SYNTARO Capacity Planning",
   "description": "Daily capacity tracking: fixes, storage, queue, workers, API calls, costs, projections",
-  "tags": ["stas", "capacity", "planning"],
+  "tags": ["syntaro", "capacity", "planning"],
   "timezone": "utc",
   "schemaVersion": 39,
   "version": 1,

@@ -194,7 +194,7 @@ function persistEnvOverrides(): void {
 router.get('/settings', (_req: Request, res: Response) => {
   const { config } = require('../config.js');
   res.json({
-    label: (settingsStore.label as string) || config.label || process.env.STAS_LABEL || 'stas:fix',
+    label: (settingsStore.label as string) || config.label || process.env.SYNTARO_LABEL || 'syntaro:fix',
     model: (settingsStore.model as string) || 'claude-sonnet-4',
     maxConcurrent: (settingsStore.maxConcurrent as number) ?? 3,
     sandboxPoolSize: (settingsStore.sandboxPoolSize as number) ?? 2,
@@ -500,10 +500,15 @@ configRouter.get('/', (_req: Request, res: Response) => {
       },
     ];
 
+    // SaaS base URL for MCP clients — must never fall back to a localhost dev URL.
+const publicUrl = process.env.SYNTARO_PUBLIC_URL || 'https://api.syntaro.io';
+const mcpApiUrl = process.env.SYNTARO_API_URL || 'https://api.syntaro.io';
+    const mcpServerUrl = process.env.SYNTARO_MCP_SERVER_URL || '';
+
     res.json({
       env,
       rateLimits: [
-        { endpoint: '/api/v1/*', limit: config.stas.rateLimitMax, window: `${config.stas.rateLimitWindowMs}ms` },
+        { endpoint: '/api/v1/*', limit: config.syntaro.rateLimitMax, window: `${config.syntaro.rateLimitWindowMs}ms` },
       ],
       tokens: [],
       symphonies: [],
@@ -511,6 +516,11 @@ configRouter.get('/', (_req: Request, res: Response) => {
       warnings: [],
       integrations,
       infrastructure: {},
+      publicUrl,
+      mcp: {
+        apiUrl: mcpApiUrl,
+        serverUrl: mcpServerUrl,
+      },
     });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to get config');

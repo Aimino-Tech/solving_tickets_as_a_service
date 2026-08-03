@@ -9,7 +9,7 @@ const knownPlaceholders: PlaceholderDefinition[] = [
   { name: 'issue.number', description: 'Issue number', example: '42', category: 'issue' },
   { name: 'issue.title', description: 'Issue title', example: 'Fix broken login', category: 'issue' },
   { name: 'issue.body', description: 'Issue body text', example: 'Users cannot log in', category: 'issue' },
-  { name: 'issue.labels', description: 'Comma-separated issue labels', example: 'bug,stas:fix', category: 'issue' },
+  { name: 'issue.labels', description: 'Comma-separated issue labels', example: 'bug,syntaro:fix', category: 'issue' },
   { name: 'repo.owner', description: 'Repository owner', example: 'owner', category: 'repo' },
   { name: 'repo.name', description: 'Repository name', example: 'my-repo', category: 'repo' },
   { name: 'template.name', description: 'Template name', example: 'fix', category: 'template' },

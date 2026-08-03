@@ -1,5 +1,5 @@
 # =============================================================================
-# Loki Configuration — STAS Log Aggregation
+# Loki Configuration — SYNTARO Log Aggregation
 # =============================================================================
 auth_enabled: false
 

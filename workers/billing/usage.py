@@ -7,7 +7,7 @@ for invoicing. A query API allows the Express service to check usage before
 dispatching a fix run.
 
 ── Key Design ────────────────────────────────────────────────────────────────
-- Redis HASH per tenant: ``stas:billing:usage:{tenant_id}``
+- Redis HASH per tenant: ``syntaro:billing:usage:{tenant_id}``
     field  ``count``       → atomic integer, incremented per fix run
     field  ``period_start`` → ISO timestamp of current billing period
 - A daily Celery beat task reads all tenant counters and reports them to
@@ -47,7 +47,7 @@ _REDIS_URL = os.getenv(
     os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0"),
 )
 
-_USAGE_KEY_PREFIX = "stas:billing:usage:"
+_USAGE_KEY_PREFIX = "syntaro:billing:usage:"
 _USAGE_COUNT_FIELD = "count"
 _USAGE_PERIOD_FIELD = "period_start"
 
@@ -232,8 +232,8 @@ def _report_usage_to_stripe(tenant_id: str, count: int) -> bool:
         stripe_mod.api_version = _STRIPE_METER_API_VERSION
 
         # Stripe meter events require a meter event name configured in the
-        # Stripe dashboard. The default is "stas_fix_run".
-        meter_event_name = os.getenv("STRIPE_METER_EVENT_NAME", "stas_fix_run")
+        # Stripe dashboard. The default is "syntaro_fix_run".
+        meter_event_name = os.getenv("STRIPE_METER_EVENT_NAME", "syntaro_fix_run")
 
         stripe_mod.billing.MeterEvent.create(
             event_name=meter_event_name,

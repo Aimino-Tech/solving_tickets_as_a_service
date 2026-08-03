@@ -38,7 +38,7 @@ const sampleData: NotificationData = {
   prUrl: 'https://github.com/owner/test-repo/pull/43',
   reason: 'Tests failed',
   errorMessage: 'Connection timeout after 30s',
-  botName: 'STAS',
+  botName: 'SYNTARO',
 };
 
 // ---------------------------------------------------------------------------
@@ -47,11 +47,11 @@ const sampleData: NotificationData = {
 
 describe('buildTextMessage() — formats Slack messages for all event types', () => {
   it.each([
-    ['fix_started', ':mag: *STAS* is investigating <https://github.com/owner/test-repo/issues/42|#42>'],
-    ['pr_created', ':rocket: *STAS* opened a PR for <https://github.com/owner/test-repo/issues/42|#42>'],
-    ['fix_failed', ":x: *STAS* couldn't fix <https://github.com/owner/test-repo/issues/42|#42>"],
-    ['verification_failed', ':warning: *STAS* fix for <https://github.com/owner/test-repo/issues/42|#42> failed verification'],
-    ['error', ':fire: *STAS* encountered an error on <https://github.com/owner/test-repo/issues/42|#42>'],
+    ['fix_started', ':mag: *SYNTARO* is investigating <https://github.com/owner/test-repo/issues/42|#42>'],
+    ['pr_created', ':rocket: *SYNTARO* opened a PR for <https://github.com/owner/test-repo/issues/42|#42>'],
+    ['fix_failed', ":x: *SYNTARO* couldn't fix <https://github.com/owner/test-repo/issues/42|#42>"],
+    ['verification_failed', ':warning: *SYNTARO* fix for <https://github.com/owner/test-repo/issues/42|#42> failed verification'],
+    ['error', ':fire: *SYNTARO* encountered an error on <https://github.com/owner/test-repo/issues/42|#42>'],
   ] as const)('should format %s event correctly', async (event, expectedPrefix) => {
     const { buildTextMessage } = await import('../../src/notifications/slack.js');
     const msg = buildTextMessage(event as NotificationEvent, sampleData);
@@ -147,7 +147,7 @@ describe('SlackNotificationService.sendNotification()', () => {
     expect(callOpts.method).toBe('POST');
     expect(callOpts.headers['Content-Type']).toBe('application/json');
     const parsedBody = JSON.parse(callOpts.body);
-    expect(parsedBody.text).toContain('*STAS* is investigating');
+    expect(parsedBody.text).toContain('*SYNTARO* is investigating');
 
     vi.unstubAllGlobals();
   });

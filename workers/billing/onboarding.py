@@ -30,13 +30,13 @@ import urllib.request
 
 logger = logging.getLogger(__name__)
 
-_ONBOARDING_REDIS_PREFIX = "stas:onboarding:"
+_ONBOARDING_REDIS_PREFIX = "syntaro:onboarding:"
 _ONBOARDING_TTL_S = int(os.getenv("ONBOARDING_TTL_S", str(7 * 24 * 3600)))
 _N8N_ONBOARDING_WEBHOOK_URL: str | None = os.getenv("N8N_ONBOARDING_WEBHOOK_URL")
 
 
 def _get_file_dir() -> str:
-    return os.getenv("ONBOARDING_FILE_DIR", "/tmp/stas-onboarding")
+    return os.getenv("ONBOARDING_FILE_DIR", "/tmp/syntaro-onboarding")
 
 
 _VALID_STATES = frozenset({

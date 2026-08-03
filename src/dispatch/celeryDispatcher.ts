@@ -88,7 +88,7 @@ export async function dispatchToCeleryPipeline(data: IssueJobData): Promise<{
   };
 
   const msg = buildCeleryMessage('workers.tasks.triage.classify_issue', ctx, undefined, dedupId);
-  const published = await publishToQueue('stas.direct', 'issue.fix', msg);
+  const published = await publishToQueue('syntaro.direct', 'issue.fix', msg);
 
   if (!published) {
     auditService.logFixJobEvent({
@@ -150,7 +150,7 @@ export async function dispatchFullPipeline(data: IssueJobData): Promise<{
   };
 
   const msg = buildCeleryMessage('workers.tasks.pipeline_orchestrator.run_full_pipeline', ctx, undefined, dedupId);
-  const published = await publishToQueue('stas.direct', 'issue.fix', msg);
+  const published = await publishToQueue('syntaro.direct', 'issue.fix', msg);
 
   if (!published) {
     auditService.logFixJobEvent({

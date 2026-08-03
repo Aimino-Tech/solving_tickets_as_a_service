@@ -6,7 +6,7 @@ P0. `npm run build` fails with 8 real TS errors; `npm test` fails 36/2013. Block
 
 1. `src/credits/routes.ts:166,168` — snake_case `account_id`/`lifetime_credits` vs camelCase type `accountId`/`lifetimeCredits` → align object keys to the declared type.
 2. `src/dispatch/celeryDispatcher.ts:157,170` — `runId` undefined → should be `dedupId` (field name bug).
-3. `src/github/auth.ts:17,101` — `@stas/github-client` TS2307. Build script already runs `npm run build -w @stas/github-client && tsc`, so verify the workspace package actually emits types to `dist` and that `tsconfig` resolves them (may need package.json `types`/`exports` or build order). Do not check in `dist`.
+3. `src/github/auth.ts:17,101` — `@syntaro/github-client` TS2307. Build script already runs `npm run build -w @syntaro/github-client && tsc`, so verify the workspace package actually emits types to `dist` and that `tsconfig` resolves them (may need package.json `types`/`exports` or build order). Do not check in `dist`.
 4. `src/routes/github.ts:65,108` — string→number type mismatches; `:171` `getInstallationToken` undefined → verify import/export (likely not exported from the module that should provide it).
 5. `src/routes/githubOAuth.ts:44` — `config.publicUrl` doesn't exist → use the real config key (verify `config.ts`, likely `publicBaseUrl`).
 

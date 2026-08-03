@@ -1,4 +1,4 @@
-# STAS MCP — End-to-End Smoke Test
+# SYNTARO MCP — End-to-End Smoke Test
 
 ## Purpose
 
@@ -73,7 +73,7 @@ curl -X POST http://localhost:4095/mcp \
    ```json
    {
      "mcpServers": {
-       "stas": {
+       "syntaro": {
          "command": "npx",
          "args": ["-y", "@aimino/syntaro-mcp", "stdio"]
        }
@@ -81,7 +81,7 @@ curl -X POST http://localhost:4095/mcp \
    }
    ```
 3. Restart Claude Desktop
-4. Verify: Claude shows stas tools in the MCP tool list
+4. Verify: Claude shows syntaro tools in the MCP tool list
 
 ## Test 7: OpenCode Discovery
 
@@ -89,7 +89,7 @@ curl -X POST http://localhost:4095/mcp \
    ```json
    {
      "mcpServers": {
-       "stas": {
+       "syntaro": {
          "command": "npx",
          "args": ["-y", "@aimino/syntaro-mcp", "stdio"]
        }
@@ -97,7 +97,7 @@ curl -X POST http://localhost:4095/mcp \
    }
    ```
 2. Restart OpenCode
-3. Verify: `/mcp` command shows stas tools
+3. Verify: `/mcp` command shows syntaro tools
 
 ## Success Criteria
 
@@ -106,5 +106,5 @@ curl -X POST http://localhost:4095/mcp \
 - [ ] Test 3 passes: all tools discoverable
 - [ ] Test 4 passes: SSE transport works
 - [ ] Test 5 passes: Streamable HTTP transport works
-- [ ] Test 6 passes: Claude Desktop discovers stas tools
-- [ ] Test 7 passes: OpenCode discovers stas tools
+- [ ] Test 6 passes: Claude Desktop discovers syntaro tools
+- [ ] Test 7 passes: OpenCode discovers syntaro tools

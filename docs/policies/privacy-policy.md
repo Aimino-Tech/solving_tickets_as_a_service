@@ -7,7 +7,7 @@ status: active
 
 # Privacy Policy
 
-**STAS (Solving Tickets As A Service)**
+**SYNTARO (Solving Tickets As A Service)**
 **Version 1.0.0**
 **Last Updated: July 28, 2026**
 
@@ -15,7 +15,7 @@ status: active
 
 ## 1. Introduction
 
-Aimino Technologies GmbH ("Aimino," "we," "us," or "our") operates STAS ("Solving Tickets As A Service"), an AI-powered GitHub issue resolution service. This Privacy Policy explains how we collect, use, process, store, and protect your personal data when you use our Service.
+Aimino Technologies GmbH ("Aimino," "we," "us," or "our") operates SYNTARO ("Solving Tickets As A Service"), an AI-powered GitHub issue resolution service. This Privacy Policy explains how we collect, use, process, store, and protect your personal data when you use our Service.
 
 We are committed to protecting your privacy and complying with the **General Data Protection Regulation (GDPR)** (Regulation (EU) 2016/679), the **German Federal Data Protection Act (BDSG)**, and the **German Telemedia Act (TMG)**.
 
@@ -26,10 +26,10 @@ Aimino Technologies GmbH
 [Registered Address]
 [City, Postal Code]
 Germany
-Email: privacy@stas.ai
+Email: privacy@syntaro.ai
 ```
 
-Our Data Protection Officer can be reached at dpo@stas.ai.
+Our Data Protection Officer can be reached at dpo@syntaro.ai.
 
 ## 2. Data We Collect
 
@@ -191,7 +191,7 @@ We ensure adequate protection for international data transfers through:
 
 ### 7.2 Your Rights Regarding Transfers
 
-You have the right to request a copy of the appropriate safeguards we have implemented for international data transfers by contacting privacy@stas.ai.
+You have the right to request a copy of the appropriate safeguards we have implemented for international data transfers by contacting privacy@syntaro.ai.
 
 ## 8. Security Measures
 
@@ -283,7 +283,7 @@ Where processing is based on consent, you have the right to withdraw consent at 
 
 To exercise any of these rights:
 
-1. **Email**: Send your request to privacy@stas.ai
+1. **Email**: Send your request to privacy@syntaro.ai
 2. **Account Settings**: Access, export, or delete your data through your Account dashboard
 3. **Response Time**: We will respond within 30 days (extendable by 60 days for complex requests)
 
@@ -304,15 +304,15 @@ Germany
 
 ### 10.1 AI Fix Generation
 
-The core function of STAS involves **automated decision-making** (Art. 22 GDPR): our AI agents automatically determine whether and how to fix a given GitHub issue, and may create pull requests without human intervention.
+The core function of SYNTARO involves **automated decision-making** (Art. 22 GDPR): our AI agents automatically determine whether and how to fix a given GitHub issue, and may create pull requests without human intervention.
 
 ### 10.2 Human Oversight
 
 We provide the following safeguards:
 
-1. **Opt-Out**: Repository owners can configure STAS to only suggest fixes (requiring manual approval) rather than automatically creating pull requests;
+1. **Opt-Out**: Repository owners can configure SYNTARO to only suggest fixes (requiring manual approval) rather than automatically creating pull requests;
 2. **Review Required**: All generated pull requests require human review and approval before merging;
-3. **Account Control**: You can pause, disable, or remove STAS from any repository at any time;
+3. **Account Control**: You can pause, disable, or remove SYNTARO from any repository at any time;
 4. **Transparency**: The Service clearly labels all AI-generated content;
 5. **Override**: You can close, modify, or reject any AI-generated pull request.
 
@@ -340,7 +340,7 @@ You can manage cookie preferences through our cookie banner or your browser sett
 
 ## 12. Children's Privacy
 
-The Service is not directed to individuals under the age of 18. We do not knowingly collect personal data from children. If you become aware that a child has provided us with personal data, please contact us at privacy@stas.ai. We will take steps to delete such data promptly.
+The Service is not directed to individuals under the age of 18. We do not knowingly collect personal data from children. If you become aware that a child has provided us with personal data, please contact us at privacy@syntaro.ai. We will take steps to delete such data promptly.
 
 ## 13. Policy Updates and Version History
 
@@ -357,7 +357,7 @@ We recommend that you review this Privacy Policy periodically. Your continued us
 
 ### 13.1 How to Track Changes
 
-You can view the complete revision history of this Privacy Policy at [https://github.com/aimino-tech/stas/privacy-policy](https://github.com/aimino-tech/stas/privacy-policy) or by requesting a copy from privacy@stas.ai.
+You can view the complete revision history of this Privacy Policy at [https://github.com/aimino-tech/syntaro/privacy-policy](https://github.com/aimino-tech/syntaro/privacy-policy) or by requesting a copy from privacy@syntaro.ai.
 
 ## 14. Data Breach Notification
 
@@ -377,10 +377,10 @@ All data breaches are documented internally, including the facts, effects, and r
 
 | Purpose | Contact |
 |---------|---------|
-| Privacy inquiries | privacy@stas.ai |
-| Data Protection Officer | dpo@stas.ai |
-| Security issues | security@stas.ai |
-| General support | support@stas.ai |
+| Privacy inquiries | privacy@syntaro.ai |
+| Data Protection Officer | dpo@syntaro.ai |
+| Security issues | security@syntaro.ai |
+| General support | support@syntaro.ai |
 | Postal address | Aimino Technologies GmbH |
 | | [Registered Address] |
 | | [City, Postal Code] |
@@ -390,8 +390,8 @@ All data breaches are documented internally, including the facts, effects, and r
 
 If you have a concern about our data handling practices:
 
-1. **First step**: Contact us at privacy@stas.ai. We will investigate and respond within 30 days;
-2. **Second step**: If unsatisfied, escalate to our Data Protection Officer at dpo@stas.ai;
+1. **First step**: Contact us at privacy@syntaro.ai. We will investigate and respond within 30 days;
+2. **Second step**: If unsatisfied, escalate to our Data Protection Officer at dpo@syntaro.ai;
 3. **Third step**: You have the right to lodge a complaint with the BayLDA (contact details in Section 9.9) or your local supervisory authority at any time.
 
 ---

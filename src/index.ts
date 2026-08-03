@@ -1,9 +1,9 @@
 /**
- * STAS — Solving Tickets As A Service
+ * SYNTARO — Solving Tickets As A Service
  *
  * Entry point — starts the API server, or both API and worker based on RUN_MODE.
  * Also starts the CI monitor if CI_MONITOR_ENABLED is true.
- * Also auto-starts the MCP server if STAS_MCP_AUTO_START is true (default).
+ * Also auto-starts the MCP server if SYNTARO_MCP_AUTO_START is true (default).
  *
  * ══════════════════════════════════════════════════════════════════════
  * IMPORTANT: Sentry must be initialized BEFORE any other imports to
@@ -64,6 +64,9 @@ async function validateStartupHealth(): Promise<void> {
       retryStrategy: () => null, // no retry — fail fast
       lazyConnect: true,
     });
+    // Prevent ioredis from crashing the process on connect failure when
+    // Redis is unreachable (serverless deploys have no local Redis).
+    redis.on('error', () => {});
     await redis.connect();
     await redis.ping();
     checks.push({ name: 'redis', ok: true });
@@ -135,7 +138,7 @@ async function validateStartupHealth(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  log.info({ runMode: config.runMode, nodeEnv: config.nodeEnv }, 'Starting STAS');
+  log.info({ runMode: config.runMode, nodeEnv: config.nodeEnv }, 'Starting SYNTARO');
 
   // Start the OpenCode health client (begins polling OpenCode serve immediately)
   try {
@@ -172,7 +175,7 @@ async function main(): Promise<void> {
   }
 
 
-  addBreadcrumb('system', 'STAS starting', { runMode: config.runMode, nodeEnv: config.nodeEnv });
+  addBreadcrumb('system', 'SYNTARO starting', { runMode: config.runMode, nodeEnv: config.nodeEnv });
 
   const mode = config.runMode;
 
@@ -302,7 +305,7 @@ async function main(): Promise<void> {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
-  addBreadcrumb('system', 'STAS started successfully');
+  addBreadcrumb('system', 'SYNTARO started successfully');
 }
 
 process.on('uncaughtException', (err) => {

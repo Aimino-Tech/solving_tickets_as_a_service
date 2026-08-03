@@ -1,8 +1,8 @@
-# STAS Production Deployment Guide
+# SYNTARO Production Deployment Guide
 
-> **AIM-3204**: Deploying the STAS GitHub webhook server and GitHub App integration to production.
+> **AIM-3204**: Deploying the SYNTARO GitHub webhook server and GitHub App integration to production.
 
-This guide covers deploying the STAS (Solving Tickets As A Service) bot to production. STAS is a GitHub App that automatically investigates, fixes, and opens pull requests for labeled issues.
+This guide covers deploying the SYNTARO (Solving Tickets As A Service) bot to production. SYNTARO is a GitHub App that automatically investigates, fixes, and opens pull requests for labeled issues.
 
 ## Table of Contents
 
@@ -40,7 +40,7 @@ This guide covers deploying the STAS (Solving Tickets As A Service) bot to produ
 
 ```
 ┌─────────────┐     ┌──────────┐     ┌──────────────────┐
-│   GitHub     │────▶│  Nginx   │────▶│  STAS Webhook    │
+│   GitHub     │────▶│  Nginx   │────▶│  SYNTARO Webhook    │
 │   Webhooks   │     │  (TLS)   │     │  (Express)       │
 └─────────────┘     └──────────┘     └────────┬─────────┘
                                               │
@@ -62,7 +62,7 @@ This guide covers deploying the STAS (Solving Tickets As A Service) bot to produ
 ### Components
 
 - **Nginx**: TLS termination, rate limiting, reverse proxy, static asset caching
-- **STAS Webhook**: Express.js server receiving GitHub webhooks, managing queues
+- **SYNTARO Webhook**: Express.js server receiving GitHub webhooks, managing queues
 - **Redis**: BullMQ job queue backend for issue processing
 - **PostgreSQL**: Persistent storage for accounts, runs, webhook events
 - **OpenCode Serve**: AI agent backend that investigates and fixes issues
@@ -107,7 +107,7 @@ Or use the template at `public/github-app-manifest.json`:
 ### Manual Setup
 
 1. Go to https://github.com/settings/apps/new
-2. **GitHub App Name**: `STAS - Solving Tickets As A Service`
+2. **GitHub App Name**: `SYNTARO - Solving Tickets As A Service`
 3. **Homepage URL**: `https://your-domain.com`
 4. **Webhook URL**: `https://your-domain.com/webhook`
 5. **Webhook secret**: Generate with `openssl rand -hex 32` and save to `GITHUB_WEBHOOK_SECRET`
@@ -192,13 +192,13 @@ docker compose -f docker-compose.prod.yml ps
 curl http://localhost:3000/health
 
 # 4. Check logs
-docker compose -f docker-compose.prod.yml logs -f stas-webhook
+docker compose -f docker-compose.prod.yml logs -f syntaro-webhook
 ```
 
 **Scaling workers:**
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=4
 ```
 
 **Updating:**
@@ -216,7 +216,7 @@ docker compose -f docker-compose.prod.yml up -d
 curl -fsSL https://fly.io/install.sh | sh
 
 # 2. Launch
-fly launch --image stas-webhook:latest
+fly launch --image syntaro-webhook:latest
 
 # 3. Set secrets
 fly secrets set GITHUB_APP_ID=...
@@ -268,9 +268,9 @@ npm run build
 
 # 3. Run with process manager
 npm install -g pm2
-pm2 start dist/index.js --name stas -- -i max
+pm2 start dist/index.js --name syntaro -- -i max
 
-# 4. Set up Nginx (see nginx/stas.conf)
+# 4. Set up Nginx (see nginx/syntaro.conf)
 # 5. Set up SSL with Let's Encrypt
 # 6. Configure systemd service
 ```
@@ -279,7 +279,7 @@ pm2 start dist/index.js --name stas -- -i max
 
 ## Nginx Reverse Proxy
 
-A production-ready Nginx configuration is provided at `nginx/stas.conf`.
+A production-ready Nginx configuration is provided at `nginx/syntaro.conf`.
 
 ### Features
 
@@ -298,8 +298,8 @@ A production-ready Nginx configuration is provided at `nginx/stas.conf`.
 docker compose -f docker-compose.prod.yml up -d nginx
 
 # For manual install:
-sudo cp nginx/stas.conf /etc/nginx/sites-available/stas
-sudo ln -s /etc/nginx/sites-available/stas /etc/nginx/sites-enabled/
+sudo cp nginx/syntaro.conf /etc/nginx/sites-available/syntaro
+sudo ln -s /etc/nginx/sites-available/syntaro /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
@@ -308,7 +308,7 @@ sudo nginx -t && sudo systemctl reload nginx
 ```bash
 # Initial setup
 sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d stas.your-domain.com
+sudo certbot --nginx -d syntaro.your-domain.com
 
 # Auto-renewal (already in docker-compose.prod.yml)
 sudo certbot renew --dry-run
@@ -373,18 +373,18 @@ Features:
 Metrics are available at `GET /metrics` in Prometheus text format:
 
 ```text
-# HELP stas_runs_total Total STAS runs
-# TYPE stas_runs_total counter
-stas_runs_total{status="completed",repo="owner/repo"} 42
-stas_runs_total{status="failed",repo="owner/repo"} 3
+# HELP syntaro_runs_total Total SYNTARO runs
+# TYPE syntaro_runs_total counter
+syntaro_runs_total{status="completed",repo="owner/repo"} 42
+syntaro_runs_total{status="failed",repo="owner/repo"} 3
 
 # HELP queue_depth Current queue depth
 # TYPE queue_depth gauge
-queue_depth{queue="stas-issues",type="bullmq"} 5
+queue_depth{queue="syntaro-issues",type="bullmq"} 5
 ```
 
 **Pre-built dashboards** are available in `monitoring/`:
-- `grafana-dashboard.json` — General STAS metrics
+- `grafana-dashboard.json` — General SYNTARO metrics
 - `tenant-health-dashboard.json` — Per-tenant health
 
 ### Slack Alerts
@@ -393,7 +393,7 @@ Configure Slack alerts for operational events:
 
 ```env
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T00/B00/xxxxx
-ALERT_SLACK_CHANNEL=#stas-alerts
+ALERT_SLACK_CHANNEL=#syntaro-alerts
 ```
 
 Alert rules are defined in `src/monitoring/alerting.ts`:
@@ -409,14 +409,14 @@ Alert rules are defined in `src/monitoring/alerting.ts`:
 
 ### Structured Logging
 
-STAS uses Pino for structured JSON logging:
+SYNTARO uses Pino for structured JSON logging:
 
 ```json
 {
   "level": 30,
   "time": 1721234567890,
   "pid": 1,
-  "hostname": "stas-webhook",
+  "hostname": "syntaro-webhook",
   "module": "server",
   "method": "POST",
   "path": "/webhook",
@@ -485,8 +485,8 @@ Security headers are applied by Helmet middleware:
 ```bash
 # Docker Compose
 git pull
-docker compose -f docker-compose.prod.yml build stas-webhook
-docker compose -f docker-compose.prod.yml up -d stas-webhook
+docker compose -f docker-compose.prod.yml build syntaro-webhook
+docker compose -f docker-compose.prod.yml up -d syntaro-webhook
 
 # Fly.io
 fly deploy
@@ -501,30 +501,30 @@ After deployment, verify:
 
 ```bash
 # Basic health
-curl https://stas.your-domain.com/health
+curl https://syntaro.your-domain.com/health
 
 # Readiness (dependencies)
-curl https://stas.your-domain.com/health/ready
+curl https://syntaro.your-domain.com/health/ready
 
 # Queue health
-curl https://stas.your-domain.com/health/queue
+curl https://syntaro.your-domain.com/health/queue
 
 # Metrics
-curl https://stas.your-domain.com/metrics
+curl https://syntaro.your-domain.com/metrics
 ```
 
 ### Rolling Back
 
 ```bash
 # Docker Compose (revert to previous image)
-docker compose -f docker-compose.prod.yml stop stas-webhook
-docker compose -f docker-compose.prod.yml rm stas-webhook
-docker compose -f docker-compose.prod.yml pull stas-webhook
+docker compose -f docker-compose.prod.yml stop syntaro-webhook
+docker compose -f docker-compose.prod.yml rm syntaro-webhook
+docker compose -f docker-compose.prod.yml pull syntaro-webhook
 # Or tag specific version:
-docker tag stas-webhook:previous stas-webhook:latest
+docker tag syntaro-webhook:previous syntaro-webhook:latest
 
 # Fly.io
-fly deploy --image stas-webhook:previous
+fly deploy --image syntaro-webhook:previous
 
 # Railway (dashboard rollback)
 railway rollback
@@ -534,10 +534,10 @@ railway rollback
 
 ```bash
 # Horizontal scaling (webhook)
-docker compose -f docker-compose.prod.yml up -d --scale stas-webhook=3
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-webhook=3
 
 # Horizontal scaling (workers)
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=6
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=6
 
 # Vertical scaling (update docker-compose.prod.yml resources)
 ```
@@ -554,14 +554,14 @@ npm run db:migrate:rollback
 
 ### Backup and Restore
 
-Backups are configured in `docker-compose.prod.yml` via the `stas-backup` service:
+Backups are configured in `docker-compose.prod.yml` via the `syntaro-backup` service:
 
 ```bash
 # Manual backup
-docker exec stas-postgres pg_dump -U stas stas > backup.sql
+docker exec syntaro-postgres pg_dump -U syntaro syntaro > backup.sql
 
 # Restore
-cat backup.sql | docker exec -i stas-postgres psql -U stas stas
+cat backup.sql | docker exec -i syntaro-postgres psql -U syntaro syntaro
 ```
 
 ### Troubleshooting
@@ -572,7 +572,7 @@ cat backup.sql | docker exec -i stas-postgres psql -U stas stas
    - https://github.com/settings/apps → Your App → Advanced
 2. Verify webhook URL is accessible:
    ```bash
-   curl -v https://stas.your-domain.com/webhook
+   curl -v https://syntaro.your-domain.com/webhook
    ```
 3. Check Nginx access logs:
    ```bash
@@ -589,20 +589,20 @@ cat backup.sql | docker exec -i stas-postgres psql -U stas stas
 
 1. Check Redis connectivity:
    ```bash
-   curl https://stas.your-domain.com/health/queue
+   curl https://syntaro.your-domain.com/health/queue
    ```
 2. Check worker logs:
    ```bash
-   docker compose -f docker-compose.prod.yml logs stas-worker
+   docker compose -f docker-compose.prod.yml logs syntaro-worker
    ```
 3. Verify OpenCode health:
    ```bash
-   curl https://stas.your-domain.com/health/ready
+   curl https://syntaro.your-domain.com/health/ready
    ```
 
 #### High memory usage
 
-1. Scale horizontally: `--scale stas-webhook=3`
+1. Scale horizontally: `--scale syntaro-webhook=3`
 2. Check for memory leaks in Sentry performance traces
 3. Review Nginx `client_max_body_size` and `proxy_buffering` settings
 
@@ -611,7 +611,7 @@ cat backup.sql | docker exec -i stas-postgres psql -U stas stas
 ## References
 
 - [`.env.production`](../.env.production) — Production environment template
-- [`nginx/stas.conf`](../nginx/stas.conf) — Nginx site configuration
+- [`nginx/syntaro.conf`](../nginx/syntaro.conf) — Nginx site configuration
 - [`docker-compose.prod.yml`](../docker-compose.prod.yml) — Production Docker Compose
 - [`fly.toml`](../fly.toml) — Fly.io deployment config
 - [`railway.json`](../railway.json) — Railway deployment config

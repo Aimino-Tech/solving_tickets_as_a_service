@@ -1,5 +1,5 @@
 /**
- * Trace Schema for STAS Eval Pipeline
+ * Trace Schema for SYNTARO Eval Pipeline
  *
  * Defines span names and their expected attributes.
  * Every span emitted by the eval pipeline should conform to one of these
@@ -16,17 +16,17 @@
 // ---------------------------------------------------------------------------
 export const TraceSpans = {
   /** Root span for a single eval run */
-  RUN: "stas-eval.run",
+  RUN: "syntaro-eval.run",
   /** Creating / provisioning the sandbox environment */
-  SANDBOX_CREATE: "stas-eval.sandbox.create",
+  SANDBOX_CREATE: "syntaro-eval.sandbox.create",
   /** Executing a command inside the agent sandbox */
-  AGENT_EXECUTE: "stas-eval.agent.execute",
+  AGENT_EXECUTE: "syntaro-eval.agent.execute",
   /** A single tool invocation made by the agent */
-  AGENT_TOOL_CALL: "stas-eval.agent.tool_call",
+  AGENT_TOOL_CALL: "syntaro-eval.agent.tool_call",
   /** Collecting artifacts (files) produced by the agent */
-  ARTIFACT_COLLECT: "stas-eval.artifact.collect",
+  ARTIFACT_COLLECT: "syntaro-eval.artifact.collect",
   /** Running the evaluation / assertion against expected output */
-  EVALUATE: "stas-eval.evaluate",
+  EVALUATE: "syntaro-eval.evaluate",
 } as const;
 
 export type TraceSpanName = (typeof TraceSpans)[keyof typeof TraceSpans];

@@ -54,9 +54,9 @@ class TestRunawayConfig:
         cfg = get_runaway_config()
         o = cfg["opentelemetry"]
         assert o["exporter_otlp_endpoint"] == ""
-        assert o["service_name"] == "stas-runaway"
+        assert o["service_name"] == "syntaro-runaway"
         assert o["traces_sampler_arg"] == 1.0
-        assert o["span_name_runaway"] == "stas.runaway.execution"
+        assert o["span_name_runaway"] == "syntaro.runaway.execution"
         assert o["batch_max_queue_size"] == 2048
         assert o["batch_max_export_batch_size"] == 512
         assert o["batch_schedule_delay_ms"] == 5000
@@ -73,9 +73,9 @@ class TestRunawayConfig:
         assert r["cost_cap_ttl_seconds"] == 86400
 
     def test_env_overrides(self, monkeypatch):
-        monkeypatch.setenv("STAS_BULLMQ_MAX_ATTEMPTS", "10")
-        monkeypatch.setenv("STAS_SUPERVISOR_MAX_RESTARTS", "5")
-        monkeypatch.setenv("STAS_REDIS_TASK_TTL_SECONDS", "3600")
+        monkeypatch.setenv("SYNTARO_BULLMQ_MAX_ATTEMPTS", "10")
+        monkeypatch.setenv("SYNTARO_SUPERVISOR_MAX_RESTARTS", "5")
+        monkeypatch.setenv("SYNTARO_REDIS_TASK_TTL_SECONDS", "3600")
 
         import importlib
         import workers.runaway.config as cfg_mod
@@ -92,7 +92,7 @@ class TestRunawayConfig:
             importlib.reload(cfg_mod)
 
     def test_supervisor_autostart_false(self, monkeypatch):
-        monkeypatch.setenv("STAS_SUPERVISOR_AUTOSTART", "false")
+        monkeypatch.setenv("SYNTARO_SUPERVISOR_AUTOSTART", "false")
 
         import importlib
         import workers.runaway.config as cfg_mod

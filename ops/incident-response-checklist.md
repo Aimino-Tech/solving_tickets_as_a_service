@@ -4,7 +4,7 @@ status: active
 last-updated: 2026-07-28
 ---
 
-# STAS Incident Response Checklist
+# SYNTARO Incident Response Checklist
 
 > One-page quick reference for on-call engineers.
 > Solving Tickets As A Service — On-Call Runbook
@@ -15,10 +15,10 @@ last-updated: 2026-07-28
 
 - [ ] **Check health dashboard**: `curl -f http://localhost:3000/health`
 - [ ] **Check alert source**: Determine which alert fired (PagerDuty / Slack / Better Uptime / Prometheus)
-- [ ] **Acknowledge the incident**: In PagerDuty (ack) AND in Slack (`#stas-on-call`)
-- [ ] **Check Grafana overview**: [Grafana Dashboard](http://localhost:3000/d/stas-overview)
+- [ ] **Acknowledge the incident**: In PagerDuty (ack) AND in Slack (`#syntaro-on-call`)
+- [ ] **Check Grafana overview**: [Grafana Dashboard](http://localhost:3000/d/syntaro-overview)
 - [ ] **Check logs (Loki)**: Search for error patterns across all services
-- [ ] **Alert the team**: Post in `#stas-incidents` with format (see §4)
+- [ ] **Alert the team**: Post in `#syntaro-incidents` with format (see §4)
 - [ ] **Determine severity**: Use severity definitions (see runbook §10.1)
 - [ ] **Start incident timer**: Note the exact time of first alert
 
@@ -30,7 +30,7 @@ curl -f http://localhost:3000/health
 curl -f http://localhost:3000/health/queue
 
 # Container status
-docker ps --filter "name=stas" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+docker ps --filter "name=syntaro" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 # Worker status
 docker compose -f docker-compose.prod.yml ps
@@ -48,7 +48,7 @@ docker compose -f docker-compose.prod.yml logs --tail=50 | grep -iE "error|excep
 - [ ] Check `ops/playbook.md` for matching alert playbook
 - [ ] Search recent incidents in `ops/security-incidents/`
 - [ ] Check GitHub issues for open bugs
-- [ ] Ask in `#stas-on-call` — has anyone seen this before?
+- [ ] Ask in `#syntaro-on-call` — has anyone seen this before?
 
 ### What's the Blast Radius?
 
@@ -63,17 +63,17 @@ docker compose -f docker-compose.prod.yml logs --tail=50 | grep -iE "error|excep
 
 | Mitigation | When to Use | Command |
 |---|---|---|
-| Scale workers | Queue depth > 100 | `docker compose up -d --scale stas-worker=8 stas-worker` |
-| Restart service | Process crash / memory leak | `docker compose restart stas-webhook` |
+| Scale workers | Queue depth > 100 | `docker compose up -d --scale syntaro-worker=8 syntaro-worker` |
+| Restart service | Process crash / memory leak | `docker compose restart syntaro-webhook` |
 | Kill idle DB connections | Connection pool exhausted | See playbook §7 |
 | Rate limit override | Tier exhausted | See playbook §5 |
-| Disable webhook processing | Upstream API flooding | `docker compose stop stas-webhook` |
+| Disable webhook processing | Upstream API flooding | `docker compose stop syntaro-webhook` |
 
 ### Instrumentation Reference
 
 ```bash
 # Grafana: all dashboards
-open http://localhost:3000/d/stas-overview
+open http://localhost:3000/d/syntaro-overview
 
 # Sentry: recent errors
 # https://sentry.io/organizations/aimino/issues/
@@ -82,14 +82,14 @@ open http://localhost:3000/d/stas-overview
 # https://aimino.pagerduty.com/incidents
 
 # Better Uptime status
-# https://stas.betteruptime.com
+# https://syntaro.betteruptime.com
 
 # Prometheus metrics
-curl -s http://localhost:9464/metrics | grep -iE "stas_" | head -30
+curl -s http://localhost:9464/metrics | grep -iE "syntaro_" | head -30
 
 # Loki log query (last 15 min)
 curl -s 'http://localhost:3100/loki/api/v1/query_range' \
-  --data-urlencode 'query={compose_project="stas"} |= "error"' \
+  --data-urlencode 'query={compose_project="syntaro"} |= "error"' \
   --data-urlencode 'start='$(date -d '15 min ago' +%s)'000' \
   --data-urlencode 'end='$(date +%s)'000' \
   --data-urlencode 'limit=50' | jq '.data.result[]'
@@ -99,7 +99,7 @@ curl -s 'http://localhost:3100/loki/api/v1/query_range' \
 
 ## 3. Communication Templates
 
-Use these in `#stas-incidents` and on the [status page](https://stas.betteruptime.com).
+Use these in `#syntaro-incidents` and on the [status page](https://syntaro.betteruptime.com).
 
 ### Investigating
 
@@ -154,7 +154,7 @@ Use these in `#stas-incidents` and on the [status page](https://stas.betteruptim
 
 | Role | Contact | Response SLA | Available |
 |---|---|---|---|
-| On-call Engineer | `#stas-on-call` Slack | 5 min SEV-1 / 15 min SEV-2 | 24/7 |
+| On-call Engineer | `#syntaro-on-call` Slack | 5 min SEV-1 / 15 min SEV-2 | 24/7 |
 | DevOps Lead | @devops-lead Slack, +1-555-0102 | 15 min | 24/7 |
 | Engineering Manager | @eng-mgr Slack, +1-555-0103 | 30 min | Business hours |
 | Security Team | security@aimino.com, `#security` Slack | 1 hour | 24/7 |
@@ -171,7 +171,7 @@ Use these in `#stas-incidents` and on the [status page](https://stas.betteruptim
 - [ ] **Draft post-mortem**: Use `ops/post-mortem-template.md`
 - [ ] **File follow-up tickets**: For any remediation items identified
 - [ ] **Update playbook**: If this incident type wasn't covered, add it to `ops/playbook.md`
-- [ ] **Post to `#stas-incidents`**: Final summary with duration and root cause
+- [ ] **Post to `#syntaro-incidents`**: Final summary with duration and root cause
 - [ ] **Schedule post-mortem review**: Within 5 business days
 - [ ] **Restore normal operations**: Scale down workers, remove temporary mitigations
 
@@ -181,20 +181,20 @@ Use these in `#stas-incidents` and on the [status page](https://stas.betteruptim
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                    STAS INCIDENT RESPONSE                        │
+│                    SYNTARO INCIDENT RESPONSE                        │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  T+0   Alert received → Acknowledge → Post in #stas-incidents   │
+│  T+0   Alert received → Acknowledge → Post in #syntaro-incidents   │
 │  T+5   Triage: known issue? blast radius? mitigate?              │
 │  T+15  Escalate if SEV-1 and no progress                        │
 │  T+30  Mitigation in place → Monitor                            │
 │  T+60  Resolved → Post-mortem → Update docs                     │
 │                                                                  │
 │  Dashboards:                                                     │
-│  - Grafana:   http://localhost:3000/d/stas-overview              │
+│  - Grafana:   http://localhost:3000/d/syntaro-overview              │
 │  - Sentry:    https://sentry.io/orgs/aimino                     │
 │  - PagerDuty: https://aimino.pagerduty.com                      │
-│  - Uptime:    https://stas.betteruptime.com                     │
+│  - Uptime:    https://syntaro.betteruptime.com                     │
 │  - Prometheus: http://localhost:9464/metrics                    │
 │                                                                  │
 │  Logs:                                                           │

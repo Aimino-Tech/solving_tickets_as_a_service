@@ -43,7 +43,7 @@ GITHUB_API_TIMEOUT = 15.0
 OSS_SEARCH_TIMEOUT = 10.0
 MAX_GITHUB_RESULTS = 10
 MAX_OSS_RESULTS = 6
-USER_AGENT = "STAS-ResearchMandate/1.0"
+USER_AGENT = "SYNTARO-ResearchMandate/1.0"
 
 SOURCE_KINDS = frozenset({
     "github_issue",
@@ -335,11 +335,11 @@ async def search_oss_documentation(
 ) -> list[ResearchSource]:
     """Search OSS documentation and known reference sites.
 
-    Uses a configurable search URL template (``STAS_OSS_SEARCH_URL`` env
+    Uses a configurable search URL template (``SYNTARO_OSS_SEARCH_URL`` env
     var, defaulting to a DuckDuckGo-based lookup for documentation sites).
     """
     url_template = os.getenv(
-        "STAS_OSS_SEARCH_URL",
+        "SYNTARO_OSS_SEARCH_URL",
         "https://api.duckduckgo.com/?q={query}+documentation&format=json&no_html=1&skip_disambig=1",
     )
     url = url_template.format(query=quote_plus(query))

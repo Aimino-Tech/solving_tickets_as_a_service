@@ -1,6 +1,6 @@
-# STAS Benchmark Suites
+# SYNTARO Benchmark Suites
 
-This directory contains the benchmark suite harnesses for evaluating STAS against industry-standard AI coding benchmarks.
+This directory contains the benchmark suite harnesses for evaluating SYNTARO against industry-standard AI coding benchmarks.
 
 ## Directory Structure
 

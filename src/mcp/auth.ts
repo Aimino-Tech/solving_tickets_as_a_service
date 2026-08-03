@@ -39,14 +39,22 @@ export function mcpKeyAuth(req: Request, res: Response, next: NextFunction): voi
     return;
   }
 
+  // Accept either `Authorization: Bearer <key>` or `x-api-key: <key>`.
   const authHeader = req.headers['authorization'];
-  if (!authHeader) {
-    res.status(401).json({ error: 'Missing authorization header' });
-    return;
+  const apiKeyHeader = req.headers['x-api-key'];
+  let token: string | undefined;
+  if (authHeader) {
+    const [scheme, maybeToken] = authHeader.split(' ');
+    if (scheme?.toLowerCase() !== 'bearer' || !maybeToken) {
+      res.status(401).json({ error: 'Invalid authorization' });
+      return;
+    }
+    token = maybeToken;
+  } else if (typeof apiKeyHeader === 'string' && apiKeyHeader.trim()) {
+    token = apiKeyHeader.trim();
   }
-  const [scheme, token] = authHeader.split(' ');
-  if (scheme?.toLowerCase() !== 'bearer' || !token) {
-    res.status(401).json({ error: 'Invalid authorization' });
+  if (!token) {
+    res.status(401).json({ error: 'Missing authorization header or x-api-key' });
     return;
   }
 

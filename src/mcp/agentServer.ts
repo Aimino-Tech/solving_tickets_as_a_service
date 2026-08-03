@@ -108,7 +108,7 @@ interface McpTextResourceContents {
 const tools: McpTool[] = [
   {
     name: 'syntaro_fix_issue',
-    description: 'Submit a GitHub issue to the STAS pipeline for automated investigation and PR creation. Use this when you have identified a fixable bug or feature request with a clear scope. Returns a runId that you can poll with syntaro_check_status to track progress through investigation, fixing, testing, and PR stages.',
+    description: 'Submit a GitHub issue to the SYNTARO pipeline for automated investigation and PR creation. Use this when you have identified a fixable bug or feature request with a clear scope. Returns a runId that you can poll with syntaro_check_status to track progress through investigation, fixing, testing, and PR stages.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -188,7 +188,7 @@ const resources: McpResource[] = [
   {
     uri: 'syntaro://runs/{runId}',
     name: 'Fix Run Details',
-    description: 'Full details for a STAS fix run, including status, timestamps, progress, and PR link.',
+    description: 'Full details for a SYNTARO fix run, including status, timestamps, progress, and PR link.',
     mimeType: 'application/json',
   },
   {
@@ -361,7 +361,7 @@ async function handleFixIssue(id: unknown, args: Record<string, unknown> | undef
         issueTitle,
         issueBody: '',
         source: 'mcp-agent',
-        labels: ['stas:fix'],
+        labels: ['syntaro:fix'],
         model: model || undefined,
         _meta: { messageId, enqueuedAt: now, runId },
       });
@@ -506,7 +506,7 @@ async function handleResourceRead(id: unknown, params: unknown, res: Response): 
     const contents: McpTextResourceContents[] = [];
 
     // syntaro://runs/{runId}
-    const runsMatch = uri.match(/^stas:\/\/runs\/(.+)$/);
+    const runsMatch = uri.match(/^syntaro:\/\/runs\/(.+)$/);
     if (runsMatch) {
       const runId = runsMatch[1];
       const raw = await client.get(redisKey('job', runId));
@@ -520,7 +520,7 @@ async function handleResourceRead(id: unknown, params: unknown, res: Response): 
     }
 
     // syntaro://issues/{issueId} — issueId can be "owner/repo#number" or a plain issue URL
-    const issuesMatch = uri.match(/^stas:\/\/issues\/(.+)$/);
+    const issuesMatch = uri.match(/^syntaro:\/\/issues\/(.+)$/);
     if (issuesMatch) {
       const issueId = issuesMatch[1];
       const historyRaw = await client.lrange(redisKey('history'), 0, -1);

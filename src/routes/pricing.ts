@@ -46,8 +46,8 @@ export interface CompetitorPrice {
 }
 
 const COMPETITOR_PRICES: CompetitorPrice[] = [
-  { competitor: 'STAS (Cloud Solo)', monthlyCostCents: 4900, costPerFixCents: 49, fixesPerMonth: 100, passRate: 0.92, selfHosted: true, openSource: true },
-  { competitor: 'STAS (Cloud Team)', monthlyCostCents: 14900, costPerFixCents: 30, fixesPerMonth: 500, passRate: 0.92, selfHosted: true, openSource: true },
+  { competitor: 'SYNTARO (Cloud Solo)', monthlyCostCents: 4900, costPerFixCents: 49, fixesPerMonth: 100, passRate: 0.92, selfHosted: true, openSource: true },
+  { competitor: 'SYNTARO (Cloud Team)', monthlyCostCents: 14900, costPerFixCents: 30, fixesPerMonth: 500, passRate: 0.92, selfHosted: true, openSource: true },
   { competitor: 'Plip.io', monthlyCostCents: 10000, costPerFixCents: 350, fixesPerMonth: 10, passRate: 0.42, selfHosted: false, openSource: false },
   { competitor: 'Devin', monthlyCostCents: 50000, costPerFixCents: 800, fixesPerMonth: 50, passRate: 0.38, selfHosted: false, openSource: false },
   { competitor: 'GitHub Copilot', monthlyCostCents: 1900, costPerFixCents: 200, fixesPerMonth: 10, passRate: 0.35, selfHosted: false, openSource: false },
@@ -67,7 +67,7 @@ const VS_DATA: Record<string, {
   copilot: {
     competitorName: 'GitHub Copilot',
     tagline: 'AI pair programmer, not an autonomous fix agent',
-    ourAdvantage: 'STAS is purpose-built for autonomous bug fixing.',
+    ourAdvantage: 'SYNTARO is purpose-built for autonomous bug fixing.',
     categories: [
       { name: 'Core Capability', items: [
         { feature: 'Autonomous fix from issue', us: 'Yes', them: 'No', advantage: 'us' },
@@ -89,7 +89,7 @@ const VS_DATA: Record<string, {
   devin: {
     competitorName: 'Devin',
     tagline: 'Premium AI agent with a premium price tag',
-    ourAdvantage: 'STAS delivers better results at a fraction of the cost.',
+    ourAdvantage: 'SYNTARO delivers better results at a fraction of the cost.',
     categories: [
       { name: 'Core Capability', items: [
         { feature: 'Autonomous fix', us: 'Yes', them: 'Yes', advantage: 'tie' },
@@ -110,7 +110,7 @@ const VS_DATA: Record<string, {
   plip: {
     competitorName: 'Plip.io',
     tagline: 'Label-triggered fix bot — closest competitor',
-    ourAdvantage: 'STAS beats Plip on every metric.',
+    ourAdvantage: 'SYNTARO beats Plip on every metric.',
     categories: [
       { name: 'Core Capability', items: [
         { feature: 'Label-triggered fix', us: 'Yes', them: 'Yes', advantage: 'tie' },
@@ -141,7 +141,7 @@ router.get('/calculate', (req: Request, res: Response) => {
   const plan = PLANS.find((p) => p.id === tierId) || PLANS[1];
   const monthlyCostCents = plan.id === 'free' ? 0 : plan.id === 'enterprise' ? 149000 : parseInt(plan.price.replace(/[$,]/g, '')) * 100;
   const costPerFixCents = plan.monthlyFixLimit > 0 ? Math.round(monthlyCostCents / Math.min(fixesPerMonth, plan.monthlyFixLimit)) : 0;
-  const vsCompetitors = COMPETITOR_PRICES.filter((c) => !c.competitor.startsWith('STAS')).map((c) => {
+  const vsCompetitors = COMPETITOR_PRICES.filter((c) => !c.competitor.startsWith('SYNTARO')).map((c) => {
     const theirMonthly = c.monthlyCostCents > 0 ? c.monthlyCostCents : fixesPerMonth * c.costPerFixCents;
     return { name: c.competitor, monthlyCostCents: theirMonthly, savingsCents: Math.max(0, theirMonthly - monthlyCostCents), savingsPercent: theirMonthly > 0 ? Math.round((Math.max(0, theirMonthly - monthlyCostCents) / theirMonthly) * 100) : 0 };
   });
