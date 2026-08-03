@@ -99,7 +99,7 @@ describe("SYNTARO ↔ Governance ↔ OpenSymphony integration stack", () => {
     expect(killBody.status).toBe("ok");
     expect(killBody.tenant_id).toBe("test-tenant");
 
-    const blocked = await postJson(`${GOVERNANCE_URL}/api/syntaro/webhook`, {
+    const blocked = await postJson(`${GOVERNANCE_URL}/api/stas/webhook`, {
       tenant_id: "test-tenant",
       issue_id: "test/foo#1",
     });
