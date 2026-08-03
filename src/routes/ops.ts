@@ -1,12 +1,9 @@
-import { Router, type Request, type Response } from 'express';
 import fs from 'node:fs';
+import { type Request, type Response, Router } from 'express';
 import { config } from '../config.js';
-import { rootLogger } from '../utils/logger.js';
-import {
-  setMaintenanceMode,
-  getMaintenanceInfo,
-} from '../monitoring/maintenance.js';
 import { queryWithRetry } from '../db/connection.js';
+import { getMaintenanceInfo, setMaintenanceMode } from '../monitoring/maintenance.js';
+import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'ops-api' });
 const router: Router = Router();

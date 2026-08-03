@@ -18,13 +18,7 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'repo-quality-gates' });
 
-export type RepoGateName =
-  | 'compile'
-  | 'vacuous-test'
-  | 'hallucination'
-  | 'dead-code'
-  | 'format'
-  | 'secret';
+export type RepoGateName = 'compile' | 'vacuous-test' | 'hallucination' | 'dead-code' | 'format' | 'secret';
 
 export interface RepoGateResult {
   gate: RepoGateName;
@@ -79,7 +73,10 @@ async function gateCompile(execFn: ExecFn, repoDir: string, timeoutMs: number): 
     const errorLines = output.split('\n').filter((l) => l.includes('error TS'));
     if (errorLines.length > 0) {
       return {
-        ...fail('compile', [`TypeScript compilation failed with ${errorLines.length} error(s)`, ...errorLines.slice(0, 10)]),
+        ...fail('compile', [
+          `TypeScript compilation failed with ${errorLines.length} error(s)`,
+          ...errorLines.slice(0, 10),
+        ]),
         durationMs: Date.now() - start,
       };
     }
@@ -131,7 +128,10 @@ async function gateVacuousTest(execFn: ExecFn, repoDir: string, timeoutMs: numbe
         durationMs: Date.now() - start,
       };
     }
-    return { ...ok('vacuous-test', [`All ${testFiles.length} test files have real assertions`]), durationMs: Date.now() - start };
+    return {
+      ...ok('vacuous-test', [`All ${testFiles.length} test files have real assertions`]),
+      durationMs: Date.now() - start,
+    };
   } catch (err) {
     return { ...fail('vacuous-test', [`Test integrity gate error: ${String(err)}`]), durationMs: Date.now() - start };
   }
@@ -161,7 +161,10 @@ async function gateHallucination(execFn: ExecFn, repoDir: string, timeoutMs: num
     }
     return { ...ok('hallucination', ['No stub or placeholder patterns found']), durationMs: Date.now() - start };
   } catch (err) {
-    return { ...ok('hallucination', [`Hallucination gate error: ${String(err)} (non-blocking)`]), durationMs: Date.now() - start };
+    return {
+      ...ok('hallucination', [`Hallucination gate error: ${String(err)} (non-blocking)`]),
+      durationMs: Date.now() - start,
+    };
   }
 }
 
@@ -183,7 +186,10 @@ async function gateDeadCode(execFn: ExecFn, repoDir: string, timeoutMs: number):
     }
     return { ...ok('dead-code', ['knip: no significant unused code detected']), durationMs: Date.now() - start };
   } catch (err) {
-    return { ...ok('dead-code', [`Dead-code gate error: ${String(err)} (non-blocking)`]), durationMs: Date.now() - start };
+    return {
+      ...ok('dead-code', [`Dead-code gate error: ${String(err)} (non-blocking)`]),
+      durationMs: Date.now() - start,
+    };
   }
 }
 
@@ -220,7 +226,10 @@ async function gateSecret(execFn: ExecFn, repoDir: string, timeoutMs: number): P
   try {
     const hasGitleaks = await execFn('command -v gitleaks >/dev/null 2>&1 && echo yes || echo no', 10_000);
     if (hasGitleaks.stdout.trim() === 'yes') {
-      const result = await execFn(`cd ${repoDir} && gitleaks detect --source . --no-banner --no-color 2>&1 || true`, timeoutMs);
+      const result = await execFn(
+        `cd ${repoDir} && gitleaks detect --source . --no-banner --no-color 2>&1 || true`,
+        timeoutMs,
+      );
       const output = `${result.stdout}\n${result.stderr}`;
       if (output.toLowerCase().includes('leaks found') || /finding/i.test(output)) {
         return { ...fail('secret', ['gitleaks reported potential secrets']), durationMs: Date.now() - start };
@@ -233,7 +242,8 @@ async function gateSecret(execFn: ExecFn, repoDir: string, timeoutMs: number): P
       10_000,
     );
     const files = scan.stdout.split('\n').filter(Boolean);
-    if (files.length === 0) return { ...ok('secret', ['gitleaks unavailable, no diff to scan']), durationMs: Date.now() - start };
+    if (files.length === 0)
+      return { ...ok('secret', ['gitleaks unavailable, no diff to scan']), durationMs: Date.now() - start };
 
     const findings: string[] = [];
     for (const file of files.slice(0, 50)) {
@@ -279,10 +289,7 @@ export async function runRepoQualityGates(options: RunRepoGatesOptions): Promise
 
   if (!passed) {
     const failed = results.filter((g) => !g.passed);
-    log.warn(
-      { failedGates: failed.map((f) => f.gate) },
-      `${failed.length}/6 repo quality gate(s) failed`,
-    );
+    log.warn({ failedGates: failed.map((f) => f.gate) }, `${failed.length}/6 repo quality gate(s) failed`);
   }
 
   return {

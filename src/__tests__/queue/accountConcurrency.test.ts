@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { AccountConcurrencyLimiter, resetAccountConcurrencyLimiter } from '../../queue/accountConcurrency.js';
 
 function delay(ms: number): Promise<void> {
@@ -32,15 +32,12 @@ describe('AccountConcurrencyLimiter (AIM-4496)', () => {
   it('queues the 3rd concurrent run until a slot frees (3rd rejected/blocked)', async () => {
     const limiter = new AccountConcurrencyLimiter(2);
     const order: number[] = [];
-    const release = [
-      () => limiter.release('acct-1'),
-      () => limiter.release('acct-1'),
-    ];
+    const release = [() => limiter.release('acct-1'), () => limiter.release('acct-1')];
 
     await limiter.acquire('acct-1');
     await limiter.acquire('acct-1');
 
-    const third = limiter.acquire('acct-1').then(() => {
+    void limiter.acquire('acct-1').then(() => {
       order.push(3);
       limiter.release('acct-1');
     });

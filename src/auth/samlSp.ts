@@ -12,9 +12,8 @@
  * from env (SAML_TENANT_*_IDP_*) or via the admin config endpoint.
  */
 
-import crypto from 'node:crypto';
+import crypto, { randomUUID } from 'node:crypto';
 import zlib from 'node:zlib';
-import { randomUUID } from 'node:crypto';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'saml-sp' });
@@ -133,13 +132,14 @@ export function parseSamlResponse(base64Response: string): SamlAssertion {
 
   const attributes: Record<string, string[]> = {};
   const attrRe = /<[^>]*Attribute[^>]*Name=["']([^"']+)["'][^>]*>([\s\S]*?)<\/[^>]*Attribute(?!Value)[^>]*>/gi;
-  let m: RegExpExecArray | null;
-  while ((m = attrRe.exec(decoded)) !== null) {
+  let m = attrRe.exec(decoded);
+  while (m) {
     const key = m[1];
     const values = [...m[2].matchAll(/<[^>]*AttributeValue[^>]*>([\s\S]*?)<\/[^>]*AttributeValue[^>]*>/gi)]
       .map((v) => v[1].trim())
       .filter(Boolean);
     attributes[key] = values;
+    m = attrRe.exec(decoded);
   }
 
   const sessionIndexRe = /<[^>]*AuthnStatement[^>]*SessionIndex=["']([^"']+)["']/i;
@@ -251,7 +251,8 @@ export function seedSamlTenantsFromEnv(
     if (!match || !value) continue;
     const suffix = match[1];
     const tenantId = (env[`SAML_TENANT_${suffix}_ID`] || suffix).toLowerCase();
-    const spEntityId = env[`SAML_TENANT_${suffix}_SP_ENTITY_ID`] || `${baseUrl}/api/v1/saml/metadata?tenant=${tenantId}`;
+    const spEntityId =
+      env[`SAML_TENANT_${suffix}_SP_ENTITY_ID`] || `${baseUrl}/api/v1/saml/metadata?tenant=${tenantId}`;
     register({
       tenantId,
       tenantName: env[`SAML_TENANT_${suffix}_NAME`] || tenantId,

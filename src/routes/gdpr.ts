@@ -1,15 +1,15 @@
-import { Router, type Request, type Response } from 'express';
+import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
+import { auditLog } from '../audit/middleware.js';
 import { requireAuth } from '../auth/middleware.js';
 import {
+  anonymizeUserData,
   eraseUserData,
   exportUserData,
-  anonymizeUserData,
-  setConsentPreference,
   getConsentPreferences,
+  setConsentPreference,
 } from '../gdpr/service.js';
 import { rootLogger } from '../utils/logger.js';
-import { auditLog } from '../audit/middleware.js';
 
 const log = rootLogger.child({ module: 'gdpr-api' });
 

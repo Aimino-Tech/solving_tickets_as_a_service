@@ -1,10 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { runRepoQualityGates } from '../../pipeline/repoQualityGates.js';
 
 function makeExecFn(overrides: Record<string, { stdout?: string; stderr?: string; exitCode?: number }>) {
-  return async (
-    cmd: string,
-  ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
+  return async (cmd: string): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
     for (const [needle, result] of Object.entries(overrides)) {
       if (cmd.includes(needle)) {
         return {
@@ -27,7 +25,7 @@ describe('runRepoQualityGates (AIM-4496)', () => {
       'knip --no-progress': { stdout: '', exitCode: 0 },
       'biome.json': { stdout: 'yes' },
       'biome check': { stdout: '', exitCode: 0 },
-      'gitleaks': { stdout: 'no' },
+      gitleaks: { stdout: 'no' },
       'find .*test': { stdout: '', exitCode: 0 },
     });
     const report = await runRepoQualityGates({ execFn, repoDir: '/tmp/repo' });
@@ -59,7 +57,7 @@ describe('runRepoQualityGates (AIM-4496)', () => {
   it('fails when gitleaks detects a secret', async () => {
     const execFn = makeExecFn({
       'gitleaks detect': { stdout: 'Finding:    1: ghp_1234567890abcdefghijklmnopqrstuvwxyz', exitCode: 1 },
-      'gitleaks': { stdout: 'yes' },
+      gitleaks: { stdout: 'yes' },
     });
     const report = await runRepoQualityGates({ execFn, repoDir: '/tmp/repo' });
     const secret = report.gates.find((g) => g.gate === 'secret');
@@ -77,7 +75,7 @@ describe('runRepoQualityGates (AIM-4496)', () => {
       },
       'biome.json': { stdout: 'yes' },
       'biome check': { stdout: '2 errors', exitCode: 1 },
-      'gitleaks': { stdout: 'no' },
+      gitleaks: { stdout: 'no' },
     });
     const report = await runRepoQualityGates({ execFn, repoDir: '/tmp/repo' });
     expect(report.passed).toBe(false);

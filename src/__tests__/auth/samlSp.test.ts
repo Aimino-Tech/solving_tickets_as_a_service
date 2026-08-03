@@ -1,10 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   buildAuthnRequest,
   buildSpMetadata,
   parseSamlResponse,
-  verifySamlSignature,
   seedSamlTenantsFromEnv,
+  verifySamlSignature,
 } from '../../auth/samlSp.js';
 
 const SAMPLE_RESPONSE = [

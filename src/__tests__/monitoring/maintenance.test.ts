@@ -1,16 +1,19 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  setMaintenanceMode,
-  isMaintenanceMode,
   getMaintenanceInfo,
+  isMaintenanceMode,
   maintenanceMiddleware,
+  setMaintenanceMode,
 } from '../../monitoring/maintenance.js';
 
 beforeEach(() => {
   setMaintenanceMode(false);
 });
 
-function callMiddleware(req: { method: string; path: string }, res: { status: (code: number) => { json: (body: Record<string, unknown>) => void } }) {
+function callMiddleware(
+  req: { method: string; path: string },
+  res: { status: (code: number) => { json: (body: Record<string, unknown>) => void } },
+) {
   let statusCode = 200;
   let body: Record<string, unknown> | undefined;
   const status = (code: number) => {

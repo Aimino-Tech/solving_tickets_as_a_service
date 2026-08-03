@@ -225,15 +225,17 @@ export class ActionDispatcher {
           };
           const report = await runRepoQualityGates({ execFn, repoDir, timeoutMs: 300_000 });
           if (!report.passed) {
-            const failedGates: QualityGateResult[] = report.gates.filter((g) => !g.passed).map((g) => ({
-              gate: g.gate,
-              passed: false,
-              ossTool: `repo-quality-gate/${g.gate}`,
-              command: g.gate,
-              stdout: g.stdout.slice(0, 1000),
-              stderr: g.stderr.slice(0, 1000),
-              details: g.details,
-            }));
+            const failedGates: QualityGateResult[] = report.gates
+              .filter((g) => !g.passed)
+              .map((g) => ({
+                gate: g.gate,
+                passed: false,
+                ossTool: `repo-quality-gate/${g.gate}`,
+                command: g.gate,
+                stdout: g.stdout.slice(0, 1000),
+                stderr: g.stderr.slice(0, 1000),
+                details: g.details,
+              }));
             log.warn(
               { issueNumber, failedGates: failedGates.map((g) => g.gate) },
               `Repo quality gates blocked: ${failedGates.length} gate(s) failed`,

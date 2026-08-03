@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
-import { getSupabaseAdmin, getSupabaseAnon } from './supabase.js';
 import { sendMail } from './mailTransport.js';
+import { getSupabaseAdmin, getSupabaseAnon } from './supabase.js';
 
 const log = rootLogger.child({ module: 'auth-service' });
 

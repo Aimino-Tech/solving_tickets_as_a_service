@@ -32,10 +32,7 @@ export interface UserDataExport {
 
 async function getUserId(userId: string): Promise<number | null> {
   if (/^\d+$/.test(userId)) return Number(userId);
-  const result = await queryWithRetry<{ id: number }>(
-    'SELECT id FROM users WHERE supabase_uid = $1 LIMIT 1',
-    [userId],
-  );
+  const result = await queryWithRetry<{ id: number }>('SELECT id FROM users WHERE supabase_uid = $1 LIMIT 1', [userId]);
   return result?.rows?.[0]?.id ?? null;
 }
 
@@ -64,41 +61,37 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
   };
   if (!numericId) return empty;
 
-  const [user, oauth, installations, webhookConfigs, notifications, feedback, runs, consent] =
-    await Promise.all([
-      queryWithRetry('SELECT id, email, name, created_at FROM users WHERE id = $1', [numericId]),
-      queryWithRetry(
-        'SELECT github_login, github_user_id, scope, created_at FROM github_oauth_tokens WHERE user_id = $1',
-        [numericId],
-      ),
-      queryWithRetry(
-        'SELECT account_login, account_type, repo_scope, created_at FROM github_installations WHERE user_id = $1',
-        [numericId],
-      ),
-      queryWithRetry(
-        'SELECT owner, repo, active, created_at FROM github_webhook_configs WHERE user_id = $1',
-        [numericId],
-      ),
-      queryWithRetry(
-        'SELECT event_type, channel, title, body, read_at, created_at FROM notification_history WHERE user_id = $1',
-        [numericId],
-      ),
-      queryWithRetry(
-        'SELECT r.run_id, r.verdict, r.comment, r.created_at FROM run_feedback r WHERE r.user_id = $1',
-        [numericId],
-      ),
-      queryWithRetry(
-        `SELECT r.id, r.repo_owner, r.repo_name, r.issue_number, r.status, r.created_at, r.duration_ms
+  const [user, oauth, installations, webhookConfigs, notifications, feedback, runs, consent] = await Promise.all([
+    queryWithRetry('SELECT id, email, name, created_at FROM users WHERE id = $1', [numericId]),
+    queryWithRetry(
+      'SELECT github_login, github_user_id, scope, created_at FROM github_oauth_tokens WHERE user_id = $1',
+      [numericId],
+    ),
+    queryWithRetry(
+      'SELECT account_login, account_type, repo_scope, created_at FROM github_installations WHERE user_id = $1',
+      [numericId],
+    ),
+    queryWithRetry('SELECT owner, repo, active, created_at FROM github_webhook_configs WHERE user_id = $1', [
+      numericId,
+    ]),
+    queryWithRetry(
+      'SELECT event_type, channel, title, body, read_at, created_at FROM notification_history WHERE user_id = $1',
+      [numericId],
+    ),
+    queryWithRetry('SELECT r.run_id, r.verdict, r.comment, r.created_at FROM run_feedback r WHERE r.user_id = $1', [
+      numericId,
+    ]),
+    queryWithRetry(
+      `SELECT r.id, r.repo_owner, r.repo_name, r.issue_number, r.status, r.created_at, r.duration_ms
          FROM run_history r
          JOIN github_installations gi ON gi.installation_id = r.installation_id
          WHERE gi.user_id = $1`,
-        [numericId],
-      ),
-      queryWithRetry(
-        'SELECT analytics, marketing, functional, updated_at FROM consent_preferences WHERE user_id = $1',
-        [userId],
-      ),
-    ]);
+      [numericId],
+    ),
+    queryWithRetry('SELECT analytics, marketing, functional, updated_at FROM consent_preferences WHERE user_id = $1', [
+      userId,
+    ]),
+  ]);
 
   return {
     user: user.rows[0] ?? null,
@@ -128,12 +121,7 @@ export async function eraseUserData(userId: string): Promise<boolean> {
   // github_* / notification tables key on the numeric users.id; the
   // consent_preferences table (012_consent_preferences) keys on the auth
   // user id (VARCHAR), so it is deleted with the original id.
-  const tables = [
-    'github_webhook_configs',
-    'github_installations',
-    'github_oauth_tokens',
-    'notification_history',
-  ];
+  const tables = ['github_webhook_configs', 'github_installations', 'github_oauth_tokens', 'notification_history'];
   for (const table of tables) {
     try {
       await queryWithRetry(`DELETE FROM ${table} WHERE user_id = $1`, [numericId]);
@@ -190,10 +178,11 @@ export async function anonymizeUserData(userId: string): Promise<boolean> {
   if (!row) return false;
 
   const anonEmail = await anonymizeEmail(row.email);
-  await queryWithRetry(
-    'UPDATE users SET email = $1, name = $2, updated_at = NOW() WHERE id = $3',
-    [anonEmail ?? `anon-${numericId}@anonymized.local`, row.name ? `anon-${numericId}` : null, numericId],
-  );
+  await queryWithRetry('UPDATE users SET email = $1, name = $2, updated_at = NOW() WHERE id = $3', [
+    anonEmail ?? `anon-${numericId}@anonymized.local`,
+    row.name ? `anon-${numericId}` : null,
+    numericId,
+  ]);
 
   log.info({ userId: numericId }, 'User data anonymized');
   return true;
@@ -214,14 +203,8 @@ type ConsentColumn = (typeof CONSENT_COLUMNS)[number];
  * one column per category (analytics/marketing/functional), so a preference
  * key maps to its column and the other columns are preserved.
  */
-export async function setConsentPreference(
-  userId: string,
-  key: string,
-  granted: boolean,
-): Promise<void> {
-  const column = (CONSENT_COLUMNS as readonly string[]).includes(key)
-    ? (key as ConsentColumn)
-    : null;
+export async function setConsentPreference(userId: string, key: string, granted: boolean): Promise<void> {
+  const column = (CONSENT_COLUMNS as readonly string[]).includes(key) ? (key as ConsentColumn) : null;
   if (!column) {
     log.warn({ key, userId }, 'Unknown consent key ignored');
     return;

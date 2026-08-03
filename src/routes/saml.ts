@@ -3,6 +3,7 @@ import { type Request, type Response, Router } from 'express';
 import {
   buildSpMetadata,
   parseSamlResponse,
+  type SamlAssertion,
   seedSamlTenantsFromEnv,
   verifySamlSignature,
 } from '../auth/samlSp.js';
@@ -101,7 +102,7 @@ router.post('/acs', async (req: Request, res: Response) => {
     return;
   }
 
-  let assertion;
+  let assertion: SamlAssertion;
   try {
     assertion = parseSamlResponse(rawResponse);
   } catch (err) {

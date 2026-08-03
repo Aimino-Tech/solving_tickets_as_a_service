@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { queryWithRetry } = vi.hoisted(() => ({ queryWithRetry: vi.fn() }));
 
 vi.mock('../../db/connection.js', () => ({ queryWithRetry }));
 
-import { exportUserData, eraseUserData, anonymizeUserData } from '../../gdpr/service.js';
+import { anonymizeUserData, eraseUserData, exportUserData } from '../../gdpr/service.js';
 
 beforeEach(() => {
   queryWithRetry.mockReset();
