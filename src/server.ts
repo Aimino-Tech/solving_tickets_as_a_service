@@ -254,7 +254,9 @@ export async function createApp(): Promise<express.Application> {
       return undefined;
     }
     const { dispatchToOpenSymphony } = await import('./dispatch/osDispatch.js');
-    const result = await dispatchToOpenSymphony(data);
+    const { accountConcurrencyLimiter } = await import('./queue/accountConcurrency.js');
+    const accountId = String(data.installationId || 'default');
+    const result = await accountConcurrencyLimiter.withSlot(accountId, () => dispatchToOpenSymphony(data));
     if (result.success) {
       log.info({ runId: result.runId }, 'Dispatched issue to OpenSymphony');
       return result.runId;
@@ -807,6 +809,14 @@ export async function createApp(): Promise<express.Application> {
   // Privacy API (GDPR: erasure, portability, consent, anonymization)
   const { default: privacyRouter } = await import('./routes/privacy.js');
   app.use('/api/v1/privacy', privacyRouter);
+
+  // GDPR core API — full Art. 17/20/21 service-backed surface
+  const { gdprRouter } = await import('./routes/gdpr.js');
+  app.use('/api/v1/gdpr', gdprRouter);
+
+  // Ops API — maintenance mode control + log tailing/SSE
+  const { opsRouter } = await import('./routes/ops.js');
+  app.use('/api/v1/ops', opsRouter);
 
   // Invites API (invite-by-email)
   const { inviteRouter } = await import('./routes/invites.js');

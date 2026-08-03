@@ -56,7 +56,19 @@ export interface QualityGatesResult {
 }
 
 export interface QualityGateResult {
-  gate: 'reality' | 'compile' | 'test_integrity' | 'hallucination' | 'coverage' | 'anti-liar' | 'mutation' | 'secrets';
+  gate:
+    | 'reality'
+    | 'compile'
+    | 'test_integrity'
+    | 'hallucination'
+    | 'coverage'
+    | 'anti-liar'
+    | 'mutation'
+    | 'secrets'
+    | 'vacuous-test'
+    | 'dead-code'
+    | 'format'
+    | 'secret';
   passed: boolean;
   ossTool: string;
   command: string;

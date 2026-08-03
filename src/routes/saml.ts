@@ -1,5 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { type Request, type Response, Router } from 'express';
+import {
+  buildSpMetadata,
+  parseSamlResponse,
+  type SamlAssertion,
+  seedSamlTenantsFromEnv,
+  verifySamlSignature,
+} from '../auth/samlSp.js';
 import { config } from '../config.js';
 import { destroySamlSession, getSamlTenantConfig, registerSamlTenant, storeSamlSession } from '../middleware/saml.js';
 import { rootLogger } from '../utils/logger.js';
@@ -27,6 +34,10 @@ if (config.saml.tenantId !== '' && config.saml.idpSsoUrl !== '') {
   log.info({ tenantId: config.saml.tenantId, idpSsoUrl: config.saml.idpSsoUrl }, 'Auto-registered default SAML tenant');
 }
 
+// Seed additional tenants declared via SAML_TENANT_<ID>_* environment
+// variables so multi-tenant deployments work without the admin API.
+seedSamlTenantsFromEnv(registerSamlTenant);
+
 function spEntityId(): string {
   return config.saml.spEntityId || DEFAULT_SP_ENTITY_ID;
 }
@@ -35,32 +46,17 @@ function spAcsUrl(): string {
   return config.saml.spAcsUrl || `${config.saml.dashboardUrl || 'http://localhost:3000'}/api/v1/saml/acs`;
 }
 
-function escapeXml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;');
-}
-
 /**
  * SP metadata document — consumed by the IdP to configure the SAML
  * integration (entity ID, ACS endpoint, NameID format).
  */
 router.get('/metadata', (_req: Request, res: Response) => {
-  const entityId = spEntityId();
-  const acsUrl = spAcsUrl();
-  const xml = [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"',
-    ` entityID="${escapeXml(entityId)}">`,
-    '  <md:SPSSODescriptor AuthnRequestsSigned="false" WantAssertionsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">',
-    '    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat>',
-    `    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="${escapeXml(acsUrl)}" index="0" isDefault="true"/>`,
-    '  </md:SPSSODescriptor>',
-    '</md:EntityDescriptor>',
-  ].join('\n');
+  const xml = buildSpMetadata({
+    tenantId: config.saml.tenantId,
+    spEntityId: spEntityId(),
+    spAcsUrl: spAcsUrl(),
+    spCertPem: process.env.SAML_SP_CERT || null,
+  });
   res.setHeader('Content-Type', 'application/xml');
   res.status(200).send(xml);
 });
@@ -97,19 +93,26 @@ router.post('/acs', async (req: Request, res: Response) => {
     return;
   }
 
-  let decoded = '';
-  try {
-    decoded = Buffer.from(rawResponse, 'base64').toString('utf-8');
-  } catch (err) {
-    log.warn({ err: String(err) }, 'Failed to base64-decode SAMLResponse');
-    res.status(400).json({ error: 'Malformed SAMLResponse' });
+  // Verify the IdP signature when the tenant configures an X.509 cert; the
+  // assertion is trusted as-is for IdPs that do not sign responses.
+  const signatureCheck = verifySamlSignature(rawResponse, tenant.idpCert || null);
+  if (!signatureCheck.verified) {
+    log.warn({ tenantId: tenant.tenantId, reason: signatureCheck.reason }, 'SAML response signature invalid');
+    res.status(401).json({ error: `SAML response verification failed: ${signatureCheck.reason}` });
     return;
   }
 
-  const nameIdMatch = decoded.match(/<saml:NameID[^>]*>([^<]+)<\/saml:NameID>/);
-  const emailMatch = decoded.match(/<saml:Attribute Name="email"[^>]*>.*?<saml:AttributeValue[^>]*>([^<]+)/s);
-  const nameId = nameIdMatch ? nameIdMatch[1].trim() : null;
-  const email = emailMatch ? emailMatch[1].trim() : nameId && nameId.includes('@') ? nameId : null;
+  let assertion: SamlAssertion;
+  try {
+    assertion = parseSamlResponse(rawResponse);
+  } catch (err) {
+    log.warn({ err: String(err), tenantId: tenant.tenantId }, 'Failed to parse SAMLResponse');
+    res.status(400).json({ error: 'SAMLResponse did not contain a NameID' });
+    return;
+  }
+
+  const nameId = assertion.nameId || null;
+  const email = assertion.email || null;
 
   if (!nameId) {
     res.status(400).json({ error: 'SAMLResponse did not contain a NameID' });
