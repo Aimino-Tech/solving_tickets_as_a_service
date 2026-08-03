@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { getSupabaseAdmin, getSupabaseAnon } from './supabase.js';
+import { sendMail } from './mailTransport.js';
 
 const log = rootLogger.child({ module: 'auth-service' });
 
@@ -135,10 +136,13 @@ export class AuthService {
       if (!user) return null;
 
       const token = this.generateMagicLinkToken(user.id, user.email!);
-      log.info(
-        { userId: user.id, email, magicLinkUrl: `/auth/magic-link?token=${token}` },
-        'Magic link issued — log-in based delivery (no email provider configured)',
-      );
+      const loginUrl = `${process.env.STAS_PUBLIC_URL || `http://localhost:${config.port}`}/auth/magic-link?token=${encodeURIComponent(token)}`;
+      await sendMail({
+        to: user.email!,
+        subject: 'Your STAS sign-in link',
+        text: `Sign in to STAS with this link: ${loginUrl}\nIt expires in 15 minutes.`,
+        linkUrl: loginUrl,
+      });
       return token;
     } catch (err) {
       log.error({ err }, 'Failed to issue magic link');
