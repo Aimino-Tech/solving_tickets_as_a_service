@@ -1,0 +1,48 @@
+# ---------------------------------------------------------------------------
+# SYNTARO Ingress — external entry point with TLS via cert-manager
+#
+# app.syntaro.io  -> syntaro-webhook (API + webhook receiver, /metrics)
+# dashboard.syntaro.io -> syntaro-dashboard (React SPA)
+#
+# Requires cert-manager with a ClusterIssuer named "letsencrypt-prod".
+# If your cluster uses a different issuer, change the annotation.
+# ---------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: syntaro-ingress
+  namespace: syntaro
+  labels:
+    app: syntaro
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: 32m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - app.syntaro.io
+        - dashboard.syntaro.io
+      secretName: syntaro-tls
+  rules:
+    - host: app.syntaro.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: syntaro-webhook
+                port:
+                  number: 80
+    - host: dashboard.syntaro.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: syntaro-dashboard
+                port:
+                  number: 80

@@ -121,6 +121,10 @@ const envSchema = z.object({
   REDIS_TTL_DEFAULT: z.coerce.number().int().positive().default(300),
   REDIS_TTL_FREQUENT_ACCESS: z.coerce.number().int().positive().default(60),
   ADMIN_API_KEY: z.string().optional(),
+  // Comma-separated allowlist of emails allowed to use dashboard admin
+  // steering (/api/v1/admin/steering/*). The JWT carries no role claim today,
+  // so admins are gated by email here. Empty = steering disabled (403).
+  ADMIN_EMAILS: z.string().default(''),
 
   JWT_SECRET: z
     .string()
@@ -385,6 +389,7 @@ const envSchema = z.object({
   OPENSYMPHONY_DISPATCH_URL: z.string().default(''),
   OPENSYMPHONY_API_KEY: z.string().default(''),
   OPENSYMPHONY_TENANT: z.string().default('default'),
+  OPENSYMPHONY_ADMIN_URL: z.string().default(''),
 
   // Loops
   LOOPS_API_KEY: z.string().optional(),

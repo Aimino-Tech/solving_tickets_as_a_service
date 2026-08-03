@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# SYNTARO Celery Beat — periodic task scheduler
+#
+# Exactly ONE replica (beat schedules are not idempotent across replicas).
+# Uses the worker image; RUN_MODE=worker makes the entrypoint start beat.
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: syntaro-beat
+  namespace: syntaro
+  labels:
+    app: syntaro-beat
+    tier: worker
+    component: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: syntaro-beat
+  template:
+    metadata:
+      labels:
+        app: syntaro-beat
+        tier: worker
+        component: scheduler
+    spec:
+      containers:
+        - name: beat
+          image: ghcr.io/aimino-tech/syntaro-worker:latest
+          imagePullPolicy: Always
+          command:
+            - celery
+            - -A
+            - workers.celery_app
+            - beat
+            - -l
+            - info
+          envFrom:
+            - configMapRef:
+                name: syntaro-config
+            - secretRef:
+                name: syntaro-secrets
+          env:
+            - name: RUN_MODE
+              value: "worker"
+            - name: NODE_ENV
+              value: "production"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"

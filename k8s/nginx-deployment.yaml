@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: syntaro-nginx
+  namespace: syntaro
   labels:
     app: syntaro-nginx
     tier: ingress
@@ -59,6 +60,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: syntaro-nginx
+  namespace: syntaro
   labels:
     app: syntaro-nginx
 spec:
@@ -77,6 +79,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: syntaro-nginx
+  namespace: syntaro
   labels:
     app: syntaro-nginx
 spec:

@@ -3,8 +3,8 @@
 #
 # Note: This deployment uses the Python Celery worker image built from
 # workers/Dockerfile. Build and push it separately:
-#   docker build -t ghcr.io/tamnguyen08/syntaro-worker:latest ./workers
-#   docker push ghcr.io/tamnguyen08/syntaro-worker:latest
+#   docker build -t ghcr.io/aimino-tech/syntaro-worker:latest ./workers
+#   docker push ghcr.io/aimino-tech/syntaro-worker:latest
 #
 # Probes use exec (not HTTP) because the Celery worker process does not
 # serve HTTP natively. The health.py script checks broker and backend
@@ -14,6 +14,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: syntaro-worker
+  namespace: syntaro
   labels:
     app: syntaro-worker
     tier: worker
@@ -41,12 +42,12 @@ spec:
       terminationGracePeriodSeconds: 360
       containers:
         - name: worker
-          image: ghcr.io/tamnguyen08/syntaro-worker:latest
+          image: ghcr.io/aimino-tech/syntaro-worker:latest
           imagePullPolicy: Always
           command:
             - celery
             - -A
-            - celery_app
+            - workers.celery_app
             - worker
             - -l
             - info
@@ -75,14 +76,14 @@ spec:
                     # GracefulShutdownHandler intercepts and drains tasks.
           livenessProbe:
             exec:
-              command: ["python3", "/app/health.py", "--check"]
+              command: ["python3", "/app/workers/health.py", "--check"]
             initialDelaySeconds: 15
             periodSeconds: 30
             timeoutSeconds: 10
             failureThreshold: 3
           readinessProbe:
             exec:
-              command: ["python3", "/app/health.py", "--check"]
+              command: ["python3", "/app/workers/health.py", "--check"]
             initialDelaySeconds: 20
             periodSeconds: 15
             timeoutSeconds: 10

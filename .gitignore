@@ -67,3 +67,7 @@ worktrees/
 /OpenSymphony
 /llm-governance
 .vercel
+
+# Local runtime artifacts
+celerybeat-schedule
+.stas/

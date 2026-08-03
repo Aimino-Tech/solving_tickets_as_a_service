@@ -1,0 +1,89 @@
+# ---------------------------------------------------------------------------
+# SYNTARO PostgreSQL — StatefulSet with persistent storage
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: syntaro-postgres
+  namespace: syntaro
+  labels:
+    app: syntaro-postgres
+    tier: data
+spec:
+  serviceName: syntaro-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: syntaro-postgres
+  template:
+    metadata:
+      labels:
+        app: syntaro-postgres
+        tier: data
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+              name: postgresql
+          env:
+            - name: POSTGRES_USER
+              value: "syntaro"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: syntaro-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "syntaro"
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "syntaro", "-d", "syntaro"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "syntaro", "-d", "syntaro"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1"
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: syntaro-postgres
+  namespace: syntaro
+  labels:
+    app: syntaro-postgres
+spec:
+  selector:
+    app: syntaro-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgresql
+  clusterIP: None

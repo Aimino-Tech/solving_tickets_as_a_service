@@ -1,0 +1,217 @@
+# ---------------------------------------------------------------------------
+# SYNTARO Monitoring — Prometheus + Grafana
+#
+# Prometheus scrapes the webhook /metrics endpoint (server.ts exposes it)
+# and Redis / RabbitMQ exporters if deployed. Grafana is pre-wired to the
+# Prometheus datasource and ships the dashboard JSON from monitoring/.
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: syntaro-prometheus-config
+  namespace: syntaro
+  labels:
+    app: syntaro-monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+      - /etc/prometheus/alerts.yml
+
+    scrape_configs:
+      - job_name: "syntaro-webhook"
+        static_configs: [{ targets: ["syntaro-webhook:80"] }]
+        metrics_path: /metrics
+      - job_name: "syntaro-redis"
+        static_configs: [{ targets: ["syntaro-redis-exporter:9121"] }]
+      - job_name: "syntaro-rabbitmq"
+        static_configs: [{ targets: ["syntaro-rabbitmq-exporter:9419"] }]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: syntaro-prometheus-alerts
+  namespace: syntaro
+  labels:
+    app: syntaro-monitoring
+data:
+  alerts.yml: |
+    groups:
+      - name: syntaro
+        rules:
+          - alert: WebhookDown
+            expr: up{job="syntaro-webhook"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "SYNTARO webhook is down"
+          - alert: HighQueueDepth
+            expr: rabbitmq_queue_messages_ready > 50
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "SYNTARO queue backlog growing"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: syntaro-prometheus
+  namespace: syntaro
+  labels:
+    app: syntaro-prometheus
+    tier: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: syntaro-prometheus
+  template:
+    metadata:
+      labels:
+        app: syntaro-prometheus
+        tier: monitoring
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.53.0
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time=15d
+          ports:
+            - containerPort: 9090
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: data
+              mountPath: /prometheus
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "1Gi"
+              cpu: "1"
+      volumes:
+        - name: config
+          configMap:
+            name: syntaro-prometheus-config
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: syntaro-prometheus
+  namespace: syntaro
+  labels:
+    app: syntaro-prometheus
+spec:
+  selector:
+    app: syntaro-prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090
+      name: http
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: syntaro-grafana-datasources
+  namespace: syntaro
+  labels:
+    app: syntaro-monitoring
+data:
+  datasource.yml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://syntaro-prometheus:9090
+        isDefault: true
+        editable: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: syntaro-grafana
+  namespace: syntaro
+  labels:
+    app: syntaro-grafana
+    tier: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: syntaro-grafana
+  template:
+    metadata:
+      labels:
+        app: syntaro-grafana
+        tier: monitoring
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.1.0
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: "admin"
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: syntaro-secrets
+                  key: GRAFANA_ADMIN_PASSWORD
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: datasources
+          configMap:
+            name: syntaro-grafana-datasources
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: syntaro-grafana
+  namespace: syntaro
+  labels:
+    app: syntaro-grafana
+spec:
+  selector:
+    app: syntaro-grafana
+  ports:
+    - port: 3000
+      targetPort: 3000
+      name: http

@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: syntaro-bot
+  namespace: syntaro
   labels:
     app: syntaro-bot
 spec:
@@ -16,12 +17,14 @@ spec:
     spec:
       containers:
         - name: syntaro-bot
-          image: ghcr.io/tamnguyen08/solving_tickets_as_a_service:latest
+          image: ghcr.io/aimino-tech/solving_tickets_as_a_service:latest
           ports:
             - containerPort: 3000
           envFrom:
+            - configMapRef:
+                name: syntaro-config
             - secretRef:
-                name: syntaro-env
+                name: syntaro-secrets
           livenessProbe:
             httpGet:
               path: /health
@@ -37,6 +40,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: syntaro-bot
+  namespace: syntaro
 spec:
   selector:
     app: syntaro-bot

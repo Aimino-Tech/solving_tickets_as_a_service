@@ -1,0 +1,75 @@
+# ---------------------------------------------------------------------------
+# SYNTARO OpenCode serve — the AI agent backend (port 4096)
+#
+# The webhook dispatches fix runs to this service via OPENCODE_URL.
+# NOTE: the official OpenCode image exposes `serve`. Verify the image tag on
+# ghcr.io/sst/opencode before production. Model API keys (ANTHROPIC_API_KEY,
+# OPENAI_API_KEY) must be present in the syntaro-secrets Secret.
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: syntaro-opencode
+  namespace: syntaro
+  labels:
+    app: syntaro-opencode
+    tier: agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: syntaro-opencode
+  template:
+    metadata:
+      labels:
+        app: syntaro-opencode
+        tier: agent
+    spec:
+      containers:
+        - name: opencode
+          image: ghcr.io/sst/opencode:latest
+          args: ["serve", "--hostname", "0.0.0.0", "--port", "4096"]
+          ports:
+            - containerPort: 4096
+              name: http
+          envFrom:
+            - secretRef:
+                name: syntaro-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "4Gi"
+              cpu: "2"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: syntaro-opencode
+  namespace: syntaro
+  labels:
+    app: syntaro-opencode
+spec:
+  selector:
+    app: syntaro-opencode
+  ports:
+    - port: 4096
+      targetPort: 4096
+      name: http

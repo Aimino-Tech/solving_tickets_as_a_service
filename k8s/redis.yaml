@@ -1,0 +1,98 @@
+# ---------------------------------------------------------------------------
+# SYNTARO Redis — Deployment with persistent storage and requirepass
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: syntaro-redis
+  namespace: syntaro
+  labels:
+    app: syntaro-redis
+    tier: data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: syntaro-redis
+  template:
+    metadata:
+      labels:
+        app: syntaro-redis
+        tier: data
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command:
+            - sh
+            - -c
+            - |
+              exec redis-server \
+                --appendonly yes \
+                --appendfsync everysec \
+                --requirepass "$REDIS_PASSWORD" \
+                --maxmemory 512mb \
+                --maxmemory-policy allkeys-lru
+          ports:
+            - containerPort: 6379
+              name: redis
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: syntaro-secrets
+                  key: REDIS_PASSWORD
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  namespace: syntaro
+  labels:
+    app: syntaro-redis
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: syntaro-redis
+  namespace: syntaro
+  labels:
+    app: syntaro-redis
+spec:
+  selector:
+    app: syntaro-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+      name: redis
