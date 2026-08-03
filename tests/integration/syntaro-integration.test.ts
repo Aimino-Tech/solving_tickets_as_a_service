@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
-const STAS_URL = process.env.STAS_URL || "http://localhost:4095";
+const SYNTARO_URL = process.env.SYNTARO_URL || "http://localhost:4095";
 const GOVERNANCE_URL = process.env.GOVERNANCE_URL || "http://localhost:4003";
 const OPENSYMPHONY_URL = process.env.OPENSYMPHONY_URL || "http://localhost:4004";
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "test-secret";
@@ -30,16 +30,16 @@ const TEST_ISSUE_PAYLOAD = {
     number: 9999,
     title: "Integration test: null check bug",
     body: "Reproduction: call getValue() on null reference. Expected: graceful null check.",
-    labels: [{ name: "stas:fix" }],
+    labels: [{ name: "syntaro:fix" }],
   },
-  repository: { owner: { login: "aimino" }, name: "stas-demo-private" },
+  repository: { owner: { login: "aimino" }, name: "syntaro-demo-private" },
   installation: { id: 99999 },
 };
 
-describe("STAS ↔ Governance ↔ OpenSymphony integration stack", () => {
+describe("SYNTARO ↔ Governance ↔ OpenSymphony integration stack", () => {
   beforeAll(async () => {
-    const stasHealth = await fetch(`${STAS_URL}/health`);
-    expect(stasHealth.status).toBe(200);
+    const syntaroHealth = await fetch(`${SYNTARO_URL}/health`);
+    expect(syntaroHealth.status).toBe(200);
     const governanceHealth = await fetch(`${GOVERNANCE_URL}/guardrail/health`);
     expect(governanceHealth.status).toBe(200);
 
@@ -60,7 +60,7 @@ describe("STAS ↔ Governance ↔ OpenSymphony integration stack", () => {
 
   it("accepts a validly-signed webhook with 202 {accepted:true}", async () => {
     const rawBody = JSON.stringify(TEST_ISSUE_PAYLOAD);
-    const resp = await postJson(`${STAS_URL}/webhook/github`, rawBody, {
+    const resp = await postJson(`${SYNTARO_URL}/webhook/github`, rawBody, {
       "X-GitHub-Event": "issues",
       "X-GitHub-Delivery": `test-delivery-${Date.now()}`,
       "X-Hub-Signature-256": sign(rawBody, WEBHOOK_SECRET),
@@ -71,7 +71,7 @@ describe("STAS ↔ Governance ↔ OpenSymphony integration stack", () => {
 
   it("rejects a webhook with an invalid signature (401)", async () => {
     const rawBody = JSON.stringify(TEST_ISSUE_PAYLOAD);
-    const resp = await postJson(`${STAS_URL}/webhook/github`, rawBody, {
+    const resp = await postJson(`${SYNTARO_URL}/webhook/github`, rawBody, {
       "X-GitHub-Event": "issues",
       "X-GitHub-Delivery": `test-delivery-${Date.now()}`,
       "X-Hub-Signature-256": "sha256=wrong",
@@ -81,7 +81,7 @@ describe("STAS ↔ Governance ↔ OpenSymphony integration stack", () => {
   });
 
   it("rejects a webhook with no signature (401)", async () => {
-    const resp = await postJson(`${STAS_URL}/webhook/github`, TEST_ISSUE_PAYLOAD, {
+    const resp = await postJson(`${SYNTARO_URL}/webhook/github`, TEST_ISSUE_PAYLOAD, {
       "X-GitHub-Event": "issues",
       "X-GitHub-Delivery": `test-delivery-${Date.now()}`,
     });
@@ -99,7 +99,7 @@ describe("STAS ↔ Governance ↔ OpenSymphony integration stack", () => {
     expect(killBody.status).toBe("ok");
     expect(killBody.tenant_id).toBe("test-tenant");
 
-    const blocked = await postJson(`${GOVERNANCE_URL}/api/stas/webhook`, {
+    const blocked = await postJson(`${GOVERNANCE_URL}/api/syntaro/webhook`, {
       tenant_id: "test-tenant",
       issue_id: "test/foo#1",
     });
@@ -109,7 +109,7 @@ describe("STAS ↔ Governance ↔ OpenSymphony integration stack", () => {
   });
 
   it("forwards an allowed webhook to the OpenSymphony upstream (reaches OS when up)", async (ctx) => {
-    const resp = await postJson(`${GOVERNANCE_URL}/api/stas/webhook`, {
+    const resp = await postJson(`${GOVERNANCE_URL}/api/syntaro/webhook`, {
       tenant_id: "default",
       issue_id: "test/bar#2",
     });
@@ -126,12 +126,12 @@ describe("STAS ↔ Governance ↔ OpenSymphony integration stack", () => {
     expect(body.status).toBe("error");
   });
 
-  it("OpenSymphony accepts a STAS webhook directly (202 accepted)", async (ctx) => {
+  it("OpenSymphony accepts a SYNTARO webhook directly (202 accepted)", async (ctx) => {
     if (!opensymphonyAvailable) {
       ctx.skip("OpenSymphony unavailable — skipping direct webhook assertion");
     }
     const rawBody = JSON.stringify(TEST_ISSUE_PAYLOAD);
-    const resp = await postJson(`${OPENSYMPHONY_URL}/api/v1/stas/webhook`, rawBody, {
+    const resp = await postJson(`${OPENSYMPHONY_URL}/api/v1/syntaro/webhook`, rawBody, {
       "X-GitHub-Event": "issues",
     });
     expect(resp.status).toBe(202);

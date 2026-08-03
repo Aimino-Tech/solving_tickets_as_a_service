@@ -1,4 +1,4 @@
-# STAS Product-Led Growth Strategy
+# SYNTARO Product-Led Growth Strategy
 
 Generated: 2026-07-17 | Status: Plan (Pricing Alignment Complete)
 Team: competition-analyst, ux-designer, growth-strategist, adversarial-critic
@@ -35,14 +35,14 @@ MCP server remains unimplemented. Tracked separately (AIM-2072). Not blocking pr
 
 ## 1. Core Thesis
 
-STAS is a **SaaS** GitHub bot that turns labeled issues into PRs. Target users are **developers** first (viral PR footer → human curiosity → signup), **AI agents** second (future MCP auto-discovery).
+SYNTARO is a **SaaS** GitHub bot that turns labeled issues into PRs. Target users are **developers** first (viral PR footer → human curiosity → signup), **AI agents** second (future MCP auto-discovery).
 
-The PLG flywheel: Developer labels issue → STAS fixes silently → PR appears → PR footer has link → other devs discover → install → more labels.
+The PLG flywheel: Developer labels issue → SYNTARO fixes silently → PR appears → PR footer has link → other devs discover → install → more labels.
 
 ## 2. Competitive Position
 
 ### 9-Competitor Matrix
-| Competitor | Pricing | Model | Weakness | STAS Exploit |
+| Competitor | Pricing | Model | Weakness | SYNTARO Exploit |
 |---|---|---|---|---|
 | Plip.io | $39-599/mo flat | Claude-only, SaaS | Locked to one model, unproven | Better pipeline quality, open source |
 | TaskBounty | $49-145/mo per-seat | Verification-gated | Per-seat kills adoption | Flat-rate $49/mo |
@@ -54,13 +54,13 @@ The PLG flywheel: Developer labels issue → STAS fixes silently → PR appears 
 | GitHub Copilot | $10-39/mo per-user | IDE plugin | Quality complaints, per-seat | 50-person team: $49 vs $950/mo |
 
 ### Killer Advantage
-**$49/mo flat-rate vs per-seat pricing across the industry.** Per-seat pricing on all competitors is the weakness STAS exploits hardest.
+**$49/mo flat-rate vs per-seat pricing across the industry.** Per-seat pricing on all competitors is the weakness SYNTARO exploits hardest.
 
 ## 3. Product-Led Growth UX
 
 ### Shortest Path (3 clicks to value)
 1. **Install** → GitHub OAuth (2s)
-2. **Label** an issue `stas:fix` (1s)
+2. **Label** an issue `syntaro:fix` (1s)
 3. **PR appears** — bot works silently, no comments, just the PR
 
 No config, no demo call, no approval flow. Zero setup required.
@@ -72,29 +72,29 @@ No config, no demo call, no approval flow. Zero setup required.
 - **PR body** includes: root cause explanation, why the fix is safe, test strategy
 
 ### Viral PR Footer
-Every PR footer: `🛠 Fixed by [STAS](https://stas.dev?ref=pr-footer)` — UTM-tracked link to shareable run page.
+Every PR footer: `🛠 Fixed by [SYNTARO](https://syntaro.dev?ref=pr-footer)` — UTM-tracked link to shareable run page.
 
 ### Shareable Run Page (primary viral channel)
-`https://stas.dev/runs/{runId}` — public page showing:
+`https://syntaro.dev/runs/{runId}` — public page showing:
 - Before/after diff
 - Root cause summary
 - Test results
-- Badge: `[![Fixed by STAS](https://stas.dev/badge.svg)](...)`
+- Badge: `[![Fixed by SYNTARO](https://syntaro.dev/badge.svg)](...)`
 
 For private repos: expiring share links (24h) a la Linear.
 
 ### Self-Serve SaaS Onboarding
 - GitHub OAuth only (no signup form)
 - No welcome modal, no checklist
-- Empty state: "Label an issue with `stas:fix` to get started"
+- Empty state: "Label an issue with `syntaro:fix` to get started"
 - No demo PR
 
 ## 4. Growth Flywheel
 
 ```
-GitHub Marketplace → Install STAS → Label issue → PR appears (wow)
+GitHub Marketplace → Install SYNTARO → Label issue → PR appears (wow)
                                                            ↓
-                                                  PR footer "Fixed by STAS"
+                                                  PR footer "Fixed by SYNTARO"
                                                            ↓
                                               Other devs discover via link
                                                            ↓
@@ -144,19 +144,19 @@ GitHub Marketplace → Install STAS → Label issue → PR appears (wow)
 3. **Hacker News** — "Show HN: I built a GitHub bot that fixes your issues"
 4. **Developer newsletters** — TLDR, Python Weekly, Node Weekly
 5. **Technical blog** — "How we fixed 10,000 issues with AI" — real metrics
-6. **Comparison pages** — "STAS vs Plip", "STAS vs Devin"
+6. **Comparison pages** — "SYNTARO vs Plip", "SYNTARO vs Devin"
 
 ## 9. Multi-Channel Layer
 
 ### Agent Access (MCP)
-- **STAS MCP Server** — agents auto-discover via MCP protocol
+- **SYNTARO MCP Server** — agents auto-discover via MCP protocol
 - **Note**: MCP server does not exist yet. See AIM-2072.
 
 ### Human Access
-- **Slack**: `/stas fix "login button not working"` → creates issue, runs fix, posts PR link
+- **Slack**: `/syntaro fix "login button not working"` → creates issue, runs fix, posts PR link
 - **Telegram**: Same commands via bot
 - **WhatsApp**: Same commands via business API
-- **Status queries**: `/stas status #42` → "Fix complete — PR #42 is ready"
+- **Status queries**: `/syntaro status #42` → "Fix complete — PR #42 is ready"
 
 ## 10. Ticket Generation
 
@@ -178,7 +178,7 @@ GitHub Marketplace → Install STAS → Label issue → PR appears (wow)
 
 ## 11. Synthesis Notes
 
-- **Primary insight**: STAS wins on flat-rate pricing vs per-seat (Copilot, Cursor, Devin).
+- **Primary insight**: SYNTARO wins on flat-rate pricing vs per-seat (Copilot, Cursor, Devin).
 - **Pricing aligned**: $49/$149 canonical across all docs, code, and config.
 - **No more AGI claims**: Positioned as "Powered by OpenCode + frontier models" until proprietary model ships.
 - **Unit economics documented**: Breakeven analysis in docs/UNIT_ECONOMICS.md, cost optimization plan in docs/COST_OPTIMIZATION.md.

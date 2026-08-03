@@ -1,13 +1,13 @@
 # Evaluation Pipeline
 
-STAS includes a comprehensive evaluation pipeline built on [Promptfoo](https://promptfoo.dev/) with [LangFuse](https://langfuse.com/) observability.
+SYNTARO includes a comprehensive evaluation pipeline built on [Promptfoo](https://promptfoo.dev/) with [LangFuse](https://langfuse.com/) observability.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
     TC[Test Cases YAML] --> PF[Promptfoo Eval]
-    PF --> SA[STAS Agent Provider]
+    PF --> SA[SYNTARO Agent Provider]
     SA --> E2B[E2B Sandbox]
     E2B --> AG[OpenCode Agent]
     AG --> RE[Result Evaluator]
@@ -29,7 +29,7 @@ docker compose -f docker-compose.eval.yml up
 ```
 
 LangFuse UI: http://localhost:3000
-STAS Eval API: http://localhost:3001
+SYNTARO Eval API: http://localhost:3001
 
 ### Local (without Docker)
 
@@ -72,10 +72,10 @@ timeoutMs: 300000
 After running eval, open LangFuse UI at http://localhost:3000:
 
 1. Navigate to **Traces** tab
-2. Filter by `name: "stas-eval"`
+2. Filter by `name: "syntaro-eval"`
 3. Each eval run creates one trace with spans:
    - `sandbox.create` — E2B sandbox provisioning
-   - `agent.run` — STAS agent execution
+   - `agent.run` — SYNTARO agent execution
    - `artifact.collection` — Result gathering
    - `evaluation` — Pass/fail determination
 

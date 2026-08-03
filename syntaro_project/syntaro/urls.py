@@ -1,5 +1,5 @@
 """
-STAS URL Configuration.
+SYNTARO URL Configuration.
 
 Routes webhooks, API endpoints, and admin interface.
 """

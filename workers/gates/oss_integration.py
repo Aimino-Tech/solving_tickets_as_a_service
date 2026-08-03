@@ -4,7 +4,7 @@ OSS prompt injection guard integration.
 Provides ML-powered prompt injection detection via optional third-party
 libraries: llm-guard, rebuff, and garak.
 
-The integration is opt-in (enabled via ``STAS_OSS_GUARD_ENABLED=true``).
+The integration is opt-in (enabled via ``SYNTARO_OSS_GUARD_ENABLED=true``).
 When OSS tools are unavailable or time out, the guard logs a warning and
 falls back to the existing regex-based ``InjectionGuard`` verdict.
 
@@ -266,7 +266,7 @@ class RebuffScanner(OssScannerBase):
 class GarakScanner(OssScannerBase):
     """Wrapper around garak's LLM vulnerability scanner.
 
-    Garak runs a battery of adversarial probes. In STAS, it is used as a
+    Garak runs a battery of adversarial probes. In SYNTARO, it is used as a
     secondary/deep scan for high-risk inputs. Because garak is designed for
     probing a running model (not standalone text), we use its ``probe``
     module directly on the input text where possible.
@@ -424,14 +424,14 @@ class OssGuardManager:
     """
 
     def __init__(self) -> None:
-        self.enabled = os.getenv("STAS_OSS_GUARD_ENABLED", "false").strip().lower() in (
+        self.enabled = os.getenv("SYNTARO_OSS_GUARD_ENABLED", "false").strip().lower() in (
             "true",
             "1",
             "yes",
         )
-        raw_tools = os.getenv("STAS_OSS_GUARD_TOOLS", ",".join(_DEFAULT_TOOLS))
+        raw_tools = os.getenv("SYNTARO_OSS_GUARD_TOOLS", ",".join(_DEFAULT_TOOLS))
         self.tool_names = [t.strip() for t in raw_tools.split(",") if t.strip()]
-        self.timeout = float(os.getenv("STAS_OSS_GUARD_TIMEOUT", "5.0"))
+        self.timeout = float(os.getenv("SYNTARO_OSS_GUARD_TIMEOUT", "5.0"))
 
         self.scanners: list[OssScannerBase] = []
         if self.enabled:

@@ -1,6 +1,6 @@
-# STAS PLG UX Design — SaaS-Only Edition
+# SYNTARO PLG UX Design — SaaS-Only Edition
 
-> **Design philosophy**: STAS is a developer tool. Developers judge tools by *how fast they can ship something real*. Every screen, every click, every loading state must answer one question: *"Can I fix a ticket yet?"*
+> **Design philosophy**: SYNTARO is a developer tool. Developers judge tools by *how fast they can ship something real*. Every screen, every click, every loading state must answer one question: *"Can I fix a ticket yet?"*
 
 ---
 
@@ -12,7 +12,7 @@
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  STAS                                            │
+│  SYNTARO                                            │
 │  Label a GitHub issue. Get a pull request.      │
 │                                                   │
 │  ┌─────────────────────────────────────────────┐ │
@@ -34,15 +34,15 @@
 - **No email-first** — email is in the overflow, not the default. Vercel's insight: OAuth pre-fills the rest of the funnel.
 - **Scope requested on signup** — read-only repo access + webhook management. No code write access yet (asked at first fix).
 
-### 1.2 Post-OAuth: "Install STAS on Your Repos" (1 click)
+### 1.2 Post-OAuth: "Install SYNTARO on Your Repos" (1 click)
 
 After GitHub OAuth, the user lands here:
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│  Install STAS on your repositories                     │
+│  Install SYNTARO on your repositories                     │
 │                                                         │
-│  Pick repos STAS will watch for "stas:fix" labels:      │
+│  Pick repos SYNTARO will watch for "syntaro:fix" labels:      │
 │                                                         │
 │  ┌──────────────────────────────────────────────────┐  │
 │  │  ☑  All repositories                              │  │
@@ -55,10 +55,10 @@ After GitHub OAuth, the user lands here:
 │  │  │                                               │  │  │
 │  │  └──────────────────────────────────────────────┘ │  │
 │  │                                                    │  │
-│  │  [Install STAS GitHub App]                         │  │
+│  │  [Install SYNTARO GitHub App]                         │  │
 │  └──────────────────────────────────────────────────┘  │
 │                                                         │
-│  › No configuration needed. STAS works with stas:fix    │
+│  › No configuration needed. SYNTARO works with syntaro:fix    │
 │    label out of the box.                                │
 └────────────────────────────────────────────────────────┘
 ```
@@ -66,24 +66,24 @@ After GitHub OAuth, the user lands here:
 **Design decisions:**
 - **Single screen replaces the typical "create account → verify email → configure → docs → deploy" pipeline** — Vercel's insight: compress every step you can.
 - **"All repositories" is the default** — reduces cognitive load. Users who want selective install can opt down.
-- **The GitHub App installation is triggered FROM inside the STAS UI** (not redirected to GitHub settings). We use the GitHub API to pre-authorize the installation — user just clicks "Install" and we handle the redirect in a silent popup.
+- **The GitHub App installation is triggered FROM inside the SYNTARO UI** (not redirected to GitHub settings). We use the GitHub API to pre-authorize the installation — user just clicks "Install" and we handle the redirect in a silent popup.
 
 ### 1.3 Zero-Config Dashboard (immediately after install)
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│  STAS  ● Dashboard  ▼ user/org                         │
+│  SYNTARO  ● Dashboard  ▼ user/org                         │
 ├────────────────────────────────────────────────────────┤
 │                                                         │
 │  ┌────────────────────────────────────────────────┐    │
-│  │  ✅ STAS is installed on 2 repositories.        │    │
+│  │  ✅ SYNTARO is installed on 2 repositories.        │    │
 │  │                                                  │    │
 │  │  Your first fix is 1 label away:                 │    │
 │  │                                                  │    │
 │  │  ┌──────────────────────────────────────────┐   │    │
 │  │  │  1. Open any issue in your repo           │   │    │
-│  │  │  2. Add label → stas:fix                  │   │    │
-│  │  │  3. STAS does the rest → PR appears       │   │    │
+│  │  │  2. Add label → syntaro:fix                  │   │    │
+│  │  │  3. SYNTARO does the rest → PR appears       │   │    │
 │  │  └──────────────────────────────────────────┘   │    │
 │  │                                                  │    │
 │  │  [Open a repo to try it →]                       │    │
@@ -111,9 +111,9 @@ After GitHub OAuth, the user lands here:
 ### The 3-Click Flow
 
 ```
-Click 1: Open any GitHub issue → add label "stas:fix"
-Click 2: (optional) Confirm on STAS dashboard (or just wait)
-Click 3: Review the draft PR that STAS opens
+Click 1: Open any GitHub issue → add label "syntaro:fix"
+Click 2: (optional) Confirm on SYNTARO dashboard (or just wait)
+Click 3: Review the draft PR that SYNTARO opens
 
 Total: ~90 seconds from label to PR
 ```
@@ -130,15 +130,15 @@ User is on a GitHub issue they want fixed:
 │  ┌───────────────────────────────────────────┐  │
 │  │  ✕ bug                                    │  │
 │  │  ✕ enhancement                            │  │
-│  │  + stas:fix  ← type to search             │  │
+│  │  + syntaro:fix  ← type to search             │  │
 │  └───────────────────────────────────────────┘  │
 │                                                  │
-│  ✓ STAS will pick this up automatically          │
+│  ✓ SYNTARO will pick this up automatically          │
 └─────────────────────────────────────────────────┘
 ```
 
-**Visual feedback**: When `stas:fix` is applied, a small toast/confetti appears:
-> "🔄 STAS is investigating this issue. Estimated PR in 2-4 minutes."
+**Visual feedback**: When `syntaro:fix` is applied, a small toast/confetti appears:
+> "🔄 SYNTARO is investigating this issue. Estimated PR in 2-4 minutes."
 
 #### Step 2: Real-time Progress (dashboard OR issue comments)
 
@@ -146,7 +146,7 @@ User is on a GitHub issue they want fixed:
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  stas-bot commented 30 seconds ago               │
+│  syntaro-bot commented 30 seconds ago               │
 │                                                   │
 │  🔍 Investigating root cause...                   │
 │  📦 Cloning repository                             │
@@ -155,7 +155,7 @@ User is on a GitHub issue they want fixed:
 │  🚀 Opening pull request...                        │
 │                                                   │
 │  ───                                              │
-│  View live progress → [STAS Dashboard]             │
+│  View live progress → [SYNTARO Dashboard]             │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -170,8 +170,8 @@ User is on a GitHub issue they want fixed:
 ┌──────────────────────────────────────────────────────┐
 │  [Draft] Fix #87: Handle null pointer in user auth    │  ◀ New PR
 ├──────────────────────────────────────────────────────┤
-│  stas-bot wants to merge 2 commits into main from    │
-│  stas/fix-87-null-pointer                             │
+│  syntaro-bot wants to merge 2 commits into main from    │
+│  syntaro/fix-87-null-pointer                             │
 │                                                       │
 │  ## Root Cause                                        │
 │  User.login() doesn't validate session before access  │
@@ -186,8 +186,8 @@ User is on a GitHub issue they want fixed:
 │  - ✅ Sandbox isolated execution                      │
 │                                                       │
 │  ───                                                  │
-│  🛠 Fixed by [STAS](https://stas.dev) — AI-powered    │
-│  issue resolution. [Dashboard](https://stas.dev/runs) │
+│  🛠 Fixed by [SYNTARO](https://syntaro.dev) — AI-powered    │
+│  issue resolution. [Dashboard](https://syntaro.dev/runs) │
 │                                                       │
 │  [Review] [Merge] [Close]                             │
 └──────────────────────────────────────────────────────┘
@@ -195,7 +195,7 @@ User is on a GitHub issue they want fixed:
 
 **Design decisions:**
 - **Draft PR** — user must explicitly set it to "Ready for Review" (safe default).
-- **"Fixed by STAS" footer** — core viral loop element (see section 3).
+- **"Fixed by SYNTARO" footer** — core viral loop element (see section 3).
 - **PR template explains root cause, changes, verification** — builds trust in AI output.
 
 ---
@@ -204,17 +204,17 @@ User is on a GitHub issue they want fixed:
 
 ### Pattern Reference: Vercel Deploy Button + Slack Team Invites
 
-### 3.1 PR Footer: "Fixed by STAS"
+### 3.1 PR Footer: "Fixed by SYNTARO"
 
-Every PR created by STAS includes:
+Every PR created by SYNTARO includes:
 
 ```
 ---
 
-🛠 Fixed by [STAS](https://stas.dev/from/pr-87?ref=github-pr-footer) — 
+🛠 Fixed by [SYNTARO](https://syntaro.dev/from/pr-87?ref=github-pr-footer) — 
 the AI-powered issue resolution platform.
 
-[Get STAS for your team →](https://stas.dev?ref=github-pr-footer)
+[Get SYNTARO for your team →](https://syntaro.dev?ref=github-pr-footer)
 ```
 
 **Why this works:**
@@ -224,18 +224,18 @@ the AI-powered issue resolution platform.
 
 ### 3.2 "Try it on your repo" Onboarding PR
 
-When a user installs STAS but hasn't run a fix yet, STAS opens a **demo pull request** in their repo:
+When a user installs SYNTARO but hasn't run a fix yet, SYNTARO opens a **demo pull request** in their repo:
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  [Demo] Welcome to STAS — here's how it works        │
+│  [Demo] Welcome to SYNTARO — here's how it works        │
 ├──────────────────────────────────────────────────────┤
 │                                                       │
-│  Hi! I'm STAS, the AI issue resolver.                 │
+│  Hi! I'm SYNTARO, the AI issue resolver.                 │
 │                                                       │
 │  **Try me:**                                          │
 │  1. Open any issue in this repo                       │
-│  2. Add the `stas:fix` label                          │
+│  2. Add the `syntaro:fix` label                          │
 │  3. I'll investigate, write a fix, and open a PR      │
 │                                                       │
 │  No config needed. No API keys. Just a label.         │
@@ -255,7 +255,7 @@ When a user installs STAS but hasn't run a fix yet, STAS opens a **demo pull req
 Each completed fix has a dedicated shareable URL:
 
 ```
-https://stas.dev/runs/run_abc123
+https://syntaro.dev/runs/run_abc123
 ```
 
 The page shows:
@@ -265,14 +265,14 @@ The page shows:
 - **Reusable embed** — `<iframe>` or markdown badge for blog posts
 
 **Viral mechanics:**
-- Developer tweets: "STAS just fixed a bug in our auth system → [link]"
+- Developer tweets: "SYNTARO just fixed a bug in our auth system → [link]"
 - Others click → see a real fix → sign up to try it on their own repo
-- **Embeddable badge** for README: `[Fixed by STAS](https://stas.dev/runs/run_abc123)`
+- **Embeddable badge** for README: `[Fixed by SYNTARO](https://syntaro.dev/runs/run_abc123)`
 
 ### 3.4 Team Viral Loop (Slack-inspired)
 
 ```
-Individual discovers STAS
+Individual discovers SYNTARO
         │
         ▼
 Signs up, fixes an issue
@@ -281,7 +281,7 @@ Signs up, fixes an issue
 PR footer visible to team
         │
         ▼
-Team member clicks "Get STAS for your team"
+Team member clicks "Get SYNTARO for your team"
         │
         ▼
 Joins the same workspace (or creates new one)
@@ -294,7 +294,7 @@ Org purchases paid plan
 ```
 
 **Implementation:**
-- **Workspace-based** — when user signs up via GitHub Org, STAS creates a workspace for that org.
+- **Workspace-based** — when user signs up via GitHub Org, SYNTARO creates a workspace for that org.
 - **Team invite** — dashboard shows "Invite your team →" with a shareable link.
 - **Shared usage** — all team members' fixes count toward the workspace's monthly limit.
 
@@ -339,7 +339,7 @@ Triggered after the **second** fix completes, not on signup.
 ```
 
 **Why this works (Slack pattern):**
-- **Triggered AFTER value is established** — user has already seen STAS fix 2 issues.
+- **Triggered AFTER value is established** — user has already seen SYNTARO fix 2 issues.
 - **Not a popup on day 1** — that would feel salesy before they understand the product.
 - **Timing**: the message appears when they're about to run out — the moment of maximum perceived value.
 
@@ -378,10 +378,10 @@ When a free user invites a team member:
 ┌──────────────────────────────────────────────────────┐
 │  You've invited @teammate to your workspace.          │
 │                                                        │
-│  With STAS Free, only you can create fixes.            │
-│  Upgrade to Pro to let your whole team use STAS:      │
+│  With SYNTARO Free, only you can create fixes.            │
+│  Upgrade to Pro to let your whole team use SYNTARO:      │
 │                                                        │
-│  • @teammate can also label issues for STAS to fix    │
+│  • @teammate can also label issues for SYNTARO to fix    │
 │  • Shared fix history and audit log                   │
 │  • Combined monthly limit (100 fixes/team)             │
 │                                                        │
@@ -401,7 +401,7 @@ If a user uses all 3 free fixes in under 24 hours:
 ┌──────────────────────────────────────────────────────┐
 │  You've used 3 fixes today — you're on a roll!        │
 │                                                        │
-│  Looks like STAS is fitting into your workflow.        │
+│  Looks like SYNTARO is fitting into your workflow.        │
 │                                                         │
 │  Pro gives you 100 fixes/month so you never have to    │
 │  stop and wait.                                        │
@@ -422,14 +422,14 @@ If a user uses all 3 free fixes in under 24 hours:
 
 ### 5.1 The Aha Moment Defined
 
-**The STAS aha moment**: *A bug you expected to spend 30+ minutes debugging is fixed in under 5 minutes with a correct, well-tested PR.*
+**The SYNTARO aha moment**: *A bug you expected to spend 30+ minutes debugging is fixed in under 5 minutes with a correct, well-tested PR.*
 
 ### 5.2 End-to-End Aha Flow
 
 ```
 Time    Event                           User Emotion
 ────    ─────                           ───────────
-T+0s    Labels issue "stas:fix"         👆 Hopeful
+T+0s    Labels issue "syntaro:fix"         👆 Hopeful
 T+10s   Bot comments "Investigating"   😮 Intrigued
 T+60s   Bot comments "Found root cause" 🤔 Impressed
 T+120s  Bot comments "Fix written +    😲 Amazed
@@ -462,9 +462,9 @@ After the first successful fix, the dashboard shows a **single next action**, no
 ┌──────────────────────────────────────────────────────┐
 │  ✅ First fix complete!                                │
 │                                                        │
-│  Want to see what else STAS can do?                    │
+│  Want to see what else SYNTARO can do?                    │
 │                                                        │
-│  → Fix another issue (label with stas:fix)             │
+│  → Fix another issue (label with syntaro:fix)             │
 │  → Invite your team to collaborate                     │
 │  → [View run history]                                  │
 └──────────────────────────────────────────────────────┘
@@ -523,8 +523,8 @@ After the first successful fix, the dashboard shows a **single next action**, no
 | Priority | Feature | Effort | Impact |
 |----------|---------|--------|--------|
 | P0 | GitHub OAuth + GitHub App install flow | 2-3 days | Unlocks all onboarding |
-| P0 | `stas:fix` label → PR pipeline (already built) | Done | Core loop |
-| P1 | PR footer "Fixed by STAS" + UTM tracking | 0.5 day | Viral distribution |
+| P0 | `syntaro:fix` label → PR pipeline (already built) | Done | Core loop |
+| P1 | PR footer "Fixed by SYNTARO" + UTM tracking | 0.5 day | Viral distribution |
 | P1 | Free tier limit (3 fixes/month) | 1 day | Conversion trigger foundation |
 | P1 | In-app conversion messaging (2-of-3 trigger) | 1 day | Free→paid conversion |
 | P2 | Shareable run dashboard (public URL per fix) | 2 days | Viral content |
@@ -552,18 +552,18 @@ After the first successful fix, the dashboard shows a **single next action**, no
 
 | Page | URL | Purpose |
 |------|-----|---------|
-| Landing | `stas.dev` | Value prop + GitHub OAuth |
-| Dashboard | `stas.dev/dashboard` | Repos list, quick stats, next action |
-| Run Detail | `stas.dev/runs/:id` | Fix analysis, diff, share |
-| Run History | `stas.dev/runs` | All fixes, search, filters |
-| Settings | `stas.dev/settings` | Repos, team, billing |
-| Pricing | `stas.dev/pricing` | Plans, comparison |
-| Upgrade | `stas.dev/upgrade` | Stripe checkout |
+| Landing | `syntaro.dev` | Value prop + GitHub OAuth |
+| Dashboard | `syntaro.dev/dashboard` | Repos list, quick stats, next action |
+| Run Detail | `syntaro.dev/runs/:id` | Fix analysis, diff, share |
+| Run History | `syntaro.dev/runs` | All fixes, search, filters |
+| Settings | `syntaro.dev/settings` | Repos, team, billing |
+| Pricing | `syntaro.dev/pricing` | Plans, comparison |
+| Upgrade | `syntaro.dev/upgrade` | Stripe checkout |
 
 ### Key UX Principles
 
-1. **Never break the GitHub flow** — the user's primary workspace is GitHub. STAS augments it, replaces nothing.
+1. **Never break the GitHub flow** — the user's primary workspace is GitHub. SYNTARO augments it, replaces nothing.
 2. **Zero-config is a feature** — every dropdown, form field, and setting you remove is a conversion you gain.
 3. **Limit after value** — don't show the paywall until the user has felt the product's value (Slack's key insight).
-4. **The PR is the product** — every PR STAS creates is a marketing asset. Make it beautiful, thorough, and shareable.
-5. **Speed is the brand** — STAS's brand promise is "fixes faster than a human." Every UX element must communicate speed: loading states are progress animations, not spinners.
+4. **The PR is the product** — every PR SYNTARO creates is a marketing asset. Make it beautiful, thorough, and shareable.
+5. **Speed is the brand** — SYNTARO's brand promise is "fixes faster than a human." Every UX element must communicate speed: loading states are progress animations, not spinners.

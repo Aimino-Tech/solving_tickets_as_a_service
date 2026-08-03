@@ -1,4 +1,4 @@
-# STAS — Solving Tickets As A Service  
+# SYNTARO — Solving Tickets As A Service  
 ## Comprehensive Test Report
 
 **Date**: 2026-06-10  
@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary
 
-STAS (Solving Tickets As A Service) has been fully configured with real GitHub App credentials and tested end-to-end. The core webhook server is operational with all endpoints responding correctly. The PostgreSQL database is connected and storing webhook events, account data, and run history.
+SYNTARO (Solving Tickets As A Service) has been fully configured with real GitHub App credentials and tested end-to-end. The core webhook server is operational with all endpoints responding correctly. The PostgreSQL database is connected and storing webhook events, account data, and run history.
 
 ### What Works
 | Feature | Status | Details |
@@ -58,7 +58,7 @@ STAS (Solving Tickets As A Service) has been fully configured with real GitHub A
 | `GITHUB_WEBHOOK_SECRET` | `e4b2ca0ad9782d3371a9be835db593d728f0dbb9` | User provided |
 | `OPENCODE_API_KEY` | `sk-cJTawtmaw3DGYJTeb7WP2HDtLKj4c9Cd877rFwbKzgafS1IgTfRotmT9w7aKrkU8` | User provided |
 | `LINEAR_API_KEY` | `lin_api_fbhkK1yZaFpUSG8KknAT7N4vrP9ALmQ9tKxSo9UW` | User provided |
-| `DATABASE_URL` | `postgres://stas:stas@localhost:5432/stas` | Docker PostgreSQL |
+| `DATABASE_URL` | `postgres://syntaro:syntaro@localhost:5432/syntaro` | Docker PostgreSQL |
 | `REDIS_URL` | `redis://localhost:6379` | Local Redis |
 | `ADMIN_API_KEY` | `dev-admin-key` | Development |
 
@@ -70,7 +70,7 @@ STAS (Solving Tickets As A Service) has been fully configured with real GitHub A
 | Missing `opencodeHealth` config section | `src/config.ts` | Added env vars with defaults |
 | Duplicate `OPENCODE_API_KEY` (required vs optional) | `src/config.ts:84` | Changed to `OPENCODE_DIRECT_API_KEY` |
 | YAML indentation error in OpenAPI spec | `openapi.yaml:1845` | Removed orphaned `credits`/`runs` properties |
-| Workspace package not linked | `node_modules/@stas/github-client` | Ran `npm install` to create symlink |
+| Workspace package not linked | `node_modules/@syntaro/github-client` | Ran `npm install` to create symlink |
 | Migration 003 references dropped column `processed` | `src/db/migrations/003_webhook_events_enrich.sql` | Removed stale data migration SQL |
 | Seed script references old `run_history` schema | `src/db/seed.ts:69` | Updated to new schema columns |
 
@@ -171,7 +171,7 @@ STAS (Solving Tickets As A Service) has been fully configured with real GitHub A
 3. **Database migrations** — All 10 migrations run cleanly from scratch
 
 ### Infrastructure Setup (2)
-1. **Docker PostgreSQL** — Started PostgreSQL 16 with `stas:stas@localhost:5432/stas`
+1. **Docker PostgreSQL** — Started PostgreSQL 16 with `syntaro:syntaro@localhost:5432/syntaro`
 2. **Database seeded** — Demo account with 1000 credits and sample data
 
 ---
@@ -185,8 +185,8 @@ opencode serve --port 4096
 ```
 
 Once running:
-1. Label a GitHub issue with `stas:fix`
-2. STAS receives the webhook, verifies the signature
+1. Label a GitHub issue with `syntaro:fix`
+2. SYNTARO receives the webhook, verifies the signature
 3. Enqueues the issue to RabbitMQ (when configured)
 4. OpenCode agent clones the repo, investigates, fixes, tests, and opens a PR
 
@@ -195,10 +195,10 @@ Once running:
 ## 7. Architecture Diagram (Verified Working Components)
 
 ```
-GitHub Issue (labeled "stas:fix")   ← Can receive webhooks
+GitHub Issue (labeled "syntaro:fix")   ← Can receive webhooks
        │
        ▼
-  STAS Webhook Server (:3000)        ← ✅ RUNNING
+  SYNTARO Webhook Server (:3000)        ← ✅ RUNNING
        │
        ├── Verify signature           ← ✅ HMAC-SHA256 verification
        ├── Rate limit check           ← ✅ Active
@@ -244,7 +244,7 @@ open http://localhost:3000/docs
 
 ## 9. Conclusion
 
-STAS is **fully operational** as a webhook server with all core infrastructure working:
+SYNTARO is **fully operational** as a webhook server with all core infrastructure working:
 - **Express server**: Running and stable
 - **PostgreSQL**: Connected with all migrations applied
 - **GitHub integration**: Authenticated and signing verified
@@ -302,6 +302,6 @@ The remaining pieces (OpenCode serve, RabbitMQ, Celery workers) are only needed 
 
 ## 11. Final Verdict
 
-**STAS is production-ready** as a webhook receiver and management platform. The server is stable (running for hours), all API endpoints respond correctly, the database is operational with all schema migrations applied, the dashboard SPA is built and served properly, and the admin/dashboard APIs return real data from PostgreSQL.
+**SYNTARO is production-ready** as a webhook receiver and management platform. The server is stable (running for hours), all API endpoints respond correctly, the database is operational with all schema migrations applied, the dashboard SPA is built and served properly, and the admin/dashboard APIs return real data from PostgreSQL.
 
 To activate the AI fix pipeline (the core value proposition), start OpenCode serve and optionally configure RabbitMQ + Celery workers for distributed processing.

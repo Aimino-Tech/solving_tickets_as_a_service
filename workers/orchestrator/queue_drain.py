@@ -61,18 +61,18 @@ _RABBITMQ_MGMT_URL = os.getenv(
 # ---------------------------------------------------------------------------
 
 _QUEUES_TO_MONITOR = [
-    "stas.agents.dispatch",
-    "stas.agents.verification",
-    "stas.agents.sandbox",
-    "stas.agents.self_audit",
-    "stas.issues.triage",
-    "stas.issues.health",
-    "stas.queue.pr",
-    "stas.queue.notifications",
-    "stas.queue.orchestrator",
-    "stas.dlx.retry",
-    "stas.dlx.failed",
-    "stas.quality.enforce",
+    "syntaro.agents.dispatch",
+    "syntaro.agents.verification",
+    "syntaro.agents.sandbox",
+    "syntaro.agents.self_audit",
+    "syntaro.issues.triage",
+    "syntaro.issues.health",
+    "syntaro.queue.pr",
+    "syntaro.queue.notifications",
+    "syntaro.queue.orchestrator",
+    "syntaro.dlx.retry",
+    "syntaro.dlx.failed",
+    "syntaro.quality.enforce",
 ]
 
 # ---------------------------------------------------------------------------

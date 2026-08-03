@@ -120,8 +120,8 @@ export class RateLimiter {
   private readonly max: number;
 
   constructor(options?: Partial<RateLimiterOptions>) {
-    this.windowMs = options?.windowMs ?? config.stas.rateLimitWindowMs;
-    this.max = options?.max ?? config.stas.rateLimitMax;
+    this.windowMs = options?.windowMs ?? config.syntaro.rateLimitWindowMs;
+    this.max = options?.max ?? config.syntaro.rateLimitMax;
   }
 
   // ── Public API ──────────────────────────────────────────────────────────

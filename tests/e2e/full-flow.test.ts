@@ -1,13 +1,13 @@
 /**
  * Full Flow E2E Tests: Webhook → Queue → Agent → PR Creation
  *
- * Validates the entire STAS pipeline end-to-end with mocked external
+ * Validates the entire SYNTARO pipeline end-to-end with mocked external
  * dependencies (GitHub API, OpenCode, BullMQ, Redis).
  *
  * Test Scenarios:
- *   1.  Happy path: issue labeled stas:fix → webhook → enqueue → agent → PR
+ *   1.  Happy path: issue labeled syntaro:fix → webhook → enqueue → agent → PR
  *   2.  GitHub issues.labeled → BullMQ job with correct dedup key
- *   3.  issues.edited with stas:fix label → re-enqueues
+ *   3.  issues.edited with syntaro:fix label → re-enqueues
  *   4.  Marketplace purchase → billing plan mapped correctly
  *   5.  Non-target label → no job enqueued
  *   6.  Missing installation ID → gracefully handled (no enqueue)
@@ -45,7 +45,7 @@ const { mockEnqueueIssue, mockCreateIssueQueue } = vi.hoisted(() => {
     getJob: vi.fn().mockResolvedValue(null),
     getJobs: vi.fn().mockResolvedValue([]),
     obliterate: vi.fn().mockResolvedValue(undefined),
-    name: "stas-issues",
+    name: "syntaro-issues",
   };
 
   return {
@@ -87,7 +87,7 @@ const { mockConfig } = vi.hoisted(() => {
       },
       queue: {
         redisUrl: "redis://localhost:6379",
-        rabbitmqUrl: "amqp://guest:guest@localhost:5672/stas",
+        rabbitmqUrl: "amqp://guest:guest@localhost:5672/syntaro",
         workerConcurrency: 2,
         dedupTtl: 120,
         keepCompleted: 200,
@@ -125,7 +125,7 @@ const { mockConfig } = vi.hoisted(() => {
         webhookSecret: "mock-bitbucket-secret",
       },
       openai: { apiKey: "mock-openai-key", cheapModel: "gpt-4o-mini" },
-      e2b: { apiKey: undefined, templateId: "stas-default", sandboxTimeoutMs: 300000 },
+      e2b: { apiKey: undefined, templateId: "syntaro-default", sandboxTimeoutMs: 300000 },
       slack: {
         webhookUrl: undefined,
         channel: undefined,
@@ -142,15 +142,15 @@ const { mockConfig } = vi.hoisted(() => {
         dlqRetentionDays: 7,
       },
       alerting: {
-        slackChannel: "#stas-alerts",
+        slackChannel: "#syntaro-alerts",
         warnQueueDepth: 50,
         critQueueDepth: 200,
         warnErrorRatePercent: 10,
         critErrorRatePercent: 30,
       },
-      stas: {
-        label: "stas:fix",
-        botName: "STAS",
+      syntaro: {
+        label: "syntaro:fix",
+        botName: "SYNTARO",
         mode: "oss" as const,
         aiMode: "ai" as const,
         aiDisabled: true,
@@ -183,7 +183,7 @@ const { mockConfig } = vi.hoisted(() => {
         price2000Credits: "price_2000credits",
       },
       database: {
-        url: "postgres://localhost:5432/stas",
+        url: "postgres://localhost:5432/syntaro",
         poolMin: 2,
         poolMax: 10,
         ssl: false,
@@ -232,7 +232,7 @@ const { mockConfig } = vi.hoisted(() => {
         sandboxMultiplierMax: 2.0,
       },
       usageCredits: { fixRun: 50, triage: 10, sandbox: 5 },
-      storage: { type: 'sqlite' as const, sqlitePath: '/tmp/stas.db' },
+      storage: { type: 'sqlite' as const, sqlitePath: '/tmp/syntaro.db' },
       ci: { monitorEnabled: false, repos: [] as string[], pollIntervalMs: 60000, failureThreshold: 3 },
       auth: { jwtSecret: 'test-jwt-secret', jwtExpiresIn: '24h', jwtRefreshExpiresIn: '30d' },
       osy: { dispatchUrl: '', apiKey: '', tenant: 'default' },
@@ -250,7 +250,7 @@ const { mockConfig } = vi.hoisted(() => {
       mcp: { apiKey: '', authEnabled: false, serverUrl: 'http://localhost:4095', port: 4095, autoStart: false, ssl: { enabled: false, keyPath: '', certPath: '' }, rateLimit: { windowMs: 60000, maxRequests: 60 } },
       docker: { image: 'node:20-slim', containerMemory: '512m', containerCpu: 0.5, networkRestrict: true, allowedHosts: [] as string[], seccompProfile: '', apparmorProfile: '', gvisorEnabled: false },
       opensymphony: { enabled: false, port: 4097, host: '127.0.0.1', dispatchUrl: '', apiKey: '', tenant: 'default', celeryPipeline: { url: '', apiKey: '', enabled: false } },
-      alerting: { slackChannel: '#stas-alerts', warnQueueDepth: 50, critQueueDepth: 200, warnErrorRatePercent: 10, critErrorRatePercent: 30, n8nWebhookUrl: '' },
+      alerting: { slackChannel: '#syntaro-alerts', warnQueueDepth: 50, critQueueDepth: 200, warnErrorRatePercent: 10, critErrorRatePercent: 30, n8nWebhookUrl: '' },
     },
   };
 });
@@ -365,11 +365,11 @@ vi.mock("../../src/metering/routes.js", () => ({ usageRouter: vi.fn() }));
 
 import { createApp } from "../../src/server.js";
 import {
-  githubIssuesLabeledStasFix as sampleIssueLabeledPayload,
+  githubIssuesLabeledSyntaroFix as sampleIssueLabeledPayload,
   githubIssuesLabeledOther as sampleNonTargetLabelPayload,
   githubIssuesOpened as sampleMissingInstallationPayload,
   githubMarketplacePurchased as sampleMarketplacePurchasePayload,
-  githubIssuesEditedWithStasFix as sampleIssueEditedWithTargetPayload,
+  githubIssuesEditedWithSyntaroFix as sampleIssueEditedWithTargetPayload,
 } from "./fixtures/webhooks/github.js";
 import { gitlabIssueHookLabeled as sampleGitlabIssuePayload } from "./fixtures/webhooks/gitlab.js";
 import { bitbucketPullRequestCreated as sampleBitbucketIssueCreatedPayload } from "./fixtures/webhooks/bitbucket.js";
@@ -546,7 +546,7 @@ describe("Full E2E Flow: Webhook → Queue → Agent → PR Creation", () => {
   // Scenario 1: Happy path
   // =========================================================================
 
-  describe("Happy path: issue labeled stas:fix → webhook → queue → agent → PR", () => {
+  describe("Happy path: issue labeled syntaro:fix → webhook → queue → agent → PR", () => {
     it("receives issues.labeled webhook and enqueues a job with correct data", async () => {
       const payload = sampleIssueLabeledPayload();
       const response = await sendGithubWebhook(serverUrl, "issues.labeled", payload);
@@ -650,8 +650,8 @@ describe("Full E2E Flow: Webhook → Queue → Agent → PR Creation", () => {
   // Scenario 3: issues.edited re-enqueues
   // =========================================================================
 
-  describe("issues.edited with stas:fix label → re-enqueues", () => {
-    it("re-enqueues when issue is edited and already has the stas:fix label", async () => {
+  describe("issues.edited with syntaro:fix label → re-enqueues", () => {
+    it("re-enqueues when issue is edited and already has the syntaro:fix label", async () => {
       const payload = sampleIssueEditedWithTargetPayload();
       const response = await sendGithubWebhook(serverUrl, "issues.edited", payload);
 
@@ -669,7 +669,7 @@ describe("Full E2E Flow: Webhook → Queue → Agent → PR Creation", () => {
       );
     });
 
-    it("does not enqueue when edited issue lacks the stas:fix label", async () => {
+    it("does not enqueue when edited issue lacks the syntaro:fix label", async () => {
       const payload = sampleIssueLabeledPayload();
       // Remove the label from the issue's labels array
       payload.issue.labels = [{ name: "bug", color: "d73a4a" }];
@@ -700,7 +700,7 @@ describe("Full E2E Flow: Webhook → Queue → Agent → PR Creation", () => {
   // =========================================================================
 
   describe("Non-target label → no job enqueued", () => {
-    it("does not enqueue when label is not stas:fix", async () => {
+    it("does not enqueue when label is not syntaro:fix", async () => {
       const payload = sampleNonTargetLabelPayload();
       const response = await sendGithubWebhook(serverUrl, "issues.labeled", payload);
 
@@ -767,7 +767,7 @@ describe("Full E2E Flow: Webhook → Queue → Agent → PR Creation", () => {
       await sendGitlabWebhook(serverUrl, "Issue Hook", payload, "mock-gitlab-secret");
 
       // GitLab handler may or may not enqueue depending on label matching
-      // (the handler checks for stas:fix label)
+      // (the handler checks for syntaro:fix label)
     });
   });
 
@@ -862,7 +862,7 @@ describe("Full E2E Flow: Webhook → Queue → Agent → PR Creation", () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.status).toBe("ok");
-      expect(body.label).toBe("stas:fix");
+      expect(body.label).toBe("syntaro:fix");
     });
   });
 });

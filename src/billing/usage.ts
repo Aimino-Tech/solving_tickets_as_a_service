@@ -6,8 +6,8 @@
  * scoped to the billing period (which may differ from calendar month for
  * paid accounts).
  *
- * Key format: `stas:billing:usage:{accountId}:{periodKey}`
- *   - accountId:   Internal STAS account ID
+ * Key format: `syntaro:billing:usage:{accountId}:{periodKey}`
+ *   - accountId:   Internal SYNTARO account ID
  *   - periodKey:   Billing period identifier (YYYY-MM or Stripe subscription ID)
  *
  * ── Error Handling ────────────────────────────────────────────────────────────
@@ -84,13 +84,13 @@ export function buildUsageKey(
   if (periodStart) {
     const year = periodStart.getUTCFullYear();
     const month = String(periodStart.getUTCMonth() + 1).padStart(2, '0');
-    return `stas:billing:usage:${accountId}:${year}-${month}`;
+    return `syntaro:billing:usage:${accountId}:${year}-${month}`;
   }
   // Fall back to current calendar month
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  return `stas:billing:usage:${accountId}:${year}-${month}`;
+  return `syntaro:billing:usage:${accountId}:${year}-${month}`;
 }
 
 // ---------------------------------------------------------------------------

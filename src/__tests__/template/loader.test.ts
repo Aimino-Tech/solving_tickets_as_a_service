@@ -17,7 +17,7 @@ describe('template loader', () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = mkdtempSync(join(tmpdir(), 'stas-templates-'));
+    tempDir = mkdtempSync(join(tmpdir(), 'syntaro-templates-'));
     clearLoadedTemplates();
     templateRegistry.clear();
   });
@@ -27,7 +27,7 @@ describe('template loader', () => {
   });
 
   function createTemplateFile(name: string, content: string): string {
-    const path = join(tempDir, '.stas', 'templates');
+    const path = join(tempDir, '.syntaro', 'templates');
     mkdirSync(path, { recursive: true });
     const filePath = join(path, name);
     writeFileSync(filePath, content, 'utf-8');
@@ -36,8 +36,8 @@ describe('template loader', () => {
 
   it('scans and loads valid YAML templates', () => {
     createTemplateFile('fix.yaml', `
-name: stas:fix
-labels: [stas:fix, stas:bugfix]
+name: syntaro:fix
+labels: [syntaro:fix, syntaro:bugfix]
 phases:
   pre:
     - command: "opencode plan --issue {issue.number}"
@@ -55,8 +55,8 @@ phases:
 
     const loaded = scanTemplatesDirectory(tempDir);
     expect(loaded).toHaveLength(1);
-    expect(loaded[0].name).toBe('stas:fix');
-    expect(loaded[0].labels).toEqual(['stas:fix', 'stas:bugfix']);
+    expect(loaded[0].name).toBe('syntaro:fix');
+    expect(loaded[0].labels).toEqual(['syntaro:fix', 'syntaro:bugfix']);
     expect(Object.keys(loaded[0].phases)).toEqual(['pre', 'main', 'post', 'final']);
   });
 
@@ -77,16 +77,16 @@ phases:
 
   it('loads and registers templates', () => {
     createTemplateFile('fix.yaml', `
-name: stas:fix
-labels: [stas:fix]
+name: syntaro:fix
+labels: [syntaro:fix]
 phases:
   main:
     - command: "echo {issue.number}"
       session: new
 `);
     createTemplateFile('plan.yaml', `
-name: stas:plan
-labels: [stas:plan]
+name: syntaro:plan
+labels: [syntaro:plan]
 phases:
   pre:
     - command: "opencode plan"
@@ -96,14 +96,14 @@ phases:
     loadAndRegisterTemplates(tempDir);
     const loaded = listLoadedTemplates();
     expect(loaded).toHaveLength(2);
-    expect(templateRegistry.getJobTemplate('stas:fix')).toBeDefined();
-    expect(templateRegistry.getJobTemplate('stas:plan')).toBeDefined();
+    expect(templateRegistry.getJobTemplate('syntaro:fix')).toBeDefined();
+    expect(templateRegistry.getJobTemplate('syntaro:plan')).toBeDefined();
   });
 
   it('resolves commands with placeholders', () => {
     createTemplateFile('fix.yaml', `
-name: stas:fix
-labels: [stas:fix]
+name: syntaro:fix
+labels: [syntaro:fix]
 phases:
   pre:
     - command: "opencode --issue {issue.number} --repo {repo.name}"
@@ -111,7 +111,7 @@ phases:
 `);
 
     scanTemplatesDirectory(tempDir);
-    const resolved = getResolvedCommand('stas:fix', 'pre', 0, {
+    const resolved = getResolvedCommand('syntaro:fix', 'pre', 0, {
       'issue.number': 42,
       'repo.name': 'my-repo',
     });
@@ -120,8 +120,8 @@ phases:
 
   it('leaves unresolved placeholders as-is', () => {
     createTemplateFile('fix.yaml', `
-name: stas:fix
-labels: [stas:fix]
+name: syntaro:fix
+labels: [syntaro:fix]
 phases:
   pre:
     - command: "opencode --issue {issue.number}"
@@ -129,7 +129,7 @@ phases:
 `);
 
     scanTemplatesDirectory(tempDir);
-    const resolved = getResolvedCommand('stas:fix', 'pre', 0, {});
+    const resolved = getResolvedCommand('syntaro:fix', 'pre', 0, {});
     expect(resolved).toBe('opencode --issue {issue.number}');
   });
 

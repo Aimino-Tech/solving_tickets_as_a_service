@@ -29,31 +29,31 @@ logger = logging.getLogger(__name__)
 
 # ── Config (env-overridable) ────────────────────────────────────────────────
 
-AUTO_ANSWER_MODEL: str = os.getenv("STAS_AUTO_ANSWER_MODEL", "gpt-4o-mini")
+AUTO_ANSWER_MODEL: str = os.getenv("SYNTARO_AUTO_ANSWER_MODEL", "gpt-4o-mini")
 """Model used for auto-answering. Cheap model is fine."""
 
-AUTO_ANSWER_TEMPERATURE: float = float(os.getenv("STAS_AUTO_ANSWER_TEMPERATURE", "0.0"))
+AUTO_ANSWER_TEMPERATURE: float = float(os.getenv("SYNTARO_AUTO_ANSWER_TEMPERATURE", "0.0"))
 """Temperature for generation. 0 = deterministic."""
 
-AUTO_ANSWER_MAX_TOKENS: int = int(os.getenv("STAS_AUTO_ANSWER_MAX_TOKENS", "1024"))
+AUTO_ANSWER_MAX_TOKENS: int = int(os.getenv("SYNTARO_AUTO_ANSWER_MAX_TOKENS", "1024"))
 """Max tokens in the LLM response."""
 
-AUTO_ANSWER_TIMEOUT_SECONDS: int = int(os.getenv("STAS_AUTO_ANSWER_TIMEOUT_SECONDS", "30"))
+AUTO_ANSWER_TIMEOUT_SECONDS: int = int(os.getenv("SYNTARO_AUTO_ANSWER_TIMEOUT_SECONDS", "30"))
 """Max seconds to wait for LLM response."""
 
-AUTO_ANSWER_MIN_CONFIDENCE: float = float(os.getenv("STAS_AUTO_ANSWER_MIN_CONFIDENCE", "0.3"))
+AUTO_ANSWER_MIN_CONFIDENCE: float = float(os.getenv("SYNTARO_AUTO_ANSWER_MIN_CONFIDENCE", "0.3"))
 """Minimum confidence to consider an answer usable at all."""
 
 AUTO_ANSWER_AUTO_POST_THRESHOLD: float = float(os.getenv(
-    "STAS_AUTO_ANSWER_AUTO_POST_THRESHOLD", "0.7",
+    "SYNTARO_AUTO_ANSWER_AUTO_POST_THRESHOLD", "0.7",
 ))
 """Confidence above which the answer can be auto-posted without human review."""
 
 AUTO_ANSWER_PROMPT_TEMPLATE: str = os.getenv(
-    "STAS_AUTO_ANSWER_PROMPT",
+    "SYNTARO_AUTO_ANSWER_PROMPT",
     (
         "You are a knowledgeable customer support engineer for a DevOps automation"
-        " platform called STAS (Solving Tickets As A Service). A user has asked a"
+        " platform called SYNTARO (Solving Tickets As A Service). A user has asked a"
         " support question. Answer clearly, concisely, and helpfully.\n\n"
         "## User Question\n{question}\n\n"
         "## Context\n{context}\n\n"
@@ -63,7 +63,7 @@ AUTO_ANSWER_PROMPT_TEMPLATE: str = os.getenv(
         " question. Include code snippets or configuration examples if relevant.\n"
         '- "confidence": float — 0.0 to 1.0. How confident are you that this answer'
         " is accurate and addresses the user's question? Be conservative — if the"
-        " question is vague or outside STAS's domain, assign low confidence.\n"
+        " question is vague or outside SYNTARO's domain, assign low confidence.\n"
         '- "needs_human_review": bool — Whether this question should be escalated to'
         " a human support engineer. Set to true if the question is complex,"
         " sensitive, requires account-specific actions, or confidence is low.\n"

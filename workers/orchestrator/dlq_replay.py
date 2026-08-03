@@ -1,15 +1,15 @@
 """
-DLQ Auto-Replay - reads messages from the ``stas.dlx.retry`` exchange and
+DLQ Auto-Replay - reads messages from the ``syntaro.dlx.retry`` exchange and
 re-routes them back to their original queue with an incremented ``retry_count``.
 
 Design
 ------
-    1. The DLQ retry consumer listens on ``stas.dlx.retry``.
+    1. The DLQ retry consumer listens on ``syntaro.dlx.retry``.
     2. Each consumed message carries its original exchange, routing key, and
        body in the ``death`` header (set by RabbitMQ when dead-lettering).
     3. We increment ``retry_count`` (stored in the message headers) and publish
        back to the original exchange with the original routing key.
-    4. After ``MAX_RETRIES``, the message is forwarded to ``stas.dlx.failed``
+    4. After ``MAX_RETRIES``, the message is forwarded to ``syntaro.dlx.failed``
        for permanent dead-lettering / manual inspection.
 
 Configuration (env vars)
@@ -21,8 +21,8 @@ Configuration (env vars)
 
 Redis Keys
 ----------
-    ``stas:dlq:retry_count:{message_id}`` - integer, current retry count for a msg.
-    ``stas:dlq:failed_ids`` - SET of permanently-failed message IDs (for audit).
+    ``syntaro:dlq:retry_count:{message_id}`` - integer, current retry count for a msg.
+    ``syntaro:dlq:failed_ids`` - SET of permanently-failed message IDs (for audit).
 """
 
 from __future__ import annotations
@@ -45,8 +45,8 @@ logger = logging.getLogger(__name__)
 _MAX_RETRIES = int(os.getenv("DLQ_MAX_RETRIES", "3"))
 _RETRY_BACKOFF_BASE_S = int(os.getenv("DLQ_RETRY_BACKOFF_BASE_S", "10"))
 _REPLAY_BATCH_SIZE = int(os.getenv("DLQ_REPLAY_BATCH_SIZE", "50"))
-_REDIS_RETRY_PREFIX = "stas:dlq:retry_count:"
-_REDIS_FAILED_KEY = "stas:dlq:failed_ids"
+_REDIS_RETRY_PREFIX = "syntaro:dlq:retry_count:"
+_REDIS_FAILED_KEY = "syntaro:dlq:failed_ids"
 
 # ---------------------------------------------------------------------------
 # Redis helpers
@@ -290,7 +290,7 @@ def _publish_failed(
     channel: Any,
     reason: str,
 ) -> None:
-    """Publish a permanently-failed message to the ``stas.dlx.failed`` queue."""
+    """Publish a permanently-failed message to the ``syntaro.dlx.failed`` queue."""
     try:
         failed_headers = {
             "original_exchange": exchange,
@@ -305,7 +305,7 @@ def _publish_failed(
         )
 
         channel.basic_publish(
-            exchange="stas.dlx",
+            exchange="syntaro.dlx",
             routing_key="dlq.failed",
             body=body_bytes,
             properties={
@@ -331,7 +331,7 @@ def _publish_failed(
 
 
 class DLQRetryConsumer(ConsumerMixin):
-    """Kombu consumer that reads from ``stas.dlx.retry`` and replays messages.
+    """Kombu consumer that reads from ``syntaro.dlx.retry`` and replays messages.
 
     Usage::
 
@@ -343,8 +343,8 @@ class DLQRetryConsumer(ConsumerMixin):
     def __init__(self, connection: Connection) -> None:
         self.connection = connection
         self.queue = Queue(
-            "stas.dlx.retry",
-            Exchange("stas.dlx", type="direct", durable=True),
+            "syntaro.dlx.retry",
+            Exchange("syntaro.dlx", type="direct", durable=True),
             routing_key="dlq.retry",
             durable=True,
         )

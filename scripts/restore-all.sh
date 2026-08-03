@@ -24,7 +24,7 @@ done
 
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
-info "STAS Full Stack Restore"
+info "SYNTARO Full Stack Restore"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
@@ -64,7 +64,7 @@ echo "  2. Verify health:"
 echo "     curl -f http://localhost:3000/health"
 echo ""
 echo "  3. Run database migrations (if needed):"
-echo "     docker compose -f docker-compose.prod.yml run --rm stas-webhook npx tsx src/db/migrate.ts"
+echo "     docker compose -f docker-compose.prod.yml run --rm syntaro-webhook npx tsx src/db/migrate.ts"
 echo ""
 echo "  4. Process a test issue to verify end-to-end functionality"
 echo "═══════════════════════════════════════════════════════════════"

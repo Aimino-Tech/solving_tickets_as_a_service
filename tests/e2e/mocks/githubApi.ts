@@ -10,7 +10,7 @@
  * const githubApi = createMockGitHubApiServer();
  * await githubApi.start();
  *
- * // Inspect what the STAS server sent to GitHub
+ * // Inspect what the SYNTARO server sent to GitHub
  * expect(githubApi.receivedRequests).toHaveLength(1);
  *
  * await githubApi.stop();

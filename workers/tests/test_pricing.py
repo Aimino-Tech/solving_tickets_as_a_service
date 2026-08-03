@@ -186,18 +186,18 @@ class TestPricingPlans:
 
 class TestCompetitorPricing:
 
-    def test_stas_solo_cheapest_per_fix(self) -> None:
-        stas = make_competitor("STAS (Cloud Solo)", 4900, 49, 100, 0.92)
+    def test_syntaro_solo_cheapest_per_fix(self) -> None:
+        syntaro = make_competitor("SYNTARO (Cloud Solo)", 4900, 49, 100, 0.92)
         plip = make_competitor("Plip.io", 10000, 350, 10, 0.42)
         devin = make_competitor("Devin", 50000, 800, 50, 0.38)
-        cheapest = min([stas, plip, devin], key=lambda c: c.cost_per_fix_cents)
-        assert cheapest.competitor == "STAS (Cloud Solo)"
+        cheapest = min([syntaro, plip, devin], key=lambda c: c.cost_per_fix_cents)
+        assert cheapest.competitor == "SYNTARO (Cloud Solo)"
 
-    def test_stas_highest_pass_rate(self) -> None:
-        stas = make_competitor("STAS", pass_rate=0.92)
+    def test_syntaro_highest_pass_rate(self) -> None:
+        syntaro = make_competitor("SYNTARO", pass_rate=0.92)
         others = [make_competitor("Plip.io", pass_rate=0.42), make_competitor("Devin", pass_rate=0.38)]
-        best = max([stas, *others], key=lambda c: c.pass_rate)
-        assert best.competitor == "STAS"
+        best = max([syntaro, *others], key=lambda c: c.pass_rate)
+        assert best.competitor == "SYNTARO"
 
     def test_competitor_metrics_positive(self) -> None:
         for c in [make_competitor(), make_competitor("Devin", 50000, 800, 50, 0.38)]:
@@ -206,10 +206,10 @@ class TestCompetitorPricing:
             assert c.fixes_per_month > 0
             assert 0 <= c.pass_rate <= 1.0
 
-    def test_only_stas_our_agi(self) -> None:
-        stas = CompetitorPrice("STAS", 4900, 49, 100, 0.92, True, True, True)
+    def test_only_syntaro_our_agi(self) -> None:
+        syntaro = CompetitorPrice("SYNTARO", 4900, 49, 100, 0.92, True, True, True)
         plip = CompetitorPrice("Plip.io", 10000, 350, 10, 0.42, False, False, False)
-        assert stas.our_agi is True
+        assert syntaro.our_agi is True
         assert plip.our_agi is False
 
 
@@ -253,7 +253,7 @@ class TestVsComparison:
                     "plip": {"categories": ["Core", "Quality", "Business"]}}
             assert len(data[slug]["categories"]) >= 2
 
-    def test_stas_wins_most_categories(self) -> None:
+    def test_syntaro_wins_most_categories(self) -> None:
         items = [
             {"advantage": "us"}, {"advantage": "us"}, {"advantage": "us"},
             {"advantage": "them"}, {"advantage": "us"}, {"advantage": "us"},

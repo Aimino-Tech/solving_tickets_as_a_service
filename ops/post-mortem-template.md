@@ -54,9 +54,9 @@ _All times in UTC._
 
 | Time | Channel | Message |
 |---|---|---|
-| HH:MM | `#stas-incidents` | "Investigating: ..." |
+| HH:MM | `#syntaro-incidents` | "Investigating: ..." |
 | HH:MM | Status page | "Identified: ..." |
-| HH:MM | `#stas-incidents` | "Resolved: ..." |
+| HH:MM | `#syntaro-incidents` | "Resolved: ..." |
 
 ---
 

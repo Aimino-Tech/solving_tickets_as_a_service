@@ -40,14 +40,14 @@ export function createTestGitHubAppConfig(
 ): TestGitHubAppConfig {
   return {
     appId: '999999',
-    appName: 'stas-test-bot',
+    appName: 'syntaro-test-bot',
     webhookSecret: 'test-webhook-secret',
     privateKey: '-----BEGIN RSA PRIVATE KEY-----\nMOCK_PRIVATE_KEY_FOR_TESTING\n-----END RSA PRIVATE KEY-----',
     clientId: 'Iv1.test-client-id',
     clientSecret: 'test-client-secret',
     installationId: 555,
     owner: 'sandbox-org',
-    repo: 'stas-e2e-test-repo',
+    repo: 'syntaro-e2e-test-repo',
     permissions: {
       issues: 'write',
       pullRequests: 'write',

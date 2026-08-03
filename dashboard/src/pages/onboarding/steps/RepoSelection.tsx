@@ -34,7 +34,7 @@ export default function RepoSelection({ progress, onComplete, onSkip }: Props) {
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Select a Repository</h2>
         <p className="mt-2 text-gray-500">
-          Choose the repository where STAS should watch for labeled issues.
+          Choose the repository where SYNTARO should watch for labeled issues.
         </p>
       </div>
 

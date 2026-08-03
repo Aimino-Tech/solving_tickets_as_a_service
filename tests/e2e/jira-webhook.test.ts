@@ -219,7 +219,7 @@ describe('jiraTicketToIssueData()', () => {
       priority: 2,
       url: 'https://jira.example.com/browse/PROJ-42',
       source: 'jira' as const,
-      labels: ['bug', 'stas:fix'],
+      labels: ['bug', 'syntaro:fix'],
       createdAt: '2025-05-01T10:00:00.000+0000',
       updatedAt: '2025-05-01T10:00:00.000+0000',
     };

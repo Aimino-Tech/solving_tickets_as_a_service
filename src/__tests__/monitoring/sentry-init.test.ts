@@ -18,7 +18,7 @@ describe('monitoring/sentry-init', () => {
   it('sets service and runtime tags', async () => {
     vi.resetModules();
     await import('../../monitoring/sentry-init.js');
-    expect(mockSetTag).toHaveBeenCalledWith('service', 'stas');
+    expect(mockSetTag).toHaveBeenCalledWith('service', 'syntaro');
     expect(mockSetTag).toHaveBeenCalledWith('runtime', 'node');
   });
 });

@@ -1,11 +1,11 @@
 ---
-name: stas
-description: STAS — Solving Tickets As A Service. Submit fix requests to a GitHub bot that investigates, fixes, tests, and opens PRs.
+name: syntaro
+description: SYNTARO — Solving Tickets As A Service. Submit fix requests to a GitHub bot that investigates, fixes, tests, and opens PRs.
 version: 0.2.0
 author: Aimino Tech
 license: MIT
 homepage: https://github.com/Aimino-Tech/solving_tickets_as_a_service
-installUrl: https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/stas/SKILL.md
+installUrl: https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/syntaro/SKILL.md
 tags:
   - github
   - automation
@@ -46,9 +46,9 @@ capabilities:
       - stdio
 ---
 
-# STAS Skill — Solving Tickets As A Service
+# SYNTARO Skill — Solving Tickets As A Service
 
-STAS is a GitHub bot that takes issue descriptions, investigates your codebase, writes a fix, runs tests, and opens a PR. Agents access STAS through its MCP (Model Context Protocol) API.
+SYNTARO is a GitHub bot that takes issue descriptions, investigates your codebase, writes a fix, runs tests, and opens a PR. Agents access SYNTARO through its MCP (Model Context Protocol) API.
 
 ## Quick Install
 
@@ -57,7 +57,7 @@ Add to `opencode.json`:
 ```json
 {
   "mcpServers": {
-    "stas": {
+    "syntaro": {
       "command": "python3",
       "args": ["-m", "syntaro_mcp.server", "stdio"]
     }
@@ -72,20 +72,20 @@ bash syntaro_mcp/install.sh --opencode
 
 ### Claude Code
 ```bash
-npx stas install-mcp --claude
+npx syntaro install-mcp --claude
 ```
 
 ### Cursor
 1. Open Cursor Settings → Features → MCP Servers
 2. Click **+ Add New MCP Server**
-3. Name: `stas`, Type: `command`, Command: `python3 -m syntaro_mcp.server stdio`
+3. Name: `syntaro`, Type: `command`, Command: `python3 -m syntaro_mcp.server stdio`
 
 ### Codex CLI
 Add to `.codex/config.json`:
 ```json
 {
   "mcpServers": {
-    "stas": {
+    "syntaro": {
       "command": "python3",
       "args": ["-m", "syntaro_mcp.server", "stdio"]
     }
@@ -97,7 +97,7 @@ Add to `.codex/config.json`:
 
 ### submit_issue
 
-Submit a new issue fix request to STAS. This triggers the full pipeline: investigation → fix → test → PR.
+Submit a new issue fix request to SYNTARO. This triggers the full pipeline: investigation → fix → test → PR.
 
 **HTTP:** `POST /mcp/submit_issue`
 
@@ -129,9 +129,9 @@ Submit a new issue fix request to STAS. This triggers the full pipeline: investi
 
 ```json
 {
-  "runId": "stas-a1b2c3d4e5f6",
+  "runId": "syntaro-a1b2c3d4e5f6",
   "status": "accepted",
-  "pollUrl": "https://api.stas.ai/mcp/status/stas-a1b2c3d4e5f6",
+  "pollUrl": "https://api.syntaro.ai/mcp/status/syntaro-a1b2c3d4e5f6",
   "createdAt": "2026-07-17T10:30:00Z"
 }
 ```
@@ -163,7 +163,7 @@ Poll the current status of a fix run.
 
 ```json
 {
-  "runId": "stas-a1b2c3d4e5f6",
+  "runId": "syntaro-a1b2c3d4e5f6",
   "status": "investigating",
   "prUrl": null,
   "createdAt": "2026-07-17T10:30:00Z",
@@ -218,7 +218,7 @@ Retrieve the history of all fix runs.
 {
   "runs": [
     {
-      "runId": "stas-a1b2c3d4e5f6",
+      "runId": "syntaro-a1b2c3d4e5f6",
       "status": "completed",
       "repoOwner": "my-org",
       "repoName": "my-repo",
@@ -235,7 +235,7 @@ Retrieve the history of all fix runs.
 
 ### list_repos
 
-List GitHub repositories configured for STAS access.
+List GitHub repositories configured for SYNTARO access.
 
 **HTTP:** `GET /mcp/repos`
 
@@ -255,7 +255,7 @@ List GitHub repositories configured for STAS access.
 
 ## Resources (MCP)
 
-STAS exposes MCP resources for agent consumption:
+SYNTARO exposes MCP resources for agent consumption:
 
 | Resource URI | Description |
 |---|---|
@@ -276,9 +276,9 @@ Authorization: Bearer <MCP_API_KEY>
 |----------|---------|-------------|
 | `MCP_API_KEY` | — | API key for MCP authentication |
 | `MCP_AUTH_ENABLED` | `true` | Enable/disable auth |
-| `STAS_MCP_PORT` | `4095` | MCP server port (SSE mode) |
-| `STAS_MCP_HOST` | `0.0.0.0` | MCP server bind address |
-| `STAS_MCP_TRANSPORT` | `stdio` | Transport mode: `stdio` or `sse` |
+| `SYNTARO_MCP_PORT` | `4095` | MCP server port (SSE mode) |
+| `SYNTARO_MCP_HOST` | `0.0.0.0` | MCP server bind address |
+| `SYNTARO_MCP_TRANSPORT` | `stdio` | Transport mode: `stdio` or `sse` |
 
 ## Error Handling
 
@@ -306,17 +306,17 @@ All tools return errors in a consistent format:
 
 ## Channel Integrations
 
-STAS sends notifications to external channels:
+SYNTARO sends notifications to external channels:
 
 | Channel | Command | Required Config |
 |---------|---------|-----------------|
-| Slack | `/stas fix <description>` | `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET` |
+| Slack | `/syntaro fix <description>` | `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET` |
 | Telegram | `/fix <description>` | `TELEGRAM_BOT_TOKEN` |
 | WhatsApp | `fix <description>` | `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_VERIFY_TOKEN` |
 
 ## Run Modes
 
-The STAS MCP server supports two transport modes:
+The SYNTARO MCP server supports two transport modes:
 
 ### stdio (default, for local agents)
 

@@ -23,13 +23,13 @@ function main() {
     env: {
       ...process.env,
       PYTHONPATH: pythonRoot,
-      STAS_MCP_PORT: process.env.STAS_MCP_PORT || '4095',
+      SYNTARO_MCP_PORT: process.env.SYNTARO_MCP_PORT || '4095',
     },
   });
 
   child.on('exit', (code) => process.exit(code ?? 1));
   child.on('error', (err) => {
-    console.error('Failed to start STAS MCP server:', err.message);
+    console.error('Failed to start SYNTARO MCP server:', err.message);
     process.exit(1);
   });
 }

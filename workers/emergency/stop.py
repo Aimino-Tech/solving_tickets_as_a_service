@@ -3,8 +3,8 @@ Emergency stop (deadman switch) — single action to kill all running agent task
 
 Design
 ------
-- Uses Redis key ``stas:emergency_stop`` as primary indicator.
-- Falls back to a file-based lock at ``/tmp/stas-emergency-stop.lock`` when
+- Uses Redis key ``syntaro:emergency_stop`` as primary indicator.
+- Falls back to a file-based lock at ``/tmp/syntaro-emergency-stop.lock`` when
   Redis is unavailable (e.g. in testing or minimal environments).
 - Singleton access via :func:`get_emergency_stop`.
 
@@ -31,27 +31,27 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-REDIS_KEY = "stas:emergency_stop"
+REDIS_KEY = "syntaro:emergency_stop"
 
 
 def _get_lock_file() -> str:
-    return os.getenv("EMERGENCY_STOP_LOCK_FILE", "/tmp/stas-emergency-stop.lock")
+    return os.getenv("EMERGENCY_STOP_LOCK_FILE", "/tmp/syntaro-emergency-stop.lock")
 
 
-FILE_LOCK = "/tmp/stas-emergency-stop.lock"
+FILE_LOCK = "/tmp/syntaro-emergency-stop.lock"
 
 # Queues whose tasks should be stopped / moved to hold during emergency
 AGENT_QUEUES = [
-    "stas.agents.triage",
-    "stas.agents.dispatch",
-    "stas.agents.sandbox",
-    "stas.agents.verification",
-    "stas.agents.pr_creation",
-    "stas.agents.notifications",
-    "stas.agents.default",
+    "syntaro.agents.triage",
+    "syntaro.agents.dispatch",
+    "syntaro.agents.sandbox",
+    "syntaro.agents.verification",
+    "syntaro.agents.pr_creation",
+    "syntaro.agents.notifications",
+    "syntaro.agents.default",
 ]
 
-HOLD_QUEUE = "stas.agents.hold"
+HOLD_QUEUE = "syntaro.agents.hold"
 
 
 def _now_iso() -> str:

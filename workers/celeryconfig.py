@@ -83,31 +83,31 @@ worker_prefetch_multiplier = 1
 worker_enable_remote_control = False
 broker_connection_retry_on_startup = True
 
-task_default_queue = "stas.agents.triage"
+task_default_queue = "syntaro.agents.triage"
 
 task_queues = [
-    Queue("stas.agents.triage", Exchange("stas"), routing_key="stas.agents.triage"),
-    Queue("stas.agents.dispatch", Exchange("stas"), routing_key="stas.agents.dispatch"),
-    Queue("stas.agents.sandbox", Exchange("stas"), routing_key="stas.agents.sandbox"),
-    Queue("stas.agents.verification", Exchange("stas"), routing_key="stas.agents.verification"),
-    Queue("stas.agents.pr_creation", Exchange("stas"), routing_key="stas.agents.pr_creation"),
-    Queue("stas.agents.notifications", Exchange("stas"), routing_key="stas.agents.notifications"),
-    Queue("stas.agents.default", Exchange("stas"), routing_key="stas.agents.default"),
-    Queue("stas.issues.triage", Exchange("stas"), routing_key="stas.issues.triage"),
-    Queue("stas.issues.fix", Exchange("stas"), routing_key="stas.issues.fix"),
-    Queue("stas.agents.self_audit", Exchange("stas"), routing_key="stas.agents.self_audit"),
+    Queue("syntaro.agents.triage", Exchange("syntaro"), routing_key="syntaro.agents.triage"),
+    Queue("syntaro.agents.dispatch", Exchange("syntaro"), routing_key="syntaro.agents.dispatch"),
+    Queue("syntaro.agents.sandbox", Exchange("syntaro"), routing_key="syntaro.agents.sandbox"),
+    Queue("syntaro.agents.verification", Exchange("syntaro"), routing_key="syntaro.agents.verification"),
+    Queue("syntaro.agents.pr_creation", Exchange("syntaro"), routing_key="syntaro.agents.pr_creation"),
+    Queue("syntaro.agents.notifications", Exchange("syntaro"), routing_key="syntaro.agents.notifications"),
+    Queue("syntaro.agents.default", Exchange("syntaro"), routing_key="syntaro.agents.default"),
+    Queue("syntaro.issues.triage", Exchange("syntaro"), routing_key="syntaro.issues.triage"),
+    Queue("syntaro.issues.fix", Exchange("syntaro"), routing_key="syntaro.issues.fix"),
+    Queue("syntaro.agents.self_audit", Exchange("syntaro"), routing_key="syntaro.agents.self_audit"),
 ]
 
 task_routes = {
-    "workers.tasks.triage.*": {"queue": "stas.agents.triage"},
-    "workers.tasks.agent.*": {"queue": "stas.agents.dispatch"},
-    "workers.tasks.sandbox.*": {"queue": "stas.agents.sandbox"},
-    "workers.tasks.verification.*": {"queue": "stas.agents.verification"},
-    "workers.tasks.pr_creation.*": {"queue": "stas.agents.pr_creation"},
-    "workers.tasks.notifications.*": {"queue": "stas.agents.notifications"},
-    "workers.billing.*": {"queue": "stas.agents.default"},
-    "workers.tasks.linear_poll.*": {"queue": "stas.issues.triage"},
-    "workers.gates.*": {"queue": "stas.agents.default"},
-    "workers.quality.*": {"queue": "stas.agents.default"},
-    "workers.health.*": {"queue": "stas.agents.default"},
+    "workers.tasks.triage.*": {"queue": "syntaro.agents.triage"},
+    "workers.tasks.agent.*": {"queue": "syntaro.agents.dispatch"},
+    "workers.tasks.sandbox.*": {"queue": "syntaro.agents.sandbox"},
+    "workers.tasks.verification.*": {"queue": "syntaro.agents.verification"},
+    "workers.tasks.pr_creation.*": {"queue": "syntaro.agents.pr_creation"},
+    "workers.tasks.notifications.*": {"queue": "syntaro.agents.notifications"},
+    "workers.billing.*": {"queue": "syntaro.agents.default"},
+    "workers.tasks.linear_poll.*": {"queue": "syntaro.issues.triage"},
+    "workers.gates.*": {"queue": "syntaro.agents.default"},
+    "workers.quality.*": {"queue": "syntaro.agents.default"},
+    "workers.health.*": {"queue": "syntaro.agents.default"},
 }

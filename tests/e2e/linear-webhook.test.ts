@@ -211,7 +211,7 @@ describe('linearTicketToIssueData()', () => {
       priority: 2,
       url: 'https://linear.app/team/PROJ-42',
       source: 'linear' as const,
-      labels: ['bug', 'stas:fix'],
+      labels: ['bug', 'syntaro:fix'],
       createdAt: '2025-05-01T10:00:00.000Z',
       updatedAt: '2025-05-01T10:00:00.000Z',
     };

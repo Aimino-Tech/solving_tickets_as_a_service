@@ -69,8 +69,8 @@ def _handle_issue_labeled(payload: dict, event: WebhookEvent):
     repo = payload.get("repository", {})
     action = payload.get("action", "")
 
-    # Check if label matches STAS trigger
-    if label_name != settings.STAS_LABEL:
+    # Check if label matches SYNTARO trigger
+    if label_name != settings.SYNTARO_LABEL:
         return
 
     logger.info(

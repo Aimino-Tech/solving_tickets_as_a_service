@@ -74,7 +74,7 @@ export default function Settings() {
   const [envValues, setEnvValues] = useState<Record<string, string>>({});
   const [sysLoading, setSysLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [mcpApiUrl, setMcpApiUrl] = useState('https://api.stas.aimino.io');
+  const [mcpApiUrl, setMcpApiUrl] = useState('https://api.syntaro.io');
   const [showSetupGuide, setShowSetupGuide] = useState(false);
 
   useEffect(() => {
@@ -936,7 +936,7 @@ const [lastRevealedKey, setLastRevealedKey] = useState<string | null>(null);
               <div>
                 <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">MCP API Keys</h3>
                 <p className="text-xs text-gray-500">
-                  Keys for AI agents to connect to STAS via MCP (set as STAS_API_KEY in your agent)
+                  Keys for AI agents to connect to SYNTARO via MCP (set as SYNTARO_API_KEY in your agent)
                 </p>
               </div>
             </div>
@@ -981,7 +981,7 @@ const [lastRevealedKey, setLastRevealedKey] = useState<string | null>(null);
                   Key "{newlyCreatedKey.name}" created — copy it now, it will not be shown again.
                 </p>
                 <p className="text-xs text-green-700 dark:text-green-400 mt-1">
-                  Use it as <code className="font-mono">STAS_API_KEY</code> with <code className="font-mono">STAS_API_URL={mcpApiUrl}</code> when configuring your agent (Claude Desktop, Cursor, OpenCode...).
+                  Use it as <code className="font-mono">SYNTARO_API_KEY</code> with <code className="font-mono">SYNTARO_API_URL={mcpApiUrl}</code> when configuring your agent (Claude Desktop, Cursor, OpenCode...).
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -1123,7 +1123,7 @@ const [lastRevealedKey, setLastRevealedKey] = useState<string | null>(null);
                 <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-3 space-y-1">
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400">2. Configure the Remote MCP Server for your agent</p>
                   <p className="text-xs text-gray-600 dark:text-gray-300">
-                    Your STAS API URL is:
+                    Your SYNTARO API URL is:
                   </p>
                   <code className="block rounded-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 font-mono text-xs break-all select-all">
                     {mcpApiUrl}
@@ -1132,7 +1132,7 @@ const [lastRevealedKey, setLastRevealedKey] = useState<string | null>(null);
                     Option A — CLI (recommended). Register the remote MCP server for your agent:
                   </p>
                   <code className="block rounded-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 font-mono text-xs break-all select-all">
-                    npx stas install-mcp --claude --url {mcpApiUrl}
+                    npx syntaro install-mcp --claude --url {mcpApiUrl}
                   </code>
                   <p className="text-xs text-gray-600 dark:text-gray-300">
                     Use <code className="font-mono">--cursor</code> or <code className="font-mono">--opencode</code> for those agents, then restart the agent.
@@ -1160,10 +1160,10 @@ const [lastRevealedKey, setLastRevealedKey] = useState<string | null>(null);
                   <div className="relative">
                     <button
                       onClick={() => {
-                        const key = guideJsonKey || '<STAS_API_KEY>';
+                        const key = guideJsonKey || '<SYNTARO_API_KEY>';
                         handleCopyKey(JSON.stringify({
                           mcpServers: {
-                            stas: {
+                            syntaro: {
                               type: 'sse',
                               url: `${mcpApiUrl}/sse`,
                               headers: { Authorization: `Bearer ${key}` },
@@ -1180,10 +1180,10 @@ const [lastRevealedKey, setLastRevealedKey] = useState<string | null>(null);
                       <JsonCode
                         json={JSON.stringify({
                           mcpServers: {
-                            stas: {
+                            syntaro: {
                               type: 'sse',
                               url: `${mcpApiUrl}/sse`,
-                              headers: { Authorization: `Bearer ${guideJsonKey || '<STAS_API_KEY>'}` },
+                              headers: { Authorization: `Bearer ${guideJsonKey || '<SYNTARO_API_KEY>'}` },
                             },
                           },
                         }, null, 2)}
@@ -1195,16 +1195,16 @@ const [lastRevealedKey, setLastRevealedKey] = useState<string | null>(null);
                       </p>
                     ) : (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        <code className="font-mono">&lt;STAS_API_KEY&gt;</code> is a placeholder — pick a key above to fill it in automatically, or click the 👁 eye icon on a key to reveal it.
+                        <code className="font-mono">&lt;SYNTARO_API_KEY&gt;</code> is a placeholder — pick a key above to fill it in automatically, or click the 👁 eye icon on a key to reveal it.
                       </p>
                     )}
                   </div>
                 </div>
 
                 <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-3 space-y-1">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">3. Set the STAS API key</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">3. Set the SYNTARO API key</p>
                   <p className="text-xs text-gray-600 dark:text-gray-300">
-                    Set the key you created as <code className="font-mono">STAS_API_KEY</code> in your agent configuration — it is sent as <code className="font-mono">Authorization: Bearer &lt;key&gt;</code>.
+                    Set the key you created as <code className="font-mono">SYNTARO_API_KEY</code> in your agent configuration — it is sent as <code className="font-mono">Authorization: Bearer &lt;key&gt;</code>.
                   </p>
                 </div>
 

@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: STAS API — Solving Tickets As A Service
+  title: SYNTARO API — Solving Tickets As A Service
   version: "1.0.0"
   description: |
-    STAS is an open-source GitHub bot that turns labeled issues into pull requests.
+    SYNTARO is an open-source GitHub bot that turns labeled issues into pull requests.
 
     ## RapidAPI Marketplace
 
@@ -38,7 +38,7 @@ info:
     url: https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/LICENSE
 
 servers:
-  - url: https://stas-rapidapi.p.rapidapi.com
+  - url: https://syntaro-rapidapi.p.rapidapi.com
     description: RapidAPI production endpoint
   - url: https://api.syntaro.io
     description: Direct API endpoint (self-hosted)
@@ -56,7 +56,7 @@ paths:
     post:
       summary: Submit a fix job
       description: |
-        Submit a GitHub issue URL to STAS for automated investigation, fix generation,
+        Submit a GitHub issue URL to SYNTARO for automated investigation, fix generation,
         test suite execution, and PR creation.
       operationId: submitFix
       tags:
@@ -159,7 +159,7 @@ paths:
           schema:
             type: string
           description: Job ID returned from submitFix
-          example: "stas_job_abc123"
+          example: "syntaro_job_abc123"
         - name: X-RapidAPI-Key
           in: header
           required: true
@@ -189,7 +189,7 @@ paths:
   /api/eval/results:
     get:
       summary: Get aggregate eval results
-      description: Public endpoint — no auth required. Returns aggregate STAS benchmark performance data.
+      description: Public endpoint — no auth required. Returns aggregate SYNTARO benchmark performance data.
       operationId: getEvalResults
       tags:
         - Eval Results
@@ -253,7 +253,7 @@ components:
         jobId:
           type: string
           description: Unique job identifier for polling
-          example: "stas_job_abc123"
+          example: "syntaro_job_abc123"
         status:
           type: string
           enum:
@@ -270,7 +270,7 @@ components:
           type: string
           format: uri
           description: URL to poll for job status
-          example: "https://stas-rapidapi.p.rapidapi.com/api/fix/stas_job_abc123"
+          example: "https://syntaro-rapidapi.p.rapidapi.com/api/fix/syntaro_job_abc123"
 
     JobStatus:
       type: object
@@ -280,7 +280,7 @@ components:
       properties:
         jobId:
           type: string
-          example: "stas_job_abc123"
+          example: "syntaro_job_abc123"
         status:
           type: string
           enum:
@@ -296,7 +296,7 @@ components:
         branch:
           type: string
           description: Git branch created for the fix
-          example: "stas-fix/login-validation-bug"
+          example: "syntaro-fix/login-validation-bug"
         summary:
           type: string
           description: Human-readable summary of the fix

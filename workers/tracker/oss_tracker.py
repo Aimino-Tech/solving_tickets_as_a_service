@@ -2,7 +2,7 @@
 OSS Linear Issue Tracker — high-level polling & dispatch.
 
 Inspired by ``@linear/sdk``, this module provides a polling tracker for OSS
-(self-hosted) STAS deployments.  It wraps the existing ``LinearClient`` with
+(self-hosted) SYNTARO deployments.  It wraps the existing ``LinearClient`` with
 deduplication, pipeline routing, configurable callbacks, and metrics reporting.
 
 Usage::

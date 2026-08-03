@@ -1,7 +1,7 @@
 // @ts-nocheck - Suppress remaining type errors in production code
 /**
  * Linear webhook route -- receives issue-update events from Linear and
- * queues them for STAS processing.
+ * queues them for SYNTARO processing.
  *
  * --- Endpoint -----------------------------------------------------------
  * POST /api/webhooks/linear  -- Receive Linear webhook (issue-updated)
@@ -244,15 +244,15 @@ function verifySignature(
 // ---------------------------------------------------------------------------
 
 /**
- * Map Linear issue labels to a STAS pipeline name.
+ * Map Linear issue labels to a SYNTARO pipeline name.
  *
  * This should stay in sync with ``workers/tracker/routing.py``.
  */
 function resolvePipelineFromLabels(labels: string[]): string {
   const labelLower = labels.map((l) => l.toLowerCase());
 
-  if (labelLower.includes('stas:feature')) return 'feature';
-  if (labelLower.includes('stas:research')) return 'research';
+  if (labelLower.includes('syntaro:feature')) return 'feature';
+  if (labelLower.includes('syntaro:research')) return 'research';
   // Default to fix pipeline
   return 'default';
 }

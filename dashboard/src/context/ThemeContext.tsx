@@ -10,7 +10,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'stas-theme';
+const STORAGE_KEY = 'syntaro-theme';
 
 function getInitialTheme(): Theme {
   try {

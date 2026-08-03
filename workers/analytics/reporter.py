@@ -77,7 +77,7 @@ class TaskTypePerformance:
 
 
 def _get_pg_connection() -> Any:
-    db_url = os.getenv("DATABASE_URL", "postgres://localhost:5432/stas")
+    db_url = os.getenv("DATABASE_URL", "postgres://localhost:5432/syntaro")
     try:
         import psycopg2 as _pg_mod
         conn = _pg_mod.connect(db_url)

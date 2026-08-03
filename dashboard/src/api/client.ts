@@ -9,7 +9,7 @@ const API_BASE = '/api';
 
 function getToken(): string | null {
   try {
-    return localStorage.getItem('stas_token');
+    return localStorage.getItem('syntaro_token');
   } catch {
     return null;
   }
@@ -17,13 +17,13 @@ function getToken(): string | null {
 
 export function setToken(token: string): void {
   try {
-    localStorage.setItem('stas_token', token);
+    localStorage.setItem('syntaro_token', token);
   } catch {}
 }
 
 export function getRefreshToken(): string | null {
   try {
-    return localStorage.getItem('stas_refresh_token');
+    return localStorage.getItem('syntaro_refresh_token');
   } catch {
     return null;
   }
@@ -31,14 +31,14 @@ export function getRefreshToken(): string | null {
 
 export function setRefreshToken(token: string): void {
   try {
-    localStorage.setItem('stas_refresh_token', token);
+    localStorage.setItem('syntaro_refresh_token', token);
   } catch {}
 }
 
 export function clearToken(): void {
   try {
-    localStorage.removeItem('stas_token');
-    localStorage.removeItem('stas_refresh_token');
+    localStorage.removeItem('syntaro_token');
+    localStorage.removeItem('syntaro_refresh_token');
   } catch {}
 }
 
@@ -288,7 +288,7 @@ export interface GitHubInstallation {
     description: string | null;
     defaultBranch: string;
     language: string | null;
-    stasInstalled: boolean;
+    syntaroInstalled: boolean;
     webhookId: number | null;
   }>;
 }

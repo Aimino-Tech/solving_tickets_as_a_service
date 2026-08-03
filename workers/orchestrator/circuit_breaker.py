@@ -15,10 +15,10 @@ Design
 
 Redis Keys
 ----------
-    ``stas:circuit:{task_type}:state`` — ``CLOSED`` | ``OPEN`` | ``HALF_OPEN``
-    ``stas:circuit:{task_type}:failure_count`` — integer
-    ``stas:circuit:{task_type}:opened_at`` — ISO timestamp when circuit opened
-    ``stas:circuit:{task_type}:half_open_at`` — ISO timestamp when half-open
+    ``syntaro:circuit:{task_type}:state`` — ``CLOSED`` | ``OPEN`` | ``HALF_OPEN``
+    ``syntaro:circuit:{task_type}:failure_count`` — integer
+    ``syntaro:circuit:{task_type}:opened_at`` — ISO timestamp when circuit opened
+    ``syntaro:circuit:{task_type}:half_open_at`` — ISO timestamp when half-open
 
 Configuration (env vars)
 ------------------------
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 _THRESHOLD = int(os.getenv("CIRCUIT_BREAKER_THRESHOLD", "5"))
 _OPEN_SECONDS = int(os.getenv("CIRCUIT_BREAKER_OPEN_SECONDS", "60"))
 _HALF_OPEN_MAX = int(os.getenv("CIRCUIT_BREAKER_HALF_OPEN_MAX", "1"))
-_REDIS_PREFIX = "stas:circuit:"
+_REDIS_PREFIX = "syntaro:circuit:"
 
 # ── States ────────────────────────────────────────────────────────────
 

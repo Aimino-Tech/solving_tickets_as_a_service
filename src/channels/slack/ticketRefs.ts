@@ -1,5 +1,5 @@
 /**
- * Linear ticket reference extraction for the Slack @stas mention handler.
+ * Linear ticket reference extraction for the Slack @syntaro mention handler.
  *
  * AIM-4460: "fix [AIM-1234](https://linear.app/aimino/issue/AIM-1234/...)"
  * or "fix ticket <title>" — extract the Linear ticket identifiers so the

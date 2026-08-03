@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/launch-checklist.sh — STAS Launch Day ASCII Checklist
+# scripts/launch-checklist.sh — SYNTARO Launch Day ASCII Checklist
 #
 # Parses docs/launch/launch-day-run-sheet.md and outputs a formatted ASCII
 # checklist for terminal use during launch day.
@@ -37,7 +37,7 @@ NC='\033[0m'
 # ── Help ────────────────────────────────────────────────────────────────────
 show_help() {
   cat <<EOF
-STAS Launch Day Checklist — Terminal checklist from launch-day-run-sheet.md
+SYNTARO Launch Day Checklist — Terminal checklist from launch-day-run-sheet.md
 
 Usage: bash scripts/launch-checklist.sh [OPTIONS]
 
@@ -214,7 +214,7 @@ show_all() {
 
 # ── Show run sheet metadata ─────────────────────────────────────────────────
 show_header() {
-  echo -e " ${BOLD}${BLUE}STAS Launch Day Checklist${NC}"
+  echo -e " ${BOLD}${BLUE}SYNTARO Launch Day Checklist${NC}"
   echo -e " ${DIM}Source: docs/launch/launch-day-run-sheet.md${NC}"
   echo -e " ${DIM}Date:   $(date -u '+%Y-%m-%d %H:%M UTC')${NC}"
 

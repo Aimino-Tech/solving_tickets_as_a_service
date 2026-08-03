@@ -1,21 +1,21 @@
-# STAS — Solving Tickets As A Service
+# SYNTARO — Solving Tickets As A Service
 
 ## Skill Installation
 
-STAS is available as a downloadable OpenCode skill. Any OpenCode, OpenClaw, or Claude Code agent can install it:
+SYNTARO is available as a downloadable OpenCode skill. Any OpenCode, OpenClaw, or Claude Code agent can install it:
 
 **OpenCode/OpenClaw:**
 ```bash
 # Install via skill URL
-opencode skill install https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/stas/SKILL.md
+opencode skill install https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/syntaro/SKILL.md
 ```
 
 Or add to `opencode.json`:
 ```json
 {
   "skills": {
-    "stas": {
-      "url": "https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/stas/SKILL.md"
+    "syntaro": {
+      "url": "https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/syntaro/SKILL.md"
     }
   }
 }
@@ -23,14 +23,14 @@ Or add to `opencode.json`:
 
 **Claude Code (via MCP):**
 ```bash
-npx stas install-mcp --claude
+npx syntaro install-mcp --claude
 ```
 
-The skill exposes tools for submitting GitHub issues, checking fix status, and retrieving results. See `skills/stas/SKILL.md` for the full reference.
+The skill exposes tools for submitting GitHub issues, checking fix status, and retrieving results. See `skills/syntaro/SKILL.md` for the full reference.
 
 ## One-liner
 
-Label a GitHub issue. STAS investigates, fixes, and opens a PR. You review and merge.
+Label a GitHub issue. SYNTARO investigates, fixes, and opens a PR. You review and merge.
 
 ## What this project is
 
@@ -38,12 +38,12 @@ An open-source GitHub bot that turns labeled issues into pull requests. Backed b
 
 ### Key insight
 
-Every competitor (Plip, TaskBounty, KintsugiBot, Open SWE, OpenRonin) wraps Claude/GPT. STAS differentiates on **execution quality** and **integrated pipeline**, not model exclusivity.
+Every competitor (Plip, TaskBounty, KintsugiBot, Open SWE, OpenRonin) wraps Claude/GPT. SYNTARO differentiates on **execution quality** and **integrated pipeline**, not model exclusivity.
 
 ## Architecture
 
 ```
-GitHub Issue (labeled "stas:fix")
+GitHub Issue (labeled "syntaro:fix")
        │
        ▼
   Webhook Server (Express, ~260 LOC)
@@ -70,7 +70,7 @@ GitHub Issue (labeled "stas:fix")
 
 ## Business model (open-core with dual-path)
 
-STAS has **three paths**, all pointing to paid plans for full features:
+SYNTARO has **three paths**, all pointing to paid plans for full features:
 
 | | Self-Hosted (OSS) | Cloud Free | Cloud Paid |
 |---|---|---|---|
@@ -97,7 +97,7 @@ STAS has **three paths**, all pointing to paid plans for full features:
 | Open SWE | Claude/GPT | ✅ | ✅ | BYO API | LangChain, 10K stars |
 | SWE-agent | Any LLM | ✅ | ✅ | BYO API | Princeton, 19K stars, NeurIPS |
 | OpenRonin | Claude/GPT | ✅ | ✅ | BYO API | Full lifecycle agent |
-| **STAS (OSS)** | **Frontier models** | **✅** | **✅** | **Minimal** | **OpenCode native** |
+| **SYNTARO (OSS)** | **Frontier models** | **✅** | **✅** | **Minimal** | **OpenCode native** |
 
 ## Agent economics (real data from XOR benchmark)
 
@@ -108,11 +108,11 @@ STAS has **three paths**, all pointing to paid plans for full features:
 | GPT-5.5 (DeepSWE) | $5.80 | 70.0% |
 | OpenCode + Opus 4.6 | $51.88 | 47.5% |
 
-STAS with claude-sonnet-4 achieves 92% pass rate at ~$3.80/fix by combining OpenCode's agent harness with effective model routing and prompt optimization.
+SYNTARO with claude-sonnet-4 achieves 92% pass rate at ~$3.80/fix by combining OpenCode's agent harness with effective model routing and prompt optimization.
 
 ## Key design decisions
 
-1. **Label trigger** (`stas:fix`) — zero config, familiar from Plip
+1. **Label trigger** (`syntaro:fix`) — zero config, familiar from Plip
 2. **2-phase triage** — cheap model classifies/scopes → expensive model fixes
 3. **Verification gate** — must pass existing tests + new regression test
 4. **Sandbox isolation** — Docker (local) → E2B (production)
@@ -129,7 +129,7 @@ npm run quality-gates:changed      # only changed files vs origin/main
 
 ## MCP Agent Server (AIM-3240)
 
-STAS exposes a TypeScript-based MCP (Model Context Protocol) server at `/mcp/jsonrpc` for AI agent discovery. Agents can discover and call STAS tools over JSON-RPC 2.0.
+SYNTARO exposes a TypeScript-based MCP (Model Context Protocol) server at `/mcp/jsonrpc` for AI agent discovery. Agents can discover and call SYNTARO tools over JSON-RPC 2.0.
 
 ### Endpoint
 

@@ -53,7 +53,7 @@ args = parser.parse_args()
 # Celery app
 # ---------------------------------------------------------------------------
 
-app = Celery("stas-e2e", broker=args.broker, backend=args.backend)
+app = Celery("syntaro-e2e", broker=args.broker, backend=args.backend)
 app.conf.update(
     task_serializer="json",
     result_serializer="json",
@@ -176,7 +176,7 @@ def run_pipeline() -> int:
     # ------------------------------------------------------------------
     stage = "sandbox"
     repo_url = f"https://github.com/{issue_context.get('repo_owner', 'owner')}/{issue_context.get('repo_name', 'repo')}.git"
-    branch = agent_output.get("result", {}).get("branchName", "stas/fix-42")
+    branch = agent_output.get("result", {}).get("branchName", "syntaro/fix-42")
 
     try:
         task = app.send_task(

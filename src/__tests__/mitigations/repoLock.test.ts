@@ -40,7 +40,7 @@ describe('RepoLock', () => {
     mockRedis.set.mockResolvedValue('OK');
     const acquired = await lock.acquire('owner', 'repo', 'pipeline-1');
     expect(acquired).toBe(true);
-    expect(mockRedis.set).toHaveBeenCalledWith('stas:lock:owner:repo', 'pipeline-1', 'PX', 30000, 'NX');
+    expect(mockRedis.set).toHaveBeenCalledWith('syntaro:lock:owner:repo', 'pipeline-1', 'PX', 30000, 'NX');
   });
 
   it('returns false when lock is already held', async () => {
@@ -53,7 +53,7 @@ describe('RepoLock', () => {
     mockRedis.evalsha.mockResolvedValue(1);
     const released = await lock.release('owner', 'repo', 'pipeline-1');
     expect(released).toBe(true);
-    expect(mockRedis.evalsha).toHaveBeenCalledWith(LUA_SHA, 1, 'stas:lock:owner:repo', 'pipeline-1');
+    expect(mockRedis.evalsha).toHaveBeenCalledWith(LUA_SHA, 1, 'syntaro:lock:owner:repo', 'pipeline-1');
   });
 
   it('returns false when releasing unowned lock', async () => {

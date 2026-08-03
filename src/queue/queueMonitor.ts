@@ -40,7 +40,7 @@ const SCALE_UP_URL = process.env.QUEUE_DRAIN_SCALE_UP_URL || '';
 // RabbitMQ queue names to monitor
 // ---------------------------------------------------------------------------
 
-const RABBITMQ_QUEUES = ['stas.issues.fix', 'stas.dlq'];
+const RABBITMQ_QUEUES = ['syntaro.issues.fix', 'syntaro.dlq'];
 
 // ---------------------------------------------------------------------------
 // Queue Depth via RabbitMQ channel check

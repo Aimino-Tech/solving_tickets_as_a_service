@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 export default function Integrations() {
-  useEffect(() => { document.title = 'Integrations — STAS'; }, []);
+  useEffect(() => { document.title = 'Integrations — SYNTARO'; }, []);
   return (
     <section className="section" style={{ paddingTop: 120 }}>
       <div className="section-header">

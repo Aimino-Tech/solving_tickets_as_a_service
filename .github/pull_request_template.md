@@ -18,7 +18,7 @@
 
 ## MCP Discovery
 
-<!-- MCP servers and AI agents can discover this PR's impact on STAS's capabilities -->
+<!-- MCP servers and AI agents can discover this PR's impact on SYNTARO's capabilities -->
 
 ```json
 {
@@ -41,4 +41,4 @@
 
 ---
 
-*STAS — Solving Tickets As A Service. [Agent Discovery](https://syntaro.io/agents.html) | [Integrations](https://syntaro.io/integrations.html)*
+*SYNTARO — Solving Tickets As A Service. [Agent Discovery](https://syntaro.io/agents.html) | [Integrations](https://syntaro.io/integrations.html)*

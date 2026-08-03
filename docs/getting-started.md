@@ -1,4 +1,4 @@
-# Getting Started with STAS
+# Getting Started with SYNTARO
 
 > **Goal**: Go from zero to your first fix PR in ≤15 minutes.
 
@@ -19,29 +19,29 @@ Choose the path that fits your setup:
 Add this workflow file to your repo:
 
 ```yaml
-# .github/workflows/stas-fix.yml
-name: STAS Fix
+# .github/workflows/syntaro-fix.yml
+name: SYNTARO Fix
 on:
   issues:
     types: [labeled]
 jobs:
   fix:
-    if: github.event.label.name == 'stas:fix'
+    if: github.event.label.name == 'syntaro:fix'
     runs-on: ubuntu-latest
     steps:
-      - uses: aimino/stas-fix-action@v1
+      - uses: aimino/syntaro-fix-action@v1
         with:
           opencode-endpoint: ${{ secrets.OPENCODE_ENDPOINT }}
 ```
 
-Then label any issue with `stas:fix`. STAS will investigate, fix, and open a PR.
+Then label any issue with `syntaro:fix`. SYNTARO will investigate, fix, and open a PR.
 
 ---
 
 ## Option 2: GitHub App + Self-Hosted (5 minutes)
 
 ```bash
-# 1. Clone STAS
+# 1. Clone SYNTARO
 git clone https://github.com/Aimino-Tech/solving_tickets_as_a_service
 cd solving_tickets_as_a_service
 
@@ -80,8 +80,8 @@ docker compose up -d
 ## Verify It Works
 
 1. Go to any issue in your repo
-2. Add the label `stas:fix`
-3. Within 60 seconds, STAS will post a "working on it" comment
+2. Add the label `syntaro:fix`
+3. Within 60 seconds, SYNTARO will post a "working on it" comment
 4. Within 5-10 minutes, a draft PR will appear
 5. Review the PR and merge if satisfied
 
@@ -89,7 +89,7 @@ docker compose up -d
 
 ## What Happens When You Label an Issue
 
-1. STAS detects the label via webhook
+1. SYNTARO detects the label via webhook
 2. Agent classifies the issue (bug, feature, question, etc.)
 3. Agent clones your repo into a sandbox
 4. Agent investigates root cause

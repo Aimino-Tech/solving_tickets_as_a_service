@@ -52,7 +52,7 @@ router.post('/url', (_req: Request, res: Response) => {
       res.status(501).json({ error: 'Linear OAuth not configured — set LINEAR_OAUTH_CLIENT_ID' });
       return;
     }
-    const baseUrl = process.env.STAS_PUBLIC_URL || `http://localhost:${config.port}`;
+    const baseUrl = process.env.SYNTARO_PUBLIC_URL || `http://localhost:${config.port}`;
     const redirectUri = `${baseUrl}/api/v1/auth/linear/callback`;
     const url =
       `https://linear.app/oauth/authorize?client_id=${clientId}` +
@@ -73,7 +73,7 @@ router.get('/callback', (req: Request, res: Response) => {
     res.status(400).json({ error: 'Missing authorization code' });
     return;
   }
-  const frontendUrl = process.env.STAS_PUBLIC_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.SYNTARO_PUBLIC_URL || 'http://localhost:5173';
   res.redirect(`${frontendUrl}/settings?code=${code}&state=${state ?? ''}`);
 });
 
@@ -113,7 +113,7 @@ router.post('/callback', async (req: Request, res: Response) => {
         client_id: config.linearOauth.clientId,
         client_secret: config.linearOauth.clientSecret,
         code: parsed.data.code,
-        redirect_uri: `${process.env.STAS_PUBLIC_URL || `http://localhost:${config.port}`}/api/v1/auth/linear/callback`,
+        redirect_uri: `${process.env.SYNTARO_PUBLIC_URL || `http://localhost:${config.port}`}/api/v1/auth/linear/callback`,
         grant_type: 'authorization_code',
       }),
     });

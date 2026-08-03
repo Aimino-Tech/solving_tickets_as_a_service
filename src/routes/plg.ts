@@ -50,7 +50,7 @@ function getTenantId(req: Request): string | undefined {
   if (headerId) return headerId;
   const queryId = req.query.tenantId as string | undefined;
   if (queryId) return queryId;
-  if (config.stas.mode === 'oss') return 'default';
+  if (config.syntaro.mode === 'oss') return 'default';
   return undefined;
 }
 
@@ -180,7 +180,7 @@ function deriveNextAction(status: {
   connected_repos: number;
 }): { action: string; label: string; url?: string } {
   if (!status.github_installed) {
-    return { action: 'install_github_app', label: 'Install STAS GitHub App', url: buildInstallUrl() };
+    return { action: 'install_github_app', label: 'Install SYNTARO GitHub App', url: buildInstallUrl() };
   }
   if (!status.repo_selected) {
     return { action: 'select_repos', label: 'Select repositories to monitor' };
@@ -189,7 +189,7 @@ function deriveNextAction(status: {
     return { action: 'complete_onboarding', label: 'Complete onboarding setup' };
   }
   if (!status.first_fix_completed) {
-    return { action: 'create_first_issue', label: 'Label an issue with stas:fix to get your first fix' };
+    return { action: 'create_first_issue', label: 'Label an issue with syntaro:fix to get your first fix' };
   }
   return { action: 'dashboard', label: 'View your fix history and usage' };
 }
@@ -301,7 +301,7 @@ router.post('/welcome-issue', async (req: Request, res: Response) => {
     res.json({
       issueUrl: result.issue_url,
       issueNumber: result.issue_number,
-      message: `Welcome issue #${result.issue_number} created! Label it with \`${config.stas.label}\` to see STAS in action.`,
+      message: `Welcome issue #${result.issue_number} created! Label it with \`${config.syntaro.label}\` to see SYNTARO in action.`,
     });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to create welcome issue');
@@ -544,8 +544,8 @@ router.post('/workspace/setup', async (req: Request, res: Response) => {
       message: 'Workspace created and setup initiated. Slack bot will be ready shortly.',
       nextSteps: [
         'Configure Slack event subscriptions for app_mention',
-        'Install the STAS GitHub App in your repos',
-        'Label an issue with stas:fix to trigger your first automated fix',
+        'Install the SYNTARO GitHub App in your repos',
+        'Label an issue with syntaro:fix to trigger your first automated fix',
       ],
     });
   } catch (err) {

@@ -3,7 +3,7 @@
  *
  * Usage:
  * ```ts
- * import { githubIssuesLabeledStasFix } from './fixtures/index.js';
+ * import { githubIssuesLabeledSyntaroFix } from './fixtures/index.js';
  * ```
  */
 

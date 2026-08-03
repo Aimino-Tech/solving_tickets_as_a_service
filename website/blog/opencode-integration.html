@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>How STAS Uses OpenCode to Fix Real-World Bugs — STAS Blog</title>
-  <meta name="description" content="A technical deep-dive into how STAS integrates with OpenCode to investigate, fix, and verify bugs across any codebase." />
-  <meta name="keywords" content="OpenCode, STAS integration, coding agent, AI fix, sandbox, architecture" />
+  <title>How SYNTARO Uses OpenCode to Fix Real-World Bugs — SYNTARO Blog</title>
+  <meta name="description" content="A technical deep-dive into how SYNTARO integrates with OpenCode to investigate, fix, and verify bugs across any codebase." />
+  <meta name="keywords" content="OpenCode, SYNTARO integration, coding agent, AI fix, sandbox, architecture" />
 
   <meta property="og:type" content="article" />
-  <meta property="og:url" content="https://stas.aimino.io/blog/opencode-integration" />
-  <meta property="og:title" content="How STAS Uses OpenCode to Fix Real-World Bugs" />
-  <meta property="og:description" content="A technical deep-dive into how STAS integrates with OpenCode to investigate, fix, and verify bugs across any codebase." />
-  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta property="og:url" content="https://syntaro.aimino.io/blog/opencode-integration" />
+  <meta property="og:title" content="How SYNTARO Uses OpenCode to Fix Real-World Bugs" />
+  <meta property="og:description" content="A technical deep-dive into how SYNTARO integrates with OpenCode to investigate, fix, and verify bugs across any codebase." />
+  <meta property="og:image" content="https://syntaro.aimino.io/img/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="How STAS Uses OpenCode to Fix Real-World Bugs" />
-  <meta name="twitter:description" content="A technical deep-dive into how STAS integrates with OpenCode to investigate, fix, and verify bugs." />
-  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta name="twitter:title" content="How SYNTARO Uses OpenCode to Fix Real-World Bugs" />
+  <meta name="twitter:description" content="A technical deep-dive into how SYNTARO integrates with OpenCode to investigate, fix, and verify bugs." />
+  <meta name="twitter:image" content="https://syntaro.aimino.io/img/og-image.png" />
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
-    "headline": "How STAS Uses OpenCode to Fix Real-World Bugs",
+    "headline": "How SYNTARO Uses OpenCode to Fix Real-World Bugs",
     "datePublished": "2026-07-15",
     "author": {
       "@type": "Organization",
@@ -35,11 +35,11 @@
       "@type": "Organization",
       "name": "AImino"
     },
-    "description": "A technical deep-dive into how STAS integrates with OpenCode to investigate, fix, and verify bugs across any codebase."
+    "description": "A technical deep-dive into how SYNTARO integrates with OpenCode to investigate, fix, and verify bugs across any codebase."
   }
   </script>
 
-  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+  <script defer data-domain="syntaro.aimino.io" src="https://plausible.io/js/script.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -75,7 +75,7 @@
   <!-- NAV -->
   <nav class="nav" role="navigation" aria-label="Main navigation">
     <div class="nav-inner">
-      <a href="/" class="nav-logo"><span class="logo-icon">S</span> STAS</a>
+      <a href="/" class="nav-logo"><span class="logo-icon">S</span> SYNTARO</a>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
       <ul class="nav-links" id="navLinks">
         <li><a href="/">Home</a></li>
@@ -84,7 +84,7 @@
         <li><a href="/docs">Docs</a></li>
         <li><a href="/blog">Blog</a></li>
         <li><a href="/status">Status</a></li>
-        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta">Install App →</a></li>
+        <li><a href="https://github.com/apps/syntaro-app/installations/new" class="nav-cta">Install App →</a></li>
       </ul>
     </div>
   </nav>
@@ -96,7 +96,7 @@
         <span class="tag tag-green">Engineering</span>
         <span class="tag tag-purple">OpenCode</span>
       </div>
-      <h1>How STAS Uses OpenCode to Fix Real-World Bugs</h1>
+      <h1>How SYNTARO Uses OpenCode to Fix Real-World Bugs</h1>
       <div class="meta">
         <span class="author">
           <span class="author-avatar">AT</span>
@@ -109,13 +109,13 @@
 
     <div class="blog-post-content">
 
-      <p>STAS doesn't just label issues and hope for the best. Under the hood, every fix is powered by <strong>OpenCode</strong> — the 162K★ open-source coding agent. This post explains the integration architecture, the fix pipeline, and the quality gates that ensure every PR is production-ready.</p>
+      <p>SYNTARO doesn't just label issues and hope for the best. Under the hood, every fix is powered by <strong>OpenCode</strong> — the 162K★ open-source coding agent. This post explains the integration architecture, the fix pipeline, and the quality gates that ensure every PR is production-ready.</p>
 
       <h2>Architecture Overview</h2>
 
-      <p>When a GitHub issue is labeled with <code>stas:fix</code>, here's what happens:</p>
+      <p>When a GitHub issue is labeled with <code>syntaro:fix</code>, here's what happens:</p>
 
-      <pre><code>GitHub Issue (labeled stas:fix)
+      <pre><code>GitHub Issue (labeled syntaro:fix)
        │
        ▼
   Webhook Server (Express/Node.js)
@@ -143,11 +143,11 @@
 
       <h2>The OpenCode Integration</h2>
 
-      <p>OpenCode is a general-purpose coding agent that can clone repositories, navigate codebases, make changes, run tests, and commit results. STAS communicates with OpenCode via its HTTP API on port 4096.</p>
+      <p>OpenCode is a general-purpose coding agent that can clone repositories, navigate codebases, make changes, run tests, and commit results. SYNTARO communicates with OpenCode via its HTTP API on port 4096.</p>
 
       <h3>Prompt Engineering</h3>
 
-      <p>The key to STAS's accuracy is how we construct the prompt. For each issue, we build a context-rich prompt that includes:</p>
+      <p>The key to SYNTARO's accuracy is how we construct the prompt. For each issue, we build a context-rich prompt that includes:</p>
       <ul>
         <li>The full issue title and body</li>
         <li>Repository structure overview (key files and directories)</li>
@@ -169,11 +169,11 @@
         <li>Ephemeral storage — destroyed immediately after execution</li>
       </ul>
 
-      <p>No two fixes share a sandbox. No data persists between runs. Your code is never stored on STAS servers.</p>
+      <p>No two fixes share a sandbox. No data persists between runs. Your code is never stored on SYNTARO servers.</p>
 
       <h2>The 6 Quality Gates</h2>
 
-      <p>The most important part of STAS is what happens <em>after</em> OpenCode writes the fix. Before a PR is created, every fix passes through 6 gates:</p>
+      <p>The most important part of SYNTARO is what happens <em>after</em> OpenCode writes the fix. Before a PR is created, every fix passes through 6 gates:</p>
 
       <h3>Gate 1: Reality Check</h3>
       <p>We verify every file referenced in the fix actually exists in the repository. This catches hallucinations where the agent invents file paths.</p>
@@ -224,14 +224,14 @@ curl -X POST http://localhost:4096/execute \
       <p>OpenCode also supports custom models, tools, and skill configurations. See the <a href="https://opencode.ai">OpenCode documentation</a> for details.</p>
 
       <div class="highlight-box">
-        <p><strong>🔧 For developers:</strong> STAS is fully open-source. You can inspect every line of the integration, contribute improvements, or fork it for your own use case. <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">View on GitHub →</a></p>
+        <p><strong>🔧 For developers:</strong> SYNTARO is fully open-source. You can inspect every line of the integration, contribute improvements, or fork it for your own use case. <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">View on GitHub →</a></p>
       </div>
 
     </div>
 
     <div class="blog-post-nav">
       <a href="/blog">← Back to Blog</a>
-      <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" data-track="post-cta">Install STAS →</a>
+      <a href="https://github.com/apps/syntaro-app/installations/new" class="btn btn-primary" data-track="post-cta">Install SYNTARO →</a>
     </div>
   </article>
 
@@ -239,7 +239,7 @@ curl -X POST http://localhost:4096/execute \
   <footer class="footer">
     <div class="footer-inner">
       <div class="footer-brand">
-        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> SYNTARO</a>
         <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
       </div>
       <div>
@@ -258,7 +258,7 @@ curl -X POST http://localhost:4096/execute \
           <li><a href="/blog">Blog</a></li>
           <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
           <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
-          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+          <li><a href="https://github.com/marketplace/actions/syntaro-eval">Marketplace</a></li>
         </ul>
       </div>
       <div>

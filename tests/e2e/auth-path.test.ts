@@ -10,7 +10,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import crypto from 'node:crypto';
 import { createTestHarness } from './harness/index.js';
-import { githubIssuesLabeledStasFix } from './fixtures/webhooks/github.js';
+import { githubIssuesLabeledSyntaroFix } from './fixtures/webhooks/github.js';
 import type { TestHarness } from './harness/index.js';
 
 let harness: TestHarness;
@@ -44,14 +44,14 @@ describe('Auth Path: Valid JWT → API responds → Invalid JWT → 401', () => 
   });
 
   it('Webhook with valid signature is accepted', async () => {
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
     const res = await harness.sendWebhook('/webhook', payload);
 
     expect(res.status).toBe(202);
   });
 
   it('Webhook with invalid signature returns 401', async () => {
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
     const bodyStr = JSON.stringify(payload);
 
     // Send with an obviously wrong signature

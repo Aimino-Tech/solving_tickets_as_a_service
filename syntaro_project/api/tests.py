@@ -14,7 +14,7 @@ class HealthTest(TestCase):
         resp = self.client.get("/api/health")
         data = resp.json()
         self.assertEqual(data["status"], "ok")
-        self.assertEqual(data["service"], "stas-django")
+        self.assertEqual(data["service"], "syntaro-django")
         self.assertEqual(data["version"], "0.1.0")
 
 

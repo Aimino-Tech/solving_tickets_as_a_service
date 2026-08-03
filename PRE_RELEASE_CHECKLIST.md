@@ -57,15 +57,15 @@ Use this checklist to qualify a release before creating a GitHub Release and pus
   ```
 - [ ] Docker container starts and passes health check:
   ```bash
-  docker run -d -p 3000:3000 --name stas-test stas-bot
+  docker run -d -p 3000:3000 --name syntaro-test syntaro-bot
   sleep 5
   curl -f http://localhost:3000/health
-  docker rm -f stas-test
+  docker rm -f syntaro-test
   ```
 - [ ] Non-root user is configured in Docker image:
   ```bash
-  docker run --rm stas-bot whoami
-  # → stas
+  docker run --rm syntaro-bot whoami
+  # → syntaro
   ```
 
 ---

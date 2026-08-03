@@ -251,7 +251,7 @@ class TestNoConfigDetection:
     def test_no_config_partial(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
         state = PlgState(tenant_id="partial", github_installed=True, installation_id=42)
-        mc.setex("stas:plg:partial", 99999, json.dumps(state.to_dict()))
+        mc.setex("syntaro:plg:partial", 99999, json.dumps(state.to_dict()))
         mock_get_redis.return_value = mc
         result = check_no_config("partial")
         assert result["configured"] is False
@@ -270,7 +270,7 @@ class TestNoConfigDetection:
             webhook_configured=True,
             welcome_issue_created=True,
         )
-        mc.setex("stas:plg:complete", 99999, json.dumps(state.to_dict()))
+        mc.setex("syntaro:plg:complete", 99999, json.dumps(state.to_dict()))
         mock_get_redis.return_value = mc
         result = check_no_config("complete")
         assert result["configured"] is True
@@ -295,7 +295,7 @@ class TestStatePersistence:
     def test_get_or_create_existing(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
         mc.setex(
-            "stas:plg:existing",
+            "syntaro:plg:existing",
             99999,
             json.dumps(PlgState(tenant_id="existing", github_installed=True, installation_id=42).to_dict()),
         )
@@ -311,7 +311,7 @@ class TestStatePersistence:
         state = mark_github_installed("t-1", 123)
         assert state.github_installed is True
         assert state.installation_id == 123
-        raw = mc.get("stas:plg:t-1")
+        raw = mc.get("syntaro:plg:t-1")
         assert raw is not None
         assert json.loads(raw)["github_installed"] is True
 
@@ -353,7 +353,7 @@ class TestStatePersistence:
     def test_get_state_returns_existing(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
         mc.setex(
-            "stas:plg:known",
+            "syntaro:plg:known",
             99999,
             json.dumps(PlgState(tenant_id="known", github_installed=True).to_dict()),
         )
@@ -391,7 +391,7 @@ class TestOnboardingSummary:
     def test_summary_partial_onboarding(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
         state = PlgState(tenant_id="partial", github_installed=True, installation_id=42)
-        mc.setex("stas:plg:partial", 99999, json.dumps(state.to_dict()))
+        mc.setex("syntaro:plg:partial", 99999, json.dumps(state.to_dict()))
         mock_get_redis.return_value = mc
         summary = get_onboarding_summary("partial")
         assert summary["state"] == "in_progress"
@@ -410,7 +410,7 @@ class TestOnboardingSummary:
             webhook_configured=True,
             connected_repos=3,
         )
-        mc.setex("stas:plg:done", 99999, json.dumps(state.to_dict()))
+        mc.setex("syntaro:plg:done", 99999, json.dumps(state.to_dict()))
         mock_get_redis.return_value = mc
         summary = get_onboarding_summary("done")
         assert summary["state"] == "completed"
@@ -426,9 +426,9 @@ class TestOnboardingSummary:
 
 class TestWelcomeIssueBody:
     def test_body_contains_bot_name(self) -> None:
-        body = _build_welcome_issue_body("STAS")
-        assert "STAS" in body
-        assert "stas:fix" in body
+        body = _build_welcome_issue_body("SYNTARO")
+        assert "SYNTARO" in body
+        assert "syntaro:fix" in body
 
     def test_body_contains_instructions(self) -> None:
         body = _build_welcome_issue_body("TestBot")
@@ -516,7 +516,7 @@ class TestAutoConfigureWebhook:
         mock_httpx.post.return_value = create_response
 
         with patch("workers.billing.plg.mark_webhook_configured") as mock_mark:
-            result = auto_configure_webhook("tenant-1", 42, "https://stas.dev/webhook")
+            result = auto_configure_webhook("tenant-1", 42, "https://syntaro.dev/webhook")
 
         assert result["configured"] is True
         assert result["webhook_id"] == 123
@@ -527,7 +527,7 @@ class TestAutoConfigureWebhook:
     @patch("workers.billing.plg._get_installation_token")
     def test_fails_without_token(self, mock_token: MagicMock) -> None:
         mock_token.return_value = None
-        result = auto_configure_webhook("tenant-1", 42, "https://stas.dev/webhook")
+        result = auto_configure_webhook("tenant-1", 42, "https://syntaro.dev/webhook")
         assert result["configured"] is False
         assert "token" in result["error"].lower()
 
@@ -551,14 +551,14 @@ class TestAutoConfigureWebhook:
         hooks_response.json.return_value = [
             {
                 "id": 456,
-                "config": {"url": "https://stas.dev/webhook"},
+                "config": {"url": "https://syntaro.dev/webhook"},
                 "active": True,
             }
         ]
 
         mock_httpx.get.side_effect = [repos_response, hooks_response]
 
-        result = auto_configure_webhook("tenant-1", 42, "https://stas.dev/webhook")
+        result = auto_configure_webhook("tenant-1", 42, "https://syntaro.dev/webhook")
 
         assert result["configured"] is True
         assert result["webhook_id"] == 456
@@ -593,7 +593,7 @@ class TestDashboardData:
             connected_repos=3,
             first_fix_completed=True,
         )
-        mc.setex("stas:plg:onboarded", 99999, json.dumps(state.to_dict()))
+        mc.setex("syntaro:plg:onboarded", 99999, json.dumps(state.to_dict()))
         mock_get_redis.return_value = mc
 
         data = get_dashboard_data("onboarded")
@@ -644,9 +644,9 @@ class TestPlgEdgeCases:
         assert state.first_fix_completed is True
         assert state.connected_repos == 3
 
-    def test_welcome_issue_body_contains_stas_fix_label(self) -> None:
-        body = _build_welcome_issue_body("STAS")
-        assert "stas:fix" in body
+    def test_welcome_issue_body_contains_syntaro_fix_label(self) -> None:
+        body = _build_welcome_issue_body("SYNTARO")
+        assert "syntaro:fix" in body
 
     @patch("workers.billing.plg._get_redis")
     def test_get_onboarding_summary_structured_dict(self, mock_get_redis: MagicMock) -> None:

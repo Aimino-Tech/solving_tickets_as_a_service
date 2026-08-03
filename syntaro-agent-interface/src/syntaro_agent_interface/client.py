@@ -2,13 +2,13 @@ from __future__ import annotations
 import os, logging
 from typing import Any, Optional
 import httpx
-from stas_agent_interface.models import CapabilityList, SubmitIssueResponse, CheckStatusResponse, RunHistoryResponse, ListReposResponse, GetPricingResponse
+from syntaro_agent_interface.models import CapabilityList, SubmitIssueResponse, CheckStatusResponse, RunHistoryResponse, ListReposResponse, GetPricingResponse
 logger = logging.getLogger(__name__)
 
 class STASAgentClient:
     def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, timeout: float = 30.0):
-        self._key = api_key or os.getenv("STAS_API_KEY","")
-        self._url = (base_url or os.getenv("STAS_AGENT_URL","http://localhost:8090")).rstrip("/")
+        self._key = api_key or os.getenv("SYNTARO_API_KEY","")
+        self._url = (base_url or os.getenv("SYNTARO_AGENT_URL","http://localhost:8090")).rstrip("/")
         self._to = timeout; self._http: Optional[httpx.Client] = None
     def _gh(self) -> httpx.Client:
         if self._http is None:

@@ -9,8 +9,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-_COST_KEY_PREFIX = "stas:cost:"
-_AGGREGATE_KEY = "stas:cost:aggregate"
+_COST_KEY_PREFIX = "syntaro:cost:"
+_AGGREGATE_KEY = "syntaro:cost:aggregate"
 
 
 @dataclass

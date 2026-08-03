@@ -187,7 +187,7 @@ async function startMockOpenCodeServer(): Promise<void> {
               confidence: "high",
               fixReady: true,
               prUrl: "https://github.com/test-owner/test-repo/pull/42",
-              branchName: "stas/fix-42-mock",
+              branchName: "syntaro/fix-42-mock",
               diff: "diff --git a/src/test.ts b/src/test.ts\nindex abc..def 100644\n--- a/src/test.ts\n+++ b/src/test.ts\n@@ -1,3 +1,5 @@\n+console.log(\"fixed\");",
               testOutput: "PASS tests/login.test.ts (42ms)\n  ✓ handles special characters\n\nTests: 1 passed, 1 total",
               errors: [],
@@ -260,7 +260,7 @@ async function startMockGitHubApiServer(): Promise<void> {
           responseBody = { id: 1, html_url: "https://github.com/mock/comment/1" };
           statusCode = 201;
         } else if (req.method === "POST" && req.url?.includes("/git/refs")) {
-          responseBody = { ref: "refs/heads/stas/fix-42-mock" };
+          responseBody = { ref: "refs/heads/syntaro/fix-42-mock" };
           statusCode = 201;
         } else if (req.method === "GET" && req.url?.includes("/git/ref")) {
           responseBody = { object: { sha: "abc123def456" } };
@@ -346,7 +346,7 @@ async function startCeleryWorker(): Promise<void> {
       "--without-mingle",
       "--without-heartbeat",
       "-Q",
-      "stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications,stas.agents.default",
+      "syntaro.agents.triage,syntaro.agents.dispatch,syntaro.agents.sandbox,syntaro.agents.verification,syntaro.agents.pr_creation,syntaro.agents.notifications,syntaro.agents.default",
     ],
     {
       cwd: WORKERS_DIR,
@@ -595,7 +595,7 @@ async function startDockerServices(): Promise<void> {
  * Wait for a Docker service to report healthy.
  */
 async function waitForDockerHealth(serviceName: string, timeoutMs: number): Promise<void> {
-  const containerName = `stas-e2e-${serviceName}`;
+  const containerName = `syntaro-e2e-${serviceName}`;
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {

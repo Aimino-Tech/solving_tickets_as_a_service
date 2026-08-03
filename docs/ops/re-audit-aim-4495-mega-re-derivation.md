@@ -1,8 +1,8 @@
 ---
-title: AIM-4495 — Story-Level Re-Derivation of STAS Megas 3180/3181/3179/3182
+title: AIM-4495 — Story-Level Re-Derivation of SYNTARO Megas 3180/3181/3179/3182
 ---
 
-# AIM-4495: Story-Level Re-Derivation of STAS Megas 3180/3181/3179/3182
+# AIM-4495: Story-Level Re-Derivation of SYNTARO Megas 3180/3181/3179/3182
 
 **Date**: 2026-08-02
 **Baseline**: `aimino/main` @ `4effcab` (includes AIM-4477 MCP server + AIM-4481 green-build)
@@ -10,7 +10,7 @@ title: AIM-4495 — Story-Level Re-Derivation of STAS Megas 3180/3181/3179/3182
 
 ## Purpose
 
-The four STAS mega tickets (AIM-3180, AIM-3181, AIM-3179, AIM-3182) were marked
+The four SYNTARO mega tickets (AIM-3180, AIM-3181, AIM-3179, AIM-3182) were marked
 Verified with PR-link-only descriptions — no enumerated story lists — so the
 2026-08-01 re-audit could not story-verify them. This document re-derives the
 story list for each mega from the ticket titles, the linked PRs' changed files,
@@ -20,7 +20,7 @@ with file:line evidence.
 ## Method
 
 1. Fetched each mega's full Linear content + linked PR metadata
-   (STAS PRs #467/#470/#472/#473, OpenSymphony PRs #677/#679/#680/#681).
+   (SYNTARO PRs #467/#470/#472/#473, OpenSymphony PRs #677/#679/#680/#681).
 2. Derived the story list per mega from ticket titles + PR changed-file lists.
 3. Verified each story against `aimino/main` @ `4effcab` using file reads and
    greps of the working tree (which equals `origin/main`).
@@ -29,7 +29,7 @@ with file:line evidence.
 
 ## Verdict Tables
 
-### MEGA 5 — AIM-3180: STAS Pipeline & Quality (pipeline ops, quality gates, sandbox, compliance)
+### MEGA 5 — AIM-3180: SYNTARO Pipeline & Quality (pipeline ops, quality gates, sandbox, compliance)
 
 | Story | Verdict | Evidence |
 |---|---|---|
@@ -41,7 +41,7 @@ with file:line evidence.
 | Compliance wired into dispatch/pipeline flow | **MISSING** | `runComplianceChecks` called only from `src/routes/quality.ts:215` (API surface) — no call site in the webhook→dispatch or fix-PR pipeline path |
 | Quality/compliance API + score card | IMPLEMENTED | `src/routes/quality.ts`: `POST /api/quality/gates/run` L61, `GET /api/quality/gates/status/:id` L156, `GET /api/quality/compliance` L182, score-card GET L240 / POST L319 / `:id` L352; router mounted `/api/quality` at `src/server.ts:1071` |
 
-### MEGA 6 — AIM-3181: STAS Monitoring, API, Deployment (health dashboard, REST API, webhooks, CLI, Docker)
+### MEGA 6 — AIM-3181: SYNTARO Monitoring, API, Deployment (health dashboard, REST API, webhooks, CLI, Docker)
 
 | Story | Verdict | Evidence |
 |---|---|---|
@@ -53,12 +53,12 @@ with file:line evidence.
 | Webhooks (routing, retry, health, metrics) | IMPLEMENTED | `src/webhooks/`: `webhookRouter.ts` (`enqueue` L126), `eventLogger.ts` L129, `retryWorker.ts` L205, `healthMonitor.ts` L309, `metrics.ts` L117, plus `github.ts`/`gitlab.ts`/`bitbucket.ts`/`base.ts` |
 | Distributed tracing (W3C trace context) | IMPLEMENTED | `src/monitoring/tracing.ts` (`getPipelineTracer` L12, `startPhaseSpan` L19, `PHASE_SPAN_NAMES` L8); merged via PR #706 (AIM-4243) |
 | API keys | IMPLEMENTED | `src/routes/mcpKeys.ts`; router mounted `/api/v1/mcp-keys` `src/server.ts:788` |
-| CLI (ops CLI) | **PARTIAL** | `packages/stas-cli/src/cli.ts` exposes only the `quickstart` command (L9-16); no monitoring/ops/admin commands |
+| CLI (ops CLI) | **PARTIAL** | `packages/syntaro-cli/src/cli.ts` exposes only the `quickstart` command (L9-16); no monitoring/ops/admin commands |
 | Docker deployment | IMPLEMENTED | `Dockerfile` + `Dockerfile.smithery` + 6 compose files (`docker-compose.yml`, `.dev`, `.e2e`, `.eval`, `.prod`, `.worker`) covering redis/rabbitmq/postgres/bot/worker/flower/n8n |
-| GitHub Action (stas-fix) | IMPLEMENTED | `.github/actions/stas-fix/action.yml` (`name: 'STAS — Auto Fix Issues'`; inputs `opencode-url`, `opencode-model`, `github-token`) |
+| GitHub Action (syntaro-fix) | IMPLEMENTED | `.github/actions/syntaro-fix/action.yml` (`name: 'SYNTARO — Auto Fix Issues'`; inputs `opencode-url`, `opencode-model`, `github-token`) |
 | Synthetic monitoring | IMPLEMENTED | `src/monitoring/syntheticMonitor.ts` (`runSyntheticCheck` L174, `isSyntheticMonitorHealthy` L326), `src/monitoring/syntheticCheck.ts` (`runSyntheticE2ECheck` L29) |
 
-### MEGA 4 — AIM-3179: STAS Billing, Team, Onboarding (billing modules, Stripe, RBAC, onboarding wizard, audit logs)
+### MEGA 4 — AIM-3179: SYNTARO Billing, Team, Onboarding (billing modules, Stripe, RBAC, onboarding wizard, audit logs)
 
 | Story | Verdict | Evidence |
 |---|---|---|
@@ -73,7 +73,7 @@ with file:line evidence.
 | SSO | **MISSING** | No SSO/team-SSO module; only a conditional SAML route (`src/server.ts:1142`) exists |
 | Demo repo / repo-connection onboarding | **PARTIAL** | Onboarding wizard has a `repo-selection` step (`recordRepoSelection` L287) but no demo-repo provisioning/seeding path found |
 
-### MEGA 7 — AIM-3182: STAS Multi-Platform & Common Sense Gate (platform abstraction, guardrails, sanity checks)
+### MEGA 7 — AIM-3182: SYNTARO Multi-Platform & Common Sense Gate (platform abstraction, guardrails, sanity checks)
 
 | Story | Verdict | Evidence |
 |---|---|---|
@@ -87,7 +87,7 @@ with file:line evidence.
 ## Ranked Remaining Gaps
 
 1. **(AIM-3180) Compliance checks not wired into the dispatch/pipeline flow** — `runComplianceChecks` is only exposed via `GET /api/quality/compliance` (`src/routes/quality.ts:215`); it never runs on the webhook→dispatch or fix-PR path. A compliance gate should gate PR creation / issue dispatch.
-2. **(AIM-3181) CLI is minimal** — `packages/stas-cli/src/cli.ts` has only a `quickstart` command (L9-16); no monitoring, status, or ops commands promised by the mega.
+2. **(AIM-3181) CLI is minimal** — `packages/syntaro-cli/src/cli.ts` has only a `quickstart` command (L9-16); no monitoring, status, or ops commands promised by the mega.
 3. **(AIM-3179) SSO missing** — only a conditional SAML route exists (`src/server.ts:1142`); no SSO/team-SSO implementation despite the mega's team scope.
 4. **(AIM-3182) Cost/benefit gate analog not ported** — destructive-instruction invariants exist (`commonSenseGate.ts` L57-74), but no cost-benefit scoring/analysis module (OpenSymphony `cost_benefit.ex` equivalent).
 5. **(AIM-3179) Demo-repo onboarding partial** — wizard has `repo-selection` step (`wizard.ts` L287) but no demo-repo provisioning.
@@ -101,5 +101,5 @@ with file:line evidence.
 
 - AIM-3180 / AIM-3181 / AIM-3179 / AIM-3182 (megas verified herein)
 - AIM-3200 (MEGA 8 production launch readiness — downstream consumer of these gates)
-- STAS PRs #467, #470, #472, #473, #705, #706, #707, #745
+- SYNTARO PRs #467, #470, #472, #473, #705, #706, #707, #745
 - OpenSymphony PRs #677, #679, #680, #681 (Elixir reference implementations)

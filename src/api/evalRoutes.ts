@@ -5,7 +5,7 @@
  * GET /api/eval/latest   — Full latest eval run JSON
  *
  * These endpoints are public (no auth required) so potential customers can
- * see STAS performance before subscribing.
+ * see SYNTARO performance before subscribing.
  */
 
 import { Router, type Request, type Response } from 'express';
@@ -86,7 +86,7 @@ const router: Router = Router();
  * GET /api/eval/results
  *
  * Returns aggregate eval results: overall pass rate, per-category scores,
- * and trend data. No auth required — accessible to anyone evaluating STAS.
+ * and trend data. No auth required — accessible to anyone evaluating SYNTARO.
  */
 router.get('/results', async (_req: Request, res: Response) => {
   try {

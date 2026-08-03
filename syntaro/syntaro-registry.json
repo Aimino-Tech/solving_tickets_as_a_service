@@ -1,8 +1,8 @@
 {
-  "$schema": "https://raw.githubusercontent.com/aimino/stas-registry/main/schemas/registry-v1.json",
-  "name": "STAS — Solving Tickets As A Service",
+  "$schema": "https://raw.githubusercontent.com/aimino/syntaro-registry/main/schemas/registry-v1.json",
+  "name": "SYNTARO — Solving Tickets As A Service",
   "version": "1.0.0",
-  "description": "STAS (Solving Tickets As A Service) is an AI-powered GitHub bot that automatically fixes bugs and implements features. Label an issue, get a pull request.",
+  "description": "SYNTARO (Solving Tickets As A Service) is an AI-powered GitHub bot that automatically fixes bugs and implements features. Label an issue, get a pull request.",
   "tagline": "Label a GitHub issue. Get a pull request — automatically.",
   "capabilities": {
     "fix_generation": {
@@ -33,14 +33,14 @@
   "marketplaces": {
     "rapidapi": {
       "name": "RapidAPI Marketplace",
-      "url": "https://rapidapi.com/aimino/api/stas-api?utm_source=stas-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=rapidapi",
+      "url": "https://rapidapi.com/aimino/api/syntaro-api?utm_source=syntaro-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=rapidapi",
       "listing_type": "REST API",
       "plans": [
         {
           "name": "Free",
           "price": 0,
           "requests_per_day": 10,
-          "description": "Try STAS with limited daily usage"
+          "description": "Try SYNTARO with limited daily usage"
         },
         {
           "name": "Pro",
@@ -59,7 +59,7 @@
     },
     "mcp_registry": {
       "name": "Model Context Protocol (MCP) Registry",
-      "url": "https://github.com/modelcontextprotocol/servers?utm_source=stas-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=mcp",
+      "url": "https://github.com/modelcontextprotocol/servers?utm_source=syntaro-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=mcp",
       "listing_type": "MCP Server",
       "server_name": "@aimino/syntaro-mcp",
       "install_command": "npx -y @aimino/syntaro-mcp",
@@ -67,30 +67,30 @@
     },
     "smithery": {
       "name": "Smithery.ai",
-      "url": "https://smithery.ai/server/@aimino/syntaro-mcp?utm_source=stas-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=smithery",
+      "url": "https://smithery.ai/server/@aimino/syntaro-mcp?utm_source=syntaro-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=smithery",
       "listing_type": "MCP Server",
       "one_click_install": "npx -y @aimino/syntaro-mcp",
       "status": "live"
     },
     "github_marketplace": {
       "name": "GitHub Marketplace",
-      "url": "https://github.com/marketplace/actions/stas-eval?utm_source=stas-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=github-marketplace",
+      "url": "https://github.com/marketplace/actions/syntaro-eval?utm_source=syntaro-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=github-marketplace",
       "listing_type": "GitHub Action",
-      "action_name": "Aimino-Tech/stas-eval-action",
+      "action_name": "Aimino-Tech/syntaro-eval-action",
       "status": "pending_verification"
     },
     "opencode_skills": {
       "name": "OpenCode/OpenClaw Skill Registry",
-      "url": "https://opencode.ai/skills/stas?utm_source=stas-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=opencode",
+      "url": "https://opencode.ai/skills/syntaro?utm_source=syntaro-registry&utm_medium=referral&utm_campaign=aim-2090&utm_content=opencode",
       "listing_type": "Agent Skill",
-      "skill_name": "stas",
+      "skill_name": "syntaro",
       "install": "Add to your opencode.json or OpenClaw agent config",
       "status": "live"
     }
   },
   "utm_tracking": {
     "campaign": "aim-2090",
-    "source": "stas-registry",
+    "source": "syntaro-registry",
     "medium": "referral",
     "params": {
       "utm_source": "Identifies which registry/referrer sent the traffic",
@@ -99,43 +99,43 @@
       "utm_content": "Identifies specific marketplace (rapidapi, mcp, smithery, github-marketplace, opencode)"
     },
     "links": {
-      "rapidapi": "https://rapidapi.com/aimino/api/stas-api?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=rapidapi",
+      "rapidapi": "https://rapidapi.com/aimino/api/syntaro-api?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=rapidapi",
       "smithery": "https://smithery.ai/server/@aimino/syntaro-mcp?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=smithery",
-      "opencode": "https://opencode.ai/skills/stas?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=opencode",
-      "github_marketplace": "https://github.com/marketplace/actions/stas-eval?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=github-marketplace",
+      "opencode": "https://opencode.ai/skills/syntaro?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=opencode",
+      "github_marketplace": "https://github.com/marketplace/actions/syntaro-eval?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=github-marketplace",
       "mcp_registry": "https://github.com/modelcontextprotocol/servers?utm_source=github&utm_medium=readme&utm_campaign=aim-2090&utm_content=mcp"
     }
   },
   "integrations": {
     "github_app": {
-      "name": "STAS GitHub App",
+      "name": "SYNTARO GitHub App",
       "type": "GitHub App",
-      "description": "Install the app on your repo, label issues with stas:fix, get PRs"
+      "description": "Install the app on your repo, label issues with syntaro:fix, get PRs"
     },
     "rest_api": {
-      "name": "STAS REST API",
+      "name": "SYNTARO REST API",
       "type": "REST API",
       "description": "Programmatic access via RapidAPI or direct endpoint",
       "docs_url": "https://github.com/tamnguyen08/solving_tickets_as_a_service#rapidapi-marketplace"
     },
     "mcp_server": {
-      "name": "STAS MCP Server",
+      "name": "SYNTARO MCP Server",
       "type": "MCP Server",
-      "description": "Use STAS tools from any MCP-compatible client (Claude, Cursor, Windsurf)",
+      "description": "Use SYNTARO tools from any MCP-compatible client (Claude, Cursor, Windsurf)",
       "install": "npx -y @aimino/syntaro-mcp",
       "config_file": "./mcp-server.json"
     },
     "opencode_skill": {
-      "name": "STAS OpenCode Skill",
+      "name": "SYNTARO OpenCode Skill",
       "type": "Agent Skill",
-      "description": "OpenCode/OpenClaw agents can invoke STAS tools directly",
+      "description": "OpenCode/OpenClaw agents can invoke SYNTARO tools directly",
       "skill_file": "./skill.md"
     },
     "github_action": {
-      "name": "STAS Eval Action",
+      "name": "SYNTARO Eval Action",
       "type": "GitHub Action",
-      "description": "Run STAS eval suites in your CI pipeline",
-      "action_ref": "Aimino-Tech/stas-eval-action@v1"
+      "description": "Run SYNTARO eval suites in your CI pipeline",
+      "action_ref": "Aimino-Tech/syntaro-eval-action@v1"
     }
   },
   "quick_links": {
@@ -148,7 +148,7 @@
     "roadmap": "https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/ROADMAP.md"
   },
   "keywords": [
-    "stas",
+    "syntaro",
     "github-bot",
     "issue-fixer",
     "automated-fix",

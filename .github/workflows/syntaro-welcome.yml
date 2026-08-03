@@ -1,7 +1,7 @@
-name: STAS Welcome
+name: SYNTARO Welcome
 on:
   repository_dispatch:
-    types: [stas-installed]
+    types: [syntaro-installed]
 
 jobs:
   create-welcome-issue:
@@ -15,27 +15,27 @@ jobs:
             const issue = await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: "🎉 Welcome! STAS is ready to fix your issues",
+              title: "🎉 Welcome! SYNTARO is ready to fix your issues",
               body: [
-                "## 🎉 STAS is now active on this repository!",
+                "## 🎉 SYNTARO is now active on this repository!",
                 "",
                 "**Solving Tickets As A Service** is installed and ready to help.",
                 "",
                 "### How it works",
                 "",
                 "1. **Create an issue** describing a bug or desired change",
-                "2. **Label it** with `stas:fix`",
-                "3. **STAS investigates**, generates a fix, runs tests, and opens a PR",
+                "2. **Label it** with `syntaro:fix`",
+                "3. **SYNTARO investigates**, generates a fix, runs tests, and opens a PR",
                 "",
                 "### Try it now",
                 "",
-                "This issue is already labeled with `stas:fix`. Watch what happens next —",
-                "STAS should automatically investigate and open a pull request.",
+                "This issue is already labeled with `syntaro:fix`. Watch what happens next —",
+                "SYNTARO should automatically investigate and open a pull request.",
                 "",
                 "---",
                 "",
-                "> 🚀 **Powered by [STAS](https://syntaro.io?ref=welcome-issue)** — Label any issue with `stas:fix` and get an AI-generated PR.",
+                "> 🚀 **Powered by [SYNTARO](https://syntaro.io?ref=welcome-issue)** — Label any issue with `syntaro:fix` and get an AI-generated PR.",
               ].join("\n"),
-              labels: ["stas:fix", "good-first-issue"],
+              labels: ["syntaro:fix", "good-first-issue"],
             });
             console.log(`Welcome issue created: ${issue.data.html_url}`);

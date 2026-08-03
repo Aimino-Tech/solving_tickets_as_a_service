@@ -7,21 +7,21 @@
  *   tsx scripts/smee.ts --url https://smee.io/my-channel --target http://localhost:3000/webhook
  *
  * Environment variables:
- *   SMEE_URL  — smee.io channel URL (default: https://smee.io/stas-dev)
- *   STAS_URL  — local webhook target (default: http://localhost:3000/webhook)
+ *   SMEE_URL  — smee.io channel URL (default: https://smee.io/syntaro-dev)
+ *   SYNTARO_URL  — local webhook target (default: http://localhost:3000/webhook)
  */
 
 import process from "node:process";
 import SmeeClient from "smee-client";
 import "dotenv/config";
 
-const SMEE_DEFAULT = "https://smee.io/stas-dev";
-const STAS_DEFAULT = "http://localhost:3000/webhook";
+const SMEE_DEFAULT = "https://smee.io/syntaro-dev";
+const SYNTARO_DEFAULT = "http://localhost:3000/webhook";
 
 function parseArgs(): { source: string; target: string } {
   const args = process.argv.slice(2);
   let source = process.env.SMEE_URL ?? SMEE_DEFAULT;
-  let target = process.env.STAS_URL ?? STAS_DEFAULT;
+  let target = process.env.SYNTARO_URL ?? SYNTARO_DEFAULT;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--url" && args[i + 1]) {

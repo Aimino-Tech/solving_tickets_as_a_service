@@ -126,7 +126,7 @@ class InMemoryWizardStore implements WizardStateStore {
  */
 class RedisWizardStore implements WizardStateStore {
   private redis: import('ioredis').Redis | null = null;
-  private readonly prefix = 'stas:wizard:';
+  private readonly prefix = 'syntaro:wizard:';
   private readonly ttlSeconds = 86400 * 7; // 7 days
 
   private async getClient(): Promise<import('ioredis').Redis> {
@@ -185,7 +185,7 @@ let store: WizardStateStore = new InMemoryWizardStore();
  * In hosted mode, a Redis store is used. In OSS mode, in-memory.
  */
 export function initWizardStore(): void {
-  if (config.stas.mode === 'hosted') {
+  if (config.syntaro.mode === 'hosted') {
     store = new RedisWizardStore();
     log.info('Onboarding wizard using Redis store');
   } else {

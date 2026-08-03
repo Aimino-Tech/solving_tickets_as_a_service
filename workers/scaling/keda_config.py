@@ -38,13 +38,13 @@ logger = logging.getLogger(__name__)
 # scaling for that queue.
 
 QUEUE_SCALING_THRESHOLDS: dict[str, int] = {
-    "stas.agents.triage": 5,
-    "stas.agents.dispatch": 2,
-    "stas.agents.sandbox": 3,
-    "stas.agents.verification": 3,
-    "stas.agents.pr_creation": 5,
-    "stas.agents.notifications": 10,
-    "stas.agents.default": 5,
+    "syntaro.agents.triage": 5,
+    "syntaro.agents.dispatch": 2,
+    "syntaro.agents.sandbox": 3,
+    "syntaro.agents.verification": 3,
+    "syntaro.agents.pr_creation": 5,
+    "syntaro.agents.notifications": 10,
+    "syntaro.agents.default": 5,
 }
 
 # ---------------------------------------------------------------------------
@@ -55,13 +55,13 @@ QUEUE_SCALING_THRESHOLDS: dict[str, int] = {
 # means the queue can scale to zero workers.
 
 QUEUE_CONCURRENCY: dict[str, tuple[int, int]] = {
-    "stas.agents.triage": (1, 4),
-    "stas.agents.dispatch": (0, 4),
-    "stas.agents.sandbox": (1, 6),
-    "stas.agents.verification": (1, 4),
-    "stas.agents.pr_creation": (0, 3),
-    "stas.agents.notifications": (1, 3),
-    "stas.agents.default": (1, 2),
+    "syntaro.agents.triage": (1, 4),
+    "syntaro.agents.dispatch": (0, 4),
+    "syntaro.agents.sandbox": (1, 6),
+    "syntaro.agents.verification": (1, 4),
+    "syntaro.agents.pr_creation": (0, 3),
+    "syntaro.agents.notifications": (1, 3),
+    "syntaro.agents.default": (1, 2),
 }
 
 DEFAULT_MIN_CONCURRENCY: int = 1

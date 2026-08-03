@@ -1,5 +1,5 @@
 """
-STAS agent pipeline tasks.
+SYNTARO agent pipeline tasks.
 
 Wraps the existing workers.tasks modules into Celery chains for
 end-to-end issue processing: triage → agent dispatch → sandbox →
@@ -106,7 +106,7 @@ def run_issue_pipeline(
     if engine is not None:
         try:
             issue_id = f"{repo_full_name}#{issue_number or 'unknown'}"
-            engine.start_pipeline(issue_id, "stas:fix", ctx)
+            engine.start_pipeline(issue_id, "syntaro:fix", ctx)
             logger.info("Pipeline dispatched via PipelineEngine for %s", issue_id)
             return {"run_id": str(run.id), "status": AgentRun.Status.TRIAGE, "via": "PipelineEngine"}
         except Exception as exc:
@@ -321,7 +321,7 @@ def create_pr(self, previous_result: dict):
 
     # Build the fix_result and repo_info for the PR creation task
     fix_result = {
-        "branch": branch or f"stas/fix-issue-{issue_number or 'unknown'}",
+        "branch": branch or f"syntaro/fix-issue-{issue_number or 'unknown'}",
         "base_branch": "main",
         "summary": f"Automated fix for {issue_url}",
     }
@@ -388,7 +388,7 @@ def send_notifications(previous_result: dict):
 
         # Post a comment on the GitHub issue
         message = (
-            f"🤖 **STAS** completed its analysis.\n\n"
+            f"🤖 **SYNTARO** completed its analysis.\n\n"
             f"**Result**: {pr_url}\n"
         )
         if pr_result.get("status") == "created":
@@ -408,7 +408,7 @@ def send_notifications(previous_result: dict):
         # Also try Slack if configured
         send_notification(
             channel="slack",
-            message=f"STAS completed: {pr_url} for {issue_url}",
+            message=f"SYNTARO completed: {pr_url} for {issue_url}",
         )
 
     except Exception as exc:

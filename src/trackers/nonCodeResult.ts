@@ -48,7 +48,7 @@ export async function postNonCodeResult(
     evidenceSection,
     '',
     '---',
-    '_Posted automatically by STAS_',
+    '_Posted automatically by SYNTARO_',
   ].join('\n');
 
   try {

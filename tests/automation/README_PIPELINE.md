@@ -1,4 +1,4 @@
-# STAS + OpenSymphony Automation Testing Pipeline
+# SYNTARO + OpenSymphony Automation Testing Pipeline
 
 ## Architecture
 
@@ -50,7 +50,7 @@
 │  │  ├─ 04-runs/          — Runs list/detail tests             │       │
 │  │  ├─ 05-analytics/     — Analytics charts tests             │       │
 │  │  └─ 06-integration/   — ★ FE+BE integration tests          │       │
-│  │     ├─ dispatch-to-osy    — STAS → OpenSymphony dispatch   │       │
+│  │     ├─ dispatch-to-osy    — SYNTARO → OpenSymphony dispatch   │       │
 │  │     └─ fe-be-consistency  — FE data matches BE data        │       │
 │  └────────────────────────────────────────────────────────────┘       │
 │                                                                       │
@@ -69,7 +69,7 @@
 
 Systems Under Test:
 ┌─────────────────────┐          ┌─────────────────────────────┐
-│  STAS (Frontend)    │          │  OpenSymphony (Backend)     │
+│  SYNTARO (Frontend)    │          │  OpenSymphony (Backend)     │
 │  React Dashboard    │──HTTP──▶ │  Elixir/Phoenix API         │
 │  Express Server     │  POST    │  ├─ POST /api/v1/dispatch   │
 │  Port 3000          │  +Auth   │  ├─ GET  /healthz           │
@@ -89,7 +89,7 @@ Systems Under Test:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STAS_URL` | `http://localhost:3000` | STAS frontend URL |
+| `SYNTARO_URL` | `http://localhost:3000` | SYNTARO frontend URL |
 | `OSY_URL` | `http://localhost:4096` | OpenSymphony backend URL |
 | `OSY_API_KEY` | — | API key for OpenSymphony auth |
 | `AUTOMATION_ROOT` | `./tests/automation` | Root directory for reports |
@@ -118,8 +118,8 @@ UPDATE_BASELINES=true npx playwright test --config tests/automation/playwright.c
 ```yaml
 # docker-compose.test.yml
 services:
-  stas:
-    image: stas:latest
+  syntaro:
+    image: syntaro:latest
     ports: ["3000:3000"]
     environment:
       - OPENSYMPHONY_DISPATCH_URL=http://opensymphony:4096/api/v1/dispatch
@@ -136,7 +136,7 @@ services:
 
 ## How to Add a New Test
 
-1. **Identify the component**: Is it FE (STAS dashboard), BE (OpenSymphony API), or integration?
+1. **Identify the component**: Is it FE (SYNTARO dashboard), BE (OpenSymphony API), or integration?
 
 2. **Create Page Object** (if new page):
    ```typescript
@@ -150,7 +150,7 @@ services:
 3. **Create test file**:
    ```typescript
    // tests/03-my-feature/my-test.test.ts
-   import { test, expect } from '../../fixtures/stas-fixtures.js';
+   import { test, expect } from '../../fixtures/syntaro-fixtures.js';
 
    test.describe('My Feature', () => {
      test('works correctly', async ({ loggedPage }) => {
@@ -239,7 +239,7 @@ Every ticket MUST contain the following sections. AI agents tend to skip details
 ```markdown
 # TICKET-{ID}: {Short Descriptive Title}
 
-> **Project**: [STAS - Solving Tickets As A Service](https://linear.app/aimino/project/stas-solving-tickets-as-a-service-7ce85efdc6bd/overview)
+> **Project**: [SYNTARO - Solving Tickets As A Service](https://linear.app/aimino/project/syntaro-solving-tickets-as-a-service-7ce85efdc6bd/overview)
 > **Team**: [AIM - All](https://linear.app/aimino/team/AIM/all)
 > **Status**: `open` | `in_progress` | `merged` | `closed`
 > **Type**: `bug` | `feature` | `task` | `automation`
@@ -389,7 +389,7 @@ cat tests/automation/.tickets/BIG-001-automation-testing-system.md
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| BIG-001 | Automation Testing System — STAS (FE) + OpenSymphony (BE) | `open` | `.tickets/BIG-001-automation-testing-system.md` |
+| BIG-001 | Automation Testing System — SYNTARO (FE) + OpenSymphony (BE) | `open` | `.tickets/BIG-001-automation-testing-system.md` |
 
 > **Note**: Linear API is not configured in this environment (`LINEAR_API_KEY` missing). Tickets are stored as markdown files in `tests/automation/.tickets/`. To create Linear tickets:
 > 1. Set `LINEAR_API_KEY` environment variable

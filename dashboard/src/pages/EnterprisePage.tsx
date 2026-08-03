@@ -11,9 +11,9 @@ const FEATURES = [
   { k: 'audit_log', l: 'Audit Log Export', d: 'Export audit logs to your SIEM via webhook or S3.', c: 'security' },
   { k: 'priority', l: 'Priority Queue', d: 'Fixes dispatched ahead of all lower-tier tenants.', c: 'performance' },
   { k: 'sandbox', l: 'Private Sandbox', d: 'Dedicated sandbox environment with no colocation.', c: 'security' },
-  { k: 'vpc', l: 'VPC Private Link', d: 'Deploy STAS within your VPC via AWS PrivateLink or Azure Private Link.', c: 'infra' },
+  { k: 'vpc', l: 'VPC Private Link', d: 'Deploy SYNTARO within your VPC via AWS PrivateLink or Azure Private Link.', c: 'infra' },
   { k: 'scim', l: 'SCIM Provisioning', d: 'Automated user provisioning and deprovisioning via SCIM 2.0.', c: 'security' },
-  { k: 'onprem', l: 'On-Premise Deploy', d: 'Deploy the full STAS stack in your own data center.', c: 'infra' },
+  { k: 'onprem', l: 'On-Premise Deploy', d: 'Deploy the full SYNTARO stack in your own data center.', c: 'infra' },
   { k: 'webhooks', l: 'Custom Webhooks', d: 'Custom webhook endpoints with retry, auth, and rate limiting.', c: 'integ' },
   { k: 'model', l: 'Dedicated AI Model', d: 'Dedicated AGI instance for your organization.', c: 'ai' },
 ];

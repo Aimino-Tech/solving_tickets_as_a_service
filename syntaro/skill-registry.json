@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "skills": [
     {
-      "name": "stas",
-      "description": "STAS — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs.",
+      "name": "syntaro",
+      "description": "SYNTARO — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs.",
       "version": "0.2.0",
       "author": "Aimino Tech",
       "license": "MIT",
       "homepage": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
-      "installUrl": "https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/stas/SKILL.md",
+      "installUrl": "https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/syntaro/SKILL.md",
       "tags": ["github", "automation", "code-review", "pr-creation", "bug-fixing", "mcp"],
       "categories": ["productivity", "developer-tools", "ci-cd"],
       "platforms": ["opencode", "openclaw", "claude-code"],
@@ -23,12 +23,12 @@
         }
       },
       "mcpServers": {
-        "stas": {
+        "syntaro": {
           "command": "python3",
           "args": ["-m", "syntaro_mcp.server", "stdio"],
           "env": {
-            "STAS_API_KEY": { "description": "STAS API key for authentication", "required": true, "secret": true },
-            "STAS_API_URL": { "description": "STAS API base URL", "required": false, "default": "https://api.syntaro.io" },
+            "SYNTARO_API_KEY": { "description": "SYNTARO API key for authentication", "required": true, "secret": true },
+            "SYNTARO_API_URL": { "description": "SYNTARO API base URL", "required": false, "default": "https://api.syntaro.io" },
             "GITHUB_TOKEN": { "description": "GitHub personal access token", "required": false, "secret": true }
           }
         }

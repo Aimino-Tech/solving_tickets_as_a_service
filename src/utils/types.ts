@@ -1,5 +1,5 @@
 /**
- * Shared type definitions for STAS.
+ * Shared type definitions for SYNTARO.
  */
 
 export interface IssueJobData {
@@ -36,7 +36,7 @@ export interface IssueJobData {
   /** Job priority (lower = higher priority). Free=30, Pro=20, Enterprise=10. */
   priority?: number;
 
-  /** GitHub/Linear issue labels (e.g. ['bug', 'stas:fix']). Used for triage classification. */
+  /** GitHub/Linear issue labels (e.g. ['bug', 'syntaro:fix']). Used for triage classification. */
   labels?: string[];
 
   /** Originating channel for progress updates ('slack', 'telegram', 'whatsapp', etc.). */
@@ -47,7 +47,7 @@ export interface IssueJobData {
 }
 
 /**
- * Triage job data sent to the stas.agents.triage queue.
+ * Triage job data sent to the syntaro.agents.triage queue.
  */
 export interface TriageData {
   installationId: number;
@@ -73,7 +73,7 @@ export interface TriageData {
   /** Job priority (lower = higher priority). Free=30, Pro=20, Enterprise=10. */
   priority?: number;
 
-  /** GitHub/Linear issue labels (e.g. ['bug', 'stas:fix']). Used for triage classification. */
+  /** GitHub/Linear issue labels (e.g. ['bug', 'syntaro:fix']). Used for triage classification. */
   labels?: string[];
 }
 
@@ -87,7 +87,7 @@ export interface MessageEnvelope {
   messageId: string;
   /** ISO 8601 timestamp of when the message was created. */
   timestamp: string;
-  /** Service or component that produced this message (e.g. "stas-bot"). */
+  /** Service or component that produced this message (e.g. "syntaro-bot"). */
   source: string;
   /** Message type (e.g. "fix", "triage", "opencode"). */
   type: string;
@@ -106,7 +106,7 @@ export interface BillingPlan {
 }
 
 /**
- * Verification job data sent to the stas.agents.verification queue.
+ * Verification job data sent to the syntaro.agents.verification queue.
  */
 export interface VerificationData {
   sandboxId: string;
@@ -116,7 +116,7 @@ export interface VerificationData {
 }
 
 /**
- * PR creation job data sent to the stas.agents.pr_creation queue.
+ * PR creation job data sent to the syntaro.agents.pr_creation queue.
  */
 export interface PRCreationData {
   installationId: number;
@@ -131,7 +131,7 @@ export interface PRCreationData {
 }
 
 /**
- * Notification job data sent to the stas.events.notifications queue.
+ * Notification job data sent to the syntaro.events.notifications queue.
  */
 export interface NotificationData {
   channel: 'slack' | 'webhook' | 'email';

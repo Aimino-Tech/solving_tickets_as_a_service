@@ -170,7 +170,7 @@
     }
   },
   "metadata": {
-    "source": "STAS WORKFLOW.md zero-tolerance policy + quality-gates.sh patterns + empirical analysis",
+    "source": "SYNTARO WORKFLOW.md zero-tolerance policy + quality-gates.sh patterns + empirical analysis",
     "target_model_types": [
       "deepseek-reasoner",
       "claude-sonnet",

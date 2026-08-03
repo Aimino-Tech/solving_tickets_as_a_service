@@ -57,8 +57,8 @@ _TIER_LRU_MAX: dict[str, int] = {
 }
 
 # Redis key prefixes
-_REDIS_QUOTA_PREFIX = "stas:oss:quota:"
-_REDIS_LRU_PREFIX = "stas:oss:lru:"
+_REDIS_QUOTA_PREFIX = "syntaro:oss:quota:"
+_REDIS_LRU_PREFIX = "syntaro:oss:lru:"
 _REDIS_USAGE_KEY = lambda tenant: f"{_REDIS_QUOTA_PREFIX}{tenant}:usage"
 _REDIS_WORKSPACE_ACCESS_KEY = lambda tenant: f"{_REDIS_LRU_PREFIX}{tenant}:access"
 

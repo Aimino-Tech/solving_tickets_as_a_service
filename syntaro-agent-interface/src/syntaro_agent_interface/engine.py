@@ -3,20 +3,20 @@ import json, logging, os
 from datetime import datetime, timezone
 from typing import Any, Optional
 import httpx
-from stas_agent_interface.models import Capability, CapabilityList, AuthScope, SubmitIssueRequest, SubmitIssueResponse, CheckStatusRequest, CheckStatusResponse, RunHistoryRequest, RunHistoryResponse, RunEntry, ListReposRequest, ListReposResponse, RepoEntry, GetPricingRequest, GetPricingResponse, PlanEntry
+from syntaro_agent_interface.models import Capability, CapabilityList, AuthScope, SubmitIssueRequest, SubmitIssueResponse, CheckStatusRequest, CheckStatusResponse, RunHistoryRequest, RunHistoryResponse, RunEntry, ListReposRequest, ListReposResponse, RepoEntry, GetPricingRequest, GetPricingResponse, PlanEntry
 
 logger = logging.getLogger(__name__)
 
 CAPABILITY_DEFINITIONS: list[Capability] = [
-    Capability(name="list_capabilities", description="Auto-discover all STAS capabilities", required_scope=AuthScope.READ),
-    Capability(name="submit_issue", description="Submit a GitHub issue to the STAS fix pipeline", required_scope=AuthScope.WRITE),
+    Capability(name="list_capabilities", description="Auto-discover all SYNTARO capabilities", required_scope=AuthScope.READ),
+    Capability(name="submit_issue", description="Submit a GitHub issue to the SYNTARO fix pipeline", required_scope=AuthScope.WRITE),
     Capability(name="check_status", description="Check phased progress of a fix run", required_scope=AuthScope.READ),
     Capability(name="get_run_history", description="List recent fix runs", required_scope=AuthScope.READ),
     Capability(name="list_repos", description="List configured repositories", required_scope=AuthScope.READ),
     Capability(name="get_pricing", description="Get subscription pricing and tiers", required_scope=AuthScope.READ),
 ]
 
-STAS_PLANS: list[PlanEntry] = [
+SYNTARO_PLANS: list[PlanEntry] = [
     PlanEntry(id="free", name="Free", description="10 fixes/mo", amount_cents=0, monthly_fix_limit=10),
     PlanEntry(id="solo", name="Solo", description="100 fixes/mo, premium models", amount_cents=4900, monthly_fix_limit=100, premium_models=True, concurrent_fixes=3),
     PlanEntry(id="team", name="Team", description="500 fixes/mo, priority support", amount_cents=14900, monthly_fix_limit=500, premium_models=True, concurrent_fixes=10),
@@ -25,8 +25,8 @@ STAS_PLANS: list[PlanEntry] = [
 
 class STASEngine:
     def __init__(self, api_url: Optional[str] = None, api_key: Optional[str] = None):
-        self._api_url = (api_url or os.getenv("STAS_API_URL", "https://api.stas.aimino.io")).rstrip("/")
-        self._api_key = api_key or os.getenv("STAS_API_KEY", "")
+        self._api_url = (api_url or os.getenv("SYNTARO_API_URL", "https://api.syntaro.io")).rstrip("/")
+        self._api_key = api_key or os.getenv("SYNTARO_API_KEY", "")
         self._http: Optional[httpx.AsyncClient] = None
     async def _get_http(self) -> httpx.AsyncClient:
         if self._http is None:
@@ -61,7 +61,7 @@ class STASEngine:
         repos = _load_repos(req.platform)
         return ListReposResponse(repos=repos, total=len(repos))
     async def get_pricing(self, req: GetPricingRequest) -> GetPricingResponse:
-        plans = [p for p in STAS_PLANS if p.id == req.plan_id] if req.plan_id else list(STAS_PLANS)
+        plans = [p for p in SYNTARO_PLANS if p.id == req.plan_id] if req.plan_id else list(SYNTARO_PLANS)
         return GetPricingResponse(plans=plans)
     async def close(self) -> None:
         if self._http: await self._http.aclose(); self._http = None
@@ -70,7 +70,7 @@ def _s2p(s: str) -> float:
     return {"queued":5.0,"triaging":20.0,"dispatching":35.0,"verifying":60.0,"reviewing":80.0,"completed":100.0,"failed":100.0,"cancelled":100.0}.get(s,0.0)
 def _load_history(rf: Optional[str], lim: int) -> list[RunEntry]:
     try:
-        with open(os.getenv("FIX_REGISTRY_PATH","/tmp/stas-fix-registry.json")) as f: reg = json.load(f)
+        with open(os.getenv("FIX_REGISTRY_PATH","/tmp/syntaro-fix-registry.json")) as f: reg = json.load(f)
     except: return []
     entries = []
     for fid, fd in reg.items():
@@ -81,7 +81,7 @@ def _load_history(rf: Optional[str], lim: int) -> list[RunEntry]:
     return entries[:lim]
 def _load_repos(pf: Optional[str]) -> list[RepoEntry]:
     try:
-        with open(os.getenv("FIX_REGISTRY_PATH","/tmp/stas-fix-registry.json")) as f: reg = json.load(f)
+        with open(os.getenv("FIX_REGISTRY_PATH","/tmp/syntaro-fix-registry.json")) as f: reg = json.load(f)
     except: return []
     seen = {}
     for fd in reg.values():

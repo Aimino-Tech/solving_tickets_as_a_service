@@ -1,8 +1,8 @@
-# STAS Brand Usage Guidelines
+# SYNTARO Brand Usage Guidelines
 
 ## Logo Overview
 
-The STAS brand uses the **"Checkmark Hero"** concept — a ticket icon that morphs into a checkmark through negative space. The design communicates the core value proposition: turning tickets (issues) into solutions (PRs).
+The SYNTARO brand uses the **"Checkmark Hero"** concept — a ticket icon that morphs into a checkmark through negative space. The design communicates the core value proposition: turning tickets (issues) into solutions (PRs).
 
 ## Logo Variants
 
@@ -56,4 +56,4 @@ SVG is the primary format. For raster fallback contexts:
 
 ## Brand Lockup
 
-The STAS wordmark uses system font stack: `system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif` with 800 weight and 4px letter-spacing. The tagline "SOLVING TICKETS AS A SERVICE" uses 400 weight with 6px letter-spacing.
+The SYNTARO wordmark uses system font stack: `system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif` with 800 weight and 4px letter-spacing. The tagline "SOLVING TICKETS AS A SERVICE" uses 400 weight with 6px letter-spacing.

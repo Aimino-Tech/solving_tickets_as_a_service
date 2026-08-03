@@ -5,7 +5,7 @@ title: Benchmark Dashboard
 
 # Benchmark Dashboard
 
-This site shows automated benchmark results for the STAS agent pipeline.
+This site shows automated benchmark results for the SYNTARO agent pipeline.
 
 ## Latest Results
 

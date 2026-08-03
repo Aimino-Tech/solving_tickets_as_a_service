@@ -12,14 +12,14 @@ Integration
 The module can be used as a **drop-in supplement** to ``status_comments``.
 Call ``post_oss_comment`` alongside ``post_stage_comment`` when the pipeline
 knows it is operating in OSS mode (i.e. the request originated from a
-self-hosted instance rather than the STAS cloud).
+self-hosted instance rather than the SYNTARO cloud).
 
 Config
 ------
-``STAS_OSS_STATUS_ENABLED`` (env var, default ``"true"``):
+``SYNTARO_OSS_STATUS_ENABLED`` (env var, default ``"true"``):
     Set to ``"false"`` to disable OSS status comments globally.
 
-``STAS_OSS_STATUS_COALESCE_SECONDS`` (env var, default ``"3"``):
+``SYNTARO_OSS_STATUS_COALESCE_SECONDS`` (env var, default ``"3"``):
     Coalesce window for completed-stage events.
 
 Stage identifiers and their emoji prefixes:
@@ -76,11 +76,11 @@ OSS_STAGE_LABELS: dict[str, str] = {
 # ---------------------------------------------------------------------------
 
 OSS_STATUS_ENABLED = os.getenv(
-    "STAS_OSS_STATUS_ENABLED", "true",
+    "SYNTARO_OSS_STATUS_ENABLED", "true",
 ).lower() in ("true", "1", "yes")
 
 OSS_STATUS_COALESCE_SECONDS = float(
-    os.getenv("STAS_OSS_STATUS_COALESCE_SECONDS", "3"),
+    os.getenv("SYNTARO_OSS_STATUS_COALESCE_SECONDS", "3"),
 )
 
 # ---------------------------------------------------------------------------

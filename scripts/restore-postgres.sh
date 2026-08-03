@@ -76,7 +76,7 @@ parse_db_url() {
   DB_USER="${DB_USER:-postgres}"
   DB_HOST="${DB_HOST:-localhost}"
   DB_PORT="${DB_PORT:-5432}"
-  DB_NAME="${DB_NAME:-stas}"
+  DB_NAME="${DB_NAME:-syntaro}"
 }
 
 parse_db_url "$DATABASE_URL"

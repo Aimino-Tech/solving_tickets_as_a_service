@@ -1,12 +1,12 @@
-# Won't Train Guarantee — STAS
+# Won't Train Guarantee — SYNTARO
 
 > Effective: 2026-06-25
 
 ## Our Commitment
 
-STAS does not train AI models on customer code, issue content, or repository data.
+SYNTARO does not train AI models on customer code, issue content, or repository data.
 
-When you submit an issue to STAS for automated fixing, the data processed during the fix run is used exclusively to:
+When you submit an issue to SYNTARO for automated fixing, the data processed during the fix run is used exclusively to:
 1. Investigate the reported issue
 2. Generate and validate a fix
 3. Open a pull request

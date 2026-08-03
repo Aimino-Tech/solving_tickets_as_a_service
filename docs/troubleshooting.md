@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common STAS errors, their causes, and fixes.
+Common SYNTARO errors, their causes, and fixes.
 
 ## 1. "Installation Not Found"
 
@@ -11,18 +11,18 @@ Common STAS errors, their causes, and fixes.
 ## 2. "Webhook verification failed"
 
 **Error**: `Signature verification failed` in logs
-**Cause**: Mismatched `GITHUB_WEBHOOK_SECRET` between your STAS config and GitHub App settings.
+**Cause**: Mismatched `GITHUB_WEBHOOK_SECRET` between your SYNTARO config and GitHub App settings.
 **Fix**: 
 1. Copy the webhook secret from your GitHub App settings
 2. Update `GITHUB_WEBHOOK_SECRET` in your `.env` file
-3. Restart STAS
+3. Restart SYNTARO
 
 ## 3. "Agent timed out"
 
 **Error**: `OpenCode agent timed out on all models`
 **Cause**: The agent took longer than the timeout (default 10 minutes) to generate a fix.
 **Fix**:
-- Check if your repo is large — consider increasing `STAS_PHASE_TIMEOUT_OPENCODE_AGENT`
+- Check if your repo is large — consider increasing `SYNTARO_PHASE_TIMEOUT_OPENCODE_AGENT`
 - Check if OpenCode is running and healthy at `OPENCODE_URL`
 - Try labeling a simpler issue to verify the pipeline works
 
@@ -33,7 +33,7 @@ Common STAS errors, their causes, and fixes.
 **Fix**:
 - Make the issue description more specific (include error messages, reproduction steps)
 - Ensure the issue is labeled `bug` or has a clear fix scope
-- Check [Failure Modes](failure-modes.md) for what STAS can and cannot fix
+- Check [Failure Modes](failure-modes.md) for what SYNTARO can and cannot fix
 
 ## 5. "OpenCode connection refused"
 
@@ -81,27 +81,27 @@ docker pull node:20-bookworm-slim
 ## 9. "Rate limit exceeded"
 
 **Error**: `429 Too Many Requests` from GitHub API
-**Cause**: STAS exceeded GitHub's API rate limit.
+**Cause**: SYNTARO exceeded GitHub's API rate limit.
 **Fix**:
-- Reduce `STAS_MAX_CONCURRENT` in your config
+- Reduce `SYNTARO_MAX_CONCURRENT` in your config
 - Wait for the rate limit window to reset
 - If self-hosted, ensure your GitHub App has sufficient rate limit
 
 ## 10. "Label not triggering"
 
-**Error**: Labeling an issue with `stas:fix` does nothing
-**Cause**: Webhook not reaching STAS or label mismatch.
+**Error**: Labeling an issue with `syntaro:fix` does nothing
+**Cause**: Webhook not reaching SYNTARO or label mismatch.
 **Fix**:
 - Verify the webhook URL in your GitHub App points to `https://your-server/webhook`
-- Check the label name matches `STAS_LABEL` config (default: `stas:fix`)
+- Check the label name matches `SYNTARO_LABEL` config (default: `syntaro:fix`)
 - Check webhook delivery logs in GitHub App settings
 
 ## Common Configuration Issues
 
-### STAS_LABEL not matching
+### SYNTARO_LABEL not matching
 ```bash
 # Check your configured label
-echo $STAS_LABEL  # Should be 'stas:fix' unless customized
+echo $SYNTARO_LABEL  # Should be 'syntaro:fix' unless customized
 ```
 
 ### OpenCode not configured

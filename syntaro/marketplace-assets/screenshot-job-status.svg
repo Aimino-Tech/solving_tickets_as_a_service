@@ -3,10 +3,10 @@
   <!-- Dashboard panel -->
   <rect x="40" y="30" width="720" height="540" rx="12" fill="#2d2d44" stroke="#3d3d54" stroke-width="1"/>
   <!-- Header -->
-  <text x="400" y="65" text-anchor="middle" font-family="system-ui" font-size="20" font-weight="bold" fill="#ddd">STAS Job Dashboard</text>
+  <text x="400" y="65" text-anchor="middle" font-family="system-ui" font-size="20" font-weight="bold" fill="#ddd">SYNTARO Job Dashboard</text>
   <!-- Job status card -->
   <rect x="60" y="90" width="680" height="460" rx="10" fill="#252536"/>
-  <text x="80" y="125" font-family="system-ui" font-size="16" font-weight="bold" fill="#ddd">Job: stas_job_abc123</text>
+  <text x="80" y="125" font-family="system-ui" font-size="16" font-weight="bold" fill="#ddd">Job: syntaro_job_abc123</text>
   <!-- Status badge -->
   <rect x="600" y="105" width="120" height="28" rx="14" fill="#53d769" opacity="0.2"/>
   <text x="660" y="124" text-anchor="middle" font-family="system-ui" font-size="13" font-weight="bold" fill="#53d769">COMPLETED</text>
@@ -18,7 +18,7 @@
   <text x="80" y="275" font-family="system-ui" font-size="13" fill="#888">PR Created</text>
   <text x="80" y="295" font-family="system-ui" font-size="13" fill="#82b">https://github.com/owner/repo/pull/43</text>
   <text x="80" y="330" font-family="system-ui" font-size="13" fill="#888">Branch</text>
-  <text x="80" y="350" font-family="monospace" font-size="13" fill="#ddd">stas-fix/login-validation-bug</text>
+  <text x="80" y="350" font-family="monospace" font-size="13" fill="#ddd">syntaro-fix/login-validation-bug</text>
   <text x="80" y="385" font-family="system-ui" font-size="13" fill="#888">Summary</text>
   <text x="80" y="405" font-family="system-ui" font-size="13" fill="#ddd">Fixed input sanitization in login endpoint</text>
   <!-- Test results -->

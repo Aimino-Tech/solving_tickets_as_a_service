@@ -78,13 +78,13 @@ export class EvalSandbox implements SandboxExecutor {
 
     const totalTimeout = this.testCase.timeoutMs + 30000;
     const envs = sanitizeEnvironment({
-      STAS_EVAL_MODE: 'true',
-      STAS_REPO_URL: this.testCase.repo,
-      ...(this.testCase.runCommand ? { STAS_RUN_COMMAND: this.testCase.runCommand } : {}),
-      ...(this.testCase.installCommand ? { STAS_INSTALL_COMMAND: this.testCase.installCommand } : {}),
+      SYNTARO_EVAL_MODE: 'true',
+      SYNTARO_REPO_URL: this.testCase.repo,
+      ...(this.testCase.runCommand ? { SYNTARO_RUN_COMMAND: this.testCase.runCommand } : {}),
+      ...(this.testCase.installCommand ? { SYNTARO_INSTALL_COMMAND: this.testCase.installCommand } : {}),
     });
 
-    const templateId = config.e2b.evalTemplateId || 'stas-eval-hardened';
+    const templateId = config.e2b.evalTemplateId || 'syntaro-eval-hardened';
 
     try {
       this.sandbox = await Sandbox.create(templateId, {

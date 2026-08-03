@@ -19,8 +19,8 @@ vi.mock('@slack/bolt', () => ({
 
 const mockConfig: any = {
   config: {
-    stas: { botName: 'STAS' },
-    slack: { ticketEnabled: true, botToken: '', signingSecret: '', channel: '#stas-test', interactionsPath: '/slack/events' },
+    syntaro: { botName: 'SYNTARO' },
+    slack: { ticketEnabled: true, botToken: '', signingSecret: '', channel: '#syntaro-test', interactionsPath: '/slack/events' },
   },
 };
 

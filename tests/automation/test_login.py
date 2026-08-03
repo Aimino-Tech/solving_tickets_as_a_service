@@ -8,7 +8,7 @@ class TestLoginPageUI:
     def test_page_loads_correctly(self, page: Page, base_url: str):
         login_page = LoginPage(page, base_url)
         login_page.goto()
-        expect(page).to_have_title(re.compile(r"STAS Dashboard"))
+        expect(page).to_have_title(re.compile(r"SYNTARO Dashboard"))
         expect(login_page.page_title_heading).to_be_visible()
 
     def test_sign_in_and_register_tabs_visible(self, page: Page, base_url: str):

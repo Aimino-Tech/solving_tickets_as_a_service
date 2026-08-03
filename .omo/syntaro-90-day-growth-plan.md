@@ -1,4 +1,4 @@
-# STAS 90-Day Growth Plan
+# SYNTARO 90-Day Growth Plan
 
 > **Context**: SaaS-only hosted service. No self-host. Powered by OpenCode + frontier models. Competitors (Plip, KintsugiBot) wrap Claude — our moat is the integrated pipeline.
 
@@ -24,11 +24,11 @@
 
 | Product | Free | Entry | Scale | Cost/Fix |
 |---|---|---|---|---|
-| **Plip** | 10/mo | $39/mo (25 fixes) | $399/mo (100 fixes) | STAS at $49 gives 100 fixes vs Plip's 100 at $399 |
-| **Devin** | ❌ | $500/mo (50 fixes) | $5000+/mo | STAS is 10x cheaper per fix |
+| **Plip** | 10/mo | $39/mo (25 fixes) | $399/mo (100 fixes) | SYNTARO at $49 gives 100 fixes vs Plip's 100 at $399 |
+| **Devin** | ❌ | $500/mo (50 fixes) | $5000+/mo | SYNTARO is 10x cheaper per fix |
 | **Copilot** | ❌ | $19/mo | $39/mo/person | Per-seat, not per-fix |
-| **KintsugiBot** | 10/mo | $5/mo (100 fixes) | N/A | STAS uses frontier models (claude-sonnet-4), not Claude |
-| **STAS** | **10/mo** | **$49/mo (100 fixes)** | **$149/mo (500 fixes)** | **Best value** |
+| **KintsugiBot** | 10/mo | $5/mo (100 fixes) | N/A | SYNTARO uses frontier models (claude-sonnet-4), not Claude |
+| **SYNTARO** | **10/mo** | **$49/mo (100 fixes)** | **$149/mo (500 fixes)** | **Best value** |
 
 ### Upgrade Funnel
 

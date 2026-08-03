@@ -8,7 +8,7 @@ issue with noise.
 
 Config
 ------
-``STAS_STATUS_COMMENTS_ENABLED`` (env var, default ``"true"``):
+``SYNTARO_STATUS_COMMENTS_ENABLED`` (env var, default ``"true"``):
     Set to ``"false"`` to disable all status comments globally.
 
 Usage
@@ -98,7 +98,7 @@ TASK_STAGE_MAP: dict[str, str] = {
 # ---------------------------------------------------------------------------
 
 STATUS_COMMENTS_ENABLED = os.getenv(
-    "STAS_STATUS_COMMENTS_ENABLED", "true",
+    "SYNTARO_STATUS_COMMENTS_ENABLED", "true",
 ).lower() in ("true", "1", "yes")
 
 # ---------------------------------------------------------------------------

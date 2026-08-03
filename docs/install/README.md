@@ -1,4 +1,4 @@
-# STAS Installation Guide
+# SYNTARO Installation Guide
 
 > Choose your deployment path. Every option gets you from zero to your first automated fix in minutes.
 
@@ -13,16 +13,16 @@
 
 ## Option 1: Cloud (Recommended for Most Users)
 
-**Install STAS Cloud in 3 clicks — no configuration needed.**
+**Install SYNTARO Cloud in 3 clicks — no configuration needed.**
 
 1. **Install from GitHub Marketplace**
-   Visit [STAS on GitHub Marketplace](https://github.com/marketplace/actions/stas-eval) and click **Install**.
+   Visit [SYNTARO on GitHub Marketplace](https://github.com/marketplace/actions/syntaro-eval) and click **Install**.
 
 2. **Select repositories**
    Choose `All repositories` or pick specific repos.
 
 3. **Label an issue**
-   Add the label `stas:fix` to any open issue — your first fix arrives in ~60 seconds.
+   Add the label `syntaro:fix` to any open issue — your first fix arrives in ~60 seconds.
 
 **That's it.** No servers, no environment variables, no configuration. Free tier includes 50 fixes/month for public repos.
 
@@ -30,7 +30,7 @@
 
 ## Option 2: Self-Host with Docker Compose
 
-Run STAS on your own infrastructure for full control and data sovereignty.
+Run SYNTARO on your own infrastructure for full control and data sovereignty.
 
 ### Prerequisites
 
@@ -46,7 +46,7 @@ Run STAS on your own infrastructure for full control and data sovereignty.
 
 1. Go to **GitHub Settings → Developer settings → GitHub Apps → New GitHub App**
 2. Fill in:
-   - **GitHub App name**: `stas-<your-org>` (must be unique)
+   - **GitHub App name**: `syntaro-<your-org>` (must be unique)
    - **Homepage URL**: `https://github.com/Aimino-Tech/solving_tickets_as_a_service`
    - **Webhook URL**: `https://your-domain.com/api/webhook/github` (update after deploy)
    - **Webhook secret**: Generate a random secret, save it for `.env`
@@ -78,7 +78,7 @@ Edit `.env` with your GitHub App credentials:
 ```bash
 # GitHub App (required)
 GITHUB_APP_ID=123456                         # From app settings page
-GITHUB_APP_PRIVATE_KEY_PATH=./stas.private-key.pem  # Path to your .pem file
+GITHUB_APP_PRIVATE_KEY_PATH=./syntaro.private-key.pem  # Path to your .pem file
 GITHUB_WEBHOOK_SECRET=your-webhook-secret    # The secret from step 1
 
 # LLM Provider (choose at least one)
@@ -97,8 +97,8 @@ docker compose up -d
 ```
 
 This starts:
-- `stas-redis` — Redis 7 (persistent, health-checked)
-- `stas-bot` — STAS bot with hot-reload
+- `syntaro-redis` — Redis 7 (persistent, health-checked)
+- `syntaro-bot` — SYNTARO bot with hot-reload
 
 Verify all services are healthy:
 
@@ -125,9 +125,9 @@ curl http://localhost:4096/health
 
 1. **Update your GitHub App's webhook URL** to point to your server (use a tunnel like `smee.io` for local dev, or deploy with a public URL)
 2. Go to any repo where the app is installed
-3. Label an issue with `stas:fix`
+3. Label an issue with `syntaro:fix`
 4. Watch the logs: `docker compose logs -f`
-5. Within ~60 seconds, STAS should post a plan comment and open a PR
+5. Within ~60 seconds, SYNTARO should post a plan comment and open a PR
 
 ### Configuration Reference
 
@@ -142,8 +142,8 @@ curl http://localhost:4096/health
 | `REDIS_URL` | No | `redis://localhost:6379` | Redis connection URL |
 | `PORT` | No | `3000` | HTTP server port |
 | `LOG_LEVEL` | No | `info` | Log verbosity (`debug`, `info`, `warn`, `error`) |
-| `STAS_LABEL` | No | `stas:fix` | Trigger issue label |
-| `BOT_NAME` | No | `STAS` | Bot display name |
+| `SYNTARO_LABEL` | No | `syntaro:fix` | Trigger issue label |
+| `BOT_NAME` | No | `SYNTARO` | Bot display name |
 | `E2B_API_KEY` | No | — | E2B sandbox API key (cloud sandbox) |
 
 \* Either `GITHUB_APP_PRIVATE_KEY` or `GITHUB_APP_PRIVATE_KEY_PATH` is required.
@@ -163,10 +163,10 @@ docker compose up -d
 docker compose logs -f
 
 # Follow a specific service
-docker compose logs -f stas-bot
+docker compose logs -f syntaro-bot
 
 # Search for errors
-docker compose logs stas-bot | grep -i error
+docker compose logs syntaro-bot | grep -i error
 
 # Last 100 lines
 docker compose logs --tail=100
@@ -176,7 +176,7 @@ docker compose logs --tail=100
 
 ## Option 3: Kubernetes (Enterprise)
 
-Deploy STAS on Kubernetes for production-grade orchestration, autoscaling, and multi-team isolation.
+Deploy SYNTARO on Kubernetes for production-grade orchestration, autoscaling, and multi-team isolation.
 
 ### Prerequisites
 
@@ -191,18 +191,18 @@ Deploy STAS on Kubernetes for production-grade orchestration, autoscaling, and m
 
 ```bash
 # Create namespace
-kubectl create namespace stas
+kubectl create namespace syntaro
 
 # GitHub App credentials
-kubectl create secret generic stas-github \
-  --namespace stas \
+kubectl create secret generic syntaro-github \
+  --namespace syntaro \
   --from-literal=app-id=123456 \
   --from-literal=webhook-secret=your-webhook-secret \
-  --from-file=private-key=./stas.private-key.pem
+  --from-file=private-key=./syntaro.private-key.pem
 
 # LLM API keys
-kubectl create secret generic stas-llm \
-  --namespace stas \
+kubectl create secret generic syntaro-llm \
+  --namespace syntaro \
   --from-literal=openai-api-key=sk-... \
   --from-literal=anthropic-api-key=sk-ant-...
 ```
@@ -211,11 +211,11 @@ kubectl create secret generic stas-llm \
 
 ```bash
 # Using kubectl
-kubectl apply -f k8s/ --namespace stas
+kubectl apply -f k8s/ --namespace syntaro
 
 # Verify deployment
-kubectl get pods --namespace stas
-kubectl get svc --namespace stas
+kubectl get pods --namespace syntaro
+kubectl get svc --namespace syntaro
 ```
 
 ### Step 3: Set Up Ingress
@@ -226,8 +226,8 @@ Create an ingress for webhook delivery:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: stas-ingress
-  namespace: stas
+  name: syntaro-ingress
+  namespace: syntaro
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: 32m
@@ -235,36 +235,36 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - stas.your-domain.com
-    secretName: stas-tls
+    - syntaro.your-domain.com
+    secretName: syntaro-tls
   rules:
-  - host: stas.your-domain.com
+  - host: syntaro.your-domain.com
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: stas-webhook
+            name: syntaro-webhook
             port:
               number: 3000
 ```
 
 ### Step 4: Configure GitHub App Webhook
 
-Update your GitHub App's webhook URL to: `https://stas.your-domain.com/api/webhook/github`
+Update your GitHub App's webhook URL to: `https://syntaro.your-domain.com/api/webhook/github`
 
 ### Step 5: Verify
 
 ```bash
 # Check pod health
-kubectl get pods --namespace stas -w
+kubectl get pods --namespace syntaro -w
 
 # Check logs
-kubectl logs --namespace stas -l app=stas-webhook
+kubectl logs --namespace syntaro -l app=syntaro-webhook
 
 # Test health endpoint
-kubectl port-forward --namespace stas svc/stas-webhook 3000:3000 &
+kubectl port-forward --namespace syntaro svc/syntaro-webhook 3000:3000 &
 curl http://localhost:3000/health
 ```
 
@@ -274,7 +274,7 @@ The Kubernetes deployment includes a KEDA `ScaledObject` for event-driven autosc
 
 ```bash
 # Scale based on queue depth
-kubectl apply -f k8s/keda-scaled-object.yaml --namespace stas
+kubectl apply -f k8s/keda-scaled-object.yaml --namespace syntaro
 ```
 
 ---
@@ -311,7 +311,7 @@ fly deploy
 
 - [ ] Webhook ping received (GitHub App settings → Advanced → Recent deliveries)
 - [ ] `GET /health` returns `200 OK`
-- [ ] Label an issue with `stas:fix` → STAS posts a comment within 15 seconds
+- [ ] Label an issue with `syntaro:fix` → SYNTARO posts a comment within 15 seconds
 - [ ] Plan appears within 15 seconds of the comment
 - [ ] PR appears within 60 seconds of the plan
 - [ ] Tests pass on the generated PR
@@ -332,14 +332,14 @@ grep GITHUB_WEBHOOK_SECRET .env
 # Update GitHub App settings if needed, or update .env
 ```
 
-### "STAS didn't respond to my comment"
+### "SYNTARO didn't respond to my comment"
 
-**Cause:** Webhook not reaching STAS, or label not matching.
+**Cause:** Webhook not reaching SYNTARO, or label not matching.
 
 **Check:**
 1. Verify webhook delivery in GitHub App settings (Advanced → Recent deliveries)
-2. Check STAS logs: `docker compose logs stas-bot | grep "webhook"`
-3. Verify trigger label: `grep STAS_LABEL .env` (default: `stas:fix`)
+2. Check SYNTARO logs: `docker compose logs syntaro-bot | grep "webhook"`
+3. Verify trigger label: `grep SYNTARO_LABEL .env` (default: `syntaro:fix`)
 4. Verify the label exists on the repo (create it if not)
 
 ### "Fix keeps failing"
@@ -365,8 +365,8 @@ curl -H "Authorization: Bearer $OPENAI_API_KEY" https://api.openai.com/v1/models
 redis-cli -u redis://localhost:6379 ping
 
 # Check if Redis is running
-docker compose ps stas-redis
-docker compose logs stas-redis
+docker compose ps syntaro-redis
+docker compose logs syntaro-redis
 ```
 
 ### "OpenCode connection refused"
@@ -412,7 +412,7 @@ For the production Docker Compose stack:
 docker compose -f docker-compose.prod.yml logs postgres
 
 # Run database migrations
-docker compose -f docker-compose.prod.yml exec stas-webhook npm run db:migrate
+docker compose -f docker-compose.prod.yml exec syntaro-webhook npm run db:migrate
 ```
 
 ---

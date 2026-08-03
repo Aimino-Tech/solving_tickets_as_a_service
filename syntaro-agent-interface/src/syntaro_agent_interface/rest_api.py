@@ -4,9 +4,9 @@ from typing import Any, Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from stas_agent_interface.auth import AuthMiddleware, AuthError, AuthScope, get_default_auth_middleware
-from stas_agent_interface.engine import STASEngine
-from stas_agent_interface.models import SubmitIssueRequest, CheckStatusRequest, RunHistoryRequest, ListReposRequest, GetPricingRequest, SCOPE_HIERARCHY
+from syntaro_agent_interface.auth import AuthMiddleware, AuthError, AuthScope, get_default_auth_middleware
+from syntaro_agent_interface.engine import STASEngine
+from syntaro_agent_interface.models import SubmitIssueRequest, CheckStatusRequest, RunHistoryRequest, ListReposRequest, GetPricingRequest, SCOPE_HIERARCHY
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +23,12 @@ def _cs(auth: AuthMiddleware, token, cap: str) -> None:
 
 def create_app(engine: Optional[STASEngine] = None, auth: Optional[AuthMiddleware] = None, require_auth: bool = True) -> FastAPI:
     eng = engine or STASEngine(); a = auth or get_default_auth_middleware()
-    app = FastAPI(title="STAS Agent Interface API", version="0.1.0")
+    app = FastAPI(title="SYNTARO Agent Interface API", version="0.1.0")
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
     @app.exception_handler(AuthError)
     async def aeh(rq: Request, exc: AuthError) -> JSONResponse: return JSONResponse(status_code=exc.status_code, content={"error": exc.message})
     @app.get("/health")
-    async def health(): return {"status": "ok", "service": "stas-agent-interface", "version": "0.1.0"}
+    async def health(): return {"status": "ok", "service": "syntaro-agent-interface", "version": "0.1.0"}
     @app.get("/capabilities")
     async def caps(rq: Request):
         if require_auth:
@@ -77,8 +77,8 @@ def create_app(engine: Optional[STASEngine] = None, auth: Optional[AuthMiddlewar
 
 def main() -> None:
     import uvicorn
-    p = int(os.getenv("STAS_REST_PORT","8090"))
-    ra = os.getenv("STAS_REQUIRE_AUTH","true").lower() == "true"
+    p = int(os.getenv("SYNTARO_REST_PORT","8090"))
+    ra = os.getenv("SYNTARO_REQUIRE_AUTH","true").lower() == "true"
     uvicorn.run(create_app(require_auth=ra), host="0.0.0.0", port=p, log_level="info")
 
 if __name__ == "__main__": main()

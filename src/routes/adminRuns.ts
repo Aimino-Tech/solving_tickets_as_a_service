@@ -1,7 +1,7 @@
 /**
  * Admin Runs API — manual fix flow for AI-disabled mode.
  *
- * When STAS_AI_DISABLED=true, issues are stored in `pending` state without
+ * When SYNTARO_AI_DISABLED=true, issues are stored in `pending` state without
  * dispatching to OpenCode. These endpoints allow operators to:
  *   - List queued runs (pending state)
  *   - Claim a run (assign to self)
@@ -95,7 +95,7 @@ router.get('/runs', async (req: Request, res: Response) => {
       total,
       limit,
       offset,
-      aiDisabled: config.stas.aiDisabled,
+      aiDisabled: config.syntaro.aiDisabled,
     });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to list admin runs');
@@ -129,7 +129,7 @@ router.get('/runs/pending', async (req: Request, res: Response) => {
       total,
       limit,
       offset,
-      aiDisabled: config.stas.aiDisabled,
+      aiDisabled: config.syntaro.aiDisabled,
     });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to list pending runs');
@@ -302,8 +302,8 @@ router.get('/runs/stats', async (_req: Request, res: Response) => {
 
     res.json({
       stats,
-      aiDisabled: config.stas.aiDisabled,
-      mode: config.stas.aiDisabled ? 'ai-disabled' : 'normal',
+      aiDisabled: config.syntaro.aiDisabled,
+      mode: config.syntaro.aiDisabled ? 'ai-disabled' : 'normal',
     });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to fetch run stats');

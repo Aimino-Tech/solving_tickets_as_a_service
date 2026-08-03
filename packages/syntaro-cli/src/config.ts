@@ -1,11 +1,11 @@
-export interface StasConfig {
+export interface SyntaroConfig {
   poweredBy?: string;
   githubToken?: string;
   installUrl?: string;
 }
 
-export function defaultConfig(): StasConfig {
+export function defaultConfig(): SyntaroConfig {
   return {
-    poweredBy: 'STAS — AI bug fixes for your repo',
+    poweredBy: 'SYNTARO — AI bug fixes for your repo',
   };
 }

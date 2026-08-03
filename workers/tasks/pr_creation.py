@@ -81,7 +81,7 @@ def _call_github(
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "STAS-Bot",
+        "User-Agent": "SYNTARO-Bot",
     }
     with httpx.Client() as client:
         resp = client.request(method, url, headers=headers, json=json_body)
@@ -125,7 +125,7 @@ def create_pull_request(self, fix_result: dict, repo_info: dict) -> dict:
     repo = repo_info.get("repo", "?")
     branch = fix_result.get("branch", "")
     base_branch = fix_result.get("base_branch", "main")
-    summary = fix_result.get("summary", "STAS automated fix")
+    summary = fix_result.get("summary", "SYNTARO automated fix")
     installation_id = repo_info.get("installation_id")
 
     logger.info(

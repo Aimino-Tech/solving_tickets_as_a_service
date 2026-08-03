@@ -1,6 +1,6 @@
 /**
  * MCP endpoint route -- agent discovery and protocol endpoints for the
- * STAS Model Context Protocol server.
+ * SYNTARO Model Context Protocol server.
  *
  * Mounted at /mcp in the Express app and provides:
  *   GET  /mcp/discovery    -- MCP server capabilities + tool/resource listing
@@ -30,9 +30,9 @@ const router: Router = Router();
 // ---------------------------------------------------------------------------
 
 router.get('/mcp/discovery', (_req: Request, res: Response) => {
-  const mcpServerUrl = process.env.STAS_MCP_SERVER_URL
-    || process.env.STAS_API_URL
-    || process.env.STAS_PUBLIC_URL
+  const mcpServerUrl = process.env.SYNTARO_MCP_SERVER_URL
+    || process.env.SYNTARO_API_URL
+    || process.env.SYNTARO_PUBLIC_URL
     || `http://localhost:${config.mcp.port}`;
   const protocol = config.mcp.ssl.enabled ? 'https' : 'http';
 
@@ -41,7 +41,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
       name: 'syntaro-agent-discovery',
       version: '1.0.0',
       protocolVersion: '2024-11-05',
-      description: 'STAS (Solving Tickets As A Service) -- label a GitHub issue and get a PR.',
+      description: 'SYNTARO (Solving Tickets As A Service) -- label a GitHub issue and get a PR.',
     },
     transports: [
       {
@@ -64,21 +64,21 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
     tools: [
       {
         name: 'syntaro_label_issue',
-        description: 'Label a GitHub issue with the STAS fix label (or custom label).',
+        description: 'Label a GitHub issue with the SYNTARO fix label (or custom label).',
         inputSchema: {
           type: 'object',
           properties: {
             owner: { type: 'string', description: 'Repository owner (user or org)' },
             repo: { type: 'string', description: 'Repository name' },
             issue_number: { type: 'integer', description: 'Issue number' },
-            label: { type: 'string', description: 'Label to apply (default: stas:fix)' },
+            label: { type: 'string', description: 'Label to apply (default: syntaro:fix)' },
           },
           required: ['owner', 'repo', 'issue_number'],
         },
       },
       {
         name: 'syntaro_run_fix',
-        description: 'Trigger the STAS fix pipeline for a GitHub issue URL. Returns a run_id for polling.',
+        description: 'Trigger the SYNTARO fix pipeline for a GitHub issue URL. Returns a run_id for polling.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -89,7 +89,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
       },
       {
         name: 'syntaro_check_status',
-        description: 'Check the current status of a STAS fix run by run_id.',
+        description: 'Check the current status of a SYNTARO fix run by run_id.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -100,7 +100,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
       },
       {
         name: 'syntaro_get_pr',
-        description: 'Get the pull request URL and details for a completed STAS fix run.',
+        description: 'Get the pull request URL and details for a completed SYNTARO fix run.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -111,7 +111,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
       },
       {
         name: 'list_issues',
-        description: 'List tracked issues with their STAS fix status, with optional filters.',
+        description: 'List tracked issues with their SYNTARO fix status, with optional filters.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -123,7 +123,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
       },
       {
         name: 'search_codebase',
-        description: 'Search the STAS codebase for symbols, files, or patterns.',
+        description: 'Search the SYNTARO codebase for symbols, files, or patterns.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -139,7 +139,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
       {
         uri: 'syntaro://runs/{run_id}',
         name: 'Fix Run Status',
-        description: 'Real-time status and PR link for a STAS fix run.',
+        description: 'Real-time status and PR link for a SYNTARO fix run.',
         mimeType: 'application/json',
       },
       {
@@ -189,7 +189,7 @@ router.post('/mcp/label', async (req: Request, res: Response) => {
       owner,
       repo,
       issue_number,
-      label: label || config.stas.label,
+      label: label || config.syntaro.label,
     });
     res.json(result);
   } catch (err) {

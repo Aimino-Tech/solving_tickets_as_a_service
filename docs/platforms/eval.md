@@ -1,6 +1,6 @@
 # Eval on Any Platform
 
-The STAS 3-tier eval strategy translates to each platform differently.
+The SYNTARO 3-tier eval strategy translates to each platform differently.
 
 ## Tier Translation
 
@@ -14,7 +14,7 @@ The STAS 3-tier eval strategy translates to each platform differently.
 
 ```yaml
 # .gitlab-ci.yml (eval-full equivalent)
-stas-eval-nightly:
+syntaro-eval-nightly:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
   script:
@@ -26,7 +26,7 @@ stas-eval-nightly:
 ```yaml
 # bitbucket-pipelines.yml
 custom:
-  stas-eval-nightly:
+  syntaro-eval-nightly:
     schedule:
       - cron: '0 6 * * *'
     steps:

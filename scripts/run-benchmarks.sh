@@ -15,7 +15,7 @@ NC='\033[0m'
 
 show_help() {
   cat <<EOF
-STAS Benchmark Runner - Run benchmark suites against STAS agent
+SYNTARO Benchmark Runner - Run benchmark suites against SYNTARO agent
 
 Usage:
   ./scripts/run-benchmarks.sh [options]

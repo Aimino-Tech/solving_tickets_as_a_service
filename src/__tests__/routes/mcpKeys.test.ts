@@ -97,7 +97,7 @@ const baseRecord = {
   id: 'k-1',
   userId: '1',
   name: 'agent',
-  keyPrefix: 'sk-stas_12345678',
+  keyPrefix: 'sk-syntaro_12345678',
   createdAt: '2026-07-31T00:00:00.000Z',
   lastUsedAt: null,
   revokedAt: null,
@@ -136,7 +136,7 @@ describe('mcpKeys routes', () => {
 
   describe('POST /', () => {
     it('creates a key and returns the full key exactly once with 201', async () => {
-      mockCreateMcpKey.mockResolvedValue({ record: baseRecord, key: 'sk-stas_1234567890abcdef1234567890abcdef' });
+      mockCreateMcpKey.mockResolvedValue({ record: baseRecord, key: 'sk-syntaro_1234567890abcdef1234567890abcdef' });
       const { req, res } = mockReqRes('POST', '/');
       req.body = { name: 'my-agent' };
       await invokeRoute(router, 'post', '/', req, res);
@@ -145,8 +145,8 @@ describe('mcpKeys routes', () => {
       expect(res.json).toHaveBeenCalledWith({
         id: 'k-1',
         name: 'agent',
-        keyPrefix: 'sk-stas_12345678',
-        key: 'sk-stas_1234567890abcdef1234567890abcdef',
+        keyPrefix: 'sk-syntaro_12345678',
+        key: 'sk-syntaro_1234567890abcdef1234567890abcdef',
         createdAt: '2026-07-31T00:00:00.000Z',
       });
     });

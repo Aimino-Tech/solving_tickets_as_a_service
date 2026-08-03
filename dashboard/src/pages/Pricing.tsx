@@ -125,7 +125,7 @@ export default function Pricing() {
       <div className="card border-gray-200 bg-gray-50 text-center">
         <h3 className="text-base font-semibold text-gray-900">Prefer Self-Hosted?</h3>
         <p className="mt-2 text-sm text-gray-600">
-          STAS is fully open-source under the MIT license. Self-host with your own API key
+          SYNTARO is fully open-source under the MIT license. Self-host with your own API key
           for unlimited fixes and no restrictions.
         </p>
         <a
@@ -172,7 +172,7 @@ export default function Pricing() {
               Is self-hosted really unlimited?
             </summary>
             <p className="mt-2 text-sm text-gray-600">
-              Yes. Self-hosted STAS is MIT-licensed with no usage limits. You only pay for your own
+              Yes. Self-hosted SYNTARO is MIT-licensed with no usage limits. You only pay for your own
               API usage through OpenCode and your model provider.
             </p>
           </details>

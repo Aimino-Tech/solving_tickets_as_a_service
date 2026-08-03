@@ -2,7 +2,7 @@
 # LangFuse Self-Hosted — Local Development
 #
 # Starts LangFuse with a PostgreSQL backend so you can inspect traces
-# emitted by the STAS eval pipeline during local development.
+# emitted by the SYNTARO eval pipeline during local development.
 #
 # Usage:
 #   docker compose -f eval/docker/docker-compose.langfuse.yml up -d
@@ -21,7 +21,7 @@
 services:
   langfuse:
     image: ghcr.io/langfuse/langfuse:latest
-    container_name: stas-langfuse
+    container_name: syntaro-langfuse
     ports:
       - "3000:3000"
     environment:
@@ -41,7 +41,7 @@ services:
 
   db:
     image: postgres:16
-    container_name: stas-langfuse-db
+    container_name: syntaro-langfuse-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

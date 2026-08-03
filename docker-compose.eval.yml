@@ -34,7 +34,7 @@ services:
       timeout: 5s
       retries: 3
 
-  stas-eval:
+  syntaro-eval:
     build:
       context: .
       dockerfile: Dockerfile

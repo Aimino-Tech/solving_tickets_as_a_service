@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 import jwt as pyjwt
 from pydantic import BaseModel, Field
-from stas_agent_interface.models import AuthError, AuthScope, AuthToken, SCOPE_HIERARCHY
+from syntaro_agent_interface.models import AuthError, AuthScope, AuthToken, SCOPE_HIERARCHY
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class APIKeyStore:
 
 class TokenManager:
     def __init__(self, secret: Optional[str] = None):
-        self._secret = secret or os.getenv("STAS_JWT_SECRET", "") or hashlib.sha256(os.urandom(64)).hexdigest()
+        self._secret = secret or os.getenv("SYNTARO_JWT_SECRET", "") or hashlib.sha256(os.urandom(64)).hexdigest()
     def issue_token(self, scope: AuthScope, ttl_seconds: int = 3600, key_name: Optional[str] = None) -> AuthToken:
         now = datetime.now(timezone.utc)
         exp = now + timedelta(seconds=ttl_seconds)

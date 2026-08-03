@@ -133,7 +133,7 @@ def send_fix_request_notification(
     blocks = [
         {
             "type": "header",
-            "text": {"type": "plain_text", "text": "🛠️ STAS Fix Requested", "emoji": True},
+            "text": {"type": "plain_text", "text": "🛠️ SYNTARO Fix Requested", "emoji": True},
         },
         {
             "type": "section",
@@ -141,7 +141,7 @@ def send_fix_request_notification(
         },
         {"type": "context", "elements": [{"type": "mrkdwn", "text": f"Run: `{run_id}`"}]},
     ]
-    return post_message(channel=channel, text=f"STAS Fix: {issue_title}", blocks=blocks)
+    return post_message(channel=channel, text=f"SYNTARO Fix: {issue_title}", blocks=blocks)
 
 
 def send_pipeline_completed(

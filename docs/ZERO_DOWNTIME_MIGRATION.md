@@ -1,7 +1,7 @@
 # Zero-Downtime Database Migration Procedure
 
 > **Last updated:** 2026-06-08
-> **Applies to:** STAS PostgreSQL production deployments
+> **Applies to:** SYNTARO PostgreSQL production deployments
 
 ## Overview
 

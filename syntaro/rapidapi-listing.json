@@ -1,8 +1,8 @@
 {
   "$schema": "https://rapidapi.com/schemas/rapidapi-listing.json",
-  "apiName": "STAS API",
+  "apiName": "SYNTARO API",
   "apiVersion": "1.0.0",
-  "description": "STAS (Solving Tickets As A Service) is an AI-powered GitHub bot that automatically fixes issues. Submit a GitHub issue URL, and STAS investigates your codebase, writes a fix, runs regression tests, and opens a PR — fully automated.",
+  "description": "SYNTARO (Solving Tickets As A Service) is an AI-powered GitHub bot that automatically fixes issues. Submit a GitHub issue URL, and SYNTARO investigates your codebase, writes a fix, runs regression tests, and opens a PR — fully automated.",
   "tagline": "Label a GitHub issue. Get a pull request — automatically.",
   "logo": "https://syntaro.io/logo.png",
   "website": "https://syntaro.io",
@@ -21,7 +21,7 @@
     "plans": [
       {
         "name": "Free",
-        "description": "Try STAS with limited daily usage. Perfect for evaluation and small projects.",
+        "description": "Try SYNTARO with limited daily usage. Perfect for evaluation and small projects.",
         "price": 0,
         "requestsPerDay": 10,
         "requestsPerMonth": 300,
@@ -78,7 +78,7 @@
     ]
   },
   "endpoints": {
-    "baseUrl": "https://stas-rapidapi.p.rapidapi.com",
+    "baseUrl": "https://syntaro-rapidapi.p.rapidapi.com",
     "auth": {
       "type": "header",
       "key": "X-RapidAPI-Key",
@@ -116,7 +116,7 @@
     },
     {
       "title": "Eval Results Dashboard",
-      "description": "View STAS benchmark performance and pass rates",
+      "description": "View SYNTARO benchmark performance and pass rates",
       "path": "./marketplace-assets/screenshot-eval-results.png"
     }
   ],
@@ -125,7 +125,7 @@
   "privacyPolicy": "https://syntaro.io/privacy",
   "sdk": {
     "curl": {
-      "example": "curl -X POST https://stas-rapidapi.p.rapidapi.com/api/fix -H \"Content-Type: application/json\" -H \"X-RapidAPI-Key: your-rapidapi-key\" -H \"X-RapidAPI-Proxy-Secret: your-proxy-secret\" -d '{\"repoUrl\":\"https://github.com/owner/repo\",\"issueTitle\":\"Fix login bug\",\"issueBody\":\"Login returns 500\"}'"
+      "example": "curl -X POST https://syntaro-rapidapi.p.rapidapi.com/api/fix -H \"Content-Type: application/json\" -H \"X-RapidAPI-Key: your-rapidapi-key\" -H \"X-RapidAPI-Proxy-Secret: your-proxy-secret\" -d '{\"repoUrl\":\"https://github.com/owner/repo\",\"issueTitle\":\"Fix login bug\",\"issueBody\":\"Login returns 500\"}'"
     }
   }
 }

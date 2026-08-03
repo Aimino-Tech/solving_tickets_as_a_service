@@ -2,7 +2,7 @@
 name: automation-testing
 description: Automation testing skill using Python + PyTest + Playwright for Web/API, with self-healing selectors, RCA, and vision-based automation.
 version: 1.0.0
-author: STAS
+author: SYNTARO
 license: MIT
 tags:
   - testing
@@ -138,7 +138,7 @@ from playwright.sync_api import Page, expect
 
 def test_login_page_has_expected_elements(page: Page, base_url: str):
     page.goto(f"{base_url}/login")
-    expect(page.get_by_role("heading", name="STAS")).to_be_visible()
+    expect(page.get_by_role("heading", name="SYNTARO")).to_be_visible()
     expect(page.get_by_text("Sign In")).to_be_visible()
     expect(page.get_by_text("Register")).to_be_visible()
 ```

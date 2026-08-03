@@ -1,17 +1,17 @@
 # ---------------------------------------------------------------------------
-# STAS Webhook Service — exposes the webhook API internally
+# SYNTARO Webhook Service — exposes the webhook API internally
 # Nginx or Ingress handles external TLS termination and load balancing.
 # ---------------------------------------------------------------------------
 apiVersion: v1
 kind: Service
 metadata:
-  name: stas-webhook
+  name: syntaro-webhook
   labels:
-    app: stas-webhook
+    app: syntaro-webhook
     tier: webhook
 spec:
   selector:
-    app: stas-webhook
+    app: syntaro-webhook
   ports:
     - port: 80
       targetPort: 3000

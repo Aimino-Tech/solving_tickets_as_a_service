@@ -224,7 +224,7 @@ def _build_nudge_message(tenant_id: str, tier: str, usage: int, limit: int, rema
         "- **Priority queue** -- your fixes jump the line\n"
         "- **Email support** -- get help when you need it\n"
         "- **Full analytics** -- see fix history, pass rates, trends\n\n"
-        "Don't lose momentum. [Upgrade here](https://stas.dev/pricing) ->"
+        "Don't lose momentum. [Upgrade here](https://syntaro.dev/pricing) ->"
     )
 
 
@@ -307,7 +307,7 @@ def _build_wall_message(tenant_id: str, tier: str, usage: int, limit: int) -> st
         "Your fix runs are paused until you upgrade:\n\n"
         f"- **Solo** -- ${solo_price}/mo for 50 fixes/month\n"
         f"- **Team** -- ${team_price}/mo for unlimited fixes with priority support\n\n"
-        "Don't lose your progress. [Upgrade here](https://stas.dev/pricing) ->\n\n"
+        "Don't lose your progress. [Upgrade here](https://syntaro.dev/pricing) ->\n\n"
         "*Your PQL score and usage data are preserved. You won't lose anything by upgrading.*"
     )
 
@@ -375,12 +375,12 @@ def _build_inactivity_alert(tenant_id: str, inactive_days: int) -> str:
     """Build a re-engagement message for an inactive tenant."""
     return (
         f"**Heads up!** It's been **{inactive_days} days** since your last fix run.\n\n"
-        "Your STAS integration is still active, but we noticed things have gone quiet. "
+        "Your SYNTARO integration is still active, but we noticed things have gone quiet. "
         "Here's what you can do:\n\n"
-        "- Label an issue with **stas:fix** to trigger a new fix run\n"
-        "- Check your [dashboard](https://stas.dev/dashboard) for recent run history\n"
-        "- Upgrade to [Solo ($49/mo)](https://stas.dev/pricing) for higher limits\n\n"
-        "Need help? Reply to this issue or email support@stas.dev."
+        "- Label an issue with **syntaro:fix** to trigger a new fix run\n"
+        "- Check your [dashboard](https://syntaro.dev/dashboard) for recent run history\n"
+        "- Upgrade to [Solo ($49/mo)](https://syntaro.dev/pricing) for higher limits\n\n"
+        "Need help? Reply to this issue or email support@syntaro.dev."
     )
 
 

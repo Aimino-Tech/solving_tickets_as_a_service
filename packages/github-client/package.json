@@ -1,7 +1,7 @@
 {
-  "name": "@stas/github-client",
+  "name": "@syntaro/github-client",
   "version": "0.1.0",
-  "description": "GitHub App client for STAS — auth, PR creation, and structured message templates",
+  "description": "GitHub App client for SYNTARO — auth, PR creation, and structured message templates",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,6 +19,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "prepare": "npm run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

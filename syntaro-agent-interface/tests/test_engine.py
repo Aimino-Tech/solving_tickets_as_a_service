@@ -1,6 +1,6 @@
 import json, os, tempfile, pytest
-from stas_agent_interface.engine import STASEngine, CAPABILITY_DEFINITIONS, STAS_PLANS, _s2p, _load_history, _load_repos
-from stas_agent_interface.models import CapabilityList, SubmitIssueRequest, CheckStatusRequest, RunHistoryRequest, ListReposRequest, GetPricingRequest, AuthScope
+from syntaro_agent_interface.engine import STASEngine, CAPABILITY_DEFINITIONS, SYNTARO_PLANS, _s2p, _load_history, _load_repos
+from syntaro_agent_interface.models import CapabilityList, SubmitIssueRequest, CheckStatusRequest, RunHistoryRequest, ListReposRequest, GetPricingRequest, AuthScope
 
 class TestDefs:
     def test_all(self): n={c.name for c in CAPABILITY_DEFINITIONS}; assert len(n)==6 and "submit_issue" in n
@@ -10,10 +10,10 @@ class TestDefs:
             assert next(c for c in CAPABILITY_DEFINITIONS if c.name==n).required_scope==AuthScope.READ
 
 class TestPlans:
-    def test_four(self): assert len(STAS_PLANS)==4
-    def test_free(self): p=next(p for p in STAS_PLANS if p.id=="free"); assert p.amount_cents==0
-    def test_solo(self): p=next(p for p in STAS_PLANS if p.id=="solo"); assert p.amount_cents==4900
-    def test_enterprise(self): p=next(p for p in STAS_PLANS if p.id=="enterprise"); assert p.monthly_fix_limit==999999
+    def test_four(self): assert len(SYNTARO_PLANS)==4
+    def test_free(self): p=next(p for p in SYNTARO_PLANS if p.id=="free"); assert p.amount_cents==0
+    def test_solo(self): p=next(p for p in SYNTARO_PLANS if p.id=="solo"); assert p.amount_cents==4900
+    def test_enterprise(self): p=next(p for p in SYNTARO_PLANS if p.id=="enterprise"); assert p.monthly_fix_limit==999999
 
 class TestEngine:
     @pytest.fixture

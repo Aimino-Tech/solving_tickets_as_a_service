@@ -59,7 +59,7 @@ describe('RmqWorkPublisher', () => {
     const [exchange, routingKey] = publishMessageMock.mock.calls[0] as [string, string];
     expect(exchange).toBe('ex.custom');
     expect(routingKey).toBe('rk.custom');
-    expect(CHAT_WORK_QUEUE).toBe('stas.chat.work');
+    expect(CHAT_WORK_QUEUE).toBe('syntaro.chat.work');
   });
 
   it('factory creates an RmqWorkPublisher', () => {

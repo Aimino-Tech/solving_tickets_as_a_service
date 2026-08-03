@@ -10,7 +10,7 @@ def generate_branch_name(
     issue_identifier: str,
     fix_type: FixType = "fix",
 ) -> str:
-    prefix = "stas"
+    prefix = "syntaro"
     identifier_slug = re.sub(r"[^a-z0-9-]", "-", issue_identifier.lower())[:40]
     short_sha = hashlib.sha256(issue_id.encode()).hexdigest()[:8]
     return f"{prefix}/{fix_type}/{identifier_slug}-{short_sha}"

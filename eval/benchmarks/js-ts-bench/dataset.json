@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "name": "STAS Internal JS/TS Issue-Resolution Benchmark",
+    "name": "SYNTARO Internal JS/TS Issue-Resolution Benchmark",
     "version": "1.0.0",
     "description": "50 curated issues from top JS/TS OSS repos. Covers bugs, feature requests, and edge cases.",
     "weighting": {
@@ -23,7 +23,7 @@
   },
   "issues": [
     {
-      "id": "STAS-JSTS-001",
+      "id": "SYNTARO-JSTS-001",
       "type": "bug",
       "repo": "facebook/react",
       "title": "useCallback infinite loop when dependency is a function expression",
@@ -33,7 +33,7 @@
       "files": ["src/hooks.js"]
     },
     {
-      "id": "STAS-JSTS-002",
+      "id": "SYNTARO-JSTS-002",
       "type": "bug",
       "repo": "vercel/next.js",
       "title": "getServerSideProps returns stale data when query parameter changes rapidly",
@@ -43,7 +43,7 @@
       "files": ["packages/next/server/next-server.ts"]
     },
     {
-      "id": "STAS-JSTS-003",
+      "id": "SYNTARO-JSTS-003",
       "type": "bug",
       "repo": "nestjs/nest",
       "title": "Global prefix not applied to exception filter paths in custom logger",
@@ -53,7 +53,7 @@
       "files": ["packages/core/router/router-exception-filters.ts"]
     },
     {
-      "id": "STAS-JSTS-004",
+      "id": "SYNTARO-JSTS-004",
       "type": "bug",
       "repo": "expressjs/express",
       "title": "res.sendFile throws ENOENT for symlinked files in production Docker containers",
@@ -63,7 +63,7 @@
       "files": ["lib/response.js"]
     },
     {
-      "id": "STAS-JSTS-005",
+      "id": "SYNTARO-JSTS-005",
       "type": "feature",
       "repo": "facebook/react",
       "title": "Add mount callback to useEffect cleanup to enable proper test teardown",
@@ -73,7 +73,7 @@
       "files": ["packages/react-dom/src/test-utils/ReactTestUtils.js"]
     },
     {
-      "id": "STAS-JSTS-006",
+      "id": "SYNTARO-JSTS-006",
       "type": "bug",
       "repo": "axios/axios",
       "title": "Cancel token error when retrying a failed request with interceptor",
@@ -83,7 +83,7 @@
       "files": ["lib/core/Axios.js"]
     },
     {
-      "id": "STAS-JSTS-007",
+      "id": "SYNTARO-JSTS-007",
       "type": "edge",
       "repo": "lodash/lodash",
       "title": "_.merge mutates source object when target is undefined",
@@ -93,7 +93,7 @@
       "files": ["lodash.js"]
     },
     {
-      "id": "STAS-JSTS-008",
+      "id": "SYNTARO-JSTS-008",
       "type": "bug",
       "repo": "npm/cli",
       "title": "npm install hangs indefinitely when one registry in .npmrc is unreachable",
@@ -103,7 +103,7 @@
       "files": ["lib/utils/config.js"]
     },
     {
-      "id": "STAS-JSTS-009",
+      "id": "SYNTARO-JSTS-009",
       "type": "feature",
       "repo": "microsoft/TypeScript",
       "title": "Add strictNullChecks-aware overload resolution for Array.prototype.find",
@@ -113,7 +113,7 @@
       "files": ["src/lib/es2015.iterable.d.ts"]
     },
     {
-      "id": "STAS-JSTS-010",
+      "id": "SYNTARO-JSTS-010",
       "type": "edge",
       "repo": "expressjs/express",
       "title": "req.ip returns ::1 when behind reverse proxy even with trust proxy set",
@@ -123,7 +123,7 @@
       "files": ["lib/request.js"]
     },
     {
-      "id": "STAS-JSTS-011",
+      "id": "SYNTARO-JSTS-011",
       "type": "bug",
       "repo": "webpack/webpack",
       "title": "Webpack 5 HMR breaks when CSS module has a cyclical @import",
@@ -133,7 +133,7 @@
       "files": ["lib/css/CssModulesPlugin.js"]
     },
     {
-      "id": "STAS-JSTS-012",
+      "id": "SYNTARO-JSTS-012",
       "type": "bug",
       "repo": "nodejs/node",
       "title": "fs.watch fails recursively on macOS with EMFILE when watching deep directory trees",
@@ -143,7 +143,7 @@
       "files": ["lib/fs.js"]
     },
     {
-      "id": "STAS-JSTS-013",
+      "id": "SYNTARO-JSTS-013",
       "type": "feature",
       "repo": "nestjs/nest",
       "title": "Add WebSocket gateway auto-reconnect with exponential backoff wrapper",
@@ -153,7 +153,7 @@
       "files": ["packages/websockets/decorators/gateway.ts"]
     },
     {
-      "id": "STAS-JSTS-014",
+      "id": "SYNTARO-JSTS-014",
       "type": "edge",
       "repo": "axios/axios",
       "title": "Axios POST with FormData and nested objects serializes incorrectly",
@@ -163,7 +163,7 @@
       "files": ["lib/adapters/xhr.js"]
     },
     {
-      "id": "STAS-JSTS-015",
+      "id": "SYNTARO-JSTS-015",
       "type": "bug",
       "repo": "vercel/next.js",
       "title": "next/image quality parameter ignored for imported .avif images",
@@ -173,7 +173,7 @@
       "files": ["packages/next/server/image-optimizer.ts"]
     },
     {
-      "id": "STAS-JSTS-016",
+      "id": "SYNTARO-JSTS-016",
       "type": "feature",
       "repo": "facebook/react",
       "title": "Add ability to pass CSS custom properties (CSS variables) through style prop",
@@ -183,7 +183,7 @@
       "files": ["packages/react-dom/src/shared/CSSPropertyOperations.js"]
     },
     {
-      "id": "STAS-JSTS-017",
+      "id": "SYNTARO-JSTS-017",
       "type": "bug",
       "repo": "microsoft/TypeScript",
       "title": "Generic type parameter inference fails with mapped types in strict mode",
@@ -193,7 +193,7 @@
       "files": ["src/compiler/checker.ts"]
     },
     {
-      "id": "STAS-JSTS-018",
+      "id": "SYNTARO-JSTS-018",
       "type": "edge",
       "repo": "nodejs/node",
       "title": "process.nextTick microtask queue starvation with recursive nextTick calls",
@@ -203,7 +203,7 @@
       "files": ["lib/internal/process/task_queues.js"]
     },
     {
-      "id": "STAS-JSTS-019",
+      "id": "SYNTARO-JSTS-019",
       "type": "feature",
       "repo": "webpack/webpack",
       "title": "Add TypeScript path aliases support in resolve.alias automatically",
@@ -213,7 +213,7 @@
       "files": ["lib/WebpackOptionsApply.js"]
     },
     {
-      "id": "STAS-JSTS-020",
+      "id": "SYNTARO-JSTS-020",
       "type": "bug",
       "repo": "lodash/lodash",
       "title": "_.debounce with maxWait option fires too late when called sporadically",
@@ -223,7 +223,7 @@
       "files": ["lodash.js"]
     },
     {
-      "id": "STAS-JSTS-021",
+      "id": "SYNTARO-JSTS-021",
       "type": "bug",
       "repo": "npm/cli",
       "title": "npm audit report shows false positives for transitive dependencies resolved to patched versions",
@@ -233,7 +233,7 @@
       "files": ["lib/commands/audit.js"]
     },
     {
-      "id": "STAS-JSTS-022",
+      "id": "SYNTARO-JSTS-022",
       "type": "edge",
       "repo": "expressjs/express",
       "title": "req.accepts('text/*') returns undefined when Accept header contains quality weights",
@@ -243,7 +243,7 @@
       "files": ["lib/utils.js"]
     },
     {
-      "id": "STAS-JSTS-023",
+      "id": "SYNTARO-JSTS-023",
       "type": "bug",
       "repo": "nestjs/nest",
       "title": "Inject dynamic modules in forRootAsync fails when module is cached",
@@ -253,7 +253,7 @@
       "files": ["packages/common/utils/module-utils.ts"]
     },
     {
-      "id": "STAS-JSTS-024",
+      "id": "SYNTARO-JSTS-024",
       "type": "feature",
       "repo": "axios/axios",
       "title": "Add progress event tracking for download progress in Node.js adapter",
@@ -263,7 +263,7 @@
       "files": ["lib/adapters/http.js"]
     },
     {
-      "id": "STAS-JSTS-025",
+      "id": "SYNTARO-JSTS-025",
       "type": "edge",
       "repo": "microsoft/TypeScript",
       "title": "Template literal type with union does not distribute correctly in strict mode",
@@ -273,7 +273,7 @@
       "files": ["src/compiler/checker.ts"]
     },
     {
-      "id": "STAS-JSTS-026",
+      "id": "SYNTARO-JSTS-026",
       "type": "bug",
       "repo": "facebook/react",
       "title": "Suspense fallback flickers when data loads very quickly (>100ms but <500ms)",
@@ -283,7 +283,7 @@
       "files": ["packages/react-reconciler/src/ReactFiberSuspenseComponent.js"]
     },
     {
-      "id": "STAS-JSTS-027",
+      "id": "SYNTARO-JSTS-027",
       "type": "feature",
       "repo": "nodejs/node",
       "title": "Add AbortSignal.timeout() polyfill-friendly implementation to fetch",
@@ -293,7 +293,7 @@
       "files": ["lib/internal/abort_controller.js"]
     },
     {
-      "id": "STAS-JSTS-028",
+      "id": "SYNTARO-JSTS-028",
       "type": "bug",
       "repo": "vercel/next.js",
       "title": "Middleware rewrites don't preserve search params in some edge cases",

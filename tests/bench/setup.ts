@@ -29,7 +29,7 @@ export function createMockWebhookPayload(): MockWebhookPayload {
           number: 42,
           title: 'Fix broken user login',
           body: 'Users are unable to log in when the password contains special characters.',
-          labels: [{ name: 'stas:fix' }],
+          labels: [{ name: 'syntaro:fix' }],
         },
         repository: {
           name: 'test-repo',

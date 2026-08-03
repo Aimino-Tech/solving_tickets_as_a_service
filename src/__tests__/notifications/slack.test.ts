@@ -11,7 +11,7 @@ vi.mock('../../notifications/slack-bolt.js', () => ({
 }));
 
 vi.mock('../../config.js', () => ({
-  config: { stas: { botName: 'STAS' }, slack: { webhookUrl: '' }, n8n: { webhookUrl: '' } },
+  config: { syntaro: { botName: 'SYNTARO' }, slack: { webhookUrl: '' }, n8n: { webhookUrl: '' } },
 }));
 
 vi.mock('../../utils/logger.js', () => ({

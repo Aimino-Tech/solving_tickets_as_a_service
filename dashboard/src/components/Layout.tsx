@@ -63,7 +63,7 @@ export default function Layout() {
         <div className="flex h-16 items-center gap-3 border-b border-gray-200 dark:border-gray-700 px-6">
           <Zap className="h-6 w-6 text-brand-600 dark:text-brand-400" />
           <div>
-            <h1 className="text-base font-bold text-gray-900 dark:text-gray-100">STAS</h1>
+            <h1 className="text-base font-bold text-gray-900 dark:text-gray-100">SYNTARO</h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">Premium Dashboard</p>
           </div>
         </div>

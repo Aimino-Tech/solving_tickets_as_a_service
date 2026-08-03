@@ -1,8 +1,8 @@
-# STAS Roadmap
+# SYNTARO Roadmap
 
 ## Overview
 
-This roadmap covers STAS development from MVP through enterprise. It evolves based on user feedback, market conditions, and technical progress.
+This roadmap covers SYNTARO development from MVP through enterprise. It evolves based on user feedback, market conditions, and technical progress.
 
 ## Legend
 
@@ -68,10 +68,10 @@ Hosted service with dashboard, billing, and free tier.
 Scale adoption through virality and ecosystem.
 
 ### Product
-- 📋 Viral PR footer — "Fixed by STAS" with shareable run page
+- 📋 Viral PR footer — "Fixed by SYNTARO" with shareable run page
 - 📋 MCP server for agent-to-agent discovery
 - 📋 One-click GitHub OAuth
-- 📋 Comparison pages — "STAS vs Plip", "STAS vs Devin"
+- 📋 Comparison pages — "SYNTARO vs Plip", "SYNTARO vs Devin"
 - 📋 Shareable run pages (public/expiring links)
 - 📋 SOC2 readiness
 - 📋 SAST pipeline (semgrep/CodeQL) integration

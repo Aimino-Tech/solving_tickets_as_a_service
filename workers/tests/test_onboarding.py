@@ -85,7 +85,7 @@ class TestOnboardingTransitions:
     @patch("workers.billing.onboarding._get_redis")
     def test_github_installed_to_linear_authed(self, mock_get_redis):
         mc = DictRedisMock()
-        mc.setex("stas:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="github_installed", github_installed=True, installation_id=123).to_dict()))
+        mc.setex("syntaro:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="github_installed", github_installed=True, installation_id=123).to_dict()))
         mock_get_redis.return_value = mc
         state = self._make_machine().transition("t-1", "auth_linear", linear_org_id="org-linear")
         assert state.state == "linear_authed"
@@ -94,7 +94,7 @@ class TestOnboardingTransitions:
     @patch("workers.billing.onboarding._get_redis")
     def test_github_installed_to_repo_selected(self, mock_get_redis):
         mc = DictRedisMock()
-        mc.setex("stas:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="github_installed", github_installed=True).to_dict()))
+        mc.setex("syntaro:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="github_installed", github_installed=True).to_dict()))
         mock_get_redis.return_value = mc
         state = self._make_machine().transition("t-1", "select_repo", installed_repos=3)
         assert state.state == "repo_selected"
@@ -103,7 +103,7 @@ class TestOnboardingTransitions:
     @patch("workers.billing.onboarding._get_redis")
     def test_linear_authed_to_repo_selected(self, mock_get_redis):
         mc = DictRedisMock()
-        mc.setex("stas:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="linear_authed", github_installed=True, linear_authed=True, installation_id=123).to_dict()))
+        mc.setex("syntaro:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="linear_authed", github_installed=True, linear_authed=True, installation_id=123).to_dict()))
         mock_get_redis.return_value = mc
         state = self._make_machine().transition("t-1", "select_repo", installed_repos=3)
         assert state.state == "repo_selected"
@@ -112,7 +112,7 @@ class TestOnboardingTransitions:
     @patch("workers.billing.onboarding._get_redis")
     def test_repo_selected_to_completed(self, mock_get_redis):
         mc = DictRedisMock()
-        mc.setex("stas:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="repo_selected", github_installed=True, linear_authed=True, repo_selected=True, installation_id=123).to_dict()))
+        mc.setex("syntaro:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="repo_selected", github_installed=True, linear_authed=True, repo_selected=True, installation_id=123).to_dict()))
         mock_get_redis.return_value = mc
         state = self._make_machine().transition("t-1", "complete")
         assert state.state == "completed"
@@ -138,7 +138,7 @@ class TestOnboardingInvalidTransitions:
     @patch("workers.billing.onboarding._get_redis")
     def test_cannot_complete_before_repo_selected(self, mock_get_redis):
         mc = DictRedisMock()
-        mc.setex("stas:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="github_installed", github_installed=True).to_dict()))
+        mc.setex("syntaro:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="github_installed", github_installed=True).to_dict()))
         mock_get_redis.return_value = mc
         with pytest.raises(ValueError, match="Invalid transition"):
             OnboardingStateMachine().transition("t-1", "complete")
@@ -162,14 +162,14 @@ class TestOnboardingRedisPersistence:
         mc = DictRedisMock()
         mock_get_redis.return_value = mc
         OnboardingStateMachine().transition("t-1", "install_github", installation_id=42)
-        raw = mc.get("stas:onboarding:t-1")
+        raw = mc.get("syntaro:onboarding:t-1")
         assert raw is not None
         assert json.loads(raw)["state"] == "github_installed"
 
     @patch("workers.billing.onboarding._get_redis")
     def test_reads_from_redis(self, mock_get_redis):
         mc = DictRedisMock()
-        mc.setex("stas:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="repo_selected", github_installed=True, linear_authed=True, repo_selected=True, installation_id=42).to_dict()))
+        mc.setex("syntaro:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="repo_selected", github_installed=True, linear_authed=True, repo_selected=True, installation_id=42).to_dict()))
         mock_get_redis.return_value = mc
         result = OnboardingStateMachine().get_state("t-1")
         assert result is not None
@@ -182,7 +182,7 @@ class TestOnboardingRedisPersistence:
 
 
 class TestOnboardingFileFallback:
-    FALLBACK_DIR = "/tmp/stas-onboarding"
+    FALLBACK_DIR = "/tmp/syntaro-onboarding"
 
     def teardown_method(self) -> None:
         import shutil
@@ -239,7 +239,7 @@ class TestOnboardingStatusAndReset:
     @patch("workers.billing.onboarding._get_redis")
     def test_reset_clears_state(self, mock_get_redis):
         mc = DictRedisMock()
-        mc.setex("stas:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="completed", completed=True, github_installed=True, linear_authed=True, repo_selected=True).to_dict()))
+        mc.setex("syntaro:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="completed", completed=True, github_installed=True, linear_authed=True, repo_selected=True).to_dict()))
         mock_get_redis.return_value = mc
         m = OnboardingStateMachine()
         m.reset("t-1")
@@ -256,7 +256,7 @@ class TestFirstIssueWizard:
     @patch("workers.billing.onboarding.Path.write_text")
     def test_trigger_file_written_on_completion(self, mock_write_text, mock_get_redis):
         mc = DictRedisMock()
-        mc.setex("stas:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="repo_selected", github_installed=True, linear_authed=True, repo_selected=True, installation_id=42).to_dict()))
+        mc.setex("syntaro:onboarding:t-1", 99999, json.dumps(OnboardingState(tenant_id="t-1", state="repo_selected", github_installed=True, linear_authed=True, repo_selected=True, installation_id=42).to_dict()))
         mock_get_redis.return_value = mc
         OnboardingStateMachine().transition("t-1", "complete")
         assert mock_write_text.called
@@ -273,7 +273,7 @@ class TestOnboardingMiddleware:
     @patch("workers.billing.onboarding._get_redis")
     def test_allows_completed_tenant(self, mock_get_redis):
         mc = DictRedisMock()
-        mc.setex("stas:onboarding:t-complete", 99999, json.dumps(OnboardingState(tenant_id="t-complete", state="completed", completed=True, github_installed=True, linear_authed=True, repo_selected=True).to_dict()))
+        mc.setex("syntaro:onboarding:t-complete", 99999, json.dumps(OnboardingState(tenant_id="t-complete", state="completed", completed=True, github_installed=True, linear_authed=True, repo_selected=True).to_dict()))
         mock_get_redis.return_value = mc
         from workers.billing.onboarding_middleware import _check_onboarding
         _check_onboarding("t-complete", MagicMock(name="task"), "task-1")
@@ -281,7 +281,7 @@ class TestOnboardingMiddleware:
     @patch("workers.billing.onboarding._get_redis")
     def test_blocks_incomplete_tenant(self, mock_get_redis):
         mc = DictRedisMock()
-        mc.setex("stas:onboarding:t-incomplete", 99999, json.dumps(OnboardingState(tenant_id="t-incomplete", state="not_started").to_dict()))
+        mc.setex("syntaro:onboarding:t-incomplete", 99999, json.dumps(OnboardingState(tenant_id="t-incomplete", state="not_started").to_dict()))
         mock_get_redis.return_value = mc
         from workers.billing.onboarding_middleware import _check_onboarding
         with pytest.raises(OnboardingIncomplete, match="not completed onboarding"):
@@ -300,7 +300,7 @@ class TestOnboardingMiddleware:
     def test_cache_hit(self, mock_get_redis):
         invalidate_cache()
         mc = DictRedisMock()
-        mc.setex("stas:onboarding:t-cached", 99999, json.dumps(OnboardingState(tenant_id="t-cached", state="completed", completed=True, github_installed=True, linear_authed=True, repo_selected=True).to_dict()))
+        mc.setex("syntaro:onboarding:t-cached", 99999, json.dumps(OnboardingState(tenant_id="t-cached", state="completed", completed=True, github_installed=True, linear_authed=True, repo_selected=True).to_dict()))
         get_wrapped = mc.get
         mc.get = MagicMock(side_effect=get_wrapped)
         mock_get_redis.return_value = mc

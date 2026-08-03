@@ -45,10 +45,10 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _DEFAULT_WINDOW_SECONDS = float(
-    os.getenv("STAS_OSS_STATUS_COALESCE_SECONDS", "3"),
+    os.getenv("SYNTARO_OSS_STATUS_COALESCE_SECONDS", "3"),
 )
 _DEFAULT_MAX_BATCH = int(
-    os.getenv("STAS_OSS_STATUS_MAX_BATCH", "10"),
+    os.getenv("SYNTARO_OSS_STATUS_MAX_BATCH", "10"),
 )
 
 OSS_EVENT_KEYS = frozenset({"repo", "issue_id", "stage", "status", "message"})

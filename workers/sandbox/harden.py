@@ -123,7 +123,7 @@ def get_seccomp_profile() -> dict[str, object]:
 def get_apparmor_profile() -> str:
     """Return the project-default AppArmor profile as a plain-text string.
 
-    The profile is loaded from ``docker/apparmor/stas-sandbox`` at the
+    The profile is loaded from ``docker/apparmor/syntaro-sandbox`` at the
     project root.  It constrains file-system access, network operations,
     ``ptrace``, and signals for untrusted code execution.
 
@@ -131,15 +131,15 @@ def get_apparmor_profile() -> str:
     -------
     str
         The raw AppArmor profile text, ready to be written to
-        ``/etc/apparmor.d/stas-sandbox`` and loaded via
+        ``/etc/apparmor.d/syntaro-sandbox`` and loaded via
         ``apparmor_parser``.
     """
-    profile_path = _DOCKER_DIR / "apparmor" / "stas-sandbox"
+    profile_path = _DOCKER_DIR / "apparmor" / "syntaro-sandbox"
 
     if not profile_path.is_file():
         raise FileNotFoundError(
             f"AppArmor profile not found at {profile_path}. "
-            "Ensure docker/apparmor/stas-sandbox exists."
+            "Ensure docker/apparmor/syntaro-sandbox exists."
         )
 
     return profile_path.read_text(encoding="utf-8")

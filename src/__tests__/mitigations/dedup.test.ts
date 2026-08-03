@@ -35,7 +35,7 @@ describe('DedupEngine', () => {
     const result = await dedup.checkDelivery('delivery-123');
     expect(result).toBe(true);
     expect(mockRedis.set).toHaveBeenCalledWith(
-      'stas:dedup:delivery:delivery-123', '1', 'PX', 24 * 60 * 60 * 1000, 'NX',
+      'syntaro:dedup:delivery:delivery-123', '1', 'PX', 24 * 60 * 60 * 1000, 'NX',
     );
   });
 
@@ -56,7 +56,7 @@ describe('DedupEngine', () => {
     const result = await dedup.checkIssue('owner', 'repo', 42);
     expect(result).toBe(true);
     expect(mockRedis.set).toHaveBeenCalledWith(
-      'stas:dedup:issue:owner:repo:42', '1', 'PX', 30 * 60 * 1000, 'NX',
+      'syntaro:dedup:issue:owner:repo:42', '1', 'PX', 30 * 60 * 1000, 'NX',
     );
   });
 
@@ -70,7 +70,7 @@ describe('DedupEngine', () => {
     mockRedis.set.mockResolvedValue('OK');
     await dedup.checkIssue('owner', 'repo', 42, 60_000);
     expect(mockRedis.set).toHaveBeenCalledWith(
-      'stas:dedup:issue:owner:repo:42', '1', 'PX', 60_000, 'NX',
+      'syntaro:dedup:issue:owner:repo:42', '1', 'PX', 60_000, 'NX',
     );
   });
 
@@ -82,7 +82,7 @@ describe('DedupEngine', () => {
 
   it('releaseIssue deletes the issue dedup key', async () => {
     await dedup.releaseIssue('owner', 'repo', 42);
-    expect(mockRedis.del).toHaveBeenCalledWith('stas:dedup:issue:owner:repo:42');
+    expect(mockRedis.del).toHaveBeenCalledWith('syntaro:dedup:issue:owner:repo:42');
   });
 
   it('releaseIssue handles errors gracefully', async () => {

@@ -34,9 +34,9 @@ class FakePipeline:
         self.runs[run_id] = run
         return run
 
-    def submit_fix(self, owner, repo, issue_number, issue_url="", pipeline_name="stas:fix"):
+    def submit_fix(self, owner, repo, issue_number, issue_url="", pipeline_name="syntaro:fix"):
         self.counter += 1
-        run_id = f"stas-fake{self.counter:03d}"
+        run_id = f"syntaro-fake{self.counter:03d}"
         self.runs[run_id] = {
             "run_id": run_id,
             "pipeline_id": f"pl-{run_id}",

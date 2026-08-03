@@ -1,9 +1,9 @@
 """
-Slack integration — bidirectional progress updates for STAS fix requests.
+Slack integration — bidirectional progress updates for SYNTARO fix requests.
 
 Provides:
   - Slack bot with Socket Mode (Bolt SDK)
-  - /stas fix slash command handler
+  - /syntaro fix slash command handler
   - Threaded progress updates back to Slack channels
   - Button interactions (acknowledge, cancel, retry)
 

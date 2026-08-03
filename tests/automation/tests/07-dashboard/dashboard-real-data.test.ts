@@ -1,4 +1,4 @@
-import { test, expect } from '../../fixtures/stas-fixtures.js';
+import { test, expect } from '../../fixtures/syntaro-fixtures.js';
 
 const VITE_URL = 'http://localhost:5173';
 const API_URL = 'http://localhost:3002';
@@ -25,8 +25,8 @@ test.describe('Dashboard with Real Data', () => {
   test('Dashboard home loads after auth', async ({ loggedPage }) => {
     await loggedPage.goto(VITE_URL);
     await loggedPage.evaluate((token: string) => {
-      localStorage.setItem('stas_token', token);
-      localStorage.setItem('stas_refresh_token', 'test-refresh');
+      localStorage.setItem('syntaro_token', token);
+      localStorage.setItem('syntaro_refresh_token', 'test-refresh');
     }, auth.token);
 
     await loggedPage.actionLogger.navigate('/');
@@ -35,13 +35,13 @@ test.describe('Dashboard with Real Data', () => {
 
     const title = await loggedPage.title();
     console.log(`[INFO] Dashboard title: "${title}"`);
-    expect(title).toContain('STAS');
+    expect(title).toContain('SYNTARO');
   });
 
   test('No JSON parse errors on pages', async ({ loggedPage }) => {
     await loggedPage.goto(VITE_URL);
     await loggedPage.evaluate((token: string) => {
-      localStorage.setItem('stas_token', token);
+      localStorage.setItem('syntaro_token', token);
     }, auth.token);
 
     const pages = ['/', '/runs', '/analytics', '/repos', '/credits'];

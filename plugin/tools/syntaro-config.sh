@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -eu
 
-# stas-config — Validate or initialize STAS .env configuration
+# syntaro-config — Validate or initialize SYNTARO .env configuration
 #
 # SYNOPSIS
-#   stas-config [init|check]
+#   syntaro-config [init|check]
 #
 # DESCRIPTION
-#   Manages the STAS .env configuration file. Can be used as a standalone CLI
-#   tool or invoked by the STAS OpenCode plugin (stas_config_validate tool).
+#   Manages the SYNTARO .env configuration file. Can be used as a standalone CLI
+#   tool or invoked by the SYNTARO OpenCode plugin (syntaro_config_validate tool).
 #
 #   init     Create .env from .env.example (interactive)
 #   check    Validate existing .env (default)
@@ -28,7 +28,7 @@ check_env() {
 
   if [ ! -f "$ENV_FILE" ]; then
     echo "❌ .env not found at $ENV_FILE"
-    echo "   Run: stas-config init"
+    echo "   Run: syntaro-config init"
     exit 1
   fi
 
@@ -56,12 +56,12 @@ check_env() {
     echo "⚠️  OpenCode not reachable at $OC_URL (expected if not running)"
   fi
 
-  echo "✅ Config looks good. Label: ${STAS_LABEL:-stas:fix}"
+  echo "✅ Config looks good. Label: ${SYNTARO_LABEL:-syntaro:fix}"
 }
 
 init_env() {
   if [ -f "$ENV_FILE" ]; then
-    echo "⚠️  $ENV_FILE already exists. Run 'stas-config check' to validate."
+    echo "⚠️  $ENV_FILE already exists. Run 'syntaro-config check' to validate."
     exit 0
   fi
 
@@ -78,14 +78,14 @@ init_env() {
   echo "  GITHUB_PRIVATE_KEY   — PEM file contents (use \\n for newlines)"
   echo "  GITHUB_WEBHOOK_SECRET — Random secret for webhook verification"
   echo ""
-  echo "Then run: stas-config check"
+  echo "Then run: syntaro-config check"
 }
 
 case "$CMD" in
   init) init_env ;;
   check|validate) check_env ;;
   *)
-    echo "Usage: stas-config [init|check]"
+    echo "Usage: syntaro-config [init|check]"
     echo ""
     echo "Commands:"
     echo "  init       Create .env from .env.example"

@@ -10,7 +10,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from './harness/index.js';
-import { githubIssuesLabeledStasFix } from './fixtures/webhooks/github.js';
+import { githubIssuesLabeledSyntaroFix } from './fixtures/webhooks/github.js';
 import type { TestHarness } from './harness/index.js';
 
 let harness: TestHarness;
@@ -36,7 +36,7 @@ describe('Rate Limit Path: N Rapid Requests → 429 on Nth+1', () => {
   });
 
   it('Multiple rapid webhook requests return 202 (within rate limit)', async () => {
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
 
     // Send requests quickly (but the rate limiter is mocked in tests)
     const results = await Promise.all(
@@ -64,7 +64,7 @@ describe('Rate Limit Path: N Rapid Requests → 429 on Nth+1', () => {
   });
 
   it('Server remains responsive after burst of requests', async () => {
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
 
     // Send 20 rapid requests
     await Promise.all(

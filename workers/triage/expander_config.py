@@ -12,35 +12,35 @@ from typing import Any
 
 # ── LLM settings ──────────────────────────────────────────────────────────
 
-EXPANDER_MODEL: str = os.getenv("STAS_EXPANDER_MODEL", "gpt-4o-mini")
+EXPANDER_MODEL: str = os.getenv("SYNTARO_EXPANDER_MODEL", "gpt-4o-mini")
 """Model used for expanding issues. Cheap model is fine for this task."""
 
-EXPANDER_TEMPERATURE: float = float(os.getenv("STAS_EXPANDER_TEMPERATURE", "0.0"))
+EXPANDER_TEMPERATURE: float = float(os.getenv("SYNTARO_EXPANDER_TEMPERATURE", "0.0"))
 """Temperature for generation. 0 = deterministic."""
 
-EXPANDER_MAX_TOKENS: int = int(os.getenv("STAS_EXPANDER_MAX_TOKENS", "2048"))
+EXPANDER_MAX_TOKENS: int = int(os.getenv("SYNTARO_EXPANDER_MAX_TOKENS", "2048"))
 """Max tokens in the LLM response."""
 
-EXPANDER_TIMEOUT_SECONDS: int = int(os.getenv("STAS_EXPANDER_TIMEOUT_SECONDS", "30"))
+EXPANDER_TIMEOUT_SECONDS: int = int(os.getenv("SYNTARO_EXPANDER_TIMEOUT_SECONDS", "30"))
 """Max seconds to wait for LLM response."""
 
 
 # ── Quality thresholds ────────────────────────────────────────────────────
 
-EXPANDER_MIN_CONFIDENCE: float = float(os.getenv("STAS_EXPANDER_MIN_CONFIDENCE", "0.3"))
+EXPANDER_MIN_CONFIDENCE: float = float(os.getenv("SYNTARO_EXPANDER_MIN_CONFIDENCE", "0.3"))
 """Minimum confidence to accept an expansion. Below this, expansion is discarded."""
 
-EXPANDER_REVIEW_THRESHOLD: float = float(os.getenv("STAS_EXPANDER_REVIEW_THRESHOLD", "0.7"))
+EXPANDER_REVIEW_THRESHOLD: float = float(os.getenv("SYNTARO_EXPANDER_REVIEW_THRESHOLD", "0.7"))
 """Confidence above which expansion is posted without review flag."""
 
-EXPANDER_SKIP_SCORE: float = float(os.getenv("STAS_EXPANDER_SKIP_SCORE", "0.7"))
+EXPANDER_SKIP_SCORE: float = float(os.getenv("SYNTARO_EXPANDER_SKIP_SCORE", "0.7"))
 """If issue quality score is above this, skip expansion entirely."""
 
 
 # ── Prompt templates ──────────────────────────────────────────────────────
 
 EXPANSION_PROMPT_TEMPLATE: str = os.getenv(
-    "STAS_EXPANDER_PROMPT",
+    "SYNTARO_EXPANDER_PROMPT",
     (
         "You are a senior software engineer refining a ticket. Given a raw issue"
         " description, expand it into a structured specification.\n\n"

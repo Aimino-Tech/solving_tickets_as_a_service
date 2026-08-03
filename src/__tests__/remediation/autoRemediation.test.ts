@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 vi.mock('../../utils/logger.js', () => ({ rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), fatal: vi.fn() })) } }));
-vi.mock('../../config.js', () => ({ config: { stas: { remediation: { disabled: false } } } }));
+vi.mock('../../config.js', () => ({ config: { syntaro: { remediation: { disabled: false } } } }));
 describe('RemediationEngine', () => {
   let engine: any, store: any, RemediationEngine: any, RemediationStore: any, createDefaultRemediations: any;
   beforeEach(async () => {

@@ -1,7 +1,7 @@
 /**
  * AIM-3210: Webhook Delivery Helper
  *
- * Provides utility functions for sending test webhook events to the STAS server.
+ * Provides utility functions for sending test webhook events to the SYNTARO server.
  * Supports GitHub, GitLab, Bitbucket, Linear, and Jira webhook formats.
  *
  * Usage:
@@ -43,7 +43,7 @@ function signPayload(body: string, secret: string): string {
 }
 
 /**
- * Send a GitHub-style webhook event to the STAS server.
+ * Send a GitHub-style webhook event to the SYNTARO server.
  */
 export async function sendGitHubWebhook(
   baseUrl: string,

@@ -80,7 +80,7 @@ export const TIER_ORDER: Tier[] = ['free', 'pro', 'team', 'enterprise'];
  * In-memory tier overrides for specific installation IDs.
  * Key = installation ID (number), Value = tier name.
  *
- * Populated from the STAS_TIER_OVERRIDES env var.
+ * Populated from the SYNTARO_TIER_OVERRIDES env var.
  * Format: comma-separated "installationId:tier" pairs
  *   Example: "12345:pro,67890:enterprise"
  */
@@ -91,7 +91,7 @@ let tierOverrides: Map<number, Tier> = new Map();
  * Called once at startup.
  */
 export function initTierOverrides(): void {
-  const raw = process.env.STAS_TIER_OVERRIDES;
+  const raw = process.env.SYNTARO_TIER_OVERRIDES;
   if (!raw) return;
 
   const map = new Map<number, Tier>();
@@ -101,12 +101,12 @@ export function initTierOverrides(): void {
     const [idStr, tierStr] = trimmed.split(':');
     const id = Number(idStr);
     if (!Number.isFinite(id) || id <= 0) {
-      log.warn({ pair: trimmed }, 'Invalid installation ID in STAS_TIER_OVERRIDES');
+      log.warn({ pair: trimmed }, 'Invalid installation ID in SYNTARO_TIER_OVERRIDES');
       continue;
     }
     const tier = tierStr?.trim().toLowerCase() as Tier;
     if (!TIER_CONFIGS[tier]) {
-      log.warn({ pair: trimmed, tier }, 'Invalid tier in STAS_TIER_OVERRIDES');
+      log.warn({ pair: trimmed, tier }, 'Invalid tier in SYNTARO_TIER_OVERRIDES');
       continue;
     }
     map.set(id, tier);
@@ -123,7 +123,7 @@ export function initTierOverrides(): void {
  * Get the tier for a given GitHub installation (account) ID.
  *
  * Resolution order:
- *  1. Admin override (env var STAS_TIER_OVERRIDES)
+ *  1. Admin override (env var SYNTARO_TIER_OVERRIDES)
  *  2. Default: free
  */
 export function getTierForAccount(installationId: number): Tier {
@@ -161,7 +161,7 @@ export function getConcurrencyLimitForAccount(installationId: number): number {
 
 /**
  * Admin override: set a tier for a specific installation ID at runtime.
- * This is NOT persisted across restarts — use STAS_TIER_OVERRIDES env var
+ * This is NOT persisted across restarts — use SYNTARO_TIER_OVERRIDES env var
  * for permanent overrides.
  */
 export function setTierOverride(installationId: number, tier: Tier): void {
@@ -188,4 +188,4 @@ export function clearTierOverride(installationId: number): void {
  * The effective windowMs for the rate limiter — uses the env-var-configured
  * default if set, otherwise falls through to the Free tier's window.
  */
-export const DEFAULT_WINDOW_MS: number = config.stas.rateLimitWindowMs ?? 60_000;
+export const DEFAULT_WINDOW_MS: number = config.syntaro.rateLimitWindowMs ?? 60_000;

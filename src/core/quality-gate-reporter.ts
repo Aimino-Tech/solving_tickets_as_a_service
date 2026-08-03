@@ -43,13 +43,13 @@ export class QualityGateReporter {
   formatMarkdown(results: QualityGateResult[]): string {
     if (results.length === 0) {
       return [
-        '<!-- stas-quality-report -->',
+        '<!-- syntaro-quality-report -->',
         '',
         '## Quality Gates',
         '',
         '_No quality gates were run for this fix._',
         '',
-        '<!-- /stas-quality-report -->',
+        '<!-- /syntaro-quality-report -->',
       ].join('\n');
     }
 
@@ -67,7 +67,7 @@ export class QualityGateReporter {
     const table = [...tableHeader, ...rows];
 
     return [
-      '<!-- stas-quality-report -->',
+      '<!-- syntaro-quality-report -->',
       '',
       `<details>`,
       `<summary>${summaryLine}</summary>`,
@@ -76,7 +76,7 @@ export class QualityGateReporter {
       '',
       '</details>',
       '',
-      '<!-- /stas-quality-report -->',
+      '<!-- /syntaro-quality-report -->',
     ].join('\n');
   }
 
@@ -119,7 +119,7 @@ export class QualityGateReporter {
 
   /**
    * Write a single gate's structured JSON result to
-   * `.stas/gates/{fixId}/{gateName}.json` for audit persistence.
+   * `.syntaro/gates/{fixId}/{gateName}.json` for audit persistence.
    *
    * Creates the directory tree if it does not exist.
    *
@@ -127,7 +127,7 @@ export class QualityGateReporter {
    * @param result   The gate result to persist.
    */
   async writeGateResult(fixId: string | number, result: QualityGateResult): Promise<void> {
-    const dir = join(process.cwd(), '.stas', 'gates', String(fixId));
+    const dir = join(process.cwd(), '.syntaro', 'gates', String(fixId));
     const filePath = join(dir, `${result.gate}.json`);
 
     try {

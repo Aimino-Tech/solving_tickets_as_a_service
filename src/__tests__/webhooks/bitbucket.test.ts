@@ -23,7 +23,7 @@ vi.mock("../../utils/logger.js", () => ({
 
 vi.mock("../../config.js", () => ({
   config: {
-    stas: { label: "stas:fix" },
+    syntaro: { label: "syntaro:fix" },
     bitbucket: {
       username: "testuser",
       appPassword: "test-password",

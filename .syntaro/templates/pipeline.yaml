@@ -1,5 +1,5 @@
-name: stas:pipeline
-labels: [stas:pipeline, stas:train, pipeline]
+name: syntaro:pipeline
+labels: [syntaro:pipeline, syntaro:train, pipeline]
 phases:
   pre:
     - command: "opencode resolve-config --issue {issue.number} --params {issue.body}"

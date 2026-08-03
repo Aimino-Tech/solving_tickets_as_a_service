@@ -1,5 +1,5 @@
 # =============================================================================
-# STAS CI — Lint, TypeCheck, Test (with coverage), Build, and E2E
+# SYNTARO CI — Lint, TypeCheck, Test (with coverage), Build, and E2E
 #
 # Optimizations:
 #   - Dependency caching via actions/setup-node (npm ci ~5s)
@@ -388,12 +388,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t stas-bot:ci -f Dockerfile .
+        run: docker build -t syntaro-bot:ci -f Dockerfile .
 
       - name: Scan image with Grype
         uses: anchore/scan-action@v6
         with:
-          image: stas-bot:ci
+          image: syntaro-bot:ci
           fail-build: true
           severity-cutoff: high
           only-fixed: true
@@ -401,7 +401,7 @@ jobs:
       - name: Generate Grype SARIF report
         uses: anchore/scan-action@v6
         with:
-          image: stas-bot:ci
+          image: syntaro-bot:ci
           severity-cutoff: high
           only-fixed: true
           output-format: sarif
@@ -441,7 +441,7 @@ jobs:
       - name: Wait for Redis
         run: |
           for i in $(seq 1 30); do
-            docker exec stas-e2e-redis redis-cli ping && break
+            docker exec syntaro-e2e-redis redis-cli ping && break
             sleep 1
           done
 
@@ -482,14 +482,14 @@ jobs:
       - name: Wait for Redis
         run: |
           for i in $(seq 1 30); do
-            docker exec stas-e2e-redis redis-cli ping && break
+            docker exec syntaro-e2e-redis redis-cli ping && break
             sleep 1
           done
 
       - name: Wait for RabbitMQ
         run: |
           for i in $(seq 1 30); do
-            docker inspect stas-e2e-rabbitmq --format '{{.State.Health.Status}}' | grep healthy && break
+            docker inspect syntaro-e2e-rabbitmq --format '{{.State.Health.Status}}' | grep healthy && break
             sleep 2
           done
 

@@ -134,7 +134,7 @@ describe('premium auth middleware', () => {
         username: 'u',
         iat: Math.floor(Date.now() / 1000) - 7200,
         exp: Math.floor(Date.now() / 1000) - 3600,
-        iss: 'stas-premium',
+        iss: 'syntaro-premium',
       })).toString('base64url');
 
       // We can't easily forge a valid signature without the secret,

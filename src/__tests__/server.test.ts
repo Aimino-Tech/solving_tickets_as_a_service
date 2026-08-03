@@ -105,9 +105,9 @@ vi.mock('../config.js', () => ({
     },
     gitlab: { url: 'https://gitlab.com', token: '', webhookSecret: 'test-secret' },
     bitbucket: { username: '', appPassword: '', webhookSecret: '' },
-    stas: {
-      label: 'stas:fix',
-      botName: 'STAS',
+    syntaro: {
+      label: 'syntaro:fix',
+      botName: 'SYNTARO',
       devSkipWebhookVerify: false,
       rateLimit: { windowMs: 60000, max: 30 },
 
@@ -188,7 +188,7 @@ vi.mock('../config.js', () => ({
     },
     sentry: { dsn: undefined, environment: 'test', tracesSampleRate: 0.1 },
     stripe: { secretKey: undefined, webhookSecret: undefined },
-    database: { url: 'postgres://localhost:5432/stas', poolMin: 2, poolMax: 10, ssl: false },
+    database: { url: 'postgres://localhost:5432/syntaro', poolMin: 2, poolMax: 10, ssl: false },
     fixTimeoutMs: 600000,
     featureFlags: { defaultTtlSeconds: 30, autoDisableThreshold: 0.05 },
     webhookRetry: { pollIntervalMs: 15000, batchSize: 10 },
@@ -268,7 +268,7 @@ vi.mock('../webhooks/retryWorker.js', () => ({
 vi.mock('../queue/rabbitmq.js', () => ({
   isConnected: vi.fn().mockReturnValue(false),
   publishMessage: vi.fn().mockResolvedValue(undefined),
-  QUEUES: { issuesFix: { name: 'issue.fix', exchange: 'stas.direct', routingKey: 'issue.fix' } },
+  QUEUES: { issuesFix: { name: 'issue.fix', exchange: 'syntaro.direct', routingKey: 'issue.fix' } },
   connect: vi.fn().mockResolvedValue(undefined),
   consumeQueue: vi.fn().mockResolvedValue(undefined),
 }));
@@ -401,7 +401,7 @@ describe('server', () => {
           issue: { number: 42, title: 'Fix bug', body: 'Details' },
           repository: { name: 'repo', owner: { login: 'owner' } },
           installation: { id: 555 },
-          label: { name: 'stas:fix' },
+          label: { name: 'syntaro:fix' },
         }),
       });
 
@@ -463,7 +463,7 @@ describe('server', () => {
           issue: { number: 1, title: 't', body: 'b' },
           repository: { name: 'r', owner: { login: 'o' } },
           installation: { id: 1 },
-          label: { name: 'stas:fix' },
+          label: { name: 'syntaro:fix' },
         }),
       });
 
@@ -489,7 +489,7 @@ describe('server', () => {
           issue: { number: 1, title: 't', body: 'b' },
           repository: { name: 'r', owner: { login: 'o' } },
           installation: { id: 1 },
-          label: { name: 'stas:fix' },
+          label: { name: 'syntaro:fix' },
         }),
       });
 

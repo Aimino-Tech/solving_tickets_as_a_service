@@ -1,5 +1,5 @@
-name: stas:fix
-labels: [stas:fix, stas:bugfix]
+name: syntaro:fix
+labels: [syntaro:fix, syntaro:bugfix]
 phases:
   pre:
     - command: "opencode grep-memory --query {issue.title}"

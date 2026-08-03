@@ -22,8 +22,8 @@ _TIER_CONCURRENCY: dict[str, int] = {
 _TOKEN_BUCKET_DEFAULT_CAPACITY = int(os.getenv("TOKEN_BUCKET_DEFAULT_CAPACITY", "60"))
 _TOKEN_BUCKET_DEFAULT_REFILL_RATE = float(os.getenv("TOKEN_BUCKET_DEFAULT_REFILL_RATE", "1.0"))
 
-_REDIS_BUCKET_PREFIX = "stas:token_bucket:"
-_REDIS_CONCURRENCY_PREFIX = "stas:tenant_concurrency:"
+_REDIS_BUCKET_PREFIX = "syntaro:token_bucket:"
+_REDIS_CONCURRENCY_PREFIX = "syntaro:tenant_concurrency:"
 
 _REDIS_CLIENT: Optional[Any] = None
 

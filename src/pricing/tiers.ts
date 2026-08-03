@@ -1,5 +1,5 @@
 /**
- * Feature-gate definitions for STAS pricing tiers.
+ * Feature-gate definitions for SYNTARO pricing tiers.
  *
  * Builds on the tier system in src/ratelimit/tiers.ts by adding per-tier
  * feature gates that control access to premium functionality. Every account

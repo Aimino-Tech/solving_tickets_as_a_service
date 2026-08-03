@@ -10,7 +10,7 @@ a ``chain`` ready for ``.delay()``.
 
 Multi-tenant (AIM-2017):
     When ``ctx`` contains ``tenant_id``, all steps are routed to the per-tenant
-    queue (``stas.agents.tenant.{tenant_id}``) by default.  Steps that explicitly
+    queue (``syntaro.agents.tenant.{tenant_id}``) by default.  Steps that explicitly
     set a ``queue`` in their config are left unchanged.
 """
 
@@ -56,8 +56,8 @@ def build_canvas(pipeline_cfg: dict, ctx: dict) -> chain:
 
 
 _PIPELINES: dict[str, dict] = {
-    "stas:fix": {
-        "name": "stas:fix",
+    "syntaro:fix": {
+        "name": "syntaro:fix",
         "label": "Fix Issue",
         "description": "Triage, workspace, agent, verify, audit, anti-mockup, sanitize, PR, notifications, review, cleanup",
         "max_attempts": 3,
@@ -79,8 +79,8 @@ _PIPELINES: dict[str, dict] = {
             {"task": "workers.orchestrator.workspace.cleanup_workspace"},
         ],
     },
-    "stas:feature": {
-        "name": "stas:feature",
+    "syntaro:feature": {
+        "name": "syntaro:feature",
         "label": "Feature Request",
         "description": "Same as fix but with feature-oriented agent prompt",
         "max_attempts": 3,
@@ -102,8 +102,8 @@ _PIPELINES: dict[str, dict] = {
             {"task": "workers.orchestrator.workspace.cleanup_workspace"},
         ],
     },
-    "stas:research": {
-        "name": "stas:research",
+    "syntaro:research": {
+        "name": "syntaro:research",
         "label": "Research / Investigation",
         "description": "Triage, workspace, agent (research), audit, cleanup — no PR",
         "max_attempts": 2,

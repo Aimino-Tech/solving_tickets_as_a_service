@@ -1,8 +1,8 @@
-# Contributing to STAS
+# Contributing to SYNTARO
 
-> **Thank you for considering contributing to STAS!**
+> **Thank you for considering contributing to SYNTARO!**
 
-STAS is an open-source project (MIT licensed) that turns labeled GitHub issues into pull requests. We welcome contributions of all kinds — bug fixes, features, documentation, tests, and more.
+SYNTARO is an open-source project (MIT licensed) that turns labeled GitHub issues into pull requests. We welcome contributions of all kinds — bug fixes, features, documentation, tests, and more.
 
 ---
 
@@ -100,7 +100,7 @@ npm run dev:worker
 
 ```bash
 curl http://localhost:3000/health
-# → {"status":"ok","label":"stas:fix","uptime":42}
+# → {"status":"ok","label":"syntaro:fix","uptime":42}
 ```
 
 ---
@@ -330,7 +330,7 @@ bash .github/scripts/ci-gates.sh all # All three
 
 ### Anti-Mock Enforcement (5-Layer Defense)
 
-Research shows AI-generated tests often mock core infrastructure instead of testing against real execution, producing false confidence. STAS runs 5 enforcement layers on every PR to prevent this:
+Research shows AI-generated tests often mock core infrastructure instead of testing against real execution, producing false confidence. SYNTARO runs 5 enforcement layers on every PR to prevent this:
 
 | Layer | Tool | What It Blocks | Why |
 |---|---|---|---|---|
@@ -569,8 +569,8 @@ If the worker pipeline test fails:
 
 1. **Check Docker logs**:
    ```bash
-   docker logs stas-e2e-redis
-   docker logs stas-e2e-rabbitmq
+   docker logs syntaro-e2e-redis
+   docker logs syntaro-e2e-rabbitmq
    ```
 
 2. **Check Python virtualenv**: The test creates `.venv-worker-pipeline` in `tests/e2e/`.
@@ -598,7 +598,7 @@ If the worker pipeline test fails:
 
 ## Release Process
 
-STAS follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and uses an automated release pipeline triggered by Git tags.
+SYNTARO follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and uses an automated release pipeline triggered by Git tags.
 
 ### Versioning Strategy
 

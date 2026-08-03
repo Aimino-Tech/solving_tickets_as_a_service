@@ -1,4 +1,4 @@
-# STAS Launch Coordination Timeline — 48-Hour HN → Reddit → PH Drop Sequence
+# SYNTARO Launch Coordination Timeline — 48-Hour HN → Reddit → PH Drop Sequence
 
 > **Objective**: Coordinate a multi-platform launch within a 2-hour window to maximize cross-traffic amplification, triggering GitHub Trending and HN front page.
 
@@ -51,7 +51,7 @@
 | 9:15 AM | 15:15 | Submit r/programming post | Content |
 | 9:16 AM | 15:16 | Submit r/devtools post | Content |
 | 9:17 AM | 15:17 | Submit r/MachineLearning post | Content |
-| 9:20 AM | 15:20 | DO NOT link to HN — link to STAS website directly | All |
+| 9:20 AM | 15:20 | DO NOT link to HN — link to SYNTARO website directly | All |
 | 9:25 AM | 15:25 | Supporters comment on Reddit posts | Community |
 
 **T+30min: Twitter/X Launch Thread**
@@ -308,7 +308,7 @@ If Plan B also fails (no traction at T+4h):
 |------|---------|
 | **No URL shorteners** on HN or Reddit | They get flagged as spam automatically |
 | **No vote manipulation** | No asking for upvotes, no vote rings |
-| **No direct HN→Reddit cross-linking** | Link to STAS website, not the HN post |
+| **No direct HN→Reddit cross-linking** | Link to SYNTARO website, not the HN post |
 | **First 30 minutes critical on HN** | Pre-coordinate ~20 upvotes within first 5 minutes |
 | **PH algorithm favors early posts** | Submit before 12:01 AM PT or within first hour |
 | **Don't launch on major holidays** | Avoid Apple/Google/Microsoft event days |

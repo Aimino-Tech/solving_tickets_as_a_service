@@ -80,7 +80,7 @@ describe('services/featureFlags', () => {
     it('adds a timestamped entry to the calls sorted set', async () => {
       await ff.recordFlagCall('test_flag');
       expect(mockRedis.zadd).toHaveBeenCalledWith(
-        'stas:flags:metrics:test_flag:calls',
+        'syntaro:flags:metrics:test_flag:calls',
         expect.any(Number),
         expect.any(String),
       );
@@ -89,7 +89,7 @@ describe('services/featureFlags', () => {
     it('sets expiry on the calls key', async () => {
       await ff.recordFlagCall('test_flag');
       expect(mockRedis.expire).toHaveBeenCalledWith(
-        'stas:flags:metrics:test_flag:calls',
+        'syntaro:flags:metrics:test_flag:calls',
         expect.any(Number),
       );
     });
@@ -99,7 +99,7 @@ describe('services/featureFlags', () => {
     it('adds a timestamped entry to the errors sorted set', async () => {
       await ff.recordFlagError('test_flag');
       expect(mockRedis.zadd).toHaveBeenCalledWith(
-        'stas:flags:metrics:test_flag:errors',
+        'syntaro:flags:metrics:test_flag:errors',
         expect.any(Number),
         expect.any(String),
       );
@@ -108,7 +108,7 @@ describe('services/featureFlags', () => {
     it('sets expiry on the errors key', async () => {
       await ff.recordFlagError('test_flag');
       expect(mockRedis.expire).toHaveBeenCalledWith(
-        'stas:flags:metrics:test_flag:errors',
+        'syntaro:flags:metrics:test_flag:errors',
         expect.any(Number),
       );
     });
@@ -413,12 +413,12 @@ describe('services/featureFlags', () => {
   describe('invalidateCache', () => {
     it('deletes the cache key', async () => {
       await ff.invalidateCache('test_flag', 42);
-      expect(mockRedis.del).toHaveBeenCalledWith(expect.stringContaining('stas:flags:account:42:test_flag'));
+      expect(mockRedis.del).toHaveBeenCalledWith(expect.stringContaining('syntaro:flags:account:42:test_flag'));
     });
 
     it('deletes global cache key when no accountId', async () => {
       await ff.invalidateCache('test_flag');
-      expect(mockRedis.del).toHaveBeenCalledWith(expect.stringContaining('stas:flags:global:test_flag'));
+      expect(mockRedis.del).toHaveBeenCalledWith(expect.stringContaining('syntaro:flags:global:test_flag'));
     });
   });
 

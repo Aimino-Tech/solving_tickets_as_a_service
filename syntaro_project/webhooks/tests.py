@@ -16,7 +16,7 @@ SAMPLE_PAYLOAD = {
         "number": 42,
         "html_url": "https://github.com/owner/repo/issues/42",
     },
-    "label": {"name": "stas:fix"},
+    "label": {"name": "syntaro:fix"},
     "repository": {
         "full_name": "owner/repo",
         "clone_url": "https://github.com/owner/repo.git",
@@ -49,7 +49,7 @@ def _post(url: str, payload: dict, **extras):
 
 @override_settings(
     GITHUB_WEBHOOK_SECRET=TEST_SECRET,
-    STAS_LABEL="stas:fix",
+    SYNTARO_LABEL="syntaro:fix",
 )
 class GitHubWebhookTest(TestCase):
     def setUp(self):

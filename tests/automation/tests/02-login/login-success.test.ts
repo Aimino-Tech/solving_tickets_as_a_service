@@ -5,7 +5,7 @@ const TEST_EMAIL = 'test-automation@aimino-test.de';
 const TEST_PASSWORD = 'TestAutomation123!';
 
 function getBaseURL(): string {
-  return process.env.STAS_URL || 'http://localhost:3000';
+  return process.env.SYNTARO_URL || 'http://localhost:3000';
 }
 
 test.describe('Successful Login', () => {
@@ -20,7 +20,7 @@ test.describe('Successful Login', () => {
     console.log(`[INFO] URL after login: "${currentUrl}"`);
 
     const token = await page.evaluate(() => {
-      try { return localStorage.getItem('stas_token'); } catch { return null; }
+      try { return localStorage.getItem('syntaro_token'); } catch { return null; }
     });
 
     expect(token).toBeTruthy();

@@ -13,8 +13,8 @@
 #   bash scripts/install-oss-guard.sh
 #
 # Environment:
-#   STAS_SKIP_GARAK=true   — Skip garak installation (slow, large deps)
-#   STAS_PIP_INDEX_URL     — Custom PyPI index URL (default: https://pypi.org/simple)
+#   SYNTARO_SKIP_GARAK=true   — Skip garak installation (slow, large deps)
+#   SYNTARO_PIP_INDEX_URL     — Custom PyPI index URL (default: https://pypi.org/simple)
 # =============================================================================
 
 set -eu
@@ -107,8 +107,8 @@ else
 fi
 
 # --- garak (optional) ----------------------------------------------------
-if [ "${STAS_SKIP_GARAK:-}" = "true" ]; then
-    warn "Skipping garak installation (STAS_SKIP_GARAK=true)"
+if [ "${SYNTARO_SKIP_GARAK:-}" = "true" ]; then
+    warn "Skipping garak installation (SYNTARO_SKIP_GARAK=true)"
 else
     info "Installing garak..."
     # garak has many transitive dependencies (~200+ MB); install is slow
@@ -169,10 +169,10 @@ if $llm_guard_ok || $rebuff_ok || $garak_ok; then
     ok "At least one OSS guard tool is available."
     echo ""
     echo "  To enable OSS guard integration, set:"
-    echo "    export STAS_OSS_GUARD_ENABLED=true"
+    echo "    export SYNTARO_OSS_GUARD_ENABLED=true"
     echo ""
     echo "  To select specific tools (default: llm_guard,rebuff):"
-    echo "    export STAS_OSS_GUARD_TOOLS=llm_guard,rebuff,garak"
+    echo "    export SYNTARO_OSS_GUARD_TOOLS=llm_guard,rebuff,garak"
 else
     warn "No OSS guard tools were installed successfully."
     echo ""

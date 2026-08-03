@@ -1,8 +1,8 @@
 # IONOS Cloud Deployment — Phase 3
 
-> **Scaling STAS to production on IONOS cloud infrastructure.**
+> **Scaling SYNTARO to production on IONOS cloud infrastructure.**
 
-This guide covers deploying STAS on [IONOS Cloud](https://cloud.ionos.com) for Phase 3 scale. It assumes you have an IONOS account and the [IONOS CLI](https://github.com/ionos-cloud/ionosctl) installed.
+This guide covers deploying SYNTARO on [IONOS Cloud](https://cloud.ionos.com) for Phase 3 scale. It assumes you have an IONOS account and the [IONOS CLI](https://github.com/ionos-cloud/ionosctl) installed.
 
 ## Prerequisites
 
@@ -81,7 +81,7 @@ The [Data Center Designer](https://dcd.ionos.com) provides:
 
 # RabbitMQ VM
 ionosctl vm create \
-  --name stas-rabbitmq \
+  --name syntaro-rabbitmq \
   --ram 4096 \
   --cores 2 \
   --image ubuntu:24.04 \
@@ -90,7 +90,7 @@ ionosctl vm create \
 
 # Redis VM
 ionosctl vm create \
-  --name stas-redis \
+  --name syntaro-redis \
   --ram 4096 \
   --cores 2 \
   --image ubuntu:24.04 \
@@ -99,7 +99,7 @@ ionosctl vm create \
 
 # PostgreSQL VM (or use IONOS managed database)
 ionosctl vm create \
-  --name stas-postgres \
+  --name syntaro-postgres \
   --ram 4096 \
   --cores 2 \
   --image ubuntu:24.04 \
@@ -109,7 +109,7 @@ ionosctl vm create \
 # --- Worker VMs (scale horizontally) ---
 
 ionosctl vm create \
-  --name stas-worker-1 \
+  --name syntaro-worker-1 \
   --ram 8192 \
   --cores 4 \
   --image ubuntu:24.04 \
@@ -134,12 +134,12 @@ packages:
 runcmd:
   - systemctl enable docker
   - systemctl start docker
-  - git clone https://github.com/your-org/stas /opt/stas
-  - cd /opt/stas
+  - git clone https://github.com/your-org/syntaro /opt/syntaro
+  - cd /opt/syntaro
   - cp .env.example .env
-  - sed -i 's|CELERY_BROKER_URL=.*|CELERY_BROKER_URL=amqp://user:pass@stas-rabbitmq:5672|' .env
-  - sed -i 's|CELERY_RESULT_BACKEND=.*|CELERY_RESULT_BACKEND=redis://stas-redis:6379/0|' .env
-  - sed -i 's|OPENCODE_URL=.*|OPENCODE_URL=http://stas-opencode:4096|' .env
+  - sed -i 's|CELERY_BROKER_URL=.*|CELERY_BROKER_URL=amqp://user:pass@syntaro-rabbitmq:5672|' .env
+  - sed -i 's|CELERY_RESULT_BACKEND=.*|CELERY_RESULT_BACKEND=redis://syntaro-redis:6379/0|' .env
+  - sed -i 's|OPENCODE_URL=.*|OPENCODE_URL=http://syntaro-opencode:4096|' .env
   - docker compose -f docker-compose.worker.yml up -d
 ```
 
@@ -154,15 +154,15 @@ IONOS S3 is compatible with the AWS S3 SDK. Use it to persist workspace artifact
 pip install ionoscloud-s3-cli
 
 # Create bucket
-ionosctl s3 bucket create --name stas-workspaces-<env>
+ionosctl s3 bucket create --name syntaro-workspaces-<env>
 
 # Set lifecycle policy (30-day retention)
 ionosctl s3 lifecycle put \
-  --bucket stas-workspaces-<env> \
+  --bucket syntaro-workspaces-<env> \
   --rule '{"id": "expire-30d", "status": "Enabled", "expiration": {"days": 30}}'
 
 # Enable versioning (optional, for audit trail)
-ionosctl s3 bucket versioning enable --bucket stas-workspaces-<env>
+ionosctl s3 bucket versioning enable --bucket syntaro-workspaces-<env>
 ```
 
 ### Configuration
@@ -175,7 +175,7 @@ S3_ENDPOINT=https://<your-region>.ionosobjects.com
 S3_REGION=de
 S3_ACCESS_KEY_ID=<ionos-s3-key>
 S3_SECRET_ACCESS_KEY=<ionos-s3-secret>
-S3_BUCKET=stas-workspaces-prod
+S3_BUCKET=syntaro-workspaces-prod
 
 # Optional: artifact retention
 S3_ARTIFACT_RETENTION_DAYS=30
@@ -186,7 +186,7 @@ S3_ARTIFACT_RETENTION_DAYS=30
 Workspace artifacts are stored under:
 
 ```
-s3://stas-workspaces-prod/{org}/{repo}/{issue-number}/
+s3://syntaro-workspaces-prod/{org}/{repo}/{issue-number}/
   ├── logs/
   ├── test-reports/
   ├── diffs/
@@ -234,27 +234,27 @@ For multi-node webhook deployments, use IONOS Application Load Balancer:
 ```bash
 # Create target group
 ionosctl alb target-group create \
-  --name stas-webhook-targets \
+  --name syntaro-webhook-targets \
   --protocol HTTP \
   --port 3000 \
   --health-check-path /health/ready
 
 # Create load balancer
 ionosctl alb create \
-  --name stas-webhook-alb \
+  --name syntaro-webhook-alb \
   --listener-protocol HTTPS \
   --listener-port 443 \
-  --target-group stas-webhook-targets \
+  --target-group syntaro-webhook-targets \
   --certificate-id <ssl-cert-id>
 
 # Add worker VMs as targets
 ionosctl alb target add \
-  --target-group stas-webhook-targets \
+  --target-group syntaro-webhook-targets \
   --ip <webhook-vm-1-ip> \
   --port 3000
 
 ionosctl alb target add \
-  --target-group stas-webhook-targets \
+  --target-group syntaro-webhook-targets \
   --ip <webhook-vm-2-ip> \
   --port 3000
 ```
@@ -274,7 +274,7 @@ Each worker exposes metrics on port 9090. Set up a central Prometheus instance o
 ```yaml
 # prometheus.yml
 scrape_configs:
-  - job_name: 'stas-workers'
+  - job_name: 'syntaro-workers'
     static_configs:
       - targets:
           - 'worker-1:9090'
@@ -307,7 +307,7 @@ scrape_configs:
 ### Recovery Procedure
 
 1. **Replace failed worker**: Launch a new VM with the same cloud-init template
-2. **Restore PostgreSQL**: `pg_restore -d stas < latest-backup`
+2. **Restore PostgreSQL**: `pg_restore -d syntaro < latest-backup`
 3. **Restore Redis**: Copy RDB snapshot to `/var/lib/redis/dump.rdb`
 4. **Restore RabbitMQ**: `rabbitmqadmin import rabbitmq.definitions.json`
 5. **Restore ALB**: Re-run ALB setup with existing target group

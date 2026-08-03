@@ -28,7 +28,7 @@ function isBoltConfigured(): boolean {
 }
 
 function buildBlocks(event: NotificationEvent, data: NotificationData): any[] {
-  const bot = data.botName ?? config.stas.botName;
+  const bot = data.botName ?? config.syntaro.botName;
   const issueUrl = data.issueNumber > 0 ? ISSUE_URL(data.repoOwner, data.repoName, data.issueNumber) : '';
   const repoUrl = data.repoOwner && data.repoName ? `https://github.com/${data.repoOwner}/${data.repoName}` : '';
 
@@ -237,7 +237,7 @@ export class SlackBoltApp {
       await ack();
     });
 
-    const stasCommandHandler = async ({ command, ack, respond, client }: any) => {
+    const syntaroCommandHandler = async ({ command, ack, respond, client }: any) => {
       await ack();
 
       const text = (command.text || '').trim();
@@ -245,15 +245,15 @@ export class SlackBoltApp {
       const userId = command.user_id;
       const threadTs = command.ts;
 
-      log.info({ text, channelId, userId }, 'Received /stas command');
+      log.info({ text, channelId, userId }, 'Received /syntaro command');
 
       if (!text) {
         await respond({
           response_type: 'ephemeral',
           text:
-            'Usage: `/stas fix <description>` or `/stas fix owner/repo <description>` or `/stas status <run_id>`\n' +
-            'Example: `/stas fix login button not working`\n' +
-            'Type `/stas help` for all commands.',
+            'Usage: `/syntaro fix <description>` or `/syntaro fix owner/repo <description>` or `/syntaro status <run_id>`\n' +
+            'Example: `/syntaro fix login button not working`\n' +
+            'Type `/syntaro help` for all commands.',
         });
         return;
       }
@@ -262,11 +262,11 @@ export class SlackBoltApp {
         await respond({
           response_type: 'ephemeral',
           text:
-            '*STAS Slack Commands:*\n\n' +
-            '• `/stas fix <description>` — Submit a fix request with the default repo\n' +
-            '• `/stas fix owner/repo <description>` — Submit a fix for a specific repo\n' +
-            '• `/stas status <run_id>` — Check the status of a running fix\n' +
-            '• `/stas help` — Show this message\n\n' +
+            '*SYNTARO Slack Commands:*\n\n' +
+            '• `/syntaro fix <description>` — Submit a fix request with the default repo\n' +
+            '• `/syntaro fix owner/repo <description>` — Submit a fix for a specific repo\n' +
+            '• `/syntaro status <run_id>` — Check the status of a running fix\n' +
+            '• `/syntaro help` — Show this message\n\n' +
             '_Progress updates appear as thread replies to your command._',
         });
         return;
@@ -275,7 +275,7 @@ export class SlackBoltApp {
       if (text.startsWith('status ')) {
         const runId = text.slice(7).trim();
         if (!runId) {
-          await respond({ response_type: 'ephemeral', text: 'Usage: `/stas status <run_id>`' });
+          await respond({ response_type: 'ephemeral', text: 'Usage: `/syntaro status <run_id>`' });
           return;
         }
 
@@ -287,6 +287,7 @@ export class SlackBoltApp {
             maxRetriesPerRequest: 1,
             connectTimeout: 3000,
           });
+          redis.on('error', () => {});
           await redis.connect();
           const raw = await redis.get(`job:${runId}`);
           await redis.quit().catch(() => {});
@@ -356,7 +357,7 @@ export class SlackBoltApp {
         if (!repoOwner || !repoName) {
           await respond({
             response_type: 'ephemeral',
-            text: 'Error: No repository specified and no default repository configured.\nUse: `/stas fix owner/repo <description>`',
+            text: 'Error: No repository specified and no default repository configured.\nUse: `/syntaro fix owner/repo <description>`',
           });
           return;
         }
@@ -421,7 +422,7 @@ export class SlackBoltApp {
 
           await respond({
             response_type: 'in_channel',
-            text: `STAS is investigating: "${issueTitle}"\nI'll post progress updates in this thread.`,
+            text: `SYNTARO is investigating: "${issueTitle}"\nI'll post progress updates in this thread.`,
           });
 
           if (threadTs) {
@@ -436,24 +437,24 @@ export class SlackBoltApp {
 
       await respond({
         response_type: 'ephemeral',
-        text: `Unknown command: \`${text}\`. Try \`/stas help\` or \`/stas fix <description>\`.`,
+        text: `Unknown command: \`${text}\`. Try \`/syntaro help\` or \`/syntaro fix <description>\`.`,
       });
     };
 
-    this.app.command('/stas', stasCommandHandler);
-    this.app.command('/STAS', stasCommandHandler);
+    this.app.command('/syntaro', syntaroCommandHandler);
+    this.app.command('/SYNTARO', syntaroCommandHandler);
 
-    this.app.command('/stas-ticket', async ({ command, ack, client }) => {
+    this.app.command('/syntaro-ticket', async ({ command, ack, client }) => {
       await ack();
 
-      log.info({ channelId: command.channel_id, userId: command.user_id }, 'Received /stas-ticket command');
+      log.info({ channelId: command.channel_id, userId: command.user_id }, 'Received /syntaro-ticket command');
 
       try {
         await client.views.open({
           trigger_id: command.trigger_id,
           view: {
             type: 'modal',
-            callback_id: 'stas_ticket_modal',
+            callback_id: 'syntaro_ticket_modal',
             title: { type: 'plain_text', text: 'Create Linear Ticket' },
             submit: { type: 'plain_text', text: 'Create' },
             close: { type: 'plain_text', text: 'Cancel' },
@@ -499,11 +500,11 @@ export class SlackBoltApp {
           },
         });
       } catch (err) {
-        log.error({ err: String(err) }, 'Failed to open /stas-ticket modal');
+        log.error({ err: String(err) }, 'Failed to open /syntaro-ticket modal');
       }
     });
 
-    this.app.view('stas_ticket_modal', async ({ ack, body, view, client }) => {
+    this.app.view('syntaro_ticket_modal', async ({ ack, body, view, client }) => {
       await ack();
 
       const values = view.state.values;
@@ -512,7 +513,7 @@ export class SlackBoltApp {
       const priority = Number(values.priority_block?.priority?.value ?? 2);
 
       if (!title) {
-        log.warn('stas_ticket_modal submitted with empty title');
+        log.warn('syntaro_ticket_modal submitted with empty title');
         return;
       }
 
@@ -543,9 +544,9 @@ export class SlackBoltApp {
           text: `:white_check_mark: *Linear ticket created by <@${userId}>*\n*${ticket.title}*\n${ticket.url}`,
         });
 
-        log.info({ ticketId: ticket.id, title }, 'Ticket created via /stas-ticket');
+        log.info({ ticketId: ticket.id, title }, 'Ticket created via /syntaro-ticket');
       } catch (err) {
-        log.error({ err: String(err), title }, 'Failed to create ticket via /stas-ticket');
+        log.error({ err: String(err), title }, 'Failed to create ticket via /syntaro-ticket');
         try {
           await client.chat.postMessage({
             channel: channelId,
@@ -565,7 +566,7 @@ export class SlackBoltApp {
       // instead of the fix-queue path below.
       if (config.slack.chatEnabled) return;
 
-      log.info({ text, userId: msg.user, channel: msg.channel }, 'Received DM to STAS');
+      log.info({ text, userId: msg.user, channel: msg.channel }, 'Received DM to SYNTARO');
 
       await say(`:mag: *Investigating:* "${text}"\nProcessing your request...`);
 
@@ -573,7 +574,7 @@ export class SlackBoltApp {
       const repoName = config.trackers.defaultRepoName;
 
       if (!repoOwner || !repoName) {
-        await say('Error: No default repository configured. Use `/stas fix owner/repo <description>` in a channel.');
+        await say('Error: No default repository configured. Use `/syntaro fix owner/repo <description>` in a channel.');
         return;
       }
 
@@ -639,7 +640,7 @@ export class SlackBoltApp {
   async sendInteractiveMessage(event: NotificationEvent, data: NotificationData): Promise<void> {
     if (!this.app) return;
 
-    const channel = config.slack.channel || '#stas-notifications';
+    const channel = config.slack.channel || '#syntaro-notifications';
     const blocks = buildBlocks(event, data);
 
     try {

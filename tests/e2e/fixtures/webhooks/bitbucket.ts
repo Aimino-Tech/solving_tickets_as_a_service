@@ -20,7 +20,7 @@ export function bitbucketPullRequestCreated() {
     pullrequest: {
       id: 42,
       title: 'Fix broken user login',
-      description: 'This PR fixes the login issue. Label: stas:fix',
+      description: 'This PR fixes the login issue. Label: syntaro:fix',
       state: 'OPEN',
       source: {
         branch: { name: 'fix/login' },

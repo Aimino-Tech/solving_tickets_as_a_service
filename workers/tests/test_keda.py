@@ -77,14 +77,14 @@ class TestKedaMetricsCollector:
     @patch("workers.scaling.keda.KedaMetricsCollector._fetch_queue_depths")
     def test_poll_success(self, mock_fetch: MagicMock):
         mock_fetch.return_value = {
-            "stas.agents.dispatch": 3,
-            "stas.agents.sandbox": 0,
+            "syntaro.agents.dispatch": 3,
+            "syntaro.agents.sandbox": 0,
         }
         collector = KedaMetricsCollector(poll_interval=9999)
         collector._started = True
         collector._poll()
-        assert collector.queue_depths["stas.agents.dispatch"] == 3
-        assert collector.queue_depths["stas.agents.sandbox"] == 0
+        assert collector.queue_depths["syntaro.agents.dispatch"] == 3
+        assert collector.queue_depths["syntaro.agents.sandbox"] == 0
         assert collector.last_poll > 0
         assert collector.last_error is None
 
@@ -101,19 +101,19 @@ class TestKedaMetricsCollector:
     def test_fetch_queue_depths_httpx(self, mock_httpx_get: MagicMock):
         mock_response = MagicMock()
         mock_response.json.return_value = [
-            {"name": "stas.agents.dispatch", "messages_ready": 3, "messages_unacknowledged": 1},
-            {"name": "stas.agents.sandbox", "messages_ready": 0, "messages_unacknowledged": 2},
-            {"name": "not.a.stas.queue", "messages_ready": 99, "messages_unacknowledged": 0},
+            {"name": "syntaro.agents.dispatch", "messages_ready": 3, "messages_unacknowledged": 1},
+            {"name": "syntaro.agents.sandbox", "messages_ready": 0, "messages_unacknowledged": 2},
+            {"name": "not.a.syntaro.queue", "messages_ready": 99, "messages_unacknowledged": 0},
             {"name": "celery.boring", "messages_ready": 1, "messages_unacknowledged": 0},
         ]
         mock_response.raise_for_status.return_value = None
         mock_httpx_get.return_value = mock_response
         collector = KedaMetricsCollector()
         depths = collector._fetch_queue_depths()
-        assert depths["stas.agents.dispatch"] == 4
-        assert depths["stas.agents.sandbox"] == 2
+        assert depths["syntaro.agents.dispatch"] == 4
+        assert depths["syntaro.agents.sandbox"] == 2
         assert depths["celery.boring"] == 1
-        assert "not.a.stas.queue" not in depths
+        assert "not.a.syntaro.queue" not in depths
 
     def test_queue_depths_returns_copy(self):
         collector = KedaMetricsCollector()
@@ -143,14 +143,14 @@ class TestRenderKedaMetrics:
         collector = get_collector()
         with collector._lock:
             collector._queue_depths = {
-                "stas.agents.dispatch": 5,
-                "stas.agents.sandbox": 3,
+                "syntaro.agents.dispatch": 5,
+                "syntaro.agents.sandbox": 3,
             }
             collector._last_poll = 1234567890.0
             collector._last_error = None
         output = render_keda_metrics()
-        assert 'keda_queue_depth{queue="stas.agents.dispatch"} 5' in output
-        assert 'keda_queue_depth{queue="stas.agents.sandbox"} 3' in output
+        assert 'keda_queue_depth{queue="syntaro.agents.dispatch"} 5' in output
+        assert 'keda_queue_depth{queue="syntaro.agents.sandbox"} 3' in output
         assert "keda_last_poll_seconds 1234567890.0" in output
         assert "keda_up 1" in output
 

@@ -1,4 +1,4 @@
-# STAS Quality Gates — Complete Handoff
+# SYNTARO Quality Gates — Complete Handoff
 
 ## What This Is
 
@@ -110,12 +110,12 @@ M  WORKFLOW.md            — Replaced anti-mockup hook with quality gates call
 M  package.json           — Added scripts: quality-gates, knip, ts-prune, ghostcheck, etc.
 A  scripts/quality-gates.sh    — 6-gate pipeline script
 A  knip.json              — knip config focused on src/
-A  STAS-QUALITY-GATES.md       — This handoff document
+A  SYNTARO-QUALITY-GATES.md       — This handoff document
 ```
 
 ## For Colleagues
 
-To use these quality gates on any STAS PR:
+To use these quality gates on any SYNTARO PR:
 
 1. Before requesting human review, run `npm run quality-gates:changed`
 2. If any gate fails (1-5), fix the issue before proceeding

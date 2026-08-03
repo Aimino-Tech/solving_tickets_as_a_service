@@ -1,9 +1,9 @@
 #!/usr/bin/env npx tsx
 /**
- * STAS GitHub Action entrypoint.
+ * SYNTARO GitHub Action entrypoint.
  *
  * Reads GitHub event context from the environment and dispatches
- * a fix via the STAS pipeline.
+ * a fix via the SYNTARO pipeline.
  *
  * Environment variables (set by action.yml):
  *   INPUT_GITHUB_TOKEN    — GitHub token for API access
@@ -44,7 +44,7 @@ async function main(): Promise<void> {
   const model = process.env.INPUT_MODEL || 'default';
   const token = process.env.INPUT_GITHUB_TOKEN!;
 
-  console.log(`STAS Fix Action triggered by: ${eventName}`);
+  console.log(`SYNTARO Fix Action triggered by: ${eventName}`);
   console.log(`Repository: ${repo}`);
   console.log(`OpenCode endpoint: ${opencodeEndpoint}`);
 
@@ -59,9 +59,9 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Only process issue.labeled events with stas:fix label
-  if (eventName !== 'issues' || !event.label?.name?.toLowerCase().includes('stas:fix')) {
-    console.log(`Ignoring event: label is not stas:fix (got: ${event.label?.name})`);
+  // Only process issue.labeled events with syntaro:fix label
+  if (eventName !== 'issues' || !event.label?.name?.toLowerCase().includes('syntaro:fix')) {
+    console.log(`Ignoring event: label is not syntaro:fix (got: ${event.label?.name})`);
     process.exit(0);
   }
 
@@ -116,7 +116,7 @@ function buildFixPrompt(
   issueBody: string,
 ): string {
   return [
-    '# STAS Fix Agent (GitHub Action)',
+    '# SYNTARO Fix Agent (GitHub Action)',
     '',
     `You are an autonomous fix agent for **${repo}**.`,
     `Your task is to fix issue **#${issueNumber}: ${issueTitle}**.`,

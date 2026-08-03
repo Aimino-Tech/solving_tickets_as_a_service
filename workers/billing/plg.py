@@ -12,7 +12,7 @@ endpoints mounted at /api/plg/*). All Redis state is shared with
 workers/billing/usage.py for atomic usage counters.
 
 ── Design ─────────────────────────────────────────────────────────────────────
-- Onboarding state is stored in Redis under ``stas:plg:{tenant_id}``
+- Onboarding state is stored in Redis under ``syntaro:plg:{tenant_id}``
   (complementary to the OnboardingStateMachine in onboarding.py, which covers
   the wizard flow — this module covers the PLG-specific self-serve path).
 - Welcome issue creation uses the GitHub App installation token (no user OAuth
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-_PLG_REDIS_PREFIX = "stas:plg:"
+_PLG_REDIS_PREFIX = "syntaro:plg:"
 _PLG_TTL_S = int(os.getenv("PLG_TTL_S", str(30 * 24 * 3600)))  # 30 days
 
 _TIER_MAX_ISSUES: dict[str, int] = {
@@ -50,8 +50,8 @@ _TIER_MAX_ISSUES: dict[str, int] = {
     "enterprise": int(os.getenv("TIER_ENTERPRISE_MAX_ISSUES", "-1")),
 }
 
-_WELCOME_ISSUE_TITLE = os.getenv("WELCOME_ISSUE_TITLE", "Welcome to STAS \u2014 try your first fix!")
-_WELCOME_ISSUE_LABEL = os.getenv("WELCOME_ISSUE_LABEL", "stas:fix")
+_WELCOME_ISSUE_TITLE = os.getenv("WELCOME_ISSUE_TITLE", "Welcome to SYNTARO \u2014 try your first fix!")
+_WELCOME_ISSUE_LABEL = os.getenv("WELCOME_ISSUE_LABEL", "syntaro:fix")
 
 # ---------------------------------------------------------------------------
 # Redis client (shared singleton)
@@ -344,7 +344,7 @@ def _build_welcome_issue_body(bot_name: str) -> str:
     return (
         f"## Welcome to {bot_name}!\n"
         "\n"
-        "I'm STAS, the AI-powered issue resolver. "
+        "I'm SYNTARO, the AI-powered issue resolver. "
         "I can investigate bugs, write fixes, run your tests, and open a pull request "
         "\u2014 all from a single label.\n"
         "\n"
@@ -362,11 +362,11 @@ def _build_welcome_issue_body(bot_name: str) -> str:
         "\n"
         "- **~2-4 minutes** from label to PR (depending on repo size)\n"
         "- A **draft PR** that you review and merge\n"
-        "- **No config needed** \u2014 just the `stas:fix` label\n"
+        "- **No config needed** \u2014 just the `syntaro:fix` label\n"
         "\n"
         "---\n"
         "\n"
-        f"*Powered by [{bot_name}](https://stas.dev)*\n"
+        f"*Powered by [{bot_name}](https://syntaro.dev)*\n"
     )
 
 
@@ -387,10 +387,10 @@ def create_welcome_issue(
     """Celery task: create a welcome issue in the tenant's repo.
 
     Uses the GitHub App installation token to create an issue via the
-    GitHub API. The issue is pre-labeled with ``stas:fix`` so the user
+    GitHub API. The issue is pre-labeled with ``syntaro:fix`` so the user
     can immediately trigger their first fix.
     """
-    bot_name = os.getenv("BOT_NAME", "STAS")
+    bot_name = os.getenv("BOT_NAME", "SYNTARO")
     body = _build_welcome_issue_body(bot_name)
 
     try:
@@ -410,7 +410,7 @@ def create_welcome_issue(
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "stas-plg/1.0",
+            "User-Agent": "syntaro-plg/1.0",
         }
         payload = {
             "title": _WELCOME_ISSUE_TITLE,
@@ -493,7 +493,7 @@ def _get_installation_token(installation_id: int) -> str | None:
         headers = {
             "Authorization": f"Bearer {app_token}",
             "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "stas-plg/1.0",
+            "User-Agent": "syntaro-plg/1.0",
         }
 
         resp = httpx.post(url, headers=headers, timeout=30)
@@ -541,7 +541,7 @@ def auto_configure_webhook(
     if not token:
         return {"configured": False, "error": "Failed to get installation token"}
 
-    webhook_secret = os.getenv("GITHUB_WEBHOOK_SECRET", "stas-webhook-secret")
+    webhook_secret = os.getenv("GITHUB_WEBHOOK_SECRET", "syntaro-webhook-secret")
 
     try:
         import httpx
@@ -550,7 +550,7 @@ def auto_configure_webhook(
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "stas-plg/1.0",
+            "User-Agent": "syntaro-plg/1.0",
         }
 
         repos_resp = httpx.get(repos_url, headers=headers, timeout=30)
@@ -663,7 +663,7 @@ def get_dashboard_data(tenant_id: str, limit: int = 10) -> dict[str, Any]:
                 headers = {
                     "Authorization": f"Bearer {token}",
                     "Accept": "application/vnd.github.v3+json",
-                    "User-Agent": "stas-plg/1.0",
+                    "User-Agent": "syntaro-plg/1.0",
                 }
                 repos_resp = httpx.get(
                     "https://api.github.com/installation/repositories",
@@ -684,9 +684,9 @@ def get_dashboard_data(tenant_id: str, limit: int = 10) -> dict[str, Any]:
     try:
         import httpx as _httpx
 
-        stas_api_url = os.getenv("STAS_API_URL", "https://api.stas.aimino.io")
+        syntaro_api_url = os.getenv("SYNTARO_API_URL", "https://api.syntaro.io")
         runs_resp = _httpx.get(
-            f"{stas_api_url}/api/runs",
+            f"{syntaro_api_url}/api/runs",
             params={"limit": limit, "tenantId": tenant_id},
             timeout=10,
         )

@@ -4,7 +4,7 @@
 
 ### Location
 
-The GitHub App private key (`GITHUB_PRIVATE_KEY` or loaded from `.stas-private-key.pem`) is used to authenticate as the GitHub App and generate installation tokens.
+The GitHub App private key (`GITHUB_PRIVATE_KEY` or loaded from `.syntaro-private-key.pem`) is used to authenticate as the GitHub App and generate installation tokens.
 
 ### Convention
 
@@ -24,8 +24,8 @@ When rotating the private key:
 
 ### Git Protection
 
-- `.stas-private-key.pem` is in `.gitignore`
-- `stas-private-key.pem` (without dot) is also in `.gitignore`
+- `.syntaro-private-key.pem` is in `.gitignore`
+- `syntaro-private-key.pem` (without dot) is also in `.gitignore`
 - `*.pem` wildcard also catches accidental PEM commits
 - `*.key` wildcard catches key files
 

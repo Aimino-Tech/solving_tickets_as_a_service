@@ -169,20 +169,20 @@ class TestBuildRunCommand:
     def test_security(self):
         cmd = _build_run_command(
             image="python:3.12-slim", workspace_path="/tmp/ws", test_command="pytest",
-            seccomp_profile="/etc/docker/seccomp/sandbox.json", apparmor_profile="stas-sandbox",
+            seccomp_profile="/etc/docker/seccomp/sandbox.json", apparmor_profile="syntaro-sandbox",
             read_only=True, network_disabled=True,
         )
         cmd_str = " ".join(cmd)
         assert "seccomp=/etc/docker/seccomp/sandbox.json" in cmd_str
-        assert "apparmor=stas-sandbox" in cmd_str
+        assert "apparmor=syntaro-sandbox" in cmd_str
         assert "--read-only" in cmd_str
         assert "--network none" in cmd_str
 
     def test_env_vars(self):
-        cmd = _build_run_command(image="python:3.12-slim", workspace_path="/tmp/ws", test_command="pytest", env_vars={"CI": "true", "STAS_VERIFY": "1"})
+        cmd = _build_run_command(image="python:3.12-slim", workspace_path="/tmp/ws", test_command="pytest", env_vars={"CI": "true", "SYNTARO_VERIFY": "1"})
         cmd_str = " ".join(cmd)
         assert "--env CI=true" in cmd_str
-        assert "--env STAS_VERIFY=1" in cmd_str
+        assert "--env SYNTARO_VERIFY=1" in cmd_str
 
 
 class TestSandboxRunnerRunTests:

@@ -43,7 +43,7 @@ RABBITMQ_API_USER = os.getenv("RABBITMQ_API_USER", "guest")
 RABBITMQ_API_PASS = os.getenv("RABBITMQ_API_PASS", "guest")
 CRITICAL_QUEUES: list[str] = json.loads(
     os.getenv("E2E_CRITICAL_QUEUES",
-        '["stas.agents.triage","stas.agents.dispatch","stas.agents.sandbox"]'))
+        '["syntaro.agents.triage","syntaro.agents.dispatch","syntaro.agents.sandbox"]'))
 MAX_QUEUE_DEPTH = int(os.getenv("E2E_MAX_QUEUE_DEPTH", "100"))
 PING_TASK_TIMEOUT = int(os.getenv("E2E_PING_TASK_TIMEOUT", "15"))
 
@@ -52,7 +52,7 @@ def _check_broker(url: str) -> tuple[bool, Optional[str]]:
     if not url:
         return False, "no broker URL configured"
     try:
-        app = Celery("stas-e2e-health", broker=url)
+        app = Celery("syntaro-e2e-health", broker=url)
         conn = app.connection(timeout=5)
         conn.ensure_connection(max_retries=1)
         conn.release()
@@ -77,7 +77,7 @@ def _check_worker_ping(timeout: int = PING_TASK_TIMEOUT) -> tuple[bool, Optional
     if not BROKER_URL or not BACKEND_URL:
         return False, "broker or backend URL not configured"
     try:
-        app = Celery("stas-e2e-ping", broker=BROKER_URL, backend=BACKEND_URL)
+        app = Celery("syntaro-e2e-ping", broker=BROKER_URL, backend=BACKEND_URL)
         r = app.control.ping(timeout=timeout)
         if r:
             for entry in r:

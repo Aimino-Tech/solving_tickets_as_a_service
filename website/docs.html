@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Documentation — STAS | Solving Tickets As A Service</title>
-  <meta name="description" content="STAS documentation: Setup guides, configuration, API reference, and FAQ." />
+  <title>Documentation — SYNTARO | Solving Tickets As A Service</title>
+  <meta name="description" content="SYNTARO documentation: Setup guides, configuration, API reference, and FAQ." />
 
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://stas.aimino.io/docs" />
-  <meta property="og:title" content="Documentation — STAS" />
-  <meta property="og:description" content="STAS documentation: Setup guides, configuration, API reference, and FAQ." />
-  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta property="og:url" content="https://syntaro.aimino.io/docs" />
+  <meta property="og:title" content="Documentation — SYNTARO" />
+  <meta property="og:description" content="SYNTARO documentation: Setup guides, configuration, API reference, and FAQ." />
+  <meta property="og:image" content="https://syntaro.aimino.io/img/og-image.png" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Documentation — STAS" />
-  <meta name="twitter:description" content="STAS documentation: Setup guides, configuration, API reference, and FAQ." />
-  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta name="twitter:title" content="Documentation — SYNTARO" />
+  <meta name="twitter:description" content="SYNTARO documentation: Setup guides, configuration, API reference, and FAQ." />
+  <meta name="twitter:image" content="https://syntaro.aimino.io/img/og-image.png" />
 
-  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+  <script defer data-domain="syntaro.aimino.io" src="https://plausible.io/js/script.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -30,7 +30,7 @@
   <!-- NAV -->
   <nav class="nav" role="navigation" aria-label="Main navigation">
     <div class="nav-inner">
-      <a href="/" class="nav-logo"><span class="logo-icon">S</span> STAS</a>
+      <a href="/" class="nav-logo"><span class="logo-icon">S</span> SYNTARO</a>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
       <ul class="nav-links" id="navLinks">
         <li><a href="/">Home</a></li>
@@ -39,7 +39,7 @@
         <li><a href="/docs" class="active">Docs</a></li>
         <li><a href="/blog">Blog</a></li>
         <li><a href="/status">Status</a></li>
-        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta">Install App →</a></li>
+        <li><a href="https://github.com/apps/syntaro-app/installations/new" class="nav-cta">Install App →</a></li>
       </ul>
     </div>
   </nav>
@@ -47,7 +47,7 @@
   <!-- PAGE HEADER (slim) -->
   <section class="page-header" style="padding-bottom:40px">
     <h1>Documentation</h1>
-    <p class="sub">Everything you need to install, configure, and use STAS.</p>
+    <p class="sub">Everything you need to install, configure, and use SYNTARO.</p>
   </section>
 
   <!-- DOCS LAYOUT -->
@@ -83,7 +83,7 @@
 
       <!-- QUICK START -->
       <h2 id="quick-start">Quick Start</h2>
-      <p>Get STAS running on your repository in under 5 minutes.</p>
+      <p>Get SYNTARO running on your repository in under 5 minutes.</p>
 
       <h3>Prerequisites</h3>
       <ul>
@@ -100,9 +100,9 @@ npm run init</code></pre>
       <p>This will install dependencies, create a <code>.env</code> file, and guide you through the setup wizard.</p>
 
       <h3>Install the GitHub App</h3>
-      <p>1. Go to the <a href="https://github.com/apps/stas-app/installations/new">STAS GitHub App page</a>.</p>
+      <p>1. Go to the <a href="https://github.com/apps/syntaro-app/installations/new">SYNTARO GitHub App page</a>.</p>
       <p>2. Click <strong>Configure</strong> → select your repository.</p>
-      <p>3. Label an issue with <code>stas:fix</code> and watch STAS work.</p>
+      <p>3. Label an issue with <code>syntaro:fix</code> and watch SYNTARO work.</p>
 
       <div class="note">
         <p><strong>Tip:</strong> The hosted version requires no infrastructure. Just install the app and label issues. Self-hosting is only needed if you want full control.</p>
@@ -132,7 +132,7 @@ npm install</code></pre>
 
       <!-- CONFIGURATION -->
       <h2 id="configuration">Configuration</h2>
-      <p>STAS is configured via environment variables. Key settings:</p>
+      <p>SYNTARO is configured via environment variables. Key settings:</p>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Variable</th><th>Required</th><th>Description</th></tr></thead>
@@ -150,28 +150,28 @@ npm install</code></pre>
 
       <!-- LABELS -->
       <h2 id="labels">Issue Labels</h2>
-      <p>STAS responds to the following issue labels:</p>
+      <p>SYNTARO responds to the following issue labels:</p>
       <table>
         <thead><tr><th>Label</th><th>Action</th></tr></thead>
         <tbody>
-          <tr><td><code>stas:fix</code></td><td>Automatically investigate, fix, and open a PR</td></tr>
-          <tr><td><code>stas:investigate</code></td><td>Investigate and report findings without making changes</td></tr>
-          <tr><td><code>stas:refactor</code></td><td>Refactor code with no functional changes</td></tr>
-          <tr><td><code>stas:docs</code></td><td>Generate or update documentation</td></tr>
+          <tr><td><code>syntaro:fix</code></td><td>Automatically investigate, fix, and open a PR</td></tr>
+          <tr><td><code>syntaro:investigate</code></td><td>Investigate and report findings without making changes</td></tr>
+          <tr><td><code>syntaro:refactor</code></td><td>Refactor code with no functional changes</td></tr>
+          <tr><td><code>syntaro:docs</code></td><td>Generate or update documentation</td></tr>
         </tbody>
       </table>
 
       <!-- DOCKER -->
       <h2 id="docker">Docker Deployment</h2>
       <pre><code># Build
-docker build -t stas-bot .
+docker build -t syntaro-bot .
 
 # Run
 docker run -p 3000:3000 \
   -e GITHUB_APP_ID=your_id \
   -e GITHUB_APP_PRIVATE_KEY="$(cat your-private-key.pem)" \
   -e GITHUB_WEBHOOK_SECRET=your_secret \
-  stas-bot</code></pre>
+  syntaro-bot</code></pre>
 
       <div class="note">
         <p><strong>Security:</strong> Use <code>--read-only --tmpfs /tmp</code> in production for read-only root filesystem.</p>
@@ -179,7 +179,7 @@ docker run -p 3000:3000 \
 
       <!-- FLY.IO -->
       <h2 id="fly-io">Fly.io Deployment</h2>
-      <p>STAS includes a <code>fly.toml</code> in the root directory. Deploy with:</p>
+      <p>SYNTARO includes a <code>fly.toml</code> in the root directory. Deploy with:</p>
       <pre><code># Install Fly CLI
 curl -L https://fly.io/install.sh | sh
 
@@ -192,7 +192,7 @@ fly deploy</code></pre>
 
       <!-- RAILWAY -->
       <h2 id="railway">Railway Deployment</h2>
-      <p>STAS includes a <code>railway.json</code> config. Deploy on Railway:</p>
+      <p>SYNTARO includes a <code>railway.json</code> config. Deploy on Railway:</p>
       <pre><code># Install Railway CLI
 npm install -g @railway/cli
 
@@ -204,7 +204,7 @@ railway up</code></pre>
 
       <!-- API REFERENCE -->
       <h2 id="api">API Reference</h2>
-      <p>STAS exposes a REST API for managing issues, checking status, and more.</p>
+      <p>SYNTARO exposes a REST API for managing issues, checking status, and more.</p>
 
       <h3>Health Check</h3>
       <pre><code>GET /health</code></pre>
@@ -216,11 +216,11 @@ railway up</code></pre>
 
       <h3>Issue Status</h3>
       <pre><code>GET /api/issues/:owner/:repo/:number</code></pre>
-      <p>Returns the current status of a STAS-managed issue.</p>
+      <p>Returns the current status of a SYNTARO-managed issue.</p>
 
       <!-- WEBHOOKS -->
       <h2 id="webhooks">Webhooks</h2>
-      <p>STAS uses GitHub webhooks to listen for issue events. Configure your GitHub App with these webhook events:</p>
+      <p>SYNTARO uses GitHub webhooks to listen for issue events. Configure your GitHub App with these webhook events:</p>
       <ul>
         <li><strong>Issues</strong> — label changes trigger fixes</li>
         <li><strong>Issue comment</strong> — for interactive workflows</li>
@@ -230,7 +230,7 @@ railway up</code></pre>
 
       <!-- SANDBOX -->
       <h2 id="sandbox">Sandbox Environment</h2>
-      <p>Each STAS fix runs in an isolated sandbox powered by <a href="https://e2b.dev">E2B</a>. The sandbox includes:</p>
+      <p>Each SYNTARO fix runs in an isolated sandbox powered by <a href="https://e2b.dev">E2B</a>. The sandbox includes:</p>
       <ul>
         <li>Full Linux environment with common developer tools</li>
         <li>Network access for dependency installation</li>
@@ -242,28 +242,28 @@ railway up</code></pre>
       <!-- FAQ -->
       <h2 id="faq">FAQ</h2>
 
-      <h3>Does STAS work with monorepos?</h3>
-      <p>Yes. STAS detects your project structure and works with any monorepo configuration. It reads your existing package manager and test runner configuration.</p>
+      <h3>Does SYNTARO work with monorepos?</h3>
+      <p>Yes. SYNTARO detects your project structure and works with any monorepo configuration. It reads your existing package manager and test runner configuration.</p>
 
       <h3>Can I customize the fix prompt?</h3>
       <p>Advanced users can customize the agent prompt via the <code>OPENCODE_CONFIG</code> environment variable. See the GitHub repo for examples.</p>
 
       <h3>What happens if the fix breaks tests?</h3>
-      <p>STAS will flag the PR as failing and leave a detailed comment explaining what went wrong. The issue remains open until a human addresses it.</p>
+      <p>SYNTARO will flag the PR as failing and leave a detailed comment explaining what went wrong. The issue remains open until a human addresses it.</p>
 
-      <h3>Does STAS support GitHub Enterprise Server?</h3>
-      <p>Self-hosted STAS can be configured to work with GHES. Contact <a href="mailto:sales@aimino.io">sales@aimino.io</a> for setup assistance.</p>
+      <h3>Does SYNTARO support GitHub Enterprise Server?</h3>
+      <p>Self-hosted SYNTARO can be configured to work with GHES. Contact <a href="mailto:sales@aimino.io">sales@aimino.io</a> for setup assistance.</p>
 
       <!-- TROUBLESHOOTING -->
       <h2 id="troubleshooting">Troubleshooting</h2>
 
-      <h3>STAS doesn't respond to my label</h3>
-      <p>Check that: (1) the GitHub App is installed on your repo, (2) the webhook is configured correctly, (3) the issue has the exact label <code>stas:fix</code> (case-sensitive).</p>
+      <h3>SYNTARO doesn't respond to my label</h3>
+      <p>Check that: (1) the GitHub App is installed on your repo, (2) the webhook is configured correctly, (3) the issue has the exact label <code>syntaro:fix</code> (case-sensitive).</p>
 
       <h3>Fix fails with a timeout</h3>
       <p>Large codebases may exceed the default sandbox timeout. Consider upgrading to a Team or Enterprise plan for longer timeouts, or self-host with a custom timeout setting.</p>
 
-      <h3>How do I update STAS?</h3>
+      <h3>How do I update SYNTARO?</h3>
       <p>For the hosted version, updates are automatic. For self-hosted: <code>git pull &amp;&amp; npm install &amp;&amp; npm run build &amp;&amp; npm run start</code>.</p>
 
       <p style="margin-top:48px;text-align:center;color:var(--text3);font-size:14px">
@@ -277,7 +277,7 @@ railway up</code></pre>
   <footer class="footer">
     <div class="footer-inner">
       <div class="footer-brand">
-        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> SYNTARO</a>
         <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
       </div>
       <div>
@@ -296,7 +296,7 @@ railway up</code></pre>
           <li><a href="/blog">Blog</a></li>
           <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
           <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
-          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+          <li><a href="https://github.com/marketplace/actions/syntaro-eval">Marketplace</a></li>
         </ul>
       </div>
       <div>

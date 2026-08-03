@@ -1,10 +1,10 @@
-# STAS — Solving Tickets As A Service
+# SYNTARO — Solving Tickets As A Service
 
 **Label a GitHub issue. Get a pull request.**
 
 ## What It Does
 
-STAS is a GitHub App that automatically responds to labeled issues with fully tested pull requests. When you label an issue `stas:fix`, STAS:
+SYNTARO is a GitHub App that automatically responds to labeled issues with fully tested pull requests. When you label an issue `syntaro:fix`, SYNTARO:
 
 1. **Investigates** your codebase to understand the problem
 2. **Diagnoses** the root cause
@@ -15,13 +15,13 @@ STAS is a GitHub App that automatically responds to labeled issues with fully te
 
 ## How to Use
 
-1. Install the STAS GitHub App on your repository
-2. Label any issue with `stas:fix`
+1. Install the SYNTARO GitHub App on your repository
+2. Label any issue with `syntaro:fix`
 3. Wait ~2-5 minutes for investigation
 4. Review the draft PR that appears
 5. Merge if you're satisfied
 
-## What Makes STAS Different
+## What Makes SYNTARO Different
 
 - **Open Source** — Full transparency, self-hostable, MIT licensed
 - **Superior AI** — Backed by OpenCode (162K ★), uses our proprietary AGI

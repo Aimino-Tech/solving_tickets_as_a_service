@@ -6,7 +6,7 @@ import { dispatchAlert } from '../monitoring/alerting.js';
 
 const log = rootLogger.child({ module: 'sla-api' });
 
-const REDIS_SLA_PREFIX = 'stas:sla:ticket:';
+const REDIS_SLA_PREFIX = 'syntaro:sla:ticket:';
 
 const SLA_GOALS: Record<string, { response_time_hours: number | null; resolution_time_hours: number | null }> = {
   free:       { response_time_hours: null, resolution_time_hours: null },

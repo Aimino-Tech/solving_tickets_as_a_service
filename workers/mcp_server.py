@@ -1,5 +1,5 @@
 """
-MCP Server — expose STAS pipeline as MCP tools and resources.
+MCP Server — expose SYNTARO pipeline as MCP tools and resources.
 
 Backed by the real OpenSymphony PipelineEngine (Celery + Redis)
 instead of a local JSON file registry.
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 SENTRY_ENV = os.getenv("SENTRY_ENVIRONMENT", os.getenv("NODE_ENV", "development"))
-SENTRY_RELEASE = os.getenv("SENTRY_RELEASE", "stas@unknown")
+SENTRY_RELEASE = os.getenv("SENTRY_RELEASE", "syntaro@unknown")
 
 if SENTRY_DSN:
     try:
@@ -45,7 +45,7 @@ else:
 
 MCP_PORT = int(os.getenv("MCP_SERVER_PORT", "4095"))
 OPENCODE_CONFIG_DIR = os.path.expanduser(os.getenv("OPENCODE_CONFIG_DIR", "~/.config/opencode"))
-MCP_SERVER_NAME = "stas-pipeline"
+MCP_SERVER_NAME = "syntaro-pipeline"
 
 _pipeline = get_client()
 
@@ -110,7 +110,7 @@ def handle_cancel_fix(params: dict) -> dict:
 
 def handle_resource_status() -> dict:
     return {
-        "description": "STAS pipeline system status",
+        "description": "SYNTARO pipeline system status",
         "system_status": "online",
         "pipeline": "PipelineEngine (Celery + Redis)",
     }
@@ -133,7 +133,7 @@ def handle_resource_queue() -> dict:
 
 def handle_list_tools() -> list[dict]:
     return [
-        {"name": "dispatch_fix", "description": "Trigger the STAS pipeline for a GitHub issue (backed by Celery + PipelineEngine)", "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "issue_number": {"type": "integer"}}, "required": ["repo", "issue_number"]}},
+        {"name": "dispatch_fix", "description": "Trigger the SYNTARO pipeline for a GitHub issue (backed by Celery + PipelineEngine)", "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "issue_number": {"type": "integer"}}, "required": ["repo", "issue_number"]}},
         {"name": "get_fix_status", "description": "Return pipeline status for a fix ID or issue ID", "inputSchema": {"type": "object", "properties": {"fix_id": {"type": "string"}, "issue_id": {"type": "string"}}}},
         {"name": "get_fix_history", "description": "Return recent pipeline runs", "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "limit": {"type": "integer"}}}},
         {"name": "cancel_fix", "description": "Cancel an in-progress pipeline run", "inputSchema": {"type": "object", "properties": {"fix_id": {"type": "string"}}, "required": ["fix_id"]}},

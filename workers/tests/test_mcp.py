@@ -27,13 +27,13 @@ class TestLabelIssue:
         mock_client.post.return_value = mock_response
 
         with patch.dict(os.environ, {"GITHUB_TOKEN": "test-token"}, clear=False):
-            result = await label_issue("test-owner", "test-repo", 42, "stas:fix")
+            result = await label_issue("test-owner", "test-repo", 42, "syntaro:fix")
 
         assert result["success"] is True
         assert result["owner"] == "test-owner"
         assert result["repo"] == "test-repo"
         assert result["issue_number"] == 42
-        assert result["label"] == "stas:fix"
+        assert result["label"] == "syntaro:fix"
         assert "applied" in result["message"].lower()
 
     @pytest.mark.asyncio
@@ -48,7 +48,7 @@ class TestLabelIssue:
         mock_client.post.return_value = mock_response
 
         with patch.dict(os.environ, {"GITHUB_TOKEN": "test-token"}, clear=False):
-            result = await label_issue("bad-owner", "bad-repo", 999, "stas:fix")
+            result = await label_issue("bad-owner", "bad-repo", 999, "syntaro:fix")
 
         assert result["success"] is False
         assert "not found" in result["error"].lower()
@@ -58,7 +58,7 @@ class TestLabelIssue:
         from syntaro_mcp.handlers import label_issue
 
         with patch.dict(os.environ, clear=True):
-            result = await label_issue("owner", "repo", 1, "stas:fix")
+            result = await label_issue("owner", "repo", 1, "syntaro:fix")
 
         assert result["success"] is False
         assert result["intent_recorded"] is True
@@ -83,7 +83,7 @@ class TestRunFix:
 
         assert result["success"] is True
         assert result["status"] == "queued"
-        assert result["run_id"].startswith("stas-fake")
+        assert result["run_id"].startswith("syntaro-fake")
         assert result["issue_url"] == "https://github.com/owner/repo/issues/42"
 
     @pytest.mark.asyncio
@@ -111,7 +111,7 @@ class TestRunFix:
             def submit_fix(self, **kwargs):
                 return {
                     "success": False,
-                    "run_id": "stas-offline",
+                    "run_id": "syntaro-offline",
                     "status": "unavailable",
                     "error": "No pipeline engine or API URL configured",
                 }
@@ -123,7 +123,7 @@ class TestRunFix:
 
     @pytest.mark.asyncio
     async def test_api_fallback(self, monkeypatch):
-        """When the pipeline client fails, run_fix falls back to the STAS API (AIM-4477)."""
+        """When the pipeline client fails, run_fix falls back to the SYNTARO API (AIM-4477)."""
         from syntaro_mcp.handlers import run_fix
 
         class FailingPipeline:

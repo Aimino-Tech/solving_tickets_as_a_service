@@ -1,6 +1,6 @@
 # Continuity eval harness (AIM-4445)
 
-Proves the STAS Slack chat bot never "talks to a gold fish": a conversation
+Proves the SYNTARO Slack chat bot never "talks to a gold fish": a conversation
 that is interrupted — by pod death, gateway restart, or scale-to-zero —
 must continue without the user having to re-explain anything.
 
@@ -67,7 +67,7 @@ model:
   agent and validates the harness + detector logic.
 - `GoldfishSUT` — always asks for re-explanation; the failing baseline.
 
-The real system under test (STAS gateway → session store → agent memory →
+The real system under test (SYNTARO gateway → session store → agent memory →
 opencode session, AIM-4442/4443) plugs in by implementing the `ChatSUT`
 interface (`ask` / `kill` / `reset`) and passing it to `runMatrix`. `kill()`
 then maps to pod death; the rehydrate driver verifies the conversation

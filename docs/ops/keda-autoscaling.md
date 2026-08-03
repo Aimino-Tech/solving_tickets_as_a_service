@@ -5,7 +5,7 @@
 
 ## Overview
 
-STAS uses [KEDA](https://keda.sh) (Kubernetes Event-driven Autoscaling) to
+SYNTARO uses [KEDA](https://keda.sh) (Kubernetes Event-driven Autoscaling) to
 dynamically scale Celery worker pods based on RabbitMQ queue depth.  When
 a queue builds up a backlog, KEDA increases the replica count.  When queues
 drain, it scales back down — all the way to zero during idle periods.
@@ -20,7 +20,7 @@ drain, it scales back down — all the way to zero during idle periods.
                            | watches
                     +------v-------------------+
                     |  ScaledObject             |
-                    |  (stas-worker)            |
+                    |  (syntaro-worker)            |
                     +--+--------+-------------+
                        |        |
               +--------v-+   +--v------------+
@@ -36,7 +36,7 @@ drain, it scales back down — all the way to zero during idle periods.
                    +------+----------+
                           | scales
                    +------v----------+
-                   |  stas-worker    |
+                   |  syntaro-worker    |
                    |  Deployment     |
                    |  (0-20 pods)    |
                    +-----------------+
@@ -59,8 +59,8 @@ drain, it scales back down — all the way to zero during idle periods.
 
 3. **Kubernetes Secret** with RabbitMQ connection string:
    ```bash
-   kubectl create secret generic stas-secrets \
-     --from-literal=RABBITMQ_KEDA_CONNECTION="amqp://user:password@stas-rabbitmq:5672/stas"
+   kubectl create secret generic syntaro-secrets \
+     --from-literal=RABBITMQ_KEDA_CONNECTION="amqp://user:password@syntaro-rabbitmq:5672/syntaro"
    ```
 
 ### Install the ScaledObject
@@ -69,9 +69,9 @@ drain, it scales back down — all the way to zero during idle periods.
 kubectl apply -f k8s/keda-scaled-object.yaml
 
 # Verify
-kubectl get scaledobject stas-worker
+kubectl get scaledobject syntaro-worker
 kubectl get hpa                          # KEDA creates this automatically
-kubectl describe scaledobject stas-worker
+kubectl describe scaledobject syntaro-worker
 ```
 
 ### Verify Autoscaling
@@ -79,16 +79,16 @@ kubectl describe scaledobject stas-worker
 Publish a test message to the dispatch queue:
 
 ```bash
-kubectl exec deploy/stas-rabbitmq -- rabbitmqadmin \
-  publish exchange=stas routing_key=stas.agents.dispatch \
+kubectl exec deploy/syntaro-rabbitmq -- rabbitmqadmin \
+  publish exchange=syntaro routing_key=syntaro.agents.dispatch \
   payload='{"task": "test"}'
 ```
 
 Watch KEDA react:
 
 ```bash
-kubectl get hpa stas-worker --watch
-kubectl get pods -l app=stas-worker --watch
+kubectl get hpa syntaro-worker --watch
+kubectl get pods -l app=syntaro-worker --watch
 ```
 
 ## ScaledObject Configuration
@@ -110,13 +110,13 @@ Each Celery queue has a backlog threshold that triggers a scale-up event:
 
 | Queue | Threshold | Rationale |
 |---|---|---|
-| `stas.agents.dispatch` | 2 | High-priority — agent execution tasks |
-| `stas.agents.sandbox` | 3 | Long-running, resource-heavy |
-| `stas.agents.verification` | 3 | Moderate-duration test runs |
-| `stas.agents.triage` | 5 | Short-lived classification |
-| `stas.agents.pr_creation` | 5 | Batchable, fast |
-| `stas.agents.notifications` | 10 | High-volume, cheap |
-| `stas.agents.default` | 5 | Catch-all / fallback |
+| `syntaro.agents.dispatch` | 2 | High-priority — agent execution tasks |
+| `syntaro.agents.sandbox` | 3 | Long-running, resource-heavy |
+| `syntaro.agents.verification` | 3 | Moderate-duration test runs |
+| `syntaro.agents.triage` | 5 | Short-lived classification |
+| `syntaro.agents.pr_creation` | 5 | Batchable, fast |
+| `syntaro.agents.notifications` | 10 | High-volume, cheap |
+| `syntaro.agents.default` | 5 | Catch-all / fallback |
 
 ### Scale-Up vs Scale-Down Behaviour
 
@@ -183,9 +183,9 @@ in `k8s/keda-scaled-object.yaml`:
 triggers:
   - type: prometheus
     metadata:
-      serverAddress: http://stas-worker-metrics:9091
+      serverAddress: http://syntaro-worker-metrics:9091
       metricName: keda_queue_depth
-      query: keda_queue_depth{queue="stas.agents.dispatch"}
+      query: keda_queue_depth{queue="syntaro.agents.dispatch"}
       threshold: "2"
 ```
 
@@ -217,17 +217,17 @@ and pod readiness (polling interval + HPA reaction + pod startup).
 kubectl logs -n keda deployment/keda-operator --tail=50
 
 # ScaledObject status
-kubectl describe scaledobject stas-worker
+kubectl describe scaledobject syntaro-worker
 
 # HPA status (created by KEDA)
-kubectl get hpa stas-worker -o yaml
+kubectl get hpa syntaro-worker -o yaml
 
 # Scrape the metrics endpoint directly
-kubectl port-forward deploy/stas-worker 9091:9091
+kubectl port-forward deploy/syntaro-worker 9091:9091
 curl http://localhost:9091/keda-metrics
 
 # RabbitMQ queue depth
-kubectl exec deploy/stas-rabbitmq -- rabbitmqadmin list queues
+kubectl exec deploy/syntaro-rabbitmq -- rabbitmqadmin list queues
 ```
 
 ### Troubleshooting

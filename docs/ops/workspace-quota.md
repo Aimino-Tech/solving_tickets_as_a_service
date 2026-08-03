@@ -5,7 +5,7 @@
 
 ## Overview
 
-STAS enforces disk quotas and workspace isolation at the OSS (self-hosted)
+SYNTARO enforces disk quotas and workspace isolation at the OSS (self-hosted)
 tier to prevent any single tenant from consuming all available disk space.
 The system provides three mechanisms:
 

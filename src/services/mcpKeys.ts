@@ -1,7 +1,7 @@
 /**
  * MCP API key service — per-user API keys for agent access via MCP.
  *
- * Keys are generated as `sk-stas_<32 hex>` and stored as a SHA-256 hash
+ * Keys are generated as `sk-syntaro_<32 hex>` and stored as a SHA-256 hash
  * (key_hash, for lookup) plus an AES-256-GCM encrypted copy (key_encrypted,
  * so the Settings UI can reveal the full key on demand).
  */
@@ -13,7 +13,7 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'mcp-keys' });
 
-export const MCP_KEY_PREFIX = 'sk-stas_';
+export const MCP_KEY_PREFIX = 'sk-syntaro_';
 
 export interface McpApiKeyRecord {
   id: string;
@@ -51,7 +51,7 @@ function rowToRecord(row: DbKeyRow): McpApiKeyRecord {
   };
 }
 
-/** Generate a new key: `sk-stas_` + 32 hex chars. */
+/** Generate a new key: `sk-syntaro_` + 32 hex chars. */
 export function generateKey(): { key: string; prefix: string } {
   const key = `${MCP_KEY_PREFIX}${randomBytes(16).toString('hex')}`;
   return { key, prefix: key.slice(0, MCP_KEY_PREFIX.length + 8) };
@@ -64,7 +64,7 @@ export function hashKey(key: string): string {
 
 /** AES-256-GCM key derived from the server JWT secret (stable, 32 bytes). */
 function deriveEncryptionKey(): Buffer {
-  return scryptSync(config.auth.jwtSecret, 'stas-mcp-key-encryption', 32);
+  return scryptSync(config.auth.jwtSecret, 'syntaro-mcp-key-encryption', 32);
 }
 
 /** Encrypt a key at rest. Returns `${ivBase64}:${authTag+ciphertextBase64}`. */

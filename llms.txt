@@ -1,12 +1,12 @@
-# STAS — Solving Tickets As A Service
+# SYNTARO — Solving Tickets As A Service
 
 > Label a GitHub issue. Get a fix PR. Open-source GitHub bot that takes a labeled issue, investigates your codebase, writes a fix, runs your tests, and opens a PR.
 
 ## Quick Start
 
 1. Install the GitHub App on your repo
-2. Label any issue with `stas:fix`
-3. STAS investigates, fixes, tests, and opens a draft PR
+2. Label any issue with `syntaro:fix`
+3. SYNTARO investigates, fixes, tests, and opens a draft PR
 4. You review and merge
 
 ## Key Features
@@ -20,7 +20,7 @@
 
 ## Architecture
 
-GitHub Issue (labeled `stas:fix`) → Webhook Server → OpenCode Agent → Investigate → Fix → Test → PR
+GitHub Issue (labeled `syntaro:fix`) → Webhook Server → OpenCode Agent → Investigate → Fix → Test → PR
 
 ## Links
 
@@ -31,4 +31,4 @@ GitHub Issue (labeled `stas:fix`) → Webhook Server → OpenCode Agent → Inve
 
 ## Configuration
 
-Key env vars: `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `OPENCODE_URL`, `STAS_LABEL` (default: `stas:fix`)
+Key env vars: `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `OPENCODE_URL`, `SYNTARO_LABEL` (default: `syntaro:fix`)

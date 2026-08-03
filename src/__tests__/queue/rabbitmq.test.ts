@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../config.js', () => ({
   config: {
     queue: {
-      rabbitmqUrl: 'amqp://guest:guest@localhost:5672/stas',
+      rabbitmqUrl: 'amqp://guest:guest@localhost:5672/syntaro',
       backend: 'rabbitmq' as const,
     },
   },
@@ -55,7 +55,7 @@ describe('rabbitmq module', () => {
     const rmq = await import('../../queue/rabbitmq.js');
     await rmq.connect();
 
-    const result = await rmq.publishMessage('stas.direct', 'issue.fix', { test: true });
+    const result = await rmq.publishMessage('syntaro.direct', 'issue.fix', { test: true });
     expect(result).toBe(true);
 
     await rmq.disconnect();
@@ -75,7 +75,7 @@ describe('rabbitmq module', () => {
     await rmq.connect();
 
     const handler = vi.fn().mockResolvedValue(undefined);
-    const consumerTag = await rmq.consumeQueue('stas.issues.fix', handler);
+    const consumerTag = await rmq.consumeQueue('syntaro.issues.fix', handler);
     expect(consumerTag).toBe('tag-1');
 
     await rmq.cancelConsumer(consumerTag);
@@ -86,7 +86,7 @@ describe('rabbitmq module', () => {
     const rmq = await import('../../queue/rabbitmq.js');
     await rmq.connect();
 
-    const depth = await rmq.getQueueDepth('stas.issues.fix');
+    const depth = await rmq.getQueueDepth('syntaro.issues.fix');
     expect(depth).toBe(5);
 
     await rmq.disconnect();

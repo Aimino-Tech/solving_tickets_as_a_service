@@ -1,8 +1,8 @@
 apiVersion: 1
 providers:
-  - name: "STAS"
+  - name: "SYNTARO"
     orgId: 1
-    folder: "STAS"
+    folder: "SYNTARO"
     type: file
     disableDeletion: true
     updateIntervalSeconds: 30

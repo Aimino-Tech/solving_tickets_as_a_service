@@ -142,7 +142,7 @@ get_redis_rdb_filename() {
 
 create_backup() {
   local suffix="$1"
-  local backup_name="stas-redis-${suffix}-${TIMESTAMP}.rdb.gz"
+  local backup_name="syntaro-redis-${suffix}-${TIMESTAMP}.rdb.gz"
   local backup_file="${BACKUP_DIR}/${backup_name}"
 
   info "Starting Redis backup: ${backup_file}"
@@ -237,8 +237,8 @@ cleanup_old() {
     return 0
   fi
 
-  find "$BACKUP_DIR" -name "stas-redis-${retention_type}-*" -type f -mtime "+${retention_days}" -delete 2>/dev/null || true
-  find "$BACKUP_DIR" -name "stas-redis-${retention_type}-*.sha256" -type f -mtime "+${retention_days}" -delete 2>/dev/null || true
+  find "$BACKUP_DIR" -name "syntaro-redis-${retention_type}-*" -type f -mtime "+${retention_days}" -delete 2>/dev/null || true
+  find "$BACKUP_DIR" -name "syntaro-redis-${retention_type}-*.sha256" -type f -mtime "+${retention_days}" -delete 2>/dev/null || true
 }
 
 # ── Restore function ──────────────────────────────────────────────────────────
@@ -290,7 +290,7 @@ restore_backup() {
   echo "  redis-server /path/to/redis.conf"
   echo ""
   info "Or if running in Docker, restart the container:"
-  echo "  docker restart stas-redis"
+  echo "  docker restart syntaro-redis"
 
   info "Restore completed"
 }
@@ -300,7 +300,7 @@ restore_backup() {
 main() {
   echo ""
   echo "═══════════════════════════════════════════════════════════════"
-  info "STAS Redis Backup Script"
+  info "SYNTARO Redis Backup Script"
   echo "═══════════════════════════════════════════════════════════════"
   echo ""
 

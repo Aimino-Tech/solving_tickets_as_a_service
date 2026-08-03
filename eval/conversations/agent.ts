@@ -1,10 +1,10 @@
-// STAS Conversation Agent — the "agent side" of the eval.
+// SYNTARO Conversation Agent — the "agent side" of the eval.
 // Deterministic conversational core with REAL tool calls:
 //   - GitHub REST API (api.github.com) — ticket existence check + creation
-//   - STAS MCP REST (POST /mcp/submit_issue, GET /mcp/status/:runId)
+//   - SYNTARO MCP REST (POST /mcp/submit_issue, GET /mcp/status/:runId)
 // The agent behaves like the target UX: user says "fix these tickets / do this",
 // the agent replies "ticket exists (#N)" or "not yet — I'll create it and fix it",
-// creates the ticket when missing, and submits the fix through STAS MCP.
+// creates the ticket when missing, and submits the fix through SYNTARO MCP.
 
 import type {
   AgentAction,
@@ -16,10 +16,10 @@ import type {
 export interface AgentConfig {
   repoOwner: string;
   repoName: string;
-  /** STAS backend base URL, e.g. http://localhost:3002 */
-  stasUrl: string;
+  /** SYNTARO backend base URL, e.g. http://localhost:3002 */
+  syntaroUrl: string;
   /** per-user MCP API key (Bearer) */
-  stasApiKey: string;
+  syntaroApiKey: string;
   /** GitHub token (GH_TOKEN) */
   githubToken: string;
   /** injectable fetch for tests */
@@ -66,7 +66,7 @@ export class ConversationAgent {
           Authorization: `Bearer ${this.cfg.githubToken}`,
           Accept: 'application/vnd.github+json',
           'X-GitHub-Api-Version': '2022-11-28',
-          'User-Agent': 'stas-conversation-eval',
+          'User-Agent': 'syntaro-conversation-eval',
           ...(init?.headers ?? {}),
         },
       });
@@ -134,7 +134,7 @@ export class ConversationAgent {
     return ticket;
   }
 
-  // ---------- STAS MCP calls ----------
+  // ---------- SYNTARO MCP calls ----------
 
   private async mcp(path: string, init?: RequestInit): Promise<unknown> {
     // space calls out so a burst does not trip the server's per-window rate limit
@@ -144,10 +144,10 @@ export class ConversationAgent {
     this.lastMcpCallAt = Date.now();
 
     for (let attempt = 1; attempt <= this.maxRateLimitRetries + 1; attempt++) {
-      const res = await this.fetchImpl(`${this.cfg.stasUrl}${path}`, {
+      const res = await this.fetchImpl(`${this.cfg.syntaroUrl}${path}`, {
         ...init,
         headers: {
-          Authorization: `Bearer ${this.cfg.stasApiKey}`,
+          Authorization: `Bearer ${this.cfg.syntaroApiKey}`,
           'Content-Type': 'application/json',
           ...(init?.headers ?? {}),
         },
@@ -161,11 +161,11 @@ export class ConversationAgent {
       }
       if (!res.ok) {
         const body = await res.text().catch(() => '');
-        throw new Error(`STAS ${init?.method ?? 'GET'} ${path} -> ${res.status}: ${body.slice(0, 300)}`);
+        throw new Error(`SYNTARO ${init?.method ?? 'GET'} ${path} -> ${res.status}: ${body.slice(0, 300)}`);
       }
       return res.json() as Promise<unknown>;
     }
-    throw new Error(`STAS ${init?.method ?? 'GET'} ${path}: exhausted rate-limit retries`);
+    throw new Error(`SYNTARO ${init?.method ?? 'GET'} ${path}: exhausted rate-limit retries`);
   }
 
   async submitFix(title: string, body: string): Promise<FixResult> {
@@ -176,7 +176,7 @@ export class ConversationAgent {
         repoName: this.cfg.repoName,
         issueTitle: title,
         issueBody: body,
-        labels: ['stas:fix'],
+        labels: ['syntaro:fix'],
         channel: 'eval-conversation',
       }),
     })) as Record<string, unknown>;

@@ -16,10 +16,10 @@ worker won't permanently block future enforcement.
 
 Key schema (Redis)::
 
-    stas:lock:timeout:<task_id>    → epoch-seconds of lock acquisition
-    stas:lock:turn:<session_id>    → integer turn counter (set on lock)
-    stas:lock:costcap:<task_id>    → 1 (locked) / 0 (unlocked)
-    stas:counter:turn:<session_id> → turn number (ephemeral, TTL-managed)
+    syntaro:lock:timeout:<task_id>    → epoch-seconds of lock acquisition
+    syntaro:lock:turn:<session_id>    → integer turn counter (set on lock)
+    syntaro:lock:costcap:<task_id>    → 1 (locked) / 0 (unlocked)
+    syntaro:counter:turn:<session_id> → turn number (ephemeral, TTL-managed)
 
 Usage::
 
@@ -56,11 +56,11 @@ logger = logging.getLogger(__name__)
 # Constants (with env overrides)
 # ---------------------------------------------------------------------------
 
-DEFAULT_MAX_TURNS: int = int(os.getenv("STAS_RUNAWAY_MAX_TURNS", "25"))
+DEFAULT_MAX_TURNS: int = int(os.getenv("SYNTARO_RUNAWAY_MAX_TURNS", "25"))
 """Maximum number of LLM-tool-call turns per session before auto-kill."""
 
 DEFAULT_TURN_TIMEOUT_SECONDS: int = int(
-    os.getenv("STAS_RUNAWAY_TURN_TIMEOUT_SECONDS", "120")
+    os.getenv("SYNTARO_RUNAWAY_TURN_TIMEOUT_SECONDS", "120")
 )
 """Maximum wall-clock seconds for a single turn before it is considered stuck."""
 
@@ -68,10 +68,10 @@ DEFAULT_TURN_TIMEOUT_SECONDS: int = int(
 # Redis key prefixes (internal)
 # ---------------------------------------------------------------------------
 
-_PREFIX_LOCK_TIMEOUT = "stas:lock:timeout:"
-_PREFIX_LOCK_TURN = "stas:lock:turn:"
-_PREFIX_LOCK_COSTCAP = "stas:lock:costcap:"
-_PREFIX_COUNTER_TURN = "stas:counter:turn:"
+_PREFIX_LOCK_TIMEOUT = "syntaro:lock:timeout:"
+_PREFIX_LOCK_TURN = "syntaro:lock:turn:"
+_PREFIX_LOCK_COSTCAP = "syntaro:lock:costcap:"
+_PREFIX_COUNTER_TURN = "syntaro:counter:turn:"
 
 
 # ---------------------------------------------------------------------------

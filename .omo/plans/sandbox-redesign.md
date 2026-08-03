@@ -1,4 +1,4 @@
-# STAS Sandbox Redesign — Efficient Self-Hosted Sandbox
+# SYNTARO Sandbox Redesign — Efficient Self-Hosted Sandbox
 
 ## Why
 
@@ -32,14 +32,14 @@ Phase 1 (now)         Phase 2 (growth)          Phase 3 (scale)
 
 ```
 ┌─────────────────────┐      HTTP       ┌──────────────────┐
-│ Python Celery       │  ────────────►   │ stas-sandbox-svc │
+│ Python Celery       │  ────────────►   │ syntaro-sandbox-svc │
 │ Worker (pipelines)  │                 │ (Node.js, :4097)│
 │                     │  ◄────────────   │                  │
 │ docker.sock: ❌     │                 │ docker.sock: ✅  │
 └─────────────────────┘                 └──────────────────┘
 ```
 
-The **sandbox microservice** (`stas-sandbox-svc`) runs on each worker machine:
+The **sandbox microservice** (`syntaro-sandbox-svc`) runs on each worker machine:
 - HTTP API on `:4097`
 - Owns the Docker socket
 - Manages warm pool, container lifecycle, GC, repo bootstrapping
@@ -66,30 +66,30 @@ GET  /sandbox/status  → { poolSize, idle, inUse, uptime }
 **Phase 1 — Single small PC (now):**
 ```
 services:
-  stas-webhook:        # Express, publishes to queue
-  stas-sandbox-svc:    # NEW — Node.js Docker manager
-  stas-worker:          # Python Celery, calls sandbox-svc via HTTP
-  stas-opencode:        # OpenCode serve (containerized)
+  syntaro-webhook:        # Express, publishes to queue
+  syntaro-sandbox-svc:    # NEW — Node.js Docker manager
+  syntaro-worker:          # Python Celery, calls sandbox-svc via HTTP
+  syntaro-opencode:        # OpenCode serve (containerized)
   redis:
   rabbitmq:
-  stas-egress-proxy:    # NEW — Squid for network isolation
+  syntaro-egress-proxy:    # NEW — Squid for network isolation
   nginx:                # optional
 ```
 
 Worker concurrency: split short-lived queues from long-lived ones:
 ```bash
 # Worker process 1 — long-running (sandbox, dispatch, verification)
-celery -A workers.celery_app worker -Q stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification --concurrency=1
+celery -A workers.celery_app worker -Q syntaro.agents.dispatch,syntaro.agents.sandbox,syntaro.agents.verification --concurrency=1
 
 # Worker process 2 — short-running (triage, PR creation, notifications)
-celery -A workers.celery_app worker -Q stas.agents.triage,stas.agents.pr_creation,stas.agents.notifications --concurrency=2
+celery -A workers.celery_app worker -Q syntaro.agents.triage,syntaro.agents.pr_creation,syntaro.agents.notifications --concurrency=2
 ```
 
 This prevents a 10-minute sandbox task from blocking a 2-second PR creation task.
 
 **Phase 2 — Celery fleet (growth):**
 - RabbitMQ/Redis stay on one machine (or managed)
-- Each worker machine: `stas-sandbox-svc` + `stas-worker` (points to remote RabbitMQ)
+- Each worker machine: `syntaro-sandbox-svc` + `syntaro-worker` (points to remote RabbitMQ)
 - Docker socket only in sandbox-svc
 
 **Phase 3 — IONOS cloud (scale):**
@@ -123,14 +123,14 @@ When you want to experiment fast without Docker on the worker side:
 - CI/CD pipelines where Docker-in-Docker is too heavy
 
 **When to use Plan A (Docker):**
-- Any fix that involves running untrusted code (the whole point of STAS)
+- Any fix that involves running untrusted code (the whole point of SYNTARO)
 - Production / staging deployments
 - Multi-tenant scenarios
 - When you need network isolation
 
 **Implementation**:
 - `pip install -r workers/requirements.txt` locally (not in Docker)
-- `celery -A workers.celery_app worker -l info -Q stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications --concurrency=2`
+- `celery -A workers.celery_app worker -l info -Q syntaro.agents.triage,syntaro.agents.dispatch,syntaro.agents.sandbox,syntaro.agents.verification,syntaro.agents.pr_creation,syntaro.agents.notifications --concurrency=2`
 - RabbitMQ/Redis can run in Docker or be installed locally (apt/brew)
 - Sandbox tasks fall back to E2B or throw (no local Docker = no sandbox-svc)
 - Create a `docker-compose.dev.yml` with just redis + rabbitmq (no workers, no webhook)
@@ -157,7 +157,7 @@ dev-infra:  # Start only Redis + RabbitMQ (Docker)
 
 dev-worker:  # Run Celery worker directly (no sandbox-svc)
 	pip install -r workers/requirements.txt
-	celery -A workers.celery_app worker -l info -Q stas.agents.$(QUEUE) --concurrency=2
+	celery -A workers.celery_app worker -l info -Q syntaro.agents.$(QUEUE) --concurrency=2
 
 dev-webhook:  # Run webhook directly
 	npm run dev
@@ -223,7 +223,7 @@ args.push('--stop-timeout', '5');          // fast SIGKILL after SIGTERM
 
 **UID approach**: `ubuntu:24.04` has no non-root user by default. The fix:
 1. Start container as root (no `--user` flag)
-2. In `POST /sandbox/boot`, run: `groupadd -g 10001 stas && useradd -u 10001 -g stas -m agent`
+2. In `POST /sandbox/boot`, run: `groupadd -g 10001 syntaro && useradd -u 10001 -g syntaro -m agent`
 3. All `POST /sandbox/exec` calls use: `docker exec -u 10001:10001 <containerId> <cmd>`
 4. Root-only operations (package installs, git pushes) happen directly in docker exec as root when needed
 
@@ -260,7 +260,7 @@ process.on('SIGTERM', async () => {
 ```yaml
 # docker-compose addition
 services:
-  stas-egress-proxy:
+  syntaro-egress-proxy:
     image: sameersbn/squid:latest
     restart: unless-stopped
     ports:
@@ -273,15 +273,15 @@ services:
 
 `squid.conf` generated from `DOCKER_ALLOWED_HOSTS` config at service start.
 
-**Squid bypass mitigation**: Add host-level iptables rules to DROP all egress from `stas_agent-net` EXCEPT:
-- TCP to `stas-egress-proxy:3128` (the proxy itself)
+**Squid bypass mitigation**: Add host-level iptables rules to DROP all egress from `syntaro_agent-net` EXCEPT:
+- TCP to `syntaro-egress-proxy:3128` (the proxy itself)
 - DNS UDP to known resolvers (e.g., `8.8.8.8:53`)
 
 ```bash
-iptables -A FORWARD -i stas_agent-net -j DROP
-iptables -A FORWARD -i stas_agent-net -o docker0 \
-  -p tcp --dport 3128 -d stas-egress-proxy-ip -j ACCEPT
-iptables -A FORWARD -i stas_agent-net -p udp --dport 53 \
+iptables -A FORWARD -i syntaro_agent-net -j DROP
+iptables -A FORWARD -i syntaro_agent-net -o docker0 \
+  -p tcp --dport 3128 -d syntaro-egress-proxy-ip -j ACCEPT
+iptables -A FORWARD -i syntaro_agent-net -p udp --dport 53 \
   -d 8.8.8.8,1.1.1.1 -j ACCEPT
 ```
 
@@ -290,7 +290,7 @@ This prevents DNS tunneling and non-proxy direct connections.
 #### QA: Egress proxy
 | Step | Tool | Action | Expected |
 |---|---|---|---|
-| 1 | bash | Start egress proxy: `docker compose up -d stas-egress-proxy` | Container running |
+| 1 | bash | Start egress proxy: `docker compose up -d syntaro-egress-proxy` | Container running |
 | 2 | bash | Boot test container with proxy: `curl -v https://api.github.com` | 200 OK |
 | 3 | bash | Test blocked domain: `curl -v https://evil.com` | 403/connection refused |
 | 4 | bash | Test DNS tunnel: `dig @8.8.8.8 evil.com` | Blocked by iptables |
@@ -366,7 +366,7 @@ class SandboxServiceClient:
     def __init__(self, base_url=None):
         # Configurable via env var, NOT hardcoded localhost
         self.base_url = base_url or os.environ.get(
-            "SANDBOX_SVC_URL", "http://stas-sandbox-svc:4097"
+            "SANDBOX_SVC_URL", "http://syntaro-sandbox-svc:4097"
         )
         self.client = httpx.Client(base_url=self.base_url)
 
@@ -400,7 +400,7 @@ class SandboxServiceClient:
         return resp.json()
 ```
 
-**Why not hardcode `localhost:4097`?** In Docker compose, containers resolve each other by service name (`stas-sandbox-svc:4097`), not `localhost:4097`. The env var allows configurable hostname.
+**Why not hardcode `localhost:4097`?** In Docker compose, containers resolve each other by service name (`syntaro-sandbox-svc:4097`), not `localhost:4097`. The env var allows configurable hostname.
 
 #### QA: Warm pool
 | Step | Tool | Action | Expected |
@@ -455,10 +455,10 @@ def sandbox_gc_trigger():
 // sandbox-svc/src/gc.ts
 export class SandboxGC {
   async sweep(): Promise<number> {
-    // List containers with label stas-sandbox=true
+    // List containers with label syntaro-sandbox=true
     // Older than 10 minutes (configurable, default 10 min)
     // → force destroy (docker stop + docker rm -v)
-    // Clean stas_agent-net network if no containers remain
+    // Clean syntaro_agent-net network if no containers remain
   }
 
   start(): void {
@@ -472,7 +472,7 @@ export class SandboxGC {
 #### QA: GC sweeper
 | Step | Tool | Action | Expected |
 |---|---|---|---|
-| 1 | grep | Verify sandbox-svc labels containers with `stas-sandbox=true` during create | Label applied |
+| 1 | grep | Verify sandbox-svc labels containers with `syntaro-sandbox=true` during create | Label applied |
 | 2 | integration | Force-kill sandbox-svc parent, restart, call `POST /sandbox/gc` | Orphan container removed |
 | 3 | integration | Verify GC cleans containers older than 10 min, not newer ones | Correct age filtering |
 | 4 | bash | `curl -X POST http://localhost:4097/sandbox/gc` | Returns `{ cleaned: N }` |
@@ -563,7 +563,7 @@ CMD ["node", "/opencode/dist/serve.js", "--port", "4096"]
 
 ```yaml
 services:
-  stas-opencode:
+  syntaro-opencode:
     build:
       context: .
       dockerfile: sandbox-svc/Dockerfile.opencode
@@ -579,7 +579,7 @@ services:
     mem_limit: 2g
     cpus: 1.0
     networks:
-      - stas-net
+      - syntaro-net
 ```
 
 In Phase 1, OpenCode runs on the same machine. In Phase 2+, each worker machine MUST have its own dedicated OpenCode instance — sharing one OpenCode across workers creates a single point of failure and bottleneck. The `OPENCODE_URL` env var on each machine points to its local OpenCode instance.

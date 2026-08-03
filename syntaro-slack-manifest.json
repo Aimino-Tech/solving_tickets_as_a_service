@@ -1,11 +1,11 @@
 {
   "display_information": {
-    "name": "STAS",
+    "name": "SYNTARO",
     "description": "Solving Tickets As A Service — fix GitHub issues on demand"
   },
   "features": {
     "bot_user": {
-      "display_name": "STAS",
+      "display_name": "SYNTARO",
       "always_online": true
     },
     "app_home": {
@@ -15,8 +15,8 @@
     },
     "slash_commands": [
       {
-        "command": "/stas_fix",
-        "description": "Submit a fix request to STAS",
+        "command": "/syntaro_fix",
+        "description": "Submit a fix request to SYNTARO",
         "usage_hint": "[owner/repo] description of the issue",
         "should_escape": false
       }
@@ -39,14 +39,14 @@
   },
   "settings": {
     "event_subscriptions": {
-      "request_url": "https://YOUR_STAS_DOMAIN/slack/events",
+      "request_url": "https://YOUR_SYNTARO_DOMAIN/slack/events",
       "bot_events": [
         "app_mention",
         "message.channels"
       ]
     },
     "interactivity": {
-      "request_url": "https://YOUR_STAS_DOMAIN/slack/events",
+      "request_url": "https://YOUR_SYNTARO_DOMAIN/slack/events",
       "is_enabled": true
     },
     "org_deploy_enabled": false,

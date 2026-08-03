@@ -1,5 +1,5 @@
 /**
- * STAS Proxy Management Routes — AIM-3191.
+ * SYNTARO Proxy Management Routes — AIM-3191.
  *
  * Provides the API surface for proxy management:
  *

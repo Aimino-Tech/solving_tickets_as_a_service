@@ -1,4 +1,4 @@
-"""STAS Agent Performance Analytics (AIM-2002).
+"""SYNTARO Agent Performance Analytics (AIM-2002).
 
 Per-run analytics tracking and daily aggregation for:
     - Fix success rate per model / task type

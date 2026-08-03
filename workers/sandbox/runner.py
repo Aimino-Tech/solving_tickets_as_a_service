@@ -350,15 +350,15 @@ class SandboxRunner:
         framework = detect_framework(command)
 
         if framework == "pytest" and capture_xml:
-            xml_path = os.path.join(workspace_path, ".stas-test-report.xml")
-            command = f"{command} --junitxml={xml_path} 2>&1; echo __STAS_XML_DONE__"
+            xml_path = os.path.join(workspace_path, ".syntaro-test-report.xml")
+            command = f"{command} --junitxml={xml_path} 2>&1; echo __SYNTARO_XML_DONE__"
 
         elif framework in ("vitest", "jest") and capture_json:
-            json_path = os.path.join(workspace_path, ".stas-test-results.json")
+            json_path = os.path.join(workspace_path, ".syntaro-test-results.json")
             if framework == "vitest":
-                command = f"{command} --reporter=json --outputFile={json_path} 2>&1; echo __STAS_JSON_DONE__"
+                command = f"{command} --reporter=json --outputFile={json_path} 2>&1; echo __SYNTARO_JSON_DONE__"
             else:
-                command = f"{command} --json --outputFile={json_path} 2>&1; echo __STAS_JSON_DONE__"
+                command = f"{command} --json --outputFile={json_path} 2>&1; echo __SYNTARO_JSON_DONE__"
 
         elif framework == "go" and capture_json:
             command = f"cd '{os.path.dirname(workspace_path)}' && go test -json ./... 2>&1"
@@ -367,7 +367,7 @@ class SandboxRunner:
 
     def _read_captured_xml(self, workspace_path: str) -> str | None:
         """Read JUnit XML captured from the test run."""
-        xml_path = Path(workspace_path) / ".stas-test-report.xml"
+        xml_path = Path(workspace_path) / ".syntaro-test-report.xml"
         if xml_path.exists():
             try:
                 return xml_path.read_text()
@@ -377,7 +377,7 @@ class SandboxRunner:
 
     def _read_captured_json(self, workspace_path: str) -> str | None:
         """Read JSON output captured from the test run."""
-        json_path = Path(workspace_path) / ".stas-test-results.json"
+        json_path = Path(workspace_path) / ".syntaro-test-results.json"
         if json_path.exists():
             try:
                 return json_path.read_text()
@@ -387,7 +387,7 @@ class SandboxRunner:
 
     def _cleanup_captured(self, workspace_path: str) -> None:
         """Remove temporary capture files from the workspace."""
-        for name in (".stas-test-report.xml", ".stas-test-results.json"):
+        for name in (".syntaro-test-report.xml", ".syntaro-test-results.json"):
             p = Path(workspace_path) / name
             if p.exists():
                 try:

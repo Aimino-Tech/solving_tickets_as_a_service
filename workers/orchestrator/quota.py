@@ -37,7 +37,7 @@ _TIER_QUOTA: dict[str, int] = {
     "enterprise": _QUOTA_ENTERPRISE_BYTES,
 }
 
-_REDIS_QUOTA_PREFIX = "stas:quota:"
+_REDIS_QUOTA_PREFIX = "syntaro:quota:"
 _REDIS_USAGE_KEY = lambda tenant: f"{_REDIS_QUOTA_PREFIX}{tenant}:usage"
 
 _REDIS_CLIENT: Optional[Any] = None

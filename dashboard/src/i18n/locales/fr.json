@@ -70,11 +70,11 @@
   "runDetail.copyLink": "Copier le lien",
   "runDetail.shareOnX": "Partager sur X",
   "runDetail.ctaTitle": "Étiquetez une issue GitHub. Obtenez une PR.",
-  "runDetail.ctaDesc": "STAS est un bot open-source qui transforme les issues étiquetées en pull requests. Propulsé par des agents IA.",
-  "runDetail.getStasGitHub": "Obtenir STAS sur GitHub",
+  "runDetail.ctaDesc": "SYNTARO est un bot open-source qui transforme les issues étiquetées en pull requests. Propulsé par des agents IA.",
+  "runDetail.getSyntaroGitHub": "Obtenir SYNTARO sur GitHub",
   "runDetail.stars": "162K+ étoiles",
   "runDetail.backToRunsLink": "← Retour aux exécutions",
-  "runDetail.getStas": "Obtenir STAS",
+  "runDetail.getSyntaro": "Obtenir SYNTARO",
 
   "repos.connected": "{{count}} dépôt{{count, plural, one {} other {s}}} connecté{{count, plural, one {} other {s}}}",
   "repos.cancel": "Annuler",
@@ -141,7 +141,7 @@
   "auth.user": "Utilisateur",
 
   "settings.botConfig": "Configuration du bot",
-  "settings.botConfigDesc": "Configurez le comportement du bot STAS pour vos dépôts.",
+  "settings.botConfigDesc": "Configurez le comportement du bot SYNTARO pour vos dépôts.",
   "settings.triggerLabel": "Étiquette déclencheuse",
   "settings.triggerLabelDesc": "Étiquette d'issue qui déclenche le bot.",
   "settings.model": "Modèle",

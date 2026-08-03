@@ -70,11 +70,11 @@
   "runDetail.copyLink": "Copiar enlace",
   "runDetail.shareOnX": "Compartir en X",
   "runDetail.ctaTitle": "Etiqueta una issue de GitHub. Obtén un PR.",
-  "runDetail.ctaDesc": "STAS es un bot de código abierto que convierte issues etiquetadas en pull requests. Impulsado por agentes de IA.",
-  "runDetail.getStasGitHub": "Obtener STAS en GitHub",
+  "runDetail.ctaDesc": "SYNTARO es un bot de código abierto que convierte issues etiquetadas en pull requests. Impulsado por agentes de IA.",
+  "runDetail.getSyntaroGitHub": "Obtener SYNTARO en GitHub",
   "runDetail.stars": "162K+ estrellas",
   "runDetail.backToRunsLink": "← Volver a ejecuciones",
-  "runDetail.getStas": "Obtener STAS",
+  "runDetail.getSyntaro": "Obtener SYNTARO",
 
   "repos.connected": "{{count}} repositor{{count, plural, one {io} other {ios}}} conectado{{count, plural, one {} other {s}}}",
   "repos.cancel": "Cancelar",
@@ -141,7 +141,7 @@
   "auth.user": "Usuario",
 
   "settings.botConfig": "Configuración del bot",
-  "settings.botConfigDesc": "Configura cómo se comporta el bot STAS en tus repositorios.",
+  "settings.botConfigDesc": "Configura cómo se comporta el bot SYNTARO en tus repositorios.",
   "settings.triggerLabel": "Etiqueta activadora",
   "settings.triggerLabelDesc": "Etiqueta de issue que activa el bot.",
   "settings.model": "Modelo",
@@ -165,7 +165,7 @@
   "settings.requestDeletion": "Solicitar eliminación de datos",
   "settings.dataRetention": "Los datos se retienen durante {{days}} días después de la cancelación, luego se eliminan permanentemente. Puedes cancelar una solicitud de eliminación en cualquier momento antes de la fecha programada.",
   "settings.dangerZone": "Zona de peligro",
-  "settings.dangerZoneDesc": "Estas acciones son irreversibles. Proceda con precaución.",
+  "settings.dangerZoneDesc": "Esyntaro acciones son irreversibles. Proceda con precaución.",
   "settings.resetAll": "Restablecer toda la configuración",
 
   "offline.youAreOffline": "Estás sin conexión. Mostrando datos en caché.",

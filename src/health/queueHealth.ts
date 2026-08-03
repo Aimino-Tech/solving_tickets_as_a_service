@@ -22,8 +22,8 @@ const log = rootLogger.child({ module: 'queue-health' });
 
 // ── Constants ───────────────────────────────────────────────────────
 
-const QUEUE_NAME = 'stas.issues.fix';
-const DLQ_NAME = 'stas.dlq';
+const QUEUE_NAME = 'syntaro.issues.fix';
+const DLQ_NAME = 'syntaro.dlq';
 
 // ── Types ───────────────────────────────────────────────────────────
 

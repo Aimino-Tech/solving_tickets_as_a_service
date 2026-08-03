@@ -15,7 +15,7 @@ from celery import shared_task
 
 logger = logging.getLogger(__name__)
 
-QUALITY_AUDIT_DIR = os.getenv("QUALITY_AUDIT_DIR", "/tmp/stas-quality-audit")
+QUALITY_AUDIT_DIR = os.getenv("QUALITY_AUDIT_DIR", "/tmp/syntaro-quality-audit")
 FIX_COUNTER_FILE = os.path.join(QUALITY_AUDIT_DIR, "fix_counter.json")
 AUDIT_HISTORY_FILE = os.path.join(QUALITY_AUDIT_DIR, "audit_history.json")
 DEFAULT_EVERY_N = int(os.getenv("AUTO_QA_EVERY_N_FIXES", "10"))

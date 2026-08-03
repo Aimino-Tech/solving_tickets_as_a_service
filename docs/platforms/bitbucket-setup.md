@@ -4,14 +4,14 @@
 
 - A Bitbucket workspace and repository (Cloud)
 - Admin access to the repository
-- STAS instance running (see [DEVELOPMENT.md](../../DEVELOPMENT.md))
+- SYNTARO instance running (see [DEVELOPMENT.md](../../DEVELOPMENT.md))
 
 ## Step 1: Create an OAuth Consumer
 
 1. Go to **Workspace Settings → OAuth consumers**
 2. Click **Add consumer**
-3. Set name: `STAS Bot`
-4. Set callback URL: `https://your-stas-instance.com`
+3. Set name: `SYNTARO Bot`
+4. Set callback URL: `https://your-syntaro-instance.com`
 5. Select permissions:
    - Pull requests: Read, Write
    - Issues: Read, Write
@@ -22,8 +22,8 @@
 
 1. Go to **Repository Settings → Webhooks**
 2. Click **Add webhook**
-3. Title: `STAS Webhook`
-4. URL: `https://your-stas-instance.com/webhook/bitbucket`
+3. Title: `SYNTARO Webhook`
+4. URL: `https://your-syntaro-instance.com/webhook/bitbucket`
 5. Select triggers:
    - Pull request: Created, Updated, Approved
    - Issue: Created, Updated
@@ -31,7 +31,7 @@
 
 ### Webhook Verification
 
-Bitbucket uses HMAC-SHA256 verification. The secret is sent in the `X-Hub-Signature` header. STAS verifies this on every incoming webhook.
+Bitbucket uses HMAC-SHA256 verification. The secret is sent in the `X-Hub-Signature` header. SYNTARO verifies this on every incoming webhook.
 
 ## Step 3: Configure Repository Variables
 
@@ -39,7 +39,7 @@ Add these to **Repository Settings → Repository variables**:
 
 | Variable | Value |
 |----------|-------|
-| `STAS_API_KEY` | Your STAS API key |
+| `SYNTARO_API_KEY` | Your SYNTARO API key |
 | `BITBUCKET_USERNAME` | Your Bitbucket username |
 | `BITBUCKET_APP_PASSWORD` | Your Bitbucket app password |
 

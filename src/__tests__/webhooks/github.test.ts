@@ -49,8 +49,8 @@ vi.mock('../../utils/logger.js', () => ({
 vi.mock('../../config.js', () => ({
   config: {
     github: { webhookSecret: 'test-secret' },
-    stas: {
-      label: 'stas:fix',
+    syntaro: {
+      label: 'syntaro:fix',
       rateLimitWindowMs: 60_000,
       rateLimitMax: 30,
       rateLimitPerRepoMax: 5,
@@ -97,7 +97,7 @@ describe('createGithubWebhooks', () => {
   });
 
   describe('issues.labeled' as any, () => {
-    it('enqueues a job when label is the target label (stas:fix)', async () => {
+    it('enqueues a job when label is the target label (syntaro:fix)', async () => {
       const webhooks = createGithubWebhooks(mockEnqueue);
       const payload = sampleIssueLabeledPayload();
 
@@ -116,7 +116,7 @@ describe('createGithubWebhooks', () => {
           issueNumber: 42,
           issueTitle: 'Fix broken user login',
           issueBody: 'Users are unable to log in when the password contains special characters.',
-          labels: ['stas:fix'],
+          labels: ['syntaro:fix'],
         }),
       );
     });
@@ -231,7 +231,7 @@ describe('createGithubWebhooks', () => {
           title: 'Fix broken user login (updated)',
           body: 'Updated description with more details.',
           state: 'open',
-          labels: [{ name: 'stas:fix', color: 'fc2929' }],
+          labels: [{ name: 'syntaro:fix', color: 'fc2929' }],
           created_at: '2025-05-01T10:00:00Z',
           updated_at: '2025-05-01T13:00:00Z',
           html_url: 'https://github.com/owner/repo/issues/42',
@@ -330,7 +330,7 @@ describe('createGithubWebhooks', () => {
           title: 'Fix something',
           body: 'Details',
           state: 'open',
-          labels: [{ name: 'stas:fix', color: 'fc2929' }],
+          labels: [{ name: 'syntaro:fix', color: 'fc2929' }],
           created_at: '2025-05-01T10:00:00Z',
           updated_at: '2025-05-01T13:00:00Z',
           html_url: 'https://github.com/owner/repo/issues/42',

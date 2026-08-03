@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 /**
- * stas-action.ts — STAS GitHub Action entry point
+ * syntaro-action.ts — SYNTARO GitHub Action entry point
  *
- * Runs inside a GitHub Action when an issue is labeled "stas:fix".
+ * Runs inside a GitHub Action when an issue is labeled "syntaro:fix".
  * Handles the full lifecycle: triage, investigate, fix, verify, PR.
  *
  * This is the "pure GitHub Action" approach — no webhook server needed.
@@ -10,7 +10,7 @@
  *
  * Usage:
  *   GITHUB_TOKEN=<token> ISSUE_NUMBER=1 REPO_OWNER=org REPO_NAME=repo \
- *     npx tsx scripts/stas-action.ts
+ *     npx tsx scripts/syntaro-action.ts
  */
 
 import { Octokit } from "@octokit/rest";
@@ -34,7 +34,7 @@ const ENV = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
   OPENAI_BASE_URL: process.env.OPENAI_BASE_URL || "",
   OPENAI_CHEAP_MODEL: process.env.OPENAI_CHEAP_MODEL || "gpt-4o-mini",
-  BOT_NAME: process.env.BOT_NAME || "STAS",
+  BOT_NAME: process.env.BOT_NAME || "SYNTARO",
   CI: process.env.CI === "true",
 };
 
@@ -427,7 +427,7 @@ async function attemptFix(
       if (!filePath) continue;
 
       // Apply the diff using patch command
-      const patchFile = `/tmp/stas-patch-${Date.now()}.diff`;
+      const patchFile = `/tmp/syntaro-patch-${Date.now()}.diff`;
       writeFileSync(patchFile, diffContent, "utf-8");
 
       try {
@@ -550,7 +550,7 @@ async function createPullRequest(
       "",
       "---",
       "",
-      `> 🚀 **Powered by [STAS](https://syntaro.io?ref=pr-footer)** — Label an issue with \`stas:fix\` and get an AI-generated PR.`,
+      `> 🚀 **Powered by [SYNTARO](https://syntaro.io?ref=pr-footer)** — Label an issue with \`syntaro:fix\` and get an AI-generated PR.`,
       `> _Automated fix by ${ENV.BOT_NAME}._`,
     ]
       .filter(Boolean)
@@ -610,7 +610,7 @@ async function main(): Promise<void> {
       [
         `## ❌ Feature Request`,
         "",
-        "This issue is a **feature request**, not a bug. STAS currently handles bug fixes only.",
+        "This issue is a **feature request**, not a bug. SYNTARO currently handles bug fixes only.",
         "",
         "I'll skip this one. Feel free to label it differently for manual triage.",
       ].join("\n"),
@@ -624,7 +624,7 @@ async function main(): Promise<void> {
       [
         `## ❌ Question / Support`,
         "",
-        "This looks like a question or support request. STAS handles bug fixes only.",
+        "This looks like a question or support request. SYNTARO handles bug fixes only.",
         "",
         "I'll skip this one.",
       ].join("\n"),
@@ -672,7 +672,7 @@ async function main(): Promise<void> {
   );
 
   // ── Step 4: Create branch and attempt fix ────────────────────────────
-  const branchName = `stas/fix-${ENV.ISSUE_NUMBER}-${Date.now().toString(36)}`;
+  const branchName = `syntaro/fix-${ENV.ISSUE_NUMBER}-${Date.now().toString(36)}`;
   run(`git checkout -b "${branchName}"`);
 
   progress["✏️ Writing fix"] = "⏳";
@@ -777,7 +777,7 @@ async function main(): Promise<void> {
         "",
         "---",
         "",
-        `> 🚀 **Powered by [STAS](https://syntaro.io?ref=issue-comment)** — Label any issue with \`stas:fix\` and get an AI-generated PR.`,
+        `> 🚀 **Powered by [SYNTARO](https://syntaro.io?ref=issue-comment)** — Label any issue with \`syntaro:fix\` and get an AI-generated PR.`,
       ].join("\n"),
     );
     console.log(`Done! PR: ${pr.html_url}`);
@@ -800,7 +800,7 @@ async function main(): Promise<void> {
         "",
         "---",
         "",
-        `> 🚀 **Powered by [STAS](https://syntaro.io?ref=issue-comment)** — Label any issue with \`stas:fix\` and get an AI-generated PR.`,
+        `> 🚀 **Powered by [SYNTARO](https://syntaro.io?ref=issue-comment)** — Label any issue with \`syntaro:fix\` and get an AI-generated PR.`,
       ].join("\n"),
     );
     console.log("Done — no changes created");
@@ -808,7 +808,7 @@ async function main(): Promise<void> {
 }
 
 main().catch(async (err) => {
-  console.error("STAS Action failed:", err);
+  console.error("SYNTARO Action failed:", err);
   try {
     await postComment(
       [

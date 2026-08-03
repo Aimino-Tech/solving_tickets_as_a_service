@@ -1,8 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
-from stas_agent_interface.auth import APIKeyStore, TokenManager, AuthMiddleware
-from stas_agent_interface.models import AuthScope
-from stas_agent_interface.rest_api import create_app
+from syntaro_agent_interface.auth import APIKeyStore, TokenManager, AuthMiddleware
+from syntaro_agent_interface.models import AuthScope
+from syntaro_agent_interface.rest_api import create_app
 
 @pytest.fixture
 def setup():

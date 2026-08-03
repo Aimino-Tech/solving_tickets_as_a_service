@@ -12,7 +12,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_LOG_PATH = os.getenv("ADMIN_AUDIT_LOG_PATH", "/tmp/stas-admin-audit.jsonl")
+DEFAULT_LOG_PATH = os.getenv("ADMIN_AUDIT_LOG_PATH", "/tmp/syntaro-admin-audit.jsonl")
 
 
 def log_admin_action(

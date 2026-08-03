@@ -15,8 +15,8 @@ vi.mock('../../config.js', () => ({
       defaultRepoName: 'test-repo',
       installationId: 123,
     },
-    stas: {
-      label: 'stas:fix',
+    syntaro: {
+      label: 'syntaro:fix',
     },
   },
 }));
@@ -67,7 +67,7 @@ describe('linearBridge', () => {
         repo: 'test-repo',
         title: 'Fix login bug',
         body: expect.stringContaining('Users cannot log in'),
-        labels: ['stas:fix'],
+        labels: ['syntaro:fix'],
       });
     });
 

@@ -8,7 +8,7 @@ const log = rootLogger.child({ module: 'saml-routes' });
 
 const router: Router = Router();
 
-const DEFAULT_SP_ENTITY_ID = 'https://stas.dev/saml/metadata';
+const DEFAULT_SP_ENTITY_ID = 'https://syntaro.dev/saml/metadata';
 
 // Auto-register a default tenant from environment configuration. This makes
 // the registry non-empty when operators configure SAML via env vars, which
@@ -130,7 +130,7 @@ router.post('/acs', async (req: Request, res: Response) => {
     86400000,
   );
 
-  res.cookie('stas_saml_token', sessionToken, {
+  res.cookie('syntaro_saml_token', sessionToken, {
     httpOnly: true,
     sameSite: 'lax',
     secure: config.nodeEnv === 'production',
@@ -157,11 +157,11 @@ router.get('/logout', (req: Request, res: Response) => {
       }
       return acc;
     }, {});
-  const token = cookies['stas_saml_token'];
+  const token = cookies['syntaro_saml_token'];
   if (token) {
     destroySamlSession(token);
   }
-  res.clearCookie('stas_saml_token');
+  res.clearCookie('syntaro_saml_token');
   const redirectTo = config.saml.dashboardUrl || '/';
   res.redirect(302, redirectTo);
 });

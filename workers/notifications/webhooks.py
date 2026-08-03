@@ -2,7 +2,7 @@
 Webhook notification dispatcher.
 
 Routes ``event_type`` + ``payload`` to every configured notifier matching the
-event type. Configuration is loaded from the ``STAS_WEBHOOK_CONFIG`` environment
+event type. Configuration is loaded from the ``SYNTARO_WEBHOOK_CONFIG`` environment
 variable (JSON), workflow YAML front matter, or environment variables with
 ``$VAR_NAME`` substitution.
 
@@ -70,12 +70,12 @@ def _resolve_env_ref(value: str) -> str:
 
 
 def _load_config_from_env() -> dict[str, Any]:
-    """Load webhook configuration from ``STAS_WEBHOOK_CONFIG`` env var."""
-    raw = os.getenv("STAS_WEBHOOK_CONFIG", "{}")
+    """Load webhook configuration from ``SYNTARO_WEBHOOK_CONFIG`` env var."""
+    raw = os.getenv("SYNTARO_WEBHOOK_CONFIG", "{}")
     try:
         config = json.loads(raw)
     except json.JSONDecodeError as exc:
-        logger.warning("STAS_WEBHOOK_CONFIG is not valid JSON — %s", exc)
+        logger.warning("SYNTARO_WEBHOOK_CONFIG is not valid JSON — %s", exc)
         return {}
     return config
 
@@ -117,9 +117,9 @@ def _validate_notifier_entry(entry: dict[str, Any], event_type: str) -> bool:
         )
         return False
     if notifier_type == "email":
-        smtp_host = entry.get("smtp_host", os.getenv("STAS_SMTP_HOST", ""))
+        smtp_host = entry.get("smtp_host", os.getenv("SYNTARO_SMTP_HOST", ""))
         to_addr = entry.get("to", "")
-        if not smtp_host and not os.getenv("STAS_SENDGRID_API_KEY", ""):
+        if not smtp_host and not os.getenv("SYNTARO_SENDGRID_API_KEY", ""):
             logger.warning(
                 "Email notifier for event %r has no SMTP host or SendGrid API key — skipping",
                 event_type,
@@ -170,7 +170,7 @@ def dispatch_to_webhooks(
         optional fields are filled with defaults.
     config:
         Webhook configuration dict keyed by event type. If ``None``, loads
-        from ``STAS_WEBHOOK_CONFIG`` environment variable.
+        from ``SYNTARO_WEBHOOK_CONFIG`` environment variable.
 
     Returns
     -------
@@ -201,7 +201,7 @@ def dispatch_to_webhooks(
 
     if COMMENT_RATE_LIMIT_ENABLED:
         issue_id = normalised_payload.get("issue_id", "unknown")
-        tier = os.getenv(f"ISSUE_{issue_id.upper()}_TIER", os.getenv("STAS_DEFAULT_TIER", "free"))
+        tier = os.getenv(f"ISSUE_{issue_id.upper()}_TIER", os.getenv("SYNTARO_DEFAULT_TIER", "free"))
         limiter = get_comment_rate_limiter()
         rate_result = limiter.check_and_increment(issue_id, tier=tier)
         if not rate_result.allowed:
@@ -274,13 +274,13 @@ def _dispatch_discord(entry: dict[str, Any], payload: dict[str, Any]) -> dict[st
 
 def _dispatch_email(entry: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     to_addr = entry.get("to", "")
-    subject_prefix = entry.get("subject_prefix", "[STAS]")
-    smtp_host = entry.get("smtp_host", os.getenv("STAS_SMTP_HOST", ""))
-    smtp_port = int(entry.get("smtp_port", os.getenv("STAS_SMTP_PORT", "587")))
-    smtp_user = entry.get("smtp_user", os.getenv("STAS_SMTP_USER", ""))
-    smtp_password = entry.get("smtp_password", os.getenv("STAS_SMTP_PASSWORD", ""))
-    from_addr = entry.get("from", os.getenv("STAS_SMTP_FROM", "stas@localhost"))
-    use_sendgrid = entry.get("use_sendgrid", False) or bool(os.getenv("STAS_SENDGRID_API_KEY", ""))
+    subject_prefix = entry.get("subject_prefix", "[SYNTARO]")
+    smtp_host = entry.get("smtp_host", os.getenv("SYNTARO_SMTP_HOST", ""))
+    smtp_port = int(entry.get("smtp_port", os.getenv("SYNTARO_SMTP_PORT", "587")))
+    smtp_user = entry.get("smtp_user", os.getenv("SYNTARO_SMTP_USER", ""))
+    smtp_password = entry.get("smtp_password", os.getenv("SYNTARO_SMTP_PASSWORD", ""))
+    from_addr = entry.get("from", os.getenv("SYNTARO_SMTP_FROM", "syntaro@localhost"))
+    use_sendgrid = entry.get("use_sendgrid", False) or bool(os.getenv("SYNTARO_SENDGRID_API_KEY", ""))
 
     result = notify_email(
         payload,

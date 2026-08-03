@@ -1,4 +1,4 @@
-- description: STAS JavaScript/TypeScript Security and Quality Suite
+- description: SYNTARO JavaScript/TypeScript Security and Quality Suite
 - warnOn: all
 - include:
     kind: [problem, path-problem, alert, path-alert]

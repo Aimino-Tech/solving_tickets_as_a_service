@@ -1,17 +1,17 @@
-# STAS MCP Server — Auto-Fix GitHub Issues
+# SYNTARO MCP Server — Auto-Fix GitHub Issues
 
-Connect your MCP-compatible IDE (Claude, Cursor, Windsurf, etc.) to STAS and automatically fix GitHub issues with AI-generated pull requests.
+Connect your MCP-compatible IDE (Claude, Cursor, Windsurf, etc.) to SYNTARO and automatically fix GitHub issues with AI-generated pull requests.
 
-## What is STAS?
+## What is SYNTARO?
 
-STAS (Solving Tickets As A Service) is an open-source GitHub bot that investigates your codebase, writes fixes, runs tests, and opens PRs — all triggered by a labeled issue.
+SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that investigates your codebase, writes fixes, runs tests, and opens PRs — all triggered by a labeled issue.
 
 ## MCP Tools
 
 This server exposes four tools through the Model Context Protocol:
 
 ### `syntaro_submit_fix`
-Submit a GitHub issue URL for automated fix generation. STAS will:
+Submit a GitHub issue URL for automated fix generation. SYNTARO will:
 1. Clone the repository
 2. Investigate the root cause
 3. Write a fix
@@ -27,13 +27,13 @@ Poll a running fix job for status updates and final results including the PR URL
 List recent fix jobs and their statuses across your account.
 
 ### `syntaro_get_eval_results`
-Get public STAS benchmark evaluation results showing pass rates.
+Get public SYNTARO benchmark evaluation results showing pass rates.
 
 ## Getting Started
 
 1. Install the MCP server
 2. Subscribe to a RapidAPI plan
-3. Set `STAS_API_KEY` environment variable
+3. Set `SYNTARO_API_KEY` environment variable
 4. Use any MCP-compatible client to start fixing issues
 
 ## Example

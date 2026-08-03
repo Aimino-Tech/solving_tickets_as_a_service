@@ -1,14 +1,14 @@
 ---
-title: "STAS Launch Day — Support Plan"
+title: "SYNTARO Launch Day — Support Plan"
 status: "draft"
 last-updated: "2026-07-28"
 ---
 
-# STAS Launch Day — Support Plan
+# SYNTARO Launch Day — Support Plan
 
 ## Overview
 
-This plan covers the first 90+ days of the STAS community Slack workspace (`stas-community`). It defines support SLAs, escalation paths, moderator recruitment, shift schedules, and key metrics. The goal is to provide an exceptional support experience that converts early users into long-term community advocates.
+This plan covers the first 90+ days of the SYNTARO community Slack workspace (`syntaro-community`). It defines support SLAs, escalation paths, moderator recruitment, shift schedules, and key metrics. The goal is to provide an exceptional support experience that converts early users into long-term community advocates.
 
 ---
 
@@ -18,7 +18,7 @@ This plan covers the first 90+ days of the STAS community Slack workspace (`stas
 
 - **SLA**: Every question in #support answered within **4 hours**, 7 days a week.
 - **Coverage**: 8:00 AM — 10:00 PM ET (14-hour window)
-- **Responders**: Founders and core STAS team members only.
+- **Responders**: Founders and core SYNTARO team members only.
 - **Channel**: Primary response in #support. Complex issues escalated to DMs or GitHub issues.
 
 ### Shift Schedule (Founder Rotation)
@@ -107,8 +107,8 @@ This plan covers the first 90+ days of the STAS community Slack workspace (`stas
 
 | Event | Frequency | Description |
 |-------|-----------|-------------|
-| AMA with STAS founders | Monthly | Live Q&A in #general. Founders answer questions for 1 hour. |
-| STAS Show & Tell | Bi-weekly | Members showcase their STAS workflows in #showcase. Best showcase wins a prize. |
+| AMA with SYNTARO founders | Monthly | Live Q&A in #general. Founders answer questions for 1 hour. |
+| SYNTARO Show & Tell | Bi-weekly | Members showcase their SYNTARO workflows in #showcase. Best showcase wins a prize. |
 | Contributor Office Hours | Weekly | 30-min video call for open-source contributors to get guidance. |
 | Bug Bash | Quarterly | 48-hour focused bug-finding event. Prizes for most valuable bug reports. |
 | Community Survey | Monthly | Measure satisfaction, identify pain points, gather feature requests. |
@@ -139,7 +139,7 @@ User posts in #support
              │               confirmed bug, security issue
              ▼
     ┌─────────────────────┐
-    │ Tier 2: STAS Team   │ ← Core contributor / founder
+    │ Tier 2: SYNTARO Team   │ ← Core contributor / founder
     │      Goal: Fix or   │    Responds within 8 hours
     │      workaround     │
     └────────┬────────────┘
@@ -166,7 +166,7 @@ User posts in #support
   - Production system is down or degraded
   - Confirmed security vulnerability (CVSS 7+)
   - Issue affects 5+ users
-  - Requires changes to core STAS architecture
+  - Requires changes to core SYNTARO architecture
 
 ---
 
@@ -243,7 +243,7 @@ User posts in #support
 | Active Members | Members who posted in last 7 days | >30 | >100 | >400 |
 | Retention (D7) | % of members still active after 7 days | >40% | >50% | >60% |
 | DAU/MAU | Daily active / monthly active users | >20% | >25% | >30% |
-| Conversion Rate | % of members who try STAS | >30% | >40% | >50% |
+| Conversion Rate | % of members who try SYNTARO | >30% | >40% | >50% |
 | NPS | Net Promoter Score (monthly survey) | — | >30 | >40 |
 | Moderators Active | Moderators who took action in last 7 days | 0 (all founders) | >3 | >8 |
 

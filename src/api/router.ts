@@ -18,7 +18,7 @@ import evalRoutes from './evalRoutes.js';
 const router: Router = Router();
 
 // ── Eval endpoints (public, no auth required) ──────────────────────────
-// These show benchmark results so potential customers can evaluate STAS
+// These show benchmark results so potential customers can evaluate SYNTARO
 // before subscribing.
 router.use('/api/eval', evalRoutes);
 

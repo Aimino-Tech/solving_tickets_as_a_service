@@ -1,10 +1,10 @@
 {
   "default_branch": "main",
   "projects": {
-    "stas--solving-tickets-as-a-service": {
+    "syntaro--solving-tickets-as-a-service": {
       "repo": "Aimino-Tech/solving_tickets_as_a_service",
       "branch": "main",
-      "linear_project_name": "STAS - Solving Tickets As A Service"
+      "linear_project_name": "SYNTARO - Solving Tickets As A Service"
     },
     "fast-html-mcp": {
       "repo": "Aimino-Tech/fast-html-mcp",

@@ -1,4 +1,4 @@
-# STAS Architecture
+# SYNTARO Architecture
 
 > **A deep-dive into the pipeline that turns GitHub issues into pull requests.**
 
@@ -24,7 +24,7 @@
 
 ## Overview
 
-STAS (Solving Tickets As A Service) is an open-source GitHub bot that automatically fixes labeled issues. It receives webhooks from GitHub, classifies issues via a cheap LLM, dispatches a full OpenCode agent in an isolated sandbox to investigate and fix the bug, runs verification, and opens a pull request — all without human intervention.
+SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that automatically fixes labeled issues. It receives webhooks from GitHub, classifies issues via a cheap LLM, dispatches a full OpenCode agent in an isolated sandbox to investigate and fix the bug, runs verification, and opens a pull request — all without human intervention.
 
 The architecture follows a **modular pipeline** design inspired by [KintsugiBot](https://github.com/kintsugi-bot) with significant extensions for production readiness: multi-backend queues, dual sandbox providers, a full verification gate, and multi-platform webhook support (GitHub, GitLab, Bitbucket, Linear, Jira).
 
@@ -104,7 +104,7 @@ sequenceDiagram
 ```mermaid
 flowchart TB
     subgraph Triggers
-        IL[Issue Labeled<br/>stas:fix]
+        IL[Issue Labeled<br/>syntaro:fix]
         IE[Issue Edited<br/>(has label)]
         MO[Marketplace Purchase]
         GL[GitLab Webhook]
@@ -240,8 +240,8 @@ Handles GitHub webhook events via `@octokit/webhooks`:
 | Event | Listener | Action |
 |---|---|---|
 | `issues.opened` | No-op | Waits for label event |
-| `issues.labeled` | **Primary trigger** | Checks label matches `STAS_LABEL`, enqueues job |
-| `issues.edited` | Re-enqueue | If issue has `stas:fix` label, re-processes |
+| `issues.labeled` | **Primary trigger** | Checks label matches `SYNTARO_LABEL`, enqueues job |
+| `issues.edited` | Re-enqueue | If issue has `syntaro:fix` label, re-processes |
 | `marketplace_purchase` | Billing update | Maps GitHub Marketplace plan names to internal tiers |
 
 The handler extracts `IssueJobData` from the payload, runs rate limit checks (per-account and per-repo), saves a pending `RunRecord` to storage, and calls `enqueueIssue()`.
@@ -339,7 +339,7 @@ flowchart TB
 
 #### Concurrency Controls
 
-- **Per-repo concurrency**: Redis SET tracks active job IDs per `owner/repo`. Configurable via `STAS_MAX_CONCURRENT` (default: 3).
+- **Per-repo concurrency**: Redis SET tracks active job IDs per `owner/repo`. Configurable via `SYNTARO_MAX_CONCURRENT` (default: 3).
 - **Per-repo rate limiting**: Token bucket per repo via `rateLimiter`.
 - **Account-level rate limiting**: Based on billing tier (free/pro/enterprise).
 
@@ -347,7 +347,7 @@ flowchart TB
 
 ### 4. Agent Layer (`src/agent/`)
 
-The agent layer orchestrates the entire fix pipeline — from triage to PR creation. This is the heart of STAS.
+The agent layer orchestrates the entire fix pipeline — from triage to PR creation. This is the heart of SYNTARO.
 
 #### `src/agent/issueAgent.ts` — The Main Pipeline
 
@@ -643,7 +643,7 @@ Additional service directories:
 2. **Cloud Free** (10 fixes/mo) — hosted trial with frontier models. No infra, no API key setup.
 3. **Cloud Paid** ($49–$149/mo) — full dashboard, analytics, audit log, support.
 
-The metering layer (`src/metering/`) enforces per-account fix limits on the cloud path. Self-hosted instances bypass metering entirely — the feature flag `STAS_CLOUD_MODE=false` (default) disables all billing gates. See [docs/FAQ.md](../docs/FAQ.md) and [STRATEGY.md](../STRATEGY.md) for details.
+The metering layer (`src/metering/`) enforces per-account fix limits on the cloud path. Self-hosted instances bypass metering entirely — the feature flag `SYNTARO_CLOUD_MODE=false` (default) disables all billing gates. See [docs/FAQ.md](../docs/FAQ.md) and [STRATEGY.md](../STRATEGY.md) for details.
 
 ### 1. Two-Phase Triage (Cost Optimization)
 
@@ -651,7 +651,7 @@ The metering layer (`src/metering/`) enforces per-account fix limits on the clou
 
 **Rationale**: ~60% of labeled issues are feature requests, questions, or non-actionable. Filtering these out before the agent runs saves significant costs. The triage model costs ~$0.001 per call vs. $3-5 per agent run.
 
-**Inspiration**: KintsugiBot uses a similar two-phase approach, but STAS makes the triage phase configurable and adds difficulty estimation.
+**Inspiration**: KintsugiBot uses a similar two-phase approach, but SYNTARO makes the triage phase configurable and adds difficulty estimation.
 
 ### 2. OpenCode Serve as Agent Backend
 
@@ -695,7 +695,7 @@ The metering layer (`src/metering/`) enforces per-account fix limits on the clou
 
 ```
 ┌─────────────┐  ┌──────────────┐  ┌──────────┐
-│  STAS Bot   │  │  OpenCode    │  │  Redis   │
+│  SYNTARO Bot   │  │  OpenCode    │  │  Redis   │
 │  :3000      │  │  :4096       │  │  :6379   │
 │  both mode  │  │              │  │          │
 └─────────────┘  └──────────────┘  └──────────┘
@@ -712,7 +712,7 @@ The metering layer (`src/metering/`) enforces per-account fix limits on the clou
               ┌────────┴────────┐
               ▼                 ▼
        ┌──────────────┐  ┌──────────────┐
-       │  STAS API    │  │  STAS API    │
+       │  SYNTARO API    │  │  SYNTARO API    │
        │  (readiness) │  │  (scalable)  │
        └──────┬───────┘  └──────┬───────┘
               │                 │
@@ -726,7 +726,7 @@ The metering layer (`src/metering/`) enforces per-account fix limits on the clou
               ┌────────┴────────┐
               ▼                 ▼
        ┌──────────────┐  ┌──────────────┐
-       │  STAS Worker  │  │  STAS Worker  │
+       │  SYNTARO Worker  │  │  SYNTARO Worker  │
        │  (processes)  │  │  (scalable)   │
        └──────┬───────┘  └──────┬───────┘
               │                 │
@@ -768,7 +768,7 @@ Run all scenarios:
 ```bash
 npm run test:load:all
 # or with custom target:
-TARGET_URL=https://staging.stas.dev npm run test:load:all
+TARGET_URL=https://staging.syntaro.dev npm run test:load:all
 ```
 
 ### Estimated Capacity Bounds (to be validated)

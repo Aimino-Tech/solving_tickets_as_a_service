@@ -267,7 +267,7 @@ def test_malicious_gate_in_pipeline_steps():
     """The malicious code gate step must appear in pipeline definitions."""
     from workers.orchestrator.pipelines import get_pipeline
 
-    for pipeline_name in ("stas:fix", "stas:feature"):
+    for pipeline_name in ("syntaro:fix", "syntaro:feature"):
         cfg = get_pipeline(pipeline_name)
         assert cfg is not None, f"Pipeline {pipeline_name} not found"
         steps = cfg.get("steps", [])

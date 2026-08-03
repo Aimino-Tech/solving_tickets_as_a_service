@@ -1,6 +1,6 @@
-# OpenCode Contract — STAS ↔ OpenCode Serve
+# OpenCode Contract — SYNTARO ↔ OpenCode Serve
 
-> **Document**: AIM-1927 — Formal contract definition between STAS and OpenCode serve.
+> **Document**: AIM-1927 — Formal contract definition between SYNTARO and OpenCode serve.
 > **Version**: 1.0.0
 > **Last Updated**: 2026-06-24
 
@@ -10,12 +10,12 @@
 
 1. [Overview](#1-overview)
 2. [Transport Protocol](#2-transport-protocol)
-3. [Request Payload (STAS → OpenCode)](#3-request-payload-stas--opencode)
-4. [Response Payload (OpenCode → STAS)](#4-response-payload-opencode--stas)
-5. [Environment Variables Injected by STAS](#5-environment-variables-injected-by-stas)
+3. [Request Payload (SYNTARO → OpenCode)](#3-request-payload-syntaro--opencode)
+4. [Response Payload (OpenCode → SYNTARO)](#4-response-payload-opencode--syntaro)
+5. [Environment Variables Injected by SYNTARO](#5-environment-variables-injected-by-syntaro)
 6. [Workspace Layout](#6-workspace-layout)
 7. [Tools Available to OpenCode](#7-tools-available-to-opencode)
-8. [Progress Reporting (OpenCode → STAS)](#8-progress-reporting-opencode--stas)
+8. [Progress Reporting (OpenCode → SYNTARO)](#8-progress-reporting-opencode--syntaro)
 9. [Error Handling](#9-error-handling)
 10. [Model Chaining and Fallback](#10-model-chaining-and-fallback)
 11. [Timeout and Circuit Breaker](#11-timeout-and-circuit-breaker)
@@ -27,15 +27,15 @@
 
 ## 1. Overview
 
-STAS (Solving Tickets As A Service) dispatches fix-generation work to OpenCode serve — an HTTP server running on `http://localhost:4096` (configurable via `OPENCODE_URL`). This document defines the formal contract between the two systems.
+SYNTARO (Solving Tickets As A Service) dispatches fix-generation work to OpenCode serve — an HTTP server running on `http://localhost:4096` (configurable via `OPENCODE_URL`). This document defines the formal contract between the two systems.
 
-**Key principle**: STAS owns the orchestration pipeline (triage, sandboxing, verification, PR creation). OpenCode owns the investigation and fix-generation loop. They communicate over HTTP with a JSON request/response protocol.
+**Key principle**: SYNTARO owns the orchestration pipeline (triage, sandboxing, verification, PR creation). OpenCode owns the investigation and fix-generation loop. They communicate over HTTP with a JSON request/response protocol.
 
 ### Architecture Diagram
 
 ```
 +-------------------------------------------+
-|  STAS Agent Pipeline                      |
+|  SYNTARO Agent Pipeline                      |
 |                                           |
 |  Phase 1-5: Triage, comments, sandbox,    |
 |             analysis                       |
@@ -95,11 +95,11 @@ Every request includes a GitHub Installation Access Token in the `Authorization`
 Authorization: Bearer <github_installation_token>
 ```
 
-This token is obtained by STAS via `getInstallationToken(installationId)` and allows OpenCode to push branches and interact with the target repository.
+This token is obtained by SYNTARO via `getInstallationToken(installationId)` and allows OpenCode to push branches and interact with the target repository.
 
 ---
 
-## 3. Request Payload (STAS → OpenCode)
+## 3. Request Payload (SYNTARO → OpenCode)
 
 ```typescript
 interface OpenCodeRequest {
@@ -119,7 +119,7 @@ interface OpenCodeRequest {
 
 ```json
 {
-  "prompt": "# STAS Fix Agent\n\nYou are an autonomous fix agent...",
+  "prompt": "# SYNTARO Fix Agent\n\nYou are an autonomous fix agent...",
   "model": "anthropic/claude-sonnet-4-20250514"
 }
 ```
@@ -153,7 +153,7 @@ Before sending, the prompt is sanitized via `sanitizeUserContent()` which redact
 
 ---
 
-## 4. Response Payload (OpenCode → STAS)
+## 4. Response Payload (OpenCode → SYNTARO)
 
 ```typescript
 interface OpenCodeResponse {
@@ -188,7 +188,7 @@ interface OpenCodeResponse {
   "summary": "Fixed the login validation bug by adding email sanitization to the auth controller.",
   "confidence": "high",
   "diff": "diff --git a/src/auth/login.ts b/src/auth/login.ts\n...",
-  "branch": "stas/fix-42-a1b2c3d",
+  "branch": "syntaro/fix-42-a1b2c3d",
   "testOutput": "PASS  tests/auth/login.test.ts (12ms)\n  ✓ handles valid email\n  ✓ rejects special characters\nTests: 2 passed, 2 total",
   "errors": []
 }
@@ -206,7 +206,7 @@ interface OpenCodeResponse {
 }
 ```
 
-### Response Parsing Logic (STAS side)
+### Response Parsing Logic (SYNTARO side)
 
 In `dispatchToOpenCode()`, the response is parsed as follows:
 
@@ -224,7 +224,7 @@ const errorList = result.errors ? (result.errors as string[]) : undefined;
 
 ### Status Codes
 
-| HTTP Status | Meaning | STAS Handling |
+| HTTP Status | Meaning | SYNTARO Handling |
 |-------------|---------|---------------|
 | `200 OK` | Success | Parse response JSON, proceed to verification |
 | `400 Bad Request` | Malformed payload | Log error, try fallback model |
@@ -236,9 +236,9 @@ const errorList = result.errors ? (result.errors as string[]) : undefined;
 
 ---
 
-## 5. Environment Variables Injected by STAS
+## 5. Environment Variables Injected by SYNTARO
 
-The following environment variables are consumed by the STAS process that calls OpenCode. These are **not** forwarded to OpenCode serve directly; OpenCode runs as a separate process. The prompt conveys equivalent context.
+The following environment variables are consumed by the SYNTARO process that calls OpenCode. These are **not** forwarded to OpenCode serve directly; OpenCode runs as a separate process. The prompt conveys equivalent context.
 
 | Variable | Default | Description | Used In |
 |----------|---------|-------------|---------|
@@ -252,7 +252,7 @@ The following environment variables are consumed by the STAS process that calls 
 | `PHASE_TIMEOUT_PRCREATION_MS` | `30000` | Timeout for PR creation | n/a for OpenCode |
 | `MAX_AGENT_ITERATIONS` | `40` | Max iterations for agent loop | n/a for OpenCode |
 | `MAX_ISSUE_COMMENTS` | `15` | Max issue comments to include | Prompt building |
-| `STAS_LABEL` | `stas:fix` | Issue label that triggers STAS | Webhook trigger (not OpenCode) |
+| `SYNTARO_LABEL` | `syntaro:fix` | Issue label that triggers SYNTARO | Webhook trigger (not OpenCode) |
 | `E2B_API_KEY` | — | Sandbox API key | Sandbox (not OpenCode) |
 | `DOCKER_IMAGE` | `node:22-alpine` | Sandbox Docker image | Sandbox (not OpenCode) |
 
@@ -292,10 +292,10 @@ The workspace layout is defined by the sandbox (E2B or Docker), which is booted 
 
 OpenCode is instructed to push branches named:
 ```
-stas/fix-${issueNumber}-<short-hash>
+syntaro/fix-${issueNumber}-<short-hash>
 ```
 
-Example: `stas/fix-42-a1b2c3d`
+Example: `syntaro/fix-42-a1b2c3d`
 
 ---
 
@@ -323,9 +323,9 @@ The prompt tells OpenCode which tools it has access to. This is advisory — act
 
 ---
 
-## 8. Progress Reporting (OpenCode → STAS)
+## 8. Progress Reporting (OpenCode → SYNTARO)
 
-Currently, **OpenCode serve does not stream progress back to STAS**. The request is a single HTTP POST that blocks until completion. STAS handles this by:
+Currently, **OpenCode serve does not stream progress back to SYNTARO**. The request is a single HTTP POST that blocks until completion. SYNTARO handles this by:
 
 1. **Posting status comments** to the GitHub issue before calling OpenCode:
    - "Running fix agent — investigating root cause and writing fix (may take a few minutes)."
@@ -358,7 +358,7 @@ This is **not implemented** in the current contract.
 
 ### Request-level Errors
 
-| Scenario | STAS Behavior |
+| Scenario | SYNTARO Behavior |
 |----------|---------------|
 | HTTP non-2xx response | Try next model in fallback chain |
 | Network timeout / `fetch` error | Try next model; distinguish timeout from crash |
@@ -489,14 +489,14 @@ Full Zod schemas are defined in `src/bridge/contract.ts`. They validate:
 - `summary`: string (required), max 10,000 chars
 - `confidence`: enum `high | medium | low` (required)
 - `diff`: optional string
-- `branch`: optional string matching `stas/fix-\d+-[a-f0-9]+` pattern
+- `branch`: optional string matching `syntaro/fix-\d+-[a-f0-9]+` pattern
 - `testOutput`: optional string
 - `errors`: optional array of strings
 - `metadata`: optional record
 
 ### Validation Entry Points
 
-Validation happens at the STAS->OpenCode boundary:
+Validation happens at the SYNTARO->OpenCode boundary:
 1. **Before sending**: validate the request payload
 2. **After receiving**: validate the response payload
 3. **Both sides**: `OpenCodeContract.validateRequest()` / `OpenCodeContract.validateResponse()`

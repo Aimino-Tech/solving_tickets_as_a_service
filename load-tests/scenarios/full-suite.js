@@ -23,7 +23,7 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.STAS_URL || "http://localhost:3000";
+const BASE_URL = __ENV.SYNTARO_URL || "http://localhost:3000";
 
 export function healthCheck() {
   check(http.get(`${BASE_URL}/health`), { "ok": (r) => r.status === 200 });

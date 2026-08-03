@@ -1,7 +1,7 @@
-# STAS Launch Team Roster
+# SYNTARO Launch Team Roster
 
 > **Launch Window**: T-60min to T+48h
-> **Base Slack**: `stas-inc.slack.com`
+> **Base Slack**: `syntaro-inc.slack.com`
 
 ---
 

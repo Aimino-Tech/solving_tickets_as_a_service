@@ -1,5 +1,5 @@
 # =============================================================================
-# STAS — Celery Worker Docker Compose (Phase 2)
+# SYNTARO — Celery Worker Docker Compose (Phase 2)
 #
 # Standalone worker node for the Celery fleet. Each worker has its own Docker
 # daemon, sandbox pool, and GC sweeper. Connects to a shared RabbitMQ broker
@@ -29,19 +29,19 @@ x-restart: &default-restart
 services:
 
   # ---------------------------------------------------------------------------
-  # STAS Worker — Celery worker that processes issue queues
+  # SYNTARO Worker — Celery worker that processes issue queues
   # ---------------------------------------------------------------------------
-  stas-worker:
+  syntaro-worker:
     build:
       context: ./workers
       dockerfile: Dockerfile
-    image: stas-worker:latest
-    container_name: stas-worker
+    image: syntaro-worker:latest
+    container_name: syntaro-worker
     restart: unless-stopped
     command: >
       celery -A workers.celery_app worker -l info
-      -Q stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications
-      --concurrency=${STAS_WORKER_CONCURRENCY:-4}
+      -Q syntaro.agents.triage,syntaro.agents.dispatch,syntaro.agents.sandbox,syntaro.agents.verification,syntaro.agents.pr_creation,syntaro.agents.notifications
+      --concurrency=${SYNTARO_WORKER_CONCURRENCY:-4}
     env_file: .env
     environment:
       # Broker & backend — must point to the shared cluster
@@ -53,8 +53,8 @@ services:
       - DOCKER_CONTAINER_MEMORY=${DOCKER_CONTAINER_MEMORY:-2g}
       - DOCKER_CONTAINER_CPU=${DOCKER_CONTAINER_CPU:-1}
       # Worker concurrency
-      - STAS_WORKER_CONCURRENCY=${STAS_WORKER_CONCURRENCY:-4}
-      - WORKER_CONCURRENCY=${STAS_WORKER_CONCURRENCY:-4}
+      - SYNTARO_WORKER_CONCURRENCY=${SYNTARO_WORKER_CONCURRENCY:-4}
+      - WORKER_CONCURRENCY=${SYNTARO_WORKER_CONCURRENCY:-4}
       # Sentry (optional)
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
@@ -80,9 +80,9 @@ services:
   # ---------------------------------------------------------------------------
   # Celery Beat — periodic task scheduler (one per fleet)
   # ---------------------------------------------------------------------------
-  stas-celery-beat:
-    image: stas-worker:latest
-    container_name: stas-celery-beat
+  syntaro-celery-beat:
+    image: syntaro-worker:latest
+    container_name: syntaro-celery-beat
     restart: unless-stopped
     command: celery -A workers.celery_app beat -l info
     env_file: .env

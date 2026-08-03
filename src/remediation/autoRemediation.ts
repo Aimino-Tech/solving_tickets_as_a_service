@@ -96,6 +96,6 @@ let _engine: RemediationEngine | null = null;
 export function getRemediationEngine(): RemediationEngine { if (!_engine) throw new Error('RemediationEngine not initialized'); return _engine; }
 export function initRemediationEngine(store?: RemediationStore): RemediationEngine {
   if (_engine) return _engine; _engine = new RemediationEngine(store); _engine.registerAll(createDefaultRemediations());
-  _engine.setDisabled((config.stas as any)?.remediation?.disabled ?? false); log.info('Engine initialized with 5 actions'); return _engine;
+  _engine.setDisabled((config.syntaro as any)?.remediation?.disabled ?? false); log.info('Engine initialized with 5 actions'); return _engine;
 }
 export function resetRemediationEngine(): void { _engine = null; }

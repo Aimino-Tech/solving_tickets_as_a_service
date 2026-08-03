@@ -2,7 +2,7 @@
 # =============================================================================
 # AIM-3210: E2E Smoke Test Runner
 #
-# Runs the comprehensive E2E smoke test suite for STAS launch verification.
+# Runs the comprehensive E2E smoke test suite for SYNTARO launch verification.
 # This script handles Docker service setup, test execution, and cleanup.
 #
 # Usage:
@@ -79,7 +79,7 @@ log_error() {
 print_banner() {
   echo ""
   echo "=============================================="
-  echo "  STAS E2E Smoke Test Runner"
+  echo "  SYNTARO E2E Smoke Test Runner"
   echo "  AIM-3210: Launch Verification"
   echo "=============================================="
   echo ""
@@ -131,7 +131,7 @@ start_docker_services() {
   # Wait for Redis
   log_info "Waiting for Redis to be ready..."
   for i in $(seq 1 15); do
-    if docker exec stas-e2e-redis redis-cli ping 2>/dev/null | grep -q "PONG"; then
+    if docker exec syntaro-e2e-redis redis-cli ping 2>/dev/null | grep -q "PONG"; then
       log_success "Redis is ready"
       return 0
     fi

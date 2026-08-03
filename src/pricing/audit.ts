@@ -3,7 +3,7 @@
  *
  * Records all admin actions (tier overrides, quota resets, feature toggles)
  * in a Redis-backed append-only log. Each entry is stored as a JSON string
- * in a Redis list keyed by `stas:audit:log`.
+ * in a Redis list keyed by `syntaro:audit:log`.
  *
  * ── Design ──────────────────────────────────────────────────────────────────
  * - Entries are appended to a Redis list (LPUSH) so most recent entries are
@@ -25,7 +25,7 @@ const log = rootLogger.child({ module: 'pricing-audit' });
 // Constants
 // ---------------------------------------------------------------------------
 
-const AUDIT_KEY = 'stas:audit:log';
+const AUDIT_KEY = 'syntaro:audit:log';
 const MAX_ENTRIES = 10_000;
 
 // ---------------------------------------------------------------------------

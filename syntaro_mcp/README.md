@@ -1,12 +1,12 @@
 # Syntaro MCP Server
 
-Expose STAS / OpenSymphony as agent infrastructure — so external agents (OpenCode, Claude, Cursor, etc.) can drive our software through the [Model Context Protocol](https://modelcontextprotocol.io).
+Expose SYNTARO / OpenSymphony as agent infrastructure — so external agents (OpenCode, Claude, Cursor, etc.) can drive our software through the [Model Context Protocol](https://modelcontextprotocol.io).
 
 ## What an agent can do
 
 | Tool | Description |
 |------|-------------|
-| `syntaro_label_issue` | Label a GitHub issue (`stas:fix` or custom) |
+| `syntaro_label_issue` | Label a GitHub issue (`syntaro:fix` or custom) |
 | `syntaro_run_fix` | Trigger the Syntaro fix pipeline for a GitHub issue URL |
 | `syntaro_check_status` | Poll the status of a fix run by `run_id` |
 | `syntaro_get_pr` | Get the PR URL/details for a completed run |
@@ -53,7 +53,7 @@ Set `PYTHONPATH` to the repo root so `workers.pipeline_client` resolves.
 | `SLACK_BOT_TOKEN` | Slack bot token for `slack_send` |
 | `MEMORY_DIR` | Directory for `syntaro_memory_read`/`syntaro_memory_write` files (default `/tmp/symphony-workspaces/memory`) |
 | `GITHUB_TOKEN` / `GITHUB_APP_PRIVATE_KEY` | GitHub auth for labeling issues |
-| `STAS_API_URL`, `STAS_API_KEY` | Syntaro backend fallback for fix runs |
+| `SYNTARO_API_URL`, `SYNTARO_API_KEY` | Syntaro backend fallback for fix runs |
 
 ## OpenCode integration
 

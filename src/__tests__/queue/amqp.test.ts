@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 vi.mock('../../config.js', () => ({
   config: {
     queue: {
-      rabbitmqUrl: 'amqp://guest:guest@localhost:5672/stas',
+      rabbitmqUrl: 'amqp://guest:guest@localhost:5672/syntaro',
     },
   },
 }));
@@ -40,14 +40,14 @@ describe('AMQP exchanges module', () => {
   it('defines the correct exchanges', async () => {
     const { EXCHANGES } = await import('../../queue/amqp/exchanges.js');
     const exchangeNames = EXCHANGES.map((e) => e.name);
-    expect(exchangeNames).toContain('stas.direct');
-    expect(exchangeNames).toContain('stas.retry');
-    expect(exchangeNames).toContain('stas.dlx');
+    expect(exchangeNames).toContain('syntaro.direct');
+    expect(exchangeNames).toContain('syntaro.retry');
+    expect(exchangeNames).toContain('syntaro.dlx');
   });
 
   it('defines retry queues with TTL', async () => {
     const { QUEUES } = await import('../../queue/amqp/exchanges.js');
-    const retryQueues = QUEUES.filter((q) => q.name.startsWith('stas.retry'));
+    const retryQueues = QUEUES.filter((q) => q.name.startsWith('syntaro.retry'));
     expect(retryQueues).toHaveLength(4);
     expect(retryQueues[0].messageTtl).toBe(30_000);
     expect(retryQueues[1].messageTtl).toBe(120_000);
@@ -57,7 +57,7 @@ describe('AMQP exchanges module', () => {
 
   it('defines DLQ bindings', async () => {
     const { BINDINGS } = await import('../../queue/amqp/exchanges.js');
-    const dlqBindings = BINDINGS.filter((b) => b.queue === 'stas.job.dlq');
+    const dlqBindings = BINDINGS.filter((b) => b.queue === 'syntaro.job.dlq');
     expect(dlqBindings.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -68,11 +68,11 @@ describe('AMQP exchanges module', () => {
 
     await declareTopology(channel);
 
-    expect(channel.assertExchange).toHaveBeenCalledWith('stas.direct', 'direct', { durable: true });
-    expect(channel.assertExchange).toHaveBeenCalledWith('stas.retry', 'direct', { durable: true });
-    expect(channel.assertExchange).toHaveBeenCalledWith('stas.dlx', 'direct', { durable: true });
-    expect(channel.assertQueue).toHaveBeenCalledWith('stas.job.pipeline', expect.objectContaining({ durable: true }));
-    expect(channel.assertQueue).toHaveBeenCalledWith('stas.retry.30s', expect.objectContaining({ messageTtl: 30_000 }));
+    expect(channel.assertExchange).toHaveBeenCalledWith('syntaro.direct', 'direct', { durable: true });
+    expect(channel.assertExchange).toHaveBeenCalledWith('syntaro.retry', 'direct', { durable: true });
+    expect(channel.assertExchange).toHaveBeenCalledWith('syntaro.dlx', 'direct', { durable: true });
+    expect(channel.assertQueue).toHaveBeenCalledWith('syntaro.job.pipeline', expect.objectContaining({ durable: true }));
+    expect(channel.assertQueue).toHaveBeenCalledWith('syntaro.retry.30s', expect.objectContaining({ messageTtl: 30_000 }));
   });
 });
 
@@ -114,11 +114,11 @@ describe('AMQP producer module', () => {
     const amqplib = await import('amqplib');
 
     const channel = await amqpConn.connect();
-    const result = await amqpProd.publishMessage('stas.direct', 'test.key', { foo: 'bar' });
+    const result = await amqpProd.publishMessage('syntaro.direct', 'test.key', { foo: 'bar' });
 
     expect(result).toBe(true);
     expect(channel.publish).toHaveBeenCalledWith(
-      'stas.direct',
+      'syntaro.direct',
       'test.key',
       expect.any(Buffer),
       expect.objectContaining({
@@ -153,7 +153,7 @@ describe('AMQP producer module', () => {
     const amqpProd = await import('../../queue/amqp/producer.js');
 
     await amqpConn.connect();
-    const result = await amqpProd.publishToRetry('stas.direct', 'stas.job.pipeline', { foo: 'bar' }, 1, 'error msg');
+    const result = await amqpProd.publishToRetry('syntaro.direct', 'syntaro.job.pipeline', { foo: 'bar' }, 1, 'error msg');
 
     expect(result).toBe(true);
   });
@@ -215,10 +215,10 @@ describe('AMQP retry module', () => {
 
   it('maps retry count to queue name', async () => {
     const retry = await import('../../queue/amqp/retry.js');
-    expect(retry.getRetryQueueName(0)).toBe('stas.retry.30s');
-    expect(retry.getRetryQueueName(1)).toBe('stas.retry.2m');
-    expect(retry.getRetryQueueName(2)).toBe('stas.retry.5m');
-    expect(retry.getRetryQueueName(3)).toBe('stas.retry.15m');
+    expect(retry.getRetryQueueName(0)).toBe('syntaro.retry.30s');
+    expect(retry.getRetryQueueName(1)).toBe('syntaro.retry.2m');
+    expect(retry.getRetryQueueName(2)).toBe('syntaro.retry.5m');
+    expect(retry.getRetryQueueName(3)).toBe('syntaro.retry.15m');
   });
 
   it('returns last queue for out-of-range retry count', () => {

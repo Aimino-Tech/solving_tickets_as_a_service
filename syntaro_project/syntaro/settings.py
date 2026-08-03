@@ -1,5 +1,5 @@
 """
-Django settings for STAS project.
+Django settings for SYNTARO project.
 
 Uses environment variables for all configuration, matching the existing
 .env format used by the Express version.
@@ -12,13 +12,13 @@ import dotenv
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load .env from project root (one level up from stas_project/)
+# Load .env from project root (one level up from syntaro_project/)
 dotenv.load_dotenv(BASE_DIR.parent / ".env")
 
 # ── Security ──────────────────────────────────────────────────────────────
 SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY",
-    "django-insecure-change-me-in-production-stas-local-dev-key",
+    "django-insecure-change-me-in-production-syntaro-local-dev-key",
 )
 DEBUG = os.getenv("DJANGO_DEBUG", str(os.getenv("NODE_ENV", "development") != "production")).lower() in ("true", "1", "yes")
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0").split(",")
@@ -55,7 +55,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "stas.urls"
+ROOT_URLCONF = "syntaro.urls"
 
 TEMPLATES = [
     {
@@ -73,11 +73,11 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "stas.wsgi.application"
+WSGI_APPLICATION = "syntaro.wsgi.application"
 
 # ── Database ───────────────────────────────────────────────────────────────
 # Uses the same DATABASE_URL as the Express version
-DATABASE_URL = os.getenv("DATABASE_URL", "postgres://localhost:5432/stas")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgres://localhost:5432/syntaro")
 
 import re  # noqa: E402
 
@@ -93,7 +93,7 @@ if _db_match:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": _db_match.group("db") or "stas",
+            "NAME": _db_match.group("db") or "syntaro",
             "USER": _db_match.group("user") or os.environ.get("USER", "postgres"),
             "PASSWORD": _db_match.group("pass") or "",
             "HOST": _db_match.group("host") or "localhost",
@@ -143,7 +143,7 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("CELERY_TASK_SOFT_TIME_LIMIT", "580"))
 CELERY_TASK_HARD_TIME_LIMIT = int(os.getenv("CELERY_TASK_HARD_TIME_LIMIT", "600"))
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-CELERY_TASK_DEFAULT_QUEUE = "stas.agents.default"
+CELERY_TASK_DEFAULT_QUEUE = "syntaro.agents.default"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_SEND_SENT_EVENT = True
 
@@ -151,28 +151,28 @@ CELERY_TASK_SEND_SENT_EVENT = True
 from kombu import Exchange, Queue  # noqa: E402
 
 CELERY_TASK_QUEUES = [
-    Queue("stas.agents.triage", Exchange("stas"), routing_key="stas.agents.triage"),
-    Queue("stas.agents.dispatch", Exchange("stas"), routing_key="stas.agents.dispatch"),
-    Queue("stas.agents.sandbox", Exchange("stas"), routing_key="stas.agents.sandbox"),
-    Queue("stas.agents.verification", Exchange("stas"), routing_key="stas.agents.verification"),
-    Queue("stas.agents.pr_creation", Exchange("stas"), routing_key="stas.agents.pr_creation"),
-    Queue("stas.agents.notifications", Exchange("stas"), routing_key="stas.agents.notifications"),
-    Queue("stas.agents.default", Exchange("stas"), routing_key="stas.agents.default"),
+    Queue("syntaro.agents.triage", Exchange("syntaro"), routing_key="syntaro.agents.triage"),
+    Queue("syntaro.agents.dispatch", Exchange("syntaro"), routing_key="syntaro.agents.dispatch"),
+    Queue("syntaro.agents.sandbox", Exchange("syntaro"), routing_key="syntaro.agents.sandbox"),
+    Queue("syntaro.agents.verification", Exchange("syntaro"), routing_key="syntaro.agents.verification"),
+    Queue("syntaro.agents.pr_creation", Exchange("syntaro"), routing_key="syntaro.agents.pr_creation"),
+    Queue("syntaro.agents.notifications", Exchange("syntaro"), routing_key="syntaro.agents.notifications"),
+    Queue("syntaro.agents.default", Exchange("syntaro"), routing_key="syntaro.agents.default"),
 ]
 
 CELERY_TASK_ROUTES = {
-    "workers.tasks.triage.*": {"queue": "stas.agents.triage"},
-    "workers.tasks.agent.*": {"queue": "stas.agents.dispatch"},
-    "workers.tasks.sandbox.*": {"queue": "stas.agents.sandbox"},
-    "workers.tasks.verification.*": {"queue": "stas.agents.verification"},
-    "workers.tasks.pr_creation.*": {"queue": "stas.agents.pr_creation"},
-    "workers.tasks.notifications.*": {"queue": "stas.agents.notifications"},
-    "agents.tasks.*": {"queue": "stas.agents.default"},
+    "workers.tasks.triage.*": {"queue": "syntaro.agents.triage"},
+    "workers.tasks.agent.*": {"queue": "syntaro.agents.dispatch"},
+    "workers.tasks.sandbox.*": {"queue": "syntaro.agents.sandbox"},
+    "workers.tasks.verification.*": {"queue": "syntaro.agents.verification"},
+    "workers.tasks.pr_creation.*": {"queue": "syntaro.agents.pr_creation"},
+    "workers.tasks.notifications.*": {"queue": "syntaro.agents.notifications"},
+    "agents.tasks.*": {"queue": "syntaro.agents.default"},
 }
 
-# ── STAS Custom Settings ──────────────────────────────────────────────────
-STAS_LABEL = os.getenv("STAS_LABEL", "stas:fix")
-BOT_NAME = os.getenv("BOT_NAME", "STAS")
+# ── SYNTARO Custom Settings ──────────────────────────────────────────────────
+SYNTARO_LABEL = os.getenv("SYNTARO_LABEL", "syntaro:fix")
+BOT_NAME = os.getenv("BOT_NAME", "SYNTARO")
 MAX_AGENT_ITERATIONS = int(os.getenv("MAX_AGENT_ITERATIONS", "40"))
 MAX_ISSUE_COMMENTS = int(os.getenv("MAX_ISSUE_COMMENTS", "15"))
 OPENCODE_URL = os.getenv("OPENCODE_URL", "http://localhost:4096")
@@ -185,7 +185,7 @@ OPENAI_CHEAP_MODEL = os.getenv("OPENAI_CHEAP_MODEL", "gpt-4o-mini")
 
 # ── E2B Sandbox ───────────────────────────────────────────────────────────
 E2B_API_KEY = os.getenv("E2B_API_KEY", "")
-E2B_TEMPLATE_ID = os.getenv("E2B_TEMPLATE_ID", "stas-default")
+E2B_TEMPLATE_ID = os.getenv("E2B_TEMPLATE_ID", "syntaro-default")
 E2B_SANDBOX_TIMEOUT_MS = int(os.getenv("E2B_SANDBOX_TIMEOUT_MS", "300000"))
 
 # ── Stripe ─────────────────────────────────────────────────────────────────

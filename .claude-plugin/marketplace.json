@@ -1,8 +1,8 @@
 {
   "$schema": "https://claude.ai/plugins/schema/marketplace.json",
-  "name": "stas",
-  "title": "STAS — Solving Tickets As A Service",
-  "description": "Submit GitHub issue descriptions and get automated fix PRs. STAS investigates your codebase, writes fixes, runs tests, and opens pull requests — all through natural language.",
+  "name": "syntaro",
+  "title": "SYNTARO — Solving Tickets As A Service",
+  "description": "Submit GitHub issue descriptions and get automated fix PRs. SYNTARO investigates your codebase, writes fixes, runs tests, and opens pull requests — all through natural language.",
   "version": "0.1.0",
   "author": {
     "name": "Aimino Tech",
@@ -36,11 +36,11 @@
     "claude"
   ],
   "skills": [
-    "skills/stas/SKILL.md"
+    "skills/syntaro/SKILL.md"
   ],
   "mcpServers": {
-    "stas": {
-      "description": "STAS MCP server — submit fix requests, check status, list repos",
+    "syntaro": {
+      "description": "SYNTARO MCP server — submit fix requests, check status, list repos",
       "command": "python3",
       "args": ["-m", "syntaro_mcp.server", "stdio"]
     }
@@ -64,11 +64,11 @@
         "required": false,
         "default": ""
       },
-      "STAS_MCP_PORT": {
+      "SYNTARO_MCP_PORT": {
         "description": "MCP server port (SSE mode)",
         "default": "4095"
       },
-      "STAS_MCP_TRANSPORT": {
+      "SYNTARO_MCP_TRANSPORT": {
         "description": "Transport mode: stdio or sse",
         "default": "stdio"
       }
@@ -86,7 +86,7 @@
     "cursor": {
       "type": "command",
       "config": {
-        "name": "stas",
+        "name": "syntaro",
         "command": "python3 -m syntaro_mcp.server stdio"
       }
     }

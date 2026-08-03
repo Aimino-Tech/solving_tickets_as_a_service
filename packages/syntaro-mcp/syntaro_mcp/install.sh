@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# install.sh — Register STAS MCP server with all major agent platforms.
+# install.sh — Register SYNTARO MCP server with all major agent platforms.
 #
 # Supported agents:
 #   - OpenCode         (opencode.json / mcp.json)
@@ -18,8 +18,8 @@
 #   bash install.sh --mode sse         # Use SSE transport (default: stdio)
 #   bash install.sh --port 4095        # SSE port (default: 4095)
 #   bash install.sh --host 0.0.0.0     # SSE bind host (default: 0.0.0.0)
-#   bash install.sh --url https://api.stas.aimino.io   # Register REMOTE SSE server pointing at the SaaS URL
-#                                                     # (falls back to STAS_API_URL env; auth header from STAS_API_KEY)
+#   bash install.sh --url https://api.syntaro.io   # Register REMOTE SSE server pointing at the SaaS URL
+#                                                     # (falls back to SYNTARO_API_URL env; auth header from SYNTARO_API_KEY)
 # ============================================================================
 
 set -euo pipefail
@@ -27,11 +27,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-MCP_SERVER_NAME="stas-agent-discovery"
-MCP_TRANSPORT="${STAS_MCP_TRANSPORT:-stdio}"
-MCP_PORT="${STAS_MCP_PORT:-4095}"
-MCP_HOST="${STAS_MCP_HOST:-0.0.0.0}"
-MCP_URL="${STAS_API_URL:-}"
+MCP_SERVER_NAME="syntaro-agent-discovery"
+MCP_TRANSPORT="${SYNTARO_MCP_TRANSPORT:-stdio}"
+MCP_PORT="${SYNTARO_MCP_PORT:-4095}"
+MCP_HOST="${SYNTARO_MCP_HOST:-0.0.0.0}"
+MCP_URL="${SYNTARO_API_URL:-}"
 
 # Config directories
 OPENCODE_CONFIG_DIR="${OPENCODE_CONFIG_DIR:-$HOME/.config/opencode}"
@@ -98,7 +98,7 @@ install_opencode() {
   "transport": "sse",
   "url": "$MCP_URL/sse",
   "headers": {
-    "Authorization": "Bearer ${STAS_API_KEY:-}"
+    "Authorization": "Bearer ${SYNTARO_API_KEY:-}"
   }
 }
 EOF
@@ -164,7 +164,7 @@ generate_opencode_snippet() {
 \`\`\`json
 {
   "mcpServers": {
-    "stas": {
+    "syntaro": {
       "command": "$PYTHON_BIN",
       "args": ["-m", "$MCP_MODULE", "stdio"]
     }
@@ -187,7 +187,7 @@ install_claude() {
   "type": "sse",
   "url": "$MCP_URL/sse",
   "headers": {
-    "Authorization": "Bearer ${STAS_API_KEY:-}"
+    "Authorization": "Bearer ${SYNTARO_API_KEY:-}"
   }
 }
 EOF
@@ -219,10 +219,10 @@ with open('$config_file', 'w') as f:
     cfg = json.loads('''$existing''')
     if 'mcpServers' not in cfg:
         cfg['mcpServers'] = {}
-    cfg['mcpServers']['stas'] = json.loads('''$server_config''')
+    cfg['mcpServers']['syntaro'] = json.loads('''$server_config''')
     json.dump(cfg, f, indent=2)
 "
-    echo "Registered 'stas' with Claude Desktop ($MCP_TRANSPORT mode)"
+    echo "Registered 'syntaro' with Claude Desktop ($MCP_TRANSPORT mode)"
 }
 
 # ------------------------------------------------------------------
@@ -235,11 +235,11 @@ install_cursor() {
     if [ -n "$MCP_URL" ]; then
         server_config=$(cat <<EOF
 {
-  "name": "stas",
+  "name": "syntaro",
   "transport": "sse",
   "url": "$MCP_URL/sse",
   "headers": {
-    "Authorization": "Bearer ${STAS_API_KEY:-}"
+    "Authorization": "Bearer ${SYNTARO_API_KEY:-}"
   }
 }
 EOF
@@ -247,7 +247,7 @@ EOF
     elif [ "$MCP_TRANSPORT" = "sse" ]; then
         server_config=$(cat <<EOF
 {
-  "name": "stas",
+  "name": "syntaro",
   "transport": "sse",
   "url": "http://$MCP_HOST:$MCP_PORT/sse"
 }
@@ -256,7 +256,7 @@ EOF
     else
         server_config=$(cat <<EOF
 {
-  "name": "stas",
+  "name": "syntaro",
   "transport": "stdio",
   "command": "$PYTHON_BIN",
   "args": ["-m", "$MCP_MODULE", "stdio"]
@@ -274,10 +274,10 @@ with open('$config_file', 'w') as f:
     cfg = json.loads('''$existing''')
     if 'mcpServers' not in cfg:
         cfg['mcpServers'] = {}
-    cfg['mcpServers']['stas'] = json.loads('''$server_config''')
+    cfg['mcpServers']['syntaro'] = json.loads('''$server_config''')
     json.dump(cfg, f, indent=2)
 "
-    echo "Registered 'stas' with Cursor ($MCP_TRANSPORT mode)"
+    echo "Registered 'syntaro' with Cursor ($MCP_TRANSPORT mode)"
 }
 
 # ------------------------------------------------------------------
@@ -293,7 +293,7 @@ install_codex() {
   "transport": "sse",
   "url": "$MCP_URL/sse",
   "headers": {
-    "Authorization": "Bearer ${STAS_API_KEY:-}"
+    "Authorization": "Bearer ${SYNTARO_API_KEY:-}"
   }
 }
 EOF
@@ -325,10 +325,10 @@ with open('$config_file', 'w') as f:
     cfg = json.loads('''$existing''')
     if 'mcpServers' not in cfg:
         cfg['mcpServers'] = {}
-    cfg['mcpServers']['stas'] = json.loads('''$server_config''')
+    cfg['mcpServers']['syntaro'] = json.loads('''$server_config''')
     json.dump(cfg, f, indent=2)
 "
-    echo "Registered 'stas' with Codex CLI ($MCP_TRANSPORT mode)"
+    echo "Registered 'syntaro' with Codex CLI ($MCP_TRANSPORT mode)"
 }
 
 # ------------------------------------------------------------------
@@ -370,11 +370,11 @@ with open('$OPENCODE_PROJECT_CONFIG', 'w') as f:
 import json
 with open('$claude_config') as f:
     cfg = json.load(f)
-cfg.get('mcpServers', {}).pop('stas', None)
+cfg.get('mcpServers', {}).pop('syntaro', None)
 with open('$claude_config', 'w') as f:
     json.dump(cfg, f, indent=2)
 " 2>/dev/null || true
-        echo "Removed 'stas' from Claude Desktop config"
+        echo "Removed 'syntaro' from Claude Desktop config"
     fi
 
     # Cursor
@@ -384,11 +384,11 @@ with open('$claude_config', 'w') as f:
 import json
 with open('$cursor_config') as f:
     cfg = json.load(f)
-cfg.get('mcpServers', {}).pop('stas', None)
+cfg.get('mcpServers', {}).pop('syntaro', None)
 with open('$cursor_config', 'w') as f:
     json.dump(cfg, f, indent=2)
 " 2>/dev/null || true
-        echo "Removed 'stas' from Cursor config"
+        echo "Removed 'syntaro' from Cursor config"
     fi
 
     # Codex CLI
@@ -398,11 +398,11 @@ with open('$cursor_config', 'w') as f:
 import json
 with open('$codex_config') as f:
     cfg = json.load(f)
-cfg.get('mcpServers', {}).pop('stas', None)
+cfg.get('mcpServers', {}).pop('syntaro', None)
 with open('$codex_config', 'w') as f:
     json.dump(cfg, f, indent=2)
 " 2>/dev/null || true
-        echo "Removed 'stas' from Codex CLI config"
+        echo "Removed 'syntaro' from Codex CLI config"
     fi
 
     echo "Done."
@@ -433,7 +433,7 @@ if [ "$INSTALL_CODEX" = true ]; then
 fi
 
 echo ""
-echo "STAS MCP server is now discoverable."
+echo "SYNTARO MCP server is now discoverable."
 echo ""
 echo "Quick start:"
 echo "  # Run in stdio mode (for tools like OpenCode):"
@@ -443,7 +443,7 @@ echo "  # Run in SSE mode (for remote discovery):"
 echo "  python -m $MCP_MODULE sse --port $MCP_PORT"
 echo ""
 echo "  # Register a remote SaaS MCP server (agent connects over the internet):"
-echo "  bash install.sh --claude --url https://api.stas.aimino.io"
+echo "  bash install.sh --claude --url https://api.syntaro.io"
 echo ""
 echo "  # Verify:"
 echo "  python -m $MCP_MODULE stdio <<< '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'"
@@ -454,7 +454,7 @@ echo "  OpenCode (opencode.json):"
 generate_opencode_snippet
 echo ""
 echo "  Cursor (~/.cursor/mcp.json):"
-echo "    { \"mcpServers\": { \"stas\": { \"command\": \"$PYTHON_BIN\", \"args\": [\"-m\", \"$MCP_MODULE\", \"stdio\"] } } }"
+echo "    { \"mcpServers\": { \"syntaro\": { \"command\": \"$PYTHON_BIN\", \"args\": [\"-m\", \"$MCP_MODULE\", \"stdio\"] } } }"
 echo ""
 echo "  Codex CLI (.codex/config.json):"
-echo "    { \"mcpServers\": { \"stas\": { \"command\": \"$PYTHON_BIN\", \"args\": [\"-m\", \"$MCP_MODULE\", \"stdio\"] } } }"
+echo "    { \"mcpServers\": { \"syntaro\": { \"command\": \"$PYTHON_BIN\", \"args\": [\"-m\", \"$MCP_MODULE\", \"stdio\"] } } }"

@@ -1,5 +1,5 @@
-name: 'STAS — Auto Fix Issues'
-description: 'Label an issue with stas:fix and get a pull request with the fix automatically'
+name: 'SYNTARO — Auto Fix Issues'
+description: 'Label an issue with syntaro:fix and get a pull request with the fix automatically'
 author: 'Aimino Tech'
 branding:
   icon: 'check-square'
@@ -26,7 +26,7 @@ inputs:
   bot-name:
     description: 'Bot name used in comments'
     required: false
-    default: 'STAS'
+    default: 'SYNTARO'
 
 runs:
   using: 'composite'
@@ -37,7 +37,7 @@ runs:
         github-token: ${{ inputs.github-token }}
         script: |
           const body = [
-            '## 🔄 STAS is on it',
+            '## 🔄 SYNTARO is on it',
             '',
             '**Issue:** ' + context.payload.issue.title,
             '',
@@ -74,9 +74,9 @@ runs:
       shell: bash
       run: npm ci --ignore-scripts
 
-    - name: Run STAS fix agent
+    - name: Run SYNTARO fix agent
       shell: bash
-      run: npx tsx ${{ github.action_path }}/../../../scripts/stas-action.ts
+      run: npx tsx ${{ github.action_path }}/../../../scripts/syntaro-action.ts
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         ISSUE_NUMBER: ${{ github.event.issue.number }}

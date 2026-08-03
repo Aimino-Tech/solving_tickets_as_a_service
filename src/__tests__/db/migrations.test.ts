@@ -15,7 +15,7 @@
  *   - Migration timing benchmarks
  *
  * Requires:
- *   - DATABASE_URL (PostgreSQL) or defaults to SQLite at /tmp/stas-test-migrations.db
+ *   - DATABASE_URL (PostgreSQL) or defaults to SQLite at /tmp/syntaro-test-migrations.db
  */
 
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';

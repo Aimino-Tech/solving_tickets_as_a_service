@@ -1,5 +1,5 @@
 from datetime import datetime
-from stas_agent_interface.models import AuthScope, Capability, CapabilityList, SCOPE_HIERARCHY, SubmitIssueRequest, SubmitIssueResponse, CheckStatusRequest, CheckStatusResponse, RunHistoryRequest, RunHistoryResponse, RunEntry, ListReposResponse, RepoEntry, GetPricingResponse, PlanEntry
+from syntaro_agent_interface.models import AuthScope, Capability, CapabilityList, SCOPE_HIERARCHY, SubmitIssueRequest, SubmitIssueResponse, CheckStatusRequest, CheckStatusResponse, RunHistoryRequest, RunHistoryResponse, RunEntry, ListReposResponse, RepoEntry, GetPricingResponse, PlanEntry
 
 class TestScope:
     def test_hierarchy(self):

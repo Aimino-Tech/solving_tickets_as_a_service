@@ -50,17 +50,17 @@ describe('QualityGateReporter.formatMarkdown', () => {
 
   it('returns a no-gates message when results array is empty', () => {
     const output = reporter.formatMarkdown([]);
-    expect(output).toContain('<!-- stas-quality-report -->');
+    expect(output).toContain('<!-- syntaro-quality-report -->');
     expect(output).toContain('No quality gates were run for this fix');
-    expect(output).toContain('<!-- /stas-quality-report -->');
+    expect(output).toContain('<!-- /syntaro-quality-report -->');
     expect(output).not.toContain('<details>');
   });
 
-  it('wraps output in stas-quality-report comment markers', () => {
+  it('wraps output in syntaro-quality-report comment markers', () => {
     const results = makeAllPassResults();
     const output = reporter.formatMarkdown(results);
-    expect(output).toContain('<!-- stas-quality-report -->');
-    expect(output).toContain('<!-- /stas-quality-report -->');
+    expect(output).toContain('<!-- syntaro-quality-report -->');
+    expect(output).toContain('<!-- /syntaro-quality-report -->');
   });
 
   it('shows a passing summary when all gates pass', () => {
@@ -160,7 +160,7 @@ describe('QualityGateReporter.writeGateResult', () => {
     reporter = new QualityGateReporter();
   });
 
-  it('writes a JSON file to .stas/gates/{fixId}/{gate}.json', async () => {
+  it('writes a JSON file to .syntaro/gates/{fixId}/{gate}.json', async () => {
     const result = makeResult({ gate: 'compile' });
     // We cannot easily test actual file writes without fs mocks
     // but at minimum the method should not throw

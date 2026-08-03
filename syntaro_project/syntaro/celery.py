@@ -1,5 +1,5 @@
 """
-Celery app configuration for STAS.
+Celery app configuration for SYNTARO.
 
 Integrates with the existing workers.tasks modules and adds Django management
 commands as Celery tasks. The app auto-discovers tasks from all installed
@@ -15,14 +15,14 @@ from celery import Celery
 
 logger = logging.getLogger(__name__)
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "stas.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "syntaro.settings")
 
 # Ensure project root is on sys.path so workers package is importable
 _project_root = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
-app = Celery("stas")
+app = Celery("syntaro")
 
 # Load config from Django settings (CELERY_ namespace)
 app.config_from_object("django.conf:settings", namespace="CELERY")
@@ -49,7 +49,7 @@ app.autodiscover_tasks(["workers.tasks"], force=True)
 def setup_periodic_tasks(sender, **kwargs):
     """Configure periodic/scheduled tasks if needed."""
     logger.info(
-        "STAS Celery app configured — broker=%s backend=%s",
+        "SYNTARO Celery app configured — broker=%s backend=%s",
         app.conf.broker_url,
         app.conf.result_backend,
     )

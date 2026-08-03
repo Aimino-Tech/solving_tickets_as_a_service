@@ -27,9 +27,9 @@ class TestExtractJiraKeys:
         assert _extract_jira_keys("PROJ-123") == ["PROJ-123"]
 
     def test_multiple_keys(self):
-        assert _extract_jira_keys("PROJ-123 and STAS-42") == [
+        assert _extract_jira_keys("PROJ-123 and SYNTARO-42") == [
             "PROJ-123",
-            "STAS-42",
+            "SYNTARO-42",
         ]
 
     def test_key_with_underscore(self):
@@ -66,7 +66,7 @@ class TestExtractJiraKeys:
 
     def test_pattern_matches_proj_123(self):
         assert JIRA_ISSUE_KEY_PATTERN.fullmatch("PROJ-123")
-        assert JIRA_ISSUE_KEY_PATTERN.fullmatch("STAS-1")
+        assert JIRA_ISSUE_KEY_PATTERN.fullmatch("SYNTARO-1")
         assert JIRA_ISSUE_KEY_PATTERN.fullmatch("TEAM_NAME-9999")
 
     def test_pattern_rejects_lowercase(self):
@@ -193,9 +193,9 @@ class TestLinkPrToJira:
         result = link_pr_to_jira(
             pr_url="https://github.com/o/r/pull/3",
             pr_title="General fix",
-            branch_name="feature/STAS-42-implement",
+            branch_name="feature/SYNTARO-42-implement",
         )
-        assert "STAS-42" in result.jira_issue_keys
+        assert "SYNTARO-42" in result.jira_issue_keys
 
     def test_extracts_from_body(self):
         result = link_pr_to_jira(
@@ -338,21 +338,21 @@ class TestFullPipeline:
 
         result = sl.link_pr_to_jira(
             pr_url="https://github.com/owner/repo/pull/42",
-            pr_title="[STAS-77] Add Jira linking",
+            pr_title="[SYNTARO-77] Add Jira linking",
             pr_body="Implements bi-directional linking",
-            branch_name="feature/STAS-77-jira-link",
+            branch_name="feature/SYNTARO-77-jira-link",
         )
 
-        assert result.jira_issue_keys == ["STAS-77"]
+        assert result.jira_issue_keys == ["SYNTARO-77"]
         assert len(result.comments_posted) == 1
-        assert result.comments_posted[0]["issue_key"] == "STAS-77"
+        assert result.comments_posted[0]["issue_key"] == "SYNTARO-77"
         assert result.comments_posted[0]["comment_id"] == "100"
         assert result.jira_links_appended is True
-        assert "STAS-77" in result.updated_pr_body
+        assert "SYNTARO-77" in result.updated_pr_body
         assert "test-domain.atlassian.net" in result.updated_pr_body
 
         call_url = mock_client.post.call_args[0][0]
-        assert "STAS-77" in call_url
+        assert "SYNTARO-77" in call_url
         assert "comment" in call_url
 
     @patch("workers.integrations.support_link.httpx.Client")

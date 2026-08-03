@@ -36,12 +36,12 @@ export async function handleLinearFixLabel(
 
   const ticket = await tracker.getTicket(ticketId);
 
-  const fixLabel = config.stas.label;
+  const fixLabel = config.syntaro.label;
   const hasLabel = ticket.labels?.some(
     (l) => l.toLowerCase() === fixLabel.toLowerCase(),
   );
   if (!hasLabel) {
-    log.debug({ ticketId }, 'Ticket does not have stas:fix label — skipping');
+    log.debug({ ticketId }, 'Ticket does not have syntaro:fix label — skipping');
     return null;
   }
 

@@ -29,7 +29,7 @@ import { rootLogger } from '../utils/logger.js';
 initSentry();
 
 // Set environment-level tags
-setTag('service', 'stas');
+setTag('service', 'syntaro');
 setTag('runtime', 'node');
 
 // ── Startup Uncaught Exception Handler ─────────────────────────────

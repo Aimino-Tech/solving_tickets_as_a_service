@@ -1,4 +1,4 @@
-export declare const DEFAULT_BOT_NAME = "STAS";
+export declare const DEFAULT_BOT_NAME = "SYNTARO";
 export interface VerificationResult {
     preExistingTestsRegressed?: boolean;
     regressionTestCreated?: boolean;

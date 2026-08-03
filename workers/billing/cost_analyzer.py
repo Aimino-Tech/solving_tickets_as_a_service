@@ -71,7 +71,7 @@ _MODEL_CAPABILITY: dict[str, set[str]] = {
     "gpt-5.5-deepswe": {"medium", "complex"},
     "claude-opus-4-20250514": {"complex"},
     "claude-opus-4.5": {"complex"},
-    "stas-agi": {"simple", "medium", "complex"},
+    "syntaro-agi": {"simple", "medium", "complex"},
 }
 
 

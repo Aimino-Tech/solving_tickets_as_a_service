@@ -1,4 +1,4 @@
-# STAS — Production Readiness Assessment
+# SYNTARO — Production Readiness Assessment
 
 **Date**: 2026-06-29
 **Assessor**: Sisyphus (OpenCode Agent)
@@ -11,7 +11,7 @@
 
 **Verdict: CONDITIONALLY READY — NOT production-ready without 4-8 hours of fixes**
 
-STAS is an ambitious, well-architected project with ~90% of planned features implemented. The Express API server, Celery workers, and all infrastructure services are operational. However, **critical issues** in TypeScript compilation, database permissions, missing runtime dependencies, and pre-existing test failures mean it is **not yet safe to deploy for 100 users**.
+SYNTARO is an ambitious, well-architected project with ~90% of planned features implemented. The Express API server, Celery workers, and all infrastructure services are operational. However, **critical issues** in TypeScript compilation, database permissions, missing runtime dependencies, and pre-existing test failures mean it is **not yet safe to deploy for 100 users**.
 
 ### What Works (Production-Quality)
 | Area | Status | Details |
@@ -54,7 +54,7 @@ STAS is an ambitious, well-architected project with ~90% of planned features imp
 | Redis 7 | `redis:7-alpine` | ✅ Up (healthy) | 6379 |
 | PostgreSQL 16 | `postgres:16-alpine` | ✅ Up | 5432 |
 | RabbitMQ 4 | `rabbitmq:4-management-alpine` | ✅ Up (healthy) | 5672, 15672 |
-| STAS Express (dev) | `tsx src/index.ts` | ✅ Listening | 3000 |
+| SYNTARO Express (dev) | `tsx src/index.ts` | ✅ Listening | 3000 |
 | Celery Worker | `celery -A workers.celery_app worker` | ✅ Running | — |
 
 ### Connectivity
@@ -77,7 +77,7 @@ STAS is an ambitious, well-architected project with ~90% of planned features imp
  8. ✅ Issue queue worker created (concurrency: 2)
  9. ✅ Scheduled maintenance started (5 tasks)
 10. ✅ SLO compliance: 4/4 passing
-11. 🟡 DLQ warning: 10 messages in stas-issues-dlq
+11. 🟡 DLQ warning: 10 messages in syntaro-issues-dlq
 12. ❌ Webhook retry worker fails: "permission denied for table webhook_events"
 ```
 
@@ -193,7 +193,7 @@ RabbitMQ 4.x removes `transient_nonexcl_queues` which Celery remote control depe
 
 2. **PostgreSQL `webhook_events` permissions** — User lacks INSERT permission. Webhook retry worker fails continuously.
    ```bash
-   docker exec stas-postgres psql -U stas -d stas -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO stas;"
+   docker exec syntaro-postgres psql -U syntaro -d syntaro -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO syntaro;"
    ```
    **Estimate: 5 minutes.**
 
@@ -230,7 +230,7 @@ RabbitMQ 4.x removes `transient_nonexcl_queues` which Celery remote control depe
 | Disk (data + logs) | 2 GB | 10 GB |
 
 ### Scaling Strategy
-1. **Horizontal**: `docker compose --scale stas-worker=4`
+1. **Horizontal**: `docker compose --scale syntaro-worker=4`
 2. **Vertical**: PostgreSQL pool (currently max: 10, needs 20-50)
 3. **Caching**: Redis TTL for frequently accessed data
 4. **CDN**: Nginx reverse proxy (pre-configured in docker-compose.prod.yml)
@@ -271,11 +271,11 @@ RabbitMQ 4.x removes `transient_nonexcl_queues` which Celery remote control depe
 
 ## 11. Final Verdict
 
-**STAS is approximately 80% of the way to production readiness.**
+**SYNTARO is approximately 80% of the way to production readiness.**
 
 The architecture is sound, the codebase is well-structured, and the core functionality works. However, the TypeScript compilation failure, database permission issues, and test suite drift represent real risks that must be resolved before any production deployment.
 
-With 4-8 hours of focused work on the 🔴 critical and 🟡 high-priority items, STAS could be ready to serve 100 users in a self-hosted configuration. For cloud-hosted SaaS (with Stripe, dashboard, OpenCode serve), add another 2-4 hours of configuration work.
+With 4-8 hours of focused work on the 🔴 critical and 🟡 high-priority items, SYNTARO could be ready to serve 100 users in a self-hosted configuration. For cloud-hosted SaaS (with Stripe, dashboard, OpenCode serve), add another 2-4 hours of configuration work.
 
 ### What would change the verdict to READY:
 1. `npm run build` exits with code 0

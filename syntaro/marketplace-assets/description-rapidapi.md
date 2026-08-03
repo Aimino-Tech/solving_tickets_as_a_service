@@ -1,13 +1,13 @@
-# STAS API — Solving Tickets As A Service
+# SYNTARO API — Solving Tickets As A Service
 
 **Label a GitHub issue. Get a pull request.**
 
-STAS is an AI-powered GitHub bot that automatically fixes bugs and implements features. Submit a GitHub issue URL, and STAS investigates your codebase, writes a fix, runs your entire test suite, and opens a PR — all without human intervention.
+SYNTARO is an AI-powered GitHub bot that automatically fixes bugs and implements features. Submit a GitHub issue URL, and SYNTARO investigates your codebase, writes a fix, runs your entire test suite, and opens a PR — all without human intervention.
 
 ## How It Works
 
 ```
-1. You submit a GitHub issue URL → 2. STAS investigates the codebase
+1. You submit a GitHub issue URL → 2. SYNTARO investigates the codebase
    → 3. Root cause analysis → 4. Fix implementation
    → 5. New regression tests → 6. Full test suite execution
    → 7. A draft PR appears ✨
@@ -24,14 +24,14 @@ STAS is an AI-powered GitHub bot that automatically fixes bugs and implements fe
 ## Who Is It For?
 
 - **Open Source Maintainers** — Never triage another low-priority bug manually
-- **Dev Teams** — Let STAS handle the backlog while you build features
+- **Dev Teams** — Let SYNTARO handle the backlog while you build features
 - **CI/CD Pipelines** — Integrate automated fixing into your workflow
 - **Indie Developers** — Fix bugs while you sleep
 
 ## Example
 
 ```bash
-curl -X POST https://stas-rapidapi.p.rapidapi.com/api/fix \
+curl -X POST https://syntaro-rapidapi.p.rapidapi.com/api/fix \
   -H "Content-Type: application/json" \
   -H "X-RapidAPI-Key: your-key" \
   -H "X-RapidAPI-Proxy-Secret: your-secret" \

@@ -4,8 +4,8 @@ import { dockerCmd } from './docker.js';
 const log = rootLogger.child({ module: 'sandbox-gc' });
 
 const STALE_AGE_MS = 60 * 60 * 1000;
-const SANDBOX_LABEL = 'stas-sandbox=true';
-const AGENT_NET = 'stas_agent-net';
+const SANDBOX_LABEL = 'syntaro-sandbox=true';
+const AGENT_NET = 'syntaro_agent-net';
 
 export class SandboxGC {
   async sweep(): Promise<number> {

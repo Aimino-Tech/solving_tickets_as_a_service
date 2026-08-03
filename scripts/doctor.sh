@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/doctor.sh — STAS System Diagnostics
+# scripts/doctor.sh — SYNTARO System Diagnostics
 #
 # Usage:
 #   npm run doctor
@@ -88,7 +88,7 @@ report() {
 echo -e "${CYAN}"
 echo "  ███████  ████████  █████   ██████"
 echo "  ██         ██    ██   ██  ██   ██"
-echo "  ███████    ██    ███████  ██████       ${BOLD}STAS Doctor${NC}${CYAN}"
+echo "  ███████    ██    ███████  ██████       ${BOLD}SYNTARO Doctor${NC}${CYAN}"
 echo "       ██    ██    ██   ██  ██   ██"
 echo "  ███████    ██    ██   ██  ██   ██      ${DIM}System Diagnostics${NC}${CYAN}"
 echo -e "${NC}"
@@ -234,9 +234,9 @@ check_redis() {
     fi
   fi
 
-  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "stas-redis"; then
-    if docker exec stas-redis redis-cli ping 2>/dev/null | grep -q "PONG"; then
-      report pass "Redis" "Reachable via Docker container stas-redis"
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "syntaro-redis"; then
+    if docker exec syntaro-redis redis-cli ping 2>/dev/null | grep -q "PONG"; then
+      report pass "Redis" "Reachable via Docker container syntaro-redis"
       return
     fi
   fi
@@ -257,7 +257,7 @@ check_redis() {
 }
 
 check_postgres() {
-  local db_url="${DATABASE_URL:-postgres://localhost:5432/stas}"
+  local db_url="${DATABASE_URL:-postgres://localhost:5432/syntaro}"
 
   if command -v psql &>/dev/null; then
     if PGPASSWORD="${PGPASSWORD:-}" psql "$db_url" -c "SELECT 1" &>/dev/null 2>&1; then
@@ -266,9 +266,9 @@ check_postgres() {
     fi
   fi
 
-  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "stas-postgres"; then
-    if docker exec stas-postgres pg_isready -U "${POSTGRES_USER:-stas}" &>/dev/null 2>&1; then
-      report pass "PostgreSQL" "Reachable via Docker container stas-postgres"
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "syntaro-postgres"; then
+    if docker exec syntaro-postgres pg_isready -U "${POSTGRES_USER:-syntaro}" &>/dev/null 2>&1; then
+      report pass "PostgreSQL" "Reachable via Docker container syntaro-postgres"
       return
     fi
   fi
@@ -291,11 +291,11 @@ check_postgres() {
 }
 
 check_rabbitmq() {
-  local rmq_url="${RABBITMQ_URL:-amqp://guest:guest@localhost:5672/stas}"
+  local rmq_url="${RABBITMQ_URL:-amqp://guest:guest@localhost:5672/syntaro}"
 
-  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "stas-rabbitmq"; then
-    if docker exec stas-rabbitmq rabbitmq-diagnostics check_port_connectivity &>/dev/null 2>&1; then
-      report pass "RabbitMQ" "Reachable via Docker container stas-rabbitmq"
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "syntaro-rabbitmq"; then
+    if docker exec syntaro-rabbitmq rabbitmq-diagnostics check_port_connectivity &>/dev/null 2>&1; then
+      report pass "RabbitMQ" "Reachable via Docker container syntaro-rabbitmq"
       return
     fi
   fi
@@ -333,9 +333,9 @@ check_bot_health() {
   if curl -sf "${bot_url}/health" &>/dev/null 2>&1; then
     local status
     status=$(curl -sf "${bot_url}/health" 2>/dev/null | head -c 200 || echo "unknown")
-    report pass "STAS bot" "Running at ${bot_url} — ${status}"
+    report pass "SYNTARO bot" "Running at ${bot_url} — ${status}"
   else
-    report info "STAS bot" "Not running at ${bot_url} (start: npm run dev)"
+    report info "SYNTARO bot" "Not running at ${bot_url} (start: npm run dev)"
   fi
 }
 
@@ -445,7 +445,7 @@ check_port() {
   fi
 }
 
-check_port "3000" "STAS bot / webhook server"
+check_port "3000" "SYNTARO bot / webhook server"
 check_port "4096" "OpenCode serve"
 check_port "6379" "Redis"
 check_port "5672" "RabbitMQ"

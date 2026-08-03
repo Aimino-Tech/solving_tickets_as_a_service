@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/ci-checks.sh — STAS CI Checks Pipeline
+# scripts/ci-checks.sh — SYNTARO CI Checks Pipeline
 #
 # Runs 3 parallel code quality checks:
 #   biome  — TypeScript/JS lint + formatting (via biome.json)

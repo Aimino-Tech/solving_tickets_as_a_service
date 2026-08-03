@@ -1,5 +1,5 @@
-name: 'STAS Eval Pipeline'
-description: 'Run AI agent evaluation against regression benchmarks using STAS'
+name: 'SYNTARO Eval Pipeline'
+description: 'Run AI agent evaluation against regression benchmarks using SYNTARO'
 author: 'Aimino Tech'
 branding:
   icon: 'check-square'
@@ -7,7 +7,7 @@ branding:
 
 inputs:
   api-key:
-    description: 'STAS API key for authentication'
+    description: 'SYNTARO API key for authentication'
     required: true
   eval-suite:
     description: 'Eval suite to run: smoke | standard | full'
@@ -19,8 +19,8 @@ inputs:
   langfuse-secret-key:
     description: 'LangFuse secret key for trace export (optional)'
     required: false
-  stas-api-url:
-    description: 'STAS API base URL'
+  syntaro-api-url:
+    description: 'SYNTARO API base URL'
     default: 'https://api.syntaro.io'
     required: false
 

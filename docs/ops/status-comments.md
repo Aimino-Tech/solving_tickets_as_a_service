@@ -5,7 +5,7 @@
 
 ## Overview
 
-STAS posts a **single evolving comment** per issue that tracks pipeline stage
+SYNTARO posts a **single evolving comment** per issue that tracks pipeline stage
 transitions in real time. As each stage starts, completes, or fails, the
 comment is updated in place — never creating a new comment. This keeps the
 issue thread clean while giving the user full visibility into progress.
@@ -29,8 +29,8 @@ issue thread clean while giving the user full visibility into progress.
 
 | Deployment | Backend | Module | Config |
 |-----------|---------|--------|--------|
-| **Cloud** (STAS hosted) | Linear API | `status_comments.py` | `STAS_STATUS_COMMENTS_ENABLED` |
-| **OSS** (self-hosted) | GitHub API | `oss_status.py` | `STAS_OSS_STATUS_ENABLED` |
+| **Cloud** (SYNTARO hosted) | Linear API | `status_comments.py` | `SYNTARO_STATUS_COMMENTS_ENABLED` |
+| **OSS** (self-hosted) | GitHub API | `oss_status.py` | `SYNTARO_OSS_STATUS_ENABLED` |
 
 In the **cloud** deployment, status comments are posted to the Linear issue
 that triggered the pipeline.  In **OSS** (self-hosted) mode, they are posted
@@ -84,7 +84,7 @@ workers/notifications/
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STAS_STATUS_COMMENTS_ENABLED` | `true` | Set to `false` to disable all Linear status comments |
+| `SYNTARO_STATUS_COMMENTS_ENABLED` | `true` | Set to `false` to disable all Linear status comments |
 
 **Signal-driven:** Importing `status_comments` connects Celery signal handlers
 (`task_prerun`, `task_success`, `task_failure`) that automatically post
@@ -105,9 +105,9 @@ workers/notifications/
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STAS_OSS_STATUS_ENABLED` | `true` | Set to `false` to disable OSS status comments |
-| `STAS_OSS_STATUS_COALESCE_SECONDS` | `3` | Coalesce window for completed stages |
-| `STAS_OSS_STATUS_MAX_BATCH` | `10` | Max events before forced flush |
+| `SYNTARO_OSS_STATUS_ENABLED` | `true` | Set to `false` to disable OSS status comments |
+| `SYNTARO_OSS_STATUS_COALESCE_SECONDS` | `3` | Coalesce window for completed stages |
+| `SYNTARO_OSS_STATUS_MAX_BATCH` | `10` | Max events before forced flush |
 | `GITHUB_TOKEN` | — | Token with `issues:write` scope for posting comments |
 
 **Direct API:** `post_oss_comment(repo, issue_id, stage, status, message)`

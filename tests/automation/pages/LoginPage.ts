@@ -95,7 +95,7 @@ export class LoginPage extends BasePage {
   }
 
   async expectPageLoaded(): Promise<void> {
-    await expect(this.page).toHaveTitle(/STAS/);
+    await expect(this.page).toHaveTitle(/SYNTARO/);
     await expect(this.pageTitleHeading).toBeVisible();
   }
 

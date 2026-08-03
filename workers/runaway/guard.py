@@ -5,15 +5,15 @@ Design
 ------
 Tracks running agent state in Redis (with file-based fallback for testing):
 
-  - ``stas:runaway:<task_id>:start``       — epoch-seconds when the task started
-  - ``stas:runaway:<task_id>:tokens``       — cumulative token usage for the session
-  - ``stas:runaway:<task_id>:cost``         — cumulative cost in credits
-  - ``stas:runaway:<session_id>:retries``   — retry counter per session
+  - ``syntaro:runaway:<task_id>:start``       — epoch-seconds when the task started
+  - ``syntaro:runaway:<task_id>:tokens``       — cumulative token usage for the session
+  - ``syntaro:runaway:<task_id>:cost``         — cumulative cost in credits
+  - ``syntaro:runaway:<session_id>:retries``   — retry counter per session
 
 When a limit is exceeded the guard:
 
   1. Terminates the task (via ``Ignore`` in the middleware).
-  2. Labels the originating GitHub issue ``stas:timeout``.
+  2. Labels the originating GitHub issue ``syntaro:timeout``.
   3. Emits an OpenTelemetry span with execution-time attributes.
 
 Usage::
@@ -40,22 +40,22 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 # ---- Redis key prefixes ---------------------------------------------------
-REDIS_PREFIX_START = "stas:runaway:"
-REDIS_PREFIX_TOKENS = "stas:runaway:tokens:"
-REDIS_PREFIX_COST = "stas:runaway:cost:"
-REDIS_PREFIX_RETRIES = "stas:runaway:retries:"
-REDIS_PREFIX_TIMEOUT_LABEL = "stas:runaway:labeled:"
+REDIS_PREFIX_START = "syntaro:runaway:"
+REDIS_PREFIX_TOKENS = "syntaro:runaway:tokens:"
+REDIS_PREFIX_COST = "syntaro:runaway:cost:"
+REDIS_PREFIX_RETRIES = "syntaro:runaway:retries:"
+REDIS_PREFIX_TIMEOUT_LABEL = "syntaro:runaway:labeled:"
 
 # ---- Default limits -------------------------------------------------------
-DEFAULT_TIMEOUT_SECONDS: int = int(os.getenv("STAS_RUNAWAY_TIMEOUT_SECONDS", "600"))
-DEFAULT_MAX_TOKENS: int = int(os.getenv("STAS_RUNAWAY_MAX_TOKENS", "100000"))
-DEFAULT_MAX_COST: float = float(os.getenv("STAS_RUNAWAY_MAX_COST", "10.0"))
-DEFAULT_MAX_RETRIES: int = int(os.getenv("STAS_RUNAWAY_MAX_RETRIES", "3"))
+DEFAULT_TIMEOUT_SECONDS: int = int(os.getenv("SYNTARO_RUNAWAY_TIMEOUT_SECONDS", "600"))
+DEFAULT_MAX_TOKENS: int = int(os.getenv("SYNTARO_RUNAWAY_MAX_TOKENS", "100000"))
+DEFAULT_MAX_COST: float = float(os.getenv("SYNTARO_RUNAWAY_MAX_COST", "10.0"))
+DEFAULT_MAX_RETRIES: int = int(os.getenv("SYNTARO_RUNAWAY_MAX_RETRIES", "3"))
 
 # ---- Per-tier overrides (loaded from env) ---------------------------------
 # Format: tier=timeout_sec,max_tokens,max_cost
-# Example: STAS_RUNAWAY_TIER_LIMITS=free=300,50000,5.0;pro=600,100000,10.0;enterprise=900,200000,20.0
-_RAW_TIER_LIMITS = os.getenv("STAS_RUNAWAY_TIER_LIMITS", "")
+# Example: SYNTARO_RUNAWAY_TIER_LIMITS=free=300,50000,5.0;pro=600,100000,10.0;enterprise=900,200000,20.0
+_RAW_TIER_LIMITS = os.getenv("SYNTARO_RUNAWAY_TIER_LIMITS", "")
 
 TIER_LIMITS: dict[str, dict[str, float | int]] = {}
 if _RAW_TIER_LIMITS:
@@ -75,7 +75,7 @@ if _RAW_TIER_LIMITS:
             logger.warning("Malformed tier limit entry %r: %s", part, exc)
 
 # ---- OpenTelemetry span name ----------------------------------------------
-OTEL_SPAN_NAME = "stas.runaway.execution"
+OTEL_SPAN_NAME = "syntaro.runaway.execution"
 
 # ---- Sentinel values for redis_client constructor argument -----------------
 _UNSET: Any = object()
@@ -100,7 +100,7 @@ def _now_iso() -> str:
 
 def _get_lock_dir() -> str:
     """Directory for file-based fallback state files."""
-    return os.getenv("RUNAWAY_LOCK_DIR", "/tmp/stas-runaway")
+    return os.getenv("RUNAWAY_LOCK_DIR", "/tmp/syntaro-runaway")
 
 
 def _lock_file(key: str) -> str:
@@ -143,7 +143,7 @@ def _extract_repo_and_issue(args: tuple, kwargs: dict) -> tuple[str | None, int 
 
 
 def _label_github_issue(repo_full_name: str, issue_number: int) -> bool:
-    """Add the ``stas:timeout`` label to a GitHub issue.
+    """Add the ``syntaro:timeout`` label to a GitHub issue.
 
     Returns ``True`` if the label was applied successfully, ``False`` otherwise.
     """
@@ -154,17 +154,17 @@ def _label_github_issue(repo_full_name: str, issue_number: int) -> bool:
         client._request(
             "POST",
             f"/repos/{repo_full_name}/issues/{issue_number}/labels",
-            json_body={"labels": ["stas:timeout"]},
+            json_body={"labels": ["syntaro:timeout"]},
         )
         logger.info(
-            "Labeled issue %s#%d with stas:timeout",
+            "Labeled issue %s#%d with syntaro:timeout",
             repo_full_name,
             issue_number,
         )
         return True
     except Exception as exc:
         logger.warning(
-            "Failed to label issue %s#%d with stas:timeout: %s",
+            "Failed to label issue %s#%d with syntaro:timeout: %s",
             repo_full_name,
             issue_number,
             exc,
@@ -182,7 +182,7 @@ def _run_otel_span(task_name: str, task_id: str, duration: float, reason: str) -
         from opentelemetry import trace
         from opentelemetry.trace import Status, StatusCode
 
-        tracer = trace.get_tracer("stas-runaway")
+        tracer = trace.get_tracer("syntaro-runaway")
         with tracer.start_as_current_span(OTEL_SPAN_NAME) as span:
             span.set_attribute("task.name", task_name)
             span.set_attribute("task.id", task_id)
@@ -312,13 +312,13 @@ class RunawayGuard:
     def get_tier(self, repo_full_name: str | None = None) -> str:
         """Resolve the plan tier for a repo.
 
-        Falls back to the ``STAS_DEFAULT_TIER`` env var (default ``"free"``).
+        Falls back to the ``SYNTARO_DEFAULT_TIER`` env var (default ``"free"``).
         """
         if repo_full_name:
-            tier = os.getenv(f"STAS_TIER_{repo_full_name.replace('/', '_').upper()}")
+            tier = os.getenv(f"SYNTARO_TIER_{repo_full_name.replace('/', '_').upper()}")
             if tier:
                 return tier.lower()
-        return os.getenv("STAS_DEFAULT_TIER", "free").lower()
+        return os.getenv("SYNTARO_DEFAULT_TIER", "free").lower()
 
     def get_limits_for_tier(self, tier: str) -> dict[str, float | int]:
         """Return limit overrides for a given plan tier.

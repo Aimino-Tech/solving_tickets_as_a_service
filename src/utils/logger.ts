@@ -8,7 +8,7 @@ import pino from 'pino';
 export type Logger = pino.Logger;
 
 const level = process.env.LOG_LEVEL || 'info';
-const logFilePath = process.env.STAS_LOG_FILE || '';
+const logFilePath = process.env.SYNTARO_LOG_FILE || '';
 const nodeEnv = process.env.NODE_ENV;
 
 const targets: { target: string; options?: Record<string, unknown>; level?: string }[] = [];

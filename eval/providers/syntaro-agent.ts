@@ -1,13 +1,13 @@
 /**
- * Promptfoo TypeScript provider — STAS agent evaluation with E2B sandbox
+ * Promptfoo TypeScript provider — SYNTARO agent evaluation with E2B sandbox
  * and LangFuse OTel trace export.
  *
  * This provider is loaded by Promptfoo as a custom provider. It:
  *  1. Parses a YAML test case from the prompt (issueTitle, issueDescription,
  *     repo, expectedOutcome, expectedFiles, timeoutMs)
  *  2. Starts a LangFuse trace via OpenTelemetry OTLP export
- *  3. Launches an E2B sandbox (template: "stas-eval")
- *  4. Runs the STAS agent CLI inside the sandbox
+ *  3. Launches an E2B sandbox (template: "syntaro-eval")
+ *  4. Runs the SYNTARO agent CLI inside the sandbox
  *  5. Collects artifacts (PR diff, agent logs, tool calls)
  *  6. Evaluates the result against the expected outcome
  *  7. Ends the LangFuse trace
@@ -18,7 +18,7 @@
  *
  * Usage in promptfoo config:
  *   providers:
- *     - file://eval/providers/stas-agent.ts
+ *     - file://eval/providers/syntaro-agent.ts
  */
 
 import type {
@@ -98,7 +98,7 @@ function initLangFuseTracer(): Tracer {
   // Use NodeTracerProvider for register() support
   const provider = new NodeTracerProvider({
     resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: "stas-eval",
+      [ATTR_SERVICE_NAME]: "syntaro-eval",
     }),
     spanProcessors: [new SimpleSpanProcessor(exporter)],
   });
@@ -106,7 +106,7 @@ function initLangFuseTracer(): Tracer {
   // Register as the global tracer provider
   provider.register();
 
-  return provider.getTracer("stas-eval", "0.1.0");
+  return provider.getTracer("syntaro-eval", "0.1.0");
 }
 
 // ---------------------------------------------------------------------------
@@ -185,7 +185,7 @@ function parseTestCase(prompt: string): TestCase {
  * Run one evaluation attempt for a test case.
  *
  * Creates a child span under the root trace, launches the E2B sandbox,
- * executes the STAS agent, collects artifacts, evaluates the result,
+ * executes the SYNTARO agent, collects artifacts, evaluates the result,
  * and returns both the EvalResult and the associated span.
  *
  * @param testCase - The parsed test case
@@ -311,11 +311,11 @@ async function runAttempt(
 // ---------------------------------------------------------------------------
 
 /**
- * STAS Agent evaluation provider for Promptfoo.
+ * SYNTARO Agent evaluation provider for Promptfoo.
  *
  * Usage in promptfoo config (YAML):
  *   providers:
- *     - file://eval/providers/stas-agent.ts
+ *     - file://eval/providers/syntaro-agent.ts
  *
  * The `prompt` passed to this provider should be a YAML document with the
  * test case fields (see `parseTestCase`).
@@ -328,7 +328,7 @@ async function runAttempt(
  *     traceUrl: string
  *   }
  */
-export default async function stasAgentProvider(
+export default async function syntaroAgentProvider(
   prompt: string,
   _context?: CallApiContextParams,
   _options?: CallApiOptionsParams,
@@ -337,10 +337,10 @@ export default async function stasAgentProvider(
   const tracer = initLangFuseTracer();
 
   // Create the root span for this evaluation run
-  const rootSpan = tracer.startSpan("stas-eval-run", {
+  const rootSpan = tracer.startSpan("syntaro-eval-run", {
     kind: SpanKind.CLIENT,
     attributes: {
-      "eval.provider": "stas-agent",
+      "eval.provider": "syntaro-agent",
       "eval.promptLength": prompt.length,
     },
   });

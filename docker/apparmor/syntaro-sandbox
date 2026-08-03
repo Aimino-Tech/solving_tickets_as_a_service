@@ -1,6 +1,6 @@
 #include <tunables/global>
 
-profile stas-sandbox flags=(attach_disconnected, mediate_deleted) {
+profile syntaro-sandbox flags=(attach_disconnected, mediate_deleted) {
 
   #include <abstractions/base>
   #include <abstractions/nameservice>

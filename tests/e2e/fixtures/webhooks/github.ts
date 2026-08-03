@@ -11,9 +11,9 @@
 // ---------------------------------------------------------------------------
 
 /**
- * `issues.labeled` with the target `stas:fix` label — triggers a fix job.
+ * `issues.labeled` with the target `syntaro:fix` label — triggers a fix job.
  */
-export function githubIssuesLabeledStasFix() {
+export function githubIssuesLabeledSyntaroFix() {
   return {
     action: 'labeled',
     issue: {
@@ -21,7 +21,7 @@ export function githubIssuesLabeledStasFix() {
       title: 'Fix broken user login',
       body: 'Users are unable to log in when the password contains special characters.',
       state: 'open',
-      labels: [{ name: 'stas:fix', color: 'fc2929', default: false, description: 'Trigger STAS fix' }],
+      labels: [{ name: 'syntaro:fix', color: 'fc2929', default: false, description: 'Trigger SYNTARO fix' }],
       created_at: '2025-05-01T10:00:00Z',
       updated_at: '2025-05-01T12:00:00Z',
       html_url: 'https://github.com/owner/test-repo/issues/42',
@@ -38,7 +38,7 @@ export function githubIssuesLabeledStasFix() {
       reactions: { url: '', total_count: 0, '+1': 0, '-1': 0, laugh: 0, hooray: 0, confused: 0, heart: 0, rocket: 0, eyes: 0 },
       state_reason: null,
     },
-    label: { name: 'stas:fix', color: 'fc2929', default: false, description: 'Trigger STAS fix' },
+    label: { name: 'syntaro:fix', color: 'fc2929', default: false, description: 'Trigger SYNTARO fix' },
     repository: {
       id: 100,
       name: 'test-repo',
@@ -73,7 +73,7 @@ export function githubIssuesLabeledStasFix() {
  * `issues.labeled` with a non-target label — should NOT trigger.
  */
 export function githubIssuesLabeledOther() {
-  const payload = githubIssuesLabeledStasFix() as any;
+  const payload = githubIssuesLabeledSyntaroFix() as any;
   payload.label = { name: 'bug', color: 'd73a4a', default: true, description: 'Something is not working' };
   payload.issue.labels = [payload.label];
   return payload;
@@ -124,10 +124,10 @@ export function githubIssuesOpened() {
 }
 
 /**
- * `issues.edited` with `stas:fix` label present — should re-enqueue.
+ * `issues.edited` with `syntaro:fix` label present — should re-enqueue.
  */
-export function githubIssuesEditedWithStasFix() {
-  const payload = githubIssuesLabeledStasFix() as any;
+export function githubIssuesEditedWithSyntaroFix() {
+  const payload = githubIssuesLabeledSyntaroFix() as any;
   payload.action = 'edited';
   payload.issue.title = 'Fix broken user login (updated)';
   payload.issue.body = 'Updated description with more details.';
@@ -139,7 +139,7 @@ export function githubIssuesEditedWithStasFix() {
 /**
  * `issues.edited` WITHOUT the target label — should NOT trigger.
  */
-export function githubIssuesEditedWithoutStasFix() {
+export function githubIssuesEditedWithoutSyntaroFix() {
   const payload = githubIssuesOpened() as any;
   payload.action = 'edited';
   payload.changes = { body: { from: 'Original' } };
@@ -167,7 +167,7 @@ export function githubMarketplacePurchased() {
       plan: {
         id: 1,
         name: 'Pro Plan',
-        description: 'Pro plan for STAS',
+        description: 'Pro plan for SYNTARO',
         monthly_price_in_cents: 4900,
         yearly_price_in_cents: 49000,
         price_model: 'flat',

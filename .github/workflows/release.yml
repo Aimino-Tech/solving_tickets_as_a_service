@@ -1,5 +1,5 @@
 # =============================================================================
-# STAS Release — Automated Release Pipeline
+# SYNTARO Release — Automated Release Pipeline
 #
 # Triggered on:
 #   - Push of a v* tag (e.g., v0.11.0, v0.11.0-rc.1)
@@ -129,8 +129,8 @@ jobs:
           SENTRY_PROJECT: ${{ env.SENTRY_PROJECT }}
         with:
           environment: production
-          version: stas@${{ steps.get-version.outputs.version }}
-          version_prefix: stas@
+          version: syntaro@${{ steps.get-version.outputs.version }}
+          version_prefix: syntaro@
           sourcemaps: ./dist
           ignore_missing: true
 
@@ -236,7 +236,7 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         with:
           environment: production
-          version: stas@${{ needs.validate.outputs.version }}
+          version: syntaro@${{ needs.validate.outputs.version }}
           ignore_empty: true
           sourcemaps: ./dist
           deploy: true
@@ -244,7 +244,7 @@ jobs:
 
       - name: Output Sentry release info
         run: |
-          echo "Sentry release created: stas@${{ needs.validate.outputs.version }}"
+          echo "Sentry release created: syntaro@${{ needs.validate.outputs.version }}"
 
   ##############################################################################
   # GENERATE SBOM (CycloneDX)
@@ -364,13 +364,13 @@ jobs:
           webhook-type: incoming-webhook
           payload: |
             {
-              "text": "STAS release v${{ needs.validate.outputs.version }} published",
+              "text": "SYNTARO release v${{ needs.validate.outputs.version }} published",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*STAS release v${{ needs.validate.outputs.version }} published*\nRepository: \`${{ github.repository }}\`\nImage: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.version }}\`"
+                    "text": "*SYNTARO release v${{ needs.validate.outputs.version }} published*\nRepository: \`${{ github.repository }}\`\nImage: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.version }}\`"
                   }
                 }
               ]

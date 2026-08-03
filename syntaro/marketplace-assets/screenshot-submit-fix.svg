@@ -5,10 +5,10 @@
   <circle cx="65" cy="55" r="8" fill="#ff5f57"/>
   <circle cx="90" cy="55" r="8" fill="#ffbd2e"/>
   <circle cx="115" cy="55" r="8" fill="#28c840"/>
-  <text x="400" y="60" text-anchor="middle" font-family="monospace" font-size="14" fill="#888">STAS Fix Submission — Terminal</text>
+  <text x="400" y="60" text-anchor="middle" font-family="monospace" font-size="14" fill="#888">SYNTARO Fix Submission — Terminal</text>
   <!-- Terminal lines -->
   <text x="60" y="95" font-family="monospace" font-size="13" fill="#6c6">$</text>
-  <text x="80" y="95" font-family="monospace" font-size="13" fill="#ddd">curl -X POST https://stas-rapidapi.p.rapidapi.com/api/fix</text>
+  <text x="80" y="95" font-family="monospace" font-size="13" fill="#ddd">curl -X POST https://syntaro-rapidapi.p.rapidapi.com/api/fix</text>
   <!-- Response panel -->
   <rect x="40" y="150" width="720" height="420" rx="10" fill="#2d2d44" stroke="#3d3d54" stroke-width="1"/>
   <text x="400" y="180" text-anchor="middle" font-family="system-ui" font-size="16" font-weight="bold" fill="#ddd">Response: Fix Job Accepted</text>
@@ -16,13 +16,13 @@
   <rect x="60" y="200" width="680" height="350" rx="8" fill="#252536"/>
   <text x="80" y="230" font-family="monospace" font-size="12" fill="#f9a">{</text>
   <text x="100" y="255" font-family="monospace" font-size="12" fill="#aef">  "jobId":</text>
-  <text x="180" y="255" font-family="monospace" font-size="12" fill="#6c6"> "stas_job_abc123",</text>
+  <text x="180" y="255" font-family="monospace" font-size="12" fill="#6c6"> "syntaro_job_abc123",</text>
   <text x="100" y="280" font-family="monospace" font-size="12" fill="#aef">  "status":</text>
   <text x="180" y="280" font-family="monospace" font-size="12" fill="#6c6"> "pending",</text>
   <text x="100" y="305" font-family="monospace" font-size="12" fill="#aef">  "estimatedWaitSeconds":</text>
   <text x="300" y="305" font-family="monospace" font-size="12" fill="#6c6"> 120,</text>
   <text x="100" y="330" font-family="monospace" font-size="12" fill="#aef">  "pollUrl":</text>
-  <text x="180" y="330" font-family="monospace" font-size="12" fill="#6c6"> "https://api.stas.aimino.io/api/fix/stas_job_abc123"</text>
+  <text x="180" y="330" font-family="monospace" font-size="12" fill="#6c6"> "https://api.syntaro.aimino.io/api/fix/syntaro_job_abc123"</text>
   <text x="80" y="520" font-family="monospace" font-size="12" fill="#f9a">}</text>
   <!-- Status indicator -->
   <rect x="60" y="540" width="200" height="30" rx="6" fill="#28c840" opacity="0.2"/>

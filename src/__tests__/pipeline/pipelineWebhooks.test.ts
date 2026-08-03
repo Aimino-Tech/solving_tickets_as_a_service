@@ -46,7 +46,7 @@ describe('pipelineWebhooks', () => {
       events: ['session.created'],
     });
 
-    const state = createSessionState('sess-1', 'issue-1', 'stas:fix');
+    const state = createSessionState('sess-1', 'issue-1', 'syntaro:fix');
     await dispatchPipelineEvent('session.created', state);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -71,7 +71,7 @@ describe('pipelineWebhooks', () => {
       events: ['session.created'],
     });
 
-    const state = createSessionState('sess-1', 'issue-1', 'stas:fix');
+    const state = createSessionState('sess-1', 'issue-1', 'syntaro:fix');
     await dispatchPipelineEvent('session.failed', state);
 
     expect(fetchMock).not.toHaveBeenCalled();
@@ -86,7 +86,7 @@ describe('pipelineWebhooks', () => {
       events: ['*'],
     });
 
-    const state = createSessionState('sess-1', 'issue-1', 'stas:fix');
+    const state = createSessionState('sess-1', 'issue-1', 'syntaro:fix');
     await dispatchPipelineEvent('session.created', state);
 
     const deliveries = getDeliveries();

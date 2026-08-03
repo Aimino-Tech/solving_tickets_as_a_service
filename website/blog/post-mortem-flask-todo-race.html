@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App — STAS Blog</title>
-  <meta name="description" content="A true-to-life STAS run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable." />
-  <meta name="keywords" content="STAS post-mortem, AI code review, race condition, Flask SQLite, automated bug fixing, GitHub bot" />
+  <title>Post-Mortem: How SYNTARO Found and Fixed a Race Condition in a Flask Todo App — SYNTARO Blog</title>
+  <meta name="description" content="A true-to-life SYNTARO run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable." />
+  <meta name="keywords" content="SYNTARO post-mortem, AI code review, race condition, Flask SQLite, automated bug fixing, GitHub bot" />
 
   <meta property="og:type" content="article" />
-  <meta property="og:url" content="https://stas.aimino.io/blog/post-mortem-flask-todo-race" />
-  <meta property="og:title" content="Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App" />
-  <meta property="og:description" content="A true-to-life STAS run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable." />
-  <meta property="og:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta property="og:url" content="https://syntaro.aimino.io/blog/post-mortem-flask-todo-race" />
+  <meta property="og:title" content="Post-Mortem: How SYNTARO Found and Fixed a Race Condition in a Flask Todo App" />
+  <meta property="og:description" content="A true-to-life SYNTARO run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable." />
+  <meta property="og:image" content="https://syntaro.aimino.io/img/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App" />
-  <meta name="twitter:description" content="A true-to-life STAS run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable." />
-  <meta name="twitter:image" content="https://stas.aimino.io/img/og-image.png" />
+  <meta name="twitter:title" content="Post-Mortem: How SYNTARO Found and Fixed a Race Condition in a Flask Todo App" />
+  <meta name="twitter:description" content="A true-to-life SYNTARO run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable." />
+  <meta name="twitter:image" content="https://syntaro.aimino.io/img/og-image.png" />
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
-    "headline": "Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App",
+    "headline": "Post-Mortem: How SYNTARO Found and Fixed a Race Condition in a Flask Todo App",
     "datePublished": "2026-07-29",
     "author": {
       "@type": "Organization",
@@ -35,11 +35,11 @@
       "@type": "Organization",
       "name": "AImino"
     },
-    "description": "A true-to-life STAS run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable."
+    "description": "A true-to-life SYNTARO run: how the bot diagnosed a SQLite race condition in a Flask todo app — per-request connections, WAL mode, busy_timeout — and why documenting root cause makes AI fixes reviewable."
   }
   </script>
 
-  <script defer data-domain="stas.aimino.io" src="https://plausible.io/js/script.js"></script>
+  <script defer data-domain="syntaro.aimino.io" src="https://plausible.io/js/script.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -75,7 +75,7 @@
   <!-- NAV -->
   <nav class="nav" role="navigation" aria-label="Main navigation">
     <div class="nav-inner">
-      <a href="/" class="nav-logo"><span class="logo-icon">S</span> STAS</a>
+      <a href="/" class="nav-logo"><span class="logo-icon">S</span> SYNTARO</a>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
       <ul class="nav-links" id="navLinks">
         <li><a href="/">Home</a></li>
@@ -84,7 +84,7 @@
         <li><a href="/docs">Docs</a></li>
         <li><a href="/blog">Blog</a></li>
         <li><a href="/status">Status</a></li>
-        <li><a href="https://github.com/apps/stas-app/installations/new" class="nav-cta">Install App →</a></li>
+        <li><a href="https://github.com/apps/syntaro-app/installations/new" class="nav-cta">Install App →</a></li>
       </ul>
     </div>
   </nav>
@@ -96,7 +96,7 @@
         <span class="tag tag-green">Engineering</span>
         <span class="tag tag-amber">Case Study</span>
       </div>
-      <h1>Post-Mortem: How STAS Found and Fixed a Race Condition in a Flask Todo App</h1>
+      <h1>Post-Mortem: How SYNTARO Found and Fixed a Race Condition in a Flask Todo App</h1>
       <div class="meta">
         <span class="author">
           <span class="author-avatar">AT</span>
@@ -109,15 +109,15 @@
 
     <div class="blog-post-content">
 
-      <p>Users of a small Flask todo app started reporting something odd: every so often, creating a todo returned a 500 error. Not a crash, not an obvious bug. Just an occasional <code>OperationalError: database is locked</code> that came and went under load. The maintainer reproduced it a couple of times, filed an issue, and, as a quick experiment, labeled it <code>stas:fix</code>. Three minutes later there was a pull request.</p>
+      <p>Users of a small Flask todo app started reporting something odd: every so often, creating a todo returned a 500 error. Not a crash, not an obvious bug. Just an occasional <code>OperationalError: database is locked</code> that came and went under load. The maintainer reproduced it a couple of times, filed an issue, and, as a quick experiment, labeled it <code>syntaro:fix</code>. Three minutes later there was a pull request.</p>
 
-      <p>This is the story of that run — what STAS saw, what it changed, and why the fix holds up.</p>
+      <p>This is the story of that run — what SYNTARO saw, what it changed, and why the fix holds up.</p>
 
       <h2>The Timeline</h2>
 
       <p>Here's the full run, from label to PR:</p>
 
-      <pre><code>Issue labeled stas:fix
+      <pre><code>Issue labeled syntaro:fix
         │
         ▼
    Webhook Server
@@ -167,7 +167,7 @@
 
       <h2>Sandbox: A Clean Room</h2>
 
-      <p>STAS cloned the repo into an isolated sandbox and installed dependencies. The baseline test suite passed. That's a deliberately unexciting step, and it's the reason the rest of the run is trustworthy: STAS knew the repo was healthy before touching it, so any later failure could be attributed to the fix rather than a broken checkout.</p>
+      <p>SYNTARO cloned the repo into an isolated sandbox and installed dependencies. The baseline test suite passed. That's a deliberately unexciting step, and it's the reason the rest of the run is trustworthy: SYNTARO knew the repo was healthy before touching it, so any later failure could be attributed to the fix rather than a broken checkout.</p>
 
       <h2>Investigation: Reproducing the Sporadic</h2>
 
@@ -183,7 +183,7 @@
 
       <p>Before touching any code, the agent confirmed the hypothesis by reading <code>app.py</code> and <code>models.py</code>. There it was: a single connection created at module import, passed into every request handler. The reproduction was deterministic once the concurrent load test existed, and the fix target was unambiguous. That's the pattern we look for in a healthy fix run: reproduce, read, confirm, then change.</p>
 
-      <p>Three compounding causes, one reproducible failure. The agent documented each one in the PR body — not as boilerplate, but as genuine root-cause analysis. This is also why STAS runs leave a useful artifact behind: the PR description reads like a small post-mortem, which is what makes AI-generated fixes auditable by humans.</p>
+      <p>Three compounding causes, one reproducible failure. The agent documented each one in the PR body — not as boilerplate, but as genuine root-cause analysis. This is also why SYNTARO runs leave a useful artifact behind: the PR description reads like a small post-mortem, which is what makes AI-generated fixes auditable by humans.</p>
 
       <h2>The Fix</h2>
 
@@ -199,7 +199,7 @@
 
       <h2>Verification: The Point of No Shortcuts</h2>
 
-      <p>The agent ran the new test until it passed, then ran the entire existing suite. Everything green. STAS applies two gates to every run: the fix must solve the reported issue, and it must not break anything that was working. On this run, both held.</p>
+      <p>The agent ran the new test until it passed, then ran the entire existing suite. Everything green. SYNTARO applies two gates to every run: the fix must solve the reported issue, and it must not break anything that was working. On this run, both held.</p>
 
       <h2>The After</h2>
 
@@ -212,12 +212,12 @@
       <p>The human review still happened. It was just fast, because the agent had already done the expensive part: figuring out <em>why</em>.</p>
 
       <div class="highlight-box">
-        <p><strong>Key lesson:</strong> The most valuable thing STAS produces isn't the diff — it's the root-cause analysis. A fix that documents why the code was wrong is reviewable in minutes. A fix that only changes code is a guess wearing a patch's clothes. Connection-per-request, WAL, and <code>busy_timeout</code> are the SQLite trifecta for Flask apps, but the general rule applies everywhere: understand the mechanism, then change it.</p>
+        <p><strong>Key lesson:</strong> The most valuable thing SYNTARO produces isn't the diff — it's the root-cause analysis. A fix that documents why the code was wrong is reviewable in minutes. A fix that only changes code is a guess wearing a patch's clothes. Connection-per-request, WAL, and <code>busy_timeout</code> are the SQLite trifecta for Flask apps, but the general rule applies everywhere: understand the mechanism, then change it.</p>
       </div>
 
       <h2>Why Post-Mortems Matter for AI Fixes</h2>
 
-      <p>There's a healthy skepticism about AI-generated code, and it's justified when the output is a blob of changes with no reasoning. STAS is built to fail that test differently: every fix run produces a narrative — triage, reproduction, root cause, change, verification — that a human can audit in minutes. The same discipline behind our <a href="/trust">trust and safety model</a> applies to the code itself: when the agent documents root cause rather than symptoms, the PR stops being "trust me, I ran the tests" and becomes evidence you can check.</p>
+      <p>There's a healthy skepticism about AI-generated code, and it's justified when the output is a blob of changes with no reasoning. SYNTARO is built to fail that test differently: every fix run produces a narrative — triage, reproduction, root cause, change, verification — that a human can audit in minutes. The same discipline behind our <a href="/trust">trust and safety model</a> applies to the code itself: when the agent documents root cause rather than symptoms, the PR stops being "trust me, I ran the tests" and becomes evidence you can check.</p>
 
       <p>That's what happened with the todo app. The bug was real, the fix was small, and the reasoning was on the record. The maintainer didn't have to reverse-engineer the diff to decide whether to merge it — the agent had already written the post-mortem.</p>
 
@@ -225,7 +225,7 @@
 
     <div class="blog-post-nav">
       <a href="/blog">← Back to Blog</a>
-      <a href="https://github.com/apps/stas-app/installations/new" class="btn btn-primary" data-track="post-cta">Install STAS →</a>
+      <a href="https://github.com/apps/syntaro-app/installations/new" class="btn btn-primary" data-track="post-cta">Install SYNTARO →</a>
     </div>
   </article>
 
@@ -233,7 +233,7 @@
   <footer class="footer">
     <div class="footer-inner">
       <div class="footer-brand">
-        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> STAS</a>
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> SYNTARO</a>
         <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
       </div>
       <div>
@@ -252,7 +252,7 @@
           <li><a href="/blog">Blog</a></li>
           <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
           <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
-          <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+          <li><a href="https://github.com/marketplace/actions/syntaro-eval">Marketplace</a></li>
         </ul>
       </div>
       <div>

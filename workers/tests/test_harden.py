@@ -72,10 +72,10 @@ class TestGetSecureConfig:
     def test_both_profiles_passthrough(self):
         cfg = get_secure_config(
             seccomp_profile="/etc/docker/seccomp/custom.json",
-            apparmor_profile="stas-custom",
+            apparmor_profile="syntaro-custom",
         )
         assert cfg["seccomp_profile"] == "/etc/docker/seccomp/custom.json"
-        assert cfg["apparmor_profile"] == "stas-custom"
+        assert cfg["apparmor_profile"] == "syntaro-custom"
 
 
 class TestGetSeccompProfile:
@@ -134,7 +134,7 @@ class TestGetApparmorProfile:
 
     def test_includes_profile_declaration(self):
         profile = get_apparmor_profile()
-        assert "profile stas-sandbox" in profile
+        assert "profile syntaro-sandbox" in profile
 
     def test_includes_workspace_rules(self):
         profile = get_apparmor_profile()

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# STAS — Docker Validation Script
+# SYNTARO — Docker Validation Script
 #
 # Validates the production Docker Compose stack:
 #   1. Builds all images without errors
@@ -28,8 +28,8 @@ COMPOSE_FILE="docker-compose.prod.yml"
 HEALTH_URL="http://localhost:3000/health"
 HEALTH_TIMEOUT_SEC=60
 HEALTH_POLL_INTERVAL=5
-COMPOSE_PROJECT_NAME="stas-validate-$(date +%s)"
-TEST_WEBHOOK_PAYLOAD='{"action":"labeled","issue":{"number":1,"title":"Test issue","body":"Test body","labels":[{"name":"stas:fix"}]},"label":{"name":"stas:fix"},"repository":{"full_name":"owner/test-repo"},"installation":{"id":999}}'
+COMPOSE_PROJECT_NAME="syntaro-validate-$(date +%s)"
+TEST_WEBHOOK_PAYLOAD='{"action":"labeled","issue":{"number":1,"title":"Test issue","body":"Test body","labels":[{"name":"syntaro:fix"}]},"label":{"name":"syntaro:fix"},"repository":{"full_name":"owner/test-repo"},"installation":{"id":999}}'
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -199,7 +199,7 @@ report() {
 # Main
 # ---------------------------------------------------------------------------
 main() {
-  log "STAS Docker Validation"
+  log "SYNTARO Docker Validation"
   log "Project: $COMPOSE_PROJECT_NAME"
   log "Compose file: $COMPOSE_FILE"
   log ""

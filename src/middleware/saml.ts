@@ -93,7 +93,7 @@ function resolveSamlUser(req: Request): EnterpriseUser | undefined {
     }
   }
   const cookies = parseCookies(req);
-  const cookieToken = cookies?.['stas_saml_token'];
+  const cookieToken = cookies?.['syntaro_saml_token'];
   if (cookieToken) {
     const session = getSamlSession(cookieToken);
     if (session) {

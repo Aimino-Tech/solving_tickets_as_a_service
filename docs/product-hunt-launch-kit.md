@@ -1,12 +1,12 @@
-# STAS Product Hunt Launch Kit
+# SYNTARO Product Hunt Launch Kit
 
-Complete listing copy, media specs, and launch day playbook for the STAS Product Hunt launch.
+Complete listing copy, media specs, and launch day playbook for the SYNTARO Product Hunt launch.
 
 ---
 
 ## 1. Listing Details
 
-**Tagline**: STAS — AI senior architect that fixes GitHub issues. Plans first, then codes.
+**Tagline**: SYNTARO — AI senior architect that fixes GitHub issues. Plans first, then codes.
 
 **Category**: Developer Tools > GitHub
 
@@ -22,19 +22,19 @@ Every developer knows the feeling: you wake up to 15 new GitHub issues. Some are
 
 ### The Solution
 
-STAS is an AI-powered GitHub bot that autonomously fixes issues. Install it → grant repo access → STAS reads your full codebase, understands the architecture, plans the optimal fix, writes the code, runs your test suite, and opens a PR — all without you touching a keyboard.
+SYNTARO is an AI-powered GitHub bot that autonomously fixes issues. Install it → grant repo access → SYNTARO reads your full codebase, understands the architecture, plans the optimal fix, writes the code, runs your test suite, and opens a PR — all without you touching a keyboard.
 
 **How it works:**
-1. A GitHub issue is created or assigned to STAS
-2. STAS clones the repo and does a full architecture analysis (reads your docs, examines your data model, studies test patterns)
+1. A GitHub issue is created or assigned to SYNTARO
+2. SYNTARO clones the repo and does a full architecture analysis (reads your docs, examines your data model, studies test patterns)
 3. It produces a structured plan: root cause identified, approach chosen, affected files listed, test strategy defined
 4. The plan is posted as a comment on the issue for your review
-5. Once approved (or automatically if configured), STAS writes the code, runs `npm test` / `pytest` / `go test` / whatever you use, generates new regression tests, and opens a PR
+5. Once approved (or automatically if configured), SYNTARO writes the code, runs `npm test` / `pytest` / `go test` / whatever you use, generates new regression tests, and opens a PR
 6. You review and merge
 
-### What Makes STAS Different
+### What Makes SYNTARO Different
 
-| Feature | STAS | Devin | Copilot Coding Agent |
+| Feature | SYNTARO | Devin | Copilot Coding Agent |
 |---------|------|-------|---------------------|
 | Pricing | $29/mo unlimited | $500/mo Team | $100/mo Max (200 credits) |
 | Avg cost per fix | $3.80 | ~$15-45 | ~$12-30 |
@@ -43,7 +43,7 @@ STAS is an AI-powered GitHub bot that autonomously fixes issues. Install it → 
 | Architecture-first | Always plans before coding | Interactive planning (opt-in) | No structured planning |
 | Self-hostable | ✅ Docker image | ❌ | ❌ |
 
-At **$3.80 average cost per fix** (vs. $50-150/hr for a senior engineer), STAS pays for itself after 8 fixes. With a **92% fix pass rate** across real-world repos, it's not a toy — it ships production code.
+At **$3.80 average cost per fix** (vs. $50-150/hr for a senior engineer), SYNTARO pays for itself after 8 fixes. With a **92% fix pass rate** across real-world repos, it's not a toy — it ships production code.
 
 ### Who It's For
 
@@ -54,7 +54,7 @@ At **$3.80 average cost per fix** (vs. $50-150/hr for a senior engineer), STAS p
 
 ### Open Source
 
-STAS is fully open source under the MIT license. You can self-host it, audit every line that runs in your CI, and extend it. We believe transparency is table stakes when an AI touches your production code.
+SYNTARO is fully open source under the MIT license. You can self-host it, audit every line that runs in your CI, and extend it. We believe transparency is table stakes when an AI touches your production code.
 
 ### Pricing
 
@@ -66,42 +66,42 @@ STAS is fully open source under the MIT license. You can self-host it, audit eve
 ### Links
 
 - GitHub: https://github.com/Aimino-Tech/solving_tickets_as_a_service
-- Website: https://stas.ai
-- Twitter/X: @stas_bot
-- Docs: https://docs.stas.ai
+- Website: https://syntaro.ai
+- Twitter/X: @syntaro_bot
+- Docs: https://docs.syntaro.ai
 
 ---
 
 ## 3. Hero Image Spec (1280×640)
 
-**Screenshot flow showing a GitHub issue → STAS plan → STAS PR:**
+**Screenshot flow showing a GitHub issue → SYNTARO plan → SYNTARO PR:**
 
 A three-panel horizontal layout (left → center → right) on a dark GitHub-themed background:
 
 **Left panel (~400px): GitHub Issue View**
 - Browser window with the GitHub issue "#142 — Login button unresponsive on Safari"
 - Shows the issue body with error logs and user's description
-- In the corner: green badge "STAS: Analyzing..." with a subtle pulse animation suggestion
+- In the corner: green badge "SYNTARO: Analyzing..." with a subtle pulse animation suggestion
 
-**Center panel (~440px): STAS Plan Comment**
-- Same browser scrolled down to show STAS's plan comment posted on the issue
-- Headline: "**STAS — Analysis & Fix Plan**"
+**Center panel (~440px): SYNTARO Plan Comment**
+- Same browser scrolled down to show SYNTARO's plan comment posted on the issue
+- Headline: "**SYNTARO — Analysis & Fix Plan**"
 - Structured sections: Root Cause → Approach → Files to Modify → Test Strategy
 - Root cause example: "Safari does not support `e.preventDefault()` on passive touchstart listeners"
 - Files: `src/components/LoginButton.tsx`, `src/hooks/useGesture.ts`
 - Small "✅ Plan approved — executing..." indicator at bottom
 
 **Right panel (~440px): Pull Request View**
-- GitHub PR view showing STAS's open PR
-- Title: "[STAS] Fix login button unresponsive on Safari (#142)"
+- GitHub PR view showing SYNTARO's open PR
+- Title: "[SYNTARO] Fix login button unresponsive on Safari (#142)"
 - Green checkmarks: CI passing, all tests passing
 - Diff preview showing the 5-line fix
-- Avatar: STAS Bot logo with "STAS Bot" label
+- Avatar: SYNTARO Bot logo with "SYNTARO Bot" label
 
 **Visual treatment:**
 - Dark mode GitHub UI (#0d1117 background)
 - Sharp 1px borders between panels with a subtle gradient (#58a6ff → #3fb950)
-- Bottom banner: "STAS — Solving Tickets As A Service" with a lightning bolt icon
+- Bottom banner: "SYNTARO — Solving Tickets As A Service" with a lightning bolt icon
 - Font: Monospace for code panels, system UI for descriptions
 - Arrow overlay (animated arrow suggested) flowing left→right showing the journey
 
@@ -119,21 +119,21 @@ A three-panel horizontal layout (left → center → right) on a dark GitHub-the
 
 **Scene 2 — Install & Configure (0:05-0:10)**
 *Speed up install for the GIF*
-- Go to GitHub Settings → Install STAS App
+- Go to GitHub Settings → Install SYNTARO App
 - Select the repository
 - Click "Install"
-- Voiceover: "Install STAS on the repo with one click."
+- Voiceover: "Install SYNTARO on the repo with one click."
 
 **Scene 3 — Assignment (0:10-0:15)**
-- Show the issue comment: assign `@stas-bot` or label `stas:fix`
-- Comment from STAS bot appears immediately: "**STAS is analyzing the issue...**"
+- Show the issue comment: assign `@syntaro-bot` or label `syntaro:fix`
+- Comment from SYNTARO bot appears immediately: "**SYNTARO is analyzing the issue...**"
 
 **Scene 4 — Architecture Analysis (0:15-0:20)**
-- Terminal window showing STAS logs: reading `pyproject.toml` → scanning `src/` → detecting FastAPI → identifying ORM models → tracing route handlers
-- Voiceover: "STAS reads the full codebase, maps the architecture."
+- Terminal window showing SYNTARO logs: reading `pyproject.toml` → scanning `src/` → detecting FastAPI → identifying ORM models → tracing route handlers
+- Voiceover: "SYNTARO reads the full codebase, maps the architecture."
 
 **Scene 5 — Plan Posted (0:20-0:25)**
-- GitHub issue page with STAS's plan comment
+- GitHub issue page with SYNTARO's plan comment
 - Structured: Root Cause → Solution → Files → Test Plan
 
 **Scene 6 — Fixing & Testing (0:25-0:32)**
@@ -141,12 +141,12 @@ A three-panel horizontal layout (left → center → right) on a dark GitHub-the
 - Running `pytest tests/` — all green, 42 passed
 
 **Scene 7 — PR Opened (0:32-0:40)**
-- PR view on GitHub: "[STAS] Fix pagination 404 error (#43)"
+- PR view on GitHub: "[SYNTARO] Fix pagination 404 error (#43)"
 - PR body contains summary of changes, test results
 - Green CI badge, "All checks passed"
 
 **End card (0:40-0:45):**
-- STAS logo + URL: stas.ai
+- SYNTARO logo + URL: syntaro.ai
 - Tagline: "Solving Tickets As A Service"
 - CTA: "Install on GitHub →"
 - Green "92% fix pass rate" badge
@@ -164,7 +164,7 @@ A three-panel horizontal layout (left → center → right) on a dark GitHub-the
 ## 5. Logo Spec (120×120)
 
 ### Option A: Wordmark (Recommended)
-- **Format:** "STAS" in bold, monospace font (JetBrains Mono or Fira Code)
+- **Format:** "SYNTARO" in bold, monospace font (JetBrains Mono or Fira Code)
 - **Styling:**
   - First three letters "STA" in white/light gray (#e6edf3)
   - Letter "S" at the end in accent green (#3fb950 — same as GitHub's "passing" green)
@@ -189,33 +189,33 @@ A three-panel horizontal layout (left → center → right) on a dark GitHub-the
 
 ## 6. Maker Comment (300-400 words)
 
-**Title: We built STAS because we got tired of fixing other people's bugs for free.**
+**Title: We built SYNTARO because we got tired of fixing other people's bugs for free.**
 
-Hi PH! I'm the founder of Aimino Tech, and STAS is our third attempt at building an AI coding agent.
+Hi PH! I'm the founder of Aimino Tech, and SYNTARO is our third attempt at building an AI coding agent.
 
 Our first version was a Slack bot that monitored Linear boards and dispatched tasks to Claude Code. It worked — but only for us. Every setup required a 2-hour onboarding call. We realized the problem wasn't the AI — it was the *accessibility*. CLI tools are great for power users, but most teams just want a GitHub bot they can install in 30 seconds and forget about.
 
-So we built STAS from the ground up with one constraint: **a non-technical PM should be able to install it and get a fix within 5 minutes.** No Docker, no API keys, no configuration files. Install the GitHub App → tag @stas-bot → get a PR.
+So we built SYNTARO from the ground up with one constraint: **a non-technical PM should be able to install it and get a fix within 5 minutes.** No Docker, no API keys, no configuration files. Install the GitHub App → tag @syntaro-bot → get a PR.
 
-We've been running STAS in production on 12 real-world repos (Python, TypeScript, Go, Rust, Elixir) for 3 months. The results surprised even us:
+We've been running SYNTARO in production on 12 real-world repos (Python, TypeScript, Go, Rust, Elixir) for 3 months. The results surprised even us:
 
 - **92% fix pass rate** — the bot's PRs pass CI and get merged
 - **$3.80 average cost per fix** — a fraction of Devin's ACU billing
 - **7,300+ issues fixed** across our beta fleet
 - **Median time-to-PR: 4 minutes 23 seconds**
 
-The secret sauce? **Planning-first architecture.** Most coding agents start writing code immediately. STAS spends the first 30-40% of its budget on understanding the codebase — reading your docs, mapping your data model, studying your test patterns, and tracing the bug's root cause. Only then does it write a single line of code. This approach is why our fixes pass CI 92% of the time versus the industry average of ~40-50%.
+The secret sauce? **Planning-first architecture.** Most coding agents start writing code immediately. SYNTARO spends the first 30-40% of its budget on understanding the codebase — reading your docs, mapping your data model, studying your test patterns, and tracing the bug's root cause. Only then does it write a single line of code. This approach is why our fixes pass CI 92% of the time versus the industry average of ~40-50%.
 
 ### What's Next on the Roadmap
 - **SOC 2 Type II** certification (in progress with Laika)
 - **Enterprise SSO** (SAML/OIDC) for team accounts
 - **Custom fine-tuned models** for specific codebases
 - **Multi-repo fixes** — one issue that spans microservices
-- **VS Code/Cursor extension** — see STAS plans right in your editor
+- **VS Code/Cursor extension** — see SYNTARO plans right in your editor
 
 ### Honest Limitations
 
-STAS isn't magic. It struggles with:
+SYNTARO isn't magic. It struggles with:
 - Issues requiring multi-repo changes (coming soon)
 - Subjective "make this look better" UI tasks
 - Architecture decisions where there's no clear "right answer"
@@ -223,7 +223,7 @@ STAS isn't magic. It struggles with:
 
 We're not trying to replace engineers. We're trying to kill the backlog so engineers can work on things that matter.
 
-**Try STAS today:** https://github.com/Aimino-Tech/solving_tickets_as_a_service
+**Try SYNTARO today:** https://github.com/Aimino-Tech/solving_tickets_as_a_service
 
 Questions? I'll be here all day to answer them. AMA!
 
@@ -232,13 +232,13 @@ Questions? I'll be here all day to answer them. AMA!
 ## 7. Competitive Positioning
 
 ### vs Devin
-STAS is 95% cheaper ($29 vs $500 Team), open source, and GitHub-native. Devin has more features (browser, VM) but for issue→PR, STAS matches or exceeds quality.
+SYNTARO is 95% cheaper ($29 vs $500 Team), open source, and GitHub-native. Devin has more features (browser, VM) but for issue→PR, SYNTARO matches or exceeds quality.
 
 ### vs Copilot Coding Agent
-Copilot's agent is in beta, closed source, and capped by credits. STAS is unlimited at $29/mo and open source.
+Copilot's agent is in beta, closed source, and capped by credits. SYNTARO is unlimited at $29/mo and open source.
 
 ### vs Sweep AI / Factory / OpenHands
-STAS's differentiator is the plan-first architecture and the 92% pass rate. Most competitors start coding immediately.
+SYNTARO's differentiator is the plan-first architecture and the 92% pass rate. Most competitors start coding immediately.
 
 ---
 
@@ -283,11 +283,11 @@ STAS's differentiator is the plan-first architecture and the 92% pass rate. Most
 
 - [ ] Hero image (1280×640) — issue → plan → PR three-panel flow
 - [ ] Demo GIF (30-45s, 1280×720, <10MB) — full install-to-PR walkthrough
-- [ ] Logo (120×120 SVG + PNG, 240×240 @2x) — STAS wordmark or icon
+- [ ] Logo (120×120 SVG + PNG, 240×240 @2x) — SYNTARO wordmark or icon
 - [ ] Product Hunt listing text — tagline + description + maker comment
 - [ ] GitHub repo — clean README, screenshots, installation guide, shields
-- [ ] Landing page — stas.ai with install CTA
-- [ ] Twitter profile — @stas_bot, avatar, header, pinned tweet
+- [ ] Landing page — syntaro.ai with install CTA
+- [ ] Twitter profile — @syntaro_bot, avatar, header, pinned tweet
 - [ ] Launch week posts — 3-5 threaded Twitter posts
 - [ ] HN post draft — short, technical, links to GitHub
 - [ ] Reddit post drafts — tailored per subreddit

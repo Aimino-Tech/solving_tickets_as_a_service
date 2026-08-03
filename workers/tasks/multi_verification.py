@@ -5,7 +5,7 @@ variations to prevent agents from gaming single-pass verification.
 Each round uses a fresh agent session. If any single round fails, the
 entire verification fails fast.
 
-Queued on ``stas.verification``.
+Queued on ``syntaro.verification``.
 """
 
 from __future__ import annotations
@@ -193,7 +193,7 @@ def _build_variations(ac_list: list[str], test_command: str) -> list[str]:
 @shared_task(
     bind=True,
     max_retries=0,
-    queue="stas.verification",
+    queue="syntaro.verification",
     name="workers.tasks.multi_verification.multi_round_verify",
 )
 def multi_round_verify(

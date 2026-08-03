@@ -19,5 +19,5 @@
   <rect x="110" y="300" width="180" height="6" rx="3" fill="#ffffff" opacity="0.4"/>
   <rect x="140" y="318" width="120" height="4" rx="2" fill="#ffffff" opacity="0.25"/>
   <!-- S -->
-  <text x="200" y="90" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="28" fill="#53d769">STAS</text>
+  <text x="200" y="90" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="28" fill="#53d769">SYNTARO</text>
 </svg>

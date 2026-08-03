@@ -58,7 +58,7 @@ const basePayload = {
   issueNumber: 7,
   issueTitle: 'Fix login',
   issueBody: 'Users cannot log in',
-  labels: ['bug', 'stas:fix'],
+  labels: ['bug', 'syntaro:fix'],
   traceId: 'abc-123-456',
 };
 
@@ -100,7 +100,7 @@ describe('dispatchThroughGovernance', () => {
     expect(mockLogger.info).toHaveBeenCalled();
   });
 
-  it('POSTs to /api/stas/webhook with x-trace-id header and trace_id body', async () => {
+  it('POSTs to /api/syntaro/webhook with x-trace-id header and trace_id body', async () => {
     mockConfig.governance.enabled = true;
     const captured: Array<{ headers: http.IncomingHttpHeaders; body: string }> = [];
     const { url, close } = await startServer((req, res) => {
@@ -119,11 +119,11 @@ describe('dispatchThroughGovernance', () => {
     expect(result).toMatchObject({ success: true, runId: 'run-xyz', status: 200 });
     expect(captured).toHaveLength(1);
     expect(captured[0].headers['x-trace-id']).toBe('abc-123-456');
-    expect(captured[0].headers['x-governance-source']).toBe('stas');
+    expect(captured[0].headers['x-governance-source']).toBe('syntaro');
     expect(captured[0].headers.traceparent).toContain('00-');
     const body = JSON.parse(captured[0].body);
     expect(body.trace_id).toBe('abc-123-456');
-    expect(body.source).toBe('stas');
+    expect(body.source).toBe('syntaro');
     expect(body.issue_id).toBe('acme/widgets#7');
 
     await close();

@@ -49,7 +49,7 @@ class FakeFetch {
         number: this.nextNumber++,
         title: parsed.title ?? 'untitled',
         state: 'open',
-        html_url: `https://github.com/xdnaimino/stas-eval-sandbox/issues/${this.nextNumber - 1}`,
+        html_url: `https://github.com/xdnaimino/syntaro-eval-sandbox/issues/${this.nextNumber - 1}`,
       };
       this.issues.push(issue);
       return Promise.resolve(this.ok(issue, 201));
@@ -73,9 +73,9 @@ class FakeFetch {
 
 const cfg = {
   repoOwner: 'xdnaimino',
-  repoName: 'stas-eval-sandbox',
-  stasUrl: 'http://localhost:3002',
-  stasApiKey: 'sk-stas_test',
+  repoName: 'syntaro-eval-sandbox',
+  syntaroUrl: 'http://localhost:3002',
+  syntaroApiKey: 'sk-syntaro_test',
   githubToken: 'gho_test',
 };
 
@@ -241,7 +241,7 @@ describe('ConversationAgent', () => {
     expect(reply.flags.ticketsCreated).toHaveLength(1);
   });
 
-  it('surfaces STAS 401 as a throw (bad key)', async () => {
+  it('surfaces SYNTARO 401 as a throw (bad key)', async () => {
     const bad = new FakeFetch();
     const origHandler = bad.handler.bind(bad);
     bad.handler = (input, init) => {

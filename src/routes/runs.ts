@@ -144,8 +144,8 @@ function renderRunPage(run: PublicRunResponse): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Run ${run.id} — ${escapeHtml(run.repoOwner)}/${escapeHtml(run.repoName)} | STAS</title>
-  <meta name="description" content="STAS automated fix run for ${escapeHtml(run.repoOwner)}/${escapeHtml(run.repoName)}#${run.issueNumber}: ${escapeHtml(run.issueTitle)}" />
+  <title>Run ${run.id} — ${escapeHtml(run.repoOwner)}/${escapeHtml(run.repoName)} | SYNTARO</title>
+  <meta name="description" content="SYNTARO automated fix run for ${escapeHtml(run.repoOwner)}/${escapeHtml(run.repoName)}#${run.issueNumber}: ${escapeHtml(run.issueTitle)}" />
   <meta property="og:title" content="Run ${run.id} — ${escapeHtml(run.repoOwner)}/${escapeHtml(run.repoName)}" />
   <meta property="og:description" content="${run.status === 'completed' || run.status === 'success' ? '✅ Fix completed' : run.status === 'failed' ? '❌ Fix failed' : '🔄 Fix in progress'} — ${escapeHtml(run.issueTitle)}" />
   <meta property="og:type" content="article" />
@@ -214,18 +214,18 @@ function renderRunPage(run: PublicRunResponse): string {
     ${run.prUrl ? `<div class="card"><div class="label">Pull Request</div><a href="${escapeHtml(run.prUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="margin-top:0.5rem">View Pull Request \u2197</a></div>` : ''}
     <div class="card cta-section">
       <h2>Automated bug fixing, powered by AI</h2>
-      <p>Label a GitHub issue with <code>stas:fix</code> and STAS investigates, fixes, and opens a PR.</p>
+      <p>Label a GitHub issue with <code>syntaro:fix</code> and SYNTARO investigates, fixes, and opens a PR.</p>
       <div class="btn-group" style="justify-content:center">
-        <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Get STAS for your repo</a>
+        <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Get SYNTARO for your repo</a>
         <span style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.8rem;color:oklch(0.5 0.03 260)">\u2B50 162K+ issues fixed</span>
       </div>
     </div>
     <p style="text-align:center;font-size:0.75rem;margin-top:0.5rem">
-      <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(`STAS fixed ${run.issueTitle} — ${run.repoOwner}/${run.repoName}#${run.issueNumber}`)}" target="_blank" rel="noopener" style="color:oklch(0.55 0.22 260);text-decoration:none;margin-right:0.75rem">\uD83D\uDC26 Share on Twitter</a>
-      <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://stas.aimino.ai/runs/${run.id}`)}" target="_blank" rel="noopener" style="color:oklch(0.55 0.22 260);text-decoration:none">\uD83D\uDC64 Share on LinkedIn</a>
+      <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(`SYNTARO fixed ${run.issueTitle} — ${run.repoOwner}/${run.repoName}#${run.issueNumber}`)}" target="_blank" rel="noopener" style="color:oklch(0.55 0.22 260);text-decoration:none;margin-right:0.75rem">\uD83D\uDC26 Share on Twitter</a>
+      <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://syntaro.io/runs/${run.id}`)}" target="_blank" rel="noopener" style="color:oklch(0.55 0.22 260);text-decoration:none">\uD83D\uDC64 Share on LinkedIn</a>
     </p>
     <p style="text-align:center;font-size:0.75rem;color:oklch(0.6 0.02 260);margin-top:0.5rem">
-      <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" style="color:oklch(0.55 0.22 260);text-decoration:none">STAS</a>
+      <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" style="color:oklch(0.55 0.22 260);text-decoration:none">SYNTARO</a>
       &mdash; Solving Tickets As A Service
     </p>
   </div>

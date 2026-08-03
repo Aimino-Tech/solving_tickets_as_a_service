@@ -1,5 +1,5 @@
 """
-STAS Billing & Multi-Tenant Isolation (AIM-2017, AIM-2018).
+SYNTARO Billing & Multi-Tenant Isolation (AIM-2017, AIM-2018).
 
 Per-tenant resource isolation:
     - Per-tenant RabbitMQ queues with ``tenant_{id}`` binding key

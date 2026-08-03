@@ -1,8 +1,8 @@
-# [STAS-1] Make STAS Work End-to-End — Compilation & Runtime Fixes
+# [SYNTARO-1] Make SYNTARO Work End-to-End — Compilation & Runtime Fixes
 
 ## Context
 
-STAS (Solving Tickets As A Service) is an open-source GitHub bot that turns labeled issues into pull requests. The codebase has been architecturally designed with all 8 phases of the agent pipeline (triage → OpenCode dispatch → E2B sandbox → verification → PR creation), webhook receivers for 5 platforms, Stripe billing, Slack notifications, and admin API. However, the code has **never been compiled or run** — there are 33 TypeScript compilation errors and missing runtime configuration.
+SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that turns labeled issues into pull requests. The codebase has been architecturally designed with all 8 phases of the agent pipeline (triage → OpenCode dispatch → E2B sandbox → verification → PR creation), webhook receivers for 5 platforms, Stripe billing, Slack notifications, and admin API. However, the code has **never been compiled or run** — there are 33 TypeScript compilation errors and missing runtime configuration.
 
 ## Input
 
@@ -19,7 +19,7 @@ Source code at `src/`:
 
 ## Output
 
-A working STAS server that:
+A working SYNTARO server that:
 
 1. Compiles with **zero TypeScript errors** (`npx tsc --noEmit`)
 2. Loads environment from `.env` without zod validation failures
@@ -67,7 +67,7 @@ pnpm dev
 import { describe, it, expect } from 'vitest';
 import http from 'http';
 
-describe('STAS Server', () => {
+describe('SYNTARO Server', () => {
   it('responds to health check', async () => {
     const res = await fetch('http://localhost:3000/health');
     expect(res.status).toBe(200);

@@ -49,23 +49,23 @@ RUN apk upgrade --no-cache
 SHELL ["/bin/sh", "-o", "pipefail", "-c"]
 
 # Create non-root user for security
-RUN addgroup -S stas && adduser -S stas -G stas
+RUN addgroup -S syntaro && adduser -S syntaro -G syntaro
 
 WORKDIR /app
 
 # Copy only what's needed at runtime — with correct ownership
-COPY --from=build --chown=stas:stas /app/dist ./dist
-COPY --from=build --chown=stas:stas /app/node_modules ./node_modules
-COPY --from=build --chown=stas:stas /app/package.json ./
-COPY --from=build --chown=stas:stas /app/package-lock.json ./
-COPY --from=build --chown=stas:stas /app/packages/github-client/package.json ./packages/github-client/
-COPY --from=build --chown=stas:stas /app/packages/github-client/dist ./packages/github-client/dist
-COPY --from=build --chown=stas:stas /app/dashboard/dist ./dashboard/dist
+COPY --from=build --chown=syntaro:syntaro /app/dist ./dist
+COPY --from=build --chown=syntaro:syntaro /app/node_modules ./node_modules
+COPY --from=build --chown=syntaro:syntaro /app/package.json ./
+COPY --from=build --chown=syntaro:syntaro /app/package-lock.json ./
+COPY --from=build --chown=syntaro:syntaro /app/packages/github-client/package.json ./packages/github-client/
+COPY --from=build --chown=syntaro:syntaro /app/packages/github-client/dist ./packages/github-client/dist
+COPY --from=build --chown=syntaro:syntaro /app/dashboard/dist ./dashboard/dist
 
 # Supply chain: keep lockfile in runtime image for SBOM traceability
-# package-lock.json is read-only at runtime (stas user)
+# package-lock.json is read-only at runtime (syntaro user)
 
-USER stas
+USER syntaro
 
 EXPOSE 3000
 
@@ -84,10 +84,10 @@ STOPSIGNAL SIGTERM
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD ["node", "-e", "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
 
-LABEL maintainer="STAS Team"
+LABEL maintainer="SYNTARO Team"
 LABEL description="Solving Tickets As A Service — GitHub bot that turns labeled issues into pull requests"
 LABEL org.opencontainers.image.source="https://github.com/tamnguyen08/solving_tickets_as_a_service"
-LABEL org.opencontainers.image.title="STAS Bot"
+LABEL org.opencontainers.image.title="SYNTARO Bot"
 LABEL org.opencontainers.image.description="Solving Tickets As A Service — GitHub bot"
 LABEL org.opencontainers.image.licenses="MIT"
 

@@ -14,8 +14,8 @@ Architecture
 
 Redis Keys
 ----------
-    ``stas:heartbeat:{worker_hostname}`` — string value = ISO timestamp of last heartbeat.
-    ``stas:heartbeat:dead_workers`` — SET of dead worker hostnames (for cleanup tracking).
+    ``syntaro:heartbeat:{worker_hostname}`` — string value = ISO timestamp of last heartbeat.
+    ``syntaro:heartbeat:dead_workers`` — SET of dead worker hostnames (for cleanup tracking).
 
 Configuration (env vars)
 ------------------------
@@ -41,8 +41,8 @@ logger = logging.getLogger(__name__)
 
 _HEARTBEAT_TIMEOUT_S = int(os.getenv("WORKER_HEARTBEAT_TIMEOUT_S", "60"))
 _CHECK_INTERVAL_S = int(os.getenv("WORKER_HEARTBEAT_CHECK_INTERVAL_S", "15"))
-_REDIS_HB_PREFIX = "stas:heartbeat:"
-_REDIS_DEAD_KEY = "stas:heartbeat:dead_workers"
+_REDIS_HB_PREFIX = "syntaro:heartbeat:"
+_REDIS_DEAD_KEY = "syntaro:heartbeat:dead_workers"
 
 # ---------------------------------------------------------------------------
 # Redis client (lazy, shared)

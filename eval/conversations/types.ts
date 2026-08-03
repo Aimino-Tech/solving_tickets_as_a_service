@@ -1,6 +1,6 @@
-// STAS Conversation Eval — shared types.
+// SYNTARO Conversation Eval — shared types.
 // A "conversation" is a scripted multi-turn dialogue between a User (simulated)
-// and the STAS Conversation Agent (real tool calls: GitHub tickets + STAS MCP).
+// and the SYNTARO Conversation Agent (real tool calls: GitHub tickets + SYNTARO MCP).
 
 export interface Ticket {
   number: number;

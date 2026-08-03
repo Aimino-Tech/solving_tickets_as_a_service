@@ -5,7 +5,7 @@ This PR verifies the implementation of AIM-4209 (Viral & Engagement Features), w
 ## Implemented Features
 
 ### 1. Issue-Comment Approval Loop
-- **Slash command parser** (`src/github/slashCommands.ts`) — parses `/stas approve`, `/stas reject <reason>`, `/stas help` from issue comments
+- **Slash command parser** (`src/github/slashCommands.ts`) — parses `/syntaro approve`, `/syntaro reject <reason>`, `/syntaro help` from issue comments
 - **Approval Gate middleware** (`src/middleware/approvalGate.ts`) — 30-second auto-approve timer with REST API for manual approve/reject
 - **Webhook handler** (`src/webhooks/github.ts`) — `issue_comment.created` handler routes comments to approve/reject
 

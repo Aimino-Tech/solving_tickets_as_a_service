@@ -1,5 +1,5 @@
 """
-Dependency resolution task for the STAS pipeline.
+Dependency resolution task for the SYNTARO pipeline.
 
 Checks a Linear issue's ``blockedBy`` relationships before dispatching
 agents.  If the issue is blocked by unresolved tickets (Todo, In Progress,

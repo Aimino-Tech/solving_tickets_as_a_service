@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/pre-launch-smoke-test.sh — STAS Pre-Launch Smoke Test
+# scripts/pre-launch-smoke-test.sh — SYNTARO Pre-Launch Smoke Test
 #
-# Comprehensive smoke test script that verifies all STAS flows work from a
+# Comprehensive smoke test script that verifies all SYNTARO flows work from a
 # clean state. Runs 37 tests across 7 sections:
 #
 #   1. Prerequisites Check  (7 tests)
@@ -56,7 +56,7 @@ RESULTS=()
 # ── Help ────────────────────────────────────────────────────────────────────
 show_help() {
   cat <<EOF
-STAS Pre-Launch Smoke Test
+SYNTARO Pre-Launch Smoke Test
 
 Usage: bash scripts/pre-launch-smoke-test.sh [OPTIONS]
 
@@ -66,7 +66,7 @@ Options:
   --help, -h       Show this help message
 
 Description:
-  Runs 37 smoke tests across 7 sections to verify STAS is ready for launch.
+  Runs 37 smoke tests across 7 sections to verify SYNTARO is ready for launch.
   Tests are designed to work even without Docker/services running.
 EOF
   exit 0
@@ -187,9 +187,9 @@ section "2" "Docker Build Tests"
 
 # Determine which Dockerfiles exist for building
 HAS_MAIN_DOCKERFILE=false
-HAS_STAS_DOCKERFILE=false
+HAS_SYNTARO_DOCKERFILE=false
 [ -f "$PROJECT_ROOT/Dockerfile" ] && HAS_MAIN_DOCKERFILE=true
-[ -f "$PROJECT_ROOT/Dockerfile.stas" ] && HAS_STAS_DOCKERFILE=true
+[ -f "$PROJECT_ROOT/Dockerfile.syntaro" ] && HAS_SYNTARO_DOCKERFILE=true
 
 # Test 2.1: Main Dockerfile exists
 if [ "$HAS_MAIN_DOCKERFILE" = true ]; then
@@ -198,11 +198,11 @@ else
   fail "2.1" "Main Dockerfile is missing"
 fi
 
-# Test 2.2: Dockerfile.stas exists
-if [ "$HAS_STAS_DOCKERFILE" = true ]; then
-  pass "2.2" "Dockerfile.stas exists"
+# Test 2.2: Dockerfile.syntaro exists
+if [ "$HAS_SYNTARO_DOCKERFILE" = true ]; then
+  pass "2.2" "Dockerfile.syntaro exists"
 else
-  warn "2.2" "Dockerfile.stas not found" "STAS-specific Dockerfile not required if main Dockerfile is used"
+  warn "2.2" "Dockerfile.syntaro not found" "SYNTARO-specific Dockerfile not required if main Dockerfile is used"
 fi
 
 # Test 2.3: Dockerfile has HEALTHCHECK instruction
@@ -334,19 +334,19 @@ fi
 
 section "4" "GitHub Actions Workflow"
 
-# Test 4.1: .github/workflows/stas.yml exists
-if [ -f "$PROJECT_ROOT/.github/workflows/stas.yml" ]; then
-  pass "4.1" ".github/workflows/stas.yml exists"
+# Test 4.1: .github/workflows/syntaro.yml exists
+if [ -f "$PROJECT_ROOT/.github/workflows/syntaro.yml" ]; then
+  pass "4.1" ".github/workflows/syntaro.yml exists"
 else
-  fail "4.1" ".github/workflows/stas.yml is missing" "The STAS workflow is required for issue-to-PR automation"
+  fail "4.1" ".github/workflows/syntaro.yml is missing" "The SYNTARO workflow is required for issue-to-PR automation"
 fi
 
 # Test 4.2: Workflow is valid YAML
-if [ -f "$PROJECT_ROOT/.github/workflows/stas.yml" ]; then
+if [ -f "$PROJECT_ROOT/.github/workflows/syntaro.yml" ]; then
   if python3 -c "
 import yaml, sys
 try:
-    with open('$PROJECT_ROOT/.github/workflows/stas.yml') as f:
+    with open('$PROJECT_ROOT/.github/workflows/syntaro.yml') as f:
         data = yaml.safe_load(f)
         assert 'jobs' in data, 'Missing jobs key'
         has_on = any(k == 'on' or k is True for k in data.keys())
@@ -356,21 +356,21 @@ except Exception as e:
     print(f'YAML validation error: {e}')
     sys.exit(1)
 " 2>/dev/null; then
-    pass "4.2" "stas.yml is valid YAML"
+    pass "4.2" "syntaro.yml is valid YAML"
   else
     # Basic fallback check
-    if grep -q "^jobs:" "$PROJECT_ROOT/.github/workflows/stas.yml" 2>/dev/null && \
-       grep -q "^on:" "$PROJECT_ROOT/.github/workflows/stas.yml" 2>/dev/null; then
-      pass "4.2" "stas.yml appears to be valid YAML (basic check)"
+    if grep -q "^jobs:" "$PROJECT_ROOT/.github/workflows/syntaro.yml" 2>/dev/null && \
+       grep -q "^on:" "$PROJECT_ROOT/.github/workflows/syntaro.yml" 2>/dev/null; then
+      pass "4.2" "syntaro.yml appears to be valid YAML (basic check)"
     else
-      fail "4.2" "stas.yml missing required sections (jobs, on)" "Ensure 'on:' and 'jobs:' keys exist"
+      fail "4.2" "syntaro.yml missing required sections (jobs, on)" "Ensure 'on:' and 'jobs:' keys exist"
     fi
   fi
 fi
 
 # Test 4.3: Workflow references correct env vars
-if [ -f "$PROJECT_ROOT/.github/workflows/stas.yml" ]; then
-  WORKFLOW_SECRETS=$(grep -oP '\$\{{ secrets\.[A-Z_]+ }}' "$PROJECT_ROOT/.github/workflows/stas.yml" 2>/dev/null | sed 's/\${{ secrets\.\(.*\) }}/\1/' | sort -u || true)
+if [ -f "$PROJECT_ROOT/.github/workflows/syntaro.yml" ]; then
+  WORKFLOW_SECRETS=$(grep -oP '\$\{{ secrets\.[A-Z_]+ }}' "$PROJECT_ROOT/.github/workflows/syntaro.yml" 2>/dev/null | sed 's/\${{ secrets\.\(.*\) }}/\1/' | sort -u || true)
   DOCUMENTED_IN_ENV=true
   if [ -f "$PROJECT_ROOT/.env.example" ]; then
     while IFS= read -r secret; do
@@ -415,15 +415,15 @@ fi
 
 section "5" "Scripts & Entrypoints"
 
-# Test 5.1: scripts/stas/entrypoint.sh exists
-if [ -d "$PROJECT_ROOT/scripts/stas" ]; then
-  if [ -f "$PROJECT_ROOT/scripts/stas/entrypoint.sh" ]; then
-    pass "5.1" "scripts/stas/entrypoint.sh exists"
+# Test 5.1: scripts/syntaro/entrypoint.sh exists
+if [ -d "$PROJECT_ROOT/scripts/syntaro" ]; then
+  if [ -f "$PROJECT_ROOT/scripts/syntaro/entrypoint.sh" ]; then
+    pass "5.1" "scripts/syntaro/entrypoint.sh exists"
   else
-    warn "5.1" "scripts/stas/entrypoint.sh not found" "Entrypoint may be in a different location"
+    warn "5.1" "scripts/syntaro/entrypoint.sh not found" "Entrypoint may be in a different location"
   fi
 else
-  warn "5.1" "scripts/stas/ directory not found" "Entrypoint structure may differ — check for entrypoint elsewhere"
+  warn "5.1" "scripts/syntaro/ directory not found" "Entrypoint structure may differ — check for entrypoint elsewhere"
 fi
 
 # Test 5.2: Healthcheck script exists
@@ -624,7 +624,7 @@ if [ "$JSON_OUTPUT" = true ]; then
   # Build JSON
   cat > "$SUMMARY_FILE" <<EOF
 {
-  "tool": "STAS Pre-Launch Smoke Test",
+  "tool": "SYNTARO Pre-Launch Smoke Test",
   "timestamp": "$(date -u '+%Y-%m-%dT%H:%M:%SZ')",
   "results": {
     "total": $TOTAL,

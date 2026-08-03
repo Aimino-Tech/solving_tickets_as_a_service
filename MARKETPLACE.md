@@ -1,23 +1,23 @@
-# STAS — GitHub Marketplace
+# SYNTARO — GitHub Marketplace
 
 > Two listings on GitHub Marketplace:
-> 1. **STAS App** — The full GitHub App (install on repos, label issues with `stas:fix`)
-> 2. **STAS Fix Action** — Composite GitHub Action that fixes a labeled issue from CI (no webhook server needed)
+> 1. **SYNTARO App** — The full GitHub App (install on repos, label issues with `syntaro:fix`)
+> 2. **SYNTARO Fix Action** — Composite GitHub Action that fixes a labeled issue from CI (no webhook server needed)
 
 For the app listing copy and visual asset preparation, see [docs/marketplace-listing.md](docs/marketplace-listing.md).
 
 ---
 
-# STAS Fix Action — GitHub Marketplace Action
+# SYNTARO Fix Action — GitHub Marketplace Action
 
-`stas-fix` is the composite action shipped in **this repository** at
-[`.github/actions/stas-fix`](.github/actions/stas-fix). When an issue is labeled
-`stas:fix`, it posts a "STAS is on it" comment, then runs the fix agent
-(`scripts/stas-action.ts`) inside the workflow: it investigates the checked-out
+`syntaro-fix` is the composite action shipped in **this repository** at
+[`.github/actions/syntaro-fix`](.github/actions/syntaro-fix). When an issue is labeled
+`syntaro:fix`, it posts a "SYNTARO is on it" comment, then runs the fix agent
+(`scripts/syntaro-action.ts`) inside the workflow: it investigates the checked-out
 codebase, writes a fix with a regression test, runs your test suite, pushes a
 branch, and opens a draft PR.
 
-It is the "pure GitHub Action" approach — no webhook server, no STAS account, no
+It is the "pure GitHub Action" approach — no webhook server, no SYNTARO account, no
 separate infrastructure. The checked-out repository is the sandbox and the
 workflow token is the auth.
 
@@ -33,16 +33,16 @@ workflow token is the auth.
 
 ## Quick Start
 
-Add this workflow to your repo at `.github/workflows/stas.yml`:
+Add this workflow to your repo at `.github/workflows/syntaro.yml`:
 
 ```yaml
-name: STAS Auto-Fix
+name: SYNTARO Auto-Fix
 on:
   issues:
     types: [labeled]
 jobs:
   fix:
-    if: github.event.label.name == 'stas:fix'
+    if: github.event.label.name == 'syntaro:fix'
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -52,9 +52,9 @@ jobs:
       - uses: actions/create-github-app-token@v1
         id: app-token
         with:
-          app-id: ${{ secrets.STAS_BOT_APP_ID }}
-          private-key: ${{ secrets.STAS_BOT_PRIVATE_KEY }}
-      - uses: Aimino-Tech/solving_tickets_as_a_service/.github/actions/stas-fix@v1
+          app-id: ${{ secrets.SYNTARO_BOT_APP_ID }}
+          private-key: ${{ secrets.SYNTARO_BOT_PRIVATE_KEY }}
+      - uses: Aimino-Tech/solving_tickets_as_a_service/.github/actions/syntaro-fix@v1
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           opencode-url: http://localhost:4096
@@ -62,7 +62,7 @@ jobs:
 ```
 
 Inside this repository (or a fork) the action can also be referenced locally as
-`uses: ./.github/actions/stas-fix`.
+`uses: ./.github/actions/syntaro-fix`.
 
 ## Inputs
 
@@ -73,7 +73,7 @@ Inside this repository (or a fork) the action can also be referenced locally as
 | `opencode-api-key` | No | — | OpenCode API key |
 | `opencode-model` | No | `anthropic/claude-sonnet-4-20250514` | OpenCode model used by the fix agent |
 | `openai-api-key` | No | — | OpenAI API key (fallback if OpenCode is not configured) |
-| `bot-name` | No | `STAS` | Bot name used in comments |
+| `bot-name` | No | `SYNTARO` | Bot name used in comments |
 
 ## Outputs
 
@@ -83,13 +83,13 @@ as a draft pull request.
 ## Example Workflow
 
 ```yaml
-name: STAS Auto-Fix
+name: SYNTARO Auto-Fix
 on:
   issues:
     types: [labeled]
 jobs:
   fix:
-    if: github.event.label.name == 'stas:fix'
+    if: github.event.label.name == 'syntaro:fix'
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -97,7 +97,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: Aimino-Tech/solving_tickets_as_a_service/.github/actions/stas-fix@v1
+      - uses: Aimino-Tech/solving_tickets_as_a_service/.github/actions/syntaro-fix@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
@@ -149,5 +149,5 @@ provided under the AGPL-3.0 license (see [LICENSE](LICENSE)).
   - [x] `CODE_OF_CONDUCT.md` — Contributor Covenant
   - [x] `CONTRIBUTING.md` — Contribution guidelines
 - [x] **Action metadata**: `action.yml` with branding and inputs
-- [x] **Marketplace README**: this document describes the shipped `stas-fix` action
-      (not `stas-eval-action`)
+- [x] **Marketplace README**: this document describes the shipped `syntaro-fix` action
+      (not `syntaro-eval-action`)

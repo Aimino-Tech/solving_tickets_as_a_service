@@ -1,6 +1,6 @@
 # Multi-Platform Support
 
-STAS supports multiple Git hosting platforms. Below is the current status.
+SYNTARO supports multiple Git hosting platforms. Below is the current status.
 
 | Platform   | Status      | Webhook | Agent Pipeline | CI Integration | Eval |
 |------------|-------------|---------|---------------|----------------|------|

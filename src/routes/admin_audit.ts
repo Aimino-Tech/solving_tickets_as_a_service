@@ -13,7 +13,7 @@ import { readFileSync, existsSync } from "fs";
 import { rootLogger } from "../utils/logger.js";
 
 const log = rootLogger.child({ module: "admin-audit-api" });
-const DEFAULT_LOG_PATH = "/tmp/stas-admin-audit.jsonl";
+const DEFAULT_LOG_PATH = "/tmp/syntaro-admin-audit.jsonl";
 
 function getLogPath(): string {
   return process.env.ADMIN_AUDIT_LOG_PATH || DEFAULT_LOG_PATH;

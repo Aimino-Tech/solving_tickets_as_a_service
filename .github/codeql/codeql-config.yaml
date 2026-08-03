@@ -1,4 +1,4 @@
-name: "STAS CodeQL Config"
+name: "SYNTARO CodeQL Config"
 disable-default-queries: false
 paths-ignore:
   - "node_modules"

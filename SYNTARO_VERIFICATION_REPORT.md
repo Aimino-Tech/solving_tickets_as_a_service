@@ -1,4 +1,4 @@
-# STAS — Solving Tickets As A Service — Full Verification Report
+# SYNTARO — Solving Tickets As A Service — Full Verification Report
 
 **Date:** 2026-06-08  
 **Author:** Sisyphus (OpenCode Agent)  
@@ -22,8 +22,8 @@
 
 ## 1. Project Overview
 
-**STAS (Solving Tickets As A Service)** is an open-source GitHub bot that:
-1. Listens for GitHub issues labeled with `stas:fix`
+**SYNTARO (Solving Tickets As A Service)** is an open-source GitHub bot that:
+1. Listens for GitHub issues labeled with `syntaro:fix`
 2. Dispatches an OpenCode AI agent to investigate and fix the issue
 3. Runs regression tests to verify the fix
 4. Opens a draft PR with the fix and tests
@@ -45,7 +45,7 @@ The project follows an open-core model:
 ## 2. Architecture Summary
 
 ```
-GitHub Issue (labeled "stas:fix")
+GitHub Issue (labeled "syntaro:fix")
        │
        ▼
   Webhook Server (Express, :3000)
@@ -105,15 +105,15 @@ GitHub Issue (labeled "stas:fix")
 
 | Service | Status | Details |
 |---------|--------|---------|
-| **STAS API Server** | ✅ **Running** | `http://localhost:3000` |
-| **STAS Worker** | ✅ **Running** | BullMQ issue worker (concurrency: 2) |
+| **SYNTARO API Server** | ✅ **Running** | `http://localhost:3000` |
+| **SYNTARO Worker** | ✅ **Running** | BullMQ issue worker (concurrency: 2) |
 | **Redis** | ✅ **Running** | `redis://localhost:6379`, PONG |
 | **Docker** | ✅ **Available** | v29.1.3 |
-| **SQLite Storage** | ✅ **Initialized** | `/tmp/stas-dev.db` |
+| **SQLite Storage** | ✅ **Initialized** | `/tmp/syntaro-dev.db` |
 | **Linear API** | ✅ **Authenticated** | Viewer: Duc Tam Nguyen |
 | **Webhook Retry Worker** | ✅ **Running** | Poll: 15s, batch: 10 |
 | **Scheduled Tasks** | ✅ **Running** | Queue depth, DLQ cleanup, metrics |
-| **Python Venv** | ✅ **Ready** | `/tmp/stas-venv` |
+| **Python Venv** | ✅ **Ready** | `/tmp/syntaro-venv` |
 
 ### Not Running (Expected — no external deps)
 
@@ -145,7 +145,7 @@ GitHub Issue (labeled "stas:fix")
 ```json
 {
   "status": "degraded",
-  "label": "stas:fix",
+  "label": "syntaro:fix",
   "uptime": 56,
   "services": {
     "webhook": { "status": "ok" },
@@ -163,8 +163,8 @@ GitHub Issue (labeled "stas:fix")
 {
   "status": "healthy",
   "queues": [
-    { "name": "stas-issues", "type": "main", "depth": 0, "status": "ok" },
-    { "name": "stas-issues-dlq", "type": "dlq", "depth": 0, "status": "ok" }
+    { "name": "syntaro-issues", "type": "main", "depth": 0, "status": "ok" },
+    { "name": "syntaro-issues-dlq", "type": "dlq", "depth": 0, "status": "ok" }
   ],
   "rabbitmq": { "connected": false }
 }
@@ -174,12 +174,12 @@ GitHub Issue (labeled "stas:fix")
 
 ## 5. Verified Linear Tickets
 
-**48 tickets** are in the "Verified" status across the STAS project.
+**48 tickets** are in the "Verified" status across the SYNTARO project.
 
 ### Phase 1: Core Loop (MVP)
 | ID | Title | Key Deliverables |
 |----|-------|-----------------|
-| AIM-1185 | Build STAS MVP | Core GitHub bot, webhook receiver, OpenCode dispatch, PR creation |
+| AIM-1185 | Build SYNTARO MVP | Core GitHub bot, webhook receiver, OpenCode dispatch, PR creation |
 
 ### Phase 2: Hardening (9 tickets)
 | ID | Title | Key Deliverables |
@@ -272,10 +272,10 @@ GitHub Issue (labeled "stas:fix")
 **Error:** `TypeError: Cannot read properties of undefined (reading 'type')` — `config.storage` was undefined.
 **Fix:** Added `STORAGE_TYPE` and `SQLITE_PATH` to the Zod env schema and `storage: { type, sqlitePath }` to the buildConfig output.
 
-#### 5. Missing `rateLimit` nesting in `stas` config
+#### 5. Missing `rateLimit` nesting in `syntaro` config
 **File:** `src/config.ts` / `src/server.ts`
-**Error:** `TypeError: Cannot read properties of undefined (reading 'windowMs')` — server code expected `config.stas.rateLimit.windowMs` but config had `config.stas.rateLimitWindowMs`.
-**Fix:** Restructured the `stas` config section to have nested `rateLimit: { windowMs, max }`.
+**Error:** `TypeError: Cannot read properties of undefined (reading 'windowMs')` — server code expected `config.syntaro.rateLimit.windowMs` but config had `config.syntaro.rateLimitWindowMs`.
+**Fix:** Restructured the `syntaro` config section to have nested `rateLimit: { windowMs, max }`.
 
 #### 6. Missing `helmet` package
 **File:** `src/server.ts`
@@ -372,7 +372,7 @@ Screenshots were captured during verification. The following endpoints were visu
 | Metrics | `http://localhost:3000/metrics` | ✅ Prometheus text format |
 | Webhook | `POST /webhook` (GitHub format) | ✅ 202 Accepted |
 
-*Screenshots saved to `/tmp/stas-screenshots/` directory.*
+*Screenshots saved to `/tmp/syntaro-screenshots/` directory.*
 
 ---
 

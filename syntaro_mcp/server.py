@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 SENTRY_ENV = os.getenv("SENTRY_ENVIRONMENT", os.getenv("NODE_ENV", "development"))
-SENTRY_RELEASE = os.getenv("SENTRY_RELEASE", "stas@unknown")
+SENTRY_RELEASE = os.getenv("SENTRY_RELEASE", "syntaro@unknown")
 
 if SENTRY_DSN:
     try:
@@ -88,7 +88,7 @@ mcp = FastMCP(
     instructions="""Syntaro (Solving Tickets As A Service) — label a GitHub issue and get a PR.
 
 Tools:
-- **syntaro_label_issue**: Add a label (e.g. "stas:fix") to a GitHub issue.
+- **syntaro_label_issue**: Add a label (e.g. "syntaro:fix") to a GitHub issue.
 - **syntaro_run_fix**: Trigger the full Syntaro pipeline for an issue URL. Returns a run_id.
 - **syntaro_check_status**: Poll the status of a fix run by run_id.
 - **syntaro_get_pr**: Get the PR URL and details for a completed run.
@@ -113,7 +113,7 @@ Resources:
 )
 
 @mcp.tool(name="syntaro_label_issue", description="Label a GitHub issue with the Syntaro fix label (or custom label).")
-async def syntaro_label_issue(owner: str, repo: str, issue_number: int, label: str = "stas:fix") -> str:
+async def syntaro_label_issue(owner: str, repo: str, issue_number: int, label: str = "syntaro:fix") -> str:
     return json.dumps(_hook(await label_issue(owner, repo, issue_number, label)), indent=2, default=str)
 
 @mcp.tool(name="syntaro_run_fix", description="Trigger the Syntaro fix pipeline for a GitHub issue URL.")
@@ -243,9 +243,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", nargs="?", default="sse", choices=["sse", "stdio"], help="Transport mode")
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=int(os.getenv("STAS_MCP_PORT", "4095")))
-    parser.add_argument("--ssl-keyfile", default=os.getenv("STAS_MCP_SSL_KEY_PATH"), help="SSL key file path")
-    parser.add_argument("--ssl-certfile", default=os.getenv("STAS_MCP_SSL_CERT_PATH"), help="SSL cert file path")
+    parser.add_argument("--port", type=int, default=int(os.getenv("SYNTARO_MCP_PORT", "4095")))
+    parser.add_argument("--ssl-keyfile", default=os.getenv("SYNTARO_MCP_SSL_KEY_PATH"), help="SSL key file path")
+    parser.add_argument("--ssl-certfile", default=os.getenv("SYNTARO_MCP_SSL_CERT_PATH"), help="SSL cert file path")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 

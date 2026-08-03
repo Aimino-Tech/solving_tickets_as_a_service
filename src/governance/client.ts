@@ -1,5 +1,5 @@
 /**
- * Governance Proxy Client — routes STAS dispatch through the governance proxy.
+ * Governance Proxy Client — routes SYNTARO dispatch through the governance proxy.
  *
  * The governance proxy applies rate limiting, model routing, kill-switch,
  * prompt injection detection, token budget tracking, and audit logging
@@ -79,12 +79,12 @@ export async function dispatchThroughGovernance(payload: GovernanceDispatchPaylo
     body: payload.issueBody,
     labels: payload.labels,
     installation_id: payload.installationId,
-    source: 'stas',
+    source: 'syntaro',
     trace_id: traceId,
   };
 
   try {
-    const url = `${proxyUrl.replace(/\/$/, '')}/api/stas/webhook`;
+    const url = `${proxyUrl.replace(/\/$/, '')}/api/syntaro/webhook`;
     log.info(
       { ...base, url, repo: body.repo, issueNumber: payload.issueNumber },
       'Dispatching through governance proxy',
@@ -92,7 +92,7 @@ export async function dispatchThroughGovernance(payload: GovernanceDispatchPaylo
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'X-Governance-Source': 'stas',
+      'X-Governance-Source': 'syntaro',
     };
     if (apiKey) headers['X-API-Key'] = apiKey;
     if (traceId) {

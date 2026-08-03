@@ -6,7 +6,7 @@ const ROOT = resolve(import.meta.dirname, '..');
 const DIST = resolve(ROOT, 'dist');
 
 async function build(): Promise<void> {
-  console.log('Building STAS Marketplace Action...');
+  console.log('Building SYNTARO Marketplace Action...');
 
   if (!existsSync(DIST)) {
     mkdirSync(DIST, { recursive: true });

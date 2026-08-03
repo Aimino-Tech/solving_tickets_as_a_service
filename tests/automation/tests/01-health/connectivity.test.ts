@@ -1,19 +1,19 @@
 import { test, expect } from '@playwright/test';
 
-const STAS_URL = process.env.STAS_URL || 'http://localhost:3000';
+const SYNTARO_URL = process.env.SYNTARO_URL || 'http://localhost:3000';
 const OSY_URL = process.env.OSY_URL || 'http://localhost:4096';
 
-test.describe('STAS + OpenSymphony Connectivity', () => {
-  test('STAS (FE) health endpoint is reachable', async () => {
-    const resp = await fetch(`${STAS_URL}/health`);
+test.describe('SYNTARO + OpenSymphony Connectivity', () => {
+  test('SYNTARO (FE) health endpoint is reachable', async () => {
+    const resp = await fetch(`${SYNTARO_URL}/health`);
     expect([200, 503]).toContain(resp.status);
     const body = await resp.json() as Record<string, unknown>;
     expect(body.status).toBeDefined();
   });
 
-  test('STAS (FE) homepage loads correctly', async ({ page }) => {
-    await page.goto(`${STAS_URL}/login`, { waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
-    await page.goto(`${STAS_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  test('SYNTARO (FE) homepage loads correctly', async ({ page }) => {
+    await page.goto(`${SYNTARO_URL}/login`, { waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
+    await page.goto(`${SYNTARO_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
     const title = await page.title();
     expect(title).toBeTruthy();
@@ -48,12 +48,12 @@ test.describe('STAS + OpenSymphony Connectivity', () => {
     }
   });
 
-  test('STAS (FE) and OpenSymphony (BE) are both alive and connected', async () => {
-    const stasResp = await fetch(`${STAS_URL}/health`);
-    expect([200, 503]).toContain(stasResp.status);
-    const stasBody = await stasResp.json() as Record<string, unknown>;
-    expect(stasBody.status).toBeDefined();
-    console.log(`[INFO] STAS (FE) status: ${stasBody.status}`);
+  test('SYNTARO (FE) and OpenSymphony (BE) are both alive and connected', async () => {
+    const syntaroResp = await fetch(`${SYNTARO_URL}/health`);
+    expect([200, 503]).toContain(syntaroResp.status);
+    const syntaroBody = await syntaroResp.json() as Record<string, unknown>;
+    expect(syntaroBody.status).toBeDefined();
+    console.log(`[INFO] SYNTARO (FE) status: ${syntaroBody.status}`);
 
     try {
       const osyResp = await fetch(`${OSY_URL}/healthz`, { signal: AbortSignal.timeout(5000) });
@@ -63,7 +63,7 @@ test.describe('STAS + OpenSymphony Connectivity', () => {
           const osyHealth = JSON.parse(text) as Record<string, unknown>;
           expect(osyHealth.status).toBeDefined();
           console.log(`[INFO] OpenSymphony (BE) status: ${osyHealth.status}`);
-          console.log('[PASS] Both STAS (FE) and OpenSymphony (BE) are connected and operational!');
+          console.log('[PASS] Both SYNTARO (FE) and OpenSymphony (BE) are connected and operational!');
         } catch {
           console.log('[INFO] OpenSymphony returned non-JSON response (expected in some modes)');
         }

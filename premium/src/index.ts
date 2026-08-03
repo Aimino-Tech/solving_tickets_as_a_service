@@ -1,5 +1,5 @@
 /**
- * STAS Premium — Hosted Service Dashboard Backend
+ * SYNTARO Premium — Hosted Service Dashboard Backend
  *
  * Standalone Express server that serves:
  * - Dashboard API routes (/api/runs, /api/repos, /api/stats, etc.)
@@ -65,7 +65,7 @@ app.use('/api', dashboardRouter);
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
-    service: 'stas-premium',
+    service: 'syntaro-premium',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
   });
@@ -93,7 +93,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 // -- Start server ---------------------------------------------------------
 app.listen(PORT, '0.0.0.0', () => {
-  log.info({ port: PORT, env: process.env.NODE_ENV || 'development' }, `STAS Premium server listening on :${PORT}`);
+  log.info({ port: PORT, env: process.env.NODE_ENV || 'development' }, `SYNTARO Premium server listening on :${PORT}`);
 });
 
 export default app;

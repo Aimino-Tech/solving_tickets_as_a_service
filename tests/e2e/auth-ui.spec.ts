@@ -45,9 +45,9 @@ test.describe('Auth UI flows', () => {
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.getByRole('button', { name: /create account/i }).click();
     await page.waitForURL(/\//, { timeout: 15_000 });
-    const accessToken = await page.evaluate(() => localStorage.getItem('stas_token'));
+    const accessToken = await page.evaluate(() => localStorage.getItem('syntaro_token'));
     expect(accessToken).toBeTruthy();
-    const refreshToken = await page.evaluate(() => localStorage.getItem('stas_refreshToken'));
+    const refreshToken = await page.evaluate(() => localStorage.getItem('syntaro_refreshToken'));
     expect(refreshToken).toBeTruthy();
   });
 
@@ -66,7 +66,7 @@ test.describe('Auth UI flows', () => {
     await page.fill('input[type="password"]', 'password');
     await page.getByRole('button', { name: /sign in/i }).click();
     await page.waitForURL(/\//, { timeout: 15_000 });
-    const accessToken = await page.evaluate(() => localStorage.getItem('stas_token'));
+    const accessToken = await page.evaluate(() => localStorage.getItem('syntaro_token'));
     expect(accessToken).toBeTruthy();
   });
 
@@ -81,7 +81,7 @@ test.describe('Auth UI flows', () => {
     if (await logoutBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await logoutBtn.click();
       await page.waitForURL(/\/login/, { timeout: 10_000 });
-      const token = await page.evaluate(() => localStorage.getItem('stas_token'));
+      const token = await page.evaluate(() => localStorage.getItem('syntaro_token'));
       expect(token).toBeNull();
     }
   });

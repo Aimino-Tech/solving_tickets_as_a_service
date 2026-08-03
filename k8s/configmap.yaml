@@ -1,13 +1,13 @@
 # ---------------------------------------------------------------------------
-# STAS ConfigMap — shared (non-sensitive) environment variables.
+# SYNTARO ConfigMap — shared (non-sensitive) environment variables.
 # Sensitive values (keys, tokens, passwords) MUST be in a Secret, not here.
 # ---------------------------------------------------------------------------
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: stas-config
+  name: syntaro-config
   labels:
-    app: stas
+    app: syntaro
 data:
   # Runtime
   NODE_ENV: "production"
@@ -15,16 +15,16 @@ data:
   RUN_MODE: "both"
 
   # Service hostnames (credentials come from Secret)
-  REDIS_HOST: "stas-redis"
-  RABBITMQ_HOST: "stas-rabbitmq"
-  POSTGRES_HOST: "stas-postgres"
-  OPENCODE_URL: "http://stas-opencode:4096"
+  REDIS_HOST: "syntaro-redis"
+  RABBITMQ_HOST: "syntaro-rabbitmq"
+  POSTGRES_HOST: "syntaro-postgres"
+  OPENCODE_URL: "http://syntaro-opencode:4096"
 
-  # STAS behavior
-  STAS_LABEL: "stas:fix"
-  STAS_PORT: "3000"
-  STAS_RATE_LIMIT_WINDOW_MS: "60000"
-  STAS_RATE_LIMIT_MAX: "30"
+  # SYNTARO behavior
+  SYNTARO_LABEL: "syntaro:fix"
+  SYNTARO_PORT: "3000"
+  SYNTARO_RATE_LIMIT_WINDOW_MS: "60000"
+  SYNTARO_RATE_LIMIT_MAX: "30"
 
   # Queue configuration
   WORKER_CONCURRENCY: "4"

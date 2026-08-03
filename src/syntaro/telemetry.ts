@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { bridgeMetrics } from '../bridge/metrics.js';
 
-export interface StasDispatchPayload {
+export interface SyntaroDispatchPayload {
   repoOwner: string;
   repoName: string;
   issueNumber: number;
@@ -10,7 +10,7 @@ export interface StasDispatchPayload {
   templateName: string;
 }
 
-export interface StasDispatchErrorPayload {
+export interface SyntaroDispatchErrorPayload {
   repoOwner: string;
   repoName: string;
   issueNumber: number;
@@ -19,49 +19,49 @@ export interface StasDispatchErrorPayload {
   source: string;
 }
 
-export interface StasTelemetryEvents {
-  'symphony.stas.dispatch': (payload: StasDispatchPayload) => void;
-  'symphony.stas.dispatch_error': (payload: StasDispatchErrorPayload) => void;
+export interface SyntaroTelemetryEvents {
+  'symphony.syntaro.dispatch': (payload: SyntaroDispatchPayload) => void;
+  'symphony.syntaro.dispatch_error': (payload: SyntaroDispatchErrorPayload) => void;
 }
 
-class StasTelemetryEmitter extends EventEmitter {
-  emit<K extends keyof StasTelemetryEvents>(event: K, ...args: Parameters<StasTelemetryEvents[K]>): boolean {
+class SyntaroTelemetryEmitter extends EventEmitter {
+  emit<K extends keyof SyntaroTelemetryEvents>(event: K, ...args: Parameters<SyntaroTelemetryEvents[K]>): boolean {
     return super.emit(event, ...args);
   }
 
-  on<K extends keyof StasTelemetryEvents>(event: K, listener: StasTelemetryEvents[K]): this {
+  on<K extends keyof SyntaroTelemetryEvents>(event: K, listener: SyntaroTelemetryEvents[K]): this {
     return super.on(event, listener as (...args: unknown[]) => void);
   }
 
-  once<K extends keyof StasTelemetryEvents>(event: K, listener: StasTelemetryEvents[K]): this {
+  once<K extends keyof SyntaroTelemetryEvents>(event: K, listener: SyntaroTelemetryEvents[K]): this {
     return super.once(event, listener as (...args: unknown[]) => void);
   }
 
-  off<K extends keyof StasTelemetryEvents>(event: K, listener: StasTelemetryEvents[K]): this {
+  off<K extends keyof SyntaroTelemetryEvents>(event: K, listener: SyntaroTelemetryEvents[K]): this {
     return super.off(event, listener as (...args: unknown[]) => void);
   }
 }
 
-export const stasTelemetry = new StasTelemetryEmitter();
+export const syntaroTelemetry = new SyntaroTelemetryEmitter();
 
-export function recordStasDispatch(payload: StasDispatchPayload): void {
-  stasTelemetry.emit('symphony.stas.dispatch', payload);
-  bridgeMetrics.incrementCounter('stas_dispatches_total', {
+export function recordSyntaroDispatch(payload: SyntaroDispatchPayload): void {
+  syntaroTelemetry.emit('symphony.syntaro.dispatch', payload);
+  bridgeMetrics.incrementCounter('syntaro_dispatches_total', {
     source: payload.source,
     status: 'success',
   });
-  bridgeMetrics.incrementCounter('stas_dispatches_by_repo_total', {
+  bridgeMetrics.incrementCounter('syntaro_dispatches_by_repo_total', {
     repo: `${payload.repoOwner}/${payload.repoName}`,
   });
 }
 
-export function recordStasDispatchError(payload: StasDispatchErrorPayload): void {
-  stasTelemetry.emit('symphony.stas.dispatch_error', payload);
-  bridgeMetrics.incrementCounter('stas_dispatches_total', {
+export function recordSyntaroDispatchError(payload: SyntaroDispatchErrorPayload): void {
+  syntaroTelemetry.emit('symphony.syntaro.dispatch_error', payload);
+  bridgeMetrics.incrementCounter('syntaro_dispatches_total', {
     source: payload.source,
     status: 'error',
   });
-  bridgeMetrics.incrementCounter('stas_dispatch_errors_total', {
+  bridgeMetrics.incrementCounter('syntaro_dispatch_errors_total', {
     source: payload.source,
     error: payload.error,
   });

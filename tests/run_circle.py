@@ -28,10 +28,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 AUTOMATION_DIR = REPO_ROOT / "tests" / "automation"
-VENV_PYTHON = "/tmp/stas-test-env/bin/python3"
+VENV_PYTHON = "/tmp/syntaro-test-env/bin/python3"
 LINEAR_API_KEY = os.environ.get("LINEAR_API_KEY", "")
 LINEAR_TEAM_ID = "f4cefcf7-7fb9-4e50-8e50-04a6d44a4ce1"  # AIM
-LINEAR_PROJECT_ID = "9bc8e1d0-adb0-4eab-aca8-fb1aa6433b78"  # STAS
+LINEAR_PROJECT_ID = "9bc8e1d0-adb0-4eab-aca8-fb1aa6433b78"  # SYNTARO
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:5173")
 BROWSER = os.environ.get("BROWSER", "chromium")
 
@@ -271,7 +271,7 @@ def create_linear_ticket(payload: dict) -> dict | None:
 
 def main():
     print("=" * 60)
-    print("  STAS Circle Flow — Automation Test Runner")
+    print("  SYNTARO Circle Flow — Automation Test Runner")
     print("=" * 60)
 
     # Step 1: Run tests

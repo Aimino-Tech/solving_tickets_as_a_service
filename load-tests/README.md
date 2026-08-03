@@ -1,4 +1,4 @@
-# STAS Load Tests
+# SYNTARO Load Tests
 
 k6 load tests for 500-user scaling verification.
 

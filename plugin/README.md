@@ -1,8 +1,8 @@
-# @tarquinen/stas-plugin
+# @tarquinen/syntaro-plugin
 
-**OpenCode plugin for [STAS — Solving Tickets As A Service](https://github.com/tamnguyen08/solving_tickets_as_a_service)**
+**OpenCode plugin for [SYNTARO — Solving Tickets As A Service](https://github.com/tamnguyen08/solving_tickets_as_a_service)**
 
-Provides local development tools for operating and testing the STAS GitHub bot directly from within OpenCode.
+Provides local development tools for operating and testing the SYNTARO GitHub bot directly from within OpenCode.
 
 ## Installation
 
@@ -10,39 +10,39 @@ Add the plugin to your `opencode.json`:
 
 ```json
 {
-  "plugin": ["@tarquinen/stas-plugin"]
+  "plugin": ["@tarquinen/syntaro-plugin"]
 }
 ```
 
 Or install from npm:
 
 ```bash
-npm install @tarquinen/stas-plugin
+npm install @tarquinen/syntaro-plugin
 ```
 
 Once loaded, the plugin exposes 4 tools that the OpenCode agent can invoke during development.
 
 ## Available Tools
 
-### `stas_webhook_test`
+### `syntaro_webhook_test`
 
-Send a test webhook event to a running STAS bot.
+Send a test webhook event to a running SYNTARO bot.
 
 | Argument | Type | Default | Description |
 |---|---|---|---|
 | `event` | `string` | `"issues.labeled"` | GitHub webhook event type |
 | `payloadFile` | `string?` | — | Path to JSON payload file |
-| `stasUrl` | `string?` | `"http://localhost:3000"` | STAS bot URL override |
+| `syntaroUrl` | `string?` | `"http://localhost:3000"` | SYNTARO bot URL override |
 
 ```bash
 # Agent can call:
-stas_webhook_test event="issues.labeled"
-stas_webhook_test event="issues.opened" stasUrl="http://localhost:3000"
+syntaro_webhook_test event="issues.labeled"
+syntaro_webhook_test event="issues.opened" syntaroUrl="http://localhost:3000"
 ```
 
-### `stas_config_validate`
+### `syntaro_config_validate`
 
-Validate or initialize the STAS `.env` configuration.
+Validate or initialize the SYNTARO `.env` configuration.
 
 | Argument | Type | Default | Description |
 |---|---|---|---|
@@ -51,26 +51,26 @@ Validate or initialize the STAS `.env` configuration.
 
 ```bash
 # Agent can call:
-stas_config_validate mode="check"
-stas_config_validate mode="init"
+syntaro_config_validate mode="check"
+syntaro_config_validate mode="init"
 ```
 
-### `stas_status`
+### `syntaro_status`
 
-Check if STAS bot and OpenCode serve are running and healthy.
+Check if SYNTARO bot and OpenCode serve are running and healthy.
 
 | Argument | Type | Default | Description |
 |---|---|---|---|
-| `stasUrl` | `string?` | `"http://localhost:3000"` | STAS bot URL override |
+| `syntaroUrl` | `string?` | `"http://localhost:3000"` | SYNTARO bot URL override |
 | `opencodeUrl` | `string?` | `"http://localhost:4096"` | OpenCode serve URL override |
 
 ```bash
 # Agent can call:
-stas_status
-stas_status stasUrl="http://localhost:3001"
+syntaro_status
+syntaro_status syntaroUrl="http://localhost:3001"
 ```
 
-### `stas_dev_start`
+### `syntaro_dev_start`
 
 Start the local development environment.
 
@@ -78,12 +78,12 @@ Start the local development environment.
 |---|---|---|---|
 | `mode` | `string` | `"full"` | `"full"` (both), `"bot-only"`, or `"opencode-only"` |
 | `opencodePort` | `string?` | `"4096"` | OpenCode serve port override |
-| `stasPort` | `string?` | `"3000"` | STAS bot port override |
+| `syntaroPort` | `string?` | `"3000"` | SYNTARO bot port override |
 
 ```bash
 # Agent can call:
-stas_dev_start mode="full"
-stas_dev_start mode="bot-only"
+syntaro_dev_start mode="full"
+syntaro_dev_start mode="bot-only"
 ```
 
 ## Standalone CLI Usage
@@ -92,19 +92,19 @@ Each tool backs onto a shell script in `plugin/tools/` that can be used independ
 
 ```bash
 # Validate config
-bash plugin/tools/stas-config.sh check
+bash plugin/tools/syntaro-config.sh check
 
 # Start dev environment
-bash plugin/tools/stas-dev.sh
+bash plugin/tools/syntaro-dev.sh
 
 # Send test webhook
-bash plugin/tools/stas-webhook-test.sh issues.labeled
+bash plugin/tools/syntaro-webhook-test.sh issues.labeled
 
 # Check status
-bash plugin/tools/stas-status.sh
+bash plugin/tools/syntaro-status.sh
 ```
 
-Environment variables (`STAS_URL`, `OPENCODE_URL`, `OPENCODE_PORT`, `STAS_PORT`) are respected by both the tools and the plugin.
+Environment variables (`SYNTARO_URL`, `OPENCODE_URL`, `OPENCODE_PORT`, `SYNTARO_PORT`) are respected by both the tools and the plugin.
 
 ## Development Setup
 
@@ -142,10 +142,10 @@ plugin/
 ├── src/
 │   └── index.ts          # Plugin entry — registers 4 OpenCode tools
 ├── tools/
-│   ├── stas-config.sh      # Config validation/init script
-│   ├── stas-dev.sh         # Dev environment launcher
-│   ├── stas-status.sh      # Health check script
-│   └── stas-webhook-test.sh # Webhook simulation script
+│   ├── syntaro-config.sh      # Config validation/init script
+│   ├── syntaro-dev.sh         # Dev environment launcher
+│   ├── syntaro-status.sh      # Health check script
+│   └── syntaro-webhook-test.sh # Webhook simulation script
 ├── package.json
 ├── tsconfig.json
 └── README.md

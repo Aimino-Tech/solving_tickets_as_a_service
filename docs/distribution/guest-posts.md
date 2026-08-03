@@ -1,6 +1,6 @@
-# STAS Guest Post Program
+# SYNTARO Guest Post Program
 
-Three guest post plans, one per platform, each with a working title, angle, outline, and the target facts to include. All copy leads with evidence and stays honest about STAS's limits, matching the voice used on syntaro.io.
+Three guest post plans, one per platform, each with a working title, angle, outline, and the target facts to include. All copy leads with evidence and stays honest about SYNTARO's limits, matching the voice used on syntaro.io.
 
 UTM convention for every CTA link in every post: `utm_source=devto|hackernoon|infoq&utm_medium=guest-post&utm_campaign=<slug>`.
 
@@ -29,12 +29,12 @@ Rule of thumb: dev.to and HackerNoon get syndicated copies of the canonical post
 **Outline:**
 
 1. **The 3-hour debug session.** The Promise.all where one rejection got swallowed, the stack trace, the 40 Stack Overflow tabs. Why a known 3-line fix still took an afternoon (context-switch tax, re-reading the module, tracing tests).
-2. **The 15-second trigger.** Writing the bug report in two sentences, adding the `stas:fix` label, closing the laptop. No IDE, no terminal session to babysit.
+2. **The 15-second trigger.** Writing the bug report in two sentences, adding the `syntaro:fix` label, closing the laptop. No IDE, no terminal session to babysit.
 3. **What the bot did.** Triage (gpt-4o-mini classifies the issue, ~$0.10), sandbox boot (E2B), baseline tests, symbol indexing, then the fix agent (claude-sonnet-4). Eight phases, plan before code.
 4. **The PR.** Root cause, the 3-line fix, the regression test. Average fix size is +32/-15 lines, so this was a typical one.
 5. **The 6 quality gates.** Reality check, compile, test integrity, hallucination scan, dead code, MCI verification. What each one catches, and why the PR did not reach review until all six passed.
 6. **Before and after.** Time: 3 hours versus ~4 minutes label to PR. Cost: $450 of developer time at $150/h versus $3.80. Test suite pass rate across real fixes: 97%.
-7. **Try it yourself.** Link to the stas-demo repo with seeded bugs, one-paragraph install instructions for the GitHub Action, and the honest limits: architectural decisions and feature design stay human.
+7. **Try it yourself.** Link to the syntaro-demo repo with seeded bugs, one-paragraph install instructions for the GitHub Action, and the honest limits: architectural decisions and feature design stay human.
 
 **Target facts:** 92% pass rate on real issues, median $3.80 per fix, ~4 minutes label to PR, 6 quality gates, +32/-15 average fix size, 97% test-suite pass rate, model cascade (gpt-4o-mini + claude-sonnet-4).
 
@@ -48,11 +48,11 @@ Rule of thumb: dev.to and HackerNoon get syndicated copies of the canonical post
 
 **Platform:** HackerNoon
 **Slug:** `month-of-automated-fixes`
-**Angle:** Narrative plus data. A month-long experiment told as a story, with the numbers in tables and the limitations stated up front. HackerNoon readers reward candor about failure modes, so the post includes what STAS filtered out and where it struggled.
+**Angle:** Narrative plus data. A month-long experiment told as a story, with the numbers in tables and the limitations stated up front. HackerNoon readers reward candor about failure modes, so the post includes what SYNTARO filtered out and where it struggled.
 
 **Outline:**
 
-1. **The setup.** What STAS is (open-source GitHub bot, label an issue, get a PR), how the month ran: 15 seconds to label, a draft PR back in minutes, review on my schedule.
+1. **The setup.** What SYNTARO is (open-source GitHub bot, label an issue, get a PR), how the month ran: 15 seconds to label, a draft PR back in minutes, review on my schedule.
 2. **The backlog math.** 47 bugs at 2 hours each = 94 hours of senior attention, versus 47 at ~$3.80 = ~$179. Why the backlog existed and what the math changed.
 3. **What got fixed well.** Pass rate (92% on real issues), test-suite pass rate (97%), PR acceptance (87%). What a good week looked like.
 4. **The cost table.** Triage at ~$0.10 (gpt-4o-mini), fix at ~$3.00 (claude-sonnet-4), sandbox at ~$0.50, total ~$3.50 to $3.80 per fix. Median turnaround 30 seconds, P95 at 62 seconds.
@@ -68,7 +68,7 @@ Rule of thumb: dev.to and HackerNoon get syndicated copies of the canonical post
 
 ## Post Plan 3: InfoQ
 
-**Working title:** Plan-first architecture for autonomous bug fixing: lessons from STAS
+**Working title:** Plan-first architecture for autonomous bug fixing: lessons from SYNTARO
 
 **Platform:** InfoQ
 **Slug:** `plan-first-architecture`
@@ -103,7 +103,7 @@ Order of operations: publish the canonical post on syntaro.io first, wait at lea
 ## Submission Checklist
 
 **dev.to:**
-- [ ] Create an account (GitHub sign-in) and complete the profile with the STAS/AImino identity.
+- [ ] Create an account (GitHub sign-in) and complete the profile with the SYNTARO/AImino identity.
 - [ ] Draft the post in markdown with YAML frontmatter: `title`, `description`, `published: true`, `canonical_url`, `tags`.
 - [ ] Use tags: `opensource`, `ai`, `github`, `productivity`, `devops`.
 - [ ] Add the UTM-tagged CTA link and the demo repo link.
@@ -126,11 +126,11 @@ Subject: Article pitch: Plan-first architecture for autonomous bug fixing
 
 Hello InfoQ editorial team,
 
-I am writing from AImino, the team behind STAS, an open-source GitHub bot that turns labeled issues into tested pull requests. I would like to propose a technical article for InfoQ: "Plan-first architecture for autonomous bug fixing: lessons from STAS."
+I am writing from AImino, the team behind SYNTARO, an open-source GitHub bot that turns labeled issues into tested pull requests. I would like to propose a technical article for InfoQ: "Plan-first architecture for autonomous bug fixing: lessons from SYNTARO."
 
 The article examines why reactive AI code generation fails (wrong-file fixes, cosmetic patches, regressions, hallucinated APIs) and presents a plan-first 8-phase pipeline as an alternative: triage with a cheap model, sandbox execution, baseline testing, graph-based code understanding, agent fix, and 6 deterministic verification gates. It includes measured results from real-world usage: a 92% pass rate on real issues, a 97% test-suite pass rate, and a median cost of $3.80 per fix through a gpt-4o-mini and claude-sonnet-4 model cascade.
 
 The article is 2 to 5K words, original, and has not been published anywhere. I can provide code examples, architecture diagrams, and the full outline on request. Please let me know if this fits InfoQ's current editorial calendar and who I should send the full draft to.
 
 Best regards,
-The STAS team at AImino
+The SYNTARO team at AImino

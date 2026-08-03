@@ -1,6 +1,6 @@
-# STAS Security Threat Model
+# SYNTARO Security Threat Model
 
-> **Documented attack vectors, current mitigations, gap analysis, and remediation priorities for the STAS system.**
+> **Documented attack vectors, current mitigations, gap analysis, and remediation priorities for the SYNTARO system.**
 >
 > Last updated: 2026-07-13
 > Review cadence: Quarterly, or after any security incident
@@ -29,7 +29,7 @@
 
 ### In Scope
 
-- The STAS webhook server (Express, TypeScript)
+- The SYNTARO webhook server (Express, TypeScript)
 - The OpenCode agent dispatch pipeline
 - Sandbox execution (Docker local, E2B cloud)
 - GitHub App authentication and authorization
@@ -50,7 +50,7 @@ Internet
    |
    v
 +---------------------+     +-----------------------+
-|  GitHub Webhook     |---->|  STAS Webhook Server  |
+|  GitHub Webhook     |---->|  SYNTARO Webhook Server  |
 |  (HMAC-SHA256)      |     |  (Express)            |
 +---------------------+     +----------+-----------+
                                        |
@@ -70,8 +70,8 @@ Internet
                               +--------------------+
 ```
 
-Trust boundary 1: Internet to STAS server (signature verified).
-Trust boundary 2: STAS server to agent (prompt sanitized).
+Trust boundary 1: Internet to SYNTARO server (signature verified).
+Trust boundary 2: SYNTARO server to agent (prompt sanitized).
 Trust boundary 3: Agent to external APIs (network-isolated sandbox).
 
 ---
@@ -178,11 +178,11 @@ Three injection vectors exist:
 
 ### Description
 
-STAS acts as a deputy (the GitHub App) with elevated permissions. An attacker who triggers a fix on a repository can cause STAS to perform actions the attacker could not perform directly. This includes pushing code, creating PRs, and reading repository contents.
+SYNTARO acts as a deputy (the GitHub App) with elevated permissions. An attacker who triggers a fix on a repository can cause SYNTARO to perform actions the attacker could not perform directly. This includes pushing code, creating PRs, and reading repository contents.
 
 ### Attack Surface
 
-1. **Public repository triggering**: Anyone can label an issue `stas:fix` on a public repo where the app is installed
+1. **Public repository triggering**: Anyone can label an issue `syntaro:fix` on a public repo where the app is installed
 2. **Cross-repository access**: If the app is installed on multiple repos, an attacker may attempt to access other repositories
 3. **Privilege escalation via sandbox**: The sandbox has access to an installation token for git operations
 
@@ -206,7 +206,7 @@ STAS acts as a deputy (the GitHub App) with elevated permissions. An attacker wh
 ### Recommendations
 
 1. **Add repository allowlist** (P0):
-   - Support a `stas-repos.json` or environment variable that lists allowed repositories
+   - Support a `syntaro-repos.json` or environment variable that lists allowed repositories
    - Block operations on unlisted repos even if the app is installed
 
 2. **Implement per-action confirmation** (P1):
@@ -232,7 +232,7 @@ STAS acts as a deputy (the GitHub App) with elevated permissions. An attacker wh
 
 ### Description
 
-An attacker could trick STAS into committing code with a spoofed author identity (different committer name, email, or signed-off-by line). While the commit is made with the GitHub App token (authenticated), the commit metadata could attribute changes to another user.
+An attacker could trick SYNTARO into committing code with a spoofed author identity (different committer name, email, or signed-off-by line). While the commit is made with the GitHub App token (authenticated), the commit metadata could attribute changes to another user.
 
 ### Attack Surface
 
@@ -260,11 +260,11 @@ An attacker could trick STAS into committing code with a spoofed author identity
    - Block `--author` flag usage in the sandbox shell
 
 2. **Add post-commit validation** (P2):
-   - After the agent pushes, verify commit metadata matches expected STAS identity
+   - After the agent pushes, verify commit metadata matches expected SYNTARO identity
    - Reject and recreate commits with mismatched identity
 
 3. **Enable GPG signing** (P2):
-   - Configure the sandbox to GPG-sign commits with a STAS-specific key
+   - Configure the sandbox to GPG-sign commits with a SYNTARO-specific key
    - GitHub will show "Verified" badge on commits
 
 ---
@@ -390,7 +390,7 @@ A compromised or malicious agent could exfiltrate repository contents, environme
 
 ### Description
 
-An attacker sends forged webhook requests to the STAS webhook endpoint, pretending to be GitHub. If successful, the attacker could trigger fix runs on arbitrary repositories, cause denial of service, or exploit parsing vulnerabilities.
+An attacker sends forged webhook requests to the SYNTARO webhook endpoint, pretending to be GitHub. If successful, the attacker could trigger fix runs on arbitrary repositories, cause denial of service, or exploit parsing vulnerabilities.
 
 ### Attack Surface
 
@@ -499,7 +499,7 @@ An attacker exploits a vulnerability in the sandbox (Docker or E2B) to break out
 
 ### Description
 
-A compromised dependency (npm package, pip package, or Docker base image) introduces malicious code into the STAS runtime. This could lead to credential theft, data exfiltration, or backdoor installation.
+A compromised dependency (npm package, pip package, or Docker base image) introduces malicious code into the SYNTARO runtime. This could lead to credential theft, data exfiltration, or backdoor installation.
 
 ### Attack Surface
 
@@ -601,12 +601,12 @@ Detailed in [SECURITY.md section 11.4-11.6](../SECURITY.md#114-dependency-vulner
 
 ## References
 
-- [STAS Security Model](../SECURITY.md) -- Comprehensive security documentation
+- [SYNTARO Security Model](../SECURITY.md) -- Comprehensive security documentation
 - [Security Key Management](../SECURITY_KEY_MANAGEMENT.md) -- GitHub App key management
 - [Sandbox Security Implementation](../../src/security/sandboxSecurity.ts) -- Sandbox configuration and validation
 - [PromptSanitizer](../../src/agent/issueAgent.ts) -- User content sanitization
 - [Webhook Signature Verification](../../src/webhooks/base.ts) -- HMAC-SHA256 implementation
-- [Quality Gates](../../STAS-QUALITY-GATES.md) -- Pre-PR verification gates
+- [Quality Gates](../../SYNTARO-QUALITY-GATES.md) -- Pre-PR verification gates
 - [SOC 2 Readiness Assessment](../soc2/readiness-assessment.md) -- SOC 2 control mapping
 - [Incident Response Plan](../soc2/incident-response-plan.md) -- Severity-based response procedures
 - [GitHub App Permissions](../../.github/APP_PERMISSIONS.md) -- Documented permission model

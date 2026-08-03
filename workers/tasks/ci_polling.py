@@ -69,7 +69,7 @@ def _fetch_json(url: str, token: str) -> dict:
     req = Request(url, headers={
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
-        "User-Agent": "STAS-CI-Poller",
+        "User-Agent": "SYNTARO-CI-Poller",
     })
     with urlopen(req, timeout=30) as resp:
         return json.loads(resp.read())

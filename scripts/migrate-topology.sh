@@ -3,7 +3,7 @@
 # RabbitMQ Topology Migration Script
 #
 # Declares the unified RabbitMQ topology (exchanges, queues, DLQs, bindings)
-# for the STAS messaging layer. Idempotent — safe to re-run.
+# for the SYNTARO messaging layer. Idempotent — safe to re-run.
 #
 # Uses rabbitmqadmin (HTTP API) or falls back to rabbitmqctl + manual
 # declare-via-TypeScript.
@@ -17,7 +17,7 @@
 # Prerequisites:
 #   - Running RabbitMQ instance (default: localhost:5672)
 #   - rabbitmqadmin CLI installed (or rabbitmqctl)
-#   - Access to the /stas vhost
+#   - Access to the /syntaro vhost
 # =============================================================================
 
 set -euo pipefail
@@ -29,7 +29,7 @@ RABBIT_HOST="${RABBITMQ_HOST:-localhost}"
 RABBIT_PORT="${RABBITMQ_PORT:-5672}"
 RABBIT_USER="${RABBITMQ_USER:-guest}"
 RABBIT_PASS="${RABBITMQ_PASS:-guest}"
-RABBIT_VHOST="${RABBITMQ_VHOST:-/stas}"
+RABBIT_VHOST="${RABBITMQ_VHOST:-/syntaro}"
 RABBIT_API_PORT="${RABBITMQ_API_PORT:-15672}"
 
 DRY_RUN=false
@@ -115,90 +115,90 @@ bind_queue() {
 declare_topology() {
   echo "=== Declaring exchanges ==="
 
-  declare_exchange "stas.agents" "topic"
-  declare_exchange "stas.issues" "topic"
-  declare_exchange "stas.queue" "topic"
-  declare_exchange "stas.events" "fanout"
-  declare_exchange "stas.dlx" "direct"
+  declare_exchange "syntaro.agents" "topic"
+  declare_exchange "syntaro.issues" "topic"
+  declare_exchange "syntaro.queue" "topic"
+  declare_exchange "syntaro.events" "fanout"
+  declare_exchange "syntaro.dlx" "direct"
 
   echo ""
   echo "=== Declaring queues with DLQ config ==="
 
-  # stas.agents exchange
-  declare_queue "stas.agents.dispatch" "stas.dlx" "stas.agents.dispatch"
-  declare_queue "stas.agents.verification" "stas.dlx" "stas.agents.verification"
-  declare_queue "stas.agents.self_audit" "stas.dlx" "stas.agents.self_audit"
-  declare_queue "stas.agents.sandbox" "stas.dlx" "stas.agents.sandbox"
+  # syntaro.agents exchange
+  declare_queue "syntaro.agents.dispatch" "syntaro.dlx" "syntaro.agents.dispatch"
+  declare_queue "syntaro.agents.verification" "syntaro.dlx" "syntaro.agents.verification"
+  declare_queue "syntaro.agents.self_audit" "syntaro.dlx" "syntaro.agents.self_audit"
+  declare_queue "syntaro.agents.sandbox" "syntaro.dlx" "syntaro.agents.sandbox"
 
-  # stas.issues exchange
-  declare_queue "stas.issues.triage" "stas.dlx" "stas.issues.triage"
-  declare_queue "stas.issues.health" "stas.dlx" "stas.issues.health"
+  # syntaro.issues exchange
+  declare_queue "syntaro.issues.triage" "syntaro.dlx" "syntaro.issues.triage"
+  declare_queue "syntaro.issues.health" "syntaro.dlx" "syntaro.issues.health"
 
-  # stas.queue exchange
-  declare_queue "stas.queue.pr" "stas.dlx" "stas.queue.pr"
-  declare_queue "stas.queue.merge" "stas.dlx" "stas.queue.merge"
-  declare_queue "stas.queue.notifications" "stas.dlx" "stas.queue.notifications"
+  # syntaro.queue exchange
+  declare_queue "syntaro.queue.pr" "syntaro.dlx" "syntaro.queue.pr"
+  declare_queue "syntaro.queue.merge" "syntaro.dlx" "syntaro.queue.merge"
+  declare_queue "syntaro.queue.notifications" "syntaro.dlx" "syntaro.queue.notifications"
 
-  # stas.events exchange
-  declare_queue "stas.events.event_bus" "stas.dlx" "stas.events.event_bus"
+  # syntaro.events exchange
+  declare_queue "syntaro.events.event_bus" "syntaro.dlx" "syntaro.events.event_bus"
 
-  # stas.dlx exchange (no DLQ for DLQ queues)
-  declare_queue "stas.dlx.retry"
-  declare_queue "stas.dlx.failed"
+  # syntaro.dlx exchange (no DLQ for DLQ queues)
+  declare_queue "syntaro.dlx.retry"
+  declare_queue "syntaro.dlx.failed"
 
-  # DLQ queues (bound to stas.dlx exchange)
+  # DLQ queues (bound to syntaro.dlx exchange)
   for queue in \
-    "stas.agents.dispatch" \
-    "stas.agents.verification" \
-    "stas.agents.self_audit" \
-    "stas.agents.sandbox" \
-    "stas.issues.triage" \
-    "stas.issues.health" \
-    "stas.queue.pr" \
-    "stas.queue.merge" \
-    "stas.queue.notifications" \
-    "stas.events.event_bus"; do
+    "syntaro.agents.dispatch" \
+    "syntaro.agents.verification" \
+    "syntaro.agents.self_audit" \
+    "syntaro.agents.sandbox" \
+    "syntaro.issues.triage" \
+    "syntaro.issues.health" \
+    "syntaro.queue.pr" \
+    "syntaro.queue.merge" \
+    "syntaro.queue.notifications" \
+    "syntaro.events.event_bus"; do
     declare_queue "${queue}.dlq"
   done
 
   echo ""
   echo "=== Binding queues to exchanges ==="
 
-  # stas.agents exchange
-  bind_queue "stas.agents.dispatch" "stas.agents" "agent.runner"
-  bind_queue "stas.agents.verification" "stas.agents" "agent.verify"
-  bind_queue "stas.agents.self_audit" "stas.agents" "agent.self_audit"
-  bind_queue "stas.agents.sandbox" "stas.agents" "agent.sandbox"
+  # syntaro.agents exchange
+  bind_queue "syntaro.agents.dispatch" "syntaro.agents" "agent.runner"
+  bind_queue "syntaro.agents.verification" "syntaro.agents" "agent.verify"
+  bind_queue "syntaro.agents.self_audit" "syntaro.agents" "agent.self_audit"
+  bind_queue "syntaro.agents.sandbox" "syntaro.agents" "agent.sandbox"
 
-  # stas.issues exchange
-  bind_queue "stas.issues.triage" "stas.issues" "triage.*"
-  bind_queue "stas.issues.health" "stas.issues" "health.*"
+  # syntaro.issues exchange
+  bind_queue "syntaro.issues.triage" "syntaro.issues" "triage.*"
+  bind_queue "syntaro.issues.health" "syntaro.issues" "health.*"
 
-  # stas.queue exchange
-  bind_queue "stas.queue.pr" "stas.queue" "pr.create"
-  bind_queue "stas.queue.merge" "stas.queue" "merge.process"
-  bind_queue "stas.queue.notifications" "stas.queue" "queue.notify"
+  # syntaro.queue exchange
+  bind_queue "syntaro.queue.pr" "syntaro.queue" "pr.create"
+  bind_queue "syntaro.queue.merge" "syntaro.queue" "merge.process"
+  bind_queue "syntaro.queue.notifications" "syntaro.queue" "queue.notify"
 
-  # stas.events exchange (fanout — routing key is ignored)
-  bind_queue "stas.events.event_bus" "stas.events" ""
+  # syntaro.events exchange (fanout — routing key is ignored)
+  bind_queue "syntaro.events.event_bus" "syntaro.events" ""
 
-  # stas.dlx exchange
-  bind_queue "stas.dlx.retry" "stas.dlx" "dlq.retry"
-  bind_queue "stas.dlx.failed" "stas.dlx" "dlq.failed"
+  # syntaro.dlx exchange
+  bind_queue "syntaro.dlx.retry" "syntaro.dlx" "dlq.retry"
+  bind_queue "syntaro.dlx.failed" "syntaro.dlx" "dlq.failed"
 
-  # Bind DLQ queues to stas.dlx exchange
+  # Bind DLQ queues to syntaro.dlx exchange
   for queue in \
-    "stas.agents.dispatch" \
-    "stas.agents.verification" \
-    "stas.agents.self_audit" \
-    "stas.agents.sandbox" \
-    "stas.issues.triage" \
-    "stas.issues.health" \
-    "stas.queue.pr" \
-    "stas.queue.merge" \
-    "stas.queue.notifications" \
-    "stas.events.event_bus"; do
-    bind_queue "${queue}.dlq" "stas.dlx" "$queue"
+    "syntaro.agents.dispatch" \
+    "syntaro.agents.verification" \
+    "syntaro.agents.self_audit" \
+    "syntaro.agents.sandbox" \
+    "syntaro.issues.triage" \
+    "syntaro.issues.health" \
+    "syntaro.queue.pr" \
+    "syntaro.queue.merge" \
+    "syntaro.queue.notifications" \
+    "syntaro.events.event_bus"; do
+    bind_queue "${queue}.dlq" "syntaro.dlx" "$queue"
   done
 
   echo ""
@@ -214,7 +214,7 @@ verify_topology() {
   local errors=0
 
   # Check exchanges exist
-  for ex in "stas.agents" "stas.issues" "stas.queue" "stas.events" "stas.dlx"; do
+  for ex in "syntaro.agents" "syntaro.issues" "syntaro.queue" "syntaro.events" "syntaro.dlx"; do
     if rabbitmqadmin --host="$RABBIT_HOST" --port="$RABBIT_API_PORT" \
       --username="$RABBIT_USER" --password="$RABBIT_PASS" \
       --vhost="$RABBIT_VHOST" list exchanges --name="$ex" 2>/dev/null | grep -q "$ex"; then
@@ -227,11 +227,11 @@ verify_topology() {
 
   # Check queues exist
   local all_queues=(
-    "stas.agents.dispatch" "stas.agents.verification" "stas.agents.self_audit" "stas.agents.sandbox"
-    "stas.issues.triage" "stas.issues.health"
-    "stas.queue.pr" "stas.queue.merge" "stas.queue.notifications"
-    "stas.events.event_bus"
-    "stas.dlx.retry" "stas.dlx.failed"
+    "syntaro.agents.dispatch" "syntaro.agents.verification" "syntaro.agents.self_audit" "syntaro.agents.sandbox"
+    "syntaro.issues.triage" "syntaro.issues.health"
+    "syntaro.queue.pr" "syntaro.queue.merge" "syntaro.queue.notifications"
+    "syntaro.events.event_bus"
+    "syntaro.dlx.retry" "syntaro.dlx.failed"
   )
 
   for queue in "${all_queues[@]}"; do
@@ -247,10 +247,10 @@ verify_topology() {
 
   # Check DLQ queues exist
   local dlq_suffixes=(
-    "stas.agents.dispatch" "stas.agents.verification" "stas.agents.self_audit" "stas.agents.sandbox"
-    "stas.issues.triage" "stas.issues.health"
-    "stas.queue.pr" "stas.queue.merge" "stas.queue.notifications"
-    "stas.events.event_bus"
+    "syntaro.agents.dispatch" "syntaro.agents.verification" "syntaro.agents.self_audit" "syntaro.agents.sandbox"
+    "syntaro.issues.triage" "syntaro.issues.health"
+    "syntaro.queue.pr" "syntaro.queue.merge" "syntaro.queue.notifications"
+    "syntaro.events.event_bus"
   )
 
   for queue in "${dlq_suffixes[@]}"; do
@@ -284,9 +284,9 @@ cleanup_old_topology() {
   echo "  (only if no messages remain)"
 
   local old_queues=(
-    "stas.agents.triage" "stas.agents.opencode" "stas.agents.pr_creation"
-    "stas.agents.notifications" "stas.agents.default"
-    "stas.issues.fix" "stas.events.notifications" "stas.events.audit"
+    "syntaro.agents.triage" "syntaro.agents.opencode" "syntaro.agents.pr_creation"
+    "syntaro.agents.notifications" "syntaro.agents.default"
+    "syntaro.issues.fix" "syntaro.events.notifications" "syntaro.events.audit"
   )
 
   for queue in "${old_queues[@]}"; do
@@ -295,9 +295,9 @@ cleanup_old_topology() {
   done
 
   local old_dlqs=(
-    "stas.agents.triage.dlq" "stas.agents.opencode.dlq"
-    "stas.agents.verification.dlq" "stas.agents.sandbox.dlq"
-    "stas.issues.fix.dlq" "stas.events.notifications.dlq" "stas.events.audit.dlq"
+    "syntaro.agents.triage.dlq" "syntaro.agents.opencode.dlq"
+    "syntaro.agents.verification.dlq" "syntaro.agents.sandbox.dlq"
+    "syntaro.issues.fix.dlq" "syntaro.events.notifications.dlq" "syntaro.events.audit.dlq"
   )
 
   for dlq in "${old_dlqs[@]}"; do
@@ -305,9 +305,9 @@ cleanup_old_topology() {
     run_rabbitmqadmin "delete" "queue" "--name=$dlq" || true
   done
 
-  # Delete old stas exchange (only if no bindings remain)
-  echo "  [DELETE] Exchange 'stas' (if no bindings)..."
-  run_rabbitmqadmin "delete" "exchange" "--name=stas" || true
+  # Delete old syntaro exchange (only if no bindings remain)
+  echo "  [DELETE] Exchange 'syntaro' (if no bindings)..."
+  run_rabbitmqadmin "delete" "exchange" "--name=syntaro" || true
 
   echo ""
   echo "=== Old topology cleanup complete ==="

@@ -182,7 +182,7 @@ def test_process_webhook():
     from workers.tasks.notifications import process_webhook
 
     result = process_webhook.run("issues.labeled", {
-        "label": {"name": "stas:fix"},
+        "label": {"name": "syntaro:fix"},
     })
     assert result["event_type"] == "issues.labeled"
     assert result["status"] == "processed"

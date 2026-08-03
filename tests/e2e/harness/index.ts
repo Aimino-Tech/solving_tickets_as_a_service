@@ -1,8 +1,8 @@
 /**
- * E2E Test Harness for STAS.
+ * E2E Test Harness for SYNTARO.
  *
  * Provides a programmatic way to spin up:
- * - The real STAS Express app (with mocked dependencies)
+ * - The real SYNTARO Express app (with mocked dependencies)
  * - Mock GitHub API server
  * - Mock OpenCode serve endpoint
  * - Redis connection (with ioredis mock fallback)
@@ -51,8 +51,8 @@ export interface MockOpenCodeServer {
 }
 
 export interface TestHarnessOptions {
-  /** Port for the STAS Express server (0 = random) */
-  stasPort?: number;
+  /** Port for the SYNTARO Express server (0 = random) */
+  syntaroPort?: number;
   /** Port for the mock GitHub API server (0 = random) */
   githubApiPort?: number;
   /** Port for the mock OpenCode server (0 = random) */
@@ -64,12 +64,12 @@ export interface TestHarnessOptions {
 }
 
 export interface TestHarness {
-  /** The STAS Express application */
+  /** The SYNTARO Express application */
   app: Express;
-  /** STAS HTTP server instance */
-  stasServer: http.Server;
-  /** Port the STAS server is listening on */
-  stasPort: number;
+  /** SYNTARO HTTP server instance */
+  syntaroServer: http.Server;
+  /** Port the SYNTARO server is listening on */
+  syntaroPort: number;
   /** Mock GitHub API server */
   githubApi: MockGitHubApiServer;
   /** Mock OpenCode server */
@@ -78,13 +78,13 @@ export interface TestHarness {
   start: () => Promise<void>;
   /** Stop all servers and clean up */
   stop: () => Promise<void>;
-  /** Send a webhook event to the STAS server */
+  /** Send a webhook event to the SYNTARO server */
   sendWebhook: (
     path: string,
     body: unknown,
     headers?: Record<string, string>,
   ) => Promise<{ status: number; body: unknown; headers: http.IncomingHttpHeaders }>;
-  /** Base URL of the STAS server */
+  /** Base URL of the SYNTARO server */
   baseUrl: string;
 }
 
@@ -100,7 +100,7 @@ export function createMockGitHubApiServer(): MockGitHubApiServer {
   responses.set('POST /repos/*/issues/*/comments', { status: 201, body: { id: 1, html_url: 'https://github.com/mock/comment/1' } });
   responses.set('POST /repos/*/pulls', { status: 201, body: { id: 1, number: 42, html_url: 'https://github.com/owner/repo/pull/42' } });
   responses.set('PATCH /repos/*/pulls/*', { status: 200, body: {} });
-  responses.set('POST /repos/*/git/refs', { status: 201, body: { ref: 'refs/heads/stas/fix-42' } });
+  responses.set('POST /repos/*/git/refs', { status: 201, body: { ref: 'refs/heads/syntaro/fix-42' } });
   responses.set('GET /repos/*/git/ref/*', { status: 200, body: { object: { sha: 'abc123' } } });
   responses.set('GET /repos/*/contents/*', { status: 200, body: { content: Buffer.from('test').toString('base64') } });
   responses.set('GET /app/installations/*/access_tokens', { status: 201, body: { token: 'mock-token' } });
@@ -173,7 +173,7 @@ export function createMockOpenCodeServer(): MockOpenCodeServer {
         confidence: 'high',
         fixReady: true,
         prUrl: 'https://github.com/owner/repo/pull/42',
-        branchName: 'stas/fix-42-mock',
+        branchName: 'syntaro/fix-42-mock',
         diff: 'diff --git a/src/test.ts b/src/test.ts\nindex abc..def 100644\n--- a/src/test.ts\n+++ b/src/test.ts\n@@ -1,3 +1,5 @@\n+console.log("fixed");',
         testOutput: 'PASS tests/login.test.ts (42ms)\n  ✓ handles special characters\n\nTests: 1 passed, 1 total',
         errors: [],
@@ -207,14 +207,14 @@ export function createMockOpenCodeServer(): MockOpenCodeServer {
 
 /**
  * Set up environment variables for E2E testing.
- * Call BEFORE importing any STAS modules.
+ * Call BEFORE importing any SYNTARO modules.
  */
 export function setupTestEnvironment(options?: TestHarnessOptions): void {
   process.env.TEST = 'true';
   process.env.NODE_ENV = 'test';
   process.env.LOG_LEVEL = options?.verbose ? 'debug' : 'silent';
   process.env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY = 'true';
-  process.env.STAS_LABEL = 'stas:fix';
+  process.env.SYNTARO_LABEL = 'syntaro:fix';
   process.env.GITHUB_APP_ID = process.env.GITHUB_APP_ID ?? '999999';
   process.env.GITHUB_WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET ?? 'test-secret';
   process.env.REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
@@ -235,10 +235,10 @@ export function setupTestEnvironment(options?: TestHarnessOptions): void {
   process.env.DPA_REQUIRE_ACCEPTANCE = 'false';
   process.env.DATA_RETENTION_DAYS = '30';
   process.env.OPENSYMPHONY_ENABLED = 'false';
-  process.env.STAS_MCP_AUTO_START = 'false';
+  process.env.SYNTARO_MCP_AUTO_START = 'false';
   process.env.CI_MONITOR_ENABLED = 'false';
-  process.env.STAS_AI_DISABLED = 'true';
-  process.env.DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://localhost:5432/stas_test';
+  process.env.SYNTARO_AI_DISABLED = 'true';
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://localhost:5432/syntaro_test';
   process.env.RABBITMQ_URL = process.env.RABBITMQ_URL ?? 'amqp://guest:guest@localhost:5672';
 
   // Override with any custom env vars
@@ -254,7 +254,7 @@ export function setupTestEnvironment(options?: TestHarnessOptions): void {
 /**
  * Create a complete E2E test harness.
  *
- * Starts mock servers, creates the STAS app, and returns helpers for
+ * Starts mock servers, creates the SYNTARO app, and returns helpers for
  * sending webhook events and making assertions.
  */
 export async function createTestHarness(options?: TestHarnessOptions): Promise<TestHarness> {
@@ -294,21 +294,21 @@ export async function createTestHarness(options?: TestHarnessOptions): Promise<T
   process.env.GITHUB_API_URL = githubApi.baseUrl;
   process.env.OPENCODE_URL = openCode.baseUrl;
 
-  // Create the STAS app
+  // Create the SYNTARO app
   const app = createApp();
 
-  // Start the STAS server
-  const stasServer = http.createServer(app);
+  // Start the SYNTARO server
+  const syntaroServer = http.createServer(app);
 
   await new Promise<void>((resolve, reject) => {
-    stasServer.listen(options?.stasPort ?? 0, () => {
+    syntaroServer.listen(options?.syntaroPort ?? 0, () => {
       resolve();
     });
-    stasServer.on('error', reject);
+    syntaroServer.on('error', reject);
   });
 
-  const stasPort = (stasServer.address() as import('net').AddressInfo).port;
-  const baseUrl = `http://localhost:${stasPort}`;
+  const syntaroPort = (syntaroServer.address() as import('net').AddressInfo).port;
+  const baseUrl = `http://localhost:${syntaroPort}`;
 
   // --- Helpers ---
 
@@ -341,14 +341,14 @@ export async function createTestHarness(options?: TestHarnessOptions): Promise<T
 
   return {
     app,
-    stasServer,
-    stasPort,
+    syntaroServer,
+    syntaroPort,
     githubApi,
     openCode,
     baseUrl,
     start: async () => {}, // already started
     stop: async () => {
-      stasServer.close();
+      syntaroServer.close();
       githubApi.server.close();
       openCode.server.close();
     },

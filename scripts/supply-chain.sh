@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# STAS Supply Chain Security — Local Tooling
+# SYNTARO Supply Chain Security — Local Tooling
 #
 # Provides local commands for supply chain security tasks that mirror the
 # CI/CD pipeline steps. Useful for developers running these checks locally
@@ -151,7 +151,7 @@ verify_lock() {
 # 5. Scan Docker image with grype
 # ---------------------------------------------------------------------------
 scan_docker() {
-    local image="${1:-stas-bot:latest}"
+    local image="${1:-syntaro-bot:latest}"
 
     info "Scanning Docker image '$image' with grype..."
 
@@ -187,7 +187,7 @@ run_all() {
 
     echo ""
     echo "========================================================"
-    echo "  STAS Supply Chain Security — Full Audit"
+    echo "  SYNTARO Supply Chain Security — Full Audit"
     echo "========================================================"
     echo ""
 
@@ -237,7 +237,7 @@ main() {
             run_all
             ;;
         help|--help|-h)
-            echo "STAS Supply Chain Security — Local Tooling"
+            echo "SYNTARO Supply Chain Security — Local Tooling"
             echo ""
             echo "Usage: $0 <command>"
             echo ""
@@ -246,7 +246,7 @@ main() {
             echo "  audit-npm         Run npm audit (fail on high/critical)"
             echo "  audit-pip         Run pip-audit on workers deps"
             echo "  verify-lock       Verify package-lock.json integrity"
-            echo "  scan-docker [img]  Scan Docker image with grype (default: stas-bot:latest)"
+            echo "  scan-docker [img]  Scan Docker image with grype (default: syntaro-bot:latest)"
             echo "  all               Run ALL checks sequentially"
             echo ""
             ;;

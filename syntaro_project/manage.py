@@ -6,7 +6,7 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "stas.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "syntaro.settings")
     # Add project root so workers package is importable
     _project_root = os.path.dirname(os.path.abspath(__file__))
     if _project_root not in sys.path:

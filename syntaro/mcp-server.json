@@ -1,6 +1,6 @@
 {
   "name": "@aimino/syntaro-mcp",
-  "description": "MCP server for STAS — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs via OpenCode agents.",
+  "description": "MCP server for SYNTARO — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs via OpenCode agents.",
   "version": "1.0.0",
   "author": {
     "name": "Aimino Tech",
@@ -22,13 +22,13 @@
     "@aimino/syntaro-mcp"
   ],
   "env": {
-    "STAS_API_KEY": {
-      "description": "STAS API key for authentication",
+    "SYNTARO_API_KEY": {
+      "description": "SYNTARO API key for authentication",
       "required": true,
       "secret": true
     },
-    "STAS_API_URL": {
-      "description": "STAS API base URL (default: https://api.syntaro.io)",
+    "SYNTARO_API_URL": {
+      "description": "SYNTARO API base URL (default: https://api.syntaro.io)",
       "required": false,
       "default": "https://api.syntaro.io"
     },
@@ -41,7 +41,7 @@
   "capabilities": {
     "tools": {
       "syntaro_submit_fix": {
-        "description": "Submit a GitHub issue URL to STAS for automated fix generation",
+        "description": "Submit a GitHub issue URL to SYNTARO for automated fix generation",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -66,7 +66,7 @@
         }
       },
       "syntaro_poll_job": {
-        "description": "Poll a STAS fix job for status updates and results",
+        "description": "Poll a SYNTARO fix job for status updates and results",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -79,7 +79,7 @@
         }
       },
       "syntaro_list_jobs": {
-        "description": "List recent STAS fix jobs and their statuses",
+        "description": "List recent SYNTARO fix jobs and their statuses",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -96,7 +96,7 @@
         }
       },
       "syntaro_get_eval_results": {
-        "description": "Get public STAS benchmark eval results",
+        "description": "Get public SYNTARO benchmark eval results",
         "inputSchema": {
           "type": "object",
           "properties": {}
@@ -108,15 +108,15 @@
         "description": "Detailed job result including PR URL, diff summary, and test results"
       },
       "syntaro://eval/latest": {
-        "description": "Latest STAS benchmark evaluation results"
+        "description": "Latest SYNTARO benchmark evaluation results"
       },
       "syntaro://eval/history": {
-        "description": "Historical STAS eval performance data"
+        "description": "Historical SYNTARO eval performance data"
       }
     }
   },
   "keywords": [
-    "stas",
+    "syntaro",
     "github-bot",
     "issue-fixer",
     "automated-fix",
@@ -126,9 +126,9 @@
     "aimino"
   ],
   "smithery": {
-    "displayName": "STAS — Auto-Fix GitHub Issues",
+    "displayName": "SYNTARO — Auto-Fix GitHub Issues",
     "category": "Developer Tools",
     "icon": "https://syntaro.io/logo.png",
-    "description": "Submit a GitHub issue URL and STAS investigates your codebase, writes a fix, runs tests, and opens a PR — fully automated."
+    "description": "Submit a GitHub issue URL and SYNTARO investigates your codebase, writes a fix, runs tests, and opens a PR — fully automated."
   }
 }

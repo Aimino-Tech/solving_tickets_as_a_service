@@ -30,7 +30,7 @@ export function createMockConfig() {
     },
     queue: {
       redisUrl: 'redis://localhost:6379',
-      rabbitmqUrl: 'amqp://guest:guest@localhost:5672/stas',
+      rabbitmqUrl: 'amqp://guest:guest@localhost:5672/syntaro',
       workerConcurrency: 2,
       dedupTtl: 120,
       keepCompleted: 200,
@@ -68,7 +68,7 @@ export function createMockConfig() {
       webhookSecret: 'mock-bitbucket-secret',
     },
     openai: { apiKey: 'mock-openai-key', cheapModel: 'gpt-4o-mini' },
-    e2b: { apiKey: undefined as string | undefined, templateId: 'stas-default', sandboxTimeoutMs: 300000 },
+    e2b: { apiKey: undefined as string | undefined, templateId: 'syntaro-default', sandboxTimeoutMs: 300000 },
     slack: {
       webhookUrl: undefined as string | undefined,
       channel: undefined as string | undefined,
@@ -88,7 +88,7 @@ export function createMockConfig() {
       dlqRetentionDays: 7,
     },
     alerting: {
-      slackChannel: '#stas-alerts',
+      slackChannel: '#syntaro-alerts',
       warnQueueDepth: 50,
       critQueueDepth: 200,
       warnErrorRatePercent: 10,
@@ -101,9 +101,9 @@ export function createMockConfig() {
       failureThreshold: 3,
       pollIntervalMs: 60000,
     },
-    stas: {
-      label: 'stas:fix',
-      botName: 'STAS',
+    syntaro: {
+      label: 'syntaro:fix',
+      botName: 'SYNTARO',
       mode: 'oss' as const,
       aiMode: 'ai' as const,
       aiDisabled: true,
@@ -138,7 +138,7 @@ export function createMockConfig() {
       teamPriceId: undefined as string | undefined,
     },
     database: {
-      url: 'postgres://localhost:5432/stas',
+      url: 'postgres://localhost:5432/syntaro',
       poolMin: 2,
       poolMax: 10,
       ssl: false,
@@ -190,7 +190,7 @@ export function createMockConfig() {
     usageCredits: { fixRun: 50, triage: 10, sandbox: 5 },
     storage: {
       type: 'sqlite' as const,
-      sqlitePath: '/tmp/stas.db',
+      sqlitePath: '/tmp/syntaro.db',
     },
     auth: {
       jwtSecret: 'test-jwt-secret',

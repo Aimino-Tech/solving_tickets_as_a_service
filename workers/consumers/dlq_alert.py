@@ -5,7 +5,7 @@ Listens to DLQ queues and triggers alerts when messages are dead-lettered.
 Sends Slack notifications and logs warnings for operational visibility.
 
 Usage:
-    celery -A workers.celery_app worker -Q stas.issues.fix.dlq -c 1 -n dlq_alert@%%h
+    celery -A workers.celery_app worker -Q syntaro.issues.fix.dlq -c 1 -n dlq_alert@%%h
 """
 
 import json
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # ── Configuration ──────────────────────────────────────────────────────────
 
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "")
-DLQ_ALERT_SLACK_CHANNEL = os.getenv("DLQ_ALERT_SLACK_CHANNEL", "#stas-alerts")
+DLQ_ALERT_SLACK_CHANNEL = os.getenv("DLQ_ALERT_SLACK_CHANNEL", "#syntaro-alerts")
 DLQ_ALERT_THROTTLE_SECONDS = int(os.getenv("DLQ_ALERT_THROTTLE_SECONDS", "300"))
 
 # ── Throttle tracking ──────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ def send_slack_alert(message: str, fields: dict | None = None) -> None:
             "elements": [
                 {
                     "type": "mrkdwn",
-                    "text": f"STAS DLQ Consumer | <{os.getenv('FLOWER_URL', 'http://localhost:5555')}|Flower Dashboard>",
+                    "text": f"SYNTARO DLQ Consumer | <{os.getenv('FLOWER_URL', 'http://localhost:5555')}|Flower Dashboard>",
                 }
             ],
         }
@@ -112,13 +112,13 @@ def log_dlq_alert(queue: str, message_body: str, headers: dict | None = None) ->
 # ── Consumer Setup ──────────────────────────────────────────────────────────
 
 DLQ_QUEUES = [
-    "stas.issues.fix.dlq",
-    "stas.agents.triage.dlq",
-    "stas.agents.opencode.dlq",
-    "stas.agents.sandbox.dlq",
-    "stas.agents.verification.dlq",
-    "stas.events.notifications.dlq",
-    "stas.events.audit.dlq",
+    "syntaro.issues.fix.dlq",
+    "syntaro.agents.triage.dlq",
+    "syntaro.agents.opencode.dlq",
+    "syntaro.agents.sandbox.dlq",
+    "syntaro.agents.verification.dlq",
+    "syntaro.events.notifications.dlq",
+    "syntaro.events.audit.dlq",
 ]
 
 
@@ -134,7 +134,7 @@ def start_dlq_consumer(app: Celery) -> None:
             app.conf.task_queues.append(
                 {
                     "name": queue_name,
-                    "exchange": "stas.dlx",
+                    "exchange": "syntaro.dlx",
                     "routing_key": queue_name.replace(".dlq", ""),
                 }
             )

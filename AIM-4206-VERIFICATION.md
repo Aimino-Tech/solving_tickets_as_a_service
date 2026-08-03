@@ -8,7 +8,7 @@ This PR verifies the implementation of AIM-4206 (Billing & Analytics Infrastruct
 - **Analytics client** (`src/analytics/tracker.ts`) — PostHog SDK integration with `initAnalytics()`, `captureEvent()`, `shutdownAnalytics()`
 - **6 core events** instrumented across the codebase:
   - `app_installed` — GitHub App installation
-  - `issue_labeled` — Issue labeled with stas:fix
+  - `issue_labeled` — Issue labeled with syntaro:fix
   - `user_signup` — User authentication/signup
   - `fix_completed` — Fix successfully completed
   - `user_converted` — Free → paid conversion

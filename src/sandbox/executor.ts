@@ -194,8 +194,8 @@ export class E2BSandboxExecutor implements SandboxExecutorInterface {
 
     try {
       // Configure git
-      await this.exec(`git -C "${this.repoDir}" config user.email "stas-bot@users.noreply.github.com"`);
-      await this.exec(`git -C "${this.repoDir}" config user.name "STAS Bot"`);
+      await this.exec(`git -C "${this.repoDir}" config user.email "syntaro-bot@users.noreply.github.com"`);
+      await this.exec(`git -C "${this.repoDir}" config user.name "SYNTARO Bot"`);
 
       // Add all changes
       await this.exec(`git -C "${this.repoDir}" add -A`);
@@ -208,7 +208,7 @@ export class E2BSandboxExecutor implements SandboxExecutorInterface {
       }
 
       // Commit with DCO sign-off
-      const commitResult = await this.exec(`git -C "${this.repoDir}" commit -m "fix: automated fix by STAS" -m "Signed-off-by: STAS Bot <stas-bot@users.noreply.github.com>"`);
+      const commitResult = await this.exec(`git -C "${this.repoDir}" commit -m "fix: automated fix by SYNTARO" -m "Signed-off-by: SYNTARO Bot <syntaro-bot@users.noreply.github.com>"`);
       if (commitResult.exitCode !== 0 && !commitResult.stderr.includes('nothing to commit')) {
         throw new Error(`Failed to commit: ${commitResult.stderr}`);
       }

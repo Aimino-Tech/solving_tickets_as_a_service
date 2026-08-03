@@ -58,7 +58,7 @@ function TierCard({ name, desc, price, period, features, cta, ctaLink, featured,
 }
 
 export default function Pricing() {
-  useEffect(() => { document.title = 'Pricing — STAS'; }, []);
+  useEffect(() => { document.title = 'Pricing — SYNTARO'; }, []);
 
   return (
     <section className="section" style={{ paddingTop: 120 }}>
@@ -75,7 +75,7 @@ export default function Pricing() {
           price="$0"
           period="Forever free, no credit card required"
           cta="Get Started Free →"
-          ctaLink="https://github.com/apps/stasgithub1/installations/new"
+          ctaLink="https://github.com/apps/syntarogithub1/installations/new"
           features={[
             { text: '50 fixes per month', included: true },
             { text: '1 private repository', included: true },
@@ -93,7 +93,7 @@ export default function Pricing() {
           price="$49"
           period="Billed monthly. Cancel anytime."
           cta="Subscribe Now →"
-          ctaLink="https://github.com/apps/stasgithub1/installations/new"
+          ctaLink="https://github.com/apps/syntarogithub1/installations/new"
           featured
           badge="Most Popular"
           features={[
@@ -113,7 +113,7 @@ export default function Pricing() {
           price="$149"
           period="Billed monthly. Cancel anytime."
           cta="Subscribe Now →"
-          ctaLink="https://github.com/apps/stasgithub1/installations/new"
+          ctaLink="https://github.com/apps/syntarogithub1/installations/new"
           features={[
             { text: '2000 fixes per month', included: true },
             { text: 'Unlimited private repositories', included: true },

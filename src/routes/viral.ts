@@ -1,9 +1,9 @@
 /**
- * Agent-to-agent discovery endpoint — MCP manifest for STAS.
+ * Agent-to-agent discovery endpoint — MCP manifest for SYNTARO.
  *
  * Serves the MCP discovery manifest at a standardised path so that
  * other agents (Claude Desktop, Cursor, etc.) can discover
- * STAS's capabilities and connect programmatically.
+ * SYNTARO's capabilities and connect programmatically.
  *
  * Endpoints:
  *   GET /discovery/mcp.json  — MCP server manifest (JSON)
@@ -60,7 +60,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
       name: 'syntaro-agent-discovery',
       version: '1.0.0',
       description:
-        'STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
+        'SYNTARO (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
       homepage: 'https://github.com/tamnguyen08/solving_tickets_as_a_service',
       documentation: 'https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md',
     },
@@ -85,14 +85,14 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
     tools: [
       {
         name: 'syntaro_label_issue',
-        description: 'Label a GitHub issue with the STAS fix label (or custom label). Triggers the fix pipeline.',
+        description: 'Label a GitHub issue with the SYNTARO fix label (or custom label). Triggers the fix pipeline.',
         inputSchema: {
           type: 'object',
           properties: {
             owner: { type: 'string', description: 'Repository owner (user or org)' },
             repo: { type: 'string', description: 'Repository name' },
             issue_number: { type: 'integer', description: 'Issue number' },
-            label: { type: 'string', description: 'Label to apply (default: stas:fix)' },
+            label: { type: 'string', description: 'Label to apply (default: syntaro:fix)' },
           },
           required: ['owner', 'repo', 'issue_number'],
         },
@@ -100,7 +100,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
       {
         name: 'syntaro_run_fix',
         description:
-          'Trigger the STAS fix pipeline for a GitHub issue URL. Returns a run_id for polling.',
+          'Trigger the SYNTARO fix pipeline for a GitHub issue URL. Returns a run_id for polling.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -111,18 +111,18 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
       },
       {
         name: 'syntaro_check_status',
-        description: 'Check the current status of a STAS fix run by run_id.',
+        description: 'Check the current status of a SYNTARO fix run by run_id.',
         inputSchema: {
           type: 'object',
           properties: {
-            run_id: { type: 'string', description: 'Run ID from syntaro_run_fix (e.g. stas-abc123)' },
+            run_id: { type: 'string', description: 'Run ID from syntaro_run_fix (e.g. syntaro-abc123)' },
           },
           required: ['run_id'],
         },
       },
       {
         name: 'syntaro_get_pr',
-        description: 'Get the pull request URL and details for a completed STAS fix run.',
+        description: 'Get the pull request URL and details for a completed SYNTARO fix run.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -133,7 +133,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
       },
       {
         name: 'list_issues',
-        description: 'List tracked issues with their STAS fix status, with optional filters by status or repo.',
+        description: 'List tracked issues with their SYNTARO fix status, with optional filters by status or repo.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -145,7 +145,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
       },
       {
         name: 'search_codebase',
-        description: 'Search the STAS codebase for symbols, files, or patterns across tracked fix runs.',
+        description: 'Search the SYNTARO codebase for symbols, files, or patterns across tracked fix runs.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -161,7 +161,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
       {
         uri: 'syntaro://runs/{run_id}',
         name: 'Fix Run Status',
-        description: 'Real-time status and PR link for a STAS fix run. Replace {run_id} with the actual run ID.',
+        description: 'Real-time status and PR link for a SYNTARO fix run. Replace {run_id} with the actual run ID.',
         mimeType: 'application/json',
       },
       {
@@ -173,7 +173,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
       {
         uri: 'syntaro://status',
         name: 'Server Health',
-        description: 'STAS server health and capability overview.',
+        description: 'SYNTARO server health and capability overview.',
         mimeType: 'application/json',
       },
       {
@@ -215,7 +215,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
 }
 
 router.get('/discovery/mcp.json', (req: Request, res: Response) => {
-  const baseUrl = process.env.STAS_PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
+  const baseUrl = process.env.SYNTARO_PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
   const manifest = buildDiscoveryManifest(baseUrl);
 
   res.setHeader('Content-Type', 'application/json');
@@ -230,8 +230,8 @@ export function renderDiscoveryPage(baseUrl: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STAS — Agent Discovery</title>
-  <meta name="description" content="STAS MCP agent discovery endpoint — connect your agent to automated bug fixing." />
+  <title>SYNTARO — Agent Discovery</title>
+  <meta name="description" content="SYNTARO MCP agent discovery endpoint — connect your agent to automated bug fixing." />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
@@ -263,17 +263,17 @@ export function renderDiscoveryPage(baseUrl: string): string {
 </head>
 <body>
   <div class="container">
-    <h1><span>STAS</span> Agent Discovery</h1>
+    <h1><span>SYNTARO</span> Agent Discovery</h1>
     <p class="subtitle">Solving Tickets As A Service — automated bug fixing for your GitHub issues.</p>
 
     <div class="badge-row">
-      <a href="https://img.shields.io/badge/STAS-MCP-8250DF" class="badge-link"><img src="https://img.shields.io/badge/STAS-MCP-8250DF" alt="STAS MCP" /></a>
+      <a href="https://img.shields.io/badge/SYNTARO-MCP-8250DF" class="badge-link"><img src="https://img.shields.io/badge/SYNTARO-MCP-8250DF" alt="SYNTARO MCP" /></a>
       <a href="${baseUrl}/discovery/mcp.json" class="badge-link"><img src="https://img.shields.io/badge/Agent-Discovery-0969da" alt="Agent Discovery" /></a>
     </div>
 
     <div class="card">
       <h2>MCP Discovery Manifest</h2>
-      <p>The <code>/discovery/mcp.json</code> endpoint lets any MCP-compatible agent discover STAS's capabilities.</p>
+      <p>The <code>/discovery/mcp.json</code> endpoint lets any MCP-compatible agent discover SYNTARO's capabilities.</p>
       <div class="endpoint"><span class="method get">GET</span> <code>${baseUrl}/discovery/mcp.json</code></div>
       <p style="margin-top:0.75rem">Connect via <code>syntaro://discovery/mcp.json</code> from any MCP client.</p>
       <a href="${baseUrl}/discovery/mcp.json" class="btn">View Manifest</a>
@@ -340,7 +340,7 @@ export function renderDiscoveryPage(baseUrl: string): string {
 
     <hr />
     <div class="footer">
-      <p><a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">STAS</a> — Solving Tickets As A Service &mdash; MIT License</p>
+      <p><a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">SYNTARO</a> — Solving Tickets As A Service &mdash; MIT License</p>
     </div>
   </div>
 </body>
@@ -348,7 +348,7 @@ export function renderDiscoveryPage(baseUrl: string): string {
 }
 
 router.get('/discovery', (_req: Request, res: Response) => {
-  const baseUrl = process.env.STAS_PUBLIC_URL || 'http://localhost:3000';
+  const baseUrl = process.env.SYNTARO_PUBLIC_URL || 'http://localhost:3000';
   const html = renderDiscoveryPage(baseUrl);
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(html);

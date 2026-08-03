@@ -1,2 +1,2 @@
-# STAS Agent Interface
-Unified MCP SDK + Discovery + Auth for STAS.
+# SYNTARO Agent Interface
+Unified MCP SDK + Discovery + Auth for SYNTARO.

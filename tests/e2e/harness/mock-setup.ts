@@ -1,7 +1,7 @@
 /**
  * Shared module mocks for E2E tests using the test harness.
  *
- * Many STAS source modules do side effects at module load time
+ * Many SYNTARO source modules do side effects at module load time
  * (connecting to Redis, validating env vars, etc.) that can't
  * run in a test environment without real services.
  *
@@ -78,7 +78,7 @@ vi.mock('../../../src/queue/issueQueue.js', () => ({
     getJob: vi.fn().mockResolvedValue(null),
     getJobs: vi.fn().mockResolvedValue([]),
     obliterate: vi.fn().mockResolvedValue(undefined),
-    name: 'stas-issues',
+    name: 'syntaro-issues',
   })),
   createIssueWorker: vi.fn(),
   createDeadLetterQueue: vi.fn(),

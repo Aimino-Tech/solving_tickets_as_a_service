@@ -23,7 +23,7 @@
   <circle cx="140" cy="170" r="3" fill="url(#brand-grad)" opacity="0.5"/>
   <circle cx="165" cy="148" r="3" fill="url(#brand-grad)" opacity="0.5"/>
   <circle cx="165" cy="170" r="3" fill="url(#brand-grad)" opacity="0.5"/>
-  <!-- STAS wordmark -->
-  <text x="200" y="345" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="48" fill="url(#brand-grad)" letter-spacing="4">STAS</text>
+  <!-- SYNTARO wordmark -->
+  <text x="200" y="345" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="48" fill="url(#brand-grad)" letter-spacing="4">SYNTARO</text>
   <text x="200" y="370" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="400" font-size="14" fill="#9ca3af" letter-spacing="6">SOLVING TICKETS AS A SERVICE</text>
 </svg>

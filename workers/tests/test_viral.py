@@ -1,4 +1,4 @@
-"""Tests for STAS viral features — badge SVG format, MCP discovery manifest, and PR footer contract (AIM-2073).
+"""Tests for SYNTARO viral features — badge SVG format, MCP discovery manifest, and PR footer contract (AIM-2073).
 
 These tests validate the expected output formats of the badge generation
 and discovery modules without importing TypeScript sources directly.
@@ -82,7 +82,7 @@ class TestMcpDiscoveryManifestContract:
         "server": {
             "name": "syntaro-agent-discovery",
             "version": "1.0.0",
-            "description": "STAS — automated bug fixing.",
+            "description": "SYNTARO — automated bug fixing.",
             "homepage": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
         },
         "transports": [{"type": "stdio", "command": "python",
@@ -113,7 +113,7 @@ class TestMcpDiscoveryManifestContract:
         assert self.SAMPLE_MANIFEST["schemaVersion"] == "2024-11-05"
 
     def test_server_name(self):
-        assert "stas" in self.SAMPLE_MANIFEST["server"]["name"].lower()
+        assert "syntaro" in self.SAMPLE_MANIFEST["server"]["name"].lower()
 
     def test_transports_include_stdio(self):
         types = [t["type"] for t in self.SAMPLE_MANIFEST["transports"]]
@@ -161,39 +161,39 @@ class TestMcpDiscoveryManifestContract:
 
 
 class TestPrFooterContract:
-    """PR body footers must include STAS branding and MCP discovery hints."""
+    """PR body footers must include SYNTARO branding and MCP discovery hints."""
 
     FOOTER_WITH_RUN = (
         "---\n"
         "\n"
-        "**Run page**: [STAS run #123](/runs/123)\n"
+        "**Run page**: [SYNTARO run #123](/runs/123)\n"
         "**Badge**: ![](/badge/123.svg)\n"
         "\n"
-        "\U0001f6e0 **Fixed by STAS** \u2014 [View run](/runs/123)\n"
+        "\U0001f6e0 **Fixed by SYNTARO** \u2014 [View run](/runs/123)\n"
         "\n"
-        "STAS exposes an MCP server for agent-to-agent discovery. "
+        "SYNTARO exposes an MCP server for agent-to-agent discovery. "
         "Connect via `syntaro://discovery/mcp.json` to inspect runs, submit new issues, "
         "and check fix status programmatically.\n"
         "\n"
-        "_\U0001f916 Automated fix by STAS_"
+        "_\U0001f916 Automated fix by SYNTARO_"
     )
 
     FOOTER_WITHOUT_RUN = (
         "---\n"
         "\n"
-        "\U0001f6e0 **Fixed by STAS** \u2014 "
+        "\U0001f6e0 **Fixed by SYNTARO** \u2014 "
         "[solving_tickets_as_a_service]"
         "(https://github.com/tamnguyen08/solving_tickets_as_a_service)\n"
         "\n"
-        "STAS exposes an MCP server for agent-to-agent discovery. "
+        "SYNTARO exposes an MCP server for agent-to-agent discovery. "
         "Connect via `syntaro://discovery/mcp.json` to inspect runs, submit new issues, "
         "and check fix status programmatically.\n"
         "\n"
-        "_\U0001f916 Automated fix by STAS_"
+        "_\U0001f916 Automated fix by SYNTARO_"
     )
 
-    def test_footer_contains_fixed_by_stas(self):
-        assert "Fixed by STAS" in self.FOOTER_WITH_RUN
+    def test_footer_contains_fixed_by_syntaro(self):
+        assert "Fixed by SYNTARO" in self.FOOTER_WITH_RUN
 
     def test_footer_contains_mcp_discovery(self):
         assert "syntaro://discovery/mcp.json" in self.FOOTER_WITH_RUN

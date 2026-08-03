@@ -216,8 +216,8 @@ class TestTierUsageCounter:
         mock_get_redis.return_value = mc
         count = increment_tier_usage("tenant-1")
         assert count == 1
-        assert mc.hgetall("stas:tiers:tenant-1").get("usage") == "1"
-        assert "last_fix_ts" in mc.hgetall("stas:tiers:tenant-1")
+        assert mc.hgetall("syntaro:tiers:tenant-1").get("usage") == "1"
+        assert "last_fix_ts" in mc.hgetall("syntaro:tiers:tenant-1")
 
     @patch("workers.billing.tiers._get_redis")
     def test_multiple_increments_accumulate(self, mock_get_redis: MagicMock) -> None:
@@ -393,7 +393,7 @@ class TestPqlScoreComputation:
         mc = DictRedisMock()
         mock_get_redis.return_value = mc
         compute_pql_score("t-persist", usage=5, verified=2)
-        raw = mc.get("stas:pql:t-persist")
+        raw = mc.get("syntaro:pql:t-persist")
         assert raw is not None
         data = json.loads(raw)
         assert data["tenant_id"] == "t-persist"
@@ -403,7 +403,7 @@ class TestPqlScoreComputation:
     def test_get_pql_score_returns_existing(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
         mc.setex(
-            "stas:pql:t-1",
+            "syntaro:pql:t-1",
             99999,
             json.dumps(PqlScore(tenant_id="t-1", score=12.5).to_dict()),
         )
@@ -433,7 +433,7 @@ class TestInactivityCheck:
     def test_recent_fix_is_not_inactive(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
         now_ts = int(time.time())
-        mc.hset("stas:tiers:active-tenant", "last_fix_ts", str(now_ts - 3600))
+        mc.hset("syntaro:tiers:active-tenant", "last_fix_ts", str(now_ts - 3600))
         mock_get_redis.return_value = mc
         assert not is_inactive("active-tenant")
 
@@ -441,7 +441,7 @@ class TestInactivityCheck:
     def test_old_fix_is_inactive(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
         old_ts = int(time.time()) - 15 * 24 * 60 * 60
-        mc.hset("stas:tiers:inactive-tenant", "last_fix_ts", str(old_ts))
+        mc.hset("syntaro:tiers:inactive-tenant", "last_fix_ts", str(old_ts))
         mock_get_redis.return_value = mc
         assert is_inactive("inactive-tenant")
 
@@ -449,7 +449,7 @@ class TestInactivityCheck:
     def test_custom_threshold(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
         old_ts = int(time.time()) - 7 * 24 * 60 * 60
-        mc.hset("stas:tiers:custom-tenant", "last_fix_ts", str(old_ts))
+        mc.hset("syntaro:tiers:custom-tenant", "last_fix_ts", str(old_ts))
         mock_get_redis.return_value = mc
         assert is_inactive("custom-tenant", days=5)
         assert not is_inactive("custom-tenant", days=10)
@@ -464,7 +464,7 @@ class TestPqlNudge:
     @patch("workers.billing.tiers._get_redis")
     def test_no_nudge_below_threshold(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
-        mc.hset("stas:tiers:low", "usage", "3")
+        mc.hset("syntaro:tiers:low", "usage", "3")
         mock_get_redis.return_value = mc
         result = check_nudge("low")
         assert not result.should_nudge
@@ -473,7 +473,7 @@ class TestPqlNudge:
     @patch("workers.billing.tiers._get_redis")
     def test_nudge_at_eight(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
-        mc.hset("stas:tiers:nudge-tenant", "usage", "8")
+        mc.hset("syntaro:tiers:nudge-tenant", "usage", "8")
         mock_get_redis.return_value = mc
         result = check_nudge("nudge-tenant")
         assert result.should_nudge
@@ -484,7 +484,7 @@ class TestPqlNudge:
     @patch("workers.billing.tiers._get_redis")
     def test_no_nudge_at_wall(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
-        mc.hset("stas:tiers:wall-tenant", "usage", "10")
+        mc.hset("syntaro:tiers:wall-tenant", "usage", "10")
         mock_get_redis.return_value = mc
         result = check_nudge("wall-tenant")
         assert not result.should_nudge
@@ -492,7 +492,7 @@ class TestPqlNudge:
     @patch("workers.billing.tiers._get_redis")
     def test_no_nudge_for_unlimited_tier(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
-        mc.hset("stas:tiers:unlimited", "usage", "50")
+        mc.hset("syntaro:tiers:unlimited", "usage", "50")
         mock_get_redis.return_value = mc
         with patch("workers.billing.tiers.resolve_tier", return_value="team"):
             result = check_nudge("unlimited")
@@ -505,7 +505,7 @@ class TestPqlNudge:
     @patch("workers.billing.tiers._get_redis")
     def test_nudge_at_nine(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
-        mc.hset("stas:tiers:nine", "usage", "9")
+        mc.hset("syntaro:tiers:nine", "usage", "9")
         mock_get_redis.return_value = mc
         result = check_nudge("nine")
         assert result.should_nudge
@@ -528,7 +528,7 @@ class TestUpgradeWall:
     @patch("workers.billing.tiers._get_redis")
     def test_wall_at_ten(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
-        mc.hset("stas:tiers:at-wall", "usage", "10")
+        mc.hset("syntaro:tiers:at-wall", "usage", "10")
         mock_get_redis.return_value = mc
         result = check_wall("at-wall")
         assert result.blocked
@@ -538,7 +538,7 @@ class TestUpgradeWall:
     @patch("workers.billing.tiers._get_redis")
     def test_wall_above_ten(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
-        mc.hset("stas:tiers:over", "usage", "15")
+        mc.hset("syntaro:tiers:over", "usage", "15")
         mock_get_redis.return_value = mc
         result = check_wall("over")
         assert result.blocked
@@ -546,7 +546,7 @@ class TestUpgradeWall:
     @patch("workers.billing.tiers._get_redis")
     def test_no_wall_for_unlimited_tier(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
-        mc.hset("stas:tiers:team-tenant", "usage", "200")
+        mc.hset("syntaro:tiers:team-tenant", "usage", "200")
         mock_get_redis.return_value = mc
         with patch("workers.billing.tiers.resolve_tier", return_value="team"):
             result = check_wall("team-tenant")
@@ -568,8 +568,8 @@ class TestInactivityAlert:
     def test_no_alert_for_active(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
         now_ts = int(time.time())
-        mc.hset("stas:tiers:active", "last_fix_ts", str(now_ts - 3600))
-        mc.hset("stas:tiers:active", "usage", "5")
+        mc.hset("syntaro:tiers:active", "last_fix_ts", str(now_ts - 3600))
+        mc.hset("syntaro:tiers:active", "usage", "5")
         mock_get_redis.return_value = mc
         result = check_inactivity("active")
         assert not result.is_inactive
@@ -578,8 +578,8 @@ class TestInactivityAlert:
     def test_alert_for_inactive(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
         old_ts = int(time.time()) - 20 * 24 * 60 * 60
-        mc.hset("stas:tiers:old", "last_fix_ts", str(old_ts))
-        mc.hset("stas:tiers:old", "usage", "3")
+        mc.hset("syntaro:tiers:old", "last_fix_ts", str(old_ts))
+        mc.hset("syntaro:tiers:old", "usage", "3")
         mock_get_redis.return_value = mc
         result = check_inactivity("old")
         assert result.is_inactive
@@ -685,10 +685,10 @@ class TestPeriodicRecalculation:
     @patch("workers.billing.tiers._get_redis")
     def test_recalculate_with_tenants(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
-        mc.hset("stas:tiers:t-1", "usage", "5")
-        mc.hset("stas:tiers:t-1", "verified", "3")
-        mc.hset("stas:tiers:t-2", "usage", "2")
-        mc.hset("stas:tiers:t-2", "verified", "1")
+        mc.hset("syntaro:tiers:t-1", "usage", "5")
+        mc.hset("syntaro:tiers:t-1", "verified", "3")
+        mc.hset("syntaro:tiers:t-2", "usage", "2")
+        mc.hset("syntaro:tiers:t-2", "verified", "1")
         mock_get_redis.return_value = mc
 
         result = recalculate_pql_scores()
@@ -696,12 +696,12 @@ class TestPeriodicRecalculation:
         assert result["processed"] == 2
         assert result["errors"] == 0
 
-        raw1 = mc.get("stas:pql:t-1")
+        raw1 = mc.get("syntaro:pql:t-1")
         assert raw1 is not None
         data1 = json.loads(raw1)
         assert data1["score"] == 11.0
 
-        raw2 = mc.get("stas:pql:t-2")
+        raw2 = mc.get("syntaro:pql:t-2")
         assert raw2 is not None
         data2 = json.loads(raw2)
         assert data2["score"] == 4.0
@@ -772,7 +772,7 @@ class TestTierEdgeCases:
     @patch("workers.billing.tiers._get_redis")
     def test_usage_display_for_exhausted_free_tier(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
-        mc.hset("stas:tiers:exhausted", "usage", "10")
+        mc.hset("syntaro:tiers:exhausted", "usage", "10")
         mock_get_redis.return_value = mc
         result = get_tier_usage("exhausted")
         assert result["remaining"] == 0
@@ -800,33 +800,33 @@ class TestPqlMessages:
     @patch("workers.billing.tiers._get_redis")
     def test_nudge_message_contains_upgrade_link(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
-        mc.hset("stas:tiers:nudge-msg", "usage", "8")
+        mc.hset("syntaro:tiers:nudge-msg", "usage", "8")
         mock_get_redis.return_value = mc
         result = check_nudge("nudge-msg")
         assert result.message is not None
-        assert "stas.dev/pricing" in result.message
+        assert "syntaro.dev/pricing" in result.message
         assert "Solo" in result.message
         assert "$49" in result.message
 
     @patch("workers.billing.tiers._get_redis")
     def test_wall_message_contains_tier_info(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
-        mc.hset("stas:tiers:wall-msg", "usage", "10")
+        mc.hset("syntaro:tiers:wall-msg", "usage", "10")
         mock_get_redis.return_value = mc
         result = check_wall("wall-msg")
         assert result.reason is not None
         assert "limit of 10 fixes" in result.reason
         assert "Solo" in result.reason
-        assert "stas.dev/pricing" in result.reason
+        assert "syntaro.dev/pricing" in result.reason
 
     @patch("workers.billing.tiers._get_redis")
     def test_inactivity_message_contains_reengagement(self, mock_get_redis: MagicMock) -> None:
         mc = DictRedisMock()
         old_ts = int(time.time()) - 20 * 24 * 60 * 60
-        mc.hset("stas:tiers:inactive-msg", "last_fix_ts", str(old_ts))
-        mc.hset("stas:tiers:inactive-msg", "usage", "5")
+        mc.hset("syntaro:tiers:inactive-msg", "last_fix_ts", str(old_ts))
+        mc.hset("syntaro:tiers:inactive-msg", "usage", "5")
         mock_get_redis.return_value = mc
         result = check_inactivity("inactive-msg")
         assert result.alert is not None
-        assert "stas:fix" in result.alert
-        assert "stas.dev" in result.alert
+        assert "syntaro:fix" in result.alert
+        assert "syntaro.dev" in result.alert

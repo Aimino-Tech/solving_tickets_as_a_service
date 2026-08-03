@@ -122,7 +122,7 @@ export function quotaMiddleware(options?: Partial<QuotaCheckOptions>) {
           limit: features.monthlyFixQuota,
           remaining: 0,
           reset: getNextMonthStartMs(),
-          upgradeUrl: 'https://stas.ai/pricing',
+          upgradeUrl: 'https://syntaro.ai/pricing',
         });
 
         return;

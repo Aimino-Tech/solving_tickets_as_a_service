@@ -254,7 +254,7 @@ async function deliverToSlack(event: EscalationEvent): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text,
-        channel: config.alerting.slackChannel || '#stas-alerts',
+        channel: config.alerting.slackChannel || '#syntaro-alerts',
       }),
     });
 
@@ -290,13 +290,13 @@ async function deliverToPagerDuty(event: EscalationEvent): Promise<void> {
   const payload = {
     routing_key: routingKey,
     event_action: 'trigger',
-    dedup_key: `stas-escalation-${event.issueKey}`,
+    dedup_key: `syntaro-escalation-${event.issueKey}`,
     payload: {
-      summary: `[STAS] ${event.title}`,
-      source: 'stas-bot',
+      summary: `[SYNTARO] ${event.title}`,
+      source: 'syntaro-bot',
       severity: severityMap[event.level] ?? 'error',
       timestamp: event.timestamp,
-      component: 'stas-pipeline',
+      component: 'syntaro-pipeline',
       group: event.pipelineFailureType ?? 'retry-exhausted',
       class: 'pipeline_failure',
       custom_details: {
@@ -349,12 +349,12 @@ async function deliverToOpsgenie(event: EscalationEvent): Promise<void> {
   };
 
   const payload = {
-    message: `[STAS] ${event.title}`,
-    alias: `stas-escalation-${event.issueKey}`,
+    message: `[SYNTARO] ${event.title}`,
+    alias: `syntaro-escalation-${event.issueKey}`,
     description: event.message,
-    source: 'STAS Bot',
+    source: 'SYNTARO Bot',
     priority: priorityMap[event.level] ?? 'P3',
-    tags: ['stas', 'pipeline-failure', event.pipelineFailureType ?? 'retry-exhausted'],
+    tags: ['syntaro', 'pipeline-failure', event.pipelineFailureType ?? 'retry-exhausted'],
     details: {
       eventId: event.eventId,
       issueKey: event.issueKey,
@@ -405,7 +405,7 @@ async function deliverToLinear(event: EscalationEvent): Promise<void> {
 
   // Build a meaningful incident title and description
   const pipelineType = event.pipelineFailureType ?? 'unknown';
-  const incidentTitle = `[STAS] Pipeline Failure: ${pipelineType} — ${event.issueKey}`;
+  const incidentTitle = `[SYNTARO] Pipeline Failure: ${pipelineType} — ${event.issueKey}`;
   const incidentDescription = [
     `## Pipeline Incident — ${pipelineType.toUpperCase()}`,
     '',

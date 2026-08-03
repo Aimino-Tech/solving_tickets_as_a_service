@@ -1,8 +1,8 @@
-# STAS MCP Server — API Reference
+# SYNTARO MCP Server — API Reference
 
 ## Overview
 
-STAS (Solving Tickets As A Service) exposes an MCP (Model Context Protocol) server that allows AI agents and MCP-compatible clients to submit GitHub issues for automated fixing and track their progress.
+SYNTARO (Solving Tickets As A Service) exposes an MCP (Model Context Protocol) server that allows AI agents and MCP-compatible clients to submit GitHub issues for automated fixing and track their progress.
 
 ## Installation
 
@@ -47,46 +47,46 @@ npx -y @aimino/syntaro-mcp streamable-http
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STAS_MCP_PORT` | `4095` | Port for SSE/HTTP transport |
-| `STAS_API_URL` | `https://api.stas.aimino.io` | STAS API backend URL |
-| `STAS_API_KEY` | — | API key for STAS backend authentication |
+| `SYNTARO_MCP_PORT` | `4095` | Port for SSE/HTTP transport |
+| `SYNTARO_API_URL` | `https://api.syntaro.io` | SYNTARO API backend URL |
+| `SYNTARO_API_KEY` | — | API key for SYNTARO backend authentication |
 
 ## Tools
 
 ### syntaro_label_issue
 
-Label a GitHub issue with the STAS fix label.
+Label a GitHub issue with the SYNTARO fix label.
 
 **Parameters:**
 - `owner` (string, required) — GitHub repository owner
 - `repo` (string, required) — GitHub repository name
 - `issue_number` (integer, required) — Issue number to label
-- `label` (string, optional, default: `stas:fix`) — Label name
+- `label` (string, optional, default: `syntaro:fix`) — Label name
 
 ### syntaro_run_fix
 
-Trigger the STAS fix pipeline for a GitHub issue URL.
+Trigger the SYNTARO fix pipeline for a GitHub issue URL.
 
 **Parameters:**
 - `issue_url` (string, required) — Full GitHub issue URL
 
 ### syntaro_check_status
 
-Check the current status of a STAS fix run by run_id.
+Check the current status of a SYNTARO fix run by run_id.
 
 **Parameters:**
 - `run_id` (string, required) — Run identifier from syntaro_run_fix
 
 ### syntaro_get_pr
 
-Get the PR URL and details for a completed STAS fix run.
+Get the PR URL and details for a completed SYNTARO fix run.
 
 **Parameters:**
 - `run_id` (string, required) — Run identifier
 
 ### list_issues
 
-List tracked issues and their STAS fix status.
+List tracked issues and their SYNTARO fix status.
 
 **Parameters:**
 - `status` (string, optional) — Filter by status
@@ -108,7 +108,7 @@ When connecting to the SSE or Streamable HTTP transport, include the API key:
 
 ```json
 {
-  "apiKey": "your-stas-api-key"
+  "apiKey": "your-syntaro-api-key"
 }
 ```
 
@@ -119,7 +119,7 @@ When connecting to the SSE or Streamable HTTP transport, include the API key:
 ```json
 {
   "mcpServers": {
-    "stas": {
+    "syntaro": {
       "command": "npx",
       "args": ["-y", "@aimino/syntaro-mcp", "stdio"]
     }
@@ -132,7 +132,7 @@ When connecting to the SSE or Streamable HTTP transport, include the API key:
 ```json
 {
   "mcpServers": {
-    "stas": {
+    "syntaro": {
       "command": "npx",
       "args": ["-y", "@aimino/syntaro-mcp", "stdio"]
     }
@@ -145,7 +145,7 @@ When connecting to the SSE or Streamable HTTP transport, include the API key:
 ```json
 {
   "mcpServers": {
-    "stas": {
+    "syntaro": {
       "command": "npx",
       "args": ["-y", "@aimino/syntaro-mcp", "stdio"]
     }

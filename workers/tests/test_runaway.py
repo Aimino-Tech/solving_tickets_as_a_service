@@ -40,23 +40,23 @@ class TestGuard:
 
     def test_timeout_exceeded(self, g, monkeypatch):
         monkeypatch.setattr("workers.runaway.guard.DEFAULT_TIMEOUT_SECONDS", 1)
-        g._redis_set("stas:runaway:t1", str(int(time.time()) - 100))
+        g._redis_set("syntaro:runaway:t1", str(int(time.time()) - 100))
         x, r = g.check_timeout("t1", "test", (), {}); assert x is True
 
     def test_timeout_labels(self, g, monkeypatch, mocker):
         monkeypatch.setattr("workers.runaway.guard.DEFAULT_TIMEOUT_SECONDS", 1)
         ml = mocker.patch("workers.runaway.guard._label_github_issue")
-        g._redis_set("stas:runaway:t1", str(int(time.time()) - 100))
+        g._redis_set("syntaro:runaway:t1", str(int(time.time()) - 100))
         g.check_timeout("t1", "test", (), {"repo_full_name": "o/r", "issue_number": 1})
         ml.assert_called_once_with("o/r", 1)
 
     def test_deduplicate_label(self, g, monkeypatch):
         monkeypatch.setattr("workers.runaway.guard.DEFAULT_TIMEOUT_SECONDS", 1)
-        g._redis_set("stas:runaway:t1", str(int(time.time()) - 100))
+        g._redis_set("syntaro:runaway:t1", str(int(time.time()) - 100))
         g.check_timeout("t1", "test", (), {"repo_full_name": "o/r", "issue_number": 1})
-        assert g._redis_get("stas:runaway:labeled:o/r/1") == "1"
+        assert g._redis_get("syntaro:runaway:labeled:o/r/1") == "1"
         g.check_timeout("t1", "test", (), {"repo_full_name": "o/r", "issue_number": 1})
-        assert g._redis_get("stas:runaway:labeled:o/r/1") == "1"
+        assert g._redis_get("syntaro:runaway:labeled:o/r/1") == "1"
 
     def test_track_tokens(self, g):
         assert g.track_tokens("t1", 150) == 150
@@ -101,7 +101,7 @@ class TestGuard:
 
     def test_check_all_timeout_first(self, g, monkeypatch):
         monkeypatch.setattr("workers.runaway.guard.DEFAULT_TIMEOUT_SECONDS", 1)
-        g._redis_set("stas:runaway:t1", str(int(time.time()) - 100))
+        g._redis_set("syntaro:runaway:t1", str(int(time.time()) - 100))
         g.track_tokens("t1", 999999)
         x, r = g.check_all("t1", "test", (), {}); assert x is True
 
@@ -116,10 +116,10 @@ class TestGuard:
 
     def test_tier_default(self, g): assert g.get_tier(None) == "free"
     def test_tier_env(self, g, monkeypatch):
-        monkeypatch.setenv("STAS_DEFAULT_TIER", "pro"); assert g.get_tier() == "pro"
+        monkeypatch.setenv("SYNTARO_DEFAULT_TIER", "pro"); assert g.get_tier() == "pro"
 
     def test_tier_limits(self, g, monkeypatch):
-        monkeypatch.setenv("STAS_RUNAWAY_TIER_LIMITS", "free=300,50000,5.0;pro=600,100000,10.0")
+        monkeypatch.setenv("SYNTARO_RUNAWAY_TIER_LIMITS", "free=300,50000,5.0;pro=600,100000,10.0")
         import importlib, workers.runaway.guard as gg
         importlib.reload(gg)
         g2 = gg.RunawayGuard(redis_client=_mem_redis())
@@ -147,7 +147,7 @@ class TestGuard:
         mc = MagicMock()
         mocker.patch("workers.github.client.GitHubClient", return_value=mc)
         assert _label_github_issue("o/r", 42) is True
-        mc._request.assert_called_once_with("POST", "/repos/o/r/issues/42/labels", json_body={"labels": ["stas:timeout"]})
+        mc._request.assert_called_once_with("POST", "/repos/o/r/issues/42/labels", json_body={"labels": ["syntaro:timeout"]})
 
     def test_label_github_fail(self, mocker):
         from workers.runaway.guard import _label_github_issue

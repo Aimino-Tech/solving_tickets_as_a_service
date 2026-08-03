@@ -1,6 +1,6 @@
 import time, pytest
-from stas_agent_interface.auth import APIKeyStore, AuthMiddleware, AuthError, TokenManager
-from stas_agent_interface.models import AuthScope
+from syntaro_agent_interface.auth import APIKeyStore, AuthMiddleware, AuthError, TokenManager
+from syntaro_agent_interface.models import AuthScope
 
 class TestStore:
     def test_gen(self):

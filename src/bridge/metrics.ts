@@ -11,7 +11,7 @@
  *   - messages_failed_total      (counter, tags: queue, error)
  *   - consumer_lag               (gauge, tags: queue)
  *   - processing_duration_seconds (histogram, tags: queue)
- *   - stas_governance_failures_total (counter, tags: repo, error)
+ *   - syntaro_governance_failures_total (counter, tags: repo, error)
  */
 
 import { EventEmitter } from 'node:events';
@@ -356,8 +356,8 @@ export function recordPublishError(queue: string, errorType: string): void {
 
 /**
  * Record a governance proxy failure with repo context.
- * Counter: stas_governance_failures_total
+ * Counter: syntaro_governance_failures_total
  */
 export function recordGovernanceFailure(repo: string, error: string): void {
-  bridgeMetrics.incrementCounter('stas_governance_failures_total', { repo, error });
+  bridgeMetrics.incrementCounter('syntaro_governance_failures_total', { repo, error });
 }

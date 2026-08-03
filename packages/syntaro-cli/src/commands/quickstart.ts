@@ -7,18 +7,18 @@ import inquirer from 'inquirer';
 import open from 'open';
 import { GitHubClient } from '../utils/github.js';
 
-const STAS_APP_NAME = 'stas';
-const CONFIG_DIR = join(homedir(), '.config', 'stas');
+const SYNTARO_APP_NAME = 'syntaro';
+const CONFIG_DIR = join(homedir(), '.config', 'syntaro');
 const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
 const IS_CI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 
-interface StasConfig {
+interface SyntaroConfig {
   poweredBy?: string;
   githubToken?: string;
   installUrl?: string;
 }
 
-function loadConfig(): StasConfig {
+function loadConfig(): SyntaroConfig {
   try {
     if (existsSync(CONFIG_PATH)) {
       return JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
@@ -27,11 +27,11 @@ function loadConfig(): StasConfig {
   return {};
 }
 
-function saveConfig(config: StasConfig): void {
+function saveConfig(config: SyntaroConfig): void {
   if (!existsSync(CONFIG_DIR)) {
     execSync(`mkdir -p "${CONFIG_DIR}"`, { stdio: 'ignore' });
   }
-  writeFileSync(CONFIG_PATH, JSON.stringify({ ...config, poweredBy: 'STAS — AI bug fixes for your repo' }, null, 2));
+  writeFileSync(CONFIG_PATH, JSON.stringify({ ...config, poweredBy: 'SYNTARO — AI bug fixes for your repo' }, null, 2));
 }
 
 function getGitHubToken(): string {
@@ -48,7 +48,7 @@ function getGitHubToken(): string {
 
 export async function quickstart(options: { skipPrompts: boolean }): Promise<void> {
   const skip = options.skipPrompts || IS_CI;
-  console.log(chalk.bold.blue('\nSTAS Quickstart — Get your first AI-powered fix in under 60 seconds\n'));
+  console.log(chalk.bold.blue('\nSYNTARO Quickstart — Get your first AI-powered fix in under 60 seconds\n'));
 
   let token = getGitHubToken();
 
@@ -105,7 +105,7 @@ export async function quickstart(options: { skipPrompts: boolean }): Promise<voi
       {
         type: 'checkbox',
         name: 'repos',
-        message: 'Select repositories to install STAS on:',
+        message: 'Select repositories to install SYNTARO on:',
         choices: repoChoices.slice(0, 20),
         validate: (input: string[]) => input.length > 0 || 'Select at least one repo',
       },
@@ -113,11 +113,11 @@ export async function quickstart(options: { skipPrompts: boolean }): Promise<voi
     selectedRepos = picked;
   }
 
-  const installUrl = `https://github.com/apps/${STAS_APP_NAME}/installations/new`;
+  const installUrl = `https://github.com/apps/${SYNTARO_APP_NAME}/installations/new`;
 
-  console.log(chalk.yellow('STAS app installation required.\n'));
+  console.log(chalk.yellow('SYNTARO app installation required.\n'));
   console.log(chalk.dim(`1. Open this URL in your browser:\n   ${chalk.underline(installUrl)}\n`));
-  console.log(chalk.dim('2. Select the repositories you want STAS to access'));
+  console.log(chalk.dim('2. Select the repositories you want SYNTARO to access'));
   console.log(chalk.dim("3. Click 'Install'"));
   console.log(chalk.dim('4. Return here when done\n'));
 
@@ -158,16 +158,16 @@ export async function quickstart(options: { skipPrompts: boolean }): Promise<voi
   console.log(chalk.dim(`\nCreating a test issue on ${targetRepo}...`));
 
   const issueBody = [
-    '## Demo Issue — STAS Quickstart',
+    '## Demo Issue — SYNTARO Quickstart',
     '',
-    "This issue was created automatically by `npx stas quickstart` to demonstrate STAS's capabilities.",
+    "This issue was created automatically by `npx syntaro quickstart` to demonstrate SYNTARO's capabilities.",
     '',
     '### Expected behavior',
-    'STAS should investigate this issue and open a pull request with a fix.',
+    'SYNTARO should investigate this issue and open a pull request with a fix.',
     '',
     '### Steps to reproduce',
     '1. This is a demo issue',
-    '2. STAS will analyze it',
+    '2. SYNTARO will analyze it',
     '3. A PR will be created',
     '',
     '---',
@@ -176,7 +176,7 @@ export async function quickstart(options: { skipPrompts: boolean }): Promise<voi
 
   let issue: { number: number; html_url: string };
   try {
-    issue = await client.createIssue(targetRepo, 'STAS Quickstart Demo — Fix Me', issueBody, ['stas:fix']);
+    issue = await client.createIssue(targetRepo, 'SYNTARO Quickstart Demo — Fix Me', issueBody, ['syntaro:fix']);
     console.log(chalk.green(`Issue created: ${issue.html_url}\n`));
   } catch (err) {
     console.log(chalk.red(`Failed to create issue: ${err.message}`));
@@ -184,7 +184,7 @@ export async function quickstart(options: { skipPrompts: boolean }): Promise<voi
     process.exit(1);
   }
 
-  console.log(chalk.yellow('Waiting for STAS to process the issue and create a PR...'));
+  console.log(chalk.yellow('Waiting for SYNTARO to process the issue and create a PR...'));
   console.log(chalk.dim('This typically takes 30-120 seconds.\n'));
 
   let prUrl: string | null = null;
@@ -226,16 +226,16 @@ export async function quickstart(options: { skipPrompts: boolean }): Promise<voi
 
   if (prUrl) {
     console.log(chalk.bold.green('\n✓ Quickstart complete!\n'));
-    console.log(chalk.bold('Your STAS fix PR:'), chalk.underline(prUrl));
+    console.log(chalk.bold('Your SYNTARO fix PR:'), chalk.underline(prUrl));
     saveConfig({ ...loadConfig(), installUrl });
     console.log(chalk.dim(`\nConfig saved to ${CONFIG_PATH}`));
-    console.log(chalk.dim('\nPro tip: Label any issue with `stas:fix` to trigger a fix automatically.\n'));
+    console.log(chalk.dim('\nPro tip: Label any issue with `syntaro:fix` to trigger a fix automatically.\n'));
   } else {
-    console.log(chalk.yellow("\nSTAS didn't create a PR within the timeout period.\n"));
+    console.log(chalk.yellow("\nSYNTARO didn't create a PR within the timeout period.\n"));
     console.log(chalk.dim('Possible reasons:'));
-    console.log(chalk.dim('  - STAS app may not be installed on the selected repository'));
-    console.log(chalk.dim('  - The STAS backend may be processing a queue'));
+    console.log(chalk.dim('  - SYNTARO app may not be installed on the selected repository'));
+    console.log(chalk.dim('  - The SYNTARO backend may be processing a queue'));
     console.log(chalk.dim(`  - Check the issue at ${issue.html_url} for updates`));
-    console.log(chalk.dim('\nRun `npx stas quickstart` again after installing the app.\n'));
+    console.log(chalk.dim('\nRun `npx syntaro quickstart` again after installing the app.\n'));
   }
 }

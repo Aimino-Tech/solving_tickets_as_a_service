@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * stas-install-mcp.js — One-command MCP install via `npx stas install-mcp`.
+ * syntaro-install-mcp.js — One-command MCP install via `npx syntaro install-mcp`.
  *
  * Usage:
- *   npx stas install-mcp              # Install for all agent platforms
- *   npx stas install-mcp --opencode   # OpenCode only
- *   npx stas install-mcp --claude     # Claude Desktop only
- *   npx stas install-mcp --cursor     # Cursor only
- *   npx stas install-mcp --codex      # Codex CLI only
- *   npx stas install-mcp --uninstall  # Remove from all agents
- *   npx stas install-mcp --claude --url https://api.stas.aimino.io   # Remote SaaS MCP server
+ *   npx syntaro install-mcp              # Install for all agent platforms
+ *   npx syntaro install-mcp --opencode   # OpenCode only
+ *   npx syntaro install-mcp --claude     # Claude Desktop only
+ *   npx syntaro install-mcp --cursor     # Cursor only
+ *   npx syntaro install-mcp --codex      # Codex CLI only
+ *   npx syntaro install-mcp --uninstall  # Remove from all agents
+ *   npx syntaro install-mcp --claude --url https://api.syntaro.io   # Remote SaaS MCP server
  *
  * This script resolves the project root and delegates to syntaro_mcp/install.sh.
  */
@@ -27,7 +27,7 @@ const installScript = resolve(PROJECT_ROOT, "syntaro_mcp", "install.sh");
 
 if (!existsSync(installScript)) {
   console.error(`Error: install.sh not found at ${installScript}`);
-  console.error("Make sure you're running this from the STAS project root.");
+  console.error("Make sure you're running this from the SYNTARO project root.");
   process.exit(1);
 }
 

@@ -9,7 +9,7 @@
  *   - GoldfishSUT: always asks for re-explanation - the no-memory baseline
  *     that MUST fail the harness.
  *
- * The real SUT (an opencode-serve conversation behind the STAS gateway) is
+ * The real SUT (an opencode-serve conversation behind the SYNTARO gateway) is
  * wired later by injecting a client that implements ChatSUT; the harness
  * itself never depends on @opencode-ai/sdk.
  */

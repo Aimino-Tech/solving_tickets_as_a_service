@@ -14,7 +14,7 @@ def health(request):
     """Health check endpoint — mirrors Express /health."""
     return JsonResponse({
         "status": "ok",
-        "service": "stas-django",
+        "service": "syntaro-django",
         "version": "0.1.0",
     })
 

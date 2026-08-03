@@ -1,9 +1,9 @@
 /**
- * STAS Plugin — OpenCode plugin for Solving Tickets As A Service.
+ * SYNTARO Plugin — OpenCode plugin for Solving Tickets As A Service.
  *
  * Provides tools for local development, webhook testing, and status checks
- * of the STAS GitHub bot. Installed via opencode.json:
- *   { "plugin": ["@tarquinen/stas-plugin"] }
+ * of the SYNTARO GitHub bot. Installed via opencode.json:
+ *   { "plugin": ["@tarquinen/syntaro-plugin"] }
  *
  * Each tool delegates to the corresponding shell script in plugin/tools/,
  * so the scripts remain usable as standalone CLI tools outside of OpenCode.
@@ -68,8 +68,8 @@ function envOverride(provided: Record<string, string | undefined>, prefix = ""):
 // Tool definitions
 // ---------------------------------------------------------------------------
 
-const stas_webhook_test = tool({
-  description: "Send a test webhook event to a running STAS bot to simulate a GitHub issue label event",
+const syntaro_webhook_test = tool({
+  description: "Send a test webhook event to a running SYNTARO bot to simulate a GitHub issue label event",
   args: {
     event: tool.schema
       .string()
@@ -79,20 +79,20 @@ const stas_webhook_test = tool({
       .string()
       .optional()
       .describe("Path to a JSON payload file (default: auto-generated test payload)"),
-    stasUrl: tool.schema
+    syntaroUrl: tool.schema
       .string()
       .optional()
-      .describe("STAS bot URL override (default: http://localhost:3000)"),
+      .describe("SYNTARO bot URL override (default: http://localhost:3000)"),
   },
   async execute(args, ctx) {
     const root = pluginRoot(ctx.directory);
-    const script = resolve(toolsDir(root), "stas-webhook-test.sh");
+    const script = resolve(toolsDir(root), "syntaro-webhook-test.sh");
 
     if (!existsSync(script)) {
       return { output: `❌ Tool script not found: ${script}` };
     }
 
-    const env = envOverride({ STAS_URL: args.stasUrl });
+    const env = envOverride({ SYNTARO_URL: args.syntaroUrl });
     const cmdArgs = [args.event];
     if (args.payloadFile) cmdArgs.push(args.payloadFile);
 
@@ -105,17 +105,17 @@ const stas_webhook_test = tool({
         encoding: "utf-8",
         stdio: ["inherit", "pipe", "pipe"],
       }).trim();
-      return { output, metadata: { tool: "stas_webhook_test", event: args.event } };
+      return { output, metadata: { tool: "syntaro_webhook_test", event: args.event } };
     } catch (err: unknown) {
       const error = err as { stderr?: string; message?: string; status?: number };
       const stderr = error.stderr?.toString().trim() ?? error.message ?? "Unknown error";
-      return { output: `❌ Webhook test failed:\n${stderr}`, metadata: { tool: "stas_webhook_test", error: true } };
+      return { output: `❌ Webhook test failed:\n${stderr}`, metadata: { tool: "syntaro_webhook_test", error: true } };
     }
   },
 });
 
-const stas_config_validate = tool({
-  description: "Validate or initialize the STAS .env configuration file",
+const syntaro_config_validate = tool({
+  description: "Validate or initialize the SYNTARO .env configuration file",
   args: {
     mode: tool.schema
       .string()
@@ -128,7 +128,7 @@ const stas_config_validate = tool({
   },
   async execute(args, ctx) {
     const root = pluginRoot(ctx.directory);
-    const script = resolve(toolsDir(root), "stas-config.sh");
+    const script = resolve(toolsDir(root), "syntaro-config.sh");
 
     if (!existsSync(script)) {
       return { output: `❌ Tool script not found: ${script}` };
@@ -145,22 +145,22 @@ const stas_config_validate = tool({
         encoding: "utf-8",
         stdio: ["inherit", "pipe", "pipe"],
       }).trim();
-      return { output, metadata: { tool: "stas_config_validate", mode: args.mode } };
+      return { output, metadata: { tool: "syntaro_config_validate", mode: args.mode } };
     } catch (err: unknown) {
       const error = err as { stderr?: string; message?: string; status?: number };
       const stderr = error.stderr?.toString().trim() ?? error.message ?? "Unknown error";
-      return { output: `❌ Config validation failed:\n${stderr}`, metadata: { tool: "stas_config_validate", error: true } };
+      return { output: `❌ Config validation failed:\n${stderr}`, metadata: { tool: "syntaro_config_validate", error: true } };
     }
   },
 });
 
-const stas_status = tool({
-  description: "Check if STAS bot and OpenCode serve are running and healthy",
+const syntaro_status = tool({
+  description: "Check if SYNTARO bot and OpenCode serve are running and healthy",
   args: {
-    stasUrl: tool.schema
+    syntaroUrl: tool.schema
       .string()
       .optional()
-      .describe("STAS bot URL override (default: http://localhost:3000)"),
+      .describe("SYNTARO bot URL override (default: http://localhost:3000)"),
     opencodeUrl: tool.schema
       .string()
       .optional()
@@ -168,13 +168,13 @@ const stas_status = tool({
   },
   async execute(args, ctx) {
     const root = pluginRoot(ctx.directory);
-    const script = resolve(toolsDir(root), "stas-status.sh");
+    const script = resolve(toolsDir(root), "syntaro-status.sh");
 
     if (!existsSync(script)) {
       return { output: `❌ Tool script not found: ${script}` };
     }
 
-    const env = envOverride({ STAS_URL: args.stasUrl, OPENCODE_URL: args.opencodeUrl });
+    const env = envOverride({ SYNTARO_URL: args.syntaroUrl, OPENCODE_URL: args.opencodeUrl });
     const fullCmd = env
       ? `${env} bash "${script}"`
       : `bash "${script}"`;
@@ -185,17 +185,17 @@ const stas_status = tool({
         encoding: "utf-8",
         stdio: ["inherit", "pipe", "pipe"],
       }).trim();
-      return { output, metadata: { tool: "stas_status" } };
+      return { output, metadata: { tool: "syntaro_status" } };
     } catch (err: unknown) {
       const error = err as { stderr?: string; message?: string; status?: number };
       const stderr = error.stderr?.toString().trim() ?? error.message ?? "Unknown error";
-      return { output: `❌ Status check failed:\n${stderr}`, metadata: { tool: "stas_status", error: true } };
+      return { output: `❌ Status check failed:\n${stderr}`, metadata: { tool: "syntaro_status", error: true } };
     }
   },
 });
 
-const stas_dev_start = tool({
-  description: "Start the local STAS development environment (OpenCode serve + bot)",
+const syntaro_dev_start = tool({
+  description: "Start the local SYNTARO development environment (OpenCode serve + bot)",
   args: {
     mode: tool.schema
       .string()
@@ -205,14 +205,14 @@ const stas_dev_start = tool({
       .string()
       .optional()
       .describe("OpenCode serve port override (default: 4096)"),
-    stasPort: tool.schema
+    syntaroPort: tool.schema
       .string()
       .optional()
-      .describe("STAS bot port override (default: 3000)"),
+      .describe("SYNTARO bot port override (default: 3000)"),
   },
   async execute(args, ctx) {
     const root = pluginRoot(ctx.directory);
-    const script = resolve(toolsDir(root), "stas-dev.sh");
+    const script = resolve(toolsDir(root), "syntaro-dev.sh");
 
     if (!existsSync(script)) {
       return { output: `❌ Tool script not found: ${script}` };
@@ -224,7 +224,7 @@ const stas_dev_start = tool({
         ? "--opencode-only"
         : "";
 
-    const env = envOverride({ OPENCODE_PORT: args.opencodePort, STAS_PORT: args.stasPort });
+    const env = envOverride({ OPENCODE_PORT: args.opencodePort, SYNTARO_PORT: args.syntaroPort });
     const fullCmd = env
       ? `${env} bash "${script}" ${flag}`
       : `bash "${script}" ${flag}`;
@@ -236,11 +236,11 @@ const stas_dev_start = tool({
         stdio: ["inherit", "pipe", "pipe"],
         timeout: 10_000,
       }).trim();
-      return { output, metadata: { tool: "stas_dev_start", mode: args.mode } };
+      return { output, metadata: { tool: "syntaro_dev_start", mode: args.mode } };
     } catch (err: unknown) {
       const error = err as { stderr?: string; message?: string; status?: number };
       const stderr = error.stderr?.toString().trim() ?? error.message ?? "Unknown error";
-      return { output: `❌ Dev start failed:\n${stderr}`, metadata: { tool: "stas_dev_start", error: true } };
+      return { output: `❌ Dev start failed:\n${stderr}`, metadata: { tool: "syntaro_dev_start", error: true } };
     }
   },
 });
@@ -249,13 +249,13 @@ const stas_dev_start = tool({
 // Plugin registration
 // ---------------------------------------------------------------------------
 
-export default async function stasPlugin(): Promise<Hooks> {
+export default async function syntaroPlugin(): Promise<Hooks> {
   return {
     tool: {
-      stas_webhook_test,
-      stas_config_validate,
-      stas_status,
-      stas_dev_start,
+      syntaro_webhook_test,
+      syntaro_config_validate,
+      syntaro_status,
+      syntaro_dev_start,
     },
   };
 }

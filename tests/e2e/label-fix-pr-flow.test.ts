@@ -1,11 +1,11 @@
 /**
  * AIM-4213: Label → Fix → PR Flow E2E Test
  *
- * Validates the complete "label an issue with stas:fix → agent runs → PR created"
+ * Validates the complete "label an issue with syntaro:fix → agent runs → PR created"
  * pipeline, including the no-fix fallback path.
  *
  * Test Scenarios:
- *   1. Happy path: issue labeled stas:fix → webhook → enqueue → PR created
+ *   1. Happy path: issue labeled syntaro:fix → webhook → enqueue → PR created
  *   2. Assert PR is created with correct params (title, head, base, body)
  *   3. Assert issue comment is posted with PR URL
  *   4. No-fix path: agent returns fixReady: false → noFixComment posted
@@ -75,7 +75,7 @@ const { mockConfig } = vi.hoisted(() => ({
     },
     queue: {
       redisUrl: 'redis://localhost:6379',
-      rabbitmqUrl: 'amqp://guest:guest@localhost:5672/stas',
+      rabbitmqUrl: 'amqp://guest:guest@localhost:5672/syntaro',
       workerConcurrency: 2,
       dedupTtl: 120,
       keepCompleted: 200,
@@ -113,7 +113,7 @@ const { mockConfig } = vi.hoisted(() => ({
       webhookSecret: 'mock-bitbucket-secret',
     },
     openai: { apiKey: 'mock-openai-key', cheapModel: 'gpt-4o-mini' },
-    e2b: { apiKey: undefined as string | undefined, templateId: 'stas-default', sandboxTimeoutMs: 300000 },
+    e2b: { apiKey: undefined as string | undefined, templateId: 'syntaro-default', sandboxTimeoutMs: 300000 },
     slack: {
       webhookUrl: undefined as string | undefined,
       channel: undefined as string | undefined,
@@ -130,7 +130,7 @@ const { mockConfig } = vi.hoisted(() => ({
       dlqRetentionDays: 7,
     },
     alerting: {
-      slackChannel: '#stas-alerts',
+      slackChannel: '#syntaro-alerts',
       warnQueueDepth: 50,
       critQueueDepth: 200,
       warnErrorRatePercent: 10,
@@ -138,9 +138,9 @@ const { mockConfig } = vi.hoisted(() => ({
       n8nWebhookUrl: '',
     },
     ci: { monitorEnabled: false, repos: [] as string[], failureThreshold: 3, pollIntervalMs: 60000 },
-    stas: {
-      label: 'stas:fix',
-      botName: 'STAS',
+    syntaro: {
+      label: 'syntaro:fix',
+      botName: 'SYNTARO',
       mode: 'oss' as const,
       aiMode: 'ai' as const,
       aiDisabled: false,
@@ -175,7 +175,7 @@ const { mockConfig } = vi.hoisted(() => ({
       teamPriceId: undefined as string | undefined,
     },
     database: {
-      url: 'postgres://localhost:5432/stas',
+      url: 'postgres://localhost:5432/syntaro',
       poolMin: 2,
       poolMax: 10,
       ssl: false,
@@ -225,7 +225,7 @@ const { mockConfig } = vi.hoisted(() => ({
       sandboxMultiplierMax: 2.0,
     },
     usageCredits: { fixRun: 50, triage: 10, sandbox: 5 },
-    storage: { type: 'sqlite' as const, sqlitePath: '/tmp/stas.db' },
+    storage: { type: 'sqlite' as const, sqlitePath: '/tmp/syntaro.db' },
     auth: { jwtSecret: 'test-jwt-secret', jwtExpiresIn: '24h', jwtRefreshExpiresIn: '30d' },
     osy: { dispatchUrl: '', apiKey: '', tenant: 'default' },
     litellm: { apiKey: '', baseUrl: 'http://localhost:4002', model: 'gpt-4o' },
@@ -410,7 +410,7 @@ vi.mock('../../src/ratelimit/tiers.js', () => ({
 // ---------------------------------------------------------------------------
 
 import { createApp } from '../../src/server.js';
-import { githubIssuesLabeledStasFix } from './fixtures/webhooks/github.js';
+import { githubIssuesLabeledSyntaroFix } from './fixtures/webhooks/github.js';
 import { noFixComment } from '../../src/platforms/messages.js';
 import type { FixUnabledReason } from '../../src/types/agent-types.js';
 
@@ -470,7 +470,7 @@ describe('Label → Fix → PR Flow', () => {
     process.env.GITHUB_APP_ID = '123';
     process.env.GITHUB_WEBHOOK_SECRET = 'test-webhook-secret';
     process.env.GITHUB_APP_PRIVATE_KEY = 'mock-private-key';
-    process.env.STAS_AI_DISABLED = 'false';
+    process.env.SYNTARO_AI_DISABLED = 'false';
     process.env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY = 'true';
     process.env.LOG_LEVEL = 'silent';
     process.env.NODE_ENV = 'test';
@@ -486,16 +486,16 @@ describe('Label → Fix → PR Flow', () => {
     if (server) {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
-    delete process.env.STAS_AI_DISABLED;
+    delete process.env.SYNTARO_AI_DISABLED;
   });
 
   // =========================================================================
   // Scenario 1: Happy path — label triggers webhook, enqueues, PR created
   // =========================================================================
 
-  describe('Happy path: issues.labeled with stas:fix → enqueue → PR created', () => {
+  describe('Happy path: issues.labeled with syntaro:fix → enqueue → PR created', () => {
     it('Step 1: Receives issues.labeled webhook and returns 202 Accepted', async () => {
-      const payload = githubIssuesLabeledStasFix();
+      const payload = githubIssuesLabeledSyntaroFix();
       const res = await sendGithubWebhook(serverUrl, 'issues.labeled', payload);
 
       expect(res.status).toBe(202);
@@ -507,7 +507,7 @@ describe('Label → Fix → PR Flow', () => {
       mockOctokitInstance.issues.createComment.mockClear();
       mockOctokitInstance.pulls.create.mockClear();
 
-      const payload = githubIssuesLabeledStasFix();
+      const payload = githubIssuesLabeledSyntaroFix();
       const res = await sendGithubWebhook(serverUrl, 'issues.labeled', payload);
 
       expect(res.status).toBe(202);
@@ -549,7 +549,7 @@ describe('Label → Fix → PR Flow', () => {
         category: 'cannot_reproduce',
         detail: 'The issue could not be reproduced on the latest commit on branch main.',
         userSuggestion: 'Please add more detailed reproduction steps, including environment, input data, and expected vs actual behavior.',
-        docsLink: 'https://docs.stas.aimino.ai/troubleshooting/cannot-reproduce',
+        docsLink: 'https://docs.syntaro.io/troubleshooting/cannot-reproduce',
       };
 
       const result = {
@@ -566,7 +566,7 @@ describe('Label → Fix → PR Flow', () => {
       expect(comment).toContain('The issue could not be reproduced');
       expect(comment).toContain('Suggested action');
       expect(comment).toContain('Please add more detailed reproduction steps');
-      expect(comment).toContain('docs.stas.aimino.ai');
+      expect(comment).toContain('docs.syntaro.io');
     });
 
     it('Renders a no-fix comment for security concern category', () => {
@@ -596,8 +596,8 @@ describe('Label → Fix → PR Flow', () => {
       const reason: FixUnabledReason = {
         category: 'timeout',
         detail: 'The agent exceeded the 10-minute timeout while attempting to fix complex dependency conflicts.',
-        userSuggestion: 'Split the issue into smaller, focused fixes or increase the timeout in the STAS configuration.',
-        docsLink: 'https://docs.stas.aimino.ai/configuration/timeout',
+        userSuggestion: 'Split the issue into smaller, focused fixes or increase the timeout in the SYNTARO configuration.',
+        docsLink: 'https://docs.syntaro.io/configuration/timeout',
       };
 
       const result = {

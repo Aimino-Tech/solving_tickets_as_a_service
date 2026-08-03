@@ -55,7 +55,7 @@ export function getSelfHostedEntitlements(): {
   plan: 'selfHosted';
   features: string[];
 } {
-  const licenseKey = process.env.STAS_LICENSE_KEY;
+  const licenseKey = process.env.SYNTARO_LICENSE_KEY;
   if (licenseKey) {
     const license = verifyLicenseKey(licenseKey);
     if (license) {

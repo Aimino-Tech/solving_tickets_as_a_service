@@ -41,7 +41,7 @@ _TIER_REFILL_RATE: dict[str, float] = {
     "enterprise": float(os.getenv("RATE_LIMITER_REFILL_ENTERPRISE", "5.0")),
 }
 
-_REDIS_PREFIX = "stas:rate_limiter:"
+_REDIS_PREFIX = "syntaro:rate_limiter:"
 _REDIS_CLIENT: Optional[Any] = None
 
 
@@ -109,7 +109,7 @@ class TenantRateLimiter:
     """Redis-backed token bucket rate limiter per tenant.
 
     Each tenant has a token bucket identified by
-    ``stas:rate_limiter:<tenant_id>`` with keys for current token count
+    ``syntaro:rate_limiter:<tenant_id>`` with keys for current token count
     and last refill timestamp.
 
     **Configuration** (environment variables):

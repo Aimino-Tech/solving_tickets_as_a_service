@@ -1,6 +1,6 @@
-# STAS Security Model
+# SYNTARO Security Model
 
-> **How STAS keeps your code, credentials, and infrastructure safe.**
+> **How SYNTARO keeps your code, credentials, and infrastructure safe.**
 
 ---
 
@@ -121,8 +121,8 @@ flowchart TB
         SB1 --> CMD[Command Executor]
     end
 
-    subgraph STAS Host
-        BOT[STAS Bot]
+    subgraph SYNTARO Host
+        BOT[SYNTARO Bot]
         BOT --> API[E2B API Key]
         API --> SB1
     end
@@ -464,14 +464,14 @@ flowchart TB
 
 ## 11. Vulnerability Response Process
 
-> **How STAS handles reported vulnerabilities and dependency flaws.**
+> **How SYNTARO handles reported vulnerabilities and dependency flaws.**
 >
 > For operational incident response (credential rotation, unauthorized access response, vulnerability patching, SSL renewal), see the [Security Incidents section of the Production Runbook](../ops/runbook.md#7-security-incidents).
 
 ### 11.1 Scope
 
 This process covers:
-- **Code vulnerabilities** — flaws in STAS source code that introduce security risks
+- **Code vulnerabilities** — flaws in SYNTARO source code that introduce security risks
 - **Dependency vulnerabilities** — CVEs in npm, pip, or other dependencies
 - **Infrastructure vulnerabilities** — Docker image, CI/CD pipeline, or deployment config issues
 - **Supply chain attacks** — Compromised upstream packages, typo-squatting, dependency confusion
@@ -507,7 +507,7 @@ Please include:
 
 #### Automated Detection
 
-STAS employs multiple layers of automated dependency scanning:
+SYNTARO employs multiple layers of automated dependency scanning:
 
 | Layer | Tool | Frequency | Scope |
 |---|---|---|---|
@@ -570,7 +570,7 @@ npm ci
 
 ### 11.5 Supply Chain Attack Mitigations
 
-STAS implements the following defenses against supply chain attacks:
+SYNTARO implements the following defenses against supply chain attacks:
 
 | Threat | Mitigation |
 |---|---|
@@ -709,7 +709,7 @@ The handler:
   "blockedUri": "https://evil.com/malicious.js",
   "violatedDirective": "script-src",
   "effectiveDirective": "script-src",
-  "sourceFile": "https://stas.example.com/dashboard/"
+  "sourceFile": "https://syntaro.example.com/dashboard/"
 }
 ```
 
@@ -863,14 +863,14 @@ app.post('/api/v1/csp-violation-report', handleCspViolationReport);
 
 ## 13. SOC 2 Readiness
 
-STAS has completed a **SOC 2 Type I readiness assessment** (not certified — just documented readiness). The assessment covers Security, Availability, and Confidentiality trust services criteria.
+SYNTARO has completed a **SOC 2 Type I readiness assessment** (not certified — just documented readiness). The assessment covers Security, Availability, and Confidentiality trust services criteria.
 
 ### SOC 2 Documents
 
 | Document | Description |
 |---|---|
 | [Readiness Assessment](docs/soc2/readiness-assessment.md) | Overall SOC 2 readiness evaluation with gap analysis and remediation roadmap |
-| [Control Mapping](docs/soc2/control-mapping.md) | Detailed mapping of SOC 2 controls to STAS implementations |
+| [Control Mapping](docs/soc2/control-mapping.md) | Detailed mapping of SOC 2 controls to SYNTARO implementations |
 | [Encryption Policy](docs/soc2/encryption-policy.md) | Encryption standards and key management practices |
 | [Access Control Policy](docs/soc2/access-control-policy.md) | Authentication, authorization, and access review processes |
 | [Incident Response Plan](docs/soc2/incident-response-plan.md) | Severity-based incident response procedures |
@@ -879,7 +879,7 @@ STAS has completed a **SOC 2 Type I readiness assessment** (not certified — ju
 
 ## 14. "Won't Train" Guarantee
 
-**STAS does not train AI models on customer code, issue content, or repository data.** All data processed during a fix run is ephemeral: it exists only within the sandbox for the duration of the fix (~5-30 minutes) and is destroyed when the sandbox is cleaned up.
+**SYNTARO does not train AI models on customer code, issue content, or repository data.** All data processed during a fix run is ephemeral: it exists only within the sandbox for the duration of the fix (~5-30 minutes) and is destroyed when the sandbox is cleaned up.
 
 Full policy: [docs/policies/wont-train.md](docs/policies/wont-train.md)
 

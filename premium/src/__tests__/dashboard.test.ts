@@ -340,14 +340,14 @@ describe('getSettings', () => {
   });
 
   it('returns settings from env vars', () => {
-    process.env.STAS_LABEL = 'stas:fix';
+    process.env.SYNTARO_LABEL = 'syntaro:fix';
     process.env.OPENCODE_MODEL = 'aimino/agi-v1';
-    process.env.STAS_MAX_CONCURRENT = '10';
+    process.env.SYNTARO_MAX_CONCURRENT = '10';
     process.env.SANDBOX_POOL_SIZE = '20';
-    process.env.STAS_AUDIT_LOG = 'true';
+    process.env.SYNTARO_AUDIT_LOG = 'true';
 
     const result = getSettings();
-    expect(result.label).toBe('stas:fix');
+    expect(result.label).toBe('syntaro:fix');
     expect(result.model).toBe('aimino/agi-v1');
     expect(result.maxConcurrent).toBe(10);
     expect(result.sandboxPoolSize).toBe(20);
@@ -358,7 +358,7 @@ describe('getSettings', () => {
     process.env = {};
 
     const result = getSettings();
-    expect(result.label).toBe('stas:fix');
+    expect(result.label).toBe('syntaro:fix');
     expect(result.model).toBe('aimino/agi-v1');
     expect(result.maxConcurrent).toBe(3);
     expect(result.sandboxPoolSize).toBe(10);

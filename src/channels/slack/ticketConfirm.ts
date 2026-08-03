@@ -1,5 +1,5 @@
 /**
- * Linear ticket confirmation for the Slack @stas mention handler.
+ * Linear ticket confirmation for the Slack @syntaro mention handler.
  *
  * AIM-4460: before dispatching work for "fix AIM-1234", confirm the ticket
  * actually exists in Linear. A cheap `viewer` health query runs first so a
@@ -41,7 +41,7 @@ export interface LinearTicketConfirmerOptions {
 
 /**
  * Resolves the Linear API key from the environment. The OpenSymphony gateway
- * convention is SYMPHONY_LINEAR_API_KEY; the STAS app also honours the legacy
+ * convention is SYMPHONY_LINEAR_API_KEY; the SYNTARO app also honours the legacy
  * LINEAR_API_KEY name. Reads `env` directly so tests never touch config.ts.
  */
 export function resolveLinearApiKey(env: NodeJS.ProcessEnv = process.env): string | undefined {

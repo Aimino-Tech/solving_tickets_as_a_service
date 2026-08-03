@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // =============================================================================
-// STAS Benchmark Badge Generator
+// SYNTARO Benchmark Badge Generator
 //
 // Reads the aggregated full-report.json and generates an SVG badge showing
 // the current eval pass rate.  The badge uses the "flat" style consistent

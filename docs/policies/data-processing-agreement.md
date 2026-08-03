@@ -3,11 +3,11 @@
 > Template version: 1.0 | Last updated: 2026-06-25
 
 ## 1. Parties
-- Data Controller: Customer/organization using STAS
-- Data Processor: Aimino, provider of STAS
+- Data Controller: Customer/organization using SYNTARO
+- Data Processor: Aimino, provider of SYNTARO
 
 ## 2. Scope
-This DPA governs processing of personal data by the Processor for the Controller in connection with STAS.
+This DPA governs processing of personal data by the Processor for the Controller in connection with SYNTARO.
 
 ## 3. Data Categories
 | Category | Description | Purpose |
@@ -69,4 +69,4 @@ Full details: docs/SECURITY.md, docs/soc2/
 Jurisdiction specified in Controller's subscription agreement.
 
 ## 11. Acceptance
-By using STAS, the Controller accepts this DPA. Signed copies available on request to security@aimino.com.
+By using SYNTARO, the Controller accepts this DPA. Signed copies available on request to security@aimino.com.

@@ -1,7 +1,13 @@
 {
-  "name": "stas",
+  "name": "syntaro",
   "version": 2,
-  "builds": [{ "src": "src/index.ts", "use": "@vercel/node" }],
+  "builds": [
+    {
+      "src": "src/index.ts",
+      "use": "@vercel/node",
+      "config": { "includeFiles": ["dashboard/dist/index.html", "dashboard/dist/assets/**"] }
+    }
+  ],
   "routes": [{ "src": "/(.*)", "dest": "src/index.ts" }],
   "env": {
     "NODE_ENV": "production"

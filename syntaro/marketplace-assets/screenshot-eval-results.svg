@@ -2,7 +2,7 @@
   <rect width="800" height="600" fill="#1e1e2e"/>
   <!-- Dashboard panel -->
   <rect x="40" y="30" width="720" height="540" rx="12" fill="#2d2d44" stroke="#3d3d54" stroke-width="1"/>
-  <text x="400" y="65" text-anchor="middle" font-family="system-ui" font-size="20" font-weight="bold" fill="#ddd">STAS Benchmark Eval Results</text>
+  <text x="400" y="65" text-anchor="middle" font-family="system-ui" font-size="20" font-weight="bold" fill="#ddd">SYNTARO Benchmark Eval Results</text>
   <!-- Overall pass rate card -->
   <rect x="280" y="90" width="240" height="100" rx="10" fill="#252536" stroke="#53d769" stroke-width="2"/>
   <text x="400" y="125" text-anchor="middle" font-family="system-ui" font-size="14" fill="#888">Overall Pass Rate</text>

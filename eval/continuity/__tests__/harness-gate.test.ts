@@ -7,7 +7,7 @@
  *      goldfish turns per passing run),
  *   2. the no-memory baseline (GoldfishSUT) FAILS every scenario.
  *
- * These are the acceptance criteria the real SUT (STAS gateway + session
+ * These are the acceptance criteria the real SUT (SYNTARO gateway + session
  * store + agent memory) must meet once wired in: "run 10x, with 10
  * follow-up messages first, without talking to a gold fish".
  */

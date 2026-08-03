@@ -1,11 +1,11 @@
-# @stas/github-client
+# @syntaro/github-client
 
-GitHub App client for STAS — authentication, PR creation, and structured message templates.
+GitHub App client for SYNTARO — authentication, PR creation, and structured message templates.
 
 ## Install
 
 ```bash
-npm install @stas/github-client
+npm install @syntaro/github-client
 ```
 
 ## Usage
@@ -13,7 +13,7 @@ npm install @stas/github-client
 ### Authentication
 
 ```typescript
-import { createAuth, createInstallationOctokit, getInstallationToken } from '@stas/github-client';
+import { createAuth, createInstallationOctokit, getInstallationToken } from '@syntaro/github-client';
 
 // Create auth strategy from GitHub App credentials
 const auth = createAuth({
@@ -31,7 +31,7 @@ const token = await getInstallationToken(auth, 789012);
 ### Loading Private Keys
 
 ```typescript
-import { loadPrivateKey } from '@stas/github-client';
+import { loadPrivateKey } from '@syntaro/github-client';
 import { readFileSync } from 'node:fs';
 
 // Load from a file
@@ -46,7 +46,7 @@ PKCS#1 keys are automatically converted to PKCS#8 for Node 20+ / OpenSSL 3 compa
 ### Creating PRs
 
 ```typescript
-import { dispatchAction } from '@stas/github-client';
+import { dispatchAction } from '@syntaro/github-client';
 
 const result = await dispatchAction(
   {
@@ -69,7 +69,7 @@ const result = await dispatchAction(
 ### Message Templates
 
 ```typescript
-import { highConfidenceIssueComment, buildPRBody } from '@stas/github-client';
+import { highConfidenceIssueComment, buildPRBody } from '@syntaro/github-client';
 
 const comment = highConfidenceIssueComment(42, { summary: 'Fixed', verification: { details: [] } });
 

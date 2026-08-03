@@ -54,7 +54,7 @@ router.post('/runs/:id/feedback', async (req: Request, res: Response) => {
           if (repoInfo) {
             await postGithubComment(
               repoInfo.owner, repoInfo.name, run.issueNumber,
-              `## Re-analysis triggered\n\nUser reported this fix as "${verdict}". STAS will re-analyze with an adjusted approach.\n\n${comment ? `> ${comment}` : ''}`,
+              `## Re-analysis triggered\n\nUser reported this fix as "${verdict}". SYNTARO will re-analyze with an adjusted approach.\n\n${comment ? `> ${comment}` : ''}`,
               tokenRow,
             );
           }
@@ -117,7 +117,7 @@ router.post('/runs/:id/escalate', async (req: Request, res: Response) => {
       metadata: { escalatedBy: req.user!.id, escalationReason: reason },
     });
 
-    log.warn({ runId, userId: req.user!.id, reason }, 'Run escalated to STAS team');
+    log.warn({ runId, userId: req.user!.id, reason }, 'Run escalated to SYNTARO team');
 
     if (run.issueNumber) {
       const tokenRow = await getGithubToken();
@@ -126,7 +126,7 @@ router.post('/runs/:id/escalate', async (req: Request, res: Response) => {
         if (repoInfo) {
           await postGithubComment(
             repoInfo.owner, repoInfo.name, run.issueNumber,
-            `## Escalated to STAS Team\n\nThis issue has been escalated to the STAS team for manual review.\n\n**Reason:** ${reason}\n\nA STAS operator will review and respond shortly.`,
+            `## Escalated to SYNTARO Team\n\nThis issue has been escalated to the SYNTARO team for manual review.\n\n**Reason:** ${reason}\n\nA SYNTARO operator will review and respond shortly.`,
             tokenRow,
           );
         }
@@ -184,7 +184,7 @@ router.post('/runs/:id/rollback', async (req: Request, res: Response) => {
       headers: {
         Authorization: `Bearer ${tokenRow}`,
         Accept: 'application/vnd.github+json',
-        'User-Agent': 'stas-bot',
+        'User-Agent': 'syntaro-bot',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ state: 'closed' }),
@@ -252,7 +252,7 @@ async function postGithubComment(owner: string, repo: string, issueNumber: numbe
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github+json',
-        'User-Agent': 'stas-bot',
+        'User-Agent': 'syntaro-bot',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ body }),

@@ -15,9 +15,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-_RUN_KEY_PREFIX = "stas:analytics:run:"
-_QUEUE_KEY = "stas:analytics:sync_queue"
-_SYNC_LOCK_KEY = "stas:analytics:sync_lock"
+_RUN_KEY_PREFIX = "syntaro:analytics:run:"
+_QUEUE_KEY = "syntaro:analytics:sync_queue"
+_SYNC_LOCK_KEY = "syntaro:analytics:sync_lock"
 _MAX_RETENTION_DAYS = 90
 
 
@@ -101,7 +101,7 @@ def _get_redis() -> Any:
 
 def _get_pg_connection() -> Any:
     """Return a psycopg2 connection using DATABASE_URL or defaults."""
-    db_url = os.getenv("DATABASE_URL", "postgres://localhost:5432/stas")
+    db_url = os.getenv("DATABASE_URL", "postgres://localhost:5432/syntaro")
     try:
         import psycopg2 as _pg_mod
 

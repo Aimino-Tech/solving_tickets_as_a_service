@@ -32,7 +32,7 @@ export class GitHubClient {
     const headers: Record<string, string> = {
       Authorization: `token ${this.token}`,
       Accept: 'application/vnd.github.v3+json',
-      'User-Agent': 'stas-cli',
+      'User-Agent': 'syntaro-cli',
     };
 
     const response = await fetch(url, {

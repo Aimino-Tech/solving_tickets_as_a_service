@@ -1,15 +1,15 @@
-# ── STAS Prometheus Alert Rules (AIM-3228) ─────────────────────────────
+# ── SYNTARO Prometheus Alert Rules (AIM-3228) ─────────────────────────────
 
 groups:
-  - name: stas_anomaly_detection
+  - name: syntaro_anomaly_detection
     interval: 30s
     rules:
-      - alert: StasQueueDepthAnomaly
+      - alert: SyntaroQueueDepthAnomaly
         expr: |
           abs(
-            stas_queue_depth
-            - avg_over_time(stas_queue_depth[1h])
-          ) / stddev_over_time(stas_queue_depth[1h]) > 3
+            syntaro_queue_depth
+            - avg_over_time(syntaro_queue_depth[1h])
+          ) / stddev_over_time(syntaro_queue_depth[1h]) > 3
         for: 2m
         labels:
           severity: warning
@@ -21,12 +21,12 @@ groups:
             from the 1-hour rolling mean. Investigate for sudden job spikes or
             worker failures.
 
-      - alert: StasErrorRateSpike
+      - alert: SyntaroErrorRateSpike
         expr: |
           abs(
-            stas_error_rate
-            - avg_over_time(stas_error_rate[1h])
-          ) / stddev_over_time(stas_error_rate[1h]) > 2
+            syntaro_error_rate
+            - avg_over_time(syntaro_error_rate[1h])
+          ) / stddev_over_time(syntaro_error_rate[1h]) > 2
         for: 3m
         labels:
           severity: critical
@@ -38,12 +38,12 @@ groups:
             above the 1-hour baseline. Check for upstream API failures or
             deployment issues.
 
-      - alert: StasLatencyDegradation
+      - alert: SyntaroLatencyDegradation
         expr: |
           (
-            stas_p95_latency_ms
-            - avg_over_time(stas_p95_latency_ms[1h])
-          ) / avg_over_time(stas_p95_latency_ms[1h]) > 0.2
+            syntaro_p95_latency_ms
+            - avg_over_time(syntaro_p95_latency_ms[1h])
+          ) / avg_over_time(syntaro_p95_latency_ms[1h]) > 0.2
         for: 5m
         labels:
           severity: warning
@@ -55,11 +55,11 @@ groups:
             compared to the 1-hour rolling average. Investigate slow queries or
             resource contention.
 
-      - alert: StasThroughputDrop
+      - alert: SyntaroThroughputDrop
         expr: |
-          rate(stas_fix_completed_total[5m])
+          rate(syntaro_fix_completed_total[5m])
           /
-          avg_over_time(rate(stas_fix_completed_total[5m])[1h]) < 0.5
+          avg_over_time(rate(syntaro_fix_completed_total[5m])[1h]) < 0.5
         for: 5m
         labels:
           severity: critical
@@ -70,9 +70,9 @@ groups:
             Current fix completion rate ({{ $value }}) is less than 50% of the
             1-hour rolling average. Check worker health and queue status.
 
-      - alert: StasWorkerHealthAnomaly
+      - alert: SyntaroWorkerHealthAnomaly
         expr: |
-          increase(stas_worker_restarts_total[5m]) > 3
+          increase(syntaro_worker_restarts_total[5m]) > 3
         for: 1m
         labels:
           severity: critical
@@ -83,9 +83,9 @@ groups:
             More than 3 worker restarts in the last 5 minutes - possible crash
             loop. Check worker logs and resource limits.
 
-      - alert: StasDbPoolExhaustion
+      - alert: SyntaroDbPoolExhaustion
         expr: |
-          stas_db_pool_usage_ratio > 0.8
+          syntaro_db_pool_usage_ratio > 0.8
         for: 5m
         labels:
           severity: critical
@@ -96,9 +96,9 @@ groups:
             Database connection pool usage has been above 80% for more than 5
             minutes. Scale up the connection pool or investigate connection leaks.
 
-      - alert: StasHighConcurrentWebhooks
+      - alert: SyntaroHighConcurrentWebhooks
         expr: |
-          stas_webhook_concurrent_requests > 50
+          syntaro_webhook_concurrent_requests > 50
         for: 2m
         labels:
           severity: warning
@@ -109,9 +109,9 @@ groups:
             More than 50 concurrent webhook requests detected. This may indicate
             a burst of GitHub events or a replay attack. Check webhook source IPs.
 
-      - alert: StasFixRunTimeout
+      - alert: SyntaroFixRunTimeout
         expr: |
-          time() - stas_fix_run_start_timestamp_seconds > 600
+          time() - syntaro_fix_run_start_timestamp_seconds > 600
         for: 1m
         labels:
           severity: warning

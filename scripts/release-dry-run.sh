@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# STAS Release Dry-Run
+# SYNTARO Release Dry-Run
 #
 # Simulates the release workflow locally without actually publishing anything.
 # Validates that the release would succeed by checking:
@@ -48,7 +48,7 @@ fi
 # Strip leading 'v' if present
 SEMVER="${VERSION#v}"
 echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
-echo -e "${CYAN}  STAS Release Dry-Run: v${SEMVER}${NC}"
+echo -e "${CYAN}  SYNTARO Release Dry-Run: v${SEMVER}${NC}"
 echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
 echo ""
 
@@ -126,18 +126,18 @@ echo ""
 # ── Step 4: Validate Docker build ─────────────────────────────────────────────
 echo -e "${YELLOW}[4/5] Validating Docker build...${NC}"
 if command -v docker &>/dev/null; then
-  echo "    Building Docker image (stas-bot:dry-run)..."
-  if docker build -t stas-bot:dry-run -f Dockerfile . --quiet 2>&1; then
+  echo "    Building Docker image (syntaro-bot:dry-run)..."
+  if docker build -t syntaro-bot:dry-run -f Dockerfile . --quiet 2>&1; then
     echo -e "${GREEN}  ✓ Docker build successful${NC}"
 
     # Check for non-root user
-    if docker run --rm stas-bot:dry-run whoami 2>/dev/null | grep -q "stas"; then
+    if docker run --rm syntaro-bot:dry-run whoami 2>/dev/null | grep -q "syntaro"; then
       echo -e "${GREEN}  ✓ Non-root user check passed${NC}"
     else
       echo -e "${YELLOW}  ⚠ Non-root user check skipped (container may not support whoami)${NC}"
     fi
 
-    docker rmi stas-bot:dry-run >/dev/null 2>&1 || true
+    docker rmi syntaro-bot:dry-run >/dev/null 2>&1 || true
   else
     echo -e "${RED}  ✗ Docker build failed${NC}"
     echo "    Fix Dockerfile errors before releasing"

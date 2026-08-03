@@ -1,5 +1,5 @@
 /**
- * German (DE) locale for STAS output messages.
+ * German (DE) locale for SYNTARO output messages.
  * Used for DACH market compliance and user-facing communications.
  */
 export const de = {
@@ -24,7 +24,7 @@ export const de = {
   ticket: {
     created: 'Ticket erstellt',
     assigned: 'Ticket zugewiesen an {assignee}',
-    fixInProgress: 'STAS arbeitet an der Fehlerbehebung...',
+    fixInProgress: 'SYNTARO arbeitet an der Fehlerbehebung...',
     fixComplete: 'Fehlerbehebung abgeschlossen — Pull-Request erstellt: {prUrl}',
     fixFailed: 'Fehlerbehebung fehlgeschlagen: {reason}',
     needsApproval: 'Ticket benötigt Freigabe vor der Ausführung',

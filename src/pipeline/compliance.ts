@@ -1,5 +1,5 @@
 /**
- * Pipeline compliance.ts — Compliance checks for the STAS pipeline.
+ * Pipeline compliance.ts — Compliance checks for the SYNTARO pipeline.
  *
  * Enforces four compliance domains before PR creation:
  *   1. Code review compliance — all code has been reviewed

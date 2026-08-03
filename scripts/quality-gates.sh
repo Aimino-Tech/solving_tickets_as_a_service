@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/quality-gates.sh — STAS Quality Gates Pipeline
+# scripts/quality-gates.sh — SYNTARO Quality Gates Pipeline
 #
 # Implements 6 deterministic gates from AIM-1848/AIM-1895 + OSS tools:
 #   Gate 1 — Reality Check: every referenced file actually exists

@@ -7,7 +7,7 @@ status: active
 
 # Terms of Service
 
-**STAS (Solving Tickets As A Service)**
+**SYNTARO (Solving Tickets As A Service)**
 **Version 1.0.0**
 **Last Updated: July 28, 2026**
 
@@ -15,7 +15,7 @@ status: active
 
 ## 1. Introduction
 
-Welcome to STAS ("Solving Tickets As A Service"), an AI-powered service that automatically fixes GitHub issues by generating and submitting pull requests. These Terms of Service ("Terms") govern your access to and use of the STAS service, website, and associated applications (collectively, the "Service").
+Welcome to SYNTARO ("Solving Tickets As A Service"), an AI-powered service that automatically fixes GitHub issues by generating and submitting pull requests. These Terms of Service ("Terms") govern your access to and use of the SYNTARO service, website, and associated applications (collectively, the "Service").
 
 By registering for, accessing, or using the Service, you enter into a legally binding agreement with **Aimino Technologies GmbH** ("Aimino," "we," "us," or "our"), a company registered in Germany. If you are using the Service on behalf of an organization, you represent and warrant that you have the authority to bind that organization to these Terms.
 
@@ -23,7 +23,7 @@ By registering for, accessing, or using the Service, you enter into a legally bi
 
 ### 1.1 Definitions
 
-- **"Service"** means the STAS platform, including the web application, API, bot account, and all associated infrastructure that provides automated GitHub issue resolution.
+- **"Service"** means the SYNTARO platform, including the web application, API, bot account, and all associated infrastructure that provides automated GitHub issue resolution.
 - **"User"**, **"you"**, **"your"** means the individual or entity that registers for and uses the Service.
 - **"Account"** means the registered user account on the Service.
 - **"Repository"** means a GitHub repository that you have authorized the Service to access.
@@ -65,20 +65,20 @@ The Service offers the following Account types:
 
 ## 3. Service Description
 
-### 3.1 What STAS Does
+### 3.1 What SYNTARO Does
 
-STAS is an automated GitHub issue resolution service. When installed and configured on your GitHub repositories, STAS:
+SYNTARO is an automated GitHub issue resolution service. When installed and configured on your GitHub repositories, SYNTARO:
 
 1. Monitors specified repositories for new or assigned issues;
 2. Analyzes issue descriptions, labels, priority, and repository context;
 3. Generates AI-powered code fixes using one or more AI models (including but not limited to OpenAI, Anthropic, and open-source models);
 4. Creates pull requests containing the proposed fixes;
 5. Responds to issue comments and pull request feedback;
-6. Provides status updates and reports through GitHub, email, and the STAS dashboard.
+6. Provides status updates and reports through GitHub, email, and the SYNTARO dashboard.
 
 ### 3.2 How It Works
 
-The Service operates as a GitHub App that you install on selected repositories. You configure which types of issues STAS should handle, labeling conventions, branch naming rules, and other operational parameters. STAS then automatically processes matching issues through its AI agent pipeline and produces pull requests for your review.
+The Service operates as a GitHub App that you install on selected repositories. You configure which types of issues SYNTARO should handle, labeling conventions, branch naming rules, and other operational parameters. SYNTARO then automatically processes matching issues through its AI agent pipeline and produces pull requests for your review.
 
 ### 3.3 AI-Generated Code
 
@@ -124,7 +124,7 @@ Unless you cancel before the end of your current billing period, your subscripti
 
 ### 4.4 Cancellation
 
-You may cancel your subscription at any time through your Account settings or by contacting support@stas.ai. Upon cancellation:
+You may cancel your subscription at any time through your Account settings or by contacting support@syntaro.ai. Upon cancellation:
 
 1. The Service will remain active until the end of your current billing period;
 2. No refunds will be issued for partial billing periods;
@@ -244,7 +244,7 @@ You are solely responsible for the content of repositories you authorize the Ser
 
 ### 7.3 Reporting Violations
 
-If you become aware of any violation of this Acceptable Use Policy, please report it immediately to abuse@stas.ai. We will investigate all reports and take appropriate action, which may include suspension or termination of accounts.
+If you become aware of any violation of this Acceptable Use Policy, please report it immediately to abuse@syntaro.ai. We will investigate all reports and take appropriate action, which may include suspension or termination of accounts.
 
 ## 8. Data Handling and Privacy
 
@@ -364,7 +364,7 @@ You agree to indemnify, defend, and hold harmless Aimino Technologies GmbH, its 
 You may terminate these Terms and delete your Account at any time by:
 
 1. Cancelling your subscription through Account settings; and
-2. Deleting your Account through Account settings, or by contacting support@stas.ai.
+2. Deleting your Account through Account settings, or by contacting support@syntaro.ai.
 
 ### 12.2 Termination by Us
 
@@ -400,7 +400,7 @@ Germany
 
 ### 13.2 Data Processing Agreement
 
-For Enterprise customers who qualify as Data Controllers under GDPR, we offer a Data Processing Agreement (DPA) that complies with Article 28 GDPR. Please contact legal@stas.ai to execute a DPA.
+For Enterprise customers who qualify as Data Controllers under GDPR, we offer a Data Processing Agreement (DPA) that complies with Article 28 GDPR. Please contact legal@syntaro.ai to execute a DPA.
 
 ### 13.3 Your Rights
 
@@ -414,11 +414,11 @@ As a data subject under GDPR, you have the right to:
 6. **Objection** (Article 21): Object to processing based on legitimate interests or for direct marketing;
 7. **Withdraw Consent**: Withdraw consent at any time where processing is based on consent.
 
-To exercise these rights, contact privacy@stas.ai. We will respond within 30 days.
+To exercise these rights, contact privacy@syntaro.ai. We will respond within 30 days.
 
 ### 13.4 Data Protection Officer
 
-Our Data Protection Officer can be reached at dpo@stas.ai or by mail at our registered address.
+Our Data Protection Officer can be reached at dpo@syntaro.ai or by mail at our registered address.
 
 ### 13.5 Supervisory Authority
 
@@ -443,7 +443,7 @@ Any disputes arising from or relating to these Terms or the Service shall be sub
 
 ### 14.3 Alternative Dispute Resolution
 
-We are committed to resolving disputes amicably. Before initiating legal proceedings, you agree to contact us at legal@stas.ai and attempt to resolve the dispute informally for 30 days. The European Commission provides an online dispute resolution platform at https://ec.europa.eu/consumers/odr/. We are not obligated to participate in out-of-court dispute resolution.
+We are committed to resolving disputes amicably. Before initiating legal proceedings, you agree to contact us at legal@syntaro.ai and attempt to resolve the dispute informally for 30 days. The European Commission provides an online dispute resolution platform at https://ec.europa.eu/consumers/odr/. We are not obligated to participate in out-of-court dispute resolution.
 
 ## 15. Payment Terms
 
@@ -508,7 +508,7 @@ You may not assign or transfer these Terms, or any rights or obligations hereund
 
 Unless otherwise specified, notices shall be sent:
 
-- **To Aimino**: legal@stas.ai or our registered address
+- **To Aimino**: legal@syntaro.ai or our registered address
 - **To you**: via the email address associated with your Account
 
 ### 16.7 Force Majeure
@@ -525,11 +525,11 @@ For questions, concerns, or legal inquiries:
 
 | Purpose | Contact |
 |---------|---------|
-| General support | support@stas.ai |
-| Legal inquiries | legal@stas.ai |
-| Privacy matters | privacy@stas.ai |
-| Data Protection Officer | dpo@stas.ai |
-| Abuse reporting | abuse@stas.ai |
+| General support | support@syntaro.ai |
+| Legal inquiries | legal@syntaro.ai |
+| Privacy matters | privacy@syntaro.ai |
+| Data Protection Officer | dpo@syntaro.ai |
+| Abuse reporting | abuse@syntaro.ai |
 | Postal address | Aimino Technologies GmbH |
 | | [Registered Address] |
 | | [City, Postal Code] |
