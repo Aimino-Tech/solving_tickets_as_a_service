@@ -90,8 +90,8 @@ services:
       # Forward allowed SYNTARO webhooks to OpenSymphony. Read by
       # guardrail/webhook_routes.py (OPENSYMPHONY_WEBHOOK_URL); the shipped default
       # http://opensymphony:4000/api/webhook is NOT an OpenSymphony route, so point it
-      # at the real SYNTARO webhook controller (POST /api/v1/syntaro/webhook → 202 accepted).
-      OPENSYMPHONY_WEBHOOK_URL: http://opensymphony:4000/api/v1/syntaro/webhook
+      # at the real webhook controller OpenSymphony exposes (POST /api/v1/stas/webhook → 202).
+      OPENSYMPHONY_WEBHOOK_URL: http://opensymphony:4000/api/v1/stas/webhook
     depends_on:
       postgres: { condition: service_healthy }
     healthcheck:

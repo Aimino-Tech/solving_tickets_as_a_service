@@ -1,0 +1,12 @@
+{
+  "gate": "hallucination",
+  "passed": true,
+  "ossTool": "Trace-core",
+  "command": "npx hallucination-grep --check-refs",
+  "stdout": "All references verified",
+  "stderr": "",
+  "details": [
+    "Hallucination scan passed — no AI failure patterns detected"
+  ],
+  "timestamp": "2026-08-01T20:49:04.123Z"
+}

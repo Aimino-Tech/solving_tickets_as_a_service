@@ -1,0 +1,12 @@
+{
+  "gate": "compile",
+  "passed": true,
+  "ossTool": "hallucination-grep",
+  "command": "npx hallucination-grep --check-refs",
+  "stdout": "All references verified",
+  "stderr": "",
+  "details": [
+    "All file and function references verified"
+  ],
+  "timestamp": "2026-08-01T20:49:04.120Z"
+}

@@ -99,7 +99,7 @@ describe("SYNTARO ↔ Governance ↔ OpenSymphony integration stack", () => {
     expect(killBody.status).toBe("ok");
     expect(killBody.tenant_id).toBe("test-tenant");
 
-    const blocked = await postJson(`${GOVERNANCE_URL}/api/syntaro/webhook`, {
+    const blocked = await postJson(`${GOVERNANCE_URL}/api/stas/webhook`, {
       tenant_id: "test-tenant",
       issue_id: "test/foo#1",
     });
@@ -109,7 +109,7 @@ describe("SYNTARO ↔ Governance ↔ OpenSymphony integration stack", () => {
   });
 
   it("forwards an allowed webhook to the OpenSymphony upstream (reaches OS when up)", async (ctx) => {
-    const resp = await postJson(`${GOVERNANCE_URL}/api/syntaro/webhook`, {
+    const resp = await postJson(`${GOVERNANCE_URL}/api/stas/webhook`, {
       tenant_id: "default",
       issue_id: "test/bar#2",
     });
@@ -131,7 +131,7 @@ describe("SYNTARO ↔ Governance ↔ OpenSymphony integration stack", () => {
       ctx.skip("OpenSymphony unavailable — skipping direct webhook assertion");
     }
     const rawBody = JSON.stringify(TEST_ISSUE_PAYLOAD);
-    const resp = await postJson(`${OPENSYMPHONY_URL}/api/v1/syntaro/webhook`, rawBody, {
+    const resp = await postJson(`${OPENSYMPHONY_URL}/api/v1/stas/webhook`, rawBody, {
       "X-GitHub-Event": "issues",
     });
     expect(resp.status).toBe(202);
