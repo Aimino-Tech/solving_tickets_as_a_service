@@ -8,6 +8,7 @@ import {
   ScrollText,
   Settings as SettingsIcon,
   ShieldCheck,
+  Gauge,
   Users,
   Zap,
 } from 'lucide-react';
@@ -52,6 +53,7 @@ export default function Layout() {
   const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
     { to: '/runs', label: t('nav.runs'), icon: RotateCw },
+    { to: '/usage-limits', label: 'Usage Limits', icon: Gauge }, // AIM-4645
     { to: '/repos', label: t('nav.repos'), icon: GitFork },
     // AIM-4642
     { to: '/members', label: 'Members', icon: Users },

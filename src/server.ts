@@ -46,6 +46,7 @@ import { streamAuditExportCsv, streamAuditExportJson } from './audit/export.js';
 import { authRouter } from './auth/index.js';
 import { oauthRouter } from './auth/oauth.js';
 import { billingRouter } from './billing/index.js';
+import { usageLimitsRouter } from './usage-limits/routes.js'; // AIM-4645
 import { registerSlackMentionHandler } from './channels/slack/handler.js';
 import { config } from './config.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
@@ -857,6 +858,11 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/v1/credits/usage', usageRouter);
 
   app.use('/api/v1', litellmUsageRouter);
+
+  // ── Usage limits + provider routing API (AIM-4645) ─────────────
+  // GET  /api/v1/usage-limits             — continuous/weekly/monthly usage + toggles
+  // POST /api/v1/usage-limits/preferences — update use_balance_after_limits / enable_china_models
+  app.use('/api/v1/usage-limits', usageLimitsRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────
   // GET /admin/webhooks (paginated, filterable)
