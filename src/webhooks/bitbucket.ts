@@ -1,11 +1,11 @@
 import crypto from 'node:crypto';
 
 import { config } from '../config.js';
+import { createBitbucketConfig } from '../platforms/bitbucket/config.js';
+import { BitbucketPlatformClient } from '../platforms/bitbucket/index.js';
 import { rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
 import type { CreatePullRequestParams, PlatformClient, PlatformWebhook, PlatformWebhookEvent } from './base.js';
-import { BitbucketPlatformClient } from '../platforms/bitbucket/index.js';
-import { createBitbucketConfig } from '../platforms/bitbucket/config.js';
 
 const bbConfig = createBitbucketConfig();
 const bbToken = `${bbConfig.username}:${bbConfig.appPassword}`;
@@ -140,6 +140,7 @@ export const bitbucketClient: PlatformClient = {
       head: params.head,
       base: params.base,
       body: params.body ?? '',
+      draft: params.draft ?? false,
     });
     return { url: pr.url, number: pr.number };
   },
@@ -185,13 +186,43 @@ export function createBitbucketWebhooks(enqueue: EnqueueHandler) {
       }
 
       if (event.startsWith('issue:')) {
+        const labels = parsed.issue.labels ?? [];
+        // Bitbucket emits one `issue:updated` when a label is added, so the
+        // trigger-label gate runs on every issue event.
+        if (!labels.includes(config.syntaro.label)) {
+          log.debug(
+            { label: config.syntaro.label, found: labels, issueNumber: parsed.issue.number },
+            'Ignoring non-target label',
+          );
+          return;
+        }
+
         log.info(
           {
             repo: `${parsed.issue.repoOwner}/${parsed.issue.repoName}`,
             issueNumber: parsed.issue.number,
+            labels,
           },
-          'Received Bitbucket issue event',
+          'Received Bitbucket issue event with target label',
         );
+
+        try {
+          await bitbucketClient.createComment(
+            parsed.issue.repoOwner,
+            parsed.issue.repoName,
+            parsed.issue.number,
+            '🚀 **SYNTARO is working on this issue.**\n\nA fix run has been dispatched. A draft pull request will be opened here for review once the fix is ready.',
+          );
+        } catch (commentErr) {
+          log.warn(
+            {
+              err: String(commentErr),
+              repo: `${parsed.issue.repoOwner}/${parsed.issue.repoName}`,
+              issueNumber: parsed.issue.number,
+            },
+            'Failed to post "working on it" comment on Bitbucket issue',
+          );
+        }
 
         const jobData: IssueJobData = {
           repoOwner: parsed.issue.repoOwner,
@@ -200,6 +231,7 @@ export function createBitbucketWebhooks(enqueue: EnqueueHandler) {
           issueNumber: parsed.issue.number,
           issueTitle: parsed.issue.title,
           issueBody: parsed.issue.body ?? '',
+          labels,
           installationId: Number(parsed.issue.installationId ?? 0),
           source: 'bitbucket',
         };

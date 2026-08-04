@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BitbucketPlatformClient } from '../../../platforms/bitbucket/index.js';
 
 const mockFetch = vi.fn();
@@ -61,9 +61,7 @@ describe('Bitbucket PlatformClient', () => {
     it('throws on non-ok response', async () => {
       mockFetch.mockResolvedValueOnce(mockResponse({ error: 'Not found' }, 404));
 
-      await expect(client.getIssue('owner/test-repo', 999)).rejects.toThrow(
-        'Bitbucket API',
-      );
+      await expect(client.getIssue('owner/test-repo', 999)).rejects.toThrow('Bitbucket API');
     });
 
     it('handles null content', async () => {
@@ -104,9 +102,7 @@ describe('Bitbucket PlatformClient', () => {
     it('throws on failure', async () => {
       mockFetch.mockResolvedValueOnce(mockResponse({ error: 'Bad request' }, 400));
 
-      await expect(
-        client.createComment('owner/test-repo', 42, 'test'),
-      ).rejects.toThrow('Bitbucket API');
+      await expect(client.createComment('owner/test-repo', 42, 'test')).rejects.toThrow('Bitbucket API');
     });
   });
 
@@ -146,6 +142,42 @@ describe('Bitbucket PlatformClient', () => {
             description: 'This PR fixes the login bug',
             source: { branch: { name: 'syntaro/fix-42' } },
             destination: { branch: { name: 'main' } },
+            draft: false,
+          }),
+        }),
+      );
+    });
+
+    it('creates a draft pull request when draft is set', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockResponse({
+          id: 101,
+          title: 'Fix: login bug',
+          links: { html: { href: 'https://bitbucket.org/owner/test-repo/pull-requests/101' } },
+          state: 'OPEN',
+        }),
+      );
+
+      const result = await client.createPullRequest({
+        repoOwner: 'owner',
+        repoName: 'test-repo',
+        title: 'Fix: login bug',
+        head: 'syntaro/fix-42',
+        base: 'main',
+        body: 'Fix',
+        draft: true,
+      });
+
+      expect(result.number).toBe(101);
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.bitbucket.org/2.0/repositories/owner/test-repo/pullrequests',
+        expect.objectContaining({
+          body: JSON.stringify({
+            title: 'Fix: login bug',
+            description: 'Fix',
+            source: { branch: { name: 'syntaro/fix-42' } },
+            destination: { branch: { name: 'main' } },
+            draft: true,
           }),
         }),
       );
@@ -154,14 +186,96 @@ describe('Bitbucket PlatformClient', () => {
     it('throws on failure', async () => {
       mockFetch.mockResolvedValueOnce(mockResponse({ error: 'Conflict' }, 409));
 
-      await expect(client.createPullRequest({
-        repoOwner: 'owner',
-        repoName: 'test-repo',
-        title: 'Fix: login bug',
-        head: 'syntaro/fix-42',
-        base: 'main',
-        body: 'Fix',
-      })).rejects.toThrow('Bitbucket API');
+      await expect(
+        client.createPullRequest({
+          repoOwner: 'owner',
+          repoName: 'test-repo',
+          title: 'Fix: login bug',
+          head: 'syntaro/fix-42',
+          base: 'main',
+          body: 'Fix',
+        }),
+      ).rejects.toThrow('Bitbucket API');
+    });
+  });
+
+  describe('listRepos', () => {
+    it('lists workspace repositories with normalized fields', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockResponse({
+          values: [
+            { name: 'repo-a', full_name: 'workspace/repo-a', is_private: false, mainbranch: { name: 'main' } },
+            { name: 'repo-b', full_name: 'workspace/repo-b', is_private: true, mainbranch: { name: 'master' } },
+          ],
+        }),
+      );
+
+      const result = await client.listRepos('workspace');
+
+      expect(result).toEqual([
+        { name: 'repo-a', fullName: 'workspace/repo-a', private: false, mainbranch: 'main' },
+        { name: 'repo-b', fullName: 'workspace/repo-b', private: true, mainbranch: 'master' },
+      ]);
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.bitbucket.org/2.0/workspaces/workspace/repositories?pagelen=100',
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+  });
+
+  describe('webhooks', () => {
+    it('lists repo webhooks', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockResponse({
+          values: [
+            { uuid: '{hook-1}', url: 'https://api.syntaro.io/webhook/bitbucket', active: true },
+            { uuid: '{hook-2}', url: 'https://example.com/other', active: false },
+          ],
+        }),
+      );
+
+      const result = await client.listWebhooks('workspace', 'repo-a');
+
+      expect(result).toEqual([
+        { uuid: '{hook-1}', url: 'https://api.syntaro.io/webhook/bitbucket', active: true },
+        { uuid: '{hook-2}', url: 'https://example.com/other', active: false },
+      ]);
+    });
+
+    it('creates a repo webhook with the secret and SYNTARO events', async () => {
+      mockFetch.mockResolvedValueOnce(mockResponse({ uuid: '{new-hook}' }));
+
+      const result = await client.createWebhook(
+        'workspace',
+        'repo-a',
+        'https://api.syntaro.io/webhook/bitbucket',
+        'sec',
+      );
+
+      expect(result).toEqual({ uuid: '{new-hook}' });
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.bitbucket.org/2.0/repositories/workspace/repo-a/hooks',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            url: 'https://api.syntaro.io/webhook/bitbucket',
+            events: ['issue:created', 'issue:updated', 'pullrequest:created', 'pullrequest:updated'],
+            active: true,
+            secret: 'sec',
+          }),
+        }),
+      );
+    });
+
+    it('removes a repo webhook by uuid', async () => {
+      mockFetch.mockResolvedValueOnce(mockResponse({}));
+
+      await client.removeWebhook('workspace', 'repo-a', '{hook-1}');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.bitbucket.org/2.0/repositories/workspace/repo-a/hooks/{hook-1}',
+        expect.objectContaining({ method: 'DELETE' }),
+      );
     });
   });
 

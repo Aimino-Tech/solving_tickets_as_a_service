@@ -74,6 +74,7 @@ import { featureFlagsRouter } from './routes/featureFlags.js';
 import { gitHubOAuthRouter } from './routes/githubOAuth.js';
 import healthRouter from './routes/health.js';
 import { kpiRouter } from './routes/kpi.js';
+import { bitbucketRouter } from './routes/bitbucket.js';
 import { linearOAuthRouter } from './routes/linearOAuth.js';
 import { litellmUsageRouter } from './routes/litellmUsage.js';
 import mcpKeysRouter from './routes/mcpKeys.js';
@@ -802,6 +803,9 @@ export async function createApp(): Promise<express.Application> {
 
   // ── MCP API Keys (per-user agent keys) ─────────────────────
   app.use('/api/v1/mcp-keys', mcpKeysRouter);
+
+  // ── Bitbucket workspace API (dashboard) ────────────────────
+  app.use('/api/v1/bitbucket', bitbucketRouter);
 
   // ── Stats & Audit API ──────────────────────────────────
   const { statsRouter, auditRouter } = await import('./routes/statsAndAudit.js');

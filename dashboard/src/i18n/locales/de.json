@@ -180,7 +180,6 @@
   "admin.complete": "Abschließen",
   "admin.cancelRun": "Abbrechen",
   "admin.noRuns": "Keine Läufe gefunden.",
-
   "steering.title": "Admin-Steuerung",
   "steering.subtitle": "Notfall-Steuerung und OpenSymphony-Status",
   "steering.statusUnavailable": "Status nicht verfügbar",
@@ -232,7 +231,24 @@
   "steering.backupRun": "Backup jetzt starten",
   "steering.backupStarted": "Backup abgeschlossen",
   "steering.runningBusy": "Wird ausgeführt…",
-  "steering.noBackups": "Noch keine Backups aufgezeichnet."
+  "steering.noBackups": "Noch keine Backups aufgezeichnet.",
+  "settings.apiKeys": "API-Schlüssel",
+  "settings.exportData": "Meine Daten exportieren",
+  "settings.exportDataDesc": "Laden Sie eine JSON-Kopie Ihrer Runs, Repositories, Nutzung und persönlichen Daten herunter (DSGVO Art. 20).",
+  "settings.exporting": "Export wird vorbereitet...",
+  "settings.exported": "Export heruntergeladen.",
+  "settings.exportFailed": "Export konnte nicht erstellt werden.",
+  "settings.residency": "Datenstandort",
+  "settings.residencyDesc": "Ihre Daten werden auf Servern in der Europäischen Union (EU/EWR) gespeichert. Wir übertragen personenbezogene Daten nicht ohne gültige Rechtsgrundlage in Nicht-EU-Länder.",
+  "settings.noTraining": "Ihr Code wird nicht für Training verwendet",
+  "settings.noTrainingDesc": "Ihr Code, Tickets und Fixes werden niemals für das Training von KI-Modellen verwendet. SYNTARO führt Ihre Fixes in isolierten Sandboxes aus und speichert sie nur zur Bereitstellung des Dienstes.",
+  "settings.deletionStatusTitle": "Status der Löschungsanfrage",
+  "settings.pendingDeletion": "Löschung geplant für {{date}}. Sie können vorher abbrechen.",
+  "settings.privacyPolicy": "Datenschutzerklärung",
+  "settings.viewPrivacy": "Datenschutzerklärung ansehen",
+  "settings.viewDpa": "AVV ansehen",
+  "settings.deletionConfirm": "Löschung aller Ihrer persönlichen Daten anfordern? Dies plant die Kontolöschung am Ende der Aufbewahrungsfrist.",
+  "settings.deletionRequestFailed": "Löschanfrage konnte nicht übermittelt werden",
+  "settings.cancelDeletionConfirm": "Diese Löschanfrage abbrechen?",
+  "settings.deletionCancelled": "Löschanfrage abgebrochen."
 }
-
-

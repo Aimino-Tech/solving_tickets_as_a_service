@@ -575,6 +575,40 @@ export const github = {
     ),
 };
 
+export interface BitbucketRepo {
+  name: string;
+  fullName: string;
+  private: boolean;
+  mainbranch: string;
+  webhookActive: boolean;
+}
+
+export interface BitbucketStatus {
+  connected: boolean;
+  workspace: string;
+  username: string | null;
+}
+
+export const bitbucket = {
+  getStatus: (opts?: { signal?: AbortSignal }) =>
+    request<BitbucketStatus>('/v1/bitbucket/status', opts),
+  connect: (body: { username: string; appPassword: string; workspace: string }) =>
+    request<{ connected: boolean; workspace: string; repoCount: number }>('/v1/bitbucket/connect', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  disconnect: () =>
+    request<{ success: boolean }>('/v1/bitbucket/disconnect', { method: 'DELETE' }),
+  listRepos: (opts?: { signal?: AbortSignal }) =>
+    request<{ connected: boolean; workspace: string; repos: BitbucketRepo[] }>('/v1/bitbucket/repos', opts),
+  configureWebhook: (owner: string, repo: string) =>
+    request<{ success: boolean; webhookUuid: string }>(`/v1/bitbucket/repos/${owner}/${repo}/webhook`, {
+      method: 'POST',
+    }),
+  removeWebhook: (owner: string, repo: string) =>
+    request<{ success: boolean }>(`/v1/bitbucket/repos/${owner}/${repo}/webhook`, { method: 'DELETE' }),
+};
+
 export const billing = {
   plan: () =>
     request<BillingPlan>('/v1/billing/plan'),
@@ -687,6 +721,29 @@ export const settings = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+};
+
+export const privacy = {
+  getDeletionStatus: (opts?: { signal?: AbortSignal }) =>
+    request<{
+      activeRequest: {
+        id: number;
+        accountId: number;
+        requestedAt: string;
+        scheduledDeletionAt: string;
+        status: 'pending' | 'completed' | 'cancelled';
+      } | null;
+      retentionDays: number;
+    }>('/v1/privacy/deletion-status', opts),
+  requestDeletion: () =>
+    request<{ deletionRequest: { id: number; scheduledDeletionAt: string; status: string } }>(
+      '/v1/privacy/deletion-request',
+      { method: 'POST' },
+    ),
+  cancelDeletion: () =>
+    request<{ cancelled: unknown }>('/v1/privacy/deletion-request/cancel', { method: 'POST' }),
+  exportData: (opts?: { signal?: AbortSignal }) =>
+    request<Record<string, unknown>>('/v1/privacy/portability', opts),
 };
 
 export const configApi = {
