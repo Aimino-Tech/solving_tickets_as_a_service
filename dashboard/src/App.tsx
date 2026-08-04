@@ -17,10 +17,13 @@ const RunsHistory = lazy(() => import('@/pages/RunsHistory'));
 const RunDetail = lazy(() => import('@/pages/RunDetail'));
 const UsageLimits = lazy(() => import('@/pages/UsageLimits')); // AIM-4645
 const Repos = lazy(() => import('@/pages/Repos'));
+const Members = lazy(() => import('@/pages/Members'));
 const Credits = lazy(() => import('@/pages/Credits'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const Billing = lazy(() => import('@/pages/Billing'));
 const AuditLog = lazy(() => import('@/pages/AuditLog'));
+// AIM-4643
+const Referral = lazy(() => import('@/pages/Referral'));
 const Security = lazy(() => import('@/pages/Security'));
 const Privacy = lazy(() => import('@/pages/Privacy'));
 const Status = lazy(() => import('@/pages/Status'));
@@ -90,9 +93,13 @@ export default function App() {
             <Route path="runs/:id" element={<RunDetail />} />
             <Route path="usage-limits" element={<UsageLimits />} /> {/* AIM-4645 */}
             <Route path="repos" element={<Repos />} />
+            {/* AIM-4642 */}
+            <Route path="members" element={<Members />} />
             <Route path="credits" element={<Credits />} />
             <Route path="billing" element={<Billing />} />
             <Route path="audit" element={<AuditLog />} />
+            {/* AIM-4643 */}
+            <Route path="referral" element={<Referral />} />
             <Route path="liveview" element={<LiveView />} />
             <Route path="admin" element={<AdminSteering />} />
             <Route path="settings" element={<Settings />} />

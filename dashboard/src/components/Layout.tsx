@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   CreditCard,
+  Gift,
   GitFork,
   LayoutDashboard,
   RotateCw,
@@ -8,6 +9,7 @@ import {
   Settings as SettingsIcon,
   ShieldCheck,
   Gauge,
+  Users,
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -53,8 +55,12 @@ export default function Layout() {
     { to: '/runs', label: t('nav.runs'), icon: RotateCw },
     { to: '/usage-limits', label: 'Usage Limits', icon: Gauge }, // AIM-4645
     { to: '/repos', label: t('nav.repos'), icon: GitFork },
+    // AIM-4642
+    { to: '/members', label: 'Members', icon: Users },
     { to: '/billing', label: 'Billing', icon: CreditCard },
     { to: '/audit', label: t('nav.audit'), icon: ScrollText },
+    // AIM-4643
+    { to: '/referral', label: 'Referral', icon: Gift },
     { to: '/settings', label: t('nav.settings'), icon: SettingsIcon },
   ];
 
