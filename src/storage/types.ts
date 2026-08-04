@@ -38,6 +38,8 @@ export interface RunRecord {
   updatedAt?: Date;
   durationMs?: number;
   modelUsed?: string;
+  difficultyTier?: number;
+  variant?: string;
 }
 
 export interface RunFilter {

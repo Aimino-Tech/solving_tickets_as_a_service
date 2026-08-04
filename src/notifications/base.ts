@@ -12,7 +12,9 @@ export type NotificationEvent =
   | 'verification_failed'
   | 'error'
   | 'payment_failed'
-  | 'payment_recovered';
+  | 'payment_recovered'
+  | 'incident_active'
+  | 'incident_resolved';
 
 export interface NotificationData {
   repoOwner: string;

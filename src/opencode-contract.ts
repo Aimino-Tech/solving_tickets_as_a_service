@@ -327,6 +327,9 @@ export interface McpJobStatus {
   progress?: number;
   message?: string;
   prUrl?: string;
+  model?: string;
+  variant?: string;
+  difficultyTier?: number;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
@@ -353,4 +356,7 @@ export const mcpSubmitIssueRequestSchema = z.object({
   labels: z.array(z.string()).optional(),
   channel: z.string().optional(),
   channelTarget: z.string().optional(),
+  model: z.string().min(1).max(200).optional(),
+  variant: z.enum(['low', 'medium', 'high', 'max']).optional(),
+  difficultyTier: z.number().int().min(1).max(4).optional(),
 }).strict();

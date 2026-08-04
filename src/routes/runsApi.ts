@@ -93,6 +93,9 @@ router.get('/', requireAuth, auditMiddleware({ action: 'runs.list', actorType: '
       prUrl: r.pr_url,
       branchName: r.branch_name,
       error: r.error,
+      modelUsed: r.model_used ?? null,
+      difficultyTier: r.difficulty_tier ?? null,
+      variant: r.variant ?? null,
       createdAt: r.created_at,
     }));
 
@@ -150,7 +153,13 @@ router.get('/:id', requireAuth, auditMiddleware({ action: 'runs.view', actorType
       // Non-fatal
     }
 
-    res.json({ ...run, creditsUsed });
+    res.json({
+      ...run,
+      creditsUsed,
+      modelUsed: (run as any).model_used ?? null,
+      difficultyTier: (run as any).difficulty_tier ?? null,
+      variant: (run as any).variant ?? null,
+    });
   } catch (err) {
     log.error({ err: String(err), runId: req.params.id }, 'Failed to fetch run');
     res.status(500).json({ error: 'Failed to fetch run' });

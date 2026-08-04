@@ -29,7 +29,7 @@ import { accountsRepository } from '../db/repositories/index.js';
 import { handleCheckSuiteCompleted, handlePullRequestOpened } from '../github/prQualityGate.js';
 import { parseSlashCommand } from '../github/slashCommands.js';
 import { dispatchThroughGovernance, isGovernanceEnabled } from '../governance/client.js';
-import type { AccountTier } from '../proxy/modelRouter.js';
+import type { AccountTier, TaskComplexity } from '../proxy/modelRouter.js';
 import { rateLimiter } from '../ratelimit/limiter.js';
 import { getTierForAccount, type Tier } from '../ratelimit/tiers.js';
 import { dispatchIssueToOsy } from '../services/osyDispatch.js';
@@ -209,6 +209,23 @@ async function createWelcomeIssue(installationId: number, repoOwner: string, rep
 function normalizeAccountTier(tier: Tier | undefined): AccountTier | undefined {
   if (!tier) return undefined;
   return tier === 'team' ? 'pro' : tier;
+}
+
+interface RoutingSelection {
+  model?: string;
+  difficultyTier?: number;
+  variant?: string;
+}
+
+async function resolveRoutingSelection(accountTier?: AccountTier, complexity: TaskComplexity = 'fix'): Promise<RoutingSelection> {
+  if (!config.osy?.dispatchUrl) return {};
+  const { modelRouter, difficultyForTask } = await import('../proxy/modelRouter.js');
+  const difficultyTier = difficultyForTask(complexity, accountTier ?? 'free');
+  if (!config.proxy?.modelRouterEnabled) {
+    return { difficultyTier, variant: undefined };
+  }
+  const selection = await modelRouter.selectModel({ complexity, accountTier: accountTier ?? 'free', difficultyTier });
+  return { model: selection.model, difficultyTier: selection.difficultyTier, variant: selection.variant };
 }
 
 export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
@@ -481,6 +498,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         repoName: jobData.repoName,
         issueNumber: jobData.issueNumber,
         status: 'pending',
+        ...(await resolveRoutingSelection(normalizeAccountTier(tier))),
       });
     } catch (storageErr) {
       log.warn({ err: String(storageErr) }, 'Failed to save pending RunRecord');
@@ -579,6 +597,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         labels: jobData.labels ?? [],
         traceId: traceId,
         accountTier: normalizeAccountTier(tier),
+        ...(await resolveRoutingSelection(normalizeAccountTier(tier))),
       });
       if (!osyResult.success) {
         auditService.logFixJobEvent({
@@ -808,6 +827,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           labels: jobData.labels ?? [],
           traceId,
           accountTier: normalizeAccountTier(tier),
+          ...(await resolveRoutingSelection(normalizeAccountTier(tier))),
         });
         if (!osyResult.success) {
           log.error(

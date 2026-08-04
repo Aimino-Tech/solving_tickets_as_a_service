@@ -37,7 +37,9 @@ CREATE TABLE IF NOT EXISTS run_history (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   duration_ms     INTEGER,
-  model_used      TEXT
+  model_used      TEXT,
+  difficulty_tier INTEGER,
+  variant         TEXT
 )
 `;
 
@@ -61,6 +63,8 @@ interface DbRow {
   updated_at: string | null;
   duration_ms: number | null;
   model_used: string | null;
+  difficulty_tier: number | null;
+  variant: string | null;
 }
 
 function rowToRecord(row: DbRow): RunRecord {
@@ -80,6 +84,8 @@ function rowToRecord(row: DbRow): RunRecord {
     updatedAt: row.updated_at ? new Date(row.updated_at) : undefined,
     durationMs: row.duration_ms ?? undefined,
     modelUsed: row.model_used ?? undefined,
+    difficultyTier: row.difficulty_tier ?? undefined,
+    variant: row.variant ?? undefined,
   };
 }
 
@@ -108,8 +114,8 @@ export class PostgresStorage {
     const result = await queryWithRetry<DbRow>(
       `INSERT INTO run_history
          (installation_id, repo_owner, repo_name, issue_number, status,
-          confidence, summary, pr_url, branch_name, error, duration_ms, model_used)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          confidence, summary, pr_url, branch_name, error, duration_ms, model_used, difficulty_tier, variant)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
       [
         run.installationId,
@@ -124,6 +130,8 @@ export class PostgresStorage {
         run.error ?? null,
         run.durationMs ?? null,
         run.modelUsed ?? null,
+        run.difficultyTier ?? null,
+        run.variant ?? null,
       ],
     );
 

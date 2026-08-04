@@ -41,6 +41,26 @@ export type TaskComplexity = 'triage' | 'fix' | 'review';
 
 export type AccountTier = 'free' | 'pro' | 'enterprise';
 
+export type DifficultyTier = 1 | 2 | 3 | 4;
+
+export type RoutingVariant = 'low' | 'medium' | 'high' | 'max';
+
+const VARIANTS_BY_TIER: RoutingVariant[] = ['low', 'medium', 'high', 'max'];
+
+export function variantForDifficulty(tier: number): RoutingVariant {
+  const clamped = Math.max(1, Math.min(4, Math.round(tier)));
+  return VARIANTS_BY_TIER[clamped - 1] ?? 'low';
+}
+
+export function difficultyForTask(complexity: TaskComplexity, accountTier?: AccountTier): DifficultyTier {
+  if (complexity === 'triage') return 1;
+  if (complexity === 'review') return 3;
+  const tier = accountTier ?? 'free';
+  if (tier === 'enterprise') return 3;
+  if (tier === 'pro') return 2;
+  return 1;
+}
+
 export interface ModelOption {
   /** Model identifier (e.g. "gpt-4o", "claude-sonnet-4-20250514") */
   id: string;
@@ -59,6 +79,8 @@ export interface ModelSelectionParams {
   complexity: TaskComplexity;
   /** Account tier for cost/power selection */
   accountTier?: AccountTier;
+  /** Difficulty tier 1-4 (OpenSymphony DifficultyRouter contract) */
+  difficultyTier?: DifficultyTier;
   /** Optional preferred model override */
   preferredModel?: string;
   /** Whether to skip availability checks (default: false) */
@@ -70,6 +92,10 @@ export interface ModelSelectionResult {
   model: string;
   /** Display name of the selected model */
   modelName: string;
+  /** Difficulty tier 1-4 for the routed task */
+  difficultyTier: DifficultyTier;
+  /** Routing variant low/medium/high/max */
+  variant: RoutingVariant;
   /** Confidence level in this selection */
   confidence: 'high' | 'medium' | 'low';
   /** Whether a fallback was used */
@@ -229,9 +255,11 @@ export class ModelRouter {
    * available, falls back to the configured default Opencode model.
    */
   async selectModel(params: ModelSelectionParams): Promise<ModelSelectionResult> {
-    const { complexity, accountTier, preferredModel, skipAvailabilityCheck } = params;
+    const { complexity, accountTier, difficultyTier, preferredModel, skipAvailabilityCheck } = params;
     const tier: AccountTier = accountTier ?? 'free';
     const fallbackChain: string[] = [];
+    const resolvedDifficulty: DifficultyTier = difficultyTier ?? difficultyForTask(complexity, tier);
+    const variant = variantForDifficulty(resolvedDifficulty);
 
     try {
       // 1. Preferred model override — check if it exists in the registry
@@ -243,6 +271,8 @@ export class ModelRouter {
           return {
             model: preferredModel,
             modelName: preferredModel,
+            difficultyTier: resolvedDifficulty,
+            variant,
             confidence: 'high',
             usedFallback: false,
             fallbackChain,
@@ -263,6 +293,8 @@ export class ModelRouter {
             return {
               model: option.id,
               modelName: option.name,
+              difficultyTier: resolvedDifficulty,
+              variant,
               confidence: 'high',
               usedFallback: fallbackChain.length > 1,
               fallbackChain,
@@ -281,6 +313,8 @@ export class ModelRouter {
       return {
         model: this.defaultModelId,
         modelName: this.defaultModelId,
+        difficultyTier: resolvedDifficulty,
+        variant,
         confidence: 'low',
         usedFallback: true,
         fallbackChain,
@@ -293,6 +327,8 @@ export class ModelRouter {
       return {
         model: this.defaultModelId,
         modelName: this.defaultModelId,
+        difficultyTier: resolvedDifficulty,
+        variant,
         confidence: 'low',
         usedFallback: true,
         fallbackChain,

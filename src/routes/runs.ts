@@ -36,6 +36,8 @@ interface PublicRunResponse {
   error: string | null;
   durationMs: number | null;
   modelUsed: string | null;
+  difficultyTier: number | null;
+  variant: string | null;
   createdAt: string;
 }
 
@@ -85,6 +87,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       error: raw.error ? String(raw.error) : null,
       durationMs: raw.durationMs ?? raw.duration_ms ? Number(raw.durationMs ?? raw.duration_ms) : null,
       modelUsed: raw.modelUsed ?? raw.model_used ? String(raw.modelUsed ?? raw.model_used) : null,
+      difficultyTier: raw.difficultyTier ?? raw.difficulty_tier ? Number(raw.difficultyTier ?? raw.difficulty_tier) : null,
+      variant: raw.variant ? String(raw.variant) : null,
       createdAt: raw.createdAt ? String(raw.createdAt) : raw.created_at ? String(raw.created_at) : new Date().toISOString(),
     };
 
@@ -201,6 +205,10 @@ function renderRunPage(run: PublicRunResponse): string {
       <div class="card">
         <div class="label">Model</div>
         <div class="value">${escapeHtml(run.modelUsed ?? '\u2014')}</div>
+      </div>
+      <div class="card">
+        <div class="label">Routed Variant</div>
+        <div class="value">${run.variant ? escapeHtml(`${run.variant} (Tier ${run.difficultyTier ?? '?'})`) : '\u2014'}</div>
       </div>
       <div class="card">
         <div class="label">Created</div>

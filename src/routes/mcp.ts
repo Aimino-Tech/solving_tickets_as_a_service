@@ -81,7 +81,7 @@ router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Validation failed', details: errors });
   }
 
-  const { repoOwner, repoName, issueTitle, issueBody, labels, channel, channelTarget } = parseResult.data;
+  const { repoOwner, repoName, issueTitle, issueBody, labels, channel, channelTarget, model, variant, difficultyTier } = parseResult.data;
 
   try {
     const client = await getRedis();
@@ -94,6 +94,9 @@ router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
       message: 'Issue queued for processing',
       createdAt: now,
       updatedAt: now,
+      model,
+      variant,
+      difficultyTier,
     };
 
     await saveJob(client, runId, jobData);

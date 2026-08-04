@@ -17,6 +17,8 @@ export interface Run {
   modelUsed: string | null;
   creditsUsed: number | null;
   costCents: number | null;
+  difficultyTier: number | null;
+  variant: string | null;
   createdAt: Date;
 }
 
@@ -35,5 +37,7 @@ export interface NewRun {
   modelUsed?: string | null;
   creditsUsed?: number | null;
   costCents?: number | null;
+  difficultyTier?: number | null;
+  variant?: string | null;
   createdAt?: Date;
 }

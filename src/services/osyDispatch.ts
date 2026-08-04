@@ -8,6 +8,8 @@ const log = rootLogger.child({ module: 'osy-dispatch' });
 export interface DispatchResult {
   success: boolean;
   runId?: string;
+  difficultyTier?: number;
+  variant?: string;
   error?: string;
 }
 
@@ -25,6 +27,12 @@ export interface IssueDispatchPayload {
   accountTier?: AccountTier;
   /** Task complexity for model routing. */
   complexity?: TaskComplexity;
+  /** Resolved model override (already selected by the caller). */
+  model?: string;
+  /** Difficulty tier 1-4 (OpenSymphony DifficultyRouter contract). */
+  difficultyTier?: number;
+  /** Routing variant low/medium/high/max. */
+  variant?: string;
 }
 
 function getDispatchUrl(): string | undefined {
@@ -49,16 +57,24 @@ export async function dispatchIssueToOsy(payload: IssueDispatchPayload): Promise
       headers.traceparent = `00-${payload.traceId.replace(/-/g, '')}-${payload.traceId.slice(0, 16)}-01`;
     }
     let model: string | undefined;
+    let difficultyTier = payload.difficultyTier ?? 1;
+    let variant = payload.variant ?? 'low';
     if (config.proxy?.modelRouterEnabled) {
       try {
         const selection = await modelRouter.selectModel({
           complexity: payload.complexity ?? 'fix',
           accountTier: payload.accountTier ?? 'free',
+          difficultyTier: difficultyTier as 1 | 2 | 3 | 4,
+          preferredModel: payload.model,
         });
         model = selection.model;
+        difficultyTier = selection.difficultyTier;
+        variant = selection.variant;
       } catch (err) {
         log.warn({ err: String(err) }, 'Model router selection failed — using default model');
       }
+    } else {
+      model = payload.model;
     }
     const response = await fetch(url, {
       method: 'POST',
@@ -72,6 +88,8 @@ export async function dispatchIssueToOsy(payload: IssueDispatchPayload): Promise
         labels: payload.labels,
         installation_id: payload.installationId,
         model,
+        difficulty_tier: difficultyTier,
+        variant,
       }),
     });
 
@@ -82,8 +100,8 @@ export async function dispatchIssueToOsy(payload: IssueDispatchPayload): Promise
     }
 
     const result = (await response.json()) as { run_id?: string };
-    log.info({ runId: result.run_id }, 'OS dispatch succeeded');
-    return { success: true, runId: result.run_id };
+    log.info({ runId: result.run_id, difficultyTier, variant }, 'OS dispatch succeeded');
+    return { success: true, runId: result.run_id, difficultyTier, variant };
   } catch (err) {
     log.error({ err: String(err) }, 'OS dispatch request failed');
     return { success: false, error: String(err) };
