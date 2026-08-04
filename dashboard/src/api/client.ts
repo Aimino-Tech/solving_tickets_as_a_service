@@ -149,6 +149,46 @@ export interface BillingPlan {
   hasBillingRecord?: boolean;
 }
 
+export interface BillingSettings {
+  autoReloadEnabled: boolean;
+  autoReloadThresholdCents: number | null;
+  autoReloadTopupCents: number | null;
+  monthlyLimitCents: number | null;
+  monthSpendCents?: number;
+}
+
+export interface Coupon {
+  id: number;
+  code: string;
+  amountCredits: number;
+  active: boolean;
+  maxRedemptions: number | null;
+  timesRedeemed: number;
+  createdAt: string;
+}
+
+export interface BillingSettingsUpdate {
+  autoReloadEnabled?: boolean;
+  autoReloadThresholdCents?: number | null;
+  autoReloadTopupCents?: number | null;
+  monthlyLimitCents?: number | null;
+}
+
+export const billingSettingsApi = {
+  get: (opts?: { signal?: AbortSignal }) =>
+    request<BillingSettings>('/v1/credits/billing-settings', opts),
+  update: (body: BillingSettingsUpdate) =>
+    request<{ settings: BillingSettings }>('/v1/credits/billing-settings', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  redeemCoupon: (code: string) =>
+    request<{ coupon: Coupon; newBalance: number }>('/v1/credits/redeem-coupon', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+};
+
 export const litellm = {
   usage: () =>
     request<LitellmUsage>('/v1/litellm/usage'),
@@ -249,6 +289,11 @@ export const credits = {
     request<{ accountId: number; period: string; usage: MonthlyUsage[] }>(
       `/v1/credits/usage?period=${period}`, opts,
     ),
+  redeemCoupon: (code: string) =>
+    request<{ coupon: Coupon; newBalance: number }>('/v1/credits/redeem-coupon', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
 };
 
 export const runs = {
@@ -383,6 +428,32 @@ export const billing = {
       method: 'POST',
       body: JSON.stringify({ returnUrl }),
     }),
+};
+
+// -- Referral API (AIM-4643) --
+
+export interface ReferralReward {
+  id: number;
+  accountId: number;
+  referredEmail: string;
+  amountCredits: number;
+  status: 'pending' | 'claimed';
+  createdAt: string;
+  claimedAt: string | null;
+}
+
+export const referralApi = {
+  code: (opts?: { signal?: AbortSignal }) =>
+    request<{ code: string }>('/v1/referral/code', opts),
+  createCode: () =>
+    request<{ code: string }>('/v1/referral/code', { method: 'POST' }),
+  rewards: (opts?: { signal?: AbortSignal }) =>
+    request<{ rewards: ReferralReward[] }>('/v1/referral/rewards', opts),
+  claim: (id: number) =>
+    request<{ claimed: boolean; reward: ReferralReward; newBalance: number }>(
+      `/v1/referral/rewards/${id}/claim`,
+      { method: 'POST' },
+    ),
 };
 
 export interface WizardProgress {
