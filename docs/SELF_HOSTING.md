@@ -195,6 +195,8 @@ QUEUE_RETRY_DELAYS=30000,120000,300000,900000
 OPENCODE_URL=http://opencode:4096              # Docker network URL
 OPENCODE_MODEL=anthropic/claude-sonnet-4-20250514
 FALLBACK_MODELS=gpt-4o,claude-haiku
+# LLM routing (tier→model/variant) is on by default. See docs/llm-routing-strategy.md.
+# PROXY_MODEL_ROUTER_ENABLED=false               # disable difficulty-tier routing
 
 # === Sandbox (Choose one) ===
 # E2B (recommended for production):

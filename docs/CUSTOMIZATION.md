@@ -59,6 +59,10 @@ Only labels that exactly match `SYNTARO_LABEL` trigger a fix run. This prevents 
 
 ## Changing the Model
 
+> Difficulty-tiered model routing (tier 1-4 → variant low/medium/high/max, how
+> to bring your own models, and how to disable routing) is documented in
+> [llm-routing-strategy.md](llm-routing-strategy.md).
+
 SYNTARO uses two separate models for different phases:
 
 ### 1. Triage Model (Classification)
