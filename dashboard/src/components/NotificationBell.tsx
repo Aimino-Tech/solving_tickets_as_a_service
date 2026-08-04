@@ -140,6 +140,17 @@ export default function NotificationBell() {
                       <p className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
                         {formatTime(notif.timestamp)}
                       </p>
+                      {notif.data && typeof notif.data.prUrl === 'string' && notif.data.prUrl && (
+                        <a
+                          href={notif.data.prUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1 inline-flex items-center gap-1 rounded bg-brand-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-brand-700"
+                        >
+                          View PR ↗
+                        </a>
+                      )}
                     </div>
                     <span
                       className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${

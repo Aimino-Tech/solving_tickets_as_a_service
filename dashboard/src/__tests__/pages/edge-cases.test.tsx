@@ -28,6 +28,8 @@ vi.mock('@/api/client', () => ({
   configApi: { get: mockConfigApiGet, updateEnv: vi.fn() },
   request: mockRequest,
   litellm: { usage: mockLitellmUsage },
+  serviceCatalog: { list: vi.fn().mockResolvedValue({ data: [] }), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
+  incidents: { list: vi.fn().mockResolvedValue({ data: [], total: 0 }), getStats: vi.fn().mockResolvedValue({ total: 0 }) },
 }));
 
 const mockFetchPreferences = vi.hoisted(() => vi.fn());

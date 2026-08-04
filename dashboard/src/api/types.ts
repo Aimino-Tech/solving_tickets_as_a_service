@@ -218,3 +218,79 @@ export interface VsComparisonData {
     theirCostPerFixCents: number;
   };
 }
+
+export type IncidentSeverity = 'SEV1' | 'SEV2' | 'SEV3' | 'SEV4';
+export type IncidentStatus = 'open' | 'investigating' | 'fixing' | 'resolved';
+export type IncidentSource = 'monitoring' | 'manual' | 'alert' | 'pager';
+
+export interface Incident {
+  id: number;
+  title: string;
+  severity: string;
+  status: string;
+  source: string;
+  confidence: 'high' | 'medium' | 'low' | null;
+  summary: string | null;
+  alertId: string | null;
+  runId: string | null;
+  autoFixed: boolean;
+  policyDecision: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IncidentTimelineEntry {
+  id: number;
+  incidentId: number;
+  event: string;
+  detail: string | null;
+  createdAt: string;
+}
+
+export interface IncidentRepo {
+  id: number;
+  incidentId: number;
+  repoOwner: string;
+  repoName: string;
+  status: string;
+  prUrl: string | null;
+  branchName: string | null;
+  runId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IncidentDetail extends Incident {
+  timeline: IncidentTimelineEntry[];
+  repos: IncidentRepo[];
+}
+
+export interface IncidentStats {
+  total: number;
+  open: number;
+  investigating: number;
+  fixing: number;
+  resolved: number;
+  mttrMs: number | null;
+  bySeverity: Array<{ severity: string; count: number }>;
+}
+
+export interface ServiceCatalogEntry {
+  id: number;
+  name: string;
+  purpose: string | null;
+  repos: Array<{ owner: string; repo: string }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IncidentFilters {
+  severity?: string;
+  status?: string;
+  source?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+}

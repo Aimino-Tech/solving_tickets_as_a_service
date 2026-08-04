@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/__tests__/test-utils';
 import Settings from '@/pages/Settings';
 
-const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiList, mockPrivacy } = vi.hoisted(() => ({
+const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiList, mockPrivacy, mockServiceCatalogList } = vi.hoisted(() => ({
   mockConfigApiGet: vi.fn(),
   mockConfigApiUpdateEnv: vi.fn(),
   mockRequest: vi.fn(),
@@ -15,6 +15,7 @@ const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiLis
     cancelDeletion: vi.fn(),
     exportData: vi.fn(),
   },
+  mockServiceCatalogList: vi.fn(),
 }));
 
 vi.mock('@/api/client', () => ({
@@ -31,6 +32,12 @@ vi.mock('@/api/client', () => ({
     getOAuthUrl: vi.fn(),
   },
   privacy: mockPrivacy,
+  serviceCatalog: {
+    list: mockServiceCatalogList,
+    create: vi.fn(),
+    remove: vi.fn(),
+    update: vi.fn(),
+  },
 }));
 
 const mockUseAuth = vi.hoisted(() => vi.fn());
@@ -70,6 +77,8 @@ describe('Settings', () => {
       subscriptions: [],
       warnings: [],
     });
+
+    mockServiceCatalogList.mockResolvedValue({ data: [] });
   });
 
   it('renders API Keys section with Linear key in display mode first, shows input on Edit', async () => {

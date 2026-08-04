@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { request, configApi, github as githubApi, mcpKeysApi, privacy as privacyApi } from '@/api/client';
-import type { McpApiKey } from '@/api/types';
+import { request, configApi, github as githubApi, mcpKeysApi, privacy as privacyApi, serviceCatalog } from '@/api/client';
+import type { McpApiKey, ServiceCatalogEntry } from '@/api/types';
 import { useI18n } from '@/i18n/I18nProvider';
 import {
   Eye,
@@ -11,6 +11,7 @@ import {
   Trash2,
   ArrowUpRight,
   ChevronDown,
+  Server,
 } from 'lucide-react';
 
 /* ── Brand SVG Icons ─────────────────────────────────────────── */
@@ -157,6 +158,56 @@ export default function Settings() {
   const [sysConfig, setSysConfig] = useState<any>({ env: {}, rateLimits: [], tokens: [], integrations: [], infrastructure: {}, symphonies: [], subscriptions: [], warnings: [] });
   const [mcpApiUrl, setMcpApiUrl] = useState('https://api.syntaro.io');
   const [showSetupGuide, setShowSetupGuide] = useState(false);
+
+  const [services, setServices] = useState<ServiceCatalogEntry[]>([]);
+  const [serviceName, setServiceName] = useState('');
+  const [servicePurpose, setServicePurpose] = useState('');
+  const [serviceRepos, setServiceRepos] = useState('');
+  const [serviceSaving, setServiceSaving] = useState(false);
+  const [serviceError, setServiceError] = useState<string | null>(null);
+
+  useEffect(() => {
+    serviceCatalog.list().then((res) => setServices(res.data)).catch(() => {});
+  }, []);
+
+  async function handleCreateService() {
+    if (!serviceName.trim()) return;
+    setServiceSaving(true);
+    setServiceError(null);
+    try {
+      const repos = serviceRepos
+        .split(',')
+        .map((r) => r.trim())
+        .filter(Boolean)
+        .map((r) => {
+          const [owner, repo] = r.split('/');
+          return { owner, repo };
+        });
+      await serviceCatalog.create({ name: serviceName.trim(), purpose: servicePurpose.trim() || null, repos });
+      setServices((await serviceCatalog.list()).data);
+      setServiceName('');
+      setServicePurpose('');
+      setServiceRepos('');
+      setMessage({ type: 'success', text: t('serviceCatalog.created') });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      setServiceError(err instanceof Error ? err.message : t('serviceCatalog.failed', { error: String(err) }));
+    } finally {
+      setServiceSaving(false);
+    }
+  }
+
+  async function handleDeleteService(id: number) {
+    if (!window.confirm(t('serviceCatalog.delete'))) return;
+    try {
+      await serviceCatalog.remove(id);
+      setServices((await serviceCatalog.list()).data);
+      setMessage({ type: 'success', text: t('serviceCatalog.deleted') });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      setServiceError(err instanceof Error ? err.message : t('serviceCatalog.failed', { error: String(err) }));
+    }
+  }
 
   useEffect(() => {
     const ac = new AbortController();
@@ -1332,6 +1383,83 @@ export default function Settings() {
                     In your agent, ask something like: <span className="italic">&quot;fix these tickets&quot;</span> or <span className="italic">&quot;is there a ticket for X?&quot;</span>. The agent will check existing tickets and create new ones if needed.
                   </p>
                 </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Service Catalog ───────────────────────────────────────── */}
+      <section>
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('serviceCatalog.title')}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('serviceCatalog.subtitle')}</p>
+        </div>
+
+        <div className="mt-4 card">
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:flex-row sm:items-end">
+              <div className="flex-1 space-y-1">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('serviceCatalog.name')}</label>
+                <input
+                  value={serviceName}
+                  onChange={(e) => setServiceName(e.target.value)}
+                  placeholder="checkout-service"
+                  className="input-field min-h-[44px] w-full font-mono text-sm"
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('serviceCatalog.purpose')}</label>
+                <input
+                  value={servicePurpose}
+                  onChange={(e) => setServicePurpose(e.target.value)}
+                  placeholder="Handles cart + payments"
+                  className="input-field min-h-[44px] w-full text-sm"
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('serviceCatalog.repos')}</label>
+                <input
+                  value={serviceRepos}
+                  onChange={(e) => setServiceRepos(e.target.value)}
+                  placeholder="owner/repo, owner/repo2"
+                  className="input-field min-h-[44px] w-full font-mono text-sm"
+                />
+              </div>
+              <button onClick={handleCreateService} disabled={serviceSaving || !serviceName.trim()} className="btn-primary min-h-[44px] text-sm disabled:opacity-50">
+                {serviceSaving ? '…' : <><Plus size={14} className="inline mr-1" />{t('serviceCatalog.add')}</>}
+              </button>
+            </div>
+
+            {serviceError && <p className="text-xs text-red-600 dark:text-red-400">{serviceError}</p>}
+
+            {services.length === 0 ? (
+              <p className="text-sm text-gray-400 dark:text-gray-500">
+                {t('serviceCatalog.noServices')} {t('serviceCatalog.noServicesDesc')}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {services.map((service) => (
+                  <div key={service.id} className="flex flex-col gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-2">
+                      <Server className="mt-0.5 h-4 w-4 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{service.name}</p>
+                        {service.purpose && <p className="text-xs text-gray-500 dark:text-gray-400">{service.purpose}</p>}
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {service.repos.map((r) => (
+                            <span key={`${r.owner}/${r.repo}`} className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                              {r.owner}/{r.repo}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={() => handleDeleteService(service.id)} className="text-xs text-gray-400 hover:text-red-500">
+                      <Trash2 size={14} className="inline" /> {t('serviceCatalog.delete')}
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>

@@ -1,6 +1,7 @@
 import type {
   Run, DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice,
   KpiResponse, PricingData, CostCalculation, VsComparisonData, McpApiKey,
+  Incident, IncidentDetail, IncidentStats, IncidentFilters, ServiceCatalogEntry,
 } from '@/api/types';
 
 export type { DashboardStats };
@@ -966,5 +967,50 @@ export const pricing = {
         theirCostPerFixCents: number;
       };
     }>(`/v1/pricing/vs/${competitor}`),
+};
+
+export const incidents = {
+  list: (filters: IncidentFilters = {}, opts?: { signal?: AbortSignal }) => {
+    const qs = new URLSearchParams();
+    if (filters.severity) qs.set('severity', filters.severity);
+    if (filters.status) qs.set('status', filters.status);
+    if (filters.source) qs.set('source', filters.source);
+    if (filters.from) qs.set('from', filters.from);
+    if (filters.to) qs.set('to', filters.to);
+    if (filters.limit) qs.set('limit', String(filters.limit));
+    if (filters.offset) qs.set('offset', String(filters.offset));
+    const query = qs.toString();
+    return request<{ data: Incident[]; total: number; limit: number; offset: number }>(
+      `/v1/incidents${query ? `?${query}` : ''}`,
+      opts,
+    );
+  },
+  get: (id: number | string, opts?: { signal?: AbortSignal }) =>
+    request<{ data: IncidentDetail }>(`/v1/incidents/${id}`, opts),
+  getStats: (opts?: { signal?: AbortSignal }) => request<IncidentStats>(`/v1/incidents/stats`, opts),
+  transition: (id: number | string, status: string) =>
+    request<{ data: Incident }>(`/v1/incidents/${id}/status`, {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    }),
+};
+
+export const serviceCatalog = {
+  list: () => request<{ data: ServiceCatalogEntry[] }>(`/v1/incidents/services`),
+  create: (body: { name: string; purpose?: string | null; repos?: { owner: string; repo: string }[] }) =>
+    request<{ data: ServiceCatalogEntry }>(`/v1/incidents/services`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  update: (
+    id: number | string,
+    body: { purpose?: string | null; repos?: { owner: string; repo: string }[] },
+  ) =>
+    request<{ data: ServiceCatalogEntry }>(`/v1/incidents/services/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  remove: (id: number | string) =>
+    request<{ success: boolean }>(`/v1/incidents/services/${id}`, { method: 'DELETE' }),
 };
 

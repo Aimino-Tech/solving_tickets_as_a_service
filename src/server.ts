@@ -80,6 +80,7 @@ import { litellmUsageRouter } from './routes/litellmUsage.js';
 import mcpKeysRouter from './routes/mcpKeys.js';
 import n8nRouter from './routes/n8n.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { incidentsRouter } from './routes/incidents.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { pipelineRouter } from './routes/pipeline.js';
 import { plgRouter } from './routes/plg.js';
@@ -896,6 +897,7 @@ export async function createApp(): Promise<express.Application> {
   // PUT    /api/v1/notifications/history/:id/read    — Mark one as read
   // PUT    /api/v1/notifications/history/read-all    — Mark all as read
   app.use('/api/v1/notifications', notificationsRouter);
+  app.use('/api/v1/incidents', incidentsRouter);
 
   // ── Team Management API ───────────────────────────────────────────
   // POST   /api/teams                          — Create a new team

@@ -17,3 +17,9 @@ export { WebhookEventsRepository, webhookEventsRepository } from './WebhookEvent
 export { WorkspaceRepository, workspaceRepository } from './WorkspaceRepository.js';
 export { NotificationPreferencesRepository, notificationPreferencesRepository } from './NotificationPreferencesRepository.js';
 export { RunFeedbackRepository, runFeedbackRepository } from './RunFeedbackRepository.js';
+export {
+  IncidentRepository,
+  incidentRepository,
+  ServiceCatalogRepository,
+  serviceCatalogRepository,
+} from './IncidentRepository.js';

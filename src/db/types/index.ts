@@ -28,3 +28,13 @@ export type { RunFeedback, NewRunFeedback } from './runFeedback.js';
 export type { RefreshToken, NewRefreshToken, RefreshTokenRepository } from './refreshTokens.js';
 
 export type { LinearOAuthToken, NewLinearOAuthToken } from './linearOAuth.js';
+export type {
+  Incident,
+  NewIncident,
+  IncidentTimelineEntry,
+  NewIncidentTimelineEntry,
+  IncidentRepo,
+  NewIncidentRepo,
+  ServiceCatalogEntry,
+  NewServiceCatalogEntry,
+} from './incidents.js';
