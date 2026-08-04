@@ -498,6 +498,13 @@ configRouter.get('/', (_req: Request, res: Response) => {
         connected: !!(process.env.SLACK_BOT_TOKEN || envOverrides.SLACK_BOT_TOKEN),
         configUrl: '',
       },
+      {
+        id: 'bitbucket',
+        name: 'Bitbucket',
+        icon: 'bitbucket',
+        connected: !!(config.bitbucket.username && config.bitbucket.appPassword),
+        configUrl: 'https://bitbucket.org/account/settings/app-passwords/',
+      },
     ];
 
     // SaaS base URL for MCP clients — must never fall back to a localhost dev URL.

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { repos, github, type GitHubInstallation } from '@/api/client';
+import { repos, github, bitbucket, type GitHubInstallation, type BitbucketRepo } from '@/api/client';
 import type { Repo } from '@/api/types';
+import { useI18n } from '@/i18n/I18nProvider';
 import { formatRelativeTime } from '@/utils/format';
 // import { supabase } from '@/lib/supabase';
 
 export default function Repos() {
+  const { t } = useI18n();
   const [repoList, setRepoList] = useState<Repo[]>([]);
   const [installations, setInstallations] = useState<GitHubInstallation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -13,6 +15,70 @@ export default function Repos() {
   const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; githubLogin?: string }>({ connected: false });
   const [showInstallations, setShowInstallations] = useState(false);
   const [togglingRepo, setTogglingRepo] = useState<string | null>(null);
+  const [bbStatus, setBbStatus] = useState<{ connected: boolean; workspace: string }>({ connected: false, workspace: '' });
+  const [bbRepos, setBbRepos] = useState<BitbucketRepo[]>([]);
+  const [bbLoading, setBbLoading] = useState(false);
+  const [bbForm, setBbForm] = useState({ username: '', appPassword: '', workspace: '' });
+  const [bbConnecting, setBbConnecting] = useState(false);
+  const [bbError, setBbError] = useState<string | null>(null);
+  const [togglingBbRepo, setTogglingBbRepo] = useState<string | null>(null);
+
+  async function loadBitbucket(signal?: AbortSignal) {
+    try {
+      const status = await bitbucket.getStatus({ signal }).catch(() => ({ connected: false, workspace: '' }));
+      setBbStatus(status);
+      if (status.connected) {
+        const data = await bitbucket.listRepos({ signal });
+        setBbRepos(data.repos);
+      } else {
+        setBbRepos([]);
+      }
+    } catch {
+      setBbRepos([]);
+    }
+  }
+
+  async function handleConnectBitbucket() {
+    setBbConnecting(true);
+    setBbError(null);
+    try {
+      await bitbucket.connect(bbForm);
+      setBbForm({ username: '', appPassword: '', workspace: '' });
+      await loadBitbucket();
+    } catch (err) {
+      setBbError(err instanceof Error ? err.message : 'Failed to connect Bitbucket');
+    } finally {
+      setBbConnecting(false);
+    }
+  }
+
+  async function handleDisconnectBitbucket() {
+    if (!confirm('Disconnect Bitbucket workspace? Repo webhooks will remain but SYNTARO will stop receiving events.')) return;
+    try {
+      await bitbucket.disconnect();
+      setBbStatus({ connected: false, workspace: '' });
+      setBbRepos([]);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to disconnect');
+    }
+  }
+
+  async function handleToggleBbRepo(repo: BitbucketRepo) {
+    setTogglingBbRepo(repo.name);
+    try {
+      if (repo.webhookActive) {
+        await bitbucket.removeWebhook(bbStatus.workspace, repo.name);
+      } else {
+        await bitbucket.configureWebhook(bbStatus.workspace, repo.name);
+      }
+      const data = await bitbucket.listRepos();
+      setBbRepos(data.repos);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : `Failed to ${repo.webhookActive ? 'remove' : 'configure'} webhook`);
+    } finally {
+      setTogglingBbRepo(null);
+    }
+  }
 
   async function loadAll(signal?: AbortSignal) {
     setLoading(true);
@@ -50,6 +116,7 @@ export default function Repos() {
   useEffect(() => {
     const ac = new AbortController();
     loadAll(ac.signal);
+    loadBitbucket(ac.signal);
     return () => ac.abort();
   }, []);
 
@@ -285,6 +352,101 @@ export default function Repos() {
           </button>
         </div>
       )}
+
+      {/* Bitbucket Workspace */}
+      <div className="pt-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('repos.bitbucketTitle')}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {bbStatus.connected
+                ? t('repos.bitbucketConnectedTo', { workspace: bbStatus.workspace })
+                : t('repos.bitbucketDesc')}
+            </p>
+          </div>
+          {bbStatus.connected ? (
+            <button onClick={handleDisconnectBitbucket} className="btn-danger text-sm">
+              {t('repos.bitbucketDisconnect')}
+            </button>
+          ) : null}
+        </div>
+
+        {bbError && (
+          <div className="card mt-3 border-red-200 dark:border-red-800">
+            <p className="text-red-600 dark:text-red-400">{bbError}</p>
+          </div>
+        )}
+
+        {!bbStatus.connected ? (
+          <div className="card mt-3">
+            <p className="text-sm text-gray-600 dark:text-gray-300">{t('repos.bitbucketAppPasswordHint')}</p>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <input
+                type="text"
+                placeholder={t('repos.bitbucketUsername')}
+                value={bbForm.username}
+                onChange={(e) => setBbForm({ ...bbForm, username: e.target.value })}
+                className="input"
+              />
+              <input
+                type="password"
+                placeholder={t('repos.bitbucketAppPassword')}
+                value={bbForm.appPassword}
+                onChange={(e) => setBbForm({ ...bbForm, appPassword: e.target.value })}
+                className="input"
+              />
+              <input
+                type="text"
+                placeholder={t('repos.bitbucketWorkspace')}
+                value={bbForm.workspace}
+                onChange={(e) => setBbForm({ ...bbForm, workspace: e.target.value })}
+                className="input"
+              />
+            </div>
+            <button
+              onClick={handleConnectBitbucket}
+              disabled={bbConnecting || !bbForm.username || !bbForm.appPassword || !bbForm.workspace}
+              className="btn-primary mt-3"
+            >
+              {bbConnecting ? t('repos.bitbucketConnecting') : t('repos.bitbucketConnect')}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3 mt-3">
+            {bbLoading ? (
+              <div className="card animate-pulse">
+                <div className="h-5 w-48 rounded bg-gray-200 dark:bg-gray-700" />
+              </div>
+            ) : bbRepos.length === 0 ? (
+              <div className="card text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">{t('repos.bitbucketNoRepos', { workspace: bbStatus.workspace })}</p>
+              </div>
+            ) : (
+              bbRepos.map((repo) => (
+                <div key={repo.fullName} className="card flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-block h-2 w-2 rounded-full ${repo.webhookActive ? 'bg-green-500' : 'bg-gray-300'}`} />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{repo.fullName}</span>
+                    {repo.private && <span className="text-xs text-gray-400">Private</span>}
+                  </div>
+                  <button
+                    onClick={() => handleToggleBbRepo(repo)}
+                    disabled={togglingBbRepo === repo.name}
+                    className={`text-xs px-3 py-1 rounded-full min-h-[44px] ${
+                      repo.webhookActive
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                    }`}
+                  >
+                    {togglingBbRepo === repo.name ? '…' : repo.webhookActive ? t('repos.bitbucketActive') : t('repos.bitbucketEnable')}
+                  </button>
+                </div>
+              ))
+            )}
+            <p className="text-xs text-gray-400">{t('repos.bitbucketHint')}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

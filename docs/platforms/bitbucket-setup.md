@@ -1,41 +1,66 @@
 # Bitbucket Setup Guide
 
+SYNTARO supports Bitbucket Cloud end-to-end: a labeled Bitbucket issue
+(`syntaro:fix`) triggers a fix run, status comments are posted on the issue,
+and a draft pull request is opened on Bitbucket for human review.
+
 ## Prerequisites
 
 - A Bitbucket workspace and repository (Cloud)
 - Admin access to the repository
 - SYNTARO instance running (see [DEVELOPMENT.md](../../DEVELOPMENT.md))
 
-## Step 1: Create an OAuth Consumer
+## Step 1: Configure SYNTARO (server side)
 
-1. Go to **Workspace Settings → OAuth consumers**
-2. Click **Add consumer**
-3. Set name: `SYNTARO Bot`
-4. Set callback URL: `https://your-syntaro-instance.com`
-5. Select permissions:
-   - Pull requests: Read, Write
-   - Issues: Read, Write
-   - Webhooks: Read, Write
-6. Save and note the **Consumer Key** and **Consumer Secret**
+Set these variables on the SYNTARO instance (see [`.env.example`](../../.env.example)):
 
-## Step 2: Configure Webhooks
+| Variable | Purpose |
+|----------|---------|
+| `BITBUCKET_USERNAME` | Bitbucket username (or workspace account) |
+| `BITBUCKET_APP_PASSWORD` | Bitbucket app password (see Step 2) |
+| `BITBUCKET_WORKSPACE` | Default workspace slug |
+| `BITBUCKET_WEBHOOK_SECRET` | Secret used to verify webhook payloads (HMAC-SHA256) |
+| `BITBUCKET_BASE_URL` | Defaults to `https://api.bitbucket.org` (Cloud) |
 
-1. Go to **Repository Settings → Webhooks**
+The workspace can also be connected from the dashboard (**Repos → Bitbucket
+Workspace** or **Settings → Integrations**), which verifies the credentials
+and lists the workspace repositories.
+
+## Step 2: Create an App Password
+
+1. Go to **Bitbucket account settings → App passwords** (https://bitbucket.org/account/settings/app-passwords/)
+2. Click **Create app password**
+3. Grant these permissions:
+   - Pull requests: **Read, Write**
+   - Issues: **Read, Write**
+   - Webhooks: **Read, Write**
+   - Repositories: **Read**
+4. Copy the generated password into `BITBUCKET_APP_PASSWORD`
+
+## Step 3: Configure the Webhook
+
+1. Go to **Repository Settings → Webhooks** (or enable it from the dashboard:
+   **Repos → Bitbucket Workspace → Enable SYNTARO** per repo)
 2. Click **Add webhook**
 3. Title: `SYNTARO Webhook`
 4. URL: `https://your-syntaro-instance.com/webhook/bitbucket`
 5. Select triggers:
-   - Pull request: Created, Updated, Approved
    - Issue: Created, Updated
-6. Save the webhook
+   - Pull request: Created, Updated
+6. Set the **secret** to the same value as `BITBUCKET_WEBHOOK_SECRET`
+7. Save the webhook
 
-### Webhook Verification
+### Trigger
 
-Bitbucket uses HMAC-SHA256 verification. The secret is sent in the `X-Hub-Signature` header. SYNTARO verifies this on every incoming webhook.
+Label a Bitbucket issue with `syntaro:fix`. SYNTARO verifies the webhook
+signature (HMAC-SHA256, `X-Hub-Signature` header), posts a **"working on
+it"** comment, and dispatches a fix run. When the fix is ready a **draft
+pull request** is opened on the repository and a result comment is posted.
 
-## Step 3: Configure Repository Variables
+## Step 4: Repository Variables (CI)
 
-Add these to **Repository Settings → Repository variables**:
+If you use Bitbucket Pipelines, add these to **Repository Settings →
+Repository variables**:
 
 | Variable | Value |
 |----------|-------|
@@ -50,3 +75,5 @@ Add these to **Repository Settings → Repository variables**:
 - Code review API is different from GitHub's
 - Bitbucket Server (on-premise) is not currently supported
 - Pipeline schedules use different syntax than GitHub Actions cron
+- One workspace per SYNTARO instance (self-host v1; credentials are
+  instance-scoped, not per-user)

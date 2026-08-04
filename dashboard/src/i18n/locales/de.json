@@ -180,7 +180,6 @@
   "admin.complete": "Abschließen",
   "admin.cancelRun": "Abbrechen",
   "admin.noRuns": "Keine Läufe gefunden.",
-
   "steering.title": "Admin-Steuerung",
   "steering.subtitle": "Notfall-Steuerung und OpenSymphony-Status",
   "steering.statusUnavailable": "Status nicht verfügbar",
@@ -232,7 +231,19 @@
   "steering.backupRun": "Backup jetzt starten",
   "steering.backupStarted": "Backup abgeschlossen",
   "steering.runningBusy": "Wird ausgeführt…",
-  "steering.noBackups": "Noch keine Backups aufgezeichnet."
+  "steering.noBackups": "Noch keine Backups aufgezeichnet.",
+  "repos.bitbucketTitle": "Bitbucket-Workspace",
+  "repos.bitbucketDesc": "Verbinde einen Bitbucket-Workspace, um SYNTARO-Fixes auf Bitbucket zu aktivieren",
+  "repos.bitbucketConnectedTo": "Verbunden mit {{workspace}}",
+  "repos.bitbucketDisconnect": "Bitbucket trennen",
+  "repos.bitbucketAppPasswordHint": "Verwende ein Bitbucket-App-Passwort (Kontoeinstellungen → App-Passwörter) mit Pull-Requests-/Issues-/Webhooks-Lese- und -Schreibrechten.",
+  "repos.bitbucketUsername": "Bitbucket-Benutzername",
+  "repos.bitbucketAppPassword": "App-Passwort",
+  "repos.bitbucketWorkspace": "Workspace-Slug",
+  "repos.bitbucketConnecting": "Verbinde…",
+  "repos.bitbucketConnect": "Bitbucket-Workspace verbinden",
+  "repos.bitbucketNoRepos": "Keine Repositories im Workspace {{workspace}} gefunden.",
+  "repos.bitbucketActive": "SYNTARO aktiv",
+  "repos.bitbucketEnable": "SYNTARO aktivieren",
+  "repos.bitbucketHint": "Ein Workspace pro Instanz. Webhook-Ereignisse: issue:created, issue:updated, pullrequest:created, pullrequest:updated."
 }
-
-
