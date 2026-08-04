@@ -62,6 +62,10 @@ vi.mock('../../stripe/credit-packs.js', () => ({
     small: { priceId: 'price_100credits', credits: 100, bonus: 0, label: '100 Credits', amount: 1000 },
     medium: { priceId: 'price_500credits', credits: 500, bonus: 50, label: '500 + 50 Bonus', amount: 4500 },
   },
+  getCreditPacks: () => [
+    { priceId: 'price_100credits', credits: 100, bonus: 0, label: '100 Credits', amount: 1000 },
+    { priceId: 'price_500credits', credits: 500, bonus: 50, label: '500 + 50 Bonus', amount: 4500 },
+  ],
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -135,9 +139,10 @@ describe('credits/routes', () => {
 
   it('registers all 8 endpoints', async () => {
     await ensureModuleLoaded();
-    expect(routeHandlers).toHaveLength(8);
+    expect(routeHandlers).toHaveLength(9);
     const paths = routeHandlers.map((h) => `${h.method.toUpperCase()} ${h.path}`);
     expect(paths).toContain('GET /credits/balance');
+    expect(paths).toContain('GET /credits/packs');
     expect(paths).toContain('GET /credits/transactions');
     expect(paths).toContain('POST /credits/top-up');
     expect(paths).toContain('POST /credits/redeem-coupon');
@@ -198,6 +203,23 @@ describe('credits/routes', () => {
   // -----------------------------------------------------------------------
   // GET /credits/transactions — S3, S4
   // -----------------------------------------------------------------------
+
+
+  describe('GET /credits/packs', () => {
+    it('returns credit packs with price IDs', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('get', '/credits/packs')!;
+
+      const req = mockReq({});
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res.json).toHaveBeenCalledWith([
+        { credits: 100, bonus: 0, priceCents: 1000, priceId: 'price_100credits' },
+        { credits: 500, bonus: 50, priceCents: 4500, priceId: 'price_500credits' },
+      ]);
+    });
+  });
 
   describe('GET /credits/transactions', () => {
     it('returns 200 with paginated transactions (S3)', async () => {

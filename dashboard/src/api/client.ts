@@ -134,6 +134,13 @@ export interface MonthlyUsage {
   totalTransactions: number;
 }
 
+export interface CreditPack {
+  credits: number;
+  bonus: number;
+  priceCents: number;
+  priceId: string;
+}
+
 export interface BillingPlan {
   id: string;
   name: string;
@@ -276,6 +283,7 @@ me: () =>
 
 export const credits = {
   balance: (opts?: { signal?: AbortSignal }) => request<CreditBalance>('/v1/credits/balance', opts),
+  getPacks: (opts?: { signal?: AbortSignal }) => request<CreditPack[]>('/v1/credits/packs', opts),
   transactions: (limit = 50, offset = 0, opts?: { signal?: AbortSignal }) =>
     request<{ transactions: Transaction[]; pagination: { limit: number; offset: number; total: number } }>(
       `/v1/credits/transactions?limit=${limit}&offset=${offset}`, opts,

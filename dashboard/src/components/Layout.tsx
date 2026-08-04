@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Gauge,
   Users,
+  Wallet,
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -56,6 +57,8 @@ export default function Layout() {
     { to: '/runs', label: t('nav.runs'), icon: RotateCw },
     { to: '/usage-limits', label: 'Usage Limits', icon: Gauge }, // AIM-4645
     { to: '/repos', label: t('nav.repos'), icon: GitFork },
+    // AIM-4646
+    { to: '/credits', label: 'Credits', icon: Wallet },
     { to: '/usage', label: 'Usage', icon: BarChart3 }, // AIM-4641
     // AIM-4642
     { to: '/members', label: 'Members', icon: Users },
