@@ -20,6 +20,8 @@ export interface Run {
   issueTitle: string;
   status: 'queued' | 'running' | 'success' | 'failed' | 'cancelled';
   modelUsed?: string;
+  difficultyTier?: number;
+  variant?: string;
   costCents?: number;
   durationSeconds?: number;
   durationMs?: number;
@@ -67,6 +69,61 @@ export interface PaginatedResponse<T> {
   page: number;
   perPage: number;
   totalPages: number;
+}
+
+export interface IncidentCatalogInfo {
+  repos: string[];
+  purpose: string | null;
+  runbook: string | null;
+}
+
+export interface IncidentPr {
+  repo: string;
+  prUrl: string;
+  status?: string;
+}
+
+export interface Incident {
+  fingerprint: string;
+  service: string;
+  title: string;
+  severity: number;
+  severityLabel: string;
+  environment?: string;
+  labels: string[];
+  traceId?: string;
+  firstSeenAt?: string;
+  lastSeenAt?: string;
+  dispatchedAt?: string;
+  resolvedAt?: string;
+  status: 'active' | 'resolved';
+  difficulty: number;
+  variant?: string;
+  repos: string[];
+  prs: IncidentPr[];
+  catalog?: IncidentCatalogInfo;
+}
+
+export interface IncidentStats {
+  active: number;
+  resolved: number;
+  total: number;
+  mttrSeconds: number | null;
+  bySeverity: Record<string, number>;
+}
+
+export interface IncidentListResponse extends PaginatedResponse<Incident> {
+  stats: IncidentStats;
+  source: string;
+}
+
+export interface ServiceCatalogEntry {
+  id: number;
+  name: string;
+  repos: string[];
+  purpose: string | null;
+  runbook: string | null;
+  providers: string[];
 }
 
 export interface BenchmarkEntry {

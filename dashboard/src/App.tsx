@@ -16,6 +16,8 @@ const DashboardHome = lazy(() => import('@/pages/DashboardHome'));
 const RunsHistory = lazy(() => import('@/pages/RunsHistory'));
 const RunDetail = lazy(() => import('@/pages/RunDetail'));
 const UsageLimits = lazy(() => import('@/pages/UsageLimits')); // AIM-4645 + AIM-4641
+const Incidents = lazy(() => import('@/pages/Incidents'));
+const IncidentDetail = lazy(() => import('@/pages/IncidentDetail'));
 const Repos = lazy(() => import('@/pages/Repos'));
 const Members = lazy(() => import('@/pages/Members'));
 const Credits = lazy(() => import('@/pages/Credits'));
@@ -102,6 +104,8 @@ export default function App() {
             <Route index element={<DashboardHome />} />
             <Route path="runs" element={<RunsHistory />} />
             <Route path="runs/:id" element={<RunDetail />} />
+            <Route path="incidents" element={<Incidents />} />
+            <Route path="incidents/:fingerprint" element={<IncidentDetail />} />
             <Route path="usage-limits" element={<UsageLimits />} /> {/* AIM-4645 + AIM-4641 */}
             <Route path="repos" element={<Repos />} />
             <Route path="usage" element={<Navigate to="/usage-limits" replace />} />

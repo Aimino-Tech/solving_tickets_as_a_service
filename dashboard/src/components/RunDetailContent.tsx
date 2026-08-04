@@ -54,6 +54,7 @@ export default function RunDetailContent({ run }: RunDetailContentProps) {
           <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Cost &amp; Model</h3>
           <DetailRow label="Cost" value={formatCost(run.costCents)} />
           <DetailRow label="Model" value={run.modelUsed || '\u2014'} />
+          <DetailRow label="Routed Variant" value={run.variant ? `${run.variant} (Tier ${run.difficultyTier ?? '?'})` : '\u2014'} />
           <DetailRow label="Credits Used" value={run.creditsUsed != null ? String(run.creditsUsed) : '\u2014'} />
         </div>
       </div>
