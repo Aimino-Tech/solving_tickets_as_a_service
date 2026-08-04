@@ -188,8 +188,8 @@ router.get('/:provider/callback', async (req: Request, res: Response) => {
 
     try {
       await queryWithRetry(
-        `INSERT INTO users (id, email, name, password_hash, plan, subscription_status, created_at, updated_at)
-         VALUES ($1, $2, $3, 'oauth', 'free', 'active', NOW(), NOW())
+        `INSERT INTO users (id, email, name, password_hash, plan, role, subscription_status, created_at, updated_at)
+         VALUES ($1, $2, $3, 'oauth', 'free', 'user', 'active', NOW(), NOW())
          ON CONFLICT (email) DO UPDATE SET
            name = EXCLUDED.name,
            updated_at = NOW()`,
@@ -199,7 +199,8 @@ router.get('/:provider/callback', async (req: Request, res: Response) => {
       log.error({ err: String(dbErr) }, 'Failed to upsert user record - non-fatal');
     }
 
-    const result = authService.generateTokens(user.id, user.email!, name);
+    const role = (user.app_metadata?.role as string | undefined) ?? 'user';
+    const result = authService.generateTokens(user.id, user.email!, name, role);
 
     try {
       auditLog({

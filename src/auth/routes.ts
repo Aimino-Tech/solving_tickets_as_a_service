@@ -61,17 +61,17 @@ router.post('/register', registerLimiter, async (req: Request, res: Response) =>
     // Create user record in local DB and sync plan to auth metadata
     try {
       await queryWithRetry(
-        `INSERT INTO users (id, email, name, password_hash, plan, subscription_status, referral_code, created_at, updated_at)
-         VALUES ($1, $2, $3, 'supabase_auth', 'solo', 'active', $4, NOW(), NOW())
+        `INSERT INTO users (id, email, name, password_hash, plan, role, subscription_status, referral_code, created_at, updated_at)
+         VALUES ($1, $2, $3, 'supabase_auth', 'solo', 'user', 'active', $4, NOW(), NOW())
          ON CONFLICT (email) DO UPDATE SET
            name = EXCLUDED.name,
            updated_at = NOW()`,
         [result.user.id, result.user.email, result.user.name || result.user.email, parsed.data.referralCode ?? null],
       );
 
-      // Sync plan to Supabase Auth metadata so JWT carries it
+      // Sync plan + role to Supabase Auth metadata so JWT carries them
       await getSupabaseAdmin().auth.admin.updateUserById(result.user.id, {
-        app_metadata: { plan: 'solo' },
+        app_metadata: { plan: 'solo', role: 'user' },
       });
     } catch (dbErr) {
       log.error({ err: String(dbErr) }, 'Failed to create user record — non-fatal');
@@ -230,7 +230,8 @@ router.post('/magic-link/verify', async (req: Request, res: Response) => {
     }
 
     const name = (data.user.user_metadata?.name as string | undefined) ?? null;
-    const result = authService.generateTokens(userId, email, name);
+    const role = (data.user.app_metadata?.role as string | undefined) ?? 'user';
+    const result = authService.generateTokens(userId, email, name, role);
 
     auditLog({
       actorType: 'user',
@@ -331,9 +332,11 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
   try {
     const email = req.user!.email ?? '';
     let plan: string = 'free';
+    let role: string = 'user';
     const userId: string = req.user!.id;
     let name: string | null = null;
     let createdAt: string = new Date().toISOString();
+    let appMetadataRole: string | null = null;
 
     // Try Supabase Auth admin API first
     try {
@@ -342,6 +345,8 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
       if (!error && data?.user) {
         const supaUser = data.user;
         plan = (supaUser.app_metadata?.plan as string) ?? 'free';
+        appMetadataRole = (supaUser.app_metadata?.role as string) ?? null;
+        role = appMetadataRole ?? 'user';
         name = supaUser.user_metadata?.name ?? null;
         createdAt = supaUser.created_at;
       }
@@ -349,10 +354,20 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
       // Supabase not available — continue with fallback
     }
 
+    // users.role is the platform source of truth (Supabase Auth metadata may lag).
+    try {
+      const { resolvePlatformRole } = await import('./roles.js');
+      role = await resolvePlatformRole({
+        userId,
+        email,
+        appMetadataRole,
+        syncToSupabase: !req.user!.impersonatorId,
+      });
+    } catch {
+      // keep role from metadata
+    }
+
     // Fallback: if plan is still 'free', check accounts table for overrides.
-    // This ensures users whose plan was set via accounts.plan (not through Stripe)
-    // get the correct plan displayed everywhere.
-    // The accounts table stores user-friendly names ('pro'), while billing uses IDs ('solo').
     if (plan === 'free' && email) {
       try {
         const acctResult = await queryWithRetry<{ plan: string; name: string | null }>(
@@ -362,7 +377,6 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
         if (acctResult.rows.length > 0) {
           const acctPlan = acctResult.rows[0].plan;
           if (acctPlan && acctPlan !== 'free') {
-            // Map account plan names to billing PlanId: 'pro' → 'solo', 'team' → 'team', etc.
             plan = acctPlan === 'pro' ? 'solo' : acctPlan;
           }
           if (!name) name = acctResult.rows[0].name;
@@ -372,9 +386,35 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
       }
     }
 
-    const isAdmin = config.adminSteering.adminEmails.includes(email.toLowerCase());
+    const isAdmin =
+      !req.user!.impersonatorId &&
+      (role === 'admin' || config.adminSteering.adminEmails.includes(email.toLowerCase()));
 
-    res.json({ id: userId, email, name, plan, createdAt, isAdmin });
+    const body: Record<string, unknown> = {
+      id: userId,
+      email,
+      name,
+      plan,
+      role,
+      createdAt,
+      isAdmin,
+    };
+
+    if (req.user!.impersonatorId) {
+      body.impersonating = true;
+      body.impersonator = {
+        id: req.user!.impersonatorId,
+        email: req.user!.impersonatorEmail ?? '',
+      };
+      body.isAdmin = false;
+    } else if (role && role !== (req.user!.role ?? 'user')) {
+      // Stale JWT (role changed after login) — hand the client fresh tokens.
+      const tokens = authService.generateTokens(userId, email, name, role);
+      body.token = tokens.token;
+      body.refreshToken = tokens.refreshToken;
+    }
+
+    res.json(body);
   } catch (err) {
     log.error({ err }, 'Failed to get user');
     res.status(500).json({ error: 'Failed to get user' });

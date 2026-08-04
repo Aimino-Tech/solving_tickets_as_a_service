@@ -18,8 +18,19 @@ vi.mock('@/api/client', () => ({
   },
   setToken: vi.fn(),
   setRefreshToken: vi.fn(),
+  getRefreshToken: vi.fn(() => null),
   clearToken: vi.fn(),
   default: {},
+}));
+
+vi.mock('@/api/adminUsers', () => ({
+  adminUsers: {
+    exitImpersonation: vi.fn(async () => ({ ok: true })),
+    impersonate: vi.fn(),
+    list: vi.fn(),
+    get: vi.fn(),
+    setRole: vi.fn(),
+  },
 }));
 
 function TestConsumer() {

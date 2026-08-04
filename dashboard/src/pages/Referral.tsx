@@ -3,6 +3,8 @@ import { referralApi } from '@/api/client';
 import type { ReferralReward } from '@/api/client';
 import { formatDate } from '@/utils/format';
 import { Gift, Link2, Copy, Check } from 'lucide-react';
+import ErrorState from '@/components/ErrorState';
+import EmptyState from '@/components/EmptyState';
 
 const REFERRAL_BASE_URL = 'https://syntaro.io/?ref=';
 
@@ -17,7 +19,7 @@ const STEPS = [
   },
   {
     title: 'Claim your credits',
-    description: 'Claim your reward below and start fixing issues with 500 free credits.',
+    description: 'Claim your reward below and start fixing issues with $5 in credits.',
   },
 ];
 
@@ -169,14 +171,14 @@ export default function Referral() {
                 </tr>
               ) : rewardsError ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-sm text-red-500 dark:text-red-400">
-                    {rewardsError}
+                  <td colSpan={5} className="px-4 py-8">
+                    <ErrorState message={rewardsError} onRetry={loadRewards} />
                   </td>
                 </tr>
               ) : rewards.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
-                    No rewards yet. Share your link to earn $5 credits.
+                  <td colSpan={5} className="px-4 py-8">
+                    <EmptyState title="No rewards yet. Share your link to earn $5 in credits." />
                   </td>
                 </tr>
               ) : (

@@ -1,6 +1,8 @@
 import { Mail, RotateCw, Shield, UserPlus } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { type TeamInvite, type TeamMember, type TeamSummary, teamApi } from '@/api/client';
+import EmptyState from '@/components/EmptyState';
+import ErrorState from '@/components/ErrorState';
 import { formatRelativeTime } from '@/utils/format';
 
 type Role = 'admin' | 'member' | 'viewer';
@@ -159,12 +161,7 @@ export default function Members() {
             <p className="text-sm text-gray-500 dark:text-gray-400">Manage who has access to your workspace.</p>
           </div>
         </div>
-        <div className="card border-red-200 dark:border-red-800">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
-          <button type="button" onClick={() => load()} className="btn-secondary mt-2">
-            Retry
-          </button>
-        </div>
+        <ErrorState message={error} onRetry={() => load()} />
       </div>
     );
   }
@@ -173,9 +170,7 @@ export default function Members() {
     return (
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Team Members</h2>
-        <div className="card text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">You are not a member of any team yet.</p>
-        </div>
+        <EmptyState title="You are not a member of any team yet." />
       </div>
     );
   }

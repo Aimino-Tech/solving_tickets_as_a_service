@@ -15,9 +15,8 @@ import NotFound from '@/pages/NotFound';
 const DashboardHome = lazy(() => import('@/pages/DashboardHome'));
 const RunsHistory = lazy(() => import('@/pages/RunsHistory'));
 const RunDetail = lazy(() => import('@/pages/RunDetail'));
-const UsageLimits = lazy(() => import('@/pages/UsageLimits')); // AIM-4645
+const UsageLimits = lazy(() => import('@/pages/UsageLimits')); // AIM-4645 + AIM-4641
 const Repos = lazy(() => import('@/pages/Repos'));
-const Usage = lazy(() => import('@/pages/Usage')); // AIM-4641
 const Members = lazy(() => import('@/pages/Members'));
 const Credits = lazy(() => import('@/pages/Credits'));
 const Settings = lazy(() => import('@/pages/Settings'));
@@ -35,6 +34,8 @@ const PricingPage = lazy(() => import('@/pages/PricingPage'));
 const VsPage = lazy(() => import('@/pages/VsPage'));
 const LiveView = lazy(() => import('@/pages/LiveView'));
 const AdminSteering = lazy(() => import('@/pages/AdminSteering'));
+const AdminUsers = lazy(() => import('@/pages/AdminUsers'));
+const AdminUserDetail = lazy(() => import('@/pages/AdminUserDetail'));
 const WizardContainer = lazy(() => import('@/pages/onboarding/WizardContainer'));
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
@@ -101,9 +102,9 @@ export default function App() {
             <Route index element={<DashboardHome />} />
             <Route path="runs" element={<RunsHistory />} />
             <Route path="runs/:id" element={<RunDetail />} />
-            <Route path="usage-limits" element={<UsageLimits />} /> {/* AIM-4645 */}
+            <Route path="usage-limits" element={<UsageLimits />} /> {/* AIM-4645 + AIM-4641 */}
             <Route path="repos" element={<Repos />} />
-            <Route path="usage" element={<Usage />} /> {/* AIM-4641 */}
+            <Route path="usage" element={<Navigate to="/usage-limits" replace />} />
             {/* AIM-4642 */}
             <Route path="members" element={<Members />} />
             <Route path="credits" element={<Credits />} />
@@ -112,7 +113,10 @@ export default function App() {
             {/* AIM-4643 */}
             <Route path="referral" element={<Referral />} />
             <Route path="liveview" element={<LiveView />} />
-            <Route path="admin" element={<AdminSteering />} />
+            <Route path="admin" element={<Navigate to="/admin/users" replace />} />
+            <Route path="admin/steering" element={<AdminSteering />} />
+            <Route path="admin/users" element={<AdminUsers />} />
+            <Route path="admin/users/:id" element={<AdminUserDetail />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="/500" element={<Error500 />} />

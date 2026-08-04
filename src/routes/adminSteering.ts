@@ -5,7 +5,8 @@
  *
  * Every route requires:
  *   1. A valid dashboard JWT (Authorization: Bearer <token>) — 401 otherwise.
- *   2. An email in the ADMIN_EMAILS allowlist (env-gated) — 403 otherwise.
+ *   2. JWT role === 'admin' (from users.role / Supabase app_metadata.role),
+ *      or email in the optional ADMIN_EMAILS allowlist — 403 otherwise.
  *
  * Authorized requests are forwarded to the OpenSymphony admin API
  * (OS_ADMIN_API_URL) with an x-api-key credential (OS_ADMIN_API_KEY) — the
@@ -16,9 +17,9 @@
  * @module routes/adminSteering
  */
 
-import { type NextFunction, type Request, type Response, Router } from 'express';
+import { type Request, type Response, Router } from 'express';
 import { logAdminAction } from '../audit/service.js';
-import { requireAuth } from '../auth/middleware.js';
+import { requireAuth, requirePlatformAdmin } from '../auth/middleware.js';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -99,21 +100,6 @@ const ENDPOINTS: OsEndpoint[] = [
   { method: 'POST', path: '/backup', osPath: '/backup', action: 'admin.steering.backup.run', resourceType: 'system' },
   { method: 'GET', path: '/backups', osPath: '/backups', action: 'admin.steering.backup.list', resourceType: 'system' },
 ];
-
-function requireAdminEmail(req: Request, res: Response, next: NextFunction): void {
-  const adminEmails = config.adminSteering.adminEmails;
-  if (adminEmails.length === 0) {
-    res.status(503).json({ error: 'Admin steering not configured — ADMIN_EMAILS is empty' });
-    return;
-  }
-  const email = req.user?.email?.toLowerCase();
-  if (!email || !adminEmails.includes(email)) {
-    log.warn({ email, ip: req.ip, path: req.path }, 'Forbidden admin steering attempt');
-    res.status(403).json({ error: 'Forbidden — account is not an administrator' });
-    return;
-  }
-  next();
-}
 
 async function forwardToOs(
   method: 'GET' | 'POST',
@@ -229,7 +215,7 @@ export function createAdminSteeringRouter(): Router {
   const router: Router = Router();
 
   router.use(requireAuth);
-  router.use(requireAdminEmail);
+  router.use(requirePlatformAdmin);
 
   for (const endpoint of ENDPOINTS) {
     router[endpoint.method.toLowerCase() as 'get' | 'post'](endpoint.path, (req, res) => {

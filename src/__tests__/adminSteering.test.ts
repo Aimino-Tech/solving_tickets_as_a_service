@@ -111,8 +111,8 @@ describe('routes/adminSteering auth gate', () => {
     expect(mockFetch).not.toHaveBeenCalledWith(expect.stringContaining('os-admin.test'), expect.anything());
   });
 
-  it('returns 403 when the JWT email is not in ADMIN_EMAILS', async () => {
-    mockVerifyToken.mockReturnValue({ sub: '42', email: 'user@test.com' });
+  it('returns 403 when the JWT email is not in ADMIN_EMAILS and role is not admin', async () => {
+    mockVerifyToken.mockReturnValue({ sub: '42', email: 'user@test.com', role: 'user' });
     const res = await fetch(`${baseUrl}/api/v1/admin/steering/health`, {
       headers: { Authorization: 'Bearer valid.jwt.token' },
     });
@@ -122,15 +122,44 @@ describe('routes/adminSteering auth gate', () => {
     expect(mockFetch).not.toHaveBeenCalledWith(expect.stringContaining('os-admin.test'), expect.anything());
   });
 
-  it('returns 503 when ADMIN_EMAILS is not configured', async () => {
+  it('allows access when JWT role is admin even if ADMIN_EMAILS is empty', async () => {
     mockConfig.adminSteering.adminEmails = [];
-    mockVerifyToken.mockReturnValue({ sub: '42', email: 'admin@test.com' });
+    mockVerifyToken.mockReturnValue({ sub: '42', email: 'hello@syntaro.io', role: 'admin' });
+    osResponse.current = okJson({ status: 'ok', proxy: 'running', emergency_paused: false });
     const res = await fetch(`${baseUrl}/api/v1/admin/steering/health`, {
       headers: { Authorization: 'Bearer valid.jwt.token' },
     });
-    expect(res.status).toBe(503);
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.error).toContain('ADMIN_EMAILS');
+    expect(body.status).toBe('ok');
+  });
+
+  it('returns 403 when impersonating even with admin role on target', async () => {
+    mockVerifyToken.mockReturnValue({
+      sub: '42',
+      email: 'user@test.com',
+      role: 'admin',
+      purpose: 'impersonation',
+      impersonatorId: 'admin-1',
+      impersonatorEmail: 'admin@test.com',
+    });
+    const res = await fetch(`${baseUrl}/api/v1/admin/steering/health`, {
+      headers: { Authorization: 'Bearer valid.jwt.token' },
+    });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain('impersonating');
+  });
+
+  it('returns 403 when ADMIN_EMAILS is empty and role is not admin', async () => {
+    mockConfig.adminSteering.adminEmails = [];
+    mockVerifyToken.mockReturnValue({ sub: '42', email: 'user@test.com', role: 'user' });
+    const res = await fetch(`${baseUrl}/api/v1/admin/steering/health`, {
+      headers: { Authorization: 'Bearer valid.jwt.token' },
+    });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain('not an administrator');
     expect(mockFetch).not.toHaveBeenCalledWith(expect.stringContaining('os-admin.test'), expect.anything());
   });
 

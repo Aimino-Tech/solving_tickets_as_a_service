@@ -2,10 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { runs } from '@/api/client';
 import type { Run } from '@/api/types';
 import { Link, useSearchParams } from 'react-router-dom';
-import { formatDateTime, formatDurationSeconds } from '@/utils/format';
+import { formatCost, formatDurationShort } from '@/utils/format';
 import { SkeletonTable, SkeletonCard } from '@/components/LoadingSkeleton';
 import SlideOver from '@/components/SlideOver';
 import RunDetailContent from '@/components/RunDetailContent';
+import EmptyState from '@/components/EmptyState';
+import ErrorState from '@/components/ErrorState';
+import Pagination from '@/components/Pagination';
+import StatusBadge from '@/components/StatusBadge';
 
 const STATUS_FILTERS = ['all', 'running', 'success', 'failed', 'queued', 'cancelled'] as const;
 
@@ -57,17 +61,6 @@ export default function RunsHistory() {
     const params = new URLSearchParams(searchParams);
     params.set('page', String(newPage));
     setSearchParams(params);
-  }
-
-  function formatDuration(seconds?: number): string {
-    if (!seconds) return '—';
-    if (seconds < 60) return `${seconds}s`;
-    return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-  }
-
-  function formatCost(cents?: number): string {
-    if (!cents) return '—';
-    return `$${(cents / 100).toFixed(2)}`;
   }
 
   return (
@@ -123,14 +116,14 @@ export default function RunsHistory() {
               <SkeletonTable rows={5} columns={6} />
             ) : error ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-red-500 dark:text-red-400">
-                  {error}
+                <td colSpan={6} className="px-4">
+                  <ErrorState message={error} />
                 </td>
               </tr>
             ) : data?.data.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
-                  No runs found.
+                <td colSpan={6} className="px-4">
+                  <EmptyState title="No runs found." />
                 </td>
               </tr>
             ) : (
@@ -171,13 +164,9 @@ export default function RunsHistory() {
         {loading ? (
           [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
         ) : error ? (
-          <div className="card">
-            <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
-          </div>
+          <ErrorState message={error} />
         ) : data?.data.length === 0 ? (
-          <div className="card text-center py-8">
-            <p className="text-sm text-gray-400 dark:text-gray-500">No runs found.</p>
-          </div>
+          <EmptyState title="No runs found." />
         ) : (
           data?.data.map((run) => (
             <Link
@@ -206,28 +195,8 @@ export default function RunsHistory() {
       </div>
 
       {/* Pagination */}
-      {data && data.totalPages > 1 && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Page {data.page} of {data.totalPages} ({data.total} total)
-          </p>
-          <div className="flex gap-2">
-            <button
-              disabled={page <= 1}
-              onClick={() => handlePageChange(page - 1)}
-              className="btn-secondary text-xs"
-            >
-              Previous
-            </button>
-            <button
-              disabled={page >= data.totalPages}
-              onClick={() => handlePageChange(page + 1)}
-              className="btn-secondary text-xs"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+      {data && (
+        <Pagination page={data.page} totalPages={data.totalPages} total={data.total} onPageChange={handlePageChange} />
       )}
 
       {/* Slide-over for run details */}
@@ -240,15 +209,4 @@ export default function RunsHistory() {
       </SlideOver>
     </div>
   );
-}
-
-function StatusBadge({ status }: { status: Run['status'] }) {
-  const styles: Record<string, string> = {
-    success: 'badge-success',
-    running: 'badge-info',
-    queued: 'badge-neutral',
-    failed: 'badge-error',
-    cancelled: 'badge-warning',
-  };
-  return <span className={styles[status] || 'badge-neutral'}>{status}</span>;
 }

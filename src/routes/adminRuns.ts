@@ -26,6 +26,12 @@ const router: Router = Router();
 // ---------------------------------------------------------------------------
 
 router.use((req: Request, res: Response, next) => {
+  // Only gate /runs* — other /api/v1/admin/* mounts (steering, kpi, …) must fall through.
+  if (!req.path.startsWith('/runs')) {
+    next('router');
+    return;
+  }
+
   const apiKey = config.admin.apiKey;
   if (!apiKey) {
     res.status(503).json({ error: 'Admin API not configured (ADMIN_API_KEY is empty)' });

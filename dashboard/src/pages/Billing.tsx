@@ -8,6 +8,10 @@ import {
 } from 'recharts';
 import { formatNumber, formatDate } from '@/utils/format';
 import { SkeletonCard, SkeletonChart } from '@/components/LoadingSkeleton';
+import StatCard from '@/components/StatCard';
+import ProgressBar from '@/components/ProgressBar';
+import ErrorState from '@/components/ErrorState';
+import EmptyState from '@/components/EmptyState';
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'Free',
@@ -146,6 +150,14 @@ export default function Billing() {
     } finally {
       setPortalLoading(false);
     }
+  }
+
+  function retryInvoices() {
+    setInvoicesLoading(true);
+    setInvoicesError(null);
+    billing.invoices()
+      .then((r) => { setInvoices(r.invoices); setInvoicesLoading(false); })
+      .catch((e: Error) => { setInvoicesError(e.message); setInvoicesLoading(false); });
   }
 
   async function handleSubscribe(planId: string) {
@@ -500,30 +512,10 @@ export default function Billing() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {data ? (
           <>
-            <div className="card">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Runs</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {formatNumber(totalRuns)}
-              </p>
-            </div>
-            <div className="card">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Pass Rate</p>
-              <p className="mt-1 text-2xl font-bold text-green-600 dark:text-green-400">
-                {passRate}%
-              </p>
-            </div>
-            <div className="card">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Avg Duration</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {avgDurationSeconds}s
-              </p>
-            </div>
-            <div className="card">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Active Repos</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {data?.activeRepos ?? 0}
-              </p>
-            </div>
+            <StatCard label="Total Runs" value={formatNumber(totalRuns)} />
+            <StatCard label="Pass Rate" value={`${passRate}%`} />
+            <StatCard label="Avg Duration" value={`${avgDurationSeconds}s`} />
+            <StatCard label="Active Repos" value={data.activeRepos ?? 0} />
           </>
         ) : (
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
@@ -553,26 +545,20 @@ export default function Billing() {
             ))}
           </div>
         ) : invoicesError ? (
-          <div className="text-center py-8">
-            <p className="text-sm text-red-600 dark:text-red-400">{invoicesError}</p>
-            <button
-              onClick={() => { setInvoicesLoading(true); setInvoicesError(null); billing.invoices().then((r) => { setInvoices(r.invoices); setInvoicesLoading(false); }).catch((e: Error) => { setInvoicesError(e.message); setInvoicesLoading(false); }); }}
-              className="btn-secondary mt-3 text-xs"
-            >
-              Retry
-            </button>
-          </div>
+          <ErrorState message={invoicesError} onRetry={retryInvoices} />
         ) : invoices.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-sm text-gray-500 dark:text-gray-400">No payments yet</p>
-            <button
-              onClick={handleOpenPortal}
-              disabled={portalLoading}
-              className="btn-secondary mt-3 text-xs"
-            >
-              View in Stripe Portal
-            </button>
-          </div>
+          <EmptyState
+            title="No payments yet"
+            action={
+              <button
+                onClick={handleOpenPortal}
+                disabled={portalLoading}
+                className="btn-secondary text-xs"
+              >
+                View in Stripe Portal
+              </button>
+            }
+          />
         ) : (
           <div className="overflow-x-auto -mx-5 px-5">
             <table className="w-full text-sm">
@@ -639,12 +625,7 @@ export default function Billing() {
                   <span className="text-gray-500 dark:text-gray-400">Budget</span>
                   <span className="text-gray-700 dark:text-gray-300">${formatNumber(maxBudget)}</span>
                 </div>
-                <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                  <div
-                    className="h-2 rounded-full bg-brand-600 dark:bg-brand-500 transition-all"
-                    style={{ width: `${Math.min((totalSpend / maxBudget) * 100, 100)}%` }}
-                  />
-                </div>
+                <ProgressBar value={totalSpend} max={maxBudget} />
               </div>
             )}
             {spendPerModel.length > 0 && (
@@ -674,7 +655,7 @@ export default function Billing() {
             )}
           </div>
         ) : (
-          <p className="text-sm text-gray-400 dark:text-gray-500">No usage data available</p>
+          <EmptyState title="No usage data available" />
         )}
       </div>
 
@@ -694,7 +675,7 @@ export default function Billing() {
             </ResponsiveContainer>
           </div>
         ) : data ? (
-          <p className="text-sm text-gray-400 dark:text-gray-500">No run data available yet.</p>
+          <EmptyState title="No run data available yet." />
         ) : (
           <SkeletonChart />
         )}

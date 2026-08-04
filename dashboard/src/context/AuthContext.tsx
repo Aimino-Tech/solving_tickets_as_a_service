@@ -1,6 +1,10 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
-import { auth, clearToken, setRefreshToken, setToken } from '@/api/client';
+import { adminUsers } from '@/api/adminUsers';
+import { auth, clearToken, getRefreshToken, setRefreshToken, setToken } from '@/api/client';
 import type { User } from '@/api/types';
+
+const ADMIN_TOKEN_KEY = 'syntaro_admin_token';
+const ADMIN_REFRESH_KEY = 'syntaro_admin_refresh';
 
 interface AuthContextValue {
   user: User | null;
@@ -9,9 +13,29 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
+  enterImpersonation: (token: string, refreshToken: string) => Promise<void>;
+  exitImpersonation: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function mapMe(res: Awaited<ReturnType<typeof auth.me>>): User {
+  if (res.token) setToken(res.token);
+  if (res.refreshToken) setRefreshToken(res.refreshToken);
+  return {
+    id: res.id,
+    email: res.email,
+    name: res.name,
+    username: res.username,
+    avatarUrl: res.avatarUrl,
+    plan: res.plan,
+    createdAt: res.createdAt,
+    isAdmin: res.isAdmin,
+    role: res.role,
+    impersonating: res.impersonating,
+    impersonator: res.impersonator,
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -38,16 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       auth
         .me()
         .then((res) => {
-          setUser({
-            id: res.id,
-            email: res.email,
-            name: res.name,
-            username: res.username,
-            avatarUrl: res.avatarUrl,
-            plan: res.plan,
-            createdAt: res.createdAt,
-            isAdmin: res.isAdmin,
-          });
+          setUser(mapMe(res));
         })
         .catch((err) => {
           console.warn('Failed to fetch user session, clearing token:', err);
@@ -72,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       username: result.user.name ?? undefined,
       plan: 'free',
       createdAt: result.user.createdAt || '',
+      role: result.user.role,
     });
   }, []);
 
@@ -95,8 +111,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await auth.logout();
     } catch {}
+    try {
+      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      sessionStorage.removeItem(ADMIN_REFRESH_KEY);
+    } catch {}
     clearToken();
     setUser(null);
+  }, []);
+
+  const enterImpersonation = useCallback(async (token: string, refreshToken: string) => {
+    try {
+      const current = localStorage.getItem('syntaro_token');
+      const currentRefresh = getRefreshToken();
+      if (current) sessionStorage.setItem(ADMIN_TOKEN_KEY, current);
+      if (currentRefresh) sessionStorage.setItem(ADMIN_REFRESH_KEY, currentRefresh);
+    } catch {}
+    setToken(token);
+    setRefreshToken(refreshToken);
+    const res = await auth.me();
+    setUser(mapMe(res));
+  }, []);
+
+  const exitImpersonation = useCallback(async () => {
+    try {
+      await adminUsers.exitImpersonation();
+    } catch {
+      // Audit is best-effort; still restore admin session.
+    }
+    try {
+      const adminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+      const adminRefresh = sessionStorage.getItem(ADMIN_REFRESH_KEY);
+      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      sessionStorage.removeItem(ADMIN_REFRESH_KEY);
+      if (!adminToken) {
+        clearToken();
+        setUser(null);
+        window.location.href = '/login';
+        return;
+      }
+      setToken(adminToken);
+      if (adminRefresh) setRefreshToken(adminRefresh);
+      // Hard reload as admin so all pages drop the member session.
+      window.location.href = '/admin/users';
+    } catch {
+      clearToken();
+      setUser(null);
+      window.location.href = '/login';
+    }
   }, []);
 
   return (
@@ -108,6 +169,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        enterImpersonation,
+        exitImpersonation,
       }}
     >
       {children}

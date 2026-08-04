@@ -77,7 +77,7 @@ export default function AdminSteering() {
 
   if (state === 'loading') {
     return (
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div>
         <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">{t('steering.title')}</h1>
         <SkeletonCardGrid count={3} />
       </div>
@@ -85,13 +85,18 @@ export default function AdminSteering() {
   }
 
   if (state === 'error') {
+    const showOsHint =
+      /OS_ADMIN|OpenSymphony|credential|not configured|503|502/i.test(pageError) &&
+      !/not an administrator|impersonating/i.test(pageError);
     return (
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div>
         <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">{t('steering.title')}</h1>
         <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-900/50 dark:bg-red-900/20">
           <p className="text-sm font-medium text-red-700 dark:text-red-400">{t('steering.unreachable')}</p>
           <p className="mt-1 text-sm text-red-600 dark:text-red-400">{pageError}</p>
-          <p className="mt-1 text-xs text-red-500 dark:text-red-400">{t('steering.envHint')}</p>
+          {showOsHint ? (
+            <p className="mt-1 text-xs text-red-500 dark:text-red-400">{t('steering.envHint')}</p>
+          ) : null}
           <button
             type="button"
             onClick={() => {
@@ -129,7 +134,7 @@ export default function AdminSteering() {
   const backupList = Array.isArray(backups?.backups) ? backups.backups : [];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('steering.title')}</h1>

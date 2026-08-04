@@ -7,6 +7,9 @@ export interface User {
   plan?: string;
   createdAt?: string;
   isAdmin?: boolean;
+  role?: string;
+  impersonating?: boolean;
+  impersonator?: { id: string; email: string };
 }
 
 export interface Run {

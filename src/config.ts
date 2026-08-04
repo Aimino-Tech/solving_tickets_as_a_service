@@ -872,8 +872,9 @@ function buildConfig(env: ParsedEnv) {
       adminEmails: env.ADMIN_EMAILS.split(',')
         .map((s) => s.trim().toLowerCase())
         .filter(Boolean),
-      osAdminApiUrl: env.OS_ADMIN_API_URL,
-      osAdminApiKey: env.OS_ADMIN_API_KEY,
+      // Prefer dedicated admin vars; fall back to OpenSymphony dispatch credentials.
+      osAdminApiUrl: env.OS_ADMIN_API_URL || env.OPENSYMPHONY_ADMIN_URL || '',
+      osAdminApiKey: env.OS_ADMIN_API_KEY || env.OPENSYMPHONY_API_KEY || '',
       osAdminTimeoutMs: env.OS_ADMIN_TIMEOUT_MS,
     },
   } as const;

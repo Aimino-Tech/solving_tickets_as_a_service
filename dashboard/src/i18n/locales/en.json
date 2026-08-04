@@ -199,7 +199,7 @@
   "steering.statusUnavailable": "status unavailable",
   "steering.refresh": "Refresh",
   "steering.unreachable": "Unable to reach the OpenSymphony admin API.",
-  "steering.envHint": "Confirm OS_ADMIN_API_URL / OS_ADMIN_API_KEY / ADMIN_EMAILS are configured on the server and the OS admin API is reachable.",
+  "steering.envHint": "Confirm OS_ADMIN_API_URL and OS_ADMIN_API_KEY are set, and OS_ADMIN_API_KEY matches SYMPHONY_API_KEYS on the OpenSymphony process.",
   "steering.retry": "Retry",
   "steering.emergencyTitle": "Emergency Stop / Resume",
   "steering.emergencyActive": "Emergency stop ACTIVE — pipeline paused",

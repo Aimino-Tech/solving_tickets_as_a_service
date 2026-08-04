@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { repos, github, type GitHubInstallation } from '@/api/client';
 import type { Repo } from '@/api/types';
+import EmptyState from '@/components/EmptyState';
+import ErrorState from '@/components/ErrorState';
 import { formatRelativeTime } from '@/utils/format';
 // import { supabase } from '@/lib/supabase';
 
@@ -128,19 +130,13 @@ export default function Repos() {
         )}
       </div>
 
-      {error && (
-        <div className="card border-red-200 dark:border-red-800">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
-          <button onClick={() => loadAll()} className="mt-2 text-sm font-medium text-brand-600 dark:text-brand-400 min-h-[44px] min-w-[44px]">
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <ErrorState message={error} onRetry={() => loadAll()} />}
 
       {warning && !error && (
-        <div className="card border-amber-200 dark:border-amber-800">
-          <p className="text-amber-600 dark:text-amber-400">{warning}</p>
-        </div>
+        <ErrorState
+          message={warning}
+          className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/50"
+        />
       )}
 
       {loading ? (
@@ -167,20 +163,20 @@ export default function Repos() {
           </div>
 
           {installations.length === 0 ? (
-            <div className="card text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">No GitHub App installations found.</p>
-              <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
-                Install the SYNTARO GitHub App on your repositories to get started.
-              </p>
-              <a
-                href={`https://github.com/apps/${import.meta.env.VITE_GITHUB_APP_NAME || 'syntaro-bot'}/installations/new`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary mt-4 inline-block"
-              >
-                Install GitHub App
-              </a>
-            </div>
+            <EmptyState
+              title="No GitHub App installations found."
+              hint="Install the SYNTARO GitHub App on your repositories to get started."
+              action={
+                <a
+                  href={`https://github.com/apps/${import.meta.env.VITE_GITHUB_APP_NAME || 'syntaro-bot'}/installations/new`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary inline-block"
+                >
+                  Install GitHub App
+                </a>
+              }
+            />
           ) : (
             installations.map((inst) => (
               <div key={inst.installationId} className="card">
@@ -247,7 +243,7 @@ export default function Repos() {
             Connected Repositories ({repoList.length})
           </h3>
           {repoList.length === 0 ? (
-            <p className="text-sm text-gray-400">No repositories connected. Enable SYNTARO on repos above.</p>
+            <EmptyState title="No repositories connected." hint="Enable SYNTARO on repos above." />
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {repoList.map((repo) => (

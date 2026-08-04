@@ -8,6 +8,15 @@ const log = rootLogger.child({ module: 'auth-service' });
 export interface TokenPayload {
   sub: string;
   email: string;
+  role?: string;
+  impersonatorId?: string;
+  impersonatorEmail?: string;
+  purpose?: 'impersonation';
+}
+
+export interface ImpersonationClaims {
+  impersonatorId: string;
+  impersonatorEmail: string;
 }
 
 export interface AuthResult {
@@ -18,6 +27,7 @@ export interface AuthResult {
     email: string;
     emailVerified: boolean;
     name: string | null;
+    role?: string;
   };
   verificationToken?: string;
 }
@@ -50,7 +60,7 @@ export class AuthService {
       'User registered — email verification required',
     );
 
-    const tokens = this.generateTokens(user.id, user.email!, name ?? null);
+    const tokens = this.generateTokens(user.id, user.email!, name ?? null, 'user');
     return { ...tokens, user: { ...tokens.user, emailVerified: true }, verificationToken };
   }
 
@@ -169,19 +179,28 @@ export class AuthService {
 
     const supabaseUser = signInData.user;
     const name = supabaseUser.user_metadata?.name as string | undefined;
+    const { resolvePlatformRole } = await import('./roles.js');
+    const role = await resolvePlatformRole({
+      userId: supabaseUser.id,
+      email: supabaseUser.email ?? email,
+      appMetadataRole: (supabaseUser.app_metadata?.role as string | undefined) ?? null,
+      syncToSupabase: true,
+    });
 
-    return this.generateTokens(supabaseUser.id, supabaseUser.email!, name ?? null);
+    return this.generateTokens(supabaseUser.id, supabaseUser.email!, name ?? null, role);
   }
 
   refreshToken(refreshToken: string): AuthResult | never {
     try {
-      const decoded = jwt.verify(refreshToken, config.auth.jwtSecret) as {
-        sub: string;
-        email: string;
+      const decoded = jwt.verify(refreshToken, config.auth.jwtSecret) as TokenPayload & {
         iat?: number;
         exp?: number;
       };
-      return this.generateTokens(decoded.sub, decoded.email);
+      const impersonation =
+        decoded.purpose === 'impersonation' && decoded.impersonatorId && decoded.impersonatorEmail
+          ? { impersonatorId: decoded.impersonatorId, impersonatorEmail: decoded.impersonatorEmail }
+          : undefined;
+      return this.generateTokens(decoded.sub, decoded.email, null, decoded.role, impersonation);
     } catch {
       throw new AuthError('Invalid or expired refresh token', 401);
     }
@@ -189,13 +208,18 @@ export class AuthService {
 
   verifyToken(token: string): TokenPayload {
     try {
-      const decoded = jwt.verify(token, config.auth.jwtSecret) as {
-        sub: string;
-        email: string;
+      const decoded = jwt.verify(token, config.auth.jwtSecret) as TokenPayload & {
         iat?: number;
         exp?: number;
       };
-      return { sub: decoded.sub, email: decoded.email };
+      return {
+        sub: decoded.sub,
+        email: decoded.email,
+        role: decoded.role,
+        ...(decoded.impersonatorId ? { impersonatorId: decoded.impersonatorId } : {}),
+        ...(decoded.impersonatorEmail ? { impersonatorEmail: decoded.impersonatorEmail } : {}),
+        ...(decoded.purpose ? { purpose: decoded.purpose } : {}),
+      };
     } catch {
       throw new AuthError('Invalid or expired token', 401);
     }
@@ -287,17 +311,37 @@ export class AuthService {
     log.info({ userId: payload.sub, email: payload.email }, 'Password reset successful');
   }
 
-  public generateTokens(userId: string, email: string, name: string | null = null): AuthResult {
-    const payload = { sub: userId, email };
+  public generateTokens(
+    userId: string,
+    email: string,
+    name: string | null = null,
+    role?: string,
+    impersonation?: ImpersonationClaims,
+  ): AuthResult {
+    const payload: TokenPayload = {
+      sub: userId,
+      email,
+      ...(role ? { role } : {}),
+      ...(impersonation
+        ? {
+            impersonatorId: impersonation.impersonatorId,
+            impersonatorEmail: impersonation.impersonatorEmail,
+            purpose: 'impersonation' as const,
+          }
+        : {}),
+    };
 
     const secret = config.auth.jwtSecret as string;
-    const token = jwt.sign(payload, secret, { expiresIn: config.auth.jwtExpiresIn } as jwt.SignOptions);
-    const refreshToken = jwt.sign(payload, secret, { expiresIn: config.auth.jwtRefreshExpiresIn } as jwt.SignOptions);
+    const accessExpiresIn = impersonation ? '1h' : config.auth.jwtExpiresIn;
+    const token = jwt.sign(payload, secret, { expiresIn: accessExpiresIn } as jwt.SignOptions);
+    const refreshToken = jwt.sign(payload, secret, {
+      expiresIn: impersonation ? '1h' : config.auth.jwtRefreshExpiresIn,
+    } as jwt.SignOptions);
 
     return {
       token,
       refreshToken,
-      user: { id: userId, email, emailVerified: false, name },
+      user: { id: userId, email, emailVerified: false, name, ...(role ? { role } : {}) },
     };
   }
 }

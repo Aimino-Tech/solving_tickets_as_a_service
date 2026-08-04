@@ -108,3 +108,26 @@ export function formatRelativeTime(date: string | Date | null | undefined): stri
   if (diffDay < 7) return `${diffDay}d ago`;
   return formatDate(d);
 }
+
+/**
+ * Alias for formatRelativeTime (e.g., "5m ago").
+ */
+export const formatTimeAgo = formatRelativeTime;
+
+/**
+ * Format an optional duration in seconds as a compact string.
+ * Returns an em-dash placeholder for missing values.
+ */
+export function formatDurationShort(seconds?: number): string {
+  if (!seconds) return '—';
+  return formatDurationSeconds(seconds);
+}
+
+/**
+ * Format an optional cost in cents as a dollar string (e.g., "$3.80").
+ * Returns an em-dash placeholder for missing values.
+ */
+export function formatCost(cents?: number): string {
+  if (cents === undefined || cents === null) return '—';
+  return `$${(cents / 100).toFixed(2)}`;
+}

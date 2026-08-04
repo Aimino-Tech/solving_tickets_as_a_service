@@ -1,22 +1,16 @@
 import { useState } from 'react';
 import type { Run } from '@/api/types';
 import { CheckCircle, AlertTriangle, XCircle, ArrowUp, ArrowDown } from 'lucide-react';
+import StatusBadge from '@/components/StatusBadge';
+import { formatCost, formatDurationShort } from '@/utils/format';
 
 interface RunDetailContentProps {
   run: Run;
   onClose?: () => void;
 }
 
-export default function RunDetailContent({ run, onClose: _onClose }: RunDetailContentProps) {
+export default function RunDetailContent({ run }: RunDetailContentProps) {
   const [showFullDiff, setShowFullDiff] = useState(false);
-
-  const statusStyles: Record<string, string> = {
-    success: 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-700',
-    running: 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/50 border-blue-200 dark:border-blue-700',
-    queued: 'text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600',
-    failed: 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/50 border-red-200 dark:border-red-700',
-    cancelled: 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/50 border-amber-200 dark:border-amber-700',
-  };
 
   const confStyles: Record<string, string> = {
     high: 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/50',
@@ -43,9 +37,7 @@ export default function RunDetailContent({ run, onClose: _onClose }: RunDetailCo
               Issue #{run.issueNumber} &mdash; {run.issueTitle}
             </p>
           </div>
-          <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${statusStyles[run.status] || 'text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}>
-            {run.status}
-          </span>
+          <StatusBadge status={run.status} />
         </div>
       </div>
 
@@ -55,12 +47,12 @@ export default function RunDetailContent({ run, onClose: _onClose }: RunDetailCo
           <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Timing</h3>
           <DetailRow label="Created" value={new Date(run.createdAt).toLocaleString()} />
           <DetailRow label="Updated" value={new Date(run.updatedAt).toLocaleString()} />
-          <DetailRow label="Duration" value={formatDuration(run.durationSeconds)} />
+          <DetailRow label="Duration" value={formatDurationShort(run.durationSeconds)} />
         </div>
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-3">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Cost &amp; Model</h3>
-          <DetailRow label="Cost" value={run.costCents ? `$${(run.costCents / 100).toFixed(2)}` : '\u2014'} />
+          <DetailRow label="Cost" value={formatCost(run.costCents)} />
           <DetailRow label="Model" value={run.modelUsed || '\u2014'} />
           <DetailRow label="Credits Used" value={run.creditsUsed != null ? String(run.creditsUsed) : '\u2014'} />
         </div>
@@ -187,15 +179,6 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{value}</span>
     </div>
   );
-}
-
-function formatDuration(seconds?: number): string {
-  if (!seconds) return '\u2014';
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return `${h}h ${m}m`;
 }
 
 function formatBytes(bytes: number): string {

@@ -6,6 +6,8 @@ import { Activity, CheckCircle, Clock, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/i18n/I18nProvider';
 import { SkeletonCardGrid } from '@/components/LoadingSkeleton';
+import StatusBadge from '@/components/StatusBadge';
+import { formatDurationShort } from '@/utils/format';
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'Free',
@@ -204,23 +206,11 @@ export default function DashboardHome() {
                   <p className="truncate text-xs text-gray-500 dark:text-gray-400">{run.issueTitle}</p>
                 </div>
                 <div className="ml-4 flex items-center gap-3">
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    run.status === 'success'
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : run.status === 'failed'
-                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                      : run.status === 'running'
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                  }`}>
-                    {run.status}
-                  </span>
+                  <StatusBadge status={run.status} />
                   {run.durationSeconds != null && (
                     <span className="hidden text-xs text-gray-400 sm:block">
                       <Clock size={12} className="inline mr-1" />
-                      {run.durationSeconds >= 60
-                        ? `${(run.durationSeconds / 60).toFixed(1)}m`
-                        : `${run.durationSeconds}s`}
+                      {formatDurationShort(run.durationSeconds)}
                     </span>
                   )}
                 </div>

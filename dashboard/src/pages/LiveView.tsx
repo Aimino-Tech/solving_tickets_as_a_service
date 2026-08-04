@@ -82,7 +82,7 @@ export default function LiveView() {
   if (loading) return <div className="p-6"><SkeletonCardGrid count={4} /><div className="mt-6"><SkeletonTable rows={5} columns={5} /></div></div>;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div>
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>

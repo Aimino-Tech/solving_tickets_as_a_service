@@ -1,6 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  BarChart3,
   CreditCard,
   Gift,
   GitFork,
@@ -8,14 +7,15 @@ import {
   RotateCw,
   ScrollText,
   Settings as SettingsIcon,
-  ShieldCheck,
   Gauge,
+  UserRound,
   Users,
   Wallet,
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import ImpersonationBanner from '@/components/ImpersonationBanner';
 import NotificationBell from '@/components/NotificationBell';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -34,9 +34,9 @@ export default function Layout() {
   const { t, locale, setLocale } = useI18n();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  // Admin status comes from /v1/auth/me (backend ADMIN_EMAILS allowlist) —
-  // no per-page health probe that 503s for non-admins.
-  const isAdmin = !!user?.isAdmin;
+  // Admin status from /v1/auth/me: users.role === 'admin' (primary), ADMIN_EMAILS optional.
+  // While impersonating, /me forces isAdmin false — hide admin nav.
+  const isAdmin = !user?.impersonating && (user?.role === 'admin' || !!user?.isAdmin);
 
   // Landing on the dashboard means onboarding is no longer pending.
   useEffect(() => {
@@ -46,11 +46,10 @@ export default function Layout() {
   const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
     { to: '/runs', label: t('nav.runs'), icon: RotateCw },
-    { to: '/usage-limits', label: 'Usage Limits', icon: Gauge }, // AIM-4645
+    { to: '/usage-limits', label: 'Usage Limits', icon: Gauge }, // AIM-4645 + AIM-4641
     { to: '/repos', label: t('nav.repos'), icon: GitFork },
     // AIM-4646
     { to: '/credits', label: 'Credits', icon: Wallet },
-    { to: '/usage', label: 'Usage', icon: BarChart3 }, // AIM-4641
     // AIM-4642
     { to: '/members', label: 'Members', icon: Users },
     { to: '/billing', label: 'Billing', icon: CreditCard },
@@ -61,15 +60,22 @@ export default function Layout() {
   ];
 
   if (isAdmin) {
-    NAV_ITEMS.splice(5, 0, { to: '/admin', label: t('nav.admin'), icon: ShieldCheck });
+    // Platform admin: user management + enter-account. OS steering is optional at /admin/steering.
+    NAV_ITEMS.splice(5, 0, { to: '/admin/users', label: 'Users', icon: UserRound });
   }
 
+  const isNavActive = (to: string) => {
+    if (to === '/') return location.pathname === '/';
+    return location.pathname === to || location.pathname.startsWith(`${to}/`);
+  };
+
   const pageTitle =
-    NAV_ITEMS.find((item) => (item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)))
-      ?.label ?? t('nav.dashboard');
+    NAV_ITEMS.find((item) => isNavActive(item.to))?.label ?? t('nav.dashboard');
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-900">
+    <>
+      <ImpersonationBanner />
+      <div className={`flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-900 ${user?.impersonating ? 'pt-11' : ''}`}>
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -77,9 +83,9 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform lg:static lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed left-0 z-50 flex w-64 flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform lg:static lg:translate-x-0 ${
+          user?.impersonating ? 'top-11 bottom-0' : 'inset-y-0'
+        } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         {/* Brand */}
         <div className="flex h-16 items-center gap-3 border-b border-slate-200 dark:border-slate-800 px-6">
@@ -93,7 +99,7 @@ export default function Layout() {
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4">
           {NAV_ITEMS.map((item) => {
-            const isActive = item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to);
+            const isActive = isNavActive(item.to);
             return (
               <NavLink
                 key={item.to}
@@ -181,10 +187,11 @@ export default function Layout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>
     </div>
+    </>
   );
 }
