@@ -9,9 +9,10 @@ import {
   ShieldCheck,
   Zap,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import NotificationBell from '@/components/NotificationBell';
+import { adminSteering } from '@/api/adminSteering';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -29,6 +30,16 @@ export default function Layout() {
   const { t, locale, setLocale } = useI18n();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    adminSteering
+      .health()
+      .then(() => { if (!cancelled) setIsAdmin(true); })
+      .catch(() => { if (!cancelled) setIsAdmin(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
@@ -36,9 +47,12 @@ export default function Layout() {
     { to: '/repos', label: t('nav.repos'), icon: GitFork },
     { to: '/billing', label: 'Billing', icon: CreditCard },
     { to: '/audit', label: t('nav.audit'), icon: ScrollText },
-    { to: '/admin', label: 'Admin', icon: ShieldCheck },
     { to: '/settings', label: t('nav.settings'), icon: SettingsIcon },
   ];
+
+  if (isAdmin) {
+    NAV_ITEMS.splice(5, 0, { to: '/admin', label: t('nav.admin'), icon: ShieldCheck });
+  }
 
   const pageTitle =
     NAV_ITEMS.find((item) => (item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)))

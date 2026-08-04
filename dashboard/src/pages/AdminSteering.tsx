@@ -6,6 +6,7 @@ import {
   type OsMaintenanceStatus,
 } from '@/api/adminSteering';
 import { SkeletonCardGrid } from '@/components/LoadingSkeleton';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type PageState = 'loading' | 'ready' | 'error';
 
@@ -14,6 +15,7 @@ function errMessage(err: unknown): string {
 }
 
 export default function AdminSteering() {
+  const { t } = useI18n();
   const [state, setState] = useState<PageState>('loading');
   const [pageError, setPageError] = useState<string>('');
 
@@ -76,7 +78,7 @@ export default function AdminSteering() {
   if (state === 'loading') {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
-        <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">Admin Steering</h1>
+        <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">{t('steering.title')}</h1>
         <SkeletonCardGrid count={3} />
       </div>
     );
@@ -85,15 +87,14 @@ export default function AdminSteering() {
   if (state === 'error') {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
-        <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">Admin Steering</h1>
+        <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">{t('steering.title')}</h1>
         <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-900/50 dark:bg-red-900/20">
           <p className="text-sm font-medium text-red-700 dark:text-red-400">
-            Unable to reach the OpenSymphony admin API.
+            {t('steering.unreachable')}
           </p>
           <p className="mt-1 text-sm text-red-600 dark:text-red-400">{pageError}</p>
           <p className="mt-1 text-xs text-red-500 dark:text-red-400">
-            Confirm OS_ADMIN_API_URL / OS_ADMIN_API_KEY / ADMIN_EMAILS are configured on the server and the OS admin API
-            is reachable.
+            {t('steering.envHint')}
           </p>
           <button
             type="button"
@@ -103,7 +104,7 @@ export default function AdminSteering() {
             }}
             className="mt-4 min-h-[44px] rounded-lg border border-red-300 px-4 text-sm font-medium text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/30"
           >
-            Retry
+            {t('steering.retry')}
           </button>
         </div>
       </div>
@@ -135,14 +136,14 @@ export default function AdminSteering() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Admin Steering</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('steering.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Emergency controls and OpenSymphony health —{' '}
-            {health ? `proxy ${health.proxy}, stripe ${health.stripe}` : 'status unavailable'}
+            {t('steering.subtitle')} —{' '}
+            {health ? `proxy ${health.proxy}, stripe ${health.stripe}` : t('steering.statusUnavailable')}
           </p>
         </div>
         <button type="button" onClick={() => void refresh()} className={ghostBtn}>
-          Refresh
+          {t('steering.refresh')}
         </button>
       </div>
 
@@ -161,7 +162,7 @@ export default function AdminSteering() {
       {/* Emergency stop/resume */}
       <div className={`${card} mb-6`}>
         <div className={cardHeader}>
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Emergency Stop / Resume</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('steering.emergencyTitle')}</h2>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4 p-4">
           <div>
@@ -173,10 +174,10 @@ export default function AdminSteering() {
               }`}
             >
               <span className={`h-2 w-2 rounded-full ${isPaused ? 'bg-red-500' : 'bg-green-500'}`} />
-              {isPaused ? 'Emergency stop ACTIVE — pipeline paused' : 'Pipeline running normally'}
+              {isPaused ? t('steering.emergencyActive') : t('steering.runningNormally')}
             </span>
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Halts all agent activity in the OpenSymphony pipeline until explicitly resumed.
+              {t('steering.emergencyDesc')}
             </p>
           </div>
           <div className="flex gap-2">
@@ -184,14 +185,14 @@ export default function AdminSteering() {
               <>
                 <button
                   type="button"
-                  onClick={() => void runAction('stop', adminSteering.emergencyPause, 'Emergency stop engaged')}
+                  onClick={() => void runAction('stop', adminSteering.emergencyPause, t('steering.emergencyPaused'))}
                   disabled={busy !== ''}
                   className={dangerBtn}
                 >
-                  {busy === 'stop' ? 'Engaging…' : 'Confirm stop'}
+                  {busy === 'stop' ? t('steering.engaging') : t('steering.confirmStop')}
                 </button>
                 <button type="button" onClick={() => setConfirming('')} disabled={busy !== ''} className={ghostBtn}>
-                  Cancel
+                  {t('steering.cancel')}
                 </button>
               </>
             ) : (
@@ -201,16 +202,16 @@ export default function AdminSteering() {
                 disabled={busy !== '' || isPaused}
                 className={dangerBtn}
               >
-                Emergency Stop
+                {t('steering.emergencyStop')}
               </button>
             )}
             <button
               type="button"
-              onClick={() => void runAction('resume', adminSteering.emergencyResume, 'Pipeline resumed')}
+              onClick={() => void runAction('resume', adminSteering.emergencyResume, t('steering.emergencyResumed'))}
               disabled={busy !== '' || !isPaused}
               className={okBtn}
             >
-              {busy === 'resume' ? 'Resuming…' : 'Resume'}
+              {busy === 'resume' ? t('steering.resuming') : t('steering.resume')}
             </button>
           </div>
         </div>
@@ -219,18 +220,18 @@ export default function AdminSteering() {
       {/* Tenant kill / refund */}
       <div className={`${card} mb-6`}>
         <div className={cardHeader}>
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Tenant Kill / Refund</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('steering.tenantTitle')}</h2>
         </div>
         <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2">
           <div>
             <label htmlFor="tenant-id" className={label}>
-              Tenant ID
+              {t('steering.tenantIdLabel')}
             </label>
             <input
               id="tenant-id"
               value={tenantId}
               onChange={(e) => setTenantId(e.target.value)}
-              placeholder="e.g. acme_corp"
+              placeholder={t('steering.tenantIdPlaceholder')}
               className={`${inputCls} mt-1`}
             />
             <div className="mt-3 flex gap-2">
@@ -239,15 +240,19 @@ export default function AdminSteering() {
                   <button
                     type="button"
                     onClick={() =>
-                      void runAction('kill', () => adminSteering.killTenant(tenantId), `Tenant ${tenantId} killed`)
+                      void runAction(
+                        'kill',
+                        () => adminSteering.killTenant(tenantId),
+                        t('steering.tenantKilled', { tenant: tenantId }),
+                      )
                     }
                     disabled={busy !== ''}
                     className={dangerBtn}
                   >
-                    {busy === 'kill' ? 'Killing…' : 'Confirm kill'}
+                    {busy === 'kill' ? t('steering.killing') : t('steering.confirmKill')}
                   </button>
                   <button type="button" onClick={() => setConfirming('')} disabled={busy !== ''} className={ghostBtn}>
-                    Cancel
+                    {t('steering.cancel')}
                   </button>
                 </>
               ) : (
@@ -257,20 +262,20 @@ export default function AdminSteering() {
                   disabled={busy !== '' || tenantId.trim() === ''}
                   className={dangerBtn}
                 >
-                  Kill tenant
+                  {t('steering.kill')}
                 </button>
               )}
             </div>
           </div>
           <div>
             <label htmlFor="payment-intent" className={label}>
-              Stripe Payment Intent (for refund)
+              {t('steering.paymentIntentLabel')}
             </label>
             <input
               id="payment-intent"
               value={paymentIntent}
               onChange={(e) => setPaymentIntent(e.target.value)}
-              placeholder="pi_…"
+              placeholder={t('steering.paymentIntentPlaceholder')}
               className={`${inputCls} mt-1`}
             />
             <div className="mt-3 flex gap-2">
@@ -280,13 +285,13 @@ export default function AdminSteering() {
                   void runAction(
                     'refund',
                     () => adminSteering.refundTenant(tenantId, { payment_intent: paymentIntent, kill: false }),
-                    `Refunded payment intent for tenant ${tenantId}`,
+                    t('steering.tenantRefunded', { tenant: tenantId }),
                   )
                 }
                 disabled={busy !== '' || tenantId.trim() === '' || paymentIntent.trim() === ''}
                 className={okBtn}
               >
-                {busy === 'refund' ? 'Refunding…' : 'Refund'}
+                {busy === 'refund' ? t('steering.refunding') : t('steering.refund')}
               </button>
             </div>
           </div>
@@ -296,7 +301,7 @@ export default function AdminSteering() {
       {/* Maintenance */}
       <div className={`${card} mb-6`}>
         <div className={cardHeader}>
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Maintenance Mode</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('steering.maintenanceTitle')}</h2>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4 p-4">
           <div>
@@ -309,12 +314,12 @@ export default function AdminSteering() {
             >
               <span className={`h-2 w-2 rounded-full ${maintenance?.active ? 'bg-amber-500' : 'bg-gray-300'}`} />
               {maintenance?.active
-                ? `Maintenance active — ${maintenance.reason ?? 'no reason'}`
-                : 'Maintenance inactive'}
+                ? t('steering.maintenanceActive', { reason: maintenance.reason ?? '—' })
+                : t('steering.maintenanceOff')}
             </span>
             {maintenance?.active && maintenance.drain_deadline && (
               <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                Drain deadline: {new Date(maintenance.drain_deadline).toLocaleString()}
+                {t('steering.drainDeadline')} {new Date(maintenance.drain_deadline).toLocaleString()}
               </p>
             )}
             {!maintenance?.active && (
@@ -322,7 +327,7 @@ export default function AdminSteering() {
                 <input
                   value={maintenanceReason}
                   onChange={(e) => setMaintenanceReason(e.target.value)}
-                  placeholder="Reason (e.g. DB migration)"
+                  placeholder={t('steering.reasonPlaceholder')}
                   className={`${inputCls} max-w-xs`}
                 />
                 <input
@@ -332,7 +337,7 @@ export default function AdminSteering() {
                   onChange={(e) => setDrainMinutes(Number(e.target.value))}
                   className={`${inputCls} w-24`}
                 />
-                <span className="self-center text-xs text-gray-500 dark:text-gray-400">drain minutes</span>
+                <span className="self-center text-xs text-gray-500 dark:text-gray-400">{t('steering.drainMinutes')}</span>
               </div>
             )}
           </div>
@@ -344,24 +349,24 @@ export default function AdminSteering() {
                   void runAction(
                     'maint',
                     () => adminSteering.maintenanceActivate(maintenanceReason || 'manual', drainMinutes || 5),
-                    'Maintenance mode activated',
+                    t('steering.maintenanceActivated'),
                   )
                 }
                 disabled={busy !== ''}
                 className={okBtn}
               >
-                {busy === 'maint' ? 'Activating…' : 'Activate maintenance'}
+                {busy === 'maint' ? t('steering.activating') : t('steering.maintenanceActivate')}
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() =>
-                  void runAction('maint', adminSteering.maintenanceDeactivate, 'Maintenance mode deactivated')
+                  void runAction('maint', adminSteering.maintenanceDeactivate, t('steering.maintenanceDeactivated'))
                 }
                 disabled={busy !== ''}
                 className={okBtn}
               >
-                {busy === 'maint' ? 'Deactivating…' : 'Deactivate maintenance'}
+                {busy === 'maint' ? t('steering.deactivating') : t('steering.maintenanceDeactivate')}
               </button>
             )}
           </div>
@@ -372,20 +377,20 @@ export default function AdminSteering() {
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className={card}>
           <div className={cardHeader}>
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Load Level</h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('steering.load')}</h2>
           </div>
           <div className="p-4">
             <p className={`text-2xl font-bold capitalize ${loadColor}`}>{loadLevel}</p>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Current OpenSymphony load-shedding level.</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('steering.loadDesc')}</p>
           </div>
         </div>
         <div className={card}>
           <div className={cardHeader}>
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Error Budget</h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('steering.errorBudget')}</h2>
           </div>
           <div className="p-4">
             {budgetEntries.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">No error-budget data recorded yet.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('steering.noErrorBudget')}</p>
             ) : (
               <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                 {budgetEntries.map(([component, remaining]) => (
@@ -407,20 +412,20 @@ export default function AdminSteering() {
       {/* Backup */}
       <div className={card}>
         <div className={`${cardHeader} flex items-center justify-between`}>
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Backups</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('steering.backupsTitle')}</h2>
           <button
             type="button"
-            onClick={() => void runAction('backup', adminSteering.backupRun, 'Backup completed')}
+            onClick={() => void runAction('backup', adminSteering.backupRun, t('steering.backupStarted'))}
             disabled={busy !== ''}
             className={okBtn}
           >
-            {busy === 'backup' ? 'Running…' : 'Run backup now'}
+            {busy === 'backup' ? t('steering.runningBusy') : t('steering.backupRun')}
           </button>
         </div>
         <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {backupList.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-              No backups recorded yet.
+              {t('steering.noBackups')}
             </div>
           ) : (
             backupList.map((b, i) => {

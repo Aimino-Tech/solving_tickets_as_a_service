@@ -398,8 +398,6 @@ const envSchema = z.object({
   ALERT_N8N_WEBHOOK_URL: z.string().optional(),
 
   // ── Admin steering (AIM-4617) ──
-  // Comma-separated allowlist of dashboard emails allowed to use /api/v1/admin/steering/*
-  ADMIN_EMAILS: z.string().default(''),
   // OpenSymphony Elixir admin API (forward target for the steering proxy)
   OS_ADMIN_API_URL: z.string().default(''),
   // x-api-key credential sent to the OS admin API (must match SYMPHONY_API_KEYS on the OS side)
