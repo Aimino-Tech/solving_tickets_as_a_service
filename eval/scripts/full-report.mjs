@@ -100,6 +100,7 @@ function extractTestResults(data) {
   // Shape 1: { results: [...] }
   if (Array.isArray(data?.results)) {
     for (const r of data.results) {
+      const output = r?.output ?? {};
       results.push({
         name: r.name || r.description || r.prompt?.display || 'unnamed',
         pass: r.pass ?? r.success ?? false,
@@ -108,6 +109,9 @@ function extractTestResults(data) {
         error: r.error ?? null,
         prompt: truncate(r.prompt?.raw || r.prompt || '', 200),
         response: truncate(r.response?.output || r.output || '', 200),
+        cost: Number(output.costCents ?? r.costCents ?? r.cost) || 0,
+        tier: Number(output.tier ?? r.tier) || undefined,
+        variant: String(output.variant ?? r.variant ?? '') || undefined,
       });
     }
   }
@@ -136,6 +140,7 @@ function extractTestResults(data) {
   // Shape 3: top-level test outcomes (some promptfoo versions)
   if (!results.length && Array.isArray(data)) {
     for (const r of data) {
+      const output = r?.output ?? {};
       results.push({
         name: r.name || r.description || 'unnamed',
         pass: r.pass ?? r.success ?? false,
@@ -144,6 +149,9 @@ function extractTestResults(data) {
         error: r.error ?? null,
         prompt: truncate(r.prompt || '', 200),
         response: truncate(r.response || '', 200),
+        cost: Number(output.costCents ?? r.costCents ?? r.cost) || 0,
+        tier: Number(output.tier ?? r.tier) || undefined,
+        variant: String(output.variant ?? r.variant ?? '') || undefined,
       });
     }
   }
@@ -217,8 +225,11 @@ function computeStats(results) {
   const passRate = total > 0 ? passed / total : 0;
   const durations = results.map((r) => r.duration).filter((d) => d > 0);
   const avgDuration = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+  const costs = results.map((r) => r.cost ?? 0).filter((c) => c > 0);
+  const totalCostCents = Math.round(costs.reduce((a, b) => a + b, 0));
+  const avgCostCents = costs.length > 0 ? Math.round(totalCostCents / costs.length) : 0;
 
-  return { total, passed, failed, passRate, avgDuration };
+  return { total, passed, failed, passRate, avgDuration, totalCostCents, avgCostCents };
 }
 
 /**
@@ -334,6 +345,8 @@ function buildReport(inputDir) {
       failedEvalTests: overallEval.failed,
       evalPassRate: overallEval.passRate,
       avgTestDuration: overallEval.avgDuration,
+      totalEvalCostCents: overallEval.totalCostCents,
+      avgEvalCostCents: overallEval.avgCostCents,
       redTeamTotalFindings: allRedTeamFindings.length,
       redTeamPassedFindings: redTeamPassed,
       redTeamFailedFindings: allRedTeamFindings.length - redTeamPassed,
@@ -377,6 +390,8 @@ function createEmptyReport() {
       failedEvalTests: 0,
       evalPassRate: 0,
       avgTestDuration: 0,
+      totalEvalCostCents: 0,
+      avgEvalCostCents: 0,
       redTeamTotalFindings: 0,
       redTeamPassedFindings: 0,
       redTeamFailedFindings: 0,
@@ -414,6 +429,8 @@ function generateMarkdown(report) {
   lines.push(`| Failed | ${summary.failedEvalTests} |`);
   lines.push(`| Eval Pass Rate | ${(summary.evalPassRate * 100).toFixed(1)}% |`);
   lines.push(`| Avg Test Duration | ${summary.avgTestDuration.toFixed(1)}ms |`);
+  lines.push(`| Total Eval Cost | $${(summary.totalEvalCostCents / 100).toFixed(2)} |`);
+  lines.push(`| Avg Cost / Fix | $${(summary.avgEvalCostCents / 100).toFixed(2)} |`);
   lines.push(`| Red Team Findings | ${summary.redTeamTotalFindings} |`);
   lines.push(`| Red Team Passed | ${summary.redTeamPassedFindings} |`);
   lines.push(`| Red Team Pass Rate | ${(summary.redTeamPassRate * 100).toFixed(1)}% |`);

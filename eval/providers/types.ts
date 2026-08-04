@@ -27,6 +27,12 @@ export interface TestCase {
 
   /** Maximum wall-clock time for the agent to complete, in milliseconds */
   timeoutMs: number;
+
+  /** Difficulty tier 1-4 for per-tier eval bucketing (AIM-4622). */
+  tier?: number;
+
+  /** Routing variant low/medium/high/max for per-tier eval bucketing. */
+  variant?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,4 +114,13 @@ export interface EvalResult {
 
   /** Link to the LangFuse trace for observability */
   traceUrl: string;
+
+  /** Difficulty tier 1-4 the case ran under (AIM-4622). */
+  tier?: number;
+
+  /** Routing variant low/medium/high/max the case ran under. */
+  variant?: string;
+
+  /** Total cost of the run in cents (used for per-tier cost reports). */
+  costCents?: number;
 }

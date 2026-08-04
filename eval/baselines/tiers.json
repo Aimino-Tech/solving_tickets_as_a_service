@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "description": "Per-tier eval baselines (AIM-4622). passRate = fraction of fixes that passed quality gates + tests for that difficulty tier.",
+  "1": {
+    "variant": "low",
+    "baselinePassRate": 0.9
+  },
+  "2": {
+    "variant": "medium",
+    "baselinePassRate": 0.85
+  },
+  "3": {
+    "variant": "high",
+    "baselinePassRate": 0.8
+  },
+  "4": {
+    "variant": "max",
+    "baselinePassRate": 0.75
+  }
+}

@@ -167,6 +167,15 @@ function parseTestCase(prompt: string): TestCase {
       ? raw.timeoutMs
       : 300_000;
 
+  const tier =
+    typeof raw.tier === "number" && raw.tier >= 1 && raw.tier <= 4
+      ? Math.round(raw.tier)
+      : undefined;
+  const variant =
+    typeof raw.variant === "string" && ["low", "medium", "high", "max"].includes(raw.variant)
+      ? raw.variant
+      : undefined;
+
   return {
     issueTitle,
     issueDescription,
@@ -174,6 +183,8 @@ function parseTestCase(prompt: string): TestCase {
     expectedOutcome,
     expectedFiles,
     timeoutMs,
+    tier,
+    variant,
   };
 }
 
@@ -379,6 +390,8 @@ export default async function syntaroAgentProvider(
     rootSpan.setAttribute("test.repo", testCase.repo);
     rootSpan.setAttribute("test.expectedFiles", testCase.expectedFiles.join(","));
     rootSpan.setAttribute("test.timeoutMs", testCase.timeoutMs);
+    if (testCase.tier !== undefined) rootSpan.setAttribute("test.tier", testCase.tier);
+    if (testCase.variant !== undefined) rootSpan.setAttribute("test.variant", testCase.variant);
 
     // Run attempts with retry logic
     let bestResult: EvalResult | null = null;
@@ -430,6 +443,8 @@ export default async function syntaroAgentProvider(
 
     if (bestResult) {
       bestResult.traceUrl = traceUrl;
+      bestResult.tier = testCase.tier;
+      bestResult.variant = testCase.variant;
     }
 
     rootSpan.setStatus({
