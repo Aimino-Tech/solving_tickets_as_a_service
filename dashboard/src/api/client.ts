@@ -385,6 +385,32 @@ export const billing = {
     }),
 };
 
+// -- Referral API (AIM-4643) --
+
+export interface ReferralReward {
+  id: number;
+  accountId: number;
+  referredEmail: string;
+  amountCredits: number;
+  status: 'pending' | 'claimed';
+  createdAt: string;
+  claimedAt: string | null;
+}
+
+export const referralApi = {
+  code: (opts?: { signal?: AbortSignal }) =>
+    request<{ code: string }>('/v1/referral/code', opts),
+  createCode: () =>
+    request<{ code: string }>('/v1/referral/code', { method: 'POST' }),
+  rewards: (opts?: { signal?: AbortSignal }) =>
+    request<{ rewards: ReferralReward[] }>('/v1/referral/rewards', opts),
+  claim: (id: number) =>
+    request<{ claimed: boolean; reward: ReferralReward; newBalance: number }>(
+      `/v1/referral/rewards/${id}/claim`,
+      { method: 'POST' },
+    ),
+};
+
 export interface WizardProgress {
   tenantId: string;
   state: 'not_started' | 'in_progress' | 'completed' | 'skipped';
