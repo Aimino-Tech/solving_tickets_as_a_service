@@ -52,12 +52,12 @@ describe('AuthService', () => {
       expect(mockCreateUser).toHaveBeenCalledWith({
         email: 'test@test.com',
         password: 'ValidP@ss1',
-        email_confirm: false,
-        user_metadata: { name: 'Test', email_verified: false },
+        email_confirm: true,
+        user_metadata: { name: 'Test', email_verified: true },
       });
       expect(result.token).toBe('access-token');
       expect(result.refreshToken).toBe('access-token');
-      expect(result.user).toEqual({ id: 'user-1', email: 'test@test.com', emailVerified: false, name: 'Test' });
+      expect(result.user).toEqual({ id: 'user-1', email: 'test@test.com', emailVerified: true, name: 'Test' });
     });
 
     it('creates user without name and returns tokens', async () => {

@@ -4,15 +4,26 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/__tests__/test-utils';
 import Settings from '@/pages/Settings';
 
-const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest } = vi.hoisted(() => ({
+const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiList } = vi.hoisted(() => ({
   mockConfigApiGet: vi.fn(),
   mockConfigApiUpdateEnv: vi.fn(),
   mockRequest: vi.fn(),
+  mockMcpKeysApiList: vi.fn(),
 }));
 
 vi.mock('@/api/client', () => ({
   configApi: { get: mockConfigApiGet, updateEnv: mockConfigApiUpdateEnv },
   request: mockRequest,
+  mcpKeysApi: {
+    list: mockMcpKeysApiList,
+    create: vi.fn(),
+    revoke: vi.fn(),
+    rename: vi.fn(),
+    get: vi.fn(),
+  },
+  github: {
+    getOAuthUrl: vi.fn(),
+  },
 }));
 
 const mockUseAuth = vi.hoisted(() => vi.fn());
@@ -23,6 +34,7 @@ vi.mock('@/context/AuthContext', () => ({
 describe('Settings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockMcpKeysApiList.mockResolvedValue({ keys: [] });
 
     mockUseAuth.mockReturnValue({
       user: { id: '1', email: 'test@test.com', name: 'Test User' },

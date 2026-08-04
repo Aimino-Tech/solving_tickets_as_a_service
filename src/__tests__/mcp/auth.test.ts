@@ -97,7 +97,7 @@ describe('mcpKeyAuth middleware', () => {
     const wasNext = await invokeAuth(req, res);
     expect(wasNext()).toBe(false);
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Missing authorization header' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Missing authorization header or x-api-key' });
   });
 
   it('returns 401 for a non-Bearer scheme', async () => {
