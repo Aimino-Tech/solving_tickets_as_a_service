@@ -344,7 +344,7 @@ export default function Billing() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Billing</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Subscription, invoices, payment history, and metered usage
+          Your plan includes monthly fixes. Credits are optional overage only.
         </p>
       </div>
 
@@ -432,24 +432,33 @@ export default function Billing() {
         )}
       </div>
 
-      {/* Credit Balance & Top-up (merged from /credits) */}
-      <div className="card bg-gradient-to-br from-brand-600 to-brand-800 text-white">
+      {/* Overage balance — secondary to plan subscription */}
+      <div className="card">
         {creditsLoading ? (
-          <div className="h-24 animate-pulse rounded bg-white/20" />
+          <div className="h-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
         ) : (
           <>
-            <div className="flex items-center gap-3">
-              <Wallet size={28} />
-              <div>
-                <p className="text-sm text-brand-100">Available Balance</p>
-                <p className="text-4xl font-bold">
-                  {(creditBalance?.balance ?? 0).toLocaleString()} credits
-                </p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3">
+                <Wallet size={22} className="mt-0.5 shrink-0 text-gray-400" />
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Overage balance
+                  </h2>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Used only after your plan&apos;s monthly fix limit — enable in Usage Limits.
+                    For ongoing volume, upgrade your plan instead.
+                  </p>
+                </div>
               </div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 sm:text-right">
+                {(creditBalance?.balance ?? 0).toLocaleString()}{' '}
+                <span className="text-base font-medium text-gray-500 dark:text-gray-400">credits</span>
+              </p>
             </div>
             <div className="mt-4">
               {creditPacks.length === 0 ? (
-                <p className="text-sm text-brand-200">Credit packs unavailable.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Overage packs unavailable.</p>
               ) : (
                 <div className="flex flex-wrap gap-3">
                   {creditPacks.map((pack) => (
@@ -458,21 +467,23 @@ export default function Billing() {
                       type="button"
                       disabled={topUpLoading === pack.priceId}
                       onClick={() => void handleTopUp(pack.priceId)}
-                      className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50 disabled:opacity-60"
+                      className="btn-secondary gap-2"
                     >
                       <CreditCard size={16} />
                       {pack.bonus > 0
                         ? `${pack.credits} + ${pack.bonus} Bonus`
                         : `${pack.credits} Credits`}
-                      <span className="text-brand-500">${(pack.priceCents / 100).toFixed(2)}</span>
+                      <span className="font-normal text-gray-500 dark:text-gray-400">
+                        ${(pack.priceCents / 100).toFixed(2)}
+                      </span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
             {creditBalance && (
-              <p className="mt-3 text-xs text-brand-200">
-                Lifetime total: {creditBalance.lifetimeCredits.toLocaleString()} credits purchased
+              <p className="mt-3 text-xs text-gray-400">
+                Lifetime overage purchased: {creditBalance.lifetimeCredits.toLocaleString()} credits
               </p>
             )}
           </>
@@ -481,7 +492,7 @@ export default function Billing() {
 
       {creditUsage.length > 0 && (
         <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Monthly Credit Usage</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Monthly overage usage</h2>
           <div className="mt-4 space-y-2">
             {creditUsage.map((m) => (
               <div
@@ -507,7 +518,7 @@ export default function Billing() {
       )}
 
       <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Credit Transactions</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Overage transactions</h2>
         {creditsLoading ? (
           <div className="mt-4 h-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
         ) : creditTransactions.length > 0 ? (
@@ -520,7 +531,7 @@ export default function Billing() {
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {tx.type === 'purchase'
-                      ? 'Credit Purchase'
+                      ? 'Overage purchase'
                       : tx.type === 'refund'
                         ? 'Refund'
                         : 'Adjustment'}
@@ -548,7 +559,7 @@ export default function Billing() {
             ))}
           </div>
         ) : (
-          <p className="mt-4 text-sm text-gray-400">No credit transactions yet.</p>
+          <p className="mt-4 text-sm text-gray-400">No overage transactions yet.</p>
         )}
       </div>
 
@@ -556,7 +567,7 @@ export default function Billing() {
       <div className="card">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Redeem Coupon</h2>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Enter a promo code to add credits to your balance.
+          Promo codes add credits to your overage balance.
         </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <input
@@ -585,7 +596,7 @@ export default function Billing() {
       <div className="card">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Auto-Reload</h2>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          When your balance drops below the threshold, we'll start a top-up checkout for the specified amount.
+          Auto-top up overage credits when the balance falls below your threshold. Prefer a higher plan for steady volume.
         </p>
         {settingsLoading ? (
           <div className="mt-4 h-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />

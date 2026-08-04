@@ -187,16 +187,17 @@ describe('Billing', () => {
     expect(mockBillingPortal).toHaveBeenCalled();
   });
 
-  it('shows credit balance and top-up packs merged from Credits', async () => {
+  it('shows overage balance and top-up packs as secondary to the plan', async () => {
     renderWithProviders(<Billing />);
 
     await waitFor(() => {
-      expect(screen.getByText(/2,500 credits/i)).toBeInTheDocument();
+      expect(screen.getByText(/2,500/i)).toBeInTheDocument();
     });
 
+    expect(screen.getByRole('heading', { name: /Overage balance/i })).toBeInTheDocument();
     expect(screen.getByText(/1000 Credits/i)).toBeInTheDocument();
-    expect(screen.getByText('Credit Transactions')).toBeInTheDocument();
-    expect(screen.getByText('Credit Purchase')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Overage transactions' })).toBeInTheDocument();
+    expect(screen.getByText('Overage purchase')).toBeInTheDocument();
   });
 
   it('shows View in Stripe Portal button in payment history section', async () => {

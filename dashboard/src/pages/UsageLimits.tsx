@@ -161,12 +161,12 @@ export default function UsageLimitsPage() {
     return () => { cancelled = true; };
   }, [monthDate, modelFilter, apiKeyFilter]);
 
-  async function handleToggle(key: 'useBalanceAfterLimits' | 'enableChinaModels', value: boolean) {
-    setSaving(key);
+  async function handleToggle(value: boolean) {
+    setSaving('useBalanceAfterLimits');
     setSaveError(null);
     try {
-      const updated = await usageLimitsApi.updatePreferences({ [key]: value });
-      setLimits((d) => (d ? { ...d, [key]: updated[key] } : d));
+      const updated = await usageLimitsApi.updatePreferences({ useBalanceAfterLimits: value });
+      setLimits((d) => (d ? { ...d, useBalanceAfterLimits: updated.useBalanceAfterLimits } : d));
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Failed to update preference');
     } finally {
@@ -232,26 +232,10 @@ export default function UsageLimitsPage() {
             <div className="mt-4">
               <Toggle
                 checked={limits.useBalanceAfterLimits}
-                onChange={(v) => handleToggle('useBalanceAfterLimits', v)}
+                onChange={handleToggle}
                 disabled={saving !== null}
                 label="Use your available balance after usage limits are reached"
-                description={`Your current balance is ${formatNumber(limits.balance)} credits. When enabled, fix runs past your plan limit draw from this balance instead of being blocked.`}
-              />
-            </div>
-          </div>
-
-          <div className="card">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Provider Routing</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Control which providers are used for routing
-            </p>
-            <div className="mt-4">
-              <Toggle
-                checked={limits.enableChinaModels}
-                onChange={(v) => handleToggle('enableChinaModels', v)}
-                disabled={saving !== null}
-                label="Enable China-hosted models"
-                description="Allow routing to models hosted in China."
+                description={`Overage balance: ${formatNumber(limits.balance)} credits. When enabled, fix runs past your plan limit draw from this balance instead of being blocked. For steady volume, upgrade your plan.`}
               />
             </div>
           </div>

@@ -332,7 +332,7 @@ export const credits = {
     }),
 };
 
-// -- Usage limits + provider routing (OpenCode Go "Go" parity, AIM-4645) --
+// -- Usage limits (AIM-4645) --
 
 export interface UsageLimitWindow {
   usedCredits: number;
@@ -345,7 +345,6 @@ export interface UsageLimits {
   weekly: UsageLimitWindow;
   monthly: UsageLimitWindow;
   useBalanceAfterLimits: boolean;
-  enableChinaModels: boolean;
   balance: number;
 }
 
@@ -354,9 +353,8 @@ export const usageLimitsApi = {
     request<UsageLimits>('/v1/usage-limits', opts),
   updatePreferences: (body: {
     useBalanceAfterLimits?: boolean;
-    enableChinaModels?: boolean;
   }) =>
-    request<{ success: boolean; useBalanceAfterLimits: boolean; enableChinaModels: boolean }>(
+    request<{ success: boolean; useBalanceAfterLimits: boolean }>(
       '/v1/usage-limits/preferences',
       { method: 'POST', body: JSON.stringify(body) },
     ),

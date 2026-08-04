@@ -1,11 +1,10 @@
 /**
- * Usage limits + provider routing preferences API (AIM-4645).
+ * Usage limits preferences API (AIM-4645).
  *
- * Mirrors OpenCode Go's dashboard: three usage windows (continuous / weekly /
- * monthly) computed from the `runs` table (SUM of credits_used), the plan's
- * monthly fix limit, and two account-level toggles persisted on `accounts`:
+ * Three usage windows (continuous / weekly / monthly) computed from the `runs`
+ * table (SUM of credits_used), the plan's monthly fix limit, and an
+ * account-level toggle persisted on `accounts`:
  *   - use_balance_after_limits — consume credits past the plan limit
- *   - enable_china_models      — allow China-hosted models in provider routing
  *
  * ── Endpoints ───────────────────────────────────────────────────────────────
  *   GET  /api/v1/usage-limits             — usage windows + preference toggles
@@ -66,7 +65,6 @@ export interface UsageLimitsResponse {
   weekly: UsageWindow;
   monthly: UsageWindow;
   useBalanceAfterLimits: boolean;
-  enableChinaModels: boolean;
   /** Current credit balance (used to back the balance-after-limits toggle). */
   balance: number;
 }
@@ -168,22 +166,21 @@ async function resolveAccountPlan(accountId: number): Promise<PlanId> {
 /**
  * Read the usage preference toggles from the accounts table.
  */
-async function getAccountPrefs(accountId: number): Promise<{ useBalanceAfterLimits: boolean; enableChinaModels: boolean }> {
+async function getAccountPrefs(accountId: number): Promise<{ useBalanceAfterLimits: boolean }> {
   try {
-    const result = await queryWithRetry<{ use_balance_after_limits: boolean; enable_china_models: boolean }>(
-      'SELECT use_balance_after_limits, enable_china_models FROM accounts WHERE id = $1',
+    const result = await queryWithRetry<{ use_balance_after_limits: boolean }>(
+      'SELECT use_balance_after_limits FROM accounts WHERE id = $1',
       [accountId],
     );
     if (result.rows.length > 0) {
       return {
         useBalanceAfterLimits: result.rows[0].use_balance_after_limits,
-        enableChinaModels: result.rows[0].enable_china_models,
       };
     }
   } catch (err) {
     log.error({ err: String(err), accountId }, 'Failed to read account usage prefs — returning defaults');
   }
-  return { useBalanceAfterLimits: false, enableChinaModels: false };
+  return { useBalanceAfterLimits: false };
 }
 
 // ---------------------------------------------------------------------------
@@ -261,7 +258,6 @@ usageLimitsRouter.get('/', async (req: Request, res: Response) => {
       weekly,
       monthly,
       useBalanceAfterLimits: prefs.useBalanceAfterLimits,
-      enableChinaModels: prefs.enableChinaModels,
       balance: balance.balance,
     };
     res.json(response);
@@ -272,11 +268,10 @@ usageLimitsRouter.get('/', async (req: Request, res: Response) => {
 });
 
 /**
- * POST /api/v1/usage-limits/preferences — update usage/provider toggles.
+ * POST /api/v1/usage-limits/preferences — update usage toggles.
  */
 const PreferencesSchema = z.object({
-  useBalanceAfterLimits: z.boolean().optional(),
-  enableChinaModels: z.boolean().optional(),
+  useBalanceAfterLimits: z.boolean(),
 });
 
 usageLimitsRouter.post('/preferences', async (req: Request, res: Response) => {
@@ -298,33 +293,16 @@ usageLimitsRouter.post('/preferences', async (req: Request, res: Response) => {
     return;
   }
 
-  const { useBalanceAfterLimits, enableChinaModels } = parsed.data;
-  if (useBalanceAfterLimits === undefined && enableChinaModels === undefined) {
-    res.status(400).json({ error: 'Provide at least one preference to update' });
-    return;
-  }
+  const { useBalanceAfterLimits } = parsed.data;
 
   try {
-    const sets: string[] = [];
-    const values: unknown[] = [];
-    let idx = 1;
-    if (useBalanceAfterLimits !== undefined) {
-      sets.push(`use_balance_after_limits = $${idx++}`);
-      values.push(useBalanceAfterLimits);
-    }
-    if (enableChinaModels !== undefined) {
-      sets.push(`enable_china_models = $${idx++}`);
-      values.push(enableChinaModels);
-    }
-    values.push(accountId);
-
     await queryWithRetry(
-      `UPDATE accounts SET ${sets.join(', ')} WHERE id = $${idx}`,
-      values,
+      'UPDATE accounts SET use_balance_after_limits = $1 WHERE id = $2',
+      [useBalanceAfterLimits, accountId],
     );
 
     const prefs = await getAccountPrefs(accountId);
-    log.info({ accountId, useBalanceAfterLimits, enableChinaModels }, 'Usage limit preferences updated');
+    log.info({ accountId, useBalanceAfterLimits }, 'Usage limit preferences updated');
     res.json({ success: true, ...prefs });
   } catch (err) {
     log.error({ err: String(err), accountId }, 'Failed to update usage limit preferences');

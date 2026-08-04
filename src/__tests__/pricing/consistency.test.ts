@@ -72,12 +72,12 @@ describe('Pricing Consistency', () => {
   });
 
   describe('Free tier consistency', () => {
-    it('PLANS.free.monthlyFixLimit is 50 fixes', () => {
-      expect(PLANS.free.monthlyFixLimit).toBe(50);
+    it('PLANS.free.monthlyFixLimit is 10 fixes', () => {
+      expect(PLANS.free.monthlyFixLimit).toBe(10);
     });
 
-    it('TIER_FEATURES.free.monthlyFixQuota is 50 fixes', () => {
-      expect(TIER_FEATURES.free.monthlyFixQuota).toBe(50);
+    it('TIER_FEATURES.free.monthlyFixQuota is 10 fixes', () => {
+      expect(TIER_FEATURES.free.monthlyFixQuota).toBe(10);
     });
 
     it('PLANS.free.trialFixLimit is 5 fixes', () => {

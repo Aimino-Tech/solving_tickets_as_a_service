@@ -57,7 +57,7 @@ export interface FeatureGate {
 export const TIER_FEATURES: Record<Tier, FeatureGate> = {
   free: {
     concurrentFixes: 1,
-    monthlyFixQuota: 50,
+    monthlyFixQuota: 10,
     premiumModels: false,
     maxRetries: 2,
     sandboxTimeoutMs: 300_000,

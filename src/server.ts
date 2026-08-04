@@ -873,9 +873,9 @@ export async function createApp(): Promise<express.Application> {
 
   app.use('/api/v1', litellmUsageRouter);
 
-  // ── Usage limits + provider routing API (AIM-4645) ─────────────
+  // ── Usage limits API (AIM-4645) ────────────────────────────────
   // GET  /api/v1/usage-limits             — continuous/weekly/monthly usage + toggles
-  // POST /api/v1/usage-limits/preferences — update use_balance_after_limits / enable_china_models
+  // POST /api/v1/usage-limits/preferences — update use_balance_after_limits
   app.use('/api/v1/usage-limits', usageLimitsRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────

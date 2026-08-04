@@ -269,5 +269,19 @@
   "settings.deletionConfirm": "Request deletion of all your personal data? This schedules account erasure for the end of the retention period.",
   "settings.deletionRequestFailed": "Failed to submit deletion request",
   "settings.cancelDeletionConfirm": "Cancel this deletion request?",
-  "settings.deletionCancelled": "Deletion request cancelled."
+  "settings.deletionCancelled": "Deletion request cancelled.",
+  "repos.bitbucketTitle": "Bitbucket Workspace",
+  "repos.bitbucketDesc": "Connect a Bitbucket workspace to enable SYNTARO fixes on Bitbucket",
+  "repos.bitbucketConnectedTo": "Connected to {{workspace}}",
+  "repos.bitbucketDisconnect": "Disconnect Bitbucket",
+  "repos.bitbucketAppPasswordHint": "Use a Bitbucket app password (account settings → App passwords) with Pull requests / Issues / Webhooks read+write permissions.",
+  "repos.bitbucketUsername": "Bitbucket username",
+  "repos.bitbucketAppPassword": "App password",
+  "repos.bitbucketWorkspace": "Workspace slug",
+  "repos.bitbucketConnecting": "Connecting…",
+  "repos.bitbucketConnect": "Connect Bitbucket Workspace",
+  "repos.bitbucketNoRepos": "No repositories found in workspace {{workspace}}.",
+  "repos.bitbucketActive": "SYNTARO Active",
+  "repos.bitbucketEnable": "Enable SYNTARO",
+  "repos.bitbucketHint": "One workspace per instance. Webhook events: issue:created, issue:updated, pullrequest:created, pullrequest:updated."
 }

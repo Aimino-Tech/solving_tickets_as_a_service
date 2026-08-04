@@ -100,10 +100,10 @@ export const PLANS: Record<PlanId, Plan> = {
   free: {
     id: 'free',
     name: 'Free',
-    description: 'Basic fix runs for individuals and small projects',
+    description: '10 fixes/mo — basic fix runs for individuals and small projects',
     amountCents: 0,
     priceId: '',
-    monthlyFixLimit: 50,
+    monthlyFixLimit: 10,
     premiumModels: false,
     concurrentFixes: 1,
     sandboxTimeoutMs: 300_000,

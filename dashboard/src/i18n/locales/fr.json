@@ -282,5 +282,19 @@
   "settings.deletionConfirm": "Demander la suppression de toutes vos données personnelles ? Cela programme l'effacement du compte à la fin de la période de rétention.",
   "settings.deletionRequestFailed": "Échec de l'envoi de la demande de suppression",
   "settings.cancelDeletionConfirm": "Annuler cette demande de suppression ?",
-  "settings.deletionCancelled": "Demande de suppression annulée."
+  "settings.deletionCancelled": "Demande de suppression annulée.",
+  "repos.bitbucketTitle": "Espace de travail Bitbucket",
+  "repos.bitbucketDesc": "Connectez un espace de travail Bitbucket pour activer les correctifs SYNTARO sur Bitbucket",
+  "repos.bitbucketConnectedTo": "Connecté à {{workspace}}",
+  "repos.bitbucketDisconnect": "Déconnecter Bitbucket",
+  "repos.bitbucketAppPasswordHint": "Utilisez un mot de passe d'application Bitbucket (paramètres du compte → Mots de passe d'application) avec des autorisations lecture/écriture pour Pull requests / Issues / Webhooks.",
+  "repos.bitbucketUsername": "Nom d'utilisateur Bitbucket",
+  "repos.bitbucketAppPassword": "Mot de passe d'application",
+  "repos.bitbucketWorkspace": "Slug de l'espace de travail",
+  "repos.bitbucketConnecting": "Connexion…",
+  "repos.bitbucketConnect": "Connecter l'espace de travail Bitbucket",
+  "repos.bitbucketNoRepos": "Aucun dépôt trouvé dans l'espace de travail {{workspace}}.",
+  "repos.bitbucketActive": "SYNTARO actif",
+  "repos.bitbucketEnable": "Activer SYNTARO",
+  "repos.bitbucketHint": "Un espace de travail par instance. Événements de webhook : issue:created, issue:updated, pullrequest:created, pullrequest:updated."
 }

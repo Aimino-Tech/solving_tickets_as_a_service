@@ -282,5 +282,19 @@
   "settings.deletionConfirm": "¿Solicitar la eliminación de todos sus datos personales? Esto programa la eliminación de la cuenta al final del período de retención.",
   "settings.deletionRequestFailed": "No se pudo enviar la solicitud de eliminación",
   "settings.cancelDeletionConfirm": "¿Cancelar esta solicitud de eliminación?",
-  "settings.deletionCancelled": "Solicitud de eliminación cancelada."
+  "settings.deletionCancelled": "Solicitud de eliminación cancelada.",
+  "repos.bitbucketTitle": "Espacio de trabajo de Bitbucket",
+  "repos.bitbucketDesc": "Conecte un espacio de trabajo de Bitbucket para habilitar las correcciones de SYNTARO en Bitbucket",
+  "repos.bitbucketConnectedTo": "Conectado a {{workspace}}",
+  "repos.bitbucketDisconnect": "Desconectar Bitbucket",
+  "repos.bitbucketAppPasswordHint": "Use una contraseña de aplicación de Bitbucket (configuración de cuenta → Contraseñas de aplicación) con permisos de lectura/escritura para Pull requests / Issues / Webhooks.",
+  "repos.bitbucketUsername": "Usuario de Bitbucket",
+  "repos.bitbucketAppPassword": "Contraseña de aplicación",
+  "repos.bitbucketWorkspace": "Slug del espacio de trabajo",
+  "repos.bitbucketConnecting": "Conectando…",
+  "repos.bitbucketConnect": "Conectar espacio de trabajo de Bitbucket",
+  "repos.bitbucketNoRepos": "No se encontraron repositorios en el espacio de trabajo {{workspace}}.",
+  "repos.bitbucketActive": "SYNTARO activo",
+  "repos.bitbucketEnable": "Activar SYNTARO",
+  "repos.bitbucketHint": "Un espacio de trabajo por instancia. Eventos de webhook: issue:created, issue:updated, pullrequest:created, pullrequest:updated."
 }
