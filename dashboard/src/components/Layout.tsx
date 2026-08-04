@@ -11,8 +11,8 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import NotificationBell from '@/components/NotificationBell';
 import { adminSteering } from '@/api/adminSteering';
+import NotificationBell from '@/components/NotificationBell';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -36,9 +36,15 @@ export default function Layout() {
     let cancelled = false;
     adminSteering
       .health()
-      .then(() => { if (!cancelled) setIsAdmin(true); })
-      .catch(() => { if (!cancelled) setIsAdmin(false); });
-    return () => { cancelled = true; };
+      .then(() => {
+        if (!cancelled) setIsAdmin(true);
+      })
+      .catch(() => {
+        if (!cancelled) setIsAdmin(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [

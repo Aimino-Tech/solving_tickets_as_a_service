@@ -89,13 +89,9 @@ export default function AdminSteering() {
       <div className="p-4 sm:p-6 lg:p-8">
         <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">{t('steering.title')}</h1>
         <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-900/50 dark:bg-red-900/20">
-          <p className="text-sm font-medium text-red-700 dark:text-red-400">
-            {t('steering.unreachable')}
-          </p>
+          <p className="text-sm font-medium text-red-700 dark:text-red-400">{t('steering.unreachable')}</p>
           <p className="mt-1 text-sm text-red-600 dark:text-red-400">{pageError}</p>
-          <p className="mt-1 text-xs text-red-500 dark:text-red-400">
-            {t('steering.envHint')}
-          </p>
+          <p className="mt-1 text-xs text-red-500 dark:text-red-400">{t('steering.envHint')}</p>
           <button
             type="button"
             onClick={() => {
@@ -176,9 +172,7 @@ export default function AdminSteering() {
               <span className={`h-2 w-2 rounded-full ${isPaused ? 'bg-red-500' : 'bg-green-500'}`} />
               {isPaused ? t('steering.emergencyActive') : t('steering.runningNormally')}
             </span>
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              {t('steering.emergencyDesc')}
-            </p>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('steering.emergencyDesc')}</p>
           </div>
           <div className="flex gap-2">
             {confirming === 'stop' ? (
@@ -337,7 +331,9 @@ export default function AdminSteering() {
                   onChange={(e) => setDrainMinutes(Number(e.target.value))}
                   className={`${inputCls} w-24`}
                 />
-                <span className="self-center text-xs text-gray-500 dark:text-gray-400">{t('steering.drainMinutes')}</span>
+                <span className="self-center text-xs text-gray-500 dark:text-gray-400">
+                  {t('steering.drainMinutes')}
+                </span>
               </div>
             )}
           </div>
