@@ -251,6 +251,36 @@ export const credits = {
     ),
 };
 
+// -- Usage limits + provider routing (OpenCode Go "Go" parity, AIM-4645) --
+
+export interface UsageLimitWindow {
+  usedCredits: number;
+  limitCredits: number;
+  resetAt: string;
+}
+
+export interface UsageLimits {
+  continuous: UsageLimitWindow;
+  weekly: UsageLimitWindow;
+  monthly: UsageLimitWindow;
+  useBalanceAfterLimits: boolean;
+  enableChinaModels: boolean;
+  balance: number;
+}
+
+export const usageLimitsApi = {
+  get: (opts?: { signal?: AbortSignal }) =>
+    request<UsageLimits>('/v1/usage-limits', opts),
+  updatePreferences: (body: {
+    useBalanceAfterLimits?: boolean;
+    enableChinaModels?: boolean;
+  }) =>
+    request<{ success: boolean; useBalanceAfterLimits: boolean; enableChinaModels: boolean }>(
+      '/v1/usage-limits/preferences',
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+};
+
 export const runs = {
   list: (params?: {
     page?: number;

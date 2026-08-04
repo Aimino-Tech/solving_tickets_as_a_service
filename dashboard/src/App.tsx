@@ -15,6 +15,7 @@ import NotFound from '@/pages/NotFound';
 const DashboardHome = lazy(() => import('@/pages/DashboardHome'));
 const RunsHistory = lazy(() => import('@/pages/RunsHistory'));
 const RunDetail = lazy(() => import('@/pages/RunDetail'));
+const UsageLimits = lazy(() => import('@/pages/UsageLimits')); // AIM-4645
 const Repos = lazy(() => import('@/pages/Repos'));
 const Credits = lazy(() => import('@/pages/Credits'));
 const Settings = lazy(() => import('@/pages/Settings'));
@@ -87,6 +88,7 @@ export default function App() {
             <Route index element={<DashboardHome />} />
             <Route path="runs" element={<RunsHistory />} />
             <Route path="runs/:id" element={<RunDetail />} />
+            <Route path="usage-limits" element={<UsageLimits />} /> {/* AIM-4645 */}
             <Route path="repos" element={<Repos />} />
             <Route path="credits" element={<Credits />} />
             <Route path="billing" element={<Billing />} />
