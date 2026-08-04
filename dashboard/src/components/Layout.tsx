@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   CreditCard,
+  Gift,
   GitFork,
   LayoutDashboard,
   RotateCw,
@@ -53,6 +54,8 @@ export default function Layout() {
     { to: '/repos', label: t('nav.repos'), icon: GitFork },
     { to: '/billing', label: 'Billing', icon: CreditCard },
     { to: '/audit', label: t('nav.audit'), icon: ScrollText },
+    // AIM-4643
+    { to: '/referral', label: 'Referral', icon: Gift },
     { to: '/settings', label: t('nav.settings'), icon: SettingsIcon },
   ];
 

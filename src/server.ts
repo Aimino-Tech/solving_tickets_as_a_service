@@ -837,6 +837,22 @@ export async function createApp(): Promise<express.Application> {
   }
   app.use('/api/v1', creditRouter);
 
+  // ── Referral API (AIM-4643) ──────────────────────────────
+  // GET  /api/v1/referral/code
+  // POST /api/v1/referral/code
+  // POST /api/v1/referral/redeem
+  // GET  /api/v1/referral/rewards
+  // POST /api/v1/referral/rewards/:id/claim
+  let referralRouter: Router;
+  try {
+    const mod = await import('./referral/index.js');
+    referralRouter = mod.referralRouter;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load referral API — using empty router');
+    referralRouter = Router();
+  }
+  app.use('/api/v1', referralRouter);
+
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
 
