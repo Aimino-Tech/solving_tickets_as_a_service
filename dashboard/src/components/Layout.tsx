@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  BarChart3,
   CreditCard,
   Gift,
   GitFork,
@@ -55,6 +56,7 @@ export default function Layout() {
     { to: '/runs', label: t('nav.runs'), icon: RotateCw },
     { to: '/usage-limits', label: 'Usage Limits', icon: Gauge }, // AIM-4645
     { to: '/repos', label: t('nav.repos'), icon: GitFork },
+    { to: '/usage', label: 'Usage', icon: BarChart3 }, // AIM-4641
     // AIM-4642
     { to: '/members', label: 'Members', icon: Users },
     { to: '/billing', label: 'Billing', icon: CreditCard },

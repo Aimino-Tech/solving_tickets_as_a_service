@@ -326,6 +326,51 @@ export const usageLimitsApi = {
     ),
 };
 
+// -- Usage & cost analytics (OpenCode Go "Kosten" parity) --
+
+export interface UsageSeriesPoint {
+  date: string;
+  [model: string]: string | number;
+}
+
+export interface UsageTotalsByModel {
+  model: string;
+  costCents: number;
+  runs: number;
+}
+
+export interface UsageRequest {
+  date: string;
+  model: string | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  costCents: number;
+  sessionId?: string;
+  runId?: number;
+  issueNumber?: number | null;
+  prUrl?: string | null;
+  durationMs?: number | null;
+}
+
+export interface UsageAnalytics {
+  month: string;
+  series: UsageSeriesPoint[];
+  totalsByModel: UsageTotalsByModel[];
+  requests: UsageRequest[];
+  filters: { models: string[]; apiKeys: string[] };
+}
+
+export const usageApi = {
+  get: (params?: { month?: string; model?: string; apiKey?: string }, opts?: { signal?: AbortSignal }) => {
+    const qs = new URLSearchParams();
+    if (params?.month) qs.set('month', params.month);
+    if (params?.model) qs.set('model', params.model);
+    if (params?.apiKey) qs.set('apiKey', params.apiKey);
+    const query = qs.toString();
+    return request<UsageAnalytics>(`/v1/credits/usage/usage${query ? `?${query}` : ''}`, opts);
+  },
+};
+
 export const runs = {
   list: (params?: {
     page?: number;
