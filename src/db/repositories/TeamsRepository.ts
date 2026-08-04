@@ -2,6 +2,7 @@
  * Teams repository — data access for the teams table.
  */
 
+import { randomUUID } from 'node:crypto';
 import { queryWithRetry, validateSqlIdentifier } from '../connection.js';
 import type { Team, NewTeam, TeamMember, NewTeamMember } from '../types/index.js';
 
@@ -82,6 +83,110 @@ export class TeamsRepository {
        DO UPDATE SET role = $3
        RETURNING *`,
       [teamId, accountId, role],
+    );
+    return result.rows[0];
+  }
+
+  /**
+   * Set or clear a member's monthly credit limit.
+   * Passing null clears the limit (unlimited).
+   */
+  async setMemberMonthlyLimit(
+    teamId: number,
+    accountId: number,
+    monthlyLimitCredits: number | null,
+  ): Promise<TeamMember | undefined> {
+    const result = await queryWithRetry<TeamMember>(
+      `INSERT INTO team_members (team_id, account_id, role, monthly_limit_credits)
+       VALUES ($1, $2, 'member', $3)
+       ON CONFLICT (team_id, account_id)
+       DO UPDATE SET monthly_limit_credits = $3
+       RETURNING *`,
+      [teamId, accountId, monthlyLimitCredits],
+    );
+    return result.rows[0];
+  }
+
+  /**
+   * Members joined with account email/name, ordered by join date.
+   */
+  async getMembersWithDetails(
+    teamId: number,
+  ): Promise<(TeamMember & { accountEmail?: string; accountName?: string })[]> {
+    const result = await queryWithRetry<
+      TeamMember & { account_email: string | null; account_name: string | null }
+    >(
+      `SELECT tm.*, a.email AS account_email, a.name AS account_name
+       FROM team_members tm
+       LEFT JOIN accounts a ON a.id = tm.account_id
+       WHERE tm.team_id = $1
+       ORDER BY tm.joined_at`,
+      [teamId],
+    );
+    return result.rows.map((row) => ({
+      ...row,
+      accountEmail: row.account_email ?? undefined,
+      accountName: row.account_name ?? undefined,
+    }));
+  }
+
+  /**
+   * Pending (not yet accepted/revoked) invites scoped to a team.
+   */
+  async getPendingInvites(
+    teamId: number,
+  ): Promise<{ id: number; email: string; role: string; monthlyLimitCredits: number | null; createdAt: Date }[]> {
+    const result = await queryWithRetry<{
+      id: number;
+      email: string;
+      role: string;
+      monthly_limit_credits: number | null;
+      created_at: Date;
+    }>(
+      `SELECT id, email, role, monthly_limit_credits, created_at
+       FROM invites
+       WHERE team_id = $1 AND status = 'pending'
+       ORDER BY created_at DESC`,
+      [teamId],
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      email: row.email,
+      role: row.role,
+      monthlyLimitCredits: row.monthly_limit_credits,
+      createdAt: row.created_at,
+    }));
+  }
+
+  /**
+   * Revoke a pending invite by id within a team.
+   */
+  async revokeInvite(teamId: number, inviteId: number): Promise<boolean> {
+    const result = await queryWithRetry(
+      `UPDATE invites SET status = 'revoked'
+       WHERE id = $1 AND team_id = $2 AND status = 'pending'`,
+      [inviteId, teamId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  /**
+   * Create a pending email invite scoped to a team.
+   * Returns undefined when an invite for this email is already pending/accepted.
+   */
+  async createInvite(data: {
+    teamId: number;
+    email: string;
+    invitedBy: string;
+    role?: string;
+    monthlyLimitCredits?: number | null;
+  }): Promise<{ id: number; email: string; token: string } | undefined> {
+    const result = await queryWithRetry<{ id: number; email: string; token: string }>(
+      `INSERT INTO invites (email, invited_by, role, token, status, team_id, monthly_limit_credits)
+       VALUES ($1, $2, $3, $4, 'pending', $5, $6)
+       ON CONFLICT (email) DO NOTHING
+       RETURNING id, email, token`,
+      [data.email, data.invitedBy, data.role ?? 'member', randomUUID(), data.teamId, data.monthlyLimitCredits ?? null],
     );
     return result.rows[0];
   }

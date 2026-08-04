@@ -25,6 +25,7 @@ export interface TeamMember {
   teamId: number;
   accountId: number;
   role: string;
+  monthlyLimitCredits: number | null;
   joinedAt: Date;
 }
 
