@@ -24,10 +24,17 @@
 import { randomUUID } from 'node:crypto';
 import { meteringEvents, type PhaseUsage, type UsageRecord } from './events.js';
 import { calculatePipelineCost } from './costs.js';
+import { runsRepository } from '../db/repositories/RunsRepository.js';
 import { rootLogger } from '../utils/logger.js';
 import { captureEvent } from '../analytics/tracker.js';
 
 const log = rootLogger.child({ module: 'usage-tracker' });
+
+/**
+ * Credit value in cents used to derive runs.cost_cents from total credits.
+ * Matches the published 100-credit pack ($10.00 → 1000 cents → 10¢/credit).
+ */
+const CREDIT_VALUE_CENTS = 10;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,6 +85,48 @@ const usageStore: StoredUsage[] = [];
  */
 export function getUsageStore(): StoredUsage[] {
   return usageStore;
+}
+
+// ---------------------------------------------------------------------------
+// Run persistence (best-effort, non-blocking)
+// ---------------------------------------------------------------------------
+
+/**
+ * Persist the computed credits/cost onto the matching `runs` row.
+ *
+ * Prefers a numeric runId (the pipeline passes `runs.id` as a string in some
+ * paths); otherwise falls back to the most recent run for the same
+ * account/issue. Never throws — failures are logged and swallowed so usage
+ * tracking never breaks the pipeline.
+ */
+async function persistRunUsage(record: UsageRecord, stored: StoredUsage): Promise<void> {
+  if (process.env.NODE_ENV === 'test' || !process.env.DATABASE_URL) return;
+
+  const creditsUsed = Math.round(record.totalCredits);
+  const costCents = Math.round(record.totalCredits * CREDIT_VALUE_CENTS);
+
+  const numericRunId = Number(record.runId);
+  if (Number.isInteger(numericRunId) && numericRunId > 0) {
+    await runsRepository.update(numericRunId, {
+      creditsUsed,
+      costCents,
+      durationMs: record.durationMs,
+    });
+    return;
+  }
+
+  const accountId = Number(stored.installationId);
+  const issueNumber = Number(stored.issueNumber);
+  if (Number.isInteger(accountId) && accountId > 0 && Number.isInteger(issueNumber) && issueNumber > 0) {
+    const run = await runsRepository.latestForIssue(accountId, issueNumber);
+    if (run) {
+      await runsRepository.update(run.id, {
+        creditsUsed,
+        costCents,
+        durationMs: record.durationMs,
+      });
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -170,6 +219,11 @@ export class UsageTracker {
 
     // Emit event for real-time consumers
     meteringEvents.emit('usage.recorded', record);
+
+    // Best-effort persist per-run cost to the runs table (non-blocking)
+    void persistRunUsage(record, stored).catch((err: unknown) => {
+      log.warn({ err: String(err), runId: this.runId }, 'Failed to persist run usage to runs table');
+    });
 
     log.info(
       {
