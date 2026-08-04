@@ -14,6 +14,10 @@ import Integrations from './pages/Integrations';
 import Faq from './pages/Faq';
 import Agents from './pages/Agents';
 import NotFound from './pages/NotFound';
+import Impressum from './pages/Impressum';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
+import Dpa from './pages/Dpa';
 
 export default function App() {
   return (
@@ -33,6 +37,10 @@ export default function App() {
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/faq" element={<Faq />} />
           <Route path="/agents" element={<Agents />} />
+          <Route path="/impressum" element={<Impressum />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/dpa" element={<Dpa />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

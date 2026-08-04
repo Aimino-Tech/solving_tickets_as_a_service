@@ -106,6 +106,33 @@ img { max-width: 100%; height: auto; }
 
 .nav-toggle { display: none; background: none; border: none; color: var(--text); font-size: 24px; cursor: pointer; padding: 8px; }
 
+.nav-scrolled { background: var(--bg); }
+.nav-anchor-bar {
+  position: fixed; top: var(--nav-height); left: 0; right: 0;
+  background: var(--bg-nav);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  z-index: 999;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.nav-anchor-bar--visible { opacity: 1; pointer-events: auto; }
+.nav-anchors {
+  display: flex; align-items: center; gap: 4px; list-style: none;
+  justify-content: center; padding: 8px 0;
+}
+.nav-anchors a {
+  padding: 6px 14px; border-radius: 6px;
+  font-size: 13px; font-weight: 500;
+  color: var(--text2); transition: all 0.2s;
+}
+.nav-anchors a:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+
+@media (max-width: 768px) {
+  .nav-anchor-bar { display: none; }
+}
+
 @media (max-width: 768px) {
   .nav-toggle { display: block; }
   .nav-links {

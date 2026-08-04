@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 export default function Home() {
   useEffect(() => { document.title = 'SYNTARO — Solving Tickets As A Service | AI-Powered GitHub Automation'; }, []);
   return (<>
-    <section className="hero">
+    <section className="hero" id="hero">
       <div className="hero-content">
         <div className="hero-label animate-in animate-in-d1">Solving Tickets As A Service</div>
         <h1 className="animate-in animate-in-d2">Label a Ticket.<br />Get a <em>Pull Request.</em></h1>
@@ -24,7 +24,7 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="section">
+    <section className="section" id="use-cases">
       <div className="section-header">
         <div className="label">The Problem</div>
         <h2>Bugs Ship. Tickets Languish. Velocity Drops.</h2>
@@ -71,7 +71,7 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="section">
+    <section className="section" id="trust">
       <div className="section-header">
         <div className="label">Trusted by Teams</div>
         <h2>What Developers Are Saying</h2>
@@ -115,7 +115,7 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="cta-section">
+    <section className="cta-section" id="cta">
       <h2>Stop Fixing Tickets. Start Shipping.</h2>
       <p className="sub">Install the SYNTARO GitHub App in under 30 seconds. No config. No onboarding calls.</p>
       <div className="btn-group">
