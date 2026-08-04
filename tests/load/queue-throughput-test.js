@@ -7,7 +7,7 @@
  *   - Job enqueue/dequeue rates
  *
  * This test simulates queue operations by hitting the health/queue endpoint
- * and the enqueue flow. In production, run this against an actual STAS instance
+ * and the enqueue flow. In production, run this against an actual SYNTARO instance
  * with Redis/BullMQ configured.
  *
  * Stages:
@@ -68,7 +68,7 @@ function generateJobPayload() {
       number: Math.floor(Math.random() * 10000) + 1,
       title: 'Load test issue #' + Math.floor(Math.random() * 1000),
       body: 'Automated load test payload for queue throughput measurement.',
-      labels: [{ name: 'stas:fix' }],
+      labels: [{ name: 'syntaro:fix' }],
     },
     repository: {
       name: 'loadtest-repo-' + Math.floor(Math.random() * 50),

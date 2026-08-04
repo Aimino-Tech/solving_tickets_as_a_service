@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const STAS_URL = process.env.STAS_URL || 'http://localhost:3000';
+const SYNTARO_URL = process.env.SYNTARO_URL || 'http://localhost:3000';
 const OSY_URL = process.env.OSY_URL || 'http://localhost:4096';
 const OSY_API_KEY = process.env.OSY_API_KEY || 'test-api-key';
 
@@ -16,7 +16,7 @@ export default defineConfig({
     ['list'],
   ],
   use: {
-    baseURL: process.env.STAS_URL || STAS_URL,
+    baseURL: process.env.SYNTARO_URL || SYNTARO_URL,
     trace: 'on',
     screenshot: 'on',
     video: 'on',

@@ -27,7 +27,7 @@ router.post('/url', async (_req: Request, res: Response) => {
       res.status(501).json({ error: 'GitHub OAuth not configured — set GITHUB_OAUTH_CLIENT_ID' });
       return;
     }
-    const baseUrl = process.env.STAS_PUBLIC_URL || `http://localhost:${config.port}`;
+    const baseUrl = process.env.SYNTARO_PUBLIC_URL || `http://localhost:${config.port}`;
     const redirectUri = `${baseUrl}/api/v1/auth/github/callback`;
     const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user&state=${crypto.randomUUID()}`;
     res.json({ url });
@@ -42,7 +42,7 @@ router.get('/callback', async (req: Request, res: Response) => {
   const code = req.query.code as string;
   const state = req.query.state as string;
   if (code) {
-    const frontendUrl = process.env.STAS_PUBLIC_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.SYNTARO_PUBLIC_URL || 'http://localhost:5173';
     res.redirect(`${frontendUrl}/repos?code=${encodeURIComponent(code)}${state ? `&state=${encodeURIComponent(state)}` : ''}`);
   } else {
     res.status(400).json({ error: 'Missing authorization code' });
@@ -57,7 +57,7 @@ router.post('/token', requireAuth, async (req: Request, res: Response) => {
 
     // Fetch GitHub user info
     const ur = await fetch('https://api.github.com/user', {
-      headers: { Authorization: 'Bearer ' + providerToken, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' }
+      headers: { Authorization: 'Bearer ' + providerToken, Accept: 'application/vnd.github+json', 'User-Agent': 'syntaro-bot' }
     });
     if (!ur.ok) { res.status(502).json({ error: 'Failed to fetch GitHub user' }); return; }
     const gu = await ur.json();
@@ -83,11 +83,11 @@ router.post('/callback', async (req: Request, res: Response) => {
   try {
     const parsed = callbackSchema.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0].message }); return; }
-    const tr = await fetch('https://github.com/login/oauth/access_token', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'stas-bot' }, body: JSON.stringify({ client_id: config.github.oauthClientId, client_secret: config.github.oauthClientSecret, code: parsed.data.code }) });
+    const tr = await fetch('https://github.com/login/oauth/access_token', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'syntaro-bot' }, body: JSON.stringify({ client_id: config.github.oauthClientId, client_secret: config.github.oauthClientSecret, code: parsed.data.code }) });
     if (!tr.ok) { log.error({ status: tr.status }, 'GitHub OAuth token exchange failed'); res.status(502).json({ error: 'GitHub OAuth token exchange failed' }); return; }
     const td = await tr.json();
     if (td.error) { log.error({ error: td.error }, 'GitHub OAuth error'); res.status(400).json({ error: td.error_description || td.error }); return; }
-    const ur = await fetch('https://api.github.com/user', { headers: { Authorization: 'Bearer ' + td.access_token, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' } });
+    const ur = await fetch('https://api.github.com/user', { headers: { Authorization: 'Bearer ' + td.access_token, Accept: 'application/vnd.github+json', 'User-Agent': 'syntaro-bot' } });
     if (!ur.ok) { res.status(502).json({ error: 'Failed to fetch GitHub user' }); return; }
     const gu = await ur.json();
     let userId, userEmail, authHeader = req.headers.authorization;

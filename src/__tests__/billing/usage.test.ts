@@ -24,10 +24,10 @@ describe('billing/usage', () => {
   describe('buildUsageKey', () => {
     it('builds key from account ID and periodStart date', () => {
       const key = usage.buildUsageKey(42, new Date('2025-06-01T00:00:00Z'));
-      expect(key).toContain('stas:billing:usage:42:2025-06');
+      expect(key).toContain('syntaro:billing:usage:42:2025-06');
     });
     it('falls back to current month when no periodStart', () => {
-      expect(usage.buildUsageKey(42)).toContain('stas:billing:usage:42:');
+      expect(usage.buildUsageKey(42)).toContain('syntaro:billing:usage:42:');
     });
   });
 

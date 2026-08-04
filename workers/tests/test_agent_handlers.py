@@ -218,15 +218,15 @@ class TestLinearCreateTicket:
                     "teams": {
                         "nodes": [
                             {"id": "t1", "key": "AIM", "name": "Aimino"},
-                            {"id": "t2", "key": "STAS", "name": "STAS"},
+                            {"id": "t2", "key": "SYNTARO", "name": "SYNTARO"},
                         ]
                     }
                 },
             }
 
         monkeypatch.setattr(ah, "_linear_query", fake_query)
-        assert await ah._resolve_team_id("stas") == "t2"
-        assert await ah._resolve_team_id("STAS") == "t2"
+        assert await ah._resolve_team_id("syntaro") == "t2"
+        assert await ah._resolve_team_id("SYNTARO") == "t2"
         assert await ah._resolve_team_id("nope") == "t1"
         assert await ah._resolve_team_id(None) == "t1"
 

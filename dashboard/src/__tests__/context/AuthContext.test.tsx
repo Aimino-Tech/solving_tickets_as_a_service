@@ -1,10 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { auth, setToken, clearToken } from '@/api/client';
-import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { auth, clearToken, setRefreshToken, setToken } from '@/api/client';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 
 // Mock the API client
 vi.mock('@/api/client', () => ({
@@ -54,9 +54,14 @@ describe('AuthContext', () => {
   });
 
   it('starts in loading state when token exists in localStorage', () => {
-    localStorage.setItem('stas_token', 'existing-token');
+    localStorage.setItem('syntaro_token', 'existing-token');
     (auth.me as any).mockResolvedValue({
-      id: '1', email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: '', createdAt: '2024-01-01',
+      id: '1',
+      email: 'test@test.com',
+      name: 'testuser',
+      username: 'testuser',
+      avatarUrl: '',
+      createdAt: '2024-01-01',
     });
 
     renderWithProvider(<TestConsumer />);
@@ -64,9 +69,14 @@ describe('AuthContext', () => {
   });
 
   it('loads user when a valid token exists', async () => {
-    localStorage.setItem('stas_token', 'valid-token');
+    localStorage.setItem('syntaro_token', 'valid-token');
     (auth.me as any).mockResolvedValue({
-      id: '1', email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: 'https://example.com/avatar.png', createdAt: '2024-01-01',
+      id: '1',
+      email: 'test@test.com',
+      name: 'testuser',
+      username: 'testuser',
+      avatarUrl: 'https://example.com/avatar.png',
+      createdAt: '2024-01-01',
     });
 
     renderWithProvider(<TestConsumer />);
@@ -79,7 +89,7 @@ describe('AuthContext', () => {
   });
 
   it('clears token and remains unauthenticated when /me fails', async () => {
-    localStorage.setItem('stas_token', 'invalid-token');
+    localStorage.setItem('syntaro_token', 'invalid-token');
     (auth.me as any).mockRejectedValue(new Error('Unauthorized'));
 
     renderWithProvider(<TestConsumer />);
@@ -125,9 +135,14 @@ describe('AuthContext', () => {
   });
 
   it('calls logout and clears state when logout() is invoked', async () => {
-    localStorage.setItem('stas_token', 'valid-token');
+    localStorage.setItem('syntaro_token', 'valid-token');
     (auth.me as any).mockResolvedValue({
-      id: '1', email: 'test@test.com', name: 'testuser', username: 'testuser', avatarUrl: '', createdAt: '2024-01-01',
+      id: '1',
+      email: 'test@test.com',
+      name: 'testuser',
+      username: 'testuser',
+      avatarUrl: '',
+      createdAt: '2024-01-01',
     });
     (auth.logout as any).mockResolvedValue({ success: true });
 
@@ -157,11 +172,16 @@ describe('AuthContext', () => {
 
     // Make setToken actually store the token so localStorage flow works
     (setToken as any).mockImplementation((token: string) => {
-      localStorage.setItem('stas_token', token);
+      localStorage.setItem('syntaro_token', token);
     });
 
     (auth.me as any).mockResolvedValue({
-      id: '2', email: 'url@test.com', name: 'urluser', username: 'urluser', avatarUrl: '', createdAt: '2024-01-01',
+      id: '2',
+      email: 'url@test.com',
+      name: 'urluser',
+      username: 'urluser',
+      avatarUrl: '',
+      createdAt: '2024-01-01',
     });
 
     renderWithProvider(<TestConsumer />);
@@ -170,6 +190,37 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('authenticated')).toHaveTextContent('true');
     });
     expect(screen.getByTestId('username')).toHaveTextContent('urluser');
+  });
+
+  it('stores refreshToken from URL search params (OAuth callback)', async () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      value: { ...originalLocation, search: '?token=url-token-123&refreshToken=url-refresh-456' },
+      writable: true,
+    });
+
+    (setToken as any).mockImplementation((token: string) => {
+      localStorage.setItem('syntaro_token', token);
+    });
+    (setRefreshToken as any).mockImplementation((token: string) => {
+      localStorage.setItem('syntaro_refresh_token', token);
+    });
+    (auth.me as any).mockResolvedValue({
+      id: '2',
+      email: 'url@test.com',
+      name: 'urluser',
+      username: 'urluser',
+      avatarUrl: '',
+      createdAt: '2024-01-01',
+    });
+
+    renderWithProvider(<TestConsumer />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('true');
+    });
+    expect(localStorage.getItem('syntaro_token')).toBe('url-token-123');
+    expect(localStorage.getItem('syntaro_refresh_token')).toBe('url-refresh-456');
   });
 
   it('throws error when useAuth is used outside provider', () => {

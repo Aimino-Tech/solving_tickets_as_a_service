@@ -1,12 +1,12 @@
 """
-Slack bot — bidirectional communication with STAS pipeline.
+Slack bot — bidirectional communication with SYNTARO pipeline.
 
 Uses Bolt SDK with Socket Mode for real-time events without
 exposing a public HTTP endpoint.
 
 Events handled:
-  - /stas fix — Submit a fix request
-  - app_mention — @STAS mentions
+  - /syntaro fix — Submit a fix request
+  - app_mention — @SYNTARO mentions
   - message.im — Direct messages
   - block_actions — Button clicks (acknowledge, cancel, retry)
 
@@ -30,7 +30,7 @@ from workers.slack.handlers import (
     handle_acknowledge,
     handle_cancel,
     handle_retry,
-    handle_slash_stas_fix,
+    handle_slash_syntaro_fix,
     parse_fix_command,
 )
 from workers.slack.publisher import (
@@ -60,8 +60,8 @@ def create_app() -> App | None:
 
 
 def _register_handlers(app: App) -> None:
-    @app.command("/stas")
-    def stas_command(ack, body, respond, say):
+    @app.command("/syntaro")
+    def syntaro_command(ack, body, respond, say):
         ack()
         text = body.get("text", "")
         user_id = body.get("user_id", "")
@@ -72,7 +72,7 @@ def _register_handlers(app: App) -> None:
         parsed = parse_fix_command(text)
         description = parsed.get("description", text)
 
-        handle_slash_stas_fix(user_id, user_name, channel_id, description, trigger_id)
+        handle_slash_syntaro_fix(user_id, user_name, channel_id, description, trigger_id)
 
         issue_title = f"Fix request from Slack: {description[:80]}"
         issue_body = f"Requested by {user_name} in <#{channel_id}>\n\n{description}"
@@ -159,7 +159,7 @@ def _trigger_fix_pipeline(issue_title: str, issue_body: str) -> str:
         repo="slack-request",
         issue_number=0,
         issue_url="",
-        pipeline_name="stas:fix",
+        pipeline_name="syntaro:fix",
     )
     return result.get("run_id", "unknown")
 

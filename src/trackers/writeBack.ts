@@ -53,7 +53,7 @@ function buildDeliverableComment(params: {
     lines.push('', '**Errors**:', ...params.errors.map((e) => `- ${e}`));
   }
 
-  lines.push('', '---', '_🤖 STAS — Automated Implementation_');
+  lines.push('', '---', '_🤖 SYNTARO — Automated Implementation_');
   return lines.join('\n');
 }
 

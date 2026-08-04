@@ -27,7 +27,7 @@ from workers.tasks.pr_creation import (
 class TestGenerateBranchName:
     def test_basic(self):
         name = generate_branch_name("AIM-1959", "fix login bug")
-        assert name.startswith("stas/fix/")
+        assert name.startswith("syntaro/fix/")
         assert "fix-login-bug" in name
         assert len(name.split("-")[-1]) == 8  # SHA hex
 
@@ -44,7 +44,7 @@ class TestGenerateBranchName:
 
     def test_fix_type_parameter(self):
         name = generate_branch_name("AIM-1959", "add feature", fix_type="feature")
-        assert name.startswith("stas/feature/")
+        assert name.startswith("syntaro/feature/")
 
 
 # ---------------------------------------------------------------------------
@@ -99,9 +99,9 @@ class TestGitHubClient:
     def test_push_branch(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         client = GitHubClient(token="ghp_test")
-        client.push_branch("/workspace", "stas/fix/test-123")
+        client.push_branch("/workspace", "syntaro/fix/test-123")
         mock_run.assert_called_once_with(
-            ["git", "push", "origin", "stas/fix/test-123"],
+            ["git", "push", "origin", "syntaro/fix/test-123"],
             cwd="/workspace",
             check=True,
             capture_output=True,
@@ -271,7 +271,7 @@ class TestCreatePullRequestTask:
             issue_body="Details",
             repo_owner="owner",
             repo_name="repo",
-            branch_name="stas/fix/test-abc12345",
+            branch_name="syntaro/fix/test-abc12345",
             verification_result={"score": 0.95, "passed": True},
             installation_id=123,
         )
@@ -281,13 +281,13 @@ class TestCreatePullRequestTask:
         assert result["status"] == "opened"
         assert result["linear_comment_id"] == "lin_comment_123"
         assert result["mergeable"] is True
-        assert result["branch"] == "stas/fix/test-abc12345"
+        assert result["branch"] == "syntaro/fix/test-abc12345"
         assert result["base_branch"] == "main"
 
-        mock_gh.push_branch.assert_called_once_with("/ws", "stas/fix/test-abc12345")
+        mock_gh.push_branch.assert_called_once_with("/ws", "syntaro/fix/test-abc12345")
         mock_gh.create_pr.assert_called_once()
         mock_gh.find_existing_pr.assert_called_once_with(
-            "owner/repo", "stas/fix/test-abc12345",
+            "owner/repo", "syntaro/fix/test-abc12345",
         )
         mock_linear.post_comment.assert_called_once()
 
@@ -327,7 +327,7 @@ class TestCreatePullRequestTask:
             issue_body="Details",
             repo_owner="owner",
             repo_name="repo",
-            branch_name="stas/fix/existing-branch",
+            branch_name="syntaro/fix/existing-branch",
             installation_id=123,
         )
 
@@ -365,7 +365,7 @@ class TestCreatePullRequestTask:
             issue_body="Body",
             repo_owner="owner",
             repo_name="repo",
-            branch_name="stas/fix/test",
+            branch_name="syntaro/fix/test",
         )
 
         assert result["linear_comment_id"] is None
@@ -394,7 +394,7 @@ class TestCreatePullRequestTask:
             issue_body="Body",
             repo_owner="owner",
             repo_name="repo",
-            branch_name="stas/fix/test",
+            branch_name="syntaro/fix/test",
             labels=["bug", "automated"],
             installation_id=123,
         )

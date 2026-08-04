@@ -66,13 +66,13 @@ describe('dashboard API client', () => {
   describe('token management', () => {
     it('setToken stores the token in localStorage', () => {
       client.setToken('test-token-123');
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('stas_token', 'test-token-123');
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('syntaro_token', 'test-token-123');
     });
 
     it('clearToken removes the token from localStorage', () => {
       client.setToken('test-token');
       client.clearToken();
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('stas_token');
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('syntaro_token');
     });
   });
 

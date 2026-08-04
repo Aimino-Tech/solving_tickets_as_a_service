@@ -56,7 +56,7 @@ class MonthlySlaRow:
     compliance_rate_pct: float = 100.0
 
 _REDIS_CLIENT: Optional[Any] = None
-_REDIS_SLA_PREFIX = "stas:sla:ticket:"
+_REDIS_SLA_PREFIX = "syntaro:sla:ticket:"
 _lock = threading.Lock()
 _memory_store: dict[str, TicketSlaEntry] = {}
 
@@ -101,7 +101,7 @@ class SlaTracker:
     def record_ticket_created(self, tenant_id: str, tenant_tier: str, ticket_id: str, created_at: str | None = None) -> TicketSlaEntry:
         now = created_at or _iso_now()
         e = TicketSlaEntry(ticket_id=ticket_id, tenant_id=tenant_id, tenant_tier=_resolve_tier(tenant_tier), created_at=now)
-        self._persist_entry(e); record_counter("stas_sla_tickets_created_total", 1, tenant_id=tenant_id, tier=e.tenant_tier); return e
+        self._persist_entry(e); record_counter("syntaro_sla_tickets_created_total", 1, tenant_id=tenant_id, tier=e.tenant_tier); return e
 
     def record_first_response(self, ticket_id: str, responded_at: str | None = None) -> Optional[TicketSlaEntry]:
         e = self._get_entry(ticket_id)
@@ -111,7 +111,7 @@ class SlaTracker:
         except: e.response_time_seconds = None
         gh = self.response_time_goal_hours(e.tenant_tier)
         if gh is not None and e.response_time_seconds is not None and e.response_time_seconds > gh * 3600:
-            e.response_breached = True; record_counter("stas_sla_response_breaches_total", 1, tenant_id=e.tenant_id, tier=e.tenant_tier)
+            e.response_breached = True; record_counter("syntaro_sla_response_breaches_total", 1, tenant_id=e.tenant_id, tier=e.tenant_tier)
             self._handle_breach(e, "response", e.response_time_seconds)
         self._persist_entry(e); return e
 
@@ -123,7 +123,7 @@ class SlaTracker:
         except: e.resolution_time_seconds = None
         gh = self.resolution_time_goal_hours(e.tenant_tier)
         if gh is not None and e.resolution_time_seconds is not None and e.resolution_time_seconds > gh * 3600:
-            e.resolution_breached = True; record_counter("stas_sla_resolution_breaches_total", 1, tenant_id=e.tenant_id, tier=e.tenant_tier)
+            e.resolution_breached = True; record_counter("syntaro_sla_resolution_breaches_total", 1, tenant_id=e.tenant_id, tier=e.tenant_tier)
             self._handle_breach(e, "resolution", e.resolution_time_seconds)
         self._persist_entry(e); return e
 
@@ -138,12 +138,12 @@ class SlaTracker:
             e.escalation_level = EscalationLevel.L1_AUTO
         e.escalation_triggered_at = _iso_now()
         e.notes.append(f"{e.escalation_level.value}: {bt} breach on {e.tenant_tier} (ratio={sr:.1f}x)")
-        record_counter("stas_sla_escalations_total", 1, tenant_id=e.tenant_id, tier=e.tenant_tier, level=e.escalation_level.value)
+        record_counter("syntaro_sla_escalations_total", 1, tenant_id=e.tenant_id, tier=e.tenant_tier, level=e.escalation_level.value)
 
     def _trigger_incident(self, e: TicketSlaEntry, bt: str) -> None:
         e.incident_created = True; e.incident_id = f"INC-{int(time.time())}"
         e.notes.append(f"P1 incident {e.incident_id} created for {bt} breach")
-        record_counter("stas_sla_incidents_created_total", 1, tenant_id=e.tenant_id, tier=e.tenant_tier)
+        record_counter("syntaro_sla_incidents_created_total", 1, tenant_id=e.tenant_id, tier=e.tenant_tier)
 
     def escalate_ticket(self, ticket_id: str, level: str = "L2_HUMAN", reason: str = "") -> Optional[TicketSlaEntry]:
         e = self._get_entry(ticket_id)
@@ -153,7 +153,7 @@ class SlaTracker:
         e.escalation_level = el; e.escalation_triggered_at = _iso_now()
         e.notes.append(f"Manual escalation to {level}: {reason}" if reason else f"Manual escalation to {level}")
         if el == EscalationLevel.L3_ENGINEERING and not e.incident_created: self._trigger_incident(e, "manual")
-        self._persist_entry(e); record_counter("stas_sla_manual_escalations_total", 1, tenant_id=e.tenant_id, tier=e.tenant_tier, level=level); return e
+        self._persist_entry(e); record_counter("syntaro_sla_manual_escalations_total", 1, tenant_id=e.tenant_id, tier=e.tenant_tier, level=level); return e
 
     def get_ticket_status(self, ticket_id: str) -> Optional[dict[str, Any]]:
         e = self._get_entry(ticket_id)

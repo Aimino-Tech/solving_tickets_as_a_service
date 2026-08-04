@@ -9,7 +9,7 @@ export function randomRepo(index) {
 export function generateWebhookPayload(owner, name, issueNumber) {
   return JSON.stringify({
     action: "labeled",
-    issue: { number: issueNumber, title: "Test fix issue", body: "Load test", labels: [{ name: "stas:fix" }] },
+    issue: { number: issueNumber, title: "Test fix issue", body: "Load test", labels: [{ name: "syntaro:fix" }] },
     repository: { owner: { login: owner }, name, private: false },
     installation: { id: 12345678 },
   });

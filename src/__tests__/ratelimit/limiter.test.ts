@@ -43,7 +43,7 @@ vi.mock('../../utils/logger.js', () => ({
 vi.mock('../../config.js', () => ({
   config: {
     queue: { redisUrl: 'redis://localhost:6379' },
-    stas: {
+    syntaro: {
       rateLimit: { windowMs: 60_000, max: 30 },
     },
   },

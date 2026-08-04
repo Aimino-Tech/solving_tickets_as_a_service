@@ -2,9 +2,9 @@
  * Parse slash commands from GitHub issue/PR comments.
  *
  * Supports commands like:
- *   /stas approve
- *   /stas reject <reason>
- *   /stas help
+ *   /syntaro approve
+ *   /syntaro reject <reason>
+ *   /syntaro help
  */
 
 export interface SlashCommand {
@@ -21,11 +21,11 @@ export interface SlashCommand {
  * Parse a comment body for slash commands.
  * Returns the command and its arguments, or null if no command is found.
  *
- * Matches patterns like `/stas approve`, `/stas reject some reason`.
- * The command is normalized to `stas:<subcommand>` format.
+ * Matches patterns like `/syntaro approve`, `/syntaro reject some reason`.
+ * The command is normalized to `syntaro:<subcommand>` format.
  */
 export function parseSlashCommand(body: string): { command: string; args: string[] } | null {
-  const match = body.match(/^\/(stas)\s+(\w+)(.*)$/m);
+  const match = body.match(/^\/(syntaro)\s+(\w+)(.*)$/m);
   if (!match) return null;
   const args = match[3].trim().split(/\s+/).filter(Boolean);
   return { command: `${match[1]}:${match[2]}`, args };

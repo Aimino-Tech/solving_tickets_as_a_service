@@ -11,7 +11,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from './harness/index.js';
-import { githubIssuesLabeledStasFix } from './fixtures/webhooks/github.js';
+import { githubIssuesLabeledSyntaroFix } from './fixtures/webhooks/github.js';
 import type { TestHarness } from './harness/index.js';
 
 let harness: TestHarness;
@@ -28,7 +28,7 @@ describe('Queue Depth Path: N Concurrent Issues → All Queued → Processed In 
   it('Accepts 10 concurrent webhook requests without error', async () => {
     const count = 10;
     const requests = Array.from({ length: count }, (_, i) => {
-      const payload = githubIssuesLabeledStasFix();
+      const payload = githubIssuesLabeledSyntaroFix();
       payload.issue.number = 100 + i; // Different issue numbers
       payload.issue.title = `Concurrent issue ${i + 1}`;
       return harness.sendWebhook('/webhook', payload);
@@ -48,7 +48,7 @@ describe('Queue Depth Path: N Concurrent Issues → All Queued → Processed In 
 
     const count = 5;
     const requests = Array.from({ length: count }, (_, i) => {
-      const payload = githubIssuesLabeledStasFix();
+      const payload = githubIssuesLabeledSyntaroFix();
       payload.issue.number = 200 + i;
       payload.issue.title = `Queue test issue ${i + 1}`;
       return harness.sendWebhook('/webhook', payload);

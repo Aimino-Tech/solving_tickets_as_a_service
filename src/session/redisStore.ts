@@ -6,9 +6,9 @@
  * that marks stale sessions.
  *
  * ── Key format ───────────────────────────────────────────────────────
- *   stas:session:{sessionId}        → Hash (SessionState fields)
- *   stas:session:{sessionId}:events → List (SessionEvent JSON)
- *   stas:session:zombie:{sessionId} → String (zombie marker)
+ *   syntaro:session:{sessionId}        → Hash (SessionState fields)
+ *   syntaro:session:{sessionId}:events → List (SessionEvent JSON)
+ *   syntaro:session:zombie:{sessionId} → String (zombie marker)
  * ─────────────────────────────────────────────────────────────────────
  *
  * ── Heartbeat ────────────────────────────────────────────────────────
@@ -40,8 +40,8 @@ const REAPER_INTERVAL_MS = 10_000;
 /** TTL threshold below which a session is considered a zombie candidate. */
 const ZOMBIE_TTL_THRESHOLD_MS = 5_000;
 
-const KEY_PREFIX = 'stas:session:';
-const ZOMBIE_PREFIX = 'stas:session:zombie:';
+const KEY_PREFIX = 'syntaro:session:';
+const ZOMBIE_PREFIX = 'syntaro:session:zombie:';
 
 // ── Helper ──────────────────────────────────────────────────────────
 
@@ -117,7 +117,7 @@ export class RedisSessionStore implements SessionStore {
     },
   ) {
     this.ttlMs = options?.ttlMs ?? SESSION_TTL_MS;
-    this.prefix = options?.keyPrefix ?? 'stas';
+    this.prefix = options?.keyPrefix ?? 'syntaro';
 
     this.redis = new Redis(redisUrl, {
       maxRetriesPerRequest: null,

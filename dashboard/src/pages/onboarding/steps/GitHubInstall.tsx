@@ -45,7 +45,7 @@ export default function GitHubInstall({ progress, onComplete, onSkip }: Props) {
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Connect Your GitHub Account</h2>
         <p className="mt-2 text-gray-500">
-          STAS needs access to your GitHub repositories so it can fix issues and open pull requests.
+          SYNTARO needs access to your GitHub repositories so it can fix issues and open pull requests.
         </p>
       </div>
 
@@ -67,15 +67,15 @@ export default function GitHubInstall({ progress, onComplete, onSkip }: Props) {
       </div>
 
       <div className="rounded-lg border border-gray-200 bg-gray-50 p-6">
-        <h3 className="text-lg font-semibold text-gray-900">Step 2: Install the STAS GitHub App</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Step 2: Install the SYNTARO GitHub App</h3>
         <p className="mt-1 text-sm text-gray-500">
-          Install the STAS GitHub App on your repositories to enable automated fixes.
+          Install the SYNTARO GitHub App on your repositories to enable automated fixes.
         </p>
         <button
-          onClick={() => window.open('https://github.com/apps/stas-bot/installations/new', '_blank')}
+          onClick={() => window.open('https://github.com/apps/syntaro-bot/installations/new', '_blank')}
           className="btn-secondary mt-4"
         >
-          Install STAS App
+          Install SYNTARO App
         </button>
       </div>
 

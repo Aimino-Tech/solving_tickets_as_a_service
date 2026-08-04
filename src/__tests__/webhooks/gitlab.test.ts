@@ -22,7 +22,7 @@ vi.mock("../../utils/logger.js", () => ({
 
 vi.mock("../../config.js", () => ({
   config: {
-    stas: { label: "stas:fix" },
+    syntaro: { label: "syntaro:fix" },
     gitlab: { url: "https://gitlab.com", token: "test-token", webhookSecret: "test-secret" },
   },
 }));
@@ -82,9 +82,9 @@ function sampleGitLabIssueLabeledPayload() {
       state: "opened",
       url: "https://gitlab.com/owner/test-repo/-/issues/42",
       action: "update",
-      labels: [{ title: "stas:fix" }],
+      labels: [{ title: "syntaro:fix" }],
     },
-    labels: [{ title: "stas:fix" }],
+    labels: [{ title: "syntaro:fix" }],
   };
 }
 
@@ -136,11 +136,11 @@ describe("gitlabWebhook", () => {
       expect(result!.issue.repoName).toBe("test-repo");
     });
 
-    it("parses issue labeled event (update with stas:fix label)", () => {
+    it("parses issue labeled event (update with syntaro:fix label)", () => {
       const result = gitlabWebhook.parse("Issue Hook", sampleGitLabIssueLabeledPayload());
       expect(result).not.toBeNull();
       expect(result!.eventType).toBe("issue.edited");
-      expect(result!.issue.labels).toContain("stas:fix");
+      expect(result!.issue.labels).toContain("syntaro:fix");
     });
 
     it("returns null for non-matching event type", () => {
@@ -174,7 +174,7 @@ describe("gitlabClient", () => {
           number: 42,
           title: "Fix bug",
           body: "Bug description",
-          labels: ["stas:fix"],
+          labels: ["syntaro:fix"],
           repoOwner: "owner",
           repoName: "test-repo",
           repoPrivate: false,

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def _template_fix_completed(payload: dict[str, Any]) -> str:
-    return f"""STAS Fix Completed
+    return f"""SYNTARO Fix Completed
 {'=' * 60}
 
 Issue : {payload.get('issue_id', '?')} — {payload.get('issue_title', '')}
@@ -39,7 +39,7 @@ Timestamp: {payload.get('timestamp', '')}
 
 
 def _template_review_needed(payload: dict[str, Any]) -> str:
-    return f"""STAS Review Needed
+    return f"""SYNTARO Review Needed
 {'=' * 60}
 
 Issue : {payload.get('issue_id', '?')} — {payload.get('issue_title', '')}
@@ -53,7 +53,7 @@ Timestamp: {payload.get('timestamp', '')}
 
 
 def _template_rework_required(payload: dict[str, Any]) -> str:
-    return f"""STAS Rework Required
+    return f"""SYNTARO Rework Required
 {'=' * 60}
 
 Issue : {payload.get('issue_id', '?')} — {payload.get('issue_title', '')}
@@ -67,7 +67,7 @@ Timestamp: {payload.get('timestamp', '')}
 
 
 def _template_merge_completed(payload: dict[str, Any]) -> str:
-    return f"""STAS Merge Completed
+    return f"""SYNTARO Merge Completed
 {'=' * 60}
 
 Issue : {payload.get('issue_id', '?')} — {payload.get('issue_title', '')}
@@ -81,7 +81,7 @@ Timestamp: {payload.get('timestamp', '')}
 
 
 def _template_pipeline_failed(payload: dict[str, Any]) -> str:
-    return f"""STAS Pipeline Failed
+    return f"""SYNTARO Pipeline Failed
 {'=' * 60}
 
 Issue : {payload.get('issue_id', '?')} — {payload.get('issue_title', '')}
@@ -183,8 +183,8 @@ def _send_via_sendgrid(
 def notify_email(
     payload: dict[str, Any],
     to: str,
-    from_addr: str = "stas@localhost",
-    subject_prefix: str = "[STAS]",
+    from_addr: str = "syntaro@localhost",
+    subject_prefix: str = "[SYNTARO]",
     smtp_host: str = "",
     smtp_port: int = 587,
     smtp_user: str = "",
@@ -213,7 +213,7 @@ def notify_email(
         SMTP password.
     use_sendgrid:
         If ``True``, sends via SendGrid API instead of SMTP. Reads
-        ``STAS_SENDGRID_API_KEY`` from the environment.
+        ``SYNTARO_SENDGRID_API_KEY`` from the environment.
 
     Returns
     -------
@@ -226,11 +226,11 @@ def notify_email(
 
     try:
         if use_sendgrid:
-            api_key = os.getenv("STAS_SENDGRID_API_KEY", "")
+            api_key = os.getenv("SYNTARO_SENDGRID_API_KEY", "")
             if not api_key:
                 return {
                     "status": "error",
-                    "error": "STAS_SENDGRID_API_KEY not set",
+                    "error": "SYNTARO_SENDGRID_API_KEY not set",
                 }
             _send_via_sendgrid(to, from_addr, subject, body, api_key)
         else:

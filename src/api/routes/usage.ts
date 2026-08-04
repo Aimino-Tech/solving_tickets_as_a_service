@@ -39,7 +39,7 @@ function resolveUserId(req: Request): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const reqAny = req as any;
   const userId: string | undefined =
-    reqAny.userId ?? reqAny.githubUserId ?? req.headers['x-stas-user-id'] as string | undefined;
+    reqAny.userId ?? reqAny.githubUserId ?? req.headers['x-syntaro-user-id'] as string | undefined;
   return userId ?? req.ip ?? 'anonymous';
 }
 
@@ -68,7 +68,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     // Build a summary across all repos
     const totalCurrentMonth = userUsage.length > 0 ? userUsage[0]!.fixCount : 0;
-    const plan = process.env.STAS_DEFAULT_TIER ?? 'cloud-free';
+    const plan = process.env.SYNTARO_DEFAULT_TIER ?? 'cloud-free';
 
     res.json({
       userId,

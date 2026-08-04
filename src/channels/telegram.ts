@@ -74,7 +74,7 @@ export async function handleTelegramWebhook(payload: Record<string, unknown>): P
   if (command === '/start') {
     await callTelegram('sendMessage', {
       chat_id: chatId,
-      text: 'Welcome to STAS! Use /fix <description> to submit an issue fix request.',
+      text: 'Welcome to SYNTARO! Use /fix <description> to submit an issue fix request.',
       parse_mode: 'Markdown',
     });
     return { ok: true };
@@ -108,7 +108,7 @@ export async function handleTelegramWebhook(payload: Record<string, unknown>): P
         _meta: { messageId, enqueuedAt: new Date().toISOString() },
       });
       await callTelegram('sendMessage', {
-        chat_id: chatId, text: `STAS is investigating: "${issueTitle}"\n\nI'll post progress updates here.`,
+        chat_id: chatId, text: `SYNTARO is investigating: "${issueTitle}"\n\nI'll post progress updates here.`,
       });
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to enqueue Telegram fix request');

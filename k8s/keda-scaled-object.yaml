@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------
-# STAS KEDA ScaledObject — RabbitMQ queue-depth-driven worker auto-scaling
+# SYNTARO KEDA ScaledObject — RabbitMQ queue-depth-driven worker auto-scaling
 #
-# Scales the stas-worker Deployment from 0 (idle, no messages) to 20
+# Scales the syntaro-worker Deployment from 0 (idle, no messages) to 20
 # replicas based on Celery queue backlog.  Scale-up is fast (zero-second
 # stabilization window); scale-down is gradual (60s cooldown) to avoid
 # flapping during brief lulls.
@@ -20,9 +20,9 @@
 # -------------
 # 1. KEDA v2.12+ installed in the cluster.
 # 2. RabbitMQ Management Plugin enabled (for direct queue-depth queries).
-# 3. Kubernetes Secret ``stas-secrets`` with key
+# 3. Kubernetes Secret ``syntaro-secrets`` with key
 #    ``RABBITMQ_KEDA_CONNECTION`` — the AMQP URI, e.g.:
-#      amqp://user:password@stas-rabbitmq:5672/stas
+#      amqp://user:password@syntaro-rabbitmq:5672/syntaro
 # 4. (optional) Prometheus operator / kube-prometheus-stack for the
 #    Prometheus scaler fallback.
 #
@@ -30,29 +30,29 @@
 #   kubectl apply -f k8s/keda-scaled-object.yaml
 #
 # Verify:
-#   kubectl get scaledobject stas-worker
+#   kubectl get scaledobject syntaro-worker
 #   kubectl get hpa                     # KEDA creates an HPA automatically
-#   kubectl describe scaledobject stas-worker  # events + trigger status
+#   kubectl describe scaledobject syntaro-worker  # events + trigger status
 # ---------------------------------------------------------------------------
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
 metadata:
-  name: stas-rabbitmq-auth
+  name: syntaro-rabbitmq-auth
   labels:
-    app: stas-worker
+    app: syntaro-worker
     tier: worker
 spec:
   secretTargetRef:
     - parameter: host
-      name: stas-secrets
+      name: syntaro-secrets
       key: RABBITMQ_KEDA_CONNECTION
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-  name: stas-worker
+  name: syntaro-worker
   labels:
-    app: stas-worker
+    app: syntaro-worker
     tier: worker
     component: queue-processor
   annotations:
@@ -63,7 +63,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: stas-worker
+    name: syntaro-worker
   # ── Scaling boundaries ──────────────────────────────────────────────
   # minReplicaCount=0 enables true zero-to-N: when all queues are idle
   # KEDA scales the Deployment down to 0 and scales back up on the first
@@ -111,67 +111,67 @@ spec:
     - type: rabbitmq
       metadata:
         protocol: amqp0-9-1
-        queueName: stas.agents.dlq
+        queueName: syntaro.agents.dlq
         mode: QueueLength
         value: "1"
       authenticationRef:
-        name: stas-rabbitmq-auth
+        name: syntaro-rabbitmq-auth
     - type: rabbitmq
       metadata:
         protocol: amqp0-9-1
-        queueName: stas.agents.triage
+        queueName: syntaro.agents.triage
         mode: QueueLength
         value: "5"
       authenticationRef:
-        name: stas-rabbitmq-auth
+        name: syntaro-rabbitmq-auth
     - type: rabbitmq
       metadata:
         protocol: amqp0-9-1
-        queueName: stas.agents.dispatch
+        queueName: syntaro.agents.dispatch
         mode: QueueLength
         value: "2"
       authenticationRef:
-        name: stas-rabbitmq-auth
+        name: syntaro-rabbitmq-auth
     - type: rabbitmq
       metadata:
         protocol: amqp0-9-1
-        queueName: stas.agents.sandbox
+        queueName: syntaro.agents.sandbox
         mode: QueueLength
         value: "3"
       authenticationRef:
-        name: stas-rabbitmq-auth
+        name: syntaro-rabbitmq-auth
     - type: rabbitmq
       metadata:
         protocol: amqp0-9-1
-        queueName: stas.agents.verification
+        queueName: syntaro.agents.verification
         mode: QueueLength
         value: "3"
       authenticationRef:
-        name: stas-rabbitmq-auth
+        name: syntaro-rabbitmq-auth
     - type: rabbitmq
       metadata:
         protocol: amqp0-9-1
-        queueName: stas.agents.pr_creation
+        queueName: syntaro.agents.pr_creation
         mode: QueueLength
         value: "5"
       authenticationRef:
-        name: stas-rabbitmq-auth
+        name: syntaro-rabbitmq-auth
     - type: rabbitmq
       metadata:
         protocol: amqp0-9-1
-        queueName: stas.agents.notifications
+        queueName: syntaro.agents.notifications
         mode: QueueLength
         value: "10"
       authenticationRef:
-        name: stas-rabbitmq-auth
+        name: syntaro-rabbitmq-auth
     - type: rabbitmq
       metadata:
         protocol: amqp0-9-1
-        queueName: stas.agents.default
+        queueName: syntaro.agents.default
         mode: QueueLength
         value: "5"
       authenticationRef:
-        name: stas-rabbitmq-auth
+        name: syntaro-rabbitmq-auth
     # ── Prometheus scaler (fallback / supplementary) ─────────────────
     # KEDA can optionally scrape the worker's /keda-metrics endpoint
     # instead of (or in addition to) querying RabbitMQ directly.
@@ -183,16 +183,16 @@ spec:
     #
     # - type: prometheus
     #   metadata:
-    #     serverAddress: http://stas-worker-metrics:9091
+    #     serverAddress: http://syntaro-worker-metrics:9091
     #     metricName: keda_queue_depth
-    #     query: keda_queue_depth{queue="stas.agents.dispatch"}
+    #     query: keda_queue_depth{queue="syntaro.agents.dispatch"}
     #     threshold: "2"
-    #     namespace: stas
+    #     namespace: syntaro
     #
     # - type: prometheus
     #   metadata:
-    #     serverAddress: http://stas-worker-metrics:9091
+    #     serverAddress: http://syntaro-worker-metrics:9091
     #     metricName: keda_queue_depth_sandbox
-    #     query: keda_queue_depth{queue="stas.agents.sandbox"}
+    #     query: keda_queue_depth{queue="syntaro.agents.sandbox"}
     #     threshold: "3"
-    #     namespace: stas
+    #     namespace: syntaro

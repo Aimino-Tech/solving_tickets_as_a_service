@@ -1,0 +1,38 @@
+{
+  "$schema": "https://opencode.ai/skill-registry.json",
+  "version": "1.0.0",
+  "skills": [
+    {
+      "name": "syntaro",
+      "description": "SYNTARO — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs.",
+      "version": "0.2.0",
+      "author": "Aimino Tech",
+      "license": "MIT",
+      "homepage": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
+      "installUrl": "https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/syntaro/SKILL.md",
+      "tags": ["github", "automation", "code-review", "pr-creation", "bug-fixing", "mcp"],
+      "categories": ["productivity", "developer-tools", "ci-cd"],
+      "platforms": ["opencode", "openclaw", "claude-code"],
+      "capabilities": {
+        "tools": ["submit_issue", "check_status", "get_run_history", "list_repos", "poll_job"],
+        "resources": ["syntaro://runs/{run_id}", "syntaro://issues/{issue_id}", "syntaro://jobs/{job_id}"],
+        "mcp": {
+          "transport": "stdio",
+          "command": "python3",
+          "args": ["-m", "syntaro_mcp.server", "stdio"]
+        }
+      },
+      "mcpServers": {
+        "syntaro": {
+          "command": "python3",
+          "args": ["-m", "syntaro_mcp.server", "stdio"],
+          "env": {
+            "SYNTARO_API_KEY": { "description": "SYNTARO API key for authentication", "required": true, "secret": true },
+            "SYNTARO_API_URL": { "description": "SYNTARO API base URL", "required": false, "default": "https://api.syntaro.io" },
+            "GITHUB_TOKEN": { "description": "GitHub personal access token", "required": false, "secret": true }
+          }
+        }
+      }
+    }
+  ]
+}

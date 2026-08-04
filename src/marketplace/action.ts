@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { StasApiClient } from './api-client.js';
+import { SyntaroApiClient } from './api-client.js';
 
 const VALID_SUITES = ['smoke', 'standard', 'full'] as const;
 type EvalSuite = (typeof VALID_SUITES)[number];
@@ -21,12 +21,12 @@ export async function run(): Promise<void> {
     const evalSuite = validateSuite(core.getInput('eval-suite') || 'smoke');
     const langfusePublicKey = core.getInput('langfuse-public-key');
     const langfuseSecretKey = core.getInput('langfuse-secret-key');
-    const stasApiUrl = core.getInput('stas-api-url') || 'https://api.syntaro.io';
+    const syntaroApiUrl = core.getInput('syntaro-api-url') || 'https://api.syntaro.io';
 
-    core.info(`STAS Eval Pipeline — suite: ${evalSuite}`);
-    core.info(`API URL: ${stasApiUrl}`);
+    core.info(`SYNTARO Eval Pipeline — suite: ${evalSuite}`);
+    core.info(`API URL: ${syntaroApiUrl}`);
 
-    const client = new StasApiClient(stasApiUrl, apiKey);
+    const client = new SyntaroApiClient(syntaroApiUrl, apiKey);
 
     core.info('Triggering eval run...');
     const { id } = await client.triggerEval({
@@ -51,7 +51,7 @@ export async function run(): Promise<void> {
       : '→';
 
     const annotationBody = [
-      `**STAS Eval — ${evalSuite}**`,
+      `**SYNTARO Eval — ${evalSuite}**`,
       `Pass Rate: **${result.passRate?.toFixed(1) ?? 'N/A'}%** ${trendArrow}`,
       result.regressionDetected ? '⚠️ **Regression detected!**' : '',
       result.langfuseTraceUrl ? `🔗 [LangFuse Trace](${result.langfuseTraceUrl})` : '',
@@ -77,7 +77,7 @@ export async function run(): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     core.setOutput('status', 'error');
-    core.setFailed(`STAS Eval action failed: ${message}`);
+    core.setFailed(`SYNTARO Eval action failed: ${message}`);
   }
 }
 

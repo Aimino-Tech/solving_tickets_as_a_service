@@ -1,38 +1,39 @@
 # ---------------------------------------------------------------------------
-# STAS Webhook Deployment — Express API server (horizontally scalable)
+# SYNTARO Webhook Deployment — Express API server (horizontally scalable)
 # ---------------------------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stas-webhook
+  name: syntaro-webhook
+  namespace: syntaro
   labels:
-    app: stas-webhook
+    app: syntaro-webhook
     tier: webhook
     component: api
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: stas-webhook
+      app: syntaro-webhook
   template:
     metadata:
       labels:
-        app: stas-webhook
+        app: syntaro-webhook
         tier: webhook
         component: api
     spec:
       containers:
         - name: webhook
-          image: ghcr.io/tamnguyen08/solving_tickets_as_a_service:latest
+          image: ghcr.io/aimino-tech/solving_tickets_as_a_service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
               name: http
           envFrom:
             - configMapRef:
-                name: stas-config
+                name: syntaro-config
             - secretRef:
-                name: stas-secrets
+                name: syntaro-secrets
           env:
             - name: RUN_MODE
               value: "api"
@@ -40,7 +41,7 @@ spec:
               value: "production"
           livenessProbe:
             httpGet:
-              path: /health/live
+              path: /health
               port: http
             initialDelaySeconds: 10
             periodSeconds: 30
@@ -48,7 +49,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /health/ready
+              path: /health
               port: http
             initialDelaySeconds: 15
             periodSeconds: 15

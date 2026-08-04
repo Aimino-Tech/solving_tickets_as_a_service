@@ -84,7 +84,7 @@ export default function WizardContainer() {
   if (!progress) {
     return (
       <div className="mx-auto max-w-lg py-16 text-center">
-        <h1 className="text-3xl font-bold text-gray-900">Welcome to STAS</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Welcome to SYNTARO</h1>
         <p className="mt-2 text-gray-500">Let's get you set up in a few quick steps.</p>
         <button onClick={handleStart} className="btn-primary mt-8">Get Started</button>
       </div>

@@ -37,7 +37,7 @@ _API_KEY_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
 _INTERNAL_URL_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     ("internal_host", re.compile(r"https?://[a-zA-Z0-9-]+\.internal(?::\d+)?(?:/[^\s\"')\]]*)?"), _REDACTED_URL),
     ("local_cloud", re.compile(r"https?://[a-zA-Z0-9-]+\.local(?::\d+)?(?:/[^\s\"')\]]*)?"), _REDACTED_URL),
-    ("stas_internal", re.compile(r"https?://stas[-.][a-zA-Z0-9.-]+(?::\d+)?(?:/[^\s\"')\]]*)?"), _REDACTED_URL),
+    ("syntaro_internal", re.compile(r"https?://syntaro[-.][a-zA-Z0-9.-]+(?::\d+)?(?:/[^\s\"')\]]*)?"), _REDACTED_URL),
     ("localhost", re.compile(r"https?://localhost(?::\d+)?(?:/[^\s\"')\]]*)?"), _REDACTED_URL),
     ("loopback", re.compile(r"https?://127\.0\.0\.1(?::\d+)?(?:/[^\s\"')\]]*)?"), _REDACTED_URL),
     ("ip_url", re.compile(r"https?://(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})(?::\d+)?(?:/[^\s\"')\]]*)?"), _REDACTED_URL),
@@ -80,7 +80,7 @@ _INTERNAL_IP_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
 
 
 def _parse_allowlist(raw: str | None = None) -> set[str]:
-    raw = raw or os_mod.getenv("STAS_SANITIZER_ALLOWLIST", "")
+    raw = raw or os_mod.getenv("SYNTARO_SANITIZER_ALLOWLIST", "")
     if not raw.strip():
         return set()
     return {item.strip().lower() for item in raw.split(",") if item.strip()}
@@ -88,7 +88,7 @@ def _parse_allowlist(raw: str | None = None) -> set[str]:
 
 class SanitizerConfig:
     def __init__(self, allowlist: str | None = None) -> None:
-        self.enabled = os_mod.getenv("STAS_SANITIZER_ENABLED", "true").strip().lower() in (
+        self.enabled = os_mod.getenv("SYNTARO_SANITIZER_ENABLED", "true").strip().lower() in (
             "true", "1", "yes",
         )
         self.allowlist = _parse_allowlist(allowlist)

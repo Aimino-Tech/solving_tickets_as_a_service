@@ -44,7 +44,7 @@ def _get_dsn() -> str:
     if _DSN is None:
         _DSN = os.getenv(
             "KPI_DATABASE_URL",
-            os.getenv("DATABASE_URL", "postgresql://localhost:5432/stas"),
+            os.getenv("DATABASE_URL", "postgresql://localhost:5432/syntaro"),
         )
     return _DSN
 
@@ -172,7 +172,7 @@ def _compute_churn(cursor: Any, snapshot: date) -> dict[str, int]:
 def _compute_viral_coefficient(cursor: Any, snapshot: date) -> dict[str, int]:
     """Compute viral coefficient placeholder.
 
-    Since STAS doesn't yet have a referral tracking system, this uses
+    Since SYNTARO doesn't yet have a referral tracking system, this uses
     the accounts table to count new accounts created on this day.
     When referral tracking is added, update this to count referred accounts.
 

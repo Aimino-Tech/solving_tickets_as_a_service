@@ -89,7 +89,7 @@ describe('published blog posts carry SEO metadata', () => {
 
     it(`${slug}: has full head + social metadata`, () => {
       expect(html).toContain(`<title>`);
-      expect(html).toContain(`— STAS Blog</title>`);
+      expect(html).toContain(`— SYNTARO Blog</title>`);
       expect(html).toContain(`<meta name="description"`);
       expect(html).toContain(`<meta name="keywords"`);
       expect(html).toContain(`<meta property="og:type" content="article"`);
@@ -177,8 +177,8 @@ describe('distribution assets exist and are actionable', () => {
   });
 
   it('phase 4 content engine doc exists and captures success metrics', () => {
-    expect(fileExists('docs', 'stas', 'growth-initiative-phase-4-content-engine.md')).toBe(true);
-    const content = readFile('docs', 'stas', 'growth-initiative-phase-4-content-engine.md');
+    expect(fileExists('docs', 'syntaro', 'growth-initiative-phase-4-content-engine.md')).toBe(true);
+    const content = readFile('docs', 'syntaro', 'growth-initiative-phase-4-content-engine.md');
     expect(content).toMatch(/5,?000/);
     expect(content).toMatch(/CPC/);
   });

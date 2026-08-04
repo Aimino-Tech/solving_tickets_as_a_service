@@ -39,7 +39,7 @@ const envSchema = z.object({
   PR_REVIEWERS_COUNT: z.coerce.number().int().min(0).max(10).default(2),
 
   REDIS_URL: z.string().default('redis://localhost:6379'),
-  RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672/stas'),
+  RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672/syntaro'),
   QUEUE_BACKEND: z.enum(['amqp']).default('amqp'),
 
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
@@ -74,25 +74,25 @@ const envSchema = z.object({
   E2B_TEMPLATE_ID: z.string().default('default'),
   E2B_SANDBOX_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
 
-  STAS_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
-  STAS_MONTHLY_QUOTA_ENABLED: boolSchema(true),
-  STAS_POWERED_BY_FOOTER: boolSchema(true),
-  STAS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
-  STAS_MODE: z.enum(['oss', 'hosted']).default('oss'),
-  STAS_AI_MODE: z.enum(['ai', 'static']).default('ai'),
-  STAS_AI_DISABLED: boolSchema(false),
-  STAS_LABEL: z.string().default('stas:fix'),
-  BOT_NAME: z.string().default('STAS'),
+  SYNTARO_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
+  SYNTARO_MONTHLY_QUOTA_ENABLED: boolSchema(true),
+  SYNTARO_POWERED_BY_FOOTER: boolSchema(true),
+  SYNTARO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
+  SYNTARO_MODE: z.enum(['oss', 'hosted']).default('oss'),
+  SYNTARO_AI_MODE: z.enum(['ai', 'static']).default('ai'),
+  SYNTARO_AI_DISABLED: boolSchema(false),
+  SYNTARO_LABEL: z.string().default('syntaro:fix'),
+  BOT_NAME: z.string().default('SYNTARO'),
   DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY: boolSchema(false),
   MAINTENANCE_MODE: boolSchema(false),
   MAX_AGENT_ITERATIONS: z.coerce.number().int().positive().default(40),
   MAX_ISSUE_COMMENTS: z.coerce.number().int().positive().default(15),
   // Rate limiting — calibrated for 500-user scale
-  STAS_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
-  STAS_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(150),
-  STAS_RATE_LIMIT_PER_REPO_MAX: z.coerce.number().int().positive().default(20),
-  STAS_RATE_LIMIT_PER_IP_MAX: z.coerce.number().int().positive().default(60),
-  STAS_RATE_LIMIT_PER_USER_MAX: z.coerce.number().int().positive().default(100),
+  SYNTARO_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  SYNTARO_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(150),
+  SYNTARO_RATE_LIMIT_PER_REPO_MAX: z.coerce.number().int().positive().default(20),
+  SYNTARO_RATE_LIMIT_PER_IP_MAX: z.coerce.number().int().positive().default(60),
+  SYNTARO_RATE_LIMIT_PER_USER_MAX: z.coerce.number().int().positive().default(100),
 
   // SAML SSO (enterprise) — optional; a default tenant is registered when SAML_TENANT_ID is set
   SAML_TENANT_ID: z.string().optional(),
@@ -121,6 +121,10 @@ const envSchema = z.object({
   REDIS_TTL_DEFAULT: z.coerce.number().int().positive().default(300),
   REDIS_TTL_FREQUENT_ACCESS: z.coerce.number().int().positive().default(60),
   ADMIN_API_KEY: z.string().optional(),
+  // Comma-separated allowlist of emails allowed to use dashboard admin
+  // steering (/api/v1/admin/steering/*). The JWT carries no role claim today,
+  // so admins are gated by email here. Empty = steering disabled (403).
+  ADMIN_EMAILS: z.string().default(''),
 
   JWT_SECRET: z
     .string()
@@ -130,8 +134,8 @@ const envSchema = z.object({
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
 
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
-  AUTH_LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
-  AUTH_REGISTER_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(3),
+  AUTH_LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+  AUTH_REGISTER_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
   AUTH_REFRESH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
 
   // Proxy
@@ -260,7 +264,7 @@ const envSchema = z.object({
     (v) =>
       typeof v === 'string' && v.trim() !== ''
         ? v
-        : process.env.SUPABASE_DATABASE_URL || 'postgres://localhost:5432/stas',
+        : process.env.SUPABASE_DATABASE_URL || 'postgres://localhost:5432/syntaro',
     z.string(),
   ),
   DATABASE_POOL_MIN: z.coerce.number().int().min(1).positive().default(2),
@@ -278,9 +282,9 @@ const envSchema = z.object({
     }, z.boolean())
     .default(false),
 
-  STAS_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
-  STAS_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
-  STAS_CONCURRENCY_OVERRIDES: z.string().default(''),
+  SYNTARO_RATE_LIMIT_DEFAULT_TIER: z.enum(['free', 'pro', 'enterprise']).default('free'),
+  SYNTARO_RATE_LIMIT_IP_MAX: z.coerce.number().int().positive().default(30),
+  SYNTARO_CONCURRENCY_OVERRIDES: z.string().default(''),
 
   // MCP Server Configuration
   MCP_API_KEY: z.string().optional(),
@@ -290,12 +294,12 @@ const envSchema = z.object({
       return v;
     }, z.boolean())
     .default(true),
-  STAS_MCP_SERVER_URL: z.string().default('http://localhost:4095'),
-  STAS_MCP_PORT: z.coerce.number().int().positive().max(65535).default(4095),
-  STAS_MCP_AUTO_START: boolSchema(true),
-  STAS_MCP_SSL_ENABLED: boolSchema(false),
-  STAS_MCP_SSL_KEY_PATH: z.string().optional(),
-  STAS_MCP_SSL_CERT_PATH: z.string().optional(),
+  SYNTARO_MCP_SERVER_URL: z.string().default('http://localhost:4095'),
+  SYNTARO_MCP_PORT: z.coerce.number().int().positive().max(65535).default(4095),
+  SYNTARO_MCP_AUTO_START: boolSchema(true),
+  SYNTARO_MCP_SSL_ENABLED: boolSchema(false),
+  SYNTARO_MCP_SSL_KEY_PATH: z.string().optional(),
+  SYNTARO_MCP_SSL_CERT_PATH: z.string().optional(),
 
   // OpenSymphony adapter configuration
   OPENSYMPHONY_ENABLED: boolSchema(false),
@@ -314,7 +318,7 @@ const envSchema = z.object({
 
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
-  STAS_LOG_FILE: z.string().optional(),
+  SYNTARO_LOG_FILE: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
   ADMIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
@@ -344,7 +348,7 @@ const envSchema = z.object({
   HEALTH_QUEUE_DEPTH_ALERT_MINUTES: z.coerce.number().int().positive().default(5),
   DLQ_RETENTION_DAYS: z.coerce.number().int().positive().default(7),
 
-  ALERT_SLACK_CHANNEL: z.string().default('#stas-alerts'),
+  ALERT_SLACK_CHANNEL: z.string().default('#syntaro-alerts'),
   ALERT_WARN_QUEUE_DEPTH: z.coerce.number().int().positive().default(50),
   ALERT_CRIT_QUEUE_DEPTH: z.coerce.number().int().positive().default(200),
   ALERT_WARN_ERROR_RATE_PERCENT: z.coerce.number().min(0).max(100).default(10),
@@ -385,12 +389,20 @@ const envSchema = z.object({
   OPENSYMPHONY_DISPATCH_URL: z.string().default(''),
   OPENSYMPHONY_API_KEY: z.string().default(''),
   OPENSYMPHONY_TENANT: z.string().default('default'),
+  OPENSYMPHONY_ADMIN_URL: z.string().default(''),
 
   // Loops
   LOOPS_API_KEY: z.string().optional(),
 
   // Alerting additions
   ALERT_N8N_WEBHOOK_URL: z.string().optional(),
+
+  // ── Admin steering (AIM-4617) ──
+  // OpenSymphony Elixir admin API (forward target for the steering proxy)
+  OS_ADMIN_API_URL: z.string().default(''),
+  // x-api-key credential sent to the OS admin API (must match SYMPHONY_API_KEYS on the OS side)
+  OS_ADMIN_API_KEY: z.string().default(''),
+  OS_ADMIN_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -416,7 +428,7 @@ function buildConfig(env: ParsedEnv) {
   return {
     port: env.PORT,
     runMode: env.RUN_MODE,
-    logFile: env.STAS_LOG_FILE ?? '',
+    logFile: env.SYNTARO_LOG_FILE ?? '',
     logLevel: env.LOG_LEVEL,
     nodeEnv: env.NODE_ENV,
     github: {
@@ -557,13 +569,13 @@ function buildConfig(env: ParsedEnv) {
     mcp: {
       apiKey: env.MCP_API_KEY ?? '',
       authEnabled: env.MCP_AUTH_ENABLED,
-      serverUrl: env.STAS_MCP_SERVER_URL,
-      port: env.STAS_MCP_PORT,
-      autoStart: env.STAS_MCP_AUTO_START,
+      serverUrl: env.SYNTARO_MCP_SERVER_URL,
+      port: env.SYNTARO_MCP_PORT,
+      autoStart: env.SYNTARO_MCP_AUTO_START,
       ssl: {
-        enabled: env.STAS_MCP_SSL_ENABLED,
-        keyPath: env.STAS_MCP_SSL_KEY_PATH ?? '',
-        certPath: env.STAS_MCP_SSL_CERT_PATH ?? '',
+        enabled: env.SYNTARO_MCP_SSL_ENABLED,
+        keyPath: env.SYNTARO_MCP_SSL_KEY_PATH ?? '',
+        certPath: env.SYNTARO_MCP_SSL_CERT_PATH ?? '',
       },
       rateLimit: {
         windowMs: env.MCP_RATE_LIMIT_WINDOW_MS,
@@ -620,26 +632,26 @@ function buildConfig(env: ParsedEnv) {
       n8nWebhookUrl: env.ALERT_N8N_WEBHOOK_URL ?? '',
     },
 
-    stas: {
-      mode: env.STAS_MODE,
-      aiMode: env.STAS_AI_MODE,
-      aiDisabled: env.STAS_AI_DISABLED,
-      label: env.STAS_LABEL,
+    syntaro: {
+      mode: env.SYNTARO_MODE,
+      aiMode: env.SYNTARO_AI_MODE,
+      aiDisabled: env.SYNTARO_AI_DISABLED,
+      label: env.SYNTARO_LABEL,
       botName: env.BOT_NAME,
       devSkipWebhookVerify: env.DEV_SKIP_WEBHOOK_SIGNATURE_VERIFY,
       maxAgentIterations: env.MAX_AGENT_ITERATIONS,
       maxIssueComments: env.MAX_ISSUE_COMMENTS,
-      rateLimitWindowMs: env.STAS_RATE_LIMIT_WINDOW_MS,
-      rateLimitMax: env.STAS_RATE_LIMIT_MAX,
-      rateLimitPerRepoMax: env.STAS_RATE_LIMIT_PER_REPO_MAX,
-      rateLimitPerIpMax: env.STAS_RATE_LIMIT_PER_IP_MAX,
-      rateLimitPerUserMax: env.STAS_RATE_LIMIT_PER_USER_MAX,
+      rateLimitWindowMs: env.SYNTARO_RATE_LIMIT_WINDOW_MS,
+      rateLimitMax: env.SYNTARO_RATE_LIMIT_MAX,
+      rateLimitPerRepoMax: env.SYNTARO_RATE_LIMIT_PER_REPO_MAX,
+      rateLimitPerIpMax: env.SYNTARO_RATE_LIMIT_PER_IP_MAX,
+      rateLimitPerUserMax: env.SYNTARO_RATE_LIMIT_PER_USER_MAX,
       queueMaxPendingPerRepo: env.QUEUE_MAX_PENDING_PER_REPO,
       queueDlqMaxSize: env.QUEUE_DLQ_MAX_SIZE,
       queueDlqNotifyAt: env.QUEUE_DLQ_NOTIFY_AT,
-      defaultTier: env.STAS_DEFAULT_TIER,
-      monthlyQuotaEnabled: env.STAS_MONTHLY_QUOTA_ENABLED,
-      poweredByFooterEnabled: env.STAS_POWERED_BY_FOOTER,
+      defaultTier: env.SYNTARO_DEFAULT_TIER,
+      monthlyQuotaEnabled: env.SYNTARO_MONTHLY_QUOTA_ENABLED,
+      poweredByFooterEnabled: env.SYNTARO_POWERED_BY_FOOTER,
     },
 
     postgres: {
@@ -664,9 +676,9 @@ function buildConfig(env: ParsedEnv) {
     },
 
     rateLimit: {
-      defaultTier: env.STAS_RATE_LIMIT_DEFAULT_TIER,
-      ipMaxPerMinute: env.STAS_RATE_LIMIT_IP_MAX,
-      adminOverrides: parseConcurrencyOverrides(env.STAS_CONCURRENCY_OVERRIDES),
+      defaultTier: env.SYNTARO_RATE_LIMIT_DEFAULT_TIER,
+      ipMaxPerMinute: env.SYNTARO_RATE_LIMIT_IP_MAX,
+      adminOverrides: parseConcurrencyOverrides(env.SYNTARO_CONCURRENCY_OVERRIDES),
     },
 
     stripe: {
@@ -854,6 +866,15 @@ function buildConfig(env: ParsedEnv) {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    adminSteering: {
+      adminEmails: env.ADMIN_EMAILS.split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean),
+      osAdminApiUrl: env.OS_ADMIN_API_URL,
+      osAdminApiKey: env.OS_ADMIN_API_KEY,
+      osAdminTimeoutMs: env.OS_ADMIN_TIMEOUT_MS,
     },
   } as const;
 }

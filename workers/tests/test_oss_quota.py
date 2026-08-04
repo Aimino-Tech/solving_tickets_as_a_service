@@ -258,7 +258,7 @@ class TestOssDiskQuota:
         quota = OssDiskQuota()
         quota.record_usage("tenant-a", "/workspaces/a/ws1", 1024)
         mock_client.hincrby.assert_called_once_with(
-            "stas:oss:quota:tenant-a:usage", "/workspaces/a/ws1", 1024
+            "syntaro:oss:quota:tenant-a:usage", "/workspaces/a/ws1", 1024
         )
 
     @patch("workers.orchestrator.oss_quota._get_redis")
@@ -269,7 +269,7 @@ class TestOssDiskQuota:
         quota = OssDiskQuota()
         quota.release_usage("tenant-a", "/workspaces/a/ws1")
         mock_client.hdel.assert_called_once_with(
-            "stas:oss:quota:tenant-a:usage", "/workspaces/a/ws1"
+            "syntaro:oss:quota:tenant-a:usage", "/workspaces/a/ws1"
         )
 
     @patch("workers.orchestrator.oss_quota._get_redis")
@@ -350,7 +350,7 @@ class TestOssLruCleanup:
         lru = OssLruCleanup()
         lru.remove_workspace("tenant-a", "/workspaces/a/ws1")
         mock_client.zrem.assert_called_once_with(
-            "stas:oss:lru:tenant-a:access", "/workspaces/a/ws1"
+            "syntaro:oss:lru:tenant-a:access", "/workspaces/a/ws1"
         )
 
     @patch("workers.orchestrator.oss_quota._get_redis")

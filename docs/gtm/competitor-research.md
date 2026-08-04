@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-Comprehensive analysis of all major competitors in the AI-based software engineering ticket solving space. This analysis covers 10+ tools across market positioning, pricing, technical capability, and DACH-specific relevance to inform STAS's GTM strategy.
+Comprehensive analysis of all major competitors in the AI-based software engineering ticket solving space. This analysis covers 10+ tools across market positioning, pricing, technical capability, and DACH-specific relevance to inform SYNTARO's GTM strategy.
 
-> **Key Finding**: No competitor combines GitHub-native async issue resolution with DACH-specific features (GitLab, Jira, German output, approval gates, audit logs). This is STAS's core differentiation opportunity.
+> **Key Finding**: No competitor combines GitHub-native async issue resolution with DACH-specific features (GitLab, Jira, German output, approval gates, audit logs). This is SYNTARO's core differentiation opportunity.
 
 ---
 
@@ -35,7 +35,7 @@ Comprehensive analysis of all major competitors in the AI-based software enginee
 | Tool | Company | Trigger | Output | Notes |
 |------|---------|---------|--------|-------|
 | **Sweep AI** | Sweep | GitHub issue | PR | Pivoted to JetBrains plugin |
-| **STAS** | Aimino | GitHub label | PR | **This analysis** |
+| **SYNTARO** | Aimino | GitHub label | PR | **This analysis** |
 
 ### Tier 4: Multi-Agent Harnesses
 
@@ -259,7 +259,7 @@ Comprehensive analysis of all major competitors in the AI-based software enginee
 - JetBrains-only (new focus)
 - No DACH-specific features
 
-**DACH Relevance**: VERY LOW — No longer a direct competitor. Pivot creates a gap STAS can fill.
+**DACH Relevance**: VERY LOW — No longer a direct competitor. Pivot creates a gap SYNTARO can fill.
 
 ---
 
@@ -377,7 +377,7 @@ Comprehensive analysis of all major competitors in the AI-based software enginee
 - No German output
 - Limited enterprise compliance features
 
-**DACH Relevance**: HIGH — Dominant platform. Missing GitLab/Jira support creates opportunity for STAS.
+**DACH Relevance**: HIGH — Dominant platform. Missing GitLab/Jira support creates opportunity for SYNTARO.
 
 ---
 
@@ -385,7 +385,7 @@ Comprehensive analysis of all major competitors in the AI-based software enginee
 
 ### No Competitor Covers All of These:
 
-| Feature | Devin | OpenHands | GitHub Copilot | Sweep | STAS (target) |
+| Feature | Devin | OpenHands | GitHub Copilot | Sweep | SYNTARO (target) |
 |---------|-------|-----------|---------------|-------|---------------|
 | GitHub PR | ✅ | ✅ | ✅ | ✅ | ✅ |
 | GitLab MR | ✅ | ❌ | ❌ | ❌ | 🔲 Planned |
@@ -401,7 +401,7 @@ Comprehensive analysis of all major competitors in the AI-based software enginee
 
 ---
 
-## 4. GTM Insights for STAS
+## 4. GTM Insights for SYNTARO
 
 ### Key Differentiators
 
@@ -413,7 +413,7 @@ Comprehensive analysis of all major competitors in the AI-based software enginee
 
 ### Pricing Strategy Comparison
 
-| Approach | Example | STAS Opportunity |
+| Approach | Example | SYNTARO Opportunity |
 |----------|---------|-----------------|
 | **Per-seat** | Cursor ($20/mo), Devin ($500/mo) | **Workspace pricing** ($50/mo per workspace) |
 | **Self-host free** | OpenHands, SWE-agent | **Open-core**: free self-host + cloud paid |
@@ -435,7 +435,7 @@ Current DACH SWE tool market:
 │  All others — no DACH presence                              │
 └──────────────────────────────────────────────────────────────┘
 
-STAS fills this gap with:
+SYNTARO fills this gap with:
 ┌──────────────────────────────────────────────────────────────┐
 │  ✅ GitLab + Jira integration                               │
 │  ✅ German PR output                                        │

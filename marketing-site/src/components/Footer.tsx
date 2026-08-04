@@ -5,7 +5,7 @@ export default function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <div className="footer-brand">
-          <Link to="/" className="nav-logo" style={{ marginBottom: 8 } as React.CSSProperties}><span className="logo-icon">S</span> STAS</Link>
+          <Link to="/" className="nav-logo" style={{ marginBottom: 8 } as React.CSSProperties}><span className="logo-icon">S</span> SYNTARO</Link>
           <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
         </div>
         <div>
@@ -24,7 +24,7 @@ export default function Footer() {
             <li><Link to="/blog">Blog</Link></li>
             <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
             <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
-            <li><a href="https://github.com/marketplace/actions/stas-eval">Marketplace</a></li>
+            <li><a href="https://github.com/marketplace/actions/syntaro-eval">Marketplace</a></li>
           </ul>
         </div>
         <div>

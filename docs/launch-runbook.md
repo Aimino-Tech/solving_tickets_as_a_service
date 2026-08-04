@@ -1,4 +1,4 @@
-# STAS Production Go-Live Runbook
+# SYNTARO Production Go-Live Runbook
 
 **Document**: Production Launch Procedure
 **Version**: 1.0
@@ -9,12 +9,12 @@
 
 ## Overview
 
-This runbook covers the step-by-step procedure for taking STAS from a verified pre-launch state to live production. Follow sections sequentially. If any step fails, consult the rollback triggers in §4 before proceeding.
+This runbook covers the step-by-step procedure for taking SYNTARO from a verified pre-launch state to live production. Follow sections sequentially. If any step fails, consult the rollback triggers in §4 before proceeding.
 
 ### Architecture Diagram
 
 ```
-GitHub Webhook → Nginx → STAS API (Express) → RabbitMQ → Celery Workers
+GitHub Webhook → Nginx → SYNTARO API (Express) → RabbitMQ → Celery Workers
                     ↓                            ↓
             Governance Proxy ←────→ OpenSymphony (agent dispatch)
                     ↓
@@ -25,20 +25,20 @@ GitHub Webhook → Nginx → STAS API (Express) → RabbitMQ → Celery Workers
 
 | Service | Container | Port | Health Endpoint |
 |---------|-----------|------|-----------------|
-| STAS API | `stas-webhook` | 3000 | `/health/ready` |
-| STAS Worker | `stas-worker` | — | Celery ping task |
+| SYNTARO API | `syntaro-webhook` | 3000 | `/health/ready` |
+| SYNTARO Worker | `syntaro-worker` | — | Celery ping task |
 | Celery Beat | `celery-beat` | — | — |
 | Governance Proxy | `governance-proxy` | 4002 | `/guardrail/health` |
 | OpenSymphony | `opensymphony` | 4001 | `/health` |
-| PostgreSQL | `stas-postgres` | 5432 | pg_isready |
-| Redis | `stas-redis` | 6379 | redis-cli ping |
-| RabbitMQ | `stas-rabbitmq` | 5672 | rabbitmq-diagnostics |
-| Nginx | `stas-nginx` | 80/443 | — |
-| Loki | `stas-loki` | 3100 | `/ready` |
-| Promtail | `stas-promtail` | — | — |
-| Flower | `stas-flower` | 5555 | — |
-| Egress Proxy | `stas-egress-proxy` | 3128 | squidclient |
-| STAS Dashboard | `stas-dashboard` | 5173 | `/healthz` |
+| PostgreSQL | `syntaro-postgres` | 5432 | pg_isready |
+| Redis | `syntaro-redis` | 6379 | redis-cli ping |
+| RabbitMQ | `syntaro-rabbitmq` | 5672 | rabbitmq-diagnostics |
+| Nginx | `syntaro-nginx` | 80/443 | — |
+| Loki | `syntaro-loki` | 3100 | `/ready` |
+| Promtail | `syntaro-promtail` | — | — |
+| Flower | `syntaro-flower` | 5555 | — |
+| Egress Proxy | `syntaro-egress-proxy` | 3128 | squidclient |
+| SYNTARO Dashboard | `syntaro-dashboard` | 5173 | `/healthz` |
 
 ---
 
@@ -50,7 +50,7 @@ Run ALL checks before touching production. Mark each pass/fail.
 
 ```bash
 # TypeScript compile check
-cd /path/to/stas
+cd /path/to/syntaro
 npx tsc --noEmit
 # Expected: exit code 0, no errors
 
@@ -94,8 +94,8 @@ curl -f http://opensymphony:4001/health
 Manual test procedure:
 
 1. Create a test GitHub issue on a configured repo
-2. Confirm STAS webhook receiver logs `accepted: true`
-3. Confirm the issue appears in the STAS queue
+2. Confirm SYNTARO webhook receiver logs `accepted: true`
+3. Confirm the issue appears in the SYNTARO queue
 4. Confirm a Celery worker picks it up
 5. Confirm OpenCode agent receives dispatch
 6. Confirm a PR is created on the repo
@@ -105,7 +105,7 @@ Manual test procedure:
 
 ```bash
 # Check DLQ depth via RabbitMQ management API
-curl -s http://rabbitmq:15672/api/queues/%2F/stas-issues-dlq | jq '.messages_ready'
+curl -s http://rabbitmq:15672/api/queues/%2F/syntaro-issues-dlq | jq '.messages_ready'
 # Expected: 0
 ```
 
@@ -114,7 +114,7 @@ curl -s http://rabbitmq:15672/api/queues/%2F/stas-issues-dlq | jq '.messages_rea
 ```bash
 for i in $(seq 1 6); do
   curl -s -o /dev/null -w "%{http_code}" \
-    -X POST http://stas-webhook:3000/webhook \
+    -X POST http://syntaro-webhook:3000/webhook \
     -H "Content-Type: application/json" \
     -d '{"action":"test"}'
   echo ""
@@ -136,7 +136,7 @@ curl -X POST http://governance-proxy:4002/admin/tenant/test-org/kill \
 
 # Send a webhook for that tenant
 curl -s -o /dev/null -w "%{http_code}" \
-  -X POST http://stas-webhook:3000/webhook \
+  -X POST http://syntaro-webhook:3000/webhook \
   -H "Content-Type: application/json" \
   -H "x-github-event: issues" \
   -d '{"action":"opened","repository":{"full_name":"test-org/test-repo"},"issue":{"title":"Test","body":"test"}}'
@@ -150,16 +150,16 @@ curl -X POST http://governance-proxy:4002/admin/tenant/test-org/revive
 
 ```bash
 # Test pg_dump
-docker exec stas-postgres pg_dump -U stas -d stas -f /tmp/stas-backup-test.sql
+docker exec syntaro-postgres pg_dump -U syntaro -d syntaro -f /tmp/syntaro-backup-test.sql
 # Expected: exit 0
 
 # Test restore
-docker exec stas-postgres psql -U stas -d stas_restore_test -f /tmp/stas-backup-test.sql
+docker exec syntaro-postgres psql -U syntaro -d syntaro_restore_test -f /tmp/syntaro-backup-test.sql
 # Expected: tables restored without errors
 
 # Clean up
-docker exec stas-postgres psql -U stas -c "DROP DATABASE IF EXISTS stas_restore_test"
-docker exec stas-postgres rm /tmp/stas-backup-test.sql
+docker exec syntaro-postgres psql -U syntaro -c "DROP DATABASE IF EXISTS syntaro_restore_test"
+docker exec syntaro-postgres rm /tmp/syntaro-backup-test.sql
 ```
 
 ### 1.9 Rollback Procedure Test
@@ -179,7 +179,7 @@ docker pull ghcr.io/aimino-tech/solving_tickets_as_a_service:v<PREVIOUS_VERSION>
 - [ ] All 6 quality gates produce output on a real ticket
 - [ ] Governance proxy `/guardrail/health` responds 200
 - [ ] OpenSymphony `/health` responds 200
-- [ ] Webhook end-to-end: GitHub → STAS → Queue → Agent → PR
+- [ ] Webhook end-to-end: GitHub → SYNTARO → Queue → Agent → PR
 - [ ] DLQ is empty
 - [ ] Rate limiting confirmed working (5 rapid requests → 429)
 - [ ] Kill-switch confirmed working (tenant:killed → 402)
@@ -211,7 +211,7 @@ curl -f http://opensymphony:4001/health
 # If this fails → §4.4 (fall back to direct OpenCode dispatch)
 ```
 
-### Step 3: Deploy STAS API + Workers
+### Step 3: Deploy SYNTARO API + Workers
 
 ```bash
 # Deploy infrastructure services
@@ -221,12 +221,12 @@ docker compose -f docker-compose.prod.yml up -d postgres redis rabbitmq
 sleep 15
 
 # Verify infrastructure health
-docker exec stas-postgres pg_isready -U stas
-redis-cli -h stas-redis ping
-docker exec stas-rabbitmq rabbitmq-diagnostics check_port_connectivity
+docker exec syntaro-postgres pg_isready -U syntaro
+redis-cli -h syntaro-redis ping
+docker exec syntaro-rabbitmq rabbitmq-diagnostics check_port_connectivity
 
 # Deploy application services
-docker compose -f docker-compose.prod.yml up -d stas-webhook stas-worker celery-beat
+docker compose -f docker-compose.prod.yml up -d syntaro-webhook syntaro-worker celery-beat
 
 # Wait for app startup
 sleep 20
@@ -236,11 +236,11 @@ sleep 20
 
 ```bash
 # Run pending migrations
-docker exec stas-webhook node dist/scripts/migrate.js
+docker exec syntaro-webhook node dist/scripts/migrate.js
 # Expected: "Migrations complete" with no errors
 
 # Verify migration state
-docker exec stas-postgres psql -U stas -d stas -c "\dt"
+docker exec syntaro-postgres psql -U syntaro -d syntaro -c "\dt"
 # Expected: all expected tables present
 ```
 
@@ -248,9 +248,9 @@ docker exec stas-postgres psql -U stas -d stas -c "\dt"
 
 ```bash
 echo "=== Health Check ==="
-curl -f http://stas-webhook:3000/health/ready    || echo "FAIL: STAS API"
-curl -f http://stas-webhook:3000/health/queue    || echo "FAIL: Queue health"
-curl -f http://stas-webhook:3000/health/dependencies || echo "FAIL: Dependencies"
+curl -f http://syntaro-webhook:3000/health/ready    || echo "FAIL: SYNTARO API"
+curl -f http://syntaro-webhook:3000/health/queue    || echo "FAIL: Queue health"
+curl -f http://syntaro-webhook:3000/health/dependencies || echo "FAIL: Dependencies"
 
 echo "=== Worker Health ==="
 # Check Celery worker is alive
@@ -258,14 +258,14 @@ celery -A workers.celery_app inspect ping --timeout 5 || echo "FAIL: Celery work
 
 echo "=== Monitoring ==="
 curl -f http://loki:3100/ready                    || echo "FAIL: Loki"
-curl -f http://stas-webhook:3000/metrics          || echo "FAIL: Metrics"
+curl -f http://syntaro-webhook:3000/metrics          || echo "FAIL: Metrics"
 ```
 
 ### Step 6: Enable Webhook Receiver
 
 ```bash
 # Enable the webhook processing pipeline
-curl -X POST http://stas-webhook:3000/admin/webhook/enable \
+curl -X POST http://syntaro-webhook:3000/admin/webhook/enable \
   -H "x-admin-key: $ADMIN_KEY"
 # Expected: {"status":"enabled"}
 ```
@@ -275,7 +275,7 @@ curl -X POST http://stas-webhook:3000/admin/webhook/enable \
 ```bash
 # Watch DLQ depth every 60 seconds
 while true; do
-  DEPTH=$(curl -s http://rabbitmq:15672/api/queues/%2F/stas-issues-dlq | jq '.messages_ready // 0')
+  DEPTH=$(curl -s http://rabbitmq:15672/api/queues/%2F/syntaro-issues-dlq | jq '.messages_ready // 0')
   echo "[$(date)] DLQ depth: $DEPTH"
   if [ "$DEPTH" -gt 20 ]; then
     echo "ALERT: DLQ backlog exceeded threshold"
@@ -300,7 +300,7 @@ Step 1: Governance Proxy ────────→ success? → continue
                                            ↓ fail → §4.3
 Step 2: OpenSymphony ───────────→ success? → continue
                                            ↓ fail → §4.4
-Step 3: STAS API + Workers ──────→ success? → continue
+Step 3: SYNTARO API + Workers ──────→ success? → continue
                                            ↓ fail → §4.1
 Step 4: DB Migrations ───────────→ success? → continue
                                            ↓ fail → rollback migration, §4.1
@@ -321,10 +321,10 @@ Step 8: Advertise ───────────────→ DONE
 
 | Endpoint | Service | Expected Status Code | Expected Body Contains |
 |----------|---------|---------------------|----------------------|
-| `/health/ready` | STAS API | 200 | `"ok"` or `"ready"` |
-| `/health/queue` | STAS API | 200 | queue depths |
-| `/health/dependencies` | STAS API | 200 | dependency status |
-| `/metrics` | STAS API | 200 | Prometheus metrics |
+| `/health/ready` | SYNTARO API | 200 | `"ok"` or `"ready"` |
+| `/health/queue` | SYNTARO API | 200 | queue depths |
+| `/health/dependencies` | SYNTARO API | 200 | dependency status |
+| `/metrics` | SYNTARO API | 200 | Prometheus metrics |
 | `/guardrail/health` | Governance Proxy | 200 | `"status":"ok"` |
 | `/guardrail/ready` | Governance Proxy | 200 | `"ready"` |
 | `/guardrail/metrics` | Governance Proxy | 200 | Prometheus metrics |
@@ -335,8 +335,8 @@ Step 8: Advertise ───────────────→ DONE
 
 | Service | Log Source | Command |
 |---------|-----------|---------|
-| STAS API | Docker | `docker logs stas-webhook` |
-| STAS Worker | Docker | `docker logs stas-worker` |
+| SYNTARO API | Docker | `docker logs syntaro-webhook` |
+| SYNTARO Worker | Docker | `docker logs syntaro-worker` |
 | Governance | Docker | `docker logs governance-proxy` |
 | OpenSymphony | Docker | `docker logs opensymphony` |
 | All services | Loki | Grafana @ `http://loki:3100` |
@@ -349,33 +349,33 @@ Step 8: Advertise ───────────────→ DONE
 
 ### 4.1 Error Rate >5% in 5 Minutes
 
-**Symptom**: STAS API error rate exceeds 5% over a 5-minute sliding window.
+**Symptom**: SYNTARO API error rate exceeds 5% over a 5-minute sliding window.
 
-**Action**: Rollback STAS to previous Docker tag.
+**Action**: Rollback SYNTARO to previous Docker tag.
 
 ```bash
 # Identify previous stable tag
 docker images ghcr.io/aimino-tech/solving_tickets_as_a_service
 # Tag the current image for rollback identification
-docker tag stas-webhook:latest stas-webhook:rollback-$(date +%Y%m%d%H%M%S)
+docker tag syntaro-webhook:latest syntaro-webhook:rollback-$(date +%Y%m%d%H%M%S)
 
-# Rollback STAS webhook
-docker compose -f docker-compose.prod.yml stop stas-webhook
-docker compose -f docker-compose.prod.yml rm -f stas-webhook
-sed -i 's|image: stas-webhook:latest|image: ghcr.io/aimino-tech/solving_tickets_as_a_service:v<PREVIOUS>|' docker-compose.prod.yml
-docker compose -f docker-compose.prod.yml up -d stas-webhook
+# Rollback SYNTARO webhook
+docker compose -f docker-compose.prod.yml stop syntaro-webhook
+docker compose -f docker-compose.prod.yml rm -f syntaro-webhook
+sed -i 's|image: syntaro-webhook:latest|image: ghcr.io/aimino-tech/solving_tickets_as_a_service:v<PREVIOUS>|' docker-compose.prod.yml
+docker compose -f docker-compose.prod.yml up -d syntaro-webhook
 
 # Rollback workers
-docker compose -f docker-compose.prod.yml stop stas-worker celery-beat
-docker compose -f docker-compose.prod.yml rm -f stas-worker celery-beat
-docker compose -f docker-compose.prod.yml up -d stas-worker celery-beat
+docker compose -f docker-compose.prod.yml stop syntaro-worker celery-beat
+docker compose -f docker-compose.prod.yml rm -f syntaro-worker celery-beat
+docker compose -f docker-compose.prod.yml up -d syntaro-worker celery-beat
 
 # Restore original compose file from git
 git checkout docker-compose.prod.yml
 ```
 
 **Time**: ~2 minutes  
-**Trigger**: Prometheus alert `STASErrorRateBurst` or manual observation
+**Trigger**: Prometheus alert `SYNTAROErrorRateBurst` or manual observation
 
 ### 4.2 DLQ Backlog > 20 in 10 Minutes
 
@@ -385,18 +385,18 @@ git checkout docker-compose.prod.yml
 
 ```bash
 # Disable webhook receiver
-curl -X POST http://stas-webhook:3000/admin/webhook/disable \
+curl -X POST http://syntaro-webhook:3000/admin/webhook/disable \
   -H "x-admin-key: $ADMIN_KEY"
 
 # Drain DLQ for investigation
-docker exec stas-rabbitmq rabbitmqadmin get queue=stas-issues-dlq count=100
+docker exec syntaro-rabbitmq rabbitmqadmin get queue=syntaro-issues-dlq count=100
 
 # Replay specific messages if safe
-# docker exec stas-rabbitmq rabbitmqadmin publish exchange=stas-issues routing_key=stas.issues payload="..."
+# docker exec syntaro-rabbitmq rabbitmqadmin publish exchange=syntaro-issues routing_key=syntaro.issues payload="..."
 
 # Investigate root cause before re-enabling
-docker logs stas-worker --tail 200
-docker logs stas-webhook --tail 200
+docker logs syntaro-worker --tail 200
+docker logs syntaro-webhook --tail 200
 ```
 
 **Time**: ~5 minutes  
@@ -409,10 +409,10 @@ docker logs stas-webhook --tail 200
 **Action**: Fail open (disable governance proxy from the dispatch path).
 
 ```bash
-# Option A: Bypass governance at STAS config level
-export STAS_BYPASS_GOVERNANCE=true
-docker compose -f docker-compose.prod.yml restart stas-webhook
-# STAS will now dispatch directly to OpenSymphony / OpenCode
+# Option A: Bypass governance at SYNTARO config level
+export SYNTARO_BYPASS_GOVERNANCE=true
+docker compose -f docker-compose.prod.yml restart syntaro-webhook
+# SYNTARO will now dispatch directly to OpenSymphony / OpenCode
 
 # Option B: If still failing, bypass governance and restart
 docker compose -f docker-compose.prod.yml stop governance-proxy
@@ -420,7 +420,7 @@ docker compose -f docker-compose.prod.yml rm -f governance-proxy
 
 # Alert the team
 echo "ALERT: governance-proxy removed from path due to 2min downtime" | \
-  mail -s "STAS: Governance Proxy Down" ops@aimino.io
+  mail -s "SYNTARO: Governance Proxy Down" ops@aimino.io
 ```
 
 **Time**: ~1 minute  
@@ -433,17 +433,17 @@ echo "ALERT: governance-proxy removed from path due to 2min downtime" | \
 **Action**: Fall back to direct OpenCode dispatch.
 
 ```bash
-# Configure STAS to dispatch directly to OpenCode
+# Configure SYNTARO to dispatch directly to OpenCode
 export OPENCODE_URL=http://opencode:4096
-export STAS_DISPATCH_MODE=direct
-docker compose -f docker-compose.prod.yml restart stas-webhook stas-worker
+export SYNTARO_DISPATCH_MODE=direct
+docker compose -f docker-compose.prod.yml restart syntaro-webhook syntaro-worker
 
 # Verify direct dispatch works
 curl -f http://opencode:4096/health
 
 # Alert the team
 echo "ALERT: OpenSymphony unavailable for 5min — switched to direct OpenCode dispatch" | \
-  mail -s "STAS: OpenSymphony Down" ops@aimino.io
+  mail -s "SYNTARO: OpenSymphony Down" ops@aimino.io
 ```
 
 **Time**: ~3 minutes  
@@ -453,7 +453,7 @@ echo "ALERT: OpenSymphony unavailable for 5min — switched to direct OpenCode d
 
 | Symptom | Severity | Action | Time | Who |
 |---------|----------|--------|------|-----|
-| Error rate >5% in 5min | 🔴 Critical | Rollback STAS to previous Docker tag | 2min | On-call engineer |
+| Error rate >5% in 5min | 🔴 Critical | Rollback SYNTARO to previous Docker tag | 2min | On-call engineer |
 | DLQ backlog >20 in 10min | 🟠 High | Disable webhook receiver, drain DLQ, investigate | 5min | On-call engineer |
 | Governance proxy down >2min | 🟠 High | Fail open (bypass governance), alert | 1min | On-call engineer |
 | OpenSymphony down >5min | 🟡 Medium | Fall back to direct OpenCode dispatch | 3min | On-call engineer |
@@ -477,13 +477,13 @@ echo "=== Post-Launch Checks ==="
 # Expected: issue created, PR created within 5 minutes
 
 # 2. Check DLQ depth = 0
-DLQ_DEPTH=$(curl -s http://rabbitmq:15672/api/queues/%2F/stas-issues-dlq | jq '.messages_ready // 0')
+DLQ_DEPTH=$(curl -s http://rabbitmq:15672/api/queues/%2F/syntaro-issues-dlq | jq '.messages_ready // 0')
 echo "DLQ depth: $DLQ_DEPTH"
 [ "$DLQ_DEPTH" -eq 0 ] && echo "PASS" || echo "FAIL"
 
 # 3. Verify audit logs
 curl -s http://loki:3100/loki/api/v1/query_range \
-  --data-urlencode 'query={container="stas-webhook"} |= "dispatch"' \
+  --data-urlencode 'query={container="syntaro-webhook"} |= "dispatch"' \
   | jq '.data.result | length'
 # Expected: > 0 (audit logs are capturing requests)
 
@@ -504,7 +504,7 @@ curl -s http://loki:3100/loki/api/v1/query_range \
 - [ ] Check all Celery workers are consuming from correct queues
 - [ ] Verify Nginx TLS termination is working
 - [ ] Confirm rate limiter is active (5 requests → 429)
-- [ ] Run `stas-doctor.sh` for comprehensive health summary
+- [ ] Run `syntaro-doctor.sh` for comprehensive health summary
 
 ### 5.3 Monitoring Dashboard
 
@@ -512,9 +512,9 @@ Open the Grafana dashboards:
 
 | Dashboard | URL | Purpose |
 |-----------|-----|---------|
-| STAS Overview | `http://grafana:3000/d/stas-overview` | Request rates, error rates, latency |
-| STAS Workers | `http://grafana:3000/d/stas-workers` | Queue depths, task success/fail rates |
-| STAS Infrastructure | `http://grafana:3000/d/stas-infra` | Redis, Postgres, RabbitMQ health |
+| SYNTARO Overview | `http://grafana:3000/d/syntaro-overview` | Request rates, error rates, latency |
+| SYNTARO Workers | `http://grafana:3000/d/syntaro-workers` | Queue depths, task success/fail rates |
+| SYNTARO Infrastructure | `http://grafana:3000/d/syntaro-infra` | Redis, Postgres, RabbitMQ health |
 | Governance | `http://grafana:3000/d/governance` | Rate limit hits, kill-switch status |
 | Loki Logs | `http://grafana:3000/explore` | Search all logs by service |
 
@@ -537,11 +537,11 @@ Open the Grafana dashboards:
 
 | Alert Name | Condition | Severity | Action |
 |------------|-----------|----------|--------|
-| `STASErrorRateBurst` | `rate(http_requests_total{status=~"5.."}[5m]) > 0.05` | critical | §4.1 |
-| `STASDLQDepth` | `rabbitmq_queue_messages{queue="stas-issues-dlq"} > 20` | warning | §4.2 |
+| `SYNTAROErrorRateBurst` | `rate(http_requests_total{status=~"5.."}[5m]) > 0.05` | critical | §4.1 |
+| `SYNTARODLQDepth` | `rabbitmq_queue_messages{queue="syntaro-issues-dlq"} > 20` | warning | §4.2 |
 | `GovernanceProxyDown` | `up{job="governance-proxy"} == 0 for > 2m` | critical | §4.3 |
 | `OpenSymphonyDown` | `up{job="opensymphony"} == 0 for > 5m` | critical | §4.4 |
-| `STASQueueBacklog` | `rabbitmq_queue_messages_ready{queue="stas.issues"} > 100` | warning | Scale workers |
+| `SYNTAROQueueBacklog` | `rabbitmq_queue_messages_ready{queue="syntaro.issues"} > 100` | warning | Scale workers |
 | `PostgresSlowQueries` | `pg_stat_activity_max_query_duration > 10s` | warning | Investigate queries |
 
 ### Critical Thresholds
@@ -563,11 +563,11 @@ Open the Grafana dashboards:
 See `.env.example` and `.env.production.template` for the full list. Key variables:
 
 ```bash
-# STAS
+# SYNTARO
 NODE_ENV=production
-REDIS_URL=redis://stas-redis:6379
-RABBITMQ_URL=amqp://stas-app:password@stas-rabbitmq:5672/stas
-DATABASE_URL=postgres://stas:password@stas-postgres:5432/stas
+REDIS_URL=redis://syntaro-redis:6379
+RABBITMQ_URL=amqp://syntaro-app:password@syntaro-rabbitmq:5672/syntaro
+DATABASE_URL=postgres://syntaro:password@syntaro-postgres:5432/syntaro
 GITHUB_APP_ID=<github-app-id>
 GITHUB_PRIVATE_KEY=<base64-encoded-private-key>
 
@@ -579,8 +579,8 @@ LLM_MODEL=gpt-4o
 OPENSYMPHONY_SECRET=<shared-secret>
 
 # Monitoring
-LOKI_URL=http://stas-loki:3100
-PROMETHEUS_URL=http://stas-prometheus:9090
+LOKI_URL=http://syntaro-loki:3100
+PROMETHEUS_URL=http://syntaro-prometheus:9090
 ```
 
 ### B. Verified Commands Reference
@@ -593,10 +593,10 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs --tail=50
 
 # Restart a single service
-docker compose -f docker-compose.prod.yml restart stas-webhook
+docker compose -f docker-compose.prod.yml restart syntaro-webhook
 
 # Scale workers (4 instances)
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=4
 
 # Full stack shutdown
 docker compose -f docker-compose.prod.yml down
@@ -626,7 +626,7 @@ Pre-Flight:
 Launch Sequence:
   1. Deploy Governance Proxy
   2. Deploy OpenSymphony
-  3. Deploy STAS API + Workers
+  3. Deploy SYNTARO API + Workers
   4. Run DB migrations
   5. Verify health endpoints
   6. Enable webhook receiver
@@ -644,4 +644,4 @@ Post-Launch:
 
 | Date | Version | Author | Changes |
 |------|---------|--------|---------|
-| 2026-07-29 | 1.0 | STAS Launch Team | Initial production go-live runbook |
+| 2026-07-29 | 1.0 | SYNTARO Launch Team | Initial production go-live runbook |

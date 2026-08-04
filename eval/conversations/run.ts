@@ -1,12 +1,12 @@
-// STAS Conversation Eval — runner.
+// SYNTARO Conversation Eval — runner.
 // Usage:
-//   STAS_API_KEY=sk-stas_... GH_TOKEN=gho_... npx tsx eval/conversations/run.ts
+//   SYNTARO_API_KEY=sk-syntaro_... GH_TOKEN=gho_... npx tsx eval/conversations/run.ts
 // Options (env):
-//   STAS_URL            STAS backend base (default http://localhost:3002)
-//   STAS_API_KEY        per-user MCP API key (required)
+//   SYNTARO_URL            SYNTARO backend base (default http://localhost:3002)
+//   SYNTARO_API_KEY        per-user MCP API key (required)
 //   GH_TOKEN            GitHub token (required)
 //   EVAL_REPO_OWNER     default xdnaimino
-//   EVAL_REPO_NAME      default stas-eval-sandbox
+//   EVAL_REPO_NAME      default syntaro-eval-sandbox
 //   EVAL_CONVERSATIONS  number of conversations to run (default 10)
 //   EVAL_TURNS          turns per conversation (default 10)
 // Writes eval/results/conversations/<tag>.json; exit 0 iff all turns pass.
@@ -28,11 +28,11 @@ function env(name: string, fallback?: string): string {
   throw new Error(`Missing required env var: ${name}`);
 }
 
-const stasUrl = env('STAS_URL', 'http://localhost:3002');
-const stasApiKey = env('STAS_API_KEY');
+const syntaroUrl = env('SYNTARO_URL', 'http://localhost:3002');
+const syntaroApiKey = env('SYNTARO_API_KEY');
 const githubToken = env('GH_TOKEN');
 const repoOwner = env('EVAL_REPO_OWNER', 'xdnaimino');
-const repoName = env('EVAL_REPO_NAME', 'stas-eval-sandbox');
+const repoName = env('EVAL_REPO_NAME', 'syntaro-eval-sandbox');
 const convCount = Math.max(1, Number(env('EVAL_CONVERSATIONS', '10')));
 const turnCount = Math.max(1, Number(env('EVAL_TURNS', '10')));
 const mcpDelayMs = Math.max(0, Number(env('EVAL_MCP_DELAY_MS', '0')));
@@ -101,11 +101,11 @@ async function runConversation(script: ConversationScript, agent: ConversationAg
 }
 
 async function main(): Promise<void> {
-  console.log(`STAS Conversation Eval — tag=${tag}  repo=${repoOwner}/${repoName}  ${convCount} convs x ${turnCount} turns`);
-  console.log(`  backend=${stasUrl}  agent=ConversationAgent(real GitHub + real STAS MCP)`);
+  console.log(`SYNTARO Conversation Eval — tag=${tag}  repo=${repoOwner}/${repoName}  ${convCount} convs x ${turnCount} turns`);
+  console.log(`  backend=${syntaroUrl}  agent=ConversationAgent(real GitHub + real SYNTARO MCP)`);
 
   const scripts = buildScenarios(tag, { repoOwner, repoName }).slice(0, convCount);
-  const agent = new ConversationAgent({ repoOwner, repoName, stasUrl, stasApiKey, githubToken, mcpDelayMs });
+  const agent = new ConversationAgent({ repoOwner, repoName, syntaroUrl, syntaroApiKey, githubToken, mcpDelayMs });
 
   const conversations: EvalReport['conversations'] = [];
   let totalPassed = 0;

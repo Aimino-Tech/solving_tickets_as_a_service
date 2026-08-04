@@ -11,7 +11,7 @@ from celery import Celery
 # ---------------------------------------------------------------------------
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 SENTRY_ENV = os.getenv("SENTRY_ENVIRONMENT", os.getenv("NODE_ENV", "development"))
-SENTRY_RELEASE = os.getenv("SENTRY_RELEASE", "stas@unknown")
+SENTRY_RELEASE = os.getenv("SENTRY_RELEASE", "syntaro@unknown")
 
 if SENTRY_DSN:
     try:
@@ -50,11 +50,11 @@ else:
 
 logger = logging.getLogger(__name__)
 
-app = Celery("stas")
+app = Celery("syntaro")
 
 app.config_from_object("workers.celeryconfig")
 
-broker_url = os.getenv("CELERY_BROKER_URL", "amqp://guest:guest@localhost:5672/stas")
+broker_url = os.getenv("CELERY_BROKER_URL", "amqp://guest:guest@localhost:5672/syntaro")
 result_backend = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
 concurrency = int(os.getenv("WORKER_CONCURRENCY", "4"))
 

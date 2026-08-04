@@ -1,9 +1,9 @@
-import { test, expect } from '../../fixtures/stas-fixtures.js';
+import { test, expect } from '../../fixtures/syntaro-fixtures.js';
 
-const STAS_URL = process.env.STAS_URL || 'http://localhost:3000';
+const SYNTARO_URL = process.env.SYNTARO_URL || 'http://localhost:3000';
 
 test.describe('FE + BE Integration: Dispatch Flow', () => {
-  test('STAS can dispatch to OpenSymphony via HTTP', async ({ osyClient }) => {
+  test('SYNTARO can dispatch to OpenSymphony via HTTP', async ({ osyClient }) => {
     const alive = await osyClient.isAlive();
     test.skip(!alive, 'OpenSymphony is not reachable — skipping integration test');
 
@@ -12,7 +12,7 @@ test.describe('FE + BE Integration: Dispatch Flow', () => {
       repo: 'test-owner/test-repo',
       title: 'Automation Test Issue',
       body: 'Test issue body for integration testing',
-      labels: ['stas:fix'],
+      labels: ['syntaro:fix'],
       source: 'automation-test',
     });
 
@@ -35,7 +35,7 @@ test.describe('FE + BE Integration: Dispatch Flow', () => {
       repo: 'test-owner/test-repo',
       title: 'Poll Status Test',
       body: 'Testing status polling',
-      labels: ['stas:fix'],
+      labels: ['syntaro:fix'],
       source: 'automation-test',
     });
 
@@ -65,7 +65,7 @@ test.describe('FE + BE Integration: Dispatch Flow', () => {
       repo: 'test-owner/test-repo',
       title: 'Get Result Test',
       body: 'Testing result retrieval',
-      labels: ['stas:fix'],
+      labels: ['syntaro:fix'],
       source: 'automation-test',
     });
 
@@ -80,9 +80,9 @@ test.describe('FE + BE Integration: Dispatch Flow', () => {
   });
 
   test('Health check confirms both FE and BE are operational', async () => {
-    const stasResp = await fetch(`${STAS_URL}/health`);
-    expect([200, 503]).toContain(stasResp.status);
-    console.log('[INFO] STAS (FE) health: OK');
+    const syntaroResp = await fetch(`${SYNTARO_URL}/health`);
+    expect([200, 503]).toContain(syntaroResp.status);
+    console.log('[INFO] SYNTARO (FE) health: OK');
 
     let osyAlive = false;
     try {
@@ -95,6 +95,6 @@ test.describe('FE + BE Integration: Dispatch Flow', () => {
       return;
     }
     console.log('[INFO] OpenSymphony (BE) health: OK');
-    console.log('[PASS] Both STAS (FE) and OpenSymphony (BE) are connected and operational!');
+    console.log('[PASS] Both SYNTARO (FE) and OpenSymphony (BE) are connected and operational!');
   });
 });

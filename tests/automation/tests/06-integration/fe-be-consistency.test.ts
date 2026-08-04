@@ -1,6 +1,6 @@
-import { test, expect } from '../../fixtures/stas-fixtures.js';
+import { test, expect } from '../../fixtures/syntaro-fixtures.js';
 
-const STAS_URL = process.env.STAS_URL || 'http://localhost:3000';
+const SYNTARO_URL = process.env.SYNTARO_URL || 'http://localhost:3000';
 
 test.describe('FE + BE Consistency', () => {
   test('Dashboard page loads (may redirect to login if not authenticated)', async ({ loggedPage }) => {
@@ -13,9 +13,9 @@ test.describe('FE + BE Consistency', () => {
 
     if (url.includes('/login')) {
       console.log('[INFO] Not authenticated — redirected to login page. This is expected.');
-      expect(title).toMatch(/STAS/);
+      expect(title).toMatch(/SYNTARO/);
     } else {
-      expect(title).toMatch(/Dashboard|STAS/);
+      expect(title).toMatch(/Dashboard|SYNTARO/);
     }
   });
 

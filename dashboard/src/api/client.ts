@@ -9,7 +9,7 @@ const API_BASE = '/api';
 
 function getToken(): string | null {
   try {
-    return localStorage.getItem('stas_token');
+    return localStorage.getItem('syntaro_token');
   } catch {
     return null;
   }
@@ -17,13 +17,13 @@ function getToken(): string | null {
 
 export function setToken(token: string): void {
   try {
-    localStorage.setItem('stas_token', token);
+    localStorage.setItem('syntaro_token', token);
   } catch {}
 }
 
 export function getRefreshToken(): string | null {
   try {
-    return localStorage.getItem('stas_refresh_token');
+    return localStorage.getItem('syntaro_refresh_token');
   } catch {
     return null;
   }
@@ -31,14 +31,14 @@ export function getRefreshToken(): string | null {
 
 export function setRefreshToken(token: string): void {
   try {
-    localStorage.setItem('stas_refresh_token', token);
+    localStorage.setItem('syntaro_refresh_token', token);
   } catch {}
 }
 
 export function clearToken(): void {
   try {
-    localStorage.removeItem('stas_token');
-    localStorage.removeItem('stas_refresh_token');
+    localStorage.removeItem('syntaro_token');
+    localStorage.removeItem('syntaro_refresh_token');
   } catch {}
 }
 
@@ -82,14 +82,20 @@ export async function request<T>(
         console.warn('Token refresh failed:', refreshErr);
       }
     }
-    const _isLoginOrRegister = path.includes('/auth/login') || path.includes('/auth/register');
-    if (!_isLoginOrRegister) {
+    const _isLogin = path.includes('/auth/login') || path.includes('/auth/register');
+    const _isReset = path.includes('/auth/forgot-password') || path.includes('/auth/reset-password');
+    const _isAuthFlow = _isLogin || _isReset;
+    if (!_isAuthFlow) {
       clearToken();
       if (typeof window !== 'undefined') {
         window.location.href = '/login';
       }
     }
-    throw new Error(_isLoginOrRegister ? 'Invalid login credentials' : 'Unauthorized');
+    if (_isReset) {
+      const resetBody = await res.json().catch(() => ({ error: 'Invalid credentials' }));
+      throw new Error(typeof resetBody.error === 'string' ? resetBody.error : 'Invalid credentials');
+    }
+    throw new Error(_isLogin ? 'Invalid login credentials' : 'Unauthorized');
   }
 
   if (!res.ok) {
@@ -149,6 +155,46 @@ export interface BillingPlan {
   concurrentFixes?: number;
   hasBillingRecord?: boolean;
 }
+
+export interface BillingSettings {
+  autoReloadEnabled: boolean;
+  autoReloadThresholdCents: number | null;
+  autoReloadTopupCents: number | null;
+  monthlyLimitCents: number | null;
+  monthSpendCents?: number;
+}
+
+export interface Coupon {
+  id: number;
+  code: string;
+  amountCredits: number;
+  active: boolean;
+  maxRedemptions: number | null;
+  timesRedeemed: number;
+  createdAt: string;
+}
+
+export interface BillingSettingsUpdate {
+  autoReloadEnabled?: boolean;
+  autoReloadThresholdCents?: number | null;
+  autoReloadTopupCents?: number | null;
+  monthlyLimitCents?: number | null;
+}
+
+export const billingSettingsApi = {
+  get: (opts?: { signal?: AbortSignal }) =>
+    request<BillingSettings>('/v1/credits/billing-settings', opts),
+  update: (body: BillingSettingsUpdate) =>
+    request<{ settings: BillingSettings }>('/v1/credits/billing-settings', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  redeemCoupon: (code: string) =>
+    request<{ coupon: Coupon; newBalance: number }>('/v1/credits/redeem-coupon', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+};
 
 export const litellm = {
   usage: () =>
@@ -214,6 +260,16 @@ export const auth = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
+  forgotPassword: (email: string) =>
+    request<{ ok: boolean; message?: string }>('/v1/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (accessToken: string, password: string) =>
+    request<{ ok: boolean; message?: string }>('/v1/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ accessToken, password }),
+    }),
 me: () =>
   request<{ id: string; email: string; name: string | null; username?: string; avatarUrl?: string; plan?: string; createdAt: string }>('/v1/auth/me'),
   refresh: (refreshToken: string) =>
@@ -241,6 +297,86 @@ export const credits = {
     request<{ accountId: number; period: string; usage: MonthlyUsage[] }>(
       `/v1/credits/usage?period=${period}`, opts,
     ),
+  redeemCoupon: (code: string) =>
+    request<{ coupon: Coupon; newBalance: number }>('/v1/credits/redeem-coupon', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+};
+
+// -- Usage limits + provider routing (OpenCode Go "Go" parity, AIM-4645) --
+
+export interface UsageLimitWindow {
+  usedCredits: number;
+  limitCredits: number;
+  resetAt: string;
+}
+
+export interface UsageLimits {
+  continuous: UsageLimitWindow;
+  weekly: UsageLimitWindow;
+  monthly: UsageLimitWindow;
+  useBalanceAfterLimits: boolean;
+  enableChinaModels: boolean;
+  balance: number;
+}
+
+export const usageLimitsApi = {
+  get: (opts?: { signal?: AbortSignal }) =>
+    request<UsageLimits>('/v1/usage-limits', opts),
+  updatePreferences: (body: {
+    useBalanceAfterLimits?: boolean;
+    enableChinaModels?: boolean;
+  }) =>
+    request<{ success: boolean; useBalanceAfterLimits: boolean; enableChinaModels: boolean }>(
+      '/v1/usage-limits/preferences',
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+};
+
+// -- Usage & cost analytics (OpenCode Go "Kosten" parity) --
+
+export interface UsageSeriesPoint {
+  date: string;
+  [model: string]: string | number;
+}
+
+export interface UsageTotalsByModel {
+  model: string;
+  costCents: number;
+  runs: number;
+}
+
+export interface UsageRequest {
+  date: string;
+  model: string | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  costCents: number;
+  sessionId?: string;
+  runId?: number;
+  issueNumber?: number | null;
+  prUrl?: string | null;
+  durationMs?: number | null;
+}
+
+export interface UsageAnalytics {
+  month: string;
+  series: UsageSeriesPoint[];
+  totalsByModel: UsageTotalsByModel[];
+  requests: UsageRequest[];
+  filters: { models: string[]; apiKeys: string[] };
+}
+
+export const usageApi = {
+  get: (params?: { month?: string; model?: string; apiKey?: string }, opts?: { signal?: AbortSignal }) => {
+    const qs = new URLSearchParams();
+    if (params?.month) qs.set('month', params.month);
+    if (params?.model) qs.set('model', params.model);
+    if (params?.apiKey) qs.set('apiKey', params.apiKey);
+    const query = qs.toString();
+    return request<UsageAnalytics>(`/v1/credits/usage/usage${query ? `?${query}` : ''}`, opts);
+  },
 };
 
 export const runs = {
@@ -296,7 +432,7 @@ export interface GitHubInstallation {
     description: string | null;
     defaultBranch: string;
     language: string | null;
-    stasInstalled: boolean;
+    syntaroInstalled: boolean;
     webhookId: number | null;
   }>;
 }
@@ -319,6 +455,57 @@ export const repos = {
     }),
   disconnect: (id: string) =>
     request<{ success: boolean }>(`/repos/${id}`, { method: 'DELETE' }),
+};
+
+export interface TeamMember {
+  id: number;
+  teamId: number;
+  accountId: number;
+  role: 'admin' | 'member' | 'viewer';
+  monthlyLimitCredits: number | null;
+  joinedAt: string;
+  accountName?: string;
+  accountEmail?: string;
+  email?: string;
+}
+
+export interface TeamInvite {
+  id: number;
+  email: string;
+  role: string;
+  monthlyLimitCredits: number | null;
+  createdAt: string;
+}
+
+export interface TeamSummary {
+  id: number;
+  name: string;
+  role: 'admin' | 'member' | 'viewer';
+  ownerAccountId?: number;
+  memberCount?: number;
+}
+
+export const teamApi = {
+  me: () => request<{ team: TeamSummary }>('/teams/me'),
+  members: (teamId: number) =>
+    request<{ teamId: number; members: TeamMember[]; invites: TeamInvite[] }>(`/teams/${teamId}/members`),
+  invite: (teamId: number, body: { email: string; role?: string; monthlyLimitCredits?: number | null }) =>
+    request<{ success: boolean; invite?: { id: number; email: string } }>(`/teams/${teamId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  changeRole: (teamId: number, userId: number, role: string) =>
+    request<{ success: boolean }>(`/teams/${teamId}/members/${userId}/role`, {
+      method: 'POST',
+      body: JSON.stringify({ role }),
+    }),
+  setLimit: (teamId: number, userId: number, monthlyLimitCredits: number | null) =>
+    request<{ success: boolean; monthlyLimitCredits: number | null }>(
+      `/teams/${teamId}/members/${userId}/limit`,
+      { method: 'POST', body: JSON.stringify({ monthlyLimitCredits }) },
+    ),
+  revokeInvite: (teamId: number, inviteId: number) =>
+    request<{ success: boolean }>(`/teams/${teamId}/invites/${inviteId}`, { method: 'DELETE' }),
 };
 
 export const github = {
@@ -375,6 +562,32 @@ export const billing = {
       method: 'POST',
       body: JSON.stringify({ returnUrl }),
     }),
+};
+
+// -- Referral API (AIM-4643) --
+
+export interface ReferralReward {
+  id: number;
+  accountId: number;
+  referredEmail: string;
+  amountCredits: number;
+  status: 'pending' | 'claimed';
+  createdAt: string;
+  claimedAt: string | null;
+}
+
+export const referralApi = {
+  code: (opts?: { signal?: AbortSignal }) =>
+    request<{ code: string }>('/v1/referral/code', opts),
+  createCode: () =>
+    request<{ code: string }>('/v1/referral/code', { method: 'POST' }),
+  rewards: (opts?: { signal?: AbortSignal }) =>
+    request<{ rewards: ReferralReward[] }>('/v1/referral/rewards', opts),
+  claim: (id: number) =>
+    request<{ claimed: boolean; reward: ReferralReward; newBalance: number }>(
+      `/v1/referral/rewards/${id}/claim`,
+      { method: 'POST' },
+    ),
 };
 
 export interface WizardProgress {

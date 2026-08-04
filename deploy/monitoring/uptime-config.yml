@@ -1,7 +1,7 @@
-# STAS External Uptime Monitoring Configuration
+# SYNTARO External Uptime Monitoring Configuration
 
 monitors:
-  - name: "STAS /health - Core Liveness"
+  - name: "SYNTARO /health - Core Liveness"
     type: "http"
     url: "https://api.syntaro.io/health"
     check_interval: 30
@@ -10,7 +10,7 @@ monitors:
     expected_status_code: 200
     paused: false
 
-  - name: "STAS /health/queue - Queue Health"
+  - name: "SYNTARO /health/queue - Queue Health"
     type: "http"
     url: "https://api.syntaro.io/health/queue"
     check_interval: 60
@@ -19,7 +19,7 @@ monitors:
     expected_status_code: 200
     paused: false
 
-  - name: "STAS /api/pricing - Pricing API"
+  - name: "SYNTARO /api/pricing - Pricing API"
     type: "http"
     url: "https://api.syntaro.io/api/pricing"
     check_interval: 300
@@ -28,7 +28,7 @@ monitors:
     expected_status_code: 200
     paused: false
 
-  - name: "STAS Website - syntaro.io"
+  - name: "SYNTARO Website - syntaro.io"
     type: "http"
     url: "https://syntaro.io/"
     check_interval: 300
@@ -37,7 +37,7 @@ monitors:
     expected_status_code: 200
     paused: false
 
-  - name: "STAS Synthetic E2E - Full Pipeline"
+  - name: "SYNTARO Synthetic E2E - Full Pipeline"
     type: "heartbeat"
     url: "https://api.syntaro.io/monitoring/synthetic-heartbeat"
     check_interval: 300

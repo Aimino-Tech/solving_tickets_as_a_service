@@ -34,8 +34,8 @@ REPLACEMENT_SYSTEM_PROMPT = "[REDACTED_SYSTEM_PROMPT]"
 REPLACEMENT_INTERNAL_IP = "[REDACTED_INTERNAL_IP]"
 REPLACEMENT_GENERIC = "[REDACTED]"
 
-ENV_ENABLED = "STAS_SANITIZER_ENABLED"
-ENV_ALLOWLIST = "STAS_SANITIZER_ALLOWLIST"
+ENV_ENABLED = "SYNTARO_SANITIZER_ENABLED"
+ENV_ALLOWLIST = "SYNTARO_SANITIZER_ALLOWLIST"
 
 
 class SanitizationRule(NamedTuple):
@@ -169,12 +169,12 @@ _INTERNAL_URL_RULES: list[SanitizationRule] = [
         description="Local .local hostname URL",
     ),
     SanitizationRule(
-        name="stas_internal",
+        name="syntaro_internal",
         category="internal_urls",
-        pattern=_re(r"https?://stas[-.][a-zA-Z0-9.-]+(?::\d+)?(?:/[^\s\"')\]]*)?"),
+        pattern=_re(r"https?://syntaro[-.][a-zA-Z0-9.-]+(?::\d+)?(?:/[^\s\"')\]]*)?"),
         replacement=REPLACEMENT_URL,
         severity=SEVERITY_HIGH,
-        description="STAS internal service URL",
+        description="SYNTARO internal service URL",
     ),
     SanitizationRule(
         name="localhost",

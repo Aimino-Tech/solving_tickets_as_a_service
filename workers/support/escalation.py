@@ -111,7 +111,7 @@ ESCALATION_BACKOFF_MAX_SECONDS: int = int(
 
 ESCALATION_REDIS_PREFIX: str = os.getenv(
     "ESCALATION_REDIS_PREFIX",
-    "stas:escalation:",
+    "syntaro:escalation:",
 )
 """Redis key prefix for escalation state."""
 

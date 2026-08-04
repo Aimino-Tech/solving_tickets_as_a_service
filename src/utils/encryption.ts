@@ -9,7 +9,7 @@ const IV_LENGTH = 16;
 const TAG_LENGTH = 16;
 
 function getEncryptionKey(): Buffer {
-  const secret = process.env.ENCRYPTION_SECRET || process.env.JWT_SECRET || 'stas-default-dev-key-change-in-production-32';
+  const secret = process.env.ENCRYPTION_SECRET || process.env.JWT_SECRET || 'syntaro-default-dev-key-change-in-production-32';
   // Ensure key is exactly 32 bytes (256 bits)
   return crypto.createHash('sha256').update(secret).digest();
 }

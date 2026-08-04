@@ -1,12 +1,12 @@
-# STAS — GitHub Marketplace Listing
+# SYNTARO — GitHub Marketplace Listing
 
-> Ready-to-submit listing copy for the STAS GitHub App on [GitHub Marketplace](https://github.com/marketplace).
+> Ready-to-submit listing copy for the SYNTARO GitHub App on [GitHub Marketplace](https://github.com/marketplace).
 
 ---
 
 ## App Name
 
-**STAS — Solving Tickets As A Service**
+**SYNTARO — Solving Tickets As A Service**
 
 ---
 
@@ -14,7 +14,7 @@
 
 *Maximum 180 characters — shown in search results and card views.*
 
-> Automated AI bug fix bot for GitHub issues. Reads your repo, plans the root cause analysis, and opens a pull request — all from a single `stas:fix` label.
+> Automated AI bug fix bot for GitHub issues. Reads your repo, plans the root cause analysis, and opens a pull request — all from a single `syntaro:fix` label.
 
 **Character count:** 162/180 ✓
 
@@ -27,16 +27,16 @@
 *Maximum 1,000 characters — main listing body.*
 *Current count: ~990 characters.*
 
-STAS is an automated AI bug fix bot that reads your entire codebase, plans the root cause analysis, and opens a pull request — all from a single `stas:fix` label. No IDE required. No context switching. Just label an issue and come back to a PR with passing tests.
+SYNTARO is an automated AI bug fix bot that reads your entire codebase, plans the root cause analysis, and opens a pull request — all from a single `syntaro:fix` label. No IDE required. No context switching. Just label an issue and come back to a PR with passing tests.
 
 ### How It Works
 
-1. **Label any issue** with `stas:fix` — no special syntax, no commands to remember
-2. **STAS reads your full repo** — not just one file, not just the diff — the entire codebase including configs, tests, and dependencies
+1. **Label any issue** with `syntaro:fix` — no special syntax, no commands to remember
+2. **SYNTARO reads your full repo** — not just one file, not just the diff — the entire codebase including configs, tests, and dependencies
 3. **You get a detailed plan** — root cause analysis and fix approach, posted as an issue comment
-4. **After approval, STAS writes the fix** — runs your tests, opens a draft PR with passing checks
+4. **After approval, SYNTARO writes the fix** — runs your tests, opens a draft PR with passing checks
 
-### Why STAS
+### Why SYNTARO
 
 - **92% fix pass rate** on XOR benchmark — 2x the industry average
 - **97M+ MCP monthly SDK downloads** — proven ecosystem
@@ -44,15 +44,15 @@ STAS is an automated AI bug fix bot that reads your entire codebase, plans the r
 
 ### Try It First
 
-Visit the [STAS Demo Repository](https://github.com/Aimino-Tech/stas-demo) — a public app with 15+ seeded bugs. Label any issue with `stas:fix` and see STAS create a PR in minutes. No installation required.
+Visit the [SYNTARO Demo Repository](https://github.com/Aimino-Tech/syntaro-demo) — a public app with 15+ seeded bugs. Label any issue with `syntaro:fix` and see SYNTARO create a PR in minutes. No installation required.
 
 ### Key Features
 
-- **Plan-first architecture** — see what STAS plans to do before it writes any code. Review the approach, approve or request changes, then watch it execute
-- **Full-repo context** — STAS doesn't just look at lines around the bug. It understands your entire codebase, including tests, configs, and dependencies
+- **Plan-first architecture** — see what SYNTARO plans to do before it writes any code. Review the approach, approve or request changes, then watch it execute
+- **Full-repo context** — SYNTARO doesn't just look at lines around the bug. It understands your entire codebase, including tests, configs, and dependencies
 - **Async workflow** — label an issue now, come back to a PR. Works while you sleep. No pairing, no screen sharing, no context switching
 - **Open core** — AGPL v3 licensed. Self-host on your own infrastructure or use the cloud version. No vendor lock-in
-- **MCP-enabled** — connect STAS to any MCP-compatible agent (Claude Desktop, Cursor, Codex CLI, OpenCode) for zero-config setup
+- **MCP-enabled** — connect SYNTARO to any MCP-compatible agent (Claude Desktop, Cursor, Codex CLI, OpenCode) for zero-config setup
 - **AI trust first** — every PR passes 6 quality gates before review: reality, compile, test integrity, hallucination scan, dead code check, and MCI verification
 
 ### Pricing
@@ -79,9 +79,9 @@ Solo developers, small teams, and organizations tired of backlog bugs. Free tier
 
 ### Get Started
 
-[Install STAS on GitHub Marketplace →](https://github.com/marketplace/actions/stas-eval)
+[Install SYNTARO on GitHub Marketplace →](https://github.com/marketplace/actions/syntaro-eval)
 
-Label an issue with `stas:fix` and watch your backlog shrink.
+Label an issue with `syntaro:fix` and watch your backlog shrink.
 
 ---
 
@@ -103,7 +103,7 @@ Keywords to ensure appear in listing copy for maximum Marketplace discoverabilit
 
 **Code review / Automated fixes**
 
-> GitHub Marketplace categories: "Code review", "Automated fixes", "Bots", "Developer tools". "Code review / Automated fixes" matches both and is where STAS will appear in search.
+> GitHub Marketplace categories: "Code review", "Automated fixes", "Bots", "Developer tools". "Code review / Automated fixes" matches both and is where SYNTARO will appear in search.
 >
 > **Target tags:** ai-assisted, code-review, automated-fixes, bots, developer-tools, pull-requests
 
@@ -127,7 +127,7 @@ Tracked in `src/mcp/agentServer.ts` via existing `captureEvent` from `src/analyt
 ### Logo (120×120 PNG)
 
 **What to create:**
-- STAS wordmark or icon mark
+- SYNTARO wordmark or icon mark
 - Clean, recognizable at small size
 - High contrast for both dark and light Marketplace themes
 - Format: PNG, transparent background preferred
@@ -135,7 +135,7 @@ Tracked in `src/mcp/agentServer.ts` via existing `captureEvent` from `src/analyt
 **Design specs:**
 - 120×120 pixels (GitHub requires exact 1:1 aspect)
 - Max file size: 1MB
-- Use the STAS brand colors (see `docs/brand-guide.md` or `public/github-app-manifest.json`)
+- Use the SYNTARO brand colors (see `docs/brand-guide.md` or `public/github-app-manifest.json`)
 
 ### Listing Screenshot (1280×640 PNG)
 
@@ -144,17 +144,17 @@ Three options — pick one or all:
 **Option 1: Plan Output (Recommended)**
 *Captures the plan-first differentiator.*
 
-- Navigate to a GitHub issue where STAS has posted a plan comment
+- Navigate to a GitHub issue where SYNTARO has posted a plan comment
 - Capture the full issue view showing:
   - Issue title and description at top
-  - STAS's plan comment below with "Root Cause Analysis" and "Fix Approach" sections
+  - SYNTARO's plan comment below with "Root Cause Analysis" and "Fix Approach" sections
   - Resolution: 1280×640
   - Annotate with a subtle highlight box around the plan comment
 
 **Option 2: Dashboard (Cloud Users)**
 *Shows fix history and metrics.*
 
-- Navigate to the STAS dashboard at `https://syntaro.io`
+- Navigate to the SYNTARO dashboard at `https://syntaro.io`
 - Capture the main analytics view showing:
   - Fix success rate
   - Recent fix history
@@ -164,7 +164,7 @@ Three options — pick one or all:
 **Option 3: Split View (Issue + PR)**
 *Shows the full workflow in one image.*
 
-- Left half: Issue view with the `stas:fix` label visible
+- Left half: Issue view with the `syntaro:fix` label visible
 - Right half: The resulting PR with passing checks
 - Resolution: 1280×640
 - Add a curved arrow or "60 seconds later" transition element
@@ -173,7 +173,7 @@ Three options — pick one or all:
 - Format: PNG
 - Max file size: 2MB
 - No text smaller than 14px (must be readable at thumbnail size)
-- STAS branding visible in the image
+- SYNTARO branding visible in the image
 - No sensitive data shown (use a demo repo)
 
 ### Demo GIF (Optional — Highly Recommended)
@@ -182,13 +182,13 @@ Three options — pick one or all:
 
 | Time | Scene | Description |
 |------|-------|-------------|
-| 0:00–0:03 | **Intro** | Browser tab titled "GitHub — stas-demo/issues" with an open issue. Issue has label `stas:fix` |
-| 0:03–0:08 | **Label applied** | User clicks "Labels" → selects `stas:fix` → label appears on issue |
-| 0:08–0:10 | **Transition** | Fade to black or flash effect showing "STAS is working..." |
-| 0:10–0:22 | **Plan appears** | Issue auto-refreshes showing STAS's plan comment: "Root Cause Analysis" + "Fix Approach" |
-| 0:22–0:25 | **Approval** | User comments `/stas approve` or the plan shows auto-approval timer |
-| 0:25–0:35 | **PR created** | Cut to the PR view: STAS has created a draft PR with code changes and passing check runs |
-| 0:35–0:42 | **Outro** | Zoom out to dashboard showing fix history. Overlay text: "STAS — Label. Fix. Ship." and URL |
+| 0:00–0:03 | **Intro** | Browser tab titled "GitHub — syntaro-demo/issues" with an open issue. Issue has label `syntaro:fix` |
+| 0:03–0:08 | **Label applied** | User clicks "Labels" → selects `syntaro:fix` → label appears on issue |
+| 0:08–0:10 | **Transition** | Fade to black or flash effect showing "SYNTARO is working..." |
+| 0:10–0:22 | **Plan appears** | Issue auto-refreshes showing SYNTARO's plan comment: "Root Cause Analysis" + "Fix Approach" |
+| 0:22–0:25 | **Approval** | User comments `/syntaro approve` or the plan shows auto-approval timer |
+| 0:25–0:35 | **PR created** | Cut to the PR view: SYNTARO has created a draft PR with code changes and passing check runs |
+| 0:35–0:42 | **Outro** | Zoom out to dashboard showing fix history. Overlay text: "SYNTARO — Label. Fix. Ship." and URL |
 
 **Technical requirements:**
 - Duration: 30–45 seconds
@@ -197,7 +197,7 @@ Three options — pick one or all:
 - Frame rate: 15–24 fps
 - Codec: H.264 (widest compatibility)
 - No audio
-- Clean UI: use a demo repo (`stas-demo` or similar) with sanitized data
+- Clean UI: use a demo repo (`syntaro-demo` or similar) with sanitized data
 
 **Recording tools:**
 - [Kap](https://getkap.co/) (macOS, free, lightweight)

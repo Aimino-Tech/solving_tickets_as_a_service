@@ -1,12 +1,12 @@
 # Self-Hosting Guide
 
-> **Everything you need to run STAS on your own infrastructure.**
+> **Everything you need to run SYNTARO on your own infrastructure.**
 
 ---
 
 ### ⚠️ Self-Host Limitations
 
-Self-hosting STAS is **unlimited** — there are no artificial caps on fixes, repos, or users. However, the self-hosted (OSS) version comes with important caveats:
+Self-hosting SYNTARO is **unlimited** — there are no artificial caps on fixes, repos, or users. However, the self-hosted (OSS) version comes with important caveats:
 
 | Area | Self-Host (OSS) | Cloud Paid ($49–$149/mo) |
 |------|-----------------|--------------------------|
@@ -86,7 +86,7 @@ opencode serve --port 4096
 
 # 7. Verify it's running
 curl http://localhost:3000/health
-# → {"status":"ok","label":"stas:fix","uptime":42,"timestamp":"..."}
+# → {"status":"ok","label":"syntaro:fix","uptime":42,"timestamp":"..."}
 ```
 
 ---
@@ -99,7 +99,7 @@ curl http://localhost:3000/health
    - Or directly: `https://github.com/settings/apps/new`
 
 2. Fill in the basic info:
-   - **GitHub App name**: `stas-bot` (or your preferred name)
+   - **GitHub App name**: `syntaro-bot` (or your preferred name)
    - **Homepage URL**: `https://github.com/tamnguyen08/solving_tickets_as_a_service`
    - **Webhook URL**: `https://your-domain.com/webhook` (use `https://smee.io/your-channel` for local dev)
    - **Webhook secret**: Generate a strong random secret:
@@ -130,13 +130,13 @@ Subscribe to these webhook events:
 3. Download the `.pem` file
 4. Store it securely:
    ```bash
-   mv ~/Downloads/stas-bot.*.pem /etc/stas/github-private-key.pem
-   chmod 600 /etc/stas/github-private-key.pem
+   mv ~/Downloads/syntaro-bot.*.pem /etc/syntaro/github-private-key.pem
+   chmod 600 /etc/syntaro/github-private-key.pem
    ```
 
 ### Step 5: Install the App
 
-1. Go to your app settings page (e.g., `https://github.com/settings/apps/stas-bot`)
+1. Go to your app settings page (e.g., `https://github.com/settings/apps/syntaro-bot`)
 2. Click **Install App** in the sidebar
 3. Choose the repositories (or all repositories)
 4. Note the **Installation ID** — you can find it in the URL after installation:
@@ -158,7 +158,7 @@ Create a `.env` file with these required values:
 ```bash
 # === GitHub App (Required) ===
 GITHUB_APP_ID=123456                         # Your GitHub App ID
-GITHUB_APP_PRIVATE_KEY_PATH=/etc/stas/github-private-key.pem  # Path to PEM file
+GITHUB_APP_PRIVATE_KEY_PATH=/etc/syntaro/github-private-key.pem  # Path to PEM file
 # OR inline the key (replace \n with actual newlines):
 # GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nMIIEpA...\n-----END RSA PRIVATE KEY-----"
 
@@ -181,7 +181,7 @@ NODE_ENV=production                            # Enable production optimizations
 
 # === GitHub App ===
 GITHUB_APP_ID=123456
-GITHUB_APP_PRIVATE_KEY_PATH=/etc/stas/github-private-key.pem
+GITHUB_APP_PRIVATE_KEY_PATH=/etc/syntaro/github-private-key.pem
 GITHUB_WEBHOOK_SECRET=your-webhook-secret-here
 
 # === Queue (Production Redis) ===
@@ -199,7 +199,7 @@ FALLBACK_MODELS=gpt-4o,claude-haiku
 # === Sandbox (Choose one) ===
 # E2B (recommended for production):
 E2B_API_KEY=e2b_api_key_here
-E2B_TEMPLATE_ID=stas-default
+E2B_TEMPLATE_ID=syntaro-default
 
 # Docker (alternative):
 # DOCKER_IMAGE=ubuntu:24.04
@@ -215,23 +215,23 @@ LOG_LEVEL=info
 SENTRY_DSN=https://your-dsn@o0.ingest.sentry.io/0
 
 # === Database (for audit persistence) ===
-DATABASE_URL=postgres://user:password@postgres:5432/stas
+DATABASE_URL=postgres://user:password@postgres:5432/syntaro
 DATABASE_SSL=true
 
 # === Slack Notifications ===
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T0000/B0000/xxxxx
-SLACK_CHANNEL=#stas-alerts
+SLACK_CHANNEL=#syntaro-alerts
 
-# === STAS Settings ===
-STAS_LABEL=stas:fix
-BOT_NAME=STAS
+# === SYNTARO Settings ===
+SYNTARO_LABEL=syntaro:fix
+BOT_NAME=SYNTARO
 MAX_AGENT_ITERATIONS=40
 FIX_TIMEOUT_MS=600000                          # 10 minutes
 ```
 
 ### Validating Configuration
 
-STAS validates all environment variables at startup using Zod schemas. If any required values are missing or invalid, you'll see grouped error messages like:
+SYNTARO validates all environment variables at startup using Zod schemas. If any required values are missing or invalid, you'll see grouped error messages like:
 
 ```
 Invalid environment configuration:
@@ -241,9 +241,9 @@ Invalid environment configuration:
 
 Use the config validation tool:
 ```bash
-npm run stas:config
+npm run syntaro:config
 # or
-bash plugin/tools/stas-config.sh check
+bash plugin/tools/syntaro-config.sh check
 ```
 
 ---
@@ -258,8 +258,8 @@ docker compose up
 ```
 
 The `docker-compose.yml` starts:
-- `stas-redis` — Redis 7 (persistent, health-checked)
-- `stas-bot` — STAS bot with hot-reload via `tsx watch`
+- `syntaro-redis` — Redis 7 (persistent, health-checked)
+- `syntaro-bot` — SYNTARO bot with hot-reload via `tsx watch`
 
 ### Production Stack
 
@@ -277,7 +277,7 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     command: serve --port 4096
 
-  stas-webhook:
+  syntaro-webhook:
     build: .
     ports: ["3000:3000"]
     environment:
@@ -285,7 +285,7 @@ services:
       # ... all other env vars
     depends_on: [redis]
 
-  stas-worker:
+  syntaro-worker:
     build: .
     environment:
       - RUN_MODE=worker
@@ -298,7 +298,7 @@ services:
     ports: ["443:443"]
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
-    depends_on: [stas-webhook]
+    depends_on: [syntaro-webhook]
 ```
 
 Start the full stack:
@@ -306,7 +306,7 @@ Start the full stack:
 docker compose -f docker-compose.prod.yml up -d
 
 # Scale workers
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=4
 ```
 
 ---
@@ -315,10 +315,10 @@ docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4
 
 ```bash
 # Build the image
-docker build -t stas-bot .
+docker build -t syntaro-bot .
 
 # Run with environment file
-docker run -p 3000:3000 --env-file .env stas-bot
+docker run -p 3000:3000 --env-file .env syntaro-bot
 
 # Run with individual env vars
 docker run -p 3000:3000 \
@@ -326,7 +326,7 @@ docker run -p 3000:3000 \
   -e GITHUB_WEBHOOK_SECRET=your-secret \
   -e REDIS_URL=redis://host.docker.internal:6379 \
   -e OPENCODE_URL=http://host.docker.internal:4096 \
-  stas-bot
+  syntaro-bot
 ```
 
 ### Dockerfile Highlights
@@ -364,37 +364,37 @@ CMD ["node", "dist/index.js"]
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stas-bot
+  name: syntaro-bot
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: stas-bot
+      app: syntaro-bot
   template:
     metadata:
       labels:
-        app: stas-bot
+        app: syntaro-bot
     spec:
       containers:
-      - name: stas-bot
-        image: stas-bot:latest
+      - name: syntaro-bot
+        image: syntaro-bot:latest
         ports:
         - containerPort: 3000
         env:
         - name: GITHUB_APP_ID
           valueFrom:
             secretKeyRef:
-              name: stas-secrets
+              name: syntaro-secrets
               key: github-app-id
         - name: GITHUB_WEBHOOK_SECRET
           valueFrom:
             secretKeyRef:
-              name: stas-secrets
+              name: syntaro-secrets
               key: github-webhook-secret
         - name: REDIS_URL
-          value: redis://stas-redis:6379
+          value: redis://syntaro-redis:6379
         - name: OPENCODE_URL
-          value: http://stas-opencode:4096
+          value: http://syntaro-opencode:4096
         livenessProbe:
           httpGet:
             path: /health
@@ -411,10 +411,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: stas-bot
+  name: syntaro-bot
 spec:
   selector:
-    app: stas-bot
+    app: syntaro-bot
   ports:
   - port: 3000
     targetPort: 3000
@@ -427,7 +427,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: stas-secrets
+  name: syntaro-secrets
 type: Opaque
 stringData:
   github-app-id: "123456"
@@ -442,9 +442,9 @@ stringData:
 
 ```bash
 helm repo add bitnami https://charts.bitnami.com/bitnami
-helm install stas-redis bitnami/redis \
+helm install syntaro-redis bitnami/redis \
   --set auth.enabled=true \
-  --set auth.password=stas-redis-password \
+  --set auth.password=syntaro-redis-password \
   --set replica.replicaCount=1
 ```
 
@@ -563,7 +563,7 @@ fly scale count 2
 ```bash
 # Basic health
 curl http://localhost:3000/health
-# → {"status":"ok","label":"stas:fix","uptime":3600,"timestamp":"..."}
+# → {"status":"ok","label":"syntaro:fix","uptime":3600,"timestamp":"..."}
 
 # Database health
 curl http://localhost:3000/health/db
@@ -580,15 +580,15 @@ curl http://localhost:3000/api/v1/admin/queue/metrics
 
 ### Logs
 
-STAS uses **pino** for structured JSON logging:
+SYNTARO uses **pino** for structured JSON logging:
 
 ```bash
 # Human-readable output (development)
 npm run dev | npx pino-pretty
 
 # Production JSON (ingest by Logstash/Datadog)
-docker compose logs -f stas-bot
-# → {"level":30,"time":1712345678000,"pid":1,"host":"stas-bot","module":"server","msg":"STAS server listening on :3000"}
+docker compose logs -f syntaro-bot
+# → {"level":30,"time":1712345678000,"pid":1,"host":"syntaro-bot","module":"server","msg":"SYNTARO server listening on :3000"}
 ```
 
 Key log modules:
@@ -607,7 +607,7 @@ Key log modules:
 Configure Slack webhook for alerts:
 ```bash
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T0000/B0000/xxxxx
-SLACK_CHANNEL=#stas-alerts
+SLACK_CHANNEL=#syntaro-alerts
 ```
 
 Alert thresholds (configurable):
@@ -620,7 +620,7 @@ Alert thresholds (configurable):
 
 ### Dashboard
 
-The STAS dashboard (analytics, run history) is served by the same Express server in production:
+The SYNTARO dashboard (analytics, run history) is served by the same Express server in production:
 
 ```bash
 # Build the dashboard alongside the API
@@ -635,9 +635,9 @@ The dashboard is served automatically when `dashboard/dist/` exists at startup. 
 | Component | Scale Strategy |
 |---|---|
 | **Webhook API** | Horizontal (multiple pods behind load balancer) |
-| **Worker** | Horizontal (set `--scale stas-worker=N`) |
+| **Worker** | Horizontal (set `--scale syntaro-worker=N`) |
 | **Redis** | Vertical (more memory) or Redis Cluster |
-| **OpenCode** | Dedicated instance per STAS instance |
+| **OpenCode** | Dedicated instance per SYNTARO instance |
 | **Sandbox** | E2B auto-scales; Docker needs host capacity |
 | **Dashboard** | Served by webhook API; scales with it |
 
@@ -649,13 +649,13 @@ The dashboard is served automatically when `dashboard/dist/` exists at startup. 
 
 ```bash
 # 1. Check the webhook arrived
-docker compose logs stas-bot | grep "Received GitHub webhook"
+docker compose logs syntaro-bot | grep "Received GitHub webhook"
 # 2. Check label matching
-docker compose logs stas-bot | grep "Ignoring non-target label"
+docker compose logs syntaro-bot | grep "Ignoring non-target label"
 # 3. Check enqueue
-docker compose logs stas-bot | grep "Issue enqueued"
+docker compose logs syntaro-bot | grep "Issue enqueued"
 # 4. Check worker processing
-docker compose logs stas-bot | grep "Processing issue job"
+docker compose logs syntaro-bot | grep "Processing issue job"
 ```
 
 ### Redis connection refused
@@ -665,10 +665,10 @@ docker compose logs stas-bot | grep "Processing issue job"
 redis-cli -u redis://localhost:6379 ping
 
 # Check if Redis is running
-docker compose ps stas-redis
+docker compose ps syntaro-redis
 
 # Check logs
-docker compose logs stas-redis
+docker compose logs syntaro-redis
 ```
 
 ### OpenCode connection refused

@@ -1,4 +1,4 @@
-# STAS Launch Day Run Sheet — T-60min to T+48h
+# SYNTARO Launch Day Run Sheet — T-60min to T+48h
 
 > **Launch Commander**: Marketing Lead
 > **Purpose**: Condensed checklist for launch-day execution. Print this sheet.
@@ -46,11 +46,11 @@
 | T+16min | Submit `r/devtools` post | Content Lead | Different angle from `r/programming` |
 | T+17min | Submit `r/MachineLearning` post | Content Lead | ML/AI angle |
 | T+20min | Supporters comment on Reddit posts | Community Lead | 2-3 organic-feeling comments each |
-| T+25min | Verify no HN→Reddit cross-linking | Launch Commander | All Reddit posts link to STAS site |
+| T+25min | Verify no HN→Reddit cross-linking | Launch Commander | All Reddit posts link to SYNTARO site |
 | T+30min | Reddit traction report in `#launch-metrics` | Content Lead | Upvotes + comments across all 3 posts |
 
 **Monitor**: Reddit upvote velocity, comment quality
-**Rule**: Link to STAS website, NOT to the HN post
+**Rule**: Link to SYNTARO website, NOT to the HN post
 
 ---
 

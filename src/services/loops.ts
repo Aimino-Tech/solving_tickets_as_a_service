@@ -37,7 +37,7 @@ export async function syncContact(contact: LoopsContact): Promise<boolean> {
         firstName: contact.firstName,
         lastName: contact.lastName,
         userId: contact.userId,
-        source: contact.source || 'stas',
+        source: contact.source || 'syntaro',
         subscribedToEmails: contact.subscribedToEmails ?? true,
       }),
     });

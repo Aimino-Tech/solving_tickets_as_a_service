@@ -284,7 +284,7 @@ class TestOAuthTokenStoreEdgeCases:
 
     def test_get_token_corrupted_data_returns_none(self, mock_redis: DictRedisMock):
         """If the stored data is corrupted, get_token should return None."""
-        mock_redis._data["stas:oauth:token:corrupted"] = "not valid json"
+        mock_redis._data["syntaro:oauth:token:corrupted"] = "not valid json"
 
         store = OAuthTokenStore()
         token = store.get_token("corrupted")

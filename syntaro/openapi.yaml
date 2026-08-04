@@ -1,0 +1,401 @@
+openapi: 3.1.0
+info:
+  title: SYNTARO API — Solving Tickets As A Service
+  version: "1.0.0"
+  description: |
+    SYNTARO is an open-source GitHub bot that turns labeled issues into pull requests.
+
+    ## RapidAPI Marketplace
+
+    Subscribe on RapidAPI to get an API key and start submitting fix jobs programmatically.
+
+    ### Features
+
+    - **Fix Submission** — Submit a GitHub issue and get a fix PR created automatically
+    - **Job Polling** — Poll for status with a simple job ID
+    - **Public Eval Results** — See benchmark performance before subscribing
+    - **Tiered Plans** — Free (10 req/day), Pro (100 req/day), Enterprise (1000 req/day)
+
+    ### Rate Limiting
+
+    RapidAPI subscribers are rate-limited by plan tier:
+    - **Free**: 10 requests/day
+    - **Pro**: 100 requests/day
+    - **Enterprise**: 1000 requests/day
+
+    Rate limit headers are returned with every response:
+    - `X-RateLimit-Limit` — Maximum requests per window
+    - `X-RateLimit-Remaining` — Requests remaining
+    - `X-RateLimit-Plan` — Your current plan tier
+    - `Retry-After` — Seconds to wait (only on 429 responses)
+
+  contact:
+    name: Aimino Tech
+    email: team@aimino.io
+    url: https://syntaro.io
+  license:
+    name: MIT
+    url: https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/LICENSE
+
+servers:
+  - url: https://syntaro-rapidapi.p.rapidapi.com
+    description: RapidAPI production endpoint
+  - url: https://api.syntaro.io
+    description: Direct API endpoint (self-hosted)
+
+tags:
+  - name: Fix Jobs
+    description: Submit and manage automated fix jobs
+  - name: Eval Results
+    description: Public benchmark evaluation results
+  - name: Health
+    description: Service health checks
+
+paths:
+  /api/fix:
+    post:
+      summary: Submit a fix job
+      description: |
+        Submit a GitHub issue URL to SYNTARO for automated investigation, fix generation,
+        test suite execution, and PR creation.
+      operationId: submitFix
+      tags:
+        - Fix Jobs
+      x-rapidapi-pricing:
+        - Free: 5/day
+        - Pro: 50/day
+        - Enterprise: 500/day
+      parameters:
+        - name: X-RapidAPI-Key
+          in: header
+          required: true
+          schema:
+            type: string
+          description: RapidAPI subscription key
+        - name: X-RapidAPI-Proxy-Secret
+          in: header
+          required: true
+          schema:
+            type: string
+          description: RapidAPI proxy secret
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - repoUrl
+              properties:
+                repoUrl:
+                  type: string
+                  format: uri
+                  description: Full GitHub repository URL
+                  example: "https://github.com/owner/repo"
+                issueTitle:
+                  type: string
+                  description: Issue title describing the bug or feature
+                  example: "Login endpoint returns 500 for special characters"
+                  maxLength: 500
+                issueBody:
+                  type: string
+                  description: Detailed issue description with reproduction steps
+                  example: "When email contains +, the login endpoint crashes with a 500 error."
+                  maxLength: 10000
+                issueNumber:
+                  type: integer
+                  description: Existing GitHub issue number (alternative to title+body)
+                  example: 42
+      responses:
+        "202":
+          description: Fix job accepted and queued
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+              description: Rate limit ceiling
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+              description: Requests remaining in window
+            X-RateLimit-Plan:
+              schema:
+                type: string
+              description: Current plan tier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobAccepted"
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/fix/{jobId}:
+    get:
+      summary: Poll job status
+      description: Poll a submitted fix job for current status, results, and PR details.
+      operationId: getJobStatus
+      tags:
+        - Fix Jobs
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Job ID returned from submitFix
+          example: "syntaro_job_abc123"
+        - name: X-RapidAPI-Key
+          in: header
+          required: true
+          schema:
+            type: string
+          description: RapidAPI subscription key
+        - name: X-RapidAPI-Proxy-Secret
+          in: header
+          required: true
+          schema:
+            type: string
+          description: RapidAPI proxy secret
+      responses:
+        "200":
+          description: Job status and results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatus"
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/eval/results:
+    get:
+      summary: Get aggregate eval results
+      description: Public endpoint — no auth required. Returns aggregate SYNTARO benchmark performance data.
+      operationId: getEvalResults
+      tags:
+        - Eval Results
+      responses:
+        "200":
+          description: Aggregate evaluation results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvalResults"
+
+  /api/eval/latest:
+    get:
+      summary: Get latest eval run
+      description: Public endpoint — no auth required. Returns the most recent full evaluation run details.
+      operationId: getLatestEval
+      tags:
+        - Eval Results
+      responses:
+        "200":
+          description: Latest eval run data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LatestEval"
+
+  /api/health:
+    get:
+      summary: Health check
+      description: Public endpoint — no auth required. Returns service health status.
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  uptime:
+                    type: number
+                    example: 3600
+
+components:
+  schemas:
+    JobAccepted:
+      type: object
+      required:
+        - jobId
+        - status
+        - estimatedWaitSeconds
+      properties:
+        jobId:
+          type: string
+          description: Unique job identifier for polling
+          example: "syntaro_job_abc123"
+        status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - completed
+            - failed
+          example: "pending"
+        estimatedWaitSeconds:
+          type: integer
+          description: Estimated time until completion
+          example: 120
+        pollUrl:
+          type: string
+          format: uri
+          description: URL to poll for job status
+          example: "https://syntaro-rapidapi.p.rapidapi.com/api/fix/syntaro_job_abc123"
+
+    JobStatus:
+      type: object
+      required:
+        - jobId
+        - status
+      properties:
+        jobId:
+          type: string
+          example: "syntaro_job_abc123"
+        status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - completed
+            - failed
+        prUrl:
+          type: string
+          format: uri
+          description: URL to the created PR (only on completion)
+          example: "https://github.com/owner/repo/pull/42"
+        branch:
+          type: string
+          description: Git branch created for the fix
+          example: "syntaro-fix/login-validation-bug"
+        summary:
+          type: string
+          description: Human-readable summary of the fix
+          example: "Fixed input sanitization in login endpoint"
+        testResults:
+          type: object
+          properties:
+            passed:
+              type: integer
+              example: 15
+            failed:
+              type: integer
+              example: 0
+            newTests:
+              type: integer
+              description: Number of new regression tests added
+              example: 2
+        error:
+          type: string
+          description: Error message if job failed
+          example: "Repository not found or inaccessible"
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    EvalResults:
+      type: object
+      properties:
+        overallPassRate:
+          type: number
+          format: float
+          description: Overall pass rate percentage
+          example: 72.5
+        benchmarkCount:
+          type: integer
+          example: 40
+        lastUpdated:
+          type: string
+          format: date-time
+        benchmarks:
+          type: array
+          items:
+            $ref: "#/components/schemas/BenchmarkResult"
+
+    BenchmarkResult:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "SWE-bench Lite"
+        passRate:
+          type: number
+          format: float
+          example: 68.3
+        sampleSize:
+          type: integer
+          example: 300
+
+    LatestEval:
+      type: object
+      properties:
+        runId:
+          type: string
+          example: "eval_run_2026_06_24"
+        timestamp:
+          type: string
+          format: date-time
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/BenchmarkResult"
+        summary:
+          type: object
+          properties:
+            totalTests:
+              type: integer
+            passed:
+              type: integer
+            failed:
+              type: integer
+            passRate:
+              type: number
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "invalid_api_key"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid or missing API key. Check your RapidAPI subscription."
+        statusCode:
+          type: integer
+          example: 401

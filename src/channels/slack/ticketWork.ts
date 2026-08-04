@@ -1,5 +1,5 @@
 /**
- * Ticket-aware work routing for the Slack @stas mention handler.
+ * Ticket-aware work routing for the Slack @syntaro mention handler.
  *
  * AIM-4460: "fix [AIM-1234](...)" → confirm the ticket exists in Linear,
  * dispatch work through the chat bridge, and reply per-ticket with evidence

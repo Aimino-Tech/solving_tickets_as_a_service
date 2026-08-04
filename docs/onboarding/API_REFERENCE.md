@@ -1,8 +1,8 @@
 # API Reference
 
-> **Complete reference for STAS's REST API endpoints.**
+> **Complete reference for SYNTARO's REST API endpoints.**
 
-Base URL: `http://localhost:3000` (self-hosted) or `https://stas-api.aimino.com` (cloud)
+Base URL: `http://localhost:3000` (self-hosted) or `https://syntaro-api.aimino.com` (cloud)
 
 ---
 
@@ -55,7 +55,7 @@ Basic health check. Returns service status.
 ```json
 {
   "status": "ok",
-  "service": "stas-bot",
+  "service": "syntaro-bot",
   "version": "0.1.0",
   "uptime": 42
 }
@@ -94,8 +94,8 @@ Celery worker health check.
     {
       "name": "celery@host1",
       "queues": [
-        "stas.agents.dispatch",
-        "stas.agents.sandbox"
+        "syntaro.agents.dispatch",
+        "syntaro.agents.sandbox"
       ],
       "concurrency": 4,
       "active_tasks": 2
@@ -110,7 +110,7 @@ Celery worker health check.
 
 ### `POST /webhook/github`
 
-Receive GitHub webhook events. STAS processes `labeled` events matching `stas:fix` to trigger fix runs.
+Receive GitHub webhook events. SYNTARO processes `labeled` events matching `syntaro:fix` to trigger fix runs.
 
 **Headers:**
 
@@ -461,11 +461,11 @@ Inspect the task queue depth.
 ```json
 {
   "queues": {
-    "stas.agents.triage": 2,
-    "stas.agents.dispatch": 5,
-    "stas.agents.sandbox": 1,
-    "stas.agents.verification": 0,
-    "stas.agents.pr_creation": 0
+    "syntaro.agents.triage": 2,
+    "syntaro.agents.dispatch": 5,
+    "syntaro.agents.sandbox": 1,
+    "syntaro.agents.verification": 0,
+    "syntaro.agents.pr_creation": 0
   }
 }
 ```
@@ -474,7 +474,7 @@ Inspect the task queue depth.
 
 ## RapidAPI
 
-Public endpoints available via the [RapidAPI Marketplace](https://rapidapi.com/aimino/api/stas-api).
+Public endpoints available via the [RapidAPI Marketplace](https://rapidapi.com/aimino/api/syntaro-api).
 
 ### `GET /api/eval/results`
 

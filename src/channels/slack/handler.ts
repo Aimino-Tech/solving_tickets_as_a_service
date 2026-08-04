@@ -1,14 +1,14 @@
 // @ts-nocheck
 /**
- * Slack @stas mention handler.
+ * Slack @syntaro mention handler.
  *
  * Listens for `app_mention` events on the Slack Bolt app. Routes requests:
  *  1. Natural-language create-intent ("Create urgent issues on linear") →
  *     creates one or more tracker tickets (Linear/GitLab/Jira) and enqueues
- *     a STAS dispatch for each. If no explicit issue list is given, the
+ *     a SYNTARO dispatch for each. If no explicit issue list is given, the
  *     recent conversation context is used as the issue description.
  *  2. GitHub issue references (`owner/repo#123`, `#123`, full URL) →
- *     enqueues a STAS fix pipeline run for the referenced issue.
+ *     enqueues a SYNTARO fix pipeline run for the referenced issue.
  *  3. Free-form text → treated as a fix request title.
  * Progress updates are posted as threaded replies.
  */
@@ -41,14 +41,14 @@ const TRACKER_PRIORITY: Record<string, number> = {
  * initialized. The handler:
  *  1. Acknowledges the event immediately
  *  2. Detects create-intent and creates tracker tickets (Linear by default)
- *  3. Otherwise parses issue references and enqueues a STAS fix via RabbitMQ
+ *  3. Otherwise parses issue references and enqueues a SYNTARO fix via RabbitMQ
  *  4. Posts threaded progress updates
  *
  * @param boltApp - The initialized Slack Bolt `App` instance.
  */
 export function registerSlackMentionHandler(boltApp: App | null): void {
   if (!boltApp) {
-    log.warn('Slack Bolt app not available — @stas handler not registered');
+    log.warn('Slack Bolt app not available — @syntaro handler not registered');
     return;
   }
 
@@ -58,7 +58,7 @@ export function registerSlackMentionHandler(boltApp: App | null): void {
     const userId = event.user;
     const threadTs = event.ts;
 
-    log.info({ text, channelId, userId, threadTs }, 'Received @stas mention');
+    log.info({ text, channelId, userId, threadTs }, 'Received @syntaro mention');
 
     try {
       // NL create-intent takes priority: "Create urgent issues on linear"
@@ -103,7 +103,7 @@ export function registerSlackMentionHandler(boltApp: App | null): void {
         repoName: ref.repo,
         repoPrivate: false,
         issueNumber: ref.issueNumber,
-        issueTitle: `Fix requested via Slack @stas for #${ref.issueNumber}`,
+        issueTitle: `Fix requested via Slack @syntaro for #${ref.issueNumber}`,
         issueBody: `Referenced in Slack by <@${userId}>\n\nIssue: https://github.com/${ref.owner}/${ref.repo}/issues/${ref.issueNumber}\n\nContext: ${text}`,
         source: 'slack',
       };
@@ -116,10 +116,10 @@ export function registerSlackMentionHandler(boltApp: App | null): void {
 
       log.info(
         { issueNumber: ref.issueNumber, owner: ref.owner, repo: ref.repo, messageId },
-        'Enqueued fix from Slack @stas mention',
+        'Enqueued fix from Slack @syntaro mention',
       );
     } catch (err) {
-      log.error({ err: String(err), channelId, userId }, 'Failed to handle @stas mention');
+      log.error({ err: String(err), channelId, userId }, 'Failed to handle @syntaro mention');
       try {
         await client.chat.postMessage({
           channel: channelId,
@@ -132,7 +132,7 @@ export function registerSlackMentionHandler(boltApp: App | null): void {
     }
   });
 
-  log.info('Slack @stas mention handler registered');
+  log.info('Slack @syntaro mention handler registered');
 }
 
 /**
@@ -173,14 +173,14 @@ async function fetchConversationContext(
     if (threadTs) {
       const res = await client.conversations.replies({ channel: channelId, ts: threadTs, limit });
       const msgs = (res.messages || [])
-        .filter((m) => m.bot_id !== 'B0BM2ET8JRJ' && !String(m.text || '').startsWith('@STAS'))
+        .filter((m) => m.bot_id !== 'B0BM2ET8JRJ' && !String(m.text || '').startsWith('@SYNTARO'))
         .map((m) => `<@${m.user || 'unknown'}>: ${m.text}`)
         .slice(-6);
       return msgs.join('\n') || 'No prior conversation context available.';
     }
     const res = await client.conversations.history({ channel: channelId, limit });
     const msgs = (res.messages || [])
-      .filter((m) => m.bot_id !== 'B0BM2ET8JRJ' && !String(m.text || '').startsWith('@STAS'))
+      .filter((m) => m.bot_id !== 'B0BM2ET8JRJ' && !String(m.text || '').startsWith('@SYNTARO'))
       .map((m) => `<@${m.user || 'unknown'}>: ${m.text}`)
       .slice(-8);
     return msgs.join('\n') || 'No prior conversation context available.';
@@ -194,7 +194,7 @@ async function fetchConversationContext(
  * Handle a create-intent mention ("Create urgent issues on linear").
  *
  * Creates one or more tracker tickets (Linear when no tracker is named),
- * then enqueues a STAS dispatch job per ticket so workers pick them up.
+ * then enqueues a SYNTARO dispatch job per ticket so workers pick them up.
  */
 async function handleCreateIssuesRequest(
   text: string,
@@ -269,14 +269,14 @@ async function handleCreateIssuesRequest(
     }
 
     for (const title of items) {
-      const description = `Requested via Slack @stas by <@${userId}>\n\n---\n${context}`;
+      const description = `Requested via Slack @syntaro by <@${userId}>\n\n---\n${context}`;
       try {
         const ticket = await tracker.createTicket({
           teamId,
           title: title.slice(0, 200),
           description,
           priority: urgent ? (TRACKER_PRIORITY[trackerName] ?? 1) : 2,
-          labels: urgent ? ['urgent', 'stas:fix'] : ['stas:fix'],
+          labels: urgent ? ['urgent', 'syntaro:fix'] : ['syntaro:fix'],
         });
         created.push({ title: ticket.title, url: ticket.url });
 
@@ -340,7 +340,7 @@ async function handleCreateIssuesRequest(
 }
 
 /**
- * Handle an @stas mention that doesn't contain a clear issue reference.
+ * Handle an @syntaro mention that doesn't contain a clear issue reference.
  * Treats the message text as a free-form fix request description.
  */
 async function handleFreeformRequest(
@@ -356,7 +356,7 @@ async function handleFreeformRequest(
 
   if (!repoOwner || !repoName) {
     await say({
-      text: 'To use @stas, mention a GitHub issue like `owner/repo#123` or a full issue URL. No default repository is configured.',
+      text: 'To use @syntaro, mention a GitHub issue like `owner/repo#123` or a full issue URL. No default repository is configured.',
       thread_ts: threadTs,
     });
     return;
@@ -364,7 +364,7 @@ async function handleFreeformRequest(
 
   // Strip the bot mention from the text to get the actual request
   const cleaned = text.replace(/<@[A-Z0-9]+>/gi, '').trim();
-  const issueTitle = cleaned || 'Fix requested via Slack @stas';
+  const issueTitle = cleaned || 'Fix requested via Slack @syntaro';
 
   // Post confirmation
   await say({
@@ -385,7 +385,7 @@ async function handleFreeformRequest(
       repoPrivate: false,
       issueNumber: 0,
       issueTitle,
-      issueBody: `Submitted via Slack @stas by <@${userId}>\n\nDescription: ${issueTitle}`,
+      issueBody: `Submitted via Slack @syntaro by <@${userId}>\n\nDescription: ${issueTitle}`,
       source: 'slack',
     };
 

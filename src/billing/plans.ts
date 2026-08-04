@@ -1,5 +1,5 @@
 /**
- * Subscription plan definitions for STAS billing tiers.
+ * Subscription plan definitions for SYNTARO billing tiers.
  *
  * ── Plans ─────────────────────────────────────────────────────────────────────
  *   Solo     – $49/mo  – 100 fixes/mo, frontier models, 3 concurrent fixes

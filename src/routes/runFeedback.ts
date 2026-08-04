@@ -52,19 +52,19 @@ async function postIssueComment(owner: string, repo: string, issueNumber: number
   const token = await getGitHubToken();
   if (!token) return;
   const installationsResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/installation`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' },
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'syntaro-bot' },
   });
   if (!installationsResponse.ok) return;
   const instData = (await installationsResponse.json()) as { id: number };
   const instTokenResponse = await fetch(`https://api.github.com/app/installations/${instData.id}/access_tokens`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' },
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'syntaro-bot' },
   });
   if (!instTokenResponse.ok) return;
   const { token: instToken } = (await instTokenResponse.json()) as { token: string };
   await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/comments`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${instToken}`, 'Content-Type': 'application/json', 'User-Agent': 'stas-bot' },
+    headers: { Authorization: `Bearer ${instToken}`, 'Content-Type': 'application/json', 'User-Agent': 'syntaro-bot' },
     body: JSON.stringify({ body }),
   });
 }
@@ -96,7 +96,7 @@ router.post('/:id/feedback', async (req: Request, res: Response) => {
       [verdict, runId],
     );
     if (verdict === 'bad_fix' || verdict === 'not_working') {
-      const reanalysisComment = `## STAS Re-analysis Triggered\n\nYou reported this fix as **"${verdict === 'bad_fix' ? 'Bad Fix' : 'Not Working'}"**. STAS will re-analyze the issue with an adjusted approach.\n\n${comment ? `> ${comment}\n\n` : ''}*Re-analysis in progress — a new PR will be created.*`;
+      const reanalysisComment = `## SYNTARO Re-analysis Triggered\n\nYou reported this fix as **"${verdict === 'bad_fix' ? 'Bad Fix' : 'Not Working'}"**. SYNTARO will re-analyze the issue with an adjusted approach.\n\n${comment ? `> ${comment}\n\n` : ''}*Re-analysis in progress — a new PR will be created.*`;
       await postIssueComment(run.repo_owner, run.repo_name, run.issue_number, reanalysisComment);
     }
     res.status(201).json(result.rows[0]);
@@ -150,9 +150,9 @@ router.post('/:id/escalate', async (req: Request, res: Response) => {
        VALUES ($1, $2, 'escalate', $3, 'escalated', NOW())`,
       [runId, req.user!.id, reason],
     );
-    const escalationComment = `## STAS Escalation\n\nThis issue has been **escalated to the STAS team** for manual review.\n\n**Reason:** ${reason}\n\nA human operator will review this issue shortly.`;
+    const escalationComment = `## SYNTARO Escalation\n\nThis issue has been **escalated to the SYNTARO team** for manual review.\n\n**Reason:** ${reason}\n\nA human operator will review this issue shortly.`;
     await postIssueComment(run.repo_owner, run.repo_name, run.issue_number, escalationComment);
-    res.json({ success: true, message: 'Issue escalated to STAS team' });
+    res.json({ success: true, message: 'Issue escalated to SYNTARO team' });
   } catch (err) {
     log.error({ err: String(err), runId: req.params.id }, 'Failed to escalate');
     res.status(500).json({ error: 'Failed to escalate' });
@@ -183,7 +183,7 @@ router.post('/:id/cancel', async (req: Request, res: Response) => {
     for (const session of sessions) {
       sessionStore.delete(session.sessionId);
     }
-    const cancelComment = `## STAS Fix Cancelled\n\nThe automated fix for this issue has been **cancelled** as you requested.\n\nIf you'd like STAS to try again, re-label the issue with the appropriate label.`;
+    const cancelComment = `## SYNTARO Fix Cancelled\n\nThe automated fix for this issue has been **cancelled** as you requested.\n\nIf you'd like SYNTARO to try again, re-label the issue with the appropriate label.`;
     await postIssueComment(run.repo_owner, run.repo_name, run.issue_number, cancelComment);
     res.json({ success: true, message: 'Run cancelled' });
   } catch (err) {
@@ -231,7 +231,7 @@ router.post('/:id/rollback', async (req: Request, res: Response) => {
           if (token) {
             await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
               method: 'PATCH',
-              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' },
+              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github+json', 'User-Agent': 'syntaro-bot' },
               body: JSON.stringify({ state: 'closed' }),
             });
           }
@@ -240,7 +240,7 @@ router.post('/:id/rollback', async (req: Request, res: Response) => {
         }
       }
     }
-    const rollbackComment = `## STAS Rollback\n\nThe fix for this issue has been **rolled back**.${reason ? `\n\n**Reason:** ${reason}` : ''}\n\nThe associated PR has been closed.`;
+    const rollbackComment = `## SYNTARO Rollback\n\nThe fix for this issue has been **rolled back**.${reason ? `\n\n**Reason:** ${reason}` : ''}\n\nThe associated PR has been closed.`;
     await postIssueComment(run.repo_owner, run.repo_name, run.issue_number, rollbackComment);
     res.json({ success: true, message: 'Run rolled back' });
   } catch (err) {

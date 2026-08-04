@@ -363,11 +363,11 @@ export interface SettingsResponse {
 
 export function getSettings(): SettingsResponse {
   return {
-    label: process.env.STAS_LABEL || 'stas:fix',
+    label: process.env.SYNTARO_LABEL || 'syntaro:fix',
     model: process.env.OPENCODE_MODEL || 'aimino/agi-v1',
-    maxConcurrent: Number(process.env.STAS_MAX_CONCURRENT) || 3,
+    maxConcurrent: Number(process.env.SYNTARO_MAX_CONCURRENT) || 3,
     sandboxPoolSize: Number(process.env.SANDBOX_POOL_SIZE) || 10,
-    auditLogEnabled: process.env.STAS_AUDIT_LOG === 'true',
+    auditLogEnabled: process.env.SYNTARO_AUDIT_LOG === 'true',
   };
 }
 

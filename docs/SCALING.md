@@ -2,7 +2,7 @@
 
 > **From a single PC to a Celery fleet to IONOS cloud — without re-architecture.**
 
-This document describes STAS's scaling path across three phases, the architectural invariants that make it possible, and the operational notes for each phase.
+This document describes SYNTARO's scaling path across three phases, the architectural invariants that make it possible, and the operational notes for each phase.
 
 ## Scaling Path
 
@@ -62,8 +62,8 @@ This single constraint is the foundation of horizontal scaling. Because no worke
 
 | Component | Role | Container |
 |---|---|---|
-| `stas-webhook` | Express.js API — receives webhooks, enqueues jobs | Node.js |
-| `stas-worker` | Celery worker — executes triage, sandbox, dispatch, verification, PR creation, notifications | Python |
+| `syntaro-webhook` | Express.js API — receives webhooks, enqueues jobs | Node.js |
+| `syntaro-worker` | Celery worker — executes triage, sandbox, dispatch, verification, PR creation, notifications | Python |
 | `celery-beat` | Periodic task scheduler — health checks, DLQ cleanup, metrics | Python |
 | `rabbitmq` | Message broker — distributes tasks to workers | Erlang |
 | `redis` | Result backend + caching | C |
@@ -125,12 +125,12 @@ Tasks are published to one of six Celery queues:
 
 | Queue | Purpose | Routing Key |
 |---|---|---|
-| `stas.agents.triage` | Issue classification | `stas.agents.triage` |
-| `stas.agents.dispatch` | OpenCode agent execution | `stas.agents.dispatch` |
-| `stas.agents.sandbox` | Sandbox lifecycle management | `stas.agents.sandbox` |
-| `stas.agents.verification` | Test suite verification | `stas.agents.verification` |
-| `stas.agents.pr_creation` | GitHub PR creation | `stas.agents.pr_creation` |
-| `stas.agents.notifications` | Slack/webhook notifications | `stas.agents.notifications` |
+| `syntaro.agents.triage` | Issue classification | `syntaro.agents.triage` |
+| `syntaro.agents.dispatch` | OpenCode agent execution | `syntaro.agents.dispatch` |
+| `syntaro.agents.sandbox` | Sandbox lifecycle management | `syntaro.agents.sandbox` |
+| `syntaro.agents.verification` | Test suite verification | `syntaro.agents.verification` |
+| `syntaro.agents.pr_creation` | GitHub PR creation | `syntaro.agents.pr_creation` |
+| `syntaro.agents.notifications` | Slack/webhook notifications | `syntaro.agents.notifications` |
 
 RabbitMQ uses fair dispatch: when a worker becomes available, it receives the next message from any subscribed queue. No affinity or sticky routing — any worker can handle any task.
 
@@ -138,7 +138,7 @@ RabbitMQ uses fair dispatch: when a worker becomes available, it receives the ne
 
 Each worker PC runs:
 
-1. **A Celery worker process** — subscribes to all 6 queues via `celery -A workers.celery_app worker -Q stas.agents.triage,stas.agents.dispatch,...`
+1. **A Celery worker process** — subscribes to all 6 queues via `celery -A workers.celery_app worker -Q syntaro.agents.triage,syntaro.agents.dispatch,...`
 2. **A local Docker daemon** — manages sandbox containers for fix execution
 3. **A sandbox pool** — pre-warmed Docker containers ready for immediate use
 4. **A GC sweeper** — periodically cleans up stale sandbox containers and temp directories
@@ -147,7 +147,7 @@ The worker Docker Compose stack (`docker-compose.worker.yml`) is lightweight —
 
 #### No Sticky Routing
 
-All queues use the `stas` topic exchange. Any worker subscribed to a queue can pick up a task from it. This means:
+All queues use the `syntaro` topic exchange. Any worker subscribed to a queue can pick up a task from it. This means:
 
 - If a task fails on worker A, worker B can retry it
 - Workers can be added/removed without any routing table updates
@@ -158,7 +158,7 @@ All queues use the `stas` topic exchange. Any worker subscribed to a queue can p
 
 ```bash
 # On the new machine:
-git clone https://github.com/your-org/stas
+git clone https://github.com/your-org/syntaro
 docker compose -f docker-compose.worker.yml up -d
 ```
 
@@ -189,12 +189,12 @@ Celery's `worker_shutdown` signal triggers graceful termination: the worker fini
 
 ```bash
 # For a 4GB PC:
-STAS_WORKER_CONCURRENCY=2   # 2 parallel tasks
+SYNTARO_WORKER_CONCURRENCY=2   # 2 parallel tasks
 DOCKER_CONTAINER_MEMORY=2g  # 2G per sandbox
 DOCKER_CONTAINER_CPU=1      # 1 CPU per sandbox
 
 # For an 8GB PC:
-STAS_WORKER_CONCURRENCY=4
+SYNTARO_WORKER_CONCURRENCY=4
 DOCKER_CONTAINER_MEMORY=2g
 DOCKER_CONTAINER_CPU=1
 ```
@@ -253,7 +253,7 @@ DOCKER_CONTAINER_CPU=1
 #### IONOS S3 for Workspace Artifacts
 
 - Store agent workspace outputs (test reports, logs, diffs) in IONOS S3-compatible object storage
-- Each task gets a unique S3 prefix: `stas-workspaces/{org}/{repo}/{issue-number}/`
+- Each task gets a unique S3 prefix: `syntaro-workspaces/{org}/{repo}/{issue-number}/`
 - Artifacts are retained for 30 days, then lifecycle-policy-expired
 - S3 replaces the local temp directory for long-lived artifact persistence
 - Access via IONOS S3 API (compatible with AWS S3 SDK)
@@ -283,13 +283,13 @@ Move RabbitMQ, Redis, and PostgreSQL to dedicated VMs (or use managed services):
 
 ```bash
 # RabbitMQ VM
-ionosctl vm create --name stas-rabbitmq --ram 4096 --cores 2
+ionosctl vm create --name syntaro-rabbitmq --ram 4096 --cores 2
 
 # Redis VM (or use IONOS managed Redis when available)
-ionosctl vm create --name stas-redis --ram 4096 --cores 2
+ionosctl vm create --name syntaro-redis --ram 4096 --cores 2
 
 # PostgreSQL VM (or use IONOS managed DB)
-ionosctl vm create --name stas-postgres --ram 4096 --cores 2
+ionosctl vm create --name syntaro-postgres --ram 4096 --cores 2
 ```
 
 Update worker configurations to point to the new endpoints.
@@ -301,7 +301,7 @@ Each IONOS worker VM runs the same stack:
 ```bash
 # Launch a worker VM
 ionosctl vm create \
-  --name stas-worker-1 \
+  --name syntaro-worker-1 \
   --ram 8192 \
   --cores 4 \
   --image ubuntu:24.04 \
@@ -312,11 +312,11 @@ ionosctl vm create \
 
 ```bash
 # Create S3 bucket for workspace artifacts
-ionosctl s3 bucket create --name stas-workspaces
+ionosctl s3 bucket create --name syntaro-workspaces
 
 # Set lifecycle policy (30-day retention)
 ionosctl s3 lifecycle put \
-  --bucket stas-workspaces \
+  --bucket syntaro-workspaces \
   --rule "expire after 30 days"
 ```
 
@@ -326,10 +326,10 @@ If running multiple webhook nodes, configure an IONOS ALB:
 
 ```bash
 ionosctl alb create \
-  --name stas-webhook-alb \
+  --name syntaro-webhook-alb \
   --listener-protocol HTTPS \
   --listener-port 443 \
-  --target-group stas-webhook-targets
+  --target-group syntaro-webhook-targets
 ```
 
 The ALB terminates TLS and distributes incoming webhooks across webhook VMs.
@@ -369,8 +369,8 @@ Each worker can run 4-8 concurrent sandbox slots depending on task memory requir
 | **Queue distribution** | `workers/celeryconfig.py` | ✅ Stateless | RabbitMQ fair dispatch. No sticky routing. Any worker handles any task. |
 | **OpenCode URL** | `src/config.ts:69` | ✅ Configurable | `OPENCODE_URL` env var. Workers reach OpenCode via HTTP (not localhost). |
 | **Docker host** | `src/sandbox/docker.ts` | ✅ Configurable | `DOCKER_HOST` env var auto-detected by Docker CLI. |
-| **Storage** | `src/storage/sqlite.ts` | ⚠️ Per-process | SQLite at `/tmp/stas.db` is per-process, not shared. OK for OSS; use Postgres in fleet. |
-| **Worker concurrency** | `src/config.ts:105` | ✅ Configurable | `STAS_WORKER_CONCURRENCY` controls parallel tasks per worker. |
+| **Storage** | `src/storage/sqlite.ts` | ⚠️ Per-process | SQLite at `/tmp/syntaro.db` is per-process, not shared. OK for OSS; use Postgres in fleet. |
+| **Worker concurrency** | `src/config.ts:105` | ✅ Configurable | `SYNTARO_WORKER_CONCURRENCY` controls parallel tasks per worker. |
 | **Celery concurrency** | `workers/celery_app.py:59` | ✅ Configurable | `WORKER_CONCURRENCY` env var overrides Celery worker concurrency. |
 | **Celery broker URL** | `workers/celery_app.py:57` | ✅ Configurable | `CELERY_BROKER_URL` env var for RabbitMQ connection. |
 | **Celery result backend** | `workers/celery_app.py:58` | ✅ Configurable | `CELERY_RESULT_BACKEND` env var for Redis connection. |
@@ -401,12 +401,12 @@ Each worker can run 4-8 concurrent sandbox slots depending on task memory requir
 | `DOCKER_HOST` | `unix:///var/run/docker.sock` | Phase 2+ (auto) | Docker CLI env |
 | `DOCKER_CONTAINER_MEMORY` | `4g` | All phases | `src/config.ts:96` |
 | `DOCKER_CONTAINER_CPU` | `2` | All phases | `src/config.ts:97` |
-| `STAS_WORKER_CONCURRENCY` | `4` | Phase 2+ | `src/config.ts:105` |
+| `SYNTARO_WORKER_CONCURRENCY` | `4` | Phase 2+ | `src/config.ts:105` |
 | `WORKER_CONCURRENCY` | `4` | Phase 2+ | `workers/celery_app.py:59` |
-| `RABBITMQ_URL` | `amqp://localhost:5672/stas` | Phase 2+ | `src/config.ts:57` |
+| `RABBITMQ_URL` | `amqp://localhost:5672/syntaro` | Phase 2+ | `src/config.ts:57` |
 | `REDIS_URL` | `redis://localhost:6379` | All phases | `src/config.ts:47` |
-| `DATABASE_URL` | `postgres://localhost:5432/stas` | Phase 2+ | `src/config.ts:179` |
-| `STAS_SANDBOX_POOL_MAX_IDLE` | — | Phase 2+ | AIM-1333 |
+| `DATABASE_URL` | `postgres://localhost:5432/syntaro` | Phase 2+ | `src/config.ts:179` |
+| `SYNTARO_SANDBOX_POOL_MAX_IDLE` | — | Phase 2+ | AIM-1333 |
 | `SANDBOX_POOL_SIZE` | `10` | Phase 2+ | `premium/src/routes/dashboard.ts` |
 
 ### Per-Machine Tuning
@@ -415,17 +415,17 @@ Each worker machine should tune these variables based on its specs:
 
 ```bash
 # 4GB machine
-STAS_WORKER_CONCURRENCY=2
+SYNTARO_WORKER_CONCURRENCY=2
 DOCKER_CONTAINER_MEMORY=2g
 DOCKER_CONTAINER_CPU=1
 
 # 8GB machine
-STAS_WORKER_CONCURRENCY=4
+SYNTARO_WORKER_CONCURRENCY=4
 DOCKER_CONTAINER_MEMORY=2g
 DOCKER_CONTAINER_CPU=1
 
 # 16GB machine
-STAS_WORKER_CONCURRENCY=8
+SYNTARO_WORKER_CONCURRENCY=8
 DOCKER_CONTAINER_MEMORY=1g
 DOCKER_CONTAINER_CPU=0.5
 ```
@@ -434,7 +434,7 @@ DOCKER_CONTAINER_CPU=0.5
 
 ## Development Mode (Plan B)
 
-For fast local experimentation and CI, STAS supports a containerless development mode
+For fast local experimentation and CI, SYNTARO supports a containerless development mode
 that avoids spinning up the full production stack.
 
 ### When to use Plan B
@@ -462,7 +462,7 @@ make dev-worker QUEUE=triage,dispatch,verification,pr_creation,notifications
 
 ### Limitations
 
-- **No Docker sandbox** — sandbox tasks (`stas.agents.sandbox`) will fail with
+- **No Docker sandbox** — sandbox tasks (`syntaro.agents.sandbox`) will fail with
   `"E2B_API_KEY not configured"`. This is intentional.
 - **No sandbox-svc** — the `SANDBOX_SVC_URL` environment variable is not set,
   so sandbox-proxy tasks are also unavailable.
@@ -498,7 +498,7 @@ Host (Plan B)
 
 ```bash
 # On the new machine:
-git clone https://github.com/your-org/stas
+git clone https://github.com/your-org/syntaro
 cp .env.example .env
 # Edit .env with your cluster's broker/backend URLs
 docker compose -f docker-compose.worker.yml up -d

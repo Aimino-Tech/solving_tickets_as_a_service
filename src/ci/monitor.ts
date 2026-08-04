@@ -273,7 +273,7 @@ async function processCheckRun(
 }
 
 /**
- * Create a GitHub issue for a sustained CI failure and label it with stas:fix.
+ * Create a GitHub issue for a sustained CI failure and label it with syntaro:fix.
  */
 async function createIssueForFailure(
   octokit: Octokit,
@@ -321,7 +321,7 @@ async function createIssueForFailure(
     ``,
     `---`,
     ``,
-    `_Auto-created by STAS CI Monitor_`,
+    `_Auto-created by SYNTARO CI Monitor_`,
   ].join('\n');
 
   try {
@@ -330,7 +330,7 @@ async function createIssueForFailure(
       repo,
       title,
       body,
-      labels: [config.stas.label],
+      labels: [config.syntaro.label],
     });
 
     log.info(

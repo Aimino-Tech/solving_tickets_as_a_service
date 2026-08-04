@@ -4,7 +4,7 @@ status: draft
 last-updated: 2026-07-28
 ---
 
-# Compliance Roadmap — STAS
+# Compliance Roadmap — SYNTARO
 
 > **Phased plan for SOC 2 and ISO 27001 certification, with estimated costs and milestones.**
 
@@ -12,7 +12,7 @@ last-updated: 2026-07-28
 
 ## Overview
 
-STAS is pursuing SOC 2 certification (Type I and Type II) followed by ISO 27001 certification. This roadmap outlines the timeline, key activities, deliverables, and estimated costs for each phase. The approach is pragmatic: build on existing security controls, address gaps identified in the [readiness assessment](soc2/readiness-assessment.md), and engage third-party auditors at the appropriate stage.
+SYNTARO is pursuing SOC 2 certification (Type I and Type II) followed by ISO 27001 certification. This roadmap outlines the timeline, key activities, deliverables, and estimated costs for each phase. The approach is pragmatic: build on existing security controls, address gaps identified in the [readiness assessment](soc2/readiness-assessment.md), and engage third-party auditors at the appropriate stage.
 
 ### Guiding Principles
 
@@ -187,7 +187,7 @@ gantt
 |------|--------|------------|
 | **Personnel**: Unable to hire compliance lead | Delayed readiness, increased engineering burden | Engage fractional compliance consultant as alternative |
 | **Timeline slip**: Pen test findings require significant remediation | Delayed Type I audit, increased cost | Budget 30% buffer in Phase 2 timeline; prioritize pen test in Phase 1 |
-| **Scope creep**: ISO 27001 requirements exceed current architecture | Higher cost, longer timeline | Scope ISO 27001 to STAS cloud service only; self-hosted excluded initially |
+| **Scope creep**: ISO 27001 requirements exceed current architecture | Higher cost, longer timeline | Scope ISO 27001 to SYNTARO cloud service only; self-hosted excluded initially |
 | **Customer demand**: Enterprise customers require certification sooner | Accelerated timeline, higher near-term cost | Compress Phase 1–2; engage auditor earlier; prioritize SOC 2 over ISO |
 | **Third-party dependency**: Auditor availability | Scheduling delays | Engage auditor 3 months in advance; maintain shortlist of 2–3 firms |
 | **Infrastructure**: Multi-region DR requires significant refactoring | Higher Phase 3 cost | Consider single-region with accelerated recovery; defer multi-region if not customer-required |

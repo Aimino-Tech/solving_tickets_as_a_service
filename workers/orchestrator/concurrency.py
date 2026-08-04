@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 _MAX_CONCURRENT = int(os.getenv("AGENT_MAX_CONCURRENT", "3"))
 _SLOT_TIMEOUT_S = int(os.getenv("AGENT_CONCURRENCY_TIMEOUT_S", "600"))
-_REDIS_KEY = "stas:agent:active_slots"
-_SLOT_PREFIX = "stas:agent:slot:"
+_REDIS_KEY = "syntaro:agent:active_slots"
+_SLOT_PREFIX = "syntaro:agent:slot:"
 
 _REDIS_CLIENT: Optional[Any] = None
 

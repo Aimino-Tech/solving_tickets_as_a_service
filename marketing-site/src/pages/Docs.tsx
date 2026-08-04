@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 export default function Docs() {
-  useEffect(() => { document.title = 'Docs — STAS'; }, []);
+  useEffect(() => { document.title = 'Docs — SYNTARO'; }, []);
   return (
     <section className="section" style={{ paddingTop: 120 }}>
       <div className="section-header">

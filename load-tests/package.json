@@ -1,8 +1,8 @@
 {
-  "name": "stas-load-tests",
+  "name": "syntaro-load-tests",
   "version": "0.1.0",
   "private": true,
-  "description": "k6 load tests for STAS — 500-user scaling verification",
+  "description": "k6 load tests for SYNTARO — 500-user scaling verification",
   "scripts": {
     "test:webhook": "k6 run scenarios/webhook-flood.js",
     "test:api": "k6 run scenarios/api-benchmark.js",

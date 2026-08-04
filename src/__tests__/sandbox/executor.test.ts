@@ -684,7 +684,7 @@ describe('SandboxExecutor', () => {
         return { stdout: '', stderr: '', exitCode: 0 };
       });
 
-      await executor.pushBranch('stas/fix-42');
+      await executor.pushBranch('syntaro/fix-42');
 
       // Verify the push sequence
       expect(runLog.some((c) => c.includes('config user.email'))).toBe(true);
@@ -692,8 +692,8 @@ describe('SandboxExecutor', () => {
       expect(runLog.some((c) => c.includes('add -A'))).toBe(true);
       expect(runLog.some((c) => c.includes('commit -m'))).toBe(true);
       expect(runLog.some((c) => c.includes('remote set-url origin'))).toBe(true);
-      expect(runLog.some((c) => c.includes('checkout -b "stas/fix-42"'))).toBe(true);
-      expect(runLog.some((c) => c.includes('push origin "stas/fix-42"'))).toBe(true);
+      expect(runLog.some((c) => c.includes('checkout -b "syntaro/fix-42"'))).toBe(true);
+      expect(runLog.some((c) => c.includes('push origin "syntaro/fix-42"'))).toBe(true);
     });
 
     it('embeds the installation token in the remote URL', async () => {
@@ -711,7 +711,7 @@ describe('SandboxExecutor', () => {
         return { stdout: '', stderr: '', exitCode: 0 };
       });
 
-      await executor.pushBranch('stas/fix');
+      await executor.pushBranch('syntaro/fix');
 
       expect(remoteSetUrlCmd).toContain('x-access-token:push-token-abc@');
     });
@@ -725,7 +725,7 @@ describe('SandboxExecutor', () => {
         return { stdout: '', stderr: '', exitCode: 0 };
       });
 
-      await executor.pushBranch('stas/fix-42');
+      await executor.pushBranch('syntaro/fix-42');
 
       // Should not attempt commit or push
       const calls = mockSandboxInstance.commands.run.mock.calls.map((c: any[]) => c[0]);
@@ -745,12 +745,12 @@ describe('SandboxExecutor', () => {
         return { stdout: '', stderr: '', exitCode: 0 };
       });
 
-      await expect(executor.pushBranch('stas/fix-42')).rejects.toThrow("Failed to push branch 'stas/fix-42'");
+      await expect(executor.pushBranch('syntaro/fix-42')).rejects.toThrow("Failed to push branch 'syntaro/fix-42'");
     });
 
     it('throws if sandbox not booted', async () => {
       const executor = new SandboxExecutor('https://github.com/owner/repo.git', 'owner', 'repo', 123, vi.fn());
-      await expect(executor.pushBranch('stas/fix')).rejects.toThrow('Sandbox not booted');
+      await expect(executor.pushBranch('syntaro/fix')).rejects.toThrow('Sandbox not booted');
     });
   });
 

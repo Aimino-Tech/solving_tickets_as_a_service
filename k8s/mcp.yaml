@@ -1,0 +1,74 @@
+# ---------------------------------------------------------------------------
+# SYNTARO MCP server — SSE endpoint (port 4095)
+#
+# Built from Dockerfile.smithery (python:3.12 + syntaro_mcp). Exposes the
+# MCP SSE server for AI-agent discovery. The webhook points to it via
+# SYNTARO_MCP_SERVER_URL; auto-start inside the webhook is disabled
+# (SYNTARO_MCP_AUTO_START=false in the ConfigMap).
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: syntaro-mcp
+  namespace: syntaro
+  labels:
+    app: syntaro-mcp
+    tier: agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: syntaro-mcp
+  template:
+    metadata:
+      labels:
+        app: syntaro-mcp
+        tier: agent
+    spec:
+      containers:
+        - name: mcp
+          image: ghcr.io/aimino-tech/syntaro-mcp:latest
+          imagePullPolicy: Always
+          args: ["sse", "--host", "0.0.0.0", "--port", "4095"]
+          ports:
+            - containerPort: 4095
+              name: sse
+          envFrom:
+            - secretRef:
+                name: syntaro-secrets
+            - configMapRef:
+                name: syntaro-config
+          readinessProbe:
+            tcpSocket:
+              port: sse
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: sse
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: syntaro-mcp
+  namespace: syntaro
+  labels:
+    app: syntaro-mcp
+spec:
+  selector:
+    app: syntaro-mcp
+  ports:
+    - port: 4095
+      targetPort: 4095
+      name: sse

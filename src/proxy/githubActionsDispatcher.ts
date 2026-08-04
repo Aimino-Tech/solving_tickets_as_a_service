@@ -151,7 +151,7 @@ export class GitHubActionsDispatcher {
           Accept: 'application/vnd.github+json',
           Authorization: `Bearer ${pat}`,
           'Content-Type': 'application/json',
-          'User-Agent': 'stas-proxy/1.0',
+          'User-Agent': 'syntaro-proxy/1.0',
         },
         body: JSON.stringify(body),
       });

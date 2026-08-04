@@ -1,9 +1,9 @@
 /**
  * Linear State Sync — posts issue state transitions and progress comments
- * back to Linear from STAS processing pipeline.
+ * back to Linear from SYNTARO processing pipeline.
  *
  * This module is the write-back layer for Linear tracker integration:
- * - Updates issue status as STAS progresses through stages
+ * - Updates issue status as SYNTARO progresses through stages
  * - Posts contextual comments at each stage
  * - Handles errors gracefully (write-back failures are non-fatal)
  *
@@ -30,11 +30,11 @@ import { rootLogger } from '../utils/logger.js';
 const log = rootLogger.child({ module: 'linear-state-sync' });
 
 // ---------------------------------------------------------------------------
-// Status mapping — STAS stages → Linear workflow states
+// Status mapping — SYNTARO stages → Linear workflow states
 // ---------------------------------------------------------------------------
 
 /**
- * Maps STAS processing stages to Linear workflow state names.
+ * Maps SYNTARO processing stages to Linear workflow state names.
  * Linear states are team-specific, so these are best-effort matches.
  */
 export const STAGE_TO_LINEAR_STATE: Record<string, string> = {
@@ -54,7 +54,7 @@ export const STAGE_TO_LINEAR_STATE: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 /**
- * Sync a STAS processing stage to a Linear issue:
+ * Sync a SYNTARO processing stage to a Linear issue:
  * 1. Updates the Linear issue status (if a mapping exists)
  * 2. Posts a contextual comment with the provided message
  *
@@ -104,24 +104,24 @@ export async function syncLinearState(
 // ---------------------------------------------------------------------------
 
 /**
- * Notify Linear that STAS has received and acknowledged the issue.
+ * Notify Linear that SYNTARO has received and acknowledged the issue.
  */
 export async function notifyReceived(ticketId: string): Promise<void> {
   await syncLinearState(
     ticketId,
     'received',
-    `🔄 **STAS received**\n\nIssue has been picked up for processing. ETA: ~5-10 minutes.`,
+    `🔄 **SYNTARO received**\n\nIssue has been picked up for processing. ETA: ~5-10 minutes.`,
   );
 }
 
 /**
- * Notify Linear that STAS is actively investigating the issue.
+ * Notify Linear that SYNTARO is actively investigating the issue.
  */
 export async function notifyInvestigating(ticketId: string): Promise<void> {
   await syncLinearState(
     ticketId,
     'processing',
-    `🔍 **STAS investigating**\n\nAnalyzing the issue, exploring the codebase, and formulating a fix strategy.`,
+    `🔍 **SYNTARO investigating**\n\nAnalyzing the issue, exploring the codebase, and formulating a fix strategy.`,
   );
 }
 
@@ -137,7 +137,7 @@ export async function notifyFixReady(
   await syncLinearState(
     ticketId,
     'fix_ready',
-    `✅ **STAS fix ready** — ${prLink}\n\nConfidence: High\n\n> Automated by STAS — please review.`,
+    `✅ **SYNTARO fix ready** — ${prLink}\n\nConfidence: High\n\n> Automated by SYNTARO — please review.`,
   );
 }
 
@@ -151,7 +151,7 @@ export async function notifyFixFailed(
   await syncLinearState(
     ticketId,
     'fix_failed',
-    `❌ **STAS fix failed**\n\nReason: ${reason}\n\n> Automated by STAS — manual intervention may be required.`,
+    `❌ **SYNTARO fix failed**\n\nReason: ${reason}\n\n> Automated by SYNTARO — manual intervention may be required.`,
   );
 }
 
@@ -162,7 +162,7 @@ export async function notifyCompleted(ticketId: string, summary: string): Promis
   await syncLinearState(
     ticketId,
     'completed',
-    `✅ **STAS completed**\n\n${summary}`,
+    `✅ **SYNTARO completed**\n\n${summary}`,
   );
 }
 

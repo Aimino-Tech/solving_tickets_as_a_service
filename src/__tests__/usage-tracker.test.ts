@@ -87,7 +87,7 @@ describe('UsageTracker', () => {
 
   beforeAll(() => {
     // Use in-memory store and set default tier to cloud-free
-    vi.stubEnv('STAS_DEFAULT_TIER', 'cloud-free');
+    vi.stubEnv('SYNTARO_DEFAULT_TIER', 'cloud-free');
     tracker = new UsageTracker();
   });
 
@@ -134,7 +134,7 @@ describe('UsageTracker', () => {
   it('checkQuota returns unlimited for self-hosted', () => {
     const selfHostedTracker = new UsageTracker();
     // Set env for this specific test
-    vi.stubEnv('STAS_TIER__TEST_', 'self-hosted');
+    vi.stubEnv('SYNTARO_TIER__TEST_', 'self-hosted');
     // Note: the env var format makes this hard to test; test the logic via config
     const result = selfHostedTracker.checkQuota('any', 'test/repo', 'fix-run');
     expect(result.allowed).toBe(true);
@@ -165,7 +165,7 @@ describe('TierGate middleware', () => {
   let tracker: UsageTracker;
 
   beforeAll(() => {
-    vi.stubEnv('STAS_DEFAULT_TIER', 'cloud-free');
+    vi.stubEnv('SYNTARO_DEFAULT_TIER', 'cloud-free');
     tracker = new UsageTracker();
   });
 
@@ -212,7 +212,7 @@ describe('TierGate middleware', () => {
     const req = {
       ip: '1.2.3.4',
       path: '/webhook',
-      headers: { 'x-stas-user-id': 'over-user' },
+      headers: { 'x-syntaro-user-id': 'over-user' },
       params: {},
       body: { repo: 'over/repo' },
       query: {},
@@ -233,13 +233,13 @@ describe('TierGate middleware', () => {
 
     expect(statusCode).toBe(402);
     expect(jsonBody.error).toBe('Payment Required');
-    expect(jsonBody.upgradeUrl).toBe('https://stas.ai/pricing');
+    expect(jsonBody.upgradeUrl).toBe('https://syntaro.ai/pricing');
     expect(nextCalled).toBe(false);
 
     // Verify headers
-    expect(headers.get('X-Stas-Usage-Remaining')).toBe('0');
-    expect(headers.get('X-Stas-Usage-Limit')).toBe('10');
-    expect(headers.get('X-Stas-Plan')).toBe('Cloud Free');
+    expect(headers.get('X-Syntaro-Usage-Remaining')).toBe('0');
+    expect(headers.get('X-Syntaro-Usage-Limit')).toBe('10');
+    expect(headers.get('X-Syntaro-Plan')).toBe('Cloud Free');
   });
 
   it('sets usage headers on allowed requests', async () => {
@@ -265,10 +265,10 @@ describe('TierGate middleware', () => {
     await middleware(req, res, () => { nextCalled = true; });
 
     expect(nextCalled).toBe(true);
-    expect(headers.has('X-Stas-Usage-Remaining')).toBe(true);
-    expect(headers.has('X-Stas-Usage-Limit')).toBe(true);
-    expect(headers.has('X-Stas-Plan')).toBe(true);
-    expect(headers.has('X-Stas-Usage-Reset')).toBe(true);
+    expect(headers.has('X-Syntaro-Usage-Remaining')).toBe(true);
+    expect(headers.has('X-Syntaro-Usage-Limit')).toBe(true);
+    expect(headers.has('X-Syntaro-Plan')).toBe(true);
+    expect(headers.has('X-Syntaro-Usage-Reset')).toBe(true);
   });
 });
 
@@ -280,7 +280,7 @@ describe('Usage API routes', () => {
   let app: express.Application;
 
   beforeAll(() => {
-    vi.stubEnv('STAS_DEFAULT_TIER', 'cloud-free');
+    vi.stubEnv('SYNTARO_DEFAULT_TIER', 'cloud-free');
     app = express();
     app.use(express.json());
     app.use('/api/v1/usage', usageRouter);

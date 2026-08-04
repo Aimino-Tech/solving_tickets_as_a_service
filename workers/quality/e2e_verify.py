@@ -1,5 +1,5 @@
 """
-E2E Verify — Multi-runner E2E verification gate for the STAS pipeline.
+E2E Verify — Multi-runner E2E verification gate for the SYNTARO pipeline.
 
 Runs three test runners in sequence and aggregates results:
   1. Vitest  — TypeScript/Node E2E tests (vitest.e2e.config.ts)

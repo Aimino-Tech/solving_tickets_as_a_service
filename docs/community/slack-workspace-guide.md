@@ -1,14 +1,14 @@
 ---
-title: "STAS Community Slack Workspace Guide"
+title: "SYNTARO Community Slack Workspace Guide"
 status: "draft"
 last-updated: "2026-07-28"
 ---
 
-# STAS Community — Slack Workspace Guide
+# SYNTARO Community — Slack Workspace Guide
 
 ## Overview
 
-This document describes the setup, channel structure, moderation rules, bot integrations, and onboarding workflow for the STAS community Slack workspace (`stas-community`). STAS (Solving Tickets As A Service) is an AI-powered GitHub issue fix bot. This workspace exists to foster a collaborative community of developers using, contributing to, and extending STAS.
+This document describes the setup, channel structure, moderation rules, bot integrations, and onboarding workflow for the SYNTARO community Slack workspace (`syntaro-community`). SYNTARO (Solving Tickets As A Service) is an AI-powered GitHub issue fix bot. This workspace exists to foster a collaborative community of developers using, contributing to, and extending SYNTARO.
 
 ---
 
@@ -22,53 +22,53 @@ This document describes the setup, channel structure, moderation rules, bot inte
 - **Pinned items**: Welcome message, Code of Conduct link, Getting Started guide, link to #introductions thread.
 
 #### #general
-- **Purpose**: Open discussion about STAS — usage questions, best practices, general chatter related to automated issue fixing.
-- **Moderation**: Stay on-topic (STAS / AI-assisted development). No off-topic threads. Mods may move conversations to #random if off-topic.
+- **Purpose**: Open discussion about SYNTARO — usage questions, best practices, general chatter related to automated issue fixing.
+- **Moderation**: Stay on-topic (SYNTARO / AI-assisted development). No off-topic threads. Mods may move conversations to #random if off-topic.
 - **Expected behavior**: Search before asking. Be concise. Use threads for replies longer than 3 messages.
 
 #### #support
-- **Purpose**: Technical support for STAS users — installation issues, configuration help, troubleshooting failed fixes, API questions.
+- **Purpose**: Technical support for SYNTARO users — installation issues, configuration help, troubleshooting failed fixes, API questions.
 - **Moderation**: Every thread must be tagged with a priority label (`:bug:`, `:question:`, `:help:`). Expect founders/contributors to respond within SLA. Do not cross-post the same issue in multiple channels.
 - **SLA**: 4 hours during business hours (first 30 days), 8 hours thereafter. See [launch-day-support-plan.md](./launch-day-support-plan.md).
 
 #### #showcase
-- **Purpose**: Share what you've built with STAS — fixed repos, workflows, automations, integrations, success stories.
-- **Moderation**: Must include a description of what was accomplished. No link-only posts. One showcase per thread. Self-promotion of commercial products is not allowed unless it directly relates to a STAS integration.
+- **Purpose**: Share what you've built with SYNTARO — fixed repos, workflows, automations, integrations, success stories.
+- **Moderation**: Must include a description of what was accomplished. No link-only posts. One showcase per thread. Self-promotion of commercial products is not allowed unless it directly relates to a SYNTARO integration.
 
 #### #feedback
-- **Purpose**: Feature requests, bug reports, product feedback. Every piece of feedback is read by the STAS team.
+- **Purpose**: Feature requests, bug reports, product feedback. Every piece of feedback is read by the SYNTARO team.
 - **Moderation**: Use the template pinned in the channel. One topic per thread. Search before posting to avoid duplicates. Constructive feedback only ("X doesn't work well because Y" rather than "X sucks").
 
 #### #contributing
 - **Purpose**: Coordination for open-source contributors — PR discussions, code reviews, contribution guidelines, onboarding new contributors.
-- **Moderation**: Follow the [CONTRIBUTING.md](https://github.com/Aimino-Tech/stas/blob/main/CONTRIBUTING.md) guide. PRs must link to an open issue. No drive-by "I'll take this" without following up.
+- **Moderation**: Follow the [CONTRIBUTING.md](https://github.com/Aimino-Tech/syntaro/blob/main/CONTRIBUTING.md) guide. PRs must link to an open issue. No drive-by "I'll take this" without following up.
 
 #### #changelog
 - **Purpose**: Automated release announcements, changelog updates, breaking-change notices, deprecation warnings.
 - **Moderation**: Read-only for non-admin members. Only CI/CD bots and maintainers may post. Each release gets its own thread for discussion.
 
 #### #random
-- **Purpose**: Off-topic conversation, water-cooler chat, memes, non-STAS content.
+- **Purpose**: Off-topic conversation, water-cooler chat, memes, non-SYNTARO content.
 - **Moderation**: No harassment, no spam, no NSFW content. Keep it friendly. Use threads for extended conversations.
 
 ---
 
 ## Welcome Message Draft
 
-> **Welcome to the STAS Community! 👋**
+> **Welcome to the SYNTARO Community! 👋**
 >
-> STAS (Solving Tickets As A Service) is an AI agent that automatically fixes GitHub issues — just tag `@stas` on any issue and it produces a pull request.
+> SYNTARO (Solving Tickets As A Service) is an AI agent that automatically fixes GitHub issues — just tag `@syntaro` on any issue and it produces a pull request.
 >
 > **Getting Started**
-> - 📖 Read the docs: https://docs.stas.ai
-> - 🚀 Install: `npm install -g @aimino/stas` or visit our GitHub Marketplace listing
-> - 🎯 Try it: Tag `@stas` on any open GitHub issue in a repo where STAS is installed
-> - 💻 Source code: https://github.com/Aimino-Tech/stas
+> - 📖 Read the docs: https://docs.syntaro.ai
+> - 🚀 Install: `npm install -g @aimino/syntaro` or visit our GitHub Marketplace listing
+> - 🎯 Try it: Tag `@syntaro` on any open GitHub issue in a repo where SYNTARO is installed
+> - 💻 Source code: https://github.com/Aimino-Tech/syntaro
 >
 > **Need Help?**
 > - ❓ Ask in #support with a clear description of your issue
 > - 🔍 Search #support and #general before asking — your question may already be answered
-> - 📬 For urgent issues, email support@stas.ai
+> - 📬 For urgent issues, email support@syntaro.ai
 >
 > **Want to Contribute?**
 > - 🛠 Check #contributing for open issues and PR guidelines
@@ -80,9 +80,9 @@ This document describes the setup, channel structure, moderation rules, bot inte
 > - No spam, no self-promotion
 > - Use the right channels
 > - Search before asking
-> - Full Code of Conduct: https://github.com/Aimino-Tech/stas/blob/main/CODE_OF_CONDUCT.md
+> - Full Code of Conduct: https://github.com/Aimino-Tech/syntaro/blob/main/CODE_OF_CONDUCT.md
 >
-> Introduce yourself in the #general channel! Tell us what you're building with STAS.
+> Introduce yourself in the #general channel! Tell us what you're building with SYNTARO.
 
 ---
 
@@ -92,19 +92,19 @@ This document describes the setup, channel structure, moderation rules, bot inte
 
 Configure a Slack app with the following:
 
-1. **Slack App Name**: `STAS GitHub Notifier`
+1. **Slack App Name**: `SYNTARO GitHub Notifier`
 2. **Scopes (Bot Token)**:
    - `chat:write`
    - `channels:read`
    - `channels:join`
    - `users:read`
 3. **Event Subscriptions**:
-   - Subscribe to GitHub webhook events via the STAS API endpoint `/api/v1/slack/notifications`
-   - Payload URL: `https://api.stas.ai/api/v1/slack/notifications`
+   - Subscribe to GitHub webhook events via the SYNTARO API endpoint `/api/v1/slack/notifications`
+   - Payload URL: `https://api.syntaro.ai/api/v1/slack/notifications`
 4. **Channel**: Post to #changelog and optionally #general for major announcements
 
 **GitHub Webhook Configuration**:
-- Payload URL: `https://api.stas.ai/api/v1/github/webhook`
+- Payload URL: `https://api.syntaro.ai/api/v1/github/webhook`
 - Events: `Issues`, `Pull Requests`, `Releases`, `Discussions`
 - Secret: Set via `SLACK_GITHUB_WEBHOOK_SECRET` environment variable
 
@@ -121,7 +121,7 @@ Configure a Slack app with the following:
 
 ### Automated Welcome DM
 
-1. **Slack App Name**: `STAS Welcome Bot`
+1. **Slack App Name**: `SYNTARO Welcome Bot`
 2. **Trigger**: `member_joined_channel` event on #welcome
 3. **Action**: Send a direct message to the new member with the welcome message (see above).
 4. **Scopes**: `chat:write`, `users:read`, `channels:read`
@@ -141,7 +141,7 @@ app.event("member_joined_channel", async ({ event, client }) => {
     // #welcome channel ID
     await client.chat.postMessage({
       channel: event.user,
-      text: `Welcome to STAS Community! 🎉 We're glad you're here...`,
+      text: `Welcome to SYNTARO Community! 🎉 We're glad you're here...`,
     });
   }
 });
@@ -160,7 +160,7 @@ app.event("member_joined_channel", async ({ event, client }) => {
 
 1. **Be Respectful** — Treat others with dignity and respect. Disagreement is fine; personal attacks are not.
 2. **No Spam** — Do not post unsolicited links, advertisements, or repetitive messages.
-3. **No Self-Promotion** — Do not promote your own products, services, or content unless it directly relates to a STAS integration and is shared in #showcase or #feedback.
+3. **No Self-Promotion** — Do not promote your own products, services, or content unless it directly relates to a SYNTARO integration and is shared in #showcase or #feedback.
 4. **Use the Right Channels** — Keep conversations in the appropriate channel. Off-topic posts will be moved by moderators.
 5. **Search Before Asking** — Check existing threads, documentation, and pinned messages before posting a question.
 6. **Be Constructive** — Criticism should be specific and actionable. "This doesn't work for X because Y" is helpful. "This sucks" is not.
@@ -231,10 +231,10 @@ Configure Slack's built-in message restriction rules (via Slack Admin > Workspac
 
 | Time | Message | Purpose |
 |------|---------|---------|
-| T+0 | Welcome message (full version above) | Introduce STAS |
-| T+1h | "Have you tried STAS yet? Here's a quick start..." | Encourage first use |
+| T+0 | Welcome message (full version above) | Introduce SYNTARO |
+| T+1h | "Have you tried SYNTARO yet? Here's a quick start..." | Encourage first use |
 | T+24h | "Need help getting started? Check #support or our docs" | Support nudge |
-| T+7d | "How's it going with STAS? We'd love your feedback in #feedback" | Engagement check |
+| T+7d | "How's it going with SYNTARO? We'd love your feedback in #feedback" | Engagement check |
 
 ### Introduce Yourself Thread
 
@@ -245,8 +245,8 @@ In #general, a pinned thread titled **"Introduce Yourself!"** where new members 
 > Share a little about yourself:
 > - What's your name / handle?
 > - What are you building?
-> - How did you hear about STAS?
-> - What's one thing you hope STAS can help you with?
+> - How did you hear about SYNTARO?
+> - What's one thing you hope SYNTARO can help you with?
 
 This thread is monitored by the community team. New member intros are acknowledged with a reaction and a reply from the community team within 24 hours.
 

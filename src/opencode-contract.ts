@@ -1,6 +1,6 @@
 /**
  * OpenCode Contract — TypeScript types and Zod validation schemas
- * for the contract between STAS and OpenCode Serve.
+ * for the contract between SYNTARO and OpenCode Serve.
  *
  * This file codifies the request/response contract documented in
  * `docs/opencode-contract.md`.  Use the Zod schemas at dispatch
@@ -38,7 +38,7 @@ export type ConfidenceLevel = (typeof CONFIDENCE_LEVELS)[number];
 export const confidenceLevelSchema = z.enum(CONFIDENCE_LEVELS);
 
 // ---------------------------------------------------------------------------
-// 1. OpenCodeDispatchRequest — what STAS sends to OpenCode Serve
+// 1. OpenCodeDispatchRequest — what SYNTARO sends to OpenCode Serve
 // ---------------------------------------------------------------------------
 
 /**
@@ -55,7 +55,7 @@ export interface OpenCodeDispatchRequest {
 
   /**
    * Model identifier, e.g. "anthropic/claude-sonnet-4-20250514".
-   * STAS iterates through a model chain on failure.
+   * SYNTARO iterates through a model chain on failure.
    */
   model: string;
 }
@@ -121,13 +121,13 @@ export const openCodeDispatchResponseSchema = z.object({
 /**
  * A progress update emitted by OpenCode Serve during a long-running fix.
  *
- * Currently, STAS does not receive streaming progress from OpenCode —
+ * Currently, SYNTARO does not receive streaming progress from OpenCode —
  * it polls via a single blocking POST to `/api/run`.  This interface
  * documents the shape that future streaming or polling-based progress
  * updates would take.
  *
  * When progress reporting is added, OpenCode Serve would emit events
- * at key lifecycle points so STAS can post real-time status to the issue.
+ * at key lifecycle points so SYNTARO can post real-time status to the issue.
  */
 export interface OpenCodeProgress {
   /** Unique identifier for the run session. */
@@ -184,7 +184,7 @@ export const openCodeProgressSchema = z.object({
  * in `src/agent/issueAgent.ts`.
  *
  * This wraps the raw HTTP response with a `success` flag and extracts the
- * fields STAS cares about.  It's the contract boundary between the HTTP
+ * fields SYNTARO cares about.  It's the contract boundary between the HTTP
  * transport layer and the rest of the agent pipeline.
  */
 export interface OpenCodeResult {

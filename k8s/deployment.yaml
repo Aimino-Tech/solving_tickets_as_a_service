@@ -1,27 +1,30 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stas-bot
+  name: syntaro-bot
+  namespace: syntaro
   labels:
-    app: stas-bot
+    app: syntaro-bot
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: stas-bot
+      app: syntaro-bot
   template:
     metadata:
       labels:
-        app: stas-bot
+        app: syntaro-bot
     spec:
       containers:
-        - name: stas-bot
-          image: ghcr.io/tamnguyen08/solving_tickets_as_a_service:latest
+        - name: syntaro-bot
+          image: ghcr.io/aimino-tech/solving_tickets_as_a_service:latest
           ports:
             - containerPort: 3000
           envFrom:
+            - configMapRef:
+                name: syntaro-config
             - secretRef:
-                name: stas-env
+                name: syntaro-secrets
           livenessProbe:
             httpGet:
               path: /health
@@ -36,10 +39,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: stas-bot
+  name: syntaro-bot
+  namespace: syntaro
 spec:
   selector:
-    app: stas-bot
+    app: syntaro-bot
   ports:
     - port: 3000
       targetPort: 3000

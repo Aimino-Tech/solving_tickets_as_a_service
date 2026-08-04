@@ -1,5 +1,5 @@
 /**
- * STAS — Main Application Script
+ * SYNTARO — Main Application Script
  * Handles: Mobile nav toggle, FAQ accordion, animations, Plausible analytics
  */
 
@@ -107,5 +107,5 @@
     });
   });
 
-  console.log('STAS website initialized');
+  console.log('SYNTARO website initialized');
 })();

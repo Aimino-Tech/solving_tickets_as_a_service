@@ -1,9 +1,9 @@
 # =============================================================================
-# STAS Website — Fly.io Deployment Config
-# Domain: stas.aimino.io
+# SYNTARO Website — Fly.io Deployment Config
+# Domain: syntaro.aimino.io
 # =============================================================================
 
-app = "stas-website"
+app = "syntaro-website"
 primary_region = "iad"
 
 [build]

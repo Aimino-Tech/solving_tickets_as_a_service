@@ -32,7 +32,7 @@ export interface ApprovalGateConfig {
   requiredOrgs: string[];
   /** Specific repos (org/repo) that require approval. */
   requiredRepos: string[];
-  /** Labels that trigger the approval gate (e.g. 'production', 'stas:fix:approval'). */
+  /** Labels that trigger the approval gate (e.g. 'production', 'syntaro:fix:approval'). */
   triggerLabels: string[];
   /** Whether the approval gate is enabled globally. */
   enabled: boolean;
@@ -65,7 +65,7 @@ export interface PendingApproval {
 const DEFAULT_CONFIG: ApprovalGateConfig = {
   requiredOrgs: [],
   requiredRepos: [],
-  triggerLabels: ['production', 'stas:fix:approval'],
+  triggerLabels: ['production', 'syntaro:fix:approval'],
   enabled: false,
 };
 

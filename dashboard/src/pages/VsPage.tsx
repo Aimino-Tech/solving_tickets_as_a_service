@@ -40,7 +40,7 @@ function AdvantageBadge({ advantage }: { advantage: 'us' | 'them' | 'tie' }) {
         <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
         </svg>
-        STAS wins
+        SYNTARO wins
       </span>
     );
   }
@@ -75,17 +75,17 @@ export default function VsPage() {
     return (
       <div className="space-y-8">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900">STAS vs Competitors</h2>
-          <p className="mt-3 text-lg text-gray-600">See how STAS compares head-to-head against leading AI coding agents.</p>
+          <h2 className="text-3xl font-bold text-gray-900">SYNTARO vs Competitors</h2>
+          <p className="mt-3 text-lg text-gray-600">See how SYNTARO compares head-to-head against leading AI coding agents.</p>
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {VALID_COMPETITORS.map((c) => (
             <Link key={c} to={`/vs/${c}`} className="card group border-gray-200 hover:border-brand-200 hover:shadow-md transition-all">
-              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-brand-600">STAS vs {COMPETITOR_NAMES[c]}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-brand-600">SYNTARO vs {COMPETITOR_NAMES[c]}</h3>
               <p className="mt-2 text-sm text-gray-500">
                 {c === 'copilot' && 'AI pair programmer vs autonomous fix agent.'}
-                {c === 'devin' && 'Premium AI agent showdown. STAS delivers better results.'}
-                {c === 'plip' && 'The closest competitor. See how STAS wins on every metric.'}
+                {c === 'devin' && 'Premium AI agent showdown. SYNTARO delivers better results.'}
+                {c === 'plip' && 'The closest competitor. See how SYNTARO wins on every metric.'}
               </p>
               <span className="mt-4 inline-block text-sm font-medium text-brand-600 group-hover:text-brand-700">View comparison &rarr;</span>
             </Link>
@@ -111,14 +111,14 @@ export default function VsPage() {
       </nav>
 
       <div className="text-center">
-        <h2 className="text-4xl font-bold tracking-tight text-gray-900">STAS vs {data.competitorName}</h2>
+        <h2 className="text-4xl font-bold tracking-tight text-gray-900">SYNTARO vs {data.competitorName}</h2>
         <p className="mt-3 text-lg text-gray-600">{data.tagline}</p>
         <p className="mt-4 max-w-2xl mx-auto text-base text-brand-700 font-medium">{data.ourAdvantage}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="card border-brand-200 bg-brand-50 text-center">
-          <p className="text-sm font-medium text-brand-600">STAS Pass Rate</p>
+          <p className="text-sm font-medium text-brand-600">SYNTARO Pass Rate</p>
           <p className="mt-1 text-4xl font-bold text-brand-700">{(bc.ourPassRate * 100).toFixed(0)}%</p>
           <p className="mt-1 text-xs text-gray-500">XOR Benchmark</p>
         </div>
@@ -140,7 +140,7 @@ export default function VsPage() {
         <h3 className="text-lg font-bold text-gray-900">Price Comparison</h3>
         <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <p className="text-sm text-gray-500">STAS monthly</p>
+            <p className="text-sm text-gray-500">SYNTARO monthly</p>
             <p className="text-2xl font-bold text-gray-900">${(pc.ourMonthlyCents / 100).toFixed(0)}</p>
           </div>
           <div>
@@ -148,7 +148,7 @@ export default function VsPage() {
             <p className="text-2xl font-bold text-gray-900">${(pc.theirMonthlyCents / 100).toFixed(0)}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">STAS per fix</p>
+            <p className="text-sm text-gray-500">SYNTARO per fix</p>
             <p className="text-2xl font-bold text-green-600">${(pc.ourPerFixCents / 100).toFixed(2)}</p>
           </div>
           <div>
@@ -159,7 +159,7 @@ export default function VsPage() {
         {pc.annualSavingsCents > 0 && (
           <div className="mt-6 rounded-lg bg-green-50 p-4 text-center">
             <p className="text-sm font-medium text-green-700">
-              Annual savings with STAS: <span className="text-xl font-bold">${(pc.annualSavingsCents / 100).toLocaleString()}</span>
+              Annual savings with SYNTARO: <span className="text-xl font-bold">${(pc.annualSavingsCents / 100).toLocaleString()}</span>
             </p>
           </div>
         )}
@@ -173,7 +173,7 @@ export default function VsPage() {
               <thead>
                 <tr className="bg-gray-50">
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Feature</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-700">STAS</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-700">SYNTARO</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">{data.competitorName}</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Edge</th>
                 </tr>

@@ -62,7 +62,7 @@ vi.mock('../../github/auth.js', () => ({
 
 vi.mock('../../config.js', () => ({
   config: {
-    stas: { mode: 'oss', botName: 'STAS', label: 'stas:fix' },
+    syntaro: { mode: 'oss', botName: 'SYNTARO', label: 'syntaro:fix' },
     sentry: { dsn: undefined },
     github: {
       appId: 'test-app',
@@ -117,7 +117,7 @@ function createDispatchParams(overrides?: Partial<AgentResult>) {
       summary: 'Fixed the login handler with input sanitization.',
       confidence: 'high' as const,
       fixReady: true,
-      branchName: 'stas/fix-42-abc',
+      branchName: 'syntaro/fix-42-abc',
       diff: 'diff --git a/src/login.ts b/src/login.ts\n+const sanitized = escape(input);',
       testOutput: 'PASS: 2 tests passed',
       errors: [],
@@ -174,7 +174,7 @@ describe('ActionDispatcher', () => {
           owner: 'owner',
           repo: 'test-repo',
           title: 'Fix: Fix broken login',
-          head: expect.stringContaining('stas/fix-'),
+          head: expect.stringContaining('syntaro/fix-'),
           base: 'main',
         }),
       );
@@ -193,7 +193,7 @@ describe('ActionDispatcher', () => {
       const params = createDispatchParams({ confidence: 'high' });
       await dispatcher.dispatch(params);
 
-      expect(params.sandbox.pushBranch).toHaveBeenCalledWith(expect.stringContaining('stas/fix-'));
+      expect(params.sandbox.pushBranch).toHaveBeenCalledWith(expect.stringContaining('syntaro/fix-'));
     });
   });
 

@@ -7,7 +7,7 @@ class DashboardPage:
         self.base_url = base_url
 
     def goto(self):
-        self.page.goto(f"{self.base_url}/dashboard")
+        self.page.goto(f"{self.base_url}/")
         self.page.wait_for_load_state("networkidle")
 
     @property

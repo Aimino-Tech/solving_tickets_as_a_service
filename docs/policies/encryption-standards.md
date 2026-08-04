@@ -1,4 +1,4 @@
-# Encryption Standards — STAS
+# Encryption Standards — SYNTARO
 
 > Last updated: 2026-06-25
 

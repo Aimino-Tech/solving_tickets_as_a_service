@@ -1,5 +1,5 @@
 /**
- * Shared types for the STAS eval provider.
+ * Shared types for the SYNTARO eval provider.
  *
  * These types define the shape of test cases, evaluation results, and
  * agent trace artifacts used throughout the Promptfoo provider pipeline.

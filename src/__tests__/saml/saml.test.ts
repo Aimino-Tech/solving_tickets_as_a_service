@@ -15,12 +15,12 @@ vi.mock('../../config.js', () => ({
     saml: {
       tenantId: 'acme',
       tenantName: 'Acme Corp',
-      spEntityId: 'https://stas.dev/saml/metadata',
+      spEntityId: 'https://syntaro.dev/saml/metadata',
       spAcsUrl: '',
       idpIssuer: 'https://idp.example.com',
       idpSsoUrl: 'https://idp.example.com/sso',
       idpCert: '',
-      dashboardUrl: 'https://app.stas.dev',
+      dashboardUrl: 'https://app.syntaro.dev',
     },
     nodeEnv: 'test',
   },
@@ -97,7 +97,7 @@ describe('SAML routes', () => {
     expect(res.status).toHaveBeenCalledWith(200);
     const body = (res.send as any).mock.calls[0][0] as string;
     expect(body).toContain('EntityDescriptor');
-    expect(body).toContain('entityID="https://stas.dev/saml/metadata"');
+    expect(body).toContain('entityID="https://syntaro.dev/saml/metadata"');
     expect(body).toContain('AssertionConsumerService');
     expect((res.setHeader as any).mock.calls.some((c: unknown[]) => c[1] === 'application/xml')).toBe(true);
   });
@@ -115,11 +115,11 @@ describe('SAML routes', () => {
     await invokeRoute(router, 'POST', '/acs', req, res);
 
     expect(res.cookie).toHaveBeenCalledWith(
-      'stas_saml_token',
+      'syntaro_saml_token',
       expect.any(String),
       expect.objectContaining({ httpOnly: true }),
     );
-    expect(res.redirect).toHaveBeenCalledWith(302, 'https://app.stas.dev');
+    expect(res.redirect).toHaveBeenCalledWith(302, 'https://app.syntaro.dev');
   });
 
   it('rejects an ACS request without a SAMLResponse', async () => {
@@ -131,10 +131,10 @@ describe('SAML routes', () => {
 
   it('clears the SAML session cookie on logout', async () => {
     const { req, res } = mockReqRes('GET', '/logout');
-    req.headers.cookie = 'stas_saml_token=abc123';
+    req.headers.cookie = 'syntaro_saml_token=abc123';
     await invokeRoute(router, 'GET', '/logout', req, res);
 
-    expect(res.clearCookie).toHaveBeenCalledWith('stas_saml_token');
-    expect(res.redirect).toHaveBeenCalledWith(302, 'https://app.stas.dev');
+    expect(res.clearCookie).toHaveBeenCalledWith('syntaro_saml_token');
+    expect(res.redirect).toHaveBeenCalledWith(302, 'https://app.syntaro.dev');
   });
 });

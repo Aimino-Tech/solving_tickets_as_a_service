@@ -1,5 +1,5 @@
 # =============================================================================
-# STAS Eval Standard — runs on PR ready_for_review or labeled:ready
+# SYNTARO Eval Standard — runs on PR ready_for_review or labeled:ready
 #
 # Executes 10 test cases across 3 parallel matrix groups, aggregates results,
 # checks for regression against committed baseline, generates a badge SVG,

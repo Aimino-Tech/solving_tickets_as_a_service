@@ -1,8 +1,8 @@
-# STAS Pre-Launch Smoke Test
+# SYNTARO Pre-Launch Smoke Test
 
 ## Overview
 
-The pre-launch smoke test (`pre-launch-smoke-test.sh`) is a comprehensive bash script that validates all STAS system components from a clean state. It runs 37 tests across 7 sections to ensure the repository is ready for production deployment.
+The pre-launch smoke test (`pre-launch-smoke-test.sh`) is a comprehensive bash script that validates all SYNTARO system components from a clean state. It runs 37 tests across 7 sections to ensure the repository is ready for production deployment.
 
 ## Purpose
 
@@ -62,7 +62,7 @@ bash scripts/pre-launch-smoke-test.sh --help
 | # | Test | Description |
 |---|------|-------------|
 | 2.1 | Main Dockerfile exists | Primary build file present |
-| 2.2 | Dockerfile.stas exists | STAS-specific Dockerfile (optional) |
+| 2.2 | Dockerfile.syntaro exists | SYNTARO-specific Dockerfile (optional) |
 | 2.3 | HEALTHCHECK configured | Container health monitoring |
 | 2.4 | Non-root user | Security best practice |
 | 2.5 | Reproducible builds | Lockfile integrity checks |
@@ -81,7 +81,7 @@ bash scripts/pre-launch-smoke-test.sh --help
 
 | # | Test | Description |
 |---|------|-------------|
-| 4.1 | stas.yml exists | Main STAS workflow |
+| 4.1 | syntaro.yml exists | Main SYNTARO workflow |
 | 4.2 | Valid YAML | Workflow parses correctly |
 | 4.3 | Secrets documented | Required secrets in config files |
 | 4.4 | CI workflow exists | Continuous Integration |

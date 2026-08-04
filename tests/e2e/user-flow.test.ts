@@ -1,7 +1,7 @@
 /**
  * Comprehensive User Flow Integration Tests.
  *
- * Simulates real user behavior through the STAS Express app:
+ * Simulates real user behavior through the SYNTARO Express app:
  *   1. Health & server responsiveness
  *   2. GitHub webhook ingestion (issue labeled → pipeline triggered)
  *   3. Multi-platform webhooks (GitLab, Linear, Jira, Bitbucket)
@@ -35,7 +35,7 @@ async function startTestServer(app: Express): Promise<{ server: http.Server; url
 function sampleIssueLabeledPayload() {
   return {
     action: 'labeled',
-    issue: { number: 42, title: 'Fix broken user login', body: 'Users are unable to log in when the password contains special characters.', labels: [{ name: 'stas:fix', color: 'fc2929' }], state: 'open' },
+    issue: { number: 42, title: 'Fix broken user login', body: 'Users are unable to log in when the password contains special characters.', labels: [{ name: 'syntaro:fix', color: 'fc2929' }], state: 'open' },
     repository: { full_name: 'owner/test-repo', owner: { login: 'owner' }, name: 'test-repo', private: false },
     installation: { id: 555 },
   };
@@ -69,26 +69,26 @@ const { mockConfig } = vi.hoisted(() => ({
   mockConfig: {
     port: 0, runMode: 'api', logLevel: 'silent', nodeEnv: 'test',
     github: { appId: '123', privateKeyPath: undefined, privateKeyEnv: 'mock-private-key', webhookSecret: 'test-webhook-secret', webhookPath: '/webhook', oauthClientId: '', oauthClientSecret: '' },
-    queue: { redisUrl: 'redis://localhost:6379', rabbitmqUrl: 'amqp://guest:guest@localhost:5672/stas', workerConcurrency: 2, dedupTtl: 120, keepCompleted: 200, keepFailed: 100, maxRetries: 4, retryDelays: [30000, 120000, 300000, 900000] as number[], backend: 'rabbitmq' as const },
+    queue: { redisUrl: 'redis://localhost:6379', rabbitmqUrl: 'amqp://guest:guest@localhost:5672/syntaro', workerConcurrency: 2, dedupTtl: 120, keepCompleted: 200, keepFailed: 100, maxRetries: 4, retryDelays: [30000, 120000, 300000, 900000] as number[], backend: 'rabbitmq' as const },
     bridge: { rpcTimeoutMs: 30000, maxRetries: 3, circuitBreakerThreshold: 5, fallbackBackend: 'redis' as const },
     opencode: { url: 'http://localhost:4096', model: 'anthropic/claude-sonnet-4-20250514', fallbackModels: ['gpt-4o', 'claude-haiku'] as string[], direct: { apiKey: '' } },
     opencodeHealth: { circuitBreakerThreshold: 3, pollIntervalMs: 15000, cacheTtlMs: 30000, requestTimeoutMs: 5000, startupTimeoutMs: 30000 },
     gitlab: { url: 'https://gitlab.com', token: 'mock-gitlab-token', webhookSecret: 'mock-gitlab-secret' },
     bitbucket: { username: 'mock-bitbucket-user', appPassword: 'mock-bitbucket-password', webhookSecret: 'mock-bitbucket-secret', baseUrl: 'https://api.bitbucket.org' },
     openai: { apiKey: 'mock-openai-key', cheapModel: 'gpt-4o-mini' },
-    e2b: { apiKey: undefined as string | undefined, templateId: 'stas-default', sandboxTimeoutMs: 300000 },
+    e2b: { apiKey: undefined as string | undefined, templateId: 'syntaro-default', sandboxTimeoutMs: 300000 },
     slack: { webhookUrl: undefined, channel: undefined, botToken: undefined, signingSecret: undefined, interactionsPath: '/slack/events' },
     admin: { apiKey: 'mock-admin-key', rateLimitMax: 10 },
     sentry: { dsn: undefined, environment: 'test', tracesSampleRate: 0 },
     monitoring: { queueDepthWarnThreshold: 50, queueDepthCritThreshold: 200, queueDepthAlertMinutes: 5, dlqRetentionDays: 7 },
-    alerting: { slackChannel: '#stas-alerts', warnQueueDepth: 50, critQueueDepth: 200, warnErrorRatePercent: 10, critErrorRatePercent: 30, n8nWebhookUrl: '' },
+    alerting: { slackChannel: '#syntaro-alerts', warnQueueDepth: 50, critQueueDepth: 200, warnErrorRatePercent: 10, critErrorRatePercent: 30, n8nWebhookUrl: '' },
     ci: { monitorEnabled: false, repos: [] as string[], pollIntervalMs: 60000, failureThreshold: 3 },
-    stas: { label: 'stas:fix', botName: 'STAS', mode: 'oss' as const, aiMode: 'ai' as const, aiDisabled: true, devSkipWebhookVerify: true, maxAgentIterations: 40, maxIssueComments: 15, rateLimitWindowMs: 60000, rateLimitMax: 150, rateLimitPerRepoMax: 20, rateLimitPerIpMax: 60, rateLimitPerUserMax: 100, queueMaxPendingPerRepo: 10, queueDlqMaxSize: 50, queueDlqNotifyAt: 25, defaultTier: 'free' as const, monthlyQuotaEnabled: true },
+    syntaro: { label: 'syntaro:fix', botName: 'SYNTARO', mode: 'oss' as const, aiMode: 'ai' as const, aiDisabled: true, devSkipWebhookVerify: true, maxAgentIterations: 40, maxIssueComments: 15, rateLimitWindowMs: 60000, rateLimitMax: 150, rateLimitPerRepoMax: 20, rateLimitPerIpMax: 60, rateLimitPerUserMax: 100, queueMaxPendingPerRepo: 10, queueDlqMaxSize: 50, queueDlqNotifyAt: 25, defaultTier: 'free' as const, monthlyQuotaEnabled: true },
     webhookRetry: { pollIntervalMs: 15000, batchSize: 10 },
     usage: { creditsFixRun: 50, creditsTriage: 10, creditsSandbox: 5 },
     rateLimit: { defaultTier: 'free' as const, ipMaxPerMinute: 30, adminOverrides: {} as Record<string, number> },
     stripe: { secretKey: undefined, webhookSecret: undefined, price100Credits: 'price_100credits', price500Credits: 'price_500credits', price2000Credits: 'price_2000credits', soloPriceId: 'price_solo', teamPriceId: 'price_team' },
-    database: { url: 'postgres://localhost:5432/stas', poolMin: 2, poolMax: 10, ssl: false, enableAuditPersistence: false },
+    database: { url: 'postgres://localhost:5432/syntaro', poolMin: 2, poolMax: 10, ssl: false, enableAuditPersistence: false },
     fixTimeoutMs: 600000,
     phaseTimeouts: { triage: 30000, sandboxBoot: 300000, openCodeAgent: 600000, prCreation: 30000 },
     featureFlags: { defaultTtlSeconds: 30, autoDisableThreshold: 0.05 },
@@ -96,7 +96,7 @@ const { mockConfig } = vi.hoisted(() => ({
     security: { adminApiKey: 'mock-admin-key', corsOrigin: '*', requestBodyLimit: '1mb', webhookBodyLimit: '5mb', cspReportUri: '', ipAllowlist: { enabled: false, ips: [] as string[] }, sandbox: { privileged: false, readOnlyRoot: true, memoryLimit: '512m', cpuLimit: '0.5', pidsLimit: 256, diskLimit: '2gb', networkEnabled: false } },
     metering: { costTriage: 1, costOpencodePrimary: 10, costOpencodeFallback: 5, costPrCreation: 2, costRetryPenalty: 3, baselineSandboxMs: 300000, freeMonthlyCredits: 100, sandboxMultiplierMin: 0.5, sandboxMultiplierMax: 2.0 },
     usageCredits: { fixRun: 50, triage: 10, sandbox: 5 },
-    storage: { type: 'sqlite' as const, sqlitePath: '/tmp/stas-test.db' },
+    storage: { type: 'sqlite' as const, sqlitePath: '/tmp/syntaro-test.db' },
     auth: { jwtSecret: 'test-jwt-secret', jwtExpiresIn: '24h', jwtRefreshExpiresIn: '30d' },
     osy: { dispatchUrl: '', apiKey: '', tenant: 'default' },
     litellm: { apiKey: '', baseUrl: 'http://localhost:4002', model: 'gpt-4o' },
@@ -237,7 +237,7 @@ describe('User Flow Integration Tests', () => {
 
   describe('3. Multi-Platform Webhooks', () => {
     it('GitLab webhook returns 202', async () => {
-      const payload = { object_kind: 'issue', object_attributes: { id: 42, title: 'Test', labels: [{ title: 'stas:fix' }] }, project: { id: 123, name: 'test-repo', namespace: 'owner' } };
+      const payload = { object_kind: 'issue', object_attributes: { id: 42, title: 'Test', labels: [{ title: 'syntaro:fix' }] }, project: { id: 123, name: 'test-repo', namespace: 'owner' } };
       const res = await fetch(`${serverUrl}/webhook/gitlab`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-gitlab-event': 'Issue Hook' },

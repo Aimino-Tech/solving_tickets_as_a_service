@@ -2,9 +2,9 @@
 Linear issue polling and pipeline dispatch.
 
 Polls Linear for issues in active workflow states, classifies them,
-and dispatches them through the full STAS pipeline: triage -> fix -> PR -> merge -> done.
+and dispatches them through the full SYNTARO pipeline: triage -> fix -> PR -> merge -> done.
 
-Deduplication is handled via Redis locks (stas:dedup:{issue_id})
+Deduplication is handled via Redis locks (syntaro:dedup:{issue_id})
 and an in-memory tracking set.
 """
 
@@ -25,7 +25,7 @@ from workers.tracker.state_machine import get_active_states
 
 logger = logging.getLogger(__name__)
 
-_CONFIG_PATH = os.getenv("STAS_REPOS_CONFIG", "/home/malek/solving_tickets_as_a_service/stas-repos.json")
+_CONFIG_PATH = os.getenv("SYNTARO_REPOS_CONFIG", "/home/malek/solving_tickets_as_a_service/syntaro-repos.json")
 _REPOS_CACHE: dict | None = None
 
 
@@ -92,10 +92,10 @@ def _is_project_paused(issue: dict[str, Any]) -> bool:
     return False
 
 
-@app.task(bind=True, queue="stas.issues.triage", max_retries=3, default_retry_delay=30)
+@app.task(bind=True, queue="syntaro.issues.triage", max_retries=3, default_retry_delay=30)
 def poll_active_issues(self: Task) -> dict[str, Any]:
     """
-    Poll Linear for active issues and dispatch them through the STAS pipeline.
+    Poll Linear for active issues and dispatch them through the SYNTARO pipeline.
 
     Beat schedule: every 2 minutes (configured in celeryconfig.py).
 
@@ -150,7 +150,7 @@ def poll_active_issues(self: Task) -> dict[str, Any]:
 
         # Post "working on it" comment
         try:
-            linear.post_comment(issue_id, f"🔄 **STAS**: Starting work — pipeline `{pipeline}`")
+            linear.post_comment(issue_id, f"🔄 **SYNTARO**: Starting work — pipeline `{pipeline}`")
         except Exception as exc:
             logger.warning("Failed to post comment to %s: %s", identifier, exc)
 
@@ -197,11 +197,11 @@ def poll_active_issues(self: Task) -> dict[str, Any]:
     }
 
 
-@app.task(bind=True, queue="stas.agents.dispatch")
+@app.task(bind=True, queue="syntaro.agents.dispatch")
 def triage(self: Task, issue_id: str, identifier: str, pipeline: str, title: str) -> dict[str, Any]:
     """Simple triage that posts a comment and passes through."""
     try:
-        linear.post_comment(issue_id, f"🔄 **STAS**: Working on it — pipeline `{pipeline}`")
+        linear.post_comment(issue_id, f"🔄 **SYNTARO**: Working on it — pipeline `{pipeline}`")
     except Exception as exc:
         logger.warning("Failed to post comment: %s", exc)
     return {
@@ -212,7 +212,7 @@ def triage(self: Task, issue_id: str, identifier: str, pipeline: str, title: str
     }
 
 
-@app.task(bind=True, queue="stas.agents.notifications")
+@app.task(bind=True, queue="syntaro.agents.notifications")
 def notify_progress(
     self: Task,
     issue_id: str,
@@ -221,13 +221,13 @@ def notify_progress(
 ) -> dict[str, Any]:
     """Post a progress update comment to the Linear issue."""
     try:
-        linear.post_comment(issue_id, f"**STAS**: {message}")
+        linear.post_comment(issue_id, f"**SYNTARO**: {message}")
     except Exception as exc:
         logger.warning("Failed to post notification: %s", exc)
     return {"issue_id": issue_id, "stage": stage, "sent": True}
 
 
-@app.task(bind=True, queue="stas.agents.self_audit")
+@app.task(bind=True, queue="syntaro.agents.self_audit")
 def transition_state(self: Task, issue_id: str, current_state: str) -> dict[str, Any]:
     """Transition the Linear issue to the next state per the state machine."""
     from workers.tracker.state_machine import resolve_state as next_state

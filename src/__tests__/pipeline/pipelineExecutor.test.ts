@@ -17,7 +17,7 @@ const mockJob: IssueJobData = {
   issueNumber: 42,
   issueTitle: 'Fix login bug',
   issueBody: 'The login page crashes on submit',
-  labels: ['stas:fix', 'bug'],
+  labels: ['syntaro:fix', 'bug'],
 };
 
 describe('PipelineExecutor', () => {
@@ -52,7 +52,7 @@ describe('PipelineExecutor', () => {
       const loaded = scanTemplatesDirectory();
       expect(loaded.length).toBeGreaterThan(0);
 
-      const executor = new PipelineExecutor(mockJob, 'stas:fix');
+      const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
       const result = await executor.start();
 
       expect(result.success).toBe(true);
@@ -68,7 +68,7 @@ describe('PipelineExecutor', () => {
 
     it('creates a session with phase metadata', async () => {
       scanTemplatesDirectory();
-      const executor = new PipelineExecutor(mockJob, 'stas:fix');
+      const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
       const firstResult = await executor.start();
 
       expect(firstResult.session).toBeDefined();
@@ -80,7 +80,7 @@ describe('PipelineExecutor', () => {
         phaseHistory: unknown[];
       };
 
-      expect(session.templateName).toBe('stas:fix');
+      expect(session.templateName).toBe('syntaro:fix');
       expect(session.phaseOrder).toEqual(expect.arrayContaining(['pre', 'main', 'post', 'final']));
       expect(session.currentPhaseIndex).toBe(0);
       expect(session.currentStepIndex).toBe(0);
@@ -90,7 +90,7 @@ describe('PipelineExecutor', () => {
   describe('advance()', () => {
     it('advances to the next step within the same phase', async () => {
       scanTemplatesDirectory();
-      const executor = new PipelineExecutor(mockJob, 'stas:fix');
+      const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
       const first = await executor.start();
       expect(first.phase).toBe('pre');
       expect(first.stepIndex).toBe(0);
@@ -105,7 +105,7 @@ describe('PipelineExecutor', () => {
 
     it('transitions to the next phase when all phase steps are consumed', async () => {
       scanTemplatesDirectory();
-      const executor = new PipelineExecutor(mockJob, 'stas:fix');
+      const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
       const first = await executor.start();
       expect(first.phase).toBe('pre');
 
@@ -122,13 +122,13 @@ describe('PipelineExecutor', () => {
 
     it('completes when all phases are done', async () => {
       scanTemplatesDirectory();
-      const template = getLoadedTemplate('stas:fix')!;
+      const template = getLoadedTemplate('syntaro:fix')!;
       const totalSteps = ALL_PHASES.reduce(
         (sum, p) => sum + (template.phases[p]?.length ?? 0),
         0,
       );
 
-      const executor = new PipelineExecutor(mockJob, 'stas:fix');
+      const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
       const first = await executor.start();
       expect(first.phase).toBe('pre');
 
@@ -151,7 +151,7 @@ describe('PipelineExecutor', () => {
 
     it('returns error for non-existent session', async () => {
       scanTemplatesDirectory();
-      const executor = new PipelineExecutor(mockJob, 'stas:fix');
+      const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
       await executor.start();
 
       const result = await executor.advance('nonexistent-session', { success: true });
@@ -163,7 +163,7 @@ describe('PipelineExecutor', () => {
   describe('failure and retry', () => {
     it('retries a step when failure occurs and attempts remain', async () => {
       scanTemplatesDirectory();
-      const executor = new PipelineExecutor(mockJob, 'stas:fix');
+      const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
       const first = await executor.start();
 
       const result = await executor.advance(first.session!.sessionId, {
@@ -183,7 +183,7 @@ describe('PipelineExecutor', () => {
 
     it('fails permanently when max retries exceeded', async () => {
       scanTemplatesDirectory();
-      const executor = new PipelineExecutor(mockJob, 'stas:fix');
+      const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
       const first = await executor.start();
 
       // Consume all retries by failing repeatedly
@@ -204,7 +204,7 @@ describe('PipelineExecutor', () => {
   describe('getProgress()', () => {
     it('returns initial progress state', async () => {
       scanTemplatesDirectory();
-      const executor = new PipelineExecutor(mockJob, 'stas:fix');
+      const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
       const result = await executor.start();
 
       const progress = executor.getProgress(result.session!.sessionId);
@@ -214,7 +214,7 @@ describe('PipelineExecutor', () => {
     });
 
     it('returns empty progress for non-existent session', async () => {
-      const executor = new PipelineExecutor(mockJob, 'stas:fix');
+      const executor = new PipelineExecutor(mockJob, 'syntaro:fix');
       const progress = executor.getProgress('nonexistent');
       expect(progress.currentPhase).toBeNull();
       expect(progress.totalPhases).toBe(0);

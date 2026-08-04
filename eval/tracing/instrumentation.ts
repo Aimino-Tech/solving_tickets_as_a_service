@@ -1,7 +1,7 @@
 import { trace, Span, SpanStatusCode, context } from "@opentelemetry/api";
 import { TraceSpans, type SpanSchemas } from "./trace-schema";
 
-const tracer = trace.getTracer("stas-eval");
+const tracer = trace.getTracer("syntaro-eval");
 
 // ---------------------------------------------------------------------------
 // Helper: create a child span with automatic error handling
@@ -94,7 +94,7 @@ export function traceSync<Name extends keyof SpanSchemas>(
  *   });
  */
 export function withRunSpan(
-  attrs: SpanSchemas["stas-eval.run"],
+  attrs: SpanSchemas["syntaro-eval.run"],
   fn: (span: Span) => Promise<unknown>,
 ): Promise<unknown> {
   return traceAsync(TraceSpans.RUN, attrs, fn);
@@ -104,7 +104,7 @@ export function withRunSpan(
  * Wraps sandbox creation inside a child span.
  */
 export function withSandboxCreateSpan(
-  attrs: SpanSchemas["stas-eval.sandbox.create"],
+  attrs: SpanSchemas["syntaro-eval.sandbox.create"],
   fn: (span: Span) => Promise<unknown>,
 ): Promise<unknown> {
   return traceAsync(TraceSpans.SANDBOX_CREATE, attrs, fn);
@@ -114,7 +114,7 @@ export function withSandboxCreateSpan(
  * Wraps an agent command execution inside a child span.
  */
 export function withAgentExecuteSpan(
-  attrs: SpanSchemas["stas-eval.agent.execute"],
+  attrs: SpanSchemas["syntaro-eval.agent.execute"],
   fn: (span: Span) => Promise<unknown>,
 ): Promise<unknown> {
   return traceAsync(TraceSpans.AGENT_EXECUTE, attrs, fn);
@@ -124,7 +124,7 @@ export function withAgentExecuteSpan(
  * Wraps a single tool call inside a child span.
  */
 export function withToolCallSpan(
-  attrs: SpanSchemas["stas-eval.agent.tool_call"],
+  attrs: SpanSchemas["syntaro-eval.agent.tool_call"],
   fn: (span: Span) => Promise<unknown>,
 ): Promise<unknown> {
   return traceAsync(TraceSpans.AGENT_TOOL_CALL, attrs, fn);
@@ -134,7 +134,7 @@ export function withToolCallSpan(
  * Wraps artifact collection inside a child span.
  */
 export function withArtifactCollectSpan(
-  attrs: SpanSchemas["stas-eval.artifact.collect"],
+  attrs: SpanSchemas["syntaro-eval.artifact.collect"],
   fn: (span: Span) => Promise<unknown>,
 ): Promise<unknown> {
   return traceAsync(TraceSpans.ARTIFACT_COLLECT, attrs, fn);
@@ -144,7 +144,7 @@ export function withArtifactCollectSpan(
  * Wraps evaluation / assertion logic inside a child span.
  */
 export function withEvaluateSpan(
-  attrs: SpanSchemas["stas-eval.evaluate"],
+  attrs: SpanSchemas["syntaro-eval.evaluate"],
   fn: (span: Span) => Promise<unknown>,
 ): Promise<unknown> {
   return traceAsync(TraceSpans.EVALUATE, attrs, fn);
@@ -155,7 +155,7 @@ export function withEvaluateSpan(
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the STAS eval tracer instance for direct use when the helper
+ * Returns the SYNTARO eval tracer instance for direct use when the helper
  * functions above do not suffice (e.g. creating multiple concurrent spans).
  */
 export function getTracer() {

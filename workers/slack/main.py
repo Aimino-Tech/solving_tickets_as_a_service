@@ -1,5 +1,5 @@
 """
-Entry point for the STAS Slack bot.
+Entry point for the SYNTARO Slack bot.
 
 Usage:
     python -m workers.slack.main
@@ -18,7 +18,7 @@ logging.basicConfig(
 
 def main():
     logger = logging.getLogger(__name__)
-    logger.info("Starting STAS Slack bot...")
+    logger.info("Starting SYNTARO Slack bot...")
 
     required_vars = ["SLACK_BOT_TOKEN", "SLACK_SIGNING_SECRET"]
     missing = [v for v in required_vars if not os.getenv(v)]

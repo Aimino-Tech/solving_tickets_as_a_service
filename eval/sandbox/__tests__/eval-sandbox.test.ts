@@ -60,30 +60,30 @@ describe('EvalTestCase interface shape', () => {
 
 describe('sanitizeEnvironment', () => {
   it('passes through non-sensitive vars', () => {
-    const result = sanitizeEnvironment({ STAS_EVAL_MODE: 'true', STAS_REPO_URL: 'https://example.com' });
-    expect(result).toEqual({ STAS_EVAL_MODE: 'true', STAS_REPO_URL: 'https://example.com' });
+    const result = sanitizeEnvironment({ SYNTARO_EVAL_MODE: 'true', SYNTARO_REPO_URL: 'https://example.com' });
+    expect(result).toEqual({ SYNTARO_EVAL_MODE: 'true', SYNTARO_REPO_URL: 'https://example.com' });
   });
 
   it('strips OPENAI_API_KEY', () => {
-    const result = sanitizeEnvironment({ STAS_EVAL_MODE: 'true', OPENAI_API_KEY: 'sk-xxx' });
-    expect(result).toEqual({ STAS_EVAL_MODE: 'true' });
+    const result = sanitizeEnvironment({ SYNTARO_EVAL_MODE: 'true', OPENAI_API_KEY: 'sk-xxx' });
+    expect(result).toEqual({ SYNTARO_EVAL_MODE: 'true' });
     expect(result.OPENAI_API_KEY).toBeUndefined();
   });
 
   it('strips ANTHROPIC_API_KEY', () => {
-    const result = sanitizeEnvironment({ STAS_EVAL_MODE: 'true', ANTHROPIC_API_KEY: 'sk-ant-xxx' });
-    expect(result).toEqual({ STAS_EVAL_MODE: 'true' });
+    const result = sanitizeEnvironment({ SYNTARO_EVAL_MODE: 'true', ANTHROPIC_API_KEY: 'sk-ant-xxx' });
+    expect(result).toEqual({ SYNTARO_EVAL_MODE: 'true' });
     expect(result.ANTHROPIC_API_KEY).toBeUndefined();
   });
 
   it('strips E2B_API_KEY', () => {
-    const result = sanitizeEnvironment({ STAS_EVAL_MODE: 'true', E2B_API_KEY: 'e2b_xxx' });
-    expect(result).toEqual({ STAS_EVAL_MODE: 'true' });
+    const result = sanitizeEnvironment({ SYNTARO_EVAL_MODE: 'true', E2B_API_KEY: 'e2b_xxx' });
+    expect(result).toEqual({ SYNTARO_EVAL_MODE: 'true' });
   });
 
   it('strips vars matching sensitive patterns case-insensitively', () => {
-    const result = sanitizeEnvironment({ STAS_EVAL_MODE: 'true', api_key: 'xxx', GITHUB_TOKEN: 'ghp_xxx' });
-    expect(result).toEqual({ STAS_EVAL_MODE: 'true' });
+    const result = sanitizeEnvironment({ SYNTARO_EVAL_MODE: 'true', api_key: 'xxx', GITHUB_TOKEN: 'ghp_xxx' });
+    expect(result).toEqual({ SYNTARO_EVAL_MODE: 'true' });
   });
 });
 

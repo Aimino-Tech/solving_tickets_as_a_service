@@ -52,12 +52,12 @@ class TestKedaDetection:
 class TestQueueThresholds:
     def test_known_queue_returns_config(self):
         """A known queue returns its configured threshold."""
-        assert get_queue_threshold("stas.agents.dispatch") == 2
-        assert get_queue_threshold("stas.agents.notifications") == 10
+        assert get_queue_threshold("syntaro.agents.dispatch") == 2
+        assert get_queue_threshold("syntaro.agents.notifications") == 10
 
     def test_unknown_queue_returns_default(self):
         """Unknown queues fall back to threshold of 5."""
-        assert get_queue_threshold("stas.agents.unknown") == 5
+        assert get_queue_threshold("syntaro.agents.unknown") == 5
 
     def test_all_queues_have_threshold(self):
         """Every queue defined in CELERY_QUEUES has a threshold entry."""
@@ -78,12 +78,12 @@ class TestQueueThresholds:
 class TestConcurrencyRanges:
     def test_known_queue_returns_range(self):
         """A known queue returns its configured (min, max) concurrency."""
-        assert get_concurrency_range("stas.agents.dispatch") == (0, 4)
-        assert get_concurrency_range("stas.agents.sandbox") == (1, 6)
+        assert get_concurrency_range("syntaro.agents.dispatch") == (0, 4)
+        assert get_concurrency_range("syntaro.agents.sandbox") == (1, 6)
 
     def test_unknown_queue_returns_default(self):
         """Unknown queues fall back to default concurrency range."""
-        min_c, max_c = get_concurrency_range("stas.agents.unknown")
+        min_c, max_c = get_concurrency_range("syntaro.agents.unknown")
         assert min_c == DEFAULT_MIN_CONCURRENCY
         assert max_c == DEFAULT_MAX_CONCURRENCY
 

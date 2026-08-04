@@ -1,4 +1,4 @@
-name: STAS Automation Tests (AIM-4227)
+name: SYNTARO Automation Tests (AIM-4227)
 
 on:
   pull_request:
@@ -24,7 +24,7 @@ concurrency:
 env:
   NODE_VERSION: "22"
   PYTHON_VERSION: "3.12"
-  STAS_URL: "http://localhost:3099"
+  SYNTARO_URL: "http://localhost:3099"
   OSY_URL: "http://localhost:4096"
 
 jobs:
@@ -61,7 +61,7 @@ jobs:
           pip install playwright pytest
           playwright install chromium
 
-      - name: Start STAS server
+      - name: Start SYNTARO server
         run: |
           PORT=3099 node dist/src/index.js &
           sleep 3

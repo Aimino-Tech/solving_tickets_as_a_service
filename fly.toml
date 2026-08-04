@@ -1,4 +1,4 @@
-app = "stas-bot"
+app = "syntaro-bot"
 primary_region = "iad"
 
 [build]

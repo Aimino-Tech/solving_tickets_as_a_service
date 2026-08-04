@@ -107,6 +107,7 @@ export class MonitoringLoop {
         maxRetriesPerRequest: 3,
         retryStrategy: () => null,
       });
+      this.redis.on('error', () => {});
       await this.redis.connect();
       this.redisReady = true;
       log.info('Monitoring loop: Redis connected');
@@ -341,7 +342,7 @@ export class MonitoringLoop {
             key: `log:${hash}`,
             title: `[Monitoring] App error: ${(entry.module || 'unknown')} — ${errMsg.slice(0, 120)}`,
             description: buildTicketDescription({
-              input: `STAS app log entry at level ${pinoLevel}`,
+              input: `SYNTARO app log entry at level ${pinoLevel}`,
               output: errMsg,
               context: {
                 what: entry.module || 'unknown module',

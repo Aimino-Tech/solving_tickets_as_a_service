@@ -132,18 +132,18 @@ class TestParseAllowlist:
 
 class TestLoadAllowlist:
     def test_load_from_env(self, monkeypatch):
-        monkeypatch.setenv("STAS_SANITIZER_ALLOWLIST", "loopback,abs_tmp")
+        monkeypatch.setenv("SYNTARO_SANITIZER_ALLOWLIST", "loopback,abs_tmp")
         result = load_allowlist()
         assert "loopback" in result
         assert "abs_tmp" in result
 
     def test_load_from_env_empty(self, monkeypatch):
-        monkeypatch.setenv("STAS_SANITIZER_ALLOWLIST", "")
+        monkeypatch.setenv("SYNTARO_SANITIZER_ALLOWLIST", "")
         result = load_allowlist()
         assert result == set()
 
     def test_load_from_arg_overrides_env(self, monkeypatch):
-        monkeypatch.setenv("STAS_SANITIZER_ALLOWLIST", "localhost")
+        monkeypatch.setenv("SYNTARO_SANITIZER_ALLOWLIST", "localhost")
         result = load_allowlist("abs_tmp")
         assert result == {"abs_tmp"}
         assert "localhost" not in result
@@ -188,19 +188,19 @@ class TestSanitizationConfig:
         assert config.enabled is False
 
     def test_from_env_enabled(self, monkeypatch):
-        monkeypatch.setenv("STAS_SANITIZER_ENABLED", "true")
-        monkeypatch.setenv("STAS_SANITIZER_ALLOWLIST", "localhost")
+        monkeypatch.setenv("SYNTARO_SANITIZER_ENABLED", "true")
+        monkeypatch.setenv("SYNTARO_SANITIZER_ALLOWLIST", "localhost")
         config = SanitizationConfig.from_env()
         assert config.enabled is True
         assert "localhost" in config.allowlist
 
     def test_from_env_disabled(self, monkeypatch):
-        monkeypatch.setenv("STAS_SANITIZER_ENABLED", "false")
+        monkeypatch.setenv("SYNTARO_SANITIZER_ENABLED", "false")
         config = SanitizationConfig.from_env()
         assert config.enabled is False
 
     def test_from_env_allowlist_override(self, monkeypatch):
-        monkeypatch.setenv("STAS_SANITIZER_ALLOWLIST", "localhost")
+        monkeypatch.setenv("SYNTARO_SANITIZER_ALLOWLIST", "localhost")
         config = SanitizationConfig.from_env(allowlist_raw="abs_tmp")
         assert config.allowlist == {"abs_tmp"}
 
@@ -218,7 +218,7 @@ class TestBuildSanitizerConfig:
         assert isinstance(config, SanitizationConfig)
 
     def test_respects_env(self, monkeypatch):
-        monkeypatch.setenv("STAS_SANITIZER_ENABLED", "false")
+        monkeypatch.setenv("SYNTARO_SANITIZER_ENABLED", "false")
         config = build_sanitizer_config()
         assert config.enabled is False
 

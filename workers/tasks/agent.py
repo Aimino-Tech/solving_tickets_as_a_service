@@ -46,7 +46,7 @@ def dispatch_opencode(self, ctx: dict) -> dict:
         raise ValueError(f"Missing repo_owner/repo_name in ctx")
 
     repo_full = f"{owner}/{repo}"
-    branch_name = f"stas/fix-{issue_id.lower().replace('_', '-')[:40]}"
+    branch_name = f"syntaro/fix-{issue_id.lower().replace('_', '-')[:40]}"
 
     logger.info("OpenCode implementing %s — repo=%s model=%s", issue_id, repo_full, OPENCODE_MODEL)
 
@@ -66,7 +66,7 @@ def dispatch_opencode(self, ctx: dict) -> dict:
         f"8. Tell me the commit SHA and branch name when done"
     )
 
-    with tempfile.TemporaryDirectory(prefix="stas-opencode-") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="syntaro-opencode-") as tmpdir:
         clone_url = f"https://x-access-token:{os.environ['GH_TOKEN']}@github.com/{repo_full}.git"
         subprocess.run(["git", "clone", clone_url, tmpdir], check=True, capture_output=True, text=True, cwd="/tmp")
         subprocess.run(["git", "checkout", "-b", branch_name], check=True, capture_output=True, text=True, cwd=tmpdir)

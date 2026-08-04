@@ -1,6 +1,6 @@
-# STAS Support Model
+# SYNTARO Support Model
 
-STAS offers a **three-tier support model** designed to serve everyone from solo developers to enterprise teams — while keeping the open-source community thriving.
+SYNTARO offers a **three-tier support model** designed to serve everyone from solo developers to enterprise teams — while keeping the open-source community thriving.
 
 ---
 
@@ -28,7 +28,7 @@ The first line of support. Before reaching out, check these resources:
 | **Documentation** | Architecture, security, self-hosting, customization | [`docs/`](./) |
 | **Troubleshooting Guide** | Common issues and their solutions | [`FAQ.md#troubleshooting`](./FAQ.md#troubleshooting) |
 | **GitHub Issues** | Search existing issues before opening a new one | [Issues](https://github.com/tamnguyen08/solving_tickets_as_a_service/issues) |
-| **Architecture Docs** | Deep-dive into the STAS pipeline | [`ARCHITECTURE.md`](./ARCHITECTURE.md) |
+| **Architecture Docs** | Deep-dive into the SYNTARO pipeline | [`ARCHITECTURE.md`](./ARCHITECTURE.md) |
 
 ---
 
@@ -36,7 +36,7 @@ The first line of support. Before reaching out, check these resources:
 
 **Available to:** All users (free)
 
-Community support is the heart of STAS. Get help from maintainers and fellow users.
+Community support is the heart of SYNTARO. Get help from maintainers and fellow users.
 
 ### Discord Server
 
@@ -47,14 +47,14 @@ Join our Discord: [https://discord.gg/aimino](https://discord.gg/aimino)
 | Channel | Purpose |
 |---|---|
 | `#announcements` | Release notes, security advisories, downtime notices |
-| `#general` | General discussion about STAS |
+| `#general` | General discussion about SYNTARO |
 | `#help` | Get help with setup, configuration, and troubleshooting |
 | `#self-host` | Self-hosting specific discussions (Docker, Railway, Fly.io, K8s) |
-| `#showcase` | Share what you've built with STAS |
+| `#showcase` | Share what you've built with SYNTARO |
 | `#contributing` | Development discussion, PR reviews, code contributions |
 | `#feedback` | Feature ideas, pain points, product feedback |
 | `#integrations` | Platform integrations (GitHub, GitLab, Bitbucket, Linear, Jira) |
-| `#jobs` | STAS-related job postings and opportunities |
+| `#jobs` | SYNTARO-related job postings and opportunities |
 
 #### Discord Onboarding
 
@@ -68,7 +68,7 @@ New members are greeted with:
 For longer-form questions and feature discussions:
 - **Q&A** — Setup and usage questions
 - **Ideas** — Feature proposals and feedback
-- **Show and tell** — Share your STAS setup
+- **Show and tell** — Share your SYNTARO setup
 
 ### Best-Effort SLA
 

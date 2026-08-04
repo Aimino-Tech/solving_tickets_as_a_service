@@ -1,11 +1,11 @@
 # Docker Sandbox Hardening
 
 > **Seccomp profiles, AppArmor policies, capability dropping, and read-only
-> root filesystem for the STAS Docker sandbox.**
+> root filesystem for the SYNTARO Docker sandbox.**
 
 ## Overview
 
-STAS runs untrusted code inside Docker containers. This document describes
+SYNTARO runs untrusted code inside Docker containers. This document describes
 the hardening stack that isolates sandbox containers from the host and from
 each other:
 
@@ -48,7 +48,7 @@ explicitly blocked. Blocked syscalls include:
 The profile also restricts `clone` to disallow creating new namespaces
 (`CLONE_NEWNS`, `CLONE_NEWNET`, etc.).
 
-### AppArmor (`docker/apparmor/stas-sandbox`)
+### AppArmor (`docker/apparmor/syntaro-sandbox`)
 
 Uses a **default-DENY** policy — only explicitly allowed resources are
 accessible. Key constraints:
@@ -80,7 +80,7 @@ seccomp = get_seccomp_profile()
 
 # AppArmor profile as raw text
 apparmor = get_apparmor_profile()
-# => "profile stas-sandbox flags=(attach_disconnected, ...) { ... }"
+# => "profile syntaro-sandbox flags=(attach_disconnected, ...) { ... }"
 ```
 
 ### Integration with `DockerSandbox`
@@ -127,13 +127,13 @@ docker run --rm --security-opt seccomp=/etc/docker/seccomp/sandbox.json \
   alpine echo "seccomp works"
 
 # AppArmor
-docker run --rm --security-opt apparmor=stas-sandbox \
+docker run --rm --security-opt apparmor=syntaro-sandbox \
   alpine echo "apparmor works"
 
 # Both combined
 docker run --rm --init \
   --security-opt seccomp=/etc/docker/seccomp/sandbox.json \
-  --security-opt apparmor=stas-sandbox \
+  --security-opt apparmor=syntaro-sandbox \
   --read-only \
   --cap-drop ALL --cap-add CHOWN --cap-add DAC_OVERRIDE \
   --cap-add FOWNER --cap-add FSETID --cap-add SETGID --cap-add SETUID \

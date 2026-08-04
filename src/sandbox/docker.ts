@@ -161,12 +161,12 @@ export class DockerSandbox implements SandboxExecutor {
       log.info({ image }, 'Image pulled');
 
       try {
-        this.tempDir = mkdtempSync(join(tmpdir(), 'stas-sandbox-'));
+        this.tempDir = mkdtempSync(join(tmpdir(), 'syntaro-sandbox-'));
       } catch (err) {
         throw new Error(`Failed to create temp directory: ${String(err)}`);
       }
 
-      const containerName = `stas-sandbox-${this.repoName}-${Date.now().toString(36)}`;
+      const containerName = `syntaro-sandbox-${this.repoName}-${Date.now().toString(36)}`;
       const createArgs = this.buildCreateArgs(image, containerName);
 
       log.info({ containerName }, 'Creating container');
@@ -312,8 +312,8 @@ export class DockerSandbox implements SandboxExecutor {
     log.info({ branchName }, 'Pushing branch');
 
     try {
-      await this.exec(`git config user.email "stas-bot@users.noreply.github.com"`);
-      await this.exec(`git config user.name "STAS Bot"`);
+      await this.exec(`git config user.email "syntaro-bot@users.noreply.github.com"`);
+      await this.exec(`git config user.name "SYNTARO Bot"`);
 
       await this.exec(`git add -A`);
 
@@ -323,7 +323,7 @@ export class DockerSandbox implements SandboxExecutor {
         return;
       }
 
-      const commitResult = await this.exec(`git commit -m "fix: automated fix by STAS" -m "Signed-off-by: STAS Bot <stas-bot@users.noreply.github.com>"`);
+      const commitResult = await this.exec(`git commit -m "fix: automated fix by SYNTARO" -m "Signed-off-by: SYNTARO Bot <syntaro-bot@users.noreply.github.com>"`);
       if (commitResult.exitCode !== 0 && !commitResult.stderr.includes('nothing to commit')) {
         throw new Error(`Failed to commit: ${commitResult.stderr}`);
       }
@@ -702,7 +702,7 @@ export class DockerSandbox implements SandboxExecutor {
       args.push('--cpus', String(cpu));
     }
 
-    args.push('--label', 'stas-sandbox=true');
+    args.push('--label', 'syntaro-sandbox=true');
 
     args.push('--security-opt', 'no-new-privileges:true');
     args.push('--cap-drop', 'ALL');
@@ -726,11 +726,11 @@ export class DockerSandbox implements SandboxExecutor {
     }
 
     if (config.docker.networkRestrict) {
-      args.push('--network', 'stas_agent-net');
-      args.push('-e', 'http_proxy=http://stas-egress-proxy:3128');
-      args.push('-e', 'https_proxy=http://stas-egress-proxy:3128');
-      args.push('-e', 'HTTP_PROXY=http://stas-egress-proxy:3128');
-      args.push('-e', 'HTTPS_PROXY=http://stas-egress-proxy:3128');
+      args.push('--network', 'syntaro_agent-net');
+      args.push('-e', 'http_proxy=http://syntaro-egress-proxy:3128');
+      args.push('-e', 'https_proxy=http://syntaro-egress-proxy:3128');
+      args.push('-e', 'HTTP_PROXY=http://syntaro-egress-proxy:3128');
+      args.push('-e', 'HTTPS_PROXY=http://syntaro-egress-proxy:3128');
       args.push('-e', 'NO_PROXY=localhost,127.0.0.1');
     } else {
       args.push('--network', 'none');
@@ -747,12 +747,12 @@ export class DockerSandbox implements SandboxExecutor {
   }
 
   /**
-   * Ensure the stas_agent-net Docker network exists.
+   * Ensure the syntaro_agent-net Docker network exists.
    * Creates it if absent (idempotent). Also attempts host-level
    * iptables rules for Squid bypass prevention (best-effort).
    */
   private ensureAgentNetwork(): void {
-    const networkName = 'stas_agent-net';
+    const networkName = 'syntaro_agent-net';
     const networkResult = dockerCmd(['network', 'ls', '--filter', `name=${networkName}`, '--format', '{{.Name}}']);
     const exists = networkResult.stdout.trim() === networkName;
 

@@ -6,28 +6,28 @@ import { createInterface } from 'node:readline/promises';
 import { Octokit } from '@octokit/rest';
 
 /**
- * `npx stas quickstart` — interactive one-shot onboarding.
+ * `npx syntaro quickstart` — interactive one-shot onboarding.
  *
- * Walks a user through: GitHub token resolution, repository selection, STAS
- * app installation, a demo issue tagged `stas:fix`, and polling for the PR
- * STAS opens in response. On success it persists a config file so subsequent
+ * Walks a user through: GitHub token resolution, repository selection, SYNTARO
+ * app installation, a demo issue tagged `syntaro:fix`, and polling for the PR
+ * SYNTARO opens in response. On success it persists a config file so subsequent
  * runs skip straight to the demo.
  *
  * The behavior implemented here matches docs/quickstart.md (PR #717).
  */
 
-export const POWERED_BY = 'STAS — AI bug fixes for your repo';
-export const ISSUE_TITLE = 'STAS Quickstart Demo — Fix Me';
-export const ISSUE_LABEL = 'stas:fix';
-export const INSTALL_URL = 'https://github.com/apps/stas/installations/new';
+export const POWERED_BY = 'SYNTARO — AI bug fixes for your repo';
+export const ISSUE_TITLE = 'SYNTARO Quickstart Demo — Fix Me';
+export const ISSUE_LABEL = 'syntaro:fix';
+export const INSTALL_URL = 'https://github.com/apps/syntaro/installations/new';
 
 export const ISSUE_BODY = [
-  'This issue was created automatically by `npx stas quickstart`',
-  "to demonstrate STAS's capabilities.",
+  'This issue was created automatically by `npx syntaro quickstart`',
+  "to demonstrate SYNTARO's capabilities.",
   '',
   'Steps:',
   '1. This is a demo issue',
-  '2. STAS will analyze it',
+  '2. SYNTARO will analyze it',
   '3. A PR will be created',
   '',
   `Powered by ${POWERED_BY}`,
@@ -97,9 +97,9 @@ function envNumber(name: string, fallback: number): number {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
-/** Directory holding the quickstart config. Honors STAS_CONFIG_DIR for tests/CI. */
+/** Directory holding the quickstart config. Honors SYNTARO_CONFIG_DIR for tests/CI. */
 export function getConfigDir(): string {
-  return process.env.STAS_CONFIG_DIR ?? join(homedir(), '.config', 'stas');
+  return process.env.SYNTARO_CONFIG_DIR ?? join(homedir(), '.config', 'syntaro');
 }
 
 export function getConfigPath(): string {
@@ -221,7 +221,7 @@ export async function selectRepositories(repos: RepoChoice[], options: Quickstar
 
   const ask = options.ask ?? promptForAnswer;
   const stdout = options.stdout ?? defaultStdout;
-  stdout('Select repositories to install STAS on:\n');
+  stdout('Select repositories to install SYNTARO on:\n');
   repos.forEach((repo, index) => {
     stdout(`  ${index + 1}) ${repo.fullName}${repo.private ? ' (private)' : ''}\n`);
   });
@@ -239,9 +239,9 @@ export async function selectRepositories(repos: RepoChoice[], options: Quickstar
   return [...new Set(indices)].map((n) => repos[n - 1]);
 }
 
-/** Open the STAS app installation page in the default browser. Best-effort. */
+/** Open the SYNTARO app installation page in the default browser. Best-effort. */
 export function openInstallPage(): void {
-  if (process.env.STAS_OPEN_BROWSER === '0') {
+  if (process.env.SYNTARO_OPEN_BROWSER === '0') {
     return;
   }
   const url = INSTALL_URL;
@@ -265,16 +265,16 @@ export async function installApp(options: QuickstartOptions = {}): Promise<void>
   const stdout = options.stdout ?? defaultStdout;
   const openPage = options.openPage ?? openInstallPage;
 
-  stdout('STAS app installation required.\n\n');
+  stdout('SYNTARO app installation required.\n\n');
   stdout('1. Open this URL in your browser:\n');
   stdout(`   ${INSTALL_URL}\n\n`);
-  stdout('2. Select the repositories you want STAS to access\n');
+  stdout('2. Select the repositories you want SYNTARO to access\n');
   stdout("3. Click 'Install'\n");
   stdout('4. Return here when done\n');
 
   if (skipPrompts) {
     openPage();
-    const waitMs = envNumber('STAS_INSTALL_WAIT_MS', DEFAULT_INSTALL_WAIT_MS);
+    const waitMs = envNumber('SYNTARO_INSTALL_WAIT_MS', DEFAULT_INSTALL_WAIT_MS);
     if (waitMs > 0) {
       stdout(`Waiting ${Math.round(waitMs / 1000)}s for the app installation to propagate`);
       await sleep(waitMs);
@@ -295,7 +295,7 @@ export interface CreateTestIssueResult {
   issueUrl: string;
 }
 
-/** Create the demo issue tagged `stas:fix` on the given repository. */
+/** Create the demo issue tagged `syntaro:fix` on the given repository. */
 export async function createTestIssue(octokit: Octokit, owner: string, repo: string): Promise<CreateTestIssueResult> {
   const { data: issue } = await octokit.rest.issues.create({
     owner,
@@ -306,7 +306,7 @@ export async function createTestIssue(octokit: Octokit, owner: string, repo: str
   try {
     await octokit.rest.issues.addLabels({ owner, repo, issue_number: issue.number, labels: [ISSUE_LABEL] });
   } catch {
-    // The `stas:fix` label may not exist yet on repos that never used STAS.
+    // The `syntaro:fix` label may not exist yet on repos that never used SYNTARO.
     // The issue itself still triggers the pipeline when the app is installed.
   }
   return {
@@ -318,7 +318,7 @@ export async function createTestIssue(octokit: Octokit, owner: string, repo: str
 const PR_URL_PATTERN = /https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/\d+/;
 
 /**
- * Poll GitHub until STAS opens a PR for the demo issue.
+ * Poll GitHub until SYNTARO opens a PR for the demo issue.
  *
  * A PR counts as found when (a) a comment on the issue contains a PR URL, or
  * (b) a pull request whose title matches "quickstart" or "fix me" exists.
@@ -333,8 +333,8 @@ export async function pollForPrUrl(
 ): Promise<string | null> {
   const sleep = options.sleep ?? defaultSleep;
   const stdout = options.stdout ?? defaultStdout;
-  const timeoutMs = envNumber('STAS_TIMEOUT_MS', DEFAULT_POLL_TIMEOUT_MS);
-  const intervalMs = envNumber('STAS_POLL_INTERVAL_MS', DEFAULT_POLL_INTERVAL_MS);
+  const timeoutMs = envNumber('SYNTARO_TIMEOUT_MS', DEFAULT_POLL_TIMEOUT_MS);
+  const intervalMs = envNumber('SYNTARO_POLL_INTERVAL_MS', DEFAULT_POLL_INTERVAL_MS);
 
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -414,7 +414,7 @@ export async function runQuickstart(options: RunQuickstartOptions = {}): Promise
 
   const { issueNumber, issueUrl } = await createTestIssue(octokit, owner, repo);
   stdout(`Created demo issue: ${issueUrl}\n`);
-  stdout(`Waiting for STAS to fix it`);
+  stdout(`Waiting for SYNTARO to fix it`);
 
   const configPath = saveConfig({ githubToken: token, installUrl: INSTALL_URL });
   stdout(`\nConfig saved to ${configPath}\n`);

@@ -75,7 +75,7 @@ export const gitlabWebhook: PlatformWebhook = {
         eventType = 'issue.opened';
       } else if (action === 'update') {
         const labels = p.object_attributes.labels ?? [];
-        const hasTargetLabel = labels.some((l) => l.title === config.stas.label);
+        const hasTargetLabel = labels.some((l) => l.title === config.syntaro.label);
         if (hasTargetLabel) {
           eventType = 'issue.edited';
         } else {
@@ -211,8 +211,8 @@ export function createGitlabWebhooks(enqueue: EnqueueHandler) {
 
       if (parsed.eventType === 'issue.labeled' || parsed.eventType === 'issue.edited') {
         const labels = parsed.issue.labels;
-        if (!labels.includes(config.stas.label)) {
-          log.debug({ label: config.stas.label, found: labels }, 'Ignoring non-target label');
+        if (!labels.includes(config.syntaro.label)) {
+          log.debug({ label: config.syntaro.label, found: labels }, 'Ignoring non-target label');
           return;
         }
 
@@ -220,7 +220,7 @@ export function createGitlabWebhooks(enqueue: EnqueueHandler) {
           {
             repo: `${parsed.issue.repoOwner}/${parsed.issue.repoName}`,
             issueNumber: parsed.issue.number,
-            label: config.stas.label,
+            label: config.syntaro.label,
           },
           "Received GitLab issue event with target label",
         );

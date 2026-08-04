@@ -1,11 +1,11 @@
 ---
-title: "STAS vs Copilot Workspace vs OpenHands: fix rate, cost, and speed comparison"
-description: "Head-to-head benchmark: STAS achieves 92% pass rate at $3.80/fix in 30s median vs Copilot Workspace and OpenHands. Full methodology, honest limitations, and when to choose each tool."
+title: "SYNTARO vs Copilot Workspace vs OpenHands: fix rate, cost, and speed comparison"
+description: "Head-to-head benchmark: SYNTARO achieves 92% pass rate at $3.80/fix in 30s median vs Copilot Workspace and OpenHands. Full methodology, honest limitations, and when to choose each tool."
 status: draft
 date: 2026-07-28
 canonical: https://syntaro.io/blog/benchmark-report
 keywords:
-  - STAS benchmark
+  - SYNTARO benchmark
   - Copilot Workspace comparison
   - OpenHands comparison
   - AI code fixing comparison
@@ -13,7 +13,7 @@ keywords:
   - SWE-bench alternative
   - cost per fix comparison
 featured_image: /images/blog/benchmark-report.png
-featured_image_description: "Bar chart comparing STAS (92% pass rate, $3.80/fix, 30s) against Copilot Workspace and OpenHands across pass rate, cost, and speed metrics"
+featured_image_description: "Bar chart comparing SYNTARO (92% pass rate, $3.80/fix, 30s) against Copilot Workspace and OpenHands across pass rate, cost, and speed metrics"
 cross_post:
   devto:
     canonical: https://syntaro.io/blog/benchmark-report
@@ -21,19 +21,19 @@ cross_post:
     canonical: https://syntaro.io/blog/benchmark-report
 ---
 
-# STAS vs Copilot Workspace vs OpenHands: fix rate, cost, and speed comparison
+# SYNTARO vs Copilot Workspace vs OpenHands: fix rate, cost, and speed comparison
 
 *July 28, 2026 · 9 min read*
 
 ---
 
-The market for automated code fixing is growing fast, and three tools have emerged as the most prominent options: **STAS**, **GitHub Copilot Workspace**, and **OpenHands** (formerly OpenCode Interpreter / SWE-agent). Each takes a fundamentally different approach to the problem, and each has meaningful tradeoffs.
+The market for automated code fixing is growing fast, and three tools have emerged as the most prominent options: **SYNTARO**, **GitHub Copilot Workspace**, and **OpenHands** (formerly OpenCode Interpreter / SWE-agent). Each takes a fundamentally different approach to the problem, and each has meaningful tradeoffs.
 
 This report presents a direct comparison based on a standardized benchmark of 500 real GitHub issues across 50 open-source JavaScript/TypeScript repositories. We measure what matters: **does it fix the issue, how fast, and how much does it cost?**
 
 ## Executive summary
 
-| Metric | STAS | Copilot Workspace | OpenHands |
+| Metric | SYNTARO | Copilot Workspace | OpenHands |
 |--------|------|-------------------|-----------|
 | **Pass rate** (fix accepted or minor edits) | **92%** | 67% | 54% |
 | **Time per fix** (median) | **30s** | 4-8 min | 45-90 min |
@@ -60,7 +60,7 @@ We selected 500 issues from 50 popular open-source JavaScript/TypeScript reposit
 
 ### How each tool was run
 
-**STAS**: Production deployment (cloud). Issues were labeled `stas:fix` via GitHub API. STAS processed them through its standard pipeline: triage → sandbox → investigation → fix → verification → PR. Default model: claude-sonnet-4.
+**SYNTARO**: Production deployment (cloud). Issues were labeled `syntaro:fix` via GitHub API. SYNTARO processed them through its standard pipeline: triage → sandbox → investigation → fix → verification → PR. Default model: claude-sonnet-4.
 
 **Copilot Workspace**: Used via the VS Code extension. For each issue, we opened Copilot Workspace, pasted the issue URL, and followed the generated plan. We accepted the generated PR if it appeared correct by inspection. The PR was then tested against the repo's test suite.
 
@@ -78,7 +78,7 @@ Fixes that produced compile errors, infinite loops, or hallucinated APIs were co
 
 ### Reproducibility
 
-All raw results, issue lists, and evaluation scripts are published in the STAS repository under `eval/benchmarks/`. We encourage independent verification. The benchmark can be reproduced by:
+All raw results, issue lists, and evaluation scripts are published in the SYNTARO repository under `eval/benchmarks/`. We encourage independent verification. The benchmark can be reproduced by:
 
 ```bash
 git clone https://github.com/Aimino-Tech/solving_tickets_as_a_service
@@ -93,17 +93,17 @@ The benchmark requires API keys for the relevant model providers and Docker for 
 
 ### Pass rate by issue difficulty
 
-| Difficulty | STAS | Copilot Workspace | OpenHands |
+| Difficulty | SYNTARO | Copilot Workspace | OpenHands |
 |------------|------|-------------------|-----------|
 | **Easy** (1 file, <10 lines changed) | **98%** | 82% | 71% |
 | **Medium** (2-3 files, 10-50 lines changed) | **89%** | 61% | 48% |
 | **Hard** (4-5 files, 50+ lines changed) | **74%** | 43% | 31% |
 
-STAS maintains a significant advantage across all difficulty levels, with the gap widening for harder issues. This is consistent with the hypothesis that STAS's plan-first architecture (triage → investigation → code intelligence → fix) becomes more valuable as issue complexity increases.
+SYNTARO maintains a significant advantage across all difficulty levels, with the gap widening for harder issues. This is consistent with the hypothesis that SYNTARO's plan-first architecture (triage → investigation → code intelligence → fix) becomes more valuable as issue complexity increases.
 
 ### Pass rate by issue category
 
-| Category | STAS | Copilot Workspace | OpenHands |
+| Category | SYNTARO | Copilot Workspace | OpenHands |
 |----------|------|-------------------|-----------|
 | Logic bugs | **91%** | 63% | 51% |
 | Type errors | **95%** | 78% | 62% |
@@ -114,19 +114,19 @@ STAS maintains a significant advantage across all difficulty levels, with the ga
 
 ### Cost analysis
 
-STAS has the highest per-fix cost ($3.80) of the three tools — but also the highest pass rate. When you normalize for pass rate, the **effective cost per successful fix** tells a different story:
+SYNTARO has the highest per-fix cost ($3.80) of the three tools — but also the highest pass rate. When you normalize for pass rate, the **effective cost per successful fix** tells a different story:
 
 | Tool | Raw cost/fix | Pass rate | Cost per successful fix | Time per fix |
 |------|-------------|-----------|------------------------|-------------|
-| **STAS** | $3.80 | 92% | **$4.13** | **30s** |
+| **SYNTARO** | $3.80 | 92% | **$4.13** | **30s** |
 | Copilot Workspace | ~$0 (subscription) | 67% | ~$0 (but 33% waste) | 4-8 min |
 | OpenHands | $5-8 | 54% | $9.26-14.81 | 45-90 min |
 
-Copilot Workspace's subscription pricing makes direct cost comparison difficult. At $10-39/user/month for Copilot, the marginal cost per fix is effectively zero — but you're paying for the subscription regardless of whether you get successful fixes. If you're running 50+ fixes per month, STAS's $49-149/month pricing with a 92% pass rate is more economical than Copilot's $10-39/user/month with a 67% pass rate (meaning 33% of your issues need manual rework).
+Copilot Workspace's subscription pricing makes direct cost comparison difficult. At $10-39/user/month for Copilot, the marginal cost per fix is effectively zero — but you're paying for the subscription regardless of whether you get successful fixes. If you're running 50+ fixes per month, SYNTARO's $49-149/month pricing with a 92% pass rate is more economical than Copilot's $10-39/user/month with a 67% pass rate (meaning 33% of your issues need manual rework).
 
 ### Time breakdown
 
-STAS's 30-second median turnaround is its most distinctive feature. Here's where the time goes:
+SYNTARO's 30-second median turnaround is its most distinctive feature. Here's where the time goes:
 
 - **Triage (Phase 1)**: ~2s (gpt-4o-mini classification)
 - **Context fetch + sandbox boot**: ~8s (E2B cloud sandbox)
@@ -144,7 +144,7 @@ This benchmark is as fair as we could make it, but it has important caveats.
 
 ### Selection bias
 
-All 500 issues are from JavaScript/TypeScript repos with existing test suites. STAS is optimized for JS/TS (it runs `tsc --noEmit` as part of static analysis), and it depends on test suites for verification. For other languages (Python, Rust, Go) or repos without tests, the performance gap would likely shrink.
+All 500 issues are from JavaScript/TypeScript repos with existing test suites. SYNTARO is optimized for JS/TS (it runs `tsc --noEmit` as part of static analysis), and it depends on test suites for verification. For other languages (Python, Rust, Go) or repos without tests, the performance gap would likely shrink.
 
 ### Copilot Workspace maturity
 
@@ -164,13 +164,13 @@ Copilot Workspace requires a human operator to review and approve the plan befor
 
 ## When to choose which tool
 
-### Choose STAS when:
+### Choose SYNTARO when:
 
 - **You want hands-off bug fixing**: Label an issue, get a PR. No IDE, no context switch.
-- **You have high-volume bug backlogs**: STAS processes fixes in ~30s. A backlog of 100 bugs is resolved in under an hour.
-- **You need verified fixes**: STAS runs tests before and after the fix, detecting regressions automatically.
+- **You have high-volume bug backlogs**: SYNTARO processes fixes in ~30s. A backlog of 100 bugs is resolved in under an hour.
+- **You need verified fixes**: SYNTARO runs tests before and after the fix, detecting regressions automatically.
 - **You want predictable costs**: $49-149/month for 100-500 fixes. No surprise API bills.
-- **You self-host**: STAS is open source with a self-hosted option.
+- **You self-host**: SYNTARO is open source with a self-hosted option.
 
 ### Choose Copilot Workspace when:
 
@@ -190,7 +190,7 @@ Copilot Workspace requires a human operator to review and approve the plan befor
 
 For readers who want the unfiltered data:
 
-| Metric | STAS | Copilot Workspace | OpenHands |
+| Metric | SYNTARO | Copilot Workspace | OpenHands |
 |--------|------|-------------------|-----------|
 | Total issues tested | 500 | 500 | 500 |
 | Pass (minor edits needed) | 460 (92%) | 335 (67%) | 270 (54%) |
@@ -208,6 +208,6 @@ All 500 issues are drawn from the following repositories: Next.js, React, TypeSc
 
 ---
 
-*STAS — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
+*SYNTARO — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
 
 *This is a cross-post. The canonical version lives at [syntaro.io/blog/benchmark-report](https://syntaro.io/blog/benchmark-report). Raw benchmark data available at [github.com/Aimino-Tech/solving_tickets_as_a_service/tree/main/eval/benchmarks](https://github.com/Aimino-Tech/solving_tickets_as_a_service/tree/main/eval/benchmarks).*

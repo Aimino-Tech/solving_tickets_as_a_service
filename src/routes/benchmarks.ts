@@ -23,7 +23,7 @@ export interface PriceEntry {
 
 const BENCHMARK_DATA: BenchmarkEntry[] = [
   {
-    agent: 'STAS (claude-sonnet-4)',
+    agent: 'SYNTARO (claude-sonnet-4)',
     passRate: 0.92,
     costPerFixCents: 380,
     agentNative: true,
@@ -49,7 +49,7 @@ const BENCHMARK_DATA: BenchmarkEntry[] = [
     note: 'Best proprietary agent on XOR',
   },
   {
-    agent: 'STAS + Opus 4.6 (self-host)',
+    agent: 'SYNTARO + Opus 4.6 (self-host)',
     passRate: 0.475,
     costPerFixCents: 5188,
     agentNative: true,
@@ -88,21 +88,21 @@ const BENCHMARK_DATA: BenchmarkEntry[] = [
 
 const PRICE_DATA: PriceEntry[] = [
   {
-    agent: 'STAS (Cloud Free)',
+    agent: 'SYNTARO (Cloud Free)',
     model: 'claude-sonnet-4',
     costPerFixCents: 0,
     monthlyMinCents: 0,
     monthlyMaxFixes: 10,
   },
   {
-    agent: 'STAS (Cloud Solo)',
+    agent: 'SYNTARO (Cloud Solo)',
     model: 'claude-sonnet-4',
     costPerFixCents: 49,
     monthlyMinCents: 4900,
     monthlyMaxFixes: 100,
   },
   {
-    agent: 'STAS (Cloud Team)',
+    agent: 'SYNTARO (Cloud Team)',
     model: 'claude-sonnet-4',
     costPerFixCents: 30,
     monthlyMinCents: 14900,

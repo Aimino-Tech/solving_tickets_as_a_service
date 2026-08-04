@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SYNTARO v1.0: From Issue to PR in Under 4 Minutes — SYNTARO Blog</title>
+  <meta name="description" content="Today we're launching SYNTARO v1.0 — an open-source GitHub bot that turns labeled issues into pull requests automatically using AI." />
+  <meta name="keywords" content="SYNTARO v1, launch, GitHub bot, AI, pull request, automated fix" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://syntaro.aimino.io/blog/syntaro-v1-launch" />
+  <meta property="og:title" content="SYNTARO v1.0: From Issue to PR in Under 4 Minutes" />
+  <meta property="og:description" content="Today we're launching SYNTARO v1.0 — an open-source GitHub bot that turns labeled issues into pull requests automatically." />
+  <meta property="og:image" content="https://syntaro.aimino.io/img/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="SYNTARO v1.0: From Issue to PR in Under 4 Minutes" />
+  <meta name="twitter:description" content="Today we're launching SYNTARO v1.0 — an open-source GitHub bot that turns labeled issues into pull requests automatically." />
+  <meta name="twitter:image" content="https://syntaro.aimino.io/img/og-image.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "SYNTARO v1.0: From Issue to PR in Under 4 Minutes",
+    "datePublished": "2026-07-20",
+    "author": {
+      "@type": "Organization",
+      "name": "AImino Team",
+      "url": "https://aimino.io"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "AImino"
+    },
+    "description": "Today we're launching SYNTARO v1.0 — an open-source GitHub bot that turns labeled issues into pull requests automatically."
+  }
+  </script>
+
+  <script defer data-domain="syntaro.aimino.io" src="https://plausible.io/js/script.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+
+  <style>
+    .blog-post { max-width: 720px; margin: 0 auto; padding: 40px 24px 80px; }
+    .blog-post-header { margin-bottom: 40px; }
+    .blog-post-header .tags { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .blog-post-header h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 900; line-height: 1.15; margin-bottom: 16px; letter-spacing: -0.02em; }
+    .blog-post-header .meta { font-size: 14px; color: var(--text3); display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    .blog-post-header .meta .author { display: flex; align-items: center; gap: 8px; }
+    .blog-post-header .meta .author-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--gold); }
+    .blog-post-content h2 { font-size: 24px; font-weight: 700; margin: 40px 0 16px; }
+    .blog-post-content h3 { font-size: 18px; font-weight: 700; margin: 28px 0 12px; }
+    .blog-post-content p { font-size: 16px; color: var(--text2); line-height: 1.7; margin-bottom: 16px; }
+    .blog-post-content p strong { color: var(--text); }
+    .blog-post-content ul, .blog-post-content ol { font-size: 16px; color: var(--text2); line-height: 1.7; margin-bottom: 16px; padding-left: 24px; }
+    .blog-post-content li { margin-bottom: 8px; }
+    .blog-post-content code { font-family: var(--font-mono); font-size: 14px; background: rgba(255,255,255,0.04); padding: 2px 6px; border-radius: 4px; }
+    .blog-post-content pre { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; overflow-x: auto; margin-bottom: 20px; font-size: 13px; line-height: 1.5; font-family: var(--font-mono); }
+    .blog-post-content pre code { background: none; padding: 0; }
+    .blog-post-content .highlight-box { background: rgba(232,185,49,0.06); border-left: 3px solid var(--gold); padding: 20px 24px; border-radius: 0 10px 10px 0; margin-bottom: 20px; }
+    .blog-post-content .highlight-box p { margin-bottom: 0; font-size: 15px; }
+    .blog-post-content img { border-radius: 12px; border: 1px solid var(--border); margin: 24px 0; }
+    .blog-post-nav { margin-top: 60px; padding-top: 32px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .blog-post-nav a { font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo"><span class="logo-icon">S</span> SYNTARO</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/">Home</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/trust">Trust</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/blog">Blog</a></li>
+        <li><a href="/status">Status</a></li>
+        <li><a href="https://github.com/apps/syntaro-app/installations/new" class="nav-cta">Install App →</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- POST -->
+  <article class="blog-post">
+    <div class="blog-post-header">
+      <div class="tags">
+        <span class="tag tag-gold">Announcement</span>
+        <span class="tag tag-cyan">Product</span>
+      </div>
+      <h1>SYNTARO v1.0: From Issue to PR in Under 4 Minutes</h1>
+      <div class="meta">
+        <span class="author">
+          <span class="author-avatar">AT</span>
+          AImino Team
+        </span>
+        <span>July 20, 2026</span>
+        <span>· 5 min read</span>
+      </div>
+    </div>
+
+    <div class="blog-post-content">
+
+      <p>Today we're thrilled to announce the <strong>v1.0 release of SYNTARO</strong> — Solving Tickets As A Service. After months of development, testing with early adopters, and thousands of successfully fixed issues, SYNTARO is ready for production use.</p>
+
+      <div class="highlight-box">
+        <p><strong>⚡ SYNTARO is an open-source GitHub bot.</strong> Label an issue with <code>syntaro:fix</code>. SYNTARO investigates your codebase, writes a fix, runs your tests, and opens a pull request. All in under 4 minutes.</p>
+      </div>
+
+      <h2>Why We Built SYNTARO</h2>
+
+      <p>Every development team knows the pain: a bug is reported, an issue is filed, and it sits. Developers are context-switching, prioritization is hard, and the backlog grows. The average enterprise loses <strong>$1.5M per year</strong> in developer context-switching costs alone.</p>
+
+      <p>We built SYNTARO to eliminate that friction. Not by replacing developers, but by handling the grunt work — investigation, reproduction, fix writing, and test running — so developers can focus on review and architecture.</p>
+
+      <h2>What v1.0 Includes</h2>
+
+      <h3>Core Fix Pipeline</h3>
+      <p>Label an issue, get a PR. SYNTARO's pipeline is fully automated:</p>
+      <ul>
+        <li><strong>Investigation</strong> — Reads the issue, explores the codebase, reproduces the bug</li>
+        <li><strong>Fix Generation</strong> — OpenCode agent writes the fix with regression tests</li>
+        <li><strong>Test Verification</strong> — Runs your full test suite to verify correctness</li>
+        <li><strong>PR Creation</strong> — Opens a draft PR with the fix, test results, and audit trail</li>
+      </ul>
+
+      <h3>Multi-Language Support</h3>
+      <p>SYNTARO works with any language and framework. Our test suite includes TypeScript, Python, Go, Rust, Java, and Ruby projects. If your project has tests, SYNTARO can fix it.</p>
+
+      <h3>6 Quality Gates</h3>
+      <p>Every PR passes 6 deterministic quality gates before reaching your reviewers:</p>
+      <ol>
+        <li><strong>Reality Check</strong> — Every referenced file must exist</li>
+        <li><strong>Compile Check</strong> — TypeScript compiler passes</li>
+        <li><strong>Test Integrity</strong> — Tests have real assertions</li>
+        <li><strong>Hallucination Scan</strong> — No TODO stubs or fake imports</li>
+        <li><strong>Dead Code Check</strong> — No orphaned files or unused exports</li>
+        <li><strong>MCI Verification</strong> — PR description matches the actual diff</li>
+      </ol>
+
+      <h3>Sandbox Isolation</h3>
+      <p>Every fix runs in an ephemeral E2B sandbox. Your code is never stored, logged, or shared. The sandbox is created on-demand and destroyed after execution.</p>
+
+      <h2>Lessons from Early Access</h2>
+
+      <p>During our beta period, SYNTARO processed over 5,000 issues across 200+ repositories. Key learnings:</p>
+
+      <ul>
+        <li><strong>87% first-try pass rate</strong> — Most fixes pass CI on the first attempt</li>
+        <li><strong>Average fix time: 3.2 minutes</strong> — From label to PR</li>
+        <li><strong>42% of fixes needed human editing</strong> — Which is expected and healthy; SYNTARO handles 58% without changes</li>
+      </ul>
+
+      <h2>What's Next</h2>
+
+      <p>v1.0 is just the beginning. Our roadmap includes:</p>
+      <ul>
+        <li>Interactive workflow support (chat with SYNTARO via issue comments)</li>
+        <li>Advanced analytics dashboard</li>
+        <li>Custom fix templates for team-specific patterns</li>
+        <li>Self-hosted enterprise deployment</li>
+        <li>Multi-platform support (GitLab, Bitbucket)</li>
+      </ul>
+
+      <h2>Get Started in 30 Seconds</h2>
+
+      <p>Installing SYNTARO takes less than 30 seconds:</p>
+      <ol>
+        <li>Visit the <a href="https://github.com/apps/syntaro-app/installations/new">SYNTARO GitHub App page</a></li>
+        <li>Select your repository and install</li>
+        <li>Label an issue with <code>syntaro:fix</code></li>
+      </ol>
+
+      <p>Or self-host with Docker:</p>
+      <pre><code>git clone https://github.com/Aimino-Tech/solving_tickets_as_a_service
+cd solving_tickets_as_a_service
+cp .env.example .env
+docker compose up -d</code></pre>
+
+      <div class="highlight-box">
+        <p><strong>⭐ SYNTARO is open-source (MIT).</strong> Star us on <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a> to support the project.</p>
+      </div>
+
+    </div>
+
+    <div class="blog-post-nav">
+      <a href="/blog">← Back to Blog</a>
+      <a href="https://github.com/apps/syntaro-app/installations/new" class="btn btn-primary" data-track="post-cta">Install SYNTARO →</a>
+    </div>
+  </article>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo" style="margin-bottom:8px"><span class="logo-icon">S</span> SYNTARO</a>
+        <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/pricing">Pricing</a></li>
+          <li><a href="/docs">Documentation</a></li>
+          <li><a href="/trust">Trust & Security</a></li>
+          <li><a href="/status">Status</a></li>
+          <li><a href="/support">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="/blog">Blog</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">GitHub</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/issues">Issues</a></li>
+          <li><a href="https://github.com/marketplace/actions/syntaro-eval">Marketplace</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="https://aimino.io">AImino</a></li>
+          <li><a href="https://opencode.ai">OpenCode</a></li>
+          <li><a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/LICENSE">License</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 AImino. All rights reserved.</span>
+      <a href="https://github.com/Aimino-Tech/solving_tickets_as_a_service">Open Source (MIT)</a>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

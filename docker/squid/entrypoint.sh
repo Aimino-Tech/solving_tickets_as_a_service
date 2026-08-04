@@ -1,5 +1,5 @@
 #!/bin/sh
-# STAS Egress Proxy Entrypoint
+# SYNTARO Egress Proxy Entrypoint
 # Generates the allowed domains file from the ALLOWED_DOMAINS env var
 # and starts Squid.
 

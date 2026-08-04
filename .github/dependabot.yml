@@ -1,5 +1,5 @@
 # =============================================================================
-# STAS Dependabot Configuration
+# SYNTARO Dependabot Configuration
 #
 # Automates dependency updates for npm (Node.js/TypeScript) and pip (Python)
 # ecosystems. Separate PRs for dev vs runtime dependencies.

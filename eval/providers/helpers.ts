@@ -1,10 +1,10 @@
 /**
- * E2B sandbox lifecycle helpers and result parsing for the STAS eval provider.
+ * E2B sandbox lifecycle helpers and result parsing for the SYNTARO eval provider.
  *
  * Provides:
- *  - launchSandbox()    — Create an E2B sandbox with the "stas-eval" template
+ *  - launchSandbox()    — Create an E2B sandbox with the "syntaro-eval" template
  *  - killSandbox()      — Hard-kill a sandbox (with grace-period timeout enforcement)
- *  - runAgentInSandbox() — Execute the STAS agent CLI inside the sandbox
+ *  - runAgentInSandbox() — Execute the SYNTARO agent CLI inside the sandbox
  *  - collectArtifacts() — Read back PR diff, agent logs, and tool calls
  *  - evaluateResult()   — Compare agent output against expected test case outcome
  */
@@ -17,8 +17,8 @@ import type { TestCase, ToolCall } from "./types.js";
 // Constants
 // ---------------------------------------------------------------------------
 
-const SANDBOX_TEMPLATE = process.env.STAS_EVAL_SANDBOX_TEMPLATE || "stas-eval";
-const AGENT_CLI_COMMAND = process.env.STAS_AGENT_CLI || "stas-agent";
+const SANDBOX_TEMPLATE = process.env.SYNTARO_EVAL_SANDBOX_TEMPLATE || "syntaro-eval";
+const AGENT_CLI_COMMAND = process.env.SYNTARO_AGENT_CLI || "syntaro-agent";
 const AGENT_WORKDIR = "/home/user";
 const GRACE_PERIOD_MS = 30_000;
 
@@ -27,7 +27,7 @@ const GRACE_PERIOD_MS = 30_000;
 // ---------------------------------------------------------------------------
 
 /**
- * Launch an E2B sandbox using the "stas-eval" template.
+ * Launch an E2B sandbox using the "syntaro-eval" template.
  *
  * The sandbox timeout is set to `timeoutMs + grace period` so the agent
  * gets its full allotted time plus buffer for cleanup operations.
@@ -77,7 +77,7 @@ export async function killSandbox(sandbox: Sandbox | null): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * Build the shell command to invoke the STAS agent CLI with test case params.
+ * Build the shell command to invoke the SYNTARO agent CLI with test case params.
  *
  * Escapes shell-sensitive characters in the issue title and description
  * to prevent injection.
@@ -111,7 +111,7 @@ export function buildAgentCommand(testCase: TestCase): string {
 }
 
 /**
- * Run the STAS agent CLI inside the sandbox and return the execution result.
+ * Run the SYNTARO agent CLI inside the sandbox and return the execution result.
  *
  * @param sandbox - Booted E2B Sandbox
  * @param testCase - Parsed test case (used for timeout and command building)

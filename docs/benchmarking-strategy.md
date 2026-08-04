@@ -1,14 +1,14 @@
-# STAS Benchmarking Strategy
+# SYNTARO Benchmarking Strategy
 
-> **Policy: Do NOT publish any benchmark results until STAS ranks in the top tier.**
+> **Policy: Do NOT publish any benchmark results until SYNTARO ranks in the top tier.**
 > This document defines what we measure, how we measure it, and when we publish.
 
 ## Why Benchmarking Matters
 
-STAS differentiates on **execution quality** and **integrated pipeline**, not model exclusivity. Benchmarks validate:
+SYNTARO differentiates on **execution quality** and **integrated pipeline**, not model exclusivity. Benchmarks validate:
 
 1. **Plan-first architecture** — we're the architect, not the coder. Benchmarks like PlanBench specifically test this.
-2. **Long-context understanding** — STAS reads full repos. RepoBench exercises this.
+2. **Long-context understanding** — SYNTARO reads full repos. RepoBench exercises this.
 3. **Real-world issue resolution** — our internal JS/TS benchmark tests what customers actually need.
 
 ## Target Benchmarks
@@ -29,7 +29,7 @@ STAS differentiates on **execution quality** and **integrated pipeline**, not mo
 | **HumanEval / MBPP** | Basic coding benchmarks (expected baseline) | ≥ 85% pass@1 | Not yet run |
 | **CRUXEval** | Execution prediction (tests if model understands code flow) | ≥ 70% accuracy | Not yet run |
 
-### STAS-Specific: Internal JS/TS Issue-Resolution Benchmark
+### SYNTARO-Specific: Internal JS/TS Issue-Resolution Benchmark
 
 An internal benchmark using **real GitHub issues from popular OSS JS/TS repos**. This differentiates from SWE-bench (Python-heavy) and demonstrates real-world value for our target audience.
 
@@ -53,7 +53,7 @@ An internal benchmark using **real GitHub issues from popular OSS JS/TS repos**.
 
 ### Phase 2: Baseline (Week 2)
 
-- [ ] Run all benchmarks with current STAS agent (claude-sonnet-4, no special tuning)
+- [ ] Run all benchmarks with current SYNTARO agent (claude-sonnet-4, no special tuning)
 - [ ] Document raw scores in `eval/benchmarks/results/`
 - [ ] Identify weak spots per benchmark
 
@@ -102,7 +102,7 @@ READY_TO_PUBLISH = (
 )
 ```
 
-Publishing before this threshold damages credibility. STAS must be a leader, not a participant.
+Publishing before this threshold damages credibility. SYNTARO must be a leader, not a participant.
 
 ### Benchmark Roster
 
@@ -146,7 +146,7 @@ npm ci
     "model": "claude-sonnet-4",
     "temperature": 0,
     "maxTokens": 16384,
-    "agent": "stas",
+    "agent": "syntaro",
     "sandbox": "e2b"
   },
   "results": {

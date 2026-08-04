@@ -3,7 +3,7 @@
   "server": {
     "name": "@aimino/syntaro-mcp",
     "version": "1.0.0",
-    "description": "STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot backed by OpenCode.",
+    "description": "SYNTARO (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot backed by OpenCode.",
     "homepage": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
     "documentation": "https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/README.md",
     "license": "AGPL-3.0-only",
@@ -16,20 +16,20 @@
   "capabilities": {
     "tools": {
       "syntaro_label_issue": {
-        "description": "Label a GitHub issue with the STAS fix label (or custom label). Triggers the fix pipeline.",
+        "description": "Label a GitHub issue with the SYNTARO fix label (or custom label). Triggers the fix pipeline.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "owner": { "type": "string", "description": "Repository owner (user or org)" },
             "repo": { "type": "string", "description": "Repository name" },
             "issue_number": { "type": "integer", "description": "Issue number" },
-            "label": { "type": "string", "description": "Label to apply (default: stas:fix)" }
+            "label": { "type": "string", "description": "Label to apply (default: syntaro:fix)" }
           },
           "required": ["owner", "repo", "issue_number"]
         }
       },
       "syntaro_run_fix": {
-        "description": "Trigger the STAS fix pipeline for a GitHub issue URL.",
+        "description": "Trigger the SYNTARO fix pipeline for a GitHub issue URL.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -39,7 +39,7 @@
         }
       },
       "syntaro_check_status": {
-        "description": "Check status of a STAS fix run by run_id.",
+        "description": "Check status of a SYNTARO fix run by run_id.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -59,7 +59,7 @@
         }
       },
       "list_issues": {
-        "description": "List tracked issues and their STAS fix status.",
+        "description": "List tracked issues and their SYNTARO fix status.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -70,7 +70,7 @@
         }
       },
       "search_codebase": {
-        "description": "Search the STAS codebase for symbols, files, or patterns.",
+        "description": "Search the SYNTARO codebase for symbols, files, or patterns.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -110,7 +110,7 @@
   "install": {
     "opencode": {
       "config": {
-        "name": "stas-agent",
+        "name": "syntaro-agent",
         "transport": "stdio",
         "command": "npx",
         "args": ["-y", "@aimino/syntaro-mcp"]
@@ -138,7 +138,7 @@
     }
   },
   "keywords": [
-    "stas", "github-bot", "issue-fixer", "automated-fix",
+    "syntaro", "github-bot", "issue-fixer", "automated-fix",
     "opencode", "mcp", "smithery", "aimino",
     "agent-discovery", "agent-to-agent"
   ]

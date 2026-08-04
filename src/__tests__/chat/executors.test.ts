@@ -15,9 +15,9 @@ describe('chat executors (AIM-4443/4445)', () => {
   it('memory bot answers from seeded memory', async () => {
     const bot = new MemoryBotExecutor();
     const out = await bot.run(
-      input('how does the project setup affect the api design?', '[Memory]\nFacts:\n- project: stas'),
+      input('how does the project setup affect the api design?', '[Memory]\nFacts:\n- project: syntaro'),
     );
-    expect(out.reply).toContain('stas');
+    expect(out.reply).toContain('syntaro');
   });
 
   it('memory bot is honest when no context is recorded', async () => {

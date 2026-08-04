@@ -1,5 +1,5 @@
 name: ✨ Feature Request
-description: Suggest an idea for STAS
+description: Suggest an idea for SYNTARO
 title: "[Feature]: "
 labels: ["enhancement"]
 assignees: []
@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for suggesting a feature! Please describe what you'd like to see added to STAS and why it would be valuable.
+        Thanks for suggesting a feature! Please describe what you'd like to see added to SYNTARO and why it would be valuable.
 
   - type: textarea
     id: problem
@@ -23,7 +23,7 @@ body:
     attributes:
       label: Describe the Solution
       description: A clear and concise description of what you want to happen.
-      placeholder: "I'd like STAS to support..."
+      placeholder: "I'd like SYNTARO to support..."
     validations:
       required: true
 
@@ -49,7 +49,7 @@ body:
     id: tier
     attributes:
       label: Target Tier
-      description: Which STAS tier is this feature relevant to?
+      description: Which SYNTARO tier is this feature relevant to?
       options:
         - Self-hosted (OSS)
         - Cloud Free

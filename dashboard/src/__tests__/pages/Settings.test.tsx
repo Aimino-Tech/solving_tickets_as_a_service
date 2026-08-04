@@ -4,15 +4,26 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/__tests__/test-utils';
 import Settings from '@/pages/Settings';
 
-const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest } = vi.hoisted(() => ({
+const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiList } = vi.hoisted(() => ({
   mockConfigApiGet: vi.fn(),
   mockConfigApiUpdateEnv: vi.fn(),
   mockRequest: vi.fn(),
+  mockMcpKeysApiList: vi.fn(),
 }));
 
 vi.mock('@/api/client', () => ({
   configApi: { get: mockConfigApiGet, updateEnv: mockConfigApiUpdateEnv },
   request: mockRequest,
+  mcpKeysApi: {
+    list: mockMcpKeysApiList,
+    create: vi.fn(),
+    revoke: vi.fn(),
+    rename: vi.fn(),
+    get: vi.fn(),
+  },
+  github: {
+    getOAuthUrl: vi.fn(),
+  },
 }));
 
 const mockUseAuth = vi.hoisted(() => vi.fn());
@@ -23,6 +34,7 @@ vi.mock('@/context/AuthContext', () => ({
 describe('Settings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockMcpKeysApiList.mockResolvedValue({ keys: [] });
 
     mockUseAuth.mockReturnValue({
       user: { id: '1', email: 'test@test.com', name: 'Test User' },
@@ -66,15 +78,23 @@ describe('Settings', () => {
     });
   });
 
-  it('shows Coming Soon badge for Bitbucket and Jira', async () => {
+  it('shows Connect link for Bitbucket and disabled Connect for Jira', async () => {
     renderWithProviders(<Settings />);
 
     await waitFor(() => {
       expect(screen.getByText('Bitbucket App Password')).toBeInTheDocument();
     });
 
-    const comingSoonBadges = screen.getAllByText('Coming soon');
-    expect(comingSoonBadges.length).toBeGreaterThanOrEqual(1);
+    // Bitbucket: clickable external link
+    const bitbucketLink = screen.getAllByRole('link', { name: 'Connect' });
+    expect(bitbucketLink.length).toBe(1);
+    expect(bitbucketLink[0]).toHaveAttribute('href');
+    expect(bitbucketLink[0]).toHaveAttribute('target', '_blank');
+
+    // Jira: disabled, not clickable
+    const jiraConnect = screen.getByTitle('Setup guide coming soon');
+    expect(jiraConnect.tagName).toBe('SPAN');
+    expect(jiraConnect).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByText('Jira API Token')).toBeInTheDocument();
   });
 

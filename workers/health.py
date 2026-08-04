@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-STAS Worker Health Check — HTTP health endpoint for Celery workers.
+SYNTARO Worker Health Check — HTTP health endpoint for Celery workers.
 
 This script runs a lightweight HTTP server on port 8080 that serves:
   - GET /health  — overall worker health (checks broker and backend connectivity)
@@ -70,7 +70,7 @@ class HealthStatus:
 def check_broker(url: str) -> tuple[bool, Optional[str]]:
     """Check connectivity to the Celery message broker (RabbitMQ)."""
     try:
-        app = Celery('stas-health', broker=url)
+        app = Celery('syntaro-health', broker=url)
         conn = app.connection(timeout=5)
         conn.ensure_connection(max_retries=1)
         conn.release()

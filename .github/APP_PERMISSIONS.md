@@ -1,15 +1,15 @@
 # GitHub App Permissions
 
-> **Documentation of STAS GitHub App permissions, scope justification, and minimum required access analysis.**
+> **Documentation of SYNTARO GitHub App permissions, scope justification, and minimum required access analysis.**
 >
-> Applies to: STAS GitHub App (`stas-bot`)
+> Applies to: SYNTARO GitHub App (`syntaro-bot`)
 > Last updated: 2026-07-13
 
 ---
 
 ## Overview
 
-STAS operates as a GitHub App to interact with repositories on behalf of users. GitHub Apps use **installation-scoped tokens** that are more secure than personal access tokens or OAuth apps because:
+SYNTARO operates as a GitHub App to interact with repositories on behalf of users. GitHub Apps use **installation-scoped tokens** that are more secure than personal access tokens or OAuth apps because:
 
 - Tokens are scoped to a single installation (one or more repositories)
 - Tokens expire after 1 hour
@@ -47,7 +47,7 @@ All permissions apply only to repositories where the app is installed. The app *
 
 ### Core Workflow Requirements
 
-To complete its core workflow (label issue, investigate, create PR), STAS needs:
+To complete its core workflow (label issue, investigate, create PR), SYNTARO needs:
 
 1. **Read issue** (Issues: read) -- Get issue title, body, labels, comments
 2. **Post comment** (Issues: write) -- Post progress updates and results
@@ -95,7 +95,7 @@ GitHub App (private key + app ID)
 
 ## Token Scope During Sandbox Execution
 
-When STAS dispatches an agent to fix an issue, the installation token is passed to the sandbox for git operations. The token scope is limited to:
+When SYNTARO dispatches an agent to fix an issue, the installation token is passed to the sandbox for git operations. The token scope is limited to:
 
 - **Repository**: The specific repository containing the issue
 - **Actions**: `git clone`, `git push`, `git commit`, `git status`
@@ -116,13 +116,13 @@ The sandbox is ephemeral and destroyed after the run, so the token cannot persis
 | **Rate limit** | Higher (with app) | Lower (user-scoped) |
 | **Secret rotation** | Automatic (tokens refresh) | Manual regeneration |
 
-**STAS uses GitHub App tokens exclusively for production.** PAT fallback is available only for local development and testing.
+**SYNTARO uses GitHub App tokens exclusively for production.** PAT fallback is available only for local development and testing.
 
 ---
 
 ## Best Practices for Self-Hosting
 
-When self-hosting STAS, follow these permission best practices:
+When self-hosting SYNTARO, follow these permission best practices:
 
 1. **Create a dedicated GitHub App** -- Do not share the app across unrelated projects
 2. **Use a strong webhook secret** -- `openssl rand -hex 32`
@@ -136,17 +136,17 @@ When self-hosting STAS, follow these permission best practices:
 
 ## FAQ
 
-### Can STAS access repositories where it is not installed?
+### Can SYNTARO access repositories where it is not installed?
 
 No. GitHub App tokens are scoped to a specific installation. The app can only access repositories explicitly selected during installation.
 
-### Can STAS access other parts of the GitHub API (admin, billing)?
+### Can SYNTARO access other parts of the GitHub API (admin, billing)?
 
 No. The app only has the permissions declared above. GitHub does not allow apps to access APIs beyond their declared scope.
 
 ### What happens when the token expires?
 
-The agent run typically completes within 30 minutes. If a token expires mid-run, the agent will fail on the next API call. STAS generates a fresh token for each new run. The system retries failed operations with a new token.
+The agent run typically completes within 30 minutes. If a token expires mid-run, the agent will fail on the next API call. SYNTARO generates a fresh token for each new run. The system retries failed operations with a new token.
 
 ### Can I use a PAT instead of a GitHub App?
 
@@ -158,6 +158,6 @@ Yes, for local development. Set `GITHUB_TOKEN` in your `.env` file. This is not 
 
 - [GitHub App Permissions Documentation](https://docs.github.com/en/apps/creating-a-github-app/setting-permissions-for-github-apps)
 - [GitHub App Authentication](https://docs.github.com/en/apps/creating-a-github-app/authenticating-with-a-github-app)
-- [STAS Security Model](../docs/SECURITY.md)
-- [STAS Security Threat Model](../docs/security/threat-model.md)
+- [SYNTARO Security Model](../docs/SECURITY.md)
+- [SYNTARO Security Threat Model](../docs/security/threat-model.md)
 - [Self-Hosting Guide](../docs/SELF_HOSTING.md)

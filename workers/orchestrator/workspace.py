@@ -61,7 +61,7 @@ def create_workspace(
         workspace_path = os.path.join(WORKSPACE_ROOT, sanitize(issue_identifier))
     os.makedirs(workspace_path, exist_ok=True)
 
-    branch = f"stas/bot/{sanitize(issue_identifier)}"
+    branch = f"syntaro/bot/{sanitize(issue_identifier)}"
 
     try:
         subprocess.run(

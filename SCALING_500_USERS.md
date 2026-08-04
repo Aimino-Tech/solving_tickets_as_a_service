@@ -1,4 +1,4 @@
-# STAS Scaling & Capacity for 500 Users
+# SYNTARO Scaling & Capacity for 500 Users
 
 > Load profile, resource requirements, rate limits, and cost projections for 500 concurrent users.
 
@@ -33,15 +33,15 @@
 
 ```bash
 # Scale webhook to 3 replicas
-docker compose -f docker-compose.prod.yml up -d --scale stas-webhook=3 stas-webhook
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-webhook=3 syntaro-webhook
 
 # Scale workers to 8 replicas
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=8 stas-worker
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=8 syntaro-worker
 
 # Full production stack
 docker compose -f docker-compose.prod.yml up -d \
-  --scale stas-webhook=3 \
-  --scale stas-worker=8
+  --scale syntaro-webhook=3 \
+  --scale syntaro-worker=8
 ```
 
 ### PostgreSQL Connection Pool
@@ -201,8 +201,8 @@ At 500 users with a mix of 5% Pro, 3% Team, 1% Enterprise, 91% Free:
 
 ## 5. Verification Checklist
 
-- [ ] `docker compose --scale stas-worker=4` works without errors
-- [ ] `docker compose --scale stas-webhook=3` works without errors
+- [ ] `docker compose --scale syntaro-worker=4` works without errors
+- [ ] `docker compose --scale syntaro-webhook=3` works without errors
 - [ ] PostgreSQL connection pool handles 50 concurrent connections
 - [ ] Redis `maxmemory` set to 4GB for 500 users
 - [ ] Nginx worker_connections: 1024 (sufficient for 500 concurrent users)

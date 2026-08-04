@@ -38,7 +38,7 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.STAS_URL || "http://localhost:3000";
+const BASE_URL = __ENV.SYNTARO_URL || "http://localhost:3000";
 
 export function readEndpoint() {
   group("DB::Reads", () => {

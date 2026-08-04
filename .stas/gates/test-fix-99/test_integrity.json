@@ -1,0 +1,12 @@
+{
+  "gate": "test_integrity",
+  "passed": true,
+  "ossTool": "Verdict",
+  "command": "npx hallucination-grep --check-refs",
+  "stdout": "All references verified",
+  "stderr": "",
+  "details": [
+    "Test integrity check passed with 2 real assertion(s)"
+  ],
+  "timestamp": "2026-08-01T20:49:04.123Z"
+}

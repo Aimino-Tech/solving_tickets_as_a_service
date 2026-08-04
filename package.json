@@ -6,7 +6,7 @@
   "workspaces": [
     "packages/github-client",
     "packages/syntaro-mcp",
-    "packages/stas-cli"
+    "packages/syntaro-cli"
   ],
   "description": "Label a GitHub issue. Our bot investigates, fixes, and opens a PR. Backed by OpenCode.",
   "type": "module",
@@ -14,16 +14,16 @@
     "node": ">=20"
   },
   "bin": {
-    "stas-init": "./scripts/init.ts",
-    "stas": "./src/template/cli.ts",
-    "stas-install-mcp": "./scripts/stas-install-mcp.js"
+    "syntaro-init": "./scripts/init.ts",
+    "syntaro": "./src/template/cli.ts",
+    "syntaro-install-mcp": "./scripts/syntaro-install-mcp.js"
   },
   "scripts": {
     "init": "tsx scripts/init.ts",
     "dev": "tsx watch src/index.ts",
     "dev:api": "RUN_MODE=api tsx watch src/index.ts",
     "dev:worker": "RUN_MODE=worker tsx watch src/index.ts",
-    "build": "npm run build -w @stas/github-client && tsc",
+    "build": "npm run build -w @syntaro/github-client && tsc",
     "start": "node dist/src/index.js",
     "start:api": "RUN_MODE=api node dist/src/index.js",
     "start:worker": "RUN_MODE=worker node dist/src/index.js",
@@ -40,14 +40,14 @@
     "test:unit": "vitest run src/__tests__/template/",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "smee": "tsx scripts/smee.ts",
-    "docker:build": "docker build -t stas-bot .",
-    "docker:run": "docker run -p 3000:3000 stas-bot",
+    "docker:build": "docker build -t syntaro-bot .",
+    "docker:run": "docker run -p 3000:3000 syntaro-bot",
     "plugin:dev": "cd plugin && npm run dev",
     "plugin:build": "cd plugin && npm run build",
-    "stas:dev": "bash plugin/tools/stas-dev.sh",
-    "stas:webhook": "bash plugin/tools/stas-webhook-test.sh",
-    "stas:config": "bash plugin/tools/stas-config.sh",
-    "stas:status": "bash plugin/tools/stas-status.sh",
+    "syntaro:dev": "bash plugin/tools/syntaro-dev.sh",
+    "syntaro:webhook": "bash plugin/tools/syntaro-webhook-test.sh",
+    "syntaro:config": "bash plugin/tools/syntaro-config.sh",
+    "syntaro:status": "bash plugin/tools/syntaro-status.sh",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:migrate:rollback": "tsx src/db/migrate.ts --rollback",
     "db:seed": "tsx src/db/seed.ts",
@@ -78,11 +78,11 @@
     "coverage-enforce:changed": "bash scripts/coverage-enforce.sh --changed",
     "anti-liar-gate": "tsx src/agent/antiLiarGate.ts",
     "install-mcp": "bash scripts/install-mcp.sh",
-    "install-mcp:node": "node scripts/stas-install-mcp.js",
-    "stas": "tsx src/template/cli.ts",
-    "stas:validate": "tsx src/template/cli.ts template validate",
-    "stas:dry-run": "tsx src/template/cli.ts template dry-run",
-    "stas:install-hook": "tsx src/template/cli.ts install-hook",
+    "install-mcp:node": "node scripts/syntaro-install-mcp.js",
+    "syntaro": "tsx src/template/cli.ts",
+    "syntaro:validate": "tsx src/template/cli.ts template validate",
+    "syntaro:dry-run": "tsx src/template/cli.ts template dry-run",
+    "syntaro:install-hook": "tsx src/template/cli.ts install-hook",
     "test:e2e:smoke": "bash scripts/run-e2e-smoke-tests.sh",
     "test:e2e:smoke:verbose": "bash scripts/run-e2e-smoke-tests.sh --verbose",
     "test:e2e:smoke:list": "bash scripts/run-e2e-smoke-tests.sh --list",
@@ -104,7 +104,7 @@
     "test:automation:python:login": "cd tests/automation && python -m pytest test_login.py -v",
     "test:automation:python:api": "cd tests/automation && python -m pytest test_auth_api.py -v",
     "eval:conversations": "tsx eval/conversations/run.ts",
-    "stas:quickstart": "tsx src/template/cli.ts quickstart"
+    "syntaro:quickstart": "tsx src/template/cli.ts quickstart"
   },
   "dependencies": {
     "@linear/sdk": "^87.0.0",

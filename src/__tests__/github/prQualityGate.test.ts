@@ -2,7 +2,7 @@
  * Unit tests for src/github/prQualityGate.ts
  *
  * Covers:
- * - handlePullRequestOpened for STAS and non-STAS PRs
+ * - handlePullRequestOpened for SYNTARO and non-SYNTARO PRs
  * - requestReviewFromCollaborators selection and dedupe
  * - handleCheckSuiteCompleted success/failure gate comments
  * - enableMergeQueue gating on PR_MERGE_QUEUE_ENABLED
@@ -28,7 +28,7 @@ const { mockOctokitInstance, mockLoggerChild, mockConfig, resetMocks } = vi.hois
   };
   logger.child = vi.fn(() => logger);
 
-  const stasPr = {
+  const syntaroPr = {
     data: {
       number: 42,
       title: 'Fix: broken login',
@@ -36,8 +36,8 @@ const { mockOctokitInstance, mockLoggerChild, mockConfig, resetMocks } = vi.hois
       state: 'open',
       merged: false,
       node_id: 'PR_node_42',
-      user: { login: 'stas-bot' },
-      head: { sha: 'abc123', repo: { owner: { login: 'stas-bot' } } },
+      user: { login: 'syntaro-bot' },
+      head: { sha: 'abc123', repo: { owner: { login: 'syntaro-bot' } } },
     },
   };
 
@@ -51,7 +51,7 @@ const { mockOctokitInstance, mockLoggerChild, mockConfig, resetMocks } = vi.hois
 
   const octokit = {
     pulls: {
-      get: vi.fn().mockResolvedValue(stasPr),
+      get: vi.fn().mockResolvedValue(syntaroPr),
       listReviewComments: vi.fn().mockResolvedValue({ data: [] }),
       requestReviewers: vi.fn().mockResolvedValue({}),
     },
@@ -66,7 +66,7 @@ const { mockOctokitInstance, mockLoggerChild, mockConfig, resetMocks } = vi.hois
 
   function resetMocks() {
     octokit.pulls.get.mockReset();
-    octokit.pulls.get.mockResolvedValue(stasPr);
+    octokit.pulls.get.mockResolvedValue(syntaroPr);
     octokit.pulls.listReviewComments.mockReset();
     octokit.pulls.listReviewComments.mockResolvedValue({ data: [] });
     octokit.pulls.requestReviewers.mockReset();
@@ -87,7 +87,7 @@ const { mockOctokitInstance, mockLoggerChild, mockConfig, resetMocks } = vi.hois
         prQualityGate: true,
         mergeQueueEnabled: true,
       },
-      stas: { label: 'stas:fix' },
+      syntaro: { label: 'syntaro:fix' },
     },
     mockOctokitInstance: octokit,
     mockLoggerChild: logger,
@@ -128,7 +128,7 @@ function prOpenedPayload(overrides?: Record<string, unknown>) {
     pull_request: {
       number: 42,
       html_url: 'https://github.com/owner/test-repo/pull/42',
-      user: { login: 'stas-bot' },
+      user: { login: 'syntaro-bot' },
       head: { sha: 'abc123' },
       base: { ref: 'main' },
     },
@@ -164,14 +164,14 @@ const defaultConfig = {
     prQualityGate: true,
     mergeQueueEnabled: true,
   },
-  stas: { label: 'stas:fix' },
+  syntaro: { label: 'syntaro:fix' },
 };
 
 describe('prQualityGate', () => {
   beforeEach(() => {
     resetMocks();
     Object.assign(mockConfig.github, defaultConfig.github);
-    Object.assign(mockConfig.stas, defaultConfig.stas);
+    Object.assign(mockConfig.syntaro, defaultConfig.syntaro);
   });
 
   describe('handlePullRequestOpened', () => {
@@ -182,7 +182,7 @@ describe('prQualityGate', () => {
       expect(mockOctokitInstance.pulls.requestReviewers).not.toHaveBeenCalled();
     });
 
-    it('does nothing for a non-STAS PR', async () => {
+    it('does nothing for a non-SYNTARO PR', async () => {
       mockOctokitInstance.pulls.get.mockResolvedValue({
         data: {
           body: 'a human-authored PR',
@@ -198,7 +198,7 @@ describe('prQualityGate', () => {
       expect(mockOctokitInstance.pulls.requestReviewers).not.toHaveBeenCalled();
     });
 
-    it('posts the waiting-for-CI comment and requests review for a STAS PR', async () => {
+    it('posts the waiting-for-CI comment and requests review for a SYNTARO PR', async () => {
       await handlePullRequestOpened(mockOctokitInstance as never, prOpenedPayload() as never);
 
       expect(mockOctokitInstance.issues.createComment).toHaveBeenCalledWith(
@@ -249,13 +249,13 @@ describe('prQualityGate', () => {
       mockOctokitInstance.repos.listCollaborators.mockResolvedValue({
         data: [
           { login: 'alice', permissions: { push: true } },
-          { login: 'stas-bot', permissions: { push: true } },
+          { login: 'syntaro-bot', permissions: { push: true } },
           { login: 'carol', permissions: { push: false } },
           { login: 'readonly', permissions: { pull: true } },
         ],
       });
 
-      await requestReviewFromCollaborators(mockOctokitInstance as never, 'owner', 'test-repo', 42, 'stas-bot');
+      await requestReviewFromCollaborators(mockOctokitInstance as never, 'owner', 'test-repo', 42, 'syntaro-bot');
 
       expect(mockOctokitInstance.pulls.requestReviewers).toHaveBeenCalledWith(
         expect.objectContaining({ reviewers: ['alice'] }),
@@ -264,10 +264,10 @@ describe('prQualityGate', () => {
 
     it('skips requesting when no eligible collaborators exist', async () => {
       mockOctokitInstance.repos.listCollaborators.mockResolvedValue({
-        data: [{ login: 'stas-bot', permissions: { push: true } }],
+        data: [{ login: 'syntaro-bot', permissions: { push: true } }],
       });
 
-      await requestReviewFromCollaborators(mockOctokitInstance as never, 'owner', 'test-repo', 42, 'stas-bot');
+      await requestReviewFromCollaborators(mockOctokitInstance as never, 'owner', 'test-repo', 42, 'syntaro-bot');
 
       expect(mockOctokitInstance.pulls.requestReviewers).not.toHaveBeenCalled();
       expect(mockOctokitInstance.issues.createComment).not.toHaveBeenCalled();
@@ -333,7 +333,7 @@ describe('prQualityGate', () => {
       expect(mockOctokitInstance.pulls.get).not.toHaveBeenCalled();
     });
 
-    it('skips non-STAS PRs', async () => {
+    it('skips non-SYNTARO PRs', async () => {
       mockOctokitInstance.pulls.get.mockResolvedValue({
         data: {
           body: 'human PR',
@@ -355,8 +355,8 @@ describe('prQualityGate', () => {
           body: 'Powered by Syntaro',
           state: 'merged',
           merged: true,
-          user: { login: 'stas-bot' },
-          head: { repo: { owner: { login: 'stas-bot' } } },
+          user: { login: 'syntaro-bot' },
+          head: { repo: { owner: { login: 'syntaro-bot' } } },
         },
       });
 
@@ -437,8 +437,8 @@ describe('prQualityGate', () => {
           body: 'Powered by Syntaro',
           state: 'open',
           merged: false,
-          user: { login: 'stas-bot' },
-          head: { repo: { owner: { login: 'stas-bot' } } },
+          user: { login: 'syntaro-bot' },
+          head: { repo: { owner: { login: 'syntaro-bot' } } },
         },
       });
       mockOctokitInstance.pulls.listReviewComments.mockRejectedValueOnce(new Error('comments failed'));

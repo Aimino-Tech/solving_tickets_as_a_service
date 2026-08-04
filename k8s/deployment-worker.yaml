@@ -1,10 +1,10 @@
 # ---------------------------------------------------------------------------
-# STAS Worker Deployment — Celery worker (horizontally scalable per queue)
+# SYNTARO Worker Deployment — Celery worker (horizontally scalable per queue)
 #
 # Note: This deployment uses the Python Celery worker image built from
 # workers/Dockerfile. Build and push it separately:
-#   docker build -t ghcr.io/tamnguyen08/stas-worker:latest ./workers
-#   docker push ghcr.io/tamnguyen08/stas-worker:latest
+#   docker build -t ghcr.io/aimino-tech/syntaro-worker:latest ./workers
+#   docker push ghcr.io/aimino-tech/syntaro-worker:latest
 #
 # Probes use exec (not HTTP) because the Celery worker process does not
 # serve HTTP natively. The health.py script checks broker and backend
@@ -13,9 +13,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stas-worker
+  name: syntaro-worker
+  namespace: syntaro
   labels:
-    app: stas-worker
+    app: syntaro-worker
     tier: worker
     component: queue-processor
 spec:
@@ -30,34 +31,34 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      app: stas-worker
+      app: syntaro-worker
   template:
     metadata:
       labels:
-        app: stas-worker
+        app: syntaro-worker
         tier: worker
         component: queue-processor
     spec:
       terminationGracePeriodSeconds: 360
       containers:
         - name: worker
-          image: ghcr.io/tamnguyen08/stas-worker:latest
+          image: ghcr.io/aimino-tech/syntaro-worker:latest
           imagePullPolicy: Always
           command:
             - celery
             - -A
-            - celery_app
+            - workers.celery_app
             - worker
             - -l
             - info
             - -Q
-            - stas.agents.triage,stas.agents.dispatch,stas.agents.sandbox,stas.agents.verification,stas.agents.pr_creation,stas.agents.notifications
+            - syntaro.agents.triage,syntaro.agents.dispatch,syntaro.agents.sandbox,syntaro.agents.verification,syntaro.agents.pr_creation,syntaro.agents.notifications
             - --concurrency=4
           envFrom:
             - configMapRef:
-                name: stas-config
+                name: syntaro-config
             - secretRef:
-                name: stas-secrets
+                name: syntaro-secrets
           env:
             - name: RUN_MODE
               value: "worker"
@@ -75,14 +76,14 @@ spec:
                     # GracefulShutdownHandler intercepts and drains tasks.
           livenessProbe:
             exec:
-              command: ["python3", "/app/health.py", "--check"]
+              command: ["python3", "/app/workers/health.py", "--check"]
             initialDelaySeconds: 15
             periodSeconds: 30
             timeoutSeconds: 10
             failureThreshold: 3
           readinessProbe:
             exec:
-              command: ["python3", "/app/health.py", "--check"]
+              command: ["python3", "/app/workers/health.py", "--check"]
             initialDelaySeconds: 20
             periodSeconds: 15
             timeoutSeconds: 10

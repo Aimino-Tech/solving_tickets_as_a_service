@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "description": "STAS Standard Eval Baseline — 10 test cases across 3 groups",
+    "description": "SYNTARO Standard Eval Baseline — 10 test cases across 3 groups",
     "timestamp": "2026-06-12T00:00:00.000Z",
     "model": "openai:gpt-4o",
     "groups": ["group-1.yml", "group-2.yml", "group-3.yml"]

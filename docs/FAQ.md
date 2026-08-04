@@ -4,15 +4,15 @@
 
 ## General
 
-### What is STAS?
+### What is SYNTARO?
 
-STAS (Solving Tickets As A Service) is an open-source GitHub bot that automatically fixes labeled issues. When you label an issue with `stas:fix`, STAS investigates your codebase, writes a fix, runs your tests, and opens a pull request — all without human intervention.
+SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that automatically fixes labeled issues. When you label an issue with `syntaro:fix`, SYNTARO investigates your codebase, writes a fix, runs your tests, and opens a pull request — all without human intervention.
 
 It's backed by [OpenCode](https://opencode.ai) — the 162K-star open-source coding agent.
 
-### How is STAS different from Plip?
+### How is SYNTARO different from Plip?
 
-| Feature | STAS | Plip.io |
+| Feature | SYNTARO | Plip.io |
 |---|---|---|
 | Open source | Yes (MIT) | No |
 | Self-hostable | Yes | No (SaaS only) |
@@ -22,11 +22,11 @@ It's backed by [OpenCode](https://opencode.ai) — the 162K-star open-source cod
 | Issue tracker support | GitHub, GitLab, Bitbucket, Linear, Jira | GitHub only |
 | Multi-platform webhooks | Yes | No |
 
-### How is STAS different from KintsugiBot?
+### How is SYNTARO different from KintsugiBot?
 
-STAS was inspired by KintsugiBot but extends it significantly:
+SYNTARO was inspired by KintsugiBot but extends it significantly:
 
-| Aspect | STAS | KintsugiBot |
+| Aspect | SYNTARO | KintsugiBot |
 |---|---|---|
 | Agent backend | OpenCode Serve (162K★ agent) | Direct LLM SDK calls |
 | Queue system | BullMQ + RabbitMQ dual-backend | Basic in-memory |
@@ -41,9 +41,9 @@ STAS was inspired by KintsugiBot but extends it significantly:
 | Fallback models | Model chain with automatic retry | Single model |
 | Dead-letter queue | Yes | No |
 
-### How is STAS different from Open SWE?
+### How is SYNTARO different from Open SWE?
 
-Open SWE is a LangChain-based agent that operates on SWE-bench tasks. STAS is a production-grade bot that:
+Open SWE is a LangChain-based agent that operates on SWE-bench tasks. SYNTARO is a production-grade bot that:
 
 - Listens for GitHub webhooks (no manual task submission)
 - Runs in an isolated sandbox with network restrictions
@@ -53,15 +53,15 @@ Open SWE is a LangChain-based agent that operates on SWE-bench tasks. STAS is a 
 - Creates actual PRs with formatted descriptions
 - Supports multi-platform webhooks
 
-### Does STAS work with private repos?
+### Does SYNTARO work with private repos?
 
-**Yes.** STAS uses GitHub App installation tokens that are scoped to specific repositories. When you install the GitHub App on a private repository, STAS can clone, investigate, and push changes to it.
+**Yes.** SYNTARO uses GitHub App installation tokens that are scoped to specific repositories. When you install the GitHub App on a private repository, SYNTARO can clone, investigate, and push changes to it.
 
-The sandbox is ephemeral — the repo clone is destroyed after each run. Your code is never stored by STAS.
+The sandbox is ephemeral — the repo clone is destroyed after each run. Your code is never stored by SYNTARO.
 
 ### What models can I use?
 
-STAS uses two models:
+SYNTARO uses two models:
 
 1. **Triage model** (cheap): Classifies the issue before the fix agent runs. Default: `gpt-4o-mini`. Configurable via `OPENAI_CHEAP_MODEL`.
 2. **Fix agent model** (primary): The main agent that investigates and fixes the issue. Default: `anthropic/claude-sonnet-4-20250514`. Configurable via `OPENCODE_MODEL`.
@@ -81,19 +81,19 @@ Fallback models (`FALLBACK_MODELS`) are tried automatically if the primary model
 
 ### Do I need a GitHub App?
 
-**Yes.** STAS operates as a GitHub App. You need to:
+**Yes.** SYNTARO operates as a GitHub App. You need to:
 
 1. Create a GitHub App at `https://github.com/settings/apps/new`
 2. Set webhook permissions (Issues: read+write, Pull Requests: write, Contents: write)
 3. Subscribe to Issues and Issue comments events
 4. Generate a private key
-5. Configure the app ID, private key, and webhook secret in STAS
+5. Configure the app ID, private key, and webhook secret in SYNTARO
 
 The `.env.example` file has step-by-step instructions. See [SELF_HOSTING.md](./SELF_HOSTING.md) for a detailed walkthrough.
 
 ### Do I need Redis?
 
-**Yes** (for production). STAS uses Redis for:
+**Yes** (for production). SYNTARO uses Redis for:
 - BullMQ job queue (or RabbitMQ as alternative)
 - Per-repo concurrency locks
 - Rate limiting (token bucket)
@@ -103,31 +103,31 @@ For local development, Docker Compose starts a Redis instance automatically.
 
 ### Do I need OpenCode?
 
-**Yes.** STAS delegates the fix agent loop to OpenCode Serve. You need to run:
+**Yes.** SYNTARO delegates the fix agent loop to OpenCode Serve. You need to run:
 ```bash
 opencode serve --port 4096
 ```
 
-STAS sends issue context to OpenCode and receives the fix result. OpenCode handles:
+SYNTARO sends issue context to OpenCode and receives the fix result. OpenCode handles:
 - Code investigation and tracing
 - Fix implementation
 - Test writing
 - Code formatting
 - Git commit
 
-### Can I run STAS without Docker?
+### Can I run SYNTARO without Docker?
 
 For the sandbox, you have two options:
 1. **E2B cloud sandbox** (recommended for production): No Docker needed. Get a free API key at https://e2b.dev.
 2. **Docker local sandbox** (development): Requires Docker.
 
-Without either, STAS cannot run fix attempts because the code execution needs isolation. The triage phase (classification) works without a sandbox, but the full fix pipeline requires one.
+Without either, SYNTARO cannot run fix attempts because the code execution needs isolation. The triage phase (classification) works without a sandbox, but the full fix pipeline requires one.
 
 ---
 
 ## Pricing & Economics
 
-### How much does it cost to run STAS?
+### How much does it cost to run SYNTARO?
 
 **Self-hosted (OSS)**: Unlimited fixes, but with caveats:
 - **LLM API costs**: ~$2-6 per fix attempt depending on the model
@@ -142,7 +142,7 @@ Example monthly cost for 100 fixes with Claude Sonnet + Docker sandbox: **~$250-
 
 **Self-host is unlimited but bare-bones; the cloud free tier gives you a taste of the hosted experience; both point to paid plans for the full feature set.**
 
-### How does STAS compare cost-wise?
+### How does SYNTARO compare cost-wise?
 
 See [STRATEGY.md](../STRATEGY.md) for detailed economics:
 
@@ -150,7 +150,7 @@ See [STRATEGY.md](../STRATEGY.md) for detailed economics:
 |---|---|---|
 | Claude Opus 4.5 (direct) | $2.64 | 45.7% |
 | GPT-5.5 (DeepSWE) | $5.80 | 70.0% |
-| STAS (claude-sonnet-4, projected) | ~$3.00 | 90%+ |
+| SYNTARO (claude-sonnet-4, projected) | ~$3.00 | 90%+ |
 
 ### Can I use my own API key?
 
@@ -164,9 +164,9 @@ The cloud version routes through frontier models, which you don't need to config
 
 ## Technical
 
-### How does STAS handle issue triage?
+### How does SYNTARO handle issue triage?
 
-STAS uses a **two-phase triage** approach:
+SYNTARO uses a **two-phase triage** approach:
 
 1. **Classification** (cheap model): The issue is classified as `bug`, `feature`, `question`, or `unknown`. Features and questions are skipped, saving ~60% in agent costs.
 2. **Difficulty estimation**: Bug issues are rated `easy`, `medium`, or `hard` to set agent expectations.
@@ -175,25 +175,25 @@ The triage uses `gpt-4o-mini` by default (configurable) and costs ~$0.001 per ca
 
 ### What happens if the agent fails?
 
-STAS has a multi-layered failure handling:
+SYNTARO has a multi-layered failure handling:
 
 1. **Model chain**: If the primary model fails, fallback models are tried automatically.
 2. **Basic fix fallback**: If OpenCode is unavailable, a simpler fix attempt is made using the triage model directly.
 3. **Retry queue**: Failed jobs are retried with exponential backoff (30s, 2m, 5m, 15m).
 4. **Dead-letter queue**: After 4 retries, the job moves to a DLQ for manual review.
 
-### Does STAS run the existing test suite?
+### Does SYNTARO run the existing test suite?
 
-**Yes.** STAS runs the test suite **before** any changes (baseline) and **after** the fix (verification):
+**Yes.** SYNTARO runs the test suite **before** any changes (baseline) and **after** the fix (verification):
 
 1. Baseline: Records which tests pass/fail before changes
 2. Regression test validation: New tests must fail on original code and pass on fix
 3. Post-fix comparison: Detects if previously-passing tests now fail
 4. If regression is detected, PR creation is blocked
 
-### What languages does STAS support?
+### What languages does SYNTARO support?
 
-STAS auto-detects the project runtime and supports 10+ languages:
+SYNTARO auto-detects the project runtime and supports 10+ languages:
 
 | Language | Detection | Test Command |
 |---|---|---|
@@ -210,23 +210,23 @@ STAS auto-detects the project runtime and supports 10+ languages:
 | C++ | `CMakeLists.txt` | `ctest` |
 | .NET/C# | `*.csproj`, `*.sln` | `dotnet test` |
 
-### How does STAS handle multiple concurrent fixes?
+### How does SYNTARO handle multiple concurrent fixes?
 
-STAS uses a **per-repo concurrency lock** backed by Redis:
+SYNTARO uses a **per-repo concurrency lock** backed by Redis:
 - Default: 3 concurrent fixes per repo
-- Configurable via `STAS_MAX_CONCURRENT`
+- Configurable via `SYNTARO_MAX_CONCURRENT`
 - Jobs that exceed the limit are retried after a delay
 - Account-level limits based on billing tier
 
-### Can STAS work with GitLab or Bitbucket?
+### Can SYNTARO work with GitLab or Bitbucket?
 
-**Yes.** STAS has built-in webhook handlers for:
+**Yes.** SYNTARO has built-in webhook handlers for:
 - **GitLab**: Issues webhooks with token verification
 - **Bitbucket**: Pull request webhooks with HMAC verification
 - **Linear**: Issue webhooks with signature verification
 - **Jira**: Issue webhooks with signature verification
 
-Each platform normalizes the incoming webhook to STAS's internal `IssueJobData` format before enqueueing.
+Each platform normalizes the incoming webhook to SYNTARO's internal `IssueJobData` format before enqueueing.
 
 ---
 
@@ -234,7 +234,7 @@ Each platform normalizes the incoming webhook to STAS's internal `IssueJobData` 
 
 ### Can I contribute?
 
-**Absolutely.** STAS is open source (MIT licensed). See [CONTRIBUTING.md](../CONTRIBUTING.md) for:
+**Absolutely.** SYNTARO is open source (MIT licensed). See [CONTRIBUTING.md](../CONTRIBUTING.md) for:
 
 - Development setup guide
 - Test requirements
@@ -260,9 +260,9 @@ Please open a GitHub issue with the `security` label or email the maintainers di
 
 ## Support & Community
 
-### How do I get help with STAS?
+### How do I get help with SYNTARO?
 
-STAS has a three-tier support model:
+SYNTARO has a three-tier support model:
 
 | Tier | Audience | Response | Channels |
 |---|---|---|---|
@@ -281,7 +281,7 @@ The server includes channels for:
 - **#general** — General discussion
 - **#help** — Get help from the community
 - **#self-host** — Self-hosting discussions
-- **#showcase** — Share your STAS setups
+- **#showcase** — Share your SYNTARO setups
 - **#contributing** — Development discussions
 - **#feedback** — Feature ideas and feedback
 
@@ -312,9 +312,9 @@ Open a GitHub issue with the `security` label or email the maintainers directly.
 
 ## Operations
 
-### How do I monitor STAS?
+### How do I monitor SYNTARO?
 
-STAS provides:
+SYNTARO provides:
 - **Health endpoint**: `GET /health` — basic status, label, uptime
 - **Database health**: `GET /health/db` — database connectivity check
 - **Structured logging**: Pino with JSON output and request IDs
@@ -324,24 +324,24 @@ STAS provides:
 
 ### Can I customize the trigger label?
 
-**Yes.** Set `STAS_LABEL` to any label name:
+**Yes.** Set `SYNTARO_LABEL` to any label name:
 ```bash
-STAS_LABEL=ai:fix
+SYNTARO_LABEL=ai:fix
 ```
 
-The default is `stas:fix`. See [CUSTOMIZATION.md](./CUSTOMIZATION.md) for more options.
+The default is `syntaro:fix`. See [CUSTOMIZATION.md](./CUSTOMIZATION.md) for more options.
 
 ### What happens to my code after a fix run?
 
 **Nothing.** The sandbox (E2B or Docker) is destroyed after every run:
 - The repository clone is deleted
 - Temp directories are cleaned up
-- No code is stored by STAS
+- No code is stored by SYNTARO
 - Only the PR branch on GitHub persists (if a fix was created)
 
-### Does STAS have a dashboard?
+### Does SYNTARO have a dashboard?
 
-The **self-hosted (OSS) version** does not include a dashboard. You manage STAS via command line, configuration files, and health endpoints.
+The **self-hosted (OSS) version** does not include a dashboard. You manage SYNTARO via command line, configuration files, and health endpoints.
 
 The **cloud version** includes a full dashboard:
 - **Cloud Free** (10 fixes/mo): Limited analytics view
@@ -351,11 +351,11 @@ The **cloud version** includes a full dashboard:
 
 ## Troubleshooting
 
-### STAS isn't responding to my label
+### SYNTARO isn't responding to my label
 
 Check:
-1. The label matches `STAS_LABEL` exactly (default: `stas:fix`)
-2. The GitHub App webhook is pointing to your STAS instance
+1. The label matches `SYNTARO_LABEL` exactly (default: `syntaro:fix`)
+2. The GitHub App webhook is pointing to your SYNTARO instance
 3. The webhook secret matches `GITHUB_WEBHOOK_SECRET`
 4. Redis is running and accessible
 5. OpenCode serve is running on the configured port
@@ -376,4 +376,4 @@ The verification gate is strict by design:
 - The regression test must fail on original code (proves it tests the bug)
 - If the repo has no test suite, verification is skipped and marked "unverified"
 
-You can configure the sandbox to skip verification by setting the `STAS_VERIFICATION_MODE` environment variable (see [CUSTOMIZATION.md](./CUSTOMIZATION.md)).
+You can configure the sandbox to skip verification by setting the `SYNTARO_VERIFICATION_MODE` environment variable (see [CUSTOMIZATION.md](./CUSTOMIZATION.md)).

@@ -1,5 +1,5 @@
 /**
- * Pipeline quality-gates.ts — Quality gate runner for the STAS pipeline.
+ * Pipeline quality-gates.ts — Quality gate runner for the SYNTARO pipeline.
  *
  * Enforces five quality gates before PR creation:
  *   1. Build quality gate — TypeScript compilation passes

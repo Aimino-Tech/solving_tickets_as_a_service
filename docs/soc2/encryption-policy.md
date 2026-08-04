@@ -1,4 +1,4 @@
-# Encryption Policy — STAS
+# Encryption Policy — SYNTARO
 
 > Last updated: 2026-06-25
 

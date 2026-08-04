@@ -139,10 +139,10 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/stas-badge.json', (_req: Request, res: Response) => {
+router.get('/syntaro-badge.json', (_req: Request, res: Response) => {
   res.json({
     schemaVersion: 1,
-    label: 'STAS',
+    label: 'SYNTARO',
     message: 'Solving Tickets As A Service',
     color: '8250DF',
   });

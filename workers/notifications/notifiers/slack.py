@@ -373,7 +373,7 @@ def notify_slack(
     webhook_url:
         Slack Incoming Webhook URL.
     channel:
-        Optional Slack channel override (e.g. ``#stas-alerts``).
+        Optional Slack channel override (e.g. ``#syntaro-alerts``).
 
     Returns
     -------
@@ -383,7 +383,7 @@ def notify_slack(
     blocks = _build_blocks(event_type, payload)
 
     message: dict[str, Any] = {
-        "text": f"[STAS] {event_type} — {payload.get('issue_id', '?')}",
+        "text": f"[SYNTARO] {event_type} — {payload.get('issue_id', '?')}",
         "blocks": blocks,
     }
     if channel:
@@ -440,7 +440,7 @@ def notify_slack_threaded(
 
     event_type = payload.get("event_type", "fix_completed")
     blocks = _build_blocks(event_type, payload)
-    text = f"[STAS] {event_type} — {payload.get('issue_id', '?')}"
+    text = f"[SYNTARO] {event_type} — {payload.get('issue_id', '?')}"
 
     try:
         resp = client.chat_postMessage(
@@ -479,7 +479,7 @@ def notify_slack_progress(
     thread_ts:
         Thread timestamp from the original fix request message.
     run_id:
-        STAS pipeline run ID.
+        SYNTARO pipeline run ID.
     status:
         Pipeline status (queued, in_progress, completed, failed, cancelled).
     stage:

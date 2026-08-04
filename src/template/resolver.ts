@@ -17,20 +17,20 @@ export interface ClassificationResult {
 }
 
 const REQUEST_TYPE_LABELS: Record<string, string[]> = {
-  bug: ['stas:fix', 'stas:bugfix', 'stas:bug', 'bug'],
-  feature: ['stas:feature', 'stas:feat', 'enhancement', 'feature'],
-  planning: ['stas:plan', 'stas:planning', 'plan', 'design'],
-  research: ['stas:research', 'stas:explore', 'research', 'question'],
-  documentation: ['stas:docs', 'documentation', 'docs'],
-  pipeline: ['stas:pipeline', 'stas:train', 'pipeline', 'train'],
+  bug: ['syntaro:fix', 'syntaro:bugfix', 'syntaro:bug', 'bug'],
+  feature: ['syntaro:feature', 'syntaro:feat', 'enhancement', 'feature'],
+  planning: ['syntaro:plan', 'syntaro:planning', 'plan', 'design'],
+  research: ['syntaro:research', 'syntaro:explore', 'research', 'question'],
+  documentation: ['syntaro:docs', 'documentation', 'docs'],
+  pipeline: ['syntaro:pipeline', 'syntaro:train', 'pipeline', 'train'],
 };
 
 export function classifyByLabel(labels: string[]): ClassificationResult {
   for (const label of labels) {
     const lower = label.toLowerCase();
 
-    if (lower.startsWith('stas:')) {
-      const typePart = lower.replace('stas:', '');
+    if (lower.startsWith('syntaro:')) {
+      const typePart = lower.replace('syntaro:', '');
       if (typePart.startsWith('fix') || typePart.startsWith('bug')) {
         return { type: 'bug', label, confidence: 0.95 };
       }

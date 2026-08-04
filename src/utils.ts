@@ -1,5 +1,5 @@
 /**
- * General-purpose utility functions for STAS.
+ * General-purpose utility functions for SYNTARO.
  */
 
 /**

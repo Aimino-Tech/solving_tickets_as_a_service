@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # install-mcp.sh — One-command MCP install for any agent platform.
-# Invoked via: npx stas install-mcp
+# Invoked via: npx syntaro install-mcp
 #
 # Detects the current project root and delegates to syntaro_mcp/install.sh.
 # Supports all flags from install.sh.

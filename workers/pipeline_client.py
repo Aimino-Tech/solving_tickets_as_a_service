@@ -29,13 +29,13 @@ class PipelineClient:
     """Client for the real OpenSymphony pipeline.
 
     In-process mode (default): calls ``PipelineEngine`` directly.
-    HTTP mode (``STAS_PIPELINE_API_URL`` env): calls a remote pipeline API.
+    HTTP mode (``SYNTARO_PIPELINE_API_URL`` env): calls a remote pipeline API.
     """
 
     def __init__(self) -> None:
         self._engine_ref = None
         self._engine_init = False
-        self._api_url = os.getenv("STAS_PIPELINE_API_URL", "")
+        self._api_url = os.getenv("SYNTARO_PIPELINE_API_URL", "")
 
     def _get_engine(self):
         if not self._engine_init:
@@ -65,13 +65,13 @@ class PipelineClient:
         repo: str,
         issue_number: int,
         issue_url: str = "",
-        pipeline_name: str = "stas:fix",
+        pipeline_name: str = "syntaro:fix",
     ) -> dict[str, Any]:
         if not issue_url:
             issue_url = f"https://github.com/{owner}/{repo}/issues/{issue_number}"
 
         issue_id = f"{owner}/{repo}#{issue_number}"
-        run_id = f"stas-{uuid.uuid4().hex[:12]}"
+        run_id = f"syntaro-{uuid.uuid4().hex[:12]}"
         created_at = datetime.now(timezone.utc).isoformat()
 
         engine = self._get_engine()

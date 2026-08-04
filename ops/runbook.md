@@ -1,4 +1,4 @@
-# STAS Production Deployment Runbook
+# SYNTARO Production Deployment Runbook
 
 > Solving Tickets As A Service — Operations Guide
 > Last updated: 2026-07-28
@@ -27,8 +27,8 @@
 docker compose -f docker-compose.prod.yml up -d
 
 # Individual services
-docker compose -f docker-compose.prod.yml up -d stas-webhook
-docker compose -f docker-compose.prod.yml up -d stas-worker
+docker compose -f docker-compose.prod.yml up -d syntaro-webhook
+docker compose -f docker-compose.prod.yml up -d syntaro-worker
 docker compose -f docker-compose.prod.yml up -d celery-beat
 ```
 
@@ -39,19 +39,19 @@ docker compose -f docker-compose.prod.yml up -d celery-beat
 docker compose -f docker-compose.prod.yml down
 
 # Stop individual service
-docker compose -f docker-compose.prod.yml stop stas-webhook
+docker compose -f docker-compose.prod.yml stop syntaro-webhook
 ```
 
 ### Restart
 
 ```bash
 # Rolling restart (zero-downtime for webhook with multiple replicas)
-docker compose -f docker-compose.prod.yml up -d --no-deps --scale stas-webhook=2 stas-webhook
+docker compose -f docker-compose.prod.yml up -d --no-deps --scale syntaro-webhook=2 syntaro-webhook
 # Then scale back down
-docker compose -f docker-compose.prod.yml up -d --no-deps --scale stas-webhook=1 stas-webhook
+docker compose -f docker-compose.prod.yml up -d --no-deps --scale syntaro-webhook=1 syntaro-webhook
 
 # Quick restart
-docker compose -f docker-compose.prod.yml restart stas-webhook
+docker compose -f docker-compose.prod.yml restart syntaro-webhook
 ```
 
 ### Health Check
@@ -61,7 +61,7 @@ docker compose -f docker-compose.prod.yml restart stas-webhook
 curl -f http://localhost:3000/health
 
 # Docker container health
-docker ps --filter "name=stas" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+docker ps --filter "name=syntaro" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 # Detailed health (if available)
 curl -s http://localhost:3000/health | jq .
@@ -71,16 +71,16 @@ curl -s http://localhost:3000/health | jq .
 
 ```bash
 # Follow logs
-docker compose -f docker-compose.prod.yml logs -f stas-webhook
+docker compose -f docker-compose.prod.yml logs -f syntaro-webhook
 
 # Last N lines
-docker compose -f docker-compose.prod.yml logs --tail=100 stas-webhook
+docker compose -f docker-compose.prod.yml logs --tail=100 syntaro-webhook
 
 # Search logs
-docker compose -f docker-compose.prod.yml logs stas-webhook | grep -i error
+docker compose -f docker-compose.prod.yml logs syntaro-webhook | grep -i error
 
 # Worker logs
-docker compose -f docker-compose.prod.yml logs -f stas-worker
+docker compose -f docker-compose.prod.yml logs -f syntaro-worker
 ```
 
 ---
@@ -105,26 +105,26 @@ For 500 concurrent users, the recommended production layout is:
 
 ```bash
 # Scale horizontally (minimum 3 for 500 users, up to 6 for peak)
-docker compose -f docker-compose.prod.yml up -d --scale stas-webhook=3 stas-webhook
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-webhook=3 syntaro-webhook
 
 # For peak load (burst)
-docker compose -f docker-compose.prod.yml up -d --scale stas-webhook=6 stas-webhook
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-webhook=6 syntaro-webhook
 
 # Verify distribution
-docker compose -f docker-compose.prod.yml ps stas-webhook
+docker compose -f docker-compose.prod.yml ps syntaro-webhook
 ```
 
 ### Worker Pool
 
 ```bash
 # Increase concurrency (stateless — safe to scale)
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=8 stas-worker
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=8 syntaro-worker
 
 # For sustained high load
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=12 stas-worker
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=12 syntaro-worker
 
 # Check worker health
-docker compose -f docker-compose.prod.yml logs --tail=20 stas-worker
+docker compose -f docker-compose.prod.yml logs --tail=20 syntaro-worker
 ```
 
 ### Database Connection Pool
@@ -140,7 +140,7 @@ environment:
 Check connection pool health:
 
 ```bash
-docker compose exec postgres psql -U stas -c "
+docker compose exec postgres psql -U syntaro -c "
   SELECT count(*) AS active_connections
   FROM pg_stat_activity
   WHERE state = 'active';
@@ -182,7 +182,7 @@ Rate limit configuration is in `nginx/nginx.conf` (Nginx level) and `src/ratelim
 
 ```bash
 # Run full 500-user load test suite
-./scripts/run-load-test.sh http://stas.example.com
+./scripts/run-load-test.sh http://syntaro.example.com
 
 # Run individual scenarios
 k6 run load-tests/scenarios/full-suite.js
@@ -200,10 +200,10 @@ See `SCALING_500_USERS.md` for the complete scaling guide and cost projections.
 
 | Service | Log Location | Retention |
 |---------|-------------|-----------|
-| Webhook | `docker logs stas-webhook` | Docker default (configurable) |
-| Worker | `docker logs stas-worker` | Docker default |
+| Webhook | `docker logs syntaro-webhook` | Docker default (configurable) |
+| Worker | `docker logs syntaro-worker` | Docker default |
 | Nginx | `/var/log/nginx/` | 14 days (logrotate) |
-| PostgreSQL | `docker logs stas-postgres` | Docker default |
+| PostgreSQL | `docker logs syntaro-postgres` | Docker default |
 
 ### Metrics (Prometheus)
 
@@ -211,15 +211,15 @@ Available at `http://localhost:9464/metrics` (or configured port):
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `stas_webhooks_received_total` | Counter | Total webhooks received |
-| `stas_webhooks_failed_total` | Counter | Failed webhook processing |
-| `stas_issues_processed_total` | Counter | Issues processed end-to-end |
-| `stas_agent_duration_seconds` | Histogram | Agent fix duration |
-| `stas_queue_depth` | Gauge | Current job queue depth |
-| `stas_worker_count` | Gauge | Active worker count |
-| `stas_rate_limit_remaining` | Gauge | Remaining rate limit per tier |
-| `stas_credit_balance` | Gauge | Account credit balances |
-| `stas_last_successful_backup_timestamp` | Gauge | Last backup timestamp |
+| `syntaro_webhooks_received_total` | Counter | Total webhooks received |
+| `syntaro_webhooks_failed_total` | Counter | Failed webhook processing |
+| `syntaro_issues_processed_total` | Counter | Issues processed end-to-end |
+| `syntaro_agent_duration_seconds` | Histogram | Agent fix duration |
+| `syntaro_queue_depth` | Gauge | Current job queue depth |
+| `syntaro_worker_count` | Gauge | Active worker count |
+| `syntaro_rate_limit_remaining` | Gauge | Remaining rate limit per tier |
+| `syntaro_credit_balance` | Gauge | Account credit balances |
+| `syntaro_last_successful_backup_timestamp` | Gauge | Last backup timestamp |
 
 ### Grafana
 
@@ -242,12 +242,12 @@ Error tracking configured in `src/monitoring/sentry.ts`. Check Sentry dashboard 
 
 ### PagerDuty On-Call Escalation
 
-STAS integrates with PagerDuty via the Events API v2 for on-call alerting. Alerts are routed based on severity:
+SYNTARO integrates with PagerDuty via the Events API v2 for on-call alerting. Alerts are routed based on severity:
 
 | Dispatch Condition | PD Severity | Dedup Key |
 |---|---|---|
-| All `critical` severity alerts | `critical` | `stas-{rule}-{YYYY-MM-DDTHH}` |
-| `warning` alerts with `escalated: true` flag | `warning` | `stas-{rule}-{YYYY-MM-DDTHH}` |
+| All `critical` severity alerts | `critical` | `syntaro-{rule}-{YYYY-MM-DDTHH}` |
+| `warning` alerts with `escalated: true` flag | `warning` | `syntaro-{rule}-{YYYY-MM-DDTHH}` |
 | `info` or `warning` (non-escalated) | Not dispatched | — |
 
 **Setup:**
@@ -264,7 +264,7 @@ curl -X POST http://localhost:3000/admin/test-alert \
   -d '{"severity":"critical","rule":"test_pd_integration","message":"PD integration test"}'
 
 # Check logs for PD delivery
-docker compose -f docker-compose.prod.yml logs stas-webhook | grep -i "pagerduty"
+docker compose -f docker-compose.prod.yml logs syntaro-webhook | grep -i "pagerduty"
 ```
 
 **Troubleshooting:**
@@ -276,8 +276,8 @@ docker compose -f docker-compose.prod.yml logs stas-webhook | grep -i "pagerduty
 
 | Alert | Condition | Severity | Channel | Response |
 |-------|-----------|----------|---------|----------|
-| Queue Depth Critical | `stas_queue_depth > 100` | Critical | Slack + PagerDuty | See playbook |
-| Worker Down | `stas_worker_count == 0` | Critical | Slack + PagerDuty | Restart worker pool |
+| Queue Depth Critical | `syntaro_queue_depth > 100` | Critical | Slack + PagerDuty | See playbook |
+| Worker Down | `syntaro_worker_count == 0` | Critical | Slack + PagerDuty | Restart worker pool |
 | Agent Success Rate Low | `agent_success_rate < 0.8` | Warning | Slack | Investigate agent logs |
 | Webhook Failure Rate High | `failure_rate > 0.05` | Warning | Slack | Check GitHub App webhook |
 | Backup Stale | `last_backup_age > 4h` | Warning | Slack | Check backup scripts |
@@ -287,7 +287,7 @@ docker compose -f docker-compose.prod.yml logs stas-webhook | grep -i "pagerduty
 
 ### External Monitoring (Better Uptime)
 
-STAS uses [Better Uptime](https://betteruptime.com) for external uptime monitoring. Configuration: `deploy/monitoring/uptime-config.yml`.
+SYNTARO uses [Better Uptime](https://betteruptime.com) for external uptime monitoring. Configuration: `deploy/monitoring/uptime-config.yml`.
 
 #### Monitored Endpoints
 
@@ -308,7 +308,7 @@ BETTER_UPTIME_API_KEY="key" bash scripts/setup-uptime-monitoring.sh
 
 #### Status Page
 
-https://stas.betteruptime.com - 90-day uptime history, public access.
+https://syntaro.betteruptime.com - 90-day uptime history, public access.
 
 #### Incident Flow
 
@@ -338,7 +338,7 @@ docker compose exec redis redis-cli PING
 # Should return: PONG
 
 # 5. Restart dependent services
-docker compose -f docker-compose.prod.yml restart stas-webhook stas-worker celery-beat
+docker compose -f docker-compose.prod.yml restart syntaro-webhook syntaro-worker celery-beat
 ```
 
 ### RabbitMQ Queue Backed Up
@@ -351,16 +351,16 @@ docker compose -f docker-compose.prod.yml restart stas-webhook stas-worker celer
 curl -u guest:guest http://localhost:15672/api/queues | jq '.[].messages_ready'
 
 # 2. Scale workers to drain
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=10 stas-worker
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=10 syntaro-worker
 
 # 3. Monitor drain rate
 watch 'curl -s -u guest:guest http://localhost:15672/api/queues | jq ".[] | {name: .name, messages: .messages_ready}"'
 
 # 4. Investigate slow processing
-docker compose -f docker-compose.prod.yml logs --tail=50 stas-worker | grep -i "error\|exception\|timeout"
+docker compose -f docker-compose.prod.yml logs --tail=50 syntaro-worker | grep -i "error\|exception\|timeout"
 
 # 5. Scale back down when queue is healthy
-docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4 stas-worker
+docker compose -f docker-compose.prod.yml up -d --scale syntaro-worker=4 syntaro-worker
 ```
 
 ### PostgreSQL Connection Pool Exhausted
@@ -370,14 +370,14 @@ docker compose -f docker-compose.prod.yml up -d --scale stas-worker=4 stas-worke
 **Resolution**:
 ```bash
 # 1. Check active connections
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   SELECT count(*) AS active_connections
   FROM pg_stat_activity
   WHERE state = 'active';
 "
 
 # 2. Kill idle connections
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   SELECT pg_terminate_backend(pid)
   FROM pg_stat_activity
   WHERE state = 'idle'
@@ -397,7 +397,7 @@ docker compose exec stas-postgres psql -U stas -c "
 **Resolution**:
 ```bash
 # 1. Check agent logs
-docker compose -f docker-compose.prod.yml logs stas-worker | grep -i "opencode\|agent"
+docker compose -f docker-compose.prod.yml logs syntaro-worker | grep -i "opencode\|agent"
 
 # 2. Check OpenCode serve health
 curl -f http://localhost:4096/health
@@ -406,7 +406,7 @@ curl -f http://localhost:4096/health
 # opencode serve --port 4096 &
 
 # 4. Reset stuck jobs
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   UPDATE run_history
   SET status = 'failed',
       error_message = 'TIMEOUT: Agent stuck for > 30 minutes'
@@ -449,13 +449,13 @@ curl -H "Authorization: Bearer $GITHUB_TOKEN" \
 # 2. Replay failed webhook events from Stripe dashboard
 
 # 3. Check local webhook signature verification
-docker compose -f docker-compose.prod.yml logs --tail=20 stas-webhook | grep -i "stripe\|webhook"
+docker compose -f docker-compose.prod.yml logs --tail=20 syntaro-webhook | grep -i "stripe\|webhook"
 
-# 4. Verify STAS_ENDPOINT_SECRET is correct in .env
+# 4. Verify SYNTARO_ENDPOINT_SECRET is correct in .env
 grep STRIPE_ENDPOINT_SECRET .env
 
 # 5. Restart webhook if needed
-docker compose -f docker-compose.prod.yml restart stas-webhook
+docker compose -f docker-compose.prod.yml restart syntaro-webhook
 ```
 
 ### Nginx 502 Bad Gateway
@@ -465,7 +465,7 @@ docker compose -f docker-compose.prod.yml restart stas-webhook
 **Resolution**:
 ```bash
 # 1. Check if webhook is running
-docker compose -f docker-compose.prod.yml ps stas-webhook
+docker compose -f docker-compose.prod.yml ps syntaro-webhook
 
 # 2. Check nginx configuration
 docker compose -f docker-compose.prod.yml exec nginx nginx -t
@@ -477,7 +477,7 @@ docker compose -f docker-compose.prod.yml logs --tail=50 nginx
 docker compose -f docker-compose.prod.yml restart nginx
 
 # 5. Verify upstream is reachable
-docker compose exec nginx curl -f http://stas-webhook:3000/health
+docker compose exec nginx curl -f http://syntaro-webhook:3000/health
 ```
 
 ---
@@ -490,11 +490,11 @@ docker compose exec nginx curl -f http://stas-webhook:3000/health
 
 ```bash
 # 1. Pull latest image
-docker compose -f docker-compose.prod.yml pull stas-webhook
+docker compose -f docker-compose.prod.yml pull syntaro-webhook
 
 # 2. Scale up new version alongside old
 docker compose -f docker-compose.prod.yml up -d --no-deps \
-  --scale stas-webhook=3 stas-webhook
+  --scale syntaro-webhook=3 syntaro-webhook
 
 # 3. Wait for old containers to drain
 sleep 10
@@ -503,11 +503,11 @@ sleep 10
 # Or simply let replacement happen
 
 # 5. Run database migrations (if applicable)
-docker compose -f docker-compose.prod.yml run --rm stas-webhook \
+docker compose -f docker-compose.prod.yml run --rm syntaro-webhook \
   npx tsx src/db/migrate.ts
 
 # 6. Roll out workers
-docker compose -f docker-compose.prod.yml up -d --no-deps stas-worker
+docker compose -f docker-compose.prod.yml up -d --no-deps syntaro-worker
 
 # 7. Verify
 curl -f http://localhost:3000/health
@@ -521,15 +521,15 @@ curl -f http://localhost:3000/health
 
 ```bash
 # Dry-run migration
-docker compose -f docker-compose.prod.yml run --rm stas-webhook \
+docker compose -f docker-compose.prod.yml run --rm syntaro-webhook \
   npx tsx src/db/migrate.ts --dry-run
 
 # Run migration
-docker compose -f docker-compose.prod.yml run --rm stas-webhook \
+docker compose -f docker-compose.prod.yml run --rm syntaro-webhook \
   npx tsx src/db/migrate.ts
 
 # Verify migration
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   SELECT version, name, applied_at
   FROM migrations
   ORDER BY version;
@@ -540,11 +540,11 @@ docker compose exec stas-postgres psql -U stas -c "
 
 ```bash
 # Rollback last migration
-docker compose -f docker-compose.prod.yml run --rm stas-webhook \
+docker compose -f docker-compose.prod.yml run --rm syntaro-webhook \
   npx tsx src/db/migrate.ts --rollback
 
 # Rollback to specific version
-docker compose -f docker-compose.prod.yml run --rm stas-webhook \
+docker compose -f docker-compose.prod.yml run --rm syntaro-webhook \
   npx tsx src/db/migrate.ts --rollback-to 3
 ```
 
@@ -552,11 +552,11 @@ docker compose -f docker-compose.prod.yml run --rm stas-webhook \
 
 ```bash
 # Build new image
-docker build -t stas-bot:latest .
+docker build -t syntaro-bot:latest .
 
 # Tag and push
-docker tag stas-bot:latest ghcr.io/aimino-tech/stas-bot:$(git rev-parse --short HEAD)
-docker push ghcr.io/aimino-tech/stas-bot:$(git rev-parse --short HEAD)
+docker tag syntaro-bot:latest ghcr.io/aimino-tech/syntaro-bot:$(git rev-parse --short HEAD)
+docker push ghcr.io/aimino-tech/syntaro-bot:$(git rev-parse --short HEAD)
 
 # Deploy
 docker compose -f docker-compose.prod.yml pull
@@ -655,17 +655,17 @@ curl -f http://localhost:3000/health
 
 ```bash
 # Check auth logs
-docker compose -f docker-compose.prod.yml logs stas-webhook | grep -i "unauthorized\|401\|403"
+docker compose -f docker-compose.prod.yml logs syntaro-webhook | grep -i "unauthorized\|401\|403"
 
 # Check audit log
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   SELECT * FROM audit_logs
   WHERE created_at > NOW() - INTERVAL '24 hours'
   ORDER BY created_at DESC;
 "
 
 # Revoke all sessions (if implemented)
-docker compose exec stas-postgres psql -U stas -c "
+docker compose exec syntaro-postgres psql -U syntaro -c "
   DELETE FROM sessions WHERE expires_at < NOW();
 "
 ```
@@ -674,14 +674,14 @@ docker compose exec stas-postgres psql -U stas -c "
 
 ```bash
 # Scan for vulnerabilities
-docker run --rm aquasec/trivy image stas-bot:latest
+docker run --rm aquasec/trivy image syntaro-bot:latest
 
 # Update dependencies
 npm audit
 npm update
 
 # Rebuild and redeploy
-docker build -t stas-bot:latest .
+docker build -t syntaro-bot:latest .
 docker compose -f docker-compose.prod.yml up -d
 ```
 
@@ -746,10 +746,10 @@ docker compose -f docker-compose.prod.yml run --rm certbot \
 docker compose -f docker-compose.prod.yml logs -f
 
 # Resource usage
-docker stats stas-webhook stas-worker
+docker stats syntaro-webhook syntaro-worker
 
 # Database interactive shell
-docker compose exec stas-postgres psql -U stas
+docker compose exec syntaro-postgres psql -U syntaro
 
 # Redis interactive shell
 docker compose exec redis redis-cli
@@ -768,7 +768,7 @@ docker compose -f docker-compose.prod.yml config
 
 ## 9. Log Aggregation (Loki)
 
-STAS uses **Grafana Loki** for centralized log aggregation with **Promtail** as the log shipper. All Docker container logs from the `stas` Compose project are automatically shipped to Loki and retained for **7 days**.
+SYNTARO uses **Grafana Loki** for centralized log aggregation with **Promtail** as the log shipper. All Docker container logs from the `syntaro` Compose project are automatically shipped to Loki and retained for **7 days**.
 
 ### Architecture
 
@@ -794,21 +794,21 @@ Loki exposes a REST API on port **3100**. Query via Grafana Log Explorer or dire
 ```bash
 # All logs from the webhook service (last 30 min)
 curl -s 'http://localhost:3100/loki/api/v1/query_range' \
-  --data-urlencode 'query={compose_service="stas-webhook"}' \
+  --data-urlencode 'query={compose_service="syntaro-webhook"}' \
   --data-urlencode 'start='$(date -d '30 min ago' +%s)'000' \
   --data-urlencode 'end='$(date +%s)'000' \
   --data-urlencode 'limit=100' | jq .
 
 # Error logs from all services (last 1 hour)
 curl -s 'http://localhost:3100/loki/api/v1/query_range' \
-  --data-urlencode 'query={compose_project="stas"} |= "error"' \
+  --data-urlencode 'query={compose_project="syntaro"} |= "error"' \
   --data-urlencode 'start='$(date -d '1 hour ago' +%s)'000' \
   --data-urlencode 'end='$(date +%s)'000' \
   --data-urlencode 'limit=100' | jq .
 
 # Count 5xx errors per minute (metric query)
 curl -s 'http://localhost:3100/loki/api/v1/query' \
-  --data-urlencode 'query=sum(rate({compose_service="stas-webhook"} |~ "5[0-9][0-9]" [1m]))' \
+  --data-urlencode 'query=sum(rate({compose_service="syntaro-webhook"} |~ "5[0-9][0-9]" [1m]))' \
   --data-urlencode 'time='$(date +%s)'000' | jq .
 ```
 
@@ -818,10 +818,10 @@ Every log entry is automatically tagged with:
 
 | Label | Source | Example |
 |-------|--------|---------|
-| `container_name` | Docker container name | `stas-webhook` |
-| `compose_service` | Docker Compose service name | `stas-worker` |
-| `compose_project` | Docker Compose project | `stas` |
-| `image_name` | Container image | `stas-webhook:latest` |
+| `container_name` | Docker container name | `syntaro-webhook` |
+| `compose_service` | Docker Compose service name | `syntaro-worker` |
+| `compose_project` | Docker Compose project | `syntaro` |
+| `image_name` | Container image | `syntaro-webhook:latest` |
 | `log_stream` | stdout / stderr | `stdout` |
 
 ### Log-Based Alerts
@@ -852,7 +852,7 @@ docker compose -f docker-compose.prod.yml logs -f promtail
 curl -f http://localhost:3100/ready
 
 # Check storage usage
-docker exec stas-loki du -sh /loki/chunks
+docker exec syntaro-loki du -sh /loki/chunks
 ```
 
 ### Configuration Files
@@ -879,7 +879,7 @@ To add Loki as a Grafana data source:
 
 ### 10.1 Incident Severity Levels
 
-STAS incidents are classified by severity. Severity determines response time, notification channels, and escalation path.
+SYNTARO incidents are classified by severity. Severity determines response time, notification channels, and escalation path.
 
 #### SEV-1 — Service Down / Data Loss
 
@@ -887,7 +887,7 @@ STAS incidents are classified by severity. Severity determines response time, no
 |---|---|
 | **Definition** | Complete service outage or data loss. No issues can be processed. Or confirmed data corruption / loss. |
 | **Response Time** | 5 minutes (acknowledge), 15 minutes (first update) |
-| **Notification** | PagerDuty (critical) + Slack `#stas-incidents` + Slack `#stas-on-call` + status page |
+| **Notification** | PagerDuty (critical) + Slack `#syntaro-incidents` + Slack `#syntaro-on-call` + status page |
 | **Examples** | Webhook not accepting requests; Worker pool completely down; Database corrupted; RabbitMQ queue lost; Credit balance errors |
 | **Escalation** | Immediate — on-call engineer, auto-escalate at T+10 to DevOps Lead if no acknowledgement |
 | **Post-mortem** | Required within 3 business days |
@@ -898,7 +898,7 @@ STAS incidents are classified by severity. Severity determines response time, no
 |---|---|
 | **Definition** | A major feature is unavailable or significantly impaired. Core functionality is degraded. |
 | **Response Time** | 15 minutes (acknowledge), 30 minutes (first update) |
-| **Notification** | PagerDuty (warning) + Slack `#stas-incidents` + status page |
+| **Notification** | PagerDuty (warning) + Slack `#syntaro-incidents` + status page |
 | **Examples** | Agent success rate < 80%; GitHub API rate limited; Webhook delivery failing for a subset of repos; Stripe payment processing broken; OpenCode serve unhealthy |
 | **Escalation** | DevOps Lead at T+30 if unresolved |
 | **Post-mortem** | Required within 5 business days |
@@ -909,7 +909,7 @@ STAS incidents are classified by severity. Severity determines response time, no
 |---|---|
 | **Definition** | A non-critical feature is degraded. Core functionality is working. Workarounds exist. |
 | **Response Time** | 1 hour (acknowledge) |
-| **Notification** | Slack `#stas-incidents` only (no PagerDuty unless escalated) |
+| **Notification** | Slack `#syntaro-incidents` only (no PagerDuty unless escalated) |
 | **Examples** | Dashboard latency; Rate limit near exhaustion; Backup stale; Non-critical API endpoint slow; Nginx latency |
 | **Escalation** | DevOps Lead at T+2h if unresolved |
 | **Post-mortem** | Optional — brief summary in incident log |
@@ -951,7 +951,7 @@ Detection → Triage → Mitigation → Resolution → Post-Mortem
 2. **Classify** severity using §10.1 definitions
 3. **Assess** blast radius (single user? all users? data at risk?)
 4. **Check** runbook and playbook for guidance
-5. **Communicate** initial status to `#stas-incidents` and status page
+5. **Communicate** initial status to `#syntaro-incidents` and status page
 6. **Decide** on mitigation approach (workaround vs full fix)
 
 **SLA**: SEV-1: 5 min, SEV-2: 15 min, SEV-3: 1 hour
@@ -976,7 +976,7 @@ Detection → Triage → Mitigation → Resolution → Post-Mortem
 2. **Verify** no residual errors in logs
 3. **Test** end-to-end flow (process a test issue)
 4. **Update** status page to "Resolved"
-5. **Post** final summary to `#stas-incidents`
+5. **Post** final summary to `#syntaro-incidents`
 6. **Close** PagerDuty incident with resolution notes
 
 **Output**: Incident closed, service confirmed healthy.
@@ -997,7 +997,7 @@ Detection → Triage → Mitigation → Resolution → Post-Mortem
 
 | Role | Contact | Response SLA | SEV-1 | SEV-2 | SEV-3 | Available |
 |---|---|---|---|---|---|---|
-| **On-call Engineer** | `#stas-on-call` Slack, PagerDuty | 5 min / 15 min / 1h | ✓ Primary | ✓ Primary | ✓ Primary | 24/7 |
+| **On-call Engineer** | `#syntaro-on-call` Slack, PagerDuty | 5 min / 15 min / 1h | ✓ Primary | ✓ Primary | ✓ Primary | 24/7 |
 | **DevOps Lead** | @devops-lead Slack, +1-555-0102 | 15 min / 30 min | ✓ Escalation | ✓ Escalation | ✓ Escalation | 24/7 |
 | **Engineering Manager** | @eng-mgr Slack, +1-555-0103 | 30 min / 1h | ✓ Escalation | ✓ Escalation | — | Business hours |
 | **Security Team** | security@aimino.com, `#security` Slack | 1 hour | ✓ Security | ✓ Security | — | 24/7 |
@@ -1010,11 +1010,11 @@ Detection → Triage → Mitigation → Resolution → Post-Mortem
 
 | Dashboard | URL | Purpose |
 |---|---|---|
-| **STAS Overview** | `http://localhost:3000/d/stas-overview` | Primary — all services, queue depth, error rates, fix rate |
-| **STAS Workers** | `http://localhost:3000/d/stas-workers` | Worker pool health, job duration, success rate |
-| **STAS Database** | `http://localhost:3000/d/stas-database` | Connection pool, query performance, replication lag |
-| **STAS Queue** | `http://localhost:3000/d/stas-queue` | Queue depth by priority, DLQ, processing rate |
-| **STAS Costs** | `http://localhost:3000/d/stas-costs` | Inference cost per model, daily spend, cost/fix ratio |
+| **SYNTARO Overview** | `http://localhost:3000/d/syntaro-overview` | Primary — all services, queue depth, error rates, fix rate |
+| **SYNTARO Workers** | `http://localhost:3000/d/syntaro-workers` | Worker pool health, job duration, success rate |
+| **SYNTARO Database** | `http://localhost:3000/d/syntaro-database` | Connection pool, query performance, replication lag |
+| **SYNTARO Queue** | `http://localhost:3000/d/syntaro-queue` | Queue depth by priority, DLQ, processing rate |
+| **SYNTARO Costs** | `http://localhost:3000/d/syntaro-costs` | Inference cost per model, daily spend, cost/fix ratio |
 
 > **Note**: Replace `localhost:3000` with the actual Grafana URL in production.
 > Default credentials: `admin` / `admin` (change immediately on first login).
@@ -1032,7 +1032,7 @@ Detection → Triage → Mitigation → Resolution → Post-Mortem
 
 #### External Monitoring
 
-- **Better Uptime Status Page**: `https://stas.betteruptime.com`
+- **Better Uptime Status Page**: `https://syntaro.betteruptime.com`
 - **Better Uptime Dashboard**: `https://betteruptime.com/teams/aimino`
 - **Sentry Error Tracking**: `https://sentry.io/organizations/aimino/issues/`
 
@@ -1040,25 +1040,25 @@ Detection → Triage → Mitigation → Resolution → Post-Mortem
 
 ```bash
 # Current queue depth
-curl -s http://localhost:9464/metrics | grep "^stas_queue_depth"
+curl -s http://localhost:9464/metrics | grep "^syntaro_queue_depth"
 
 # Worker count
-curl -s http://localhost:9464/metrics | grep "^stas_worker_count"
+curl -s http://localhost:9464/metrics | grep "^syntaro_worker_count"
 
 # Recent webhook failure rate (last 5 minutes)
-curl -s 'http://localhost:9090/api/v1/query'   --data-urlencode 'query=rate(stas_webhooks_failed_total[5m])' | jq '.data.result'
+curl -s 'http://localhost:9090/api/v1/query'   --data-urlencode 'query=rate(syntaro_webhooks_failed_total[5m])' | jq '.data.result'
 
 # Agent success rate (last hour)
-curl -s 'http://localhost:9090/api/v1/query'   --data-urlencode 'query=sum(rate(stas_issues_processed_total{status="success"}[1h])) / sum(rate(stas_issues_processed_total[1h]))' | jq '.data.result'
+curl -s 'http://localhost:9090/api/v1/query'   --data-urlencode 'query=sum(rate(syntaro_issues_processed_total{status="success"}[1h])) / sum(rate(syntaro_issues_processed_total[1h]))' | jq '.data.result'
 ```
 
 ### 10.5 Incident Management Tools
 
 | Tool | Purpose | URL / Config |
 |---|---|---|
-| **PagerDuty** | On-call alerting, scheduling, escalation | Service: "STAS Production", Integration: Events API v2 |
-| **Slack** | Real-time incident communication | Channels: `#stas-incidents`, `#stas-on-call` |
-| **Better Uptime** | External monitoring, status page | `https://stas.betteruptime.com` |
+| **PagerDuty** | On-call alerting, scheduling, escalation | Service: "SYNTARO Production", Integration: Events API v2 |
+| **Slack** | Real-time incident communication | Channels: `#syntaro-incidents`, `#syntaro-on-call` |
+| **Better Uptime** | External monitoring, status page | `https://syntaro.betteruptime.com` |
 | **Grafana** | Dashboards, alerting, log exploration | Local: `http://localhost:3000` |
 | **Prometheus** | Metrics storage, alert rules | `deploy/monitoring/prometheus-rules.yml` |
 | **Sentry** | Error tracking, performance monitoring | `src/monitoring/sentry.ts` |

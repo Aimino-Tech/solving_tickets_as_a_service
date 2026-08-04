@@ -1,8 +1,8 @@
 """
-STAS MCP Server — Agent Discovery via Model Context Protocol.
+SYNTARO MCP Server — Agent Discovery via Model Context Protocol.
 
-Exposes STAS pipeline as MCP tools and resources so any MCP-compatible
-client (OpenCode, Claude Desktop, Cursor, etc.) can discover and invoke STAS.
+Exposes SYNTARO pipeline as MCP tools and resources so any MCP-compatible
+client (OpenCode, Claude Desktop, Cursor, etc.) can discover and invoke SYNTARO.
 
 Published to:
   - MCP Registry: https://registry.mcp.ai/servers/@aimino/syntaro-mcp

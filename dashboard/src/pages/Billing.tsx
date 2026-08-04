@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { stats, billing, litellm } from '@/api/client';
-import type { DashboardStats, BillingPlan } from '@/api/client';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { stats, billing, litellm, credits, billingSettingsApi } from '@/api/client';
+import type { DashboardStats, BillingPlan, BillingSettings } from '@/api/client';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
@@ -23,6 +24,10 @@ export default function Billing() {
   const [planLoading, setPlanLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const autoTriggered = useRef(false);
   const [litellmData, setLitellmData] = useState<any>(null);
   const [litellmLoading, setLitellmLoading] = useState(true);
   const [litellmError, setLitellmError] = useState<string | null>(null);
@@ -73,6 +78,140 @@ export default function Billing() {
       setPortalLoading(false);
     }
   }
+
+  async function handleSubscribe(planId: string) {
+    setCheckoutLoading(planId);
+    setCheckoutError(null);
+    try {
+      const { url } = await billing.createCheckout(
+        planId,
+        `${window.location.origin}/billing`,
+        `${window.location.origin}/billing`,
+      );
+      window.location.href = url;
+    } catch (err) {
+      setCheckoutError(err instanceof Error ? err.message : 'Failed to start checkout');
+      setCheckoutLoading(null);
+    }
+  }
+
+  const planParam = searchParams.get('plan');
+
+  const [settings, setSettings] = useState<BillingSettings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [autoReloadEnabled, setAutoReloadEnabled] = useState(false);
+  const [thresholdDollars, setThresholdDollars] = useState('');
+  const [topupDollars, setTopupDollars] = useState('');
+  const [monthlyLimitDollars, setMonthlyLimitDollars] = useState('');
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsSaveMsg, setSettingsSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponMsg, setCouponMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSettingsLoading(true);
+    setSettingsError(null);
+    billingSettingsApi.get()
+      .then((s) => {
+        if (cancelled) return;
+        setSettings(s);
+        setAutoReloadEnabled(s.autoReloadEnabled);
+        setThresholdDollars(s.autoReloadThresholdCents != null ? String(s.autoReloadThresholdCents / 100) : '');
+        setTopupDollars(s.autoReloadTopupCents != null ? String(s.autoReloadTopupCents / 100) : '');
+        setMonthlyLimitDollars(s.monthlyLimitCents != null ? String(s.monthlyLimitCents / 100) : '');
+      })
+      .catch((e: Error) => { if (!cancelled) setSettingsError(e.message); })
+      .finally(() => { if (!cancelled) setSettingsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  function dollarsToCents(value: string): number | null {
+    if (value.trim() === '') return null;
+    const n = Math.round(Number.parseFloat(value) * 100);
+    return Number.isFinite(n) && n > 0 ? n : NaN;
+  }
+
+  function validateAmount(value: string): string | null {
+    if (value.trim() === '') return null;
+    const n = Number.parseFloat(value);
+    if (!Number.isFinite(n) || n <= 0) return 'Enter a positive amount';
+    return null;
+  }
+
+  async function handleSaveBillingSettings(body: Parameters<typeof billingSettingsApi.update>[0]) {
+    setSettingsSaving(true);
+    setSettingsSaveMsg(null);
+    try {
+      const res = await billingSettingsApi.update(body);
+      setSettings(res.settings);
+      setSettingsSaveMsg({ type: 'success', text: 'Billing settings saved.' });
+    } catch (err) {
+      setSettingsSaveMsg({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save billing settings' });
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
+
+  async function handleSaveAutoReload() {
+    const thresholdErr = validateAmount(thresholdDollars);
+    const topupErr = validateAmount(topupDollars);
+    if (autoReloadEnabled && (thresholdErr || topupErr)) {
+      setSettingsSaveMsg({ type: 'error', text: thresholdErr ?? topupErr ?? 'Threshold and top-up amount are required.' });
+      return;
+    }
+    await handleSaveBillingSettings({
+      autoReloadEnabled,
+      autoReloadThresholdCents: dollarsToCents(thresholdDollars),
+      autoReloadTopupCents: dollarsToCents(topupDollars),
+    });
+  }
+
+  async function handleSaveMonthlyLimit() {
+    const err = validateAmount(monthlyLimitDollars);
+    if (monthlyLimitDollars.trim() !== '' && err) {
+      setSettingsSaveMsg({ type: 'error', text: err });
+      return;
+    }
+    await handleSaveBillingSettings({ monthlyLimitCents: dollarsToCents(monthlyLimitDollars) });
+  }
+
+  async function handleClearMonthlyLimit() {
+    await handleSaveBillingSettings({ monthlyLimitCents: null });
+    setMonthlyLimitDollars('');
+  }
+
+  async function handleRedeemCoupon() {
+    if (couponCode.trim() === '') {
+      setCouponMsg({ type: 'error', text: 'Enter a coupon code.' });
+      return;
+    }
+    setCouponLoading(true);
+    setCouponMsg(null);
+    try {
+      const res = await credits.redeemCoupon(couponCode);
+      setCouponMsg({
+        type: 'success',
+        text: `Coupon redeemed — ${res.coupon.amountCredits.toLocaleString()} credits added. New balance: ${res.newBalance.toLocaleString()} credits.`,
+      });
+      setCouponCode('');
+    } catch (err) {
+      setCouponMsg({ type: 'error', text: err instanceof Error ? err.message : 'Failed to redeem coupon' });
+    } finally {
+      setCouponLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!planLoading && planParam && !activePlan?.hasBillingRecord && !autoTriggered.current) {
+      if (planParam === 'solo' || planParam === 'team') {
+        autoTriggered.current = true;
+        void handleSubscribe(planParam);
+      }
+    }
+  }, [planLoading, planParam, activePlan]);
 
   const totalRuns = data?.totalRuns ?? 0;
   const passRate = data?.passRate ?? 0;
@@ -131,22 +270,193 @@ export default function Billing() {
                   {portalLoading ? 'Opening...' : 'Manage Subscription'}
                 </button>
               ) : (
-                <a href="https://syntaro.io/pricing" className="btn-primary min-h-[44px] inline-flex items-center">
-                  Upgrade Plan
-                </a>
+                <>
+                  <button
+                    onClick={() => handleSubscribe('solo')}
+                    disabled={checkoutLoading === 'solo'}
+                    className="btn-primary min-h-[44px]"
+                  >
+                    {checkoutLoading === 'solo' ? 'Redirecting...' : 'Subscribe Solo — $49/mo'}
+                  </button>
+                  <button
+                    onClick={() => handleSubscribe('team')}
+                    disabled={checkoutLoading === 'team'}
+                    className="btn-primary min-h-[44px]"
+                  >
+                    {checkoutLoading === 'team' ? 'Redirecting...' : 'Subscribe Team — $149/mo'}
+                  </button>
+                </>
               )}
             </div>
+            {checkoutError && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
+            )}
           </div>
         ) : (
           <div className="mt-4">
             <p className="text-gray-500 dark:text-gray-400">No active plan found.</p>
-            <a href="https://syntaro.io/pricing" className="btn-primary mt-3 inline-block min-h-[44px]">View Plans</a>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                onClick={() => handleSubscribe('solo')}
+                disabled={checkoutLoading === 'solo'}
+                className="btn-primary min-h-[44px]"
+              >
+                {checkoutLoading === 'solo' ? 'Redirecting...' : 'Subscribe Solo — $49/mo'}
+              </button>
+              <button
+                onClick={() => handleSubscribe('team')}
+                disabled={checkoutLoading === 'team'}
+                className="btn-primary min-h-[44px]"
+              >
+                {checkoutLoading === 'team' ? 'Redirecting...' : 'Subscribe Team — $149/mo'}
+              </button>
+            </div>
+            {checkoutError && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
+            )}
           </div>
         )}
         {portalError && (
           <p className="mt-2 text-sm text-red-600 dark:text-red-400">{portalError}</p>
         )}
       </div>
+
+      {/* Redeem Coupon */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Redeem Coupon</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Enter a promo code to add credits to your balance.
+        </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <input
+            type="text"
+            value={couponCode}
+            onChange={(e) => setCouponCode(e.target.value)}
+            placeholder="e.g. WELCOME100"
+            className="input-field flex-1 min-h-[44px]"
+          />
+          <button
+            onClick={handleRedeemCoupon}
+            disabled={couponLoading}
+            className="btn-primary min-h-[44px]"
+          >
+            {couponLoading ? 'Redeeming...' : 'Redeem'}
+          </button>
+        </div>
+        {couponMsg && (
+          <p className={`mt-2 text-sm ${couponMsg.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            {couponMsg.text}
+          </p>
+        )}
+      </div>
+
+      {/* Auto-Reload */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Auto-Reload</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          When your balance drops below the threshold, we'll start a top-up checkout for the specified amount.
+        </p>
+        {settingsLoading ? (
+          <div className="mt-4 h-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        ) : settingsError ? (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">{settingsError}</p>
+        ) : (
+          <div className="mt-4 space-y-4">
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={autoReloadEnabled}
+                onChange={(e) => setAutoReloadEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-brand-600"
+              />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Enable auto-reload</span>
+            </label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-400">Reload when balance falls below ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={thresholdDollars}
+                  onChange={(e) => setThresholdDollars(e.target.value)}
+                  placeholder="e.g. 10.00"
+                  className="input-field mt-1 w-full min-h-[44px]"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-400">Top-up amount ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={topupDollars}
+                  onChange={(e) => setTopupDollars(e.target.value)}
+                  placeholder="e.g. 25.00"
+                  className="input-field mt-1 w-full min-h-[44px]"
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleSaveAutoReload}
+              disabled={settingsSaving}
+              className="btn-secondary min-h-[44px]"
+            >
+              {settingsSaving ? 'Saving...' : 'Save Auto-Reload'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Monthly Limit */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Monthly Usage Limit</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          {settings?.monthSpendCents != null
+            ? `Spent this month: $${(settings.monthSpendCents / 100).toFixed(2)}. `
+            : ''}
+          Fix runs are blocked once this month's spend reaches the limit.
+        </p>
+        {settingsLoading ? (
+          <div className="mt-4 h-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        ) : settingsError ? (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">{settingsError}</p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={monthlyLimitDollars}
+              onChange={(e) => setMonthlyLimitDollars(e.target.value)}
+              placeholder="e.g. 100.00"
+              className="input-field w-full sm:w-48 min-h-[44px]"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleSaveMonthlyLimit}
+                disabled={settingsSaving}
+                className="btn-primary min-h-[44px]"
+              >
+                {settingsSaving ? 'Saving...' : 'Set Limit'}
+              </button>
+              <button
+                onClick={handleClearMonthlyLimit}
+                disabled={settingsSaving}
+                className="btn-secondary min-h-[44px]"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {settingsSaveMsg && (
+        <p className={`text-sm ${settingsSaveMsg.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+          {settingsSaveMsg.text}
+        </p>
+      )}
 
       {/* Usage Stats */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">

@@ -11,7 +11,7 @@
  *   7. PR creation
  *
  * The monitor does NOT actually create PRs on real repos. Instead it:
- *   - Uses a dedicated test repo (STAS_SYNTHETIC_REPO)
+ *   - Uses a dedicated test repo (SYNTARO_SYNTHETIC_REPO)
  *   - Targets a known synthetic issue with a known trivial fix
  *   - Records pass/fail per stage
  *   - Reports results via the alerting system
@@ -21,7 +21,7 @@
  *
  * Health check integration:
  *   - POST /health/synthetic returns latest result
- *   - Prometheus gauge: stas_synthetic_health{stage="..."} 0|1
+ *   - Prometheus gauge: syntaro_synthetic_health{stage="..."} 0|1
  */
 
 import { rootLogger } from '../utils/logger.js';
@@ -105,7 +105,7 @@ export interface PipelineExecutor {
 // Default synthetic test parameters
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_SYNTHETIC_REPO = process.env.STAS_SYNTHETIC_REPO ?? 'stas-bot/synthetic-test';
+export const DEFAULT_SYNTHETIC_REPO = process.env.SYNTARO_SYNTHETIC_REPO ?? 'syntaro-bot/synthetic-test';
 export const DEFAULT_SYNTHETIC_ISSUE = '1';
 export const DEFAULT_SYNTHETIC_ISSUE_TITLE = 'Synthetic health check';
 export const DEFAULT_SYNTHETIC_ISSUE_BODY =
@@ -167,7 +167,7 @@ async function timedStage<T>(
  * Execute a full synthetic fix run through the pipeline.
  *
  * @param executor - The pipeline executor to use.
- * @param repo - Target repository (defaults to STAS_SYNTHETIC_REPO).
+ * @param repo - Target repository (defaults to SYNTARO_SYNTHETIC_REPO).
  * @param issueNumber - Target issue number (defaults to "1").
  * @returns The complete run result.
  */

@@ -60,7 +60,7 @@ describe('SandboxGC', () => {
     it('cleans containers older than 1 hour', async () => {
       const oldContainerTime = hoursAgo(2).toISOString();
       queueDockerCalls([
-        { stdout: `container-old\t${oldContainerTime}\tstas-sandbox-old` },
+        { stdout: `container-old\t${oldContainerTime}\tsyntaro-sandbox-old` },
         { stdout: '' },
         { stdout: '' },
         { stdout: '', status: 1 },
@@ -75,7 +75,7 @@ describe('SandboxGC', () => {
     it('skips containers younger than 1 hour', async () => {
       const recentContainerTime = hoursAgo(0.5).toISOString();
       queueDockerCalls([
-        { stdout: `container-recent\t${recentContainerTime}\tstas-sandbox-recent` },
+        { stdout: `container-recent\t${recentContainerTime}\tsyntaro-sandbox-recent` },
         { stdout: '', status: 1 },
       ]);
 
@@ -108,7 +108,7 @@ describe('SandboxGC', () => {
       expect(cleaned).toBe(0);
     });
 
-    it('uses stas-sandbox=true filter in docker ps', async () => {
+    it('uses syntaro-sandbox=true filter in docker ps', async () => {
       queueDockerCalls([
         { stdout: '' },
         { stdout: '', status: 1 },
@@ -124,7 +124,7 @@ describe('SandboxGC', () => {
       );
       expect(psCall).toBeDefined();
       const args: string[] = psCall![1];
-      expect(args.join(' ')).toContain('label=stas-sandbox=true');
+      expect(args.join(' ')).toContain('label=syntaro-sandbox=true');
     });
 
     it('returns count of multiple cleaned containers', async () => {

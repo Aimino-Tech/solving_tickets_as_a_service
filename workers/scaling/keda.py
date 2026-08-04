@@ -80,7 +80,7 @@ RABBITMQ_MGMT_URL = os.getenv(
 KEDA_METRICS_PORT = int(os.getenv("KEDA_METRICS_PORT", "9091"))
 KEDA_METRICS_INTERVAL = int(os.getenv("KEDA_METRICS_INTERVAL", "15"))
 
-_QUEUE_PREFIXES = ("stas.agents.", "celery.")
+_QUEUE_PREFIXES = ("syntaro.agents.", "celery.")
 
 
 class KedaMetricsCollector:
@@ -172,7 +172,7 @@ class KedaMetricsCollector:
     def _fetch_queue_depths(self) -> dict[str, int]:
         """Query RabbitMQ Management API and return ``{queue_name: depth}``.
 
-        Only includes queues whose name starts with ``stas.agents.``
+        Only includes queues whose name starts with ``syntaro.agents.``
         or ``celery.``.
         """
         try:

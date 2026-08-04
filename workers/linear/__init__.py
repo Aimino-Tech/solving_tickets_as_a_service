@@ -1,5 +1,5 @@
 """
-Linear API integration for STAS.
+Linear API integration for SYNTARO.
 
 Provides the ``LinearClient`` GraphQL client with rate limiting, caching,
 and pagination support.

@@ -44,7 +44,9 @@ import previewRoutes from './api/routes/preview.js';
 import { trustRouter } from './api/routes/trust.js';
 import { streamAuditExportCsv, streamAuditExportJson } from './audit/export.js';
 import { authRouter } from './auth/index.js';
+import { oauthRouter } from './auth/oauth.js';
 import { billingRouter } from './billing/index.js';
+import { usageLimitsRouter } from './usage-limits/routes.js'; // AIM-4645
 import { registerSlackMentionHandler } from './channels/slack/handler.js';
 import { config } from './config.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
@@ -60,6 +62,7 @@ import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { adminRouter } from './routes/admin.js';
 import { adminAuditRouter } from './routes/admin_audit.js';
 import { adminRunsRouter } from './routes/adminRuns.js';
+import { adminSteeringRouter } from './routes/adminSteering.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { badgeRouter } from './routes/badge.js';
@@ -776,6 +779,9 @@ export async function createApp(): Promise<express.Application> {
   // ── Admin Runs API (AI-Disabled Mode) ────────────
   app.use('/api/v1/admin', adminRunsRouter);
 
+  // ── Admin Steering API (JWT + ADMIN_EMAILS gate → OpenSymphony admin API) ──
+  app.use('/api/v1/admin/steering', adminSteeringRouter);
+
   app.use('/api/admin/audit', adminAuditRouter);
 
   // ── Dashboard API ──────────────────────────────────────
@@ -804,6 +810,9 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/v1/auth/github', gitHubOAuthRouter);
   app.use('/api/v1/auth/linear', linearOAuthRouter);
 
+  // Social OAuth (Google + Microsoft via Supabase) — before /api/v1 catch-all
+  app.use('/api/v1/auth/oauth', oauthRouter);
+
   // Privacy API (GDPR: erasure, portability, consent, anonymization)
   const { default: privacyRouter } = await import('./routes/privacy.js');
   app.use('/api/v1/privacy', privacyRouter);
@@ -829,10 +838,31 @@ export async function createApp(): Promise<express.Application> {
   }
   app.use('/api/v1', creditRouter);
 
+  // ── Referral API (AIM-4643) ──────────────────────────────
+  // GET  /api/v1/referral/code
+  // POST /api/v1/referral/code
+  // POST /api/v1/referral/redeem
+  // GET  /api/v1/referral/rewards
+  // POST /api/v1/referral/rewards/:id/claim
+  let referralRouter: Router;
+  try {
+    const mod = await import('./referral/index.js');
+    referralRouter = mod.referralRouter;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load referral API — using empty router');
+    referralRouter = Router();
+  }
+  app.use('/api/v1', referralRouter);
+
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
 
   app.use('/api/v1', litellmUsageRouter);
+
+  // ── Usage limits + provider routing API (AIM-4645) ─────────────
+  // GET  /api/v1/usage-limits             — continuous/weekly/monthly usage + toggles
+  // POST /api/v1/usage-limits/preferences — update use_balance_after_limits / enable_china_models
+  app.use('/api/v1/usage-limits', usageLimitsRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────
   // GET /admin/webhooks (paginated, filterable)
@@ -856,10 +886,14 @@ export async function createApp(): Promise<express.Application> {
   // ── Team Management API ───────────────────────────────────────────
   // POST   /api/teams                          — Create a new team
   // GET    /api/teams                          — List teams for current account
+  // GET    /api/teams/me                       — Resolve the caller's team
   // GET    /api/teams/:id                       — Get team details with members
-  // POST   /api/teams/:id/invite               — Invite a member
-  // POST   /api/teams/:id/members/:userId/role  — Change member role
-  // DELETE /api/teams/:id/members/:userId       — Remove member
+  // GET    /api/teams/:id/members               — List members + pending invites
+  // POST   /api/teams/:id/invite               — Invite a member (accountId or email)
+  // POST   /api/teams/:id/members/:userId/role  — Change a member's role
+  // POST   /api/teams/:id/members/:userId/limit — Set a member's monthly credit limit
+  // DELETE /api/teams/:id/members/:userId       — Remove a member
+  // DELETE /api/teams/:id/invites/:inviteId     — Revoke a pending invite
   app.use('/api/teams', teamRouter);
 
   // Repos API (repo picker with webhook status)
@@ -875,7 +909,13 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Dashboard SPA (served from built dist/) ───────────────────────
   // Served at root `/` — all routes except /api/* and /health go to dashboard
-  const dashboardDist = path.join(__dirname, '../dashboard/dist');
+  // Resolve dashboard/dist robustly: local tsc emits to <repo>/dist (so
+  // __dirname = <repo>/dist), while Vercel's @vercel/node places included
+  // files at the function root (__dirname = <repo>).
+  const dashboardDist =
+    [path.join(__dirname, '../dashboard/dist'), path.join(__dirname, 'dashboard/dist')].find((p) =>
+      fs.existsSync(path.join(p, 'index.html')),
+    ) ?? path.join(__dirname, '../dashboard/dist');
   const viteDevUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
   if (fs.existsSync(path.join(dashboardDist, 'index.html'))) {
     app.use(express.static(dashboardDist));
@@ -928,11 +968,11 @@ export async function createApp(): Promise<express.Application> {
   // ── MCP Well-Known Discovery (agent detection) ────────────────────
   // GET /.well-known/mcp-server-card.json — AI agent auto-discovery card
   // GET /.well-known/mcp/server-card.json — Alternative path
-  // Serves the MCP server card so AI agents can discover STAS autonomously.
+  // Serves the MCP server card so AI agents can discover SYNTARO autonomously.
   app.get('/.well-known/mcp-server-card.json', (_req: Request, res: Response) => {
-    const baseUrl = process.env.STAS_PUBLIC_URL || `${_req.protocol}://${_req.get('host')}`;
-    const sseUrl = process.env.STAS_MCP_SERVER_URL ? `${process.env.STAS_MCP_SERVER_URL}/sse` : `${baseUrl}/sse`;
-    const mcpUrl = process.env.STAS_MCP_SERVER_URL ? `${process.env.STAS_MCP_SERVER_URL}/mcp` : `${baseUrl}/mcp`;
+    const baseUrl = process.env.SYNTARO_PUBLIC_URL || `${_req.protocol}://${_req.get('host')}`;
+    const sseUrl = process.env.SYNTARO_MCP_SERVER_URL ? `${process.env.SYNTARO_MCP_SERVER_URL}/sse` : `${baseUrl}/sse`;
+    const mcpUrl = process.env.SYNTARO_MCP_SERVER_URL ? `${process.env.SYNTARO_MCP_SERVER_URL}/mcp` : `${baseUrl}/mcp`;
 
     const card = {
       schemaVersion: '2024-11-05',
@@ -940,7 +980,7 @@ export async function createApp(): Promise<express.Application> {
         name: '@aimino/syntaro-mcp',
         version: '1.0.0',
         description:
-          'STAS (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
+          'SYNTARO (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
         homepage: 'https://github.com/tamnguyen08/solving_tickets_as_a_service',
         documentation: 'https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md',
         license: 'MIT',
@@ -949,20 +989,20 @@ export async function createApp(): Promise<express.Application> {
       capabilities: {
         tools: {
           syntaro_label_issue: {
-            description: 'Label a GitHub issue with the STAS fix label. Triggers the fix pipeline.',
+            description: 'Label a GitHub issue with the SYNTARO fix label. Triggers the fix pipeline.',
             inputSchema: {
               type: 'object',
               properties: {
                 owner: { type: 'string', description: 'Repository owner' },
                 repo: { type: 'string', description: 'Repository name' },
                 issue_number: { type: 'integer', description: 'Issue number' },
-                label: { type: 'string', description: 'Label to apply (default: stas:fix)' },
+                label: { type: 'string', description: 'Label to apply (default: syntaro:fix)' },
               },
               required: ['owner', 'repo', 'issue_number'],
             },
           },
           syntaro_run_fix: {
-            description: 'Trigger the STAS fix pipeline for a GitHub issue URL.',
+            description: 'Trigger the SYNTARO fix pipeline for a GitHub issue URL.',
             inputSchema: {
               type: 'object',
               properties: { issue_url: { type: 'string', description: 'Full GitHub issue URL' } },
@@ -970,7 +1010,7 @@ export async function createApp(): Promise<express.Application> {
             },
           },
           syntaro_check_status: {
-            description: 'Check status of a STAS fix run by run_id.',
+            description: 'Check status of a SYNTARO fix run by run_id.',
             inputSchema: {
               type: 'object',
               properties: { run_id: { type: 'string', description: 'Run ID from syntaro_run_fix' } },
@@ -1005,7 +1045,7 @@ export async function createApp(): Promise<express.Application> {
       ],
       install: {
         opencode: {
-          config: { name: 'stas-agent', transport: 'stdio', command: 'npx', args: ['-y', '@aimino/syntaro-mcp'] },
+          config: { name: 'syntaro-agent', transport: 'stdio', command: 'npx', args: ['-y', '@aimino/syntaro-mcp'] },
         },
         claudeDesktop: {
           config: { mcpServers: { syntaro: { command: 'npx', args: ['-y', '@aimino/syntaro-mcp'] } } },
@@ -1015,7 +1055,7 @@ export async function createApp(): Promise<express.Application> {
         },
       },
       keywords: [
-        'stas',
+        'syntaro',
         'github-bot',
         'issue-fixer',
         'automated-fix',
@@ -1039,10 +1079,10 @@ export async function createApp(): Promise<express.Application> {
     res.redirect(301, '/.well-known/mcp-server-card.json');
   });
 
-  // GET /badge/agent-found.svg — "Agent Found STAS" badge for repo READMEs
+  // GET /badge/agent-found.svg — "Agent Found SYNTARO" badge for repo READMEs
   app.get('/badge/agent-found.svg', (_req: Request, res: Response) => {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="138" height="20" role="img" aria-label="Agent Found: STAS">
-  <title>Agent Found: STAS</title>
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="138" height="20" role="img" aria-label="Agent Found: SYNTARO">
+  <title>Agent Found: SYNTARO</title>
   <linearGradient id="s" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
     <stop offset="1" stop-opacity=".1"/>
@@ -1058,8 +1098,8 @@ export async function createApp(): Promise<express.Application> {
   <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
     <text x="45" y="15" fill="#010101" fill-opacity=".3">Agent Found</text>
     <text x="45" y="14">Agent Found</text>
-    <text x="114" y="15" fill="#010101" fill-opacity=".3">STAS</text>
-    <text x="114" y="14">STAS</text>
+    <text x="114" y="15" fill="#010101" fill-opacity=".3">SYNTARO</text>
+    <text x="114" y="14">SYNTARO</text>
   </g>
 </svg>`;
     res.setHeader('Content-Type', 'image/svg+xml');
@@ -1189,7 +1229,7 @@ export async function createApp(): Promise<express.Application> {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
-    triggerLabels: (process.env.APPROVAL_TRIGGER_LABELS || 'production,stas:fix:approval')
+    triggerLabels: (process.env.APPROVAL_TRIGGER_LABELS || 'production,syntaro:fix:approval')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
@@ -1257,7 +1297,7 @@ const MAX_PORT_RETRIES = 5;
 async function tryListen(app: express.Application, port: number, attempt: number): Promise<import('http').Server> {
   return new Promise((resolve, reject) => {
     const server = app.listen(port, '0.0.0.0', async () => {
-      log.info({ port, label: config.stas.label, env: config.nodeEnv }, `STAS server listening on :${port}`);
+      log.info({ port, label: config.syntaro.label, env: config.nodeEnv }, `SYNTARO server listening on :${port}`);
 
       // Start the RabbitMQ issue consumer — dispatches to OpenSymphony
       try {

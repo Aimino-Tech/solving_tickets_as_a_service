@@ -79,7 +79,7 @@ def _build_embed(event_type: str, payload: dict[str, Any]) -> dict[str, Any]:
             "inline": False,
         })
 
-    embed["footer"] = {"text": "STAS Notification System"}
+    embed["footer"] = {"text": "SYNTARO Notification System"}
     return embed
 
 
@@ -127,7 +127,7 @@ def notify_discord(
     embed = _build_embed(event_type, payload)
 
     message: dict[str, Any] = {
-        "content": f"**STAS {event_type.replace('_', ' ').title()}**",
+        "content": f"**SYNTARO {event_type.replace('_', ' ').title()}**",
         "embeds": [embed],
     }
 

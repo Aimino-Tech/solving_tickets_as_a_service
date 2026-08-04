@@ -4,7 +4,7 @@
  * Prevents concurrent PR creation for the same repository.
  *
  * ── Key format ───────────────────────────────────────────────────────
- *   stas:lock:{owner}:{name}  →  pipelineId (owner identifier)
+ *   syntaro:lock:{owner}:{name}  →  pipelineId (owner identifier)
  * ─────────────────────────────────────────────────────────────────────
  *
  * ── Lua release script ──────────────────────────────────────────────
@@ -21,7 +21,7 @@ import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'repo-lock' });
 
-const KEY_PREFIX = 'stas:lock';
+const KEY_PREFIX = 'syntaro:lock';
 
 const RELEASE_SCRIPT = `
 if redis.call("GET", KEYS[1]) == ARGV[1] then

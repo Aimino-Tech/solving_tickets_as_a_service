@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
-DEFAULT_STATE_DIR = os.getenv("PAUSE_STATE_DIR", "/tmp/stas-pause-state")
+DEFAULT_STATE_DIR = os.getenv("PAUSE_STATE_DIR", "/tmp/syntaro-pause-state")
 
 
 class PauseManager:

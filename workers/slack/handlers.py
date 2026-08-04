@@ -1,9 +1,9 @@
 """
-Slack event and command handlers for STAS.
+Slack event and command handlers for SYNTARO.
 
 Handles:
-  - /stas fix <description> — Submit a fix request
-  - app_mention — Process @STAS mentions
+  - /syntaro fix <description> — Submit a fix request
+  - app_mention — Process @SYNTARO mentions
   - message.im — Process DMs to the bot
   - button interactions (acknowledge, cancel, retry)
 """
@@ -25,10 +25,10 @@ from workers.slack.publisher import (
 
 logger = logging.getLogger(__name__)
 
-_STAS_LABEL = os.getenv("STAS_LABEL", "stas:fix")
+_SYNTARO_LABEL = os.getenv("SYNTARO_LABEL", "syntaro:fix")
 
 
-def handle_slash_stas_fix(
+def handle_slash_syntaro_fix(
     user_id: str,
     user_name: str,
     channel_id: str,
@@ -39,18 +39,18 @@ def handle_slash_stas_fix(
         return {
             "response_type": "ephemeral",
             "text": "Please provide a description of what to fix.\n"
-                    "Example: `/stas fix The login page crashes when entering special characters`",
+                    "Example: `/syntaro fix The login page crashes when entering special characters`",
         }
 
     post_ephemeral(
         channel=channel_id,
         user=user_id,
-        text="🤖 *STAS* received your fix request and is investigating...",
+        text="🤖 *SYNTARO* received your fix request and is investigating...",
     )
 
     return {
         "response_type": "in_channel",
-        "text": f"🛠️ *STAS Fix Requested* by {user_name}\n> _{text}_",
+        "text": f"🛠️ *SYNTARO Fix Requested* by {user_name}\n> _{text}_",
     }
 
 

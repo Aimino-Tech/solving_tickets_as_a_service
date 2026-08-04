@@ -7,32 +7,32 @@ last-updated: 2026-07-28
 # Security Questionnaire Answers — Top 50
 
 > **Answer bank for the most common security, compliance, and vendor risk assessment questions.**
-> These answers reflect STAS's current security posture as of July 2026.
+> These answers reflect SYNTARO's current security posture as of July 2026.
 
 ---
 
 ## General
 
-### Q1: What does STAS do?
+### Q1: What does SYNTARO do?
 
-STAS (Solving Tickets As A Service) is an open-source GitHub bot that automatically investigates, fixes, and opens pull requests for labeled issues. It uses AI agents (OpenCode) to understand bug reports, generate fixes, verify them, and submit PRs — all without human intervention.
+SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that automatically investigates, fixes, and opens pull requests for labeled issues. It uses AI agents (OpenCode) to understand bug reports, generate fixes, verify them, and submit PRs — all without human intervention.
 
-### Q2: What type of data does STAS process?
+### Q2: What type of data does SYNTARO process?
 
 See the [Architecture Data Flow Document](architecture-data-flow.md#2-data-classification) for the full data classification. Summary: source code (ephemeral, processed in memory), issue metadata (stored temporarily), GitHub user IDs and usernames (log context), and credentials (environment variables only).
 
 ### Q3: Where is data processed and stored?
 
-- **Cloud-hosted STAS**: Data processed in US regions (AWS us-east-1 / us-west-2). PostgreSQL, Redis, and RabbitMQ in the same region. Logs retained for 90 days.
-- **Self-hosted STAS**: Data remains entirely within the customer's infrastructure. No data leaves the customer's network except AI inference API calls (configurable).
+- **Cloud-hosted SYNTARO**: Data processed in US regions (AWS us-east-1 / us-west-2). PostgreSQL, Redis, and RabbitMQ in the same region. Logs retained for 90 days.
+- **Self-hosted SYNTARO**: Data remains entirely within the customer's infrastructure. No data leaves the customer's network except AI inference API calls (configurable).
 
 ### Q4: Do you offer data residency options?
 
-Yes. Self-hosted deployment (Docker Compose or Kubernetes) allows customers to run STAS entirely within their own infrastructure, including air-gapped environments. AI provider endpoints can be configured to use region-specific APIs where supported.
+Yes. Self-hosted deployment (Docker Compose or Kubernetes) allows customers to run SYNTARO entirely within their own infrastructure, including air-gapped environments. AI provider endpoints can be configured to use region-specific APIs where supported.
 
 ### Q5: What compliance certifications do you hold?
 
-STAS is currently in the readiness phase for SOC 2 Type I (target: Q4 2026). We have not yet obtained formal certification. All security controls are documented and implemented in line with SOC 2 criteria, and a third-party readiness assessment has been completed. See the [Compliance Roadmap](../compliance-roadmap.md) for the certification timeline.
+SYNTARO is currently in the readiness phase for SOC 2 Type I (target: Q4 2026). We have not yet obtained formal certification. All security controls are documented and implemented in line with SOC 2 criteria, and a third-party readiness assessment has been completed. See the [Compliance Roadmap](../compliance-roadmap.md) for the certification timeline.
 
 ---
 
@@ -56,7 +56,7 @@ Yes. Each GitHub App installation has its own set of credentials (installation t
 
 ### Q10: Do you use customer data for model training?
 
-**No.** STAS never uses customer code, issues, or any other data for model training. The AI provider (OpenCode / Anthropic / OpenAI) is contractually prohibited from training on customer data. Customer code is sent to the AI provider only for the purpose of generating a fix and is not stored.
+**No.** SYNTARO never uses customer code, issues, or any other data for model training. The AI provider (OpenCode / Anthropic / OpenAI) is contractually prohibited from training on customer data. Customer code is sent to the AI provider only for the purpose of generating a fix and is not stored.
 
 ---
 
@@ -190,7 +190,7 @@ Not yet. Third-party penetration testing is scheduled for Q3 2026 as part of the
 
 ### Q28: How do you handle security vulnerabilities reported externally?
 
-STAS follows coordinated disclosure practices:
+SYNTARO follows coordinated disclosure practices:
 1. Reporter submits to security@aimino.com (or via GitHub Security Advisory)
 2. Acknowledgment within 24 hours
 3. Triage and severity assessment within 72 hours
@@ -264,7 +264,7 @@ The maintainer team handles incident response. Currently:
 
 **Self-hosted:**
 - RPO/RTO defined by the customer's infrastructure
-- STAS provides Docker Compose and Kubernetes manifests for rapid redeployment
+- SYNTARO provides Docker Compose and Kubernetes manifests for rapid redeployment
 - Configuration is fully codified (environment variables, docker-compose.yml, k8s manifests)
 
 ### Q36: How do you ensure high availability?
@@ -281,7 +281,7 @@ The maintainer team handles incident response. Currently:
 ### Q37: What is your business continuity plan?
 
 For extended outages (beyond DR recovery):
-1. **Degraded mode**: STAS continues to accept webhooks but queues jobs; processing resumes when service is restored
+1. **Degraded mode**: SYNTARO continues to accept webhooks but queues jobs; processing resumes when service is restored
 2. **Manual fallback**: Maintainers can manually trigger fix runs via CLI
 3. **Self-hosted option**: Critical customers can self-host during cloud outage
 4. **Communication**: Status page updated; affected customers notified via email
@@ -376,7 +376,7 @@ Yes. See the [Data Retention and Deletion Policy](../policies/data-retention-del
 
 ### Q50: What is your approach to compliance and what certifications are you pursuing?
 
-STAS is pursuing SOC 2 Type I (target: Q4 2026), followed by SOC 2 Type II (target: Q2 2027), and ISO 27001 (target: Q2 2027). All security controls are already implemented and documented in line with SOC 2 criteria. A third-party readiness assessment has been completed. See the [Compliance Roadmap](../compliance-roadmap.md) for the full timeline and estimated costs.
+SYNTARO is pursuing SOC 2 Type I (target: Q4 2026), followed by SOC 2 Type II (target: Q2 2027), and ISO 27001 (target: Q2 2027). All security controls are already implemented and documented in line with SOC 2 criteria. A third-party readiness assessment has been completed. See the [Compliance Roadmap](../compliance-roadmap.md) for the full timeline and estimated costs.
 
 ---
 

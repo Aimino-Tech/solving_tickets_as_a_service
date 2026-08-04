@@ -22,7 +22,7 @@ export async function dispatchAction(config, params) {
             l.info({ issueNumber }, 'Investigation only — silent skip');
             return { action: 'comment_posted' };
         }
-        const branchName = `stas/fix-${issueNumber}-${Date.now().toString(36)}`;
+        const branchName = `syntaro/fix-${issueNumber}-${Date.now().toString(36)}`;
         await pushBranch(branchName);
         let changedFiles = [];
         if (getChangedFiles) {

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# STAS CI Gates — "Leave It Cleaner Than You Found It"
+# SYNTARO CI Gates — "Leave It Cleaner Than You Found It"
 #
 # Five gates that run on every PR:
 #   Gate 0 — "Leave It Cleaner" (lsp_diagnostics + test suite on touched files)
@@ -232,7 +232,7 @@ gate_vulnerability_scan() {
     warn "grype not installed — skipping Gate 4"
     return
   fi
-  local image="stas-bot:ci-scan"
+  local image="syntaro-bot:ci-scan"
   if docker build -t "${image}" --target build . >/dev/null 2>&1; then
     if grype "${image}" --fail-on high --scope all-layers -q; then
       pass "Gate 4 — No critical/high vulnerabilities found"

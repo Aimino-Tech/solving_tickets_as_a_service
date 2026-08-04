@@ -49,9 +49,9 @@ __pycache__/
 # Môi trường & Bí mật (Token, Password)
 .env
 .env.local
-.stas
-.stas-private-key.pem
-stas-private-key.pem
+.syntaro
+.syntaro-private-key.pem
+syntaro-private-key.pem
 # Supply chain: Generated SBOM artifacts (CI generates these)
 *.swo
 *.swp
@@ -66,3 +66,8 @@ worktrees/
 # (CI checks these out at the workspace root; never commit symlinks)
 /OpenSymphony
 /llm-governance
+.vercel
+
+# Local runtime artifacts
+celerybeat-schedule
+.stas/

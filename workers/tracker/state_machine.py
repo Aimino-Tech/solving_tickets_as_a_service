@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # Status transition map
 #
 # Key = current Linear state name, Value = next state on success.
-# The state machine follows the STAS pipeline lifecycle:
+# The state machine follows the SYNTARO pipeline lifecycle:
 #
 #   Backlog -> Todo -> In Progress -> Agent Working -> Human Review -> Done
 #                                                    | (failure)

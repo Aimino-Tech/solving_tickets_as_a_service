@@ -1,6 +1,6 @@
-# STAS Celery Workers
+# SYNTARO Celery Workers
 
-Python Celery worker service for the STAS agent pipeline.
+Python Celery worker service for the SYNTARO agent pipeline.
 
 ## Quick start
 
@@ -15,12 +15,12 @@ celery -A celery_app worker --loglevel=info --concurrency=4
 
 | Module         | Queue                    | Purpose                        |
 |----------------|--------------------------|--------------------------------|
-| `triage`       | `stas.agents.triage`     | Issue classification via OpenAI |
-| `agent`        | `stas.agents.dispatch`   | OpenCode agent dispatch         |
-| `sandbox`      | `stas.agents.sandbox`    | E2B sandbox management          |
-| `verification` | `stas.agents.verification` | Test suite verification       |
-| `pr_creation`  | `stas.agents.pr_creation` | GitHub PR creation              |
-| `notifications`| `stas.agents.notifications` | Slack/webhook notifications   |
+| `triage`       | `syntaro.agents.triage`     | Issue classification via OpenAI |
+| `agent`        | `syntaro.agents.dispatch`   | OpenCode agent dispatch         |
+| `sandbox`      | `syntaro.agents.sandbox`    | E2B sandbox management          |
+| `verification` | `syntaro.agents.verification` | Test suite verification       |
+| `pr_creation`  | `syntaro.agents.pr_creation` | GitHub PR creation              |
+| `notifications`| `syntaro.agents.notifications` | Slack/webhook notifications   |
 
 ## Monitoring
 

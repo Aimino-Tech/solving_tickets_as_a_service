@@ -1,12 +1,12 @@
 # =============================================================================
-# STAS Website — Deploy to Production
+# SYNTARO Website — Deploy to Production
 #
 # Triggered on:
 #   - Push to main (changes to website/)
 #   - Manual workflow_dispatch
 #
 # Deploys to:
-#   - Fly.io (stas-website app)
+#   - Fly.io (syntaro-website app)
 #   - GitHub Container Registry (for backup/hosting flexibility)
 # =============================================================================
 
@@ -36,7 +36,7 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-website
-  FLY_APP_NAME: stas-website
+  FLY_APP_NAME: syntaro-website
 
 jobs:
   ##############################################################################
@@ -160,13 +160,13 @@ jobs:
           webhook-type: incoming-webhook
           payload: |
             {
-              "text": "🌐 STAS website deployed",
+              "text": "🌐 SYNTARO website deployed",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*🌐 STAS website deployed*\nRepository: `${{ github.repository }}`\nCommit: <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|`${{ github.sha }}`>\nSite: https://syntaro.io"
+                    "text": "*🌐 SYNTARO website deployed*\nRepository: `${{ github.repository }}`\nCommit: <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|`${{ github.sha }}`>\nSite: https://syntaro.io"
                   }
                 }
               ]
@@ -174,7 +174,7 @@ jobs:
 
       - name: Generate summary
         run: |
-          echo '### 🌐 STAS Website Deployed' >> "$GITHUB_STEP_SUMMARY"
+          echo '### 🌐 SYNTARO Website Deployed' >> "$GITHUB_STEP_SUMMARY"
           echo '' >> "$GITHUB_STEP_SUMMARY"
           echo '- **Site:** https://syntaro.io' >> "$GITHUB_STEP_SUMMARY"
           echo "- **Commit:** ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"

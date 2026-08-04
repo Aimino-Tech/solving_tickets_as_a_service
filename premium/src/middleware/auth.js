@@ -20,7 +20,7 @@ const JWT_SECRET = process.env.DASHBOARD_JWT_SECRET ||
         return fallback;
     })();
 const JWT_ALGORITHM = 'HS256';
-const JWT_ISSUER = 'stas-premium';
+const JWT_ISSUER = 'syntaro-premium';
 const JWT_EXPIRY_SECONDS = 7 * 24 * 60 * 60; // 7 days
 function b64url(data) {
     const buf = typeof data === 'string' ? Buffer.from(data) : data;

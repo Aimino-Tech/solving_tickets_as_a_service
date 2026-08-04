@@ -4,7 +4,7 @@ PipelineEngine --- Redis-backed state tracking for Celery canvas pipelines.
 Usage::
 
     engine = get_engine()
-    pipeline_id = engine.start_pipeline("issue-42", "stas:fix", ctx)
+    pipeline_id = engine.start_pipeline("issue-42", "syntaro:fix", ctx)
     status = engine.get_status("issue-42")
     engine.cancel_pipeline("issue-42")
 """

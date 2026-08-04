@@ -4,9 +4,9 @@ status: draft
 last-updated: 2026-07-28
 ---
 
-# Security Overview — STAS
+# Security Overview — SYNTARO
 
-> **End-to-end security architecture for the STAS (Solving Tickets As A Service) platform.**
+> **End-to-end security architecture for the SYNTARO (Solving Tickets As A Service) platform.**
 > This document describes data flows, encryption standards, access controls, audit trails, and network security for customers, prospects, and security reviewers.
 
 ---
@@ -27,8 +27,8 @@ flowchart LR
         WEBHOOK_SIG["HMAC-SHA256<br/>Signature Verification"]
     end
 
-    subgraph "STAS Control Plane"
-        API["STAS API<br/>(Express)"]
+    subgraph "SYNTARO Control Plane"
+        API["SYNTARO API<br/>(Express)"]
         VALIDATION["Validation Layer<br/>(Label Check + Dedup)"]
         QUEUE["Message Queue<br/>(RabbitMQ / Redis)"]
         WORKER["Worker Pool<br/>(OpenCode Agent)"]
@@ -62,9 +62,9 @@ flowchart LR
 
 ### Data Flow Narrative
 
-1. **GitHub webhook delivery**: A user opens or labels an issue on a GitHub repository where STAS is installed. GitHub sends an HTTP POST payload to the STAS API endpoint.
+1. **GitHub webhook delivery**: A user opens or labels an issue on a GitHub repository where SYNTARO is installed. GitHub sends an HTTP POST payload to the SYNTARO API endpoint.
 
-2. **TLS termination and signature verification**: The payload arrives over TLS 1.3. STAS verifies the GitHub webhook secret using constant-time HMAC-SHA256 comparison to prevent forgery.
+2. **TLS termination and signature verification**: The payload arrives over TLS 1.3. SYNTARO verifies the GitHub webhook secret using constant-time HMAC-SHA256 comparison to prevent forgery.
 
 3. **Validation and deduplication**: The API layer checks that the issue has the required label (e.g., `fix-me`), that it hasn't been processed recently (dedup window), and that the repository is within its rate limits.
 
@@ -80,9 +80,9 @@ flowchart LR
 
 | Data Type | Source | Destination | Protection |
 |-----------|--------|-------------|------------|
-| GitHub webhook payload | GitHub | STAS API | TLS 1.3 in transit |
+| GitHub webhook payload | GitHub | SYNTARO API | TLS 1.3 in transit |
 | Repository contents | GitHub | Sandbox (ephemeral) | TLS 1.3 clone; deleted after run |
-| Issue metadata | GitHub | STAS API → Queue → Worker | TLS + in-memory only |
+| Issue metadata | GitHub | SYNTARO API → Queue → Worker | TLS + in-memory only |
 | AI inference payload | Sandbox | AI Provider (OpenCode) | TLS 1.3; no code stored by provider |
 | PR content | Worker | GitHub | TLS 1.3 via GitHub API |
 | Logs / telemetry | All services | Sentry + pino logs | TLS 1.2+; encrypted at rest |
@@ -150,7 +150,7 @@ flowchart LR
 
 ## Audit Trail
 
-All actions across the STAS platform are logged with:
+All actions across the SYNTARO platform are logged with:
 
 - **Timestamps**: ISO 8601 UTC, nanosecond precision where available
 - **Actor IDs**: GitHub installation ID, repository ID, issue number, or internal service identifier
@@ -195,7 +195,7 @@ flowchart TD
     end
 
     subgraph "Private VPC / Network"
-        API[STAS API Server]
+        API[SYNTARO API Server]
         QUEUE[Message Queue<br/>(RabbitMQ)]
         DB[(PostgreSQL<br/>Database)]
         CACHE[(Redis Cache)]
@@ -246,7 +246,7 @@ flowchart TD
 
 ### Self-Hosted Deployments
 
-For enterprise customers self-hosting STAS via Docker Compose or Kubernetes:
+For enterprise customers self-hosting SYNTARO via Docker Compose or Kubernetes:
 - All network controls are configurable via `docker-compose.prod.yml` or Kubernetes manifests
 - Recommended: deploy behind a reverse proxy (nginx, Caddy) with TLS termination
 - Database should be in a separate private subnet with IP allowlisting
@@ -267,7 +267,7 @@ For enterprise customers self-hosting STAS via Docker Compose or Kubernetes:
 
 ## References
 
-- [STAS Security Model](../../SECURITY.md) — Detailed security controls and implementation
+- [SYNTARO Security Model](../../SECURITY.md) — Detailed security controls and implementation
 - [SOC 2 Readiness Assessment](../soc2/readiness-assessment.md) — Current readiness gaps
 - [Threat Model](threat-model.md) — Documented attack vectors and mitigations
 - [Encryption Policy](../soc2/encryption-policy.md) — Encryption standards and key management

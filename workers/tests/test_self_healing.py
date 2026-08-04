@@ -75,7 +75,7 @@ class TestHeartbeat:
 
         mock_redis.set.assert_called_once()
         key = mock_redis.set.call_args[0][0]
-        assert key.startswith("stas:heartbeat:")
+        assert key.startswith("syntaro:heartbeat:")
         assert "worker1@host1" in key
         mock_redis.expire.assert_called_once()
 
@@ -145,7 +145,7 @@ class TestHeartbeat:
 
         # Should have recorded heartbeat and unmarked dead
         mock_redis.set.assert_called_once()
-        mock_redis.srem.assert_called_once_with("stas:heartbeat:dead_workers", "recovered_worker@host")
+        mock_redis.srem.assert_called_once_with("syntaro:heartbeat:dead_workers", "recovered_worker@host")
 
     def test_degraded_no_redis(self) -> None:
         """Test find_dead_workers returns empty when Redis is unavailable."""

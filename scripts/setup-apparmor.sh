@@ -1,6 +1,6 @@
 #!/bin/sh
-# STAS Sandbox AppArmor Profile Setup
-# Loads the stas-sandbox AppArmor profile into the kernel.
+# SYNTARO Sandbox AppArmor Profile Setup
+# Loads the syntaro-sandbox AppArmor profile into the kernel.
 # Must be run as root on the Docker host.
 #
 # Usage:
@@ -10,7 +10,7 @@
 
 set -e
 
-PROFILE_NAME="stas-sandbox"
+PROFILE_NAME="syntaro-sandbox"
 PROFILE_SRC="./docker/apparmor/${PROFILE_NAME}"
 PROFILE_DST="/etc/apparmor.d/${PROFILE_NAME}"
 

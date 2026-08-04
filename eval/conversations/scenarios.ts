@@ -1,10 +1,10 @@
-// STAS Conversation Eval — 10 scripted conversations × 10 turns each.
+// SYNTARO Conversation Eval — 10 scripted conversations × 10 turns each.
 // Every turn: a User message (simulated) + expectations on the agent's reply.
 // Ticket titles are unique per conversation AND per run (tag), so the eval is
 // deterministic and re-runnable: a fresh run never collides with prior runs.
 // Ticket existence/creation/fix-submission all hit REAL systems:
-//   - GitHub REST API (xdnaimino/stas-eval-sandbox, private)
-//   - STAS MCP on the local backend (:3002) with a real per-user API key
+//   - GitHub REST API (xdnaimino/syntaro-eval-sandbox, private)
+//   - SYNTARO MCP on the local backend (:3002) with a real per-user API key
 
 import type { ConversationScript } from './types.js';
 

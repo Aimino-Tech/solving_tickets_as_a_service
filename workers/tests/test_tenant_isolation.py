@@ -22,17 +22,17 @@ from workers.orchestrator.engine import PipelineEngine
 class TestTenantQueueNaming:
     def test_queue_name_format(self):
         name = TenantIsolationManager.queue_name("tenant-abc")
-        assert name == "stas.agents.tenant.tenant_abc"
+        assert name == "syntaro.agents.tenant.tenant_abc"
 
     def test_queue_name_sanitizes_dots(self):
         name = TenantIsolationManager.queue_name("my.tenant")
-        assert name == "stas.agents.tenant.my_tenant"
+        assert name == "syntaro.agents.tenant.my_tenant"
 
     def test_queue_name_short_uuid(self):
         tid = "a" * 100
         name = TenantIsolationManager.queue_name(tid)
         assert len(name) <= 84
-        assert name.startswith("stas.agents.tenant.")
+        assert name.startswith("syntaro.agents.tenant.")
 
     def test_binding_key(self):
         key = TenantIsolationManager.binding_key("tenant-abc")
@@ -44,7 +44,7 @@ class TestTenantQueueNaming:
 
     def test_celery_queue_option(self):
         opts = TenantIsolationManager.celery_queue_option("t-1")
-        assert opts == {"queue": "stas.agents.tenant.t_1"}
+        assert opts == {"queue": "syntaro.agents.tenant.t_1"}
 
     def test_two_tenants_have_different_queues(self):
         q1 = TenantIsolationManager.queue_name("alpha")
@@ -112,7 +112,7 @@ class TestTenantConcurrency:
             mock_get_redis.return_value = mock_client
             limiter = TenantConcurrencyLimiter()
             limiter.release("tenant-a", "job-1")
-            mock_client.srem.assert_called_once_with("stas:tenant_concurrency:tenant-a", "job:job-1")
+            mock_client.srem.assert_called_once_with("syntaro:tenant_concurrency:tenant-a", "job:job-1")
 
     def test_active_count(self):
         with patch("workers.orchestrator.tenant_limiter._get_redis") as mock_get_redis:
@@ -312,7 +312,7 @@ class TestPipelineTenantIntegration:
 
         engine = PipelineEngine()
         pipeline_id = engine.start_pipeline(
-            "ISSUE-42", "stas:fix",
+            "ISSUE-42", "syntaro:fix",
             {
                 "tenant_id": "acme-corp",
                 "tenant_tier": "pro",
@@ -341,7 +341,7 @@ class TestPipelineTenantIntegration:
 
         engine = PipelineEngine()
         pipeline_id = engine.start_pipeline(
-            "ISSUE-99", "stas:fix",
+            "ISSUE-99", "syntaro:fix",
             {"repo_url": "https://github.com/test/repo.git", "issue_identifier": "gh-99"},
         )
         assert pipeline_id is not None
@@ -371,7 +371,7 @@ class TestPipelineTenantIntegration:
 
         engine = PipelineEngine()
         engine.start_pipeline(
-            "ISSUE-55", "stas:fix",
+            "ISSUE-55", "syntaro:fix",
             {
                 "tenant_id": "corp-a",
                 "tenant_tier": "enterprise",

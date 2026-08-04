@@ -249,8 +249,8 @@ jobs:
       - name: Commit badge update
         if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_badge_commit != 'true' }}
         run: |
-          git config user.name "stas-benchmark-bot"
-          git config user.email "bot@stas.dev"
+          git config user.name "syntaro-benchmark-bot"
+          git config user.email "bot@syntaro.dev"
           git add eval/badges/
           # Only commit if there are changes
           if ! git diff --cached --quiet; then

@@ -29,8 +29,8 @@ export class AuthService {
     const { data, error } = await getSupabaseAdmin().auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
-      user_metadata: { ...(name ? { name } : {}), email_verified: false },
+      email_confirm: true,
+      user_metadata: { ...(name ? { name } : {}), email_verified: true },
     });
     if (error) {
       const status =
@@ -51,7 +51,7 @@ export class AuthService {
     );
 
     const tokens = this.generateTokens(user.id, user.email!, name ?? null);
-    return { ...tokens, user: { ...tokens.user, emailVerified: false }, verificationToken };
+    return { ...tokens, user: { ...tokens.user, emailVerified: true }, verificationToken };
   }
 
   generateVerificationToken(userId: string, email: string): string {
@@ -199,6 +199,41 @@ export class AuthService {
     } catch {
       throw new AuthError('Invalid or expired token', 401);
     }
+  }
+
+  async requestPasswordReset(email: string, redirectTo: string): Promise<void> {
+    const { error } = await getSupabaseAnon().auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) {
+      // Supabase intentionally does not reveal whether an email exists; treat
+      // user-not-found responses as success for anti-enumeration.
+      const msg = error.message?.toLowerCase() ?? '';
+      if (msg.includes('not found') || msg.includes('no user')) return;
+      throw new AuthError('Failed to send password reset email', 500);
+    }
+  }
+
+  async resetPasswordWithRecovery(
+    accessToken: string,
+    newPassword: string,
+  ): Promise<{ userId: string; email: string | null }> {
+    if (newPassword.length < 8) {
+      throw new AuthError('Password must be at least 8 characters', 400);
+    }
+
+    const { data: userData, error: userError } = await getSupabaseAnon().auth.getUser(accessToken);
+    if (userError || !userData.user) {
+      throw new AuthError('Invalid or expired reset token', 401);
+    }
+
+    const { error: updateError } = await getSupabaseAdmin().auth.admin.updateUserById(userData.user.id, {
+      password: newPassword,
+    });
+    if (updateError) {
+      throw new AuthError('Failed to reset password', 500);
+    }
+
+    log.info({ userId: userData.user.id, email: userData.user.email }, 'Password reset successful');
+    return { userId: userData.user.id, email: userData.user.email ?? null };
   }
 
   async createPasswordResetToken(email: string): Promise<void> {

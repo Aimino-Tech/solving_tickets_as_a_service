@@ -5,7 +5,7 @@ const router: Router = Router();
 /**
  * POST /api/v1/n8n/webhook
  * Generic webhook receiver for n8n automation workflows.
- * Accepts JSON payloads and forwards to the STAS pipeline.
+ * Accepts JSON payloads and forwards to the SYNTARO pipeline.
  */
 router.post('/webhook', async (req: Request, res: Response) => {
   try {

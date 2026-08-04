@@ -1,5 +1,5 @@
 name: 🐛 Bug Report
-description: Report a bug to help us improve STAS
+description: Report a bug to help us improve SYNTARO
 title: "[Bug]: "
 labels: ["bug", "triage"]
 assignees: []
@@ -22,7 +22,7 @@ body:
     id: issue_url
     attributes:
       label: Issue URL
-      description: The URL of the issue that STAS was attempting to fix (if applicable).
+      description: The URL of the issue that SYNTARO was attempting to fix (if applicable).
       placeholder: "https://github.com/owner/repo/issues/123"
     validations:
       required: false
@@ -32,7 +32,7 @@ body:
     attributes:
       label: Expected Behavior
       description: What did you expect to happen?
-      placeholder: "STAS should have created a PR with a fix..."
+      placeholder: "SYNTARO should have created a PR with a fix..."
     validations:
       required: true
 
@@ -41,7 +41,7 @@ body:
     attributes:
       label: Actual Behavior
       description: What actually happened instead?
-      placeholder: "STAS did not respond to the label, or the fix was incorrect..."
+      placeholder: "SYNTARO did not respond to the label, or the fix was incorrect..."
     validations:
       required: true
 
@@ -51,8 +51,8 @@ body:
       label: Steps to Reproduce
       description: How can we reproduce this issue?
       placeholder: |
-        1. Create an issue with label `stas:fix`
-        2. Wait for STAS to respond
+        1. Create an issue with label `syntaro:fix`
+        2. Wait for SYNTARO to respond
         3. Observe the error
     validations:
       required: false
@@ -63,7 +63,7 @@ body:
       label: Relevant Log Output
       description: Please copy and paste any relevant log output. This will be automatically formatted into code.
       render: shell
-      placeholder: "STAS server logs, webhook logs, or error messages..."
+      placeholder: "SYNTARO server logs, webhook logs, or error messages..."
     validations:
       required: false
 
@@ -71,7 +71,7 @@ body:
     id: deployment
     attributes:
       label: Deployment Method
-      description: How are you running STAS?
+      description: How are you running SYNTARO?
       options:
         - Self-hosted (Docker)
         - Self-hosted (Railway)
@@ -88,8 +88,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: STAS Version
-      description: What version of STAS are you running? Check your `package.json` or Docker image tag.
+      label: SYNTARO Version
+      description: What version of SYNTARO are you running? Check your `package.json` or Docker image tag.
       placeholder: "v0.11.0"
     validations:
       required: false

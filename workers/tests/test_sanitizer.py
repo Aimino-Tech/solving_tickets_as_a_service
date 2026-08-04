@@ -159,7 +159,7 @@ class TestSanitizerConfig:
         assert config.enabled is True
 
     def test_enabled_via_env(self, monkeypatch):
-        monkeypatch.setenv("STAS_SANITIZER_ENABLED", "false")
+        monkeypatch.setenv("SYNTARO_SANITIZER_ENABLED", "false")
         config = SanitizerConfig()
         assert config.enabled is False
 
@@ -208,7 +208,7 @@ class TestSanitizeAgentOutputCeleryTask:
     def test_sanitizes_nested_comments(self):
         fix_result = {
             "comments": {
-                "status_update": "Running on http://stas-worker-1.internal:9090",
+                "status_update": "Running on http://syntaro-worker-1.internal:9090",
                 "review_comment": "Looks good to me",
             },
         }

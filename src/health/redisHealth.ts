@@ -81,6 +81,7 @@ export async function checkRedisHealth(): Promise<RedisHealthReport> {
       lazyConnect: true,
       connectTimeout: 5000,
     });
+    redis.on('error', () => {});
 
     await redis.connect();
     report.connected = true;

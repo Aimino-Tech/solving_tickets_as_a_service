@@ -40,7 +40,7 @@ _TIER_LRU_MAX: dict[str, int] = {
     "enterprise": _LRU_MAX_WORKSPACES_ENTERPRISE,
 }
 
-_REDIS_LRU_PREFIX = "stas:quota:lru:"
+_REDIS_LRU_PREFIX = "syntaro:quota:lru:"
 _REDIS_WORKSPACE_ACCESS_KEY = lambda tenant: f"{_REDIS_LRU_PREFIX}{tenant}:access"
 
 _REDIS_CLIENT: Optional[Any] = None
@@ -249,10 +249,10 @@ class PeriodicCleanupTask:
         try:
             while cursor is not None:
                 cursor, keys = client.scan(
-                    cursor=cursor, match="stas:quota:*:usage", count=100,
+                    cursor=cursor, match="syntaro:quota:*:usage", count=100,
                 )
                 for key in keys:
-                    prefix = "stas:quota:"
+                    prefix = "syntaro:quota:"
                     suffix = ":usage"
                     inner = key[len(prefix):]
                     tenant_id = inner[:-len(suffix)] if inner.endswith(suffix) else inner

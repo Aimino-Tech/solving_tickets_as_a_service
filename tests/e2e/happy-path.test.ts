@@ -1,16 +1,16 @@
 /**
  * AIM-3210: Happy Path E2E Smoke Test
  *
- * Validates the entire STAS pipeline end-to-end:
+ * Validates the entire SYNTARO pipeline end-to-end:
  *   Label issue → webhook received → run created → status updates → PR created
  *
- * This is the primary "golden path" test. If this passes, the core STAS
+ * This is the primary "golden path" test. If this passes, the core SYNTARO
  * pipeline is operational. All mocks simulate real GitHub/OpenCode behavior.
  */
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestHarness } from './harness/index.js';
-import { githubIssuesLabeledStasFix } from './fixtures/webhooks/github.js';
+import { githubIssuesLabeledSyntaroFix } from './fixtures/webhooks/github.js';
 import type { TestHarness } from './harness/index.js';
 
 let harness: TestHarness;
@@ -25,7 +25,7 @@ afterAll(async () => {
 
 describe('Happy Path: Label → Webhook → Run → Status → PR', () => {
   it('Step 1: Receives issues.labeled webhook and returns 202 Accepted', async () => {
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
     const res = await harness.sendWebhook('/webhook', payload);
 
     expect(res.status).toBe(202);
@@ -36,7 +36,7 @@ describe('Happy Path: Label → Webhook → Run → Status → PR', () => {
     // Reset tracking
     harness.githubApi.receivedRequests.length = 0;
 
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
     await harness.sendWebhook('/webhook', payload);
 
     // Give async processing time
@@ -55,7 +55,7 @@ describe('Happy Path: Label → Webhook → Run → Status → PR', () => {
   it('Step 3: OpenCode mock receives the agent request', async () => {
     harness.openCode.receivedRequests.length = 0;
 
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
     await harness.sendWebhook('/webhook', payload);
 
     await new Promise((r) => setTimeout(r, 1000));
@@ -71,12 +71,12 @@ describe('Happy Path: Label → Webhook → Run → Status → PR', () => {
 
     const health = await healthRes.json() as any;
     expect(health.status).toBe('ok');
-    expect(health.label).toBe('stas:fix');
+    expect(health.label).toBe('syntaro:fix');
   });
 
   it('Step 5: End-to-end pipeline completes without unhandled errors', async () => {
     // Send a complete flow and verify no 500 errors
-    const payload = githubIssuesLabeledStasFix();
+    const payload = githubIssuesLabeledSyntaroFix();
     const res = await harness.sendWebhook('/webhook', payload);
 
     expect(res.status).toBe(202);

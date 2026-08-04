@@ -1,4 +1,4 @@
-# STAS Development Infrastructure — Plan B
+# SYNTARO Development Infrastructure — Plan B
 #
 # Lightweight Docker compose for local experimentation.
 # Only the services that are hard to install natively:
@@ -13,7 +13,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: stas-dev-redis
+    container_name: syntaro-dev-redis
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
@@ -27,7 +27,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-alpine
-    container_name: stas-dev-rabbitmq
+    container_name: syntaro-dev-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"

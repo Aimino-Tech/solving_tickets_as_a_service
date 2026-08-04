@@ -19,8 +19,8 @@ export interface RmqWorkPublisherOptions {
   routingKey?: string;
 }
 
-export const CHAT_WORK_QUEUE = 'stas.chat.work';
-export const CHAT_WORK_EXCHANGE = 'stas.direct';
+export const CHAT_WORK_QUEUE = 'syntaro.chat.work';
+export const CHAT_WORK_EXCHANGE = 'syntaro.direct';
 export const CHAT_WORK_ROUTING_KEY = 'chat.work';
 
 /**

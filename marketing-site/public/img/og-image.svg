@@ -7,7 +7,7 @@
     </linearGradient>
   </defs>
   <circle cx="600" cy="315" r="280" fill="none" stroke="rgba(232,185,49,0.06)" stroke-width="200"/>
-  <text x="600" y="250" font-family="Georgia, serif" font-size="72" font-weight="900" fill="#f8f8fa" text-anchor="middle">STAS</text>
+  <text x="600" y="250" font-family="Georgia, serif" font-size="72" font-weight="900" fill="#f8f8fa" text-anchor="middle">SYNTARO</text>
   <text x="600" y="320" font-family="sans-serif" font-size="28" fill="#8888a0" text-anchor="middle">Solving Tickets As A Service</text>
   <text x="600" y="380" font-family="sans-serif" font-size="20" fill="url(#gold)" text-anchor="middle">Label a Ticket. Get a Pull Request.</text>
   <rect x="440" y="420" width="320" height="4" rx="2" fill="url(#gold)"/>

@@ -3,12 +3,12 @@
  * Linear Poller — periodic polling fallback for Linear issues.
  *
  * When webhooks are unavailable or unreliable, the poller periodically queries
- * the Linear API (via @linear/sdk) for issues matching the STAS label and
+ * the Linear API (via @linear/sdk) for issues matching the SYNTARO label and
  * bridges them to GitHub issues for processing.
  *
  * The poller:
  * 1. Uses @linear/sdk for typed GraphQL access
- * 2. Queries for issues with the configured STAS label
+ * 2. Queries for issues with the configured SYNTARO label
  * 3. Deduplicates — skips issues already bridged
  * 4. Respects minimum polling intervals to avoid rate limits
  * 5. Logs all polling activity for monitoring
@@ -50,7 +50,7 @@ const MAX_ISSUES_PER_POLL = 50;
 export interface LinearPollerOptions {
   /** Polling interval in milliseconds (default: 60000). */
   intervalMs?: number;
-  /** The label to filter issues by (default: config.stas.label || 'stas:fix'). */
+  /** The label to filter issues by (default: config.syntaro.label || 'syntaro:fix'). */
   label?: string;
   /** Whether to enable bridge-to-GitHub when new issues are found. */
   enableBridge?: boolean;
@@ -100,7 +100,7 @@ export function createLinearPoller(options: LinearPollerOptions = {}): LinearPol
     options.intervalMs ?? DEFAULT_POLL_INTERVAL_MS,
     MIN_POLL_INTERVAL_MS,
   );
-  const targetLabel = options.label ?? config.stas.label ?? 'stas:fix';
+  const targetLabel = options.label ?? config.syntaro.label ?? 'syntaro:fix';
   const enableBridge = options.enableBridge ?? true;
 
   const client = createLinearClient();

@@ -114,7 +114,7 @@ export default function Repos() {
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {connectionStatus.connected
               ? `Connected as ${connectionStatus.githubLogin}`
-              : 'Connect your GitHub account to enable STAS'}
+              : 'Connect your GitHub account to enable SYNTARO'}
           </p>
         </div>
         {connectionStatus.connected ? (
@@ -170,10 +170,10 @@ export default function Repos() {
             <div className="card text-center py-12">
               <p className="text-gray-500 dark:text-gray-400">No GitHub App installations found.</p>
               <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
-                Install the STAS GitHub App on your repositories to get started.
+                Install the SYNTARO GitHub App on your repositories to get started.
               </p>
               <a
-                href={`https://github.com/apps/${import.meta.env.VITE_GITHUB_APP_NAME || 'stas-bot'}/installations/new`}
+                href={`https://github.com/apps/${import.meta.env.VITE_GITHUB_APP_NAME || 'syntaro-bot'}/installations/new`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary mt-4 inline-block"
@@ -214,26 +214,26 @@ export default function Repos() {
                         className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800"
                       >
                         <div className="flex items-center gap-2">
-                          <span className={`inline-block h-2 w-2 rounded-full ${repo.stasInstalled ? 'bg-green-500' : 'bg-gray-300'}`} />
+                          <span className={`inline-block h-2 w-2 rounded-full ${repo.syntaroInstalled ? 'bg-green-500' : 'bg-gray-300'}`} />
                           <span className="text-sm text-gray-700 dark:text-gray-300">{repo.fullName}</span>
                           {repo.private && (
                             <span className="text-xs text-gray-400">Private</span>
                           )}
                         </div>
                         <button
-                          onClick={() => handleToggleRepo(inst.installationId, repo.owner, repo.name, repo.stasInstalled)}
+                          onClick={() => handleToggleRepo(inst.installationId, repo.owner, repo.name, repo.syntaroInstalled)}
                           disabled={togglingRepo === repo.fullName}
                           className={`text-xs px-3 py-1 rounded-full min-h-[44px] ${
-                            repo.stasInstalled
+                            repo.syntaroInstalled
                               ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                               : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                           }`}
                         >
                           {togglingRepo === repo.fullName
                             ? '...'
-                            : repo.stasInstalled
-                              ? 'STAS Active'
-                              : 'Enable STAS'}
+                            : repo.syntaroInstalled
+                              ? 'SYNTARO Active'
+                              : 'Enable SYNTARO'}
                         </button>
                       </div>
                     ))}
@@ -247,7 +247,7 @@ export default function Repos() {
             Connected Repositories ({repoList.length})
           </h3>
           {repoList.length === 0 ? (
-            <p className="text-sm text-gray-400">No repositories connected. Enable STAS on repos above.</p>
+            <p className="text-sm text-gray-400">No repositories connected. Enable SYNTARO on repos above.</p>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {repoList.map((repo) => (

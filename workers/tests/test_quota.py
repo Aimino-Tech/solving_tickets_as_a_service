@@ -162,7 +162,7 @@ class TestDiskQuotaUsage:
         quota = DiskQuota()
         quota.record_usage("tenant-a", "/workspaces/t_a/issue-1", 1024)
         mock_client.hincrby.assert_called_once_with(
-            "stas:quota:tenant-a:usage", "/workspaces/t_a/issue-1", 1024,
+            "syntaro:quota:tenant-a:usage", "/workspaces/t_a/issue-1", 1024,
         )
         mock_client.expire.assert_called_once()
 
@@ -173,7 +173,7 @@ class TestDiskQuotaUsage:
         quota = DiskQuota()
         quota.release_usage("tenant-a", "/workspaces/t_a/issue-1")
         mock_client.hdel.assert_called_once_with(
-            "stas:quota:tenant-a:usage", "/workspaces/t_a/issue-1",
+            "syntaro:quota:tenant-a:usage", "/workspaces/t_a/issue-1",
         )
 
     @patch("workers.orchestrator.quota._get_redis")
@@ -569,7 +569,7 @@ class TestPeriodicCleanupTask:
     @patch("workers.orchestrator.workspace_quota._get_redis")
     def test_cleanup_scans_tenants(self, mock_get_redis: MagicMock) -> None:
         mock_client = MagicMock()
-        mock_client.scan.return_value = (0, ["stas:quota:t-1:usage", "stas:quota:t-2:usage"])
+        mock_client.scan.return_value = (0, ["syntaro:quota:t-1:usage", "syntaro:quota:t-2:usage"])
         mock_client.zcard.return_value = 3  # under limit, no eviction
         mock_get_redis.return_value = mock_client
 

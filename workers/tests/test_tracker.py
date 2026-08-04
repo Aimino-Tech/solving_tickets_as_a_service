@@ -34,7 +34,7 @@ class TestLinearClient:
                             "priority": 2.0,
                             "state": {"name": "Todo", "type": "unstarted"},
                             "team": {"key": "PROJ"},
-                            "labels": {"nodes": [{"name": "stas:fix"}]},
+                            "labels": {"nodes": [{"name": "syntaro:fix"}]},
                             "url": "https://linear.app/proj/PROJ-1",
                             "createdAt": "2025-01-01T00:00:00Z",
                             "updatedAt": "2025-01-02T00:00:00Z",
@@ -46,7 +46,7 @@ class TestLinearClient:
                             "priority": 1.0,
                             "state": {"name": "In Progress", "type": "started"},
                             "team": {"key": "PROJ"},
-                            "labels": {"nodes": [{"name": "stas:feature"}]},
+                            "labels": {"nodes": [{"name": "syntaro:feature"}]},
                             "url": "https://linear.app/proj/PROJ-2",
                             "createdAt": "2025-01-01T00:00:00Z",
                             "updatedAt": "2025-01-03T00:00:00Z",
@@ -71,14 +71,14 @@ class TestLinearClient:
             assert issues[0].state_name == "Todo"
             assert issues[0].state_type == "unstarted"
             assert issues[0].team_key == "PROJ"
-            assert issues[0].labels == ["stas:fix"]
+            assert issues[0].labels == ["syntaro:fix"]
             assert issues[0].url == "https://linear.app/proj/PROJ-1"
 
             assert issues[1].id == "lin_issue_2"
             assert issues[1].title == "Add feature"
             assert issues[1].description is None
             assert issues[1].state_name == "In Progress"
-            assert issues[1].labels == ["stas:feature"]
+            assert issues[1].labels == ["syntaro:feature"]
 
             # Verify the filter was built correctly
             call_kwargs = mock_request.call_args_list[0]
@@ -291,28 +291,28 @@ class TestStateMachine:
 class TestRouting:
     """Tests for ``workers.tracker.routing``."""
 
-    def test_resolve_pipeline_stas_fix(self):
+    def test_resolve_pipeline_syntaro_fix(self):
         from workers.tracker.routing import resolve_pipeline
 
-        assert resolve_pipeline(["stas:fix"]) == "default"
-        assert resolve_pipeline(["stas:fix", "bug"]) == "default"
+        assert resolve_pipeline(["syntaro:fix"]) == "default"
+        assert resolve_pipeline(["syntaro:fix", "bug"]) == "default"
 
-    def test_resolve_pipeline_stas_feature(self):
+    def test_resolve_pipeline_syntaro_feature(self):
         from workers.tracker.routing import resolve_pipeline
 
-        assert resolve_pipeline(["stas:feature"]) == "feature"
-        assert resolve_pipeline(["bug", "stas:feature"]) == "feature"
+        assert resolve_pipeline(["syntaro:feature"]) == "feature"
+        assert resolve_pipeline(["bug", "syntaro:feature"]) == "feature"
 
-    def test_resolve_pipeline_stas_research(self):
+    def test_resolve_pipeline_syntaro_research(self):
         from workers.tracker.routing import resolve_pipeline
 
-        assert resolve_pipeline(["stas:research"]) == "research"
+        assert resolve_pipeline(["syntaro:research"]) == "research"
 
     def test_resolve_pipeline_case_insensitive(self):
         from workers.tracker.routing import resolve_pipeline
 
-        assert resolve_pipeline(["STAS:FIX"]) == "default"
-        assert resolve_pipeline(["  StAs:FeAtUrE  "]) == "feature"
+        assert resolve_pipeline(["SYNTARO:FIX"]) == "default"
+        assert resolve_pipeline(["  SyntArO:FeAtUrE  "]) == "feature"
 
     def test_resolve_pipeline_default_when_no_match(self):
         from workers.tracker.routing import resolve_pipeline
@@ -341,8 +341,8 @@ class TestRouting:
     def test_register_route_adds_new_pipeline(self):
         from workers.tracker.routing import register_route, resolve_pipeline, get_pipeline_meta
 
-        register_route("stas:refactor", "refactor")
-        assert resolve_pipeline(["stas:refactor"]) == "refactor"
+        register_route("syntaro:refactor", "refactor")
+        assert resolve_pipeline(["syntaro:refactor"]) == "refactor"
         meta = get_pipeline_meta("refactor")
         assert meta is not None
         assert meta["display_name"] == "Refactor"
@@ -353,8 +353,8 @@ class TestRouting:
         # Re-register with an existing pipeline; metadata already exists
         # so it should not be overwritten
         original_meta = dict(PIPELINE_META["default"])
-        register_route("stas:hotfix", "default")
-        assert resolve_pipeline(["stas:hotfix"]) == "default"
+        register_route("syntaro:hotfix", "default")
+        assert resolve_pipeline(["syntaro:hotfix"]) == "default"
         assert PIPELINE_META["default"] == original_meta
 
 
@@ -379,12 +379,12 @@ class TestPollTask:
         mock_issue_1 = MagicMock()
         mock_issue_1.id = "lin_1"
         mock_issue_1.title = "Fix login"
-        mock_issue_1.labels = ["stas:fix"]
+        mock_issue_1.labels = ["syntaro:fix"]
 
         mock_issue_2 = MagicMock()
         mock_issue_2.id = "lin_2"
         mock_issue_2.title = "New feature"
-        mock_issue_2.labels = ["stas:feature"]
+        mock_issue_2.labels = ["syntaro:feature"]
 
         mock_client.get_issues_by_state.return_value = [mock_issue_1, mock_issue_2]
         mock_get_client.return_value = mock_client
@@ -419,7 +419,7 @@ class TestPollTask:
         mock_issue = MagicMock()
         mock_issue.id = "lin_1"
         mock_issue.title = "Fix login"
-        mock_issue.labels = ["stas:fix"]
+        mock_issue.labels = ["syntaro:fix"]
 
         mock_client.get_issues_by_state.return_value = [mock_issue]
         mock_get_client.return_value = mock_client
@@ -472,7 +472,7 @@ class TestPollTask:
 
         assert result["sent"] is True
         assert result["stage"] == "testing"
-        mock_client.post_comment.assert_called_once_with("lin_1", "**STAS**: Tests are running")
+        mock_client.post_comment.assert_called_once_with("lin_1", "**SYNTARO**: Tests are running")
 
     @patch("workers.tasks.linear_poll._get_client")
     def test_transition_state(self, mock_get_client):
@@ -534,13 +534,13 @@ class TestBeatSchedule:
 
         entry = beat_schedule["poll-linear-active-issues"]
         options = entry.get("options", {})
-        assert options.get("queue") == "stas.issues.triage"
+        assert options.get("queue") == "syntaro.issues.triage"
 
     def test_task_routes_include_linear_poll(self):
         from workers.celeryconfig import task_routes
 
         assert "workers.tasks.linear_poll.*" in task_routes
-        assert task_routes["workers.tasks.linear_poll.*"]["queue"] == "stas.issues.triage"
+        assert task_routes["workers.tasks.linear_poll.*"]["queue"] == "syntaro.issues.triage"
 
     def test_task_registered_in_celery_app(self):
         """Verify the task can be discovered by the Celery app."""

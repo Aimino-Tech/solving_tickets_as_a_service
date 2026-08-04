@@ -1,8 +1,8 @@
 # Failure Mode Catalog
 
-What STAS can and cannot fix, and why.
+What SYNTARO can and cannot fix, and why.
 
-## ✅ What STAS Can Fix
+## ✅ What SYNTARO Can Fix
 
 | Type | Example | Success Rate |
 |------|---------|-------------|
@@ -22,7 +22,7 @@ What STAS can and cannot fix, and why.
 - **No external dependencies**: The fix doesn't require changes to external services or databases
 - **Well-scoped**: The issue describes a specific problem, not a feature request
 
-## ❌ What STAS Cannot Fix
+## ❌ What SYNTARO Cannot Fix
 
 | Type | Example | Why |
 |------|---------|-----|
@@ -35,14 +35,14 @@ What STAS can and cannot fix, and why.
 | **Security vulnerabilities** | "Fix SQL injection in login" | Deliberately limited — security fixes need human review |
 | **API design changes** | "Redesign the REST API" | Requires breaking change management and client coordination |
 
-### Issues That STAS Will Skip Automatically
+### Issues That SYNTARO Will Skip Automatically
 
 1. **Questions** — Issues asking "how do I..." or "what is..."
 2. **Feature requests** — Issues describing new functionality, not bugs
 3. **Vague descriptions** — Issues without enough context to understand the problem
 4. **Already fixed** — Issues where the bug has already been addressed in a newer commit
 
-## Why STAS Fails on Certain Issues
+## Why SYNTARO Fails on Certain Issues
 
 ### Technical Limitations
 
@@ -64,18 +64,18 @@ What STAS can and cannot fix, and why.
 
 ## What to Do Instead
 
-| If STAS Can't Fix | Alternative |
+| If SYNTARO Can't Fix | Alternative |
 |-------------------|-------------|
 | **Multi-file refactor** | Break it into single-file sub-tasks |
 | **Database migration** | Write the migration SQL manually, then label the code changes |
 | **Feature request** | Implement the feature yourself, or create a bounty |
 | **Vague issue** | Add error messages, stack traces, and reproduction steps |
 | **Security fix** | Review and apply the fix manually for safety |
-| **Dependency upgrade** | Run upgrade commands manually, use STAS for test fixes |
+| **Dependency upgrade** | Run upgrade commands manually, use SYNTARO for test fixes |
 
 ## Reporting a Failure
 
-If STAS attempted a fix but produced a bad result:
+If SYNTARO attempted a fix but produced a bad result:
 
 1. Check the quality report in the PR body for gate failures
 2. See if the PR was marked as draft (low confidence) or full (high confidence)

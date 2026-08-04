@@ -1,5 +1,5 @@
 # =============================================================================
-# STAS CD — Build & Push Docker Image to GHCR
+# SYNTARO CD — Build & Push Docker Image to GHCR
 #
 # Triggered on:
 #   - Push to main
@@ -121,13 +121,13 @@ jobs:
           webhook-type: incoming-webhook
           payload: |
             {
-              "text": "🚀 STAS deployment complete",
+              "text": "🚀 SYNTARO deployment complete",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*🚀 STAS deployed*\nRepository: `${{ github.repository }}`\nCommit: <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|`${{ github.sha }}`>\nImage: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}`"
+                    "text": "*🚀 SYNTARO deployed*\nRepository: `${{ github.repository }}`\nCommit: <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|`${{ github.sha }}`>\nImage: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}`"
                   }
                 }
               ]

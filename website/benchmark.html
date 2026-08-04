@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>STAS — Competitive Benchmark</title>
+<title>SYNTARO — Competitive Benchmark</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
 <style>
@@ -35,18 +35,18 @@ h1,h2,h3{font-family:'Playfair Display',serif}
 table{width:100%;border-collapse:collapse;font-size:14px;min-width:700px}
 thead{background:var(--bg3)}
 th{padding:16px 20px;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border)}
-th.stas-col{color:var(--gold)}
+th.syntaro-col{color:var(--gold)}
 td{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text2);vertical-align:top}
 tr:last-child td{border-bottom:none}
-tr.stas-row{background:rgba(232,185,49,0.04)}
-tr.stas-row td{color:var(--text)}
+tr.syntaro-row{background:rgba(232,185,49,0.04)}
+tr.syntaro-row td{color:var(--text)}
 tr:hover td{background:rgba(255,255,255,0.02)}
 td.name-cell{font-weight:600;color:var(--text);white-space:nowrap}
 td .tag{display:inline-block;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:10px;font-weight:600}
 .tag.yes{background:rgba(52,211,153,0.1);color:var(--green)}
 .tag.no{background:rgba(251,113,133,0.1);color:var(--rose)}
 .tag.partial{background:rgba(251,191,36,0.1);color:var(--amber)}
-td .stas-badge{display:inline-block;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:10px;background:var(--gold);color:var(--bg);font-weight:700;margin-left:6px}
+td .syntaro-badge{display:inline-block;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:10px;background:var(--gold);color:var(--bg);font-weight:700;margin-left:6px}
 td .pass-bar{display:inline-flex;align-items:center;gap:8px}
 td .pass-bar .bar{width:60px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle}
 td .pass-bar .bar .fill{height:100%;border-radius:3px;transition:width .6s}
@@ -112,10 +112,10 @@ td .notes{font-size:12px;color:var(--text3);line-height:1.4;max-width:280px}
 <section class="hero">
 <div class="hero-content">
 <div class="hero-label">Competitive Benchmark</div>
-<h1>STAS vs. The <em>Field</em></h1>
+<h1>SYNTARO vs. The <em>Field</em></h1>
 <p class="sub">An honest, data-driven comparison of issue-to-PR automation platforms across <strong>cost, quality, pass rate, and deployment flexibility</strong>.</p>
 <div class="summary-bar">
-<div class="summary-item"><div class="val gold">90%</div><div class="lbl">STAS Pass Rate</div></div>
+<div class="summary-item"><div class="val gold">90%</div><div class="lbl">SYNTARO Pass Rate</div></div>
 <div class="summary-item"><div class="val green">6</div><div class="lbl">Quality Gates</div></div>
 <div class="summary-item"><div class="val cyan">$3–4</div><div class="lbl">Cost / Fix</div></div>
 <div class="summary-item"><div class="val amber">5</div><div class="lbl">Competitors</div></div>
@@ -147,8 +147,8 @@ td .notes{font-size:12px;color:var(--text3);line-height:1.4;max-width:280px}
 </tr>
 </thead>
 <tbody>
-<tr class="stas-row">
-<td class="name-cell">STAS <span class="stas-badge">Best</span></td>
+<tr class="syntaro-row">
+<td class="name-cell">SYNTARO <span class="syntaro-badge">Best</span></td>
 <td><span class="tag yes">Yes</span></td>
 <td><span class="tag yes">Yes</span></td>
 <td><span class="tag yes">6 Gates</span></td>
@@ -207,7 +207,7 @@ td .notes{font-size:12px;color:var(--text3);line-height:1.4;max-width:280px}
 </div>
 
 <div class="summary-bar">
-<div class="summary-item"><div class="val gold">1st</div><div class="lbl">STAS Pass Rate Rank</div></div>
+<div class="summary-item"><div class="val gold">1st</div><div class="lbl">SYNTARO Pass Rate Rank</div></div>
 <div class="summary-item"><div class="val green">1st</div><div class="lbl">Quality Gates Rank</div></div>
 <div class="summary-item"><div class="val cyan">2nd</div><div class="lbl">Cost Efficiency</div></div>
 <div class="summary-item"><div class="val amber">T-1st</div><div class="lbl">Deployment Flexibility</div></div>
@@ -225,19 +225,19 @@ td .notes{font-size:12px;color:var(--text3);line-height:1.4;max-width:280px}
 <div class="meth-grid">
 <div class="meth-card">
 <h4>Pass Rate</h4>
-<p>Measured on the XOR / DeepSWE benchmark suite — 500+ real-world GitHub issues across Python, TypeScript, Rust, and Go. STAS achieves 90% thanks to proprietary AGI that outperforms GPT-5.5 by 50%. A higher pass rate means fewer failed fix attempts and less developer time wasted reviewing broken patches.</p>
+<p>Measured on the XOR / DeepSWE benchmark suite — 500+ real-world GitHub issues across Python, TypeScript, Rust, and Go. SYNTARO achieves 90% thanks to proprietary AGI that outperforms GPT-5.5 by 50%. A higher pass rate means fewer failed fix attempts and less developer time wasted reviewing broken patches.</p>
 </div>
 <div class="meth-card">
 <h4>Quality Gates</h4>
-<p>STAS runs <strong>6 deterministic gates</strong> before any PR is created: reality check, compile check, test integrity, hallucination/stub detection, dead code check, and external AI tool scan. Every gate must pass. This prevents bad fixes from ever reaching human review — saving your team hours of back-and-forth.</p>
+<p>SYNTARO runs <strong>6 deterministic gates</strong> before any PR is created: reality check, compile check, test integrity, hallucination/stub detection, dead code check, and external AI tool scan. Every gate must pass. This prevents bad fixes from ever reaching human review — saving your team hours of back-and-forth.</p>
 </div>
 <div class="meth-card">
 <h4>Anti-Injection</h4>
-<p>Prompt injection attacks via issue bodies or code comments are a real threat for AI agents working on public repos. STAS includes built-in injection guards that sanitize inputs before they reach the agent. No other tool in this comparison ships this as a built-in feature.</p>
+<p>Prompt injection attacks via issue bodies or code comments are a real threat for AI agents working on public repos. SYNTARO includes built-in injection guards that sanitize inputs before they reach the agent. No other tool in this comparison ships this as a built-in feature.</p>
 </div>
 <div class="meth-card">
 <h4>Total Cost of Ownership</h4>
-<p>STAS at $3–4/fix includes the quality gate pipeline, sandbox isolation, and real-time status streaming. BYO API tools look cheaper on paper but require your team to manage infrastructure, handle failures, and manually verify output quality — hidden costs that quickly add up to $15–50+ per fix in engineering time.</p>
+<p>SYNTARO at $3–4/fix includes the quality gate pipeline, sandbox isolation, and real-time status streaming. BYO API tools look cheaper on paper but require your team to manage infrastructure, handle failures, and manually verify output quality — hidden costs that quickly add up to $15–50+ per fix in engineering time.</p>
 </div>
 </div>
 </section>
@@ -257,7 +257,7 @@ td .notes{font-size:12px;color:var(--text3);line-height:1.4;max-width:280px}
 </div>
 <div class="meth-card">
 <h4>Cost Model</h4>
-<p>STAS cost assumes hosted tier at projected pricing ($3–4/fix). Competitor costs sourced from published pricing pages, community reports, and public API pricing. BYO API costs exclude developer time, infrastructure overhead, and maintenance.</p>
+<p>SYNTARO cost assumes hosted tier at projected pricing ($3–4/fix). Competitor costs sourced from published pricing pages, community reports, and public API pricing. BYO API costs exclude developer time, infrastructure overhead, and maintenance.</p>
 </div>
 <div class="meth-card">
 <h4>Feature Assessment</h4>
@@ -286,7 +286,7 @@ td .notes{font-size:12px;color:var(--text3);line-height:1.4;max-width:280px}
 <!-- ============ CTA ============ -->
 <section class="cta-section">
 <h2>Run Your Own Benchmark</h2>
-<p class="sub">Don't take our word for it. Set up STAS on your own repos and measure the difference yourself.</p>
+<p class="sub">Don't take our word for it. Set up SYNTARO on your own repos and measure the difference yourself.</p>
 <div class="btn-group">
 <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service" class="btn btn-primary">★ Star on GitHub</a>
 <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/CONTRIBUTING.md" class="btn btn-secondary">Read the Docs</a>
@@ -298,7 +298,7 @@ td .notes{font-size:12px;color:var(--text3);line-height:1.4;max-width:280px}
 
 <!-- ============ FOOTER ============ -->
 <footer class="footer">
-<p>STAS — Solving Tickets As A Service &bull; <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">GitHub</a> &bull; MIT License</p>
+<p>SYNTARO — Solving Tickets As A Service &bull; <a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">GitHub</a> &bull; MIT License</p>
 <p style="margin-top:4px;font-size:12px">Data updated July 13, 2026. Competitor data sourced from public information and may not reflect latest versions.</p>
 </footer>
 

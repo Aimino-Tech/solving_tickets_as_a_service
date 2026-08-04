@@ -75,8 +75,8 @@ function generateWebhookPayload() {
       title: 'Mixed workload test issue ' + Math.floor(Math.random() * 1000),
       body: 'Performance testing payload for mixed workload simulation.',
       labels: Math.random() > 0.3
-        ? [{ name: 'stas:fix' }]
-        : [{ name: 'bug' }, { name: 'stas:fix' }],
+        ? [{ name: 'syntaro:fix' }]
+        : [{ name: 'bug' }, { name: 'syntaro:fix' }],
     },
     repository: {
       name: 'mixed-repo-' + repoId,

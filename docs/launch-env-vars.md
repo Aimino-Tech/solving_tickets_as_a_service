@@ -1,4 +1,4 @@
-# STAS — Launch-Ready Environment Variables
+# SYNTARO — Launch-Ready Environment Variables
 
 > **Compiled from `src/config.ts` schema + `.env.example`**
 > Last updated: 2026-07-14
@@ -43,7 +43,7 @@ ADMIN_API_KEY=<openssl rand -hex 32>
 2. Sign up with GitHub (easiest) or email
 3. Once logged in, click **New project**
 4. Fill in:
-   - **Name:** `stas` (or whatever you like)
+   - **Name:** `syntaro` (or whatever you like)
    - **Database Password:** Generate a strong one (click the 🔐 icon)
    - **Region:** Pick the closest to your users (e.g., `Frankfurt` for EU, `US East` for US)
    - **Pricing Plan:** Free tier is fine to start (500 MB database)
@@ -87,7 +87,7 @@ This creates all required tables (accounts, billing, run_history, audit_logs, we
 
 ## 2. Linear — Issue Tracker 🔴
 
-**STAS listens to Linear webhooks for tickets labeled with your trigger label.**
+**SYNTARO listens to Linear webhooks for tickets labeled with your trigger label.**
 
 ### Step-by-Step: Set Up Linear Integration
 
@@ -95,7 +95,7 @@ This creates all required tables (accounts, billing, run_history, audit_logs, we
 
 1. Go to https://linear.app/settings/api
 2. Click **Create key**
-3. Give it a name like `stas-bot`
+3. Give it a name like `syntaro-bot`
 4. Copy the generated key (it starts with `lin-api-`)
 5. Set:
 
@@ -107,7 +107,7 @@ LINEAR_API_KEY=lin-api-<your-generated-key>
 
 1. Go to Linear → **Settings** → **Webhooks** → **Create webhook**
 2. Fill in:
-   - **URL:** `https://your-stas-domain.com/webhook/linear`
+   - **URL:** `https://your-syntaro-domain.com/webhook/linear`
    - **Secret:** Generate a random string: `openssl rand -hex 32`
    - **Events:** Select:
      - `Issue` — `create`, `update`
@@ -121,32 +121,32 @@ LINEAR_WEBHOOK_SECRET=<the-secret-you-entered>
 
 #### Configure the Trigger Label
 
-STAS picks up Linear issues that have a specific label applied:
+SYNTARO picks up Linear issues that have a specific label applied:
 
 ```env
-STAS_LABEL=stas:fix
+SYNTARO_LABEL=syntaro:fix
 ```
 
 **How it works:**
-1. Someone adds the `stas:fix` label to a Linear issue
-2. Linear sends a webhook to STAS
-3. STAS fetches the full issue details via the Linear GraphQL API
-4. STAS bridges the ticket to a GitHub issue in the configured repo
+1. Someone adds the `syntaro:fix` label to a Linear issue
+2. Linear sends a webhook to SYNTARO
+3. SYNTARO fetches the full issue details via the Linear GraphQL API
+4. SYNTARO bridges the ticket to a GitHub issue in the configured repo
 5. The agent investigates and opens a PR
 
 ---
 
 ## 3. GitHub App — Bridge Infrastructure 🟡
 
-**STAS bridges Linear tickets to GitHub issues. A GitHub App is required under the hood even if users interact via Linear.**
+**SYNTARO bridges Linear tickets to GitHub issues. A GitHub App is required under the hood even if users interact via Linear.**
 
 ### Step-by-Step: Create a GitHub App
 
 1. Go to https://github.com/settings/apps/new
 2. Fill in:
-   - **GitHub App name:** `stas-bot` (must be unique)
-   - **Homepage URL:** `https://your-stas-domain.com`
-   - **Webhook URL:** `https://your-stas-domain.com/webhook`
+   - **GitHub App name:** `syntaro-bot` (must be unique)
+   - **Homepage URL:** `https://your-syntaro-domain.com`
+   - **Webhook URL:** `https://your-syntaro-domain.com/webhook`
    - **Webhook secret:** Generate: `openssl rand -hex 32`
 3. **Permissions** (Repository):
    - Issues: **Read & write**
@@ -184,7 +184,7 @@ GITHUB_WEBHOOK_SECRET=<the-secret-you-entered>
 ### Install the App on Your Repo
 
 12. Go to the app settings page, scroll to **Install App**, click **Install**
-13. Select the repos you want STAS to write PRs to
+13. Select the repos you want SYNTARO to write PRs to
 14. Note the **Installation ID** from the URL after installing (`/installations/<ID>`)
 
 ```env
@@ -199,7 +199,7 @@ TRACKER_DEFAULT_REPO_NAME=<your-repo>
 
 ### OpenCode Serve
 
-STAS requires [OpenCode](https://opencode.ai) running in serve mode:
+SYNTARO requires [OpenCode](https://opencode.ai) running in serve mode:
 
 ```bash
 # Install
@@ -245,7 +245,7 @@ Both auto-provision Redis. Connection string available in dashboard.
 ### Option C: Self-Hosted
 
 ```bash
-docker run -d --name stas-redis -p 6379:6379 redis:7-alpine
+docker run -d --name syntaro-redis -p 6379:6379 redis:7-alpine
 ```
 
 ```env
@@ -271,11 +271,11 @@ RABBITMQ_URL=amqps://user:password@tiger.rmq.cloudamqp.com/vhost
 ### Option B: Self-Hosted
 
 ```bash
-docker run -d --name stas-rabbitmq -p 5672:5672 rabbitmq:4
+docker run -d --name syntaro-rabbitmq -p 5672:5672 rabbitmq:4
 ```
 
 ```env
-RABBITMQ_URL=amqp://guest:guest@localhost:5672/stas
+RABBITMQ_URL=amqp://guest:guest@localhost:5672/syntaro
 ```
 
 ### Queue Configuration
@@ -324,7 +324,7 @@ STRIPE_TEAM_PRICE_ID=price_mno345
 ### Set Up Webhook
 
 7. **Developers** → **Webhooks** → **Add endpoint**
-8. URL: `https://your-stas-domain.com/webhook/stripe`
+8. URL: `https://your-syntaro-domain.com/webhook/stripe`
 9. Events:
    - `checkout.session.completed`
    - `customer.subscription.updated`
@@ -399,10 +399,10 @@ IP_ALLOWLIST=192.30.252.0/22,185.199.108.0/22,140.82.112.0/20
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STAS_AI_MODE` | `ai` | `ai` = real AI, `static` = placeholder mocks for testing |
-| `STAS_MODE` | `oss` | `oss` or `hosted` — controls feature gates |
-| `STAS_LABEL` | `stas:fix` | Issue label that triggers the bot |
-| `BOT_NAME` | `STAS` | Bot display name in comments |
+| `SYNTARO_AI_MODE` | `ai` | `ai` = real AI, `static` = placeholder mocks for testing |
+| `SYNTARO_MODE` | `oss` | `oss` or `hosted` — controls feature gates |
+| `SYNTARO_LABEL` | `syntaro:fix` | Issue label that triggers the bot |
+| `BOT_NAME` | `SYNTARO` | Bot display name in comments |
 | `NODE_ENV` | `development` | `development`, `production`, or `test` |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
 | `PORT` | `3000` | Webhook server HTTP port |
@@ -448,8 +448,8 @@ IP_ALLOWLIST=192.30.252.0/22,185.199.108.0/22,140.82.112.0/20
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STAS_DEFAULT_TIER` | `free` | Default account tier |
-| `STAS_MONTHLY_QUOTA_ENABLED` | `true` | Enforce monthly quotas |
+| `SYNTARO_DEFAULT_TIER` | `free` | Default account tier |
+| `SYNTARO_MONTHLY_QUOTA_ENABLED` | `true` | Enforce monthly quotas |
 | `USAGE_CREDITS_FIX_RUN` | `50` | Credits per fix run |
 | `METERING_FREE_MONTHLY_CREDITS` | `100` | Free tier monthly credits |
 
@@ -486,7 +486,7 @@ IP_ALLOWLIST=192.30.252.0/22,185.199.108.0/22,140.82.112.0/20
 # 1. https://linear.app/settings/api → Create API key
 # 2. Linear → Settings → Webhooks → Create webhook
 #    URL: https://your-domain.com/webhook/linear
-# 3. Set LINEAR_API_KEY, LINEAR_WEBHOOK_SECRET, STAS_LABEL
+# 3. Set LINEAR_API_KEY, LINEAR_WEBHOOK_SECRET, SYNTARO_LABEL
 ```
 
 ### Step 3: GitHub

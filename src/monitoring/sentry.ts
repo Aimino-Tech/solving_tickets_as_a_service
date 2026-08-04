@@ -30,11 +30,11 @@ function resolveRelease(): string {
   if (process.env.SENTRY_RELEASE) return process.env.SENTRY_RELEASE;
   try {
     const pkgVersion = process.env.npm_package_version;
-    if (pkgVersion) return `stas@${pkgVersion}`;
+    if (pkgVersion) return `syntaro@${pkgVersion}`;
   } catch {
     // fall through
   }
-  return 'stas@unknown';
+  return 'syntaro@unknown';
 }
 
 /**

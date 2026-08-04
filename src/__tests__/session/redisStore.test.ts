@@ -56,7 +56,7 @@ describe('RedisSessionStore', () => {
     const state = {
       sessionId: 'sess-1',
       issueId: 'issue-1',
-      pipelineName: 'stas:fix',
+      pipelineName: 'syntaro:fix',
       status: 'queued' as const,
       currentStage: 'queued' as const,
       progress: 0,
@@ -114,7 +114,7 @@ describe('RedisSessionStore', () => {
 
   it('clear scans and deletes all session keys', async () => {
     mockRedis.scan
-      .mockResolvedValueOnce(['0', ['stas:session:sess-1']])
+      .mockResolvedValueOnce(['0', ['syntaro:session:sess-1']])
       .mockResolvedValueOnce(['0', []]);
     mockRedis.del.mockResolvedValue(1);
 
@@ -126,7 +126,7 @@ describe('RedisSessionStore', () => {
     const stateData = {
       sessionId: 'sess-1',
       issueId: 'issue-1',
-      pipelineName: 'stas:fix',
+      pipelineName: 'syntaro:fix',
       status: 'running',
       currentStage: 'triage',
       progress: '0.1',
@@ -141,7 +141,7 @@ describe('RedisSessionStore', () => {
     };
 
     mockRedis.scan
-      .mockResolvedValueOnce(['0', ['stas:session:sess-1']])
+      .mockResolvedValueOnce(['0', ['syntaro:session:sess-1']])
       .mockResolvedValueOnce(['0', []]);
 
     const pipelineMock = {

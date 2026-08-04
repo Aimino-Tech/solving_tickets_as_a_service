@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DASHBOARD_DIR="${DASHBOARD_DIR:-$HOME/stas/dashboard}"
-PM2_APP_NAME="${PM2_APP_NAME:-stas}"
+DASHBOARD_DIR="${DASHBOARD_DIR:-$HOME/syntaro/dashboard}"
+PM2_APP_NAME="${PM2_APP_NAME:-syntaro}"
 
-echo "=== Deploying STAS Dashboard ==="
+echo "=== Deploying SYNTARO Dashboard ==="
 
 cd "$(dirname "$DASHBOARD_DIR")"
 echo "[1/4] Pulling latest code..."
@@ -27,7 +27,7 @@ echo "[4/4] Restarting Express server..."
 if command -v pm2 &> /dev/null; then
   pm2 restart "$PM2_APP_NAME"
 elif command -v systemctl &> /dev/null; then
-  sudo systemctl restart stas
+  sudo systemctl restart syntaro
 else
   echo "  ⚠ Restart manually"
 fi

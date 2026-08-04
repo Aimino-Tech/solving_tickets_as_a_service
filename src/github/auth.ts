@@ -1,5 +1,5 @@
 /**
- * @deprecated Use `@stas/github-client` instead.
+ * @deprecated Use `@syntaro/github-client` instead.
  * This file re-exports from the standalone package for backward compatibility.
  */
 import { readFileSync } from 'node:fs';
@@ -14,7 +14,7 @@ import {
   getInstallationToken as getInstallationTokenFromPackage,
   type GitHubAppConfig,
 // File outside rootDir, handled at runtime
-} from '@stas/github-client';
+} from '@syntaro/github-client';
 
 const log = rootLogger.child({ module: 'github-auth' });
 
@@ -98,4 +98,4 @@ export function getAppOctokitInstance(): ReturnType<typeof createAppOctokit> {
 }
 
 // File outside rootDir, handled at runtime
-export { createAuth } from '@stas/github-client';
+export { createAuth } from '@syntaro/github-client';

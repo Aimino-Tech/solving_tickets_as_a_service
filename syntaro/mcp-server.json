@@ -1,0 +1,134 @@
+{
+  "name": "@aimino/syntaro-mcp",
+  "description": "MCP server for SYNTARO — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs via OpenCode agents.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Aimino Tech",
+    "email": "team@aimino.io",
+    "url": "https://syntaro.io"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamnguyen08/solving_tickets_as_a_service.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tamnguyen08/solving_tickets_as_a_service/issues"
+  },
+  "command": "npx",
+  "args": [
+    "-y",
+    "@aimino/syntaro-mcp"
+  ],
+  "env": {
+    "SYNTARO_API_KEY": {
+      "description": "SYNTARO API key for authentication",
+      "required": true,
+      "secret": true
+    },
+    "SYNTARO_API_URL": {
+      "description": "SYNTARO API base URL (default: https://api.syntaro.io)",
+      "required": false,
+      "default": "https://api.syntaro.io"
+    },
+    "GITHUB_TOKEN": {
+      "description": "GitHub personal access token for PR creation",
+      "required": false,
+      "secret": true
+    }
+  },
+  "capabilities": {
+    "tools": {
+      "syntaro_submit_fix": {
+        "description": "Submit a GitHub issue URL to SYNTARO for automated fix generation",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "repoUrl": {
+              "type": "string",
+              "description": "Full URL to the GitHub repository"
+            },
+            "issueTitle": {
+              "type": "string",
+              "description": "Title of the issue to fix"
+            },
+            "issueBody": {
+              "type": "string",
+              "description": "Body/description of the issue"
+            },
+            "issueNumber": {
+              "type": "number",
+              "description": "GitHub issue number (alternative to title+body)"
+            }
+          },
+          "required": ["repoUrl"]
+        }
+      },
+      "syntaro_poll_job": {
+        "description": "Poll a SYNTARO fix job for status updates and results",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "jobId": {
+              "type": "string",
+              "description": "Job ID returned from syntaro_submit_fix"
+            }
+          },
+          "required": ["jobId"]
+        }
+      },
+      "syntaro_list_jobs": {
+        "description": "List recent SYNTARO fix jobs and their statuses",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "number",
+              "description": "Maximum number of jobs to return (default: 10)"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["pending", "in_progress", "completed", "failed"],
+              "description": "Filter by job status"
+            }
+          }
+        }
+      },
+      "syntaro_get_eval_results": {
+        "description": "Get public SYNTARO benchmark eval results",
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    },
+    "resources": {
+      "syntaro://jobs/{jobId}": {
+        "description": "Detailed job result including PR URL, diff summary, and test results"
+      },
+      "syntaro://eval/latest": {
+        "description": "Latest SYNTARO benchmark evaluation results"
+      },
+      "syntaro://eval/history": {
+        "description": "Historical SYNTARO eval performance data"
+      }
+    }
+  },
+  "keywords": [
+    "syntaro",
+    "github-bot",
+    "issue-fixer",
+    "automated-fix",
+    "opencode",
+    "mcp",
+    "smithery",
+    "aimino"
+  ],
+  "smithery": {
+    "displayName": "SYNTARO — Auto-Fix GitHub Issues",
+    "category": "Developer Tools",
+    "icon": "https://syntaro.io/logo.png",
+    "description": "Submit a GitHub issue URL and SYNTARO investigates your codebase, writes a fix, runs tests, and opens a PR — fully automated."
+  }
+}

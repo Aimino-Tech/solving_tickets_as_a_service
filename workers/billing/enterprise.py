@@ -87,7 +87,7 @@ def create_enterprise_stripe_product() -> EnterpriseProvisioningResult:
                 p = stripe.Price.retrieve(existing)
                 return EnterpriseProvisioningResult(True, p.product if isinstance(p.product, str) else str(p.product), p.id)
             except: pass
-        prod = stripe.Product.create(name="STAS Enterprise", metadata={"plan": "enterprise"})
+        prod = stripe.Product.create(name="SYNTARO Enterprise", metadata={"plan": "enterprise"})
         price = stripe.Price.create(product=prod.id, unit_amount=BP, currency="usd", recurring={"interval": "month"})
         return EnterpriseProvisioningResult(True, prod.id, price.id)
     except Exception as e:
@@ -106,7 +106,7 @@ def get_enterprise_tenant_ids() -> list[str]:
             if k.startswith("TENANT_") and k.endswith("_TIER") and v.lower() == "enterprise"]
 
 def get_enterprise_queue_config() -> dict:
-    return {"queue_name": "stas.agents.enterprise", "priority": 10,
+    return {"queue_name": "syntaro.agents.enterprise", "priority": 10,
             "max_concurrency": int(os.getenv("ENTERPRISE_MAX_CONCURRENCY","20")),
             "max_retries": int(os.getenv("ENTERPRISE_MAX_RETRIES","10")),
             "sandbox_timeout_ms": int(os.getenv("ENTERPRISE_SANDBOX_TIMEOUT_MS","1800000"))}

@@ -120,14 +120,14 @@ parse_db_url() {
   DB_USER="${DB_USER:-postgres}"
   DB_HOST="${DB_HOST:-localhost}"
   DB_PORT="${DB_PORT:-5432}"
-  DB_NAME="${DB_NAME:-stas}"
+  DB_NAME="${DB_NAME:-syntaro}"
 }
 
 # ── Backup function ───────────────────────────────────────────────────────────
 
 create_backup() {
   local suffix="$1"
-  local backup_file="${BACKUP_DIR}/stas-postgres-${suffix}-${TIMESTAMP}.sql.gz.gpg"
+  local backup_file="${BACKUP_DIR}/syntaro-postgres-${suffix}-${TIMESTAMP}.sql.gz.gpg"
 
   info "Creating PostgreSQL backup: ${backup_file}"
 
@@ -241,8 +241,8 @@ cleanup_old() {
     return 0
   fi
 
-  find "$BACKUP_DIR" -name "stas-postgres-${retention_type}-*" -type f -mtime "+${retention_days}" -delete 2>/dev/null || true
-  find "$BACKUP_DIR" -name "stas-postgres-${retention_type}-*.sha256" -type f -mtime "+${retention_days}" -delete 2>/dev/null || true
+  find "$BACKUP_DIR" -name "syntaro-postgres-${retention_type}-*" -type f -mtime "+${retention_days}" -delete 2>/dev/null || true
+  find "$BACKUP_DIR" -name "syntaro-postgres-${retention_type}-*.sha256" -type f -mtime "+${retention_days}" -delete 2>/dev/null || true
 
   if [[ -n "$BACKUP_S3_BUCKET" && -n "$S3_CMD" ]]; then
     local cutoff_date
@@ -346,7 +346,7 @@ restore_backup() {
 main() {
   echo ""
   echo "═══════════════════════════════════════════════════════════════"
-  info "STAS PostgreSQL Backup Script"
+  info "SYNTARO PostgreSQL Backup Script"
   echo "═══════════════════════════════════════════════════════════════"
   echo ""
 
@@ -361,7 +361,7 @@ main() {
   if [[ -z "${DATABASE_URL:-}" ]]; then
     error "DATABASE_URL is not set"
     echo "  Set it in your .env file or export it before running."
-    echo "  Example: DATABASE_URL=postgres://user:pass@localhost:5432/stas"
+    echo "  Example: DATABASE_URL=postgres://user:pass@localhost:5432/syntaro"
     exit 1
   fi
 

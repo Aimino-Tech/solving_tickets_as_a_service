@@ -1,6 +1,6 @@
-# STAS Automation Tests
+# SYNTARO Automation Tests
 
-Playwright-based UI automation tests for the STAS dashboard (FE).
+Playwright-based UI automation tests for the SYNTARO dashboard (FE).
 
 ## Prerequisites
 
@@ -66,7 +66,7 @@ tests/automation/
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `BASE_URL` | `http://localhost:5173` | Vite dev server URL |
-| `STAS_URL` | `http://localhost:3099` | Express API server URL |
+| `SYNTARO_URL` | `http://localhost:3099` | Express API server URL |
 
 ## GitHub Issue Guidelines
 

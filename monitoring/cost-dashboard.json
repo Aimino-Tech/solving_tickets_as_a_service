@@ -1,30 +1,30 @@
 {
-  "title": "STAS — Cost Dashboard",
-  "uid": "stas-cost-dashboard",
+  "title": "SYNTARO — Cost Dashboard",
+  "uid": "syntaro-cost-dashboard",
   "version": 1,
   "schemaVersion": 39,
-  "tags": ["stas", "cost", "finops"],
+  "tags": ["syntaro", "cost", "finops"],
   "timezone": "browser",
   "panels": [
     {
       "title": "24h Inference Cost",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum(stas_inference_cost_dollars_total[24h])", "legendFormat": "inference" }],
+      "targets": [{ "expr": "sum(syntaro_inference_cost_dollars_total[24h])", "legendFormat": "inference" }],
       "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 }
     },
     {
       "title": "24h Infrastructure Cost",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum(stas_infra_cost_dollars_total[24h])", "legendFormat": "infra" }],
+      "targets": [{ "expr": "sum(syntaro_infra_cost_dollars_total[24h])", "legendFormat": "infra" }],
       "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 }
     },
     {
       "title": "24h Sandbox Cost",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum(stas_sandbox_cost_dollars_total[24h])", "legendFormat": "sandbox" }],
+      "targets": [{ "expr": "sum(syntaro_sandbox_cost_dollars_total[24h])", "legendFormat": "sandbox" }],
       "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 }
     },
     {
@@ -32,9 +32,9 @@
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
-        { "expr": "sum(rate(stas_inference_cost_dollars_total[1d]))", "legendFormat": "Inference" },
-        { "expr": "sum(rate(stas_infra_cost_dollars_total[1d]))", "legendFormat": "Infrastructure" },
-        { "expr": "sum(rate(stas_sandbox_cost_dollars_total[1d]))", "legendFormat": "Sandbox" }
+        { "expr": "sum(rate(syntaro_inference_cost_dollars_total[1d]))", "legendFormat": "Inference" },
+        { "expr": "sum(rate(syntaro_infra_cost_dollars_total[1d]))", "legendFormat": "Infrastructure" },
+        { "expr": "sum(rate(syntaro_sandbox_cost_dollars_total[1d]))", "legendFormat": "Sandbox" }
       ],
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 }
     },
@@ -42,21 +42,21 @@
       "title": "Cost per Fix (30d avg)",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum(rate(stas_inference_cost_dollars_total[30d])) / sum(rate(stas_fixes_completed_total[30d]))", "legendFormat": "$/fix" }],
+      "targets": [{ "expr": "sum(rate(syntaro_inference_cost_dollars_total[30d])) / sum(rate(syntaro_fixes_completed_total[30d]))", "legendFormat": "$/fix" }],
       "gridPos": { "h": 6, "w": 6, "x": 0, "y": 14 }
     },
     {
       "title": "Cost by Tenant (Top 10)",
       "type": "table",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "topk(10, sum by(tenant) (stas_inference_cost_dollars_total[7d]))", "legendFormat": "tenant" }],
+      "targets": [{ "expr": "topk(10, sum by(tenant) (syntaro_inference_cost_dollars_total[7d]))", "legendFormat": "tenant" }],
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 }
     },
     {
       "title": "Monthly Projection",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [{ "expr": "sum(rate(stas_inference_cost_dollars_total[7d])) * 30 / 7", "legendFormat": "projected monthly" }],
+      "targets": [{ "expr": "sum(rate(syntaro_inference_cost_dollars_total[7d])) * 30 / 7", "legendFormat": "projected monthly" }],
       "gridPos": { "h": 6, "w": 6, "x": 6, "y": 14 }
     }
   ]

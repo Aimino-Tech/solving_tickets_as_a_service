@@ -97,7 +97,7 @@ describe('mcpKeyAuth middleware', () => {
     const wasNext = await invokeAuth(req, res);
     expect(wasNext()).toBe(false);
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Missing authorization header' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Missing authorization header or x-api-key' });
   });
 
   it('returns 401 for a non-Bearer scheme', async () => {
@@ -129,19 +129,19 @@ describe('mcpKeyAuth middleware', () => {
   it('allows a valid DB key and attaches owner context', async () => {
     mockFindUserByMcpKey.mockResolvedValue({ userId: '42', keyId: 'k-1', name: 'agent' });
     const { req, res } = mockReqRes();
-    req.headers['authorization'] = 'Bearer sk-stas_validkey1234567890';
+    req.headers['authorization'] = 'Bearer sk-syntaro_validkey1234567890';
     const wasNext = await invokeAuth(req, res);
     expect(wasNext()).toBe(true);
     expect(req.mcpKey).toEqual({ id: 'k-1', name: 'agent', source: 'db' });
     expect(req.mcpKeyUserId).toBe('42');
-    expect(mockFindUserByMcpKey).toHaveBeenCalledWith('sk-stas_validkey1234567890');
+    expect(mockFindUserByMcpKey).toHaveBeenCalledWith('sk-syntaro_validkey1234567890');
     expect(mockTouchMcpKey).toHaveBeenCalledWith('k-1');
   });
 
   it('returns 401 for an unknown or revoked DB key', async () => {
     mockFindUserByMcpKey.mockResolvedValue(null);
     const { req, res } = mockReqRes();
-    req.headers['authorization'] = 'Bearer sk-stas_unknown';
+    req.headers['authorization'] = 'Bearer sk-syntaro_unknown';
     const wasNext = await invokeAuth(req, res);
     expect(wasNext()).toBe(false);
     expect(res.status).toHaveBeenCalledWith(401);
@@ -152,7 +152,7 @@ describe('mcpKeyAuth middleware', () => {
   it('returns 500 when the DB lookup throws', async () => {
     mockFindUserByMcpKey.mockRejectedValue(new Error('db down'));
     const { req, res } = mockReqRes();
-    req.headers['authorization'] = 'Bearer sk-stas_boom';
+    req.headers['authorization'] = 'Bearer sk-syntaro_boom';
     const wasNext = await invokeAuth(req, res);
     expect(wasNext()).toBe(false);
     expect(res.status).toHaveBeenCalledWith(500);

@@ -121,7 +121,7 @@ parse_rabbitmq_url() {
 
 export_definitions() {
   local suffix="$1"
-  local backup_name="stas-rabbitmq-defs-${suffix}-${TIMESTAMP}.json"
+  local backup_name="syntaro-rabbitmq-defs-${suffix}-${TIMESTAMP}.json"
   local backup_file="${BACKUP_DIR}/${backup_name}"
 
   info "Exporting RabbitMQ definitions to: ${backup_file}"
@@ -228,8 +228,8 @@ cleanup_old() {
     return 0
   fi
 
-  find "$BACKUP_DIR" -name "stas-rabbitmq-defs-${retention_type}-*" -type f -mtime "+${retention_days}" -delete 2>/dev/null || true
-  find "$BACKUP_DIR" -name "stas-rabbitmq-defs-${retention_type}-*.sha256" -type f -mtime "+${retention_days}" -delete 2>/dev/null || true
+  find "$BACKUP_DIR" -name "syntaro-rabbitmq-defs-${retention_type}-*" -type f -mtime "+${retention_days}" -delete 2>/dev/null || true
+  find "$BACKUP_DIR" -name "syntaro-rabbitmq-defs-${retention_type}-*.sha256" -type f -mtime "+${retention_days}" -delete 2>/dev/null || true
 }
 
 # ── Restore function ──────────────────────────────────────────────────────────
@@ -290,7 +290,7 @@ restore_definitions() {
 main() {
   echo ""
   echo "═══════════════════════════════════════════════════════════════"
-  info "STAS RabbitMQ Definition Export Script"
+  info "SYNTARO RabbitMQ Definition Export Script"
   echo "═══════════════════════════════════════════════════════════════"
   echo ""
 

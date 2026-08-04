@@ -1,11 +1,11 @@
 """
-MCP Handler implementations — core business logic for STAS MCP tools.
+MCP Handler implementations — core business logic for SYNTARO MCP tools.
 
 Each handler is an async function that takes typed parameters and returns
 a dict suitable for JSON serialization.
 
 Run state is backed by the OpenSymphony PipelineEngine (Celery + Redis)
-via PipelineClient, with the STAS API (Node.js backend) as fallback.
+via PipelineClient, with the SYNTARO API (Node.js backend) as fallback.
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ from workers.pipeline_client import get_client
 logger = logging.getLogger(__name__)
 
 GITHUB_API_BASE = os.getenv("GITHUB_API_BASE", "https://api.github.com")
-STAS_API_URL = os.getenv("STAS_API_URL", "http://localhost:3000")
-STAS_API_KEY = os.getenv("STAS_API_KEY", "")
+SYNTARO_API_URL = os.getenv("SYNTARO_API_URL", "http://localhost:3000")
+SYNTARO_API_KEY = os.getenv("SYNTARO_API_KEY", "")
 
 _pipeline = get_client()
 
@@ -35,13 +35,13 @@ def _api_headers() -> dict[str, str]:
         "Accept": "application/json",
         "User-Agent": "syntaro-mcp-server",
     }
-    if STAS_API_KEY:
-        headers["Authorization"] = f"Bearer {STAS_API_KEY}"
+    if SYNTARO_API_KEY:
+        headers["Authorization"] = f"Bearer {SYNTARO_API_KEY}"
     return headers
 
 
 async def _call_api(method: str, path: str, json_body: dict | None = None) -> dict[str, Any] | None:
-    url = f"{STAS_API_URL.rstrip('/')}/{path.lstrip('/')}"
+    url = f"{SYNTARO_API_URL.rstrip('/')}/{path.lstrip('/')}"
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.request(
@@ -70,7 +70,7 @@ async def label_issue(
         return {"success": False, "error": "owner, repo, and issue_number are required"}
 
     full_repo = f"{owner}/{repo}"
-    label = label or os.getenv("STAS_LABEL", "stas:fix")
+    label = label or os.getenv("SYNTARO_LABEL", "syntaro:fix")
 
     gh_token = os.getenv("GITHUB_APP_PRIVATE_KEY") or os.getenv("GITHUB_TOKEN")
     api_url = f"{GITHUB_API_BASE}/repos/{full_repo}/issues/{issue_number}/labels"
@@ -144,7 +144,7 @@ async def run_fix(issue_url: str) -> dict[str, Any]:
             "issueNumber": issue_number,
             "issueTitle": f"Fix for #{issue_number}",
             "issueBody": f"Auto-triggered fix for {owner}/{repo}#{issue_number}",
-            "labels": [os.getenv("STAS_LABEL", "stas:fix")],
+            "labels": [os.getenv("SYNTARO_LABEL", "syntaro:fix")],
             "channel": "mcp",
         })
         if api_result and api_result.get("runId"):
@@ -154,7 +154,7 @@ async def run_fix(issue_url: str) -> dict[str, Any]:
                 "status": "queued",
                 "issue_url": issue_url,
                 "owner": owner, "repo": repo, "issue_number": issue_number,
-                "message": f"Fix run {api_result['runId']} created and queued via STAS API",
+                "message": f"Fix run {api_result['runId']} created and queued via SYNTARO API",
             }
 
     return {

@@ -27,7 +27,7 @@ import { runQuickstart, resolveGitHubToken, selectRepositories, installApp } fro
 // ---------------------------------------------------------------------------
 
 function createTempDir(): string {
-  return mkdtempSync(join(tmpdir(), "stas-cli-test-"));
+  return mkdtempSync(join(tmpdir(), "syntaro-cli-test-"));
 }
 
 function writeTemplate(dir: string, name: string, content: string): string {

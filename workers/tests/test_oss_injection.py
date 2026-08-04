@@ -289,8 +289,8 @@ class TestOssGuardManagerDisabled:
     def test_no_available_tools_returns_regex_fallback(self):
         """When no OSS tools are installed, fallback to regex guard."""
         with patch.dict(os.environ, {
-            "STAS_OSS_GUARD_ENABLED": "true",
-            "STAS_OSS_GUARD_TOOLS": "nonexistent_tool",
+            "SYNTARO_OSS_GUARD_ENABLED": "true",
+            "SYNTARO_OSS_GUARD_TOOLS": "nonexistent_tool",
         }):
             manager = OssGuardManager()
             assert manager.enabled is True
@@ -309,8 +309,8 @@ class TestOssGuardManagerDisabled:
 class TestOssGuardManagerConfig:
     def test_env_enables_oss_guard(self):
         with patch.dict(os.environ, {
-            "STAS_OSS_GUARD_ENABLED": "true",
-            "STAS_OSS_GUARD_TOOLS": "llm_guard,rebuff",
+            "SYNTARO_OSS_GUARD_ENABLED": "true",
+            "SYNTARO_OSS_GUARD_TOOLS": "llm_guard,rebuff",
         }):
             manager = OssGuardManager()
             assert manager.enabled is True
@@ -319,16 +319,16 @@ class TestOssGuardManagerConfig:
 
     def test_custom_tool_list(self):
         with patch.dict(os.environ, {
-            "STAS_OSS_GUARD_ENABLED": "true",
-            "STAS_OSS_GUARD_TOOLS": "garak",
+            "SYNTARO_OSS_GUARD_ENABLED": "true",
+            "SYNTARO_OSS_GUARD_TOOLS": "garak",
         }):
             manager = OssGuardManager()
             assert manager.tool_names == ["garak"]
 
     def test_timeout_config(self):
         with patch.dict(os.environ, {
-            "STAS_OSS_GUARD_ENABLED": "true",
-            "STAS_OSS_GUARD_TIMEOUT": "10.0",
+            "SYNTARO_OSS_GUARD_ENABLED": "true",
+            "SYNTARO_OSS_GUARD_TIMEOUT": "10.0",
         }):
             manager = OssGuardManager()
             assert manager.timeout == 10.0
@@ -336,8 +336,8 @@ class TestOssGuardManagerConfig:
     def test_available_tools_property(self):
         """available_tools should only list tools that are actually initialized."""
         with patch.dict(os.environ, {
-            "STAS_OSS_GUARD_ENABLED": "true",
-            "STAS_OSS_GUARD_TOOLS": "llm_guard,rebuff,garak",
+            "SYNTARO_OSS_GUARD_ENABLED": "true",
+            "SYNTARO_OSS_GUARD_TOOLS": "llm_guard,rebuff,garak",
         }):
             manager = OssGuardManager()
             # Only installed tools should appear
@@ -354,8 +354,8 @@ class TestOssGuardManagerScanning:
     def test_scan_with_llm_guard_if_available(self):
         """If llm-guard is installed, it should be used."""
         with patch.dict(os.environ, {
-            "STAS_OSS_GUARD_ENABLED": "true",
-            "STAS_OSS_GUARD_TOOLS": "llm_guard",
+            "SYNTARO_OSS_GUARD_ENABLED": "true",
+            "SYNTARO_OSS_GUARD_TOOLS": "llm_guard",
         }):
             manager = OssGuardManager()
             if "llm_guard" not in manager.available_tools:
@@ -368,8 +368,8 @@ class TestOssGuardManagerScanning:
     def test_scan_benign_with_oss(self):
         """Benign text should not be detected by OSS tools."""
         with patch.dict(os.environ, {
-            "STAS_OSS_GUARD_ENABLED": "true",
-            "STAS_OSS_GUARD_TOOLS": "llm_guard,rebuff",
+            "SYNTARO_OSS_GUARD_ENABLED": "true",
+            "SYNTARO_OSS_GUARD_TOOLS": "llm_guard,rebuff",
         }):
             manager = OssGuardManager()
             if not manager.scanners:
@@ -384,8 +384,8 @@ class TestOssGuardManagerScanning:
     def test_scan_all_tools_fail_fallback(self):
         """If all scanners fail, fallback to regex guard."""
         with patch.dict(os.environ, {
-            "STAS_OSS_GUARD_ENABLED": "true",
-            "STAS_OSS_GUARD_TOOLS": "llm_guard",
+            "SYNTARO_OSS_GUARD_ENABLED": "true",
+            "SYNTARO_OSS_GUARD_TOOLS": "llm_guard",
         }):
             manager = OssGuardManager()
 
@@ -404,8 +404,8 @@ class TestOssGuardManagerScanning:
     def test_majority_vote(self):
         """Detection should use majority vote across scanners."""
         with patch.dict(os.environ, {
-            "STAS_OSS_GUARD_ENABLED": "true",
-            "STAS_OSS_GUARD_TOOLS": "llm_guard,rebuff,garak",
+            "SYNTARO_OSS_GUARD_ENABLED": "true",
+            "SYNTARO_OSS_GUARD_TOOLS": "llm_guard,rebuff,garak",
         }):
             manager = OssGuardManager()
 
@@ -442,8 +442,8 @@ class TestRegexGuardIntegration:
     def test_oss_enabled_picks_oss_over_regex(self):
         """When OSS is enabled with working tools, result should not be a fallback."""
         with patch.dict(os.environ, {
-            "STAS_OSS_GUARD_ENABLED": "true",
-            "STAS_OSS_GUARD_TOOLS": "llm_guard,rebuff",
+            "SYNTARO_OSS_GUARD_ENABLED": "true",
+            "SYNTARO_OSS_GUARD_TOOLS": "llm_guard,rebuff",
         }):
             manager = OssGuardManager()
             if not manager.scanners:
@@ -454,7 +454,7 @@ class TestRegexGuardIntegration:
 
     def test_oss_disabled_uses_only_regex(self):
         """When OSS is disabled, only the regex guard is used."""
-        with patch.dict(os.environ, {"STAS_OSS_GUARD_ENABLED": "false"}):
+        with patch.dict(os.environ, {"SYNTARO_OSS_GUARD_ENABLED": "false"}):
             from workers.gates.injection_guard import InjectionGuard
 
             # Mock the regex guard to verify it's called

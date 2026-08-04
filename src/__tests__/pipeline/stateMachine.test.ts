@@ -33,7 +33,7 @@ describe('stateMachine', () => {
   });
 
   it('creates session state', () => {
-    const state = createSessionState('sess-1', 'issue-1', 'stas:fix');
+    const state = createSessionState('sess-1', 'issue-1', 'syntaro:fix');
     expect(state.sessionId).toBe('sess-1');
     expect(state.status).toBe('queued');
     expect(state.currentStage).toBe('queued');
@@ -41,27 +41,27 @@ describe('stateMachine', () => {
   });
 
   it('transitions state', () => {
-    const state = createSessionState('sess-1', 'issue-1', 'stas:fix');
+    const state = createSessionState('sess-1', 'issue-1', 'syntaro:fix');
     const advanced = transitionState(state, 'triage');
     expect(advanced.currentStage).toBe('triage');
     expect(advanced.status).toBe('running');
   });
 
   it('fails state', () => {
-    const state = createSessionState('sess-1', 'issue-1', 'stas:fix');
+    const state = createSessionState('sess-1', 'issue-1', 'syntaro:fix');
     const failed = failState(state, 'Something went wrong');
     expect(failed.status).toBe('failed');
     expect(failed.error).toBe('Something went wrong');
   });
 
   it('cancels state', () => {
-    const state = createSessionState('sess-1', 'issue-1', 'stas:fix');
+    const state = createSessionState('sess-1', 'issue-1', 'syntaro:fix');
     const cancelled = cancelState(state);
     expect(cancelled.status).toBe('cancelled');
   });
 
   it('retries state', () => {
-    const state = createSessionState('sess-1', 'issue-1', 'stas:fix', 3);
+    const state = createSessionState('sess-1', 'issue-1', 'syntaro:fix', 3);
     const advanced = transitionState(state, 'agent');
     const failed = failState(advanced, 'error');
     const retried = retryState(failed);
@@ -71,7 +71,7 @@ describe('stateMachine', () => {
   });
 
   it('returns null when max retries exceeded', () => {
-    const state = { ...createSessionState('sess-1', 'issue-1', 'stas:fix', 1), attempt: 1 };
+    const state = { ...createSessionState('sess-1', 'issue-1', 'syntaro:fix', 1), attempt: 1 };
     const result = retryState(state);
     expect(result).toBeNull();
   });

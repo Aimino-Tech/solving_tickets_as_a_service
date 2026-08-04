@@ -1,6 +1,6 @@
 # Agent Output Sanitization - Configuration & Allowlist
 
-STAS sanitizes all agent-generated output before it reaches external surfaces
+SYNTARO sanitizes all agent-generated output before it reaches external surfaces
 (PR descriptions, issue comments, Slack notifications). The sanitization system
 strips internal system details - API keys, internal URLs, system prompts,
 absolute paths, environment variables, and private IPs - without breaking
@@ -27,7 +27,7 @@ Agent output (PR body, comments, diff, summary)
 | Category | Rules | Risk | What It Catches |
 |----------|-------|------|-----------------|
 | `api_keys` | 9 | HIGH | OpenAI `sk-...`, GitHub tokens, AWS keys, Slack tokens, JWTs, private keys |
-| `internal_urls` | 6 | HIGH | `.internal`/`.local` hostnames, localhost, RFC 1918 URLs, `stas-*` services |
+| `internal_urls` | 6 | HIGH | `.internal`/`.local` hostnames, localhost, RFC 1918 URLs, `syntaro-*` services |
 | `system_prompts` | 5 | MEDIUM | "You are an AI assistant" templates, system directives, tool access descriptions |
 | `file_paths` | 9 | MEDIUM | `/etc/`, `/home/`, `/root/`, `/var/`, `/tmp/`, `/usr/`, `/opt/`, `.env`, `~/.ssh/` |
 | `env_vars` | 5 | LOW | `process.env.X`, `os.environ`, shell `$VARS`, `${VARS}`, `export` statements |
@@ -39,8 +39,8 @@ Agent output (PR body, comments, diff, summary)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STAS_SANITIZER_ENABLED` | `true` | Enable/disable all sanitization |
-| `STAS_SANITIZER_ALLOWLIST` | `""` | Comma-separated rule/category names to allowlist |
+| `SYNTARO_SANITIZER_ENABLED` | `true` | Enable/disable all sanitization |
+| `SYNTARO_SANITIZER_ALLOWLIST` | `""` | Comma-separated rule/category names to allowlist |
 
 ### Allowlist
 
@@ -51,19 +51,19 @@ Examples:
 
 ```bash
 # Suppress localhost URL redaction
-export STAS_SANITIZER_ALLOWLIST="localhost"
+export SYNTARO_SANITIZER_ALLOWLIST="localhost"
 
 # Suppress all file path redaction
-export STAS_SANITIZER_ALLOWLIST="file_paths"
+export SYNTARO_SANITIZER_ALLOWLIST="file_paths"
 
 # Suppress multiple specific rules
-export STAS_SANITIZER_ALLOWLIST="loopback,abs_tmp"
+export SYNTARO_SANITIZER_ALLOWLIST="loopback,abs_tmp"
 ```
 
 ### Disabling Sanitization Completely
 
 ```bash
-export STAS_SANITIZER_ENABLED=false
+export SYNTARO_SANITIZER_ENABLED=false
 ```
 
 ## Architecture

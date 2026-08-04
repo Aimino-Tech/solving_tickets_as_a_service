@@ -166,6 +166,6 @@ describe('getAuditLog', () => {
   it('respects the limit parameter', async () => {
     mockRedisClient.lrange.mockResolvedValue([]);
     await getAuditLog(50);
-    expect(mockRedisClient.lrange).toHaveBeenCalledWith('stas:audit:log', 0, 49);
+    expect(mockRedisClient.lrange).toHaveBeenCalledWith('syntaro:audit:log', 0, 49);
   });
 });

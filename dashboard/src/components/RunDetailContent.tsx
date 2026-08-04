@@ -166,7 +166,7 @@ export default function RunDetailContent({ run, onClose: _onClose }: RunDetailCo
               Copy link
             </button>
             <a
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`STAS fix for ${run.repoOwner}/${run.repoName} (${run.status}): ${shareUrl}`)}`}
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`SYNTARO fix for ${run.repoOwner}/${run.repoName} (${run.status}): ${shareUrl}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-lg bg-white dark:bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"

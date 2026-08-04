@@ -1,5 +1,5 @@
 """
-3-layer anti-liar enforcement for STAS.
+3-layer anti-liar enforcement for SYNTARO.
 
 Layer 1 — test_coverage_mapping(): maps every new/changed production function
 to a corresponding test function, fails if untested function is found.
@@ -421,7 +421,7 @@ def _cleanup_workspace(workspace_path: str) -> None:
     default_retry_delay=30,
     name="workers.tasks.anti_liar.run_anti_liar",
     autoretry_for=(Exception,),
-    queue="stas.quality",
+    queue="syntaro.quality",
 )
 def run_anti_liar(
     self,

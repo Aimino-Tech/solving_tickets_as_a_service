@@ -23,7 +23,7 @@ class TestClaimManager:
         monkeypatch.setattr(mgr, "_get_client", lambda: fake)
         result = mgr.claim("issue-1", "worker-a", ttl=300)
         assert result is True
-        fake.set.assert_called_once_with("stas:claim:issue-1", "worker-a", nx=True, ex=300)
+        fake.set.assert_called_once_with("syntaro:claim:issue-1", "worker-a", nx=True, ex=300)
 
     def test_claim_already_held(self, monkeypatch: pytest.MonkeyPatch) -> None:
         mgr = ClaimManager()
@@ -56,7 +56,7 @@ class TestClaimManager:
         fake = MagicMock()
         monkeypatch.setattr(mgr, "_get_client", lambda: fake)
         mgr.release("issue-1")
-        fake.delete.assert_called_once_with("stas:claim:issue-1")
+        fake.delete.assert_called_once_with("syntaro:claim:issue-1")
 
     def test_release_redis_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         mgr = ClaimManager()
@@ -71,7 +71,7 @@ class TestClaimManager:
         fake.get.return_value = "worker-a"
         monkeypatch.setattr(mgr, "_get_client", lambda: fake)
         assert mgr.get_claim("issue-1") == "worker-a"
-        fake.get.assert_called_once_with("stas:claim:issue-1")
+        fake.get.assert_called_once_with("syntaro:claim:issue-1")
 
     def test_get_claim_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
         mgr = ClaimManager()

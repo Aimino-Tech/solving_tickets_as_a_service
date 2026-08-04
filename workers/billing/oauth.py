@@ -9,7 +9,7 @@ the configured ``OAUTH_TOKEN_ENCRYPTION_KEY`` (or a SHA-256 hash of
 
 Storage backends (tried in order):
     1. Redis  (``OAUTH_REDIS_URL`` or ``REDIS_URL``)
-    2. File   (``OAUTH_FILE_DIR``, default ``/tmp/stas-oauth``)
+    2. File   (``OAUTH_FILE_DIR``, default ``/tmp/syntaro-oauth``)
 
 Usage::
 
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-_OAUTH_REDIS_PREFIX = "stas:oauth:token:"
+_OAUTH_REDIS_PREFIX = "syntaro:oauth:token:"
 _OAUTH_TTL_S = int(os.getenv("OAUTH_TOKEN_TTL_S", str(30 * 24 * 3600)))  # 30 days
 
 # ---------------------------------------------------------------------------
@@ -168,7 +168,7 @@ def _get_redis() -> Any | None:
 
 
 def _file_dir() -> Path:
-    return Path(os.getenv("OAUTH_FILE_DIR", "/tmp/stas-oauth"))
+    return Path(os.getenv("OAUTH_FILE_DIR", "/tmp/syntaro-oauth"))
 
 
 def _file_path(github_user_id: str) -> Path:

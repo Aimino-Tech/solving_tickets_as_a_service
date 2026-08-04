@@ -5,7 +5,7 @@ Prevents duplicate Celery task execution for the same issue across
 worker instances. Uses Redis SET NX EX for atomic lock acquisition
 with automatic expiry.
 
-Key format: ``stas:dedup:{issue_id}``
+Key format: ``syntaro:dedup:{issue_id}``
 Default TTL: 1 hour (configurable via ``DEDUP_LOCK_TTL`` env var).
 """
 
@@ -18,7 +18,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 DEFAULT_LOCK_TTL = int(os.getenv("DEDUP_LOCK_TTL", "3600"))
-_REDIS_KEY_TPL = "stas:dedup:{issue_id}"
+_REDIS_KEY_TPL = "syntaro:dedup:{issue_id}"
 
 
 class DedupManager:

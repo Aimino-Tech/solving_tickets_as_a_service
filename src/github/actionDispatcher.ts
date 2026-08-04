@@ -93,8 +93,8 @@ export class ActionDispatcher {
       }
 
       if (params.receiptManifest) {
-        if (config.stas.mode === 'oss') {
-          log.info({ issueNumber, mode: config.stas.mode }, 'OSS mode — skipping receipt verification gate');
+        if (config.syntaro.mode === 'oss') {
+          log.info({ issueNumber, mode: config.syntaro.mode }, 'OSS mode — skipping receipt verification gate');
         } else {
           const receiptCheck = verifyAllReceipts(params.receiptManifest);
           if (!receiptCheck.valid) {
@@ -136,7 +136,7 @@ export class ActionDispatcher {
       }
 
       // 5. Push branch and gather changed files
-      const branchName = `stas/fix-${issueNumber}-${Date.now().toString(36)}`;
+      const branchName = `syntaro/fix-${issueNumber}-${Date.now().toString(36)}`;
       await sandbox.pushBranch(branchName);
 
       let changedFiles: string[] = [];
@@ -345,7 +345,7 @@ export class ActionDispatcher {
     repoName: string,
     installationId: number,
   ): void {
-    if (!config.stas.poweredByFooterEnabled) return;
+    if (!config.syntaro.poweredByFooterEnabled) return;
     const props = { repoOwner, repoName, issueNumber };
     captureEvent('pr_footer_impression', String(installationId), { ...props, placement: 'pr-body' });
     captureEvent('pr_footer_impression', String(installationId), { ...props, placement: 'pr-comment' });

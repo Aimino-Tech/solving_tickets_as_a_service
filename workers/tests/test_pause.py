@@ -167,8 +167,8 @@ class TestPollPauseIntegration:
         mock_pm = MagicMock()
         mock_pm.is_paused.side_effect = lambda slug: slug == "paused-team"
         mock_get_pm.return_value = mock_pm
-        paused = {"id": "p1", "identifier": "P-1", "title": "Paused", "team": {"key": "paused-team"}, "labels": {"nodes": [{"name": "stas:fix"}]}}
-        active = {"id": "a1", "identifier": "A-1", "title": "Active", "team": {"key": "ACTIVE"}, "labels": {"nodes": [{"name": "stas:fix"}]}}
+        paused = {"id": "p1", "identifier": "P-1", "title": "Paused", "team": {"key": "paused-team"}, "labels": {"nodes": [{"name": "syntaro:fix"}]}}
+        active = {"id": "a1", "identifier": "A-1", "title": "Active", "team": {"key": "ACTIVE"}, "labels": {"nodes": [{"name": "syntaro:fix"}]}}
         mock_get_issues.return_value = [paused, active]
         result = poll_active_issues.run()
         assert result["skipped_paused"] == 1

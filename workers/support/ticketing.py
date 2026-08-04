@@ -1,5 +1,5 @@
 """
-Jira Service Management (JSM) ticketing integration for STAS support.
+Jira Service Management (JSM) ticketing integration for SYNTARO support.
 
 Provides functions to create, read, and update customer requests in Jira Service
 Management using the JSM REST API (``/rest/servicedeskapi/``).

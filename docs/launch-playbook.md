@@ -1,4 +1,4 @@
-# STAS Launch Strategy Playbook — 48-Hour Multi-Channel Ignition
+# SYNTARO Launch Strategy Playbook — 48-Hour Multi-Channel Ignition
 
 > **Objective**: Drive 1,000+ GitHub stars, 10,000+ website visitors, and 100+ Discord members within 30 days of launch.
 
@@ -19,7 +19,7 @@ GitHub Trending responds to **star velocity** (not total count). A concentrated 
 
 ### README Polish
 
-- [ ] Hero GIF showing STAS in action (label issue → auto-fix → PR created)
+- [ ] Hero GIF showing SYNTARO in action (label issue → auto-fix → PR created)
 - [ ] Badge row: GitHub stars, license, Discord, Docker pulls, CI status
 - [ ] Comparison table vs Plip, KintsugiBot, Open SWE
 - [ ] Star CTA prominently placed above the fold
@@ -110,15 +110,15 @@ GitHub Trending responds to **star velocity** (not total count). A concentrated 
 
 ### HN Template
 
-**Title**: Show HN: STAS – Label a GitHub issue, get a fix PR automatically
+**Title**: Show HN: SYNTARO – Label a GitHub issue, get a fix PR automatically
 
 **First comment**:
 ```
-I built STAS because I was tired of spending 30 minutes on simple bugs that
+I built SYNTARO because I was tired of spending 30 minutes on simple bugs that
 are obvious once you know the codebase.
 
 How it works:
-1. Label any GitHub issue with "stas:fix"
+1. Label any GitHub issue with "syntaro:fix"
 2. Our agent investigates your codebase, understands the issue
 3. Writes a fix + regression test
 4. Runs your test suite (before/after comparison)
@@ -139,9 +139,9 @@ Would love feedback from the community!
 **Tagline**: Open-source GitHub bot that fixes labeled issues automatically
 
 **Description**:
-STAS (Solving Tickets As A Service) is an open-source GitHub bot that turns
-labeled issues into pull requests. When you label an issue with "stas:fix,"
-STAS investigates your codebase, writes a fix, runs tests, and opens a PR.
+SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that turns
+labeled issues into pull requests. When you label an issue with "syntaro:fix,"
+SYNTARO investigates your codebase, writes a fix, runs tests, and opens a PR.
 
 **Key features**:
 - Zero-config GitHub Action: 3 lines of YAML → auto-fixes
@@ -152,7 +152,7 @@ STAS investigates your codebase, writes a fix, runs tests, and opens a PR.
 - Built on OpenCode — the 162K★ open-source agent
 
 **Maker comment**:
-I built STAS after realizing most "simple" bugs take 10x longer to fix
+I built SYNTARO after realizing most "simple" bugs take 10x longer to fix
 manually than they should. The insights pipeline that makes this possible
 is our proprietary AGI — 50% more effective than GPT-5.5 on DeepSWE.
 

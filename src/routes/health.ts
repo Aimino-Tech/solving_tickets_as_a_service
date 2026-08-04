@@ -71,7 +71,7 @@ healthRouter.get('/health', async (_req: Request, res: Response) => {
     status: allOk ? 'ok' : 'degraded',
     checks,
     timestamp: new Date().toISOString(),
-    aiMode: config.stas.aiDisabled ? 'ai-disabled' : 'enabled',
+    aiMode: config.syntaro.aiDisabled ? 'ai-disabled' : 'enabled',
   });
 });
 

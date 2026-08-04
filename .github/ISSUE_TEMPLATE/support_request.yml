@@ -1,5 +1,5 @@
 name: ❓ Support Request
-description: Get help with STAS — before opening, check the FAQ and Discord
+description: Get help with SYNTARO — before opening, check the FAQ and Discord
 title: "[Support]: "
 labels: ["support"]
 assignees: []
@@ -33,10 +33,10 @@ body:
         If you've already checked those resources and still need help, fill out the form below and we'll get back to you.
 
   - type: input
-    id: stas_tier
+    id: syntaro_tier
     attributes:
-      label: STAS Tier
-      description: Which STAS tier are you using?
+      label: SYNTARO Tier
+      description: Which SYNTARO tier are you using?
       placeholder: "Self-hosted / Cloud Free / Cloud Pro / Cloud Business"
     validations:
       required: true
@@ -46,7 +46,7 @@ body:
     attributes:
       label: What do you need help with?
       description: Describe your issue in detail.
-      placeholder: "I'm trying to set up STAS and running into..."
+      placeholder: "I'm trying to set up SYNTARO and running into..."
     validations:
       required: true
 
@@ -67,7 +67,7 @@ body:
       options:
         - Low — Not blocking, general question
         - Medium — Affecting workflow but have workaround
-        - High — Blocking use of STAS
+        - High — Blocking use of SYNTARO
         - Critical — Production system is down
     validations:
       required: true

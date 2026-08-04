@@ -24,7 +24,7 @@ function sampleGitLabIssue(iid = 42, state = "opened"): Record<string, unknown> 
     title: "Fix broken login",
     description: "Users cannot log in",
     state,
-    labels: ["bug", "stas:fix"],
+    labels: ["bug", "syntaro:fix"],
     web_url: `https://gitlab.com/owner/test-repo/-/issues/${iid}`,
     created_at: "2025-01-01T00:00:00Z",
     updated_at: "2025-01-02T00:00:00Z",
@@ -40,7 +40,7 @@ function sampleGitLabMR(iid = 10, state = "opened"): Record<string, unknown> {
     description: "Fixes the login issue",
     state,
     web_url: `https://gitlab.com/owner/test-repo/-/merge_requests/${iid}`,
-    source_branch: "stas/fix-42",
+    source_branch: "syntaro/fix-42",
     target_branch: "main",
     created_at: "2025-01-01T00:00:00Z",
     updated_at: "2025-01-02T00:00:00Z",
@@ -51,8 +51,8 @@ function sampleGitLabMR(iid = 10, state = "opened"): Record<string, unknown> {
 function sampleGitLabUser(): Record<string, unknown> {
   return {
     id: 1,
-    username: "stas-bot",
-    name: "STAS Bot",
+    username: "syntaro-bot",
+    name: "SYNTARO Bot",
     state: "active",
   };
 }
@@ -105,7 +105,7 @@ describe("GitLabPlatformClient", () => {
       expect(issue.number).toBe(42);
       expect(issue.title).toBe("Fix broken login");
       expect(issue.body).toBe("Users cannot log in");
-      expect(issue.labels).toEqual(["bug", "stas:fix"]);
+      expect(issue.labels).toEqual(["bug", "syntaro:fix"]);
       expect(issue.repoOwner).toBe("owner");
       expect(issue.repoName).toBe("test-repo");
       expect(issue.state).toBe("opened");
@@ -159,7 +159,7 @@ describe("GitLabPlatformClient", () => {
       });
 
       await client.updateIssue("owner/test-repo", 42, {
-        labels: ["bug", "stas:fix", "wontfix"],
+        labels: ["bug", "syntaro:fix", "wontfix"],
         state: "closed",
       });
 
@@ -167,7 +167,7 @@ describe("GitLabPlatformClient", () => {
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
 
       expect(requestUrl).toContain("/api/v4/projects/owner%2Ftest-repo/issues/42");
-      expect(requestBody.labels).toBe("bug,stas:fix,wontfix");
+      expect(requestBody.labels).toBe("bug,syntaro:fix,wontfix");
       expect(requestBody.state).toBe("closed");
     });
   });
@@ -186,7 +186,7 @@ describe("GitLabPlatformClient", () => {
         repoOwner: "owner",
         repoName: "test-repo",
         title: "Fix broken login",
-        head: "stas/fix-42",
+        head: "syntaro/fix-42",
         base: "main",
         body: "Fixes the login issue",
         draft: false,
@@ -202,7 +202,7 @@ describe("GitLabPlatformClient", () => {
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
 
       expect(requestUrl).toContain("/api/v4/projects/owner%2Ftest-repo/merge_requests");
-      expect(requestBody.source_branch).toBe("stas/fix-42");
+      expect(requestBody.source_branch).toBe("syntaro/fix-42");
       expect(requestBody.target_branch).toBe("main");
       expect(requestBody.title).toBe("Fix broken login");
     });
@@ -218,7 +218,7 @@ describe("GitLabPlatformClient", () => {
         repoOwner: "owner",
         repoName: "test-repo",
         title: "Fix broken login",
-        head: "stas/fix-42",
+        head: "syntaro/fix-42",
         base: "main",
         body: "Fixes the login issue",
         draft: true,
@@ -305,7 +305,7 @@ describe("GitLabPlatformClient", () => {
       });
 
       const username = await client.getAuthenticatedUser();
-      expect(username).toBe("stas-bot");
+      expect(username).toBe("syntaro-bot");
 
       const requestUrl = mockFetch.mock.calls[0][0];
       expect(requestUrl).toContain("/api/v4/user");

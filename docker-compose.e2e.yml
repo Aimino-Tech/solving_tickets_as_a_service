@@ -3,7 +3,7 @@ version: '3.8'
 services:
   redis:
     image: redis:7-alpine
-    container_name: stas-e2e-redis
+    container_name: syntaro-e2e-redis
     ports:
       - "16379:6379"
     command: redis-server --appendonly no --save ""
@@ -14,13 +14,13 @@ services:
       timeout: 2s
       retries: 10
     networks:
-      - stas-e2e-net
+      - syntaro-e2e-net
     mem_limit: 128m
     cpus: 0.3
 
   rabbitmq:
     image: rabbitmq:4-management-alpine
-    container_name: stas-e2e-rabbitmq
+    container_name: syntaro-e2e-rabbitmq
     ports:
       - "15672:15672"
       - "5672:5672"
@@ -34,7 +34,7 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - stas-e2e-net
+      - syntaro-e2e-net
     mem_limit: 256m
     cpus: 0.5
 
@@ -47,5 +47,5 @@ services:
   #   npm run test:e2e
 
 networks:
-  stas-e2e-net:
+  syntaro-e2e-net:
     driver: bridge

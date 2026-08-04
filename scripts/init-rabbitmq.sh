@@ -2,7 +2,7 @@
 # =============================================================================
 # RabbitMQ Initialization Script
 #
-# Creates the stas-monitor monitoring user, the /stas-dev vhost, and sets
+# Creates the syntaro-monitor monitoring user, the /syntaro-dev vhost, and sets
 # appropriate permissions. Uses rabbitmqctl (must run on the RabbitMQ node).
 #
 # Usage:
@@ -10,7 +10,7 @@
 #   bash scripts/init-rabbitmq.sh
 #
 #   # With custom password for the monitor user:
-#   STAS_MONITOR_PASSWORD=my-secure-pass bash scripts/init-rabbitmq.sh
+#   SYNTARO_MONITOR_PASSWORD=my-secure-pass bash scripts/init-rabbitmq.sh
 #
 # This script is idempotent — resources that already exist are skipped.
 # =============================================================================
@@ -20,11 +20,11 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Configuration (overridable via environment)
 # ---------------------------------------------------------------------------
-STAS_MONITOR_PASSWORD="${STAS_MONITOR_PASSWORD:-stas-monitor-password}"
-STAS_DEV_VHOST="${STAS_DEV_VHOST:-/stas-dev}"
-STAS_APP_USER="${STAS_APP_USER:-stas-app}"
-STAS_MONITOR_USER="${STAS_MONITOR_USER:-stas-monitor}"
-STAS_VHOST="${STAS_VHOST:-/stas}"
+SYNTARO_MONITOR_PASSWORD="${SYNTARO_MONITOR_PASSWORD:-syntaro-monitor-password}"
+SYNTARO_DEV_VHOST="${SYNTARO_DEV_VHOST:-/syntaro-dev}"
+SYNTARO_APP_USER="${SYNTARO_APP_USER:-syntaro-app}"
+SYNTARO_MONITOR_USER="${SYNTARO_MONITOR_USER:-syntaro-monitor}"
+SYNTARO_VHOST="${SYNTARO_VHOST:-/syntaro}"
 
 # ---------------------------------------------------------------------------
 # Prerequisites check
@@ -97,22 +97,22 @@ echo "=== RabbitMQ Initialization ==="
 echo ""
 
 # --- Step 1: Monitoring user ---
-echo "--- stas-monitor user ---"
-ensure_user "$STAS_MONITOR_USER" "$STAS_MONITOR_PASSWORD" "monitoring"
+echo "--- syntaro-monitor user ---"
+ensure_user "$SYNTARO_MONITOR_USER" "$SYNTARO_MONITOR_PASSWORD" "monitoring"
 
-# --- Step 2: /stas-dev vhost ---
-echo "--- /stas-dev vhost ---"
-ensure_vhost "$STAS_DEV_VHOST"
+# --- Step 2: /syntaro-dev vhost ---
+echo "--- /syntaro-dev vhost ---"
+ensure_vhost "$SYNTARO_DEV_VHOST"
 
-# --- Step 3: Permissions on /stas for stas-app (should already exist) ---
-echo "--- Permissions on $STAS_VHOST ---"
-ensure_permissions "$STAS_VHOST" "$STAS_APP_USER" ".*" ".*" ".*"
-ensure_permissions "$STAS_VHOST" "$STAS_MONITOR_USER" "" "" ".*"
+# --- Step 3: Permissions on /syntaro for syntaro-app (should already exist) ---
+echo "--- Permissions on $SYNTARO_VHOST ---"
+ensure_permissions "$SYNTARO_VHOST" "$SYNTARO_APP_USER" ".*" ".*" ".*"
+ensure_permissions "$SYNTARO_VHOST" "$SYNTARO_MONITOR_USER" "" "" ".*"
 
-# --- Step 4: Permissions on /stas-dev ---
-echo "--- Permissions on $STAS_DEV_VHOST ---"
-ensure_permissions "$STAS_DEV_VHOST" "$STAS_APP_USER" ".*" ".*" ".*"
-ensure_permissions "$STAS_DEV_VHOST" "$STAS_MONITOR_USER" "" "" ".*"
+# --- Step 4: Permissions on /syntaro-dev ---
+echo "--- Permissions on $SYNTARO_DEV_VHOST ---"
+ensure_permissions "$SYNTARO_DEV_VHOST" "$SYNTARO_APP_USER" ".*" ".*" ".*"
+ensure_permissions "$SYNTARO_DEV_VHOST" "$SYNTARO_MONITOR_USER" "" "" ".*"
 
 # --- Step 5: Verify ---
 echo ""
@@ -123,11 +123,11 @@ echo ""
 echo "--- Vhosts ---"
 rabbitmqctl list_vhosts
 echo ""
-echo "--- Permissions on $STAS_VHOST ---"
-rabbitmqctl list_permissions -p "$STAS_VHOST"
+echo "--- Permissions on $SYNTARO_VHOST ---"
+rabbitmqctl list_permissions -p "$SYNTARO_VHOST"
 echo ""
-echo "--- Permissions on $STAS_DEV_VHOST ---"
-rabbitmqctl list_permissions -p "$STAS_DEV_VHOST"
+echo "--- Permissions on $SYNTARO_DEV_VHOST ---"
+rabbitmqctl list_permissions -p "$SYNTARO_DEV_VHOST"
 
 echo ""
 echo "=== RabbitMQ initialization complete ==="

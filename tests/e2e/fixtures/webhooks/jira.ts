@@ -6,7 +6,7 @@
  */
 
 /**
- * Jira Issue Created — a new issue is created with a "stas:fix" label.
+ * Jira Issue Created — a new issue is created with a "syntaro:fix" label.
  */
 export function jiraIssueCreated() {
   return {
@@ -40,7 +40,7 @@ export function jiraIssueCreated() {
         project: { id: '10000', key: 'PROJ', name: 'Project' },
         priority: { id: '2', name: 'High' },
         status: { id: '1', name: 'Open', statusCategory: { id: 2, key: 'new', colorName: 'blue' } },
-        labels: ['stas:fix'],
+        labels: ['syntaro:fix'],
         assignee: null,
         created: '2025-05-01T10:00:00.000+0000',
         updated: '2025-05-01T10:00:00.000+0000',
@@ -81,7 +81,7 @@ export function jiraIssueUpdated() {
 }
 
 /**
- * Jira Issue Created — without the stas:fix label (no trigger).
+ * Jira Issue Created — without the syntaro:fix label (no trigger).
  */
 export function jiraIssueCreatedOtherLabel() {
   const payload = jiraIssueCreated() as any;

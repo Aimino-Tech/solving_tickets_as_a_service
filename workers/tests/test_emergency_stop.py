@@ -16,7 +16,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def _clear_file_lock():
     """Remove any leftover lock file before and after each test."""
-    lock = "/tmp/stas-emergency-stop.lock"
+    lock = "/tmp/syntaro-emergency-stop.lock"
     try:
         os.unlink(lock)
     except FileNotFoundError:
@@ -98,17 +98,17 @@ class TestEmergencyStopCore:
 
     def test_activate_writes_file_lock(self, es_no_redis):
         es_no_redis.activate(reason="file-check")
-        assert os.path.isfile("/tmp/stas-emergency-stop.lock")
-        with open("/tmp/stas-emergency-stop.lock") as f:
+        assert os.path.isfile("/tmp/syntaro-emergency-stop.lock")
+        with open("/tmp/syntaro-emergency-stop.lock") as f:
             data = json.load(f)
         assert data["active"] is True
         assert data["reason"] == "file-check"
 
     def test_deactivate_removes_file_lock(self, es_no_redis):
         es_no_redis.activate("cleanup")
-        assert os.path.isfile("/tmp/stas-emergency-stop.lock")
+        assert os.path.isfile("/tmp/syntaro-emergency-stop.lock")
         es_no_redis.deactivate()
-        assert not os.path.isfile("/tmp/stas-emergency-stop.lock")
+        assert not os.path.isfile("/tmp/syntaro-emergency-stop.lock")
 
     def test_deactivate_idempotent(self, es_no_redis):
         es_no_redis.deactivate()
@@ -134,7 +134,7 @@ class TestEmergencyStopRedis:
         es, mock_r = es_with_mock_redis
         mock_r.get.return_value = json.dumps({"active": True, "reason": "test"})
         assert es.check() is True
-        mock_r.get.assert_called_once_with("stas:emergency_stop")
+        mock_r.get.assert_called_once_with("syntaro:emergency_stop")
 
     def test_check_returns_false_when_redis_key_missing(self, es_with_mock_redis):
         es, mock_r = es_with_mock_redis
@@ -146,7 +146,7 @@ class TestEmergencyStopRedis:
         es.activate(reason="redis-test")
         mock_r.set.assert_called_once()
         args = mock_r.set.call_args[0]
-        assert args[0] == "stas:emergency_stop"
+        assert args[0] == "syntaro:emergency_stop"
         payload = json.loads(args[1])
         assert payload["active"] is True
         assert payload["reason"] == "redis-test"
@@ -155,7 +155,7 @@ class TestEmergencyStopRedis:
         es, mock_r = es_with_mock_redis
         es.activate(reason="del-test")
         es.deactivate()
-        mock_r.delete.assert_called_once_with("stas:emergency_stop")
+        mock_r.delete.assert_called_once_with("syntaro:emergency_stop")
 
     def test_redis_failure_falls_back_to_file(self, es_with_mock_redis):
         es, mock_r = es_with_mock_redis
@@ -163,7 +163,7 @@ class TestEmergencyStopRedis:
         # File lock not set yet
         assert es.check() is False
         # Set file lock manually
-        with open("/tmp/stas-emergency-stop.lock", "w") as f:
+        with open("/tmp/syntaro-emergency-stop.lock", "w") as f:
             f.write('{"active": true}')
         assert es.check() is True
 
@@ -345,14 +345,14 @@ class TestEmergencyActivateRevoke:
         try:
             with patch.object(get_emergency_stop(), "activate", side_effect=fake_activate), \
                  patch("workers.emergency.server._revoke_active_tasks", return_value=[{"task_id": "t1", "task_name": "agent.dispatch", "worker": "w1"}]), \
-                 patch("workers.emergency.server._move_pending_to_hold", return_value={"stas.agents.dispatch": 3}):
+                 patch("workers.emergency.server._move_pending_to_hold", return_value={"syntaro.agents.dispatch": 3}):
 
                 state = _activate_emergency(celery_app, reason="integration test")
 
             assert state["active"] is True
             assert state["reason"] == "integration test"
             assert len(state["revoked_tasks"]) == 1
-            assert state["moved_to_hold"]["stas.agents.dispatch"] == 3
+            assert state["moved_to_hold"]["syntaro.agents.dispatch"] == 3
         finally:
             get_emergency_stop().activate = original
 
@@ -390,7 +390,7 @@ class TestEmergencyStopFalsePositives:
         es_no_redis.deactivate()
         assert es_no_redis.check() is False
         # Verify no side effects on unrelated state
-        assert not os.path.isfile("/tmp/stas-emergency-stop.lock")
+        assert not os.path.isfile("/tmp/syntaro-emergency-stop.lock")
 
     def test_middleware_does_not_block_normal_operation(self):
         from workers.emergency.middleware import _is_agent_task

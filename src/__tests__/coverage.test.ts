@@ -1,5 +1,5 @@
 /**
- * Coverage acceptance test for STAS.
+ * Coverage acceptance test for SYNTARO.
  *
  * This test exists to satisfy acceptance criteria requiring coverage
  * validation. It verifies that the coverage infrastructure is set up

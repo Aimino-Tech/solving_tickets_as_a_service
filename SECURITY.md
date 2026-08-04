@@ -1,6 +1,6 @@
 # Security Policy
 
-STAS takes security seriously. Please report vulnerabilities privately so they can be fixed before public disclosure.
+SYNTARO takes security seriously. Please report vulnerabilities privately so they can be fixed before public disclosure.
 
 The full security policy, threat model, and vulnerability response process live in [docs/SECURITY.md](docs/SECURITY.md).
 

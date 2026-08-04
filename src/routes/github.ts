@@ -72,7 +72,7 @@ router.get('/installations', async (req: Request, res: Response) => {
     }
 
     const r = await fetch('https://api.github.com/user/installations', {
-      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' },
+      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'syntaro-bot' },
     });
 
     if (!r.ok) {
@@ -174,12 +174,12 @@ router.get('/installations/:id/repos', async (req: Request, res: Response) => {
       res.status(503).json({ error: 'Failed to get installation token — check GitHub App configuration' });
       return;
     }
-    const r = await fetch('https://api.github.com/installation/repositories', { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' } });
+    const r = await fetch('https://api.github.com/installation/repositories', { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'syntaro-bot' } });
     if (!r.ok) { res.status(r.status).json({ error: 'GitHub API error' }); return; }
     const d = await r.json();
     const wh = await gitHubWebhookRepository.findByInstallationId(iid);
     const wm = new Map(wh.map(w => [w.repoOwner + '/' + w.repoName, w]));
-    res.json({ repos: d.repositories.map((repo: any) => { const key = repo.full_name.toLowerCase(); const wh = wm.get(key); return { id: repo.id, owner: repo.owner.login, name: repo.name, fullName: repo.full_name, private: repo.private, description: repo.description, defaultBranch: repo.default_branch, language: repo.language, updatedAt: repo.updated_at, stasInstalled: !!wh?.active, stasWebhookId: wh?.webhookId ?? null }; }) });
+    res.json({ repos: d.repositories.map((repo: any) => { const key = repo.full_name.toLowerCase(); const wh = wm.get(key); return { id: repo.id, owner: repo.owner.login, name: repo.name, fullName: repo.full_name, private: repo.private, description: repo.description, defaultBranch: repo.default_branch, language: repo.language, updatedAt: repo.updated_at, syntaroInstalled: !!wh?.active, syntaroWebhookId: wh?.webhookId ?? null }; }) });
   } catch (err) { log.error({ err: String(err) }, 'Failed to list repos'); res.status(500).json({ error: 'Failed to list repos' }); }
 });
 
@@ -198,10 +198,10 @@ router.post('/installations/:id/repos/:owner/:repo/webhook', async (req: Request
 
     const token = await getGitHubToken(req);
     if (token) {
-      const baseUrl = process.env.STAS_PUBLIC_URL || req.protocol + '://' + req.get('host');
+      const baseUrl = process.env.SYNTARO_PUBLIC_URL || req.protocol + '://' + req.get('host');
       const whResp = await fetch('https://api.github.com/repos/' + owner + '/' + repo + '/hooks', {
         method: 'POST',
-        headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot', 'Content-Type': 'application/json' },
+        headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'syntaro-bot', 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'web', active: true, events: ['issues', 'pull_request', 'issue_comment', 'label'], config: { url: baseUrl + config.github.webhookPath, content_type: 'json', secret: config.github.webhookSecret } }),
       });
       if (whResp.ok) {
@@ -220,10 +220,10 @@ router.post('/installations/:id/repos/:owner/:repo/webhook', async (req: Request
     const fullName = owner + '/' + repo;
     const existingRepos: Array<any> = Array.isArray((inst as any).repos_json) ? (inst as any).repos_json : [];
     const updatedRepos = existingRepos.map((r: any) =>
-      r.fullName === fullName ? { ...r, stasInstalled: true } : r
+      r.fullName === fullName ? { ...r, syntaroInstalled: true } : r
     );
     if (!updatedRepos.find((r: any) => r.fullName === fullName)) {
-      updatedRepos.push({ name: repo, owner, fullName, private: false, stasInstalled: true });
+      updatedRepos.push({ name: repo, owner, fullName, private: false, syntaroInstalled: true });
     }
     const actualInstallationId = (inst as any).installation_id ?? inst.installationId;
     await gitHubInstallationRepository.create({
@@ -251,7 +251,7 @@ router.delete('/installations/:id/repos/:owner/:repo/webhook', async (req: Reque
     } else {
       if (existing.userId !== req.user!.id) { res.status(403).json({ error: 'Forbidden' }); return; }
       try {
-        await fetch('https://api.github.com/repos/' + owner + '/' + repo + '/hooks/' + existing.webhookId, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'stas-bot' } });
+        await fetch('https://api.github.com/repos/' + owner + '/' + repo + '/hooks/' + existing.webhookId, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'syntaro-bot' } });
       } catch { log.warn({ owner, repo }, 'GitHub API delete webhook failed — removing from DB anyway'); }
       await gitHubWebhookRepository.deactivate(existing.id);
     }
@@ -259,7 +259,7 @@ router.delete('/installations/:id/repos/:owner/:repo/webhook', async (req: Reque
     const inst = await gitHubInstallationRepository.findByInstallationId(iid);
     if (inst && Array.isArray((inst as any).repos_json)) {
       const updatedRepos = (inst as any).repos_json.map((r: any) =>
-        r.fullName === owner + '/' + repo ? { ...r, stasInstalled: false } : r
+        r.fullName === owner + '/' + repo ? { ...r, syntaroInstalled: false } : r
       );
       await gitHubInstallationRepository.create({
         userId: req.user!.id,

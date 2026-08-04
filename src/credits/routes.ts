@@ -34,6 +34,7 @@ import { CREDIT_PACKS, getCreditPacks } from '../stripe/credit-packs.js';
 import { rootLogger } from '../utils/logger.js';
 import { queryWithRetry } from '../db/connection.js';
 import { requireAuth } from '../auth/middleware.js';
+import { getBillingSettings, getMonthSpendCents } from './billingSettings.js';
 
 const log = rootLogger.child({ module: 'credits-routes' });
 
@@ -133,6 +134,17 @@ const AdminAdjustSchema = z.object({
 
 const UsageSchema = z.object({
   period: z.enum(['daily', 'weekly', 'monthly']).default('monthly'),
+});
+
+const RedeemCouponSchema = z.object({
+  code: z.string().trim().min(1, 'code is required').max(100, 'code is too long'),
+});
+
+const BillingSettingsSchema = z.object({
+  autoReloadEnabled: z.boolean().optional(),
+  autoReloadThresholdCents: z.number().int().positive().nullable().optional(),
+  autoReloadTopupCents: z.number().int().positive().nullable().optional(),
+  monthlyLimitCents: z.number().int().positive().nullable().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -331,6 +343,182 @@ creditRouter.post('/credits/top-up', async (req: Request, res: Response) => {
     }
 
     log.error({ err: message, accountId }, 'Failed to create checkout session');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/credits/redeem-coupon
+// ---------------------------------------------------------------------------
+
+/**
+ * Redeem a promo coupon and credit the account balance.
+ *
+ * Body:
+ * ```json
+ * { "code": "WELCOME100" }
+ * ```
+ *
+ * Response:
+ * ```json
+ * {
+ *   "coupon": { "id": 1, "code": "WELCOME100", "amountCredits": 100, "active": true },
+ *   "newBalance": 1500
+ * }
+ * ```
+ */
+creditRouter.post('/credits/redeem-coupon', async (req: Request, res: Response) => {
+  const accountId = await requireAccount(req, res);
+  if (!accountId) return;
+
+  const parsed = RedeemCouponSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      error: 'Invalid request body',
+      details: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`),
+    });
+    return;
+  }
+
+  try {
+    const result = await creditsRepository.redeemCoupon(accountId, parsed.data.code);
+    log.info({ accountId, coupon: result.coupon.code, newBalance: result.balance }, 'Coupon redeemed');
+    res.json({ coupon: result.coupon, newBalance: result.balance });
+  } catch (err) {
+    const message = String(err);
+    if (message.includes('Coupon not found')) {
+      res.status(404).json({ error: 'Coupon not found', message });
+      return;
+    }
+    if (message.includes('Coupon is inactive')) {
+      res.status(400).json({ error: 'Coupon is inactive', message });
+      return;
+    }
+    if (message.includes('fully redeemed')) {
+      res.status(409).json({ error: 'Coupon exhausted', message });
+      return;
+    }
+    log.error({ err: message, accountId }, 'Failed to redeem coupon');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/credits/billing-settings
+// ---------------------------------------------------------------------------
+
+/**
+ * Get billing balance settings for the authenticated account:
+ * auto-reload config, monthly usage limit, and current month spend.
+ *
+ * Response:
+ * ```json
+ * {
+ *   "autoReloadEnabled": true,
+ *   "autoReloadThresholdCents": 500,
+ *   "autoReloadTopupCents": 1000,
+ *   "monthlyLimitCents": 5000,
+ *   "monthSpendCents": 1230
+ * }
+ * ```
+ */
+creditRouter.get('/credits/billing-settings', async (req: Request, res: Response) => {
+  const accountId = await requireAccount(req, res);
+  if (!accountId) return;
+
+  try {
+    const [settings, monthSpendCents] = await Promise.all([
+      getBillingSettings(accountId),
+      getMonthSpendCents(accountId),
+    ]);
+    res.json({ ...settings, monthSpendCents });
+  } catch (err) {
+    log.error({ err: String(err), accountId }, 'Failed to fetch billing settings');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/credits/billing-settings
+// ---------------------------------------------------------------------------
+
+/**
+ * Update billing balance settings (partial update — omitted fields keep
+ * their current value; pass null to clear a value).
+ *
+ * Body:
+ * ```json
+ * {
+ *   "autoReloadEnabled": true,
+ *   "autoReloadThresholdCents": 500,
+ *   "autoReloadTopupCents": 1000,
+ *   "monthlyLimitCents": null
+ * }
+ * ```
+ *
+ * Response:
+ * ```json
+ * { "settings": { "autoReloadEnabled": true, ... } }
+ * ```
+ */
+creditRouter.post('/credits/billing-settings', async (req: Request, res: Response) => {
+  const accountId = await requireAccount(req, res);
+  if (!accountId) return;
+
+  const parsed = BillingSettingsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      error: 'Invalid request body',
+      details: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`),
+    });
+    return;
+  }
+
+  try {
+    const existing = await getBillingSettings(accountId);
+    const body = parsed.data;
+    const merged = {
+      autoReloadEnabled: body.autoReloadEnabled ?? existing.autoReloadEnabled,
+      autoReloadThresholdCents:
+        body.autoReloadThresholdCents !== undefined ? body.autoReloadThresholdCents : existing.autoReloadThresholdCents,
+      autoReloadTopupCents:
+        body.autoReloadTopupCents !== undefined ? body.autoReloadTopupCents : existing.autoReloadTopupCents,
+      monthlyLimitCents:
+        body.monthlyLimitCents !== undefined ? body.monthlyLimitCents : existing.monthlyLimitCents,
+    };
+
+    if (
+      merged.autoReloadEnabled &&
+      (merged.autoReloadThresholdCents == null || merged.autoReloadTopupCents == null)
+    ) {
+      res.status(400).json({
+        error: 'Invalid billing settings',
+        message: 'autoReloadThresholdCents and autoReloadTopupCents are required when auto-reload is enabled.',
+      });
+      return;
+    }
+
+    await queryWithRetry(
+      `UPDATE accounts SET
+         auto_reload_enabled = $2,
+         auto_reload_threshold_cents = $3,
+         auto_reload_topup_cents = $4,
+         monthly_limit_cents = $5,
+         updated_at = NOW()
+       WHERE id = $1`,
+      [
+        accountId,
+        merged.autoReloadEnabled,
+        merged.autoReloadThresholdCents,
+        merged.autoReloadTopupCents,
+        merged.monthlyLimitCents,
+      ],
+    );
+
+    log.info({ accountId, merged }, 'Billing settings updated');
+    res.json({ settings: merged });
+  } catch (err) {
+    log.error({ err: String(err), accountId }, 'Failed to update billing settings');
     res.status(500).json({ error: 'Internal server error' });
   }
 });

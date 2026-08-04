@@ -1,7 +1,7 @@
 /**
- * Trace ID utilities — W3C Trace Context propagation for STAS.
+ * Trace ID utilities — W3C Trace Context propagation for SYNTARO.
  *
- * Generates and propagates trace IDs across STAS → Governance → OpenSymphony
+ * Generates and propagates trace IDs across SYNTARO → Governance → OpenSymphony
  * for end-to-end log correlation.
  *
  * ── Usage ──────────────────────────────────────────────────────────────
@@ -22,7 +22,7 @@ import { randomUUID } from 'node:crypto';
 const traceContext = new AsyncLocalStorage<string>();
 
 /** HTTP header name for trace ID propagation. */
-export const TRACE_HEADER = 'x-stas-trace-id';
+export const TRACE_HEADER = 'x-syntaro-trace-id';
 
 /** W3C Trace Context traceparent header. */
 export const TRACEPARENT_HEADER = 'traceparent';
@@ -53,14 +53,14 @@ export function getCurrentTraceId(): string | undefined {
 /**
  * Extract or generate a trace ID from request headers.
  * Checks for existing trace headers in order of priority:
- *   1. x-stas-trace-id (STAS-specific)
+ *   1. x-syntaro-trace-id (SYNTARO-specific)
  *   2. traceparent (W3C Trace Context)
  *   3. x-request-id (generic request ID)
  * Falls back to generating a new UUID.
  */
 export function extractOrGenerateTraceId(headers: Record<string, string | string[] | undefined>): string {
-  const stasTrace = headers[TRACE_HEADER];
-  if (stasTrace) return Array.isArray(stasTrace) ? stasTrace[0] : stasTrace;
+  const syntaroTrace = headers[TRACE_HEADER];
+  if (syntaroTrace) return Array.isArray(syntaroTrace) ? syntaroTrace[0] : syntaroTrace;
 
   const w3cTrace = headers[TRACEPARENT_HEADER];
   if (w3cTrace) {

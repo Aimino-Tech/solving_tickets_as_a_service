@@ -3,7 +3,7 @@
  *
  * Provides a singleton Redis client for use across the codebase.
  * Uses lazy initialization and reuses the same connection options
- * pattern found throughout the STAS TypeScript codebase.
+ * pattern found throughout the SYNTARO TypeScript codebase.
  *
  * Usage:
  *   import { getRedis, closeRedis } from '../utils/redis.js';

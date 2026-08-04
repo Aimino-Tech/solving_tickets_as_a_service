@@ -25,8 +25,8 @@
 Use `{{param}}` placeholders:
 
 ```ts
-t('dashboard.noRuns', { label: 'stas:fix' })
-// "No runs yet. Label an issue with stas:fix to get started."
+t('dashboard.noRuns', { label: 'syntaro:fix' })
+// "No runs yet. Label an issue with syntaro:fix to get started."
 ```
 
 ## Testing

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────────
-# STAS Guardrail — Post-hoc slop-intent scanner
+# SYNTARO Guardrail — Post-hoc slop-intent scanner
 # ──────────────────────────────────────────────────────────────────────────────
 # Scans changed files for slop patterns: stubs, placeholders, mocks, deferrals.
 # This is the Level 3 backup layer — catches what slips past LiteLLM.

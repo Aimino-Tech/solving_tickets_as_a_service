@@ -52,11 +52,11 @@ _REDIS_URL = os.getenv(
     os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0"),
 )
 
-_TIER_KEY_PREFIX = "stas:tiers:"
+_TIER_KEY_PREFIX = "syntaro:tiers:"
 _TIER_USAGE_KEY = "usage"
 _TIER_VERIFIED_KEY = "verified"
 _TIER_LAST_FIX_KEY = "last_fix_ts"
-_TIER_PQL_KEY_PREFIX = "stas:pql:"
+_TIER_PQL_KEY_PREFIX = "syntaro:pql:"
 _TIER_PQL_SCORE_KEY = "score"
 
 
@@ -488,7 +488,7 @@ def is_inactive(tenant_id: str, days: int = _INACTIVITY_DAYS) -> bool:
 def recalculate_pql_scores(self: Any) -> dict[str, Any]:
     """Iterate all tenants with tier usage records and recalculate PQL scores.
 
-    Uses Redis SCAN to find all ``stas:tiers:*`` keys, reads usage and
+    Uses Redis SCAN to find all ``syntaro:tiers:*`` keys, reads usage and
     verification counts, and recomputes the PQL score for each tenant.
 
     Returns a summary dict with counts of processed tenants.

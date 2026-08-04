@@ -4,7 +4,7 @@ status: draft
 last-updated: 2026-07-28
 ---
 
-# SOC 2 Architecture and Data Flow — STAS
+# SOC 2 Architecture and Data Flow — SYNTARO
 
 > **System boundaries, data classification, data flows, storage locations, and third-party data sharing for SOC 2 compliance.**
 
@@ -12,7 +12,7 @@ last-updated: 2026-07-28
 
 ## 1. System Description
 
-STAS (Solving Tickets As A Service) is an AI-powered GitHub bot that automatically investigates, fixes, and opens pull requests for labeled issues. The system consists of:
+SYNTARO (Solving Tickets As A Service) is an AI-powered GitHub bot that automatically investigates, fixes, and opens pull requests for labeled issues. The system consists of:
 
 - **Webhook receiver**: Express.js HTTP server that ingests webhooks from GitHub (and optionally GitLab, Bitbucket, Linear, Jira)
 - **Validation layer**: Issue label checking, deduplication, rate limiting
@@ -26,7 +26,7 @@ STAS (Solving Tickets As A Service) is an AI-powered GitHub bot that automatical
 
 ```mermaid
 flowchart LR
-    subgraph "System Boundary — STAS"
+    subgraph "System Boundary — SYNTARO"
         direction TB
         API["API Server<br/>(Express, TypeScript)"]
         VAL["Validation<br/>& Dedup"]
@@ -70,7 +70,7 @@ flowchart LR
 
 ## 2. Data Classification
 
-STAS processes the following categories of data:
+SYNTARO processes the following categories of data:
 
 ### 2.1 Code (Customer Confidential)
 
@@ -187,7 +187,7 @@ All services ──> pino structured logs ──TLS──> Log storage (90-day r
 
 ### Data Residency
 
-- **Customer data** (code, issues, PR content): Processed in the region where the worker runs. For cloud-hosted STAS, this is currently US regions (AWS us-east-1 / us-west-2). For self-hosted deployments, data remains in the customer's chosen infrastructure.
+- **Customer data** (code, issues, PR content): Processed in the region where the worker runs. For cloud-hosted SYNTARO, this is currently US regions (AWS us-east-1 / us-west-2). For self-hosted deployments, data remains in the customer's chosen infrastructure.
 - **Metadata** (job status, timestamps): Stored in the same region as the control plane.
 - **Logs and telemetry**: Sentry processes data in US regions. Self-hosted customers can configure Sentry self-hosting or alternative logging.
 
@@ -211,9 +211,9 @@ All services ──> pino structured logs ──TLS──> Log storage (90-day r
 
 ### 5.2 Data Sharing Principles
 
-- STAS **never sells** customer data
-- STAS **never trains models** on customer code or issues
-- STAS **never stores** customer code outside the ephemeral sandbox
+- SYNTARO **never sells** customer data
+- SYNTARO **never trains models** on customer code or issues
+- SYNTARO **never stores** customer code outside the ephemeral sandbox
 - All subprocessors are contractually bound to process data only for the specific service provided
 - No customer data is shared with advertising networks, analytics providers, or data brokers
 - Data sharing is limited to what is strictly necessary to provide the fix service

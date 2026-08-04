@@ -1,5 +1,5 @@
 # =============================================================================
-# promptfoo eval configuration for STAS smoke tests
+# promptfoo eval configuration for SYNTARO smoke tests
 #
 # This config provides the default model provider and output format settings
 # used by all smoke test cases.

@@ -23,7 +23,7 @@ class TestListIssues:
 
     @pytest.mark.asyncio
     async def test_filter_falls_back_to_api(self, fake_pipeline, monkeypatch):
-        """Empty pipeline history falls back to the STAS API with the status filter (AIM-4477)."""
+        """Empty pipeline history falls back to the SYNTARO API with the status filter (AIM-4477)."""
         from syntaro_mcp.server import _list_issues_handler
 
         async def fake_api(status=None, repo=None, limit=20):

@@ -34,7 +34,7 @@ export interface GitHubInstallation {
   repoScope: 'all' | 'selected';
   permissions: Record<string, unknown>;
   avatarUrl?: string | null;
-  reposJson?: Array<{ name: string; owner: string; fullName: string; private: boolean; stasInstalled: boolean }>;
+  reposJson?: Array<{ name: string; owner: string; fullName: string; private: boolean; syntaroInstalled: boolean }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,7 +47,7 @@ export interface NewGitHubInstallation {
   repoScope?: 'all' | 'selected';
   permissions?: Record<string, unknown>;
   avatarUrl?: string | null;
-  reposJson?: Array<{ name: string; owner: string; fullName: string; private: boolean; stasInstalled: boolean }>;
+  reposJson?: Array<{ name: string; owner: string; fullName: string; private: boolean; syntaroInstalled: boolean }>;
 }
 
 export interface GitHubWebhookConfig {

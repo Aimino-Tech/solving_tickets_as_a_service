@@ -1,6 +1,6 @@
 /**
  * Repository picker API — lists the authenticated user's GitHub repos and
- * their STAS webhook / installation status.
+ * their SYNTARO webhook / installation status.
  *
  * Routes (mounted at /api/repos):
  *   GET  /          — List user's repos with webhook status
@@ -45,12 +45,12 @@ interface RepoWithStatus {
   defaultBranch: string;
   language: string | null;
   updatedAt: string;
-  /** Whether STAS has a webhook installed on this repo. */
-  stasInstalled: boolean;
+  /** Whether SYNTARO has a webhook installed on this repo. */
+  syntaroInstalled: boolean;
   /** GitHub App installation ID if installed. */
   installationId: number | null;
-  /** The STAS label trigger config for this repo. */
-  stasLabel: string;
+  /** The SYNTARO label trigger config for this repo. */
+  syntaroLabel: string;
 }
 
 interface GitHubRepo {
@@ -78,7 +78,7 @@ interface GitHubInstallation {
 
 /**
  * Lists the authenticated user's GitHub repos that they have access to,
- * annotated with STAS installation status.
+ * annotated with SYNTARO installation status.
  *
  * Query params:
  *   type    — all | owner | public | private | member (default: all)
@@ -106,7 +106,7 @@ router.get('/', async (req: Request, res: Response) => {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/vnd.github+json',
-          'User-Agent': 'stas-bot',
+          'User-Agent': 'syntaro-bot',
         },
       },
     );
@@ -119,14 +119,14 @@ router.get('/', async (req: Request, res: Response) => {
 
     const repos = (await reposResponse.json()) as GitHubRepo[];
 
-    // Fetch STAS installations to determine which repos have the bot
+    // Fetch SYNTARO installations to determine which repos have the bot
     const installationsResponse = await fetch(
       'https://api.github.com/user/installations',
       {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/vnd.github+json',
-          'User-Agent': 'stas-bot',
+          'User-Agent': 'syntaro-bot',
         },
       },
     );
@@ -146,7 +146,7 @@ router.get('/', async (req: Request, res: Response) => {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: 'application/vnd.github+json',
-              'User-Agent': 'stas-bot',
+              'User-Agent': 'syntaro-bot',
             },
           });
 
@@ -174,9 +174,9 @@ router.get('/', async (req: Request, res: Response) => {
         defaultBranch: repo.default_branch,
         language: repo.language,
         updatedAt: repo.updated_at,
-        stasInstalled: installedRepos.has(fullName),
+        syntaroInstalled: installedRepos.has(fullName),
         installationId: installationByRepo[fullName] ?? null,
-        stasLabel: config.stas.label,
+        syntaroLabel: config.syntaro.label,
       };
     });
 
@@ -190,7 +190,7 @@ router.get('/', async (req: Request, res: Response) => {
       perPage,
       totalPages,
       total: result.length, // GitHub doesn't give us a total count on this endpoint
-      stasLabel: config.stas.label,
+      syntaroLabel: config.syntaro.label,
     });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to list repos');
@@ -216,7 +216,7 @@ router.get('/:owner/:repo', async (req: Request, res: Response) => {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github+json',
-        'User-Agent': 'stas-bot',
+        'User-Agent': 'syntaro-bot',
       },
     });
 
@@ -231,45 +231,45 @@ router.get('/:owner/:repo', async (req: Request, res: Response) => {
 
     const repoData = (await repoResponse.json()) as GitHubRepo;
 
-    // Check if STAS webhook is installed
+    // Check if SYNTARO webhook is installed
     const hooksResponse = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/hooks`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/vnd.github+json',
-          'User-Agent': 'stas-bot',
+          'User-Agent': 'syntaro-bot',
         },
       },
     );
 
-    let stasInstalled = false;
+    let syntaroInstalled = false;
     let installationId: number | null = null;
 
     if (hooksResponse.ok) {
       const hooks = (await hooksResponse.json()) as Array<{ config: { url?: string }; id: number }>;
-      const stasHook = hooks.find((h) => h.config.url?.includes('stas') || h.config.url?.includes(config.github.webhookPath));
-      if (stasHook) {
-        stasInstalled = true;
-        installationId = stasHook.id;
+      const syntaroHook = hooks.find((h) => h.config.url?.includes('syntaro') || h.config.url?.includes(config.github.webhookPath));
+      if (syntaroHook) {
+        syntaroInstalled = true;
+        installationId = syntaroHook.id;
       }
     }
 
     // Also check installations
-    if (!stasInstalled) {
+    if (!syntaroInstalled) {
       const instResponse = await fetch(
         `https://api.github.com/repos/${owner}/${repo}/installation`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/vnd.github+json',
-            'User-Agent': 'stas-bot',
+            'User-Agent': 'syntaro-bot',
           },
         },
       );
       if (instResponse.ok) {
         const instData = (await instResponse.json()) as { id: number };
-        stasInstalled = true;
+        syntaroInstalled = true;
         installationId = instData.id;
       }
     }
@@ -284,9 +284,9 @@ router.get('/:owner/:repo', async (req: Request, res: Response) => {
       defaultBranch: repoData.default_branch,
       language: repoData.language,
       updatedAt: repoData.updated_at,
-      stasInstalled,
+      syntaroInstalled,
       installationId,
-      stasLabel: config.stas.label,
+      syntaroLabel: config.syntaro.label,
     };
 
     res.json(result);
@@ -322,7 +322,7 @@ function resolveToken(req: Request): string | null {
       if (eq === -1) continue;
       const key = part.slice(0, eq).trim();
       const val = part.slice(eq + 1).trim();
-      if (key === 'stas_token' && val && !val.startsWith('eyJ')) {
+      if (key === 'syntaro_token' && val && !val.startsWith('eyJ')) {
         return val;
       }
     }

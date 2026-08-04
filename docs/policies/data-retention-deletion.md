@@ -1,4 +1,4 @@
-# Data Retention and Deletion Policy — STAS
+# Data Retention and Deletion Policy — SYNTARO
 
 > Last updated: 2026-06-25
 

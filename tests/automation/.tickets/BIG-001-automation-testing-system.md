@@ -37,7 +37,7 @@
 ## Architecture
 
 ```
-STAS (FE, Port 3000)              OpenSymphony (BE, Port 4096)
+SYNTARO (FE, Port 3000)              OpenSymphony (BE, Port 4096)
 ┌─────────────────────┐          ┌─────────────────────────────┐
 │  React Dashboard    │──POST──▶│  Elixir/Phoenix API         │
 │  Express Server     │ /dispatch│  ├─ POST /api/v1/dispatch  │
@@ -50,7 +50,7 @@ STAS (FE, Port 3000)              OpenSymphony (BE, Port 4096)
 
 ```bash
 # Health check
-STAS_URL=http://localhost:3099 npm run test:automation:health
+SYNTARO_URL=http://localhost:3099 npm run test:automation:health
 
 # Full suite
 npm run test:automation

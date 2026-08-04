@@ -121,11 +121,11 @@ function createContainer(instance: SWEBenchInstance): string {
   try {
     if (process.env.E2B_API_KEY) {
       const image = process.env.SWE_BENCH_IMAGE || "swe-bench-verified";
-      return `e2b://${image}?env=STAS_MODE=benchmark&env=REPO=${instance.repo}`;
+      return `e2b://${image}?env=SYNTARO_MODE=benchmark&env=REPO=${instance.repo}`;
     }
     const containerId = execSync(
       `docker run -d --rm ` +
-      `-e STAS_MODE=benchmark ` +
+      `-e SYNTARO_MODE=benchmark ` +
       `-e REPO=${instance.repo} ` +
       `-e BASE_COMMIT=${instance.base_commit} ` +
       `swe-bench-verified sleep 300`,
@@ -145,7 +145,7 @@ function runAgentInContainer(
     if (containerId.startsWith("e2b://")) {
       return runAgentE2B(instance);
     }
-    const execCmd = `docker exec ${containerId} stas-run --issue "${instance.problem_statement}" --repo ${instance.repo}`;
+    const execCmd = `docker exec ${containerId} syntaro-run --issue "${instance.problem_statement}" --repo ${instance.repo}`;
     const output = execSync(execCmd, { encoding: "utf-8", timeout: 300000 });
     return { exitCode: 0, output, error: null };
   } catch (err: any) {
@@ -161,7 +161,7 @@ function runAgentE2B(instance: SWEBenchInstance): { exitCode: number | null; out
   const issueBody = `${instance.problem_statement}\n\n${instance.hints.map((h) => `- ${h}`).join("\n")}`;
   try {
     const output = execSync(
-      `stas-run --issue-title "Fix bug in ${instance.repo}" --issue-body "${issueBody}" --repo ${instance.repo} --commit ${instance.base_commit}`,
+      `syntaro-run --issue-title "Fix bug in ${instance.repo}" --issue-body "${issueBody}" --repo ${instance.repo} --commit ${instance.base_commit}`,
       { encoding: "utf-8", timeout: 300000 }
     );
     return { exitCode: 0, output, error: null };

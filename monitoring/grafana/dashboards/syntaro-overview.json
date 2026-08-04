@@ -1,0 +1,21 @@
+{
+  "title": "SYNTARO Overview", "uid": "syntaro-overview", "version": 1, "schemaVersion": 39,
+  "tags": ["syntaro"], "timezone": "browser",
+  "panels": [
+    { "title": "Webhook Rate", "type": "timeseries", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "rate(syntaro_webhook_requests_total[1m])", "legendFormat": "webhooks/s" }],
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 } },
+    { "title": "Queue Depth", "type": "timeseries", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "bullmq_queue_depth", "legendFormat": "pending" }],
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 } },
+    { "title": "Error Rate", "type": "timeseries", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "rate(syntaro_webhook_errors_total[5m]) / rate(syntaro_webhook_requests_total[5m]) * 100", "legendFormat": "error %" }],
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 } },
+    { "title": "P95 Latency", "type": "timeseries", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "histogram_quantile(0.95, rate(webhook_processing_duration_ms_bucket[5m]))", "legendFormat": "p95" }],
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 } },
+    { "title": "Fix Rate", "type": "timeseries", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "rate(syntaro_fixes_completed_total[1h])", "legendFormat": "fixes/hr" }],
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 } }
+  ]
+}

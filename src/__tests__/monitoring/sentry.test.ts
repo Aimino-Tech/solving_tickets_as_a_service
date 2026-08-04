@@ -103,8 +103,8 @@ describe('monitoring/sentry', () => {
       vi.resetModules();
       mockConfigObj.config.sentry.dsn = 'https://key@sentry.io/project';
       const mod = await import('../../monitoring/sentry.js');
-      mod.setTag('service', 'stas');
-      expect(mockSentrySetTag).toHaveBeenCalledWith('service', 'stas');
+      mod.setTag('service', 'syntaro');
+      expect(mockSentrySetTag).toHaveBeenCalledWith('service', 'syntaro');
     });
   });
 
