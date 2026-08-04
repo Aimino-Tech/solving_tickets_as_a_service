@@ -23,7 +23,16 @@ vi.mock('lucide-react', () => ({
 
 // Mock the API client
 vi.mock('@/api/client', () => ({
-  auth: { login: vi.fn(), register: vi.fn(), refresh: vi.fn(), me: vi.fn(), logout: vi.fn(), loginUrl: vi.fn() },
+  auth: {
+    login: vi.fn(),
+    register: vi.fn(),
+    refresh: vi.fn(),
+    me: vi.fn(),
+    logout: vi.fn(),
+    loginUrl: vi.fn(),
+    forgotPassword: vi.fn(),
+    resetPassword: vi.fn(),
+  },
   setToken: vi.fn(),
   clearToken: vi.fn(),
   default: {},
@@ -54,6 +63,28 @@ describe('Routing — catch-all 404', () => {
 
     // Login page should render without 404
     expect(screen.queryByText('Page not found')).not.toBeInTheDocument();
+  });
+
+  it('renders the forgot-password page without 404', async () => {
+    render(
+      <MemoryRouter initialEntries={['/forgot-password']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('Page not found')).not.toBeInTheDocument();
+    expect(await screen.findByText('Send Reset Link')).toBeInTheDocument();
+  });
+
+  it('renders the reset-password page without 404', async () => {
+    render(
+      <MemoryRouter initialEntries={['/auth/reset-password']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('Page not found')).not.toBeInTheDocument();
+    expect(await screen.findByText('Update Password')).toBeInTheDocument();
   });
 
   it('shows 404 for deleted/superseded pages like /kpi, /monitoring, /admin/runs', () => {

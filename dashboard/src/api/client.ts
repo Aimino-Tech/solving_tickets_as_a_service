@@ -82,14 +82,20 @@ export async function request<T>(
         console.warn('Token refresh failed:', refreshErr);
       }
     }
-    const _isLoginOrRegister = path.includes('/auth/login') || path.includes('/auth/register');
-    if (!_isLoginOrRegister) {
+    const _isLogin = path.includes('/auth/login') || path.includes('/auth/register');
+    const _isReset = path.includes('/auth/forgot-password') || path.includes('/auth/reset-password');
+    const _isAuthFlow = _isLogin || _isReset;
+    if (!_isAuthFlow) {
       clearToken();
       if (typeof window !== 'undefined') {
         window.location.href = '/login';
       }
     }
-    throw new Error(_isLoginOrRegister ? 'Invalid login credentials' : 'Unauthorized');
+    if (_isReset) {
+      const resetBody = await res.json().catch(() => ({ error: 'Invalid credentials' }));
+      throw new Error(typeof resetBody.error === 'string' ? resetBody.error : 'Invalid credentials');
+    }
+    throw new Error(_isLogin ? 'Invalid login credentials' : 'Unauthorized');
   }
 
   if (!res.ok) {
@@ -206,6 +212,16 @@ export const auth = {
     request<AuthResult>('/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    }),
+  forgotPassword: (email: string) =>
+    request<{ ok: boolean; message?: string }>('/v1/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (accessToken: string, password: string) =>
+    request<{ ok: boolean; message?: string }>('/v1/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ accessToken, password }),
     }),
 me: () =>
   request<{ id: string; email: string; name: string | null; username?: string; avatarUrl?: string; plan?: string; createdAt: string }>('/v1/auth/me'),

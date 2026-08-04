@@ -30,6 +30,8 @@ const PricingPage = lazy(() => import('@/pages/PricingPage'));
 const VsPage = lazy(() => import('@/pages/VsPage'));
 const LiveView = lazy(() => import('@/pages/LiveView'));
 const WizardContainer = lazy(() => import('@/pages/onboarding/WizardContainer'));
+const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 
 function PageFallback() {
   return (
@@ -52,6 +54,8 @@ export default function App() {
         <Routes>
           <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
           <Route path="/logout" element={<Logout />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/auth/reset-password" element={<ResetPassword />} />
           <Route element={<PublicLayout />}>
             <Route path="/security" element={<Security />} />
             <Route path="/privacy" element={<Privacy />} />

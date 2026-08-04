@@ -1,0 +1,32 @@
+- generic [ref=e6]:
+  - generic [ref=e7]:
+    - generic [ref=e8]: SYNTARO
+    - paragraph [ref=e10]: Solving Tickets As A Service
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - button "Sign In" [ref=e13] [cursor=pointer]
+      - button "Register" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: Email
+        - textbox "you@example.com" [ref=e18]
+      - generic [ref=e19]:
+        - generic [ref=e20]: Password
+        - textbox "Your password" [ref=e21]
+      - button "Sign In" [ref=e22] [cursor=pointer]
+    - generic [ref=e23]:
+      - generic [ref=e24]: or
+      - button [ref=e28] [cursor=pointer]:
+        - img "Google" [ref=e29]
+        - text: Continue with Google
+      - button [ref=e34] [cursor=pointer]:
+        - img "Microsoft" [ref=e35]
+        - text: Continue with Microsoft
+      - button [ref=e40] [cursor=pointer]:
+        - img "GitHub" [ref=e41]
+        - text: Continue with GitHub
+    - paragraph [ref=e43]: By signing in, you agree to our Terms of Service.
+  - paragraph [ref=e44]:
+    - link "New to SYNTARO? Learn more" [ref=e45] [cursor=pointer]:
+      - /url: /onboarding
+  - paragraph [ref=e46]: © 2026 SYNTARO. All rights reserved.

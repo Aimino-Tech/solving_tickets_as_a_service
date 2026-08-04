@@ -66,15 +66,19 @@ describe('Settings', () => {
     });
   });
 
-  it('shows Coming Soon badge for Bitbucket and Jira', async () => {
+  it('shows Connect links for Bitbucket and Jira', async () => {
     renderWithProviders(<Settings />);
 
     await waitFor(() => {
       expect(screen.getByText('Bitbucket App Password')).toBeInTheDocument();
     });
 
-    const comingSoonBadges = screen.getAllByText('Coming soon');
-    expect(comingSoonBadges.length).toBeGreaterThanOrEqual(1);
+    const connectLinks = screen.getAllByRole('link', { name: 'Connect' });
+    expect(connectLinks.length).toBeGreaterThanOrEqual(2);
+    for (const link of connectLinks) {
+      expect(link).toHaveAttribute('href');
+      expect(link).toHaveAttribute('target', '_blank');
+    }
     expect(screen.getByText('Jira API Token')).toBeInTheDocument();
   });
 

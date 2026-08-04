@@ -44,6 +44,7 @@ import previewRoutes from './api/routes/preview.js';
 import { trustRouter } from './api/routes/trust.js';
 import { streamAuditExportCsv, streamAuditExportJson } from './audit/export.js';
 import { authRouter } from './auth/index.js';
+import { oauthRouter } from './auth/oauth.js';
 import { billingRouter } from './billing/index.js';
 import { registerSlackMentionHandler } from './channels/slack/handler.js';
 import { config } from './config.js';
@@ -803,6 +804,9 @@ export async function createApp(): Promise<express.Application> {
   // GitHub OAuth — before /api/v1 catch-all to avoid requireAuth conflict
   app.use('/api/v1/auth/github', gitHubOAuthRouter);
   app.use('/api/v1/auth/linear', linearOAuthRouter);
+
+  // Social OAuth (Google + Microsoft via Supabase) — before /api/v1 catch-all
+  app.use('/api/v1/auth/oauth', oauthRouter);
 
   // Privacy API (GDPR: erasure, portability, consent, anonymization)
   const { default: privacyRouter } = await import('./routes/privacy.js');

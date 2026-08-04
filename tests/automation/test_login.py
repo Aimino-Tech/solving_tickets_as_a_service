@@ -58,7 +58,15 @@ class TestRegisterFunctionality:
         login_page.switch_to_register()
         expect(login_page.submit_button).to_have_text("Create Account")
 
-    def test_register_form_submission_shows_error(self, page: Page, base_url: str):
+    def test_register_form_submission_shows_error(
+        self, page: Page, base_url: str, api_context
+    ):
+        # Pre-register the email via API so the UI submission deterministically fails
+        resp = api_context.post(
+            "/api/v1/auth/register",
+            data={"email": "test@example.com", "password": "password123", "name": "Test User"},
+        )
+        assert resp.status in (201, 409), f"pre-register failed: {resp.status} {resp.text()[:200]}"
         login_page = LoginPage(page, base_url)
         login_page.goto()
         login_page.register("Test User", "test@example.com", "password123")

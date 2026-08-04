@@ -36,6 +36,15 @@ const magicLinkVerifySchema = z.object({
   token: z.string().min(1),
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+const resetPasswordSchema = z.object({
+  accessToken: z.string().min(1),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
 router.post('/register', registerLimiter, async (req: Request, res: Response) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -231,6 +240,64 @@ router.post('/magic-link/verify', async (req: Request, res: Response) => {
     }
     log.error({ err }, 'Magic link verification failed');
     res.status(401).json({ error: 'Invalid or expired magic link' });
+  }
+});
+
+router.post('/forgot-password', loginLimiter, async (req: Request, res: Response) => {
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0].message });
+    return;
+  }
+
+  try {
+    const host = req.get?.('host') || (req.headers as Record<string, string>)?.host || 'localhost';
+    const origin = req.headers.origin || `${req.protocol || 'http'}://${host}`;
+    await authService.requestPasswordReset(parsed.data.email, `${origin}/auth/reset-password`);
+    auditLog({
+      actorType: 'user',
+      action: 'auth.password_reset.request',
+      resourceType: 'account',
+      details: { email: parsed.data.email },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    });
+    res.json({ ok: true, message: 'If an account exists for this email, a password reset link has been sent.' });
+  } catch (err) {
+    log.error({ err }, 'Password reset request failed');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/reset-password', async (req: Request, res: Response) => {
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0].message });
+    return;
+  }
+
+  try {
+    const { userId } = await authService.resetPasswordWithRecovery(parsed.data.accessToken, parsed.data.password);
+    auditLog({
+      actorType: 'user',
+      actorId: userId,
+      action: 'auth.password_reset.complete',
+      resourceType: 'account',
+      resourceId: userId,
+      details: { passwordReset: true },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    });
+    res.json({ ok: true, message: 'Password updated. You can now sign in.' });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      res.status(err.statusCode).json({ error: err.message });
+      return;
+    }
+    log.error({ err }, 'Password reset failed');
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

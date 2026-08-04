@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { stats, billing, litellm } from '@/api/client';
 import type { DashboardStats, BillingPlan } from '@/api/client';
 import {
@@ -23,6 +24,10 @@ export default function Billing() {
   const [planLoading, setPlanLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const autoTriggered = useRef(false);
   const [litellmData, setLitellmData] = useState<any>(null);
   const [litellmLoading, setLitellmLoading] = useState(true);
   const [litellmError, setLitellmError] = useState<string | null>(null);
@@ -73,6 +78,33 @@ export default function Billing() {
       setPortalLoading(false);
     }
   }
+
+  async function handleSubscribe(planId: string) {
+    setCheckoutLoading(planId);
+    setCheckoutError(null);
+    try {
+      const { url } = await billing.createCheckout(
+        planId,
+        `${window.location.origin}/billing`,
+        `${window.location.origin}/billing`,
+      );
+      window.location.href = url;
+    } catch (err) {
+      setCheckoutError(err instanceof Error ? err.message : 'Failed to start checkout');
+      setCheckoutLoading(null);
+    }
+  }
+
+  const planParam = searchParams.get('plan');
+
+  useEffect(() => {
+    if (!planLoading && planParam && !activePlan?.hasBillingRecord && !autoTriggered.current) {
+      if (planParam === 'solo' || planParam === 'team') {
+        autoTriggered.current = true;
+        void handleSubscribe(planParam);
+      }
+    }
+  }, [planLoading, planParam, activePlan]);
 
   const totalRuns = data?.totalRuns ?? 0;
   const passRate = data?.passRate ?? 0;
@@ -131,16 +163,50 @@ export default function Billing() {
                   {portalLoading ? 'Opening...' : 'Manage Subscription'}
                 </button>
               ) : (
-                <a href="https://syntaro.io/pricing" className="btn-primary min-h-[44px] inline-flex items-center">
-                  Upgrade Plan
-                </a>
+                <>
+                  <button
+                    onClick={() => handleSubscribe('solo')}
+                    disabled={checkoutLoading === 'solo'}
+                    className="btn-primary min-h-[44px]"
+                  >
+                    {checkoutLoading === 'solo' ? 'Redirecting...' : 'Subscribe Solo — $49/mo'}
+                  </button>
+                  <button
+                    onClick={() => handleSubscribe('team')}
+                    disabled={checkoutLoading === 'team'}
+                    className="btn-primary min-h-[44px]"
+                  >
+                    {checkoutLoading === 'team' ? 'Redirecting...' : 'Subscribe Team — $149/mo'}
+                  </button>
+                </>
               )}
             </div>
+            {checkoutError && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
+            )}
           </div>
         ) : (
           <div className="mt-4">
             <p className="text-gray-500 dark:text-gray-400">No active plan found.</p>
-            <a href="https://syntaro.io/pricing" className="btn-primary mt-3 inline-block min-h-[44px]">View Plans</a>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                onClick={() => handleSubscribe('solo')}
+                disabled={checkoutLoading === 'solo'}
+                className="btn-primary min-h-[44px]"
+              >
+                {checkoutLoading === 'solo' ? 'Redirecting...' : 'Subscribe Solo — $49/mo'}
+              </button>
+              <button
+                onClick={() => handleSubscribe('team')}
+                disabled={checkoutLoading === 'team'}
+                className="btn-primary min-h-[44px]"
+              >
+                {checkoutLoading === 'team' ? 'Redirecting...' : 'Subscribe Team — $149/mo'}
+              </button>
+            </div>
+            {checkoutError && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
+            )}
           </div>
         )}
         {portalError && (
