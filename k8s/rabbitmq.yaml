@@ -1,0 +1,117 @@
+# ---------------------------------------------------------------------------
+# SYNTARO RabbitMQ — StatefulSet with management plugin + persistent storage
+#
+# IMPORTANT: RabbitMQ 4.x denies `transient_nonexcl_queues` (non-durable,
+# non-exclusive queues) by default. Celery 5.x declares such queues, so the
+# feature is re-enabled via rabbitmq.conf — the same fix applied to the
+# Docker Compose deployment.
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: syntaro-rabbitmq-config
+  namespace: syntaro
+  labels:
+    app: syntaro-rabbitmq
+data:
+  rabbitmq.conf: |
+    # Re-enable deprecated non-durable, non-exclusive queues (Celery compat)
+    deprecated_features.permit.transient_nonexcl_queues = true
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: syntaro-rabbitmq
+  namespace: syntaro
+  labels:
+    app: syntaro-rabbitmq
+    tier: data
+spec:
+  serviceName: syntaro-rabbitmq
+  replicas: 1
+  selector:
+    matchLabels:
+      app: syntaro-rabbitmq
+  template:
+    metadata:
+      labels:
+        app: syntaro-rabbitmq
+        tier: data
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:4-management-alpine
+          ports:
+            - containerPort: 5672
+              name: amqp
+            - containerPort: 15672
+              name: management
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: "syntaro"
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: syntaro-secrets
+                  key: RABBITMQ_PASSWORD
+            - name: RABBITMQ_DEFAULT_VHOST
+              value: "/syntaro"
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: /var/lib/rabbitmq
+            - name: rabbitmq-config
+              mountPath: /etc/rabbitmq/conf.d/20-syntaro.conf
+              subPath: rabbitmq.conf
+              readOnly: true
+          readinessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "check_port_connectivity"]
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "status"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1"
+      volumes:
+        - name: rabbitmq-config
+          configMap:
+            name: syntaro-rabbitmq-config
+  volumeClaimTemplates:
+    - metadata:
+        name: rabbitmq-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: syntaro-rabbitmq
+  namespace: syntaro
+  labels:
+    app: syntaro-rabbitmq
+spec:
+  selector:
+    app: syntaro-rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672

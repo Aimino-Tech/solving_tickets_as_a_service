@@ -5,6 +5,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: syntaro-webhook
+  namespace: syntaro
   labels:
     app: syntaro-webhook
     tier: webhook
@@ -23,7 +24,7 @@ spec:
     spec:
       containers:
         - name: webhook
-          image: ghcr.io/tamnguyen08/solving_tickets_as_a_service:latest
+          image: ghcr.io/aimino-tech/solving_tickets_as_a_service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
@@ -40,7 +41,7 @@ spec:
               value: "production"
           livenessProbe:
             httpGet:
-              path: /health/live
+              path: /health
               port: http
             initialDelaySeconds: 10
             periodSeconds: 30
@@ -48,7 +49,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /health/ready
+              path: /health
               port: http
             initialDelaySeconds: 15
             periodSeconds: 15

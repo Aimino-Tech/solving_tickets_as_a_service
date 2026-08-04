@@ -29,6 +29,7 @@ const EnterprisePage = lazy(() => import('@/pages/EnterprisePage'));
 const PricingPage = lazy(() => import('@/pages/PricingPage'));
 const VsPage = lazy(() => import('@/pages/VsPage'));
 const LiveView = lazy(() => import('@/pages/LiveView'));
+const AdminSteering = lazy(() => import('@/pages/AdminSteering'));
 const WizardContainer = lazy(() => import('@/pages/onboarding/WizardContainer'));
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
@@ -91,6 +92,7 @@ export default function App() {
             <Route path="billing" element={<Billing />} />
             <Route path="audit" element={<AuditLog />} />
             <Route path="liveview" element={<LiveView />} />
+            <Route path="admin" element={<AdminSteering />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="/500" element={<Error500 />} />

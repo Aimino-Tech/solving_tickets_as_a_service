@@ -121,6 +121,10 @@ const envSchema = z.object({
   REDIS_TTL_DEFAULT: z.coerce.number().int().positive().default(300),
   REDIS_TTL_FREQUENT_ACCESS: z.coerce.number().int().positive().default(60),
   ADMIN_API_KEY: z.string().optional(),
+  // Comma-separated allowlist of emails allowed to use dashboard admin
+  // steering (/api/v1/admin/steering/*). The JWT carries no role claim today,
+  // so admins are gated by email here. Empty = steering disabled (403).
+  ADMIN_EMAILS: z.string().default(''),
 
   JWT_SECRET: z
     .string()
@@ -385,12 +389,20 @@ const envSchema = z.object({
   OPENSYMPHONY_DISPATCH_URL: z.string().default(''),
   OPENSYMPHONY_API_KEY: z.string().default(''),
   OPENSYMPHONY_TENANT: z.string().default('default'),
+  OPENSYMPHONY_ADMIN_URL: z.string().default(''),
 
   // Loops
   LOOPS_API_KEY: z.string().optional(),
 
   // Alerting additions
   ALERT_N8N_WEBHOOK_URL: z.string().optional(),
+
+  // ── Admin steering (AIM-4617) ──
+  // OpenSymphony Elixir admin API (forward target for the steering proxy)
+  OS_ADMIN_API_URL: z.string().default(''),
+  // x-api-key credential sent to the OS admin API (must match SYMPHONY_API_KEYS on the OS side)
+  OS_ADMIN_API_KEY: z.string().default(''),
+  OS_ADMIN_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -854,6 +866,15 @@ function buildConfig(env: ParsedEnv) {
       fixRun: env.USAGE_CREDITS_FIX_RUN,
       triage: env.USAGE_CREDITS_TRIAGE,
       sandbox: env.USAGE_CREDITS_SANDBOX,
+    },
+
+    adminSteering: {
+      adminEmails: env.ADMIN_EMAILS.split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean),
+      osAdminApiUrl: env.OS_ADMIN_API_URL,
+      osAdminApiKey: env.OS_ADMIN_API_KEY,
+      osAdminTimeoutMs: env.OS_ADMIN_TIMEOUT_MS,
     },
   } as const;
 }

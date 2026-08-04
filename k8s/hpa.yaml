@@ -8,6 +8,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: syntaro-webhook
+  namespace: syntaro
   labels:
     app: syntaro-webhook
     tier: webhook
@@ -53,6 +54,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: syntaro-worker
+  namespace: syntaro
   labels:
     app: syntaro-worker
     tier: worker

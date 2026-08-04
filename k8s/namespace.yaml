@@ -1,0 +1,10 @@
+# ---------------------------------------------------------------------------
+# SYNTARO Namespace — isolates all SYNTARO workloads
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: syntaro
+  labels:
+    app: syntaro
+    tier: all

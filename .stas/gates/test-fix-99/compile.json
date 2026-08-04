@@ -1,0 +1,12 @@
+{
+  "gate": "compile",
+  "passed": true,
+  "ossTool": "tsc",
+  "command": "npx hallucination-grep --check-refs",
+  "stdout": "All references verified",
+  "stderr": "",
+  "details": [
+    "TypeScript compilation succeeded"
+  ],
+  "timestamp": "2026-08-01T20:49:04.123Z"
+}

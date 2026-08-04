@@ -20,6 +20,8 @@ branch, and opens a draft PR.
 It is the "pure GitHub Action" approach — no webhook server, no SYNTARO account, no
 separate infrastructure. The checked-out repository is the sandbox and the
 workflow token is the auth.
+separate infrastructure. The checked-out repository is the sandbox and the
+workflow token is the auth.
 
 ## Prerequisites
 

@@ -21,10 +21,10 @@ path was therefore never covered end-to-end in CI.
    unchanged so a broken OpenSymphony build can never take the SYNTARO webhook path
    down.
 2. **Wire the governance → OpenSymphony hop**: set `OPENSYMPHONY_WEBHOOK_URL` on
-   the `governance` service to `http://opensymphony:4000/api/v1/syntaro/webhook`.
+   the `governance` service to `http://opensymphony:4000/api/v1/stas/webhook`.
    This env var is read by the governance proxy (`guardrail/webhook_routes.py`),
    which forwards allowed SYNTARO webhooks to OpenSymphony; OpenSymphony's
-   `POST /api/v1/syntaro/webhook` controller returns `202 accepted`.
+   `POST /api/v1/stas/webhook` controller returns `202 accepted`.
 3. **Integration test degrades gracefully**: the upstream-forwarding test probes
    OpenSymphony health first and `ctx.skip`s with an explanatory message when the
    optional upstream is unavailable (e.g. CI without the sibling checkout, or an
